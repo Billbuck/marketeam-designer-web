@@ -249,11 +249,16 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentSize = targetSize;
         const minSize = 4; // Taille minimum de sécurité
         
+        // IMPORTANT: Sauvegarder l'alignement vertical actuel
+        const currentJustify = contentEl.style.justifyContent;
+        
+        // Forcer alignement en haut pendant le calcul pour une détection correcte du débordement
+        contentEl.style.justifyContent = 'flex-start';
+        
         // 1. On commence par la taille max (Reset)
         zoneEl.style.fontSize = currentSize + 'pt';
         
         // 2. Tant que ça déborde, on réduit
-        // On utilise une petite boucle de sécurité pour éviter le freeze navigateur
         let iterations = 0;
         while (
             (contentEl.scrollHeight > zoneEl.clientHeight || 
@@ -265,6 +270,9 @@ document.addEventListener('DOMContentLoaded', () => {
             zoneEl.style.fontSize = currentSize + 'pt';
             iterations++;
         }
+        
+        // Restaurer l'alignement vertical d'origine
+        contentEl.style.justifyContent = currentJustify;
     }
 
     // Helper pour l'alignement vertical flexbox (Axe principal en column)
