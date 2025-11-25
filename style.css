@@ -72,6 +72,28 @@ button {
     user-select: none;
 }
 
+/* Animation de création (Pop + Flash) */
+@keyframes zone-appear {
+    0% {
+        transform: scale(0.5);
+        background-color: rgba(255, 235, 59, 0.8); /* Jaune vif */
+        box-shadow: 0 0 20px rgba(255, 235, 59, 0.8);
+    }
+    50% {
+        transform: scale(1.1);
+        background-color: rgba(255, 235, 59, 0.4);
+    }
+    100% {
+        transform: scale(1);
+        background-color: transparent; /* Ou la couleur finale */
+        box-shadow: none;
+    }
+}
+
+.zone-appear-anim {
+    animation: zone-appear 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Effet élastique */
+}
+
 /* --- Zones de Texte --- */
 .zone {
     position: absolute;

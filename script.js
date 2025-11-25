@@ -107,6 +107,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function createZoneDOM(id, labelNum, autoSelect = true) {
         const zone = document.createElement('div');
         zone.classList.add('zone');
+        // Ajouter l'animation seulement si c'est une nouvelle création (autoSelect = true)
+        // Si autoSelect est false, c'est un chargement depuis le localStorage, donc pas d'animation
+        if (autoSelect) {
+            zone.classList.add('zone-appear-anim');
+            // Retirer la classe après l'animation pour nettoyer
+            setTimeout(() => {
+                zone.classList.remove('zone-appear-anim');
+            }, 1000);
+        }
         zone.id = id;
         
         // Style initial par défaut
@@ -224,6 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         zoneEl.style.color = inputColor.value;
+        contentEl.style.color = inputColor.value;
         
         // Fond
         if (chkTransparent.checked) {
