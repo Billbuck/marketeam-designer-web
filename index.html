@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Éditeur VDP - Multi-Zones</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <div class="toolbar">
+            <h2>Outils</h2>
+            <button id="btn-add-zone" class="btn-primary">
+                <span class="material-icons">add_box</span> Ajouter une Zone
+            </button>
+            <button id="btn-delete-zone" class="btn-danger" disabled>
+                <span class="material-icons">delete</span> Supprimer Zone
+            </button>
+            <hr>
+            <button onclick="console.log(generateJson())" class="btn-success">
+                <span class="material-icons">code</span> Générer JSON
+            </button>
+
+
+<div class="coordinates-panel" id="coords-panel" style="opacity: 0.5; pointer-events: none;">
+    <h3>Propriétés de la Zone</h3>
+    <p class="selection-info">Sélection : <strong id="lbl-selected-zone">Aucune</strong></p>
+    
+    <hr>
+
+    <div class="input-group">
+        <label>Contenu du texte (avec balises {{...}})</label>
+        <!-- Liste des champs de fusion -->
+        <div id="merge-fields-list" class="merge-fields-container"></div>
+        <textarea id="input-content" rows="3" placeholder="Ex: Cher {{NOM}},"></textarea>
+    </div>
+
+    <div class="style-row">
+        <div class="input-group half">
+            <label>Police (Google)</label>
+            <select id="input-font">
+                <option value="Roboto">Roboto</option>
+                <option value="Open Sans">Open Sans</option>
+                <option value="Lato">Lato</option>
+                <option value="Montserrat">Montserrat</option>
+                <option value="Courier Prime">Courier (Type machine)</option>
+            </select>
+        </div>
+        <div class="input-group half">
+            <label>Taille (pt)</label>
+            <input type="number" id="input-size" value="12">
+        </div>
+    </div>
+
+    <div class="style-row">
+        <div class="input-group half">
+            <label>Couleur</label>
+            <input type="color" id="input-color" value="#000000" style="height: 30px; padding: 2px;">
+        </div>
+        <div class="input-group half">
+            <label>Alignement</label>
+            <select id="input-align">
+                <option value="left">Gauche</option>
+                <option value="center">Centré</option>
+                <option value="right">Droite</option>
+            </select>
+        </div>
+    </div>
+
+    <hr>
+
+    <h4>Géométrie (mm)</h4>
+    <div class="style-row">
+        <div class="input-group half">
+            <label>X</label>
+            <input type="text" id="val-x" readonly>
+        </div>
+        <div class="input-group half">
+            <label>Y</label>
+            <input type="text" id="val-y" readonly>
+        </div>
+    </div>
+    <div class="style-row">
+        <div class="input-group half">
+            <label>Largeur</label>
+            <input type="text" id="val-w" readonly>
+        </div>
+        <div class="input-group half">
+            <label>Hauteur</label>
+            <input type="text" id="val-h" readonly>
+        </div>
+    </div>
+</div>
+			
+			
+			
+			
+        </div>
+
+        <div class="workspace">
+            <div id="a4-page">
+                <img src="a4_template.jpg" alt="Fond A4" id="a4-background">
+                </div>
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,210 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #e0e0e0;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.app-container {
+    display: flex;
+    height: 100%;
+}
+
+/* --- Barre d'outils --- */
+.toolbar {
+    width: 280px;
+    background-color: #fff;
+    padding: 20px;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.workspace {
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 40px;
+    overflow: auto;
+}
+
+/* --- Boutons --- */
+button {
+    padding: 10px;
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.btn-primary { background-color: #4285f4; color: white; }
+.btn-primary:hover { background-color: #3367d6; }
+
+.btn-danger { background-color: #ea4335; color: white; }
+.btn-danger:disabled { background-color: #e0e0e0; color: #999; cursor: not-allowed; }
+
+.btn-success { background-color: #34a853; color: white; }
+
+/* --- Page A4 --- */
+#a4-page {
+    /* Dimensions A4 à 96 DPI */
+    width: 794px; 
+    height: 1123px;
+    background-color: white;
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    position: relative;
+    flex-shrink: 0; /* Empêche le rétrécissement */
+}
+
+#a4-background {
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* Empêche de glisser l'image elle-même */
+    user-select: none;
+}
+
+/* --- Zones de Texte --- */
+.zone {
+    position: absolute;
+    background-color: rgba(66, 133, 244, 0.2);
+    border: 1px solid #4285f4;
+    cursor: grab;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.zone.selected {
+    background-color: rgba(66, 133, 244, 0.4);
+    border: 2px solid #1a73e8;
+    z-index: 50; /* Met la zone sélectionnée au premier plan */
+}
+
+.zone-label {
+    font-size: 12px;
+    color: #1a73e8;
+    font-weight: bold;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* --- Poignées (visibles uniquement si sélectionné) --- */
+.handle {
+    width: 8px;
+    height: 8px;
+    background-color: white;
+    border: 1px solid #1a73e8;
+    position: absolute;
+    display: none; /* Cachées par défaut */
+}
+
+.zone.selected .handle {
+    display: block; /* Affichées si parent sélectionné */
+}
+
+.nw { top: -5px; left: -5px; cursor: nw-resize; }
+.ne { top: -5px; right: -5px; cursor: ne-resize; }
+.sw { bottom: -5px; left: -5px; cursor: sw-resize; }
+.se { bottom: -5px; right: -5px; cursor: se-resize; }
+
+/* --- Inputs coordonnées --- */
+.input-group {
+    margin-bottom: 10px;
+}
+.input-group label {
+    display: block;
+    font-size: 12px;
+    color: #666;
+}
+.input-group input {
+    width: 100%;
+    padding: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #f9f9f9;
+}
+
+/* --- Ajouts pour le formulaire --- */
+textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    resize: vertical;
+    font-family: inherit;
+    box-sizing: border-box; /* Important pour ne pas dépasser */
+}
+
+select, input[type="number"] {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.style-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.half {
+    flex: 1; /* Chaque élément prend 50% de la largeur */
+}
+
+h4 {
+    margin: 10px 0 5px 0;
+    font-size: 14px;
+    color: #555;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
+}
+
+/* Mise à jour visuelle de la zone pour refléter le style approximatif */
+.zone-content {
+    pointer-events: none; /* Le texte ne doit pas gêner le clic */
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    width: 100%;
+}
+
+/* --- Champs de fusion --- */
+.merge-fields-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 8px;
+}
+
+.merge-tag {
+    background-color: #e8f0fe;
+    color: #1a73e8;
+    border: 1px solid #d2e3fc;
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s;
+}
+
+.merge-tag:hover {
+    background-color: #d2e3fc;
+    border-color: #1a73e8;
+}
+
+.merge-tag:active {
+    background-color: #aecbfa;
+}
