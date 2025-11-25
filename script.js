@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const chkTransparent = document.getElementById('chk-transparent');
     const chkLock = document.getElementById('chk-lock');
     const chkCopyfit = document.getElementById('chk-copyfit'); // Copy Fitting
+    const inputLineHeight = document.getElementById('input-line-height'); // Interlignage
 
     // Inputs géométrie
     const inputX = document.getElementById('val-x');
@@ -88,7 +89,8 @@ document.addEventListener('DOMContentLoaded', () => {
             bgColor: '#ffffff',
             isTransparent: true, // Transparent par défaut
             locked: false,
-            copyfit: false // Désactivé par défaut
+            copyfit: false, // Désactivé par défaut
+            lineHeight: 1.2 // Interlignage par défaut (120%)
         };
 
         createZoneDOM(id, zoneCounter);
@@ -109,7 +111,10 @@ document.addEventListener('DOMContentLoaded', () => {
         zone.style.fontSize = '12pt';
         zone.style.textAlign = 'left';
         zone.style.color = '#000000';
-        zone.style.backgroundColor = 'transparent';
+        // Styles par défaut fond/transparence
+        zone.style.backgroundColor = 'transparent'; 
+        // Alignement vertical par défaut (flex)
+        zone.style.alignItems = 'flex-start'; 
 
         // Élément interne pour le texte (Aperçu)
         const contentSpan = document.createElement('div');
@@ -165,6 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
         chkTransparent.checked = data.isTransparent !== undefined ? data.isTransparent : true;
         chkLock.checked = data.locked || false;
         chkCopyfit.checked = data.copyfit || false;
+        inputLineHeight.value = data.lineHeight !== undefined ? data.lineHeight : 1.2; // Rétrocompatibilité
         
         // Gestion état UI couleur fond
         inputBgColor.disabled = chkTransparent.checked;
@@ -193,6 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
         zonesData[selectedZoneId].isTransparent = chkTransparent.checked;
         zonesData[selectedZoneId].locked = chkLock.checked;
         zonesData[selectedZoneId].copyfit = chkCopyfit.checked;
+        zonesData[selectedZoneId].lineHeight = parseFloat(inputLineHeight.value) || 1.2;
 
         // Gestion UI Checkbox
         inputBgColor.disabled = chkTransparent.checked;
@@ -200,10 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Mise à jour visuelle (Aperçu approximatif)
         contentEl.innerText = inputContent.value;
         zoneEl.style.fontFamily = inputFont.value + ", sans-serif";
-        
-        // Couleur du texte (appliquée sur parent ET enfant pour cohérence)
-        zoneEl.style.color = inputColor.value;
-        contentEl.style.color = inputColor.value;
+        // Note: Le rendu 'pt' web n'est pas 100% identique au print, mais proche
         
         // Application de la taille (Soit Copyfit, soit Taille Fixe)
         if (chkCopyfit.checked) {
@@ -211,6 +215,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             zoneEl.style.fontSize = inputSize.value + 'pt';
         }
+        
+        zoneEl.style.color = inputColor.value;
         
         // Fond
         if (chkTransparent.checked) {
@@ -222,19 +228,40 @@ document.addEventListener('DOMContentLoaded', () => {
         // Verrouillage (Visuel)
         if (chkLock.checked) {
             zoneEl.classList.add('locked');
+            // Cacher les poignées si verrouillé
             zoneEl.querySelectorAll('.handle').forEach(h => h.style.display = 'none');
         } else {
             zoneEl.classList.remove('locked');
-            if(selectedZoneId === zoneEl.id) {
+            // Réafficher les poignées si sélectionné ET non verrouillé
+            // (Mais attention, si on vient de déverrouiller, on veut peut-être voir les poignées tout de suite car on est sélectionné)
+             if(selectedZoneId === zoneEl.id) {
                 zoneEl.querySelectorAll('.handle').forEach(h => h.style.display = 'block');
-            }
+             }
         }
         
-        // Alignements
+        // Alignement Horizontal (géré par le texte lui-même)
         contentEl.style.textAlign = inputAlign.value;
+        
+        // Interlignage
+        contentEl.style.lineHeight = inputLineHeight.value;
+        
+        // Alignement Vertical
+        // Comme .zone-content est en flex-column, l'axe principal (vertical) est géré par justify-content
         contentEl.style.justifyContent = mapValignToFlex(inputValign.value);
+        
+        // Nettoyage des styles conflictuels sur le parent
+        zoneEl.style.alignItems = 'normal'; 
+        zoneEl.style.justifyContent = 'normal';
 
-        saveToLocalStorage();
+        // Appliquer le Copy Fitting si activé
+        if (chkCopyfit.checked) {
+            applyCopyfit(zoneEl, zonesData[selectedZoneId]);
+        } else {
+            // Si désactivé, on remet la taille normale définie
+            zoneEl.style.fontSize = inputSize.value + 'pt';
+        }
+
+        saveToLocalStorage(); // Sauvegarder à chaque modif
     }
 
     // --- FONCTION COPY FITTING (Ajustement automatique) ---
@@ -246,19 +273,21 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (isNaN(targetSize)) return;
 
+        // Sauvegarder l'alignement vertical actuel pour le restaurer après
+        const originalJustifyContent = contentEl.style.justifyContent || 'flex-start';
+        
+        // Temporairement mettre l'alignement en haut pour des calculs précis
+        // (évite les problèmes avec flex-end qui peut fausser scrollHeight)
+        contentEl.style.justifyContent = 'flex-start';
+
         let currentSize = targetSize;
         const minSize = 4; // Taille minimum de sécurité
-        
-        // IMPORTANT: Sauvegarder l'alignement vertical actuel
-        const currentJustify = contentEl.style.justifyContent;
-        
-        // Forcer alignement en haut pendant le calcul pour une détection correcte du débordement
-        contentEl.style.justifyContent = 'flex-start';
         
         // 1. On commence par la taille max (Reset)
         zoneEl.style.fontSize = currentSize + 'pt';
         
         // 2. Tant que ça déborde, on réduit
+        // On utilise une petite boucle de sécurité pour éviter le freeze navigateur
         let iterations = 0;
         while (
             (contentEl.scrollHeight > zoneEl.clientHeight || 
@@ -271,8 +300,8 @@ document.addEventListener('DOMContentLoaded', () => {
             iterations++;
         }
         
-        // Restaurer l'alignement vertical d'origine
-        contentEl.style.justifyContent = currentJustify;
+        // Restaurer l'alignement vertical original
+        contentEl.style.justifyContent = originalJustifyContent;
     }
 
     // Helper pour l'alignement vertical flexbox (Axe principal en column)
@@ -283,7 +312,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Attacher les écouteurs
-    [inputContent, inputFont, inputSize, inputColor, inputAlign, inputValign, inputBgColor, chkTransparent, chkLock, chkCopyfit].forEach(el => {
+    [inputContent, inputFont, inputSize, inputColor, inputAlign, inputValign, inputBgColor, chkTransparent, chkLock, chkCopyfit, inputLineHeight].forEach(el => {
         el.addEventListener('input', updateActiveZoneData);
         el.addEventListener('change', updateActiveZoneData); // Pour checkbox/color
     });
@@ -462,17 +491,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     zoneEl.style.backgroundColor = data.bgColor || '#ffffff';
                 }
                 
-                // Police et taille
+                // Police
                 zoneEl.style.fontFamily = data.font + ", sans-serif";
+                
+                // Alignements (DOIT être avant copyfit car copyfit modifie temporairement justifyContent)
+                contentEl.style.textAlign = data.align;
+                contentEl.style.justifyContent = mapValignToFlex(data.valign || 'top');
+                
+                // Interlignage (DOIT être avant copyfit car scrollHeight dépend de lineHeight)
+                contentEl.style.lineHeight = (data.lineHeight !== undefined ? data.lineHeight : 1.2);
+                
+                // Taille (Copyfit ou fixe) - DOIT être après alignements et interlignage
                 if (data.copyfit) {
                     applyCopyfit(zoneEl, data.size);
                 } else {
                     zoneEl.style.fontSize = data.size + 'pt';
                 }
-                
-                // Alignements
-                contentEl.style.textAlign = data.align;
-                contentEl.style.justifyContent = mapValignToFlex(data.valign || 'top');
                 
                 // Verrouillage
                 if (data.locked) {
@@ -512,6 +546,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         color: data.color,
                         align: data.align,
                         valign: data.valign,
+                        lineHeight: data.lineHeight !== undefined ? data.lineHeight : 1.2,
                         bgColor: data.isTransparent ? null : data.bgColor,
                         transparent: data.isTransparent,
                         locked: data.locked,
