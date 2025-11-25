@@ -607,7 +607,6 @@ document.addEventListener('DOMContentLoaded', () => {
         zoomValue.textContent = Math.round(zoomLevel * 100) + '%';
         
         // Ajuster le scroll pour centrer la page après zoom
-        // On attend un peu pour que le navigateur applique le transform
         setTimeout(() => {
             centerWorkspace();
         }, 10);
