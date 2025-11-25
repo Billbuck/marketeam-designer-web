@@ -1,12 +1,19 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- ÉLÉMENTS DOM ---
     const a4Page = document.getElementById('a4-page');
+    const workspace = document.querySelector('.workspace');
     const btnAdd = document.getElementById('btn-add-zone');
     const btnDelete = document.getElementById('btn-delete-zone');
     const btnReset = document.getElementById('btn-reset');
     const btnGenerate = document.getElementById('btn-generate-json');
     const coordsPanel = document.getElementById('coords-panel');
     const lblSelected = document.getElementById('lbl-selected-zone');
+    
+    // Contrôles de zoom
+    const zoomSlider = document.getElementById('zoom-slider');
+    const btnZoomIn = document.getElementById('btn-zoom-in');
+    const btnZoomOut = document.getElementById('btn-zoom-out');
+    const zoomValue = document.getElementById('zoom-value');
 
     // Inputs du formulaire
     const inputContent = document.getElementById('input-content');
@@ -378,6 +385,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let startX, startY, startLeft, startTop, startW, startH;
 
     document.addEventListener('mousedown', (e) => {
+        // Si on est en mode pan (Espace pressé ou clic molette), ne pas permettre le drag des zones
+        if (spacePressed || e.button === 1) {
+            return; // Laisser le pan gérer
+        }
+        
         if (selectedZoneId) {
             const zone = document.getElementById(selectedZoneId);
             // Vérifier si verrouillé
@@ -578,4 +590,184 @@ document.addEventListener('DOMContentLoaded', () => {
         
         console.log("JSON généré et téléchargé.");
     });
+
+    // --- 8. FONCTIONNALITÉ ZOOM ---
+    let zoomLevel = 1.0; // 100% par défaut
+
+    function setZoom(level) {
+        // Limiter le zoom entre 25% et 200%
+        zoomLevel = Math.max(0.25, Math.min(2.0, level));
+        
+        // Appliquer le zoom avec transform: scale()
+        a4Page.style.transform = `scale(${zoomLevel})`;
+        a4Page.style.transformOrigin = 'top left';
+        
+        // Mettre à jour l'interface
+        zoomSlider.value = Math.round(zoomLevel * 100);
+        zoomValue.textContent = Math.round(zoomLevel * 100) + '%';
+        
+        // Ajuster le scroll pour centrer la page après zoom
+        // On attend un peu pour que le navigateur applique le transform
+        setTimeout(() => {
+            centerWorkspace();
+        }, 10);
+    }
+
+    function centerWorkspace() {
+        // Les dimensions réelles de la page A4 (794x1123px à 96 DPI)
+        const pageWidth = 794;
+        const pageHeight = 1123;
+        
+        // Calculer les dimensions de la page zoomée
+        const scaledWidth = pageWidth * zoomLevel;
+        const scaledHeight = pageHeight * zoomLevel;
+        
+        // Centrer horizontalement et verticalement dans le workspace
+        const workspaceWidth = workspace.clientWidth;
+        const workspaceHeight = workspace.clientHeight;
+        
+        // Position de scroll pour centrer (en tenant compte du padding du workspace)
+        const scrollLeft = Math.max(0, (scaledWidth - workspaceWidth) / 2);
+        const scrollTop = Math.max(0, (scaledHeight - workspaceHeight) / 2);
+        
+        workspace.scrollLeft = scrollLeft;
+        workspace.scrollTop = scrollTop;
+    }
+
+    // Event listeners pour les contrôles de zoom
+    zoomSlider.addEventListener('input', (e) => {
+        const level = parseInt(e.target.value) / 100;
+        setZoom(level);
+    });
+
+    btnZoomIn.addEventListener('click', () => {
+        setZoom(zoomLevel + 0.1);
+    });
+
+    btnZoomOut.addEventListener('click', () => {
+        setZoom(zoomLevel - 0.1);
+    });
+
+    // Zoom avec molette (Ctrl + Molette)
+    workspace.addEventListener('wheel', (e) => {
+        if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? -0.1 : 0.1;
+            setZoom(zoomLevel + delta);
+        }
+    }, { passive: false });
+
+    // Initialiser le zoom à 100%
+    setZoom(1.0);
+
+    // --- 9. FONCTIONNALITÉ PAN (Déplacement du document) ---
+    let isPanning = false;
+    let panStartX, panStartY, panStartScrollLeft, panStartScrollTop;
+    let spacePressed = false;
+    let panPotential = false; // Pour le pan permanent (détection du mouvement)
+    const PAN_THRESHOLD = 5; // Seuil de mouvement en pixels avant d'activer le pan
+
+    // Détecter quand Espace est pressé
+    document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && !e.target.matches('input, textarea')) {
+            e.preventDefault(); // Empêcher le scroll de page
+            spacePressed = true;
+            workspace.style.cursor = 'grab';
+        }
+    });
+
+    document.addEventListener('keyup', (e) => {
+        if (e.code === 'Space') {
+            spacePressed = false;
+            if (!isPanning) {
+                workspace.style.cursor = '';
+            }
+        }
+    });
+
+    // Détecter le début du pan : Espace + clic gauche OU clic molette OU clic gauche sur fond (pan permanent)
+    document.addEventListener('mousedown', (e) => {
+        // Ne pas activer le pan si on clique sur une zone ou un élément interactif
+        if (e.target.closest('.zone') || e.target.closest('.toolbar') || e.target.closest('button')) {
+            return;
+        }
+
+        // Pan avec Espace + clic gauche (immédiat)
+        if (e.button === 0 && spacePressed) {
+            e.preventDefault();
+            e.stopPropagation();
+            isPanning = true;
+            panStartX = e.clientX;
+            panStartY = e.clientY;
+            panStartScrollLeft = workspace.scrollLeft;
+            panStartScrollTop = workspace.scrollTop;
+            workspace.style.cursor = 'grabbing';
+            document.body.style.userSelect = 'none';
+        }
+        // Pan avec clic molette (immédiat)
+        else if (e.button === 1) {
+            e.preventDefault();
+            e.stopPropagation();
+            isPanning = true;
+            panStartX = e.clientX;
+            panStartY = e.clientY;
+            panStartScrollLeft = workspace.scrollLeft;
+            panStartScrollTop = workspace.scrollTop;
+            workspace.style.cursor = 'grabbing';
+            document.body.style.userSelect = 'none';
+        }
+        // Pan permanent : clic gauche sur le fond (avec seuil de mouvement)
+        else if (e.button === 0) {
+            // On enregistre la position mais on n'active pas le pan tout de suite
+            // On attend de voir si l'utilisateur bouge la souris
+            panPotential = true;
+            panStartX = e.clientX;
+            panStartY = e.clientY;
+            panStartScrollLeft = workspace.scrollLeft;
+            panStartScrollTop = workspace.scrollTop;
+        }
+    });
+
+    // Déplacer le document pendant le pan
+    document.addEventListener('mousemove', (e) => {
+        // Pan permanent : activer le pan si on dépasse le seuil de mouvement
+        if (panPotential && !isPanning && !isDragging && !isResizing) {
+            const dx = Math.abs(e.clientX - panStartX);
+            const dy = Math.abs(e.clientY - panStartY);
+            
+            // Si on a bougé de plus de PAN_THRESHOLD pixels, activer le pan
+            if (dx > PAN_THRESHOLD || dy > PAN_THRESHOLD) {
+                isPanning = true;
+                panPotential = false;
+                workspace.style.cursor = 'grabbing';
+                document.body.style.userSelect = 'none';
+            }
+        }
+        
+        // Pan actif : déplacer le document
+        if (isPanning && !isDragging && !isResizing) {
+            e.preventDefault();
+            const dx = e.clientX - panStartX;
+            const dy = e.clientY - panStartY;
+            
+            workspace.scrollLeft = panStartScrollLeft - dx;
+            workspace.scrollTop = panStartScrollTop - dy;
+        }
+    });
+
+    // Arrêter le pan
+    document.addEventListener('mouseup', (e) => {
+        if (isPanning) {
+            isPanning = false;
+            workspace.style.cursor = spacePressed ? 'grab' : '';
+            document.body.style.userSelect = '';
+        }
+        
+        // Si on n'a pas activé le pan (clic simple), permettre la désélection normale
+        if (panPotential && !isPanning) {
+            panPotential = false;
+            // Le clic simple sera géré par le listener de désélection existant
+        }
+    });
+
 });
