@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
         saveToLocalStorage(); // Sauvegarde auto
     });
 
-    function createZoneDOM(id, labelNum, autoSelect = true) {
+    function createZoneDOM(id, labelNum) {
         const zone = document.createElement('div');
         zone.classList.add('zone');
         zone.id = id;
@@ -109,7 +109,10 @@ document.addEventListener('DOMContentLoaded', () => {
         zone.style.fontSize = '12pt';
         zone.style.textAlign = 'left';
         zone.style.color = '#000000';
-        zone.style.backgroundColor = 'transparent';
+        // Styles par défaut fond/transparence
+        zone.style.backgroundColor = 'transparent'; 
+        // Alignement vertical par défaut (flex)
+        zone.style.alignItems = 'flex-start'; 
 
         // Élément interne pour le texte (Aperçu)
         const contentSpan = document.createElement('div');
@@ -132,9 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         a4Page.appendChild(zone);
-        if (autoSelect) {
-            selectZone(id);
-        }
+        selectZone(id);
     }
 
     // --- 2. SÉLECTIONNER ET CHARGER LES DONNÉES ---
@@ -200,10 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Mise à jour visuelle (Aperçu approximatif)
         contentEl.innerText = inputContent.value;
         zoneEl.style.fontFamily = inputFont.value + ", sans-serif";
-        
-        // Couleur du texte (appliquée sur parent ET enfant pour cohérence)
-        zoneEl.style.color = inputColor.value;
-        contentEl.style.color = inputColor.value;
+        // Note: Le rendu 'pt' web n'est pas 100% identique au print, mais proche
         
         // Application de la taille (Soit Copyfit, soit Taille Fixe)
         if (chkCopyfit.checked) {
@@ -211,6 +209,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             zoneEl.style.fontSize = inputSize.value + 'pt';
         }
+        
+        zoneEl.style.color = inputColor.value;
         
         // Fond
         if (chkTransparent.checked) {
@@ -222,48 +222,58 @@ document.addEventListener('DOMContentLoaded', () => {
         // Verrouillage (Visuel)
         if (chkLock.checked) {
             zoneEl.classList.add('locked');
+            // Cacher les poignées si verrouillé
             zoneEl.querySelectorAll('.handle').forEach(h => h.style.display = 'none');
         } else {
             zoneEl.classList.remove('locked');
-            if(selectedZoneId === zoneEl.id) {
+            // Réafficher les poignées si sélectionné ET non verrouillé
+            // (Mais attention, si on vient de déverrouiller, on veut peut-être voir les poignées tout de suite car on est sélectionné)
+             if(selectedZoneId === zoneEl.id) {
                 zoneEl.querySelectorAll('.handle').forEach(h => h.style.display = 'block');
-            }
+             }
         }
         
-        // Alignements
+        // Alignement Horizontal (géré par le texte lui-même)
         contentEl.style.textAlign = inputAlign.value;
+        
+        // Alignement Vertical
+        // Comme .zone-content est en flex-column, l'axe principal (vertical) est géré par justify-content
         contentEl.style.justifyContent = mapValignToFlex(inputValign.value);
+        
+        // Nettoyage des styles conflictuels sur le parent
+        zoneEl.style.alignItems = 'normal'; 
+        zoneEl.style.justifyContent = 'normal';
 
-        saveToLocalStorage();
+        // Appliquer le Copy Fitting si activé
+        if (chkCopyfit.checked) {
+            applyCopyFit(zoneEl, zonesData[selectedZoneId]);
+        } else {
+            // Si désactivé, on remet la taille normale définie
+            zoneEl.style.fontSize = inputSize.value + 'pt';
+        }
+
+        saveToLocalStorage(); // Sauvegarder à chaque modif
     }
 
     // --- FONCTION COPY FITTING (Ajustement automatique) ---
-    function applyCopyfit(zoneEl, maxSizePt) {
-        if (!zoneEl) return;
+    function applyCopyFit(zoneEl, data) {
         const contentEl = zoneEl.querySelector('.zone-content');
-        // Si on passe un objet data au lieu d'un nombre, on extrait la taille
-        const targetSize = typeof maxSizePt === 'object' ? parseInt(maxSizePt.size) : parseInt(maxSizePt); 
-        
-        if (isNaN(targetSize)) return;
-
+        const targetSize = parseInt(data.size); // Taille max désirée (en pt)
         let currentSize = targetSize;
-        const minSize = 4; // Taille minimum de sécurité
         
-        // 1. On commence par la taille max (Reset)
+        // Reset à la taille max pour commencer
         zoneEl.style.fontSize = currentSize + 'pt';
         
-        // 2. Tant que ça déborde, on réduit
-        // On utilise une petite boucle de sécurité pour éviter le freeze navigateur
-        let iterations = 0;
+        // Tant que le contenu déborde (hauteur ou largeur), on réduit
+        // Note: scrollHeight/Width incluent le padding, offsetHeight/Width la taille visible
+        // On utilise une tolérance de 1px pour les arrondis
         while (
             (contentEl.scrollHeight > zoneEl.clientHeight || 
              contentEl.scrollWidth > zoneEl.clientWidth) && 
-            currentSize > minSize &&
-            iterations < 100
+            currentSize > 4 // Taille minimum de sécurité
         ) {
-            currentSize -= 0.5; 
+            currentSize -= 0.5; // Pas de réduction de 0.5pt
             zoneEl.style.fontSize = currentSize + 'pt';
-            iterations++;
         }
     }
 
@@ -390,7 +400,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Recalculer le CopyFit pendant le redimensionnement pour effet temps réel
             if (zonesData[selectedZoneId].copyfit) {
-                applyCopyfit(zone, zonesData[selectedZoneId].size);
+                applyCopyFit(zone, zonesData[selectedZoneId]);
             }
         }
     });
@@ -431,7 +441,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Restaurer chaque zone
             for (const [id, data] of Object.entries(parsedZones)) {
                 zonesData[id] = data;
-                createZoneDOM(id, id.split('-')[1], false); // NE PAS auto-sélectionner pendant le chargement
+                createZoneDOM(id, id.split('-')[1]); // Recréer le DOM
                 
                 // Appliquer position/taille sauvegardées
                 const zoneEl = document.getElementById(id);
@@ -440,36 +450,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.w) zoneEl.style.width = data.w + 'px';
                 if (data.h) zoneEl.style.height = data.h + 'px';
                 
-                // APPLIQUER TOUS LES STYLES AVANT TOUT LE RESTE
-                const contentEl = zoneEl.querySelector('.zone-content');
+                // Appliquer style initial complet
+                if (data.isTransparent) zoneEl.style.backgroundColor = 'transparent';
+                else zoneEl.style.backgroundColor = data.bgColor;
                 
-                // Couleurs (PRIORITÉ)
-                zoneEl.style.color = data.color;
-                contentEl.style.color = data.color;
-                
-                // Fond
-                if (data.isTransparent) {
-                    zoneEl.style.backgroundColor = 'transparent';
-                } else {
-                    zoneEl.style.backgroundColor = data.bgColor || '#ffffff';
-                }
-                
-                // Police et taille
                 zoneEl.style.fontFamily = data.font + ", sans-serif";
+                // Appliquer Copyfit si activé
                 if (data.copyfit) {
                     applyCopyfit(zoneEl, data.size);
                 } else {
                     zoneEl.style.fontSize = data.size + 'pt';
                 }
                 
-                // Alignements
-                contentEl.style.textAlign = data.align;
-                contentEl.style.justifyContent = mapValignToFlex(data.valign || 'top');
-                
-                // Verrouillage
+                // Appliquer verrouillage
                 if (data.locked) {
                      zoneEl.classList.add('locked');
                      zoneEl.querySelectorAll('.handle').forEach(h => h.style.display = 'none');
+                }
+
+                // Appliquer alignements (Horizontal / Vertical)
+                const contentEl = zoneEl.querySelector('.zone-content');
+                contentEl.style.textAlign = data.align;
+                contentEl.style.justifyContent = mapValignToFlex(data.valign || 'top');
+                
+                // Appliquer le copyfit au chargement
+                if (data.copyfit) {
+                    applyCopyFit(zoneEl, data);
                 }
             }
         }
