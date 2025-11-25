@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const a4Page = document.getElementById('a4-page');
     const workspace = document.querySelector('.workspace');
     const btnAdd = document.getElementById('btn-add-zone');
+    const btnAddQr = document.getElementById('btn-add-qr');
     const btnDelete = document.getElementById('btn-delete-zone');
     const btnReset = document.getElementById('btn-reset');
     const btnGenerate = document.getElementById('btn-generate-json');
@@ -28,6 +29,29 @@ document.addEventListener('DOMContentLoaded', () => {
     const chkLock = document.getElementById('chk-lock');
     const chkCopyfit = document.getElementById('chk-copyfit'); // Copy Fitting
     const inputLineHeight = document.getElementById('input-line-height'); // Interlignage
+
+    const textControls = [
+        inputContent,
+        inputFont,
+        inputSize,
+        inputColor,
+        inputAlign,
+        inputValign,
+        inputBgColor,
+        chkTransparent,
+        chkCopyfit,
+        inputLineHeight
+    ];
+
+    function setTextControlsEnabled(enabled) {
+        textControls.forEach(ctrl => {
+            if (!ctrl) return;
+            ctrl.disabled = !enabled;
+        });
+        inputContent.placeholder = enabled ? "Ex: Cher {{NOM}}," : "Zone QR statique (non modifiable)";
+    }
+
+    setTextControlsEnabled(true);
 
     // Inputs géométrie
     const inputX = document.getElementById('val-x');
@@ -87,6 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Initialiser les données par défaut pour cette zone
         zonesData[id] = {
+            type: 'text',
             content: `Texte Zone ${zoneCounter}`,
             font: 'Roboto',
             size: 12,
@@ -104,39 +129,64 @@ document.addEventListener('DOMContentLoaded', () => {
         saveToLocalStorage(); // Sauvegarde auto
     });
 
+    btnAddQr.addEventListener('click', () => {
+        zoneCounter++;
+        const id = `zone-${zoneCounter}`;
+        zonesData[id] = {
+            type: 'qr',
+            qrColor: '#000000',
+            bgColor: '#ffffff',
+            locked: false
+        };
+        createZoneDOM(id, zoneCounter);
+        saveToLocalStorage();
+    });
+
     function createZoneDOM(id, labelNum, autoSelect = true) {
+        const zoneData = zonesData[id] || {};
+        const zoneType = zoneData.type || 'text';
+        zonesData[id] = { type: zoneType, ...zoneData };
+
         const zone = document.createElement('div');
         zone.classList.add('zone');
-        // Ajouter l'animation seulement si c'est une nouvelle création (autoSelect = true)
-        // Si autoSelect est false, c'est un chargement depuis le localStorage, donc pas d'animation
+        if (zoneType === 'qr') {
+            zone.classList.add('zone-qr');
+        }
         if (autoSelect) {
             zone.classList.add('zone-appear-anim');
-            // Retirer la classe après l'animation pour nettoyer
-            setTimeout(() => {
-                zone.classList.remove('zone-appear-anim');
-            }, 1000);
+            setTimeout(() => zone.classList.remove('zone-appear-anim'), 1000);
         }
         zone.id = id;
         
-        // Style initial par défaut
-        zone.style.width = '200px';
-        zone.style.height = '40px';
-        zone.style.left = '50px';
-        zone.style.top = (50 + (labelNum * 20)) + 'px';
-        zone.style.fontFamily = 'Roboto, sans-serif'; // Visuel web
-        zone.style.fontSize = '12pt';
-        zone.style.textAlign = 'left';
-        zone.style.color = '#000000';
-        // Styles par défaut fond/transparence
-        zone.style.backgroundColor = 'transparent'; 
-        // Alignement vertical par défaut (flex)
-        zone.style.alignItems = 'flex-start'; 
+        if (zoneType === 'qr') {
+            const defaultSize = zoneData.w || zoneData.h || 100;
+            zone.style.width = defaultSize + 'px';
+            zone.style.height = defaultSize + 'px';
+            zone.style.left = (zoneData.x !== undefined ? zoneData.x : 50) + 'px';
+            zone.style.top = (zoneData.y !== undefined ? zoneData.y : (50 + (labelNum * 20))) + 'px';
+            zone.style.backgroundColor = '#ffffff';
+            const qrWrapper = document.createElement('div');
+            qrWrapper.classList.add('zone-content');
+            qrWrapper.innerHTML = getQrPlaceholderSvg();
+            zone.appendChild(qrWrapper);
+        } else {
+            // Style initial par défaut pour le texte
+            zone.style.width = '200px';
+            zone.style.height = '40px';
+            zone.style.left = '50px';
+            zone.style.top = (50 + (labelNum * 20)) + 'px';
+            zone.style.fontFamily = 'Roboto, sans-serif';
+            zone.style.fontSize = '12pt';
+            zone.style.textAlign = 'left';
+            zone.style.color = '#000000';
+            zone.style.backgroundColor = 'transparent';
+            zone.style.alignItems = 'flex-start';
 
-        // Élément interne pour le texte (Aperçu)
-        const contentSpan = document.createElement('div');
-        contentSpan.classList.add('zone-content');
-        contentSpan.innerText = zonesData[id].content;
-        zone.appendChild(contentSpan);
+            const contentSpan = document.createElement('div');
+            contentSpan.classList.add('zone-content');
+            contentSpan.innerText = zonesData[id].content;
+            zone.appendChild(contentSpan);
+        }
 
         // Poignées
         ['nw', 'ne', 'sw', 'se'].forEach(pos => {
@@ -176,17 +226,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // CHARGER LES DONNÉES DANS LE FORMULAIRE
         const data = zonesData[id];
-        inputContent.value = data.content;
-        inputFont.value = data.font;
-        inputSize.value = data.size;
-        inputColor.value = data.color;
-        inputAlign.value = data.align;
-        inputValign.value = data.valign || 'top'; // Rétrocompatibilité
-        inputBgColor.value = data.bgColor || '#ffffff';
-        chkTransparent.checked = data.isTransparent !== undefined ? data.isTransparent : true;
+        const zoneType = data.type || 'text';
+        zonesData[id].type = zoneType;
+
+        if (zoneType === 'qr') {
+            setTextControlsEnabled(false);
+            inputContent.value = 'Zone QR statique (non modifiable)';
+            inputFont.value = 'Roboto';
+            inputSize.value = 12;
+            inputColor.value = '#000000';
+            inputAlign.value = 'center';
+            inputValign.value = 'middle';
+            inputBgColor.value = '#ffffff';
+            chkTransparent.checked = false;
+            chkCopyfit.checked = false;
+            inputLineHeight.value = 1.0;
+        } else {
+            setTextControlsEnabled(true);
+            inputContent.value = data.content;
+            inputFont.value = data.font;
+            inputSize.value = data.size;
+            inputColor.value = data.color;
+            inputAlign.value = data.align;
+            inputValign.value = data.valign || 'top'; // Rétrocompatibilité
+            inputBgColor.value = data.bgColor || '#ffffff';
+            chkTransparent.checked = data.isTransparent !== undefined ? data.isTransparent : true;
+            chkCopyfit.checked = data.copyfit || false;
+            inputLineHeight.value = data.lineHeight !== undefined ? data.lineHeight : 1.2; // Rétrocompatibilité
+        }
         chkLock.checked = data.locked || false;
-        chkCopyfit.checked = data.copyfit || false;
-        inputLineHeight.value = data.lineHeight !== undefined ? data.lineHeight : 1.2; // Rétrocompatibilité
         
         // Gestion état UI couleur fond
         inputBgColor.disabled = chkTransparent.checked;
@@ -201,7 +269,21 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateActiveZoneData() {
         if (!selectedZoneId) return;
         const zoneEl = document.getElementById(selectedZoneId);
+        const zoneType = zonesData[selectedZoneId].type || 'text';
         const contentEl = zoneEl.querySelector('.zone-content');
+
+        if (zoneType === 'qr') {
+            zonesData[selectedZoneId].locked = chkLock.checked;
+            if (chkLock.checked) {
+                zoneEl.classList.add('locked');
+                zoneEl.querySelectorAll('.handle').forEach(h => h.style.display = 'none');
+            } else {
+                zoneEl.classList.remove('locked');
+                zoneEl.querySelectorAll('.handle').forEach(h => h.style.display = 'block');
+            }
+            saveToLocalStorage();
+            return;
+        }
 
         // Mise à jour de l'objet de données
         zonesData[selectedZoneId].content = inputContent.value;
@@ -328,6 +410,20 @@ document.addEventListener('DOMContentLoaded', () => {
         return 'flex-start'; // top
     }
 
+    function getQrPlaceholderSvg() {
+        return `
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="100" fill="#ffffff" />
+    <rect x="5" y="5" width="25" height="25" fill="#000000" />
+    <rect x="70" y="5" width="25" height="25" fill="#000000" />
+    <rect x="5" y="70" width="25" height="25" fill="#000000" />
+    <rect x="32" y="32" width="12" height="12" fill="#000000" />
+    <rect x="50" y="32" width="12" height="12" fill="#000000" />
+    <rect x="32" y="50" width="12" height="12" fill="#000000" />
+    <rect x="50" y="50" width="12" height="12" fill="#000000" />
+</svg>`;
+    }
+
     // Attacher les écouteurs
     [inputContent, inputFont, inputSize, inputColor, inputAlign, inputValign, inputBgColor, chkTransparent, chkLock, chkCopyfit, inputLineHeight].forEach(el => {
         el.addEventListener('input', updateActiveZoneData);
@@ -357,6 +453,7 @@ document.addEventListener('DOMContentLoaded', () => {
             coordsPanel.style.opacity = 0.5;
             coordsPanel.style.pointerEvents = 'none';
             lblSelected.innerText = "Aucune";
+            setTextControlsEnabled(true);
         }
     }
 
@@ -443,14 +540,20 @@ document.addEventListener('DOMContentLoaded', () => {
             if (currentHandle.includes('w')) { /* ... logique complexe ... */ }
             if (currentHandle.includes('s')) newH = startH + dy;
             
-            if (newW > 20) zone.style.width = newW + 'px';
-            if (newH > 20) zone.style.height = newH + 'px';
-            updateGeomDisplay(zone);
-            
-            // Recalculer le CopyFit pendant le redimensionnement pour effet temps réel
-            if (zonesData[selectedZoneId].copyfit) {
-                applyCopyfit(zone, zonesData[selectedZoneId].size);
+            if (zonesData[selectedZoneId].type === 'qr') {
+                const size = Math.max(40, Math.max(newW, newH));
+                zone.style.width = size + 'px';
+                zone.style.height = size + 'px';
+            } else {
+                if (newW > 20) zone.style.width = newW + 'px';
+                if (newH > 20) zone.style.height = newH + 'px';
+                
+                // Recalculer le CopyFit pendant le redimensionnement pour effet temps réel
+                if (zonesData[selectedZoneId].copyfit) {
+                    applyCopyfit(zone, zonesData[selectedZoneId].size);
+                }
             }
+            updateGeomDisplay(zone);
         }
     });
 
@@ -489,7 +592,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Restaurer chaque zone
             for (const [id, data] of Object.entries(parsedZones)) {
-                zonesData[id] = data;
+                zonesData[id] = { type: data.type || 'text', ...data };
                 createZoneDOM(id, id.split('-')[1], false); // NE PAS auto-sélectionner pendant le chargement
                 
                 // Appliquer position/taille sauvegardées
@@ -501,6 +604,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // APPLIQUER TOUS LES STYLES AVANT TOUT LE RESTE
                 const contentEl = zoneEl.querySelector('.zone-content');
+                const zoneType = zonesData[id].type || 'text';
+                
+                if (zoneType === 'qr') {
+                    zoneEl.classList.add('zone-qr');
+                    if (contentEl && !contentEl.innerHTML.trim()) {
+                        contentEl.innerHTML = getQrPlaceholderSvg();
+                    }
+                    if (data.locked) {
+                        zoneEl.classList.add('locked');
+                        zoneEl.querySelectorAll('.handle').forEach(h => h.style.display = 'none');
+                    }
+                    continue;
+                }
                 
                 // Couleurs (PRIORITÉ)
                 zoneEl.style.color = data.color;
@@ -551,30 +667,45 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const [id, data] of Object.entries(zonesData)) {
             const el = document.getElementById(id);
             if(el) { // Sécurité si élément DOM existe encore
-                zonesOutput.push({
-                    id: id,
-                    // Positionnement Précis
-                    geometry: {
-                        x_mm: (el.offsetLeft * MM_PER_PIXEL).toFixed(2),
-                        y_mm: (el.offsetTop * MM_PER_PIXEL).toFixed(2),
-                        width_mm: (el.offsetWidth * MM_PER_PIXEL).toFixed(2),
-                        height_mm: (el.offsetHeight * MM_PER_PIXEL).toFixed(2)
-                    },
-                    // Style & Contenu
-                    content: data.content,
-                    style: {
-                        font: data.font,
-                        size_pt: data.size,
-                        color: data.color,
-                        align: data.align,
-                        valign: data.valign,
-                        lineHeight: data.lineHeight !== undefined ? data.lineHeight : 1.2,
-                        bgColor: data.isTransparent ? null : data.bgColor,
-                        transparent: data.isTransparent,
-                        locked: data.locked,
-                        copyfit: data.copyfit
-                    }
-                });
+                const geometry = {
+                    x_mm: (el.offsetLeft * MM_PER_PIXEL).toFixed(2),
+                    y_mm: (el.offsetTop * MM_PER_PIXEL).toFixed(2),
+                    width_mm: (el.offsetWidth * MM_PER_PIXEL).toFixed(2),
+                    height_mm: (el.offsetHeight * MM_PER_PIXEL).toFixed(2)
+                };
+
+                const zoneType = data.type || 'text';
+                if (zoneType === 'qr') {
+                    zonesOutput.push({
+                        id,
+                        type: 'qr',
+                        geometry,
+                        qr: {
+                            color: data.qrColor || '#000000',
+                            background: '#ffffff'
+                        },
+                        locked: data.locked || false
+                    });
+                } else {
+                    zonesOutput.push({
+                        id,
+                        type: 'text',
+                        geometry,
+                        content: data.content,
+                        style: {
+                            font: data.font,
+                            size_pt: data.size,
+                            color: data.color,
+                            align: data.align,
+                            valign: data.valign,
+                            lineHeight: data.lineHeight !== undefined ? data.lineHeight : 1.2,
+                            bgColor: data.isTransparent ? null : data.bgColor,
+                            transparent: data.isTransparent,
+                            locked: data.locked,
+                            copyfit: data.copyfit
+                        }
+                    });
+                }
             }
         }
 
