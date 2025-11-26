@@ -102,13 +102,41 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedZoneId = null; 
 
     // --- STOCKAGE DES DONNÉES (Le "Cerveau") ---
-    // Structure : { 'zone-1': { content: '...', font: '...', size: 12, ... }, ... }
-    const zonesData = {}; 
+    // Nouvelle structure hiérarchique multipage
+    let documentState = {
+        currentPageIndex: 0, // 0 = Recto
+        pages: [
+            { id: 'page-1', name: 'Recto', image: 'a4_template_recto.jpg', zones: {} },
+            { id: 'page-2', name: 'Verso', image: 'a4_template_verso.jpg', zones: {} }
+        ],
+        zoneCounter: 0 // Compteur global pour ID uniques
+    };
+
+    // --- FONCTIONS HELPER POUR ACCÈS AUX DONNÉES ---
+    function getCurrentPage() {
+        return documentState.pages[documentState.currentPageIndex];
+    }
+
+    function getCurrentPageZones() {
+        return getCurrentPage().zones;
+    }
+
+    function setCurrentPageZones(zones) {
+        getCurrentPage().zones = zones;
+    }
+
+    // Rétrocompatibilité : zonesData pointe vers les zones de la page courante
+    // (pour faciliter la migration progressive)
+    function getZonesData() {
+        return getCurrentPageZones();
+    } 
 
     // --- 1. AJOUTER UNE ZONE ---
     btnAdd.addEventListener('click', () => {
-        zoneCounter++;
+        documentState.zoneCounter++;
+        zoneCounter = documentState.zoneCounter; // Synchroniser pour compatibilité
         const id = `zone-${zoneCounter}`;
+        const zonesData = getCurrentPageZones();
         
         // Initialiser les données par défaut pour cette zone
         zonesData[id] = {
@@ -131,8 +159,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     btnAddQr.addEventListener('click', () => {
-        zoneCounter++;
+        documentState.zoneCounter++;
+        zoneCounter = documentState.zoneCounter; // Synchroniser pour compatibilité
         const id = `zone-${zoneCounter}`;
+        const zonesData = getCurrentPageZones();
         zonesData[id] = {
             type: 'qr',
             qrColor: '#000000',
@@ -144,6 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function createZoneDOM(id, labelNum, autoSelect = true) {
+        const zonesData = getCurrentPageZones();
         const zoneData = zonesData[id] || {};
         const zoneType = zoneData.type || 'text';
         zonesData[id] = { type: zoneType, ...zoneData };
@@ -185,7 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const contentSpan = document.createElement('div');
             contentSpan.classList.add('zone-content');
-            contentSpan.innerText = zonesData[id].content;
+            contentSpan.innerText = zonesData[id]?.content || '';
             zone.appendChild(contentSpan);
         }
 
@@ -226,6 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
         lblSelected.innerText = `Zone ${id.split('-')[1]}`;
 
         // CHARGER LES DONNÉES DANS LE FORMULAIRE
+        const zonesData = getCurrentPageZones();
         const data = zonesData[id];
         const zoneType = data.type || 'text';
         zonesData[id].type = zoneType;
@@ -270,6 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateActiveZoneData() {
         if (!selectedZoneId) return;
         const zoneEl = document.getElementById(selectedZoneId);
+        const zonesData = getCurrentPageZones();
         const zoneType = zonesData[selectedZoneId].type || 'text';
         const contentEl = zoneEl.querySelector('.zone-content');
 
@@ -355,7 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Appliquer le Copy Fitting si activé
         if (chkCopyfit.checked) {
-            applyCopyfit(zoneEl, zonesData[selectedZoneId]);
+            applyCopyfit(zoneEl, zonesData[selectedZoneId].size);
         } else {
             // Si désactivé, on remet la taille normale définie
             zoneEl.style.fontSize = inputSize.value + 'pt';
@@ -452,6 +485,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedZoneId) {
             const el = document.getElementById(selectedZoneId);
             if (el) el.remove();
+            const zonesData = getCurrentPageZones();
             delete zonesData[selectedZoneId];
             saveToLocalStorage();
             deselectAll();
@@ -525,10 +559,12 @@ document.addEventListener('DOMContentLoaded', () => {
             // 1. Supprimer toutes les zones du DOM
             document.querySelectorAll('.zone').forEach(el => el.remove());
             
-            // 2. Vider la mémoire
+            // 2. Vider la mémoire de la page courante
+            const zonesData = getCurrentPageZones();
             for (const key in zonesData) delete zonesData[key];
             
             // 3. Réinitialiser le compteur et la sélection
+            documentState.zoneCounter = 0;
             zoneCounter = 0;
             selectedZoneId = null;
             deselectAll(); // Nettoyer l'interface
@@ -550,6 +586,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (selectedZoneId) {
             const zone = document.getElementById(selectedZoneId);
+            const zonesData = getCurrentPageZones();
             // Vérifier si verrouillé
             if (zonesData[selectedZoneId].locked) return; 
             
@@ -582,6 +619,7 @@ document.addEventListener('DOMContentLoaded', () => {
             zone.style.top = Math.max(0, Math.min(startTop + dy, maxTop)) + 'px';
             updateGeomDisplay(zone);
         } else if (isResizing) {
+            const zonesData = getCurrentPageZones();
             const dx = (e.clientX - startX) / zoomLevel;
             const dy = (e.clientY - startY) / zoomLevel;
             let newW = startW, newH = startH;
@@ -620,6 +658,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 6. SAUVEGARDE / CHARGEMENT LOCAL ---
     function saveToLocalStorage() {
         // On ajoute la position/taille actuelle du DOM dans les données avant de sauver
+        const zonesData = getCurrentPageZones();
         for (const [id, data] of Object.entries(zonesData)) {
             const el = document.getElementById(id);
             if (el) {
@@ -629,29 +668,90 @@ document.addEventListener('DOMContentLoaded', () => {
                 data.h = el.offsetHeight;
             }
         }
+        
+        // Synchroniser le compteur global
+        documentState.zoneCounter = zoneCounter;
+        
+        // Sauvegarder la nouvelle structure
+        localStorage.setItem('marketeam_document_state', JSON.stringify(documentState));
+        
+        // Rétrocompatibilité : sauvegarder aussi l'ancien format pour la page courante
         localStorage.setItem('marketeam_zones', JSON.stringify(zonesData));
         localStorage.setItem('marketeam_zone_counter', zoneCounter);
     }
 
     function loadFromLocalStorage() {
+        // Essayer de charger le nouveau format multipage
+        const savedState = localStorage.getItem('marketeam_document_state');
+        
+        if (savedState) {
+            try {
+                const parsedState = JSON.parse(savedState);
+                // Vérifier que c'est bien la nouvelle structure
+                if (parsedState.pages && Array.isArray(parsedState.pages)) {
+                    documentState = parsedState;
+                    zoneCounter = documentState.zoneCounter || 0;
+                    
+                    // FORCER la page 0 (Recto) au chargement initial
+                    // (l'utilisateur peut ensuite naviguer manuellement)
+                    documentState.currentPageIndex = 0;
+                    
+                    // Charger la page courante (maintenant Recto)
+                    loadCurrentPage();
+                    return;
+                }
+            } catch (e) {
+                console.warn('Erreur lors du chargement du nouveau format, migration vers ancien format...', e);
+            }
+        }
+        
+        // MIGRATION : Ancien format détecté, migrer vers la page 0 (Recto)
         const savedZones = localStorage.getItem('marketeam_zones');
         const savedCounter = localStorage.getItem('marketeam_zone_counter');
 
         if (savedZones && savedCounter) {
+            console.log('Migration des données anciennes vers le nouveau format multipage...');
             zoneCounter = parseInt(savedCounter);
+            documentState.zoneCounter = zoneCounter;
+            documentState.currentPageIndex = 0; // Forcer Recto lors de la migration
             const parsedZones = JSON.parse(savedZones);
             
-            // Restaurer chaque zone
-            for (const [id, data] of Object.entries(parsedZones)) {
-                zonesData[id] = { type: data.type || 'text', ...data };
-                createZoneDOM(id, id.split('-')[1], false); // NE PAS auto-sélectionner pendant le chargement
-                
-                // Appliquer position/taille sauvegardées
-                const zoneEl = document.getElementById(id);
-                if (data.x) zoneEl.style.left = data.x + 'px';
-                if (data.y) zoneEl.style.top = data.y + 'px';
-                if (data.w) zoneEl.style.width = data.w + 'px';
-                if (data.h) zoneEl.style.height = data.h + 'px';
+            // Migrer toutes les zones vers la page 0 (Recto)
+            documentState.pages[0].zones = parsedZones;
+            
+            // Charger la page courante
+            loadCurrentPage();
+            
+            // Sauvegarder immédiatement dans le nouveau format
+            saveToLocalStorage();
+        } else {
+            // Aucune donnée sauvegardée : s'assurer qu'on est sur la page 0 (Recto)
+            documentState.currentPageIndex = 0;
+        }
+    }
+
+    function loadCurrentPage() {
+        const currentPage = getCurrentPage();
+        const zonesData = currentPage.zones;
+        
+        // Mettre à jour l'image de fond
+        const bgImg = document.getElementById('a4-background');
+        if (bgImg) {
+            bgImg.src = currentPage.image;
+        }
+        
+        // Restaurer chaque zone de la page courante
+        for (const [id, data] of Object.entries(zonesData)) {
+            zonesData[id] = { type: data.type || 'text', ...data };
+            createZoneDOM(id, id.split('-')[1], false); // NE PAS auto-sélectionner pendant le chargement
+            
+            // Appliquer position/taille sauvegardées
+            const zoneEl = document.getElementById(id);
+            if (zoneEl) {
+                if (data.x !== undefined) zoneEl.style.left = data.x + 'px';
+                if (data.y !== undefined) zoneEl.style.top = data.y + 'px';
+                if (data.w !== undefined) zoneEl.style.width = data.w + 'px';
+                if (data.h !== undefined) zoneEl.style.height = data.h + 'px';
                 
                 // APPLIQUER TOUS LES STYLES AVANT TOUT LE RESTE
                 const contentEl = zoneEl.querySelector('.zone-content');
@@ -670,8 +770,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 // Couleurs (PRIORITÉ)
-                zoneEl.style.color = data.color;
-                contentEl.style.color = data.color;
+                if (data.color) {
+                    zoneEl.style.color = data.color;
+                    if (contentEl) contentEl.style.color = data.color;
+                }
                 
                 // Fond
                 if (data.isTransparent) {
@@ -681,19 +783,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 // Police
-                zoneEl.style.fontFamily = data.font + ", sans-serif";
+                if (data.font) {
+                    zoneEl.style.fontFamily = data.font + ", sans-serif";
+                }
                 
                 // Alignements (DOIT être avant copyfit car copyfit modifie temporairement justifyContent)
-                contentEl.style.textAlign = data.align;
-                contentEl.style.justifyContent = mapValignToFlex(data.valign || 'top');
-                
-                // Interlignage (DOIT être avant copyfit car scrollHeight dépend de lineHeight)
-                contentEl.style.lineHeight = (data.lineHeight !== undefined ? data.lineHeight : 1.2);
+                if (contentEl) {
+                    if (data.align) contentEl.style.textAlign = data.align;
+                    contentEl.style.justifyContent = mapValignToFlex(data.valign || 'top');
+                    
+                    // Interlignage (DOIT être avant copyfit car scrollHeight dépend de lineHeight)
+                    contentEl.style.lineHeight = (data.lineHeight !== undefined ? data.lineHeight : 1.2);
+                }
                 
                 // Taille (Copyfit ou fixe) - DOIT être après alignements et interlignage
                 if (data.copyfit) {
                     applyCopyfit(zoneEl, data.size);
-                } else {
+                } else if (data.size) {
                     zoneEl.style.fontSize = data.size + 'pt';
                 }
                 
@@ -706,24 +812,110 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // --- NAVIGATION MULTIPAGE ---
+    const pageNavButtons = document.querySelectorAll('.page-nav-btn');
+    pageNavButtons.forEach((btn, index) => {
+        btn.addEventListener('click', () => {
+            switchPage(index);
+        });
+    });
+
     // Charger au démarrage
     loadFromLocalStorage();
+    
+    // S'assurer que l'image de fond correspond à la page courante après le chargement
+    // (loadFromLocalStorage() force déjà la page 0, mais on double-vérifie)
+    const bgImg = document.getElementById('a4-background');
+    if (bgImg) {
+        bgImg.src = getCurrentPage().image;
+    }
+    
+    // Initialiser l'UI de navigation
+    updatePageNavigationUI();
+
+    // --- FONCTION DE CHANGEMENT DE PAGE ---
+    function switchPage(pageIndex) {
+        if (pageIndex < 0 || pageIndex >= documentState.pages.length) {
+            console.warn('Index de page invalide:', pageIndex);
+            return;
+        }
+
+        // 1. Sauvegarder l'état de la page actuelle (positions, styles)
+        saveToLocalStorage();
+
+        // 2. Désélectionner toute zone active
+        deselectAll();
+
+        // 3. Vider le workspace (supprimer toutes les zones du DOM)
+        document.querySelectorAll('.zone').forEach(el => el.remove());
+
+        // 4. Changer l'index de page courante
+        documentState.currentPageIndex = pageIndex;
+
+        // 5. Changer l'image de fond
+        const bgImg = document.getElementById('a4-background');
+        const currentPage = getCurrentPage();
+        if (bgImg) {
+            bgImg.src = currentPage.image;
+        }
+
+        // 6. Charger et afficher les zones de la nouvelle page
+        loadCurrentPage();
+
+        // 7. Remettre le zoom à 100% lors du changement de page
+        setZoom(1.0);
+
+        // 8. Mettre à jour l'interface de navigation
+        updatePageNavigationUI();
+
+        // 9. Le pan est préservé automatiquement
+    }
+
+    function updatePageNavigationUI() {
+        // Mettre à jour les boutons de navigation
+        const pageButtons = document.querySelectorAll('.page-nav-btn');
+        pageButtons.forEach((btn, index) => {
+            if (index === documentState.currentPageIndex) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+    }
 
     // --- 7. GÉNÉRATION ET TÉLÉCHARGEMENT JSON FINALE ---
     btnGenerate.addEventListener('click', () => {
         saveToLocalStorage(); // Sauvegarde aussi quand on génère le JSON
-        const zonesOutput = [];
         
-        // On parcourt l'objet de données
-        for (const [id, data] of Object.entries(zonesData)) {
-            const el = document.getElementById(id);
-            if(el) { // Sécurité si élément DOM existe encore
-                const geometry = {
-                    x_mm: (el.offsetLeft * MM_PER_PIXEL).toFixed(2),
-                    y_mm: (el.offsetTop * MM_PER_PIXEL).toFixed(2),
-                    width_mm: (el.offsetWidth * MM_PER_PIXEL).toFixed(2),
-                    height_mm: (el.offsetHeight * MM_PER_PIXEL).toFixed(2)
-                };
+        // Générer le JSON pour toutes les pages
+        const pagesOutput = documentState.pages.map((page, pageIndex) => {
+            const zonesOutput = [];
+            const zonesData = page.zones;
+            
+            // On parcourt l'objet de données de cette page
+            for (const [id, data] of Object.entries(zonesData)) {
+                // Note: Les zones du DOM ne sont visibles que pour la page courante
+                // Pour les autres pages, on utilise les données sauvegardées
+                const el = document.getElementById(id);
+                
+                let geometry;
+                if (el && pageIndex === documentState.currentPageIndex) {
+                    // Page courante : utiliser les dimensions du DOM
+                    geometry = {
+                        x_mm: (el.offsetLeft * MM_PER_PIXEL).toFixed(2),
+                        y_mm: (el.offsetTop * MM_PER_PIXEL).toFixed(2),
+                        width_mm: (el.offsetWidth * MM_PER_PIXEL).toFixed(2),
+                        height_mm: (el.offsetHeight * MM_PER_PIXEL).toFixed(2)
+                    };
+                } else {
+                    // Autres pages : utiliser les données sauvegardées
+                    geometry = {
+                        x_mm: (data.x * MM_PER_PIXEL).toFixed(2),
+                        y_mm: (data.y * MM_PER_PIXEL).toFixed(2),
+                        width_mm: (data.w * MM_PER_PIXEL).toFixed(2),
+                        height_mm: (data.h * MM_PER_PIXEL).toFixed(2)
+                    };
+                }
 
                 const zoneType = data.type || 'text';
                 if (zoneType === 'qr') {
@@ -758,13 +950,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
             }
-        }
+            
+            return {
+                page_id: page.id,
+                page_name: page.name,
+                image: page.image,
+                zones: zonesOutput
+            };
+        });
 
         const output = {
-            document: "a4_template.jpg",
+            document: "a4_template_multipage",
             scale_reference: "96 DPI", // Important pour le moteur BAT
             generated_at: new Date().toISOString(),
-            zones: zonesOutput
+            pages: pagesOutput
         };
         
         const jsonString = JSON.stringify(output, null, 2);

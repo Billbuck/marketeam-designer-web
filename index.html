@@ -13,6 +13,20 @@
         
         <div class="toolbar">
             <h2>Outils</h2>
+            
+            <!-- Navigation multipage -->
+            <div class="page-navigation" style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eee;">
+                <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #555;">Pages</h3>
+                <div class="page-nav-buttons" style="display: flex; gap: 5px;">
+                    <button class="page-nav-btn btn-primary" data-page-index="0" style="flex: 1;">
+                        <span class="material-icons" style="font-size: 16px;">description</span> Recto
+                    </button>
+                    <button class="page-nav-btn btn-primary" data-page-index="1" style="flex: 1;">
+                        <span class="material-icons" style="font-size: 16px;">description</span> Verso
+                    </button>
+                </div>
+            </div>
+            
             <button id="btn-add-zone" class="btn-primary">
                 <span class="material-icons">add_box</span> Ajouter une zone de texte
             </button>
@@ -169,7 +183,7 @@
         <div class="workspace">
             <div class="workspace-canvas">
                 <div id="a4-page">
-                    <img src="a4_template.jpg" alt="Fond A4" id="a4-background">
+                    <img src="a4_template_recto.jpg" alt="Fond A4" id="a4-background">
                 </div>
             </div>
         </div>
