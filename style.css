@@ -26,11 +26,20 @@ body {
 
 .workspace {
     flex-grow: 1;
+    overflow: auto;
+    background-color: #e0e0e0;
+}
+
+.workspace-canvas {
+    /* Ce conteneur aura une taille dynamique définie par JS */
+    /* Il permet le centrage du document et l'affichage du fond gris */
     display: flex;
     justify-content: center;
-    align-items: flex-start;
-    padding: 40px;
-    overflow: auto;
+    align-items: center;
+    box-sizing: border-box;
+    /* Taille minimale = 100% du workspace pour le centrage */
+    min-width: 100%;
+    min-height: 100%;
 }
 
 /* --- Boutons --- */

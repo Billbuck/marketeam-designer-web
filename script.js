@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- ÉLÉMENTS DOM ---
     const a4Page = document.getElementById('a4-page');
     const workspace = document.querySelector('.workspace');
+    const workspaceCanvas = document.querySelector('.workspace-canvas');
     const btnAdd = document.getElementById('btn-add-zone');
     const btnAddQr = document.getElementById('btn-add-qr');
     const btnDelete = document.getElementById('btn-delete-zone');
@@ -522,8 +523,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const zone = document.getElementById(selectedZoneId);
 
         if (isDragging) {
-            const dx = e.clientX - startX;
-            const dy = e.clientY - startY;
+            const dx = (e.clientX - startX) / zoomLevel;
+            const dy = (e.clientY - startY) / zoomLevel;
             const maxLeft = a4Page.offsetWidth - zone.offsetWidth;
             const maxTop = a4Page.offsetHeight - zone.offsetHeight;
 
@@ -531,8 +532,8 @@ document.addEventListener('DOMContentLoaded', () => {
             zone.style.top = Math.max(0, Math.min(startTop + dy, maxTop)) + 'px';
             updateGeomDisplay(zone);
         } else if (isResizing) {
-            const dx = e.clientX - startX;
-            const dy = e.clientY - startY;
+            const dx = (e.clientX - startX) / zoomLevel;
+            const dy = (e.clientY - startY) / zoomLevel;
             let newW = startW, newH = startH;
             
             // Simplification redimensionnement (juste SE pour l'exemple, ou complet comme avant)
@@ -734,6 +735,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 8. FONCTIONNALITÉ ZOOM ---
     let zoomLevel = 1.0; // 100% par défaut
+    const PAGE_WIDTH = 794;
+    const PAGE_HEIGHT = 1123;
+    const CANVAS_PADDING = 60;
 
     function setZoom(level) {
         // Limiter le zoom entre 25% et 200%
@@ -741,34 +745,48 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Appliquer le zoom avec transform: scale()
         a4Page.style.transform = `scale(${zoomLevel})`;
-        a4Page.style.transformOrigin = 'top left';
+        a4Page.style.transformOrigin = 'center center';
+        
+        // Calculer les dimensions du document zoomé
+        const scaledWidth = PAGE_WIDTH * zoomLevel;
+        const scaledHeight = PAGE_HEIGHT * zoomLevel;
+        
+        // Dimensions nécessaires pour le canvas (document + marge grise)
+        const neededWidth = scaledWidth + CANVAS_PADDING * 2;
+        const neededHeight = scaledHeight + CANVAS_PADDING * 2;
+        
+        // Dimensions du workspace (viewport)
+        const workspaceWidth = workspace.clientWidth;
+        const workspaceHeight = workspace.clientHeight;
+        
+        // Le canvas doit être au moins aussi grand que le workspace (pour le centrage)
+        // ou plus grand si le document zoomé le nécessite
+        const canvasWidth = Math.max(workspaceWidth, neededWidth);
+        const canvasHeight = Math.max(workspaceHeight, neededHeight);
+        
+        // Appliquer la taille au canvas
+        workspaceCanvas.style.width = canvasWidth + 'px';
+        workspaceCanvas.style.height = canvasHeight + 'px';
         
         // Mettre à jour l'interface
         zoomSlider.value = Math.round(zoomLevel * 100);
         zoomValue.textContent = Math.round(zoomLevel * 100) + '%';
         
-        // Ajuster le scroll pour centrer la page après zoom
-        setTimeout(() => {
-            centerWorkspace();
-        }, 10);
+        // Centrer le document dans le workspace
+        centerWorkspace();
     }
 
     function centerWorkspace() {
-        // Les dimensions réelles de la page A4 (794x1123px à 96 DPI)
-        const pageWidth = 794;
-        const pageHeight = 1123;
-        
-        // Calculer les dimensions de la page zoomée
-        const scaledWidth = pageWidth * zoomLevel;
-        const scaledHeight = pageHeight * zoomLevel;
-        
-        // Centrer horizontalement et verticalement dans le workspace
+        // Dimensions du canvas et du workspace
+        const canvasWidth = workspaceCanvas.offsetWidth;
+        const canvasHeight = workspaceCanvas.offsetHeight;
         const workspaceWidth = workspace.clientWidth;
         const workspaceHeight = workspace.clientHeight;
         
-        // Position de scroll pour centrer (en tenant compte du padding du workspace)
-        const scrollLeft = Math.max(0, (scaledWidth - workspaceWidth) / 2);
-        const scrollTop = Math.max(0, (scaledHeight - workspaceHeight) / 2);
+        // Si le canvas est plus grand que le workspace, on centre via scroll
+        // Sinon, le flexbox du canvas centre automatiquement le document
+        const scrollLeft = Math.max(0, (canvasWidth - workspaceWidth) / 2);
+        const scrollTop = Math.max(0, (canvasHeight - workspaceHeight) / 2);
         
         workspace.scrollLeft = scrollLeft;
         workspace.scrollTop = scrollTop;
