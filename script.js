@@ -433,10 +433,50 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 4. SUPPRESSION & DÉSÉLECTION ---
     
+    // Gestion de la modale de suppression
+    const modalOverlay = document.getElementById('confirmation-modal');
+    const btnModalCancel = document.getElementById('btn-modal-cancel');
+    const btnModalConfirm = document.getElementById('btn-modal-confirm');
+
+    function showDeleteConfirmation() {
+        if (selectedZoneId) {
+            modalOverlay.classList.remove('hidden');
+        }
+    }
+
+    function hideDeleteConfirmation() {
+        modalOverlay.classList.add('hidden');
+    }
+
+    function confirmDeletion() {
+        if (selectedZoneId) {
+            const el = document.getElementById(selectedZoneId);
+            if (el) el.remove();
+            delete zonesData[selectedZoneId];
+            saveToLocalStorage();
+            deselectAll();
+        }
+        hideDeleteConfirmation();
+    }
+
+    // Écouteurs pour la modale
+    btnModalCancel.addEventListener('click', hideDeleteConfirmation);
+    btnModalConfirm.addEventListener('click', confirmDeletion);
+    
+    // Fermer la modale en cliquant sur le fond gris
+    modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) {
+            hideDeleteConfirmation();
+        }
+    });
+
     // Désélectionner si clic en dehors (sur le fond ou le workspace)
     document.addEventListener('mousedown', (e) => {
-        // Si on clique sur une zone, une poignée ou le panneau de contrôle, on ne fait rien
-        if (e.target.closest('.zone') || e.target.closest('.handle') || e.target.closest('.toolbar')) {
+        // Si on clique sur une zone, une poignée, le panneau de contrôle ou la modale, on ne fait rien
+        if (e.target.closest('.zone') || 
+            e.target.closest('.handle') || 
+            e.target.closest('.toolbar') ||
+            e.target.closest('.modal-box')) {
             return;
         }
         
@@ -459,13 +499,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     btnDelete.addEventListener('click', () => {
-        if (selectedZoneId) {
-            const el = document.getElementById(selectedZoneId);
-            el.remove();
-            delete zonesData[selectedZoneId]; // Supprimer de la mémoire
-            saveToLocalStorage(); // Sauvegarde après suppression
+        showDeleteConfirmation();
+    });
+
+    // Raccourci clavier : Touche Suppr pour supprimer
+    document.addEventListener('keydown', (e) => {
+        // Si la modale est ouverte
+        if (!modalOverlay.classList.contains('hidden')) {
+            if (e.key === 'Enter') confirmDeletion();
+            if (e.key === 'Escape') hideDeleteConfirmation();
+            return;
+        }
+
+        if (selectedZoneId && (e.key === 'Delete' || e.key === 'Del')) {
+            // Ne pas supprimer si l'utilisateur tape dans un input ou textarea
+            if (e.target.matches('input, textarea')) return;
             
-            lblSelected.innerText = "Aucune";
+            showDeleteConfirmation();
         }
     });
 
