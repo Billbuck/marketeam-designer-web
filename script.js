@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const MM_PER_PIXEL = 25.4 / 96;
     let zoneCounter = 0;
-    let selectedZoneId = null;
+    let selectedZoneIds = []; // Tableau pour la sélection multiple
     
     // Déclarer zoomLevel et constantes de page tôt pour qu'ils soient disponibles partout
     let zoomLevel = 1.0; // 100% par défaut
@@ -279,7 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Event: Sélection
         zone.addEventListener('mousedown', (e) => {
             if(e.target.classList.contains('handle')) return;
-            selectZone(id);
+            selectZone(id, e);
         });
 
         a4Page.appendChild(zone);
@@ -288,25 +288,74 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 2. SÉLECTIONNER ET CHARGER LES DONNÉES ---
-    function selectZone(id) {
-        // Gestion visuelle de la sélection précédente
-        if (selectedZoneId) {
-            document.getElementById(selectedZoneId)?.classList.remove('selected');
+    // --- 2. SÉLECTION MULTIPLE ---
+    
+    // Ajouter une zone à la sélection
+    function addToSelection(id) {
+        if (!selectedZoneIds.includes(id)) {
+            selectedZoneIds.push(id);
+            const zoneEl = document.getElementById(id);
+            if (zoneEl) {
+                zoneEl.classList.add('selected');
+            }
+            updateSelectionUI();
         }
-        selectedZoneId = id;
-        const zoneEl = document.getElementById(id);
-        zoneEl.classList.add('selected');
+    }
 
-        // Activer l'interface
-        btnDelete.disabled = false;
-        coordsPanel.style.display = 'block';
-        coordsPanel.style.pointerEvents = 'auto';
-        lblSelected.innerText = `Zone ${id.split('-')[1]}`;
+    // Retirer une zone de la sélection
+    function removeFromSelection(id) {
+        const index = selectedZoneIds.indexOf(id);
+        if (index > -1) {
+            selectedZoneIds.splice(index, 1);
+            const zoneEl = document.getElementById(id);
+            if (zoneEl) {
+                zoneEl.classList.remove('selected');
+            }
+            updateSelectionUI();
+        }
+    }
 
-        // CHARGER LES DONNÉES DANS LE FORMULAIRE
+    // Mettre à jour l'interface selon la sélection
+    function updateSelectionUI() {
+        const count = selectedZoneIds.length;
+        
+        if (count === 0) {
+            // Aucune sélection
+            btnDelete.disabled = true;
+            coordsPanel.style.display = 'none';
+            coordsPanel.style.pointerEvents = 'none';
+            lblSelected.innerText = "-";
+        } else if (count === 1) {
+            // Sélection unique : afficher les propriétés de la zone
+            const id = selectedZoneIds[0];
+            btnDelete.disabled = false;
+            coordsPanel.style.display = 'block';
+            coordsPanel.style.pointerEvents = 'auto';
+            lblSelected.innerText = `Zone ${id.split('-')[1]}`;
+            
+            // Charger les données de la zone unique
+            loadZoneDataToForm(id);
+        } else {
+            // Sélection multiple : afficher le nombre de zones
+            btnDelete.disabled = false;
+            coordsPanel.style.display = 'block';
+            coordsPanel.style.pointerEvents = 'auto';
+            lblSelected.innerText = `${count} zones sélectionnées`;
+            
+            // Masquer ou désactiver les champs de propriétés en mode multi-sélection
+            setMultiSelectionMode(true);
+        }
+        
+        // Afficher/masquer les sections d'alignement et taille
+        updateAlignmentToolbarVisibility();
+    }
+
+    // Charger les données d'une zone dans le formulaire
+    function loadZoneDataToForm(id) {
         const zonesData = getCurrentPageZones();
         const data = zonesData[id];
+        if (!data) return;
+        
         const zoneType = data.type || 'text';
         zonesData[id].type = zoneType;
 
@@ -330,12 +379,12 @@ document.addEventListener('DOMContentLoaded', () => {
             inputSize.value = data.size || 12;
             inputColor.value = data.color || '#000000';
             inputAlign.value = data.align || 'left';
-            inputValign.value = data.valign || 'top'; // Rétrocompatibilité
+            inputValign.value = data.valign || 'top';
             inputBgColor.value = data.bgColor || '#ffffff';
             chkTransparent.checked = data.isTransparent !== undefined ? data.isTransparent : true;
             chkCopyfit.checked = data.copyfit || false;
-            chkBold.checked = data.bold || false; // Rétrocompatibilité
-            inputLineHeight.value = data.lineHeight !== undefined ? data.lineHeight : 1.2; // Rétrocompatibilité
+            chkBold.checked = data.bold || false;
+            inputLineHeight.value = data.lineHeight !== undefined ? data.lineHeight : 1.2;
         }
         chkLock.checked = data.locked || false;
         
@@ -343,21 +392,223 @@ document.addEventListener('DOMContentLoaded', () => {
         inputBgColor.disabled = chkTransparent.checked;
 
         // Mettre à jour les géométries
-        updateGeomDisplay(zoneEl);
+        const zoneEl = document.getElementById(id);
+        if (zoneEl) {
+            updateGeomDisplay(zoneEl);
+        }
+        
+        // Désactiver le mode multi-sélection
+        setMultiSelectionMode(false);
+    }
+
+    // Activer/désactiver le mode multi-sélection dans le formulaire
+    function setMultiSelectionMode(enabled) {
+        // Désactiver tous les champs en mode multi-sélection
+        textControls.forEach(ctrl => {
+            if (ctrl) {
+                ctrl.disabled = enabled;
+            }
+        });
+        // Masquer les géométries en mode multi-sélection
+        const geomInputs = [inputX, inputY, inputW, inputH];
+        geomInputs.forEach(input => {
+            if (input) {
+                input.style.display = enabled ? 'none' : '';
+            }
+        });
+    }
+
+    // Mettre à jour la visibilité de la toolbar d'alignement et taille
+    function updateAlignmentToolbarVisibility() {
+        const alignmentSection = document.getElementById('alignment-section');
+        const sizeSection = document.getElementById('size-section');
+        const count = selectedZoneIds.length;
+        
+        if (alignmentSection) {
+            alignmentSection.style.display = count >= 2 ? 'block' : 'none';
+        }
+        if (sizeSection) {
+            sizeSection.style.display = count >= 2 ? 'block' : 'none';
+        }
+    }
+
+    // --- FONCTIONS D'ALIGNEMENT ---
+    
+    // Aligner les zones sélectionnées par rapport à la première zone (référence)
+    function alignZones(direction) {
+        if (selectedZoneIds.length < 2) return;
+        
+        const referenceId = selectedZoneIds[0];
+        const referenceZone = document.getElementById(referenceId);
+        if (!referenceZone) return;
+        
+        const refRect = {
+            left: referenceZone.offsetLeft,
+            top: referenceZone.offsetTop,
+            right: referenceZone.offsetLeft + referenceZone.offsetWidth,
+            bottom: referenceZone.offsetTop + referenceZone.offsetHeight,
+            centerX: referenceZone.offsetLeft + referenceZone.offsetWidth / 2,
+            centerY: referenceZone.offsetTop + referenceZone.offsetHeight / 2
+        };
+        
+        // Aligner toutes les autres zones par rapport à la référence
+        for (let i = 1; i < selectedZoneIds.length; i++) {
+            const zoneId = selectedZoneIds[i];
+            const zone = document.getElementById(zoneId);
+            if (!zone) continue;
+            
+            const zonesData = getCurrentPageZones();
+            if (zonesData[zoneId] && zonesData[zoneId].locked) continue; // Ignorer les zones verrouillées
+            
+            switch(direction) {
+                case 'left':
+                    zone.style.left = refRect.left + 'px';
+                    break;
+                case 'center':
+                    zone.style.left = (refRect.centerX - zone.offsetWidth / 2) + 'px';
+                    break;
+                case 'right':
+                    zone.style.left = (refRect.right - zone.offsetWidth) + 'px';
+                    break;
+                case 'top':
+                    zone.style.top = refRect.top + 'px';
+                    break;
+                case 'middle':
+                    zone.style.top = (refRect.centerY - zone.offsetHeight / 2) + 'px';
+                    break;
+                case 'bottom':
+                    zone.style.top = (refRect.bottom - zone.offsetHeight) + 'px';
+                    break;
+            }
+            
+            // S'assurer que la zone reste dans les limites de la page
+            const maxLeft = a4Page.offsetWidth - zone.offsetWidth;
+            const maxTop = a4Page.offsetHeight - zone.offsetHeight;
+            zone.style.left = Math.max(0, Math.min(parseFloat(zone.style.left), maxLeft)) + 'px';
+            zone.style.top = Math.max(0, Math.min(parseFloat(zone.style.top), maxTop)) + 'px';
+        }
+        
+        saveToLocalStorage();
+    }
+
+    // --- FONCTIONS DE TAILLE ---
+    
+    // Appliquer la même largeur que la première zone (référence)
+    function applySameWidth() {
+        if (selectedZoneIds.length < 2) return;
+        
+        const referenceId = selectedZoneIds[0];
+        const referenceZone = document.getElementById(referenceId);
+        if (!referenceZone) return;
+        
+        const refWidth = referenceZone.offsetWidth;
+        const zonesData = getCurrentPageZones();
+        
+        for (let i = 1; i < selectedZoneIds.length; i++) {
+            const zoneId = selectedZoneIds[i];
+            const zone = document.getElementById(zoneId);
+            if (!zone) continue;
+            
+            if (zonesData[zoneId] && zonesData[zoneId].locked) continue; // Ignorer les zones verrouillées
+            
+            // Pour les QR codes, appliquer aussi la hauteur
+            if (zonesData[zoneId] && zonesData[zoneId].type === 'qr') {
+                zone.style.width = refWidth + 'px';
+                zone.style.height = refWidth + 'px';
+            } else {
+                zone.style.width = refWidth + 'px';
+            }
+            
+            // S'assurer que la zone reste dans les limites
+            const maxLeft = a4Page.offsetWidth - zone.offsetWidth;
+            const currentLeft = parseFloat(zone.style.left) || 0;
+            zone.style.left = Math.max(0, Math.min(currentLeft, maxLeft)) + 'px';
+        }
+        
+        saveToLocalStorage();
+    }
+
+    // Appliquer la même hauteur que la première zone (référence)
+    function applySameHeight() {
+        if (selectedZoneIds.length < 2) return;
+        
+        const referenceId = selectedZoneIds[0];
+        const referenceZone = document.getElementById(referenceId);
+        if (!referenceZone) return;
+        
+        const refHeight = referenceZone.offsetHeight;
+        const zonesData = getCurrentPageZones();
+        
+        for (let i = 1; i < selectedZoneIds.length; i++) {
+            const zoneId = selectedZoneIds[i];
+            const zone = document.getElementById(zoneId);
+            if (!zone) continue;
+            
+            if (zonesData[zoneId] && zonesData[zoneId].locked) continue; // Ignorer les zones verrouillées
+            
+            // Pour les QR codes, appliquer aussi la largeur
+            if (zonesData[zoneId] && zonesData[zoneId].type === 'qr') {
+                zone.style.height = refHeight + 'px';
+                zone.style.width = refHeight + 'px';
+            } else {
+                zone.style.height = refHeight + 'px';
+            }
+            
+            // S'assurer que la zone reste dans les limites
+            const maxTop = a4Page.offsetHeight - zone.offsetHeight;
+            const currentTop = parseFloat(zone.style.top) || 0;
+            zone.style.top = Math.max(0, Math.min(currentTop, maxTop)) + 'px';
+        }
+        
+        saveToLocalStorage();
+    }
+
+    // SÉLECTIONNER UNE ZONE (avec gestion Ctrl+clic)
+    function selectZone(id, event = null) {
+        const isCtrlPressed = event && (event.ctrlKey || event.metaKey);
+        
+        if (isCtrlPressed) {
+            // Mode multi-sélection : ajouter ou retirer de la sélection
+            if (selectedZoneIds.includes(id)) {
+                removeFromSelection(id);
+            } else {
+                addToSelection(id);
+            }
+        } else {
+            // Sélection simple : remplacer la sélection actuelle
+            // Désélectionner toutes les zones
+            selectedZoneIds.forEach(zoneId => {
+                document.getElementById(zoneId)?.classList.remove('selected');
+            });
+            selectedZoneIds = [id];
+            
+            // Sélectionner la nouvelle zone
+            const zoneEl = document.getElementById(id);
+            if (zoneEl) {
+                zoneEl.classList.add('selected');
+            }
+            
+            updateSelectionUI();
+        }
     }
 
     // --- 3. ÉCOUTEURS SUR LE FORMULAIRE (DATA BINDING) ---
     // Quand on tape dans le formulaire, on met à jour l'objet ET le visuel
     
     function updateActiveZoneData() {
-        if (!selectedZoneId) return;
-        const zoneEl = document.getElementById(selectedZoneId);
+        // Ne fonctionne qu'en mode sélection unique
+        if (selectedZoneIds.length !== 1) return;
+        
+        const selectedId = selectedZoneIds[0];
+        const zoneEl = document.getElementById(selectedId);
+        if (!zoneEl) return;
+        
         const zonesData = getCurrentPageZones();
-        const zoneType = zonesData[selectedZoneId].type || 'text';
+        const zoneType = zonesData[selectedId].type || 'text';
         const contentEl = zoneEl.querySelector('.zone-content');
 
         if (zoneType === 'qr') {
-            zonesData[selectedZoneId].locked = chkLock.checked;
+            zonesData[selectedId].locked = chkLock.checked;
             if (chkLock.checked) {
                 zoneEl.classList.add('locked');
                 zoneEl.querySelectorAll('.handle').forEach(h => h.style.display = 'none');
@@ -370,19 +621,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Mise à jour de l'objet de données
-        zonesData[selectedZoneId].content = inputContent.value;
-        zonesData[selectedZoneId].font = inputFont.value;
-        zonesData[selectedZoneId].size = inputSize.value;
-        zonesData[selectedZoneId].color = inputColor.value;
-        zonesData[selectedZoneId].align = inputAlign.value;
-        zonesData[selectedZoneId].valign = inputValign.value;
+        zonesData[selectedId].content = inputContent.value;
+        zonesData[selectedId].font = inputFont.value;
+        zonesData[selectedId].size = inputSize.value;
+        zonesData[selectedId].color = inputColor.value;
+        zonesData[selectedId].align = inputAlign.value;
+        zonesData[selectedId].valign = inputValign.value;
         // Nouvelles propriétés
-        zonesData[selectedZoneId].bgColor = inputBgColor.value;
-        zonesData[selectedZoneId].isTransparent = chkTransparent.checked;
-        zonesData[selectedZoneId].locked = chkLock.checked;
-        zonesData[selectedZoneId].copyfit = chkCopyfit.checked;
-        zonesData[selectedZoneId].bold = chkBold.checked;
-        zonesData[selectedZoneId].lineHeight = parseFloat(inputLineHeight.value) || 1.2;
+        zonesData[selectedId].bgColor = inputBgColor.value;
+        zonesData[selectedId].isTransparent = chkTransparent.checked;
+        zonesData[selectedId].locked = chkLock.checked;
+        zonesData[selectedId].copyfit = chkCopyfit.checked;
+        zonesData[selectedId].bold = chkBold.checked;
+        zonesData[selectedId].lineHeight = parseFloat(inputLineHeight.value) || 1.2;
 
         // Gestion UI Checkbox
         inputBgColor.disabled = chkTransparent.checked;
@@ -426,10 +677,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             zoneEl.classList.remove('locked');
             // Réafficher les poignées si sélectionné ET non verrouillé
-            // (Mais attention, si on vient de déverrouiller, on veut peut-être voir les poignées tout de suite car on est sélectionné)
-             if(selectedZoneId === zoneEl.id) {
+            if(selectedZoneIds.includes(zoneEl.id)) {
                 zoneEl.querySelectorAll('.handle').forEach(h => h.style.display = 'block');
-             }
+            }
         }
         
         // Alignement Horizontal (géré par le texte lui-même)
@@ -448,7 +698,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Appliquer le Copy Fitting si activé
         if (chkCopyfit.checked) {
-            applyCopyfit(zoneEl, zonesData[selectedZoneId].size);
+            applyCopyfit(zoneEl, zonesData[selectedId].size);
         } else {
             // Si désactivé, on remet la taille normale définie
             zoneEl.style.fontSize = inputSize.value + 'pt';
@@ -524,6 +774,25 @@ document.addEventListener('DOMContentLoaded', () => {
         el.addEventListener('change', updateActiveZoneData); // Pour checkbox/color
     });
 
+    // --- ÉCOUTEURS POUR LES BOUTONS D'ALIGNEMENT ET TAILLE ---
+    const btnAlignLeft = document.getElementById('btn-align-left');
+    const btnAlignCenter = document.getElementById('btn-align-center');
+    const btnAlignRight = document.getElementById('btn-align-right');
+    const btnAlignTop = document.getElementById('btn-align-top');
+    const btnAlignMiddle = document.getElementById('btn-align-middle');
+    const btnAlignBottom = document.getElementById('btn-align-bottom');
+    const btnSameWidth = document.getElementById('btn-same-width');
+    const btnSameHeight = document.getElementById('btn-same-height');
+
+    if (btnAlignLeft) btnAlignLeft.addEventListener('click', () => alignZones('left'));
+    if (btnAlignCenter) btnAlignCenter.addEventListener('click', () => alignZones('center'));
+    if (btnAlignRight) btnAlignRight.addEventListener('click', () => alignZones('right'));
+    if (btnAlignTop) btnAlignTop.addEventListener('click', () => alignZones('top'));
+    if (btnAlignMiddle) btnAlignMiddle.addEventListener('click', () => alignZones('middle'));
+    if (btnAlignBottom) btnAlignBottom.addEventListener('click', () => alignZones('bottom'));
+    if (btnSameWidth) btnSameWidth.addEventListener('click', () => applySameWidth());
+    if (btnSameHeight) btnSameHeight.addEventListener('click', () => applySameHeight());
+
     // --- 4. SUPPRESSION & DÉSÉLECTION ---
     
     // Gestion de la modale de suppression
@@ -532,7 +801,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnModalConfirm = document.getElementById('btn-modal-confirm');
 
     function showDeleteConfirmation() {
-        if (selectedZoneId) {
+        if (selectedZoneIds.length > 0) {
             modalOverlay.classList.remove('hidden');
         }
     }
@@ -542,11 +811,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function confirmDeletion() {
-        if (selectedZoneId) {
-            const el = document.getElementById(selectedZoneId);
-            if (el) el.remove();
+        if (selectedZoneIds.length > 0) {
             const zonesData = getCurrentPageZones();
-            delete zonesData[selectedZoneId];
+            // Supprimer toutes les zones sélectionnées
+            selectedZoneIds.forEach(zoneId => {
+                const el = document.getElementById(zoneId);
+                if (el) el.remove();
+                delete zonesData[zoneId];
+            });
             saveToLocalStorage();
             deselectAll();
         }
@@ -579,10 +851,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function deselectAll() {
-        if (selectedZoneId) {
-            document.getElementById(selectedZoneId)?.classList.remove('selected');
-            selectedZoneId = null;
-        }
+        // Désélectionner toutes les zones
+        selectedZoneIds.forEach(zoneId => {
+            document.getElementById(zoneId)?.classList.remove('selected');
+        });
+        selectedZoneIds = [];
         
         // Cacher complètement le panneau et vider toutes les valeurs
         btnDelete.disabled = true;
@@ -608,6 +881,9 @@ document.addEventListener('DOMContentLoaded', () => {
         inputH.value = '';
         lblSelected.innerText = "-";
         setTextControlsEnabled(true);
+        
+        // Masquer les sections d'alignement et taille
+        updateAlignmentToolbarVisibility();
     }
 
     btnDelete.addEventListener('click', () => {
@@ -628,7 +904,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        if (selectedZoneId && (e.key === 'Delete' || e.key === 'Del')) {
+        if (selectedZoneIds.length > 0 && (e.key === 'Delete' || e.key === 'Del')) {
             // Ne pas supprimer si l'utilisateur tape dans un input ou textarea
             if (e.target.matches('input, textarea')) return;
             
@@ -665,7 +941,7 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const key in zonesData) delete zonesData[key];
         
         // 3. Désélectionner
-        selectedZoneId = null;
+        selectedZoneIds = [];
         deselectAll(); // Nettoyer l'interface
         
         // 4. Sauvegarder l'état
@@ -686,7 +962,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 3. Réinitialiser le compteur global et la sélection
         documentState.zoneCounter = 0;
         zoneCounter = 0;
-        selectedZoneId = null;
+        selectedZoneIds = [];
         deselectAll(); // Nettoyer l'interface
         
         // 4. Sauvegarder l'état vide
@@ -730,11 +1006,15 @@ document.addEventListener('DOMContentLoaded', () => {
             return; // Laisser le pan gérer
         }
         
-        if (selectedZoneId) {
-            const zone = document.getElementById(selectedZoneId);
+        // Utiliser la première zone sélectionnée pour le drag/resize
+        if (selectedZoneIds.length > 0) {
+            const firstSelectedId = selectedZoneIds[0];
+            const zone = document.getElementById(firstSelectedId);
+            if (!zone) return;
+            
             const zonesData = getCurrentPageZones();
             // Vérifier si verrouillé
-            if (zonesData[selectedZoneId].locked) return; 
+            if (zonesData[firstSelectedId].locked) return; 
             
             if (e.target.classList.contains('handle') && zone.contains(e.target)) {
                 isResizing = true;
@@ -752,8 +1032,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.addEventListener('mousemove', (e) => {
-        if (!selectedZoneId) return;
-        const zone = document.getElementById(selectedZoneId);
+        if (selectedZoneIds.length === 0) return;
+        const firstSelectedId = selectedZoneIds[0];
+        const zone = document.getElementById(firstSelectedId);
+        if (!zone) return;
 
         if (isDragging) {
             const dx = (e.clientX - startX) / zoomLevel;
@@ -775,7 +1057,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (currentHandle.includes('w')) { /* ... logique complexe ... */ }
             if (currentHandle.includes('s')) newH = startH + dy;
             
-            if (zonesData[selectedZoneId].type === 'qr') {
+            if (zonesData[firstSelectedId].type === 'qr') {
                 const size = Math.max(40, Math.max(newW, newH));
                 zone.style.width = size + 'px';
                 zone.style.height = size + 'px';
@@ -784,8 +1066,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (newH > 20) zone.style.height = newH + 'px';
                 
                 // Recalculer le CopyFit pendant le redimensionnement pour effet temps réel
-                if (zonesData[selectedZoneId].copyfit) {
-                    applyCopyfit(zone, zonesData[selectedZoneId].size);
+                if (zonesData[firstSelectedId].copyfit) {
+                    applyCopyfit(zone, zonesData[firstSelectedId].size);
                 }
             }
             updateGeomDisplay(zone);
@@ -987,6 +1269,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Initialiser l'UI de navigation
     updatePageNavigationUI();
+    
+    // Initialiser la visibilité des sections d'alignement et taille
+    updateAlignmentToolbarVisibility();
 
     // --- FONCTION DE CHANGEMENT DE PAGE ---
     function switchPage(pageIndex) {
@@ -998,7 +1283,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1. Sauvegarder l'état de la page actuelle (positions, styles)
         saveToLocalStorage();
 
-        // 2. Désélectionner toute zone active
+        // 2. Vider la sélection multiple avant de changer de page
+        selectedZoneIds.forEach(zoneId => {
+            document.getElementById(zoneId)?.classList.remove('selected');
+        });
+        selectedZoneIds = [];
+        
+        // 3. Désélectionner toute zone active
         deselectAll();
 
         // 3. Vider le workspace (supprimer toutes les zones du DOM)

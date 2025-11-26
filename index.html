@@ -41,6 +41,46 @@
                 </button>
             </div>
 
+            <!-- Alignement (visible uniquement si 2+ zones sélectionnées) -->
+            <div class="toolbar-section" id="alignment-section" style="display: none;">
+                <h3 class="section-title">Alignement</h3>
+                <div style="margin-bottom: 8px;">
+                    <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+                        <button id="btn-align-left" class="btn-primary" style="flex: 1;">
+                            <span class="material-icons">format_align_left</span> Gauche
+                        </button>
+                        <button id="btn-align-center" class="btn-primary" style="flex: 1;">
+                            <span class="material-icons">format_align_center</span> Centre
+                        </button>
+                        <button id="btn-align-right" class="btn-primary" style="flex: 1;">
+                            <span class="material-icons">format_align_right</span> Droite
+                        </button>
+                    </div>
+                    <div style="display: flex; gap: 5px;">
+                        <button id="btn-align-top" class="btn-primary" style="flex: 1;">
+                            <span class="material-icons">vertical_align_top</span> Haut
+                        </button>
+                        <button id="btn-align-middle" class="btn-primary" style="flex: 1;">
+                            <span class="material-icons">vertical_align_center</span> Milieu
+                        </button>
+                        <button id="btn-align-bottom" class="btn-primary" style="flex: 1;">
+                            <span class="material-icons">vertical_align_bottom</span> Bas
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Taille (visible uniquement si 2+ zones sélectionnées) -->
+            <div class="toolbar-section" id="size-section" style="display: none;">
+                <h3 class="section-title">Taille</h3>
+                <button id="btn-same-width" class="btn-primary">
+                    <span class="material-icons">width_wide</span> Même largeur
+                </button>
+                <button id="btn-same-height" class="btn-primary">
+                    <span class="material-icons">height</span> Même hauteur
+                </button>
+            </div>
+
             <!-- Panneau de propriétés (caché par défaut) -->
             <div class="coordinates-panel" id="coords-panel" style="display: none;">
                 <h3 class="section-title">Propriétés de la Zone</h3>
