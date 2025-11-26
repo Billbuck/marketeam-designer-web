@@ -14,7 +14,10 @@
         <div class="toolbar">
             <h2>Outils</h2>
             <button id="btn-add-zone" class="btn-primary">
-                <span class="material-icons">add_box</span> Ajouter une Zone
+                <span class="material-icons">add_box</span> Ajouter une zone de texte
+            </button>
+            <button id="btn-add-qr" class="btn-primary">
+                <span class="material-icons">qr_code_2</span> Ajouter un QR Code
             </button>
             <button id="btn-delete-zone" class="btn-danger" disabled>
                 <span class="material-icons">delete</span> Supprimer Zone
@@ -26,7 +29,23 @@
             <button id="btn-generate-json" class="btn-success">
                 <span class="material-icons">code</span> Générer JSON
             </button>
-
+            <hr>
+            <h3 style="margin: 10px 0 5px 0; font-size: 14px; color: #555;">Zoom</h3>
+            <div class="zoom-controls" style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <button id="btn-zoom-out" class="btn-primary" style="padding: 5px 10px; min-width: 40px;">
+                    <span class="material-icons" style="font-size: 18px;">remove</span>
+                </button>
+                <input type="range" id="zoom-slider" min="25" max="200" value="100" step="5" style="flex: 1;">
+                <button id="btn-zoom-in" class="btn-primary" style="padding: 5px 10px; min-width: 40px;">
+                    <span class="material-icons" style="font-size: 18px;">add</span>
+                </button>
+            </div>
+            <div style="text-align: center; font-size: 12px; color: #666;">
+                <span id="zoom-value">100%</span>
+            </div>
+            <div style="text-align: center; font-size: 10px; color: #999; margin-top: 5px;">
+                Ctrl + Molette pour zoomer
+            </div>
 
 <div class="coordinates-panel" id="coords-panel" style="opacity: 0.5; pointer-events: none;">
     <h3>Propriétés de la Zone</h3>
@@ -60,6 +79,14 @@
                     <input type="checkbox" id="chk-copyfit"> Ajuster auto.
                 </label>
             </div>
+        </div>
+    </div>
+
+    <div class="style-row">
+        <div class="input-group half">
+            <label>Interlignage</label>
+            <input type="number" id="input-line-height" value="1.2" step="0.1" min="0.5" max="3.0">
+            <small style="color: #999; font-size: 10px;">Multiplicateur (ex: 1.2 = 120%)</small>
         </div>
     </div>
 
@@ -140,11 +167,31 @@
         </div>
 
         <div class="workspace">
-            <div id="a4-page">
-                <img src="a4_template.jpg" alt="Fond A4" id="a4-background">
+            <div class="workspace-canvas">
+                <div id="a4-page">
+                    <img src="a4_template.jpg" alt="Fond A4" id="a4-background">
                 </div>
+            </div>
         </div>
 
+    </div>
+
+    <!-- Modale de confirmation personnalisée -->
+    <div id="confirmation-modal" class="modal-overlay hidden">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span class="material-icons" style="color: #ea4335;">warning</span>
+                <h3>Confirmation de suppression</h3>
+            </div>
+            <div class="modal-body">
+                <p>Êtes-vous sûr de vouloir supprimer cette zone ?</p>
+                <p class="sub-text">Cette action est irréversible.</p>
+            </div>
+            <div class="modal-buttons">
+                <button id="btn-modal-cancel" class="btn-secondary">Annuler</button>
+                <button id="btn-modal-confirm" class="btn-danger">Supprimer</button>
+            </div>
+        </div>
     </div>
 
     <script src="script.js"></script>

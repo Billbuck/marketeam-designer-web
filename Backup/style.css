@@ -26,11 +26,20 @@ body {
 
 .workspace {
     flex-grow: 1;
+    overflow: auto;
+    background-color: #e0e0e0;
+}
+
+.workspace-canvas {
+    /* Ce conteneur aura une taille dynamique définie par JS */
+    /* Il permet le centrage du document et l'affichage du fond gris */
     display: flex;
     justify-content: center;
-    align-items: flex-start;
-    padding: 40px;
-    overflow: auto;
+    align-items: center;
+    box-sizing: border-box;
+    /* Taille minimale = 100% du workspace pour le centrage */
+    min-width: 100%;
+    min-height: 100%;
 }
 
 /* --- Boutons --- */
@@ -72,6 +81,28 @@ button {
     user-select: none;
 }
 
+/* Animation de création (Pop + Flash) */
+@keyframes zone-appear {
+    0% {
+        transform: scale(0.5);
+        background-color: rgba(255, 235, 59, 0.8); /* Jaune vif */
+        box-shadow: 0 0 20px rgba(255, 235, 59, 0.8);
+    }
+    50% {
+        transform: scale(1.1);
+        background-color: rgba(255, 235, 59, 0.4);
+    }
+    100% {
+        transform: scale(1);
+        background-color: transparent; /* Ou la couleur finale */
+        box-shadow: none;
+    }
+}
+
+.zone-appear-anim {
+    animation: zone-appear 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Effet élastique */
+}
+
 /* --- Zones de Texte --- */
 .zone {
     position: absolute;
@@ -82,6 +113,25 @@ button {
     justify-content: center;
     align-items: center;
     border: 1px solid transparent; /* Réserve l'espace pour la bordure au survol/sélection */
+}
+
+.zone-qr {
+    cursor: grab;
+}
+
+.zone-qr .zone-content {
+    pointer-events: none;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #ffffff;
+}
+
+.zone-qr .zone-content svg {
+    width: 80%;
+    height: 80%;
 }
 
 /* Indiquer qu'une zone est survolable si elle n'est pas sélectionnée */
@@ -288,4 +338,77 @@ input:checked + .slider:before {
 
 .merge-tag:active {
     background-color: #aecbfa;
+}
+
+/* --- Modale de Confirmation --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 1;
+    transition: opacity 0.2s ease;
+}
+
+.modal-overlay.hidden {
+    display: none;
+    opacity: 0;
+}
+
+.modal-box {
+    background-color: white;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    width: 400px;
+    max-width: 90%;
+    transform: scale(1);
+    transition: transform 0.2s ease;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    color: #ea4335;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 18px;
+}
+
+.modal-body p {
+    margin: 0 0 5px 0;
+    color: #555;
+    font-size: 14px;
+}
+
+.modal-body .sub-text {
+    color: #999;
+    font-size: 12px;
+    margin-bottom: 20px;
+}
+
+.modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.btn-secondary {
+    background-color: #f1f3f4;
+    color: #3c4043;
+}
+
+.btn-secondary:hover {
+    background-color: #e8eaed;
 }

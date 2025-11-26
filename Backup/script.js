@@ -1,12 +1,21 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- ÉLÉMENTS DOM ---
     const a4Page = document.getElementById('a4-page');
+    const workspace = document.querySelector('.workspace');
+    const workspaceCanvas = document.querySelector('.workspace-canvas');
     const btnAdd = document.getElementById('btn-add-zone');
+    const btnAddQr = document.getElementById('btn-add-qr');
     const btnDelete = document.getElementById('btn-delete-zone');
     const btnReset = document.getElementById('btn-reset');
     const btnGenerate = document.getElementById('btn-generate-json');
     const coordsPanel = document.getElementById('coords-panel');
     const lblSelected = document.getElementById('lbl-selected-zone');
+    
+    // Contrôles de zoom
+    const zoomSlider = document.getElementById('zoom-slider');
+    const btnZoomIn = document.getElementById('btn-zoom-in');
+    const btnZoomOut = document.getElementById('btn-zoom-out');
+    const zoomValue = document.getElementById('zoom-value');
 
     // Inputs du formulaire
     const inputContent = document.getElementById('input-content');
@@ -20,6 +29,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const chkTransparent = document.getElementById('chk-transparent');
     const chkLock = document.getElementById('chk-lock');
     const chkCopyfit = document.getElementById('chk-copyfit'); // Copy Fitting
+    const inputLineHeight = document.getElementById('input-line-height'); // Interlignage
+
+    const textControls = [
+        inputContent,
+        inputFont,
+        inputSize,
+        inputColor,
+        inputAlign,
+        inputValign,
+        inputBgColor,
+        chkTransparent,
+        chkCopyfit,
+        inputLineHeight
+    ];
+
+    function setTextControlsEnabled(enabled) {
+        textControls.forEach(ctrl => {
+            if (!ctrl) return;
+            ctrl.disabled = !enabled;
+        });
+        inputContent.placeholder = enabled ? "Ex: Cher {{NOM}}," : "Zone QR statique (non modifiable)";
+    }
+
+    setTextControlsEnabled(true);
 
     // Inputs géométrie
     const inputX = document.getElementById('val-x');
@@ -79,6 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Initialiser les données par défaut pour cette zone
         zonesData[id] = {
+            type: 'text',
             content: `Texte Zone ${zoneCounter}`,
             font: 'Roboto',
             size: 12,
@@ -88,37 +122,72 @@ document.addEventListener('DOMContentLoaded', () => {
             bgColor: '#ffffff',
             isTransparent: true, // Transparent par défaut
             locked: false,
-            copyfit: false // Désactivé par défaut
+            copyfit: false, // Désactivé par défaut
+            lineHeight: 1.2 // Interlignage par défaut (120%)
         };
 
         createZoneDOM(id, zoneCounter);
         saveToLocalStorage(); // Sauvegarde auto
     });
 
-    function createZoneDOM(id, labelNum) {
+    btnAddQr.addEventListener('click', () => {
+        zoneCounter++;
+        const id = `zone-${zoneCounter}`;
+        zonesData[id] = {
+            type: 'qr',
+            qrColor: '#000000',
+            bgColor: '#ffffff',
+            locked: false
+        };
+        createZoneDOM(id, zoneCounter);
+        saveToLocalStorage();
+    });
+
+    function createZoneDOM(id, labelNum, autoSelect = true) {
+        const zoneData = zonesData[id] || {};
+        const zoneType = zoneData.type || 'text';
+        zonesData[id] = { type: zoneType, ...zoneData };
+
         const zone = document.createElement('div');
         zone.classList.add('zone');
+        if (zoneType === 'qr') {
+            zone.classList.add('zone-qr');
+        }
+        if (autoSelect) {
+            zone.classList.add('zone-appear-anim');
+            setTimeout(() => zone.classList.remove('zone-appear-anim'), 1000);
+        }
         zone.id = id;
         
-        // Style initial par défaut
-        zone.style.width = '200px';
-        zone.style.height = '40px';
-        zone.style.left = '50px';
-        zone.style.top = (50 + (labelNum * 20)) + 'px';
-        zone.style.fontFamily = 'Roboto, sans-serif'; // Visuel web
-        zone.style.fontSize = '12pt';
-        zone.style.textAlign = 'left';
-        zone.style.color = '#000000';
-        // Styles par défaut fond/transparence
-        zone.style.backgroundColor = 'transparent'; 
-        // Alignement vertical par défaut (flex)
-        zone.style.alignItems = 'flex-start'; 
+        if (zoneType === 'qr') {
+            const defaultSize = zoneData.w || zoneData.h || 100;
+            zone.style.width = defaultSize + 'px';
+            zone.style.height = defaultSize + 'px';
+            zone.style.left = (zoneData.x !== undefined ? zoneData.x : 50) + 'px';
+            zone.style.top = (zoneData.y !== undefined ? zoneData.y : (50 + (labelNum * 20))) + 'px';
+            zone.style.backgroundColor = '#ffffff';
+            const qrWrapper = document.createElement('div');
+            qrWrapper.classList.add('zone-content');
+            qrWrapper.innerHTML = getQrPlaceholderSvg();
+            zone.appendChild(qrWrapper);
+        } else {
+            // Style initial par défaut pour le texte
+            zone.style.width = '200px';
+            zone.style.height = '40px';
+            zone.style.left = '50px';
+            zone.style.top = (50 + (labelNum * 20)) + 'px';
+            zone.style.fontFamily = 'Roboto, sans-serif';
+            zone.style.fontSize = '12pt';
+            zone.style.textAlign = 'left';
+            zone.style.color = '#000000';
+            zone.style.backgroundColor = 'transparent';
+            zone.style.alignItems = 'flex-start';
 
-        // Élément interne pour le texte (Aperçu)
-        const contentSpan = document.createElement('div');
-        contentSpan.classList.add('zone-content');
-        contentSpan.innerText = zonesData[id].content;
-        zone.appendChild(contentSpan);
+            const contentSpan = document.createElement('div');
+            contentSpan.classList.add('zone-content');
+            contentSpan.innerText = zonesData[id].content;
+            zone.appendChild(contentSpan);
+        }
 
         // Poignées
         ['nw', 'ne', 'sw', 'se'].forEach(pos => {
@@ -135,7 +204,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         a4Page.appendChild(zone);
-        selectZone(id);
+        if (autoSelect) {
+            selectZone(id);
+        }
     }
 
     // --- 2. SÉLECTIONNER ET CHARGER LES DONNÉES ---
@@ -156,16 +227,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // CHARGER LES DONNÉES DANS LE FORMULAIRE
         const data = zonesData[id];
-        inputContent.value = data.content;
-        inputFont.value = data.font;
-        inputSize.value = data.size;
-        inputColor.value = data.color;
-        inputAlign.value = data.align;
-        inputValign.value = data.valign || 'top'; // Rétrocompatibilité
-        inputBgColor.value = data.bgColor || '#ffffff';
-        chkTransparent.checked = data.isTransparent !== undefined ? data.isTransparent : true;
+        const zoneType = data.type || 'text';
+        zonesData[id].type = zoneType;
+
+        if (zoneType === 'qr') {
+            setTextControlsEnabled(false);
+            inputContent.value = 'Zone QR statique (non modifiable)';
+            inputFont.value = 'Roboto';
+            inputSize.value = 12;
+            inputColor.value = '#000000';
+            inputAlign.value = 'center';
+            inputValign.value = 'middle';
+            inputBgColor.value = '#ffffff';
+            chkTransparent.checked = false;
+            chkCopyfit.checked = false;
+            inputLineHeight.value = 1.0;
+        } else {
+            setTextControlsEnabled(true);
+            inputContent.value = data.content;
+            inputFont.value = data.font;
+            inputSize.value = data.size;
+            inputColor.value = data.color;
+            inputAlign.value = data.align;
+            inputValign.value = data.valign || 'top'; // Rétrocompatibilité
+            inputBgColor.value = data.bgColor || '#ffffff';
+            chkTransparent.checked = data.isTransparent !== undefined ? data.isTransparent : true;
+            chkCopyfit.checked = data.copyfit || false;
+            inputLineHeight.value = data.lineHeight !== undefined ? data.lineHeight : 1.2; // Rétrocompatibilité
+        }
         chkLock.checked = data.locked || false;
-        chkCopyfit.checked = data.copyfit || false;
         
         // Gestion état UI couleur fond
         inputBgColor.disabled = chkTransparent.checked;
@@ -180,7 +270,21 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateActiveZoneData() {
         if (!selectedZoneId) return;
         const zoneEl = document.getElementById(selectedZoneId);
+        const zoneType = zonesData[selectedZoneId].type || 'text';
         const contentEl = zoneEl.querySelector('.zone-content');
+
+        if (zoneType === 'qr') {
+            zonesData[selectedZoneId].locked = chkLock.checked;
+            if (chkLock.checked) {
+                zoneEl.classList.add('locked');
+                zoneEl.querySelectorAll('.handle').forEach(h => h.style.display = 'none');
+            } else {
+                zoneEl.classList.remove('locked');
+                zoneEl.querySelectorAll('.handle').forEach(h => h.style.display = 'block');
+            }
+            saveToLocalStorage();
+            return;
+        }
 
         // Mise à jour de l'objet de données
         zonesData[selectedZoneId].content = inputContent.value;
@@ -194,6 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
         zonesData[selectedZoneId].isTransparent = chkTransparent.checked;
         zonesData[selectedZoneId].locked = chkLock.checked;
         zonesData[selectedZoneId].copyfit = chkCopyfit.checked;
+        zonesData[selectedZoneId].lineHeight = parseFloat(inputLineHeight.value) || 1.2;
 
         // Gestion UI Checkbox
         inputBgColor.disabled = chkTransparent.checked;
@@ -211,6 +316,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         zoneEl.style.color = inputColor.value;
+        contentEl.style.color = inputColor.value;
         
         // Fond
         if (chkTransparent.checked) {
@@ -236,6 +342,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Alignement Horizontal (géré par le texte lui-même)
         contentEl.style.textAlign = inputAlign.value;
         
+        // Interlignage
+        contentEl.style.lineHeight = inputLineHeight.value;
+        
         // Alignement Vertical
         // Comme .zone-content est en flex-column, l'axe principal (vertical) est géré par justify-content
         contentEl.style.justifyContent = mapValignToFlex(inputValign.value);
@@ -246,7 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Appliquer le Copy Fitting si activé
         if (chkCopyfit.checked) {
-            applyCopyFit(zoneEl, zonesData[selectedZoneId]);
+            applyCopyfit(zoneEl, zonesData[selectedZoneId]);
         } else {
             // Si désactivé, on remet la taille normale définie
             zoneEl.style.fontSize = inputSize.value + 'pt';
@@ -256,25 +365,43 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- FONCTION COPY FITTING (Ajustement automatique) ---
-    function applyCopyFit(zoneEl, data) {
+    function applyCopyfit(zoneEl, maxSizePt) {
+        if (!zoneEl) return;
         const contentEl = zoneEl.querySelector('.zone-content');
-        const targetSize = parseInt(data.size); // Taille max désirée (en pt)
-        let currentSize = targetSize;
+        // Si on passe un objet data au lieu d'un nombre, on extrait la taille
+        const targetSize = typeof maxSizePt === 'object' ? parseInt(maxSizePt.size) : parseInt(maxSizePt); 
         
-        // Reset à la taille max pour commencer
+        if (isNaN(targetSize)) return;
+
+        // Sauvegarder l'alignement vertical actuel pour le restaurer après
+        const originalJustifyContent = contentEl.style.justifyContent || 'flex-start';
+        
+        // Temporairement mettre l'alignement en haut pour des calculs précis
+        // (évite les problèmes avec flex-end qui peut fausser scrollHeight)
+        contentEl.style.justifyContent = 'flex-start';
+
+        let currentSize = targetSize;
+        const minSize = 4; // Taille minimum de sécurité
+        
+        // 1. On commence par la taille max (Reset)
         zoneEl.style.fontSize = currentSize + 'pt';
         
-        // Tant que le contenu déborde (hauteur ou largeur), on réduit
-        // Note: scrollHeight/Width incluent le padding, offsetHeight/Width la taille visible
-        // On utilise une tolérance de 1px pour les arrondis
+        // 2. Tant que ça déborde, on réduit
+        // On utilise une petite boucle de sécurité pour éviter le freeze navigateur
+        let iterations = 0;
         while (
             (contentEl.scrollHeight > zoneEl.clientHeight || 
              contentEl.scrollWidth > zoneEl.clientWidth) && 
-            currentSize > 4 // Taille minimum de sécurité
+            currentSize > minSize &&
+            iterations < 100
         ) {
-            currentSize -= 0.5; // Pas de réduction de 0.5pt
+            currentSize -= 0.5; 
             zoneEl.style.fontSize = currentSize + 'pt';
+            iterations++;
         }
+        
+        // Restaurer l'alignement vertical original
+        contentEl.style.justifyContent = originalJustifyContent;
     }
 
     // Helper pour l'alignement vertical flexbox (Axe principal en column)
@@ -284,18 +411,72 @@ document.addEventListener('DOMContentLoaded', () => {
         return 'flex-start'; // top
     }
 
+    function getQrPlaceholderSvg() {
+        return `
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="100" fill="#ffffff" />
+    <rect x="5" y="5" width="25" height="25" fill="#000000" />
+    <rect x="70" y="5" width="25" height="25" fill="#000000" />
+    <rect x="5" y="70" width="25" height="25" fill="#000000" />
+    <rect x="32" y="32" width="12" height="12" fill="#000000" />
+    <rect x="50" y="32" width="12" height="12" fill="#000000" />
+    <rect x="32" y="50" width="12" height="12" fill="#000000" />
+    <rect x="50" y="50" width="12" height="12" fill="#000000" />
+</svg>`;
+    }
+
     // Attacher les écouteurs
-    [inputContent, inputFont, inputSize, inputColor, inputAlign, inputValign, inputBgColor, chkTransparent, chkLock, chkCopyfit].forEach(el => {
+    [inputContent, inputFont, inputSize, inputColor, inputAlign, inputValign, inputBgColor, chkTransparent, chkLock, chkCopyfit, inputLineHeight].forEach(el => {
         el.addEventListener('input', updateActiveZoneData);
         el.addEventListener('change', updateActiveZoneData); // Pour checkbox/color
     });
 
     // --- 4. SUPPRESSION & DÉSÉLECTION ---
     
+    // Gestion de la modale de suppression
+    const modalOverlay = document.getElementById('confirmation-modal');
+    const btnModalCancel = document.getElementById('btn-modal-cancel');
+    const btnModalConfirm = document.getElementById('btn-modal-confirm');
+
+    function showDeleteConfirmation() {
+        if (selectedZoneId) {
+            modalOverlay.classList.remove('hidden');
+        }
+    }
+
+    function hideDeleteConfirmation() {
+        modalOverlay.classList.add('hidden');
+    }
+
+    function confirmDeletion() {
+        if (selectedZoneId) {
+            const el = document.getElementById(selectedZoneId);
+            if (el) el.remove();
+            delete zonesData[selectedZoneId];
+            saveToLocalStorage();
+            deselectAll();
+        }
+        hideDeleteConfirmation();
+    }
+
+    // Écouteurs pour la modale
+    btnModalCancel.addEventListener('click', hideDeleteConfirmation);
+    btnModalConfirm.addEventListener('click', confirmDeletion);
+    
+    // Fermer la modale en cliquant sur le fond gris
+    modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) {
+            hideDeleteConfirmation();
+        }
+    });
+
     // Désélectionner si clic en dehors (sur le fond ou le workspace)
     document.addEventListener('mousedown', (e) => {
-        // Si on clique sur une zone, une poignée ou le panneau de contrôle, on ne fait rien
-        if (e.target.closest('.zone') || e.target.closest('.handle') || e.target.closest('.toolbar')) {
+        // Si on clique sur une zone, une poignée, le panneau de contrôle ou la modale, on ne fait rien
+        if (e.target.closest('.zone') || 
+            e.target.closest('.handle') || 
+            e.target.closest('.toolbar') ||
+            e.target.closest('.modal-box')) {
             return;
         }
         
@@ -313,17 +494,28 @@ document.addEventListener('DOMContentLoaded', () => {
             coordsPanel.style.opacity = 0.5;
             coordsPanel.style.pointerEvents = 'none';
             lblSelected.innerText = "Aucune";
+            setTextControlsEnabled(true);
         }
     }
 
     btnDelete.addEventListener('click', () => {
-        if (selectedZoneId) {
-            const el = document.getElementById(selectedZoneId);
-            el.remove();
-            delete zonesData[selectedZoneId]; // Supprimer de la mémoire
-            saveToLocalStorage(); // Sauvegarde après suppression
+        showDeleteConfirmation();
+    });
+
+    // Raccourci clavier : Touche Suppr pour supprimer
+    document.addEventListener('keydown', (e) => {
+        // Si la modale est ouverte
+        if (!modalOverlay.classList.contains('hidden')) {
+            if (e.key === 'Enter') confirmDeletion();
+            if (e.key === 'Escape') hideDeleteConfirmation();
+            return;
+        }
+
+        if (selectedZoneId && (e.key === 'Delete' || e.key === 'Del')) {
+            // Ne pas supprimer si l'utilisateur tape dans un input ou textarea
+            if (e.target.matches('input, textarea')) return;
             
-            lblSelected.innerText = "Aucune";
+            showDeleteConfirmation();
         }
     });
 
@@ -351,6 +543,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let startX, startY, startLeft, startTop, startW, startH;
 
     document.addEventListener('mousedown', (e) => {
+        // Si on est en mode pan (Espace pressé ou clic molette), ne pas permettre le drag des zones
+        if (spacePressed || e.button === 1) {
+            return; // Laisser le pan gérer
+        }
+        
         if (selectedZoneId) {
             const zone = document.getElementById(selectedZoneId);
             // Vérifier si verrouillé
@@ -376,8 +573,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const zone = document.getElementById(selectedZoneId);
 
         if (isDragging) {
-            const dx = e.clientX - startX;
-            const dy = e.clientY - startY;
+            const dx = (e.clientX - startX) / zoomLevel;
+            const dy = (e.clientY - startY) / zoomLevel;
             const maxLeft = a4Page.offsetWidth - zone.offsetWidth;
             const maxTop = a4Page.offsetHeight - zone.offsetHeight;
 
@@ -385,8 +582,8 @@ document.addEventListener('DOMContentLoaded', () => {
             zone.style.top = Math.max(0, Math.min(startTop + dy, maxTop)) + 'px';
             updateGeomDisplay(zone);
         } else if (isResizing) {
-            const dx = e.clientX - startX;
-            const dy = e.clientY - startY;
+            const dx = (e.clientX - startX) / zoomLevel;
+            const dy = (e.clientY - startY) / zoomLevel;
             let newW = startW, newH = startH;
             
             // Simplification redimensionnement (juste SE pour l'exemple, ou complet comme avant)
@@ -394,14 +591,20 @@ document.addEventListener('DOMContentLoaded', () => {
             if (currentHandle.includes('w')) { /* ... logique complexe ... */ }
             if (currentHandle.includes('s')) newH = startH + dy;
             
-            if (newW > 20) zone.style.width = newW + 'px';
-            if (newH > 20) zone.style.height = newH + 'px';
-            updateGeomDisplay(zone);
-            
-            // Recalculer le CopyFit pendant le redimensionnement pour effet temps réel
-            if (zonesData[selectedZoneId].copyfit) {
-                applyCopyFit(zone, zonesData[selectedZoneId]);
+            if (zonesData[selectedZoneId].type === 'qr') {
+                const size = Math.max(40, Math.max(newW, newH));
+                zone.style.width = size + 'px';
+                zone.style.height = size + 'px';
+            } else {
+                if (newW > 20) zone.style.width = newW + 'px';
+                if (newH > 20) zone.style.height = newH + 'px';
+                
+                // Recalculer le CopyFit pendant le redimensionnement pour effet temps réel
+                if (zonesData[selectedZoneId].copyfit) {
+                    applyCopyfit(zone, zonesData[selectedZoneId].size);
+                }
             }
+            updateGeomDisplay(zone);
         }
     });
 
@@ -440,8 +643,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Restaurer chaque zone
             for (const [id, data] of Object.entries(parsedZones)) {
-                zonesData[id] = data;
-                createZoneDOM(id, id.split('-')[1]); // Recréer le DOM
+                zonesData[id] = { type: data.type || 'text', ...data };
+                createZoneDOM(id, id.split('-')[1], false); // NE PAS auto-sélectionner pendant le chargement
                 
                 // Appliquer position/taille sauvegardées
                 const zoneEl = document.getElementById(id);
@@ -450,32 +653,54 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.w) zoneEl.style.width = data.w + 'px';
                 if (data.h) zoneEl.style.height = data.h + 'px';
                 
-                // Appliquer style initial complet
-                if (data.isTransparent) zoneEl.style.backgroundColor = 'transparent';
-                else zoneEl.style.backgroundColor = data.bgColor;
+                // APPLIQUER TOUS LES STYLES AVANT TOUT LE RESTE
+                const contentEl = zoneEl.querySelector('.zone-content');
+                const zoneType = zonesData[id].type || 'text';
                 
+                if (zoneType === 'qr') {
+                    zoneEl.classList.add('zone-qr');
+                    if (contentEl && !contentEl.innerHTML.trim()) {
+                        contentEl.innerHTML = getQrPlaceholderSvg();
+                    }
+                    if (data.locked) {
+                        zoneEl.classList.add('locked');
+                        zoneEl.querySelectorAll('.handle').forEach(h => h.style.display = 'none');
+                    }
+                    continue;
+                }
+                
+                // Couleurs (PRIORITÉ)
+                zoneEl.style.color = data.color;
+                contentEl.style.color = data.color;
+                
+                // Fond
+                if (data.isTransparent) {
+                    zoneEl.style.backgroundColor = 'transparent';
+                } else {
+                    zoneEl.style.backgroundColor = data.bgColor || '#ffffff';
+                }
+                
+                // Police
                 zoneEl.style.fontFamily = data.font + ", sans-serif";
-                // Appliquer Copyfit si activé
+                
+                // Alignements (DOIT être avant copyfit car copyfit modifie temporairement justifyContent)
+                contentEl.style.textAlign = data.align;
+                contentEl.style.justifyContent = mapValignToFlex(data.valign || 'top');
+                
+                // Interlignage (DOIT être avant copyfit car scrollHeight dépend de lineHeight)
+                contentEl.style.lineHeight = (data.lineHeight !== undefined ? data.lineHeight : 1.2);
+                
+                // Taille (Copyfit ou fixe) - DOIT être après alignements et interlignage
                 if (data.copyfit) {
                     applyCopyfit(zoneEl, data.size);
                 } else {
                     zoneEl.style.fontSize = data.size + 'pt';
                 }
                 
-                // Appliquer verrouillage
+                // Verrouillage
                 if (data.locked) {
                      zoneEl.classList.add('locked');
                      zoneEl.querySelectorAll('.handle').forEach(h => h.style.display = 'none');
-                }
-
-                // Appliquer alignements (Horizontal / Vertical)
-                const contentEl = zoneEl.querySelector('.zone-content');
-                contentEl.style.textAlign = data.align;
-                contentEl.style.justifyContent = mapValignToFlex(data.valign || 'top');
-                
-                // Appliquer le copyfit au chargement
-                if (data.copyfit) {
-                    applyCopyFit(zoneEl, data);
                 }
             }
         }
@@ -493,29 +718,45 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const [id, data] of Object.entries(zonesData)) {
             const el = document.getElementById(id);
             if(el) { // Sécurité si élément DOM existe encore
-                zonesOutput.push({
-                    id: id,
-                    // Positionnement Précis
-                    geometry: {
-                        x_mm: (el.offsetLeft * MM_PER_PIXEL).toFixed(2),
-                        y_mm: (el.offsetTop * MM_PER_PIXEL).toFixed(2),
-                        width_mm: (el.offsetWidth * MM_PER_PIXEL).toFixed(2),
-                        height_mm: (el.offsetHeight * MM_PER_PIXEL).toFixed(2)
-                    },
-                    // Style & Contenu
-                    content: data.content,
-                    style: {
-                        font: data.font,
-                        size_pt: data.size,
-                        color: data.color,
-                        align: data.align,
-                        valign: data.valign,
-                        bgColor: data.isTransparent ? null : data.bgColor,
-                        transparent: data.isTransparent,
-                        locked: data.locked,
-                        copyfit: data.copyfit
-                    }
-                });
+                const geometry = {
+                    x_mm: (el.offsetLeft * MM_PER_PIXEL).toFixed(2),
+                    y_mm: (el.offsetTop * MM_PER_PIXEL).toFixed(2),
+                    width_mm: (el.offsetWidth * MM_PER_PIXEL).toFixed(2),
+                    height_mm: (el.offsetHeight * MM_PER_PIXEL).toFixed(2)
+                };
+
+                const zoneType = data.type || 'text';
+                if (zoneType === 'qr') {
+                    zonesOutput.push({
+                        id,
+                        type: 'qr',
+                        geometry,
+                        qr: {
+                            color: data.qrColor || '#000000',
+                            background: '#ffffff'
+                        },
+                        locked: data.locked || false
+                    });
+                } else {
+                    zonesOutput.push({
+                        id,
+                        type: 'text',
+                        geometry,
+                        content: data.content,
+                        style: {
+                            font: data.font,
+                            size_pt: data.size,
+                            color: data.color,
+                            align: data.align,
+                            valign: data.valign,
+                            lineHeight: data.lineHeight !== undefined ? data.lineHeight : 1.2,
+                            bgColor: data.isTransparent ? null : data.bgColor,
+                            transparent: data.isTransparent,
+                            locked: data.locked,
+                            copyfit: data.copyfit
+                        }
+                    });
+                }
             }
         }
 
@@ -541,4 +782,200 @@ document.addEventListener('DOMContentLoaded', () => {
         
         console.log("JSON généré et téléchargé.");
     });
+
+    // --- 8. FONCTIONNALITÉ ZOOM ---
+    let zoomLevel = 1.0; // 100% par défaut
+    const PAGE_WIDTH = 794;
+    const PAGE_HEIGHT = 1123;
+    const CANVAS_PADDING = 60;
+
+    function setZoom(level) {
+        // Limiter le zoom entre 25% et 200%
+        zoomLevel = Math.max(0.25, Math.min(2.0, level));
+        
+        // Appliquer le zoom avec transform: scale()
+        a4Page.style.transform = `scale(${zoomLevel})`;
+        a4Page.style.transformOrigin = 'center center';
+        
+        // Calculer les dimensions du document zoomé
+        const scaledWidth = PAGE_WIDTH * zoomLevel;
+        const scaledHeight = PAGE_HEIGHT * zoomLevel;
+        
+        // Dimensions nécessaires pour le canvas (document + marge grise)
+        const neededWidth = scaledWidth + CANVAS_PADDING * 2;
+        const neededHeight = scaledHeight + CANVAS_PADDING * 2;
+        
+        // Dimensions du workspace (viewport)
+        const workspaceWidth = workspace.clientWidth;
+        const workspaceHeight = workspace.clientHeight;
+        
+        // Le canvas doit être au moins aussi grand que le workspace (pour le centrage)
+        // ou plus grand si le document zoomé le nécessite
+        const canvasWidth = Math.max(workspaceWidth, neededWidth);
+        const canvasHeight = Math.max(workspaceHeight, neededHeight);
+        
+        // Appliquer la taille au canvas
+        workspaceCanvas.style.width = canvasWidth + 'px';
+        workspaceCanvas.style.height = canvasHeight + 'px';
+        
+        // Mettre à jour l'interface
+        zoomSlider.value = Math.round(zoomLevel * 100);
+        zoomValue.textContent = Math.round(zoomLevel * 100) + '%';
+        
+        // Centrer le document dans le workspace
+        centerWorkspace();
+    }
+
+    function centerWorkspace() {
+        // Dimensions du canvas et du workspace
+        const canvasWidth = workspaceCanvas.offsetWidth;
+        const canvasHeight = workspaceCanvas.offsetHeight;
+        const workspaceWidth = workspace.clientWidth;
+        const workspaceHeight = workspace.clientHeight;
+        
+        // Si le canvas est plus grand que le workspace, on centre via scroll
+        // Sinon, le flexbox du canvas centre automatiquement le document
+        const scrollLeft = Math.max(0, (canvasWidth - workspaceWidth) / 2);
+        const scrollTop = Math.max(0, (canvasHeight - workspaceHeight) / 2);
+        
+        workspace.scrollLeft = scrollLeft;
+        workspace.scrollTop = scrollTop;
+    }
+
+    // Event listeners pour les contrôles de zoom
+    zoomSlider.addEventListener('input', (e) => {
+        const level = parseInt(e.target.value) / 100;
+        setZoom(level);
+    });
+
+    btnZoomIn.addEventListener('click', () => {
+        setZoom(zoomLevel + 0.1);
+    });
+
+    btnZoomOut.addEventListener('click', () => {
+        setZoom(zoomLevel - 0.1);
+    });
+
+    // Zoom avec molette (Ctrl + Molette)
+    workspace.addEventListener('wheel', (e) => {
+        if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? -0.1 : 0.1;
+            setZoom(zoomLevel + delta);
+        }
+    }, { passive: false });
+
+    // Initialiser le zoom à 100%
+    setZoom(1.0);
+
+    // --- 9. FONCTIONNALITÉ PAN (Déplacement du document) ---
+    let isPanning = false;
+    let panStartX, panStartY, panStartScrollLeft, panStartScrollTop;
+    let spacePressed = false;
+    let panPotential = false; // Pour le pan permanent (détection du mouvement)
+    const PAN_THRESHOLD = 5; // Seuil de mouvement en pixels avant d'activer le pan
+
+    // Détecter quand Espace est pressé
+    document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && !e.target.matches('input, textarea')) {
+            e.preventDefault(); // Empêcher le scroll de page
+            spacePressed = true;
+            workspace.style.cursor = 'grab';
+        }
+    });
+
+    document.addEventListener('keyup', (e) => {
+        if (e.code === 'Space') {
+            spacePressed = false;
+            if (!isPanning) {
+                workspace.style.cursor = '';
+            }
+        }
+    });
+
+    // Détecter le début du pan : Espace + clic gauche OU clic molette OU clic gauche sur fond (pan permanent)
+    document.addEventListener('mousedown', (e) => {
+        // Ne pas activer le pan si on clique sur une zone ou un élément interactif
+        if (e.target.closest('.zone') || e.target.closest('.toolbar') || e.target.closest('button')) {
+            return;
+        }
+
+        // Pan avec Espace + clic gauche (immédiat)
+        if (e.button === 0 && spacePressed) {
+            e.preventDefault();
+            e.stopPropagation();
+            isPanning = true;
+            panStartX = e.clientX;
+            panStartY = e.clientY;
+            panStartScrollLeft = workspace.scrollLeft;
+            panStartScrollTop = workspace.scrollTop;
+            workspace.style.cursor = 'grabbing';
+            document.body.style.userSelect = 'none';
+        }
+        // Pan avec clic molette (immédiat)
+        else if (e.button === 1) {
+            e.preventDefault();
+            e.stopPropagation();
+            isPanning = true;
+            panStartX = e.clientX;
+            panStartY = e.clientY;
+            panStartScrollLeft = workspace.scrollLeft;
+            panStartScrollTop = workspace.scrollTop;
+            workspace.style.cursor = 'grabbing';
+            document.body.style.userSelect = 'none';
+        }
+        // Pan permanent : clic gauche sur le fond (avec seuil de mouvement)
+        else if (e.button === 0) {
+            // On enregistre la position mais on n'active pas le pan tout de suite
+            // On attend de voir si l'utilisateur bouge la souris
+            panPotential = true;
+            panStartX = e.clientX;
+            panStartY = e.clientY;
+            panStartScrollLeft = workspace.scrollLeft;
+            panStartScrollTop = workspace.scrollTop;
+        }
+    });
+
+    // Déplacer le document pendant le pan
+    document.addEventListener('mousemove', (e) => {
+        // Pan permanent : activer le pan si on dépasse le seuil de mouvement
+        if (panPotential && !isPanning && !isDragging && !isResizing) {
+            const dx = Math.abs(e.clientX - panStartX);
+            const dy = Math.abs(e.clientY - panStartY);
+            
+            // Si on a bougé de plus de PAN_THRESHOLD pixels, activer le pan
+            if (dx > PAN_THRESHOLD || dy > PAN_THRESHOLD) {
+                isPanning = true;
+                panPotential = false;
+                workspace.style.cursor = 'grabbing';
+                document.body.style.userSelect = 'none';
+            }
+        }
+        
+        // Pan actif : déplacer le document
+        if (isPanning && !isDragging && !isResizing) {
+            e.preventDefault();
+            const dx = e.clientX - panStartX;
+            const dy = e.clientY - panStartY;
+            
+            workspace.scrollLeft = panStartScrollLeft - dx;
+            workspace.scrollTop = panStartScrollTop - dy;
+        }
+    });
+
+    // Arrêter le pan
+    document.addEventListener('mouseup', (e) => {
+        if (isPanning) {
+            isPanning = false;
+            workspace.style.cursor = spacePressed ? 'grab' : '';
+            document.body.style.userSelect = '';
+        }
+        
+        // Si on n'a pas activé le pan (clic simple), permettre la désélection normale
+        if (panPotential && !isPanning) {
+            panPotential = false;
+            // Le clic simple sera géré par le listener de désélection existant
+        }
+    });
+
 });
