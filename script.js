@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const chkTransparent = document.getElementById('chk-transparent');
     const chkLock = document.getElementById('chk-lock');
     const chkCopyfit = document.getElementById('chk-copyfit'); // Copy Fitting
+    const chkBold = document.getElementById('chk-bold'); // Gras
     const inputLineHeight = document.getElementById('input-line-height'); // Interlignage
 
     const textControls = [
@@ -41,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
         inputBgColor,
         chkTransparent,
         chkCopyfit,
+        chkBold,
         inputLineHeight
     ];
 
@@ -99,7 +101,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const MM_PER_PIXEL = 25.4 / 96;
     let zoneCounter = 0;
-    let selectedZoneId = null; 
+    let selectedZoneId = null;
+    
+    // Déclarer zoomLevel et constantes de page tôt pour qu'ils soient disponibles partout
+    let zoomLevel = 1.0; // 100% par défaut
+    const PAGE_WIDTH = 794;
+    const PAGE_HEIGHT = 1123; 
 
     // --- STOCKAGE DES DONNÉES (Le "Cerveau") ---
     // Nouvelle structure hiérarchique multipage
@@ -129,7 +136,36 @@ document.addEventListener('DOMContentLoaded', () => {
     // (pour faciliter la migration progressive)
     function getZonesData() {
         return getCurrentPageZones();
-    } 
+    }
+
+    // --- FONCTION POUR CALCULER LE CENTRE DE LA VUE ACTUELLE ---
+    function getCenterOfView() {
+        // Utiliser zoomLevel s'il est défini, sinon 1.0 par défaut
+        const currentZoom = typeof zoomLevel !== 'undefined' ? zoomLevel : 1.0;
+        
+        // Calculer le centre du viewport (workspace visible)
+        const viewportCenterX = workspace.scrollLeft + workspace.clientWidth / 2;
+        const viewportCenterY = workspace.scrollTop + workspace.clientHeight / 2;
+        
+        // Obtenir la position de #a4-page dans le workspace-canvas
+        const a4PageRect = a4Page.getBoundingClientRect();
+        const canvasRect = workspaceCanvas.getBoundingClientRect();
+        
+        // Position relative de #a4-page dans le canvas
+        const a4PageOffsetX = a4PageRect.left - canvasRect.left + workspace.scrollLeft;
+        const a4PageOffsetY = a4PageRect.top - canvasRect.top + workspace.scrollTop;
+        
+        // Calculer la position relative au centre de #a4-page (sans zoom)
+        const centerX = (viewportCenterX - a4PageOffsetX) / currentZoom;
+        const centerY = (viewportCenterY - a4PageOffsetY) / currentZoom;
+        
+        // S'assurer que la position est dans les limites de la page A4
+        // PAGE_WIDTH et PAGE_HEIGHT sont maintenant déclarés plus haut
+        const maxX = Math.max(0, Math.min(PAGE_WIDTH, centerX));
+        const maxY = Math.max(0, Math.min(PAGE_HEIGHT, centerY));
+        
+        return { x: maxX, y: maxY };
+    }
 
     // --- 1. AJOUTER UNE ZONE ---
     btnAdd.addEventListener('click', () => {
@@ -151,6 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
             isTransparent: true, // Transparent par défaut
             locked: false,
             copyfit: false, // Désactivé par défaut
+            bold: false, // Gras désactivé par défaut
             lineHeight: 1.2 // Interlignage par défaut (120%)
         };
 
@@ -190,12 +227,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         zone.id = id;
         
+        // Calculer le centre de la vue pour positionner la nouvelle zone
+        const centerView = getCenterOfView();
+        const defaultZoneWidth = zoneType === 'qr' ? 100 : 200;
+        const defaultZoneHeight = zoneType === 'qr' ? 100 : 40;
+        
+        // Positionner au centre de la vue, moins la moitié de la taille de la zone
+        const zoneX = centerView.x - (defaultZoneWidth / 2);
+        const zoneY = centerView.y - (defaultZoneHeight / 2);
+        
         if (zoneType === 'qr') {
             const defaultSize = zoneData.w || zoneData.h || 100;
             zone.style.width = defaultSize + 'px';
             zone.style.height = defaultSize + 'px';
-            zone.style.left = (zoneData.x !== undefined ? zoneData.x : 50) + 'px';
-            zone.style.top = (zoneData.y !== undefined ? zoneData.y : (50 + (labelNum * 20))) + 'px';
+            // Utiliser la position sauvegardée si elle existe, sinon le centre de la vue
+            zone.style.left = (zoneData.x !== undefined ? zoneData.x : zoneX) + 'px';
+            zone.style.top = (zoneData.y !== undefined ? zoneData.y : zoneY) + 'px';
             zone.style.backgroundColor = '#ffffff';
             const qrWrapper = document.createElement('div');
             qrWrapper.classList.add('zone-content');
@@ -205,8 +252,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Style initial par défaut pour le texte
             zone.style.width = '200px';
             zone.style.height = '40px';
-            zone.style.left = '50px';
-            zone.style.top = (50 + (labelNum * 20)) + 'px';
+            // Utiliser la position sauvegardée si elle existe, sinon le centre de la vue
+            zone.style.left = (zoneData.x !== undefined ? zoneData.x : zoneX) + 'px';
+            zone.style.top = (zoneData.y !== undefined ? zoneData.y : zoneY) + 'px';
             zone.style.fontFamily = 'Roboto, sans-serif';
             zone.style.fontSize = '12pt';
             zone.style.textAlign = 'left';
@@ -252,7 +300,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Activer l'interface
         btnDelete.disabled = false;
-        coordsPanel.style.opacity = 1;
+        coordsPanel.style.display = 'block';
         coordsPanel.style.pointerEvents = 'auto';
         lblSelected.innerText = `Zone ${id.split('-')[1]}`;
 
@@ -273,18 +321,20 @@ document.addEventListener('DOMContentLoaded', () => {
             inputBgColor.value = '#ffffff';
             chkTransparent.checked = false;
             chkCopyfit.checked = false;
+            chkBold.checked = false;
             inputLineHeight.value = 1.0;
         } else {
             setTextControlsEnabled(true);
-            inputContent.value = data.content;
-            inputFont.value = data.font;
-            inputSize.value = data.size;
-            inputColor.value = data.color;
-            inputAlign.value = data.align;
+            inputContent.value = data.content || '';
+            inputFont.value = data.font || 'Roboto';
+            inputSize.value = data.size || 12;
+            inputColor.value = data.color || '#000000';
+            inputAlign.value = data.align || 'left';
             inputValign.value = data.valign || 'top'; // Rétrocompatibilité
             inputBgColor.value = data.bgColor || '#ffffff';
             chkTransparent.checked = data.isTransparent !== undefined ? data.isTransparent : true;
             chkCopyfit.checked = data.copyfit || false;
+            chkBold.checked = data.bold || false; // Rétrocompatibilité
             inputLineHeight.value = data.lineHeight !== undefined ? data.lineHeight : 1.2; // Rétrocompatibilité
         }
         chkLock.checked = data.locked || false;
@@ -331,6 +381,7 @@ document.addEventListener('DOMContentLoaded', () => {
         zonesData[selectedZoneId].isTransparent = chkTransparent.checked;
         zonesData[selectedZoneId].locked = chkLock.checked;
         zonesData[selectedZoneId].copyfit = chkCopyfit.checked;
+        zonesData[selectedZoneId].bold = chkBold.checked;
         zonesData[selectedZoneId].lineHeight = parseFloat(inputLineHeight.value) || 1.2;
 
         // Gestion UI Checkbox
@@ -346,6 +397,15 @@ document.addEventListener('DOMContentLoaded', () => {
             applyCopyfit(zoneEl, inputSize.value);
         } else {
             zoneEl.style.fontSize = inputSize.value + 'pt';
+        }
+        
+        // Gras
+        if (chkBold.checked) {
+            zoneEl.style.fontWeight = 'bold';
+            contentEl.style.fontWeight = 'bold';
+        } else {
+            zoneEl.style.fontWeight = 'normal';
+            contentEl.style.fontWeight = 'normal';
         }
         
         zoneEl.style.color = inputColor.value;
@@ -459,7 +519,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Attacher les écouteurs
-    [inputContent, inputFont, inputSize, inputColor, inputAlign, inputValign, inputBgColor, chkTransparent, chkLock, chkCopyfit, inputLineHeight].forEach(el => {
+    [inputContent, inputFont, inputSize, inputColor, inputAlign, inputValign, inputBgColor, chkTransparent, chkLock, chkCopyfit, chkBold, inputLineHeight].forEach(el => {
         el.addEventListener('input', updateActiveZoneData);
         el.addEventListener('change', updateActiveZoneData); // Pour checkbox/color
     });
@@ -522,14 +582,32 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedZoneId) {
             document.getElementById(selectedZoneId)?.classList.remove('selected');
             selectedZoneId = null;
-            
-            // Désactiver le panneau
-            btnDelete.disabled = true;
-            coordsPanel.style.opacity = 0.5;
-            coordsPanel.style.pointerEvents = 'none';
-            lblSelected.innerText = "Aucune";
-            setTextControlsEnabled(true);
         }
+        
+        // Cacher complètement le panneau et vider toutes les valeurs
+        btnDelete.disabled = true;
+        coordsPanel.style.display = 'none';
+        coordsPanel.style.pointerEvents = 'none';
+        
+        // Vider tous les champs
+        inputContent.value = '';
+        inputFont.value = 'Roboto';
+        inputSize.value = 12;
+        inputColor.value = '#000000';
+        inputAlign.value = 'left';
+        inputValign.value = 'top';
+        inputBgColor.value = '#ffffff';
+        chkTransparent.checked = true;
+        chkCopyfit.checked = false;
+        chkBold.checked = false;
+        chkLock.checked = false;
+        inputLineHeight.value = 1.2;
+        inputX.value = '';
+        inputY.value = '';
+        inputW.value = '';
+        inputH.value = '';
+        lblSelected.innerText = "-";
+        setTextControlsEnabled(true);
     }
 
     btnDelete.addEventListener('click', () => {
@@ -855,6 +933,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     zoneEl.style.fontFamily = data.font + ", sans-serif";
                 }
                 
+                // Gras
+                if (data.bold) {
+                    zoneEl.style.fontWeight = 'bold';
+                    if (contentEl) contentEl.style.fontWeight = 'bold';
+                } else {
+                    zoneEl.style.fontWeight = 'normal';
+                    if (contentEl) contentEl.style.fontWeight = 'normal';
+                }
+                
                 // Alignements (DOIT être avant copyfit car copyfit modifie temporairement justifyContent)
                 if (contentEl) {
                     if (data.align) contentEl.style.textAlign = data.align;
@@ -1013,7 +1100,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             bgColor: data.isTransparent ? null : data.bgColor,
                             transparent: data.isTransparent,
                             locked: data.locked,
-                            copyfit: data.copyfit
+                            copyfit: data.copyfit,
+                            bold: data.bold || false
                         }
                     });
                 }
@@ -1051,14 +1139,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- 8. FONCTIONNALITÉ ZOOM ---
-    let zoomLevel = 1.0; // 100% par défaut
-    const PAGE_WIDTH = 794;
-    const PAGE_HEIGHT = 1123;
+    // zoomLevel, PAGE_WIDTH et PAGE_HEIGHT sont déjà déclarés plus haut
     const CANVAS_PADDING = 60;
 
     function setZoom(level) {
         // Limiter le zoom entre 25% et 200%
         zoomLevel = Math.max(0.25, Math.min(2.0, level));
+        
+        if (!a4Page) return;
         
         // Appliquer le zoom avec transform: scale()
         a4Page.style.transform = `scale(${zoomLevel})`;
@@ -1082,8 +1170,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const canvasHeight = Math.max(workspaceHeight, neededHeight);
         
         // Appliquer la taille au canvas
-        workspaceCanvas.style.width = canvasWidth + 'px';
-        workspaceCanvas.style.height = canvasHeight + 'px';
+        if (workspaceCanvas) {
+            workspaceCanvas.style.width = canvasWidth + 'px';
+            workspaceCanvas.style.height = canvasHeight + 'px';
+        }
         
         // Mettre à jour l'interface
         zoomSlider.value = Math.round(zoomLevel * 100);

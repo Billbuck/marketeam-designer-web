@@ -14,14 +14,55 @@ body {
 
 /* --- Barre d'outils --- */
 .toolbar {
-    width: 280px;
+    width: 300px;
     background-color: #fff;
-    padding: 20px;
+    padding: 15px;
     box-shadow: 2px 0 5px rgba(0,0,0,0.1);
     z-index: 100;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 15px;
+    overflow-y: auto;
+}
+
+.toolbar h2 {
+    margin: 0 0 10px 0;
+    font-size: 18px;
+    color: #1a73e8;
+    border-bottom: 2px solid #1a73e8;
+    padding-bottom: 8px;
+}
+
+.toolbar-section {
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.toolbar-section:last-child {
+    border-bottom: none;
+}
+
+.toolbar-section-primary {
+    background-color: #f8f9fa;
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid #e0e0e0;
+}
+
+.section-title {
+    margin: 0 0 10px 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.subsection-title {
+    margin: 10px 0 8px 0;
+    font-size: 12px;
+    color: #666;
+    font-weight: 600;
 }
 
 .workspace {
@@ -50,9 +91,36 @@ button {
     border-radius: 4px;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     font-weight: bold;
     font-size: 14px;
+    width: 100%;
+    margin-bottom: 8px;
+    transition: all 0.2s;
+}
+
+button:last-child {
+    margin-bottom: 0;
+}
+
+.btn-large {
+    padding: 12px;
+    font-size: 15px;
+    background-color: #1a73e8;
+    box-shadow: 0 2px 4px rgba(26, 115, 232, 0.3);
+}
+
+.btn-large:hover {
+    background-color: #1557b0;
+    box-shadow: 0 3px 6px rgba(26, 115, 232, 0.4);
+}
+
+.btn-icon {
+    padding: 8px;
+    min-width: 40px;
+    width: auto;
+    flex: 0 0 auto;
 }
 
 .btn-primary { background-color: #4285f4; color: white; }
@@ -185,38 +253,94 @@ button {
 
 /* --- Inputs coordonnées --- */
 .input-group {
-    margin-bottom: 10px;
+    margin-bottom: 12px;
 }
+
+.input-group-emphasized {
+    margin-bottom: 20px;
+    padding: 12px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    border: 2px solid #e0e0e0;
+}
+
 .input-group label {
     display: block;
     font-size: 12px;
     color: #666;
-}
-.input-group input {
-    width: 100%;
-    padding: 5px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    background-color: #f9f9f9;
+    margin-bottom: 5px;
+    font-weight: 500;
 }
 
-/* --- Ajouts pour le formulaire --- */
-textarea {
+.label-emphasized {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: #1a73e8 !important;
+    margin-bottom: 8px !important;
+}
+
+.input-group input,
+.input-group select,
+.input-group textarea {
     width: 100%;
     padding: 8px;
     border: 1px solid #ddd;
     border-radius: 4px;
-    resize: vertical;
-    font-family: inherit;
-    box-sizing: border-box; /* Important pour ne pas dépasser */
-}
-
-select, input[type="number"] {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    background-color: #fff;
     box-sizing: border-box;
+    font-size: 13px;
+}
+
+.input-group-emphasized textarea {
+    border: 2px solid #1a73e8;
+    font-size: 14px;
+    line-height: 1.5;
+    resize: vertical;
+    min-height: 80px;
+}
+
+.input-group-emphasized textarea:focus {
+    outline: none;
+    border-color: #1557b0;
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+}
+
+/* --- Navigation multipage --- */
+.page-nav-buttons {
+    display: flex;
+    gap: 5px;
+}
+
+.page-nav-btn {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+/* --- Zoom --- */
+.zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.zoom-controls input[type="range"] {
+    flex: 1;
+    margin: 0;
+}
+
+.zoom-value-display {
+    text-align: center;
+    font-size: 13px;
+    color: #666;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.zoom-hint {
+    text-align: center;
+    font-size: 10px;
+    color: #999;
 }
 
 .style-row {
