@@ -418,10 +418,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Mettre à jour la visibilité de la toolbar d'alignement et taille
+    // Mettre à jour la visibilité de la toolbar d'alignement, taille et espacement
     function updateAlignmentToolbarVisibility() {
         const alignmentSection = document.getElementById('alignment-section');
         const sizeSection = document.getElementById('size-section');
+        const spacingSection = document.getElementById('spacing-section');
         const count = selectedZoneIds.length;
         
         if (alignmentSection) {
@@ -429,6 +430,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (sizeSection) {
             sizeSection.style.display = count >= 2 ? 'block' : 'none';
+        }
+        if (spacingSection) {
+            spacingSection.style.display = count >= 3 ? 'block' : 'none';
         }
     }
 
@@ -774,6 +778,126 @@ document.addEventListener('DOMContentLoaded', () => {
         el.addEventListener('change', updateActiveZoneData); // Pour checkbox/color
     });
 
+    // --- FONCTIONS D'ESPACEMENT ---
+    
+    // Ajuster l'écartement horizontal entre les zones (uniforme)
+    function spaceZonesHorizontally() {
+        if (selectedZoneIds.length < 3) return;
+        
+        const zonesData = getCurrentPageZones();
+        
+        // Récupérer toutes les zones avec leurs positions
+        const zones = selectedZoneIds
+            .map(id => {
+                const zone = document.getElementById(id);
+                if (!zone) return null;
+                if (zonesData[id] && zonesData[id].locked) return null; // Ignorer les zones verrouillées
+                return {
+                    id: id,
+                    element: zone,
+                    left: zone.offsetLeft,
+                    width: zone.offsetWidth
+                };
+            })
+            .filter(z => z !== null);
+        
+        if (zones.length < 3) return;
+        
+        // Trier par position X (de gauche à droite)
+        zones.sort((a, b) => a.left - b.left);
+        
+        // Calculer l'espace total disponible
+        const firstZone = zones[0];
+        const lastZone = zones[zones.length - 1];
+        const totalWidth = (lastZone.left + lastZone.width) - firstZone.left;
+        
+        // Calculer la largeur totale des zones
+        const totalZonesWidth = zones.reduce((sum, z) => sum + z.width, 0);
+        
+        // Calculer l'espace disponible pour l'écartement
+        const availableSpace = totalWidth - totalZonesWidth;
+        
+        // Calculer l'écartement uniforme entre chaque zone
+        const spacing = availableSpace / (zones.length - 1);
+        
+        // Positionner chaque zone avec l'écartement uniforme
+        let currentX = firstZone.left;
+        for (let i = 0; i < zones.length; i++) {
+            if (i === 0) {
+                // La première zone garde sa position
+                currentX = firstZone.left;
+            } else {
+                // Les autres zones sont positionnées avec l'écartement
+                currentX += zones[i - 1].width + spacing;
+            }
+            
+            // S'assurer que la zone reste dans les limites de la page
+            const maxLeft = a4Page.offsetWidth - zones[i].width;
+            zones[i].element.style.left = Math.max(0, Math.min(currentX, maxLeft)) + 'px';
+        }
+        
+        saveToLocalStorage();
+    }
+
+    // Ajuster l'écartement vertical entre les zones (uniforme)
+    function spaceZonesVertically() {
+        if (selectedZoneIds.length < 3) return;
+        
+        const zonesData = getCurrentPageZones();
+        
+        // Récupérer toutes les zones avec leurs positions
+        const zones = selectedZoneIds
+            .map(id => {
+                const zone = document.getElementById(id);
+                if (!zone) return null;
+                if (zonesData[id] && zonesData[id].locked) return null; // Ignorer les zones verrouillées
+                return {
+                    id: id,
+                    element: zone,
+                    top: zone.offsetTop,
+                    height: zone.offsetHeight
+                };
+            })
+            .filter(z => z !== null);
+        
+        if (zones.length < 3) return;
+        
+        // Trier par position Y (de haut en bas)
+        zones.sort((a, b) => a.top - b.top);
+        
+        // Calculer l'espace total disponible
+        const firstZone = zones[0];
+        const lastZone = zones[zones.length - 1];
+        const totalHeight = (lastZone.top + lastZone.height) - firstZone.top;
+        
+        // Calculer la hauteur totale des zones
+        const totalZonesHeight = zones.reduce((sum, z) => sum + z.height, 0);
+        
+        // Calculer l'espace disponible pour l'écartement
+        const availableSpace = totalHeight - totalZonesHeight;
+        
+        // Calculer l'écartement uniforme entre chaque zone
+        const spacing = availableSpace / (zones.length - 1);
+        
+        // Positionner chaque zone avec l'écartement uniforme
+        let currentY = firstZone.top;
+        for (let i = 0; i < zones.length; i++) {
+            if (i === 0) {
+                // La première zone garde sa position
+                currentY = firstZone.top;
+            } else {
+                // Les autres zones sont positionnées avec l'écartement
+                currentY += zones[i - 1].height + spacing;
+            }
+            
+            // S'assurer que la zone reste dans les limites de la page
+            const maxTop = a4Page.offsetHeight - zones[i].height;
+            zones[i].element.style.top = Math.max(0, Math.min(currentY, maxTop)) + 'px';
+        }
+        
+        saveToLocalStorage();
+    }
+
     // --- ÉCOUTEURS POUR LES BOUTONS D'ALIGNEMENT ET TAILLE ---
     const btnAlignLeft = document.getElementById('btn-align-left');
     const btnAlignCenter = document.getElementById('btn-align-center');
@@ -783,6 +907,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnAlignBottom = document.getElementById('btn-align-bottom');
     const btnSameWidth = document.getElementById('btn-same-width');
     const btnSameHeight = document.getElementById('btn-same-height');
+    const btnSpaceHorizontal = document.getElementById('btn-space-horizontal');
+    const btnSpaceVertical = document.getElementById('btn-space-vertical');
 
     if (btnAlignLeft) btnAlignLeft.addEventListener('click', () => alignZones('left'));
     if (btnAlignCenter) btnAlignCenter.addEventListener('click', () => alignZones('center'));
@@ -792,6 +918,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnAlignBottom) btnAlignBottom.addEventListener('click', () => alignZones('bottom'));
     if (btnSameWidth) btnSameWidth.addEventListener('click', () => applySameWidth());
     if (btnSameHeight) btnSameHeight.addEventListener('click', () => applySameHeight());
+    if (btnSpaceHorizontal) btnSpaceHorizontal.addEventListener('click', () => spaceZonesHorizontally());
+    if (btnSpaceVertical) btnSpaceVertical.addEventListener('click', () => spaceZonesVertically());
 
     // --- 4. SUPPRESSION & DÉSÉLECTION ---
     
