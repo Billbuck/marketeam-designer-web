@@ -1143,8 +1143,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const CANVAS_PADDING = 60;
 
     function setZoom(level) {
-        // Limiter le zoom entre 25% et 200%
-        zoomLevel = Math.max(0.25, Math.min(2.0, level));
+        // Limiter le zoom entre 25% et 300%
+        zoomLevel = Math.max(0.25, Math.min(3.0, level));
         
         if (!a4Page) return;
         
