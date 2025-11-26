@@ -538,10 +538,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Raccourci clavier : Touche Suppr pour supprimer
     document.addEventListener('keydown', (e) => {
-        // Si la modale est ouverte
+        // Si la modale de suppression est ouverte
         if (!modalOverlay.classList.contains('hidden')) {
             if (e.key === 'Enter') confirmDeletion();
             if (e.key === 'Escape') hideDeleteConfirmation();
+            return;
+        }
+
+        // Si la modale de réinitialisation est ouverte, ne pas gérer les autres touches
+        if (!resetModal.classList.contains('hidden')) {
             return;
         }
 
@@ -554,23 +559,86 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- BOUTON RÉINITIALISER ---
+    const resetModal = document.getElementById('reset-modal');
+    const btnResetCancel = document.getElementById('btn-reset-cancel');
+    const btnResetCurrentPage = document.getElementById('btn-reset-current-page');
+    const btnResetAllPages = document.getElementById('btn-reset-all-pages');
+
+    function showResetConfirmation() {
+        // Afficher ou masquer le bouton "Toutes les pages" selon le nombre de pages
+        if (documentState.pages.length > 1) {
+            btnResetAllPages.style.display = 'inline-flex';
+        } else {
+            btnResetAllPages.style.display = 'none';
+        }
+        resetModal.classList.remove('hidden');
+    }
+
+    function hideResetConfirmation() {
+        resetModal.classList.add('hidden');
+    }
+
+    function resetCurrentPage() {
+        // 1. Supprimer toutes les zones du DOM de la page courante
+        document.querySelectorAll('.zone').forEach(el => el.remove());
+        
+        // 2. Vider la mémoire de la page courante uniquement
+        const zonesData = getCurrentPageZones();
+        for (const key in zonesData) delete zonesData[key];
+        
+        // 3. Désélectionner
+        selectedZoneId = null;
+        deselectAll(); // Nettoyer l'interface
+        
+        // 4. Sauvegarder l'état
+        saveToLocalStorage();
+        
+        hideResetConfirmation();
+    }
+
+    function resetAllPages() {
+        // 1. Supprimer toutes les zones du DOM
+        document.querySelectorAll('.zone').forEach(el => el.remove());
+        
+        // 2. Vider la mémoire de toutes les pages
+        documentState.pages.forEach(page => {
+            for (const key in page.zones) delete page.zones[key];
+        });
+        
+        // 3. Réinitialiser le compteur global et la sélection
+        documentState.zoneCounter = 0;
+        zoneCounter = 0;
+        selectedZoneId = null;
+        deselectAll(); // Nettoyer l'interface
+        
+        // 4. Sauvegarder l'état vide
+        saveToLocalStorage();
+        
+        hideResetConfirmation();
+    }
+
     btnReset.addEventListener('click', () => {
-        if (confirm("Êtes-vous sûr de vouloir tout effacer ? Cette action est irréversible.")) {
-            // 1. Supprimer toutes les zones du DOM
-            document.querySelectorAll('.zone').forEach(el => el.remove());
-            
-            // 2. Vider la mémoire de la page courante
-            const zonesData = getCurrentPageZones();
-            for (const key in zonesData) delete zonesData[key];
-            
-            // 3. Réinitialiser le compteur et la sélection
-            documentState.zoneCounter = 0;
-            zoneCounter = 0;
-            selectedZoneId = null;
-            deselectAll(); // Nettoyer l'interface
-            
-            // 4. Sauvegarder l'état vide
-            saveToLocalStorage();
+        showResetConfirmation();
+    });
+
+    btnResetCancel.addEventListener('click', hideResetConfirmation);
+    btnResetCurrentPage.addEventListener('click', resetCurrentPage);
+    btnResetAllPages.addEventListener('click', resetAllPages);
+    
+    // Fermer la modale en cliquant sur le fond gris
+    resetModal.addEventListener('click', (e) => {
+        if (e.target === resetModal) {
+            hideResetConfirmation();
+        }
+    });
+
+    // Raccourci clavier : Escape pour fermer la modale de réinitialisation
+    document.addEventListener('keydown', (e) => {
+        // Si la modale de réinitialisation est ouverte
+        if (!resetModal.classList.contains('hidden')) {
+            if (e.key === 'Escape') {
+                hideResetConfirmation();
+            }
         }
     });
 
