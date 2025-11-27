@@ -289,30 +289,8 @@
         </div>
     </div>
 
-    <!-- Modale de sélection de couleur pour formatage -->
-    <div id="color-picker-modal" class="modal-overlay hidden">
-        <div class="modal-box color-picker-box">
-            <div class="modal-header">
-                <span class="material-icons" style="color: #1a73e8;">palette</span>
-                <h3>Choisir une couleur</h3>
-            </div>
-            <div class="modal-body">
-                <div class="color-picker-container">
-                    <input type="color" id="color-picker-input" value="#ff0000">
-                    <div class="color-preview">
-                        <label>Aperçu :</label>
-                        <div class="color-preview-box">
-                            <span id="color-preview-text">Texte d'exemple</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-buttons">
-                <button id="btn-color-cancel" class="btn-secondary">Annuler</button>
-                <button id="btn-color-validate" class="btn-primary">Valider</button>
-            </div>
-        </div>
-    </div>
+    <!-- Input color caché pour le formatage de texte -->
+    <input type="color" id="color-picker-input" style="position: fixed; opacity: 0; width: 0; height: 0; left: -9999px;">
 
     <!-- Modale de confirmation de réinitialisation -->
     <div id="reset-modal" class="modal-overlay hidden">
