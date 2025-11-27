@@ -97,6 +97,8 @@
                 <h3 class="section-title">Propriétés de la Zone</h3>
                 <p class="selection-info">Zone : <strong id="lbl-selected-zone">-</strong></p>
                 
+                <!-- Conteneur pour toutes les propriétés individuelles (masqué en multisélection) -->
+                <div id="zone-properties-content">
                 <hr>
 
                 <!-- Zone de texte en saisie - MISE EN AVANT -->
@@ -173,7 +175,7 @@
                     </div>
                 </div>
 
-                <div class="style-row">
+                <div class="style-row" id="lock-row">
                     <div class="input-group">
                         <label class="switch-container">
                             <div class="switch">
@@ -187,7 +189,7 @@
 
                 <hr>
 
-                <h4 class="subsection-title">Géométrie (mm)</h4>
+                <h4 class="subsection-title" id="geometry-title">Géométrie (mm)</h4>
                 <div class="style-row">
                     <div class="input-group half">
                         <label>X</label>
@@ -208,6 +210,9 @@
                         <input type="text" id="val-h" readonly>
                     </div>
                 </div>
+                </div>
+                <!-- Fin du conteneur zone-properties-content -->
+
             </div>
 
             <!-- Outils secondaires -->

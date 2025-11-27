@@ -133,11 +133,10 @@ button:last-child {
 
 .btn-success { background-color: #34a853; color: white; }
 
-/* --- Page A4 --- */
+/* --- Page (dimensions définies dynamiquement par JavaScript) --- */
 #a4-page {
-    /* Dimensions A4 à 96 DPI */
-    width: 794px; 
-    height: 1123px;
+    /* Dimensions définies dynamiquement via JavaScript selon le format */
+    /* Par défaut A4 (794x1123px à 96 DPI) mais peut être changé */
     background-color: white;
     box-shadow: 0 0 10px rgba(0,0,0,0.2);
     position: relative;
@@ -241,12 +240,11 @@ button:last-child {
     background-color: white;
     border: 1px solid #1a73e8;
     position: absolute;
-    display: none; /* Cachées par défaut */
+    display: none; /* Cachées par défaut - gérées par JavaScript */
 }
 
-.zone.selected .handle {
-    display: block; /* Affichées si parent sélectionné */
-}
+/* L'affichage des poignées est maintenant géré par JavaScript dans updateHandlesVisibility() */
+/* Elles ne s'affichent que si une seule zone est sélectionnée et non verrouillée */
 
 .nw { top: -5px; left: -5px; cursor: nw-resize; }
 .ne { top: -5px; right: -5px; cursor: ne-resize; }

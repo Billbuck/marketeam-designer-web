@@ -103,18 +103,45 @@ document.addEventListener('DOMContentLoaded', () => {
     let zoneCounter = 0;
     let selectedZoneIds = []; // Tableau pour la sélection multiple
     
-    // Déclarer zoomLevel et constantes de page tôt pour qu'ils soient disponibles partout
+    // Déclarer zoomLevel tôt pour qu'il soit disponible partout
     let zoomLevel = 1.0; // 100% par défaut
-    const PAGE_WIDTH = 794;
-    const PAGE_HEIGHT = 1123; 
+
+    // --- SYSTÈME DE FORMATS DE DOCUMENT ---
+    // Formats prédéfinis (dimensions en pixels à 96 DPI)
+    const DOCUMENT_FORMATS = {
+        'A4': { width: 794, height: 1123, name: 'A4' },
+        'A3': { width: 1123, height: 1587, name: 'A3' },
+        'A5': { width: 559, height: 794, name: 'A5' },
+        'Letter': { width: 816, height: 1056, name: 'Letter (US)' },
+        'Legal': { width: 816, height: 1344, name: 'Legal (US)' }
+    };
+
+    // Format par défaut (A4)
+    const DEFAULT_FORMAT = 'A4';
 
     // --- STOCKAGE DES DONNÉES (Le "Cerveau") ---
-    // Nouvelle structure hiérarchique multipage
+    // Nouvelle structure hiérarchique multipage avec dimensions
     let documentState = {
         currentPageIndex: 0, // 0 = Recto
         pages: [
-            { id: 'page-1', name: 'Recto', image: 'a4_template_recto.jpg', zones: {} },
-            { id: 'page-2', name: 'Verso', image: 'a4_template_verso.jpg', zones: {} }
+            { 
+                id: 'page-1', 
+                name: 'Recto', 
+                image: 'a4_template_recto.jpg', 
+                format: DEFAULT_FORMAT, // Format de la page
+                width: DOCUMENT_FORMATS[DEFAULT_FORMAT].width, // Largeur en pixels
+                height: DOCUMENT_FORMATS[DEFAULT_FORMAT].height, // Hauteur en pixels
+                zones: {} 
+            },
+            { 
+                id: 'page-2', 
+                name: 'Verso', 
+                image: 'a4_template_verso.jpg', 
+                format: DEFAULT_FORMAT,
+                width: DOCUMENT_FORMATS[DEFAULT_FORMAT].width,
+                height: DOCUMENT_FORMATS[DEFAULT_FORMAT].height,
+                zones: {} 
+            }
         ],
         zoneCounter: 0 // Compteur global pour ID uniques
     };
@@ -138,6 +165,47 @@ document.addEventListener('DOMContentLoaded', () => {
         return getCurrentPageZones();
     }
 
+    // --- FONCTIONS HELPER POUR LES DIMENSIONS DE PAGE ---
+    // Obtenir la largeur de la page courante (en pixels)
+    function getPageWidth() {
+        const currentPage = getCurrentPage();
+        // Priorité : données sauvegardées > dimensions du DOM > format par défaut
+        if (currentPage && currentPage.width) {
+            return currentPage.width;
+        }
+        // Fallback : lire depuis le DOM si disponible
+        if (a4Page && a4Page.offsetWidth > 0) {
+            return a4Page.offsetWidth;
+        }
+        // Fallback final : format par défaut
+        return DOCUMENT_FORMATS[DEFAULT_FORMAT].width;
+    }
+
+    // Obtenir la hauteur de la page courante (en pixels)
+    function getPageHeight() {
+        const currentPage = getCurrentPage();
+        // Priorité : données sauvegardées > dimensions du DOM > format par défaut
+        if (currentPage && currentPage.height) {
+            return currentPage.height;
+        }
+        // Fallback : lire depuis le DOM si disponible
+        if (a4Page && a4Page.offsetHeight > 0) {
+            return a4Page.offsetHeight;
+        }
+        // Fallback final : format par défaut
+        return DOCUMENT_FORMATS[DEFAULT_FORMAT].height;
+    }
+
+    // Appliquer les dimensions de la page courante au DOM
+    function applyPageDimensions() {
+        const width = getPageWidth();
+        const height = getPageHeight();
+        if (a4Page) {
+            a4Page.style.width = width + 'px';
+            a4Page.style.height = height + 'px';
+        }
+    }
+
     // --- FONCTION POUR CALCULER LE CENTRE DE LA VUE ACTUELLE ---
     function getCenterOfView() {
         // Utiliser zoomLevel s'il est défini, sinon 1.0 par défaut
@@ -159,10 +227,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const centerX = (viewportCenterX - a4PageOffsetX) / currentZoom;
         const centerY = (viewportCenterY - a4PageOffsetY) / currentZoom;
         
-        // S'assurer que la position est dans les limites de la page A4
-        // PAGE_WIDTH et PAGE_HEIGHT sont maintenant déclarés plus haut
-        const maxX = Math.max(0, Math.min(PAGE_WIDTH, centerX));
-        const maxY = Math.max(0, Math.min(PAGE_HEIGHT, centerY));
+        // S'assurer que la position est dans les limites de la page
+        const pageWidth = getPageWidth();
+        const pageHeight = getPageHeight();
+        const maxX = Math.max(0, Math.min(pageWidth, centerX));
+        const maxY = Math.max(0, Math.min(pageHeight, centerY));
         
         return { x: maxX, y: maxY };
     }
@@ -315,6 +384,35 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Mettre à jour l'affichage des poignées selon la sélection
+    function updateHandlesVisibility() {
+        const count = selectedZoneIds.length;
+        const zonesData = getCurrentPageZones();
+        
+        // D'abord, masquer les poignées de TOUTES les zones de la page
+        const allZones = document.querySelectorAll('.zone');
+        allZones.forEach(zoneEl => {
+            const handles = zoneEl.querySelectorAll('.handle');
+            handles.forEach(h => h.style.display = 'none');
+        });
+        
+        // Ensuite, afficher les poignées uniquement pour les zones sélectionnées (si sélection unique et non verrouillée)
+        if (count === 1) {
+            const zoneId = selectedZoneIds[0];
+            const zoneEl = document.getElementById(zoneId);
+            if (zoneEl) {
+                const zoneData = zonesData[zoneId];
+                const isLocked = zoneData && zoneData.locked;
+                
+                if (!isLocked) {
+                    // Sélection unique et non verrouillée : afficher les poignées
+                    const handles = zoneEl.querySelectorAll('.handle');
+                    handles.forEach(h => h.style.display = 'block');
+                }
+            }
+        }
+    }
+
     // Mettre à jour l'interface selon la sélection
     function updateSelectionUI() {
         const count = selectedZoneIds.length;
@@ -345,6 +443,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Masquer ou désactiver les champs de propriétés en mode multi-sélection
             setMultiSelectionMode(true);
         }
+        
+        // Mettre à jour l'affichage des poignées
+        updateHandlesVisibility();
         
         // Afficher/masquer les sections d'alignement et taille
         updateAlignmentToolbarVisibility();
@@ -403,7 +504,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Activer/désactiver le mode multi-sélection dans le formulaire
     function setMultiSelectionMode(enabled) {
-        // Désactiver tous les champs en mode multi-sélection
+        // Masquer/afficher tout le conteneur des propriétés individuelles
+        const propertiesContent = document.getElementById('zone-properties-content');
+        if (propertiesContent) {
+            propertiesContent.style.display = enabled ? 'none' : '';
+        }
+        
+        // Désactiver tous les champs en mode multi-sélection (pour sécurité, même si masqués)
         textControls.forEach(ctrl => {
             if (ctrl) {
                 ctrl.disabled = enabled;
@@ -570,16 +677,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // SÉLECTIONNER UNE ZONE (avec gestion Ctrl+clic)
     function selectZone(id, event = null) {
         const isCtrlPressed = event && (event.ctrlKey || event.metaKey);
+        const isAlreadySelected = selectedZoneIds.includes(id);
         
         if (isCtrlPressed) {
             // Mode multi-sélection : ajouter ou retirer de la sélection
-            if (selectedZoneIds.includes(id)) {
+            if (isAlreadySelected) {
                 removeFromSelection(id);
             } else {
                 addToSelection(id);
             }
         } else {
             // Sélection simple : remplacer la sélection actuelle
+            // MAIS : si la zone cliquée est déjà dans une sélection multiple, ne pas remplacer
+            // (pour permettre le drag groupé sans Ctrl)
+            if (isAlreadySelected && selectedZoneIds.length > 1) {
+                // Ne rien faire, garder la sélection multiple pour permettre le drag groupé
+                return;
+            }
+            
             // Désélectionner toutes les zones
             selectedZoneIds.forEach(zoneId => {
                 document.getElementById(zoneId)?.classList.remove('selected');
@@ -615,11 +730,11 @@ document.addEventListener('DOMContentLoaded', () => {
             zonesData[selectedId].locked = chkLock.checked;
             if (chkLock.checked) {
                 zoneEl.classList.add('locked');
-                zoneEl.querySelectorAll('.handle').forEach(h => h.style.display = 'none');
             } else {
                 zoneEl.classList.remove('locked');
-                zoneEl.querySelectorAll('.handle').forEach(h => h.style.display = 'block');
             }
+            // Mettre à jour l'affichage des poignées (prend en compte sélection + verrouillage)
+            updateHandlesVisibility();
             saveToLocalStorage();
             return;
         }
@@ -676,15 +791,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Verrouillage (Visuel)
         if (chkLock.checked) {
             zoneEl.classList.add('locked');
-            // Cacher les poignées si verrouillé
-            zoneEl.querySelectorAll('.handle').forEach(h => h.style.display = 'none');
         } else {
             zoneEl.classList.remove('locked');
-            // Réafficher les poignées si sélectionné ET non verrouillé
-            if(selectedZoneIds.includes(zoneEl.id)) {
-                zoneEl.querySelectorAll('.handle').forEach(h => h.style.display = 'block');
-            }
         }
+        // Mettre à jour l'affichage des poignées (prend en compte sélection + verrouillage)
+        updateHandlesVisibility();
         
         // Alignement Horizontal (géré par le texte lui-même)
         contentEl.style.textAlign = inputAlign.value;
@@ -1012,6 +1123,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Masquer les sections d'alignement et taille
         updateAlignmentToolbarVisibility();
+        
+        // Masquer les poignées (aucune sélection)
+        updateHandlesVisibility();
     }
 
     btnDelete.addEventListener('click', () => {
@@ -1127,6 +1241,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 5. DRAG & DROP (Repris et adapté) ---
     let isDragging = false, isResizing = false, currentHandle = null;
     let startX, startY, startLeft, startTop, startW, startH;
+    // Stockage des positions initiales de toutes les zones sélectionnées pour le déplacement groupé
+    let startPositions = []; // Tableau de {id, left, top, width, height}
 
     document.addEventListener('mousedown', (e) => {
         // Si on est en mode pan (Espace pressé ou clic molette), ne pas permettre le drag des zones
@@ -1134,47 +1250,118 @@ document.addEventListener('DOMContentLoaded', () => {
             return; // Laisser le pan gérer
         }
         
-        // Utiliser la première zone sélectionnée pour le drag/resize
+        // Vérifier si on clique sur une zone sélectionnée (pour le drag/resize)
         if (selectedZoneIds.length > 0) {
-            const firstSelectedId = selectedZoneIds[0];
-            const zone = document.getElementById(firstSelectedId);
-            if (!zone) return;
-            
             const zonesData = getCurrentPageZones();
-            // Vérifier si verrouillé
-            if (zonesData[firstSelectedId].locked) return; 
             
-            if (e.target.classList.contains('handle') && zone.contains(e.target)) {
+            // Trouver quelle zone sélectionnée a été cliquée (si une)
+            let clickedZone = null;
+            let clickedZoneId = null;
+            
+            for (const zoneId of selectedZoneIds) {
+                const zoneEl = document.getElementById(zoneId);
+                if (zoneEl && zoneEl.contains(e.target)) {
+                    // Vérifier si cette zone n'est pas verrouillée
+                    if (!zonesData[zoneId] || !zonesData[zoneId].locked) {
+                        clickedZone = zoneEl;
+                        clickedZoneId = zoneId;
+                        break;
+                    }
+                }
+            }
+            
+            if (!clickedZone) return; // Aucune zone sélectionnée cliquée ou toutes verrouillées
+            
+            // Gestion du redimensionnement (handle)
+            // Ne permettre le redimensionnement que si une seule zone est sélectionnée
+            if (e.target.classList.contains('handle') && clickedZone.contains(e.target)) {
+                if (selectedZoneIds.length > 1) {
+                    // Sélection multiple : empêcher le redimensionnement
+                    e.preventDefault();
+                    return;
+                }
+                // Redimensionnement : seulement la zone cliquée (sélection unique)
                 isResizing = true;
                 currentHandle = e.target.dataset.pos;
                 startX = e.clientX; startY = e.clientY;
-                startW = zone.offsetWidth; startH = zone.offsetHeight;
-                startLeft = zone.offsetLeft; startTop = zone.offsetTop;
+                startW = clickedZone.offsetWidth; startH = clickedZone.offsetHeight;
+                startLeft = clickedZone.offsetLeft; startTop = clickedZone.offsetTop;
                 e.preventDefault();
-            } else if (zone.contains(e.target)) {
+            } else if (clickedZone.contains(e.target) && !e.target.classList.contains('handle')) {
+                // Déplacement : sauvegarder les positions de TOUTES les zones sélectionnées
                 isDragging = true;
                 startX = e.clientX; startY = e.clientY;
-                startLeft = zone.offsetLeft; startTop = zone.offsetTop;
+                startLeft = clickedZone.offsetLeft; startTop = clickedZone.offsetTop;
+                
+                // Sauvegarder les positions initiales de toutes les zones sélectionnées
+                startPositions = [];
+                selectedZoneIds.forEach(zoneId => {
+                    const zoneEl = document.getElementById(zoneId);
+                    if (zoneEl) {
+                        // Vérifier si la zone n'est pas verrouillée
+                        const zoneData = zonesData[zoneId];
+                        if (!zoneData || !zoneData.locked) {
+                            startPositions.push({
+                                id: zoneId,
+                                left: zoneEl.offsetLeft,
+                                top: zoneEl.offsetTop,
+                                width: zoneEl.offsetWidth,
+                                height: zoneEl.offsetHeight
+                            });
+                        }
+                    }
+                });
             }
         }
     });
 
     document.addEventListener('mousemove', (e) => {
         if (selectedZoneIds.length === 0) return;
-        const firstSelectedId = selectedZoneIds[0];
-        const zone = document.getElementById(firstSelectedId);
-        if (!zone) return;
 
         if (isDragging) {
+            // Calculer le déplacement relatif (sans vérification de Ctrl - naturel)
             const dx = (e.clientX - startX) / zoomLevel;
             const dy = (e.clientY - startY) / zoomLevel;
-            const maxLeft = a4Page.offsetWidth - zone.offsetWidth;
-            const maxTop = a4Page.offsetHeight - zone.offsetHeight;
-
-            zone.style.left = Math.max(0, Math.min(startLeft + dx, maxLeft)) + 'px';
-            zone.style.top = Math.max(0, Math.min(startTop + dy, maxTop)) + 'px';
-            updateGeomDisplay(zone);
+            
+            // Obtenir les dimensions de la page (dynamiques)
+            const pageWidth = getPageWidth();
+            const pageHeight = getPageHeight();
+            
+            // Déplacer toutes les zones sélectionnées ensemble (sans besoin de Ctrl)
+            const zonesData = getCurrentPageZones();
+            startPositions.forEach(pos => {
+                const zoneEl = document.getElementById(pos.id);
+                if (!zoneEl) return;
+                
+                // Vérifier si la zone n'est pas verrouillée
+                const zoneData = zonesData[pos.id];
+                if (zoneData && zoneData.locked) return; // Ignorer les zones verrouillées
+                
+                // Calculer la nouvelle position
+                const newLeft = pos.left + dx;
+                const newTop = pos.top + dy;
+                
+                // Appliquer les contraintes de limites pour cette zone
+                const maxLeft = pageWidth - pos.width;
+                const maxTop = pageHeight - pos.height;
+                
+                // Positionner la zone en respectant les limites
+                zoneEl.style.left = Math.max(0, Math.min(newLeft, maxLeft)) + 'px';
+                zoneEl.style.top = Math.max(0, Math.min(newTop, maxTop)) + 'px';
+            });
+            
+            // Mettre à jour l'affichage géométrique seulement si une seule zone est sélectionnée
+            if (selectedZoneIds.length === 1) {
+                const firstSelectedId = selectedZoneIds[0];
+                const zone = document.getElementById(firstSelectedId);
+                if (zone) {
+                    updateGeomDisplay(zone);
+                }
+            }
         } else if (isResizing) {
+            const firstSelectedId = selectedZoneIds[0];
+            const zone = document.getElementById(firstSelectedId);
+            if (!zone) return;
             const zonesData = getCurrentPageZones();
             const dx = (e.clientX - startX) / zoomLevel;
             const dy = (e.clientY - startY) / zoomLevel;
@@ -1202,7 +1389,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    document.addEventListener('mouseup', () => { isDragging = false; isResizing = false; });
+    document.addEventListener('mouseup', () => {
+        // Sauvegarder après le déplacement groupé (avant de réinitialiser)
+        if (isDragging && startPositions.length > 0) {
+            saveToLocalStorage();
+        }
+        
+        isDragging = false; 
+        isResizing = false;
+        startPositions = []; // Nettoyer les positions sauvegardées
+    });
 
     function updateGeomDisplay(el) {
         inputX.value = (el.offsetLeft * MM_PER_PIXEL).toFixed(2);
@@ -1273,6 +1469,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const parsedZones = JSON.parse(savedZones);
             
             // Migrer toutes les zones vers la page 0 (Recto)
+            // S'assurer que la page a les dimensions par défaut (A4)
+            const defaultFormat = DOCUMENT_FORMATS[DEFAULT_FORMAT];
+            if (!documentState.pages[0].width || !documentState.pages[0].height) {
+                documentState.pages[0].format = DEFAULT_FORMAT;
+                documentState.pages[0].width = defaultFormat.width;
+                documentState.pages[0].height = defaultFormat.height;
+            }
+            if (!documentState.pages[1].width || !documentState.pages[1].height) {
+                documentState.pages[1].format = DEFAULT_FORMAT;
+                documentState.pages[1].width = defaultFormat.width;
+                documentState.pages[1].height = defaultFormat.height;
+            }
+            
             documentState.pages[0].zones = parsedZones;
             
             // Charger la page courante
@@ -1283,12 +1492,26 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             // Aucune donnée sauvegardée : s'assurer qu'on est sur la page 0 (Recto)
             documentState.currentPageIndex = 0;
+            // Appliquer les dimensions par défaut
+            applyPageDimensions();
         }
     }
 
     function loadCurrentPage() {
         const currentPage = getCurrentPage();
         const zonesData = currentPage.zones;
+        
+        // S'assurer que la page a des dimensions (migration/rétrocompatibilité)
+        if (!currentPage.width || !currentPage.height) {
+            // Si pas de dimensions, utiliser le format par défaut
+            const defaultFormat = DOCUMENT_FORMATS[DEFAULT_FORMAT];
+            currentPage.format = currentPage.format || DEFAULT_FORMAT;
+            currentPage.width = currentPage.width || defaultFormat.width;
+            currentPage.height = currentPage.height || defaultFormat.height;
+        }
+        
+        // Appliquer les dimensions au DOM
+        applyPageDimensions();
         
         // Mettre à jour l'image de fond
         const bgImg = document.getElementById('a4-background');
@@ -1320,7 +1543,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     if (data.locked) {
                         zoneEl.classList.add('locked');
-                        zoneEl.querySelectorAll('.handle').forEach(h => h.style.display = 'none');
                     }
                     continue;
                 }
@@ -1371,10 +1593,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Verrouillage
                 if (data.locked) {
                      zoneEl.classList.add('locked');
-                     zoneEl.querySelectorAll('.handle').forEach(h => h.style.display = 'none');
                 }
             }
         }
+        
+        // Mettre à jour l'affichage des poignées après le chargement de toutes les zones
+        updateHandlesVisibility();
     }
 
     // --- NAVIGATION MULTIPAGE ---
@@ -1394,6 +1618,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (bgImg) {
         bgImg.src = getCurrentPage().image;
     }
+    
+    // Appliquer les dimensions de la page courante au démarrage
+    // (loadCurrentPage() l'applique déjà, mais on s'assure ici aussi)
+    applyPageDimensions();
     
     // Initialiser l'UI de navigation
     updatePageNavigationUI();
@@ -1426,12 +1654,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // 4. Changer l'index de page courante
         documentState.currentPageIndex = pageIndex;
 
-        // 5. Changer l'image de fond
+        // 5. Changer l'image de fond et appliquer les dimensions
         const bgImg = document.getElementById('a4-background');
         const currentPage = getCurrentPage();
         if (bgImg) {
             bgImg.src = currentPage.image;
         }
+        
+        // Appliquer les dimensions de la nouvelle page
+        applyPageDimensions();
 
         // 6. Charger et afficher les zones de la nouvelle page
         loadCurrentPage();
@@ -1530,12 +1761,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 page_id: page.id,
                 page_name: page.name,
                 image: page.image,
+                format: page.format || DEFAULT_FORMAT,
+                width: page.width || DOCUMENT_FORMATS[DEFAULT_FORMAT].width,
+                height: page.height || DOCUMENT_FORMATS[DEFAULT_FORMAT].height,
                 zones: zonesOutput
             };
         });
 
         const output = {
-            document: "a4_template_multipage",
+            document: "template_multipage",
             scale_reference: "96 DPI", // Important pour le moteur BAT
             generated_at: new Date().toISOString(),
             pages: pagesOutput
@@ -1558,7 +1792,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- 8. FONCTIONNALITÉ ZOOM ---
-    // zoomLevel, PAGE_WIDTH et PAGE_HEIGHT sont déjà déclarés plus haut
     const CANVAS_PADDING = 60;
 
     function setZoom(level) {
@@ -1571,9 +1804,11 @@ document.addEventListener('DOMContentLoaded', () => {
         a4Page.style.transform = `scale(${zoomLevel})`;
         a4Page.style.transformOrigin = 'center center';
         
-        // Calculer les dimensions du document zoomé
-        const scaledWidth = PAGE_WIDTH * zoomLevel;
-        const scaledHeight = PAGE_HEIGHT * zoomLevel;
+        // Calculer les dimensions du document zoomé (utiliser les dimensions dynamiques)
+        const pageWidth = getPageWidth();
+        const pageHeight = getPageHeight();
+        const scaledWidth = pageWidth * zoomLevel;
+        const scaledHeight = pageHeight * zoomLevel;
         
         // Dimensions nécessaires pour le canvas (document + marge grise)
         const neededWidth = scaledWidth + CANVAS_PADDING * 2;
