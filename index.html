@@ -106,7 +106,20 @@
                     <label class="label-emphasized">Contenu du texte</label>
                     <!-- Liste des champs de fusion -->
                     <div id="merge-fields-list" class="merge-fields-container"></div>
+                    <!-- Barre d'outils de formatage -->
+                    <div class="formatting-toolbar">
+                        <button type="button" id="btn-format-bold" class="format-btn" title="Gras (Ctrl+B)">
+                            <span class="material-icons">format_bold</span>
+                        </button>
+                        <button type="button" id="btn-format-color" class="format-btn" title="Couleur du texte">
+                            <span class="material-icons">format_color_text</span>
+                        </button>
+                        <button type="button" id="btn-format-clear" class="format-btn" title="Supprimer le formatage de la sélection">
+                            <span class="material-icons">format_clear</span>
+                        </button>
+                    </div>
                     <textarea id="input-content" rows="4" placeholder="Ex: Cher {{NOM}},&#10;Votre texte ici..."></textarea>
+                    <small class="formatting-hint">Sélectionnez du texte puis utilisez les boutons ci-dessus pour le formater</small>
                 </div>
 
                 <div class="style-row">
@@ -224,6 +237,9 @@
                 <button id="btn-generate-json" class="btn-success">
                     <span class="material-icons">code</span> Générer JSON
                 </button>
+                <button id="btn-generate-rtf" class="btn-success">
+                    <span class="material-icons">description</span> Exporter RTF
+                </button>
             </div>
 
             <!-- Zoom -->
@@ -269,6 +285,31 @@
             <div class="modal-buttons">
                 <button id="btn-modal-cancel" class="btn-secondary">Annuler</button>
                 <button id="btn-modal-confirm" class="btn-danger">Supprimer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale de sélection de couleur pour formatage -->
+    <div id="color-picker-modal" class="modal-overlay hidden">
+        <div class="modal-box color-picker-box">
+            <div class="modal-header">
+                <span class="material-icons" style="color: #1a73e8;">palette</span>
+                <h3>Choisir une couleur</h3>
+            </div>
+            <div class="modal-body">
+                <div class="color-picker-container">
+                    <input type="color" id="color-picker-input" value="#ff0000">
+                    <div class="color-preview">
+                        <label>Aperçu :</label>
+                        <div class="color-preview-box">
+                            <span id="color-preview-text">Texte d'exemple</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button id="btn-color-cancel" class="btn-secondary">Annuler</button>
+                <button id="btn-color-validate" class="btn-primary">Valider</button>
             </div>
         </div>
     </div>

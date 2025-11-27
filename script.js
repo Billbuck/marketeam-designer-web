@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnDelete = document.getElementById('btn-delete-zone');
     const btnReset = document.getElementById('btn-reset');
     const btnGenerate = document.getElementById('btn-generate-json');
+    const btnGenerateRtf = document.getElementById('btn-generate-rtf');
     const coordsPanel = document.getElementById('coords-panel');
     const lblSelected = document.getElementById('lbl-selected-zone');
     
@@ -31,6 +32,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const chkCopyfit = document.getElementById('chk-copyfit'); // Copy Fitting
     const chkBold = document.getElementById('chk-bold'); // Gras
     const inputLineHeight = document.getElementById('input-line-height'); // Interlignage
+    
+    // Boutons de formatage partiel
+    const btnFormatBold = document.getElementById('btn-format-bold');
+    const btnFormatColor = document.getElementById('btn-format-color');
+    const btnFormatClear = document.getElementById('btn-format-clear');
+    
+    // Modale de sélection de couleur
+    const colorPickerModal = document.getElementById('color-picker-modal');
+    const colorPickerInput = document.getElementById('color-picker-input');
+    const colorPreviewText = document.getElementById('color-preview-text');
+    const btnColorCancel = document.getElementById('btn-color-cancel');
+    const btnColorValidate = document.getElementById('btn-color-validate');
+    let pendingColorSelection = null; // Stocke la sélection en attente
 
     const textControls = [
         inputContent,
@@ -258,7 +272,8 @@ document.addEventListener('DOMContentLoaded', () => {
             locked: false,
             copyfit: false, // Désactivé par défaut
             bold: false, // Gras désactivé par défaut
-            lineHeight: 1.2 // Interlignage par défaut (120%)
+            lineHeight: 1.2, // Interlignage par défaut (120%)
+            formatting: [] // Tableau d'annotations pour le formatage partiel
         };
 
         createZoneDOM(id, zoneCounter);
@@ -334,7 +349,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const contentSpan = document.createElement('div');
             contentSpan.classList.add('zone-content');
-            contentSpan.innerText = zonesData[id]?.content || '';
+            // Utiliser le formatage si disponible
+            const formatting = zoneData.formatting || [];
+            contentSpan.innerHTML = renderFormattedContent(zoneData.content || '', formatting, null);
             zone.appendChild(contentSpan);
         }
 
@@ -394,6 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
             copyfit: zoneData.copyfit || false,
             bold: zoneData.bold || false,
             lineHeight: zoneData.lineHeight !== undefined ? zoneData.lineHeight : 1.2,
+            formatting: zoneData.formatting ? JSON.parse(JSON.stringify(zoneData.formatting)) : [], // Copie profonde du formatage
             // Géométrie : utiliser les dimensions actuelles du DOM
             w: zoneEl.offsetWidth,
             h: zoneEl.offsetHeight,
@@ -440,6 +458,7 @@ document.addEventListener('DOMContentLoaded', () => {
             copyfit: copiedZoneData.copyfit,
             bold: copiedZoneData.bold,
             lineHeight: copiedZoneData.lineHeight,
+            formatting: copiedZoneData.formatting ? JSON.parse(JSON.stringify(copiedZoneData.formatting)) : [], // Copie profonde du formatage
             // Position et taille
             x: newX,
             y: newY,
@@ -462,9 +481,10 @@ document.addEventListener('DOMContentLoaded', () => {
             newZoneEl.style.width = zoneData.w + 'px';
             newZoneEl.style.height = zoneData.h + 'px';
             
-            // Contenu
+            // Contenu avec formatage
             if (contentEl) {
-                contentEl.innerText = zoneData.content || '';
+                const formatting = zoneData.formatting || [];
+                contentEl.innerHTML = renderFormattedContent(zoneData.content || '', formatting, null);
             }
             
             // Police
@@ -638,6 +658,11 @@ document.addEventListener('DOMContentLoaded', () => {
             chkCopyfit.checked = data.copyfit || false;
             chkBold.checked = data.bold || false;
             inputLineHeight.value = data.lineHeight !== undefined ? data.lineHeight : 1.2;
+            
+            // Initialiser le formatage partiel si nécessaire
+            if (!data.formatting) {
+                zonesData[id].formatting = [];
+            }
         }
         chkLock.checked = data.locked || false;
         
@@ -863,6 +888,279 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // --- GESTION DU FORMATAGE PARTIEL (ANNOTATIONS) ---
+    
+    /**
+     * Applique un formatage à la sélection dans le textarea
+     * @param {string} styleType - Type de style ('bold' ou 'color')
+     * @param {string} value - Valeur du style (pour color: '#ff0000', pour bold: null)
+     */
+    function applyFormattingToSelection(styleType, value = null) {
+        if (selectedZoneIds.length !== 1) return;
+        
+        const selectedId = selectedZoneIds[0];
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[selectedId];
+        
+        if (!zoneData || zoneData.type !== 'text') return;
+        
+        const textarea = inputContent;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        
+        // Vérifier qu'il y a une sélection
+        if (start === end) {
+            alert('Veuillez sélectionner du texte à formater');
+            return;
+        }
+        
+        // Initialiser le tableau de formatage si nécessaire
+        if (!zoneData.formatting) {
+            zoneData.formatting = [];
+        }
+        
+        // Créer l'annotation
+        const annotation = {
+            start: start,
+            end: end,
+            styles: {}
+        };
+        
+        if (styleType === 'bold') {
+            annotation.styles.fontWeight = 'bold';
+        } else if (styleType === 'color' && value) {
+            annotation.styles.color = value;
+        }
+        
+        console.log('=== APPLICATION DE FORMATAGE ===');
+        console.log('Sélection:', start, '-', end);
+        console.log('Type de style:', styleType, value ? `(${value})` : '');
+        console.log('Annotations existantes AVANT:', JSON.stringify(zoneData.formatting, null, 2));
+        
+        // Vérifier si une annotation existe déjà pour cette plage exacte
+        const existingIndex = zoneData.formatting.findIndex(f => 
+            f.start === start && f.end === end
+        );
+        
+        if (existingIndex >= 0) {
+            // Fusionner avec l'annotation existante
+            console.log(`Fusion avec annotation existante [${existingIndex}]`);
+            Object.assign(zoneData.formatting[existingIndex].styles, annotation.styles);
+        } else {
+            // Vérifier s'il y a des annotations qui chevauchent
+            const overlapping = zoneData.formatting.filter(f => 
+                !(f.end <= start || f.start >= end)
+            );
+            
+            if (overlapping.length > 0) {
+                console.log(`Annotations qui chevauchent trouvées:`, overlapping.length);
+                // Pour l'instant, on ajoute quand même la nouvelle annotation
+                // TODO: Gérer correctement les chevauchements
+            }
+            
+            // Ajouter la nouvelle annotation
+            zoneData.formatting.push(annotation);
+            console.log('Nouvelle annotation ajoutée');
+        }
+        
+        // Trier les annotations par position
+        zoneData.formatting.sort((a, b) => a.start - b.start);
+        
+        console.log('Annotations APRÈS ajout:', JSON.stringify(zoneData.formatting, null, 2));
+        console.log('================================');
+        
+        // Mettre à jour l'affichage
+        updateActiveZoneData();
+        
+        // Remettre le focus sur le textarea
+        textarea.focus();
+        // Restaurer la sélection
+        textarea.setSelectionRange(start, end);
+    }
+    
+    /**
+     * Supprime le formatage de la sélection
+     */
+    function clearFormattingFromSelection() {
+        if (selectedZoneIds.length !== 1) return;
+        
+        const selectedId = selectedZoneIds[0];
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[selectedId];
+        
+        if (!zoneData || zoneData.type !== 'text' || !zoneData.formatting) return;
+        
+        const textarea = inputContent;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        
+        if (start === end) {
+            alert('Veuillez sélectionner du texte');
+            return;
+        }
+        
+        console.log('=== SUPPRESSION DE FORMATAGE ===');
+        console.log('Sélection:', start, '-', end);
+        console.log('Annotations AVANT suppression:', JSON.stringify(zoneData.formatting, null, 2));
+        
+        // Supprimer toutes les annotations qui chevauchent la sélection
+        // On ne supprime PAS le texte, seulement le formatage
+        // Donc on ne doit PAS ajuster les positions des autres annotations
+        const beforeCount = zoneData.formatting.length;
+        
+        zoneData.formatting = zoneData.formatting.filter(f => {
+            // Garder seulement les annotations qui ne chevauchent PAS la sélection
+            const overlaps = !(f.end <= start || f.start >= end);
+            if (overlaps) {
+                console.log(`  Annotation supprimée: ${f.start}-${f.end} (chevauche la sélection ${start}-${end})`);
+            }
+            return !overlaps;
+        });
+        
+        const afterCount = zoneData.formatting.length;
+        console.log(`Annotations supprimées: ${beforeCount} -> ${afterCount} (${beforeCount - afterCount} supprimées)`);
+        console.log('Annotations APRÈS suppression:', JSON.stringify(zoneData.formatting, null, 2));
+        console.log('================================');
+        
+        updateActiveZoneData();
+        textarea.focus();
+    }
+    
+    /**
+     * Ajuste les positions des annotations après modification du texte
+     * @param {number} startPos - Position de début de la modification
+     * @param {number} oldLength - Longueur de l'ancien texte
+     * @param {number} newLength - Longueur du nouveau texte
+     */
+    function adjustFormattingPositions(startPos, oldLength, newLength) {
+        if (selectedZoneIds.length !== 1) return;
+        
+        const selectedId = selectedZoneIds[0];
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[selectedId];
+        
+        if (!zoneData || !zoneData.formatting) return;
+        
+        const diff = newLength - oldLength;
+        const endPos = startPos + oldLength;
+        
+        zoneData.formatting.forEach(f => {
+            // Si l'annotation est après la modification, décaler
+            if (f.start >= endPos) {
+                f.start += diff;
+                f.end += diff;
+            }
+            // Si l'annotation chevauche la modification, ajuster
+            else if (f.start < endPos && f.end > startPos) {
+                if (f.start < startPos) {
+                    // L'annotation commence avant la modification
+                    if (f.end > endPos) {
+                        // L'annotation s'étend après la modification
+                        f.end += diff;
+                    }
+                    // Sinon, l'annotation se termine dans la zone modifiée, on la garde telle quelle
+                } else {
+                    // L'annotation commence dans la zone modifiée
+                    f.start = startPos + newLength;
+                    f.end = startPos + newLength;
+                }
+            }
+        });
+        
+        // Nettoyer les annotations invalides
+        zoneData.formatting = zoneData.formatting.filter(f => f.start < f.end && f.start >= 0);
+    }
+    
+    /**
+     * Rend le contenu avec formatage appliqué (pour l'affichage dans la zone)
+     * @param {string} content - Contenu texte brut
+     * @param {Array} formatting - Tableau d'annotations
+     * @returns {string} HTML avec formatage
+     */
+    function renderFormattedContent(content, formatting, defaultColor = null) {
+        if (!content) return '';
+        
+        let innerHtml = '';
+        
+        if (!formatting || formatting.length === 0) {
+            innerHtml = escapeHtml(content);
+        } else {
+            console.log('=== RENDU DU CONTENU ===');
+            console.log('Contenu:', content);
+            console.log('Annotations à rendre:', JSON.stringify(formatting, null, 2));
+            
+            // Trier les annotations par position
+            const sortedFormatting = [...formatting].sort((a, b) => a.start - b.start);
+            
+            // Créer une liste de tous les points de changement (débuts et fins d'annotations)
+            const breakpoints = new Set();
+            sortedFormatting.forEach(f => {
+                breakpoints.add(f.start);
+                breakpoints.add(f.end);
+            });
+            breakpoints.add(0);
+            breakpoints.add(content.length);
+            
+            // Trier les points de changement
+            const sortedBreakpoints = Array.from(breakpoints).sort((a, b) => a - b);
+            
+            console.log('Points de changement:', sortedBreakpoints);
+            
+            // Pour chaque segment entre deux points de changement, déterminer quels styles s'appliquent
+            for (let i = 0; i < sortedBreakpoints.length - 1; i++) {
+                const segmentStart = sortedBreakpoints[i];
+                const segmentEnd = sortedBreakpoints[i + 1];
+                
+                if (segmentStart >= segmentEnd) continue;
+                
+                // Trouver toutes les annotations qui couvrent ce segment
+                const activeStyles = {};
+                sortedFormatting.forEach(f => {
+                    if (f.start <= segmentStart && f.end >= segmentEnd) {
+                        // Cette annotation couvre tout le segment
+                        Object.assign(activeStyles, f.styles);
+                    }
+                });
+                
+                const segmentText = content.substring(segmentStart, segmentEnd);
+                console.log(`Segment [${segmentStart}-${segmentEnd}]: "${segmentText}", styles:`, JSON.stringify(activeStyles));
+                
+                // Construire les styles CSS pour ce segment
+                const styles = [];
+                
+                if (activeStyles.fontWeight === 'bold') {
+                    styles.push('font-weight: bold');
+                }
+                if (activeStyles.color) {
+                    styles.push(`color: ${activeStyles.color}`);
+                }
+                // Note: On n'applique PAS la couleur par défaut automatiquement
+                // La couleur par défaut est gérée au niveau de la zone (.zone-content)
+                
+                if (styles.length > 0) {
+                    innerHtml += `<span style="${styles.join('; ')}">${escapeHtml(segmentText)}</span>`;
+                } else {
+                    innerHtml += escapeHtml(segmentText);
+                }
+            }
+            
+            console.log('HTML généré:', innerHtml);
+            console.log('========================');
+        }
+        
+        // Envelopper dans un conteneur inline pour préserver le flux de texte
+        return `<span style="display: inline-block; width: 100%;">${innerHtml}</span>`;
+    }
+    
+    /**
+     * Échappe les caractères HTML
+     */
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
     // --- 3. ÉCOUTEURS SUR LE FORMULAIRE (DATA BINDING) ---
     // Quand on tape dans le formulaire, on met à jour l'objet ET le visuel
     
@@ -909,8 +1207,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Gestion UI Checkbox
         inputBgColor.disabled = chkTransparent.checked;
 
-        // Mise à jour visuelle (Aperçu approximatif)
-        contentEl.innerText = inputContent.value;
+        // Mise à jour visuelle avec formatage partiel
+        const formatting = zonesData[selectedId].formatting || [];
+        const defaultColor = formatting.length > 0 ? inputColor.value : null;
+        contentEl.innerHTML = renderFormattedContent(inputContent.value, formatting, defaultColor);
         zoneEl.style.fontFamily = inputFont.value + ", sans-serif";
         // Note: Le rendu 'pt' web n'est pas 100% identique au print, mais proche
         
@@ -930,6 +1230,8 @@ document.addEventListener('DOMContentLoaded', () => {
             contentEl.style.fontWeight = 'normal';
         }
         
+        // Couleur globale : appliquée sur la zone et sur contentEl
+        // La couleur par défaut sera héritée par les segments sans annotation
         zoneEl.style.color = inputColor.value;
         contentEl.style.color = inputColor.value;
         
@@ -1039,6 +1341,455 @@ document.addEventListener('DOMContentLoaded', () => {
     [inputContent, inputFont, inputSize, inputColor, inputAlign, inputValign, inputBgColor, chkTransparent, chkLock, chkCopyfit, chkBold, inputLineHeight].forEach(el => {
         el.addEventListener('input', updateActiveZoneData);
         el.addEventListener('change', updateActiveZoneData); // Pour checkbox/color
+    });
+    
+    // Gérer les modifications du texte pour ajuster les annotations
+    let previousContent = '';
+    let previousSelectionStart = 0;
+    let previousSelectionEnd = 0;
+    
+    inputContent.addEventListener('focus', () => {
+        // Sauvegarder l'état initial quand on focus le textarea
+        previousContent = inputContent.value;
+        previousSelectionStart = inputContent.selectionStart;
+        previousSelectionEnd = inputContent.selectionEnd;
+    });
+    
+    inputContent.addEventListener('input', (e) => {
+        if (selectedZoneIds.length !== 1) {
+            updateActiveZoneData();
+            return;
+        }
+        
+        const selectedId = selectedZoneIds[0];
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[selectedId];
+        
+        if (!zoneData || !zoneData.formatting || zoneData.formatting.length === 0) {
+            updateActiveZoneData();
+            previousContent = inputContent.value;
+            return;
+        }
+        
+        // Logs pour diagnostiquer
+        const currentContent = inputContent.value;
+        const currentSelectionStart = inputContent.selectionStart;
+        const currentSelectionEnd = inputContent.selectionEnd;
+        const oldLength = previousContent.length;
+        const newLength = currentContent.length;
+        
+        console.log('=== MODIFICATION DU TEXTE ===');
+        console.log('Ancien contenu:', previousContent);
+        console.log('Nouveau contenu:', currentContent);
+        console.log('Longueur ancienne:', oldLength, 'Longueur nouvelle:', newLength);
+        console.log('Position curseur avant:', previousSelectionStart, '-', previousSelectionEnd);
+        console.log('Position curseur maintenant:', currentSelectionStart, '-', currentSelectionEnd);
+        
+        // Afficher les annotations en détail AVANT
+        console.log('Annotations AVANT modification:', JSON.stringify(zoneData.formatting, null, 2));
+        if (zoneData.formatting && zoneData.formatting.length > 0) {
+            zoneData.formatting.forEach((f, i) => {
+                const text = currentContent.substring(Math.max(0, f.start), Math.min(currentContent.length, f.end));
+                console.log(`  [${i}] start: ${f.start}, end: ${f.end}, longueur: ${f.end - f.start}, texte: "${text}", styles:`, JSON.stringify(f.styles));
+            });
+        } else {
+            console.log('  (aucune annotation)');
+        }
+        
+        // Détecter le type de modification et ajuster les annotations
+        // Calculer la différence de longueur
+        const diff = newLength - oldLength;
+        
+        // Trouver où la modification a eu lieu
+        // On utilise la position du curseur avant et après pour déterminer la zone modifiée
+        let modificationPos;
+        let modificationEnd;
+        
+        if (diff < 0) {
+            // SUPPRESSION
+            // Le curseur avant indique où la suppression a commencé
+            // Le curseur après indique où on se trouve maintenant
+            // La zone supprimée va de previousSelectionStart à previousSelectionStart + |diff|
+            modificationPos = previousSelectionStart; // Position où commence la suppression
+            modificationEnd = previousSelectionStart + Math.abs(diff); // Position où se terminait la suppression
+        } else if (diff > 0) {
+            // INSERTION
+            // Si on avait une sélection (previousSelectionStart != previousSelectionEnd)
+            // et qu'on insère, c'est un remplacement de sélection
+            if (previousSelectionStart !== previousSelectionEnd) {
+                // Remplacement de sélection : la zone modifiée est la sélection originale
+                modificationPos = previousSelectionStart;
+                modificationEnd = previousSelectionEnd;
+            } else {
+                // Insertion simple : le curseur avant indique où l'insertion a commencé
+                modificationPos = previousSelectionStart;
+                modificationEnd = previousSelectionStart; // L'insertion est un point (pas une plage)
+            }
+        } else {
+            // Pas de changement de longueur (remplacement ?)
+            modificationPos = previousSelectionStart;
+            modificationEnd = previousSelectionEnd;
+        }
+        
+        console.log('Différence de longueur:', diff);
+        console.log('Zone modifiée: positions', modificationPos, 'à', modificationEnd, '(longueur:', modificationEnd - modificationPos, ')');
+        
+        // Ajuster les annotations selon la modification
+        // On travaille sur une copie pour éviter les modifications pendant l'itération
+        const annotationsToKeep = [];
+        const annotationsToRemove = [];
+        
+        zoneData.formatting.forEach((f, i) => {
+            const oldStart = f.start;
+            const oldEnd = f.end;
+            const annotationLength = oldEnd - oldStart;
+            
+            if (diff < 0) {
+                // SUPPRESSION
+                // modificationPos = position après suppression, modificationEnd = position avant suppression
+                if (f.start >= modificationEnd) {
+                    // L'annotation est complètement après la suppression : on décale vers la gauche
+                    const newStart = Math.max(0, f.start + diff);
+                    const newEnd = Math.max(newStart, f.end + diff);
+                    if (newStart < newEnd) {
+                        f.start = newStart;
+                        f.end = newEnd;
+                        annotationsToKeep.push(f);
+                        console.log(`  Annotation [${i}] décalée: ${oldStart}-${oldEnd} -> ${f.start}-${f.end}`);
+                    } else {
+                        annotationsToRemove.push(i);
+                        console.log(`  Annotation [${i}] supprimée (devenue invalide après décalage)`);
+                    }
+                } else if (f.end > modificationPos) {
+                    // L'annotation chevauche la zone supprimée
+                    if (f.start < modificationPos) {
+                        // L'annotation commence avant la suppression
+                        // On tronque l'annotation pour qu'elle se termine juste avant la suppression
+                        f.end = modificationPos;
+                        if (f.end > f.start) {
+                            annotationsToKeep.push(f);
+                            console.log(`  Annotation [${i}] tronquée: ${oldStart}-${oldEnd} -> ${f.start}-${f.end}`);
+                        } else {
+                            annotationsToRemove.push(i);
+                            console.log(`  Annotation [${i}] supprimée (texte formaté complètement effacé)`);
+                        }
+                    } else if (f.start >= modificationPos && f.start < modificationEnd) {
+                        // L'annotation commence dans la zone supprimée
+                        if (f.end <= modificationEnd) {
+                            // L'annotation est complètement dans la zone supprimée : on la supprime
+                            annotationsToRemove.push(i);
+                            console.log(`  Annotation [${i}] supprimée (complètement dans la zone supprimée)`);
+                        } else {
+                            // L'annotation commence dans la zone supprimée mais se termine après
+                            // On décale le début à la fin de la zone supprimée
+                            f.start = modificationPos;
+                            f.end = f.end + diff; // On décale aussi la fin
+                            if (f.end > f.start) {
+                                annotationsToKeep.push(f);
+                                console.log(`  Annotation [${i}] décalée: ${oldStart}-${oldEnd} -> ${f.start}-${f.end}`);
+                            } else {
+                                annotationsToRemove.push(i);
+                                console.log(`  Annotation [${i}] supprimée (devenue invalide)`);
+                            }
+                        }
+                    } else {
+                        // L'annotation commence après la zone supprimée : on la décale
+                        f.start = Math.max(0, f.start + diff);
+                        f.end = Math.max(f.start, f.end + diff);
+                        if (f.start < f.end) {
+                            annotationsToKeep.push(f);
+                            console.log(`  Annotation [${i}] décalée: ${oldStart}-${oldEnd} -> ${f.start}-${f.end}`);
+                        } else {
+                            annotationsToRemove.push(i);
+                            console.log(`  Annotation [${i}] supprimée (devenue invalide)`);
+                        }
+                    }
+                } else {
+                    // L'annotation est complètement avant la suppression : on la garde telle quelle
+                    annotationsToKeep.push(f);
+                }
+            } else if (diff > 0) {
+                // INSERTION
+                if (previousSelectionStart !== previousSelectionEnd) {
+                    // REMPLACEMENT DE SÉLECTION (insertion dans une sélection)
+                    // Si l'annotation correspond exactement à la sélection remplacée, on l'étend
+                    if (f.start === modificationPos && f.end === modificationEnd) {
+                        // L'annotation correspond exactement à la sélection : on l'étend pour inclure le nouveau texte
+                        f.end = f.start + (f.end - f.start) + diff;
+                        annotationsToKeep.push(f);
+                        console.log(`  Annotation [${i}] étendue (remplacement de sélection): ${oldStart}-${oldEnd} -> ${f.start}-${f.end}`);
+                    } else if (f.start >= modificationEnd) {
+                        // L'annotation est complètement après la zone modifiée : on décale
+                        f.start += diff;
+                        f.end += diff;
+                        annotationsToKeep.push(f);
+                        console.log(`  Annotation [${i}] décalée: ${oldStart}-${oldEnd} -> ${f.start}-${f.end}`);
+                    } else if (f.end > modificationPos) {
+                        // L'annotation chevauche la zone modifiée
+                        if (f.start < modificationPos) {
+                            // L'annotation commence avant : on tronque à la position de début
+                            f.end = modificationPos;
+                            annotationsToKeep.push(f);
+                            console.log(`  Annotation [${i}] tronquée: ${oldStart}-${oldEnd} -> ${f.start}-${f.end}`);
+                        } else {
+                            // L'annotation commence dans la zone modifiée : on la supprime
+                            annotationsToRemove.push(i);
+                            console.log(`  Annotation [${i}] supprimée (dans la zone remplacée)`);
+                        }
+                    } else {
+                        // L'annotation est complètement avant : on la garde
+                        annotationsToKeep.push(f);
+                    }
+                } else {
+                    // INSERTION SIMPLE (pas de sélection)
+                    if (f.start >= modificationPos) {
+                        // L'annotation est complètement après l'insertion : on décale
+                        f.start += diff;
+                        f.end += diff;
+                        annotationsToKeep.push(f);
+                        console.log(`  Annotation [${i}] décalée: ${oldStart}-${oldEnd} -> ${f.start}-${f.end}`);
+                    } else if (f.end > modificationPos) {
+                        // L'annotation s'étend jusqu'à ou au-delà de la position d'insertion
+                        // IMPORTANT: On n'étend PAS l'annotation pour inclure le nouveau texte
+                        // Le nouveau texte ne doit pas hériter du formatage
+                        // On décale juste la fin pour maintenir la position relative
+                        if (f.end > modificationPos) {
+                            // L'annotation se terminait après la position d'insertion : on décale la fin
+                            f.end += diff;
+                        }
+                        annotationsToKeep.push(f);
+                        console.log(`  Annotation [${i}] conservée (ne s'étend pas au nouveau texte): ${oldStart}-${oldEnd} -> ${f.start}-${f.end}`);
+                    } else {
+                        // L'annotation est complètement avant l'insertion : on la garde telle quelle
+                        annotationsToKeep.push(f);
+                    }
+                }
+            } else {
+                // Pas de changement de longueur (remplacement ?) : on garde l'annotation
+                annotationsToKeep.push(f);
+            }
+        });
+        
+        // Mettre à jour le tableau de formatage
+        zoneData.formatting = annotationsToKeep;
+        
+        // Nettoyer les annotations invalides
+        const beforeClean = zoneData.formatting.length;
+        zoneData.formatting = zoneData.formatting.filter(f => {
+            // Vérifier que l'annotation est valide
+            if (f.start >= f.end || f.start < 0 || f.end > currentContent.length) {
+                return false;
+            }
+            // Vérifier que le texte couvert par l'annotation existe toujours
+            // (pour éviter que des annotations "fantômes" restent après suppression complète)
+            const coveredText = currentContent.substring(f.start, f.end);
+            if (coveredText.length === 0) {
+                console.log(`  Annotation supprimée (texte vide): ${f.start}-${f.end}`);
+                return false;
+            }
+            return true;
+        });
+        const afterClean = zoneData.formatting.length;
+        if (beforeClean !== afterClean) {
+            console.log(`Nettoyage: ${beforeClean} annotations -> ${afterClean} annotations (supprimé ${beforeClean - afterClean} annotations invalides)`);
+        }
+        
+        // Mettre à jour l'affichage
+        updateActiveZoneData();
+        
+        // Sauvegarder l'état pour la prochaine modification
+        previousContent = currentContent;
+        previousSelectionStart = currentSelectionStart;
+        previousSelectionEnd = currentSelectionEnd;
+        
+        // Afficher les annotations en détail APRÈS
+        console.log('Annotations APRÈS modification:', JSON.stringify(zoneData.formatting, null, 2));
+        if (zoneData.formatting && zoneData.formatting.length > 0) {
+            zoneData.formatting.forEach((f, i) => {
+                const text = currentContent.substring(Math.max(0, f.start), Math.min(currentContent.length, f.end));
+                console.log(`  [${i}] start: ${f.start}, end: ${f.end}, longueur: ${f.end - f.start}, texte: "${text}", styles:`, JSON.stringify(f.styles));
+            });
+        } else {
+            console.log('  (aucune annotation)');
+        }
+        console.log('==============================');
+    });
+    
+    // Event listeners pour les boutons de formatage
+    if (btnFormatBold) {
+        btnFormatBold.addEventListener('click', () => {
+            applyFormattingToSelection('bold');
+        });
+    }
+    
+    if (btnFormatColor) {
+        btnFormatColor.addEventListener('click', () => {
+            // Vérifier qu'il y a une sélection dans le textarea
+            const textarea = inputContent;
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            
+            if (start === end) {
+                alert('Veuillez sélectionner du texte à formater');
+                return;
+            }
+            
+            // Sauvegarder la sélection
+            pendingColorSelection = { start, end };
+            
+            // Initialiser la couleur de l'aperçu avec la couleur actuelle si disponible
+            const selectedId = selectedZoneIds[0];
+            if (selectedId) {
+                const zonesData = getCurrentPageZones();
+                const zoneData = zonesData[selectedId];
+                if (zoneData && zoneData.formatting) {
+                    // Chercher si la sélection a déjà une couleur
+                    const existingFormat = zoneData.formatting.find(f => 
+                        f.start === start && f.end === end && f.styles && f.styles.color
+                    );
+                    if (existingFormat) {
+                        colorPickerInput.value = existingFormat.styles.color;
+                        colorPreviewText.style.color = existingFormat.styles.color;
+                    } else {
+                        colorPickerInput.value = '#ff0000';
+                        colorPreviewText.style.color = '#ff0000';
+                    }
+                } else {
+                    colorPickerInput.value = '#ff0000';
+                    colorPreviewText.style.color = '#ff0000';
+                }
+            } else {
+                colorPickerInput.value = '#ff0000';
+                colorPreviewText.style.color = '#ff0000';
+            }
+            
+            // Afficher la modale
+            if (colorPickerModal) {
+                colorPickerModal.classList.remove('hidden');
+            }
+        });
+    }
+    
+    // Aperçu en temps réel de la couleur (dans la modale ET dans la zone de texte finale)
+    if (colorPickerInput) {
+        colorPickerInput.addEventListener('input', (e) => {
+            const color = e.target.value;
+            
+            // Aperçu dans la modale
+            if (colorPreviewText) {
+                colorPreviewText.style.color = color;
+            }
+            
+            // Aperçu en temps réel dans la zone de texte finale (sur la page A4)
+            if (pendingColorSelection && selectedZoneIds.length === 1) {
+                const selectedId = selectedZoneIds[0];
+                const zoneEl = document.getElementById(selectedId);
+                if (zoneEl) {
+                    const zonesData = getCurrentPageZones();
+                    const zoneData = zonesData[selectedId];
+                    if (zoneData && zoneData.type === 'text') {
+                        // Créer une annotation temporaire pour l'aperçu
+                        const tempFormatting = JSON.parse(JSON.stringify(zoneData.formatting || []));
+                        
+                        // Trouver ou créer l'annotation pour la sélection en attente
+                        const existingIndex = tempFormatting.findIndex(f => 
+                            f.start === pendingColorSelection.start && f.end === pendingColorSelection.end
+                        );
+                        
+                        if (existingIndex >= 0) {
+                            // Mettre à jour l'annotation existante temporairement
+                            tempFormatting[existingIndex] = {
+                                ...tempFormatting[existingIndex],
+                                styles: {
+                                    ...tempFormatting[existingIndex].styles,
+                                    color: color
+                                }
+                            };
+                        } else {
+                            // Ajouter une annotation temporaire
+                            tempFormatting.push({
+                                start: pendingColorSelection.start,
+                                end: pendingColorSelection.end,
+                                styles: { color: color }
+                            });
+                            tempFormatting.sort((a, b) => a.start - b.start);
+                        }
+                        
+                        // Mettre à jour l'affichage avec l'aperçu temporaire
+                        const contentEl = zoneEl.querySelector('.zone-content');
+                        if (contentEl) {
+                            const defaultColor = zoneData.color || null;
+                            contentEl.innerHTML = renderFormattedContent(zoneData.content || '', tempFormatting, defaultColor);
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Bouton Annuler
+    if (btnColorCancel) {
+        btnColorCancel.addEventListener('click', () => {
+            if (colorPickerModal) {
+                colorPickerModal.classList.add('hidden');
+            }
+            pendingColorSelection = null;
+        });
+    }
+    
+    // Bouton Valider
+    if (btnColorValidate) {
+        btnColorValidate.addEventListener('click', () => {
+            if (pendingColorSelection && colorPickerInput) {
+                const color = colorPickerInput.value;
+                const textarea = inputContent;
+                
+                // Restaurer la sélection avant d'appliquer le formatage
+                textarea.setSelectionRange(pendingColorSelection.start, pendingColorSelection.end);
+                textarea.focus();
+                
+                // Appliquer le formatage avec la couleur sélectionnée
+                applyFormattingToSelection('color', color);
+            }
+            
+            // Fermer la modale
+            if (colorPickerModal) {
+                colorPickerModal.classList.add('hidden');
+            }
+            pendingColorSelection = null;
+        });
+    }
+    
+    // Fermer la modale en cliquant sur le fond
+    if (colorPickerModal) {
+        colorPickerModal.addEventListener('click', (e) => {
+            if (e.target === colorPickerModal) {
+                colorPickerModal.classList.add('hidden');
+                pendingColorSelection = null;
+            }
+        });
+    }
+    
+    // Fermer la modale avec Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && colorPickerModal && !colorPickerModal.classList.contains('hidden')) {
+            colorPickerModal.classList.add('hidden');
+            pendingColorSelection = null;
+        }
+    });
+    
+    if (btnFormatClear) {
+        btnFormatClear.addEventListener('click', () => {
+            clearFormattingFromSelection();
+        });
+    }
+    
+    // Raccourci clavier Ctrl+B pour le gras
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'b' && e.target === inputContent) {
+            e.preventDefault();
+            applyFormattingToSelection('bold');
+        }
     });
 
     // --- FONCTIONS D'ESPACEMENT ---
@@ -1719,7 +2470,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Couleurs (PRIORITÉ)
                 if (data.color) {
                     zoneEl.style.color = data.color;
-                    if (contentEl) contentEl.style.color = data.color;
+                    // Ne pas appliquer la couleur globale si on a du formatage partiel
+                    if (!data.formatting || data.formatting.length === 0) {
+                        if (contentEl) contentEl.style.color = data.color;
+                    }
                 }
                 
                 // Fond
@@ -1734,13 +2488,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     zoneEl.style.fontFamily = data.font + ", sans-serif";
                 }
                 
-                // Gras
-                if (data.bold) {
-                    zoneEl.style.fontWeight = 'bold';
-                    if (contentEl) contentEl.style.fontWeight = 'bold';
-                } else {
-                    zoneEl.style.fontWeight = 'normal';
-                    if (contentEl) contentEl.style.fontWeight = 'normal';
+                // Gras global (seulement si pas de formatage partiel)
+                if (!data.formatting || data.formatting.length === 0) {
+                    if (data.bold) {
+                        zoneEl.style.fontWeight = 'bold';
+                        if (contentEl) contentEl.style.fontWeight = 'bold';
+                    } else {
+                        zoneEl.style.fontWeight = 'normal';
+                        if (contentEl) contentEl.style.fontWeight = 'normal';
+                    }
+                }
+                
+                // Contenu avec formatage partiel
+                if (contentEl && data.content) {
+                    const formatting = data.formatting || [];
+                    contentEl.innerHTML = renderFormattedContent(data.content, formatting, data.color || null);
                 }
                 
                 // Alignements (DOIT être avant copyfit car copyfit modifie temporairement justifyContent)
@@ -1909,6 +2671,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         type: 'text',
                         geometry,
                         content: data.content,
+                        formatting: data.formatting || [], // Formatage partiel
                         style: {
                             font: data.font,
                             size_pt: data.size,
@@ -1959,6 +2722,254 @@ document.addEventListener('DOMContentLoaded', () => {
         
         console.log("JSON généré et téléchargé.");
     });
+
+    // --- CONVERSION RTF ---
+    
+    /**
+     * Convertit une couleur hexadécimale en RTF (format RGB)
+     * @param {string} hexColor - Couleur hexadécimale (#RRGGBB)
+     * @returns {string} Couleur RTF (r255g0b0)
+     */
+    function hexToRtfColor(hexColor) {
+        if (!hexColor || !hexColor.startsWith('#')) return 'r0g0b0';
+        
+        const hex = hexColor.substring(1);
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        
+        return `r${r}g${g}b${b}`;
+    }
+    
+    /**
+     * Échappe les caractères spéciaux RTF
+     * @param {string} text - Texte à échapper
+     * @returns {string} Texte échappé
+     */
+    function escapeRtf(text) {
+        if (!text) return '';
+        
+        return text
+            .replace(/\\/g, '\\\\')
+            .replace(/{/g, '\\{')
+            .replace(/}/g, '\\}')
+            .replace(/\n/g, '\\par ')
+            .replace(/\r/g, '');
+    }
+    
+    /**
+     * Construit la table de couleurs RTF
+     * @param {Array} zonesData - Données de toutes les zones
+     * @returns {string} Table de couleurs RTF
+     */
+    function buildRtfColorTable(zonesData) {
+        const colors = new Set();
+        
+        // Ajouter la couleur par défaut (noir)
+        colors.add('#000000');
+        
+        // Parcourir toutes les zones pour collecter les couleurs
+        for (const [id, data] of Object.entries(zonesData)) {
+            if (data.type !== 'text') continue;
+            
+            // Couleur globale de la zone
+            if (data.color) colors.add(data.color);
+            
+            // Couleurs du formatage partiel
+            if (data.formatting) {
+                data.formatting.forEach(f => {
+                    if (f.styles && f.styles.color) {
+                        colors.add(f.styles.color);
+                    }
+                });
+            }
+        }
+        
+        // Convertir en tableau et créer la table RTF
+        const colorArray = Array.from(colors);
+        let colorTable = '{\\colortbl;';
+        
+        colorArray.forEach(color => {
+            colorTable += hexToRtfColor(color);
+        });
+        
+        colorTable += '}';
+        return { table: colorTable, colors: colorArray };
+    }
+    
+    /**
+     * Construit la table de polices RTF
+     * @param {Array} zonesData - Données de toutes les zones
+     * @returns {string} Table de polices RTF
+     */
+    function buildRtfFontTable(zonesData) {
+        const fonts = new Set();
+        
+        // Parcourir toutes les zones pour collecter les polices
+        for (const [id, data] of Object.entries(zonesData)) {
+            if (data.type !== 'text' && data.font) continue;
+            if (data.font) fonts.add(data.font);
+        }
+        
+        // Si aucune police, utiliser la police par défaut
+        if (fonts.size === 0) fonts.add('Arial');
+        
+        // Convertir en tableau et créer la table RTF
+        const fontArray = Array.from(fonts);
+        let fontTable = '{\\fonttbl';
+        
+        fontArray.forEach((font, index) => {
+            fontTable += `{\\f${index} ${font};}`;
+        });
+        
+        fontTable += '}';
+        return { table: fontTable, fonts: fontArray };
+    }
+    
+    /**
+     * Convertit une zone de texte en RTF
+     * @param {Object} zoneData - Données de la zone
+     * @param {Object} colorTable - Table de couleurs (avec colors array)
+     * @param {Object} fontTable - Table de polices (avec fonts array)
+     * @returns {string} RTF de la zone
+     */
+    function convertZoneToRtf(zoneData, colorTable, fontTable) {
+        const { content, formatting, font, size, color, align } = zoneData;
+        
+        if (!content) return '';
+        
+        // Trouver l'index de la police
+        const fontIndex = fontTable.fonts.indexOf(font || 'Arial');
+        const fontCode = fontIndex >= 0 ? fontIndex : 0;
+        
+        // Trouver l'index de la couleur par défaut
+        const defaultColorIndex = colorTable.colors.indexOf(color || '#000000');
+        const defaultColorCode = defaultColorIndex >= 0 ? defaultColorIndex + 1 : 1; // +1 car RTF commence à 1
+        
+        // Taille de police en demi-points (RTF utilise des demi-points)
+        const fontSize = Math.round((size || 12) * 2);
+        
+        // Alignement
+        let alignment = '\\ql'; // left par défaut
+        if (align === 'center') alignment = '\\qc';
+        else if (align === 'right') alignment = '\\qr';
+        else if (align === 'justify') alignment = '\\qj';
+        
+        let rtf = `{\\f${fontCode}\\fs${fontSize}\\cf${defaultColorCode}${alignment} `;
+        
+        // Si pas de formatage partiel, texte simple
+        if (!formatting || formatting.length === 0) {
+            rtf += escapeRtf(content);
+        } else {
+            // Trier les annotations par position
+            const sortedFormatting = [...formatting].sort((a, b) => a.start - b.start);
+            
+            let pos = 0;
+            
+            for (const format of sortedFormatting) {
+                // Texte avant le formatage
+                if (format.start > pos) {
+                    rtf += escapeRtf(content.substring(pos, format.start));
+                }
+                
+                // Texte formaté
+                const formattedText = escapeRtf(content.substring(format.start, format.end));
+                let formatCodes = '';
+                
+                // Gras
+                if (format.styles && format.styles.fontWeight === 'bold') {
+                    formatCodes += '\\b ';
+                }
+                
+                // Couleur
+                if (format.styles && format.styles.color) {
+                    const colorIndex = colorTable.colors.indexOf(format.styles.color);
+                    if (colorIndex >= 0) {
+                        formatCodes += `\\cf${colorIndex + 1} `; // +1 car RTF commence à 1
+                    }
+                }
+                
+                if (formatCodes) {
+                    rtf += `{${formatCodes}${formattedText}}`;
+                } else {
+                    rtf += formattedText;
+                }
+                
+                pos = format.end;
+            }
+            
+            // Texte restant
+            if (pos < content.length) {
+                rtf += escapeRtf(content.substring(pos));
+            }
+        }
+        
+        rtf += '\\par}';
+        return rtf;
+    }
+    
+    /**
+     * Génère le RTF pour toutes les zones de texte de la page courante
+     * @returns {string} RTF complet
+     */
+    function generateRtf() {
+        saveToLocalStorage();
+        
+        const zonesData = getCurrentPageZones();
+        const textZones = [];
+        
+        // Filtrer uniquement les zones de texte
+        for (const [id, data] of Object.entries(zonesData)) {
+            if (data.type === 'text') {
+                textZones.push({ id, ...data });
+            }
+        }
+        
+        if (textZones.length === 0) {
+            alert('Aucune zone de texte à convertir en RTF');
+            return null;
+        }
+        
+        // Construire les tables RTF
+        const colorTable = buildRtfColorTable(zonesData);
+        const fontTable = buildRtfFontTable(zonesData);
+        
+        // Générer le RTF
+        let rtf = '{\\rtf1\\ansi\\deff0';
+        rtf += fontTable.table;
+        rtf += colorTable.table;
+        rtf += '\n';
+        
+        // Convertir chaque zone
+        textZones.forEach((zoneData, index) => {
+            if (index > 0) rtf += '\n';
+            rtf += convertZoneToRtf(zoneData, colorTable, fontTable);
+        });
+        
+        rtf += '\n}';
+        
+        return rtf;
+    }
+    
+    // Event listener pour le bouton d'export RTF
+    if (btnGenerateRtf) {
+        btnGenerateRtf.addEventListener('click', () => {
+            const rtf = generateRtf();
+            if (rtf) {
+                // Télécharger le fichier RTF
+                const blob = new Blob([rtf], { type: "application/rtf" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = "template_vdp.rtf";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                console.log("RTF généré et téléchargé.");
+            }
+        });
+    }
 
     // --- 8. FONCTIONNALITÉ ZOOM ---
     const CANVAS_PADDING = 60;
