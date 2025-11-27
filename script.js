@@ -967,9 +967,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const segStart = sortedBreakpoints[i];
                 const segEnd = sortedBreakpoints[i + 1];
                 
-                // Ne traiter que les segments dans la sélection
-                if (segStart < start || segEnd > end) continue;
-                
                 // Fusionner tous les styles qui s'appliquent à ce segment
                 const mergedStyles = {};
                 
@@ -980,8 +977,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
                 
-                // Ajouter le nouveau style (écrase les styles existants du même type)
-                Object.assign(mergedStyles, newStyle);
+                // Ajouter le nouveau style UNIQUEMENT si le segment est dans la sélection
+                // (écrase les styles existants du même type)
+                if (segStart >= start && segEnd <= end) {
+                    Object.assign(mergedStyles, newStyle);
+                }
                 
                 // Ajouter l'annotation seulement si elle a des styles
                 if (Object.keys(mergedStyles).length > 0) {
