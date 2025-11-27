@@ -102,6 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const MM_PER_PIXEL = 25.4 / 96;
     let zoneCounter = 0;
     let selectedZoneIds = []; // Tableau pour la sélection multiple
+    let copiedZoneData = null; // Données de la zone copiée pour le copier-coller
     
     // Déclarer zoomLevel tôt pour qu'il soit disponible partout
     let zoomLevel = 1.0; // 100% par défaut
@@ -355,6 +356,157 @@ document.addEventListener('DOMContentLoaded', () => {
         if (autoSelect) {
             selectZone(id);
         }
+    }
+
+    // --- COPIE/COLLER DE ZONES ---
+    
+    // Copier la zone sélectionnée
+    function copySelectedZone() {
+        // Vérifier qu'une seule zone est sélectionnée
+        if (selectedZoneIds.length !== 1) {
+            return; // Ne rien faire si aucune zone ou plusieurs zones sélectionnées
+        }
+        
+        const zoneId = selectedZoneIds[0];
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        
+        // Vérifier que c'est une zone de texte (pas QR)
+        if (!zoneData || zoneData.type !== 'text') {
+            return; // Ne copier que les zones de texte
+        }
+        
+        const zoneEl = document.getElementById(zoneId);
+        if (!zoneEl) return;
+        
+        // Copier toutes les propriétés de la zone
+        copiedZoneData = {
+            type: 'text',
+            content: zoneData.content || '',
+            font: zoneData.font || 'Roboto',
+            size: zoneData.size || 12,
+            color: zoneData.color || '#000000',
+            align: zoneData.align || 'left',
+            valign: zoneData.valign || 'top',
+            bgColor: zoneData.bgColor || '#ffffff',
+            isTransparent: zoneData.isTransparent !== undefined ? zoneData.isTransparent : true,
+            locked: false, // Toujours réinitialiser à false pour la copie
+            copyfit: zoneData.copyfit || false,
+            bold: zoneData.bold || false,
+            lineHeight: zoneData.lineHeight !== undefined ? zoneData.lineHeight : 1.2,
+            // Géométrie : utiliser les dimensions actuelles du DOM
+            w: zoneEl.offsetWidth,
+            h: zoneEl.offsetHeight,
+            // Position de référence (sera décalée lors du collage)
+            x: zoneEl.offsetLeft,
+            y: zoneEl.offsetTop
+        };
+    }
+    
+    // Coller la zone copiée
+    function pasteZone() {
+        // Vérifier qu'il y a des données copiées
+        if (!copiedZoneData) {
+            return; // Rien à coller
+        }
+        
+        // Créer un nouvel ID pour la zone dupliquée
+        documentState.zoneCounter++;
+        zoneCounter = documentState.zoneCounter;
+        const newId = `zone-${zoneCounter}`;
+        const zonesData = getCurrentPageZones();
+        
+        // Créer une copie des données avec un décalage de position
+        const pageWidth = getPageWidth();
+        const pageHeight = getPageHeight();
+        const offsetY = 20; // Décalage de 20px vers le bas
+        
+        // Calculer la nouvelle position (20px en dessous)
+        const newX = copiedZoneData.x;
+        const newY = Math.min(copiedZoneData.y + offsetY, pageHeight - copiedZoneData.h);
+        
+        // Créer les données de la nouvelle zone
+        zonesData[newId] = {
+            type: 'text',
+            content: copiedZoneData.content,
+            font: copiedZoneData.font,
+            size: copiedZoneData.size,
+            color: copiedZoneData.color,
+            align: copiedZoneData.align,
+            valign: copiedZoneData.valign,
+            bgColor: copiedZoneData.bgColor,
+            isTransparent: copiedZoneData.isTransparent,
+            locked: false, // Toujours false pour la copie
+            copyfit: copiedZoneData.copyfit,
+            bold: copiedZoneData.bold,
+            lineHeight: copiedZoneData.lineHeight,
+            // Position et taille
+            x: newX,
+            y: newY,
+            w: copiedZoneData.w,
+            h: copiedZoneData.h
+        };
+        
+        // Créer la zone dans le DOM
+        createZoneDOM(newId, zoneCounter, true);
+        
+        // Appliquer tous les styles depuis les données copiées
+        const newZoneEl = document.getElementById(newId);
+        if (newZoneEl) {
+            const contentEl = newZoneEl.querySelector('.zone-content');
+            const zoneData = zonesData[newId];
+            
+            // Position et taille
+            newZoneEl.style.left = newX + 'px';
+            newZoneEl.style.top = newY + 'px';
+            newZoneEl.style.width = zoneData.w + 'px';
+            newZoneEl.style.height = zoneData.h + 'px';
+            
+            // Contenu
+            if (contentEl) {
+                contentEl.innerText = zoneData.content || '';
+            }
+            
+            // Police
+            newZoneEl.style.fontFamily = zoneData.font + ", sans-serif";
+            
+            // Taille (Copyfit ou fixe)
+            if (zoneData.copyfit) {
+                applyCopyfit(newZoneEl, zoneData.size);
+            } else {
+                newZoneEl.style.fontSize = zoneData.size + 'pt';
+            }
+            
+            // Gras
+            if (zoneData.bold) {
+                newZoneEl.style.fontWeight = 'bold';
+                if (contentEl) contentEl.style.fontWeight = 'bold';
+            } else {
+                newZoneEl.style.fontWeight = 'normal';
+                if (contentEl) contentEl.style.fontWeight = 'normal';
+            }
+            
+            // Couleur
+            newZoneEl.style.color = zoneData.color;
+            if (contentEl) contentEl.style.color = zoneData.color;
+            
+            // Fond
+            if (zoneData.isTransparent) {
+                newZoneEl.style.backgroundColor = 'transparent';
+            } else {
+                newZoneEl.style.backgroundColor = zoneData.bgColor;
+            }
+            
+            // Alignements
+            if (contentEl) {
+                contentEl.style.textAlign = zoneData.align;
+                contentEl.style.justifyContent = mapValignToFlex(zoneData.valign);
+                contentEl.style.lineHeight = zoneData.lineHeight;
+            }
+        }
+        
+        // Sauvegarder
+        saveToLocalStorage();
     }
 
     // --- 2. SÉLECTION MULTIPLE ---
@@ -1132,7 +1284,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showDeleteConfirmation();
     });
 
-    // Raccourci clavier : Touche Suppr pour supprimer
+    // Raccourci clavier : Touche Suppr pour supprimer, Ctrl+C pour copier, Ctrl+V pour coller
     document.addEventListener('keydown', (e) => {
         // Si la modale de suppression est ouverte
         if (!modalOverlay.classList.contains('hidden')) {
@@ -1146,9 +1298,26 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Ne pas intercepter si l'utilisateur tape dans un input ou textarea (sauf pour Delete)
+        const isInInput = e.target.matches('input, textarea');
+        
+        // Copier (Ctrl+C ou Cmd+C)
+        if ((e.ctrlKey || e.metaKey) && e.key === 'c' && !isInInput) {
+            e.preventDefault();
+            copySelectedZone();
+            return;
+        }
+        
+        // Coller (Ctrl+V ou Cmd+V)
+        if ((e.ctrlKey || e.metaKey) && e.key === 'v' && !isInInput) {
+            e.preventDefault();
+            pasteZone();
+            return;
+        }
+
         if (selectedZoneIds.length > 0 && (e.key === 'Delete' || e.key === 'Del')) {
             // Ne pas supprimer si l'utilisateur tape dans un input ou textarea
-            if (e.target.matches('input, textarea')) return;
+            if (isInInput) return;
             
             showDeleteConfirmation();
         }
