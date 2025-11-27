@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnDelete = document.getElementById('btn-delete-zone');
     const btnReset = document.getElementById('btn-reset');
     const btnGenerate = document.getElementById('btn-generate-json');
-    const btnGenerateRtf = document.getElementById('btn-generate-rtf');
+    const btnGenerateJsonDebug = document.getElementById('btn-generate-json-debug');
     const coordsPanel = document.getElementById('coords-panel');
     const lblSelected = document.getElementById('lbl-selected-zone');
     
@@ -2724,12 +2724,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         locked: data.locked || false
                     });
                 } else {
+                    // Générer le RTF pour cette zone
+                    const rtfContent = generateRtfForZone(data);
+                    
                     zonesOutput.push({
                         id,
                         type: 'text',
                         geometry,
-                        content: data.content,
-                        formatting: data.formatting || [], // Formatage partiel
+                        content: rtfContent, // RTF valide au lieu du texte brut
                         style: {
                             font: data.font,
                             size_pt: data.size,
@@ -2844,11 +2846,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Convertir en tableau et créer la table RTF
+        // Format: {\colortbl ;<couleur1>;<couleur2>;<couleur3>;...}
         const colorArray = Array.from(colors);
-        let colorTable = '{\\colortbl;';
+        let colorTable = '{\\colortbl ;';
         
         colorArray.forEach(color => {
-            colorTable += hexToRtfColor(color);
+            colorTable += hexToRtfColor(color) + ';';
         });
         
         colorTable += '}';
@@ -2967,6 +2970,190 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
+     * Convertit une couleur hexadécimale en format RTF colortbl (\redXXX\greenYYY\blueZZZ)
+     * @param {string} hexColor - Couleur hexadécimale (#RRGGBB)
+     * @returns {string} Couleur RTF pour colortbl (\redXXX\greenYYY\blueZZZ)
+     */
+    function hexToRtfColorTable(hexColor) {
+        if (!hexColor || !hexColor.startsWith('#')) return '\\red0\\green0\\blue0';
+        
+        const hex = hexColor.substring(1);
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        
+        return `\\red${r}\\green${g}\\blue${b}`;
+    }
+    
+    /**
+     * Génère un RTF complet pour une zone de texte individuelle (format PrintShop Mail)
+     * @param {Object} zoneData - Données de la zone
+     * @returns {string} RTF complet pour la zone
+     */
+    function generateRtfForZone(zoneData) {
+        const { content, formatting, font, size, color } = zoneData;
+        
+        if (!content) return '';
+        
+        // Collecter toutes les couleurs utilisées
+        const colors = new Set();
+        colors.add(color || '#000000'); // Couleur par défaut
+        
+        // Collecter les couleurs du formatage partiel
+        if (formatting && formatting.length > 0) {
+            formatting.forEach(f => {
+                if (f.styles && f.styles.color) {
+                    colors.add(f.styles.color);
+                }
+            });
+        }
+        
+        const colorArray = Array.from(colors);
+        const defaultColor = color || '#000000';
+        
+        // Construire la table de couleurs
+        // Format: {\colortbl ;<couleur1>;<couleur2>;<couleur3>;...}
+        let colorTable = '{\\colortbl ;';
+        colorArray.forEach(c => {
+            colorTable += hexToRtfColorTable(c) + ';';
+        });
+        colorTable += '}';
+        
+        // Construire la table de polices
+        const fontName = font || 'Roboto';
+        const fontTable = `{\\fonttbl{\\f0\\fnil\\fcharset0 ${fontName};}}`;
+        
+        // Trouver l'index de la couleur par défaut dans la table
+        const defaultColorIndex = colorArray.indexOf(defaultColor);
+        const defaultColorCode = defaultColorIndex >= 0 ? defaultColorIndex + 1 : 1; // +1 car RTF commence à 1
+        
+        // Taille de police en demi-points (RTF utilise des demi-points)
+        const fontSize = Math.round((size || 12) * 2);
+        
+        // Construire le contenu RTF
+        let rtfContent = '';
+        
+        if (!formatting || formatting.length === 0) {
+            // Pas de formatage partiel, texte simple
+            rtfContent = escapeRtf(content);
+        } else {
+            // Trier les annotations par position
+            const sortedFormatting = [...formatting].sort((a, b) => a.start - b.start);
+            
+            // Créer une fonction pour obtenir les styles actifs à une position donnée
+            function getStylesAtPosition(pos) {
+                const activeStyles = {
+                    bold: false,
+                    italic: false,
+                    underline: false,
+                    color: null
+                };
+                
+                for (const format of sortedFormatting) {
+                    if (pos >= format.start && pos < format.end) {
+                        const styles = format.styles || {};
+                        if (styles.fontWeight === 'bold') activeStyles.bold = true;
+                        if (styles.fontStyle === 'italic') activeStyles.italic = true;
+                        if (styles.textDecoration && styles.textDecoration.includes('underline')) {
+                            activeStyles.underline = true;
+                        }
+                        if (styles.color) {
+                            activeStyles.color = styles.color;
+                        }
+                    }
+                }
+                
+                return activeStyles;
+            }
+            
+            // État actuel des styles
+            let currentBold = false;
+            let currentItalic = false;
+            let currentUnderline = false;
+            let currentColorIndex = defaultColorCode;
+            
+            // Parcourir le texte et détecter les changements de style aux positions exactes
+            for (let pos = 0; pos < content.length; pos++) {
+                const stylesAtPos = getStylesAtPosition(pos);
+                
+                // Construire les codes de changement de style nécessaires
+                const commands = [];
+                
+                // Gras
+                if (stylesAtPos.bold !== currentBold) {
+                    commands.push(stylesAtPos.bold ? '\\b' : '\\b0');
+                    currentBold = stylesAtPos.bold;
+                }
+                
+                // Italique
+                if (stylesAtPos.italic !== currentItalic) {
+                    commands.push(stylesAtPos.italic ? '\\i' : '\\i0');
+                    currentItalic = stylesAtPos.italic;
+                }
+                
+                // Souligné
+                if (stylesAtPos.underline !== currentUnderline) {
+                    commands.push(stylesAtPos.underline ? '\\ul' : '\\ul0');
+                    currentUnderline = stylesAtPos.underline;
+                }
+                
+                // Couleur
+                let newColorIndex = defaultColorCode;
+                if (stylesAtPos.color) {
+                    const colorIndex = colorArray.indexOf(stylesAtPos.color);
+                    if (colorIndex >= 0) {
+                        newColorIndex = colorIndex + 1; // +1 car RTF commence à 1
+                    }
+                }
+                if (newColorIndex !== currentColorIndex) {
+                    commands.push(`\\cf${newColorIndex}`);
+                    currentColorIndex = newColorIndex;
+                }
+                
+                // Ajouter les commandes suivies de {} comme délimiteur universel
+                // {} est un groupe vide qui sépare la commande du texte sans ajouter d'espace visible
+                // Cela préserve exactement le texte original (y compris les espaces)
+                if (commands.length > 0) {
+                    rtfContent += commands.join('') + '{}';
+                }
+                
+                // Ajouter le caractère (échappé si nécessaire)
+                const char = content[pos];
+                rtfContent += escapeRtf(char);
+            }
+            
+            // Fermer tous les styles actifs à la fin
+            let closeCodes = '';
+            if (currentBold) {
+                closeCodes += '\\b0';
+            }
+            if (currentItalic) {
+                closeCodes += '\\i0';
+            }
+            if (currentUnderline) {
+                closeCodes += '\\ul0';
+            }
+            if (currentColorIndex !== defaultColorCode) {
+                closeCodes += `\\cf${defaultColorCode}`;
+            }
+            
+            if (closeCodes) {
+                rtfContent += closeCodes;
+            }
+        }
+        
+        // Construire le RTF complet
+        let rtf = '{\\rtf1\\ansi\\ansicpg1252\\deff0\\deflang1036\n';
+        rtf += fontTable + '\n';
+        rtf += colorTable + '\n';
+        rtf += `\\viewkind4\\uc1\\pard\\f0\\fs${fontSize}\\cf${defaultColorCode}{}`;
+        rtf += rtfContent;
+        rtf += '\\par\n}';
+        
+        return rtf;
+    }
+    
+    /**
      * Génère le RTF pour toutes les zones de texte de la page courante
      * @returns {string} RTF complet
      */
@@ -3009,23 +3196,110 @@ document.addEventListener('DOMContentLoaded', () => {
         return rtf;
     }
     
-    // Event listener pour le bouton d'export RTF
-    if (btnGenerateRtf) {
-        btnGenerateRtf.addEventListener('click', () => {
-            const rtf = generateRtf();
-            if (rtf) {
-                // Télécharger le fichier RTF
-                const blob = new Blob([rtf], { type: "application/rtf" });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = "template_vdp.rtf";
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                console.log("RTF généré et téléchargé.");
-            }
+    // --- EXPORT JSON DEBUG (ancien format avec texte brut et formatting) ---
+    if (btnGenerateJsonDebug) {
+        btnGenerateJsonDebug.addEventListener('click', () => {
+            saveToLocalStorage(); // Sauvegarde aussi quand on génère le JSON
+            
+            // Générer le JSON pour toutes les pages (format debug : texte brut + formatting)
+            const pagesOutput = documentState.pages.map((page, pageIndex) => {
+                const zonesOutput = [];
+                const zonesData = page.zones;
+                
+                // On parcourt l'objet de données de cette page
+                for (const [id, data] of Object.entries(zonesData)) {
+                    // Note: Les zones du DOM ne sont visibles que pour la page courante
+                    // Pour les autres pages, on utilise les données sauvegardées
+                    const el = document.getElementById(id);
+                    
+                    let geometry;
+                    if (el && pageIndex === documentState.currentPageIndex) {
+                        // Page courante : utiliser les dimensions du DOM
+                        geometry = {
+                            x_mm: (el.offsetLeft * MM_PER_PIXEL).toFixed(2),
+                            y_mm: (el.offsetTop * MM_PER_PIXEL).toFixed(2),
+                            width_mm: (el.offsetWidth * MM_PER_PIXEL).toFixed(2),
+                            height_mm: (el.offsetHeight * MM_PER_PIXEL).toFixed(2)
+                        };
+                    } else {
+                        // Autres pages : utiliser les données sauvegardées
+                        geometry = {
+                            x_mm: (data.x * MM_PER_PIXEL).toFixed(2),
+                            y_mm: (data.y * MM_PER_PIXEL).toFixed(2),
+                            width_mm: (data.w * MM_PER_PIXEL).toFixed(2),
+                            height_mm: (data.h * MM_PER_PIXEL).toFixed(2)
+                        };
+                    }
+
+                    const zoneType = data.type || 'text';
+                    if (zoneType === 'qr') {
+                        zonesOutput.push({
+                            id,
+                            type: 'qr',
+                            geometry,
+                            qr: {
+                                color: data.qrColor || '#000000',
+                                background: '#ffffff'
+                            },
+                            locked: data.locked || false
+                        });
+                    } else {
+                        // Format debug : texte brut + formatting
+                        zonesOutput.push({
+                            id,
+                            type: 'text',
+                            geometry,
+                            content: data.content || '', // Texte brut
+                            formatting: data.formatting || [], // Tableau d'annotations
+                            style: {
+                                font: data.font,
+                                size_pt: data.size,
+                                color: data.color,
+                                align: data.align,
+                                valign: data.valign,
+                                lineHeight: data.lineHeight !== undefined ? data.lineHeight : 1.2,
+                                bgColor: data.isTransparent ? null : data.bgColor,
+                                transparent: data.isTransparent,
+                                locked: data.locked,
+                                copyfit: data.copyfit,
+                                bold: data.bold || false
+                            }
+                        });
+                    }
+                }
+                
+                return {
+                    page_id: page.id,
+                    page_name: page.name,
+                    image: page.image,
+                    format: page.format || DEFAULT_FORMAT,
+                    width: page.width || DOCUMENT_FORMATS[DEFAULT_FORMAT].width,
+                    height: page.height || DOCUMENT_FORMATS[DEFAULT_FORMAT].height,
+                    zones: zonesOutput
+                };
+            });
+
+            const output = {
+                document: "template_multipage",
+                scale_reference: "96 DPI",
+                generated_at: new Date().toISOString(),
+                pages: pagesOutput
+            };
+            
+            const jsonString = JSON.stringify(output, null, 2);
+            
+            // Téléchargement du fichier
+            const blob = new Blob([jsonString], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = "template_vdp_debug.json";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            console.log("JSON debug généré et téléchargé.");
         });
     }
 
