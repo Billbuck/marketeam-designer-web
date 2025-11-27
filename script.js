@@ -42,6 +42,60 @@ document.addEventListener('DOMContentLoaded', () => {
     const colorPickerInput = document.getElementById('color-picker-input');
     let savedColorSelection = null; // Sauvegarde la sélection pour le color picker
     
+    // Inputs de bordure
+    const inputBorderWidth = document.getElementById('input-border-width');
+    const inputBorderColor = document.getElementById('input-border-color');
+    const inputBorderStyle = document.getElementById('input-border-style');
+    
+    // --- CONSTANTES BORDURE ---
+    
+    // Mapping des styles de bordure vers les valeurs PrintShop Mail
+    const BORDER_STYLE_TO_PSMD = {
+        'none': 0,
+        'solid': 1,
+        'dotted': 2,           // Point carré
+        'dashed': 3,           // Tiret
+        'dash-dot': 4,         // Trait mixte
+        'long-dash': 5,        // Tiret long
+        'long-dash-dot': 6,    // Trait mixte long
+        'long-dash-dot-dot': 7 // Point trait mixte long
+    };
+    
+    // Mapping inverse (PSMD vers style interne)
+    const PSMD_TO_BORDER_STYLE = {
+        0: 'none',
+        1: 'solid',
+        2: 'dotted',
+        3: 'dashed',
+        4: 'dash-dot',
+        5: 'long-dash',
+        6: 'long-dash-dot',
+        7: 'long-dash-dot-dot'
+    };
+    
+    // Mapping des styles internes vers CSS pour l'aperçu
+    const BORDER_STYLE_TO_CSS = {
+        'none': 'none',
+        'solid': 'solid',
+        'dotted': 'dotted',
+        'dashed': 'dashed',
+        'dash-dot': 'dashed',           // Approximation
+        'long-dash': 'dashed',          // Approximation
+        'long-dash-dot': 'dashed',      // Approximation
+        'long-dash-dot-dot': 'dotted'   // Approximation
+    };
+    
+    // Options de styles de bordure pour le select
+    const BORDER_STYLES = [
+        { value: 'none', label: 'Aucune' },
+        { value: 'solid', label: 'Solide' },
+        { value: 'dotted', label: 'Point carré' },
+        { value: 'dashed', label: 'Tiret' },
+        { value: 'dash-dot', label: 'Trait mixte' },
+        { value: 'long-dash', label: 'Tiret long' },
+        { value: 'long-dash-dot', label: 'Trait mixte long' },
+        { value: 'long-dash-dot-dot', label: 'Point trait mixte long' }
+    ];
 
     const textControls = [
         inputContent,
@@ -54,7 +108,10 @@ document.addEventListener('DOMContentLoaded', () => {
         chkTransparent,
         chkCopyfit,
         chkBold,
-        inputLineHeight
+        inputLineHeight,
+        inputBorderWidth,
+        inputBorderColor,
+        inputBorderStyle
     ];
 
     function setTextControlsEnabled(enabled) {
@@ -270,7 +327,12 @@ document.addEventListener('DOMContentLoaded', () => {
             copyfit: false, // Désactivé par défaut
             bold: false, // Gras désactivé par défaut
             lineHeight: 1.2, // Interlignage par défaut (120%)
-            formatting: [] // Tableau d'annotations pour le formatage partiel
+            formatting: [], // Tableau d'annotations pour le formatage partiel
+            border: {
+                width: 0,           // 0 = pas de bordure, 0.5 = filet, 1, 2, 3, 4...
+                color: '#000000',   // Couleur de la bordure
+                style: 'none'       // Style de la bordure
+            }
         };
 
         createZoneDOM(id, zoneCounter);
@@ -409,6 +471,7 @@ document.addEventListener('DOMContentLoaded', () => {
             bold: zoneData.bold || false,
             lineHeight: zoneData.lineHeight !== undefined ? zoneData.lineHeight : 1.2,
             formatting: zoneData.formatting ? JSON.parse(JSON.stringify(zoneData.formatting)) : [], // Copie profonde du formatage
+            border: zoneData.border ? JSON.parse(JSON.stringify(zoneData.border)) : { width: 0, color: '#000000', style: 'none' },
             // Géométrie : utiliser les dimensions actuelles du DOM
             w: zoneEl.offsetWidth,
             h: zoneEl.offsetHeight,
@@ -456,6 +519,7 @@ document.addEventListener('DOMContentLoaded', () => {
             bold: copiedZoneData.bold,
             lineHeight: copiedZoneData.lineHeight,
             formatting: copiedZoneData.formatting ? JSON.parse(JSON.stringify(copiedZoneData.formatting)) : [], // Copie profonde du formatage
+            border: copiedZoneData.border ? JSON.parse(JSON.stringify(copiedZoneData.border)) : { width: 0, color: '#000000', style: 'none' },
             // Position et taille
             x: newX,
             y: newY,
@@ -519,6 +583,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 contentEl.style.textAlign = zoneData.align;
                 contentEl.style.justifyContent = mapValignToFlex(zoneData.valign);
                 contentEl.style.lineHeight = zoneData.lineHeight;
+            }
+            
+            // Appliquer la bordure utilisateur
+            if (zoneData.border) {
+                applyBorderToZone(newZoneEl, zoneData.border);
             }
         }
         
@@ -642,6 +711,10 @@ document.addEventListener('DOMContentLoaded', () => {
             chkCopyfit.checked = false;
             chkBold.checked = false;
             inputLineHeight.value = 1.0;
+            // Bordures pour zone QR (pas applicable)
+            if (inputBorderWidth) inputBorderWidth.value = 0;
+            if (inputBorderColor) inputBorderColor.value = '#000000';
+            if (inputBorderStyle) inputBorderStyle.value = 'none';
         } else {
             setTextControlsEnabled(true);
             inputContent.value = data.content || '';
@@ -655,6 +728,15 @@ document.addEventListener('DOMContentLoaded', () => {
             chkCopyfit.checked = data.copyfit || false;
             chkBold.checked = data.bold || false;
             inputLineHeight.value = data.lineHeight !== undefined ? data.lineHeight : 1.2;
+            
+            // Initialiser la bordure si nécessaire
+            if (!data.border) {
+                zonesData[id].border = { width: 0, color: '#000000', style: 'none' };
+            }
+            const border = data.border || { width: 0, color: '#000000', style: 'none' };
+            if (inputBorderWidth) inputBorderWidth.value = border.width || 0;
+            if (inputBorderColor) inputBorderColor.value = border.color || '#000000';
+            if (inputBorderStyle) inputBorderStyle.value = border.style || 'none';
             
             // Initialiser le formatage partiel si nécessaire
             if (!data.formatting) {
@@ -1241,6 +1323,14 @@ document.addEventListener('DOMContentLoaded', () => {
         zonesData[selectedId].copyfit = chkCopyfit.checked;
         zonesData[selectedId].bold = chkBold.checked;
         zonesData[selectedId].lineHeight = parseFloat(inputLineHeight.value) || 1.2;
+        
+        // Mise à jour des propriétés de bordure
+        if (!zonesData[selectedId].border) {
+            zonesData[selectedId].border = { width: 0, color: '#000000', style: 'none' };
+        }
+        if (inputBorderWidth) zonesData[selectedId].border.width = parseFloat(inputBorderWidth.value) || 0;
+        if (inputBorderColor) zonesData[selectedId].border.color = inputBorderColor.value;
+        if (inputBorderStyle) zonesData[selectedId].border.style = inputBorderStyle.value;
 
         // Gestion UI Checkbox
         inputBgColor.disabled = chkTransparent.checked;
@@ -1310,8 +1400,68 @@ document.addEventListener('DOMContentLoaded', () => {
             // Si désactivé, on remet la taille normale définie
             zoneEl.style.fontSize = inputSize.value + 'pt';
         }
+        
+        // Appliquer la bordure utilisateur
+        applyBorderToZone(zoneEl, zonesData[selectedId].border);
 
         saveToLocalStorage(); // Sauvegarder à chaque modif
+    }
+    
+    /**
+     * Applique les styles de bordure à une zone
+     * @param {HTMLElement} zoneEl - Élément DOM de la zone
+     * @param {Object} border - Configuration de la bordure { width, color, style }
+     */
+    function applyBorderToZone(zoneEl, border) {
+        if (!zoneEl) return;
+        
+        const borderData = border || { width: 0, color: '#000000', style: 'none' };
+        const width = parseFloat(borderData.width) || 0;
+        const color = borderData.color || '#000000';
+        const style = borderData.style || 'none';
+        
+        if (width === 0 || style === 'none') {
+            // Pas de bordure
+            zoneEl.style.border = 'none';
+            zoneEl.classList.remove('has-border');
+        } else {
+            // Appliquer la bordure avec le style CSS correspondant
+            const cssStyle = BORDER_STYLE_TO_CSS[style] || 'solid';
+            
+            // Gestion du filet (0.5px) - certains navigateurs ne supportent pas les valeurs décimales
+            let cssWidth = width + 'px';
+            if (width === 0.5) {
+                // Fallback pour les navigateurs qui ne supportent pas 0.5px
+                // On utilise 1px avec une opacité réduite sur la couleur
+                cssWidth = '1px';
+                // Convertir la couleur en rgba avec opacité 0.5
+                const rgb = hexToRgb(color);
+                if (rgb) {
+                    zoneEl.style.border = `${cssWidth} ${cssStyle} rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.5)`;
+                } else {
+                    zoneEl.style.border = `${cssWidth} ${cssStyle} ${color}`;
+                }
+            } else {
+                zoneEl.style.border = `${cssWidth} ${cssStyle} ${color}`;
+            }
+            
+            zoneEl.classList.add('has-border');
+        }
+    }
+    
+    /**
+     * Convertit une couleur hexadécimale en RGB
+     * @param {string} hex - Couleur hexadécimale (#RRGGBB)
+     * @returns {Object|null} - { r, g, b } ou null si invalide
+     */
+    function hexToRgb(hex) {
+        if (!hex || !hex.startsWith('#')) return null;
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        } : null;
     }
 
     // --- FONCTION COPY FITTING (Ajustement automatique) ---
@@ -1376,9 +1526,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Attacher les écouteurs
-    [inputContent, inputFont, inputSize, inputColor, inputAlign, inputValign, inputBgColor, chkTransparent, chkLock, chkCopyfit, chkBold, inputLineHeight].forEach(el => {
+    [inputContent, inputFont, inputSize, inputColor, inputAlign, inputValign, inputBgColor, chkTransparent, chkLock, chkCopyfit, chkBold, inputLineHeight, inputBorderWidth, inputBorderColor, inputBorderStyle].forEach(el => {
+        if (!el) return; // Vérifier que l'élément existe
         el.addEventListener('input', updateActiveZoneData);
-        el.addEventListener('change', updateActiveZoneData); // Pour checkbox/color
+        el.addEventListener('change', updateActiveZoneData); // Pour checkbox/color/select
     });
     
     // Gérer les modifications du texte pour ajuster les annotations
@@ -2075,6 +2226,10 @@ document.addEventListener('DOMContentLoaded', () => {
         chkBold.checked = false;
         chkLock.checked = false;
         inputLineHeight.value = 1.2;
+        // Réinitialiser les inputs de bordure
+        if (inputBorderWidth) inputBorderWidth.value = 0;
+        if (inputBorderColor) inputBorderColor.value = '#000000';
+        if (inputBorderStyle) inputBorderStyle.value = 'none';
         inputX.value = '';
         inputY.value = '';
         inputW.value = '';
@@ -2583,6 +2738,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.locked) {
                      zoneEl.classList.add('locked');
                 }
+                
+                // Bordure utilisateur
+                if (data.border) {
+                    applyBorderToZone(zoneEl, data.border);
+                }
             }
         }
         
@@ -2727,6 +2887,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Générer le RTF pour cette zone
                     const rtfContent = generateRtfForZone(data);
                     
+                    // Préparer les propriétés de bordure pour l'export
+                    const borderData = data.border || { width: 0, color: '#000000', style: 'none' };
+                    const borderExport = {
+                        width: borderData.width || 0,
+                        color: borderData.color || '#000000',
+                        style: borderData.style || 'none',
+                        style_psmd: BORDER_STYLE_TO_PSMD[borderData.style] || 0 // Valeur numérique pour PrintShop Mail
+                    };
+                    
                     zonesOutput.push({
                         id,
                         type: 'text',
@@ -2744,7 +2913,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             locked: data.locked,
                             copyfit: data.copyfit,
                             bold: data.bold || false
-                        }
+                        },
+                        border: borderExport
                     });
                 }
             }
@@ -3245,6 +3415,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                     } else {
                         // Format debug : texte brut + formatting
+                        const borderData = data.border || { width: 0, color: '#000000', style: 'none' };
+                        
                         zonesOutput.push({
                             id,
                             type: 'text',
@@ -3263,6 +3435,12 @@ document.addEventListener('DOMContentLoaded', () => {
                                 locked: data.locked,
                                 copyfit: data.copyfit,
                                 bold: data.bold || false
+                            },
+                            border: {
+                                width: borderData.width || 0,
+                                color: borderData.color || '#000000',
+                                style: borderData.style || 'none',
+                                style_psmd: BORDER_STYLE_TO_PSMD[borderData.style] || 0
                             }
                         });
                     }

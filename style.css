@@ -181,7 +181,7 @@ button:last-child {
     display: flex;
     justify-content: center;
     align-items: center;
-    border: 1px solid transparent; /* Réserve l'espace pour la bordure au survol/sélection */
+    border: none; /* Pas de bordure par défaut - la bordure utilisateur sera appliquée via style inline */
     user-select: none; /* Empêche la sélection du texte lors du déplacement */
     -webkit-user-select: none; /* Pour compatibilité WebKit */
     -moz-user-select: none; /* Pour compatibilité Firefox */
@@ -209,16 +209,26 @@ button:last-child {
 
 /* Indiquer qu'une zone est survolable si elle n'est pas sélectionnée */
 .zone:hover:not(.selected) {
-    border: 1px dashed #ccc; /* Aide visuelle légère */
+    outline: 1px dashed #ccc; /* Aide visuelle légère - utilise outline pour ne pas affecter la bordure utilisateur */
+    outline-offset: -1px;
 }
 
 .zone.selected {
-    /* Bordure et fond de sélection uniquement ici */
-    border: 1px solid #1a73e8;
+    /* Utiliser outline pour la sélection - préserve la bordure utilisateur */
+    outline: 2px solid #1a73e8;
+    outline-offset: -1px;
     z-index: 50; /* Met la zone sélectionnée au premier plan */
 }
-/* Le fond de sélection (bleu clair) a été retiré pour respecter la couleur de fond réelle de l'objet. 
-   On compte sur la bordure pour montrer la sélection. */
+
+/* Bordure utilisateur par défaut (aucune) */
+.zone {
+    /* La bordure utilisateur sera appliquée dynamiquement via style inline */
+}
+
+/* Styles de bordure utilisateur pour l'aperçu */
+.zone.has-border {
+    /* Classe ajoutée quand une bordure utilisateur est définie */
+}
 
 .zone.locked {
     cursor: not-allowed;
