@@ -225,15 +225,16 @@
                 <div class="style-row">
                     <div class="input-group half">
                         <label>Épaisseur</label>
-                        <select id="input-border-width">
-                            <option value="0">Aucune</option>
-                            <option value="0.5">Filet (0.5px)</option>
-                            <option value="1">1px</option>
-                            <option value="2">2px</option>
-                            <option value="3">3px</option>
-                            <option value="4">4px</option>
-                            <option value="5">5px</option>
-                        </select>
+                        <div class="spin-control">
+                            <button type="button" class="spin-btn spin-down" data-target="input-border-width">
+                                <span class="material-icons">remove</span>
+                            </button>
+                            <span class="spin-value"><span id="input-border-width-display">0</span> px</span>
+                            <input type="hidden" id="input-border-width" value="0">
+                            <button type="button" class="spin-btn spin-up" data-target="input-border-width">
+                                <span class="material-icons">add</span>
+                            </button>
+                        </div>
                     </div>
                     <div class="input-group half">
                         <label>Couleur</label>
@@ -244,14 +245,8 @@
                     <div class="input-group">
                         <label>Style</label>
                         <select id="input-border-style">
-                            <option value="none">Aucune</option>
-                            <option value="solid">Solide</option>
-                            <option value="dotted">Point carré</option>
+                            <option value="solid" selected>Plein</option>
                             <option value="dashed">Tiret</option>
-                            <option value="dash-dot">Trait mixte</option>
-                            <option value="long-dash">Tiret long</option>
-                            <option value="long-dash-dot">Trait mixte long</option>
-                            <option value="long-dash-dot-dot">Point trait mixte long</option>
                         </select>
                     </div>
                 </div>

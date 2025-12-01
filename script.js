@@ -51,58 +51,48 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Inputs de bordure
     const inputBorderWidth = document.getElementById('input-border-width');
+    const inputBorderWidthDisplay = document.getElementById('input-border-width-display');
     const inputBorderColor = document.getElementById('input-border-color');
     const inputBorderStyle = document.getElementById('input-border-style');
+    
+    // Fonction pour mettre à jour l'affichage du spin button d'épaisseur de bordure
+    function updateBorderWidthDisplay(value) {
+        if (inputBorderWidthDisplay) {
+            inputBorderWidthDisplay.textContent = value;
+        }
+    }
+    
+    // Écouteurs pour les boutons spin de l'épaisseur de bordure
+    document.querySelectorAll('.spin-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetId = btn.dataset.target;
+            const input = document.getElementById(targetId);
+            if (!input) return;
+            
+            let value = parseInt(input.value) || 0;
+            
+            if (btn.classList.contains('spin-up')) {
+                value++;
+            } else if (btn.classList.contains('spin-down')) {
+                value = Math.max(0, value - 1); // Minimum 0
+            }
+            
+            input.value = value;
+            updateBorderWidthDisplay(value);
+            
+            // Déclencher la mise à jour de la zone
+            updateActiveZoneData();
+            saveState();
+        });
+    });
     
     // --- CONSTANTES BORDURE ---
     
     // Mapping des styles de bordure vers les valeurs PrintShop Mail
     const BORDER_STYLE_TO_PSMD = {
-        'none': 0,
         'solid': 1,
-        'dotted': 2,           // Point carré
-        'dashed': 3,           // Tiret
-        'dash-dot': 4,         // Trait mixte
-        'long-dash': 5,        // Tiret long
-        'long-dash-dot': 6,    // Trait mixte long
-        'long-dash-dot-dot': 7 // Point trait mixte long
+        'dashed': 3
     };
-    
-    // Mapping inverse (PSMD vers style interne)
-    const PSMD_TO_BORDER_STYLE = {
-        0: 'none',
-        1: 'solid',
-        2: 'dotted',
-        3: 'dashed',
-        4: 'dash-dot',
-        5: 'long-dash',
-        6: 'long-dash-dot',
-        7: 'long-dash-dot-dot'
-    };
-    
-    // Mapping des styles internes vers CSS pour l'aperçu
-    const BORDER_STYLE_TO_CSS = {
-        'none': 'none',
-        'solid': 'solid',
-        'dotted': 'dotted',
-        'dashed': 'dashed',
-        'dash-dot': 'dashed',           // Approximation
-        'long-dash': 'dashed',          // Approximation
-        'long-dash-dot': 'dashed',      // Approximation
-        'long-dash-dot-dot': 'dotted'   // Approximation
-    };
-    
-    // Options de styles de bordure pour le select
-    const BORDER_STYLES = [
-        { value: 'none', label: 'Aucune' },
-        { value: 'solid', label: 'Solide' },
-        { value: 'dotted', label: 'Point carré' },
-        { value: 'dashed', label: 'Tiret' },
-        { value: 'dash-dot', label: 'Trait mixte' },
-        { value: 'long-dash', label: 'Tiret long' },
-        { value: 'long-dash-dot', label: 'Trait mixte long' },
-        { value: 'long-dash-dot-dot', label: 'Point trait mixte long' }
-    ];
 
     const textControls = [
         inputContent,
@@ -499,9 +489,9 @@ document.addEventListener('DOMContentLoaded', () => {
             lineHeight: 1.2, // Interlignage par défaut (120%)
             formatting: [], // Tableau d'annotations pour le formatage partiel
             border: {
-                width: 0,           // 0 = pas de bordure, 0.5 = filet, 1, 2, 3, 4...
+                width: 0,           // 0 = pas de bordure, sinon épaisseur en px
                 color: '#000000',   // Couleur de la bordure
-                style: 'none'       // Style de la bordure
+                style: 'solid'      // Style de la bordure (solid par défaut)
             }
         };
 
@@ -643,7 +633,7 @@ document.addEventListener('DOMContentLoaded', () => {
             bold: zoneData.bold || false,
             lineHeight: zoneData.lineHeight !== undefined ? zoneData.lineHeight : 1.2,
             formatting: zoneData.formatting ? JSON.parse(JSON.stringify(zoneData.formatting)) : [], // Copie profonde du formatage
-            border: zoneData.border ? JSON.parse(JSON.stringify(zoneData.border)) : { width: 0, color: '#000000', style: 'none' },
+            border: zoneData.border ? JSON.parse(JSON.stringify(zoneData.border)) : { width: 0, color: '#000000', style: 'solid' },
             // Géométrie : utiliser les dimensions actuelles du DOM
             w: zoneEl.offsetWidth,
             h: zoneEl.offsetHeight,
@@ -691,7 +681,7 @@ document.addEventListener('DOMContentLoaded', () => {
             bold: copiedZoneData.bold,
             lineHeight: copiedZoneData.lineHeight,
             formatting: copiedZoneData.formatting ? JSON.parse(JSON.stringify(copiedZoneData.formatting)) : [], // Copie profonde du formatage
-            border: copiedZoneData.border ? JSON.parse(JSON.stringify(copiedZoneData.border)) : { width: 0, color: '#000000', style: 'none' },
+            border: copiedZoneData.border ? JSON.parse(JSON.stringify(copiedZoneData.border)) : { width: 0, color: '#000000', style: 'solid' },
             // Position et taille
             x: newX,
             y: newY,
@@ -891,9 +881,12 @@ document.addEventListener('DOMContentLoaded', () => {
             chkBold.checked = false;
             inputLineHeight.value = 1.0;
             // Bordures pour zone QR (pas applicable)
-            if (inputBorderWidth) inputBorderWidth.value = 0;
+            if (inputBorderWidth) {
+                inputBorderWidth.value = 0;
+                updateBorderWidthDisplay(0);
+            }
             if (inputBorderColor) inputBorderColor.value = '#000000';
-            if (inputBorderStyle) inputBorderStyle.value = 'none';
+            if (inputBorderStyle) inputBorderStyle.value = 'solid';
         } else {
             setTextControlsEnabled(true);
             inputContent.value = data.content || '';
@@ -910,12 +903,15 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Initialiser la bordure si nécessaire
             if (!data.border) {
-                zonesData[id].border = { width: 0, color: '#000000', style: 'none' };
+                zonesData[id].border = { width: 0, color: '#000000', style: 'solid' };
             }
-            const border = data.border || { width: 0, color: '#000000', style: 'none' };
-            if (inputBorderWidth) inputBorderWidth.value = border.width || 0;
+            const border = data.border || { width: 0, color: '#000000', style: 'solid' };
+            if (inputBorderWidth) {
+                inputBorderWidth.value = border.width || 0;
+                updateBorderWidthDisplay(border.width || 0);
+            }
             if (inputBorderColor) inputBorderColor.value = border.color || '#000000';
-            if (inputBorderStyle) inputBorderStyle.value = border.style || 'none';
+            if (inputBorderStyle) inputBorderStyle.value = border.style || 'solid';
             
             // Initialiser le formatage partiel si nécessaire
             if (!data.formatting) {
@@ -1512,7 +1508,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Mise à jour des propriétés de bordure
         if (!zonesData[selectedId].border) {
-            zonesData[selectedId].border = { width: 0, color: '#000000', style: 'none' };
+            zonesData[selectedId].border = { width: 0, color: '#000000', style: 'solid' };
         }
         if (inputBorderWidth) zonesData[selectedId].border.width = parseFloat(inputBorderWidth.value) || 0;
         if (inputBorderColor) zonesData[selectedId].border.color = inputBorderColor.value;
@@ -1601,36 +1597,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function applyBorderToZone(zoneEl, border) {
         if (!zoneEl) return;
         
-        const borderData = border || { width: 0, color: '#000000', style: 'none' };
+        const borderData = border || { width: 0, color: '#000000', style: 'solid' };
         const width = parseFloat(borderData.width) || 0;
         const color = borderData.color || '#000000';
-        const style = borderData.style || 'none';
+        const style = borderData.style || 'solid';
         
-        if (width === 0 || style === 'none') {
-            // Pas de bordure
+        if (width === 0) {
+            // Pas de bordure (épaisseur = 0)
             zoneEl.style.border = 'none';
             zoneEl.classList.remove('has-border');
         } else {
-            // Appliquer la bordure avec le style CSS correspondant
-            const cssStyle = BORDER_STYLE_TO_CSS[style] || 'solid';
-            
-            // Gestion du filet (0.5px) - certains navigateurs ne supportent pas les valeurs décimales
-            let cssWidth = width + 'px';
-            if (width === 0.5) {
-                // Fallback pour les navigateurs qui ne supportent pas 0.5px
-                // On utilise 1px avec une opacité réduite sur la couleur
-                cssWidth = '1px';
-                // Convertir la couleur en rgba avec opacité 0.5
-                const rgb = hexToRgb(color);
-                if (rgb) {
-                    zoneEl.style.border = `${cssWidth} ${cssStyle} rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.5)`;
-                } else {
-                    zoneEl.style.border = `${cssWidth} ${cssStyle} ${color}`;
-                }
-            } else {
-                zoneEl.style.border = `${cssWidth} ${cssStyle} ${color}`;
-            }
-            
+            // Appliquer la bordure avec le style CSS natif (solid ou dashed)
+            const cssStyle = (style === 'dashed') ? 'dashed' : 'solid';
+            zoneEl.style.border = `${width}px ${cssStyle} ${color}`;
             zoneEl.classList.add('has-border');
         }
     }
@@ -1728,7 +1707,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // IMPORTANT: saveState() est appelé APRÈS updateActiveZoneData() pour capturer l'état APRÈS la modification
     
     // 1. Inputs numériques : input pour l'aperçu temps réel, change pour saveState
-    [inputSize, inputLineHeight, inputBorderWidth].forEach(el => {
+    // Note: inputBorderWidth est maintenant un hidden géré par les boutons spin
+    [inputSize, inputLineHeight].forEach(el => {
         if (!el) return;
         el.addEventListener('input', () => {
             updateActiveZoneData(); // Aperçu temps réel sans snapshot
@@ -2470,9 +2450,12 @@ document.addEventListener('DOMContentLoaded', () => {
         chkLock.checked = false;
         inputLineHeight.value = 1.2;
         // Réinitialiser les inputs de bordure
-        if (inputBorderWidth) inputBorderWidth.value = 0;
+        if (inputBorderWidth) {
+            inputBorderWidth.value = 0;
+            updateBorderWidthDisplay(0);
+        }
         if (inputBorderColor) inputBorderColor.value = '#000000';
-        if (inputBorderStyle) inputBorderStyle.value = 'none';
+        if (inputBorderStyle) inputBorderStyle.value = 'solid';
         inputX.value = '';
         inputY.value = '';
         inputW.value = '';
@@ -3184,11 +3167,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     const rtfContent = generateRtfForZone(data);
                     
                     // Préparer les propriétés de bordure pour l'export
-                    const borderData = data.border || { width: 0, color: '#000000', style: 'none' };
+                    const borderData = data.border || { width: 0, color: '#000000', style: 'solid' };
                     const borderExport = {
                         width: borderData.width || 0,
                         color: borderData.color || '#000000',
-                        style: borderData.style || 'none',
+                        style: borderData.style || 'solid',
                         style_psmd: BORDER_STYLE_TO_PSMD[borderData.style] || 0 // Valeur numérique pour PrintShop Mail
                     };
                     
@@ -3711,7 +3694,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                     } else {
                         // Format debug : texte brut + formatting
-                        const borderData = data.border || { width: 0, color: '#000000', style: 'none' };
+                        const borderData = data.border || { width: 0, color: '#000000', style: 'solid' };
                         
                         zonesOutput.push({
                             id,
@@ -3735,7 +3718,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             border: {
                                 width: borderData.width || 0,
                                 color: borderData.color || '#000000',
-                                style: borderData.style || 'none',
+                                style: borderData.style || 'solid',
                                 style_psmd: BORDER_STYLE_TO_PSMD[borderData.style] || 0
                             }
                         });
