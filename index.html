@@ -41,6 +41,24 @@
                 </button>
             </div>
 
+            <!-- Historique (Undo/Redo) -->
+            <div class="toolbar-section toolbar-section-history">
+                <h3 class="section-title">Historique</h3>
+                <div class="history-controls">
+                    <button id="btn-undo" class="btn-history" title="Annuler (Ctrl+Z)" disabled>
+                        <span class="material-icons">undo</span>
+                        <span class="btn-label">Annuler</span>
+                    </button>
+                    <button id="btn-redo" class="btn-history" title="Rétablir (Ctrl+Y)" disabled>
+                        <span class="material-icons">redo</span>
+                        <span class="btn-label">Rétablir</span>
+                    </button>
+                </div>
+                <div class="history-status">
+                    <span id="history-position">1</span> / <span id="history-total">1</span>
+                </div>
+            </div>
+
             <!-- Alignement (visible uniquement si 2+ zones sélectionnées) -->
             <div class="toolbar-section" id="alignment-section" style="display: none;">
                 <h3 class="section-title">Alignement</h3>
@@ -348,6 +366,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Toast notification pour Undo/Redo -->
+    <div id="undo-redo-toast" class="undo-toast"></div>
 
     <script src="script.js"></script>
 </body>

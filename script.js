@@ -10,6 +10,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnGenerate = document.getElementById('btn-generate-json');
     const btnGenerateJsonDebug = document.getElementById('btn-generate-json-debug');
     const coordsPanel = document.getElementById('coords-panel');
+    
+    // Boutons et éléments d'historique (Undo/Redo)
+    const btnUndo = document.getElementById('btn-undo');
+    const btnRedo = document.getElementById('btn-redo');
+    const historyPositionEl = document.getElementById('history-position');
+    const historyTotalEl = document.getElementById('history-total');
+    const undoRedoToast = document.getElementById('undo-redo-toast');
     const lblSelected = document.getElementById('lbl-selected-zone');
     
     // Contrôles de zoom
@@ -175,6 +182,169 @@ document.addEventListener('DOMContentLoaded', () => {
     // Déclarer zoomLevel tôt pour qu'il soit disponible partout
     let zoomLevel = 1.0; // 100% par défaut
 
+    // --- SYSTÈME D'HISTORIQUE (UNDO/REDO) ---
+    const historyManager = {
+        states: [],           // Tableau des snapshots de documentState
+        currentIndex: -1,     // Position actuelle dans l'historique
+        maxStates: 50,        // Limite mémoire
+        isRestoring: false,   // Flag pour éviter de sauvegarder pendant une restauration
+        isLoadingForm: false  // Flag pour éviter de sauvegarder pendant le chargement du formulaire
+    };
+
+    // Variable pour le debounce du contenu texte
+    let contentSaveTimeout = null;
+
+    /**
+     * Sauvegarde l'état actuel dans l'historique
+     * Doit être appelé APRÈS chaque modification
+     */
+    function saveState() {
+        // Ne pas sauvegarder si on est en train de restaurer ou de charger le formulaire
+        if (historyManager.isRestoring || historyManager.isLoadingForm) {
+            return;
+        }
+        
+        // Synchroniser les positions DOM vers documentState avant le snapshot
+        const zonesData = getCurrentPageZones();
+        for (const [id, data] of Object.entries(zonesData)) {
+            const el = document.getElementById(id);
+            if (el) {
+                data.x = el.offsetLeft;
+                data.y = el.offsetTop;
+                data.w = el.offsetWidth;
+                data.h = el.offsetHeight;
+            }
+        }
+        documentState.zoneCounter = zoneCounter;
+        
+        // Supprimer les états "futurs" si on a fait des undo
+        if (historyManager.currentIndex < historyManager.states.length - 1) {
+            historyManager.states = historyManager.states.slice(0, historyManager.currentIndex + 1);
+        }
+        
+        // Créer un snapshot profond de documentState
+        const snapshot = JSON.parse(JSON.stringify(documentState));
+        
+        // Ajouter à l'historique
+        historyManager.states.push(snapshot);
+        historyManager.currentIndex++;
+        
+        // Limiter la taille de l'historique
+        if (historyManager.states.length > historyManager.maxStates) {
+            historyManager.states.shift();
+            historyManager.currentIndex--;
+        }
+        
+        // Mettre à jour l'interface
+        updateHistoryUI();
+    }
+
+    /**
+     * Annule la dernière action (Undo)
+     */
+    function undo() {
+        if (historyManager.currentIndex <= 0) {
+            showUndoRedoToast('Rien à annuler', 'error', 'block');
+            return;
+        }
+        
+        historyManager.currentIndex--;
+        restoreState(historyManager.states[historyManager.currentIndex]);
+        updateHistoryUI();
+        showUndoRedoToast('Action annulée', 'success', 'undo');
+    }
+
+    /**
+     * Rétablit l'action annulée (Redo)
+     */
+    function redo() {
+        if (historyManager.currentIndex >= historyManager.states.length - 1) {
+            showUndoRedoToast('Rien à rétablir', 'error', 'block');
+            return;
+        }
+        
+        historyManager.currentIndex++;
+        restoreState(historyManager.states[historyManager.currentIndex]);
+        updateHistoryUI();
+        showUndoRedoToast('Action rétablie', 'success', 'redo');
+    }
+
+    /**
+     * Restaure un état depuis un snapshot
+     * @param {Object} snapshot - L'état à restaurer
+     */
+    function restoreState(snapshot) {
+        historyManager.isRestoring = true;
+        
+        // 1. Supprimer toutes les zones du DOM
+        document.querySelectorAll('.zone').forEach(el => el.remove());
+        
+        // 2. Restaurer documentState
+        documentState = JSON.parse(JSON.stringify(snapshot));
+        zoneCounter = documentState.zoneCounter;
+        
+        // 3. Recharger la page courante (recrée les zones dans le DOM)
+        loadCurrentPage();
+        
+        // 4. Désélectionner tout
+        selectedZoneIds = [];
+        deselectAll();
+        
+        // 5. Sauvegarder dans localStorage (sans ajouter à l'historique)
+        saveToLocalStorage();
+        
+        historyManager.isRestoring = false;
+    }
+
+    /**
+     * Affiche une notification toast pour Undo/Redo
+     * @param {string} message - Message à afficher
+     * @param {string} type - Type de toast ('success', 'error', ou vide)
+     * @param {string} icon - Icône Material Icons (optionnel)
+     */
+    function showUndoRedoToast(message, type = 'success', icon = null) {
+        if (!undoRedoToast) return;
+        
+        // Construire le contenu du toast
+        let content = '';
+        if (icon) {
+            content += `<span class="material-icons toast-icon">${icon}</span>`;
+        }
+        content += `<span>${message}</span>`;
+        
+        undoRedoToast.innerHTML = content;
+        undoRedoToast.className = 'undo-toast'; // Reset classes
+        if (type) {
+            undoRedoToast.classList.add(type);
+        }
+        undoRedoToast.classList.add('show');
+        
+        // Masquer après 1.5 secondes
+        setTimeout(() => {
+            undoRedoToast.classList.remove('show');
+        }, 1500);
+    }
+
+    /**
+     * Met à jour l'interface des boutons et compteur d'historique
+     */
+    function updateHistoryUI() {
+        const canUndo = historyManager.currentIndex > 0;
+        const canRedo = historyManager.currentIndex < historyManager.states.length - 1;
+        
+        // Mettre à jour l'état des boutons
+        if (btnUndo) btnUndo.disabled = !canUndo;
+        if (btnRedo) btnRedo.disabled = !canRedo;
+        
+        // Mettre à jour le compteur
+        if (historyPositionEl) {
+            historyPositionEl.textContent = historyManager.currentIndex + 1;
+        }
+        if (historyTotalEl) {
+            historyTotalEl.textContent = historyManager.states.length;
+        }
+    }
+
     // --- SYSTÈME DE FORMATS DE DOCUMENT ---
     // Formats prédéfinis (dimensions en pixels à 96 DPI)
     const DOCUMENT_FORMATS = {
@@ -337,6 +507,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         createZoneDOM(id, zoneCounter);
         saveToLocalStorage(); // Sauvegarde auto
+        saveState(); // Snapshot APRÈS la création
     });
 
     btnAddQr.addEventListener('click', () => {
@@ -352,6 +523,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         createZoneDOM(id, zoneCounter);
         saveToLocalStorage();
+        saveState(); // Snapshot APRÈS la création
     });
 
     function createZoneDOM(id, labelNum, autoSelect = true) {
@@ -593,6 +765,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Sauvegarder
         saveToLocalStorage();
+        saveState(); // Snapshot APRÈS le collage
     }
 
     // --- 2. SÉLECTION MULTIPLE ---
@@ -691,9 +864,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Charger les données d'une zone dans le formulaire
     function loadZoneDataToForm(id) {
+        // Empêcher la création de snapshots pendant le chargement du formulaire
+        historyManager.isLoadingForm = true;
+        
         const zonesData = getCurrentPageZones();
         const data = zonesData[id];
-        if (!data) return;
+        if (!data) {
+            historyManager.isLoadingForm = false;
+            return;
+        }
         
         const zoneType = data.type || 'text';
         zonesData[id].type = zoneType;
@@ -756,6 +935,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Désactiver le mode multi-sélection
         setMultiSelectionMode(false);
+        
+        // Réactiver la sauvegarde dans l'historique
+        historyManager.isLoadingForm = false;
     }
 
     // Activer/désactiver le mode multi-sélection dans le formulaire
@@ -856,6 +1038,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         saveToLocalStorage();
+        saveState(); // Snapshot APRÈS l'alignement
     }
 
     // --- FONCTIONS DE TAILLE ---
@@ -893,6 +1076,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         saveToLocalStorage();
+        saveState(); // Snapshot APRÈS le changement de taille
     }
 
     // Appliquer la même hauteur que la première zone (référence)
@@ -928,6 +1112,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         saveToLocalStorage();
+        saveState(); // Snapshot APRÈS le changement de taille
     }
 
     // SÉLECTIONNER UNE ZONE (avec gestion Ctrl+clic)
@@ -1105,6 +1290,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Mettre à jour l'affichage
         updateActiveZoneData();
+        saveState(); // Snapshot APRÈS le formatage partiel
         
         // Remettre le focus sur le textarea
         textarea.focus();
@@ -1133,7 +1319,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        
         // Supprimer toutes les annotations qui chevauchent la sélection
         // On ne supprime PAS le texte, seulement le formatage
         // Donc on ne doit PAS ajuster les positions des autres annotations
@@ -1150,9 +1335,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const afterCount = zoneData.formatting.length;
         
         updateActiveZoneData();
+        saveState(); // Snapshot APRÈS la suppression du formatage
         textarea.focus();
     }
-    
+
     /**
      * Ajuste les positions des annotations après modification du texte
      * @param {number} startPos - Position de début de la modification
@@ -1526,10 +1712,58 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Attacher les écouteurs
-    [inputContent, inputFont, inputSize, inputColor, inputAlign, inputValign, inputBgColor, chkTransparent, chkLock, chkCopyfit, chkBold, inputLineHeight, inputBorderWidth, inputBorderColor, inputBorderStyle].forEach(el => {
-        if (!el) return; // Vérifier que l'élément existe
-        el.addEventListener('input', updateActiveZoneData);
-        el.addEventListener('change', updateActiveZoneData); // Pour checkbox/color/select
+    
+    // Écouteur spécifique pour le contenu texte (avec debounce pour l'historique)
+    // L'état AVANT la modification est déjà dans l'historique (dernier snapshot)
+    // On sauvegarde l'état APRÈS 500ms d'inactivité
+    inputContent.addEventListener('input', () => {
+        clearTimeout(contentSaveTimeout);
+        contentSaveTimeout = setTimeout(() => {
+            saveState(); // Snapshot APRÈS la saisie (500ms après dernière frappe)
+        }, 500);
+        // Note: updateActiveZoneData() est appelé par l'écouteur de formatage plus bas
+    });
+    
+    // Écouteurs pour les autres inputs (éviter les doubles snapshots)
+    // IMPORTANT: saveState() est appelé APRÈS updateActiveZoneData() pour capturer l'état APRÈS la modification
+    
+    // 1. Inputs numériques : input pour l'aperçu temps réel, change pour saveState
+    [inputSize, inputLineHeight, inputBorderWidth].forEach(el => {
+        if (!el) return;
+        el.addEventListener('input', () => {
+            updateActiveZoneData(); // Aperçu temps réel sans snapshot
+        });
+        el.addEventListener('change', () => {
+            updateActiveZoneData(); // Appliquer le changement
+            saveState(); // Snapshot APRÈS le changement
+        });
+    });
+    
+    // 2. Selects et color pickers
+    [inputFont, inputColor, inputAlign, inputValign, inputBgColor, inputBorderColor, inputBorderStyle].forEach(el => {
+        if (!el) return;
+        
+        // Pour les color pickers : input pour l'aperçu temps réel
+        if (el.type === 'color') {
+            el.addEventListener('input', () => {
+                updateActiveZoneData(); // Aperçu temps réel sans snapshot
+            });
+        }
+        
+        // Pour tous : change pour la sauvegarde finale
+        el.addEventListener('change', () => {
+            updateActiveZoneData();
+            saveState(); // Snapshot APRÈS le changement
+        });
+    });
+    
+    // 3. Checkboxes : uniquement change
+    [chkTransparent, chkLock, chkCopyfit, chkBold].forEach(el => {
+        if (!el) return;
+        el.addEventListener('change', () => {
+            updateActiveZoneData(); // Appliquer le changement
+            saveState(); // Snapshot APRÈS le changement
+        });
     });
     
     // Gérer les modifications du texte pour ajuster les annotations
@@ -2060,6 +2294,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         saveToLocalStorage();
+        saveState(); // Snapshot APRÈS l'espacement
     }
 
     // Ajuster l'écartement vertical entre les zones (uniforme)
@@ -2119,6 +2354,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         saveToLocalStorage();
+        saveState(); // Snapshot APRÈS l'espacement
     }
 
     // --- ÉCOUTEURS POUR LES BOUTONS D'ALIGNEMENT ET TAILLE ---
@@ -2171,6 +2407,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 delete zonesData[zoneId];
             });
             saveToLocalStorage();
+            saveState(); // Snapshot APRÈS la suppression
             deselectAll();
         }
         hideDeleteConfirmation();
@@ -2194,6 +2431,12 @@ document.addEventListener('DOMContentLoaded', () => {
             e.target.closest('.handle') || 
             e.target.closest('.toolbar') ||
             e.target.closest('.modal-box')) {
+            return;
+        }
+        
+        // Ne pas désélectionner si un color picker est actif (la popup native n'est pas dans le DOM)
+        const activeElement = document.activeElement;
+        if (activeElement && activeElement.type === 'color') {
             return;
         }
         
@@ -2248,6 +2491,18 @@ document.addEventListener('DOMContentLoaded', () => {
         showDeleteConfirmation();
     });
 
+    // Écouteurs pour les boutons Undo/Redo
+    if (btnUndo) {
+        btnUndo.addEventListener('click', () => {
+            undo();
+        });
+    }
+    if (btnRedo) {
+        btnRedo.addEventListener('click', () => {
+            redo();
+        });
+    }
+
     // Raccourci clavier : Touche Suppr pour supprimer, Ctrl+C pour copier, Ctrl+V pour coller
     document.addEventListener('keydown', (e) => {
         // Si la modale de suppression est ouverte
@@ -2264,6 +2519,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Ne pas intercepter si l'utilisateur tape dans un input ou textarea (sauf pour Delete)
         const isInInput = e.target.matches('input, textarea');
+        
+        // Undo (Ctrl+Z ou Cmd+Z)
+        if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey && !isInInput) {
+            e.preventDefault();
+            undo();
+            return;
+        }
+        
+        // Redo (Ctrl+Y ou Cmd+Y ou Ctrl+Shift+Z ou Cmd+Shift+Z)
+        if (((e.ctrlKey || e.metaKey) && e.key === 'y') || 
+            ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'z' || e.key === 'Z'))) {
+            if (!isInInput) {
+                e.preventDefault();
+                redo();
+                return;
+            }
+        }
         
         // Copier (Ctrl+C ou Cmd+C)
         if ((e.ctrlKey || e.metaKey) && e.key === 'c' && !isInInput) {
@@ -2321,11 +2593,13 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 4. Sauvegarder l'état
         saveToLocalStorage();
+        saveState(); // Snapshot APRÈS la réinitialisation
         
         hideResetConfirmation();
     }
 
     function resetAllPages() {
+        
         // 1. Supprimer toutes les zones du DOM
         document.querySelectorAll('.zone').forEach(el => el.remove());
         
@@ -2342,6 +2616,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 4. Sauvegarder l'état vide
         saveToLocalStorage();
+        saveState(); // Snapshot APRÈS la réinitialisation
         
         hideResetConfirmation();
     }
@@ -2376,6 +2651,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let startX, startY, startLeft, startTop, startW, startH;
     // Stockage des positions initiales de toutes les zones sélectionnées pour le déplacement groupé
     let startPositions = []; // Tableau de {id, left, top, width, height}
+    let hasActuallyMoved = false; // Flag pour détecter si un vrai mouvement a eu lieu
 
     document.addEventListener('mousedown', (e) => {
         // Si on est en mode pan (Espace pressé ou clic molette), ne pas permettre le drag des zones
@@ -2415,6 +2691,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 // Redimensionnement : seulement la zone cliquée (sélection unique)
                 isResizing = true;
+                hasActuallyMoved = false;
+                
                 currentHandle = e.target.dataset.pos;
                 startX = e.clientX; startY = e.clientY;
                 startW = clickedZone.offsetWidth; startH = clickedZone.offsetHeight;
@@ -2423,6 +2701,8 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (clickedZone.contains(e.target) && !e.target.classList.contains('handle')) {
                 // Déplacement : sauvegarder les positions de TOUTES les zones sélectionnées
                 isDragging = true;
+                hasActuallyMoved = false;
+                
                 startX = e.clientX; startY = e.clientY;
                 startLeft = clickedZone.offsetLeft; startTop = clickedZone.offsetTop;
                 
@@ -2455,6 +2735,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // Calculer le déplacement relatif (sans vérification de Ctrl - naturel)
             const dx = (e.clientX - startX) / zoomLevel;
             const dy = (e.clientY - startY) / zoomLevel;
+            
+            // Détecter si un vrai mouvement a eu lieu (seuil de 1 pixel)
+            if (!hasActuallyMoved && (Math.abs(dx) > 1 || Math.abs(dy) > 1)) {
+                hasActuallyMoved = true;
+            }
             
             // Obtenir les dimensions de la page (dynamiques)
             const pageWidth = getPageWidth();
@@ -2498,6 +2783,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const zonesData = getCurrentPageZones();
             const dx = (e.clientX - startX) / zoomLevel;
             const dy = (e.clientY - startY) / zoomLevel;
+            
+            // Détecter si un vrai redimensionnement a eu lieu (seuil de 1 pixel)
+            if (!hasActuallyMoved && (Math.abs(dx) > 1 || Math.abs(dy) > 1)) {
+                hasActuallyMoved = true;
+            }
+            
             let newW = startW, newH = startH;
             
             // Simplification redimensionnement (juste SE pour l'exemple, ou complet comme avant)
@@ -2523,14 +2814,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.addEventListener('mouseup', () => {
-        // Sauvegarder après le déplacement groupé (avant de réinitialiser)
-        if (isDragging && startPositions.length > 0) {
+        // Sauvegarder UNIQUEMENT si un vrai changement a eu lieu (drag ou resize avec mouvement)
+        if (hasActuallyMoved && (isDragging || isResizing)) {
             saveToLocalStorage();
+            saveState(); // Snapshot APRÈS le déplacement/redimensionnement
         }
         
         isDragging = false; 
         isResizing = false;
-        startPositions = []; // Nettoyer les positions sauvegardées
+        hasActuallyMoved = false;
+        startPositions = [];
     });
 
     function updateGeomDisplay(el) {
@@ -2760,6 +3053,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Charger au démarrage
     loadFromLocalStorage();
+    
+    // Sauvegarder l'état initial dans l'historique (après le chargement)
+    saveState();
     
     // S'assurer que l'image de fond correspond à la page courante après le chargement
     // (loadFromLocalStorage() force déjà la page 0, mais on double-vérifie)

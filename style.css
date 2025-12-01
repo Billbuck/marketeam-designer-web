@@ -623,3 +623,106 @@ input:checked + .slider:before {
     font-weight: bold;
     box-shadow: 0 2px 4px rgba(26, 115, 232, 0.3);
 }
+
+/* --- Historique (Undo/Redo) --- */
+.toolbar-section-history {
+    background-color: #fafafa;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid #e8e8e8;
+}
+
+.history-controls {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-history {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background-color: #fff;
+    border: 1px solid #dadce0;
+    border-radius: 6px;
+    color: #3c4043;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-history:hover:not(:disabled) {
+    background-color: #f1f3f4;
+    border-color: #1a73e8;
+    color: #1a73e8;
+}
+
+.btn-history:active:not(:disabled) {
+    background-color: #e8f0fe;
+    transform: scale(0.98);
+}
+
+.btn-history:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.btn-history .material-icons {
+    font-size: 18px;
+}
+
+.btn-history .btn-label {
+    font-size: 12px;
+}
+
+.history-status {
+    text-align: center;
+    margin-top: 8px;
+    font-size: 11px;
+    color: #80868b;
+    font-weight: 500;
+}
+
+/* --- Toast Notification --- */
+.undo-toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: linear-gradient(135deg, #323232 0%, #1a1a1a 100%);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 10000;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.undo-toast.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+.undo-toast.success {
+    background: linear-gradient(135deg, #1a73e8 0%, #1557b0 100%);
+}
+
+.undo-toast.error {
+    background: linear-gradient(135deg, #ea4335 0%, #c5221f 100%);
+}
+
+.undo-toast .toast-icon {
+    font-size: 20px;
+}
