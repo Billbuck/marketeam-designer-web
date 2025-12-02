@@ -2970,6 +2970,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Rétrocompatibilité : sauvegarder aussi l'ancien format pour la page courante
         localStorage.setItem('marketeam_zones', JSON.stringify(zonesData));
         localStorage.setItem('marketeam_zone_counter', zoneCounter);
+        
+        // Notifier le parent WebDev qu'il y a eu une modification
+        if (typeof notifyParentOfChange === 'function') {
+            notifyParentOfChange();
+        }
     }
 
     // ============================================================================
@@ -3564,6 +3569,107 @@ document.addEventListener('DOMContentLoaded', () => {
     // Exposer la fonction globalement pour l'appel depuis l'iframe parent
     window.exportToWebDev = exportToWebDev;
 
+    // ========================================================================
+    // COMMUNICATION POSTMESSAGE AVEC WEBDEV - Étape 7
+    // ========================================================================
+    
+    // Détecter si on est dans une iframe
+    const isInIframe = window.parent !== window;
+    
+    if (isInIframe) {
+        console.log('🖼️ Designer chargé en mode iframe');
+        document.body.classList.add('in-iframe');
+    } else {
+        console.log('🖥️ Designer chargé en mode standalone');
+    }
+    
+    /**
+     * Envoie un message au parent (WebDev)
+     * @param {Object} message - Message à envoyer
+     */
+    function sendMessageToParent(message) {
+        if (window.parent && window.parent !== window) {
+            window.parent.postMessage(message, '*');
+            console.log('📤 Message envoyé au parent:', message.action);
+        } else {
+            console.log('📤 Mode standalone (pas de parent):', message.action);
+        }
+    }
+    
+    /**
+     * Notifie le parent qu'une modification a été faite
+     */
+    function notifyParentOfChange() {
+        sendMessageToParent({ action: 'changed', timestamp: Date.now() });
+    }
+    
+    /**
+     * Gestionnaire des messages reçus du parent (WebDev)
+     */
+    function handleParentMessage(event) {
+        // Sécurité : vérifier l'origine si nécessaire
+        // if (event.origin !== "https://votre-domaine-webdev.com") return;
+        
+        const message = event.data;
+        
+        // Ignorer les messages non structurés ou d'autres sources (ex: extensions)
+        if (!message || typeof message !== 'object' || !message.action) {
+            return;
+        }
+        
+        console.log('📩 Message reçu du parent:', message.action);
+        
+        switch (message.action) {
+            case 'load':
+                // Charger un document JSON
+                if (message.data) {
+                    try {
+                        loadFromWebDev(message.data);
+                        sendMessageToParent({ action: 'loaded', success: true });
+                    } catch (error) {
+                        console.error('Erreur lors du chargement:', error);
+                        sendMessageToParent({ action: 'loaded', success: false, error: error.message });
+                    }
+                }
+                break;
+                
+            case 'export':
+                // Exporter le document actuel
+                try {
+                    const exported = exportToWebDev();
+                    sendMessageToParent({ action: 'exported', success: true, data: exported });
+                } catch (error) {
+                    console.error('Erreur lors de l\'export:', error);
+                    sendMessageToParent({ action: 'exported', success: false, error: error.message });
+                }
+                break;
+                
+            case 'getState':
+                // Retourner l'état actuel (pour debug ou synchronisation)
+                sendMessageToParent({ action: 'state', data: documentState });
+                break;
+                
+            case 'ping':
+                // Test de connexion
+                sendMessageToParent({ action: 'pong' });
+                break;
+                
+            default:
+                console.warn('Action inconnue:', message.action);
+        }
+    }
+    
+    // Écouter les messages du parent
+    window.addEventListener('message', handleParentMessage);
+    
+    // Signaler que le Designer est prêt (après l'initialisation complète)
+    // Note: Le message "ready" sera envoyé à la fin de l'initialisation du DOMContentLoaded
+    
+    // Exposer les fonctions globalement
+    window.sendMessageToParent = sendMessageToParent;
+    window.notifyParentOfChange = notifyParentOfChange;
+    window.isInIframe = isInIframe;
+
     function loadFromLocalStorage() {
         // Essayer de charger le nouveau format multipage
         const savedState = localStorage.getItem('marketeam_document_state');
@@ -3779,6 +3885,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Initialiser la visibilité des sections d'alignement et taille
     updateAlignmentToolbarVisibility();
+    
+    // Signaler au parent (WebDev) que le Designer est prêt
+    setTimeout(() => {
+        sendMessageToParent({ action: 'ready', version: '1.0' });
+    }, 100);
 
     // --- FONCTION DE CHANGEMENT DE PAGE ---
     function switchPage(pageIndex) {
