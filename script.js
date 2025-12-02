@@ -2841,6 +2841,352 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('marketeam_zone_counter', zoneCounter);
     }
 
+    // ============================================================================
+    // CHARGEMENT DEPUIS WEBDEV (iframe parent)
+    // ============================================================================
+    
+    /**
+     * Convertit une zone texte du format JSON WebDev vers le format interne documentState
+     * @param {Object} zoneJson - Zone texte au format WebDev
+     * @returns {Object} - Zone au format documentState interne
+     */
+    function convertZoneTexteFromJson(zoneJson) {
+        // Conversion mm → pixels
+        const mmToPixels = (mm) => mm / MM_PER_PIXEL;
+        
+        // Extraction des données avec valeurs par défaut
+        const geometrie = zoneJson.geometrie || {};
+        const style = zoneJson.style || {};
+        const fond = zoneJson.fond || {};
+        const bordure = zoneJson.bordure || {};
+        const copyfitting = zoneJson.copyfitting || {};
+        
+        // Mapper le formatage partiel : debut/fin → start/end
+        const formatting = (zoneJson.formatage || []).map(f => ({
+            start: f.debut,
+            end: f.fin,
+            styles: f.styles || {}
+        }));
+        
+        // Construction de l'objet zone interne
+        return {
+            // Type de zone
+            type: 'text',
+            
+            // Géométrie (conversion mm → px)
+            x: geometrie.xMm !== undefined ? mmToPixels(geometrie.xMm) : 0,
+            y: geometrie.yMm !== undefined ? mmToPixels(geometrie.yMm) : 0,
+            w: geometrie.largeurMm !== undefined ? mmToPixels(geometrie.largeurMm) : 200,
+            h: geometrie.hauteurMm !== undefined ? mmToPixels(geometrie.hauteurMm) : 40,
+            
+            // Contenu et formatage
+            content: zoneJson.contenu || '',
+            formatting: formatting,
+            
+            // Style typographique
+            font: style.police || 'Roboto',
+            size: style.taillePt || 12,
+            color: style.couleur || '#000000',
+            bold: style.gras || false,
+            lineHeight: style.interligne || 1.2,
+            align: style.alignementH || 'left',
+            valign: style.alignementV || 'top',
+            
+            // Fond
+            isTransparent: fond.transparent !== undefined ? fond.transparent : true,
+            bgColor: fond.couleur || '#FFFFFF',
+            
+            // Bordure
+            border: {
+                width: bordure.epaisseur || 0,
+                color: bordure.couleur || '#000000',
+                style: bordure.style || 'solid'
+            },
+            
+            // États
+            locked: zoneJson.verrouille || false,
+            copyfit: copyfitting.actif || false,
+            
+            // Nouvelles propriétés (stockées pour utilisation future)
+            name: zoneJson.nom || '',
+            zIndex: zoneJson.niveau || 1,
+            rotation: zoneJson.rotation || 0,
+            copyfitMin: copyfitting.tailleMinimum || 6,
+            copyfitWrap: copyfitting.autoriserRetourLigne !== undefined ? copyfitting.autoriserRetourLigne : true,
+            removeEmptyLines: zoneJson.supprimerLignesVides || false
+        };
+    }
+    
+    /**
+     * Convertit une zone code-barres du format JSON WebDev vers le format interne documentState
+     * @param {Object} zoneJson - Zone code-barres au format WebDev
+     * @returns {Object} - Zone au format documentState interne
+     */
+    function convertZoneCodeBarresFromJson(zoneJson) {
+        // Conversion mm → pixels
+        const mmToPixels = (mm) => mm / MM_PER_PIXEL;
+        
+        // Extraction des données avec valeurs par défaut
+        const geometrie = zoneJson.geometrie || {};
+        const couleurs = zoneJson.couleurs || {};
+        
+        // Construction de l'objet zone interne
+        return {
+            // Type interne 'qr' pour compatibilité avec createZoneDOM()
+            type: 'qr',
+            
+            // Type réel du code-barres (QRCode, Code128, EAN13, Code39, DataMatrix, PDF417, EanUcc128, UPCA, UPCE)
+            typeCode: zoneJson.typeCode || 'QRCode',
+            
+            // Contenu à encoder dans le code-barres
+            content: zoneJson.contenu || '',
+            
+            // Couleurs
+            qrColor: couleurs.code || '#000000',
+            bgColor: couleurs.fond || '#FFFFFF',
+            
+            // État
+            locked: zoneJson.verrouille || false,
+            
+            // Nouvelles propriétés (stockées pour utilisation future)
+            name: zoneJson.nom || '',
+            zIndex: zoneJson.niveau || 1,
+            rotation: zoneJson.rotation || 0,
+            
+            // Géométrie (conversion mm → px)
+            x: geometrie.xMm !== undefined ? mmToPixels(geometrie.xMm) : 0,
+            y: geometrie.yMm !== undefined ? mmToPixels(geometrie.yMm) : 0,
+            w: geometrie.largeurMm !== undefined ? mmToPixels(geometrie.largeurMm) : 100,
+            h: geometrie.hauteurMm !== undefined ? mmToPixels(geometrie.hauteurMm) : 100
+        };
+    }
+    
+    /**
+     * Charge un document depuis une configuration JSON envoyée par WebDev
+     * @param {Object} jsonData - Configuration du document au format WebDev
+     * @returns {boolean} - true si le chargement a réussi, false sinon
+     */
+    function loadFromWebDev(jsonData) {
+        console.log('=== loadFromWebDev() : Début du chargement ===');
+        console.log('Données reçues :', jsonData);
+        
+        // Validation de base
+        if (!jsonData || typeof jsonData !== 'object') {
+            console.error('loadFromWebDev : JSON invalide ou vide');
+            return false;
+        }
+        
+        // --- ÉTAPE 1 : Nettoyer le DOM ---
+        // Supprimer toutes les zones existantes de la page actuelle
+        console.log('Étape 1 : Nettoyage du DOM...');
+        const existingZones = a4Page.querySelectorAll('.zone');
+        existingZones.forEach(zone => zone.remove());
+        console.log(`  → ${existingZones.length} zone(s) supprimée(s)`);
+        
+        // Désélectionner tout
+        selectedZoneIds = [];
+        deselectAll();
+        
+        // --- ÉTAPE 2 : Initialiser les métadonnées ---
+        console.log('Étape 2 : Initialisation des métadonnées...');
+        
+        // Stocker l'identification du document (nouveau champ)
+        if (jsonData.identification) {
+            documentState.identification = {
+                idDocument: jsonData.identification.idDocument || '',
+                nomDocument: jsonData.identification.nomDocument || '',
+                dateCreation: jsonData.identification.dateCreation || ''
+            };
+            console.log('  → Identification :', documentState.identification);
+        }
+        
+        // Stocker le format du document (fond perdu, traits de coupe)
+        if (jsonData.formatDocument) {
+            documentState.formatDocument = {
+                fondPerdu: jsonData.formatDocument.fondPerdu || { actif: false, valeurMm: 3 },
+                traitsCoupe: jsonData.formatDocument.traitsCoupe || { actif: false }
+            };
+            console.log('  → Format document :', documentState.formatDocument);
+        }
+        
+        // Stocker les champs de fusion disponibles
+        if (jsonData.champsFusion && Array.isArray(jsonData.champsFusion)) {
+            documentState.champsFusion = jsonData.champsFusion;
+            console.log(`  → ${documentState.champsFusion.length} champ(s) de fusion chargé(s)`);
+        }
+        
+        // Stocker les polices (pour chargement ultérieur)
+        if (jsonData.polices) {
+            documentState.polices = jsonData.polices;
+            console.log('  → Polices :', documentState.polices);
+        }
+        
+        // --- ÉTAPE 3 : Créer les pages ---
+        console.log('Étape 3 : Création des pages...');
+        
+        // Conversion mm → pixels
+        const mmToPixels = (mm) => mm / MM_PER_PIXEL;
+        
+        // Récupérer les dimensions du document (appliquées à toutes les pages)
+        const docWidthPx = jsonData.formatDocument?.largeurMm 
+            ? mmToPixels(jsonData.formatDocument.largeurMm) 
+            : DOCUMENT_FORMATS[DEFAULT_FORMAT].width;
+        const docHeightPx = jsonData.formatDocument?.hauteurMm 
+            ? mmToPixels(jsonData.formatDocument.hauteurMm) 
+            : DOCUMENT_FORMATS[DEFAULT_FORMAT].height;
+        
+        console.log(`  → Dimensions : ${jsonData.formatDocument?.largeurMm || 210}mm x ${jsonData.formatDocument?.hauteurMm || 297}mm`);
+        console.log(`  → En pixels : ${Math.round(docWidthPx)}px x ${Math.round(docHeightPx)}px`);
+        
+        // Créer les pages depuis le JSON
+        if (jsonData.pages && Array.isArray(jsonData.pages) && jsonData.pages.length > 0) {
+            documentState.pages = jsonData.pages.map((pageData, index) => {
+                const pageId = `page-${pageData.numero || (index + 1)}`;
+                const pageName = pageData.nom || (index === 0 ? 'Recto' : 'Verso');
+                
+                console.log(`  → Page ${index + 1} : id="${pageId}", nom="${pageName}"`);
+                console.log(`    Image de fond : ${pageData.urlFond || 'aucune'}`);
+                
+                return {
+                    id: pageId,
+                    name: pageName,
+                    image: pageData.urlFond || '',
+                    format: 'Custom', // Format personnalisé depuis WebDev
+                    width: Math.round(docWidthPx),
+                    height: Math.round(docHeightPx),
+                    zones: {} // Zones vides pour l'instant (étape suivante)
+                };
+            });
+        } else {
+            // Fallback : créer 2 pages par défaut si aucune n'est fournie
+            console.warn('  → Aucune page définie, création des pages par défaut');
+            documentState.pages = [
+                { id: 'page-1', name: 'Recto', image: '', format: 'Custom', width: Math.round(docWidthPx), height: Math.round(docHeightPx), zones: {} },
+                { id: 'page-2', name: 'Verso', image: '', format: 'Custom', width: Math.round(docWidthPx), height: Math.round(docHeightPx), zones: {} }
+            ];
+        }
+        
+        console.log(`  → ${documentState.pages.length} page(s) créée(s)`);
+        
+        // --- ÉTAPE 4 : Charger les zones texte ---
+        console.log('Étape 4 : Chargement des zones texte...');
+        
+        let maxZoneId = 0; // Pour calculer le zoneCounter
+        let zonesTexteCount = 0;
+        
+        if (jsonData.zonesTexte && Array.isArray(jsonData.zonesTexte)) {
+            jsonData.zonesTexte.forEach(zoneJson => {
+                // Déterminer la page cible (WebDev: 1-based → JS: 0-based)
+                const pageIndex = (zoneJson.page || 1) - 1;
+                
+                // Vérifier que la page existe
+                if (pageIndex < 0 || pageIndex >= documentState.pages.length) {
+                    console.warn(`  ⚠ Zone "${zoneJson.id}" : page ${zoneJson.page} inexistante, ignorée`);
+                    return;
+                }
+                
+                // Convertir la zone vers le format interne
+                const zoneData = convertZoneTexteFromJson(zoneJson);
+                const zoneId = zoneJson.id || `zone-${Date.now()}`;
+                
+                // Ajouter la zone à la page cible
+                documentState.pages[pageIndex].zones[zoneId] = zoneData;
+                zonesTexteCount++;
+                
+                // Extraire le numéro de l'ID pour le compteur (ex: "zone-5" → 5)
+                const idMatch = zoneId.match(/zone-(\d+)/);
+                if (idMatch) {
+                    const idNum = parseInt(idMatch[1]);
+                    if (idNum > maxZoneId) {
+                        maxZoneId = idNum;
+                    }
+                }
+                
+                console.log(`  → Zone texte "${zoneId}" (${zoneData.name || 'sans nom'}) → Page ${pageIndex + 1}`);
+                console.log(`    Position: ${zoneData.x.toFixed(1)}px, ${zoneData.y.toFixed(1)}px | Taille: ${zoneData.w.toFixed(1)}px x ${zoneData.h.toFixed(1)}px`);
+            });
+        }
+        
+        console.log(`  → ${zonesTexteCount} zone(s) texte chargée(s)`);
+        
+        // --- ÉTAPE 5 : Charger les zones code-barres ---
+        console.log('Étape 5 : Chargement des zones code-barres...');
+        
+        let zonesCodeBarresCount = 0;
+        
+        if (jsonData.zonesCodeBarres && Array.isArray(jsonData.zonesCodeBarres)) {
+            jsonData.zonesCodeBarres.forEach(zoneJson => {
+                // Déterminer la page cible (WebDev: 1-based → JS: 0-based)
+                const pageIndex = (zoneJson.page || 1) - 1;
+                
+                // Vérifier que la page existe
+                if (pageIndex < 0 || pageIndex >= documentState.pages.length) {
+                    console.warn(`  ⚠ Zone code-barres "${zoneJson.id}" : page ${zoneJson.page} inexistante, ignorée`);
+                    return;
+                }
+                
+                // Convertir la zone vers le format interne
+                const zoneData = convertZoneCodeBarresFromJson(zoneJson);
+                const zoneId = zoneJson.id || `zone-${Date.now()}`;
+                
+                // Ajouter la zone à la page cible
+                documentState.pages[pageIndex].zones[zoneId] = zoneData;
+                zonesCodeBarresCount++;
+                
+                // Extraire le numéro de l'ID pour le compteur (ex: "zone-5" → 5)
+                const idMatch = zoneId.match(/zone-(\d+)/);
+                if (idMatch) {
+                    const idNum = parseInt(idMatch[1]);
+                    if (idNum > maxZoneId) {
+                        maxZoneId = idNum;
+                    }
+                }
+                
+                console.log(`  → Zone code-barres "${zoneId}" (${zoneData.typeCode}) → Page ${pageIndex + 1}`);
+                console.log(`    Position: ${zoneData.x.toFixed(1)}px, ${zoneData.y.toFixed(1)}px | Taille: ${zoneData.w.toFixed(1)}px x ${zoneData.h.toFixed(1)}px`);
+                if (zoneData.content) {
+                    console.log(`    Contenu: ${zoneData.content.substring(0, 50)}${zoneData.content.length > 50 ? '...' : ''}`);
+                }
+            });
+        }
+        
+        console.log(`  → ${zonesCodeBarresCount} zone(s) code-barres chargée(s)`);
+        
+        // --- ÉTAPE 6 : Mettre à jour le compteur et l'affichage ---
+        console.log('Étape 6 : Finalisation...');
+        
+        // Mettre à jour le compteur de zones (max ID trouvé + 1 pour la prochaine zone)
+        zoneCounter = maxZoneId;
+        documentState.zoneCounter = maxZoneId;
+        console.log(`  → Compteur de zones : ${zoneCounter}`);
+        
+        // Forcer l'affichage de la première page (Recto)
+        documentState.currentPageIndex = 0;
+        
+        // Charger et afficher la page courante (crée les zones dans le DOM)
+        loadCurrentPage();
+        console.log('  → Page courante chargée avec ses zones');
+        
+        // Mettre à jour les onglets de page si la fonction existe
+        if (typeof updatePageTabs === 'function') {
+            updatePageTabs();
+            console.log('  → Onglets de page mis à jour');
+        }
+        
+        // Sauvegarder dans localStorage pour persistance
+        saveToLocalStorage();
+        console.log('  → État sauvegardé dans localStorage');
+        
+        console.log('=== loadFromWebDev() : Chargement terminé ===');
+        console.log('État documentState :', documentState);
+        console.log(`Résumé : ${documentState.pages.length} page(s), ${zonesTexteCount} zone(s) texte, ${zonesCodeBarresCount} zone(s) code-barres`);
+        
+        return true;
+    }
+    
+    // Exposer la fonction globalement pour l'appel depuis l'iframe parent
+    window.loadFromWebDev = loadFromWebDev;
+
     function loadFromLocalStorage() {
         // Essayer de charger le nouveau format multipage
         const savedState = localStorage.getItem('marketeam_document_state');
