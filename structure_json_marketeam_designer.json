@@ -1,0 +1,487 @@
+{
+  "identification": {
+    "nomProjet": "Mailing Noël 2024",
+    "typeDocument": "Lettre",
+    "idDocument": "DOC-12345",
+    "idEnveloppe": "ENV-C5-FENETRE",
+    "nombrePages": 2
+  },
+
+  "formatDocument": {
+    "libelle": "A4 Portrait",
+    "largeurMm": 210,
+    "hauteurMm": 297,
+    "fondPerdu": {
+      "actif": true,
+      "tailleMm": 3
+    },
+    "margeSecurite": 5,
+    "impressionRectoVerso": true,
+    "traitsCoupe": {
+      "actif": true,
+      "tailleMm": 6
+    }
+  },
+
+  "champsFusion": [
+    {
+      "code": "CIVILITE",
+      "libelle": "Civilité",
+      "ordre": 1,
+      "typeChamp": "TXT"
+    },
+    {
+      "code": "NOM",
+      "libelle": "Nom",
+      "ordre": 2,
+      "typeChamp": "TXT"
+    },
+    {
+      "code": "PRENOM",
+      "libelle": "Prénom",
+      "ordre": 3,
+      "typeChamp": "TXT"
+    },
+    {
+      "code": "ADRESSE1",
+      "libelle": "Adresse ligne 1",
+      "ordre": 4,
+      "typeChamp": "TXT"
+    },
+    {
+      "code": "ADRESSE2",
+      "libelle": "Adresse ligne 2",
+      "ordre": 5,
+      "typeChamp": "TXT"
+    },
+    {
+      "code": "CODEPOSTAL",
+      "libelle": "Code postal",
+      "ordre": 6,
+      "typeChamp": "TXT"
+    },
+    {
+      "code": "VILLE",
+      "libelle": "Ville",
+      "ordre": 7,
+      "typeChamp": "TXT"
+    },
+    {
+      "code": "SEQUENTIEL",
+      "libelle": "N° séquentiel",
+      "ordre": 99,
+      "typeChamp": "SYS"
+    },
+    {
+      "code": "PHOTO_PRODUIT",
+      "libelle": "Photo produit",
+      "ordre": 10,
+      "typeChamp": "IMG"
+    }
+  ],
+
+  "donneesApercu": [
+    {
+      "CIVILITE": "Monsieur",
+      "NOM": "DURAND",
+      "PRENOM": "Michel",
+      "ADRESSE1": "12 rue des Lilas",
+      "ADRESSE2": "",
+      "CODEPOSTAL": "75009",
+      "VILLE": "PARIS",
+      "SEQUENTIEL": "000001",
+      "PHOTO_PRODUIT": "produit_001"
+    },
+    {
+      "CIVILITE": "Madame",
+      "NOM": "MARTIN",
+      "PRENOM": "Sophie",
+      "ADRESSE1": "45 avenue Victor Hugo",
+      "ADRESSE2": "Bâtiment B",
+      "CODEPOSTAL": "69003",
+      "VILLE": "LYON",
+      "SEQUENTIEL": "000002",
+      "PHOTO_PRODUIT": "produit_002"
+    }
+  ],
+
+  "polices": {
+    "googleFonts": [
+      {
+        "nom": "Roboto",
+        "variantes": [
+          { "style": "regular", "urlTtf": "https://marketeam.com/fonts/google/roboto-regular.ttf" },
+          { "style": "bold", "urlTtf": "https://marketeam.com/fonts/google/roboto-bold.ttf" }
+        ]
+      },
+      {
+        "nom": "Open Sans",
+        "variantes": [
+          { "style": "regular", "urlTtf": "https://marketeam.com/fonts/google/opensans-regular.ttf" },
+          { "style": "bold", "urlTtf": "https://marketeam.com/fonts/google/opensans-bold.ttf" }
+        ]
+      }
+    ],
+    "policesClient": [
+      {
+        "nom": "MaPoliceEntreprise",
+        "variantes": [
+          { "style": "regular", "urlTtf": "https://marketeam.com/fonts/client123/mapolice-regular.ttf" }
+        ]
+      }
+    ]
+  },
+
+  "uploadImage": {
+    "urlDestination": "https://marketeam.com/api/upload/12345/images/",
+    "extensionsAutorisees": ["jpg", "jpeg", "png", "gif"],
+    "tailleMaxMo": 5
+  },
+
+  "pages": [
+    {
+      "numero": 1,
+      "nom": "Recto",
+      "fondPdf": "https://marketeam.com/uploads/12345/fond_recto.pdf",
+      "fondJpg": "https://marketeam.com/uploads/12345/fond_recto.jpg"
+    },
+    {
+      "numero": 2,
+      "nom": "Verso",
+      "fondPdf": "https://marketeam.com/uploads/12345/fond_verso.pdf",
+      "fondJpg": "https://marketeam.com/uploads/12345/fond_verso.jpg"
+    }
+  ],
+
+  "zonesTexte": [
+    {
+      "id": "zone-1",
+      "page": 1,
+      "nom": "Fond fenêtre",
+      "niveau": 1,
+      "verrouille": true,
+      "rotation": 0,
+      "geometrie": {
+        "xMm": 105.0,
+        "yMm": 45.0,
+        "largeurMm": 99.0,
+        "hauteurMm": 35.0
+      },
+      "contenu": "",
+      "formatage": [],
+      "style": {
+        "police": "Roboto",
+        "taillePt": 10,
+        "couleur": "#000000",
+        "gras": false,
+        "interligne": 1.2,
+        "alignementH": "left",
+        "alignementV": "top"
+      },
+      "fond": {
+        "transparent": false,
+        "couleur": "#FFFFFF"
+      },
+      "bordure": {
+        "epaisseur": 1,
+        "couleur": "#999999",
+        "style": "dashed"
+      },
+      "copyfitting": {
+        "actif": false,
+        "tailleMinimum": 6,
+        "autoriserRetourLigne": false
+      },
+      "supprimerLignesVides": false
+    },
+    {
+      "id": "zone-2",
+      "page": 1,
+      "nom": "Adresse destinataire",
+      "niveau": 2,
+      "verrouille": true,
+      "rotation": 0,
+      "geometrie": {
+        "xMm": 120.0,
+        "yMm": 45.0,
+        "largeurMm": 80.0,
+        "hauteurMm": 35.0
+      },
+      "contenu": "@CIVILITE@ @PRENOM@ @NOM@\n@ADRESSE1@\n@ADRESSE2@\n@CODEPOSTAL@ @VILLE@",
+      "formatage": [],
+      "style": {
+        "police": "Verdana",
+        "taillePt": 10,
+        "couleur": "#000000",
+        "gras": false,
+        "interligne": 1.2,
+        "alignementH": "left",
+        "alignementV": "top"
+      },
+      "fond": {
+        "transparent": true,
+        "couleur": "#FFFFFF"
+      },
+      "bordure": {
+        "epaisseur": 0,
+        "couleur": "#000000",
+        "style": "solid"
+      },
+      "copyfitting": {
+        "actif": true,
+        "tailleMinimum": 6,
+        "autoriserRetourLigne": true
+      },
+      "supprimerLignesVides": true
+    },
+    {
+      "id": "zone-3",
+      "page": 1,
+      "nom": "Séquentiel",
+      "niveau": 3,
+      "verrouille": true,
+      "rotation": 0,
+      "geometrie": {
+        "xMm": 120.0,
+        "yMm": 45.0,
+        "largeurMm": 80.0,
+        "hauteurMm": 5.0
+      },
+      "contenu": "@SEQUENTIEL@",
+      "formatage": [],
+      "style": {
+        "police": "Verdana",
+        "taillePt": 6,
+        "couleur": "#000000",
+        "gras": false,
+        "interligne": 1.0,
+        "alignementH": "left",
+        "alignementV": "top"
+      },
+      "fond": {
+        "transparent": true,
+        "couleur": "#FFFFFF"
+      },
+      "bordure": {
+        "epaisseur": 0,
+        "couleur": "#000000",
+        "style": "solid"
+      },
+      "copyfitting": {
+        "actif": false,
+        "tailleMinimum": 6,
+        "autoriserRetourLigne": false
+      },
+      "supprimerLignesVides": false
+    },
+    {
+      "id": "zone-4",
+      "page": 1,
+      "nom": "Corps lettre",
+      "niveau": 1,
+      "verrouille": false,
+      "rotation": 0,
+      "geometrie": {
+        "xMm": 20.0,
+        "yMm": 100.0,
+        "largeurMm": 170.0,
+        "hauteurMm": 150.0
+      },
+      "contenu": "Cher @CIVILITE@ @NOM@,\n\nNous avons le plaisir de vous informer...",
+      "formatage": [
+        {
+          "debut": 5,
+          "fin": 21,
+          "styles": {
+            "gras": true
+          }
+        }
+      ],
+      "style": {
+        "police": "Roboto",
+        "taillePt": 11,
+        "couleur": "#333333",
+        "gras": false,
+        "interligne": 1.4,
+        "alignementH": "justify",
+        "alignementV": "top"
+      },
+      "fond": {
+        "transparent": true,
+        "couleur": "#FFFFFF"
+      },
+      "bordure": {
+        "epaisseur": 0,
+        "couleur": "#000000",
+        "style": "solid"
+      },
+      "copyfitting": {
+        "actif": false,
+        "tailleMinimum": 6,
+        "autoriserRetourLigne": false
+      },
+      "supprimerLignesVides": false
+    }
+  ],
+
+  "zonesImage": [
+    {
+      "id": "img-1",
+      "page": 1,
+      "nom": "Logo entreprise",
+      "niveau": 1,
+      "verrouille": true,
+      "rotation": 0,
+      "geometrie": {
+        "xMm": 20.0,
+        "yMm": 10.0,
+        "largeurMm": 50.0,
+        "hauteurMm": 25.0
+      },
+      "source": {
+        "type": "fixe",
+        "urlImage": "https://marketeam.com/uploads/12345/logo_entreprise.png",
+        "urlApercu": "https://marketeam.com/uploads/12345/logo_entreprise_thumb.jpg"
+      },
+      "affichage": {
+        "modeEchelle": "proportionnel",
+        "conserverProportions": true,
+        "alignementH": "left",
+        "alignementV": "middle",
+        "pagePdf": 1
+      },
+      "bordure": {
+        "epaisseur": 0,
+        "couleur": "#000000",
+        "style": "solid"
+      }
+    },
+    {
+      "id": "img-2",
+      "page": 1,
+      "nom": "Photo produit",
+      "niveau": 2,
+      "verrouille": false,
+      "rotation": 0,
+      "geometrie": {
+        "xMm": 150.0,
+        "yMm": 200.0,
+        "largeurMm": 40.0,
+        "hauteurMm": 40.0
+      },
+      "source": {
+        "type": "variable",
+        "champSource": "PHOTO_PRODUIT",
+        "dossierBase": "https://marketeam.com/uploads/12345/produits/",
+        "extension": ".jpg",
+        "urlApercu": "https://marketeam.com/uploads/12345/produits/sample.jpg"
+      },
+      "affichage": {
+        "modeEchelle": "remplir",
+        "conserverProportions": true,
+        "alignementH": "center",
+        "alignementV": "middle",
+        "pagePdf": 1
+      },
+      "bordure": {
+        "epaisseur": 1,
+        "couleur": "#cccccc",
+        "style": "solid"
+      }
+    },
+    {
+      "id": "img-3",
+      "page": 2,
+      "nom": "Image importée",
+      "niveau": 1,
+      "verrouille": false,
+      "rotation": 0,
+      "geometrie": {
+        "xMm": 80.0,
+        "yMm": 120.0,
+        "largeurMm": 60.0,
+        "hauteurMm": 60.0
+      },
+      "source": {
+        "type": "importee",
+        "urlImage": "",
+        "urlApercu": ""
+      },
+      "affichage": {
+        "modeEchelle": "proportionnel",
+        "conserverProportions": true,
+        "alignementH": "center",
+        "alignementV": "middle",
+        "pagePdf": 1
+      },
+      "bordure": {
+        "epaisseur": 0,
+        "couleur": "#000000",
+        "style": "solid"
+      }
+    }
+  ],
+
+  "zonesCodeBarres": [
+    {
+      "id": "cb-1",
+      "page": 1,
+      "nom": "QR Tracking",
+      "niveau": 5,
+      "verrouille": true,
+      "rotation": 0,
+      "geometrie": {
+        "xMm": 180.0,
+        "yMm": 45.0,
+        "largeurMm": 20.0,
+        "hauteurMm": 20.0
+      },
+      "typeCode": "QRCode",
+      "contenu": "https://marketeam.com/track/@IDENVOI@",
+      "style": {
+        "couleurCode": "#000000",
+        "couleurFond": "#FFFFFF"
+      }
+    },
+    {
+      "id": "cb-2",
+      "page": 1,
+      "nom": "Code produit",
+      "niveau": 4,
+      "verrouille": false,
+      "rotation": 0,
+      "geometrie": {
+        "xMm": 20.0,
+        "yMm": 270.0,
+        "largeurMm": 60.0,
+        "hauteurMm": 15.0
+      },
+      "typeCode": "Code128",
+      "contenu": "@CODE_PRODUIT@",
+      "style": {
+        "couleurCode": "#000000",
+        "couleurFond": "#FFFFFF"
+      }
+    },
+    {
+      "id": "cb-3",
+      "page": 2,
+      "nom": "EAN Produit",
+      "niveau": 1,
+      "verrouille": false,
+      "rotation": 0,
+      "geometrie": {
+        "xMm": 150.0,
+        "yMm": 250.0,
+        "largeurMm": 40.0,
+        "hauteurMm": 20.0
+      },
+      "typeCode": "EAN13",
+      "contenu": "@EAN_PRODUIT@",
+      "style": {
+        "couleurCode": "#000000",
+        "couleurFond": "#FFFFFF"
+      }
+    }
+  ]
+}
