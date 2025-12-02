@@ -541,6 +541,38 @@ input:checked + .slider:before {
     background-color: #aecbfa;
 }
 
+/* Champs de fusion système (SYS) - Orange */
+.merge-tag-sys {
+    background-color: #fff3e0;
+    border-color: #ffb74d;
+    color: #e65100;
+}
+
+.merge-tag-sys:hover {
+    background-color: #ffe0b2;
+    border-color: #ff9800;
+}
+
+.merge-tag-sys:active {
+    background-color: #ffcc80;
+}
+
+/* Champs de fusion image (IMG) - Vert */
+.merge-tag-img {
+    background-color: #e8f5e9;
+    border-color: #81c784;
+    color: #2e7d32;
+}
+
+.merge-tag-img:hover {
+    background-color: #c8e6c9;
+    border-color: #66bb6a;
+}
+
+.merge-tag-img:active {
+    background-color: #a5d6a7;
+}
+
 /* --- Barre d'outils de formatage --- */
 .formatting-toolbar {
     display: flex;

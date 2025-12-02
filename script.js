@@ -129,29 +129,64 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Champs de fusion
     const mergeFieldsContainer = document.getElementById('merge-fields-list');
-    const MERGE_FIELDS = ['Civilité', 'Nom', 'Prénom', 'Adresse 1', 'Adresse 2', 'CP', 'Ville', 'Téléphone', 'Champ 1'];
+    
+    // Champs de fusion par défaut (seront remplacés par ceux du JSON WebDev)
+    let mergeFields = ['Civilité', 'Nom', 'Prénom', 'Adresse 1', 'Adresse 2', 'CP', 'Ville', 'Téléphone', 'Champ 1'];
 
-    // Initialisation des champs de fusion
-    MERGE_FIELDS.forEach(field => {
-        const tag = document.createElement('div');
-        tag.classList.add('merge-tag');
-        tag.innerText = field;
-        tag.addEventListener('click', () => insertTag(field));
-        // Pour le drag & drop (optionnel pour l'instant, mais prêt)
-        tag.draggable = true;
-        tag.addEventListener('dragstart', (e) => {
-            e.dataTransfer.setData('text/plain', `{{${field}}}`);
+    /**
+     * Met à jour l'affichage des champs de fusion dans la toolbar
+     * @param {Array} champs - Tableau des champs [{nom: "NOM", type: "TXT"}, ...] ou ["NOM", "PRENOM", ...]
+     */
+    function updateMergeFieldsUI(champs) {
+        if (!mergeFieldsContainer) return;
+        
+        // Vider le conteneur
+        mergeFieldsContainer.innerHTML = '';
+        
+        // Parcourir les champs
+        champs.forEach(champ => {
+            // Supporter les 2 formats : objet {nom, type} ou string simple
+            const fieldName = typeof champ === 'object' ? champ.nom : champ;
+            const fieldType = typeof champ === 'object' ? champ.type : 'TXT';
+            
+            const tag = document.createElement('div');
+            tag.classList.add('merge-tag');
+            
+            // Ajouter une classe selon le type (pour style visuel différent)
+            if (fieldType === 'SYS') tag.classList.add('merge-tag-sys');
+            if (fieldType === 'IMG') tag.classList.add('merge-tag-img');
+            
+            tag.innerText = fieldName;
+            tag.title = `Type: ${fieldType} - Cliquez pour insérer @${fieldName}@`;
+            
+            tag.addEventListener('click', () => insertTag(fieldName));
+            
+            // Drag & drop avec syntaxe @CHAMP@
+            tag.draggable = true;
+            tag.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', `@${fieldName}@`);
+            });
+            
+            mergeFieldsContainer.appendChild(tag);
         });
-        mergeFieldsContainer.appendChild(tag);
-    });
+        
+        console.log(`updateMergeFieldsUI: ${champs.length} champ(s) de fusion chargé(s)`);
+    }
 
+    // Initialisation des champs de fusion avec les valeurs par défaut
+    updateMergeFieldsUI(mergeFields);
+
+    /**
+     * Insère un champ de fusion à la position du curseur dans le textarea
+     * @param {string} fieldName - Nom du champ à insérer
+     */
     function insertTag(fieldName) {
         if (!inputContent) return;
         
         const start = inputContent.selectionStart;
         const end = inputContent.selectionEnd;
         const text = inputContent.value;
-        const tag = `{{${fieldName}}}`;
+        const tag = `@${fieldName}@`;  // Syntaxe WebDev au lieu de {{}}
         
         // Insertion au curseur
         inputContent.value = text.substring(0, start) + tag + text.substring(end);
@@ -163,6 +198,102 @@ document.addEventListener('DOMContentLoaded', () => {
         // Forcer la mise à jour de l'aperçu
         inputContent.dispatchEvent(new Event('input'));
     }
+
+    // ========================================================================
+    // POLICES DYNAMIQUES - Étape 6
+    // ========================================================================
+    
+    /**
+     * Injecte les règles @font-face pour les polices du document
+     * @param {Array} polices - Tableau [{nom: "Roboto", url: "https://..."}, ...]
+     */
+    function loadFontsFromJson(polices) {
+        if (!polices || polices.length === 0) {
+            console.log('loadFontsFromJson: Aucune police à charger');
+            return;
+        }
+        
+        // Supprimer l'ancien style si existant
+        const oldStyle = document.getElementById('dynamic-fonts-style');
+        if (oldStyle) oldStyle.remove();
+        
+        // Créer un nouvel élément style
+        const styleEl = document.createElement('style');
+        styleEl.id = 'dynamic-fonts-style';
+        
+        let cssRules = '';
+        
+        polices.forEach(police => {
+            if (!police.nom || !police.url) {
+                console.warn('loadFontsFromJson: Police invalide (nom ou url manquant)', police);
+                return;
+            }
+            
+            // Déterminer le format selon l'extension
+            let format = 'truetype'; // défaut
+            const url = police.url.toLowerCase();
+            if (url.endsWith('.woff2')) format = 'woff2';
+            else if (url.endsWith('.woff')) format = 'woff';
+            else if (url.endsWith('.otf')) format = 'opentype';
+            else if (url.endsWith('.ttf')) format = 'truetype';
+            
+            cssRules += `
+@font-face {
+    font-family: '${police.nom}';
+    src: url('${police.url}') format('${format}');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+`;
+            console.log(`  → Police "${police.nom}" chargée depuis ${police.url}`);
+        });
+        
+        styleEl.textContent = cssRules;
+        document.head.appendChild(styleEl);
+        
+        console.log(`loadFontsFromJson: ${polices.length} police(s) injectée(s)`);
+    }
+    
+    /**
+     * Met à jour la liste des polices dans le sélecteur UI
+     * @param {Array} polices - Tableau [{nom: "Roboto", url: "..."}, ...] ou ["Roboto", "Arial", ...]
+     */
+    function updateFontSelectUI(polices) {
+        if (!inputFont) return;
+        
+        // Sauvegarder la valeur actuelle
+        const currentValue = inputFont.value;
+        
+        // Vider le sélecteur
+        inputFont.innerHTML = '';
+        
+        // Si pas de polices fournies, utiliser les polices par défaut
+        const defaultFonts = ['Roboto', 'Open Sans', 'Lato', 'Montserrat', 'Courier Prime'];
+        const fontsToUse = (polices && polices.length > 0) ? polices : defaultFonts;
+        
+        fontsToUse.forEach(police => {
+            const fontName = typeof police === 'object' ? police.nom : police;
+            const option = document.createElement('option');
+            option.value = fontName;
+            option.textContent = fontName;
+            option.style.fontFamily = `'${fontName}', sans-serif`; // Aperçu dans le dropdown
+            inputFont.appendChild(option);
+        });
+        
+        // Restaurer la valeur si elle existe toujours, sinon prendre la première
+        if (fontsToUse.some(p => (typeof p === 'object' ? p.nom : p) === currentValue)) {
+            inputFont.value = currentValue;
+        } else if (fontsToUse.length > 0) {
+            inputFont.value = typeof fontsToUse[0] === 'object' ? fontsToUse[0].nom : fontsToUse[0];
+        }
+        
+        console.log(`updateFontSelectUI: ${fontsToUse.length} police(s) dans le sélecteur`);
+    }
+    
+    // Exposer les fonctions globalement (pour debug et appel depuis WebDev)
+    window.loadFontsFromJson = loadFontsFromJson;
+    window.updateFontSelectUI = updateFontSelectUI;
 
     const MM_PER_PIXEL = 25.4 / 96;
     let zoneCounter = 0;
@@ -3009,16 +3140,26 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('  → Format document :', documentState.formatDocument);
         }
         
-        // Stocker les champs de fusion disponibles
-        if (jsonData.champsFusion && Array.isArray(jsonData.champsFusion)) {
+        // Stocker les champs de fusion disponibles et mettre à jour l'UI
+        if (jsonData.champsFusion && Array.isArray(jsonData.champsFusion) && jsonData.champsFusion.length > 0) {
             documentState.champsFusion = jsonData.champsFusion;
-            console.log(`  → ${documentState.champsFusion.length} champ(s) de fusion chargé(s)`);
+            mergeFields = jsonData.champsFusion;
+            updateMergeFieldsUI(mergeFields);
+            console.log(`  → ${documentState.champsFusion.length} champ(s) de fusion chargé(s) et affichés dans la toolbar`);
+        } else {
+            console.log('  → Pas de champs de fusion dans le JSON, conservation des valeurs par défaut');
         }
         
-        // Stocker les polices (pour chargement ultérieur)
-        if (jsonData.polices) {
+        // Étape 2c : Charger les polices et mettre à jour l'UI
+        if (jsonData.polices && jsonData.polices.length > 0) {
             documentState.polices = jsonData.polices;
-            console.log('  → Polices :', documentState.polices);
+            loadFontsFromJson(jsonData.polices);
+            updateFontSelectUI(jsonData.polices);
+            console.log(`  → ${jsonData.polices.length} police(s) chargée(s) et injectée(s)`);
+        } else {
+            console.log('  → Pas de polices dans le JSON, conservation des valeurs par défaut');
+            // Réinitialiser avec les polices par défaut
+            updateFontSelectUI(null);
         }
         
         // --- ÉTAPE 3 : Créer les pages ---
@@ -3186,6 +3327,242 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Exposer la fonction globalement pour l'appel depuis l'iframe parent
     window.loadFromWebDev = loadFromWebDev;
+
+    // ========================================================================
+    // EXPORT VERS WEBDEV - Étape 4
+    // ========================================================================
+    
+    /**
+     * Convertit une zone texte du format documentState vers le format JSON WebDev
+     * @param {string} id - Identifiant de la zone (ex: "zone-1")
+     * @param {Object} zoneData - Données de la zone au format interne
+     * @param {number} pageNumero - Numéro de page (1-based pour WebDev)
+     * @returns {Object} - Zone au format JSON WebDev
+     */
+    function convertZoneTexteToJson(id, zoneData, pageNumero) {
+        // Conversion pixels → mm
+        const pixelsToMm = (px) => px * MM_PER_PIXEL;
+        
+        // Mapper le formatage partiel : start/end → debut/fin
+        const formatage = (zoneData.formatting || []).map(f => ({
+            debut: f.start,
+            fin: f.end,
+            styles: f.styles || {}
+        }));
+        
+        // Construction de l'objet JSON WebDev
+        return {
+            // Identifiant et page
+            id: id,
+            page: pageNumero,
+            
+            // Nom et métadonnées
+            nom: zoneData.name || '',
+            niveau: zoneData.zIndex || 1,
+            rotation: zoneData.rotation || 0,
+            verrouille: zoneData.locked || false,
+            supprimerLignesVides: zoneData.removeEmptyLines || false,
+            
+            // Géométrie (conversion px → mm)
+            geometrie: {
+                xMm: pixelsToMm(zoneData.x || 0),
+                yMm: pixelsToMm(zoneData.y || 0),
+                largeurMm: pixelsToMm(zoneData.w || 200),
+                hauteurMm: pixelsToMm(zoneData.h || 40)
+            },
+            
+            // Contenu et formatage
+            contenu: zoneData.content || '',
+            formatage: formatage,
+            
+            // Style typographique
+            style: {
+                police: zoneData.font || 'Roboto',
+                taillePt: zoneData.size || 12,
+                couleur: zoneData.color || '#000000',
+                gras: zoneData.bold || false,
+                interligne: zoneData.lineHeight || 1.2,
+                alignementH: zoneData.align || 'left',
+                alignementV: zoneData.valign || 'top'
+            },
+            
+            // Fond
+            fond: {
+                transparent: zoneData.isTransparent !== undefined ? zoneData.isTransparent : true,
+                couleur: zoneData.bgColor || '#FFFFFF'
+            },
+            
+            // Bordure
+            bordure: {
+                epaisseur: zoneData.border?.width || 0,
+                couleur: zoneData.border?.color || '#000000',
+                style: zoneData.border?.style || 'solid'
+            },
+            
+            // Copyfitting
+            copyfitting: {
+                actif: zoneData.copyfit || false,
+                tailleMinimum: zoneData.copyfitMin || 6,
+                autoriserRetourLigne: zoneData.copyfitWrap !== undefined ? zoneData.copyfitWrap : true
+            }
+        };
+    }
+    
+    /**
+     * Convertit une zone code-barres du format documentState vers le format JSON WebDev
+     * @param {string} id - Identifiant de la zone (ex: "zone-2")
+     * @param {Object} zoneData - Données de la zone au format interne
+     * @param {number} pageNumero - Numéro de page (1-based pour WebDev)
+     * @returns {Object} - Zone au format JSON WebDev
+     */
+    function convertZoneCodeBarresToJson(id, zoneData, pageNumero) {
+        // Conversion pixels → mm
+        const pixelsToMm = (px) => px * MM_PER_PIXEL;
+        
+        // Construction de l'objet JSON WebDev
+        return {
+            // Identifiant et page
+            id: id,
+            page: pageNumero,
+            
+            // Type de code-barres (QRCode, Code128, EAN13, Code39, DataMatrix, PDF417, EanUcc128, UPCA, UPCE)
+            typeCode: zoneData.typeCode || 'QRCode',
+            
+            // Contenu à encoder
+            contenu: zoneData.content || '',
+            
+            // Nom et métadonnées
+            nom: zoneData.name || '',
+            niveau: zoneData.zIndex || 1,
+            rotation: zoneData.rotation || 0,
+            verrouille: zoneData.locked || false,
+            
+            // Géométrie (conversion px → mm)
+            geometrie: {
+                xMm: pixelsToMm(zoneData.x || 0),
+                yMm: pixelsToMm(zoneData.y || 0),
+                largeurMm: pixelsToMm(zoneData.w || 100),
+                hauteurMm: pixelsToMm(zoneData.h || 100)
+            },
+            
+            // Couleurs
+            couleurs: {
+                code: zoneData.qrColor || '#000000',
+                fond: zoneData.bgColor || '#FFFFFF'
+            }
+        };
+    }
+    
+    /**
+     * Exporte documentState vers le format JSON WebDev (inverse de loadFromWebDev)
+     * @returns {Object} - Document complet au format JSON WebDev
+     */
+    function exportToWebDev() {
+        console.log('=== exportToWebDev() : Début de l\'export ===');
+        
+        // --- ÉTAPE 1 : Synchroniser les positions DOM → documentState ---
+        // Pour la page courante, lire les positions actuelles depuis le DOM
+        console.log('Étape 1 : Synchronisation DOM → documentState...');
+        
+        const currentZones = getCurrentPageZones();
+        let syncCount = 0;
+        
+        for (const [id, data] of Object.entries(currentZones)) {
+            const el = document.getElementById(id);
+            if (el) {
+                data.x = el.offsetLeft;
+                data.y = el.offsetTop;
+                data.w = el.offsetWidth;
+                data.h = el.offsetHeight;
+                syncCount++;
+            }
+        }
+        console.log(`  → ${syncCount} zone(s) synchronisée(s) depuis le DOM`);
+        
+        // --- ÉTAPE 2 : Construire l'objet JSON de base ---
+        console.log('Étape 2 : Construction de la structure JSON...');
+        
+        const output = {
+            identification: {
+                idDocument: documentState.identification?.idDocument || '',
+                nomDocument: documentState.identification?.nomDocument || '',
+                dateCreation: documentState.identification?.dateCreation || ''
+            },
+            formatDocument: {
+                largeurMm: documentState.pages[0]?.width * MM_PER_PIXEL || 210,
+                hauteurMm: documentState.pages[0]?.height * MM_PER_PIXEL || 297,
+                fondPerdu: documentState.formatDocument?.fondPerdu || { actif: false, valeurMm: 3 },
+                traitsCoupe: documentState.formatDocument?.traitsCoupe || { actif: false }
+            },
+            champsFusion: documentState.champsFusion || [],
+            polices: documentState.polices || [],
+            pages: [],
+            zonesTexte: [],
+            zonesCodeBarres: []
+        };
+        
+        console.log(`  → Identification : ${output.identification.idDocument || '(non défini)'}`);
+        console.log(`  → Format : ${output.formatDocument.largeurMm.toFixed(1)}mm x ${output.formatDocument.hauteurMm.toFixed(1)}mm`);
+        
+        // --- ÉTAPE 3 : Parcourir toutes les pages ---
+        console.log('Étape 3 : Export des pages et zones...');
+        
+        documentState.pages.forEach((page, index) => {
+            const pageNumero = index + 1;
+            
+            // Ajouter la page
+            output.pages.push({
+                numero: pageNumero,
+                nom: page.name || `Page ${pageNumero}`,
+                urlFond: page.image || ''
+            });
+            
+            console.log(`  → Page ${pageNumero} : "${page.name}" (fond: ${page.image ? 'oui' : 'non'})`);
+            
+            // Parcourir les zones de cette page
+            let textCount = 0, qrCount = 0;
+            
+            for (const [zoneId, zoneData] of Object.entries(page.zones || {})) {
+                if (zoneData.type === 'qr') {
+                    output.zonesCodeBarres.push(
+                        convertZoneCodeBarresToJson(zoneId, zoneData, pageNumero)
+                    );
+                    qrCount++;
+                } else {
+                    output.zonesTexte.push(
+                        convertZoneTexteToJson(zoneId, zoneData, pageNumero)
+                    );
+                    textCount++;
+                }
+            }
+            
+            console.log(`    → ${textCount} zone(s) texte, ${qrCount} zone(s) code-barres`);
+        });
+        
+        // --- ÉTAPE 4 : Extraire les polices utilisées ---
+        console.log('Étape 4 : Extraction des polices utilisées...');
+        
+        const policesUtilisees = new Set();
+        output.zonesTexte.forEach(z => {
+            if (z.style?.police) policesUtilisees.add(z.style.police);
+        });
+        output.policesUtilisees = Array.from(policesUtilisees);
+        
+        console.log(`  → ${output.policesUtilisees.length} police(s) utilisée(s) : ${output.policesUtilisees.join(', ') || '(aucune)'}`);
+        
+        // --- Résumé final ---
+        console.log('=== exportToWebDev() : Export terminé ===');
+        console.log(`Résumé :`);
+        console.log(`  → ${output.pages.length} page(s)`);
+        console.log(`  → ${output.zonesTexte.length} zone(s) texte`);
+        console.log(`  → ${output.zonesCodeBarres.length} zone(s) code-barres`);
+        console.log('Données exportées :', output);
+        
+        return output;
+    }
+    
+    // Exposer la fonction globalement pour l'appel depuis l'iframe parent
+    window.exportToWebDev = exportToWebDev;
 
     function loadFromLocalStorage() {
         // Essayer de charger le nouveau format multipage
