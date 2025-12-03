@@ -2997,12 +2997,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const bordure = zoneJson.bordure || {};
         const copyfitting = zoneJson.copyfitting || {};
         
-        // Mapper le formatage partiel : debut/fin → start/end
+        // Mapper le formatage partiel : debut/fin → start/end, noms français → anglais
         const formatting = (zoneJson.formatage || []).map(f => ({
             start: f.debut,
             end: f.fin,
-            styles: f.styles || {}
+            styles: {
+                fontWeight: f.styles?.gras === true ? 'bold' : undefined,
+                color: f.styles?.couleur || undefined
+            }
         }));
+        // Nettoyer les styles undefined
+        formatting.forEach(f => {
+            Object.keys(f.styles).forEach(key => {
+                if (f.styles[key] === undefined) delete f.styles[key];
+            });
+        });
         
         // Construction de l'objet zone interne
         return {
@@ -3348,12 +3357,21 @@ document.addEventListener('DOMContentLoaded', () => {
         // Conversion pixels → mm
         const pixelsToMm = (px) => px * MM_PER_PIXEL;
         
-        // Mapper le formatage partiel : start/end → debut/fin
+        // Mapper le formatage partiel : start/end → debut/fin, noms anglais → français
         const formatage = (zoneData.formatting || []).map(f => ({
             debut: f.start,
             fin: f.end,
-            styles: f.styles || {}
+            styles: {
+                gras: f.styles?.fontWeight === 'bold' ? true : undefined,
+                couleur: f.styles?.color || undefined
+            }
         }));
+        // Nettoyer les styles undefined
+        formatage.forEach(f => {
+            Object.keys(f.styles).forEach(key => {
+                if (f.styles[key] === undefined) delete f.styles[key];
+            });
+        });
         
         // Construction de l'objet JSON WebDev
         return {
