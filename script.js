@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const workspaceCanvas = document.querySelector('.workspace-canvas');
     const btnAdd = document.getElementById('btn-add-zone');
     const btnAddQr = document.getElementById('btn-add-qr');
+    const btnAddImage = document.getElementById('btn-add-image');
     const btnDelete = document.getElementById('btn-delete-zone');
     const btnReset = document.getElementById('btn-reset');
     const btnGenerate = document.getElementById('btn-generate-json');
@@ -55,6 +56,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputBorderColor = document.getElementById('input-border-color');
     const inputBorderStyle = document.getElementById('input-border-style');
     
+    // Inputs pour zones image
+    const imagePropertiesSection = document.getElementById('image-properties-section');
+    const textPropertiesSection = document.getElementById('text-properties-section');
+    const inputImageSourceType = document.getElementById('input-image-source-type');
+    const inputImageUrl = document.getElementById('input-image-url');
+    const inputImageChamp = document.getElementById('input-image-champ');
+    const inputImageMode = document.getElementById('input-image-mode');
+    const inputImageAlignH = document.getElementById('input-image-align-h');
+    const inputImageAlignV = document.getElementById('input-image-align-v');
+    const imageUrlGroup = document.getElementById('image-url-group');
+    const imageChampGroup = document.getElementById('image-champ-group');
+    
     // Fonction pour mettre à jour l'affichage du spin button d'épaisseur de bordure
     function updateBorderWidthDisplay(value) {
         if (inputBorderWidthDisplay) {
@@ -80,8 +93,8 @@ document.addEventListener('DOMContentLoaded', () => {
             input.value = value;
             updateBorderWidthDisplay(value);
             
-            // Déclencher la mise à jour de la zone
-            updateActiveZoneData();
+            // Déclencher la mise à jour de la zone (commun à tous les types)
+            updateActiveZone();
             saveState();
         });
     });
@@ -657,6 +670,40 @@ document.addEventListener('DOMContentLoaded', () => {
         saveState(); // Snapshot APRÈS la création
     });
 
+    // Listener pour créer une zone image
+    btnAddImage.addEventListener('click', () => {
+        documentState.zoneCounter++;
+        zoneCounter = documentState.zoneCounter;
+        const id = `zone-${zoneCounter}`;
+        const zonesData = getCurrentPageZones();
+        
+        zonesData[id] = {
+            type: 'image',
+            source: {
+                type: 'url',
+                valeur: ''
+            },
+            redimensionnement: {
+                mode: 'ajuster',
+                alignementH: 'center',
+                alignementV: 'middle'
+            },
+            bgColor: '#ffffff',
+            isTransparent: true,
+            locked: false,
+            rotation: 0,
+            border: {
+                width: 0,
+                color: '#000000',
+                style: 'solid'
+            }
+        };
+        
+        createZoneDOM(id, zoneCounter);
+        saveToLocalStorage();
+        saveState();
+    });
+
     function createZoneDOM(id, labelNum, autoSelect = true) {
         const zonesData = getCurrentPageZones();
         const zoneData = zonesData[id] || {};
@@ -676,8 +723,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Calculer le centre de la vue pour positionner la nouvelle zone
         const centerView = getCenterOfView();
-        const defaultZoneWidth = zoneType === 'qr' ? 100 : 200;
-        const defaultZoneHeight = zoneType === 'qr' ? 100 : 40;
+        const defaultZoneWidth = zoneType === 'qr' ? 100 : (zoneType === 'image' ? 150 : 200);
+        const defaultZoneHeight = zoneType === 'qr' ? 100 : (zoneType === 'image' ? 150 : 40);
         
         // Obtenir la marge de sécurité et les dimensions de la page
         const margin = getSecurityMarginPx();
@@ -708,6 +755,33 @@ document.addEventListener('DOMContentLoaded', () => {
             qrWrapper.classList.add('zone-content');
             qrWrapper.innerHTML = getQrPlaceholderSvg();
             zone.appendChild(qrWrapper);
+        } else if (zoneType === 'image') {
+            // Zone image
+            const defaultSize = 150;
+            zone.style.width = (zoneData.w || defaultSize) + 'px';
+            zone.style.height = (zoneData.h || defaultSize) + 'px';
+            zone.style.left = (zoneData.x !== undefined ? zoneData.x : zoneX) + 'px';
+            zone.style.top = (zoneData.y !== undefined ? zoneData.y : zoneY) + 'px';
+            zone.classList.add('zone-image');
+            
+            // Fond
+            if (zoneData.isTransparent) {
+                zone.style.backgroundColor = 'transparent';
+            } else {
+                zone.style.backgroundColor = zoneData.bgColor || '#ffffff';
+            }
+            
+            // Bordure
+            if (zoneData.border) {
+                applyBorderToZone(zone, zoneData.border);
+            }
+            
+            const imageWrapper = document.createElement('div');
+            imageWrapper.classList.add('zone-content', 'zone-image-content');
+            zone.appendChild(imageWrapper);
+            
+            // Afficher image réelle ou placeholder
+            updateImageZoneDisplay(zone, zoneData);
         } else {
             // Style initial par défaut pour le texte
             zone.style.width = '200px';
@@ -1022,6 +1096,10 @@ document.addEventListener('DOMContentLoaded', () => {
         zonesData[id].type = zoneType;
 
         if (zoneType === 'qr') {
+            // Masquer section image, afficher section texte (désactivée)
+            if (textPropertiesSection) textPropertiesSection.style.display = 'block';
+            if (imagePropertiesSection) imagePropertiesSection.style.display = 'none';
+            
             setTextControlsEnabled(false);
             inputContent.value = 'Zone QR statique (non modifiable)';
             inputFont.value = 'Roboto';
@@ -1041,7 +1119,84 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (inputBorderColor) inputBorderColor.value = '#000000';
             if (inputBorderStyle) inputBorderStyle.value = 'solid';
+        } else if (zoneType === 'image') {
+            // Masquer la section contenu texte
+            if (textPropertiesSection) textPropertiesSection.style.display = 'none';
+            
+            // Masquer les contrôles spécifiques texte (Police, Taille, Interlignage, etc.)
+            const textOnlyControls = [
+                'input-font', 'input-size', 'input-line-height', 
+                'chk-bold', 'chk-copyfit', 'input-color',
+                'input-align', 'input-valign'
+            ];
+            textOnlyControls.forEach(ctrlId => {
+                const el = document.getElementById(ctrlId);
+                if (el) {
+                    const parent = el.closest('.style-row') || el.closest('.input-group');
+                    if (parent) parent.style.display = 'none';
+                }
+            });
+            
+            // Afficher la section image
+            if (imagePropertiesSection) imagePropertiesSection.style.display = 'block';
+            setTextControlsEnabled(false);
+            
+            const source = data.source || { type: 'url', valeur: '' };
+            const redim = data.redimensionnement || { mode: 'ajuster', alignementH: 'center', alignementV: 'middle' };
+            
+            if (inputImageSourceType) inputImageSourceType.value = source.type;
+            if (inputImageUrl) inputImageUrl.value = source.type === 'url' ? source.valeur : '';
+            if (inputImageMode) inputImageMode.value = redim.mode;
+            if (inputImageAlignH) inputImageAlignH.value = redim.alignementH;
+            if (inputImageAlignV) inputImageAlignV.value = redim.alignementV;
+            
+            // Afficher le bon groupe (URL ou Champ)
+            if (source.type === 'url') {
+                if (imageUrlGroup) imageUrlGroup.style.display = 'block';
+                if (imageChampGroup) imageChampGroup.style.display = 'none';
+            } else {
+                if (imageUrlGroup) imageUrlGroup.style.display = 'none';
+                if (imageChampGroup) imageChampGroup.style.display = 'block';
+                populateImageFieldsSelect(source.valeur);
+            }
+            
+            // Bordure (contrôle commun - doit rester visible)
+            if (inputBorderWidth) {
+                inputBorderWidth.value = data.border?.width || 0;
+                updateBorderWidthDisplay(data.border?.width || 0);
+            }
+            if (inputBorderColor) inputBorderColor.value = data.border?.color || '#000000';
+            if (inputBorderStyle) inputBorderStyle.value = data.border?.style || 'solid';
+            
+            // Fond (contrôle commun - doit rester visible)
+            inputBgColor.value = data.bgColor || '#ffffff';
+            chkTransparent.checked = data.isTransparent !== undefined ? data.isTransparent : true;
+            inputBgColor.disabled = chkTransparent.checked;
+            
+            // Verrouillage (contrôle commun)
+            if (chkLock) chkLock.checked = data.locked || false;
         } else {
+            // Zone texte
+            // Afficher la section contenu texte
+            if (textPropertiesSection) textPropertiesSection.style.display = 'block';
+            
+            // Réafficher les contrôles spécifiques texte (masqués pour les zones image)
+            const textOnlyControls = [
+                'input-font', 'input-size', 'input-line-height', 
+                'chk-bold', 'chk-copyfit', 'input-color',
+                'input-align', 'input-valign'
+            ];
+            textOnlyControls.forEach(ctrlId => {
+                const el = document.getElementById(ctrlId);
+                if (el) {
+                    const parent = el.closest('.style-row') || el.closest('.input-group');
+                    if (parent) parent.style.display = '';
+                }
+            });
+            
+            // Masquer la section image
+            if (imagePropertiesSection) imagePropertiesSection.style.display = 'none';
+            
             setTextControlsEnabled(true);
             inputContent.value = data.content || '';
             inputFont.value = data.font || 'Roboto';
@@ -1847,6 +2002,237 @@ document.addEventListener('DOMContentLoaded', () => {
 </svg>`;
     }
 
+    // --- FONCTIONS POUR ZONES IMAGE ---
+    
+    /**
+     * Met à jour l'affichage d'une zone image (image réelle ou placeholder)
+     */
+    function updateImageZoneDisplay(zoneEl, zoneData) {
+        const contentEl = zoneEl.querySelector('.zone-content');
+        if (!contentEl) return;
+        
+        const source = zoneData.source || { type: 'url', valeur: '' };
+        const redim = zoneData.redimensionnement || { mode: 'ajuster', alignementH: 'center', alignementV: 'middle' };
+        
+        // Vider le contenu précédent
+        contentEl.innerHTML = '';
+        
+        // Si URL fixe avec valeur, afficher l'image
+        if (source.type === 'url' && source.valeur && source.valeur.trim() !== '') {
+            const img = document.createElement('img');
+            img.src = source.valeur;
+            img.alt = 'Image';
+            img.draggable = false;
+            
+            // Appliquer le mode de redimensionnement
+            img.style.objectFit = getObjectFitFromMode(redim.mode);
+            img.style.objectPosition = getObjectPosition(redim.alignementH, redim.alignementV);
+            
+            if (redim.mode === 'initial') {
+                img.style.width = 'auto';
+                img.style.height = 'auto';
+                img.style.maxWidth = 'none';
+                img.style.maxHeight = 'none';
+            } else {
+                img.style.width = '100%';
+                img.style.height = '100%';
+            }
+            
+            contentEl.appendChild(img);
+        } else {
+            // Afficher placeholder
+            contentEl.innerHTML = getImagePlaceholderSvg(source.type === 'champ' ? source.valeur : null);
+        }
+        
+        // Appliquer l'alignement au conteneur (pour mode initial)
+        contentEl.style.justifyContent = mapAlignHToFlex(redim.alignementH);
+        contentEl.style.alignItems = mapAlignVToFlex(redim.alignementV);
+    }
+    
+    function getObjectFitFromMode(mode) {
+        switch (mode) {
+            case 'initial': return 'none';
+            case 'ajuster': return 'contain';
+            case 'couper': return 'cover';
+            default: return 'contain';
+        }
+    }
+    
+    function getObjectPosition(alignH, alignV) {
+        const h = alignH === 'left' ? 'left' : (alignH === 'right' ? 'right' : 'center');
+        const v = alignV === 'top' ? 'top' : (alignV === 'bottom' ? 'bottom' : 'center');
+        return `${h} ${v}`;
+    }
+    
+    function mapAlignHToFlex(align) {
+        if (align === 'left') return 'flex-start';
+        if (align === 'right') return 'flex-end';
+        return 'center';
+    }
+    
+    function mapAlignVToFlex(align) {
+        if (align === 'top') return 'flex-start';
+        if (align === 'bottom') return 'flex-end';
+        return 'center';
+    }
+    
+    function getImagePlaceholderSvg(champName) {
+        const label = champName ? `@${champName}@` : 'Image';
+        return `
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width: 80%; height: 80%; opacity: 0.5;">
+    <rect x="5" y="5" width="90" height="90" fill="none" stroke="#999" stroke-width="2" stroke-dasharray="5,5" rx="5"/>
+    <path d="M30 65 L45 45 L55 55 L70 35 L85 65 Z" fill="#ccc"/>
+    <circle cx="35" cy="35" r="8" fill="#ccc"/>
+    <text x="50" y="85" text-anchor="middle" font-size="10" fill="#666">${label}</text>
+</svg>`;
+    }
+    
+    /**
+     * Remplit le select des champs de fusion de type IMG
+     */
+    function populateImageFieldsSelect(selectedValue) {
+        if (!inputImageChamp) return;
+        
+        inputImageChamp.innerHTML = '';
+        
+        // Récupérer les champs de fusion de type IMG
+        const champs = documentState.champsFusion || [];
+        const imgChamps = champs.filter(c => {
+            if (typeof c === 'object') return c.type === 'IMG';
+            return false;
+        });
+        
+        // Ajouter une option vide
+        const emptyOption = document.createElement('option');
+        emptyOption.value = '';
+        emptyOption.textContent = '-- Sélectionner --';
+        inputImageChamp.appendChild(emptyOption);
+        
+        imgChamps.forEach(champ => {
+            const option = document.createElement('option');
+            const fieldName = typeof champ === 'object' ? champ.nom : champ;
+            option.value = fieldName;
+            option.textContent = fieldName;
+            if (fieldName === selectedValue) option.selected = true;
+            inputImageChamp.appendChild(option);
+        });
+    }
+    
+    /**
+     * Met à jour les données de la zone image active depuis les contrôles
+     */
+    function updateActiveImageZoneData() {
+        if (selectedZoneIds.length !== 1) return;
+        
+        const selectedId = selectedZoneIds[0];
+        const zoneEl = document.getElementById(selectedId);
+        if (!zoneEl) return;
+        
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[selectedId];
+        if (!zoneData || zoneData.type !== 'image') return;
+        
+        // Mettre à jour la source (avec vérifications null)
+        if (inputImageSourceType) {
+            const sourceType = inputImageSourceType.value;
+            zoneData.source = {
+                type: sourceType,
+                valeur: sourceType === 'url' ? (inputImageUrl?.value || '') : (inputImageChamp?.value || '')
+            };
+        }
+        
+        // Mettre à jour le redimensionnement (avec vérifications null)
+        if (inputImageMode && inputImageAlignH && inputImageAlignV) {
+            zoneData.redimensionnement = {
+                mode: inputImageMode.value,
+                alignementH: inputImageAlignH.value,
+                alignementV: inputImageAlignV.value
+            };
+        }
+        
+        // Mettre à jour fond
+        if (inputBgColor) zoneData.bgColor = inputBgColor.value;
+        if (chkTransparent) zoneData.isTransparent = chkTransparent.checked;
+        if (chkLock) zoneData.locked = chkLock.checked;
+        
+        // Mettre à jour bordure
+        if (!zoneData.border) zoneData.border = {};
+        if (inputBorderWidth) zoneData.border.width = parseFloat(inputBorderWidth.value) || 0;
+        if (inputBorderColor) zoneData.border.color = inputBorderColor.value;
+        if (inputBorderStyle) zoneData.border.style = inputBorderStyle.value;
+        
+        // Appliquer les styles visuels au DOM
+        if (chkTransparent?.checked) {
+            zoneEl.style.backgroundColor = 'transparent';
+        } else if (inputBgColor) {
+            zoneEl.style.backgroundColor = inputBgColor.value;
+        }
+        
+        // Appliquer la bordure
+        applyBorderToZone(zoneEl, zoneData.border);
+        
+        // Verrouillage
+        if (chkLock?.checked) {
+            zoneEl.classList.add('locked');
+        } else {
+            zoneEl.classList.remove('locked');
+        }
+        
+        // IMPORTANT : Mettre à jour l'affichage de l'image
+        updateImageZoneDisplay(zoneEl, zoneData);
+        
+        updateHandlesVisibility();
+        saveToLocalStorage();
+    }
+    
+    /**
+     * Fonction wrapper qui détecte le type de zone et appelle la bonne fonction de mise à jour
+     * Utilisée pour les contrôles communs (bordure, fond, verrouillage)
+     */
+    function updateActiveZone() {
+        if (selectedZoneIds.length !== 1) return;
+        
+        const selectedId = selectedZoneIds[0];
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[selectedId];
+        
+        if (!zoneData) return;
+        
+        if (zoneData.type === 'image') {
+            updateActiveImageZoneData();
+        } else if (zoneData.type === 'qr') {
+            updateActiveQrZoneData();
+        } else {
+            updateActiveZoneData();
+        }
+    }
+    
+    /**
+     * Met à jour les données d'une zone QR (verrouillage uniquement)
+     */
+    function updateActiveQrZoneData() {
+        if (selectedZoneIds.length !== 1) return;
+        
+        const selectedId = selectedZoneIds[0];
+        const zoneEl = document.getElementById(selectedId);
+        if (!zoneEl) return;
+        
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[selectedId];
+        if (!zoneData || zoneData.type !== 'qr') return;
+        
+        // Verrouillage
+        zoneData.locked = chkLock.checked;
+        if (chkLock.checked) {
+            zoneEl.classList.add('locked');
+        } else {
+            zoneEl.classList.remove('locked');
+        }
+        
+        updateHandlesVisibility();
+        saveToLocalStorage();
+    }
+
     // Attacher les écouteurs
     
     // Écouteur spécifique pour le contenu texte (avec debounce pour l'historique)
@@ -1876,8 +2262,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     
-    // 2. Selects et color pickers
-    [inputFont, inputColor, inputAlign, inputValign, inputBgColor, inputBorderColor, inputBorderStyle].forEach(el => {
+    // 2. Selects et color pickers SPÉCIFIQUES AU TEXTE
+    [inputFont, inputColor, inputAlign, inputValign].forEach(el => {
         if (!el) return;
         
         // Pour les color pickers : input pour l'aperçu temps réel
@@ -1894,14 +2280,90 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     
-    // 3. Checkboxes : uniquement change
-    [chkTransparent, chkLock, chkCopyfit, chkBold].forEach(el => {
+    // 2b. Contrôles COMMUNS (fond, bordure) - utilisent updateActiveZone()
+    [inputBgColor, inputBorderColor, inputBorderStyle].forEach(el => {
+        if (!el) return;
+        
+        // Pour les color pickers : input pour l'aperçu temps réel
+        if (el.type === 'color') {
+            el.addEventListener('input', () => {
+                updateActiveZone(); // Aperçu temps réel sans snapshot
+            });
+        }
+        
+        // Pour tous : change pour la sauvegarde finale
+        el.addEventListener('change', () => {
+            updateActiveZone();
+            saveState(); // Snapshot APRÈS le changement
+        });
+    });
+    
+    // 3. Checkboxes SPÉCIFIQUES AU TEXTE
+    [chkCopyfit, chkBold].forEach(el => {
         if (!el) return;
         el.addEventListener('change', () => {
             updateActiveZoneData(); // Appliquer le changement
             saveState(); // Snapshot APRÈS le changement
         });
     });
+    
+    // 3b. Checkboxes COMMUNS (fond transparent, verrouillage)
+    [chkTransparent, chkLock].forEach(el => {
+        if (!el) return;
+        el.addEventListener('change', () => {
+            updateActiveZone(); // Appliquer selon le type de zone
+            saveState(); // Snapshot APRÈS le changement
+        });
+    });
+    
+    // --- LISTENERS POUR ZONES IMAGE ---
+    
+    if (inputImageSourceType) {
+        inputImageSourceType.addEventListener('change', () => {
+            const isUrl = inputImageSourceType.value === 'url';
+            if (imageUrlGroup) imageUrlGroup.style.display = isUrl ? 'block' : 'none';
+            if (imageChampGroup) imageChampGroup.style.display = isUrl ? 'none' : 'block';
+            if (!isUrl) populateImageFieldsSelect('');
+            updateActiveImageZoneData();
+            saveState();
+        });
+    }
+    
+    if (inputImageUrl) {
+        inputImageUrl.addEventListener('input', () => updateActiveImageZoneData());
+        inputImageUrl.addEventListener('change', () => {
+            updateActiveImageZoneData();
+            saveState();
+        });
+    }
+    
+    if (inputImageChamp) {
+        inputImageChamp.addEventListener('change', () => {
+            updateActiveImageZoneData();
+            saveState();
+        });
+    }
+    
+    if (inputImageMode) {
+        inputImageMode.addEventListener('change', () => {
+            updateActiveImageZoneData();
+            saveState();
+        });
+    }
+    
+    if (inputImageAlignH) {
+        inputImageAlignH.addEventListener('change', () => {
+            updateActiveImageZoneData();
+            saveState();
+        });
+    }
+    
+    if (inputImageAlignV) {
+        inputImageAlignV.addEventListener('change', () => {
+            updateActiveImageZoneData();
+            saveState();
+        });
+    }
     
     // Gérer les modifications du texte pour ajuster les annotations
     let previousContent = '';
@@ -3355,8 +3817,42 @@ document.addEventListener('DOMContentLoaded', () => {
         
         console.log(`  → ${zonesCodeBarresCount} zone(s) code-barres chargée(s)`);
         
-        // --- ÉTAPE 6 : Mettre à jour le compteur et l'affichage ---
-        console.log('Étape 6 : Finalisation...');
+        // --- ÉTAPE 6 : Charger les zones image ---
+        console.log('Étape 6 : Chargement des zones image...');
+        
+        let zonesImageCount = 0;
+        
+        if (jsonData.zonesImage && Array.isArray(jsonData.zonesImage)) {
+            jsonData.zonesImage.forEach(zoneJson => {
+                const pageIndex = (zoneJson.page || 1) - 1;
+                
+                if (pageIndex < 0 || pageIndex >= documentState.pages.length) {
+                    console.warn(`  ⚠ Zone image "${zoneJson.id}" : page ${zoneJson.page} inexistante, ignorée`);
+                    return;
+                }
+                
+                const zoneData = convertZoneImageFromJson(zoneJson);
+                const zoneId = zoneJson.id || `zone-${Date.now()}`;
+                
+                documentState.pages[pageIndex].zones[zoneId] = zoneData;
+                zonesImageCount++;
+                
+                const idMatch = zoneId.match(/zone-(\d+)/);
+                if (idMatch) {
+                    const idNum = parseInt(idMatch[1]);
+                    if (idNum > maxZoneId) maxZoneId = idNum;
+                }
+                
+                console.log(`  → Zone image "${zoneId}" → Page ${pageIndex + 1}`);
+                console.log(`    Position: ${zoneData.x.toFixed(1)}px, ${zoneData.y.toFixed(1)}px | Taille: ${zoneData.w.toFixed(1)}px x ${zoneData.h.toFixed(1)}px`);
+                console.log(`    Source: ${zoneData.source.type} = ${zoneData.source.valeur || '(vide)'}`);
+            });
+        }
+        
+        console.log(`  → ${zonesImageCount} zone(s) image chargée(s)`);
+        
+        // --- ÉTAPE 7 : Mettre à jour le compteur et l'affichage ---
+        console.log('Étape 7 : Finalisation...');
         
         // Mettre à jour le compteur de zones (max ID trouvé + 1 pour la prochaine zone)
         zoneCounter = maxZoneId;
@@ -3382,9 +3878,50 @@ document.addEventListener('DOMContentLoaded', () => {
         
         console.log('=== loadFromWebDev() : Chargement terminé ===');
         console.log('État documentState :', documentState);
-        console.log(`Résumé : ${documentState.pages.length} page(s), ${zonesTexteCount} zone(s) texte, ${zonesCodeBarresCount} zone(s) code-barres`);
+        console.log(`Résumé : ${documentState.pages.length} page(s), ${zonesTexteCount} zone(s) texte, ${zonesCodeBarresCount} zone(s) code-barres, ${zonesImageCount} zone(s) image`);
         
         return true;
+    }
+    
+    /**
+     * Convertit une zone image depuis le format JSON WebDev vers le format interne
+     */
+    function convertZoneImageFromJson(zoneJson) {
+        const mmToPixels = (mm) => mm / MM_PER_PIXEL;
+        
+        const geometrie = zoneJson.geometrie || {};
+        const source = zoneJson.source || { type: 'url', valeur: '' };
+        const redim = zoneJson.redimensionnement || { mode: 'ajuster', alignementH: 'center', alignementV: 'middle' };
+        const fond = zoneJson.fond || {};
+        const bordure = zoneJson.bordure || {};
+        
+        return {
+            type: 'image',
+            x: geometrie.xMm !== undefined ? mmToPixels(geometrie.xMm) : 0,
+            y: geometrie.yMm !== undefined ? mmToPixels(geometrie.yMm) : 0,
+            w: geometrie.largeurMm !== undefined ? mmToPixels(geometrie.largeurMm) : 150,
+            h: geometrie.hauteurMm !== undefined ? mmToPixels(geometrie.hauteurMm) : 150,
+            source: {
+                type: source.type || 'url',
+                valeur: source.valeur || ''
+            },
+            redimensionnement: {
+                mode: redim.mode || 'ajuster',
+                alignementH: redim.alignementH || 'center',
+                alignementV: redim.alignementV || 'middle'
+            },
+            bgColor: fond.couleur || '#ffffff',
+            isTransparent: fond.transparent !== undefined ? fond.transparent : true,
+            locked: zoneJson.verrouille || false,
+            rotation: zoneJson.rotation || 0,
+            border: {
+                width: bordure.epaisseur || 0,
+                color: bordure.couleur || '#000000',
+                style: bordure.style || 'solid'
+            },
+            name: zoneJson.nom || '',
+            zIndex: zoneJson.niveau || 1
+        };
     }
     
     // Exposer la fonction globalement pour l'appel depuis l'iframe parent
@@ -3525,6 +4062,46 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
+     * Convertit une zone image du format interne vers le format JSON WebDev
+     */
+    function convertZoneImageToJson(id, zoneData, pageNumero) {
+        const pixelsToMm = (px) => px * MM_PER_PIXEL;
+        
+        return {
+            id: id,
+            page: pageNumero,
+            nom: zoneData.name || '',
+            niveau: zoneData.zIndex || 1,
+            rotation: zoneData.rotation || 0,
+            verrouille: zoneData.locked || false,
+            geometrie: {
+                xMm: pixelsToMm(zoneData.x || 0),
+                yMm: pixelsToMm(zoneData.y || 0),
+                largeurMm: pixelsToMm(zoneData.w || 150),
+                hauteurMm: pixelsToMm(zoneData.h || 150)
+            },
+            source: {
+                type: zoneData.source?.type || 'url',
+                valeur: zoneData.source?.valeur || ''
+            },
+            redimensionnement: {
+                mode: zoneData.redimensionnement?.mode || 'ajuster',
+                alignementH: zoneData.redimensionnement?.alignementH || 'center',
+                alignementV: zoneData.redimensionnement?.alignementV || 'middle'
+            },
+            fond: {
+                transparent: zoneData.isTransparent !== undefined ? zoneData.isTransparent : true,
+                couleur: zoneData.bgColor || '#FFFFFF'
+            },
+            bordure: {
+                epaisseur: zoneData.border?.width || 0,
+                couleur: zoneData.border?.color || '#000000',
+                style: zoneData.border?.style || 'solid'
+            }
+        };
+    }
+    
+    /**
      * Exporte documentState vers le format JSON WebDev (inverse de loadFromWebDev)
      * @returns {Object} - Document complet au format JSON WebDev
      */
@@ -3570,7 +4147,8 @@ document.addEventListener('DOMContentLoaded', () => {
             polices: documentState.polices || [],
             pages: [],
             zonesTexte: [],
-            zonesCodeBarres: []
+            zonesCodeBarres: [],
+            zonesImage: []
         };
         
         console.log(`  → Identification : ${output.identification.idDocument || '(non défini)'}`);
@@ -3592,7 +4170,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log(`  → Page ${pageNumero} : "${page.name}" (fond: ${page.image ? 'oui' : 'non'})`);
             
             // Parcourir les zones de cette page
-            let textCount = 0, qrCount = 0;
+            let textCount = 0, qrCount = 0, imageCount = 0;
             
             for (const [zoneId, zoneData] of Object.entries(page.zones || {})) {
                 if (zoneData.type === 'qr') {
@@ -3600,6 +4178,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         convertZoneCodeBarresToJson(zoneId, zoneData, pageNumero)
                     );
                     qrCount++;
+                } else if (zoneData.type === 'image') {
+                    output.zonesImage.push(
+                        convertZoneImageToJson(zoneId, zoneData, pageNumero)
+                    );
+                    imageCount++;
                 } else {
                     output.zonesTexte.push(
                         convertZoneTexteToJson(zoneId, zoneData, pageNumero)
@@ -3608,7 +4191,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             
-            console.log(`    → ${textCount} zone(s) texte, ${qrCount} zone(s) code-barres`);
+            console.log(`    → ${textCount} zone(s) texte, ${qrCount} zone(s) code-barres, ${imageCount} zone(s) image`);
         });
         
         // --- ÉTAPE 4 : Extraire les polices utilisées ---
@@ -3849,6 +4432,32 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (data.locked) {
                         zoneEl.classList.add('locked');
                     }
+                    continue;
+                }
+                
+                if (zoneType === 'image') {
+                    zoneEl.classList.add('zone-image');
+                    
+                    // Fond
+                    if (data.isTransparent) {
+                        zoneEl.style.backgroundColor = 'transparent';
+                    } else {
+                        zoneEl.style.backgroundColor = data.bgColor || '#ffffff';
+                    }
+                    
+                    // Bordure
+                    if (data.border) {
+                        applyBorderToZone(zoneEl, data.border);
+                    }
+                    
+                    // Verrouillage
+                    if (data.locked) {
+                        zoneEl.classList.add('locked');
+                    }
+                    
+                    // Affichage image/placeholder
+                    updateImageZoneDisplay(zoneEl, data);
+                    
                     continue;
                 }
                 

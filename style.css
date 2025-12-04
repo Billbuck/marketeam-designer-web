@@ -207,6 +207,32 @@ button:last-child {
     height: 80%;
 }
 
+/* --- Zones Image --- */
+.zone-image {
+    overflow: hidden;
+    cursor: grab;
+}
+
+.zone-image .zone-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: row; /* IMPORTANT : row pour que justify-content = horizontal */
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.zone-image .zone-content img {
+    display: block;
+    pointer-events: none;
+    user-select: none;
+}
+
+.zone-image .zone-content svg {
+    pointer-events: none;
+    user-select: none;
+}
+
 /* Indiquer qu'une zone est survolable si elle n'est pas sélectionnée */
 .zone:hover:not(.selected) {
     outline: 1px dashed #ccc; /* Aide visuelle légère - utilise outline pour ne pas affecter la bordure utilisateur */

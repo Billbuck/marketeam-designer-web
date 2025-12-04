@@ -36,6 +36,9 @@
                 <button id="btn-add-qr" class="btn-primary">
                     <span class="material-icons">qr_code_2</span> QR Code
                 </button>
+                <button id="btn-add-image" class="btn-primary">
+                    <span class="material-icons">image</span> Zone image
+                </button>
                 <button id="btn-delete-zone" class="btn-danger" disabled>
                     <span class="material-icons">delete</span> Supprimer
                 </button>
@@ -120,7 +123,7 @@
                 <hr>
 
                 <!-- Zone de texte en saisie - MISE EN AVANT -->
-                <div class="input-group input-group-emphasized">
+                <div class="input-group input-group-emphasized" id="text-properties-section">
                     <label class="label-emphasized">Contenu du texte</label>
                     <!-- Liste des champs de fusion -->
                     <div id="merge-fields-list" class="merge-fields-container"></div>
@@ -138,6 +141,57 @@
                     </div>
                     <textarea id="input-content" rows="4" placeholder="Ex: Cher {{NOM}},&#10;Votre texte ici..."></textarea>
                     <small class="formatting-hint">Sélectionnez du texte puis utilisez les boutons ci-dessus pour le formater</small>
+                </div>
+
+                <!-- Section spécifique Zone Image (masquée par défaut) -->
+                <div id="image-properties-section" style="display: none;">
+                    <div class="input-group">
+                        <label>Source de l'image</label>
+                        <select id="input-image-source-type">
+                            <option value="url">URL fixe</option>
+                            <option value="champ">Champ de fusion</option>
+                        </select>
+                    </div>
+                    
+                    <div class="input-group" id="image-url-group">
+                        <label>URL de l'image</label>
+                        <input type="text" id="input-image-url" placeholder="https://exemple.com/image.jpg">
+                    </div>
+                    
+                    <div class="input-group" id="image-champ-group" style="display: none;">
+                        <label>Champ de fusion</label>
+                        <select id="input-image-champ">
+                            <!-- Rempli dynamiquement avec les champs de type IMG -->
+                        </select>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>Mode de redimensionnement</label>
+                        <select id="input-image-mode">
+                            <option value="initial">Taille initiale (100%)</option>
+                            <option value="ajuster">Ajuster dans le cadre</option>
+                            <option value="couper">Couper au cadre</option>
+                        </select>
+                    </div>
+                    
+                    <div class="style-row">
+                        <div class="input-group half">
+                            <label>Alignement H.</label>
+                            <select id="input-image-align-h">
+                                <option value="left">Gauche</option>
+                                <option value="center">Centre</option>
+                                <option value="right">Droite</option>
+                            </select>
+                        </div>
+                        <div class="input-group half">
+                            <label>Alignement V.</label>
+                            <select id="input-image-align-v">
+                                <option value="top">Haut</option>
+                                <option value="middle">Milieu</option>
+                                <option value="bottom">Bas</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="style-row">
