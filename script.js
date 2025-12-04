@@ -296,6 +296,16 @@ document.addEventListener('DOMContentLoaded', () => {
     window.updateFontSelectUI = updateFontSelectUI;
 
     const MM_PER_PIXEL = 25.4 / 96;
+    
+    /**
+     * Retourne la marge de sécurité en pixels pour la page courante
+     * @returns {number} Marge en pixels (0 si non définie)
+     */
+    function getSecurityMarginPx() {
+        const marginMm = documentState.formatDocument?.margeSecuriteMm || 0;
+        return marginMm / MM_PER_PIXEL;
+    }
+    
     let zoneCounter = 0;
     let selectedZoneIds = []; // Tableau pour la sélection multiple
     let copiedZoneData = null; // Données de la zone copiée pour le copier-coller
@@ -669,9 +679,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const defaultZoneWidth = zoneType === 'qr' ? 100 : 200;
         const defaultZoneHeight = zoneType === 'qr' ? 100 : 40;
         
+        // Obtenir la marge de sécurité et les dimensions de la page
+        const margin = getSecurityMarginPx();
+        const pageWidth = getPageWidth();
+        const pageHeight = getPageHeight();
+        
         // Positionner au centre de la vue, moins la moitié de la taille de la zone
-        const zoneX = centerView.x - (defaultZoneWidth / 2);
-        const zoneY = centerView.y - (defaultZoneHeight / 2);
+        let zoneX = centerView.x - (defaultZoneWidth / 2);
+        let zoneY = centerView.y - (defaultZoneHeight / 2);
+        
+        // Appliquer les contraintes de marge de sécurité pour les nouvelles zones
+        const minX = margin;
+        const maxX = pageWidth - margin - defaultZoneWidth;
+        const minY = margin;
+        const maxY = pageHeight - margin - defaultZoneHeight;
+        zoneX = Math.max(minX, Math.min(zoneX, maxX));
+        zoneY = Math.max(minY, Math.min(zoneY, maxY));
         
         if (zoneType === 'qr') {
             const defaultSize = zoneData.w || zoneData.h || 100;
@@ -1157,11 +1180,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
             }
             
-            // S'assurer que la zone reste dans les limites de la page
-            const maxLeft = a4Page.offsetWidth - zone.offsetWidth;
-            const maxTop = a4Page.offsetHeight - zone.offsetHeight;
-            zone.style.left = Math.max(0, Math.min(parseFloat(zone.style.left), maxLeft)) + 'px';
-            zone.style.top = Math.max(0, Math.min(parseFloat(zone.style.top), maxTop)) + 'px';
+            // S'assurer que la zone reste dans les limites de la page avec marge de sécurité
+            const margin = getSecurityMarginPx();
+            const minLeft = margin;
+            const maxLeft = a4Page.offsetWidth - margin - zone.offsetWidth;
+            const minTop = margin;
+            const maxTop = a4Page.offsetHeight - margin - zone.offsetHeight;
+            zone.style.left = Math.max(minLeft, Math.min(parseFloat(zone.style.left), maxLeft)) + 'px';
+            zone.style.top = Math.max(minTop, Math.min(parseFloat(zone.style.top), maxTop)) + 'px';
         }
         
         saveToLocalStorage();
@@ -2873,13 +2899,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const newLeft = pos.left + dx;
                 const newTop = pos.top + dy;
                 
-                // Appliquer les contraintes de limites pour cette zone
-                const maxLeft = pageWidth - pos.width;
-                const maxTop = pageHeight - pos.height;
+                // Appliquer les contraintes de limites avec marge de sécurité
+                const margin = getSecurityMarginPx();
+                const minLeft = margin;
+                const maxLeft = pageWidth - margin - pos.width;
+                const minTop = margin;
+                const maxTop = pageHeight - margin - pos.height;
                 
-                // Positionner la zone en respectant les limites
-                zoneEl.style.left = Math.max(0, Math.min(newLeft, maxLeft)) + 'px';
-                zoneEl.style.top = Math.max(0, Math.min(newTop, maxTop)) + 'px';
+                // Positionner la zone en respectant les limites et la marge
+                zoneEl.style.left = Math.max(minLeft, Math.min(newLeft, maxLeft)) + 'px';
+                zoneEl.style.top = Math.max(minTop, Math.min(newTop, maxTop)) + 'px';
             });
             
             // Mettre à jour l'affichage géométrique seulement si une seule zone est sélectionnée
@@ -2910,11 +2939,28 @@ document.addEventListener('DOMContentLoaded', () => {
             if (currentHandle.includes('w')) { /* ... logique complexe ... */ }
             if (currentHandle.includes('s')) newH = startH + dy;
             
+            // Appliquer les contraintes de marge de sécurité au redimensionnement
+            const margin = getSecurityMarginPx();
+            const pageWidth = getPageWidth();
+            const pageHeight = getPageHeight();
+            const zoneLeft = zone.offsetLeft;
+            const zoneTop = zone.offsetTop;
+            
+            // Limiter la largeur pour ne pas dépasser la marge droite
+            const maxWidth = pageWidth - margin - zoneLeft;
+            // Limiter la hauteur pour ne pas dépasser la marge basse
+            const maxHeight = pageHeight - margin - zoneTop;
+            
             if (zonesData[firstSelectedId].type === 'qr') {
-                const size = Math.max(40, Math.max(newW, newH));
+                let size = Math.max(40, Math.max(newW, newH));
+                // Appliquer la contrainte de marge (le plus restrictif entre largeur et hauteur)
+                size = Math.min(size, maxWidth, maxHeight);
                 zone.style.width = size + 'px';
                 zone.style.height = size + 'px';
             } else {
+                // Appliquer les contraintes de marge
+                newW = Math.min(newW, maxWidth);
+                newH = Math.min(newH, maxHeight);
                 if (newW > 20) zone.style.width = newW + 'px';
                 if (newH > 20) zone.style.height = newH + 'px';
                 
@@ -3145,13 +3191,15 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('  → Identification :', documentState.identification);
         }
         
-        // Stocker le format du document (fond perdu, traits de coupe)
+        // Stocker le format du document (fond perdu, traits de coupe, marge de sécurité)
         if (jsonData.formatDocument) {
             documentState.formatDocument = {
                 fondPerdu: jsonData.formatDocument.fondPerdu || { actif: false, valeurMm: 3 },
-                traitsCoupe: jsonData.formatDocument.traitsCoupe || { actif: false }
+                traitsCoupe: jsonData.formatDocument.traitsCoupe || { actif: false },
+                margeSecuriteMm: jsonData.formatDocument.margeSecurite || 0
             };
             console.log('  → Format document :', documentState.formatDocument);
+            console.log('  → Marge de sécurité :', documentState.formatDocument.margeSecuriteMm, 'mm');
         }
         
         // Stocker les champs de fusion disponibles et mettre à jour l'UI
@@ -3515,7 +3563,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 largeurMm: documentState.pages[0]?.width * MM_PER_PIXEL || 210,
                 hauteurMm: documentState.pages[0]?.height * MM_PER_PIXEL || 297,
                 fondPerdu: documentState.formatDocument?.fondPerdu || { actif: false, valeurMm: 3 },
-                traitsCoupe: documentState.formatDocument?.traitsCoupe || { actif: false }
+                traitsCoupe: documentState.formatDocument?.traitsCoupe || { actif: false },
+                margeSecurite: documentState.formatDocument?.margeSecuriteMm || 0
             },
             champsFusion: documentState.champsFusion || [],
             polices: documentState.polices || [],
