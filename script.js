@@ -60,13 +60,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const imagePropertiesSection = document.getElementById('image-properties-section');
     const textPropertiesSection = document.getElementById('text-properties-section');
     const inputImageSourceType = document.getElementById('input-image-source-type');
-    const inputImageUrl = document.getElementById('input-image-url');
     const inputImageChamp = document.getElementById('input-image-champ');
     const inputImageMode = document.getElementById('input-image-mode');
     const inputImageAlignH = document.getElementById('input-image-align-h');
     const inputImageAlignV = document.getElementById('input-image-align-v');
-    const imageUrlGroup = document.getElementById('image-url-group');
+    const imageUploadGroup = document.getElementById('image-upload-group');
     const imageChampGroup = document.getElementById('image-champ-group');
+    
+    // Éléments upload image
+    const btnImageUpload = document.getElementById('btn-image-upload');
+    const btnImageClear = document.getElementById('btn-image-clear');
+    const inputImageFile = document.getElementById('input-image-file');
+    const imageFileInfo = document.getElementById('image-file-info');
+    const imageFileName = document.getElementById('image-file-name');
+    const imageFileDimensions = document.getElementById('image-file-dimensions');
+    const imageFileSize = document.getElementById('image-file-size');
+    const imageDpiIndicator = document.getElementById('image-dpi-indicator');
+    const imageDpiValue = document.getElementById('image-dpi-value');
     
     // Fonction pour mettre à jour l'affichage du spin button d'épaisseur de bordure
     function updateBorderWidthDisplay(value) {
@@ -317,6 +327,702 @@ document.addEventListener('DOMContentLoaded', () => {
     function getSecurityMarginPx() {
         const marginMm = documentState.formatDocument?.margeSecuriteMm || 0;
         return marginMm / MM_PER_PIXEL;
+    }
+    
+    // --- CONSTANTES LIMITES ZONES IMAGE ---
+    const DEFAULT_SURFACE_MAX_IMAGE_MM2 = 20000;  // Surface max absolue en mm²
+    const DEFAULT_POURCENTAGE_MAX_IMAGE = 50;     // % max de la surface document
+    const IMAGE_MAX_DIMENSION_PX = 1500;          // Dimension max après compression
+    const IMAGE_COMPRESSION_QUALITY = 0.85;       // Qualité WebP/JPEG (85%)
+    const IMAGE_MAX_UPLOAD_SIZE = 10 * 1024 * 1024;  // 10 Mo max à l'upload
+    const IMAGE_MAX_COMPRESSED_SIZE = 2 * 1024 * 1024;  // 2 Mo max après compression
+    const DPI_MINIMUM = 150;
+    const DPI_RECOMMENDED = 200;
+    
+    /**
+     * Calcule la surface limite effective pour les zones images
+     * Retourne le minimum entre la limite absolue et la limite relative (% du document)
+     * @returns {number} Surface limite en mm²
+     */
+    function getSurfaceLimiteImageMm2() {
+        // Surface du document en mm²
+        const largeurMm = getPageWidth() * MM_PER_PIXEL;
+        const hauteurMm = getPageHeight() * MM_PER_PIXEL;
+        const surfaceDocMm2 = largeurMm * hauteurMm;
+        
+        // Paramètres (avec valeurs par défaut)
+        const surfaceMaxAbsolue = documentState.formatDocument?.surfaceMaxImageMm2 || DEFAULT_SURFACE_MAX_IMAGE_MM2;
+        const pourcentageMax = documentState.formatDocument?.pourcentageMaxImage || DEFAULT_POURCENTAGE_MAX_IMAGE;
+        
+        // Limite relative
+        const surfaceMaxRelative = surfaceDocMm2 * (pourcentageMax / 100);
+        
+        // Retourne le minimum des deux
+        return Math.min(surfaceMaxAbsolue, surfaceMaxRelative);
+    }
+    
+    /**
+     * Convertit la surface limite en pixels² pour comparaison avec les zones
+     * @returns {number} Surface limite en pixels²
+     */
+    function getSurfaceLimiteImagePx2() {
+        const surfaceMm2 = getSurfaceLimiteImageMm2();
+        const pxPerMm = 1 / MM_PER_PIXEL;
+        return surfaceMm2 * pxPerMm * pxPerMm;
+    }
+    
+    // ========================================
+    // UPLOAD IMAGE - Fonctions utilitaires
+    // ========================================
+    
+    /**
+     * Vérifie si le navigateur supporte le format WebP
+     * @returns {boolean}
+     */
+    function supportsWebP() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1;
+        canvas.height = 1;
+        return canvas.toDataURL('image/webp').startsWith('data:image/webp');
+    }
+    
+    /**
+     * Formate une taille de fichier en Ko ou Mo
+     * @param {number} bytes - Taille en octets
+     * @returns {string} - Taille formatée
+     */
+    function formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + ' o';
+        if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' Ko';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' Mo';
+    }
+    
+    /**
+     * Vérifie si un format de fichier est accepté
+     * @param {string} fileName - Nom du fichier
+     * @returns {boolean}
+     */
+    function isImageFormatAccepted(fileName) {
+        const ext = fileName.toLowerCase().split('.').pop();
+        return ['jpg', 'jpeg', 'png', 'webp', 'svg'].includes(ext);
+    }
+    
+    /**
+     * Vérifie si un fichier est un SVG
+     * @param {string} fileName - Nom du fichier
+     * @returns {boolean}
+     */
+    function isSvgFile(fileName) {
+        return fileName.toLowerCase().endsWith('.svg');
+    }
+    
+    /**
+     * Compresse une image via Canvas
+     * @param {File} file - Fichier image original
+     * @returns {Promise<{base64: string, width: number, height: number, size: number}>}
+     */
+    function compressImage(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const img = new Image();
+                
+                img.onload = function() {
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    // Calculer les nouvelles dimensions (max IMAGE_MAX_DIMENSION_PX côté long)
+                    if (width > IMAGE_MAX_DIMENSION_PX || height > IMAGE_MAX_DIMENSION_PX) {
+                        if (width > height) {
+                            height = Math.round(height * IMAGE_MAX_DIMENSION_PX / width);
+                            width = IMAGE_MAX_DIMENSION_PX;
+                        } else {
+                            width = Math.round(width * IMAGE_MAX_DIMENSION_PX / height);
+                            height = IMAGE_MAX_DIMENSION_PX;
+                        }
+                    }
+                    
+                    // Créer le canvas
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Choisir le format de sortie
+                    const outputFormat = supportsWebP() ? 'image/webp' : 'image/jpeg';
+                    const base64 = canvas.toDataURL(outputFormat, IMAGE_COMPRESSION_QUALITY);
+                    
+                    // Calculer la taille du base64 (approximation)
+                    const base64Size = Math.round((base64.length - 22) * 3 / 4);
+                    
+                    resolve({
+                        base64: base64,
+                        width: width,
+                        height: height,
+                        size: base64Size
+                    });
+                };
+                
+                img.onerror = function() {
+                    reject(new Error('Impossible de charger l\'image'));
+                };
+                
+                img.src = e.target.result;
+            };
+            
+            reader.onerror = function() {
+                reject(new Error('Impossible de lire le fichier'));
+            };
+            
+            reader.readAsDataURL(file);
+        });
+    }
+    
+    /**
+     * Lit un fichier SVG en base64 sans compression
+     * @param {File} file - Fichier SVG
+     * @returns {Promise<{base64: string, width: number, height: number, size: number}>}
+     */
+    function readSvgFile(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const base64 = e.target.result;
+                
+                // Essayer d'extraire les dimensions du SVG
+                const svgText = atob(base64.split(',')[1]);
+                let width = 100, height = 100; // Valeurs par défaut
+                
+                const widthMatch = svgText.match(/width=["'](\d+)/);
+                const heightMatch = svgText.match(/height=["'](\d+)/);
+                const viewBoxMatch = svgText.match(/viewBox=["'][\d.]+ [\d.]+ ([\d.]+) ([\d.]+)/);
+                
+                if (widthMatch && heightMatch) {
+                    width = parseInt(widthMatch[1]);
+                    height = parseInt(heightMatch[1]);
+                } else if (viewBoxMatch) {
+                    width = Math.round(parseFloat(viewBoxMatch[1]));
+                    height = Math.round(parseFloat(viewBoxMatch[2]));
+                }
+                
+                resolve({
+                    base64: base64,
+                    width: width,
+                    height: height,
+                    size: file.size
+                });
+            };
+            
+            reader.onerror = function() {
+                reject(new Error('Impossible de lire le fichier SVG'));
+            };
+            
+            reader.readAsDataURL(file);
+        });
+    }
+    
+    /**
+     * Affiche un message d'erreur dans la zone upload
+     * @param {string} message - Message d'erreur
+     */
+    function showImageUploadError(message) {
+        // Masquer l'info fichier
+        if (imageFileInfo) imageFileInfo.style.display = 'none';
+        if (imageDpiIndicator) imageDpiIndicator.style.display = 'none';
+        
+        // Créer ou mettre à jour le message d'erreur
+        let errorDiv = document.getElementById('image-upload-error');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.id = 'image-upload-error';
+            errorDiv.className = 'image-upload-error';
+            if (imageUploadGroup) {
+                imageUploadGroup.insertBefore(errorDiv, imageFileInfo);
+            }
+        }
+        
+        errorDiv.innerHTML = `
+            <span class="material-icons">error</span>
+            <span>${message}</span>
+        `;
+        errorDiv.style.display = 'flex';
+        
+        // Masquer après 5 secondes
+        setTimeout(() => {
+            if (errorDiv) errorDiv.style.display = 'none';
+        }, 5000);
+    }
+    
+    /**
+     * Masque le message d'erreur upload
+     */
+    function hideImageUploadError() {
+        const errorDiv = document.getElementById('image-upload-error');
+        if (errorDiv) errorDiv.style.display = 'none';
+    }
+    
+    /**
+     * Affiche l'état de chargement pendant la compression
+     * @param {boolean} show - Afficher ou masquer
+     */
+    function showImageLoading(show) {
+        let loadingDiv = document.getElementById('image-loading-indicator');
+        
+        if (show) {
+            if (!loadingDiv) {
+                loadingDiv = document.createElement('div');
+                loadingDiv.id = 'image-loading-indicator';
+                loadingDiv.className = 'image-loading';
+                loadingDiv.innerHTML = `
+                    <span class="material-icons">hourglass_empty</span>
+                    <span>Compression en cours...</span>
+                `;
+                if (imageUploadGroup) {
+                    imageUploadGroup.insertBefore(loadingDiv, imageFileInfo);
+                }
+            }
+            loadingDiv.style.display = 'flex';
+        } else {
+            if (loadingDiv) loadingDiv.style.display = 'none';
+        }
+    }
+    
+    /**
+     * Met à jour l'affichage des infos fichier dans le panneau
+     * @param {Object} source - Données source de la zone image
+     */
+    function updateImageFileInfoDisplay(source) {
+        if (!source || !source.imageBase64) {
+            // Pas d'image : masquer les infos
+            if (imageFileInfo) imageFileInfo.style.display = 'none';
+            if (imageDpiIndicator) imageDpiIndicator.style.display = 'none';
+            if (btnImageClear) btnImageClear.disabled = true;
+            return;
+        }
+        
+        // Afficher les infos
+        if (imageFileInfo) {
+            imageFileInfo.style.display = 'block';
+            if (imageFileName) imageFileName.textContent = source.nomOriginal || 'image';
+            if (imageFileDimensions) {
+                imageFileDimensions.textContent = `${source.largeurPx} × ${source.hauteurPx} px`;
+            }
+            if (imageFileSize) {
+                imageFileSize.textContent = formatFileSize(source.poidsCompresse || source.poidsBrut || 0);
+            }
+        }
+        
+        // Activer le bouton Vider
+        if (btnImageClear) btnImageClear.disabled = false;
+        
+        // Mettre à jour l'indicateur DPI
+        updateDpiIndicator();
+    }
+    
+    // ========================================
+    // CALCUL ET AFFICHAGE DPI
+    // ========================================
+    
+    /**
+     * Calcule le DPI d'une image dans une zone
+     * @param {number} imagePxWidth - Largeur de l'image en pixels
+     * @param {number} imagePxHeight - Hauteur de l'image en pixels
+     * @param {number} zonePxWidth - Largeur de la zone en pixels
+     * @param {number} zonePxHeight - Hauteur de la zone en pixels
+     * @param {string} displayMode - Mode d'affichage ('initial', 'ajuster', 'couper')
+     * @returns {number} - DPI calculé (ou Infinity pour vectoriel)
+     */
+    function calculateImageDpi(imagePxWidth, imagePxHeight, zonePxWidth, zonePxHeight, displayMode = 'ajuster') {
+        if (!imagePxWidth || !imagePxHeight || !zonePxWidth || !zonePxHeight) {
+            return 0;
+        }
+        
+        // Convertir les dimensions de la zone en mm
+        const zoneWidthMm = zonePxWidth * MM_PER_PIXEL;
+        const zoneHeightMm = zonePxHeight * MM_PER_PIXEL;
+        
+        // Convertir mm en pouces (1 pouce = 25.4 mm)
+        const zoneWidthInches = zoneWidthMm / 25.4;
+        const zoneHeightInches = zoneHeightMm / 25.4;
+        
+        let effectiveImageWidth = imagePxWidth;
+        let effectiveImageHeight = imagePxHeight;
+        
+        if (displayMode === 'initial') {
+            // Mode initial : l'image garde sa taille native
+            // Le DPI dépend de la taille réelle affichée (= taille image)
+            // On calcule comme si la zone était de la taille de l'image
+            const imageWidthMm = imagePxWidth * MM_PER_PIXEL;
+            const imageHeightMm = imagePxHeight * MM_PER_PIXEL;
+            const imageWidthInches = imageWidthMm / 25.4;
+            const imageHeightInches = imageHeightMm / 25.4;
+            
+            const dpiH = imagePxWidth / imageWidthInches;
+            const dpiV = imagePxHeight / imageHeightInches;
+            return Math.round(Math.min(dpiH, dpiV));
+            
+        } else if (displayMode === 'couper') {
+            // Mode couper : l'image remplit toute la zone (peut être rognée)
+            // On prend le ratio le plus grand pour couvrir la zone
+            const scaleX = zonePxWidth / imagePxWidth;
+            const scaleY = zonePxHeight / imagePxHeight;
+            const scale = Math.max(scaleX, scaleY);
+            
+            // L'image est agrandie/réduite par ce facteur
+            effectiveImageWidth = imagePxWidth * scale;
+            effectiveImageHeight = imagePxHeight * scale;
+            
+        } else {
+            // Mode ajuster (défaut) : l'image s'inscrit dans la zone
+            // On prend le ratio le plus petit pour tenir dans la zone
+            const scaleX = zonePxWidth / imagePxWidth;
+            const scaleY = zonePxHeight / imagePxHeight;
+            const scale = Math.min(scaleX, scaleY);
+            
+            effectiveImageWidth = imagePxWidth * scale;
+            effectiveImageHeight = imagePxHeight * scale;
+        }
+        
+        // Calculer le DPI basé sur les dimensions effectives
+        // DPI = pixels originaux / taille affichée en pouces
+        const effectiveWidthInches = (effectiveImageWidth * MM_PER_PIXEL) / 25.4;
+        const effectiveHeightInches = (effectiveImageHeight * MM_PER_PIXEL) / 25.4;
+        
+        const dpiH = imagePxWidth / effectiveWidthInches;
+        const dpiV = imagePxHeight / effectiveHeightInches;
+        
+        // Retourner le DPI le plus faible (le plus contraignant)
+        return Math.round(Math.min(dpiH, dpiV));
+    }
+    
+    /**
+     * Détermine l'état DPI (good, warning, error, vector)
+     * @param {number} dpi - Valeur DPI
+     * @param {boolean} isSvg - Est-ce un fichier SVG ?
+     * @returns {string} - État ('good', 'warning', 'error', 'vector')
+     */
+    function getDpiState(dpi, isSvg = false) {
+        if (isSvg) return 'vector';
+        if (dpi >= DPI_RECOMMENDED) return 'good';
+        if (dpi >= DPI_MINIMUM) return 'warning';
+        return 'error';
+    }
+    
+    /**
+     * Génère le texte et l'icône pour l'indicateur DPI
+     * @param {number} dpi - Valeur DPI
+     * @param {string} state - État ('good', 'warning', 'error', 'vector')
+     * @returns {{icon: string, text: string}}
+     */
+    function getDpiDisplayInfo(dpi, state) {
+        switch (state) {
+            case 'vector':
+                return {
+                    icon: 'check_circle',
+                    text: 'Vectoriel - Qualité optimale'
+                };
+            case 'good':
+                return {
+                    icon: 'check_circle',
+                    text: `${dpi} dpi`
+                };
+            case 'warning':
+                return {
+                    icon: 'warning',
+                    text: `${dpi} dpi - Qualité moyenne`
+                };
+            case 'error':
+                return {
+                    icon: 'error',
+                    text: `${dpi} dpi - Résolution insuffisante`
+                };
+            default:
+                return {
+                    icon: 'help',
+                    text: 'DPI inconnu'
+                };
+        }
+    }
+    
+    /**
+     * Met à jour l'indicateur DPI dans le panneau de propriétés
+     * @param {string} zoneId - ID de la zone (optionnel, utilise la sélection courante si absent)
+     */
+    function updateDpiIndicator(zoneId = null) {
+        // Déterminer la zone à analyser
+        const targetZoneId = zoneId || (selectedZoneIds.length === 1 ? selectedZoneIds[0] : null);
+        if (!targetZoneId) {
+            if (imageDpiIndicator) imageDpiIndicator.style.display = 'none';
+            return;
+        }
+        
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[targetZoneId];
+        
+        if (!zoneData || zoneData.type !== 'image') {
+            if (imageDpiIndicator) imageDpiIndicator.style.display = 'none';
+            return;
+        }
+        
+        const source = zoneData.source || {};
+        
+        // Vérifier qu'une image est chargée
+        if (!source.imageBase64 && !source.valeur) {
+            if (imageDpiIndicator) imageDpiIndicator.style.display = 'none';
+            return;
+        }
+        
+        // Récupérer les dimensions de la zone depuis le DOM
+        const zoneEl = document.getElementById(targetZoneId);
+        if (!zoneEl) {
+            if (imageDpiIndicator) imageDpiIndicator.style.display = 'none';
+            return;
+        }
+        
+        const zonePxWidth = zoneEl.offsetWidth;
+        const zonePxHeight = zoneEl.offsetHeight;
+        
+        // Vérifier si c'est un SVG
+        const isSvg = source.nomOriginal ? isSvgFile(source.nomOriginal) : false;
+        
+        let dpi = 0;
+        let state = 'error';
+        
+        if (isSvg) {
+            // SVG = vectoriel, qualité toujours optimale
+            dpi = Infinity;
+            state = 'vector';
+        } else if (source.largeurPx && source.hauteurPx) {
+            // Calculer le DPI
+            const displayMode = zoneData.redimensionnement?.mode || 'ajuster';
+            dpi = calculateImageDpi(
+                source.largeurPx,
+                source.hauteurPx,
+                zonePxWidth,
+                zonePxHeight,
+                displayMode
+            );
+            state = getDpiState(dpi, false);
+        }
+        
+        // Mettre à jour l'affichage
+        if (imageDpiIndicator && imageDpiValue) {
+            imageDpiIndicator.style.display = 'block';
+            
+            const displayInfo = getDpiDisplayInfo(dpi, state);
+            
+            // Mettre à jour la classe CSS
+            imageDpiValue.className = 'dpi-value dpi-' + state;
+            
+            // Mettre à jour le contenu
+            imageDpiValue.innerHTML = `
+                <span class="material-icons dpi-icon">${displayInfo.icon}</span>
+                <span class="dpi-text">${displayInfo.text}</span>
+            `;
+        }
+        
+        return { dpi, state };
+    }
+    
+    // ========================================
+    // CONTRAINTES REDIMENSIONNEMENT IMAGES
+    // ========================================
+    
+    /**
+     * Vérifie si un redimensionnement de zone image est autorisé
+     * @param {string} zoneId - ID de la zone
+     * @param {number} newWidth - Nouvelle largeur en pixels
+     * @param {number} newHeight - Nouvelle hauteur en pixels
+     * @returns {{allowed: boolean, reason: string|null, maxWidth: number|null, maxHeight: number|null}}
+     */
+    function checkImageResizeAllowed(zoneId, newWidth, newHeight) {
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        
+        // Si ce n'est pas une zone image, autoriser
+        if (!zoneData || zoneData.type !== 'image') {
+            return { allowed: true, reason: null };
+        }
+        
+        const source = zoneData.source || {};
+        
+        // Si pas d'image chargée, autoriser (pas de contrainte)
+        if (!source.imageBase64 && !source.valeur) {
+            return { allowed: true, reason: null };
+        }
+        
+        // Si c'est un SVG, pas de contrainte DPI (mais contrainte surface)
+        const isSvg = source.nomOriginal ? isSvgFile(source.nomOriginal) : false;
+        
+        // --- Vérification 1 : Surface maximale ---
+        const surfaceLimitePx2 = getSurfaceLimiteImagePx2();
+        const newSurfacePx2 = newWidth * newHeight;
+        
+        if (newSurfacePx2 > surfaceLimitePx2) {
+            // Calculer les dimensions maximales en conservant le ratio
+            const currentRatio = newWidth / newHeight;
+            const maxHeight = Math.sqrt(surfaceLimitePx2 / currentRatio);
+            const maxWidth = maxHeight * currentRatio;
+            
+            const surfaceLimiteMm2 = getSurfaceLimiteImageMm2();
+            const surfaceLimiteCm2 = (surfaceLimiteMm2 / 100).toFixed(0);
+            
+            return {
+                allowed: false,
+                reason: `Surface maximum atteinte (${surfaceLimiteCm2} cm²)`,
+                maxWidth: Math.floor(maxWidth),
+                maxHeight: Math.floor(maxHeight)
+            };
+        }
+        
+        // --- Vérification 2 : DPI minimum (sauf SVG) ---
+        if (!isSvg && source.largeurPx && source.hauteurPx) {
+            const displayMode = zoneData.redimensionnement?.mode || 'ajuster';
+            const dpi = calculateImageDpi(
+                source.largeurPx,
+                source.hauteurPx,
+                newWidth,
+                newHeight,
+                displayMode
+            );
+            
+            if (dpi < DPI_MINIMUM) {
+                // Calculer les dimensions maximales pour 150 DPI
+                const maxDimensions = calculateMaxDimensionsForDpi(
+                    source.largeurPx,
+                    source.hauteurPx,
+                    DPI_MINIMUM,
+                    displayMode,
+                    newWidth / newHeight // Ratio actuel
+                );
+                
+                return {
+                    allowed: false,
+                    reason: `Résolution minimum atteinte (${DPI_MINIMUM} dpi)`,
+                    maxWidth: maxDimensions.width,
+                    maxHeight: maxDimensions.height
+                };
+            }
+        }
+        
+        return { allowed: true, reason: null };
+    }
+    
+    /**
+     * Calcule les dimensions maximales d'une zone pour un DPI cible
+     * @param {number} imagePxWidth - Largeur de l'image en pixels
+     * @param {number} imagePxHeight - Hauteur de l'image en pixels
+     * @param {number} targetDpi - DPI cible minimum
+     * @param {string} displayMode - Mode d'affichage
+     * @param {number} aspectRatio - Ratio largeur/hauteur de la zone
+     * @returns {{width: number, height: number}}
+     */
+    function calculateMaxDimensionsForDpi(imagePxWidth, imagePxHeight, targetDpi, displayMode, aspectRatio) {
+        // Formule inverse : à partir du DPI cible, calculer la taille max de la zone
+        // DPI = pixels_image / (taille_affichée_en_pouces)
+        // taille_affichée_en_pouces = pixels_image / DPI
+        // taille_affichée_en_mm = (pixels_image / DPI) * 25.4
+        // taille_affichée_en_px = taille_affichée_en_mm / MM_PER_PIXEL
+        
+        const maxWidthInches = imagePxWidth / targetDpi;
+        const maxHeightInches = imagePxHeight / targetDpi;
+        
+        const maxWidthMm = maxWidthInches * 25.4;
+        const maxHeightMm = maxHeightInches * 25.4;
+        
+        const maxWidthPx = maxWidthMm / MM_PER_PIXEL;
+        const maxHeightPx = maxHeightMm / MM_PER_PIXEL;
+        
+        if (displayMode === 'ajuster') {
+            // En mode ajuster, la zone peut être plus grande que l'image
+            // car l'image est mise à l'échelle pour tenir dedans
+            // On doit trouver la taille de zone qui donne exactement targetDpi
+            
+            // Si le ratio de la zone est plus large que l'image
+            const imageRatio = imagePxWidth / imagePxHeight;
+            
+            if (aspectRatio > imageRatio) {
+                // Zone plus large : la hauteur est contraignante
+                return {
+                    width: Math.floor(maxHeightPx * aspectRatio),
+                    height: Math.floor(maxHeightPx)
+                };
+            } else {
+                // Zone plus haute : la largeur est contraignante
+                return {
+                    width: Math.floor(maxWidthPx),
+                    height: Math.floor(maxWidthPx / aspectRatio)
+                };
+            }
+            
+        } else if (displayMode === 'couper') {
+            // En mode couper, l'image couvre toute la zone
+            // La dimension la plus petite de l'image est utilisée
+            const imageRatio = imagePxWidth / imagePxHeight;
+            
+            if (aspectRatio > imageRatio) {
+                // Zone plus large : la largeur de l'image est utilisée
+                return {
+                    width: Math.floor(maxWidthPx),
+                    height: Math.floor(maxWidthPx / aspectRatio)
+                };
+            } else {
+                // Zone plus haute : la hauteur de l'image est utilisée
+                return {
+                    width: Math.floor(maxHeightPx * aspectRatio),
+                    height: Math.floor(maxHeightPx)
+                };
+            }
+            
+        } else {
+            // Mode initial : l'image garde sa taille native
+            // La zone peut être de n'importe quelle taille
+            return {
+                width: 99999,
+                height: 99999
+            };
+        }
+    }
+    
+    /**
+     * Affiche un message de contrainte (toast)
+     * @param {string} message - Message à afficher
+     */
+    function showResizeConstraintMessage(message) {
+        // Utiliser le système de toast existant (undo-redo-toast)
+        const toast = document.getElementById('undo-redo-toast');
+        if (toast) {
+            toast.innerHTML = `
+                <span class="material-icons toast-icon">block</span>
+                <span>${message}</span>
+            `;
+            toast.className = 'undo-toast error show';
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+    }
+    
+    // Variable pour éviter les messages répétitifs pendant le drag
+    let lastConstraintMessage = '';
+    let lastConstraintTime = 0;
+    
+    /**
+     * Affiche un message de contrainte avec debounce
+     * @param {string} message - Message à afficher
+     */
+    function showResizeConstraintMessageDebounced(message) {
+        const now = Date.now();
+        if (message === lastConstraintMessage && now - lastConstraintTime < 2000) {
+            return; // Éviter les messages répétitifs
+        }
+        lastConstraintMessage = message;
+        lastConstraintTime = now;
+        showResizeConstraintMessage(message);
     }
     
     let zoneCounter = 0;
@@ -680,8 +1386,14 @@ document.addEventListener('DOMContentLoaded', () => {
         zonesData[id] = {
             type: 'image',
             source: {
-                type: 'url',
-                valeur: ''
+                type: 'fixe',        // 'fixe' (image uploadée), 'url' (rétrocompat), 'champ' (fusion)
+                valeur: '',          // URL pour rétrocompatibilité ou nom du champ
+                imageBase64: null,   // Données base64 de l'image compressée
+                nomOriginal: null,   // Nom du fichier uploadé
+                largeurPx: null,     // Largeur image compressée
+                hauteurPx: null,     // Hauteur image compressée
+                poidsBrut: null,     // Poids avant compression (octets)
+                poidsCompresse: null // Poids après compression (octets)
             },
             redimensionnement: {
                 mode: 'ajuster',
@@ -1141,24 +1853,34 @@ document.addEventListener('DOMContentLoaded', () => {
             if (imagePropertiesSection) imagePropertiesSection.style.display = 'block';
             setTextControlsEnabled(false);
             
-            const source = data.source || { type: 'url', valeur: '' };
+            const source = data.source || { type: 'fixe', valeur: '' };
             const redim = data.redimensionnement || { mode: 'ajuster', alignementH: 'center', alignementV: 'middle' };
             
-            if (inputImageSourceType) inputImageSourceType.value = source.type;
-            if (inputImageUrl) inputImageUrl.value = source.type === 'url' ? source.valeur : '';
+            // Rétrocompatibilité : 'url' devient 'fixe' dans le select
+            const selectType = source.type === 'url' ? 'fixe' : source.type;
+            if (inputImageSourceType) inputImageSourceType.value = selectType;
             if (inputImageMode) inputImageMode.value = redim.mode;
             if (inputImageAlignH) inputImageAlignH.value = redim.alignementH;
             if (inputImageAlignV) inputImageAlignV.value = redim.alignementV;
             
-            // Afficher le bon groupe (URL ou Champ)
-            if (source.type === 'url') {
-                if (imageUrlGroup) imageUrlGroup.style.display = 'block';
-                if (imageChampGroup) imageChampGroup.style.display = 'none';
-            } else {
-                if (imageUrlGroup) imageUrlGroup.style.display = 'none';
+            // Afficher le bon groupe selon le type
+            // 'fixe' : afficher le groupe upload
+            // 'champ' : afficher le select des champs de fusion
+            if (source.type === 'champ') {
+                if (imageUploadGroup) imageUploadGroup.style.display = 'none';
                 if (imageChampGroup) imageChampGroup.style.display = 'block';
                 populateImageFieldsSelect(source.valeur);
+            } else {
+                // 'fixe' ou 'url' : afficher le groupe upload
+                if (imageUploadGroup) imageUploadGroup.style.display = 'block';
+                if (imageChampGroup) imageChampGroup.style.display = 'none';
             }
+            
+            // Afficher les infos fichier si image uploadée
+            updateImageFileInfoDisplay(source);
+            
+            // Mettre à jour l'indicateur DPI
+            updateDpiIndicator(id);
             
             // Bordure (contrôle commun - doit rester visible)
             if (inputBorderWidth) {
@@ -2007,21 +2729,70 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * Met à jour l'affichage d'une zone image (image réelle ou placeholder)
      */
-    function updateImageZoneDisplay(zoneEl, zoneData) {
+    /**
+     * Met à jour l'affichage visuel d'une zone image
+     * @param {string|HTMLElement} zoneIdOrEl - ID de la zone ou élément DOM
+     * @param {Object} [zoneDataParam] - Données de la zone (optionnel si zoneIdOrEl est un ID)
+     */
+    function updateImageZoneDisplay(zoneIdOrEl, zoneDataParam) {
+        // Supporter les deux signatures : (zoneEl, zoneData) et (zoneId)
+        let zoneEl, zoneData;
+        
+        if (typeof zoneIdOrEl === 'string') {
+            // Appelé avec un ID
+            const zonesData = getCurrentPageZones();
+            zoneData = zonesData[zoneIdOrEl];
+            if (!zoneData || zoneData.type !== 'image') return;
+            zoneEl = document.getElementById(zoneIdOrEl);
+        } else {
+            // Appelé avec un élément DOM et des données
+            zoneEl = zoneIdOrEl;
+            zoneData = zoneDataParam;
+        }
+        
+        if (!zoneEl) return;
+        
         const contentEl = zoneEl.querySelector('.zone-content');
         if (!contentEl) return;
         
-        const source = zoneData.source || { type: 'url', valeur: '' };
+        const source = zoneData.source || { type: 'fixe', valeur: '' };
         const redim = zoneData.redimensionnement || { mode: 'ajuster', alignementH: 'center', alignementV: 'middle' };
+        
+        // Déterminer l'URL/base64 de l'image
+        let imageUrl = null;
+        
+        if (source.type === 'fixe') {
+            if (source.imageBase64) {
+                // Image uploadée en base64
+                imageUrl = source.imageBase64;
+            } else if (source.valeur) {
+                // URL fixe (rétrocompatibilité)
+                imageUrl = source.valeur;
+            }
+        } else if (source.type === 'url' && source.valeur) {
+            // Ancien format URL (rétrocompatibilité)
+            imageUrl = source.valeur;
+        } else if (source.type === 'champ') {
+            // Champ de fusion : afficher un placeholder spécial
+            contentEl.innerHTML = getImagePlaceholderSvg(source.valeur);
+            contentEl.classList.remove('has-image');
+            contentEl.classList.add('no-image');
+            contentEl.style.justifyContent = 'center';
+            contentEl.style.alignItems = 'center';
+            return;
+        }
         
         // Vider le contenu précédent
         contentEl.innerHTML = '';
         
-        // Si URL fixe avec valeur, afficher l'image
-        if (source.type === 'url' && source.valeur && source.valeur.trim() !== '') {
+        if (imageUrl) {
+            // Afficher l'image
+            contentEl.classList.add('has-image');
+            contentEl.classList.remove('no-image');
+            
             const img = document.createElement('img');
-            img.src = source.valeur;
-            img.alt = 'Image';
+            img.src = imageUrl;
+            img.alt = source.nomOriginal || 'Image';
             img.draggable = false;
             
             // Appliquer le mode de redimensionnement
@@ -2040,8 +2811,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             contentEl.appendChild(img);
         } else {
-            // Afficher placeholder
-            contentEl.innerHTML = getImagePlaceholderSvg(source.type === 'champ' ? source.valeur : null);
+            // Pas d'image : afficher le placeholder
+            contentEl.innerHTML = getImagePlaceholderSvg(null);
+            contentEl.classList.remove('has-image');
+            contentEl.classList.add('no-image');
         }
         
         // Appliquer l'alignement au conteneur (pour mode initial)
@@ -2135,9 +2908,22 @@ document.addEventListener('DOMContentLoaded', () => {
         // Mettre à jour la source (avec vérifications null)
         if (inputImageSourceType) {
             const sourceType = inputImageSourceType.value;
+            
+            // Préserver les données existantes (base64, dimensions, etc.)
+            const existingSource = zoneData.source || {};
+            
             zoneData.source = {
                 type: sourceType,
-                valeur: sourceType === 'url' ? (inputImageUrl?.value || '') : (inputImageChamp?.value || '')
+                // Pour 'champ' : utiliser le nom du champ de fusion
+                // Pour 'fixe' : valeur vide (image stockée en base64)
+                valeur: sourceType === 'champ' ? (inputImageChamp?.value || '') : '',
+                // Propriétés pour images uploadées (préservées si existantes)
+                imageBase64: existingSource.imageBase64 || null,
+                nomOriginal: existingSource.nomOriginal || null,
+                largeurPx: existingSource.largeurPx || null,
+                hauteurPx: existingSource.hauteurPx || null,
+                poidsBrut: existingSource.poidsBrut || null,
+                poidsCompresse: existingSource.poidsCompresse || null
             };
         }
         
@@ -2320,18 +3106,15 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (inputImageSourceType) {
         inputImageSourceType.addEventListener('change', () => {
-            const isUrl = inputImageSourceType.value === 'url';
-            if (imageUrlGroup) imageUrlGroup.style.display = isUrl ? 'block' : 'none';
-            if (imageChampGroup) imageChampGroup.style.display = isUrl ? 'none' : 'block';
-            if (!isUrl) populateImageFieldsSelect('');
-            updateActiveImageZoneData();
-            saveState();
-        });
-    }
-    
-    if (inputImageUrl) {
-        inputImageUrl.addEventListener('input', () => updateActiveImageZoneData());
-        inputImageUrl.addEventListener('change', () => {
+            const sourceType = inputImageSourceType.value;
+            const isChamp = sourceType === 'champ';
+            
+            // 'fixe' : afficher le groupe upload
+            // 'champ' : afficher le select des champs de fusion
+            if (imageUploadGroup) imageUploadGroup.style.display = isChamp ? 'none' : 'block';
+            if (imageChampGroup) imageChampGroup.style.display = isChamp ? 'block' : 'none';
+            
+            if (isChamp) populateImageFieldsSelect('');
             updateActiveImageZoneData();
             saveState();
         });
@@ -2347,6 +3130,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (inputImageMode) {
         inputImageMode.addEventListener('change', () => {
             updateActiveImageZoneData();
+            updateDpiIndicator(); // Recalculer le DPI avec le nouveau mode
             saveState();
         });
     }
@@ -2362,6 +3146,138 @@ document.addEventListener('DOMContentLoaded', () => {
         inputImageAlignV.addEventListener('change', () => {
             updateActiveImageZoneData();
             saveState();
+        });
+    }
+    
+    // ========================================
+    // EVENT LISTENERS - Upload Image
+    // ========================================
+    
+    // Bouton Importer : ouvre le sélecteur de fichier
+    if (btnImageUpload) {
+        btnImageUpload.addEventListener('click', () => {
+            if (inputImageFile) inputImageFile.click();
+        });
+    }
+    
+    // Sélection d'un fichier
+    if (inputImageFile) {
+        inputImageFile.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // Réinitialiser l'input pour permettre de resélectionner le même fichier
+            e.target.value = '';
+            
+            // Vérifier qu'une zone image est sélectionnée
+            if (selectedZoneIds.length !== 1) return;
+            const selectedId = selectedZoneIds[0];
+            const zonesData = getCurrentPageZones();
+            const zoneData = zonesData[selectedId];
+            if (!zoneData || zoneData.type !== 'image') return;
+            
+            hideImageUploadError();
+            
+            // 1. Validation du format
+            if (!isImageFormatAccepted(file.name)) {
+                showImageUploadError('Format non supporté. Formats acceptés : JPG, PNG, WebP, SVG');
+                return;
+            }
+            
+            // 2. Validation du poids (max 10 Mo)
+            if (file.size > IMAGE_MAX_UPLOAD_SIZE) {
+                showImageUploadError(`Fichier trop volumineux (max ${formatFileSize(IMAGE_MAX_UPLOAD_SIZE)})`);
+                return;
+            }
+            
+            try {
+                showImageLoading(true);
+                
+                let result;
+                
+                // 3. Traitement selon le type de fichier
+                if (isSvgFile(file.name)) {
+                    // SVG : pas de compression
+                    result = await readSvgFile(file);
+                } else {
+                    // Image bitmap : compression
+                    result = await compressImage(file);
+                }
+                
+                showImageLoading(false);
+                
+                // 4. Vérification poids après compression
+                if (result.size > IMAGE_MAX_COMPRESSED_SIZE) {
+                    showImageUploadError(`Impossible de compresser l'image sous ${formatFileSize(IMAGE_MAX_COMPRESSED_SIZE)}`);
+                    return;
+                }
+                
+                // 5. Stocker dans zoneData.source
+                zoneData.source = {
+                    type: 'fixe',
+                    valeur: '',
+                    imageBase64: result.base64,
+                    nomOriginal: file.name,
+                    largeurPx: result.width,
+                    hauteurPx: result.height,
+                    poidsBrut: file.size,
+                    poidsCompresse: result.size
+                };
+                
+                // 6. Mettre à jour l'affichage de la zone
+                updateImageZoneDisplay(selectedId);
+                
+                // 7. Mettre à jour l'UI du panneau
+                updateImageFileInfoDisplay(zoneData.source);
+                
+                // 8. Sauvegarder
+                saveToLocalStorage();
+                saveState();
+                
+                console.log(`✅ Image uploadée : ${file.name} (${result.width}×${result.height}, ${formatFileSize(result.size)})`);
+                
+            } catch (error) {
+                showImageLoading(false);
+                showImageUploadError(error.message || 'Erreur lors du chargement de l\'image');
+                console.error('Erreur upload image:', error);
+            }
+        });
+    }
+    
+    // Bouton Vider : supprime l'image de la zone
+    if (btnImageClear) {
+        btnImageClear.addEventListener('click', () => {
+            // Vérifier qu'une zone image est sélectionnée
+            if (selectedZoneIds.length !== 1) return;
+            const selectedId = selectedZoneIds[0];
+            const zonesData = getCurrentPageZones();
+            const zoneData = zonesData[selectedId];
+            if (!zoneData || zoneData.type !== 'image') return;
+            
+            // Réinitialiser la source
+            zoneData.source = {
+                type: 'fixe',
+                valeur: '',
+                imageBase64: null,
+                nomOriginal: null,
+                largeurPx: null,
+                hauteurPx: null,
+                poidsBrut: null,
+                poidsCompresse: null
+            };
+            
+            // Mettre à jour l'affichage
+            updateImageZoneDisplay(selectedId);
+            updateImageFileInfoDisplay(zoneData.source);
+            
+            // Masquer l'indicateur DPI
+            if (imageDpiIndicator) imageDpiIndicator.style.display = 'none';
+            
+            // Sauvegarder
+            saveToLocalStorage();
+            saveState();
+            
+            console.log('🗑️ Image vidée de la zone');
         });
     }
     
@@ -3423,6 +4339,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Appliquer les contraintes de marge
                 newW = Math.min(newW, maxWidth);
                 newH = Math.min(newH, maxHeight);
+                
+                // === CONTRAINTES ZONES IMAGE ===
+                const zoneDataResize = zonesData[firstSelectedId];
+                if (zoneDataResize && zoneDataResize.type === 'image' && zoneDataResize.source && 
+                    (zoneDataResize.source.imageBase64 || zoneDataResize.source.valeur)) {
+                    
+                    // Seulement si on agrandit (pas si on réduit)
+                    if (newW > startW || newH > startH) {
+                        const resizeCheck = checkImageResizeAllowed(firstSelectedId, newW, newH);
+                        
+                        if (!resizeCheck.allowed) {
+                            // Limiter aux dimensions maximales
+                            if (resizeCheck.maxWidth !== null) {
+                                newW = Math.min(newW, resizeCheck.maxWidth);
+                            }
+                            if (resizeCheck.maxHeight !== null) {
+                                newH = Math.min(newH, resizeCheck.maxHeight);
+                            }
+                            
+                            // Afficher le message
+                            showResizeConstraintMessageDebounced(resizeCheck.reason);
+                        }
+                    }
+                }
+                // === FIN CONTRAINTES ZONES IMAGE ===
+                
                 if (newW > 20) zone.style.width = newW + 'px';
                 if (newH > 20) zone.style.height = newH + 'px';
                 
@@ -3432,6 +4374,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             updateGeomDisplay(zone);
+            
+            // Mettre à jour le DPI si c'est une zone image
+            if (zonesData[firstSelectedId] && zonesData[firstSelectedId].type === 'image') {
+                updateDpiIndicator(firstSelectedId);
+            }
         }
     });
 
@@ -3446,6 +4393,10 @@ document.addEventListener('DOMContentLoaded', () => {
         isResizing = false;
         hasActuallyMoved = false;
         startPositions = [];
+        
+        // Réinitialiser le debounce des messages de contrainte
+        lastConstraintMessage = '';
+        lastConstraintTime = 0;
     });
 
     function updateGeomDisplay(el) {
@@ -3653,15 +4604,18 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('  → Identification :', documentState.identification);
         }
         
-        // Stocker le format du document (fond perdu, traits de coupe, marge de sécurité)
+        // Stocker le format du document (fond perdu, traits de coupe, marge de sécurité, limites images)
         if (jsonData.formatDocument) {
             documentState.formatDocument = {
                 fondPerdu: jsonData.formatDocument.fondPerdu || { actif: false, valeurMm: 3 },
                 traitsCoupe: jsonData.formatDocument.traitsCoupe || { actif: false },
-                margeSecuriteMm: jsonData.formatDocument.margeSecurite || 0
+                margeSecuriteMm: jsonData.formatDocument.margeSecurite || 0,
+                surfaceMaxImageMm2: jsonData.formatDocument?.surfaceMaxImageMm2 || DEFAULT_SURFACE_MAX_IMAGE_MM2,
+                pourcentageMaxImage: jsonData.formatDocument?.pourcentageMaxImage || DEFAULT_POURCENTAGE_MAX_IMAGE
             };
             console.log('  → Format document :', documentState.formatDocument);
             console.log('  → Marge de sécurité :', documentState.formatDocument.margeSecuriteMm, 'mm');
+            console.log('  → Limites zones image : surface max', documentState.formatDocument.surfaceMaxImageMm2, 'mm², pourcentage max', documentState.formatDocument.pourcentageMaxImage, '%');
         }
         
         // Stocker les champs de fusion disponibles et mettre à jour l'UI
@@ -4141,7 +5095,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 hauteurMm: documentState.pages[0]?.height * MM_PER_PIXEL || 297,
                 fondPerdu: documentState.formatDocument?.fondPerdu || { actif: false, valeurMm: 3 },
                 traitsCoupe: documentState.formatDocument?.traitsCoupe || { actif: false },
-                margeSecurite: documentState.formatDocument?.margeSecuriteMm || 0
+                margeSecurite: documentState.formatDocument?.margeSecuriteMm || 0,
+                surfaceMaxImageMm2: documentState.formatDocument?.surfaceMaxImageMm2 || DEFAULT_SURFACE_MAX_IMAGE_MM2,
+                pourcentageMaxImage: documentState.formatDocument?.pourcentageMaxImage || DEFAULT_POURCENTAGE_MAX_IMAGE
             },
             champsFusion: documentState.champsFusion || [],
             polices: documentState.polices || [],

@@ -144,32 +144,74 @@
                 </div>
 
                 <!-- Section spécifique Zone Image (masquée par défaut) -->
+                <!-- Section spécifique Zone Image (masquée par défaut) -->
                 <div id="image-properties-section" style="display: none;">
+                    <h4 class="subsection-title">Source de l'image</h4>
+                    
                     <div class="input-group">
-                        <label>Source de l'image</label>
+                        <label>Type de source</label>
                         <select id="input-image-source-type">
-                            <option value="url">URL fixe</option>
-                            <option value="champ">Champ de fusion</option>
+                            <option value="fixe">Image fixe (upload)</option>
+                            <option value="champ" disabled>Champ de fusion (bientôt)</option>
                         </select>
                     </div>
                     
-                    <div class="input-group" id="image-url-group">
-                        <label>URL de l'image</label>
-                        <input type="text" id="input-image-url" placeholder="https://exemple.com/image.jpg">
+                    <!-- Groupe upload image fixe -->
+                    <div id="image-upload-group">
+                        <div class="image-upload-buttons">
+                            <button type="button" id="btn-image-upload" class="btn-primary btn-upload">
+                                <span class="material-icons">file_upload</span> Importer
+                            </button>
+                            <button type="button" id="btn-image-clear" class="btn-secondary btn-upload" disabled>
+                                <span class="material-icons">delete_outline</span> Vider
+                            </button>
+                        </div>
+                        
+                        <!-- Input file caché -->
+                        <input type="file" id="input-image-file" accept=".jpg,.jpeg,.png,.webp,.svg" style="display: none;">
+                        
+                        <!-- Info fichier (visible si image chargée) -->
+                        <div id="image-file-info" class="image-file-info" style="display: none;">
+                            <div class="file-info-row">
+                                <span class="material-icons file-info-icon">check_circle</span>
+                                <span id="image-file-name" class="file-info-name">photo.jpg</span>
+                            </div>
+                            <div class="file-info-details">
+                                <span id="image-file-dimensions">1200 × 800 px</span>
+                                <span class="file-info-separator">|</span>
+                                <span id="image-file-size">450 Ko</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Indicateur DPI (toujours visible si image chargée) -->
+                        <div id="image-dpi-indicator" class="dpi-indicator" style="display: none;">
+                            <label>Résolution d'impression</label>
+                            <div id="image-dpi-value" class="dpi-value dpi-good">
+                                <span class="material-icons dpi-icon">check_circle</span>
+                                <span class="dpi-text">254 dpi</span>
+                            </div>
+                        </div>
                     </div>
                     
-                    <div class="input-group" id="image-champ-group" style="display: none;">
-                        <label>Champ de fusion</label>
-                        <select id="input-image-champ">
-                            <!-- Rempli dynamiquement avec les champs de type IMG -->
-                        </select>
+                    <!-- Groupe champ de fusion (masqué par défaut, Phase 3-4) -->
+                    <div id="image-champ-group" style="display: none;">
+                        <div class="input-group">
+                            <label>Champ de fusion</label>
+                            <select id="input-image-champ">
+                                <!-- Rempli dynamiquement avec les champs de type IMG -->
+                            </select>
+                        </div>
                     </div>
+                    
+                    <hr>
+                    
+                    <h4 class="subsection-title">Affichage</h4>
                     
                     <div class="input-group">
                         <label>Mode de redimensionnement</label>
                         <select id="input-image-mode">
                             <option value="initial">Taille initiale (100%)</option>
-                            <option value="ajuster">Ajuster dans le cadre</option>
+                            <option value="ajuster" selected>Ajuster dans le cadre</option>
                             <option value="couper">Couper au cadre</option>
                         </select>
                     </div>
@@ -179,7 +221,7 @@
                             <label>Alignement H.</label>
                             <select id="input-image-align-h">
                                 <option value="left">Gauche</option>
-                                <option value="center">Centre</option>
+                                <option value="center" selected>Centre</option>
                                 <option value="right">Droite</option>
                             </select>
                         </div>
@@ -187,7 +229,7 @@
                             <label>Alignement V.</label>
                             <select id="input-image-align-v">
                                 <option value="top">Haut</option>
-                                <option value="middle">Milieu</option>
+                                <option value="middle" selected>Milieu</option>
                                 <option value="bottom">Bas</option>
                             </select>
                         </div>
