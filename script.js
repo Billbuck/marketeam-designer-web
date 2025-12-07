@@ -62,6 +62,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnBackward = document.getElementById('btn-backward');
     const btnToBack = document.getElementById('btn-to-back');
     
+    // Contrôle lignes vides
+    const inputEmptyLines = document.getElementById('input-empty-lines');
+    const emptyLinesSection = document.getElementById('empty-lines-section');
+    
     // Inputs pour zones image
     const imagePropertiesSection = document.getElementById('image-properties-section');
     const textPropertiesSection = document.getElementById('text-properties-section');
@@ -1357,6 +1361,7 @@ document.addEventListener('DOMContentLoaded', () => {
             bold: false, // Gras désactivé par défaut
             lineHeight: 1.2, // Interlignage par défaut (120%)
             formatting: [], // Tableau d'annotations pour le formatage partiel
+            emptyLines: 0, // 0 = Non, 1 = Oui, 2 = Variables uniquement
             zIndex: newZIndex, // Niveau d'empilement (au premier plan)
             border: {
                 width: 0,           // 0 = pas de bordure, sinon épaisseur en px
@@ -1597,6 +1602,7 @@ document.addEventListener('DOMContentLoaded', () => {
             lineHeight: zoneData.lineHeight !== undefined ? zoneData.lineHeight : 1.2,
             formatting: zoneData.formatting ? JSON.parse(JSON.stringify(zoneData.formatting)) : [], // Copie profonde du formatage
             border: zoneData.border ? JSON.parse(JSON.stringify(zoneData.border)) : { width: 0, color: '#000000', style: 'solid' },
+            emptyLines: zoneData.emptyLines || 0, // Lignes vides
             // Géométrie : utiliser les dimensions actuelles du DOM
             w: zoneEl.offsetWidth,
             h: zoneEl.offsetHeight,
@@ -1648,6 +1654,7 @@ document.addEventListener('DOMContentLoaded', () => {
             lineHeight: copiedZoneData.lineHeight,
             formatting: copiedZoneData.formatting ? JSON.parse(JSON.stringify(copiedZoneData.formatting)) : [], // Copie profonde du formatage
             border: copiedZoneData.border ? JSON.parse(JSON.stringify(copiedZoneData.border)) : { width: 0, color: '#000000', style: 'solid' },
+            emptyLines: copiedZoneData.emptyLines || 0, // Lignes vides
             zIndex: newZIndex, // Z-index au premier plan (pas hérité de l'original)
             // Position et taille
             x: newX,
@@ -2205,12 +2212,27 @@ document.addEventListener('DOMContentLoaded', () => {
             if (inputBorderColor) inputBorderColor.value = border.color || '#000000';
             if (inputBorderStyle) inputBorderStyle.value = border.style || 'solid';
             
+            // Charger la valeur des lignes vides (avec rétrocompatibilité)
+            if (inputEmptyLines) {
+                let emptyLinesValue = data.emptyLines;
+                if (emptyLinesValue === undefined) {
+                    // Ancien format booléen
+                    emptyLinesValue = data.removeEmptyLines ? 1 : 0;
+                }
+                inputEmptyLines.value = emptyLinesValue;
+            }
+            
             // Initialiser le formatage partiel si nécessaire
             if (!data.formatting) {
                 zonesData[id].formatting = [];
             }
         }
         chkLock.checked = data.locked || false;
+        
+        // Afficher/masquer la section Lignes vides selon le type de zone (texte uniquement)
+        if (emptyLinesSection) {
+            emptyLinesSection.style.display = (zoneType === 'text') ? 'block' : 'none';
+        }
         
         // Gestion état UI couleur fond
         inputBgColor.disabled = chkTransparent.checked;
@@ -3353,6 +3375,24 @@ document.addEventListener('DOMContentLoaded', () => {
             saveState(); // Snapshot APRÈS le changement
         });
     });
+    
+    // 3a. Select Lignes vides (SPÉCIFIQUE AU TEXTE)
+    if (inputEmptyLines) {
+        inputEmptyLines.addEventListener('change', () => {
+            if (selectedZoneIds.length !== 1) return;
+            
+            const zoneId = selectedZoneIds[0];
+            const zonesData = getCurrentPageZones();
+            const zoneData = zonesData[zoneId];
+            
+            if (zoneData && zoneData.type === 'text') {
+                zoneData.emptyLines = parseInt(inputEmptyLines.value, 10);
+                
+                saveToLocalStorage();
+                saveState();
+            }
+        });
+    }
     
     // 3b. Checkboxes COMMUNS (fond transparent, verrouillage)
     [chkTransparent, chkLock].forEach(el => {
@@ -4791,7 +4831,10 @@ document.addEventListener('DOMContentLoaded', () => {
             rotation: zoneJson.rotation || 0,
             copyfitMin: copyfitting.tailleMinimum || 6,
             copyfitWrap: copyfitting.autoriserRetourLigne !== undefined ? copyfitting.autoriserRetourLigne : true,
-            removeEmptyLines: zoneJson.supprimerLignesVides || false
+            // Lignes vides : rétrocompatibilité booléen → entier
+            emptyLines: typeof zoneJson.supprimerLignesVides === 'number' 
+                ? zoneJson.supprimerLignesVides 
+                : (zoneJson.supprimerLignesVides ? 1 : 0)
         };
     }
     
@@ -5197,7 +5240,8 @@ document.addEventListener('DOMContentLoaded', () => {
             niveau: zoneData.zIndex || 1,
             rotation: zoneData.rotation || 0,
             verrouille: zoneData.locked || false,
-            supprimerLignesVides: zoneData.removeEmptyLines || false,
+            // Lignes vides : export entier (rétrocompatibilité avec ancien booléen)
+            supprimerLignesVides: zoneData.emptyLines !== undefined ? zoneData.emptyLines : (zoneData.removeEmptyLines ? 1 : 0),
             
             // Géométrie (conversion px → mm)
             geometrie: {
