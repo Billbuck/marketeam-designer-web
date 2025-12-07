@@ -56,6 +56,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputBorderColor = document.getElementById('input-border-color');
     const inputBorderStyle = document.getElementById('input-border-style');
     
+    // Boutons d'arrangement (z-index)
+    const btnToFront = document.getElementById('btn-to-front');
+    const btnForward = document.getElementById('btn-forward');
+    const btnBackward = document.getElementById('btn-backward');
+    const btnToBack = document.getElementById('btn-to-back');
+    
     // Inputs pour zones image
     const imagePropertiesSection = document.getElementById('image-properties-section');
     const textPropertiesSection = document.getElementById('text-properties-section');
@@ -1332,6 +1338,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const id = `zone-${zoneCounter}`;
         const zonesData = getCurrentPageZones();
         
+        // Calculer le z-index pour mettre la nouvelle zone au premier plan
+        const newZIndex = getMaxZIndex() + 1;
+        
         // Initialiser les données par défaut pour cette zone
         zonesData[id] = {
             type: 'text',
@@ -1348,6 +1357,7 @@ document.addEventListener('DOMContentLoaded', () => {
             bold: false, // Gras désactivé par défaut
             lineHeight: 1.2, // Interlignage par défaut (120%)
             formatting: [], // Tableau d'annotations pour le formatage partiel
+            zIndex: newZIndex, // Niveau d'empilement (au premier plan)
             border: {
                 width: 0,           // 0 = pas de bordure, sinon épaisseur en px
                 color: '#000000',   // Couleur de la bordure
@@ -1365,11 +1375,16 @@ document.addEventListener('DOMContentLoaded', () => {
         zoneCounter = documentState.zoneCounter; // Synchroniser pour compatibilité
         const id = `zone-${zoneCounter}`;
         const zonesData = getCurrentPageZones();
+        
+        // Calculer le z-index pour mettre la nouvelle zone au premier plan
+        const newZIndex = getMaxZIndex() + 1;
+        
         zonesData[id] = {
             type: 'qr',
             qrColor: '#000000',
             bgColor: '#ffffff',
-            locked: false
+            locked: false,
+            zIndex: newZIndex // Niveau d'empilement (au premier plan)
         };
         createZoneDOM(id, zoneCounter);
         saveToLocalStorage();
@@ -1382,6 +1397,9 @@ document.addEventListener('DOMContentLoaded', () => {
         zoneCounter = documentState.zoneCounter;
         const id = `zone-${zoneCounter}`;
         const zonesData = getCurrentPageZones();
+        
+        // Calculer le z-index pour mettre la nouvelle zone au premier plan
+        const newZIndex = getMaxZIndex() + 1;
         
         zonesData[id] = {
             type: 'image',
@@ -1404,6 +1422,7 @@ document.addEventListener('DOMContentLoaded', () => {
             isTransparent: true,
             locked: false,
             rotation: 0,
+            zIndex: newZIndex, // Niveau d'empilement (au premier plan)
             border: {
                 width: 0,
                 color: '#000000',
@@ -1524,6 +1543,10 @@ document.addEventListener('DOMContentLoaded', () => {
             zone.appendChild(handle);
         });
 
+        // Appliquer le z-index
+        const zIndex = zoneData.zIndex || 1;
+        zone.style.zIndex = zIndex;
+
         // Event: Sélection
         zone.addEventListener('mousedown', (e) => {
             if(e.target.classList.contains('handle')) return;
@@ -1596,6 +1619,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const newId = `zone-${zoneCounter}`;
         const zonesData = getCurrentPageZones();
         
+        // Calculer le z-index pour mettre la zone dupliquée au premier plan
+        const newZIndex = getMaxZIndex() + 1;
+        
         // Créer une copie des données avec un décalage de position
         const pageWidth = getPageWidth();
         const pageHeight = getPageHeight();
@@ -1622,6 +1648,7 @@ document.addEventListener('DOMContentLoaded', () => {
             lineHeight: copiedZoneData.lineHeight,
             formatting: copiedZoneData.formatting ? JSON.parse(JSON.stringify(copiedZoneData.formatting)) : [], // Copie profonde du formatage
             border: copiedZoneData.border ? JSON.parse(JSON.stringify(copiedZoneData.border)) : { width: 0, color: '#000000', style: 'solid' },
+            zIndex: newZIndex, // Z-index au premier plan (pas hérité de l'original)
             // Position et taille
             x: newX,
             y: newY,
@@ -1696,6 +1723,237 @@ document.addEventListener('DOMContentLoaded', () => {
         // Sauvegarder
         saveToLocalStorage();
         saveState(); // Snapshot APRÈS le collage
+    }
+
+    // ========================================
+    // FONCTIONS D'ARRANGEMENT (Z-INDEX)
+    // ========================================
+
+    /**
+     * Récupère le z-index maximum parmi toutes les zones de la page courante
+     * @returns {number} - Z-index maximum (0 si aucune zone, sinon >= 1)
+     */
+    function getMaxZIndex() {
+        const zonesData = getCurrentPageZones();
+        let maxZ = 0; // Commence à 0 pour que la première zone ait z-index = 1
+        for (const zoneData of Object.values(zonesData)) {
+            const z = zoneData.zIndex || 1;
+            if (z > maxZ) maxZ = z;
+        }
+        return maxZ;
+    }
+
+    /**
+     * Trouve l'ID de la zone qui a un z-index spécifique
+     * @param {number} targetZ - Le z-index recherché
+     * @returns {string|null} - L'ID de la zone ou null si non trouvée
+     */
+    function findZoneByZIndex(targetZ) {
+        const zonesData = getCurrentPageZones();
+        for (const [id, data] of Object.entries(zonesData)) {
+            if ((data.zIndex || 1) === targetZ) {
+                return id;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Renormalise les z-index de toutes les zones pour qu'ils soient contigus (1, 2, 3...)
+     * Préserve l'ordre relatif des zones.
+     */
+    function normalizeZIndexes() {
+        const zonesData = getCurrentPageZones();
+        const zoneIds = Object.keys(zonesData);
+        
+        if (zoneIds.length === 0) return;
+        
+        // Trier les zones par z-index croissant
+        zoneIds.sort((a, b) => {
+            const zA = zonesData[a].zIndex || 1;
+            const zB = zonesData[b].zIndex || 1;
+            return zA - zB;
+        });
+        
+        // Réassigner les z-index de 1 à n
+        zoneIds.forEach((id, index) => {
+            const newZ = index + 1;
+            zonesData[id].zIndex = newZ;
+            
+            // Mettre à jour le DOM
+            const el = document.getElementById(id);
+            if (el) el.style.zIndex = newZ;
+        });
+    }
+
+    /**
+     * Met la zone sélectionnée au premier plan (z-index max)
+     * Les zones qui étaient au-dessus descendent de 1.
+     */
+    function bringToFront() {
+        if (selectedZoneIds.length !== 1) return;
+        
+        const zoneId = selectedZoneIds[0];
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        if (!zoneData) return;
+        
+        const currentZ = zoneData.zIndex || 1;
+        const maxZ = getMaxZIndex();
+        
+        // Si déjà au max, ne rien faire
+        if (currentZ === maxZ) {
+            return;
+        }
+        
+        // Décaler toutes les zones qui sont au-dessus (z > currentZ) de -1
+        for (const [id, data] of Object.entries(zonesData)) {
+            const z = data.zIndex || 1;
+            if (z > currentZ) {
+                data.zIndex = z - 1;
+                const el = document.getElementById(id);
+                if (el) el.style.zIndex = data.zIndex;
+            }
+        }
+        
+        // Mettre la zone sélectionnée au max
+        zoneData.zIndex = maxZ;
+        const el = document.getElementById(zoneId);
+        if (el) el.style.zIndex = maxZ;
+        
+        // Sauvegardes
+        saveToLocalStorage();
+        saveState();
+    }
+
+    /**
+     * Avance la zone sélectionnée d'un niveau (échange avec celle au-dessus)
+     */
+    function bringForward() {
+        if (selectedZoneIds.length !== 1) return;
+        
+        const zoneId = selectedZoneIds[0];
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        if (!zoneData) return;
+        
+        const currentZ = zoneData.zIndex || 1;
+        const maxZ = getMaxZIndex();
+        
+        // Si déjà au max, ne rien faire
+        if (currentZ >= maxZ) {
+            return;
+        }
+        
+        // Trouver la zone qui est juste au-dessus (z = currentZ + 1)
+        const aboveZoneId = findZoneByZIndex(currentZ + 1);
+        
+        if (aboveZoneId) {
+            // Échanger les z-index
+            zonesData[aboveZoneId].zIndex = currentZ;
+            zoneData.zIndex = currentZ + 1;
+            
+            // Mettre à jour le DOM
+            const aboveEl = document.getElementById(aboveZoneId);
+            if (aboveEl) aboveEl.style.zIndex = currentZ;
+            
+            const el = document.getElementById(zoneId);
+            if (el) el.style.zIndex = currentZ + 1;
+        }
+        
+        // Sauvegardes
+        saveToLocalStorage();
+        saveState();
+    }
+
+    /**
+     * Recule la zone sélectionnée d'un niveau (échange avec celle en-dessous)
+     */
+    function sendBackward() {
+        if (selectedZoneIds.length !== 1) return;
+        
+        const zoneId = selectedZoneIds[0];
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        if (!zoneData) return;
+        
+        const currentZ = zoneData.zIndex || 1;
+        
+        // Si déjà à 1, ne rien faire
+        if (currentZ <= 1) {
+            return;
+        }
+        
+        // Trouver la zone qui est juste en-dessous (z = currentZ - 1)
+        const belowZoneId = findZoneByZIndex(currentZ - 1);
+        
+        if (belowZoneId) {
+            // Échanger les z-index
+            zonesData[belowZoneId].zIndex = currentZ;
+            zoneData.zIndex = currentZ - 1;
+            
+            // Mettre à jour le DOM
+            const belowEl = document.getElementById(belowZoneId);
+            if (belowEl) belowEl.style.zIndex = currentZ;
+            
+            const el = document.getElementById(zoneId);
+            if (el) el.style.zIndex = currentZ - 1;
+        }
+        
+        // Sauvegardes
+        saveToLocalStorage();
+        saveState();
+    }
+
+    /**
+     * Met la zone sélectionnée en arrière-plan (z-index = 1)
+     * Les zones qui étaient en-dessous montent de 1.
+     */
+    function sendToBack() {
+        if (selectedZoneIds.length !== 1) return;
+        
+        const zoneId = selectedZoneIds[0];
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        if (!zoneData) return;
+        
+        const currentZ = zoneData.zIndex || 1;
+        
+        // Si déjà à 1, ne rien faire
+        if (currentZ === 1) {
+            return;
+        }
+        
+        // Monter toutes les zones qui sont en-dessous (z < currentZ) de +1
+        for (const [id, data] of Object.entries(zonesData)) {
+            const z = data.zIndex || 1;
+            if (z < currentZ) {
+                data.zIndex = z + 1;
+                const el = document.getElementById(id);
+                if (el) el.style.zIndex = data.zIndex;
+            }
+        }
+        
+        // Mettre la zone sélectionnée à 1
+        zoneData.zIndex = 1;
+        const el = document.getElementById(zoneId);
+        if (el) el.style.zIndex = 1;
+        
+        // Sauvegardes
+        saveToLocalStorage();
+        saveState();
+    }
+
+    /**
+     * Met à jour l'état des boutons d'arrangement selon la sélection
+     */
+    function updateArrangementButtons() {
+        const enabled = selectedZoneIds.length === 1;
+        
+        if (btnToFront) btnToFront.disabled = !enabled;
+        if (btnForward) btnForward.disabled = !enabled;
+        if (btnBackward) btnBackward.disabled = !enabled;
+        if (btnToBack) btnToBack.disabled = !enabled;
     }
 
     // --- 2. SÉLECTION MULTIPLE ---
@@ -1790,6 +2048,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Afficher/masquer les sections d'alignement et taille
         updateAlignmentToolbarVisibility();
+        
+        // Mettre à jour les boutons d'arrangement (z-index)
+        updateArrangementButtons();
     }
 
     // Charger les données d'une zone dans le formulaire
@@ -3921,6 +4182,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (el) el.remove();
                 delete zonesData[zoneId];
             });
+            
+            // Renormaliser les z-index après suppression (pour éviter les trous)
+            normalizeZIndexes();
+            
             saveToLocalStorage();
             saveState(); // Snapshot APRÈS la suppression
             deselectAll();
@@ -4003,6 +4268,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Masquer les poignées (aucune sélection)
         updateHandlesVisibility();
+        
+        // Désactiver les boutons d'arrangement (z-index)
+        updateArrangementButtons();
     }
 
     btnDelete.addEventListener('click', () => {
@@ -4020,6 +4288,12 @@ document.addEventListener('DOMContentLoaded', () => {
             redo();
         });
     }
+
+    // --- EVENT LISTENERS ARRANGEMENT (Z-INDEX) ---
+    if (btnToFront) btnToFront.addEventListener('click', bringToFront);
+    if (btnForward) btnForward.addEventListener('click', bringForward);
+    if (btnBackward) btnBackward.addEventListener('click', sendBackward);
+    if (btnToBack) btnToBack.addEventListener('click', sendToBack);
 
     // Raccourci clavier : Touche Suppr pour supprimer, Ctrl+C pour copier, Ctrl+V pour coller
     document.addEventListener('keydown', (e) => {
@@ -5517,6 +5791,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Initialiser la visibilité des sections d'alignement et taille
     updateAlignmentToolbarVisibility();
+    
+    // Initialiser les boutons d'arrangement (désactivés au démarrage)
+    updateArrangementButtons();
     
     // Signaler au parent (WebDev) que le Designer est prêt
     setTimeout(() => {
