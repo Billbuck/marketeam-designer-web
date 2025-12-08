@@ -88,6 +88,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const imageDpiIndicator = document.getElementById('image-dpi-indicator');
     const imageDpiValue = document.getElementById('image-dpi-value');
     
+    // Bouton Ajuster au contenu
+    const btnSnapToContent = document.getElementById('btn-snap-to-content');
+    
     // Fonction pour mettre à jour l'affichage du spin button d'épaisseur de bordure
     function updateBorderWidthDisplay(value) {
         if (inputBorderWidthDisplay) {
@@ -2058,6 +2061,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Mettre à jour les boutons d'arrangement (z-index)
         updateArrangementButtons();
+        
+        // Mettre à jour le bouton Ajuster au contenu
+        updateSnapToContentButton();
     }
 
     // Charger les données d'une zone dans le formulaire
@@ -3432,6 +3438,7 @@ document.addEventListener('DOMContentLoaded', () => {
         inputImageMode.addEventListener('change', () => {
             updateActiveImageZoneData();
             updateDpiIndicator(); // Recalculer le DPI avec le nouveau mode
+            updateSnapToContentButton(); // Activer/désactiver selon le mode
             saveState();
         });
     }
@@ -3531,7 +3538,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 7. Mettre à jour l'UI du panneau
                 updateImageFileInfoDisplay(zoneData.source);
                 
-                // 8. Sauvegarder
+                // 8. Mettre à jour le bouton Ajuster au contenu (maintenant que les dimensions sont disponibles)
+                updateSnapToContentButton();
+                
+                // 9. Sauvegarder
                 saveToLocalStorage();
                 saveState();
                 
@@ -4264,6 +4274,197 @@ document.addEventListener('DOMContentLoaded', () => {
         deselectAll();
     });
 
+    // ========================================
+    // AJUSTER AU CONTENU (Snap to Content)
+    // ========================================
+    
+    /**
+     * Mesure la hauteur réelle du contenu d'une zone texte
+     * @param {HTMLElement} zoneEl - Élément DOM de la zone
+     * @returns {number} - Hauteur en pixels
+     */
+    function measureTextContentHeight(zoneEl) {
+        const contentEl = zoneEl.querySelector('.zone-content');
+        if (!contentEl) return zoneEl.offsetHeight;
+        
+        // Sauvegarder la hauteur actuelle
+        const originalHeight = zoneEl.style.height;
+        
+        // Passer temporairement en height:auto pour mesurer
+        zoneEl.style.height = 'auto';
+        const measuredHeight = zoneEl.offsetHeight;
+        
+        // Restaurer
+        zoneEl.style.height = originalHeight;
+        
+        return Math.max(20, measuredHeight); // Minimum 20px
+    }
+    
+    /**
+     * Ajuste le cadre de la zone sélectionnée à son contenu
+     */
+    function snapToContent() {
+        if (selectedZoneIds.length !== 1) return;
+        
+        const zoneId = selectedZoneIds[0];
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        if (!zoneData) return;
+        
+        const zoneEl = document.getElementById(zoneId);
+        if (!zoneEl) return;
+        
+        const zoneType = zoneData.type || 'text';
+        let newW = zoneData.w || zoneEl.offsetWidth;
+        let newH = zoneData.h || zoneEl.offsetHeight;
+        
+        if (zoneType === 'text') {
+            // Zone Texte : ajuster hauteur au contenu
+            newH = measureTextContentHeight(zoneEl);
+            
+        } else if (zoneType === 'qr') {
+            // Zone QR : rendre carré (basé sur largeur)
+            newH = zoneData.w || zoneEl.offsetWidth;
+            
+        } else if (zoneType === 'image') {
+            const mode = zoneData.redimensionnement?.mode || 'ajuster';
+            const source = zoneData.source || {};
+            
+            // Vérifier qu'on a une image avec des dimensions
+            if (!source.largeurPx || !source.hauteurPx) {
+                console.log('[snapToContent] Image sans dimensions source');
+                return;
+            }
+            
+            if (mode === 'couper') {
+                // Couper : ne rien faire
+                console.log('[snapToContent] Non applicable en mode "couper"');
+                return;
+            }
+            
+            if (mode === 'initial') {
+                // Taille initiale : le cadre prend les dimensions de l'image source
+                newW = source.largeurPx;
+                newH = source.hauteurPx;
+                
+            } else if (mode === 'ajuster') {
+                // Ajuster : calculer les dimensions visibles de l'image dans le cadre actuel
+                const cadreW = zoneData.w || zoneEl.offsetWidth;
+                const cadreH = zoneData.h || zoneEl.offsetHeight;
+                
+                const ratioImage = source.largeurPx / source.hauteurPx;
+                const ratioCadre = cadreW / cadreH;
+                
+                let visibleW, visibleH;
+                
+                if (ratioCadre > ratioImage) {
+                    // Cadre plus large que l'image → image contrainte par la hauteur
+                    visibleH = cadreH;
+                    visibleW = cadreH * ratioImage;
+                } else {
+                    // Cadre plus haut que l'image → image contrainte par la largeur
+                    visibleW = cadreW;
+                    visibleH = cadreW / ratioImage;
+                }
+                
+                // Calculer l'offset de l'image visible dans le cadre actuel (selon alignement)
+                const alignH = zoneData.redimensionnement?.alignementH || 'center';
+                const alignV = zoneData.redimensionnement?.alignementV || 'middle';
+                
+                let offsetX = 0;
+                let offsetY = 0;
+                
+                // Offset horizontal
+                if (alignH === 'center') {
+                    offsetX = (cadreW - visibleW) / 2;
+                } else if (alignH === 'right') {
+                    offsetX = cadreW - visibleW;
+                }
+                // alignH === 'left' → offsetX = 0
+                
+                // Offset vertical
+                if (alignV === 'middle') {
+                    offsetY = (cadreH - visibleH) / 2;
+                } else if (alignV === 'bottom') {
+                    offsetY = cadreH - visibleH;
+                }
+                // alignV === 'top' → offsetY = 0
+                
+                // Nouvelles dimensions
+                newW = Math.round(visibleW);
+                newH = Math.round(visibleH);
+                
+                // Nouvelle position (compenser l'offset pour que l'image reste immobile)
+                const currentX = zoneData.x || zoneEl.offsetLeft;
+                const currentY = zoneData.y || zoneEl.offsetTop;
+                
+                zoneData.x = Math.round(currentX + offsetX);
+                zoneData.y = Math.round(currentY + offsetY);
+                
+                // Appliquer la nouvelle position au DOM
+                zoneEl.style.left = zoneData.x + 'px';
+                zoneEl.style.top = zoneData.y + 'px';
+                
+                console.log(`[snapToContent] Position ajustée: offset(${Math.round(offsetX)}, ${Math.round(offsetY)}) → nouvelle pos(${zoneData.x}, ${zoneData.y})`);
+            }
+        }
+        
+        // Appliquer les nouvelles dimensions
+        zoneData.w = Math.round(newW);
+        zoneData.h = Math.round(newH);
+        
+        zoneEl.style.width = zoneData.w + 'px';
+        zoneEl.style.height = zoneData.h + 'px';
+        
+        // Mettre à jour l'affichage des coordonnées dans le panneau
+        updateGeomDisplay(zoneEl);
+        
+        // Mettre à jour l'affichage de l'image si nécessaire
+        if (zoneType === 'image') {
+            updateImageZoneDisplay(zoneEl, zoneData);
+        }
+        
+        // Sauvegardes
+        saveToLocalStorage();
+        saveState();
+        
+        console.log(`[snapToContent] ${zoneId} (${zoneType}) → ${zoneData.w}×${zoneData.h}px`);
+    }
+    
+    /**
+     * Met à jour l'état du bouton Ajuster au contenu
+     */
+    function updateSnapToContentButton() {
+        if (!btnSnapToContent) return;
+        
+        if (selectedZoneIds.length !== 1) {
+            btnSnapToContent.disabled = true;
+            return;
+        }
+        
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[selectedZoneIds[0]];
+        
+        if (!zoneData) {
+            btnSnapToContent.disabled = true;
+            return;
+        }
+        
+        // Désactiver pour images en mode "couper" ou sans image chargée
+        if (zoneData.type === 'image') {
+            const mode = zoneData.redimensionnement?.mode || 'ajuster';
+            const source = zoneData.source || {};
+            
+            if (mode === 'couper' || !source.largeurPx || !source.hauteurPx) {
+                btnSnapToContent.disabled = true;
+            } else {
+                btnSnapToContent.disabled = false;
+            }
+        } else {
+            btnSnapToContent.disabled = false;
+        }
+    }
+
     function deselectAll() {
         // Désélectionner toutes les zones
         selectedZoneIds.forEach(zoneId => {
@@ -4311,6 +4512,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Désactiver les boutons d'arrangement (z-index)
         updateArrangementButtons();
+        
+        // Désactiver le bouton Ajuster au contenu
+        if (btnSnapToContent) btnSnapToContent.disabled = true;
     }
 
     btnDelete.addEventListener('click', () => {
@@ -4334,6 +4538,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnForward) btnForward.addEventListener('click', bringForward);
     if (btnBackward) btnBackward.addEventListener('click', sendBackward);
     if (btnToBack) btnToBack.addEventListener('click', sendToBack);
+    
+    // Event listener pour le bouton Ajuster au contenu
+    if (btnSnapToContent) btnSnapToContent.addEventListener('click', snapToContent);
 
     // Raccourci clavier : Touche Suppr pour supprimer, Ctrl+C pour copier, Ctrl+V pour coller
     document.addEventListener('keydown', (e) => {
@@ -5838,6 +6045,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Initialiser les boutons d'arrangement (désactivés au démarrage)
     updateArrangementButtons();
+    
+    // Initialiser le bouton Ajuster au contenu (désactivé au démarrage)
+    if (btnSnapToContent) btnSnapToContent.disabled = true;
     
     // Signaler au parent (WebDev) que le Designer est prêt
     setTimeout(() => {
