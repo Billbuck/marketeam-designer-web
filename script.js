@@ -76,6 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputBarcodeType = document.getElementById('input-barcode-type');
     const inputBarcodeField = document.getElementById('input-barcode-field');
     const inputBarcodeReadable = document.getElementById('input-barcode-readable');
+    const barcodeReadableGroup = document.getElementById('barcode-readable-group');
     const inputBarcodeFontsize = document.getElementById('input-barcode-fontsize');
     const barcodeFontsizeGroup = document.getElementById('barcode-fontsize-group');
     const inputBarcodeColor = document.getElementById('input-barcode-color');
@@ -2523,9 +2524,22 @@ document.addEventListener('DOMContentLoaded', () => {
             if (inputBarcodeFontsize) inputBarcodeFontsize.value = data.taillePolice || 8;
             if (inputBarcodeColor) inputBarcodeColor.value = data.couleur || '#000000';
             
-            // Masquer/afficher le champ taille police selon la valeur de texte lisible
-            if (barcodeFontsizeGroup) {
-                barcodeFontsizeGroup.style.display = (data.texteLisible === 'aucun') ? 'none' : '';
+            // Vérifier si c'est un code 2D (jamais de texte lisible pour QR/DataMatrix)
+            const typeCode = data.typeCodeBarres || 'code128';
+            const config = BARCODE_BWIPJS_CONFIG[typeCode];
+            const is2D = config ? config.is2D : false;
+            
+            // Masquer/afficher les options texte selon le type
+            if (is2D) {
+                // Codes 2D : masquer les options texte lisible
+                if (barcodeReadableGroup) barcodeReadableGroup.style.display = 'none';
+                if (barcodeFontsizeGroup) barcodeFontsizeGroup.style.display = 'none';
+            } else {
+                // Codes 1D : afficher les options texte
+                if (barcodeReadableGroup) barcodeReadableGroup.style.display = '';
+                if (barcodeFontsizeGroup) {
+                    barcodeFontsizeGroup.style.display = (data.texteLisible === 'aucun') ? 'none' : '';
+                }
             }
             
             // Remplir le select des champs de fusion
@@ -3703,18 +3717,32 @@ document.addEventListener('DOMContentLoaded', () => {
             fieldBadge.className = 'barcode-field-badge';
             zoneEl.appendChild(fieldBadge);
         }
-        fieldBadge.textContent = getFieldDisplayName(zoneData.champFusion);
+        
+        // Vérifier si un champ est sélectionné
+        const champFusion = zoneData.champFusion || '';
+        const hasField = champFusion && champFusion.trim() !== '';
+        
+        if (hasField) {
+            fieldBadge.textContent = getFieldDisplayName(champFusion);
+            fieldBadge.classList.remove('no-field');
+        } else {
+            fieldBadge.textContent = '(Aucun champ)';
+            fieldBadge.classList.add('no-field');
+        }
         
         // Générer l'image du code-barres (SANS texte)
         const barcodeImage = generateBarcodeImage(typeCode, color);
+        
+        // Vérifier si c'est un code 2D (jamais de texte pour les codes 2D)
+        const is2D = config ? config.is2D : false;
         
         // Mettre à jour le contenu : image + texte HTML séparé
         const svgContainer = zoneEl.querySelector('.barcode-svg');
         if (svgContainer) {
             let html = `<img class="barcode-image" src="${barcodeImage}" alt="${typeCode}">`;
             
-            // Ajouter le texte si nécessaire
-            if (texteLisible !== 'aucun') {
+            // Ajouter le texte SEULEMENT pour les codes 1D
+            if (!is2D && texteLisible !== 'aucun') {
                 html += `<span class="barcode-text" style="font-size: ${taillePolice}pt; color: ${color};">${sampleValue}</span>`;
             }
             
@@ -3728,7 +3756,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Ajuster les dimensions si passage 1D <-> 2D
-        const is2D = ['qrcode', 'datamatrix'].includes(typeCode);
         if (is2D && Math.abs(zoneData.w - zoneData.h) > 10) {
             // Pour les 2D, rendre carré (prendre la plus petite dimension)
             const size = Math.min(zoneData.w || 100, zoneData.h || 100);
@@ -3797,16 +3824,29 @@ document.addEventListener('DOMContentLoaded', () => {
             fieldBadge.className = 'barcode-field-badge';
             zoneEl.appendChild(fieldBadge);
         }
-        fieldBadge.textContent = getFieldDisplayName(content);
+        
+        // Vérifier si un champ est sélectionné
+        const hasField = content && content.trim() !== '';
+        
+        if (hasField) {
+            fieldBadge.textContent = getFieldDisplayName(content);
+            fieldBadge.classList.remove('no-field');
+        } else {
+            fieldBadge.textContent = '(Aucun champ)';
+            fieldBadge.classList.add('no-field');
+        }
         
         // Générer l'image du code-barres (SANS texte)
         const barcodeImage = generateBarcodeImage(typeCode, color);
         
+        // Vérifier si c'est un code 2D (jamais de texte pour les codes 2D)
+        const is2D = config ? config.is2D : false;
+        
         // Construire le HTML : image + texte séparé
         let html = `<img class="barcode-image" src="${barcodeImage}" alt="${typeCode}">`;
         
-        // Ajouter le texte si nécessaire
-        if (texteLisible !== 'aucun') {
+        // Ajouter le texte SEULEMENT pour les codes 1D
+        if (!is2D && texteLisible !== 'aucun') {
             html += `<span class="barcode-text" style="font-size: ${taillePolice}pt; color: ${color};">${sampleValue}</span>`;
         }
         
@@ -3849,6 +3889,46 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (inputBarcodeType) {
         inputBarcodeType.addEventListener('change', () => {
+            const newType = inputBarcodeType.value;
+            const config = BARCODE_BWIPJS_CONFIG[newType];
+            const is2D = config ? config.is2D : false;
+            
+            // Masquer/afficher les options selon le type 1D/2D
+            if (is2D) {
+                // Codes 2D : masquer les options texte lisible
+                if (barcodeReadableGroup) barcodeReadableGroup.style.display = 'none';
+                if (barcodeFontsizeGroup) barcodeFontsizeGroup.style.display = 'none';
+                
+                // Rendre la zone carrée pour les codes 2D
+                if (selectedZoneIds.length === 1) {
+                    const selectedId = selectedZoneIds[0];
+                    const zoneEl = document.getElementById(selectedId);
+                    const zonesData = getCurrentPageZones();
+                    const zoneData = zonesData[selectedId];
+                    
+                    if (zoneEl && zoneData) {
+                        const currentWidth = zoneEl.offsetWidth;
+                        const currentHeight = zoneEl.offsetHeight;
+                        const size = Math.max(currentWidth, currentHeight);
+                        
+                        zoneEl.style.width = size + 'px';
+                        zoneEl.style.height = size + 'px';
+                        zoneData.w = size;
+                        zoneData.h = size;
+                        
+                        // Mettre à jour l'affichage de la géométrie
+                        updateGeomDisplay(zoneEl);
+                    }
+                }
+            } else {
+                // Codes 1D : afficher les options texte
+                if (barcodeReadableGroup) barcodeReadableGroup.style.display = '';
+                if (barcodeFontsizeGroup) {
+                    // Afficher seulement si texte lisible !== 'aucun'
+                    barcodeFontsizeGroup.style.display = inputBarcodeReadable.value === 'aucun' ? 'none' : '';
+                }
+            }
+            
             updateActiveBarcodeZoneData();
             saveState();
         });
@@ -5577,7 +5657,22 @@ document.addEventListener('DOMContentLoaded', () => {
             // Limiter la hauteur pour ne pas dépasser la marge basse
             const maxHeight = pageHeight - margin - zoneTop;
             
-            if (zonesData[firstSelectedId].type === 'qr') {
+            // Vérifier si c'est un code 2D (QR Code, DataMatrix) qui doit rester carré
+            const zoneDataResize = zonesData[firstSelectedId];
+            let is2DBarcode = false;
+            
+            if (zoneDataResize && zoneDataResize.type === 'qr') {
+                const typeCode = zoneDataResize.typeCode || 'QRCode';
+                const config = BARCODE_BWIPJS_CONFIG[typeCode];
+                is2DBarcode = config ? config.is2D : false;
+            } else if (zoneDataResize && zoneDataResize.type === 'barcode') {
+                const typeCode = zoneDataResize.typeCodeBarres || 'code128';
+                const config = BARCODE_BWIPJS_CONFIG[typeCode];
+                is2DBarcode = config ? config.is2D : false;
+            }
+            
+            if (is2DBarcode) {
+                // Codes 2D : forcer un carré
                 let size = Math.max(40, Math.max(newW, newH));
                 // Appliquer la contrainte de marge (le plus restrictif entre largeur et hauteur)
                 size = Math.min(size, maxWidth, maxHeight);
@@ -5589,7 +5684,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 newH = Math.min(newH, maxHeight);
                 
                 // === CONTRAINTES ZONES IMAGE ===
-                const zoneDataResize = zonesData[firstSelectedId];
                 if (zoneDataResize && zoneDataResize.type === 'image' && zoneDataResize.source && 
                     (zoneDataResize.source.imageBase64 || zoneDataResize.source.valeur)) {
                     

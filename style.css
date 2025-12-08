@@ -1245,9 +1245,14 @@ body.in-iframe .toolbar {
     border-radius: 3px;
     font-family: Arial, sans-serif;
     white-space: nowrap;
-    background: rgba(0, 100, 200, 0.85);
+    background: rgba(0, 100, 200, 0.85);  /* Bleu = champ sélectionné */
     color: white;
     z-index: 10;
+}
+
+/* Badge du champ - SANS champ sélectionné (rouge foncé = alerte) */
+.barcode-field-badge.no-field {
+    background: rgba(180, 40, 40, 0.9);  /* Rouge foncé */
 }
 
 /* Section propriétés code-barres */
