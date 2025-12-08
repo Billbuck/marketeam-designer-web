@@ -193,15 +193,17 @@ button:last-child {
     overflow: visible;  /* Permettre aux badges de déborder */
 }
 
+/* Conteneur du code-barres */
 .zone-qr .zone-content {
     pointer-events: none;
     width: 100%;
     height: 100%;
     display: flex;
+    flex-direction: column;    /* Image en haut, texte en bas */
     align-items: center;
     justify-content: center;
     background-color: #ffffff;
-    padding: 4px;
+    padding: 2px;
     box-sizing: border-box;
 }
 
@@ -210,25 +212,42 @@ button:last-child {
     height: 80%;
 }
 
-/* Zone code-barres - affichage de l'image générée */
-.zone.zone-qr .zone-content img {
+/* Image des barres - style commun */
+.zone.zone-qr .zone-content .barcode-image {
     image-rendering: pixelated;  /* Garder la netteté des codes-barres */
     image-rendering: -moz-crisp-edges;
     image-rendering: crisp-edges;
 }
 
-/* Code-barres 1D : étirement pour remplir la zone (comme PrintShop Mail) */
-.zone.zone-qr.barcode-1d .zone-content img {
+/* Code-barres 1D : l'image remplit l'espace disponible */
+.zone.zone-qr.barcode-1d .zone-content .barcode-image {
     width: 100%;
-    height: 100%;
-    object-fit: fill;  /* Étire pour remplir complètement */
+    flex: 1;                    /* Prend tout l'espace restant */
+    min-height: 0;              /* Permet de rétrécir */
+    object-fit: fill;           /* Étire pour remplir */
 }
 
-/* Code-barres 2D : garder les proportions (centré) */
-.zone.zone-qr.barcode-2d .zone-content img {
+/* Code-barres 2D : garde les proportions (centré) */
+.zone.zone-qr.barcode-2d .zone-content .barcode-image {
     max-width: 100%;
     max-height: 100%;
-    object-fit: contain;  /* Garde les proportions carrées */
+    flex: 1;
+    object-fit: contain;        /* Garde les proportions carrées */
+}
+
+/* Texte lisible - TAILLE FIXE (ne s'étire pas avec l'image) */
+.zone.zone-qr .zone-content .barcode-text {
+    display: block;
+    text-align: center;
+    font-family: 'Courier New', Courier, monospace;  /* Police monospace comme les codes-barres */
+    font-size: 8pt;             /* Taille par défaut - sera écrasée par style inline */
+    color: #000000;
+    padding: 2px 0;
+    flex-shrink: 0;             /* Ne rétrécit JAMAIS */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
 }
 
 /* --- Zones Image --- */
@@ -1130,10 +1149,12 @@ body.in-iframe .toolbar {
     pointer-events: none;
 }
 
+/* Conteneur du code-barres */
 .zone.barcode-zone .barcode-preview .barcode-svg {
     width: 100%;
     height: 100%;
     display: flex;
+    flex-direction: column;    /* Image en haut, texte en bas */
     align-items: center;
     justify-content: center;
 }
@@ -1144,25 +1165,42 @@ body.in-iframe .toolbar {
     object-fit: contain;
 }
 
-/* Images de code-barres générées */
-.zone.barcode-zone .barcode-svg img {
+/* Image des barres - style commun */
+.zone.barcode-zone .barcode-svg .barcode-image {
     image-rendering: pixelated;
     image-rendering: -moz-crisp-edges;
     image-rendering: crisp-edges;
 }
 
-/* Code-barres 1D : étirement pour remplir la zone (comme PrintShop Mail) */
-.zone.barcode-zone.barcode-1d .barcode-svg img {
+/* Code-barres 1D : l'image remplit l'espace disponible */
+.zone.barcode-zone.barcode-1d .barcode-svg .barcode-image {
     width: 100%;
-    height: 100%;
-    object-fit: fill;  /* Étire pour remplir complètement */
+    flex: 1;                    /* Prend tout l'espace restant */
+    min-height: 0;              /* Permet de rétrécir */
+    object-fit: fill;           /* Étire pour remplir */
 }
 
-/* Code-barres 2D : garder les proportions (centré) */
-.zone.barcode-zone.barcode-2d .barcode-svg img {
+/* Code-barres 2D : garde les proportions (centré) */
+.zone.barcode-zone.barcode-2d .barcode-svg .barcode-image {
     max-width: 100%;
     max-height: 100%;
-    object-fit: contain;  /* Garde les proportions carrées */
+    flex: 1;
+    object-fit: contain;        /* Garde les proportions carrées */
+}
+
+/* Texte lisible - TAILLE FIXE (ne s'étire pas avec l'image) */
+.zone.barcode-zone .barcode-svg .barcode-text {
+    display: block;
+    text-align: center;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 8pt;
+    color: #000000;
+    padding: 2px 0;
+    flex-shrink: 0;             /* Ne rétrécit JAMAIS */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
 }
 
 .zone.barcode-zone .barcode-label {

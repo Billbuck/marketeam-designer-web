@@ -76,6 +76,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputBarcodeType = document.getElementById('input-barcode-type');
     const inputBarcodeField = document.getElementById('input-barcode-field');
     const inputBarcodeReadable = document.getElementById('input-barcode-readable');
+    const inputBarcodeFontsize = document.getElementById('input-barcode-fontsize');
+    const barcodeFontsizeGroup = document.getElementById('barcode-fontsize-group');
     const inputBarcodeColor = document.getElementById('input-barcode-color');
     
     const inputImageSourceType = document.getElementById('input-image-source-type');
@@ -357,16 +359,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
-     * Génère un vrai code-barres en utilisant bwip-js
+     * Génère une image de code-barres SANS texte (le texte sera ajouté en HTML séparément)
      * @param {string} typeCode - Type de code-barres (qrcode, code128, ean13, etc.)
-     * @param {string} content - Contenu à encoder (optionnel, utilise valeur fictive si vide)
      * @param {string} color - Couleur du code-barres (défaut #000000)
-     * @param {string} textPosition - Position du texte lisible: 'aucun', 'dessous', 'dessus' (défaut 'dessous')
-     * @param {number} width - Largeur de la zone en pixels
-     * @param {number} height - Hauteur de la zone en pixels
-     * @returns {string} - Data URL de l'image du code-barres ou SVG fallback
+     * @returns {string} - Data URL de l'image PNG du code-barres ou SVG fallback
      */
-    function generateBarcodeImage(typeCode, content, color = '#000000', textPosition = 'dessous', width = 150, height = 60) {
+    function generateBarcodeImage(typeCode, color = '#000000') {
         // Vérifier que bwip-js est chargé
         if (typeof bwipjs === 'undefined') {
             console.warn('bwip-js non chargé, utilisation du fallback');
@@ -386,7 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Créer un canvas temporaire
         const canvas = document.createElement('canvas');
         
-        // Options bwip-js
+        // Options bwip-js - SANS TEXTE (le texte sera ajouté en HTML séparément)
         const options = {
             bcid: config.bcid,
             text: valueToEncode,
@@ -394,21 +392,14 @@ document.addEventListener('DOMContentLoaded', () => {
             height: config.is2D ? 20 : 10,     // Hauteur en mm (bwip-js utilise mm)
             backgroundcolor: 'FFFFFF',         // Fond blanc
             barcolor: color.replace('#', ''),  // Couleur du code (sans #)
+            includetext: false                 // JAMAIS de texte dans l'image
         };
-        
-        // Gestion du texte lisible
-        if (textPosition === 'aucun') {
-            options.includetext = false;
-        } else {
-            options.includetext = true;
-            options.textxalign = 'center';
-        }
         
         // Ajustements spécifiques par type
         if (config.is2D) {
             // Codes 2D : format carré
-            options.width = 20;
-            options.height = 20;
+            options.width = 25;
+            options.height = 25;
         }
         
         // Ajustement pour PDF417 (plus compact)
@@ -1759,7 +1750,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 nom: 'Code-barres',
                 typeCodeBarres: 'code128',       // Type par défaut
                 champFusion: '',                  // Champ de fusion (sans les @)
-                texteLisible: 'dessous',          // 'aucun', 'dessous', 'dessus'
+                texteLisible: 'dessous',          // 'aucun', 'dessous'
+                taillePolice: 8,                  // Taille du texte lisible en points
                 couleur: '#000000',               // Couleur du code-barres
                 locked: false,
                 zIndex: newZIndex
@@ -2528,7 +2520,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (inputBarcodeName) inputBarcodeName.value = data.nom || '';
             if (inputBarcodeType) inputBarcodeType.value = data.typeCodeBarres || 'code128';
             if (inputBarcodeReadable) inputBarcodeReadable.value = data.texteLisible || 'dessous';
+            if (inputBarcodeFontsize) inputBarcodeFontsize.value = data.taillePolice || 8;
             if (inputBarcodeColor) inputBarcodeColor.value = data.couleur || '#000000';
+            
+            // Masquer/afficher le champ taille police selon la valeur de texte lisible
+            if (barcodeFontsizeGroup) {
+                barcodeFontsizeGroup.style.display = (data.texteLisible === 'aucun') ? 'none' : '';
+            }
             
             // Remplir le select des champs de fusion
             updateBarcodeFieldSelect();
@@ -3670,19 +3668,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const zoneEl = document.getElementById(zoneId);
         if (!zoneEl) return;
         
-        // Récupérer les dimensions de la zone
-        const width = zoneEl.offsetWidth || 150;
-        const height = zoneEl.offsetHeight || 60;
-        
         // Récupérer les propriétés du code-barres
         const typeCode = zoneData.typeCodeBarres || 'code128';
         const color = zoneData.couleur || '#000000';
-        const textPosition = zoneData.texteLisible || 'dessous';
+        const texteLisible = zoneData.texteLisible || 'dessous';
+        const taillePolice = zoneData.taillePolice || 8;
+        
+        // Récupérer la valeur fictive pour le texte
+        const config = BARCODE_BWIPJS_CONFIG[typeCode];
+        const sampleValue = config ? config.sampleValue : 'SAMPLE';
         
         // Mettre à jour la classe 1D/2D pour l'étirement
         updateBarcodeDimensionClass(zoneEl, typeCode);
         
-        // Supprimer l'ancien conteneur de badges et l'ancien badge type s'ils existent
+        // Supprimer l'ancien conteneur de badges s'il existe
         const oldBadgesContainer = zoneEl.querySelector('.barcode-badges');
         if (oldBadgesContainer) {
             oldBadgesContainer.remove();
@@ -3706,15 +3705,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         fieldBadge.textContent = getFieldDisplayName(zoneData.champFusion);
         
-        // Générer le vrai code-barres (toujours avec la valeur fictive)
+        // Générer l'image du code-barres (SANS texte)
+        const barcodeImage = generateBarcodeImage(typeCode, color);
+        
+        // Mettre à jour le contenu : image + texte HTML séparé
         const svgContainer = zoneEl.querySelector('.barcode-svg');
         if (svgContainer) {
-            const barcodeImage = generateBarcodeImage(typeCode, '', color, textPosition, width, height);
-            // Le CSS gère l'étirement via les classes barcode-1d/barcode-2d
-            svgContainer.innerHTML = `<img src="${barcodeImage}" alt="${typeCode}">`;
+            let html = `<img class="barcode-image" src="${barcodeImage}" alt="${typeCode}">`;
+            
+            // Ajouter le texte si nécessaire
+            if (texteLisible !== 'aucun') {
+                html += `<span class="barcode-text" style="font-size: ${taillePolice}pt; color: ${color};">${sampleValue}</span>`;
+            }
+            
+            svgContainer.innerHTML = html;
         }
         
-        // Supprimer le label du bas (plus nécessaire avec les badges)
+        // Supprimer l'ancien label du bas (plus nécessaire)
         const label = zoneEl.querySelector('.barcode-label');
         if (label) {
             label.remove();
@@ -3747,24 +3754,25 @@ document.addEventListener('DOMContentLoaded', () => {
         const contentEl = zoneEl.querySelector('.zone-content');
         if (!contentEl) return;
         
-        // Récupérer les dimensions de la zone
-        const width = zoneEl.offsetWidth || 100;
-        const height = zoneEl.offsetHeight || 100;
-        
         // Récupérer les propriétés du code-barres
         const typeCode = zoneData.typeCode || 'QRCode';
         const content = zoneData.content || '';
         const color = zoneData.qrColor || '#000000';
+        const taillePolice = zoneData.taillePolice || 8;
+        
+        // Récupérer la valeur fictive pour le texte
+        const config = BARCODE_BWIPJS_CONFIG[typeCode];
+        const sampleValue = config ? config.sampleValue : 'SAMPLE';
         
         // Mettre à jour la classe 1D/2D pour l'étirement
         updateBarcodeDimensionClass(zoneEl, typeCode);
         
-        // Déterminer la position du texte
-        let textPosition = 'dessous';
+        // Déterminer si le texte est visible
+        let texteLisible = 'dessous';
         if (zoneData.texteLisible) {
-            textPosition = zoneData.texteLisible;
+            texteLisible = zoneData.texteLisible;
         } else if (zoneData.includeText === false) {
-            textPosition = 'aucun';
+            texteLisible = 'aucun';
         }
         
         // Supprimer l'ancien conteneur de badges s'il existe
@@ -3791,11 +3799,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         fieldBadge.textContent = getFieldDisplayName(content);
         
-        // Générer le vrai code-barres (toujours avec la valeur fictive)
-        const barcodeImage = generateBarcodeImage(typeCode, '', color, textPosition, width, height);
+        // Générer l'image du code-barres (SANS texte)
+        const barcodeImage = generateBarcodeImage(typeCode, color);
         
-        // Afficher l'image du code-barres (le CSS gère l'étirement via les classes barcode-1d/barcode-2d)
-        contentEl.innerHTML = `<img src="${barcodeImage}" alt="${typeCode}">`;
+        // Construire le HTML : image + texte séparé
+        let html = `<img class="barcode-image" src="${barcodeImage}" alt="${typeCode}">`;
+        
+        // Ajouter le texte si nécessaire
+        if (texteLisible !== 'aucun') {
+            html += `<span class="barcode-text" style="font-size: ${taillePolice}pt; color: ${color};">${sampleValue}</span>`;
+        }
+        
+        contentEl.innerHTML = html;
     }
     
     /**
@@ -3814,6 +3829,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (inputBarcodeType) zoneData.typeCodeBarres = inputBarcodeType.value;
         if (inputBarcodeField) zoneData.champFusion = inputBarcodeField.value;
         if (inputBarcodeReadable) zoneData.texteLisible = inputBarcodeReadable.value;
+        if (inputBarcodeFontsize) zoneData.taillePolice = parseInt(inputBarcodeFontsize.value) || 8;
         if (inputBarcodeColor) zoneData.couleur = inputBarcodeColor.value;
         
         // Mettre à jour l'affichage
@@ -3847,8 +3863,22 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (inputBarcodeReadable) {
         inputBarcodeReadable.addEventListener('change', () => {
+            // Masquer/afficher le champ taille police selon la valeur
+            if (barcodeFontsizeGroup) {
+                barcodeFontsizeGroup.style.display = inputBarcodeReadable.value === 'aucun' ? 'none' : '';
+            }
             updateActiveBarcodeZoneData();
             saveState();
+        });
+    }
+    
+    if (inputBarcodeFontsize) {
+        inputBarcodeFontsize.addEventListener('change', () => {
+            updateActiveBarcodeZoneData();
+            saveState();
+        });
+        inputBarcodeFontsize.addEventListener('input', () => {
+            updateActiveBarcodeZoneData();
         });
     }
     
@@ -5783,6 +5813,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 typeCodeBarres: zoneJson.typeCodeBarres || 'code128',
                 champFusion: zoneJson.champFusion || '',
                 texteLisible: zoneJson.texteLisible || 'dessous',
+                taillePolice: zoneJson.taillePolice || 8,
                 couleur: zoneJson.couleur || (couleurs.code || '#000000'),
                 locked: zoneJson.verrouille || false,
                 zIndex: zoneJson.niveau || 1,
@@ -6266,6 +6297,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 typeCodeBarres: zoneData.typeCodeBarres || 'code128',
                 champFusion: zoneData.champFusion || '',
                 texteLisible: zoneData.texteLisible || 'dessous',
+                taillePolice: zoneData.taillePolice || 8,
                 couleur: zoneData.couleur || '#000000',
                 geometrie: {
                     xMm: pixelsToMm(zoneData.x || 0),
