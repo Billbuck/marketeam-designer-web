@@ -1539,7 +1539,7 @@ document.addEventListener('DOMContentLoaded', () => {
             contentSpan.classList.add('zone-content');
             // Utiliser le formatage si disponible
             const formatting = zoneData.formatting || [];
-            contentSpan.innerHTML = renderFormattedContent(zoneData.content || '', formatting, null);
+            contentSpan.innerHTML = renderFormattedContent(zoneData.content || '', formatting, null, zoneData.emptyLines || 0);
             zone.appendChild(contentSpan);
         }
 
@@ -1684,7 +1684,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Contenu avec formatage
             if (contentEl) {
                 const formatting = zoneData.formatting || [];
-                contentEl.innerHTML = renderFormattedContent(zoneData.content || '', formatting, null);
+                contentEl.innerHTML = renderFormattedContent(zoneData.content || '', formatting, null, zoneData.emptyLines || 0);
             }
             
             // Police
@@ -2709,13 +2709,26 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {Array} formatting - Tableau d'annotations
      * @returns {string} HTML avec formatage
      */
-    function renderFormattedContent(content, formatting, defaultColor = null) {
+    function renderFormattedContent(content, formatting, defaultColor = null, emptyLines = 0) {
         if (!content) return '';
+        
+        // --- Filtrer les lignes vides si emptyLines === 1 ---
+        let processedContent = content;
+        if (emptyLines === 1) {
+            const lines = content.split('\n');
+            const filteredLines = lines.filter(line => line.length > 0);
+            processedContent = filteredLines.join('\n');
+            
+            // Si tout est filtré, retourner un espace insécable pour garder la zone visible
+            if (processedContent.length === 0) {
+                return '<span style="display: inline-block; width: 100%;">&nbsp;</span>';
+            }
+        }
         
         let innerHtml = '';
         
         if (!formatting || formatting.length === 0) {
-            innerHtml = escapeHtml(content);
+            innerHtml = escapeHtml(processedContent);
         } else {
             
             // Trier les annotations par position
@@ -2728,7 +2741,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 breakpoints.add(f.end);
             });
             breakpoints.add(0);
-            breakpoints.add(content.length);
+            breakpoints.add(processedContent.length);
             
             // Trier les points de changement
             const sortedBreakpoints = Array.from(breakpoints).sort((a, b) => a - b);
@@ -2740,6 +2753,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const segmentEnd = sortedBreakpoints[i + 1];
                 
                 if (segmentStart >= segmentEnd) continue;
+                if (segmentEnd > processedContent.length) continue;
                 
                 // Trouver toutes les annotations qui couvrent ce segment
                 const activeStyles = {};
@@ -2750,7 +2764,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
                 
-                const segmentText = content.substring(segmentStart, segmentEnd);
+                const segmentText = processedContent.substring(segmentStart, segmentEnd);
                 
                 // Construire les styles CSS pour ce segment
                 const styles = [];
@@ -2843,7 +2857,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Mise à jour visuelle avec formatage partiel
         const formatting = zonesData[selectedId].formatting || [];
         const defaultColor = formatting.length > 0 ? inputColor.value : null;
-        contentEl.innerHTML = renderFormattedContent(inputContent.value, formatting, defaultColor);
+        const emptyLinesValue = zonesData[selectedId].emptyLines || 0;
+        contentEl.innerHTML = renderFormattedContent(inputContent.value, formatting, defaultColor, emptyLinesValue);
         zoneEl.style.fontFamily = inputFont.value + ", sans-serif";
         // Note: Le rendu 'pt' web n'est pas 100% identique au print, mais proche
         
@@ -3393,6 +3408,22 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (zoneData && zoneData.type === 'text') {
                 zoneData.emptyLines = parseInt(inputEmptyLines.value, 10);
+                
+                // Rafraîchir l'affichage de la zone
+                const zoneEl = document.getElementById(zoneId);
+                if (zoneEl) {
+                    const contentEl = zoneEl.querySelector('.zone-content');
+                    if (contentEl) {
+                        const formatting = zoneData.formatting || [];
+                        const defaultColor = zoneData.color || '#000000';
+                        contentEl.innerHTML = renderFormattedContent(
+                            zoneData.content || '', 
+                            formatting, 
+                            defaultColor, 
+                            zoneData.emptyLines
+                        );
+                    }
+                }
                 
                 saveToLocalStorage();
                 saveState();
@@ -4008,7 +4039,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const contentEl = zoneEl.querySelector('.zone-content');
             if (contentEl) {
                 const defaultColor = zoneData.color || null;
-                contentEl.innerHTML = renderFormattedContent(zoneData.content || '', tempFormatting, defaultColor);
+                contentEl.innerHTML = renderFormattedContent(zoneData.content || '', tempFormatting, defaultColor, zoneData.emptyLines || 0);
             }
         }
     }
@@ -5977,7 +6008,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Contenu avec formatage partiel
                 if (contentEl && data.content) {
                     const formatting = data.formatting || [];
-                    contentEl.innerHTML = renderFormattedContent(data.content, formatting, data.color || null);
+                    contentEl.innerHTML = renderFormattedContent(data.content, formatting, data.color || null, data.emptyLines || 0);
                 }
                 
                 // Alignements (DOIT être avant copyfit car copyfit modifie temporairement justifyContent)
