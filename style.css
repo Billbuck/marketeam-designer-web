@@ -190,6 +190,7 @@ button:last-child {
 
 .zone-qr {
     cursor: grab;
+    overflow: visible;  /* Permettre aux badges de déborder */
 }
 
 .zone-qr .zone-content {
@@ -200,11 +201,34 @@ button:last-child {
     align-items: center;
     justify-content: center;
     background-color: #ffffff;
+    padding: 4px;
+    box-sizing: border-box;
 }
 
 .zone-qr .zone-content svg {
     width: 80%;
     height: 80%;
+}
+
+/* Zone code-barres - affichage de l'image générée */
+.zone.zone-qr .zone-content img {
+    image-rendering: pixelated;  /* Garder la netteté des codes-barres */
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+}
+
+/* Code-barres 1D : étirement pour remplir la zone (comme PrintShop Mail) */
+.zone.zone-qr.barcode-1d .zone-content img {
+    width: 100%;
+    height: 100%;
+    object-fit: fill;  /* Étire pour remplir complètement */
+}
+
+/* Code-barres 2D : garder les proportions (centré) */
+.zone.zone-qr.barcode-2d .zone-content img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;  /* Garde les proportions carrées */
 }
 
 /* --- Zones Image --- */
@@ -1077,4 +1101,144 @@ body.in-iframe .toolbar {
 .btn-arrange .material-icons {
     font-size: 20px;
     color: #555;
+}
+
+/* ========================================
+   ZONES CODE-BARRES
+   ======================================== */
+
+.zone.barcode-zone {
+    background-color: #ffffff;
+    border: 1px dashed #999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;  /* Permettre aux badges de déborder */
+    cursor: grab;
+}
+
+.zone.barcode-zone .barcode-preview {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    box-sizing: border-box;
+    pointer-events: none;
+}
+
+.zone.barcode-zone .barcode-preview .barcode-svg {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.zone.barcode-zone .barcode-preview svg {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+/* Images de code-barres générées */
+.zone.barcode-zone .barcode-svg img {
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+}
+
+/* Code-barres 1D : étirement pour remplir la zone (comme PrintShop Mail) */
+.zone.barcode-zone.barcode-1d .barcode-svg img {
+    width: 100%;
+    height: 100%;
+    object-fit: fill;  /* Étire pour remplir complètement */
+}
+
+/* Code-barres 2D : garder les proportions (centré) */
+.zone.barcode-zone.barcode-2d .barcode-svg img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;  /* Garde les proportions carrées */
+}
+
+.zone.barcode-zone .barcode-label {
+    font-size: 10px;
+    color: #666;
+    margin-top: 2px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    flex-shrink: 0;
+}
+
+/* Conteneur des badges - rendu transparent (les badges sont positionnés individuellement) */
+.barcode-badges {
+    display: contents;  /* Les enfants sont positionnés individuellement */
+}
+
+/* Badge du type - en haut à gauche, AU-DESSUS du cadre */
+.barcode-type-badge {
+    position: absolute;
+    top: -18px;           /* Au-dessus du cadre */
+    left: 0;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: Arial, sans-serif;
+    white-space: nowrap;
+    background: rgba(0, 0, 0, 0.75);
+    color: white;
+    z-index: 10;
+}
+
+/* Badge du champ - en bas à droite, EN-DESSOUS du cadre */
+.barcode-field-badge {
+    position: absolute;
+    bottom: -18px;        /* En-dessous du cadre */
+    right: 0;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: Arial, sans-serif;
+    white-space: nowrap;
+    background: rgba(0, 100, 200, 0.85);
+    color: white;
+    z-index: 10;
+}
+
+/* Section propriétés code-barres */
+#barcode-properties-section .input-group {
+    margin-bottom: 12px;
+}
+
+#barcode-properties-section select,
+#barcode-properties-section input[type="text"],
+#barcode-properties-section input[type="color"] {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+#barcode-properties-section optgroup {
+    font-weight: bold;
+    color: #333;
+}
+
+#barcode-properties-section option {
+    font-weight: normal;
+    padding: 4px;
+}
+
+#barcode-properties-section input[type="color"] {
+    height: 34px;
+    padding: 2px;
+    cursor: pointer;
 }

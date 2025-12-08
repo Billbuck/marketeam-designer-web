@@ -69,6 +69,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Inputs pour zones image
     const imagePropertiesSection = document.getElementById('image-properties-section');
     const textPropertiesSection = document.getElementById('text-properties-section');
+    
+    // Inputs pour zones code-barres
+    const barcodePropertiesSection = document.getElementById('barcode-properties-section');
+    const inputBarcodeName = document.getElementById('input-barcode-name');
+    const inputBarcodeType = document.getElementById('input-barcode-type');
+    const inputBarcodeField = document.getElementById('input-barcode-field');
+    const inputBarcodeReadable = document.getElementById('input-barcode-readable');
+    const inputBarcodeColor = document.getElementById('input-barcode-color');
+    
     const inputImageSourceType = document.getElementById('input-image-source-type');
     const inputImageChamp = document.getElementById('input-image-champ');
     const inputImageMode = document.getElementById('input-image-mode');
@@ -129,6 +138,296 @@ document.addEventListener('DOMContentLoaded', () => {
         'solid': 1,
         'dashed': 3
     };
+    
+    // --- CONSTANTES CODE-BARRES ---
+    
+    // Types de code-barres supportés
+    const BARCODE_TYPES = [
+        { id: 'code128', label: 'Code 128', category: '1d' },
+        { id: 'code39', label: 'Code 39', category: '1d' },
+        { id: 'ean13', label: 'EAN-13', category: '1d' },
+        { id: 'ean8', label: 'EAN-8', category: '1d' },
+        { id: 'upca', label: 'UPC-A', category: '1d' },
+        { id: 'interleaved2of5', label: 'Code 2/5 Intercalé', category: '1d' },
+        { id: 'pdf417', label: 'PDF417', category: '1d' },
+        { id: 'datamatrix', label: 'Data Matrix', category: '2d' },
+        { id: 'qrcode', label: 'Code QR', category: '2d' }
+    ];
+    
+    // SVG Placeholder pour codes 1D (barres verticales)
+    const SVG_BARCODE_1D = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 762 254" preserveAspectRatio="xMidYMid meet">
+<g fill="currentColor">
+<path d="M541.725 170.377l17.276 0c2.386,0 4.319,-1.941 4.319,-4.333l0 -147.313c0,-2.392 -1.933,-4.333 -4.319,-4.333l-17.276 0c-2.385,0 -4.32,1.941 -4.32,4.333l0 147.313c0,2.392 1.935,4.333 4.32,4.333l0 0zm4.319 -147.313l8.639 0 0 138.647 -8.639 0.001 0 -138.648zm103.659 147.313l17.277 0c2.385,0 4.318,-1.941 4.318,-4.333l0 -147.313c0,-2.392 -1.933,-4.333 -4.318,-4.333l-17.277 0c-2.385,0 -4.319,1.941 -4.319,4.333l0 147.313c0,2.392 1.934,4.333 4.319,4.333l0 0zm4.319 -147.313l8.639 0 0 138.647 -8.639 0.001 0 -138.648zm-64.787 142.98l0 -147.313c0,-2.392 1.935,-4.333 4.32,-4.333l4.319 0c2.385,0 4.319,1.941 4.319,4.333l0 147.313c0,2.392 -1.934,4.333 -4.319,4.333l-4.319 0c-2.385,0 -4.32,-1.941 -4.32,-4.333zm90.702 0l0 -147.313c0,-2.392 1.934,-4.333 4.319,-4.333l4.32 0c2.384,0 4.319,1.941 4.319,4.333l0 147.313c0,2.392 -1.934,4.333 -4.319,4.333l-4.32 0c-2.384,0 -4.319,-1.941 -4.319,-4.333zm47.51 0l0 -147.313c0,-2.392 1.934,-4.333 4.32,-4.333l4.319 0c2.385,0 4.319,1.941 4.319,4.333l0 147.313c0,2.392 -1.934,4.333 -4.319,4.333l-4.319 0c-2.386,0 -4.32,-1.941 -4.32,-4.333zm-155.488 0l0 -147.313c0,-2.392 1.933,-4.333 4.319,-4.333 2.385,0 4.319,1.941 4.319,4.333l0 147.313c0,2.392 -1.934,4.333 -4.319,4.333 -2.386,0 -4.319,-1.941 -4.319,-4.333zm38.872 0l0 -147.313c0,-2.392 1.934,-4.333 4.319,-4.333 2.385,0 4.32,1.941 4.32,4.333l0 147.313c0,2.392 -1.935,4.333 -4.32,4.333 -2.385,0 -4.319,-1.941 -4.319,-4.333zm17.276 0l0 -147.313c0,-2.392 1.935,-4.333 4.32,-4.333 2.386,0 4.319,1.941 4.319,4.333l0 147.313c0,2.392 -1.933,4.333 -4.319,4.333 -2.385,0 -4.32,-1.941 -4.32,-4.333zm77.745 0l0 -147.313c0,-2.392 1.933,-4.333 4.319,-4.333 2.385,0 4.32,1.941 4.32,4.333l0 147.313c0,2.392 -1.935,4.333 -4.32,4.333 -2.386,0 -4.319,-1.941 -4.319,-4.333zm47.51 0l0 -147.313c0,-2.392 1.934,-4.333 4.32,-4.333 2.385,0 4.318,1.941 4.318,4.333l0 147.313c0,2.392 -1.933,4.333 -4.318,4.333 -2.386,0 -4.32,-1.941 -4.32,-4.333zm-268.703 0l0 -147.313c0,-2.392 1.934,-4.333 4.32,-4.333 2.386,0 4.319,1.941 4.319,4.333l0 147.313c0,2.392 -1.933,4.333 -4.319,4.333 -2.386,0 -4.32,-1.941 -4.32,-4.333zm-47.509 0l0 -147.313c0,-2.392 1.933,-4.333 4.319,-4.333 2.385,0 4.318,1.941 4.318,4.333l0 147.313c0,2.392 -1.933,4.333 -4.318,4.333 -2.386,0 -4.319,-1.941 -4.319,-4.333zm-77.745 0l0 -147.313c0,-2.392 1.934,-4.333 4.32,-4.333 2.384,0 4.319,1.941 4.319,4.333l0 147.313c0,2.392 -1.935,4.333 -4.319,4.333 -2.386,0 -4.32,-1.941 -4.32,-4.333zm-17.277 0l0 -147.313c0,-2.392 1.934,-4.333 4.32,-4.333 2.386,0 4.319,1.941 4.319,4.333l0 147.313c0,2.392 -1.933,4.333 -4.319,4.333 -2.386,0 -4.32,-1.941 -4.32,-4.333zm-38.872 0l0 -147.313c0,-2.392 1.934,-4.333 4.319,-4.333 2.387,0 4.32,1.941 4.32,4.333l0 147.313c0,2.392 -1.933,4.333 -4.32,4.333 -2.385,0 -4.319,-1.941 -4.319,-4.333zm155.489 0l0 -147.313c0,-2.392 1.933,-4.333 4.319,-4.333l4.319 0c2.386,0 4.319,1.941 4.319,4.333l0 147.313c0,2.392 -1.933,4.333 -4.319,4.333l-4.319 0c-2.385,0 -4.319,-1.941 -4.319,-4.333zm-47.51 0l0 -147.313c0,-2.392 1.933,-4.333 4.319,-4.333l4.318 0c2.386,0 4.32,1.941 4.32,4.333l0 147.313c0,2.392 -1.933,4.333 -4.32,4.333l-4.318 0c-2.385,0 -4.319,-1.941 -4.319,-4.333zm-90.702 0l0 -147.313c0,-2.392 1.934,-4.333 4.319,-4.333l4.319 0c2.386,0 4.319,1.941 4.319,4.333l0 147.313c0,2.392 -1.933,4.333 -4.319,4.333l-4.319 0c-2.385,0 -4.319,-1.941 -4.319,-4.333zm190.041 -142.98l8.639 0 0 138.647 -8.639 0.001 0 -138.648zm-4.319 147.313l17.277 0c2.385,0 4.32,-1.941 4.32,-4.333l0 -147.313c0,-2.392 -1.935,-4.333 -4.32,-4.333l-17.277 0c-2.385,0 -4.318,1.941 -4.318,4.333l0 147.313c0,2.392 1.933,4.333 4.318,4.333l0 0zm-120.935 -147.313l8.637 0 0 138.647 -8.637 0.001 0 -138.648zm-4.32 147.313l17.277 0c2.386,0 4.32,-1.941 4.32,-4.333l0 -147.313c0,-2.392 -1.934,-4.333 -4.32,-4.333l-17.277 0c-2.384,0 -4.318,1.941 -4.318,4.333l0 147.313c0,2.392 1.934,4.333 4.318,4.333l0 0zm-103.658 -147.313l8.638 0 0 138.647 -8.638 0.001 0 -138.648zm-4.319 147.313l17.276 0c2.385,0 4.319,-1.941 4.319,-4.333l0 -147.313c0,-2.392 -1.934,-4.333 -4.319,-4.333l-17.276 0c-2.386,0 -4.32,1.941 -4.32,4.333l0 147.313c0,2.392 1.934,4.333 4.32,4.333l0 0zm-57.066 -4.333l0 -147.313c0,-2.392 1.933,-4.333 4.32,-4.333 2.385,0 4.319,1.941 4.319,4.333l0 147.313c0,2.392 -1.934,4.333 -4.319,4.333 -2.387,0 -4.32,-1.941 -4.32,-4.333zm-47.51 0l0 -147.313c0,-2.392 1.934,-4.333 4.32,-4.333 2.384,0 4.318,1.941 4.318,4.333l0 147.313c0,2.392 -1.934,4.333 -4.318,4.333 -2.386,0 -4.32,-1.941 -4.32,-4.333zm-77.744 0l0 -147.313c0,-2.392 1.934,-4.333 4.319,-4.333 2.385,0 4.319,1.941 4.319,4.333l0 147.313c0,2.392 -1.934,4.333 -4.319,4.333 -2.385,0 -4.319,-1.941 -4.319,-4.333zm-17.278 0l0 -147.313c0,-2.392 1.935,-4.333 4.32,-4.333 2.386,0 4.32,1.941 4.32,4.333l0 147.313c0,2.392 -1.934,4.333 -4.32,4.333 -2.385,0 -4.32,-1.941 -4.32,-4.333zm-38.871 0l0 -147.313c0,-2.392 1.933,-4.333 4.319,-4.333 2.386,0 4.32,1.941 4.32,4.333l0 147.313c0,2.392 -1.934,4.333 -4.32,4.333 -2.386,0 -4.319,-1.941 -4.319,-4.333zm155.488 0l0 -147.313c0,-2.392 1.934,-4.333 4.32,-4.333l4.319 0c2.385,0 4.319,1.941 4.319,4.333l0 147.313c0,2.392 -1.934,4.333 -4.319,4.333l-4.319 0c-2.385,0 -4.32,-1.941 -4.32,-4.333zm-47.51 0l0 -147.313c0,-2.392 1.934,-4.333 4.32,-4.333l4.318 0c2.385,0 4.32,1.941 4.32,4.333l0 147.313c0,2.392 -1.934,4.333 -4.32,4.333l-4.318 0c-2.385,0 -4.32,-1.941 -4.32,-4.333zm-90.702 0l0 -147.313c0,-2.392 1.935,-4.333 4.32,-4.333l4.319 0c2.385,0 4.319,1.941 4.319,4.333l0 147.313c0,2.392 -1.934,4.333 -4.319,4.333l-4.319 0c-2.385,0 -4.32,-1.941 -4.32,-4.333zm190.042 -142.98l8.638 0 0 138.647 -8.638 0.001 0 -138.648zm-4.319 147.313l17.276 0c2.386,0 4.32,-1.941 4.32,-4.333l0 -147.313c0,-2.392 -1.934,-4.333 -4.32,-4.333l-17.276 0c-2.385,0 -4.319,1.941 -4.319,4.333l0 147.313c0,2.392 1.934,4.333 4.319,4.333l0 0zm-120.936 -147.313l8.638 0 0 138.647 -8.638 0.001 0 -138.648zm-4.319 147.313l17.277 0c2.385,0 4.32,-1.941 4.32,-4.333l0 -147.313c0,-2.392 -1.935,-4.333 -4.32,-4.333l-17.277 0c-2.385,0 -4.318,1.941 -4.318,4.333l0 147.313c0,2.392 1.933,4.333 4.318,4.333l0 0zm-103.659 -147.313l8.639 0 0 138.647 -8.639 0.001 0 -138.648zm-4.319 147.313l17.277 0c2.385,0 4.318,-1.941 4.318,-4.333l0 -147.313c0,-2.392 -1.933,-4.333 -4.318,-4.333l-17.277 0c-2.385,0 -4.32,1.941 -4.32,4.333l0 147.313c0,2.392 1.935,4.333 4.32,4.333l0 0z"/>
+<path d="M-0 235.268l0 -8.665c0,-7.168 5.814,-12.998 12.958,-12.998l0 -4.334c0,-2.389 -1.938,-4.333 -4.319,-4.333l-4.319 0c-2.385,0 -4.32,-1.939 -4.32,-4.332 0,-2.393 1.935,-4.333 4.32,-4.333l4.319 0c7.144,0 12.958,5.832 12.958,12.998l0 8.666c0,2.392 -1.935,4.333 -4.319,4.333l-4.32 0c-2.381,0 -4.319,1.943 -4.319,4.333l0 4.332 8.639 0c2.384,0 4.319,1.94 4.319,4.333 0,2.392 -1.934,4.333 -4.319,4.333l-12.958 0c-2.385,0 -4.32,-1.941 -4.32,-4.333z"/>
+</g>
+</svg>`;
+    
+    // SVG Placeholder pour codes 2D (QR / DataMatrix)
+    const SVG_BARCODE_2D = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 254 254" preserveAspectRatio="xMidYMid meet">
+<g fill="currentColor">
+<path d="M127 29.766l0 19.843 -19.844 0 0 -19.843 19.844 0zm-19.844 116.582l0 28.277 19.844 0 0 -28.277 -19.844 0zm59.531 107.652l0 -19.844 -19.843 0 0 -19.843 -19.844 0 0 39.687 39.687 0zm39.688 -147.34l-59.531 0 0 19.844 59.531 0 0 -19.844zm0 39.688l27.781 0 0 -19.844 -27.781 0 0 19.844zm0 28.277l0 19.844 47.625 0 0 -48.121 -19.844 0 0 28.277 -27.781 0zm-59.531 -174.625l-19.844 0 0 29.766 19.844 0 0 -29.766zm-19.844 89.297l19.844 0 0 -39.688 -19.844 0 0 19.844 -19.844 0 0 57.051 19.844 0 0 -37.207zm-127 17.363l0 39.688 19.844 0 0 -19.844 29.765 0 0 -19.844 -49.609 0zm146.844 39.688l0 -19.844 -19.844 0 0 19.844 19.844 0zm39.687 19.843l19.844 0 0 -19.843 -19.844 0 0 19.843zm47.625 -39.687l19.844 0 0 -19.844 -19.844 0 0 19.844zm-67.469 19.844l-19.843 0 0 28.277 -19.844 0 0 19.844 39.687 0 0 -48.121zm-59.531 67.965l19.844 0 0 -19.844 -19.844 0 0 19.844zm59.531 -19.844l0 19.844 39.688 0 0 -19.844 -39.688 0zm59.532 39.687l0 -19.843 -19.844 0 0 19.843 19.844 0zm27.781 19.844l0 -19.844 -27.781 0 0 19.844 27.781 0zm-67.469 0l19.844 0 0 -19.844 -19.844 0 0 19.844zm-97.234 -127.496l0 -19.844 -19.844 0 0 19.844 -19.844 0 0 19.844 57.547 0 0 -19.844 -17.859 0zm0 -37.207l-89.297 0 0 -89.297 89.297 0 0 89.297zm-19.844 -69.453l-49.609 0 0 49.609 49.609 0 0 -49.609zm-14.883 14.883l-19.843 0 0 19.843 19.843 0 0 -19.843zm199.43 -34.727l0 89.297 -89.297 0 0 -89.297 89.297 0zm-19.844 19.844l-49.609 0 0 49.609 49.609 0 0 -49.609zm-14.883 14.883l-19.843 0 0 19.843 19.843 0 0 -19.843zm-219.273 129.976l89.297 0 0 89.297 -89.297 0 0 -89.297zm19.844 69.453l49.609 0 0 -49.609 -49.609 0 0 49.609zm14.883 -14.883l19.843 0 0 -19.843 -19.843 0 0 19.843zm0 0z"/>
+</g>
+</svg>`;
+    
+    // =====================================================
+    // CONFIGURATION CODES-BARRES (bwip-js)
+    // =====================================================
+    
+    /**
+     * Mapping entre nos types de codes-barres et les identifiants bwip-js (bcid)
+     * Utilise nos IDs internes (minuscules) comme clés
+     */
+    const BARCODE_BWIPJS_CONFIG = {
+        'qrcode': {
+            bcid: 'qrcode',
+            sampleValue: 'https://example.com',
+            is2D: true
+        },
+        'code128': {
+            bcid: 'code128',
+            sampleValue: 'ABC-12345',
+            is2D: false
+        },
+        'ean13': {
+            bcid: 'ean13',
+            sampleValue: '5901234123457',  // Checksum valide
+            is2D: false
+        },
+        'ean8': {
+            bcid: 'ean8',
+            sampleValue: '96385074',       // Checksum valide
+            is2D: false
+        },
+        'code39': {
+            bcid: 'code39',
+            sampleValue: 'CODE39',
+            is2D: false
+        },
+        'datamatrix': {
+            bcid: 'datamatrix',
+            sampleValue: 'DATAMATRIX01',
+            is2D: true
+        },
+        'pdf417': {
+            bcid: 'pdf417',
+            sampleValue: 'PDF417 SAMPLE',
+            is2D: false  // Visuellement proche 1D (rectangulaire)
+        },
+        'upca': {
+            bcid: 'upca',
+            sampleValue: '012345678905',   // Checksum valide
+            is2D: false
+        },
+        'interleaved2of5': {
+            bcid: 'interleaved2of5',
+            sampleValue: '1234567890',     // Doit être pair
+            is2D: false
+        },
+        // Mapping supplémentaire pour les anciens types (format WebDev)
+        'QRCode': {
+            bcid: 'qrcode',
+            sampleValue: 'https://example.com',
+            is2D: true
+        },
+        'Code128': {
+            bcid: 'code128',
+            sampleValue: 'ABC-12345',
+            is2D: false
+        },
+        'EAN13': {
+            bcid: 'ean13',
+            sampleValue: '5901234123457',
+            is2D: false
+        },
+        'EAN8': {
+            bcid: 'ean8',
+            sampleValue: '96385074',
+            is2D: false
+        },
+        'Code39': {
+            bcid: 'code39',
+            sampleValue: 'CODE39',
+            is2D: false
+        },
+        'DataMatrix': {
+            bcid: 'datamatrix',
+            sampleValue: 'DATAMATRIX01',
+            is2D: true
+        },
+        'PDF417': {
+            bcid: 'pdf417',
+            sampleValue: 'PDF417 SAMPLE',
+            is2D: false
+        },
+        'UPCA': {
+            bcid: 'upca',
+            sampleValue: '012345678905',
+            is2D: false
+        },
+        'Interleaved2of5': {
+            bcid: 'interleaved2of5',
+            sampleValue: '1234567890',
+            is2D: false
+        }
+    };
+    
+    /**
+     * SVG placeholder de fallback en cas d'erreur de génération
+     */
+    const SVG_BARCODE_FALLBACK = `<svg viewBox="0 0 100 40" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100" height="40" fill="#f8f8f8" stroke="#ccc" stroke-dasharray="4"/>
+        <text x="50" y="24" text-anchor="middle" font-size="10" fill="#999">Code-barres</text>
+    </svg>`;
+    
+    const SVG_BARCODE_2D_FALLBACK = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100" height="100" fill="#f8f8f8" stroke="#ccc" stroke-dasharray="4"/>
+        <text x="50" y="55" text-anchor="middle" font-size="10" fill="#999">2D Code</text>
+    </svg>`;
+    
+    /**
+     * Retourne le libellé d'un type de code-barres
+     * @param {string} typeId - ID du type (ex: 'code128')
+     * @returns {string} - Libellé (ex: 'Code 128')
+     */
+    function getBarcodeTypeLabel(typeId) {
+        const type = BARCODE_TYPES.find(t => t.id === typeId);
+        return type ? type.label : typeId;
+    }
+    
+    /**
+     * Extrait le nom du champ sans les @ pour l'affichage
+     * @param {string} fieldValue - Valeur du champ (ex: "@Civilité@" ou "Civilité")
+     * @returns {string} - Nom du champ ou "(Aucun champ)"
+     */
+    function getFieldDisplayName(fieldValue) {
+        if (!fieldValue || fieldValue.trim() === '') {
+            return '(Aucun champ)';
+        }
+        // Retirer les @ au début et à la fin si présents
+        return fieldValue.replace(/^@/, '').replace(/@$/, '');
+    }
+    
+    /**
+     * Détermine si un type de code-barres est 2D
+     * @param {string} typeCode - Type du code-barres (ex: 'QRCode', 'qrcode', 'Code128')
+     * @returns {boolean} - true si 2D, false si 1D
+     */
+    function is2DBarcode(typeCode) {
+        const types2D = ['qrcode', 'datamatrix'];
+        return types2D.includes(typeCode.toLowerCase());
+    }
+    
+    /**
+     * Met à jour la classe de dimension sur la zone (1D ou 2D)
+     * @param {HTMLElement} zoneEl - Élément DOM de la zone
+     * @param {string} typeCode - Type du code-barres
+     */
+    function updateBarcodeDimensionClass(zoneEl, typeCode) {
+        // Retirer les classes existantes
+        zoneEl.classList.remove('barcode-1d', 'barcode-2d');
+        
+        // Ajouter la classe appropriée
+        if (is2DBarcode(typeCode)) {
+            zoneEl.classList.add('barcode-2d');
+        } else {
+            zoneEl.classList.add('barcode-1d');
+        }
+    }
+    
+    /**
+     * Retourne le SVG placeholder selon le type de code-barres
+     * @param {string} typeCodeBarres - Type de code-barres
+     * @returns {string} - Contenu SVG
+     */
+    function getBarcodePlaceholderSVG(typeCodeBarres) {
+        const type2D = ['qrcode', 'datamatrix'];
+        return type2D.includes(typeCodeBarres) ? SVG_BARCODE_2D : SVG_BARCODE_1D;
+    }
+    
+    /**
+     * Retourne le SVG de fallback approprié selon le type
+     * @param {string} typeCode - Type de code-barres
+     * @returns {string} - SVG en data URL
+     */
+    function getFallbackBarcodeSvg(typeCode) {
+        const config = BARCODE_BWIPJS_CONFIG[typeCode];
+        const is2D = config ? config.is2D : false;
+        const svg = is2D ? SVG_BARCODE_2D_FALLBACK : SVG_BARCODE_FALLBACK;
+        return 'data:image/svg+xml,' + encodeURIComponent(svg);
+    }
+    
+    /**
+     * Génère un vrai code-barres en utilisant bwip-js
+     * @param {string} typeCode - Type de code-barres (qrcode, code128, ean13, etc.)
+     * @param {string} content - Contenu à encoder (optionnel, utilise valeur fictive si vide)
+     * @param {string} color - Couleur du code-barres (défaut #000000)
+     * @param {string} textPosition - Position du texte lisible: 'aucun', 'dessous', 'dessus' (défaut 'dessous')
+     * @param {number} width - Largeur de la zone en pixels
+     * @param {number} height - Hauteur de la zone en pixels
+     * @returns {string} - Data URL de l'image du code-barres ou SVG fallback
+     */
+    function generateBarcodeImage(typeCode, content, color = '#000000', textPosition = 'dessous', width = 150, height = 60) {
+        // Vérifier que bwip-js est chargé
+        if (typeof bwipjs === 'undefined') {
+            console.warn('bwip-js non chargé, utilisation du fallback');
+            return getFallbackBarcodeSvg(typeCode);
+        }
+        
+        // Récupérer la configuration pour ce type
+        const config = BARCODE_BWIPJS_CONFIG[typeCode];
+        if (!config) {
+            console.warn(`Type de code-barres inconnu: ${typeCode}`);
+            return getFallbackBarcodeSvg(typeCode);
+        }
+        
+        // Toujours utiliser la valeur fictive (le champ est une métadonnée pour l'export, pas pour l'affichage)
+        const valueToEncode = config.sampleValue;
+        
+        // Créer un canvas temporaire
+        const canvas = document.createElement('canvas');
+        
+        // Options bwip-js
+        const options = {
+            bcid: config.bcid,
+            text: valueToEncode,
+            scale: 3,                          // Facteur d'échelle pour netteté
+            height: config.is2D ? 20 : 10,     // Hauteur en mm (bwip-js utilise mm)
+            backgroundcolor: 'FFFFFF',         // Fond blanc
+            barcolor: color.replace('#', ''),  // Couleur du code (sans #)
+        };
+        
+        // Gestion du texte lisible
+        if (textPosition === 'aucun') {
+            options.includetext = false;
+        } else {
+            options.includetext = true;
+            options.textxalign = 'center';
+        }
+        
+        // Ajustements spécifiques par type
+        if (config.is2D) {
+            // Codes 2D : format carré
+            options.width = 20;
+            options.height = 20;
+        }
+        
+        // Ajustement pour PDF417 (plus compact)
+        if (typeCode === 'pdf417' || typeCode === 'PDF417') {
+            options.columns = 3;
+            options.rows = 10;
+        }
+        
+        try {
+            // Générer le code-barres sur le canvas
+            bwipjs.toCanvas(canvas, options);
+            
+            // Retourner le data URL
+            return canvas.toDataURL('image/png');
+        } catch (e) {
+            console.warn(`Erreur génération code-barres ${typeCode}:`, e.message);
+            return getFallbackBarcodeSvg(typeCode);
+        }
+    }
 
     const textControls = [
         inputContent,
@@ -1443,6 +1742,35 @@ document.addEventListener('DOMContentLoaded', () => {
         saveState();
     });
 
+    // Listener pour créer une zone code-barres
+    const btnAddBarcode = document.getElementById('btn-add-barcode');
+    if (btnAddBarcode) {
+        btnAddBarcode.addEventListener('click', () => {
+            documentState.zoneCounter++;
+            zoneCounter = documentState.zoneCounter;
+            const id = `zone-${zoneCounter}`;
+            const zonesData = getCurrentPageZones();
+            
+            // Calculer le z-index pour mettre la nouvelle zone au premier plan
+            const newZIndex = getMaxZIndex() + 1;
+            
+            zonesData[id] = {
+                type: 'barcode',
+                nom: 'Code-barres',
+                typeCodeBarres: 'code128',       // Type par défaut
+                champFusion: '',                  // Champ de fusion (sans les @)
+                texteLisible: 'dessous',          // 'aucun', 'dessous', 'dessus'
+                couleur: '#000000',               // Couleur du code-barres
+                locked: false,
+                zIndex: newZIndex
+            };
+            
+            createZoneDOM(id, zoneCounter);
+            saveToLocalStorage();
+            saveState();
+        });
+    }
+
     function createZoneDOM(id, labelNum, autoSelect = true) {
         const zonesData = getCurrentPageZones();
         const zoneData = zonesData[id] || {};
@@ -1454,6 +1782,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (zoneType === 'qr') {
             zone.classList.add('zone-qr');
         }
+        if (zoneType === 'barcode') {
+            zone.classList.add('barcode-zone');
+        }
         if (autoSelect) {
             zone.classList.add('zone-appear-anim');
             setTimeout(() => zone.classList.remove('zone-appear-anim'), 1000);
@@ -1462,8 +1793,23 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Calculer le centre de la vue pour positionner la nouvelle zone
         const centerView = getCenterOfView();
-        const defaultZoneWidth = zoneType === 'qr' ? 100 : (zoneType === 'image' ? 150 : 200);
-        const defaultZoneHeight = zoneType === 'qr' ? 100 : (zoneType === 'image' ? 150 : 40);
+        // Dimensions par défaut selon le type
+        let defaultZoneWidth, defaultZoneHeight;
+        if (zoneType === 'qr') {
+            defaultZoneWidth = 100;
+            defaultZoneHeight = 100;
+        } else if (zoneType === 'barcode') {
+            // Code-barres 2D = carré, 1D = rectangle
+            const is2D = ['qrcode', 'datamatrix'].includes(zoneData.typeCodeBarres);
+            defaultZoneWidth = is2D ? 100 : 150;
+            defaultZoneHeight = is2D ? 100 : 60;
+        } else if (zoneType === 'image') {
+            defaultZoneWidth = 150;
+            defaultZoneHeight = 150;
+        } else {
+            defaultZoneWidth = 200;
+            defaultZoneHeight = 40;
+        }
         
         // Obtenir la marge de sécurité et les dimensions de la page
         const margin = getSecurityMarginPx();
@@ -1484,16 +1830,22 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (zoneType === 'qr') {
             const defaultSize = zoneData.w || zoneData.h || 100;
-            zone.style.width = defaultSize + 'px';
-            zone.style.height = defaultSize + 'px';
+            zone.style.width = (zoneData.w || defaultSize) + 'px';
+            zone.style.height = (zoneData.h || defaultSize) + 'px';
             // Utiliser la position sauvegardée si elle existe, sinon le centre de la vue
             zone.style.left = (zoneData.x !== undefined ? zoneData.x : zoneX) + 'px';
             zone.style.top = (zoneData.y !== undefined ? zoneData.y : zoneY) + 'px';
-            zone.style.backgroundColor = '#ffffff';
+            zone.style.backgroundColor = zoneData.bgColor || '#ffffff';
+            
             const qrWrapper = document.createElement('div');
             qrWrapper.classList.add('zone-content');
-            qrWrapper.innerHTML = getQrPlaceholderSvg();
             zone.appendChild(qrWrapper);
+            
+            // Générer le vrai code-barres après ajout au DOM
+            // (utilise setTimeout pour s'assurer que les dimensions sont calculées)
+            setTimeout(() => {
+                updateQrZoneDisplay(id);
+            }, 10);
         } else if (zoneType === 'image') {
             // Zone image
             const defaultSize = 150;
@@ -1521,6 +1873,45 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Afficher image réelle ou placeholder
             updateImageZoneDisplay(zone, zoneData);
+        } else if (zoneType === 'barcode') {
+            // Zone code-barres
+            const is2D = ['qrcode', 'datamatrix'].includes(zoneData.typeCodeBarres);
+            const defaultWidth = is2D ? 100 : 150;
+            const defaultHeight = is2D ? 100 : 60;
+            
+            zone.style.width = (zoneData.w || defaultWidth) + 'px';
+            zone.style.height = (zoneData.h || defaultHeight) + 'px';
+            zone.style.left = (zoneData.x !== undefined ? zoneData.x : zoneX) + 'px';
+            zone.style.top = (zoneData.y !== undefined ? zoneData.y : zoneY) + 'px';
+            zone.style.backgroundColor = '#ffffff';
+            
+            // Badge type de code-barres (en haut à gauche)
+            const typeBadge = document.createElement('span');
+            typeBadge.className = 'barcode-type-badge';
+            typeBadge.textContent = getBarcodeTypeLabel(zoneData.typeCodeBarres || 'code128');
+            zone.appendChild(typeBadge);
+            
+            // Container preview
+            const preview = document.createElement('div');
+            preview.className = 'barcode-preview';
+            
+            // Container pour le code-barres généré
+            const svgContainer = document.createElement('div');
+            svgContainer.className = 'barcode-svg';
+            preview.appendChild(svgContainer);
+            
+            // Label champ de fusion
+            const label = document.createElement('div');
+            label.className = 'barcode-label';
+            label.textContent = zoneData.champFusion ? '@' + zoneData.champFusion + '@' : '(Aucun champ)';
+            preview.appendChild(label);
+            
+            zone.appendChild(preview);
+            
+            // Générer le vrai code-barres après ajout au DOM
+            setTimeout(() => {
+                updateBarcodeZoneDisplay(id);
+            }, 10);
         } else {
             // Style initial par défaut pour le texte
             zone.style.width = '200px';
@@ -2082,9 +2473,10 @@ document.addEventListener('DOMContentLoaded', () => {
         zonesData[id].type = zoneType;
 
         if (zoneType === 'qr') {
-            // Masquer section image, afficher section texte (désactivée)
+            // Masquer section image et code-barres, afficher section texte (désactivée)
             if (textPropertiesSection) textPropertiesSection.style.display = 'block';
             if (imagePropertiesSection) imagePropertiesSection.style.display = 'none';
+            if (barcodePropertiesSection) barcodePropertiesSection.style.display = 'none';
             
             setTextControlsEnabled(false);
             inputContent.value = 'Zone QR statique (non modifiable)';
@@ -2105,9 +2497,49 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (inputBorderColor) inputBorderColor.value = '#000000';
             if (inputBorderStyle) inputBorderStyle.value = 'solid';
-        } else if (zoneType === 'image') {
-            // Masquer la section contenu texte
+        } else if (zoneType === 'barcode') {
+            // Masquer sections texte et image, afficher section code-barres
             if (textPropertiesSection) textPropertiesSection.style.display = 'none';
+            if (imagePropertiesSection) imagePropertiesSection.style.display = 'none';
+            if (barcodePropertiesSection) barcodePropertiesSection.style.display = 'block';
+            
+            // Masquer les contrôles spécifiques texte et fond
+            const controlsToHide = [
+                'input-font', 'input-size', 'input-line-height', 
+                'chk-bold', 'chk-copyfit', 'input-color',
+                'input-align', 'input-valign',
+                'input-bg-color', 'chk-transparent',
+                'input-border-width', 'input-border-color', 'input-border-style'
+            ];
+            controlsToHide.forEach(ctrlId => {
+                const el = document.getElementById(ctrlId);
+                if (el) {
+                    const parent = el.closest('.style-row') || el.closest('.input-group');
+                    if (parent) parent.style.display = 'none';
+                }
+            });
+            
+            // Masquer la section bordure
+            const borderSection = document.querySelector('.subsection-title + .style-row');
+            
+            setTextControlsEnabled(false);
+            
+            // Remplir les contrôles code-barres
+            if (inputBarcodeName) inputBarcodeName.value = data.nom || '';
+            if (inputBarcodeType) inputBarcodeType.value = data.typeCodeBarres || 'code128';
+            if (inputBarcodeReadable) inputBarcodeReadable.value = data.texteLisible || 'dessous';
+            if (inputBarcodeColor) inputBarcodeColor.value = data.couleur || '#000000';
+            
+            // Remplir le select des champs de fusion
+            updateBarcodeFieldSelect();
+            if (inputBarcodeField) inputBarcodeField.value = data.champFusion || '';
+            
+            // Verrouillage
+            if (chkLock) chkLock.checked = data.locked || false;
+        } else if (zoneType === 'image') {
+            // Masquer la section contenu texte et code-barres
+            if (textPropertiesSection) textPropertiesSection.style.display = 'none';
+            if (barcodePropertiesSection) barcodePropertiesSection.style.display = 'none';
             
             // Masquer les contrôles spécifiques texte (Police, Taille, Interlignage, etc.)
             const textOnlyControls = [
@@ -2176,13 +2608,15 @@ document.addEventListener('DOMContentLoaded', () => {
             // Afficher la section contenu texte
             if (textPropertiesSection) textPropertiesSection.style.display = 'block';
             
-            // Réafficher les contrôles spécifiques texte (masqués pour les zones image)
-            const textOnlyControls = [
+            // Réafficher les contrôles spécifiques texte (masqués pour les zones image/barcode)
+            const controlsToShow = [
                 'input-font', 'input-size', 'input-line-height', 
                 'chk-bold', 'chk-copyfit', 'input-color',
-                'input-align', 'input-valign'
+                'input-align', 'input-valign',
+                'input-bg-color', 'chk-transparent',
+                'input-border-width', 'input-border-color', 'input-border-style'
             ];
-            textOnlyControls.forEach(ctrlId => {
+            controlsToShow.forEach(ctrlId => {
                 const el = document.getElementById(ctrlId);
                 if (el) {
                     const parent = el.closest('.style-row') || el.closest('.input-group');
@@ -2190,8 +2624,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
             
-            // Masquer la section image
+            // Masquer les sections image et code-barres
             if (imagePropertiesSection) imagePropertiesSection.style.display = 'none';
+            if (barcodePropertiesSection) barcodePropertiesSection.style.display = 'none';
             
             setTextControlsEnabled(true);
             inputContent.value = data.content || '';
@@ -2824,6 +3259,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             // Mettre à jour l'affichage des poignées (prend en compte sélection + verrouillage)
             updateHandlesVisibility();
+            // Régénérer le code-barres avec les nouvelles propriétés
+            updateQrZoneDisplay(selectedId);
             saveToLocalStorage();
             return;
         }
@@ -3192,6 +3629,235 @@ document.addEventListener('DOMContentLoaded', () => {
             option.textContent = fieldName;
             if (fieldName === selectedValue) option.selected = true;
             inputImageChamp.appendChild(option);
+        });
+    }
+    
+    // ========================================
+    // FONCTIONS CODE-BARRES
+    // ========================================
+    
+    /**
+     * Remplit le select des champs de fusion pour les code-barres
+     */
+    function updateBarcodeFieldSelect() {
+        if (!inputBarcodeField) return;
+        
+        // Vider et ajouter l'option par défaut
+        inputBarcodeField.innerHTML = '<option value="">-- Sélectionner un champ --</option>';
+        
+        // Ajouter les champs de fusion disponibles
+        const champs = documentState.champsFusion || mergeFields || [];
+        champs.forEach(champ => {
+            const fieldName = typeof champ === 'object' ? champ.nom : champ;
+            const fieldType = typeof champ === 'object' ? champ.type : 'TXT';
+            
+            const option = document.createElement('option');
+            option.value = fieldName;
+            option.textContent = fieldName + (fieldType !== 'TXT' ? ` (${fieldType})` : '');
+            inputBarcodeField.appendChild(option);
+        });
+    }
+    
+    /**
+     * Met à jour l'affichage d'une zone code-barres (type 'barcode')
+     * @param {string} zoneId - ID de la zone
+     */
+    function updateBarcodeZoneDisplay(zoneId) {
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        if (!zoneData || zoneData.type !== 'barcode') return;
+        
+        const zoneEl = document.getElementById(zoneId);
+        if (!zoneEl) return;
+        
+        // Récupérer les dimensions de la zone
+        const width = zoneEl.offsetWidth || 150;
+        const height = zoneEl.offsetHeight || 60;
+        
+        // Récupérer les propriétés du code-barres
+        const typeCode = zoneData.typeCodeBarres || 'code128';
+        const color = zoneData.couleur || '#000000';
+        const textPosition = zoneData.texteLisible || 'dessous';
+        
+        // Mettre à jour la classe 1D/2D pour l'étirement
+        updateBarcodeDimensionClass(zoneEl, typeCode);
+        
+        // Supprimer l'ancien conteneur de badges et l'ancien badge type s'ils existent
+        const oldBadgesContainer = zoneEl.querySelector('.barcode-badges');
+        if (oldBadgesContainer) {
+            oldBadgesContainer.remove();
+        }
+        
+        // Badge du type - en haut à gauche, au-dessus du cadre
+        let typeBadge = zoneEl.querySelector('.barcode-type-badge');
+        if (!typeBadge) {
+            typeBadge = document.createElement('span');
+            typeBadge.className = 'barcode-type-badge';
+            zoneEl.appendChild(typeBadge);
+        }
+        typeBadge.textContent = getBarcodeTypeLabel(typeCode);
+        
+        // Badge du champ - en bas à droite, en-dessous du cadre
+        let fieldBadge = zoneEl.querySelector('.barcode-field-badge');
+        if (!fieldBadge) {
+            fieldBadge = document.createElement('span');
+            fieldBadge.className = 'barcode-field-badge';
+            zoneEl.appendChild(fieldBadge);
+        }
+        fieldBadge.textContent = getFieldDisplayName(zoneData.champFusion);
+        
+        // Générer le vrai code-barres (toujours avec la valeur fictive)
+        const svgContainer = zoneEl.querySelector('.barcode-svg');
+        if (svgContainer) {
+            const barcodeImage = generateBarcodeImage(typeCode, '', color, textPosition, width, height);
+            // Le CSS gère l'étirement via les classes barcode-1d/barcode-2d
+            svgContainer.innerHTML = `<img src="${barcodeImage}" alt="${typeCode}">`;
+        }
+        
+        // Supprimer le label du bas (plus nécessaire avec les badges)
+        const label = zoneEl.querySelector('.barcode-label');
+        if (label) {
+            label.remove();
+        }
+        
+        // Ajuster les dimensions si passage 1D <-> 2D
+        const is2D = ['qrcode', 'datamatrix'].includes(typeCode);
+        if (is2D && Math.abs(zoneData.w - zoneData.h) > 10) {
+            // Pour les 2D, rendre carré (prendre la plus petite dimension)
+            const size = Math.min(zoneData.w || 100, zoneData.h || 100);
+            zoneData.w = size;
+            zoneData.h = size;
+            zoneEl.style.width = size + 'px';
+            zoneEl.style.height = size + 'px';
+        }
+    }
+    
+    /**
+     * Met à jour l'affichage d'une zone QR code (ancien type 'qr')
+     * @param {string} zoneId - ID de la zone
+     */
+    function updateQrZoneDisplay(zoneId) {
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        if (!zoneData || zoneData.type !== 'qr') return;
+        
+        const zoneEl = document.getElementById(zoneId);
+        if (!zoneEl) return;
+        
+        const contentEl = zoneEl.querySelector('.zone-content');
+        if (!contentEl) return;
+        
+        // Récupérer les dimensions de la zone
+        const width = zoneEl.offsetWidth || 100;
+        const height = zoneEl.offsetHeight || 100;
+        
+        // Récupérer les propriétés du code-barres
+        const typeCode = zoneData.typeCode || 'QRCode';
+        const content = zoneData.content || '';
+        const color = zoneData.qrColor || '#000000';
+        
+        // Mettre à jour la classe 1D/2D pour l'étirement
+        updateBarcodeDimensionClass(zoneEl, typeCode);
+        
+        // Déterminer la position du texte
+        let textPosition = 'dessous';
+        if (zoneData.texteLisible) {
+            textPosition = zoneData.texteLisible;
+        } else if (zoneData.includeText === false) {
+            textPosition = 'aucun';
+        }
+        
+        // Supprimer l'ancien conteneur de badges s'il existe
+        const oldBadgesContainer = zoneEl.querySelector('.barcode-badges');
+        if (oldBadgesContainer) {
+            oldBadgesContainer.remove();
+        }
+        
+        // Badge du type - en haut à gauche, au-dessus du cadre
+        let typeBadge = zoneEl.querySelector('.barcode-type-badge');
+        if (!typeBadge) {
+            typeBadge = document.createElement('span');
+            typeBadge.className = 'barcode-type-badge';
+            zoneEl.appendChild(typeBadge);
+        }
+        typeBadge.textContent = getBarcodeTypeLabel(typeCode.toLowerCase());
+        
+        // Badge du champ - en bas à droite, en-dessous du cadre
+        let fieldBadge = zoneEl.querySelector('.barcode-field-badge');
+        if (!fieldBadge) {
+            fieldBadge = document.createElement('span');
+            fieldBadge.className = 'barcode-field-badge';
+            zoneEl.appendChild(fieldBadge);
+        }
+        fieldBadge.textContent = getFieldDisplayName(content);
+        
+        // Générer le vrai code-barres (toujours avec la valeur fictive)
+        const barcodeImage = generateBarcodeImage(typeCode, '', color, textPosition, width, height);
+        
+        // Afficher l'image du code-barres (le CSS gère l'étirement via les classes barcode-1d/barcode-2d)
+        contentEl.innerHTML = `<img src="${barcodeImage}" alt="${typeCode}">`;
+    }
+    
+    /**
+     * Met à jour les données de la zone code-barres active depuis les contrôles
+     */
+    function updateActiveBarcodeZoneData() {
+        if (selectedZoneIds.length !== 1) return;
+        
+        const selectedId = selectedZoneIds[0];
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[selectedId];
+        if (!zoneData || zoneData.type !== 'barcode') return;
+        
+        // Mettre à jour les données
+        if (inputBarcodeName) zoneData.nom = inputBarcodeName.value;
+        if (inputBarcodeType) zoneData.typeCodeBarres = inputBarcodeType.value;
+        if (inputBarcodeField) zoneData.champFusion = inputBarcodeField.value;
+        if (inputBarcodeReadable) zoneData.texteLisible = inputBarcodeReadable.value;
+        if (inputBarcodeColor) zoneData.couleur = inputBarcodeColor.value;
+        
+        // Mettre à jour l'affichage
+        updateBarcodeZoneDisplay(selectedId);
+        
+        // Sauvegardes
+        saveToLocalStorage();
+        notifyParentOfChange();
+    }
+    
+    // Listeners pour les contrôles code-barres
+    if (inputBarcodeName) {
+        inputBarcodeName.addEventListener('input', () => {
+            updateActiveBarcodeZoneData();
+        });
+    }
+    
+    if (inputBarcodeType) {
+        inputBarcodeType.addEventListener('change', () => {
+            updateActiveBarcodeZoneData();
+            saveState();
+        });
+    }
+    
+    if (inputBarcodeField) {
+        inputBarcodeField.addEventListener('change', () => {
+            updateActiveBarcodeZoneData();
+            saveState();
+        });
+    }
+    
+    if (inputBarcodeReadable) {
+        inputBarcodeReadable.addEventListener('change', () => {
+            updateActiveBarcodeZoneData();
+            saveState();
+        });
+    }
+    
+    if (inputBarcodeColor) {
+        inputBarcodeColor.addEventListener('input', () => {
+            updateActiveBarcodeZoneData();
+        });
+        inputBarcodeColor.addEventListener('change', () => {
+            saveState();
         });
     }
     
@@ -4939,6 +5605,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (hasActuallyMoved && (isDragging || isResizing)) {
             saveToLocalStorage();
             saveState(); // Snapshot APRÈS le déplacement/redimensionnement
+            
+            // Régénérer les codes-barres après redimensionnement
+            if (isResizing && selectedZoneIds.length === 1) {
+                const zoneId = selectedZoneIds[0];
+                const zonesData = getCurrentPageZones();
+                const zoneData = zonesData[zoneId];
+                if (zoneData) {
+                    if (zoneData.type === 'qr') {
+                        setTimeout(() => updateQrZoneDisplay(zoneId), 50);
+                    } else if (zoneData.type === 'barcode') {
+                        setTimeout(() => updateBarcodeZoneDisplay(zoneId), 50);
+                    }
+                }
+            }
         }
         
         isDragging = false; 
@@ -5089,7 +5769,32 @@ document.addEventListener('DOMContentLoaded', () => {
         const geometrie = zoneJson.geometrie || {};
         const couleurs = zoneJson.couleurs || {};
         
-        // Construction de l'objet zone interne
+        // Détecter si c'est le nouveau format (avec typeCodeBarres et champFusion)
+        // ou l'ancien format QR simple (avec typeCode et contenu)
+        const isNewBarcodeFormat = zoneJson.typeCodeBarres !== undefined || 
+                                    zoneJson.champFusion !== undefined || 
+                                    zoneJson.texteLisible !== undefined;
+        
+        if (isNewBarcodeFormat) {
+            // Nouveau format : zone code-barres complète avec champ de fusion
+            return {
+                type: 'barcode',
+                nom: zoneJson.nom || 'Code-barres',
+                typeCodeBarres: zoneJson.typeCodeBarres || 'code128',
+                champFusion: zoneJson.champFusion || '',
+                texteLisible: zoneJson.texteLisible || 'dessous',
+                couleur: zoneJson.couleur || (couleurs.code || '#000000'),
+                locked: zoneJson.verrouille || false,
+                zIndex: zoneJson.niveau || 1,
+                rotation: zoneJson.rotation || 0,
+                x: geometrie.xMm !== undefined ? mmToPixels(geometrie.xMm) : 0,
+                y: geometrie.yMm !== undefined ? mmToPixels(geometrie.yMm) : 0,
+                w: geometrie.largeurMm !== undefined ? mmToPixels(geometrie.largeurMm) : 150,
+                h: geometrie.hauteurMm !== undefined ? mmToPixels(geometrie.hauteurMm) : 60
+            };
+        }
+        
+        // Ancien format : zone QR simple (rétrocompatibilité)
         return {
             // Type interne 'qr' pour compatibilité avec createZoneDOM()
             type: 'qr',
@@ -5385,6 +6090,20 @@ document.addEventListener('DOMContentLoaded', () => {
         saveToLocalStorage();
         console.log('  → État sauvegardé dans localStorage');
         
+        // Rafraîchir tous les codes-barres pour générer les vrais codes-barres
+        setTimeout(() => {
+            const zonesData = getCurrentPageZones();
+            Object.keys(zonesData).forEach(zoneId => {
+                const zoneData = zonesData[zoneId];
+                if (zoneData && zoneData.type === 'qr') {
+                    updateQrZoneDisplay(zoneId);
+                } else if (zoneData && zoneData.type === 'barcode') {
+                    updateBarcodeZoneDisplay(zoneId);
+                }
+            });
+            console.log('  → Codes-barres rafraîchis');
+        }, 100);
+        
         console.log('=== loadFromWebDev() : Chargement terminé ===');
         console.log('État documentState :', documentState);
         console.log(`Résumé : ${documentState.pages.length} page(s), ${zonesTexteCount} zone(s) texte, ${zonesCodeBarresCount} zone(s) code-barres, ${zonesImageCount} zone(s) image`);
@@ -5528,6 +6247,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     /**
      * Convertit une zone code-barres du format documentState vers le format JSON WebDev
+     * Gère les deux types : 'qr' (ancien format) et 'barcode' (nouveau format)
      * @param {string} id - Identifiant de la zone (ex: "zone-2")
      * @param {Object} zoneData - Données de la zone au format interne
      * @param {number} pageNumero - Numéro de page (1-based pour WebDev)
@@ -5537,7 +6257,28 @@ document.addEventListener('DOMContentLoaded', () => {
         // Conversion pixels → mm
         const pixelsToMm = (px) => px * MM_PER_PIXEL;
         
-        // Construction de l'objet JSON WebDev
+        // Nouveau format : zone code-barres avec champ de fusion
+        if (zoneData.type === 'barcode') {
+            return {
+                id: id,
+                page: pageNumero,
+                nom: zoneData.nom || 'Code-barres',
+                typeCodeBarres: zoneData.typeCodeBarres || 'code128',
+                champFusion: zoneData.champFusion || '',
+                texteLisible: zoneData.texteLisible || 'dessous',
+                couleur: zoneData.couleur || '#000000',
+                geometrie: {
+                    xMm: pixelsToMm(zoneData.x || 0),
+                    yMm: pixelsToMm(zoneData.y || 0),
+                    largeurMm: pixelsToMm(zoneData.w || 150),
+                    hauteurMm: pixelsToMm(zoneData.h || 60)
+                },
+                niveau: zoneData.zIndex || 1,
+                verrouille: zoneData.locked || false
+            };
+        }
+        
+        // Ancien format : zone QR simple (rétrocompatibilité)
         return {
             // Identifiant et page
             id: id,
@@ -5682,14 +6423,15 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log(`  → Page ${pageNumero} : "${page.name}" (fond: ${page.image ? 'oui' : 'non'})`);
             
             // Parcourir les zones de cette page
-            let textCount = 0, qrCount = 0, imageCount = 0;
+            let textCount = 0, barcodeCount = 0, imageCount = 0;
             
             for (const [zoneId, zoneData] of Object.entries(page.zones || {})) {
-                if (zoneData.type === 'qr') {
+                if (zoneData.type === 'qr' || zoneData.type === 'barcode') {
+                    // Les deux types (qr et barcode) vont dans zonesCodeBarres
                     output.zonesCodeBarres.push(
                         convertZoneCodeBarresToJson(zoneId, zoneData, pageNumero)
                     );
-                    qrCount++;
+                    barcodeCount++;
                 } else if (zoneData.type === 'image') {
                     output.zonesImage.push(
                         convertZoneImageToJson(zoneId, zoneData, pageNumero)
@@ -5703,7 +6445,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             
-            console.log(`    → ${textCount} zone(s) texte, ${qrCount} zone(s) code-barres, ${imageCount} zone(s) image`);
+            console.log(`    → ${textCount} zone(s) texte, ${barcodeCount} zone(s) code-barres, ${imageCount} zone(s) image`);
         });
         
         // --- ÉTAPE 4 : Extraire les polices utilisées ---
@@ -5938,9 +6680,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (zoneType === 'qr') {
                     zoneEl.classList.add('zone-qr');
-                    if (contentEl && !contentEl.innerHTML.trim()) {
-                        contentEl.innerHTML = getQrPlaceholderSvg();
+                    // Régénérer le vrai code-barres
+                    setTimeout(() => updateQrZoneDisplay(id), 10);
+                    if (data.locked) {
+                        zoneEl.classList.add('locked');
                     }
+                    continue;
+                }
+                
+                if (zoneType === 'barcode') {
+                    zoneEl.classList.add('barcode-zone');
+                    // Régénérer le vrai code-barres
+                    setTimeout(() => updateBarcodeZoneDisplay(id), 10);
                     if (data.locked) {
                         zoneEl.classList.add('locked');
                     }

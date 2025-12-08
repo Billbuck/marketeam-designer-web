@@ -6,6 +6,8 @@
     <title>Éditeur VDP - Multi-Zones</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Bibliothèque bwip-js pour génération de codes-barres -->
+    <script src="https://cdn.jsdelivr.net/npm/bwip-js@4.5.1/dist/bwip-js-min.min.js"></script>
 </head>
 <body>
 
@@ -35,6 +37,9 @@
                 </button>
                 <button id="btn-add-qr" class="btn-primary">
                     <span class="material-icons">qr_code_2</span> QR Code
+                </button>
+                <button id="btn-add-barcode" class="btn-primary" title="Ajouter un code-barres">
+                    <span class="material-icons">view_week</span> Code-barres
                 </button>
                 <button id="btn-add-image" class="btn-primary">
                     <span class="material-icons">image</span> Zone image
@@ -233,6 +238,56 @@
                                 <option value="bottom">Bas</option>
                             </select>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Section spécifique Zone Code-barres (masquée par défaut) -->
+                <div id="barcode-properties-section" style="display: none;">
+                    <h4 class="subsection-title">Code-barres</h4>
+                    
+                    <div class="input-group">
+                        <label for="input-barcode-name">Nom de la zone</label>
+                        <input type="text" id="input-barcode-name" placeholder="Code produit">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="input-barcode-type">Type de code-barres</label>
+                        <select id="input-barcode-type">
+                            <optgroup label="Codes 1D">
+                                <option value="code128">Code 128</option>
+                                <option value="code39">Code 39</option>
+                                <option value="ean13">EAN-13</option>
+                                <option value="ean8">EAN-8</option>
+                                <option value="upca">UPC-A</option>
+                                <option value="interleaved2of5">Code 2/5 Intercalé</option>
+                                <option value="pdf417">PDF417</option>
+                            </optgroup>
+                            <optgroup label="Codes 2D">
+                                <option value="datamatrix">Data Matrix</option>
+                                <option value="qrcode">Code QR</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="input-barcode-field">Champ de fusion</label>
+                        <select id="input-barcode-field">
+                            <!-- Sera rempli dynamiquement avec les champs de fusion -->
+                            <option value="">-- Sélectionner un champ --</option>
+                        </select>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="input-barcode-readable">Texte lisible</label>
+                        <select id="input-barcode-readable">
+                            <option value="aucun">Aucun</option>
+                            <option value="dessous" selected>En dessous</option>
+                        </select>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="input-barcode-color">Couleur</label>
+                        <input type="color" id="input-barcode-color" value="#000000">
                     </div>
                 </div>
 
