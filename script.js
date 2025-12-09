@@ -665,9 +665,10 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function getGeometryLimits() {
         const marginMm = getSecurityMarginMm();
-        const pageWidthMm = pxToMm(getPageWidth());
-        const pageHeightMm = pxToMm(getPageHeight());
-        
+        // Utiliser les dimensions mm EXACTES (pas de conversion depuis pixels)
+        const pageWidthMm = getPageWidthMm();
+        const pageHeightMm = getPageHeightMm();
+
         return {
             minX: marginMm,
             minY: marginMm,
@@ -1631,6 +1632,15 @@ document.addEventListener('DOMContentLoaded', () => {
         'Legal': { width: 816, height: 1344, name: 'Legal (US)' }
     };
 
+    // Formats prédéfinis en mm (dimensions EXACTES sans conversion)
+    const DOCUMENT_FORMATS_MM = {
+        'A4': { widthMm: 210, heightMm: 297, name: 'A4' },
+        'A3': { widthMm: 297, heightMm: 420, name: 'A3' },
+        'A5': { widthMm: 148, heightMm: 210, name: 'A5' },
+        'Letter': { widthMm: 215.9, heightMm: 279.4, name: 'Letter (US)' },
+        'Legal': { widthMm: 215.9, heightMm: 355.6, name: 'Legal (US)' }
+    };
+
     // Format par défaut (A4)
     const DEFAULT_FORMAT = 'A4';
 
@@ -1709,6 +1719,46 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         // Fallback final : format par défaut
         return DOCUMENT_FORMATS[DEFAULT_FORMAT].height;
+    }
+
+    // Obtenir la largeur de la page courante en mm (valeur EXACTE)
+    function getPageWidthMm() {
+        const currentPage = getCurrentPage();
+        
+        // Priorité 1 : valeur mm stockée dans formatDocument (import JSON)
+        if (documentState.formatDocument?.largeurMm !== undefined) {
+            return documentState.formatDocument.largeurMm;
+        }
+        
+        // Priorité 2 : format prédéfini en mm
+        const format = currentPage?.format || DEFAULT_FORMAT;
+        if (DOCUMENT_FORMATS_MM[format]) {
+            return DOCUMENT_FORMATS_MM[format].widthMm;
+        }
+        
+        // Priorité 3 (Custom ou format inconnu) : arrondir à l'entier le plus proche
+        // Cela corrige les erreurs de précision px→mm (794px → 210.05mm → 210mm)
+        return Math.round(pxToMm(getPageWidth()));
+    }
+
+    // Obtenir la hauteur de la page courante en mm (valeur EXACTE)
+    function getPageHeightMm() {
+        const currentPage = getCurrentPage();
+        
+        // Priorité 1 : valeur mm stockée dans formatDocument (import JSON)
+        if (documentState.formatDocument?.hauteurMm !== undefined) {
+            return documentState.formatDocument.hauteurMm;
+        }
+        
+        // Priorité 2 : format prédéfini en mm
+        const format = currentPage?.format || DEFAULT_FORMAT;
+        if (DOCUMENT_FORMATS_MM[format]) {
+            return DOCUMENT_FORMATS_MM[format].heightMm;
+        }
+        
+        // Priorité 3 (Custom ou format inconnu) : arrondir à l'entier le plus proche
+        // Cela corrige les erreurs de précision px→mm (1123px → 297.09mm → 297mm)
+        return Math.round(pxToMm(getPageHeight()));
     }
 
     // Appliquer les dimensions de la page courante au DOM
@@ -6121,11 +6171,11 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'w':
                 // NE PAS modifier X, juste limiter la largeur au max possible
                 wMm = Math.max(minSizeMm, valueMm);
-                
+
                 // Largeur max = bord droit (avec marge) - position X actuelle
                 const maxWidth = round1(limits.maxX - xMm);
                 wMm = round1(Math.min(wMm, maxWidth));
-                
+
                 // Codes 2D : forcer le carré
                 if (is2D) {
                     // Aussi vérifier la contrainte de hauteur
@@ -6488,9 +6538,12 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('  → Identification :', documentState.identification);
         }
         
-        // Stocker le format du document (fond perdu, traits de coupe, marge de sécurité, limites images)
+        // Stocker le format du document (dimensions mm, fond perdu, traits de coupe, marge de sécurité, limites images)
         if (jsonData.formatDocument) {
             documentState.formatDocument = {
+                // Dimensions exactes en mm (pour les calculs de géométrie précis)
+                largeurMm: jsonData.formatDocument.largeurMm || DOCUMENT_FORMATS_MM[DEFAULT_FORMAT].widthMm,
+                hauteurMm: jsonData.formatDocument.hauteurMm || DOCUMENT_FORMATS_MM[DEFAULT_FORMAT].heightMm,
                 fondPerdu: jsonData.formatDocument.fondPerdu || { actif: false, valeurMm: 3 },
                 traitsCoupe: jsonData.formatDocument.traitsCoupe || { actif: false },
                 margeSecuriteMm: jsonData.formatDocument.margeSecurite || 0,
@@ -6498,6 +6551,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 pourcentageMaxImage: jsonData.formatDocument?.pourcentageMaxImage || DEFAULT_POURCENTAGE_MAX_IMAGE
             };
             console.log('  → Format document :', documentState.formatDocument);
+            console.log('  → Dimensions :', documentState.formatDocument.largeurMm, 'x', documentState.formatDocument.hauteurMm, 'mm');
             console.log('  → Marge de sécurité :', documentState.formatDocument.margeSecuriteMm, 'mm');
             console.log('  → Limites zones image : surface max', documentState.formatDocument.surfaceMaxImageMm2, 'mm², pourcentage max', documentState.formatDocument.pourcentageMaxImage, '%');
         }
