@@ -179,6 +179,7 @@ button:last-child {
     cursor: grab;
     box-sizing: border-box;
     display: flex;
+    overflow: visible;  /* Permettre aux badges système de déborder */
     justify-content: center;
     align-items: center;
     border: none; /* Pas de bordure par défaut - la bordure utilisateur sera appliquée via style inline */
@@ -1326,6 +1327,21 @@ body.in-iframe .toolbar {
 
 .image-dpi-badge.dpi-vector {
     background: rgba(100, 100, 100, 0.9);  /* Gris - SVG vectoriel */
+}
+
+/* Badge zone système */
+.systeme-badge {
+    position: absolute;
+    bottom: -18px;
+    right: 0;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: Arial, sans-serif;
+    white-space: nowrap;
+    color: white;
+    background: #2196F3;  /* Bleu Material */
+    z-index: 10;
 }
 
 /* Section propriétés code-barres */

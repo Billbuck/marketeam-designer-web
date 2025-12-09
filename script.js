@@ -1254,6 +1254,42 @@ document.addEventListener('DOMContentLoaded', () => {
         dpiBadge.className = 'image-dpi-badge ' + dpiClass;
     }
     
+    /**
+     * Met à jour le badge système d'une zone
+     * Affiche le libellé système si systeme=true ET systemeLibelle non vide
+     * @param {string} zoneId - ID de la zone
+     */
+    function updateSystemeBadge(zoneId) {
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        if (!zoneData) return;
+        
+        const zoneEl = document.getElementById(zoneId);
+        if (!zoneEl) return;
+        
+        // Chercher un badge existant
+        let badge = zoneEl.querySelector('.systeme-badge');
+        
+        // Vérifier si on doit afficher le badge
+        const shouldShow = zoneData.systeme && zoneData.systemeLibelle;
+        
+        if (!shouldShow) {
+            // Supprimer le badge s'il existe
+            if (badge) badge.remove();
+            return;
+        }
+        
+        // Créer le badge s'il n'existe pas
+        if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'systeme-badge';
+            zoneEl.appendChild(badge);
+        }
+        
+        // Mettre à jour le contenu
+        badge.textContent = zoneData.systemeLibelle;
+    }
+    
     // ========================================
     // CONTRAINTES REDIMENSIONNEMENT IMAGES
     // ========================================
@@ -2601,11 +2637,16 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (count === 1) {
             // Sélection unique : afficher les propriétés de la zone
             const id = selectedZoneIds[0];
-            btnDelete.disabled = false;
+            const zonesData = getCurrentPageZones();
+            const zoneData = zonesData[id];
+            const isSysteme = zoneData && zoneData.systeme;
+            
+            // Griser le bouton Supprimer si zone système
+            btnDelete.disabled = isSysteme;
             coordsPanel.style.display = 'block';
             coordsPanel.style.pointerEvents = 'auto';
             lblSelected.innerText = `Zone ${id.split('-')[1]}`;
-            
+
             // Charger les données de la zone unique
             loadZoneDataToForm(id);
         } else {
@@ -2639,9 +2680,26 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const zonesData = getCurrentPageZones();
         const data = zonesData[id];
+        
         if (!data) {
             historyManager.isLoadingForm = false;
             return;
+        }
+        
+        // Zone système : masquer tout le conteneur de propriétés
+        if (data.systeme) {
+            const propertiesContent = document.getElementById('zone-properties-content');
+            if (propertiesContent) {
+                propertiesContent.style.display = 'none';
+            }
+            historyManager.isLoadingForm = false;
+            return;
+        }
+        
+        // Zone normale : s'assurer que le conteneur est visible
+        const propertiesContent = document.getElementById('zone-properties-content');
+        if (propertiesContent) {
+            propertiesContent.style.display = '';
         }
         
         const zoneType = data.type || 'text';
@@ -2865,12 +2923,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         chkLock.checked = data.locked || false;
         
-        // Activer/désactiver les champs de géométrie selon le verrouillage
+        // Activer/désactiver les champs de géométrie selon le verrouillage ou système
         const isLocked = data.locked || false;
-        inputX.disabled = isLocked;
-        inputY.disabled = isLocked;
-        inputW.disabled = isLocked;
-        inputH.disabled = isLocked;
+        const isSysteme = data.systeme || false;
+        const isReadOnly = isLocked || isSysteme;
+        inputX.disabled = isReadOnly;
+        inputY.disabled = isReadOnly;
+        inputW.disabled = isReadOnly;
+        inputH.disabled = isReadOnly;
+        
+        // Désactiver le checkbox de verrouillage si la zone est système
+        if (chkLock) chkLock.disabled = isSysteme;
         
         // Afficher/masquer la section Lignes vides selon le type de zone (texte uniquement)
         if (emptyLinesSection) {
@@ -2960,8 +3023,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!zone) continue;
             
             const zonesData = getCurrentPageZones();
-            if (zonesData[zoneId] && zonesData[zoneId].locked) continue; // Ignorer les zones verrouillées
-            
+            if (zonesData[zoneId] && (zonesData[zoneId].locked || zonesData[zoneId].systeme)) continue; // Ignorer les zones verrouillées ou système
+
             switch(direction) {
                 case 'left':
                     zone.style.left = refRect.left + 'px';
@@ -3015,7 +3078,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const zone = document.getElementById(zoneId);
             if (!zone) continue;
 
-            if (zonesData[zoneId] && zonesData[zoneId].locked) continue; // Ignorer les zones verrouillées
+            if (zonesData[zoneId] && (zonesData[zoneId].locked || zonesData[zoneId].systeme)) continue; // Ignorer les zones verrouillées ou système
 
             const zoneData = zonesData[zoneId];
             
@@ -3082,7 +3145,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const zone = document.getElementById(zoneId);
             if (!zone) continue;
 
-            if (zonesData[zoneId] && zonesData[zoneId].locked) continue; // Ignorer les zones verrouillées
+            if (zonesData[zoneId] && (zonesData[zoneId].locked || zonesData[zoneId].systeme)) continue; // Ignorer les zones verrouillées ou système
 
             const zoneData = zonesData[zoneId];
             
@@ -3138,12 +3201,33 @@ document.addEventListener('DOMContentLoaded', () => {
         const isCtrlPressed = event && (event.ctrlKey || event.metaKey);
         const isAlreadySelected = selectedZoneIds.includes(id);
         
+        // Vérifier si la zone cliquée est système
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[id];
+        const isSysteme = zoneData && zoneData.systeme;
+        
         if (isCtrlPressed) {
             // Mode multi-sélection : ajouter ou retirer de la sélection
-            if (isAlreadySelected) {
+            // MAIS : une zone système ne peut pas faire partie d'une multi-sélection
+            if (isSysteme) {
+                // Zone système : ignorer le Ctrl+clic, faire une sélection simple
+                // (la zone système sera sélectionnée seule plus bas)
+            } else if (isAlreadySelected) {
                 removeFromSelection(id);
+                return;
             } else {
-                addToSelection(id);
+                // Vérifier si la sélection actuelle contient une zone système
+                const hasSystemeInSelection = selectedZoneIds.some(zoneId => {
+                    const data = zonesData[zoneId];
+                    return data && data.systeme;
+                });
+                if (hasSystemeInSelection) {
+                    // Il y a une zone système sélectionnée, on la remplace par cette nouvelle zone
+                    // (pas de multi-sélection avec une zone système)
+                } else {
+                    addToSelection(id);
+                    return;
+                }
             }
         } else {
             // Sélection simple : remplacer la sélection actuelle
@@ -3505,12 +3589,16 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateActiveZoneData() {
         // Ne fonctionne qu'en mode sélection unique
         if (selectedZoneIds.length !== 1) return;
-        
+
         const selectedId = selectedZoneIds[0];
         const zoneEl = document.getElementById(selectedId);
         if (!zoneEl) return;
-        
+
         const zonesData = getCurrentPageZones();
+        
+        // Bloquer si zone système
+        if (zonesData[selectedId] && zonesData[selectedId].systeme) return;
+        
         const zoneType = zonesData[selectedId].type || 'text';
         const contentEl = zoneEl.querySelector('.zone-content');
 
@@ -4121,11 +4209,14 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function updateActiveBarcodeZoneData() {
         if (selectedZoneIds.length !== 1) return;
-        
+
         const selectedId = selectedZoneIds[0];
         const zonesData = getCurrentPageZones();
         const zoneData = zonesData[selectedId];
         if (!zoneData || zoneData.type !== 'barcode') return;
+        
+        // Bloquer si zone système
+        if (zoneData.systeme) return;
         
         // Mettre à jour les données
         if (inputBarcodeName) zoneData.nom = inputBarcodeName.value;
@@ -4248,6 +4339,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const zoneData = zonesData[selectedId];
         if (!zoneData || zoneData.type !== 'image') return;
         
+        // Bloquer si zone système
+        if (zoneData.systeme) return;
+        
         // Mettre à jour la source (avec vérifications null)
         if (inputImageSourceType) {
             const sourceType = inputImageSourceType.value;
@@ -4347,15 +4441,18 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function updateActiveQrZoneData() {
         if (selectedZoneIds.length !== 1) return;
-        
+
         const selectedId = selectedZoneIds[0];
         const zoneEl = document.getElementById(selectedId);
         if (!zoneEl) return;
-        
+
         const zonesData = getCurrentPageZones();
         const zoneData = zonesData[selectedId];
         if (!zoneData || zoneData.type !== 'qr') return;
         
+        // Bloquer si zone système
+        if (zoneData.systeme) return;
+
         // Verrouillage
         zoneData.locked = chkLock.checked;
         if (chkLock.checked) {
@@ -5158,7 +5255,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .map(id => {
                 const zone = document.getElementById(id);
                 if (!zone) return null;
-                if (zonesData[id] && zonesData[id].locked) return null; // Ignorer les zones verrouillées
+                if (zonesData[id] && (zonesData[id].locked || zonesData[id].systeme)) return null; // Ignorer les zones verrouillées ou système
                 return {
                     id: id,
                     element: zone,
@@ -5218,7 +5315,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .map(id => {
                 const zone = document.getElementById(id);
                 if (!zone) return null;
-                if (zonesData[id] && zonesData[id].locked) return null; // Ignorer les zones verrouillées
+                if (zonesData[id] && (zonesData[id].locked || zonesData[id].systeme)) return null; // Ignorer les zones verrouillées ou système
                 return {
                     id: id,
                     element: zone,
@@ -5703,12 +5800,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function resetCurrentPage() {
-        // 1. Supprimer toutes les zones du DOM de la page courante
-        document.querySelectorAll('.zone').forEach(el => el.remove());
-        
-        // 2. Vider la mémoire de la page courante uniquement
         const zonesData = getCurrentPageZones();
-        for (const key in zonesData) delete zonesData[key];
+        
+        // 1. Supprimer les zones du DOM (sauf les zones système)
+        document.querySelectorAll('.zone').forEach(el => {
+            const zoneId = el.id;
+            const zoneData = zonesData[zoneId];
+            // Ne pas supprimer si c'est une zone système
+            if (!zoneData || !zoneData.systeme) {
+                el.remove();
+            }
+        });
+        
+        // 2. Vider la mémoire de la page courante (sauf zones système)
+        for (const key in zonesData) {
+            if (!zonesData[key].systeme) {
+                delete zonesData[key];
+            }
+        }
         
         // 3. Désélectionner
         selectedZoneIds = [];
@@ -5723,21 +5832,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function resetAllPages() {
         
-        // 1. Supprimer toutes les zones du DOM
-        document.querySelectorAll('.zone').forEach(el => el.remove());
-        
-        // 2. Vider la mémoire de toutes les pages
-        documentState.pages.forEach(page => {
-            for (const key in page.zones) delete page.zones[key];
+        // 1. Supprimer les zones du DOM (sauf les zones système de la page courante)
+        const currentZonesData = getCurrentPageZones();
+        document.querySelectorAll('.zone').forEach(el => {
+            const zoneId = el.id;
+            const zoneData = currentZonesData[zoneId];
+            // Ne pas supprimer si c'est une zone système
+            if (!zoneData || !zoneData.systeme) {
+                el.remove();
+            }
         });
         
-        // 3. Réinitialiser le compteur global et la sélection
-        documentState.zoneCounter = 0;
-        zoneCounter = 0;
+        // 2. Vider la mémoire de toutes les pages (sauf zones système)
+        documentState.pages.forEach(page => {
+            for (const key in page.zones) {
+                if (!page.zones[key].systeme) {
+                    delete page.zones[key];
+                }
+            }
+        });
+        
+        // 3. Désélectionner (ne pas réinitialiser le compteur car les zones système restent)
         selectedZoneIds = [];
         deselectAll(); // Nettoyer l'interface
         
-        // 4. Sauvegarder l'état vide
+        // 4. Sauvegarder l'état
         saveToLocalStorage();
         saveState(); // Snapshot APRÈS la réinitialisation
         
@@ -5793,8 +5912,8 @@ document.addEventListener('DOMContentLoaded', () => {
             for (const zoneId of selectedZoneIds) {
                 const zoneEl = document.getElementById(zoneId);
                 if (zoneEl && zoneEl.contains(e.target)) {
-                    // Vérifier si cette zone n'est pas verrouillée
-                    if (!zonesData[zoneId] || !zonesData[zoneId].locked) {
+                    // Vérifier si cette zone n'est pas verrouillée ou système
+                    if (!zonesData[zoneId] || (!zonesData[zoneId].locked && !zonesData[zoneId].systeme)) {
                         clickedZone = zoneEl;
                         clickedZoneId = zoneId;
                         break;
@@ -5834,9 +5953,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectedZoneIds.forEach(zoneId => {
                     const zoneEl = document.getElementById(zoneId);
                     if (zoneEl) {
-                        // Vérifier si la zone n'est pas verrouillée
+                        // Vérifier si la zone n'est pas verrouillée ou système
                         const zoneData = zonesData[zoneId];
-                        if (!zoneData || !zoneData.locked) {
+                        if (!zoneData || (!zoneData.locked && !zoneData.systeme)) {
                             startPositions.push({
                                 id: zoneId,
                                 left: zoneEl.offsetLeft,
@@ -5874,9 +5993,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const zoneEl = document.getElementById(pos.id);
                 if (!zoneEl) return;
                 
-                // Vérifier si la zone n'est pas verrouillée
+                // Vérifier si la zone n'est pas verrouillée ou système
                 const zoneData = zonesData[pos.id];
-                if (zoneData && zoneData.locked) return; // Ignorer les zones verrouillées
+                if (zoneData && (zoneData.locked || zoneData.systeme)) return; // Ignorer les zones verrouillées ou système
                 
                 // Calculer la nouvelle position
                 const newLeft = pos.left + dx;
@@ -6120,8 +6239,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const zonesData = getCurrentPageZones();
         const zoneData = zonesData[zoneId];
-        if (!zoneData || zoneData.locked) return;
-        
+        if (!zoneData || zoneData.locked || zoneData.systeme) return;
+
         // Récupérer les limites avec marge de sécurité
         const limits = getGeometryLimits();
         
@@ -6404,6 +6523,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // États
             locked: zoneJson.verrouille || false,
+            systeme: zoneJson.systeme || false,
+            systemeLibelle: zoneJson.systemeLibelle || '',
+            imprimable: zoneJson.imprimable !== undefined ? zoneJson.imprimable : true,
             copyfit: copyfitting.actif || false,
             
             // Nouvelles propriétés (stockées pour utilisation future)
@@ -6449,6 +6571,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 taillePolice: zoneJson.taillePolice || 8,
                 couleur: zoneJson.couleur || (couleurs.code || '#000000'),
                 locked: zoneJson.verrouille || false,
+                systeme: zoneJson.systeme || false,
+                systemeLibelle: zoneJson.systemeLibelle || '',
+                imprimable: zoneJson.imprimable !== undefined ? zoneJson.imprimable : true,
                 zIndex: zoneJson.niveau || 1,
                 rotation: zoneJson.rotation || 0,
                 x: geometrie.xMm !== undefined ? mmToPixels(geometrie.xMm) : 0,
@@ -6480,6 +6605,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // État
             locked: zoneJson.verrouille || false,
+            systeme: zoneJson.systeme || false,
+            systemeLibelle: zoneJson.systemeLibelle || '',
+            imprimable: zoneJson.imprimable !== undefined ? zoneJson.imprimable : true,
             
             // Nouvelles propriétés (stockées pour utilisation future)
             name: zoneJson.nom || '',
@@ -6824,6 +6952,9 @@ document.addEventListener('DOMContentLoaded', () => {
             bgColor: fond.couleur || '#ffffff',
             isTransparent: fond.transparent !== undefined ? fond.transparent : true,
             locked: zoneJson.verrouille || false,
+            systeme: zoneJson.systeme || false,
+            systemeLibelle: zoneJson.systemeLibelle || '',
+            imprimable: zoneJson.imprimable !== undefined ? zoneJson.imprimable : true,
             rotation: zoneJson.rotation || 0,
             border: {
                 width: bordure.epaisseur || 0,
@@ -6834,7 +6965,7 @@ document.addEventListener('DOMContentLoaded', () => {
             zIndex: zoneJson.niveau || 1
         };
     }
-    
+
     // Exposer la fonction globalement pour l'appel depuis l'iframe parent
     window.loadFromWebDev = loadFromWebDev;
 
@@ -6880,6 +7011,9 @@ document.addEventListener('DOMContentLoaded', () => {
             niveau: zoneData.zIndex || 1,
             rotation: zoneData.rotation || 0,
             verrouille: zoneData.locked || false,
+            systeme: zoneData.systeme || false,
+            systemeLibelle: zoneData.systemeLibelle || '',
+            imprimable: zoneData.imprimable !== undefined ? zoneData.imprimable : true,
             // Lignes vides : export entier (rétrocompatibilité avec ancien booléen)
             supprimerLignesVides: zoneData.emptyLines !== undefined ? zoneData.emptyLines : (zoneData.removeEmptyLines ? 1 : 0),
             
@@ -6958,7 +7092,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     hauteurMm: zoneData.hMm !== undefined ? zoneData.hMm : pixelsToMm(zoneData.h || 60)
                 },
                 niveau: zoneData.zIndex || 1,
-                verrouille: zoneData.locked || false
+                verrouille: zoneData.locked || false,
+                systeme: zoneData.systeme || false,
+                systemeLibelle: zoneData.systemeLibelle || '',
+                imprimable: zoneData.imprimable !== undefined ? zoneData.imprimable : true
             };
         }
 
@@ -6979,6 +7116,9 @@ document.addEventListener('DOMContentLoaded', () => {
             niveau: zoneData.zIndex || 1,
             rotation: zoneData.rotation || 0,
             verrouille: zoneData.locked || false,
+            systeme: zoneData.systeme || false,
+            systemeLibelle: zoneData.systemeLibelle || '',
+            imprimable: zoneData.imprimable !== undefined ? zoneData.imprimable : true,
 
             // Géométrie (utiliser les valeurs mm stockées si disponibles)
             geometrie: {
@@ -7009,6 +7149,9 @@ document.addEventListener('DOMContentLoaded', () => {
             niveau: zoneData.zIndex || 1,
             rotation: zoneData.rotation || 0,
             verrouille: zoneData.locked || false,
+            systeme: zoneData.systeme || false,
+            systemeLibelle: zoneData.systemeLibelle || '',
+            imprimable: zoneData.imprimable !== undefined ? zoneData.imprimable : true,
             geometrie: {
                 xMm: zoneData.xMm !== undefined ? zoneData.xMm : pixelsToMm(zoneData.x || 0),
                 yMm: zoneData.yMm !== undefined ? zoneData.yMm : pixelsToMm(zoneData.y || 0),
@@ -7072,8 +7215,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 dateCreation: documentState.identification?.dateCreation || ''
             },
             formatDocument: {
-                largeurMm: documentState.pages[0]?.width * MM_PER_PIXEL || 210,
-                hauteurMm: documentState.pages[0]?.height * MM_PER_PIXEL || 297,
+                // Priorité aux valeurs mm stockées (précises), sinon calcul depuis pixels
+                largeurMm: documentState.formatDocument?.largeurMm || (documentState.pages[0]?.width * MM_PER_PIXEL) || 210,
+                hauteurMm: documentState.formatDocument?.hauteurMm || (documentState.pages[0]?.height * MM_PER_PIXEL) || 297,
                 fondPerdu: documentState.formatDocument?.fondPerdu || { actif: false, valeurMm: 3 },
                 traitsCoupe: documentState.formatDocument?.traitsCoupe || { actif: false },
                 margeSecurite: documentState.formatDocument?.margeSecuriteMm || 0,
@@ -7369,9 +7513,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (data.locked) {
                         zoneEl.classList.add('locked');
                     }
+                    // Badge système
+                    updateSystemeBadge(id);
                     continue;
                 }
-                
+
                 if (zoneType === 'barcode') {
                     zoneEl.classList.add('barcode-zone');
                     // Régénérer le vrai code-barres
@@ -7379,6 +7525,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (data.locked) {
                         zoneEl.classList.add('locked');
                     }
+                    // Badge système
+                    updateSystemeBadge(id);
                     continue;
                 }
                 
@@ -7396,12 +7544,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (data.border) {
                         applyBorderToZone(zoneEl, data.border);
                     }
-                    
+
                     // Verrouillage
                     if (data.locked) {
                         zoneEl.classList.add('locked');
                     }
                     
+                    // Badge système
+                    updateSystemeBadge(id);
+
                     // Affichage image/placeholder
                     updateImageZoneDisplay(zoneEl, data);
                     
@@ -7461,12 +7612,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else if (data.size) {
                     zoneEl.style.fontSize = data.size + 'pt';
                 }
-                
+
                 // Verrouillage
                 if (data.locked) {
                      zoneEl.classList.add('locked');
                 }
                 
+                // Badge système
+                updateSystemeBadge(id);
+
                 // Bordure utilisateur
                 if (data.border) {
                     applyBorderToZone(zoneEl, data.border);
