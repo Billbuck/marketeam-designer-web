@@ -1,5 +1,59 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- ÉLÉMENTS DOM ---
+    /**
+     * ╔══════════════════════════════════════════════════════════════════════════════╗
+     * ║                        MARKETEAM DESIGNER - SCRIPT.JS                        ║
+     * ║                         Éditeur VDP Multi-Zones                              ║
+     * ╠══════════════════════════════════════════════════════════════════════════════╣
+     * ║                                                                              ║
+     * ║  TABLE DES MATIÈRES                                                          ║
+     * ║  ─────────────────                                                           ║
+     * ║                                                                              ║
+     * ║  SECTION 1  : RÉFÉRENCES DOM ............................ ligne ~43         ║
+     * ║  SECTION 2  : CONSTANTES ET CONFIGURATION ............... ligne ~194        ║
+     * ║  SECTION 3  : CONFIGURATION CODES-BARRES (bwip-js) ...... ligne ~245        ║
+     * ║  SECTION 4  : UTILITAIRES CODES-BARRES .................. ligne ~374        ║
+     * ║  SECTION 5  : POLICES DYNAMIQUES ........................ ligne ~636        ║
+     * ║  SECTION 6  : CONVERSIONS MM/PIXELS ET MARGES ........... ligne ~745        ║
+     * ║  SECTION 7  : CONTRAINTES ZONES IMAGE (Surface/DPI) ..... ligne ~828        ║
+     * ║  SECTION 8  : UPLOAD ET COMPRESSION IMAGE ............... ligne ~892        ║
+     * ║  SECTION 9  : CALCUL DPI ET BADGES ...................... ligne ~1164       ║
+     * ║  SECTION 10 : CONTRAINTES REDIMENSIONNEMENT IMAGE ....... ligne ~1501       ║
+     * ║  SECTION 11 : SYSTÈME UNDO/REDO (Historique) ............ ligne ~1724       ║
+     * ║  SECTION 12 : ÉTAT DU DOCUMENT ET HELPERS ............... ligne ~1913       ║
+     * ║  SECTION 13 : CRÉATION DE ZONES ......................... ligne ~2121       ║
+     * ║  SECTION 14 : AFFICHAGE DES ZONES (QR, Barcode, Image) .. ligne ~2646       ║
+     * ║  SECTION 15 : FORMATAGE PARTIEL DU TEXTE ................ ligne ~3588       ║
+     * ║  SECTION 16 : EVENT LISTENERS - FORMULAIRE .............. ligne ~4822       ║
+     * ║  SECTION 17 : DRAG & DROP / REDIMENSIONNEMENT ........... ligne ~6271       ║
+     * ║  SECTION 18 : SAISIE GÉOMÉTRIE (mm) ..................... ligne ~6586       ║
+     * ║  SECTION 19 : IMPORT DEPUIS WEBDEV ...................... ligne ~6882       ║
+     * ║  SECTION 20 : EXPORT VERS WEBDEV ........................ ligne ~7427       ║
+     * ║  SECTION 21 : COMMUNICATION POSTMESSAGE ................. ligne ~7778       ║
+     * ║  SECTION 22 : CHARGEMENT PAGE ET LOCALSTORAGE ........... ligne ~7904       ║
+     * ║  SECTION 23 : NAVIGATION MULTIPAGE ...................... ligne ~8200       ║
+     * ║  SECTION 24 : ZOOM ET PAN ............................... ligne ~8925       ║
+     * ║                                                                              ║
+     * ╠══════════════════════════════════════════════════════════════════════════════╣
+     * ║  Version : 1.0.0                                                             ║
+     * ║  Dernière modification : 09/12/2025                                          ║
+     * ╚══════════════════════════════════════════════════════════════════════════════╝
+     */
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SECTION 1 : RÉFÉRENCES DOM
+    // ═══════════════════════════════════════════════════════════════════════════════
+    /**
+     * Récupération de tous les éléments DOM utilisés dans l'application.
+     * Ces références sont utilisées tout au long du script pour manipuler l'interface.
+     * 
+     * Contenu :
+     *   - Éléments principaux (page, workspace, boutons)
+     *   - Inputs du formulaire (texte, image, code-barres)
+     *   - Contrôles de zoom et historique
+     *   - Éléments de géométrie
+     */
+    // ───────────────────────────────────────────────────────────────────────────────
+
     const a4Page = document.getElementById('a4-page');
     const workspace = document.querySelector('.workspace');
     const workspaceCanvas = document.querySelector('.workspace-canvas');
@@ -133,8 +187,21 @@ document.addEventListener('DOMContentLoaded', () => {
             saveState();
         });
     });
-    
-    // --- CONSTANTES BORDURE ---
+
+    // ─────────────────────────────── FIN SECTION 1 ────────────────────────────────
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SECTION 2 : CONSTANTES ET CONFIGURATION
+    // ═══════════════════════════════════════════════════════════════════════════════
+    /**
+     * Constantes globales de configuration de l'application.
+     * 
+     * Contenu :
+     *   - BORDER_STYLE_TO_PSMD : Mapping styles de bordure vers PrintShop Mail
+     *   - BARCODE_TYPES : Types de codes-barres supportés
+     *   - SVG_BARCODE_1D, SVG_BARCODE_2D : SVG placeholders pour l'affichage
+     */
+    // ───────────────────────────────────────────────────────────────────────────────
     
     // Mapping des styles de bordure vers les valeurs PrintShop Mail
     const BORDER_STYLE_TO_PSMD = {
@@ -171,10 +238,24 @@ document.addEventListener('DOMContentLoaded', () => {
 <path d="M127 29.766l0 19.843 -19.844 0 0 -19.843 19.844 0zm-19.844 116.582l0 28.277 19.844 0 0 -28.277 -19.844 0zm59.531 107.652l0 -19.844 -19.843 0 0 -19.843 -19.844 0 0 39.687 39.687 0zm39.688 -147.34l-59.531 0 0 19.844 59.531 0 0 -19.844zm0 39.688l27.781 0 0 -19.844 -27.781 0 0 19.844zm0 28.277l0 19.844 47.625 0 0 -48.121 -19.844 0 0 28.277 -27.781 0zm-59.531 -174.625l-19.844 0 0 29.766 19.844 0 0 -29.766zm-19.844 89.297l19.844 0 0 -39.688 -19.844 0 0 19.844 -19.844 0 0 57.051 19.844 0 0 -37.207zm-127 17.363l0 39.688 19.844 0 0 -19.844 29.765 0 0 -19.844 -49.609 0zm146.844 39.688l0 -19.844 -19.844 0 0 19.844 19.844 0zm39.687 19.843l19.844 0 0 -19.843 -19.844 0 0 19.843zm47.625 -39.687l19.844 0 0 -19.844 -19.844 0 0 19.844zm-67.469 19.844l-19.843 0 0 28.277 -19.844 0 0 19.844 39.687 0 0 -48.121zm-59.531 67.965l19.844 0 0 -19.844 -19.844 0 0 19.844zm59.531 -19.844l0 19.844 39.688 0 0 -19.844 -39.688 0zm59.532 39.687l0 -19.843 -19.844 0 0 19.843 19.844 0zm27.781 19.844l0 -19.844 -27.781 0 0 19.844 27.781 0zm-67.469 0l19.844 0 0 -19.844 -19.844 0 0 19.844zm-97.234 -127.496l0 -19.844 -19.844 0 0 19.844 -19.844 0 0 19.844 57.547 0 0 -19.844 -17.859 0zm0 -37.207l-89.297 0 0 -89.297 89.297 0 0 89.297zm-19.844 -69.453l-49.609 0 0 49.609 49.609 0 0 -49.609zm-14.883 14.883l-19.843 0 0 19.843 19.843 0 0 -19.843zm199.43 -34.727l0 89.297 -89.297 0 0 -89.297 89.297 0zm-19.844 19.844l-49.609 0 0 49.609 49.609 0 0 -49.609zm-14.883 14.883l-19.843 0 0 19.843 19.843 0 0 -19.843zm-219.273 129.976l89.297 0 0 89.297 -89.297 0 0 -89.297zm19.844 69.453l49.609 0 0 -49.609 -49.609 0 0 49.609zm14.883 -14.883l19.843 0 0 -19.843 -19.843 0 0 19.843zm0 0z"/>
 </g>
 </svg>`;
-    
-    // =====================================================
-    // CONFIGURATION CODES-BARRES (bwip-js)
-    // =====================================================
+
+    // ─────────────────────────────── FIN SECTION 2 ────────────────────────────────
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SECTION 3 : CONFIGURATION CODES-BARRES (bwip-js)
+    // ═══════════════════════════════════════════════════════════════════════════════
+    /**
+     * Configuration détaillée pour la génération de codes-barres avec bwip-js.
+     * 
+     * Contenu :
+     *   - BARCODE_BWIPJS_CONFIG : Mapping types → configuration bwip-js
+     *   - SVG_BARCODE_FALLBACK : SVG de secours si génération échoue
+     *   - SVG_BARCODE_2D_FALLBACK : SVG de secours pour codes 2D
+     * 
+     * Dépendances :
+     *   - Librairie bwip-js (chargée externement)
+     */
+    // ───────────────────────────────────────────────────────────────────────────────
     
     /**
      * Mapping entre nos types de codes-barres et les identifiants bwip-js (bcid)
@@ -286,6 +367,29 @@ document.addEventListener('DOMContentLoaded', () => {
         <rect width="100" height="100" fill="#f8f8f8" stroke="#ccc" stroke-dasharray="4"/>
         <text x="50" y="55" text-anchor="middle" font-size="10" fill="#999">2D Code</text>
     </svg>`;
+
+    // ─────────────────────────────── FIN SECTION 3 ────────────────────────────────
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SECTION 4 : UTILITAIRES CODES-BARRES
+    // ═══════════════════════════════════════════════════════════════════════════════
+    /**
+     * Fonctions utilitaires pour la manipulation des codes-barres.
+     * 
+     * Fonctions principales :
+     *   - getBarcodeTypeLabel() : Retourne le libellé d'un type
+     *   - getFieldDisplayName() : Extrait le nom du champ sans @
+     *   - is2DBarcode() : Détermine si un code est 2D
+     *   - updateBarcodeDimensionClass() : Met à jour la classe CSS
+     *   - getBarcodePlaceholderSVG() : Retourne le SVG placeholder
+     *   - getFallbackBarcodeSvg() : Retourne le SVG de fallback
+     *   - generateBarcodeImage() : Génère l'image du code-barres
+     * 
+     * Dépendances :
+     *   - BARCODE_TYPES (Section 2)
+     *   - BARCODE_BWIPJS_CONFIG (Section 3)
+     */
+    // ───────────────────────────────────────────────────────────────────────────────
     
     /**
      * Retourne le libellé d'un type de code-barres
@@ -421,6 +525,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // ─────────────────────────────── FIN SECTION 4 ────────────────────────────────
+
     const textControls = [
         inputContent,
         inputFont,
@@ -526,9 +632,20 @@ document.addEventListener('DOMContentLoaded', () => {
         inputContent.dispatchEvent(new Event('input'));
     }
 
-    // ========================================================================
-    // POLICES DYNAMIQUES - Étape 6
-    // ========================================================================
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SECTION 5 : POLICES DYNAMIQUES
+    // ═══════════════════════════════════════════════════════════════════════════════
+    /**
+     * Gestion dynamique des polices de caractères depuis le JSON WebDev.
+     * 
+     * Fonctions principales :
+     *   - loadFontsFromJson() : Injecte les règles @font-face
+     *   - updateFontSelectUI() : Met à jour le sélecteur de polices
+     * 
+     * Dépendances :
+     *   - inputFont (Section 1) : Sélecteur de police dans le formulaire
+     */
+    // ───────────────────────────────────────────────────────────────────────────────
     
     /**
      * Injecte les règles @font-face pour les polices du document
@@ -622,6 +739,31 @@ document.addEventListener('DOMContentLoaded', () => {
     window.loadFontsFromJson = loadFontsFromJson;
     window.updateFontSelectUI = updateFontSelectUI;
 
+    // ─────────────────────────────── FIN SECTION 5 ────────────────────────────────
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SECTION 6 : CONVERSIONS MM/PIXELS ET MARGES
+    // ═══════════════════════════════════════════════════════════════════════════════
+    /**
+     * Utilitaires de conversion entre millimètres et pixels.
+     * Gestion des marges de sécurité du document.
+     * 
+     * Constantes :
+     *   - MM_PER_PIXEL : Ratio mm/pixel (basé sur 96 DPI)
+     *   - DEFAULT_SECURITY_MARGIN_MM : Marge par défaut (8mm)
+     * 
+     * Fonctions principales :
+     *   - mmToPx() : Convertit mm en pixels
+     *   - pxToMm() : Convertit pixels en mm
+     *   - getSecurityMarginMm() / getSecurityMarginPx() : Marge de sécurité
+     *   - getGeometryLimits() : Limites de positionnement
+     * 
+     * Dépendances :
+     *   - documentState (Section 12)
+     *   - getPageWidthMm(), getPageHeightMm() (Section 12)
+     */
+    // ───────────────────────────────────────────────────────────────────────────────
+
     const MM_PER_PIXEL = 25.4 / 96;
     const DEFAULT_SECURITY_MARGIN_MM = 8;  // Marge de sécurité par défaut : 8mm
     
@@ -679,8 +821,30 @@ document.addEventListener('DOMContentLoaded', () => {
             marginMm: marginMm
         };
     }
-    
-    // --- CONSTANTES LIMITES ZONES IMAGE ---
+
+    // ─────────────────────────────── FIN SECTION 6 ────────────────────────────────
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SECTION 7 : CONTRAINTES ZONES IMAGE (Surface/DPI)
+    // ═══════════════════════════════════════════════════════════════════════════════
+    /**
+     * Constantes et fonctions pour les contraintes des zones image.
+     * Limite la surface maximale et définit les seuils DPI.
+     * 
+     * Constantes :
+     *   - DEFAULT_SURFACE_MAX_IMAGE_MM2 : Surface max absolue (20000 mm²)
+     *   - DPI_MINIMUM, DPI_RECOMMENDED : Seuils qualité (150/200 dpi)
+     * 
+     * Fonctions principales :
+     *   - getSurfaceLimiteImageMm2() : Surface limite en mm²
+     *   - getSurfaceLimiteImagePx2() : Surface limite en pixels²
+     * 
+     * Dépendances :
+     *   - documentState (Section 12)
+     *   - MM_PER_PIXEL (Section 6)
+     */
+    // ───────────────────────────────────────────────────────────────────────────────
+
     const DEFAULT_SURFACE_MAX_IMAGE_MM2 = 20000;  // Surface max absolue en mm²
     const DEFAULT_POURCENTAGE_MAX_IMAGE = 50;     // % max de la surface document
     const IMAGE_MAX_DIMENSION_PX = 1500;          // Dimension max après compression
@@ -721,10 +885,31 @@ document.addEventListener('DOMContentLoaded', () => {
         const pxPerMm = 1 / MM_PER_PIXEL;
         return surfaceMm2 * pxPerMm * pxPerMm;
     }
-    
-    // ========================================
-    // UPLOAD IMAGE - Fonctions utilitaires
-    // ========================================
+
+    // ─────────────────────────────── FIN SECTION 7 ────────────────────────────────
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SECTION 8 : UPLOAD ET COMPRESSION IMAGE
+    // ═══════════════════════════════════════════════════════════════════════════════
+    /**
+     * Fonctions pour l'upload, la compression et l'affichage des images.
+     * 
+     * Fonctions principales :
+     *   - supportsWebP() : Détection support WebP
+     *   - formatFileSize() : Formatage taille fichier
+     *   - isImageFormatAccepted() : Validation format fichier
+     *   - isSvgFile() : Détection fichier SVG
+     *   - compressImage() : Compression via Canvas
+     *   - readSvgFile() : Lecture SVG sans compression
+     *   - showImageUploadError() : Affichage erreur upload
+     *   - showImageLoading() : Indicateur de chargement
+     *   - updateImageFileInfoDisplay() : Mise à jour infos fichier
+     * 
+     * Dépendances :
+     *   - imageFileInfo, imageDpiIndicator (Section 1)
+     *   - IMAGE_MAX_DIMENSION_PX, IMAGE_COMPRESSION_QUALITY (Section 7)
+     */
+    // ───────────────────────────────────────────────────────────────────────────────
     
     /**
      * Vérifie si le navigateur supporte le format WebP
@@ -972,10 +1157,30 @@ document.addEventListener('DOMContentLoaded', () => {
         // Mettre à jour l'indicateur DPI
         updateDpiIndicator();
     }
-    
-    // ========================================
-    // CALCUL ET AFFICHAGE DPI
-    // ========================================
+
+    // ─────────────────────────────── FIN SECTION 8 ────────────────────────────────
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SECTION 9 : CALCUL DPI ET BADGES
+    // ═══════════════════════════════════════════════════════════════════════════════
+    /**
+     * Calcul et affichage de la résolution (DPI) des images.
+     * Gestion des badges visuels sur les zones.
+     * 
+     * Fonctions principales :
+     *   - calculateImageDpi() : Calcul DPI selon mode d'affichage
+     *   - getDpiState() : Détermine l'état (good/warning/error/vector)
+     *   - getDpiDisplayInfo() : Génère texte et icône
+     *   - updateDpiIndicator() : Met à jour l'indicateur dans le panneau
+     *   - updateImageDpiBadge() : Met à jour le badge sur la zone
+     *   - updateSystemeBadge() : Met à jour le badge système
+     * 
+     * Dépendances :
+     *   - DPI_MINIMUM, DPI_RECOMMENDED (Section 7)
+     *   - MM_PER_PIXEL (Section 6)
+     *   - getCurrentPageZones() (Section 12)
+     */
+    // ───────────────────────────────────────────────────────────────────────────────
     
     /**
      * Calcule le DPI d'une image dans une zone
@@ -1289,10 +1494,28 @@ document.addEventListener('DOMContentLoaded', () => {
         // Mettre à jour le contenu
         badge.textContent = zoneData.systemeLibelle;
     }
-    
-    // ========================================
-    // CONTRAINTES REDIMENSIONNEMENT IMAGES
-    // ========================================
+
+    // ─────────────────────────────── FIN SECTION 9 ────────────────────────────────
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SECTION 10 : CONTRAINTES REDIMENSIONNEMENT IMAGE
+    // ═══════════════════════════════════════════════════════════════════════════════
+    /**
+     * Vérification et application des contraintes lors du redimensionnement.
+     * Empêche l'agrandissement au-delà des limites de surface et DPI.
+     * 
+     * Fonctions principales :
+     *   - checkImageResizeAllowed() : Vérifie si redimensionnement autorisé
+     *   - calculateMaxDimensionsForDpi() : Calcule dimensions max pour DPI cible
+     *   - showResizeConstraintMessage() : Affiche message de contrainte
+     *   - showResizeConstraintMessageDebounced() : Version avec debounce
+     * 
+     * Dépendances :
+     *   - getSurfaceLimiteImagePx2() (Section 7)
+     *   - calculateImageDpi() (Section 9)
+     *   - DPI_MINIMUM (Section 7)
+     */
+    // ───────────────────────────────────────────────────────────────────────────────
     
     /**
      * Vérifie si un redimensionnement de zone image est autorisé
@@ -1487,6 +1710,8 @@ document.addEventListener('DOMContentLoaded', () => {
         lastConstraintTime = now;
         showResizeConstraintMessage(message);
     }
+
+    // ─────────────────────────────── FIN SECTION 10 ───────────────────────────────
     
     let zoneCounter = 0;
     let selectedZoneIds = []; // Tableau pour la sélection multiple
@@ -1495,7 +1720,31 @@ document.addEventListener('DOMContentLoaded', () => {
     // Déclarer zoomLevel tôt pour qu'il soit disponible partout
     let zoomLevel = 1.0; // 100% par défaut
 
-    // --- SYSTÈME D'HISTORIQUE (UNDO/REDO) ---
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SECTION 11 : SYSTÈME UNDO/REDO (Historique)
+    // ═══════════════════════════════════════════════════════════════════════════════
+    /**
+     * Système d'historique pour annuler/rétablir les actions.
+     * Gère les snapshots de l'état du document.
+     * 
+     * Objet principal :
+     *   - historyManager : Gestionnaire d'états (states, currentIndex, flags)
+     * 
+     * Fonctions principales :
+     *   - saveState() : Sauvegarde état après modification
+     *   - undo() : Annule dernière action
+     *   - redo() : Rétablit action annulée
+     *   - restoreState() : Restaure depuis snapshot
+     *   - updateHistoryUI() : Met à jour boutons et compteur
+     *   - showUndoRedoToast() : Affiche notification
+     * 
+     * Dépendances :
+     *   - documentState (Section 12)
+     *   - loadCurrentPage() (Section 22)
+     *   - btnUndo, btnRedo (Section 1)
+     */
+    // ───────────────────────────────────────────────────────────────────────────────
+
     const historyManager = {
         states: [],           // Tableau des snapshots de documentState
         currentIndex: -1,     // Position actuelle dans l'historique
@@ -1658,7 +1907,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- SYSTÈME DE FORMATS DE DOCUMENT ---
+    // ─────────────────────────────── FIN SECTION 11 ───────────────────────────────
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SECTION 12 : ÉTAT DU DOCUMENT ET HELPERS
+    // ═══════════════════════════════════════════════════════════════════════════════
+    /**
+     * Structure centrale de données et fonctions d'accès.
+     * Gère les formats de document et les dimensions de page.
+     * 
+     * Constantes :
+     *   - DOCUMENT_FORMATS : Formats prédéfinis en pixels
+     *   - DOCUMENT_FORMATS_MM : Formats prédéfinis en mm
+     * 
+     * Objet principal :
+     *   - documentState : État complet du document (pages, zones, compteurs)
+     * 
+     * Fonctions principales :
+     *   - getCurrentPage() : Page courante
+     *   - getCurrentPageZones() : Zones de la page courante
+     *   - getPageWidth/Height() : Dimensions en pixels
+     *   - getPageWidthMm/HeightMm() : Dimensions en mm
+     *   - applyPageDimensions() : Applique au DOM
+     *   - getCenterOfView() : Centre de la vue actuelle
+     * 
+     * Dépendances :
+     *   - a4Page (Section 1)
+     *   - pxToMm() (Section 6)
+     */
+    // ───────────────────────────────────────────────────────────────────────────────
+
     // Formats prédéfinis (dimensions en pixels à 96 DPI)
     const DOCUMENT_FORMATS = {
         'A4': { width: 794, height: 1123, name: 'A4' },
@@ -1837,7 +2115,32 @@ document.addEventListener('DOMContentLoaded', () => {
         return { x: maxX, y: maxY };
     }
 
-    // --- 1. AJOUTER UNE ZONE ---
+    // ─────────────────────────────── FIN SECTION 12 ───────────────────────────────
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SECTION 13 : CRÉATION DE ZONES
+    // ═══════════════════════════════════════════════════════════════════════════════
+    /**
+     * Création des différents types de zones (texte, QR, image, code-barres).
+     * Fonctions de copier-coller de zones.
+     * 
+     * Event Listeners :
+     *   - btnAdd : Créer zone texte
+     *   - btnAddQr : Créer zone QR
+     *   - btnAddImage : Créer zone image
+     *   - btnAddBarcode : Créer zone code-barres
+     * 
+     * Fonctions principales :
+     *   - createZoneDOM() : Créer l'élément DOM d'une zone
+     *   - copyZone() : Copier la zone sélectionnée
+     *   - pasteZone() : Coller la zone copiée
+     * 
+     * Dépendances :
+     *   - documentState, getCurrentPageZones() (Section 12)
+     *   - saveState() (Section 11)
+     */
+    // ───────────────────────────────────────────────────────────────────────────────
+
     btnAdd.addEventListener('click', () => {
         documentState.zoneCounter++;
         zoneCounter = documentState.zoneCounter; // Synchroniser pour compatibilité
@@ -2337,9 +2640,34 @@ document.addEventListener('DOMContentLoaded', () => {
         saveState(); // Snapshot APRÈS le collage
     }
 
-    // ========================================
-    // FONCTIONS D'ARRANGEMENT (Z-INDEX)
-    // ========================================
+    // ─────────────────────────────── FIN SECTION 13 ───────────────────────────────
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SECTION 14 : AFFICHAGE DES ZONES (QR, Barcode, Image)
+    // ═══════════════════════════════════════════════════════════════════════════════
+    /**
+     * Fonctions de mise à jour de l'affichage visuel des zones.
+     * Gestion du z-index et de l'arrangement des zones.
+     * 
+     * Fonctions d'arrangement (z-index) :
+     *   - getMaxZIndex() : Z-index maximum des zones
+     *   - bringToFront/Forward/Backward/ToBack() : Réorganiser les zones
+     * 
+     * Fonctions de sélection :
+     *   - addToSelection(), removeFromSelection()
+     *   - updateSelectionUI(), loadZoneDataToForm()
+     * 
+     * Fonctions d'affichage :
+     *   - updateImageZoneDisplay() : Affichage zone image
+     *   - updateBarcodeZoneDisplay() : Affichage zone code-barres
+     *   - updateQrZoneDisplay() : Affichage zone QR
+     *   - applyBorderToZone() : Application des bordures
+     * 
+     * Dépendances :
+     *   - generateBarcodeImage() (Section 4)
+     *   - BARCODE_BWIPJS_CONFIG (Section 3)
+     */
+    // ───────────────────────────────────────────────────────────────────────────────
 
     /**
      * Récupère le z-index maximum parmi toutes les zones de la page courante
@@ -3254,7 +3582,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- GESTION DU FORMATAGE PARTIEL (ANNOTATIONS) ---
+    // ─────────────────────────────── FIN SECTION 14 ───────────────────────────────
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SECTION 15 : FORMATAGE PARTIEL DU TEXTE
+    // ═══════════════════════════════════════════════════════════════════════════════
+    /**
+     * Système d'annotations pour le formatage partiel du texte.
+     * Permet d'appliquer gras et couleur sur des portions de texte.
+     * 
+     * Fonctions principales :
+     *   - applyFormattingToSelection() : Appliquer un style à la sélection
+     *   - clearFormattingFromSelection() : Supprimer le formatage
+     *   - updateFormattingAfterContentChange() : Ajuster après modification
+     *   - renderFormattedContent() : Générer le HTML avec formatage
+     *   - escapeHtml() : Échapper les caractères HTML
+     * 
+     * Listeners :
+     *   - btnFormatBold, btnFormatColor, btnFormatClear
+     * 
+     * Dépendances :
+     *   - inputContent (Section 1)
+     *   - getCurrentPageZones() (Section 12)
+     */
+    // ───────────────────────────────────────────────────────────────────────────────
     
     /**
      * Applique un formatage à la sélection dans le textarea
@@ -4465,7 +4816,33 @@ document.addEventListener('DOMContentLoaded', () => {
         saveToLocalStorage();
     }
 
-    // Attacher les écouteurs
+    // ─────────────────────────────── FIN SECTION 15 ───────────────────────────────
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SECTION 16 : EVENT LISTENERS - FORMULAIRE
+    // ═══════════════════════════════════════════════════════════════════════════════
+    /**
+     * Écouteurs d'événements pour les contrôles du formulaire.
+     * Gère la synchronisation entre l'UI et les données des zones.
+     * 
+     * Listeners texte :
+     *   - inputContent, inputFont, inputSize, inputColor
+     *   - inputAlign, inputValign, inputLineHeight
+     *   - chkBold, chkCopyfit, chkTransparent, chkLock
+     * 
+     * Listeners image :
+     *   - inputImageSourceType, inputImageChamp, inputImageMode
+     *   - inputImageAlignH, inputImageAlignV, inputImageFile
+     * 
+     * Listeners code-barres :
+     *   - inputBarcodeName, inputBarcodeType, inputBarcodeField
+     *   - inputBarcodeReadable, inputBarcodeFontsize, inputBarcodeColor
+     * 
+     * Dépendances :
+     *   - updateActiveZoneData() (Section 14)
+     *   - saveState() (Section 11)
+     */
+    // ───────────────────────────────────────────────────────────────────────────────
     
     // Écouteur spécifique pour le contenu texte (avec debounce pour l'historique)
     // L'état AVANT la modification est déjà dans l'historique (dernier snapshot)
@@ -5888,7 +6265,35 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- 5. DRAG & DROP (Repris et adapté) ---
+    // ─────────────────────────────── FIN SECTION 16 ───────────────────────────────
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SECTION 17 : DRAG & DROP / REDIMENSIONNEMENT
+    // ═══════════════════════════════════════════════════════════════════════════════
+    /**
+     * Gestion du déplacement et du redimensionnement des zones par souris.
+     * Support du déplacement groupé pour sélection multiple.
+     * 
+     * Variables d'état :
+     *   - isDragging, isResizing : Flags d'état
+     *   - currentHandle : Poignée active (nw, ne, sw, se)
+     *   - startPositions : Positions initiales pour déplacement groupé
+     * 
+     * Handlers :
+     *   - mousedown : Initier drag ou resize
+     *   - mousemove : Appliquer déplacement/redimensionnement
+     *   - mouseup : Finaliser et sauvegarder
+     * 
+     * Contraintes :
+     *   - Marge de sécurité (Section 6)
+     *   - Contraintes DPI/surface pour images (Section 10)
+     * 
+     * Dépendances :
+     *   - getSecurityMarginPx() (Section 6)
+     *   - checkImageResizeAllowed() (Section 10)
+     */
+    // ───────────────────────────────────────────────────────────────────────────────
+
     let isDragging = false, isResizing = false, currentHandle = null;
     let startX, startY, startLeft, startTop, startW, startH;
     // Stockage des positions initiales de toutes les zones sélectionnées pour le déplacement groupé
@@ -6175,6 +6580,33 @@ document.addEventListener('DOMContentLoaded', () => {
         lastConstraintTime = 0;
     });
 
+    // ─────────────────────────────── FIN SECTION 17 ───────────────────────────────
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SECTION 18 : SAISIE GÉOMÉTRIE (mm)
+    // ═══════════════════════════════════════════════════════════════════════════════
+    /**
+     * Gestion de la saisie manuelle des coordonnées et dimensions en millimètres.
+     * Synchronisation entre les inputs mm et les positions pixels des zones.
+     * 
+     * Fonctions principales :
+     *   - updateGeomDisplay() : Affiche les valeurs mm depuis la zone
+     *   - applyGeometryChange() : Applique une modification de géométrie
+     * 
+     * Listeners :
+     *   - inputX, inputY : Position (mm)
+     *   - inputW, inputH : Dimensions (mm)
+     * 
+     * Contraintes :
+     *   - Marge de sécurité (getGeometryLimits)
+     *   - Taille minimum (2mm)
+     * 
+     * Dépendances :
+     *   - pxToMm(), mmToPx() (Section 6)
+     *   - getGeometryLimits() (Section 6)
+     */
+    // ───────────────────────────────────────────────────────────────────────────────
+
     /**
      * Met à jour les champs de géométrie avec les valeurs mm stockées ou calculées
      * @param {HTMLElement|Object} zoneDataOrEl - Élément DOM ou données de la zone
@@ -6414,6 +6846,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // ─────────────────────────────── FIN SECTION 18 ───────────────────────────────
+
     // --- 6. SAUVEGARDE / CHARGEMENT LOCAL ---
     function saveToLocalStorage() {
         // On ajoute la position/taille actuelle du DOM dans les données avant de sauver
@@ -6444,9 +6878,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ============================================================================
-    // CHARGEMENT DEPUIS WEBDEV (iframe parent)
-    // ============================================================================
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SECTION 19 : IMPORT DEPUIS WEBDEV
+    // ═══════════════════════════════════════════════════════════════════════════════
+    /**
+     * Chargement des données depuis le format JSON WebDev.
+     * Conversion des zones et métadonnées vers le format interne.
+     * 
+     * Fonctions de conversion :
+     *   - convertZoneTexteFromJson() : Zone texte JSON → interne
+     *   - convertZoneCodeBarresFromJson() : Zone code-barres JSON → interne
+     *   - convertZoneImageFromJson() : Zone image JSON → interne
+     * 
+     * Fonction principale :
+     *   - loadFromWebDev() : Point d'entrée pour le chargement
+     * 
+     * Dépendances :
+     *   - documentState (Section 12)
+     *   - mmToPx(), pxToMm() (Section 6)
+     *   - loadFontsFromJson() (Section 5)
+     */
+    // ───────────────────────────────────────────────────────────────────────────────
     
     /**
      * Convertit une zone texte du format JSON WebDev vers le format interne documentState
@@ -6969,9 +7421,28 @@ document.addEventListener('DOMContentLoaded', () => {
     // Exposer la fonction globalement pour l'appel depuis l'iframe parent
     window.loadFromWebDev = loadFromWebDev;
 
-    // ========================================================================
-    // EXPORT VERS WEBDEV - Étape 4
-    // ========================================================================
+    // ─────────────────────────────── FIN SECTION 19 ───────────────────────────────
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SECTION 20 : EXPORT VERS WEBDEV
+    // ═══════════════════════════════════════════════════════════════════════════════
+    /**
+     * Export des données vers le format JSON WebDev.
+     * Conversion des zones et métadonnées vers le format de sortie.
+     * 
+     * Fonctions de conversion :
+     *   - convertZoneTexteToJson() : Zone texte interne → JSON
+     *   - convertZoneCodeBarresToJson() : Zone code-barres interne → JSON
+     *   - convertZoneImageToJson() : Zone image interne → JSON
+     * 
+     * Fonction principale :
+     *   - exportToWebDev() : Génère le JSON complet pour WebDev
+     * 
+     * Dépendances :
+     *   - documentState (Section 12)
+     *   - MM_PER_PIXEL (Section 6)
+     */
+    // ───────────────────────────────────────────────────────────────────────────────
     
     /**
      * Convertit une zone texte du format documentState vers le format JSON WebDev
@@ -7301,9 +7772,34 @@ document.addEventListener('DOMContentLoaded', () => {
     // Exposer la fonction globalement pour l'appel depuis l'iframe parent
     window.exportToWebDev = exportToWebDev;
 
-    // ========================================================================
-    // COMMUNICATION POSTMESSAGE AVEC WEBDEV - Étape 7
-    // ========================================================================
+    // ─────────────────────────────── FIN SECTION 20 ───────────────────────────────
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SECTION 21 : COMMUNICATION POSTMESSAGE
+    // ═══════════════════════════════════════════════════════════════════════════════
+    /**
+     * Communication bidirectionnelle avec le parent WebDev via postMessage.
+     * Gère le chargement et l'export à distance.
+     * 
+     * Variables :
+     *   - isInIframe : Détection mode iframe
+     * 
+     * Fonctions principales :
+     *   - sendMessageToParent() : Envoie un message au parent
+     *   - notifyParentOfChange() : Notifie d'une modification
+     *   - handleParentMessage() : Gestionnaire des messages reçus
+     * 
+     * Actions supportées :
+     *   - load : Charger un document
+     *   - export : Exporter le document
+     *   - getState : Retourner l'état
+     *   - ping/pong : Test de connexion
+     * 
+     * Dépendances :
+     *   - loadFromWebDev() (Section 19)
+     *   - exportToWebDev() (Section 20)
+     */
+    // ───────────────────────────────────────────────────────────────────────────────
     
     // Détecter si on est dans une iframe
     const isInIframe = window.parent !== window;
@@ -7401,6 +7897,30 @@ document.addEventListener('DOMContentLoaded', () => {
     window.sendMessageToParent = sendMessageToParent;
     window.notifyParentOfChange = notifyParentOfChange;
     window.isInIframe = isInIframe;
+
+    // ─────────────────────────────── FIN SECTION 21 ───────────────────────────────
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SECTION 22 : CHARGEMENT PAGE ET LOCALSTORAGE
+    // ═══════════════════════════════════════════════════════════════════════════════
+    /**
+     * Sauvegarde et restauration des données via localStorage.
+     * Chargement des pages avec leurs zones.
+     * 
+     * Fonctions principales :
+     *   - saveToLocalStorage() : Sauvegarde l'état complet
+     *   - loadFromLocalStorage() : Restaure depuis localStorage
+     *   - loadCurrentPage() : Charge la page courante dans le DOM
+     * 
+     * Migration :
+     *   - Support de l'ancien format (page unique) vers le nouveau (multipage)
+     * 
+     * Dépendances :
+     *   - documentState (Section 12)
+     *   - createZoneDOM() (Section 13)
+     *   - applyPageDimensions() (Section 12)
+     */
+    // ───────────────────────────────────────────────────────────────────────────────
 
     function loadFromLocalStorage() {
         // Essayer de charger le nouveau format multipage
@@ -7674,7 +8194,29 @@ document.addEventListener('DOMContentLoaded', () => {
         sendMessageToParent({ action: 'ready', version: '1.0' });
     }, 100);
 
-    // --- FONCTION DE CHANGEMENT DE PAGE ---
+    // ─────────────────────────────── FIN SECTION 22 ───────────────────────────────
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SECTION 23 : NAVIGATION MULTIPAGE
+    // ═══════════════════════════════════════════════════════════════════════════════
+    /**
+     * Gestion de la navigation entre les pages du document.
+     * Mise à jour de l'interface de navigation.
+     * 
+     * Fonctions principales :
+     *   - switchPage() : Change de page (sauvegarde, vide, charge)
+     *   - updatePageNavigationUI() : Met à jour les boutons de navigation
+     * 
+     * Listeners :
+     *   - Boutons de navigation Recto/Verso
+     * 
+     * Dépendances :
+     *   - documentState (Section 12)
+     *   - loadCurrentPage() (Section 22)
+     *   - setZoom() (Section 24)
+     */
+    // ───────────────────────────────────────────────────────────────────────────────
+
     function switchPage(pageIndex) {
         if (pageIndex < 0 || pageIndex >= documentState.pages.length) {
             console.warn('Index de page invalide:', pageIndex);
@@ -8377,7 +8919,35 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- 8. FONCTIONNALITÉ ZOOM ---
+    // ─────────────────────────────── FIN SECTION 23 ───────────────────────────────
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SECTION 24 : ZOOM ET PAN
+    // ═══════════════════════════════════════════════════════════════════════════════
+    /**
+     * Gestion du zoom et du déplacement (pan) dans l'espace de travail.
+     * 
+     * Variables :
+     *   - zoomLevel : Niveau de zoom actuel (0.25 à 3.0)
+     *   - CANVAS_PADDING : Marge autour du document
+     *   - spacePressed : Flag pour le mode pan avec Espace
+     * 
+     * Fonctions principales :
+     *   - setZoom() : Applique un niveau de zoom
+     *   - centerWorkspace() : Centre le document dans la vue
+     * 
+     * Listeners :
+     *   - zoomSlider : Curseur de zoom
+     *   - btnZoomIn, btnZoomOut : Boutons de zoom
+     *   - wheel : Zoom molette (Ctrl+molette)
+     *   - Espace : Mode pan temporaire
+     * 
+     * Dépendances :
+     *   - a4Page, workspace, workspaceCanvas (Section 1)
+     *   - getPageWidth(), getPageHeight() (Section 12)
+     */
+    // ───────────────────────────────────────────────────────────────────────────────
+
     const CANVAS_PADDING = 60;
 
     function setZoom(level) {
@@ -8574,5 +9144,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Le clic simple sera géré par le listener de désélection existant
         }
     });
+
+    // ─────────────────────────────── FIN SECTION 24 ───────────────────────────────
 
 });
