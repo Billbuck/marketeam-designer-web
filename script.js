@@ -40,6 +40,417 @@ document.addEventListener('DOMContentLoaded', () => {
      */
 
     // ═══════════════════════════════════════════════════════════════════════════════
+    // DÉFINITIONS DE TYPES JSDOC (@typedef)
+    // ═══════════════════════════════════════════════════════════════════════════════
+    /**
+     * Ce bloc contient les définitions de types TypeScript/JSDoc pour l'éditeur VDP.
+     * Ces types permettent aux IDE et IA d'offrir une meilleure autocomplétion
+     * et une meilleure compréhension du code.
+     */
+    // ───────────────────────────────────────────────────────────────────────────────
+
+    // --- STRUCTURES DE FORMAT DE DOCUMENT ---
+
+    /**
+     * @typedef {Object} DocumentFormatDefinition
+     * @property {number} width - Largeur en pixels (96 DPI)
+     * @property {number} height - Hauteur en pixels (96 DPI)
+     * @property {string} name - Nom d'affichage du format
+     * @description Définition d'un format de document en pixels.
+     * @example
+     * // Format A4 : { width: 794, height: 1123, name: 'A4' }
+     */
+
+    /**
+     * @typedef {Object} DocumentFormatMmDefinition
+     * @property {number} widthMm - Largeur en millimètres
+     * @property {number} heightMm - Hauteur en millimètres
+     * @property {string} name - Nom d'affichage du format
+     * @description Définition d'un format de document en millimètres (dimensions exactes).
+     * @example
+     * // Format A4 : { widthMm: 210, heightMm: 297, name: 'A4' }
+     */
+
+    /**
+     * @typedef {'A4'|'A3'|'A5'|'Letter'|'Legal'} FormatName
+     * @description Identifiants des formats de document prédéfinis.
+     */
+
+    // --- STRUCTURES DE BORDURE ---
+
+    /**
+     * @typedef {Object} BorderData
+     * @property {number} width - Épaisseur en pixels (0 = pas de bordure)
+     * @property {string} color - Couleur hexadécimale (ex: '#000000')
+     * @property {'solid'|'dashed'} style - Style du trait
+     * @description Configuration de la bordure d'une zone.
+     */
+
+    // --- STRUCTURES SOURCE IMAGE ---
+
+    /**
+     * @typedef {Object} SourceData
+     * @property {'fixe'|'champ'|'url'} type - Type de source ('fixe' = uploadée, 'champ' = fusion, 'url' = rétrocompat)
+     * @property {string} [valeur] - URL (rétrocompat) ou nom du champ de fusion
+     * @property {string|null} [imageBase64] - Données base64 de l'image compressée
+     * @property {string|null} [nomOriginal] - Nom du fichier uploadé
+     * @property {number|null} [largeurPx] - Largeur image compressée en pixels
+     * @property {number|null} [hauteurPx] - Hauteur image compressée en pixels
+     * @property {number|null} [poidsBrut] - Poids avant compression (octets)
+     * @property {number|null} [poidsCompresse] - Poids après compression (octets)
+     * @description Source d'image pour les zones de type 'image'.
+     */
+
+    /**
+     * @typedef {Object} RedimensionnementData
+     * @property {'initial'|'ajuster'|'couper'} mode - Mode d'affichage de l'image
+     * @property {'left'|'center'|'right'} alignementH - Alignement horizontal
+     * @property {'top'|'middle'|'bottom'} alignementV - Alignement vertical
+     * @description Configuration du redimensionnement d'une zone image.
+     */
+
+    // --- STRUCTURES DE FORMATAGE TEXTE ---
+
+    /**
+     * @typedef {Object} TextFormattingAnnotation
+     * @property {number} start - Index de début (caractère)
+     * @property {number} end - Index de fin (caractère)
+     * @property {'bold'|'color'} type - Type de formatage
+     * @property {string} [value] - Valeur du formatage (ex: couleur hex pour 'color')
+     * @description Annotation de formatage partiel pour le texte riche.
+     */
+
+    // --- STRUCTURES DE ZONES ---
+
+    /**
+     * @typedef {Object} BaseZoneData
+     * @property {'text'|'qr'|'barcode'|'image'} type - Type de zone
+     * @property {number} [x] - Position X en pixels (depuis le DOM)
+     * @property {number} [y] - Position Y en pixels (depuis le DOM)
+     * @property {number} [w] - Largeur en pixels (depuis le DOM)
+     * @property {number} [h] - Hauteur en pixels (depuis le DOM)
+     * @property {number} [xMm] - Position X en mm (optionnel, depuis JSON WebDev)
+     * @property {number} [yMm] - Position Y en mm (optionnel, depuis JSON WebDev)
+     * @property {number} [wMm] - Largeur en mm (optionnel, depuis JSON WebDev)
+     * @property {number} [hMm] - Hauteur en mm (optionnel, depuis JSON WebDev)
+     * @property {boolean} [locked] - Zone verrouillée (non modifiable)
+     * @property {number} [zIndex] - Ordre d'empilement (z-index CSS)
+     * @description Propriétés communes à toutes les zones.
+     */
+
+    /**
+     * @typedef {Object} TextZoneData
+     * @property {'text'} type - Type de zone (toujours 'text')
+     * @property {string} content - Contenu textuel
+     * @property {string} font - Nom de la police (ex: 'Roboto')
+     * @property {number} size - Taille en points
+     * @property {string} color - Couleur du texte (hex, ex: '#000000')
+     * @property {'left'|'center'|'right'|'justify'} align - Alignement horizontal
+     * @property {'top'|'middle'|'bottom'} valign - Alignement vertical
+     * @property {string} bgColor - Couleur de fond (hex)
+     * @property {boolean} isTransparent - Fond transparent (true = ignore bgColor)
+     * @property {boolean} locked - Zone verrouillée
+     * @property {boolean} copyfit - Copy fitting activé (réduit auto la taille)
+     * @property {boolean} bold - Texte en gras
+     * @property {number} lineHeight - Interlignage (1.2 = 120%)
+     * @property {TextFormattingAnnotation[]} formatting - Annotations de formatage partiel
+     * @property {0|1|2} emptyLines - Gestion lignes vides (0=Non, 1=Oui, 2=Variables uniquement)
+     * @property {number} zIndex - Ordre d'empilement
+     * @property {BorderData} border - Configuration de la bordure
+     * @description Zone de texte avec formatage riche.
+     */
+
+    /**
+     * @typedef {Object} QrZoneData
+     * @property {'qr'} type - Type de zone (toujours 'qr')
+     * @property {string} qrColor - Couleur du QR code (hex)
+     * @property {string} bgColor - Couleur de fond (hex)
+     * @property {boolean} locked - Zone verrouillée
+     * @property {number} zIndex - Ordre d'empilement
+     * @description Zone de code QR (contenu géré par champ de fusion).
+     */
+
+    /**
+     * @typedef {Object} ImageZoneData
+     * @property {'image'} type - Type de zone (toujours 'image')
+     * @property {SourceData} source - Source de l'image
+     * @property {RedimensionnementData} redimensionnement - Mode de redimensionnement
+     * @property {string} bgColor - Couleur de fond (hex)
+     * @property {boolean} isTransparent - Fond transparent
+     * @property {boolean} locked - Zone verrouillée
+     * @property {number} rotation - Rotation en degrés
+     * @property {number} zIndex - Ordre d'empilement
+     * @property {BorderData} border - Configuration de la bordure
+     * @description Zone image (fixe ou dynamique via fusion).
+     */
+
+    /**
+     * @typedef {Object} BarcodeZoneData
+     * @property {'barcode'} type - Type de zone (toujours 'barcode')
+     * @property {string} nom - Nom de la zone code-barres
+     * @property {string} typeCodeBarres - Type de code (code128, ean13, qrcode, datamatrix, etc.)
+     * @property {string} champFusion - Nom du champ de fusion (sans les @)
+     * @property {'aucun'|'dessous'} texteLisible - Affichage du texte lisible
+     * @property {number} taillePolice - Taille du texte lisible en points
+     * @property {string} couleur - Couleur du code-barres (hex)
+     * @property {boolean} locked - Zone verrouillée
+     * @property {number} zIndex - Ordre d'empilement
+     * @description Zone code-barres 1D ou 2D.
+     */
+
+    /**
+     * @typedef {TextZoneData|QrZoneData|ImageZoneData|BarcodeZoneData} ZoneData
+     * @description Union des types de zones possibles.
+     */
+
+    /**
+     * @typedef {Object.<string, ZoneData>} ZonesCollection
+     * @description Collection de zones indexées par leur ID (ex: 'zone-1', 'zone-2').
+     */
+
+    // --- STRUCTURE PAGE ---
+
+    /**
+     * @typedef {Object} PageData
+     * @property {string} id - Identifiant unique de la page (ex: 'page-1')
+     * @property {string} name - Nom de la page ('Recto', 'Verso', etc.)
+     * @property {string} image - Chemin vers l'image de fond
+     * @property {FormatName} format - Format de la page (A4, A3, etc.)
+     * @property {number} width - Largeur en pixels
+     * @property {number} height - Hauteur en pixels
+     * @property {ZonesCollection} zones - Collection des zones de cette page
+     * @description Structure d'une page du document.
+     */
+
+    // --- STRUCTURE ÉTAT DU DOCUMENT ---
+
+    /**
+     * @typedef {Object} FormatDocumentData
+     * @property {number} largeurMm - Largeur du document en mm
+     * @property {number} hauteurMm - Hauteur du document en mm
+     * @property {number} [margeSecuriteMm] - Marge de sécurité en mm
+     * @property {{actif: boolean, valeurMm: number}} [fondPerdu] - Configuration fond perdu
+     * @property {{actif: boolean}} [traitsCoupe] - Configuration traits de coupe
+     * @description Métadonnées de format du document (depuis JSON WebDev).
+     */
+
+    /**
+     * @typedef {Object} DocumentState
+     * @property {number} currentPageIndex - Index de la page courante (0 = Recto, 1 = Verso)
+     * @property {PageData[]} pages - Tableau des pages du document
+     * @property {number} zoneCounter - Compteur global pour générer des IDs uniques
+     * @property {FormatDocumentData} [formatDocument] - Métadonnées de format (optionnel)
+     * @description État global du document de l'éditeur VDP.
+     * @example
+     * // Structure de documentState :
+     * // {
+     * //   currentPageIndex: 0,
+     * //   pages: [
+     * //     { id: 'page-1', name: 'Recto', zones: {...}, width: 794, height: 1123 },
+     * //     { id: 'page-2', name: 'Verso', zones: {...}, width: 794, height: 1123 }
+     * //   ],
+     * //   zoneCounter: 5
+     * // }
+     */
+
+    // --- STRUCTURE HISTORIQUE (UNDO/REDO) ---
+
+    /**
+     * @typedef {Object} HistoryManager
+     * @property {DocumentState[]} states - Tableau des snapshots de documentState
+     * @property {number} currentIndex - Position actuelle dans l'historique (-1 si vide)
+     * @property {number} maxStates - Limite mémoire (nombre max de snapshots)
+     * @property {boolean} isRestoring - Flag pour éviter de sauvegarder pendant une restauration
+     * @property {boolean} isLoadingForm - Flag pour éviter de sauvegarder pendant le chargement du formulaire
+     * @description Gestionnaire d'historique pour Undo/Redo.
+     */
+
+    // --- TYPES DE CODE-BARRES ---
+
+    /**
+     * @typedef {Object} BarcodeTypeDefinition
+     * @property {string} id - Identifiant interne (ex: 'code128', 'ean13', 'qrcode')
+     * @property {string} label - Libellé d'affichage (ex: 'Code 128', 'EAN-13')
+     * @property {'1d'|'2d'} category - Catégorie du code (1D = barres, 2D = matrice)
+     * @description Définition d'un type de code-barres supporté.
+     */
+
+    /**
+     * @typedef {Object} BarcodeBwipConfig
+     * @property {string} bcid - Identifiant bwip-js
+     * @property {string} sampleValue - Valeur d'exemple pour la prévisualisation
+     * @property {boolean} is2D - Est un code 2D (QR, DataMatrix)
+     * @description Configuration bwip-js pour un type de code-barres.
+     */
+
+    // --- STRUCTURES JSON WEBDEV (IMPORT/EXPORT) ---
+
+    /**
+     * @typedef {Object} GeometrieJsonWebDev
+     * @property {number} xMm - Position X en mm
+     * @property {number} yMm - Position Y en mm
+     * @property {number} largeurMm - Largeur en mm
+     * @property {number} hauteurMm - Hauteur en mm
+     * @description Géométrie d'une zone au format JSON WebDev.
+     */
+
+    /**
+     * @typedef {Object} StyleJsonWebDev
+     * @property {string} police - Nom de la police
+     * @property {number} taillePt - Taille en points
+     * @property {string} couleur - Couleur hex
+     * @property {boolean} gras - Gras activé
+     * @property {number} interligne - Facteur d'interlignage
+     * @property {'left'|'center'|'right'|'justify'} alignementH - Alignement horizontal
+     * @property {'top'|'middle'|'bottom'} alignementV - Alignement vertical
+     * @description Style typographique au format JSON WebDev.
+     */
+
+    /**
+     * @typedef {Object} FondJsonWebDev
+     * @property {boolean} transparent - Fond transparent
+     * @property {string} couleur - Couleur de fond hex
+     * @description Configuration du fond au format JSON WebDev.
+     */
+
+    /**
+     * @typedef {Object} BordureJsonWebDev
+     * @property {number} epaisseur - Épaisseur en pixels
+     * @property {string} couleur - Couleur hex
+     * @property {'solid'|'dashed'} style - Style du trait
+     * @description Configuration de bordure au format JSON WebDev.
+     */
+
+    /**
+     * @typedef {Object} CopyfittingJsonWebDev
+     * @property {boolean} actif - Copyfitting activé
+     * @property {number} tailleMinimum - Taille minimale en points
+     * @property {boolean} autoriserRetourLigne - Autoriser le retour à la ligne
+     * @description Configuration du copyfitting au format JSON WebDev.
+     */
+
+    /**
+     * @typedef {Object} FormatagePartielJsonWebDev
+     * @property {number} debut - Index de début (caractère)
+     * @property {number} fin - Index de fin (caractère)
+     * @property {Object} styles - Styles appliqués
+     * @property {boolean} [styles.gras] - Gras
+     * @property {string} [styles.couleur] - Couleur hex
+     * @description Annotation de formatage partiel au format JSON WebDev.
+     */
+
+    /**
+     * @typedef {Object} SourceImageJsonWebDev
+     * @property {'fixe'|'champ'|'url'} type - Type de source
+     * @property {string} valeur - URL ou nom du champ
+     * @description Source d'image au format JSON WebDev.
+     */
+
+    /**
+     * @typedef {Object} RedimensionnementJsonWebDev
+     * @property {'initial'|'ajuster'|'couper'} mode - Mode d'affichage
+     * @property {'left'|'center'|'right'} alignementH - Alignement horizontal
+     * @property {'top'|'middle'|'bottom'} alignementV - Alignement vertical
+     * @description Mode de redimensionnement au format JSON WebDev.
+     */
+
+    /**
+     * @typedef {Object} ZoneTexteJsonWebDev
+     * @property {string} id - Identifiant de la zone
+     * @property {number} page - Numéro de page (1-based)
+     * @property {string} nom - Nom de la zone
+     * @property {number} niveau - Z-index
+     * @property {number} rotation - Rotation en degrés
+     * @property {boolean} verrouille - Zone verrouillée
+     * @property {boolean} systeme - Zone système (non modifiable par l'utilisateur)
+     * @property {string} systemeLibelle - Libellé système
+     * @property {boolean} imprimable - Zone imprimable
+     * @property {number|boolean} supprimerLignesVides - Gestion lignes vides (0/1/2 ou booléen)
+     * @property {GeometrieJsonWebDev} geometrie - Géométrie en mm
+     * @property {string} contenu - Contenu textuel
+     * @property {FormatagePartielJsonWebDev[]} formatage - Formatage partiel
+     * @property {StyleJsonWebDev} style - Style typographique
+     * @property {FondJsonWebDev} fond - Configuration du fond
+     * @property {BordureJsonWebDev} bordure - Configuration de la bordure
+     * @property {CopyfittingJsonWebDev} copyfitting - Configuration du copyfitting
+     * @description Zone texte au format JSON WebDev (import/export).
+     */
+
+    /**
+     * @typedef {Object} ZoneCodeBarresJsonWebDev
+     * @property {string} id - Identifiant de la zone
+     * @property {number} page - Numéro de page (1-based)
+     * @property {string} nom - Nom de la zone
+     * @property {number} niveau - Z-index
+     * @property {number} rotation - Rotation en degrés
+     * @property {boolean} verrouille - Zone verrouillée
+     * @property {boolean} systeme - Zone système
+     * @property {string} systemeLibelle - Libellé système
+     * @property {boolean} imprimable - Zone imprimable
+     * @property {GeometrieJsonWebDev} geometrie - Géométrie en mm
+     * @property {string} typeCodeBarres - Type de code (code128, ean13, qrcode, etc.)
+     * @property {string} champFusion - Nom du champ de fusion (sans @)
+     * @property {'aucun'|'dessous'} texteLisible - Affichage du texte
+     * @property {number} taillePolice - Taille du texte lisible
+     * @property {string} couleur - Couleur du code hex
+     * @description Zone code-barres au format JSON WebDev (nouveau format).
+     */
+
+    /**
+     * @typedef {Object} ZoneQrJsonWebDev
+     * @property {string} id - Identifiant de la zone
+     * @property {number} page - Numéro de page (1-based)
+     * @property {string} nom - Nom de la zone
+     * @property {GeometrieJsonWebDev} geometrie - Géométrie en mm
+     * @property {string} typeCode - Type de code (QRCode, Code128, etc.)
+     * @property {string} contenu - Contenu à encoder
+     * @property {{code: string, fond: string}} couleurs - Couleurs du code
+     * @description Zone QR au format JSON WebDev (ancien format rétrocompatible).
+     */
+
+    /**
+     * @typedef {Object} ZoneImageJsonWebDev
+     * @property {string} id - Identifiant de la zone
+     * @property {number} page - Numéro de page (1-based)
+     * @property {string} nom - Nom de la zone
+     * @property {number} niveau - Z-index
+     * @property {number} rotation - Rotation en degrés
+     * @property {boolean} verrouille - Zone verrouillée
+     * @property {boolean} systeme - Zone système
+     * @property {string} systemeLibelle - Libellé système
+     * @property {boolean} imprimable - Zone imprimable
+     * @property {GeometrieJsonWebDev} geometrie - Géométrie en mm
+     * @property {SourceImageJsonWebDev} source - Source de l'image
+     * @property {RedimensionnementJsonWebDev} redimensionnement - Mode de redimensionnement
+     * @property {FondJsonWebDev} fond - Configuration du fond
+     * @property {BordureJsonWebDev} bordure - Configuration de la bordure
+     * @description Zone image au format JSON WebDev (import/export).
+     */
+
+    /**
+     * @typedef {Object} FormatDocumentJsonWebDev
+     * @property {number} largeurMm - Largeur en mm
+     * @property {number} hauteurMm - Hauteur en mm
+     * @property {number} [margeSecuriteMm] - Marge de sécurité en mm
+     * @property {{actif: boolean, valeurMm: number}} [fondPerdu] - Fond perdu
+     * @property {{actif: boolean}} [traitsCoupe] - Traits de coupe
+     * @description Format du document au format JSON WebDev.
+     */
+
+    /**
+     * @typedef {Object} DocumentJsonWebDev
+     * @property {Object} [identification] - Métadonnées du document
+     * @property {FormatDocumentJsonWebDev} [formatDocument] - Dimensions du document
+     * @property {Array} [pages] - Pages du document
+     * @property {ZoneTexteJsonWebDev[]} [zonesTexte] - Zones de texte
+     * @property {(ZoneCodeBarresJsonWebDev|ZoneQrJsonWebDev)[]} [zonesCodeBarres] - Zones code-barres
+     * @property {ZoneImageJsonWebDev[]} [zonesImage] - Zones image
+     * @description Document complet au format JSON WebDev (entrée de loadFromWebDev).
+     */
+
+    // ─────────────────────────── FIN DÉFINITIONS DE TYPES ──────────────────────────
+
+    // ═══════════════════════════════════════════════════════════════════════════════
     // SECTION 1 : RÉFÉRENCES DOM
     // ═══════════════════════════════════════════════════════════════════════════════
     /**
@@ -452,9 +863,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
-     * Retourne le SVG de fallback approprié selon le type
-     * @param {string} typeCode - Type de code-barres
-     * @returns {string} - SVG en data URL
+     * Retourne un SVG placeholder approprié selon le type de code-barres.
+     * Utilisé quand bwip-js n'est pas disponible ou en cas d'erreur de génération.
+     * 
+     * @param {string} typeCode - Type de code-barres (qrcode, code128, datamatrix, etc.)
+     * @returns {string} Data URL du SVG (data:image/svg+xml,...)
+     * 
+     * @example
+     * getFallbackBarcodeSvg('code128'); // → SVG barres verticales (1D)
+     * getFallbackBarcodeSvg('qrcode');  // → SVG matrice carrée (2D)
+     * 
+     * @see SVG_BARCODE_FALLBACK - SVG 1D (barres)
+     * @see SVG_BARCODE_2D_FALLBACK - SVG 2D (matrice)
      */
     function getFallbackBarcodeSvg(typeCode) {
         const config = BARCODE_BWIPJS_CONFIG[typeCode];
@@ -464,10 +884,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
-     * Génère une image de code-barres SANS texte (le texte sera ajouté en HTML séparément)
-     * @param {string} typeCode - Type de code-barres (qrcode, code128, ean13, etc.)
-     * @param {string} color - Couleur du code-barres (défaut #000000)
-     * @returns {string} - Data URL de l'image PNG du code-barres ou SVG fallback
+     * Génère une image de prévisualisation pour un code-barres (SANS texte lisible).
+     * Utilise bwip-js pour générer le code-barres sur un canvas, puis retourne une Data URL PNG.
+     * Si bwip-js n'est pas disponible ou si le type est inconnu, retourne un SVG placeholder.
+     * 
+     * Note : Le texte lisible est ajouté séparément en HTML/CSS car le champ de fusion
+     * n'est pas connu à ce stade (c'est une métadonnée pour l'export).
+     * 
+     * @param {string} typeCode - Type de code-barres (qrcode, code128, ean13, datamatrix, etc.)
+     * @param {string} [color='#000000'] - Couleur du code-barres (format hex)
+     * @returns {string} Data URL de l'image PNG (data:image/png;base64,...) ou SVG inline fallback
+     * 
+     * @example
+     * // Générer un Code 128 noir
+     * const imgSrc = generateBarcodeImage('code128', '#000000');
+     * imgElement.src = imgSrc;
+     * 
+     * @see BARCODE_BWIPJS_CONFIG - Configuration bwip-js par type
+     * @see getFallbackBarcodeSvg - SVG de secours si bwip-js échoue
      */
     function generateBarcodeImage(typeCode, color = '#000000') {
         // Vérifier que bwip-js est chargé
@@ -768,42 +1202,77 @@ document.addEventListener('DOMContentLoaded', () => {
     const DEFAULT_SECURITY_MARGIN_MM = 8;  // Marge de sécurité par défaut : 8mm
     
     /**
-     * Convertit des mm en pixels
+     * Convertit des millimètres en pixels (basé sur 96 DPI).
+     * Formule : pixels = mm / (25.4 / 96) = mm * 96 / 25.4
+     * 
      * @param {number} mm - Valeur en millimètres
-     * @returns {number} Valeur en pixels
+     * @returns {number} Valeur en pixels (non arrondie)
+     * 
+     * @example
+     * mmToPx(25.4); // → 96 (1 pouce = 96 pixels à 96 DPI)
+     * mmToPx(210);  // → 794.4 (largeur A4)
      */
     function mmToPx(mm) {
         return mm / MM_PER_PIXEL;
     }
     
     /**
-     * Convertit des pixels en mm (arrondi à 1 décimale)
+     * Convertit des pixels en millimètres (basé sur 96 DPI).
+     * Le résultat est arrondi à 1 décimale pour éviter les erreurs de précision.
+     * Formule : mm = pixels * (25.4 / 96)
+     * 
      * @param {number} px - Valeur en pixels
-     * @returns {number} Valeur en millimètres
+     * @returns {number} Valeur en millimètres (arrondie à 1 décimale)
+     * 
+     * @example
+     * pxToMm(96);  // → 25.4 (1 pouce)
+     * pxToMm(794); // → 210.1 (largeur A4 approximative)
      */
     function pxToMm(px) {
         return Math.round(px * MM_PER_PIXEL * 10) / 10;
     }
     
     /**
-     * Retourne la marge de sécurité en mm
-     * @returns {number} Marge en mm
+     * Retourne la marge de sécurité du document en millimètres.
+     * Utilisée pour définir la zone imprimable (hors marges).
+     * 
+     * @returns {number} Marge de sécurité en mm (défaut: 8mm via DEFAULT_SECURITY_MARGIN_MM)
+     * 
+     * @see documentState.formatDocument.margeSecuriteMm
      */
     function getSecurityMarginMm() {
         return documentState.formatDocument?.margeSecuriteMm || DEFAULT_SECURITY_MARGIN_MM;
     }
     
     /**
-     * Retourne la marge de sécurité en pixels pour la page courante
-     * @returns {number} Marge en pixels (0 si non définie)
+     * Retourne la marge de sécurité du document en pixels.
+     * Conversion de la marge mm vers pixels pour le positionnement DOM.
+     * 
+     * @returns {number} Marge de sécurité en pixels
+     * 
+     * @see getSecurityMarginMm
      */
     function getSecurityMarginPx() {
         return mmToPx(getSecurityMarginMm());
     }
     
     /**
-     * Calcule les limites de positionnement et dimensionnement avec marge de sécurité
-     * @returns {Object} Limites en mm
+     * Calcule les limites de positionnement et dimensionnement avec marge de sécurité.
+     * Utilisé pour contraindre les zones dans la zone imprimable.
+     * 
+     * @returns {Object} Objet contenant les limites en mm
+     * @returns {number} returns.minX - Position X minimale (= marge)
+     * @returns {number} returns.minY - Position Y minimale (= marge)
+     * @returns {number} returns.maxX - Position X maximale (= largeur - marge)
+     * @returns {number} returns.maxY - Position Y maximale (= hauteur - marge)
+     * @returns {number} returns.pageWidthMm - Largeur totale de la page en mm
+     * @returns {number} returns.pageHeightMm - Hauteur totale de la page en mm
+     * @returns {number} returns.marginMm - Marge de sécurité en mm
+     * 
+     * @example
+     * const limits = getGeometryLimits();
+     * // Pour A4 avec marge 8mm :
+     * // { minX: 8, minY: 8, maxX: 202, maxY: 289, pageWidthMm: 210, pageHeightMm: 297, marginMm: 8 }
      */
     function getGeometryLimits() {
         const marginMm = getSecurityMarginMm();
@@ -944,9 +1413,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
-     * Vérifie si un fichier est un SVG
-     * @param {string} fileName - Nom du fichier
-     * @returns {boolean}
+     * Vérifie si un fichier est un SVG (image vectorielle).
+     * Les SVG n'ont pas de contrainte DPI car ils sont redimensionnables sans perte.
+     * 
+     * @param {string} fileName - Nom du fichier (avec extension)
+     * @returns {boolean} true si l'extension est .svg (insensible à la casse)
+     * 
+     * @example
+     * isSvgFile('logo.svg');     // → true
+     * isSvgFile('photo.PNG');    // → false
+     * isSvgFile('LOGO.SVG');     // → true
      */
     function isSvgFile(fileName) {
         return fileName.toLowerCase().endsWith('.svg');
@@ -1183,13 +1659,28 @@ document.addEventListener('DOMContentLoaded', () => {
     // ───────────────────────────────────────────────────────────────────────────────
     
     /**
-     * Calcule le DPI d'une image dans une zone
-     * @param {number} imagePxWidth - Largeur de l'image en pixels
-     * @param {number} imagePxHeight - Hauteur de l'image en pixels
-     * @param {number} zonePxWidth - Largeur de la zone en pixels
-     * @param {number} zonePxHeight - Hauteur de la zone en pixels
-     * @param {string} displayMode - Mode d'affichage ('initial', 'ajuster', 'couper')
-     * @returns {number} - DPI calculé (ou Infinity pour vectoriel)
+     * Calcule le DPI (Dots Per Inch) effectif d'une image affichée dans une zone.
+     * Le DPI dépend du mode d'affichage et des dimensions relatives image/zone.
+     * 
+     * Modes d'affichage :
+     * - 'initial' : Image à taille native (DPI = 96 car 1px écran = 1px image)
+     * - 'ajuster' : Image inscrite dans la zone (conserve le ratio, peut avoir des marges)
+     * - 'couper' : Image remplit la zone (conserve le ratio, peut être rognée)
+     * 
+     * @param {number} imagePxWidth - Largeur de l'image source en pixels
+     * @param {number} imagePxHeight - Hauteur de l'image source en pixels
+     * @param {number} zonePxWidth - Largeur de la zone d'affichage en pixels
+     * @param {number} zonePxHeight - Hauteur de la zone d'affichage en pixels
+     * @param {'initial'|'ajuster'|'couper'} [displayMode='ajuster'] - Mode d'affichage de l'image
+     * @returns {number} DPI calculé (arrondi), 0 si dimensions invalides
+     * 
+     * @example
+     * // Image 1200x800 dans zone 100x100mm (378x378px) en mode ajuster
+     * calculateImageDpi(1200, 800, 378, 378, 'ajuster');
+     * // → ~200 DPI (image réduite pour tenir dans la zone)
+     * 
+     * @see DPI_RECOMMENDED - Seuil recommandé (300 DPI)
+     * @see DPI_MINIMUM - Seuil minimum (150 DPI)
      */
     function calculateImageDpi(imagePxWidth, imagePxHeight, zonePxWidth, zonePxHeight, displayMode = 'ajuster') {
         if (!imagePxWidth || !imagePxHeight || !zonePxWidth || !zonePxHeight) {
@@ -1255,10 +1746,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
-     * Détermine l'état DPI (good, warning, error, vector)
-     * @param {number} dpi - Valeur DPI
-     * @param {boolean} isSvg - Est-ce un fichier SVG ?
-     * @returns {string} - État ('good', 'warning', 'error', 'vector')
+     * Détermine l'état qualité DPI d'une image pour l'affichage du badge.
+     * 
+     * Seuils de qualité :
+     * - 'vector' : Fichier SVG (qualité infinie)
+     * - 'good' : DPI >= 300 (qualité impression optimale)
+     * - 'warning' : 150 <= DPI < 300 (qualité acceptable)
+     * - 'error' : DPI < 150 (qualité insuffisante)
+     * 
+     * @param {number} dpi - Valeur DPI calculée
+     * @param {boolean} [isSvg=false] - true si le fichier source est un SVG
+     * @returns {'good'|'warning'|'error'|'vector'} État de qualité pour le badge DPI
+     * 
+     * @see DPI_RECOMMENDED - Constante seuil "good" (300)
+     * @see DPI_MINIMUM - Constante seuil "warning" (150)
      */
     function getDpiState(dpi, isSvg = false) {
         if (isSvg) return 'vector';
@@ -1268,10 +1769,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
-     * Génère le texte et l'icône pour l'indicateur DPI
-     * @param {number} dpi - Valeur DPI
-     * @param {string} state - État ('good', 'warning', 'error', 'vector')
-     * @returns {{icon: string, text: string}}
+     * Génère le texte et l'icône Material Icons pour l'affichage du badge DPI.
+     * 
+     * @param {number} dpi - Valeur DPI calculée
+     * @param {'good'|'warning'|'error'|'vector'} state - État de qualité (depuis getDpiState)
+     * @returns {{icon: string, text: string}} Objet avec l'icône Material Icons et le texte à afficher
+     * @returns {string} returns.icon - Nom de l'icône Material Icons (check_circle, warning, error)
+     * @returns {string} returns.text - Texte descriptif (ex: "300 dpi", "Qualité insuffisante")
+     * 
+     * @example
+     * getDpiDisplayInfo(300, 'good');
+     * // → { icon: 'check_circle', text: '300 dpi' }
+     * 
+     * getDpiDisplayInfo(0, 'vector');
+     * // → { icon: 'check_circle', text: 'Vectoriel - Qualité optimale' }
      */
     function getDpiDisplayInfo(dpi, state) {
         switch (state) {
@@ -1460,9 +1971,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
-     * Met à jour le badge système d'une zone
-     * Affiche le libellé système si systeme=true ET systemeLibelle non vide
-     * @param {string} zoneId - ID de la zone
+     * Met à jour le badge système d'une zone.
+     * Affiche le libellé système si la zone est marquée comme système
+     * avec un libellé non vide.
+     * 
+     * Les zones système sont des zones spéciales (ex: numéro de page, date)
+     * qui ne peuvent pas être supprimées ou multi-sélectionnées.
+     * 
+     * @param {string} zoneId - Identifiant de la zone (ex: "zone-1")
+     * @returns {void}
+     * 
+     * @example
+     * // Zone système avec libellé
+     * zoneData.systeme = true;
+     * zoneData.systemeLibelle = 'N° Page';
+     * updateSystemeBadge('zone-1'); // → Affiche badge "N° Page"
+     * 
+     * // Zone non système
+     * zoneData.systeme = false;
+     * updateSystemeBadge('zone-1'); // → Supprime le badge
      */
     function updateSystemeBadge(zoneId) {
         const zonesData = getCurrentPageZones();
@@ -1518,11 +2045,29 @@ document.addEventListener('DOMContentLoaded', () => {
     // ───────────────────────────────────────────────────────────────────────────────
     
     /**
-     * Vérifie si un redimensionnement de zone image est autorisé
-     * @param {string} zoneId - ID de la zone
-     * @param {number} newWidth - Nouvelle largeur en pixels
-     * @param {number} newHeight - Nouvelle hauteur en pixels
-     * @returns {{allowed: boolean, reason: string|null, maxWidth: number|null, maxHeight: number|null}}
+     * Vérifie si un redimensionnement de zone image est autorisé.
+     * Applique deux contraintes :
+     * 1. Surface maximale (évite les zones trop grandes)
+     * 2. DPI minimum (150 DPI, sauf pour les SVG)
+     * 
+     * @param {string} zoneId - Identifiant de la zone (ex: "zone-1")
+     * @param {number} newWidth - Nouvelle largeur souhaitée en pixels
+     * @param {number} newHeight - Nouvelle hauteur souhaitée en pixels
+     * @returns {Object} Résultat de la vérification
+     * @returns {boolean} returns.allowed - true si le redimensionnement est autorisé
+     * @returns {string|null} returns.reason - Message d'erreur si refusé, null sinon
+     * @returns {number|null} returns.maxWidth - Largeur maximale autorisée si refusé, null sinon
+     * @returns {number|null} returns.maxHeight - Hauteur maximale autorisée si refusé, null sinon
+     * 
+     * @example
+     * const result = checkImageResizeAllowed('zone-1', 500, 500);
+     * if (!result.allowed) {
+     *   console.log(result.reason); // "Surface maximum atteinte (100 cm²)"
+     *   // Utiliser result.maxWidth et result.maxHeight comme limites
+     * }
+     * 
+     * @see DPI_MINIMUM - Seuil DPI minimum (150)
+     * @see getSurfaceLimiteImagePx2 - Surface maximale autorisée
      */
     function checkImageResizeAllowed(zoneId, newWidth, newHeight) {
         const zonesData = getCurrentPageZones();
@@ -1757,8 +2302,25 @@ document.addEventListener('DOMContentLoaded', () => {
     let contentSaveTimeout = null;
 
     /**
-     * Sauvegarde l'état actuel dans l'historique
-     * Doit être appelé APRÈS chaque modification
+     * Sauvegarde l'état actuel du document dans l'historique (pour Undo/Redo).
+     * Crée un snapshot profond de documentState et l'ajoute à la pile d'historique.
+     * 
+     * Comportement :
+     * - Synchronise d'abord les positions DOM → documentState
+     * - Supprime les états "futurs" si on a fait des undo (branche abandonnée)
+     * - Limite la taille de l'historique à maxStates (50 par défaut)
+     * - Ne fait rien si isRestoring ou isLoadingForm est true
+     * 
+     * @fires updateHistoryUI - Met à jour les boutons Undo/Redo
+     * 
+     * @example
+     * // Après une modification (création, déplacement, suppression de zone)
+     * zonesData[id] = { type: 'text', content: 'Nouveau' };
+     * saveState(); // Snapshot pour pouvoir annuler
+     * 
+     * @see undo - Annuler la dernière action
+     * @see redo - Rétablir l'action annulée
+     * @see historyManager - Gestionnaire d'historique
      */
     function saveState() {
         // Ne pas sauvegarder si on est en train de restaurer ou de charger le formulaire
@@ -1802,7 +2364,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Annule la dernière action (Undo)
+     * Annule la dernière action (Undo).
+     * Restaure l'état précédent depuis l'historique.
+     * 
+     * @returns {void}
+     * @fires showUndoRedoToast - Affiche "Action annulée" ou "Rien à annuler"
+     * @fires updateHistoryUI - Met à jour les boutons Undo/Redo
+     * 
+     * @example
+     * // Raccourci clavier : Ctrl+Z
+     * undo(); // Restaure l'état précédent
+     * 
+     * @see redo - Rétablir l'action annulée
+     * @see saveState - Sauvegarder l'état courant
      */
     function undo() {
         if (historyManager.currentIndex <= 0) {
@@ -1817,7 +2391,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Rétablit l'action annulée (Redo)
+     * Rétablit l'action annulée (Redo).
+     * Restaure l'état suivant depuis l'historique (après un Undo).
+     * 
+     * @returns {void}
+     * @fires showUndoRedoToast - Affiche "Action rétablie" ou "Rien à rétablir"
+     * @fires updateHistoryUI - Met à jour les boutons Undo/Redo
+     * 
+     * @example
+     * // Raccourci clavier : Ctrl+Y ou Ctrl+Shift+Z
+     * redo(); // Restaure l'état suivant
+     * 
+     * @see undo - Annuler la dernière action
+     * @see saveState - Sauvegarder l'état courant
      */
     function redo() {
         if (historyManager.currentIndex >= historyManager.states.length - 1) {
@@ -1832,8 +2418,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Restaure un état depuis un snapshot
-     * @param {Object} snapshot - L'état à restaurer
+     * Restaure un état complet du document depuis un snapshot d'historique.
+     * Utilisée par undo() et redo() pour appliquer un état sauvegardé.
+     * 
+     * Étapes de restauration :
+     * 1. Supprime toutes les zones du DOM
+     * 2. Restaure documentState depuis le snapshot (copie profonde)
+     * 3. Recharge la page courante (recrée les zones dans le DOM)
+     * 4. Désélectionne toutes les zones
+     * 5. Sauvegarde dans localStorage (sans ajouter à l'historique)
+     * 
+     * @param {DocumentState} snapshot - Snapshot de documentState à restaurer
+     * @returns {void}
+     * 
+     * @see undo - Utilise cette fonction pour annuler
+     * @see redo - Utilise cette fonction pour rétablir
      */
     function restoreState(snapshot) {
         historyManager.isRestoring = true;
@@ -1986,26 +2585,48 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- FONCTIONS HELPER POUR ACCÈS AUX DONNÉES ---
+
+    /**
+     * Retourne la page courante du document.
+     * @returns {PageData} Page courante (Recto ou Verso selon currentPageIndex)
+     */
     function getCurrentPage() {
         return documentState.pages[documentState.currentPageIndex];
     }
 
+    /**
+     * Retourne la collection de zones de la page courante.
+     * @returns {ZonesCollection} Objet zones indexé par ID (ex: { 'zone-1': {...}, 'zone-2': {...} })
+     */
     function getCurrentPageZones() {
         return getCurrentPage().zones;
     }
 
+    /**
+     * Remplace la collection de zones de la page courante.
+     * @param {ZonesCollection} zones - Nouvelle collection de zones
+     */
     function setCurrentPageZones(zones) {
         getCurrentPage().zones = zones;
     }
 
-    // Rétrocompatibilité : zonesData pointe vers les zones de la page courante
-    // (pour faciliter la migration progressive)
+    /**
+     * Alias de getCurrentPageZones() pour rétrocompatibilité.
+     * @returns {ZonesCollection} Zones de la page courante
+     * @deprecated Utiliser getCurrentPageZones() à la place
+     */
     function getZonesData() {
         return getCurrentPageZones();
     }
 
     // --- FONCTIONS HELPER POUR LES DIMENSIONS DE PAGE ---
-    // Obtenir la largeur de la page courante (en pixels)
+
+    /**
+     * Retourne la largeur de la page courante en pixels.
+     * Priorité : données sauvegardées > DOM > format par défaut (A4).
+     * 
+     * @returns {number} Largeur en pixels (ex: 794 pour A4)
+     */
     function getPageWidth() {
         const currentPage = getCurrentPage();
         // Priorité : données sauvegardées > dimensions du DOM > format par défaut
@@ -2020,7 +2641,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return DOCUMENT_FORMATS[DEFAULT_FORMAT].width;
     }
 
-    // Obtenir la hauteur de la page courante (en pixels)
+    /**
+     * Retourne la hauteur de la page courante en pixels.
+     * Priorité : données sauvegardées > DOM > format par défaut (A4).
+     * 
+     * @returns {number} Hauteur en pixels (ex: 1123 pour A4)
+     */
     function getPageHeight() {
         const currentPage = getCurrentPage();
         // Priorité : données sauvegardées > dimensions du DOM > format par défaut
@@ -2035,7 +2661,17 @@ document.addEventListener('DOMContentLoaded', () => {
         return DOCUMENT_FORMATS[DEFAULT_FORMAT].height;
     }
 
-    // Obtenir la largeur de la page courante en mm (valeur EXACTE)
+    /**
+     * Retourne la largeur de la page courante en millimètres (valeur EXACTE).
+     * Évite les erreurs de conversion px→mm en utilisant les valeurs mm natives si disponibles.
+     * 
+     * Priorité :
+     * 1. formatDocument.largeurMm (depuis import JSON WebDev)
+     * 2. DOCUMENT_FORMATS_MM[format].widthMm (format prédéfini)
+     * 3. Conversion arrondie depuis pixels
+     * 
+     * @returns {number} Largeur en mm (ex: 210 pour A4)
+     */
     function getPageWidthMm() {
         const currentPage = getCurrentPage();
         
@@ -2055,7 +2691,17 @@ document.addEventListener('DOMContentLoaded', () => {
         return Math.round(pxToMm(getPageWidth()));
     }
 
-    // Obtenir la hauteur de la page courante en mm (valeur EXACTE)
+    /**
+     * Retourne la hauteur de la page courante en millimètres (valeur EXACTE).
+     * Évite les erreurs de conversion px→mm en utilisant les valeurs mm natives si disponibles.
+     * 
+     * Priorité :
+     * 1. formatDocument.hauteurMm (depuis import JSON WebDev)
+     * 2. DOCUMENT_FORMATS_MM[format].heightMm (format prédéfini)
+     * 3. Conversion arrondie depuis pixels
+     * 
+     * @returns {number} Hauteur en mm (ex: 297 pour A4)
+     */
     function getPageHeightMm() {
         const currentPage = getCurrentPage();
         
@@ -2075,7 +2721,15 @@ document.addEventListener('DOMContentLoaded', () => {
         return Math.round(pxToMm(getPageHeight()));
     }
 
-    // Appliquer les dimensions de la page courante au DOM
+    /**
+     * Applique les dimensions de la page courante au DOM.
+     * Met à jour la taille de l'élément #a4-page selon le format du document.
+     * 
+     * @returns {void}
+     * 
+     * @see getPageWidth - Largeur en pixels
+     * @see getPageHeight - Hauteur en pixels
+     */
     function applyPageDimensions() {
         const width = getPageWidth();
         const height = getPageHeight();
@@ -2085,7 +2739,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- FONCTION POUR CALCULER LE CENTRE DE LA VUE ACTUELLE ---
+    /**
+     * Calcule le centre de la vue actuelle dans les coordonnées de la page.
+     * Utilisé pour positionner les nouvelles zones au centre de l'écran visible.
+     * Prend en compte le niveau de zoom actuel.
+     * 
+     * @returns {{x: number, y: number}} Coordonnées du centre en pixels (dans le repère de la page)
+     * 
+     * @example
+     * const center = getCenterOfView();
+     * zone.style.left = (center.x - zoneWidth/2) + 'px';
+     * zone.style.top = (center.y - zoneHeight/2) + 'px';
+     */
     function getCenterOfView() {
         // Utiliser zoomLevel s'il est défini, sinon 1.0 par défaut
         const currentZoom = typeof zoomLevel !== 'undefined' ? zoomLevel : 1.0;
@@ -2275,6 +2940,39 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    /**
+     * Crée l'élément DOM pour une zone et l'ajoute à la page.
+     * Gère tous les types de zones (text, qr, barcode, image) avec leur structure HTML spécifique.
+     * 
+     * Structure DOM créée :
+     * - div.zone (conteneur principal avec poignées de redimensionnement)
+     *   - div.zone-content (contenu de la zone)
+     *   - div.zone-label (numéro de zone)
+     *   - span.zone-field-badge (badge champ de fusion, zones texte)
+     *   - span.barcode-type-badge (badge type, zones code-barres)
+     *   - span.barcode-field-badge (badge champ, zones code-barres)
+     * 
+     * @param {string} id - Identifiant unique de la zone (ex: "zone-1")
+     * @param {number|string} labelNum - Numéro à afficher dans le label (généralement le compteur)
+     * @param {boolean} [autoSelect=true] - Sélectionner automatiquement la zone après création
+     * @returns {void}
+     * 
+     * @fires saveToLocalStorage - Si autoSelect est true (via selectZone)
+     * 
+     * @example
+     * // Créer une nouvelle zone et la sélectionner
+     * zonesData['zone-5'] = { type: 'text', content: 'Nouveau texte' };
+     * createZoneDOM('zone-5', 5);
+     * 
+     * // Restaurer une zone sans la sélectionner (chargement)
+     * createZoneDOM('zone-3', 3, false);
+     * 
+     * @see selectZone - Sélection de la zone créée
+     * @see updateTextZoneDisplay - Mise à jour affichage texte
+     * @see updateImageZoneDisplay - Mise à jour affichage image
+     * @see updateBarcodeZoneDisplay - Mise à jour affichage code-barres
+     * @see updateQrZoneDisplay - Mise à jour affichage QR
+     */
     function createZoneDOM(id, labelNum, autoSelect = true) {
         const zonesData = getCurrentPageZones();
         const zoneData = zonesData[id] || {};
@@ -2670,8 +3368,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // ───────────────────────────────────────────────────────────────────────────────
 
     /**
-     * Récupère le z-index maximum parmi toutes les zones de la page courante
-     * @returns {number} - Z-index maximum (0 si aucune zone, sinon >= 1)
+     * Récupère le z-index maximum parmi toutes les zones de la page courante.
+     * Utilisé pour placer les nouvelles zones au premier plan (max + 1).
+     * 
+     * @returns {number} Z-index maximum (0 si aucune zone, permettant à la première zone d'avoir z-index = 1)
+     * 
+     * @example
+     * const newZIndex = getMaxZIndex() + 1; // Place la nouvelle zone au premier plan
+     * zonesData[newId] = { type: 'text', zIndex: newZIndex };
+     * 
+     * @see findZoneByZIndex - Trouver une zone par son z-index
      */
     function getMaxZIndex() {
         const zonesData = getCurrentPageZones();
@@ -3524,7 +4230,33 @@ document.addEventListener('DOMContentLoaded', () => {
         saveState(); // Snapshot APRÈS le changement de taille
     }
 
-    // SÉLECTIONNER UNE ZONE (avec gestion Ctrl+clic)
+    /**
+     * Sélectionne une zone et affiche ses propriétés dans le formulaire.
+     * Gère la multi-sélection avec Ctrl+clic (sauf pour les zones système).
+     * 
+     * Comportements :
+     * - Clic simple : Remplace la sélection actuelle
+     * - Ctrl+clic : Ajoute/retire de la sélection (multi-sélection)
+     * - Zone système : Toujours sélectionnée seule (pas de multi-sélection)
+     * - Zone déjà dans multi-sélection : Clic simple conserve la sélection (pour drag groupé)
+     * 
+     * @param {string} id - Identifiant de la zone à sélectionner (ex: "zone-1")
+     * @param {MouseEvent|null} [event=null] - Événement souris pour détecter Ctrl/Meta
+     * @returns {void}
+     * 
+     * @fires loadFormFromZone - Charge les propriétés dans le formulaire
+     * 
+     * @example
+     * // Sélection simple
+     * selectZone('zone-1');
+     * 
+     * // Sélection depuis un événement clic (gère Ctrl)
+     * zoneEl.addEventListener('click', (e) => selectZone(id, e));
+     * 
+     * @see deselectAll - Désélectionner toutes les zones
+     * @see addToSelection - Ajouter à la multi-sélection
+     * @see removeFromSelection - Retirer de la multi-sélection
+     */
     function selectZone(id, event = null) {
         const isCtrlPressed = event && (event.ctrlKey || event.metaKey);
         const isAlreadySelected = selectedZoneIds.includes(id);
@@ -4184,10 +4916,34 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * Met à jour l'affichage d'une zone image (image réelle ou placeholder)
      */
+
     /**
-     * Met à jour l'affichage visuel d'une zone image
-     * @param {string|HTMLElement} zoneIdOrEl - ID de la zone ou élément DOM
-     * @param {Object} [zoneDataParam] - Données de la zone (optionnel si zoneIdOrEl est un ID)
+     * Met à jour l'affichage visuel d'une zone image dans le DOM.
+     * Gère l'affichage de l'image selon son mode de redimensionnement et sa source.
+     * 
+     * Types de source gérés :
+     * - 'fixe' avec imageBase64 : Image uploadée en base64
+     * - 'fixe' avec valeur URL : Image depuis URL (rétrocompat)
+     * - 'url' : Ancien format URL (rétrocompat)
+     * - 'champ' : Champ de fusion → affiche un placeholder
+     * 
+     * Modes de redimensionnement :
+     * - 'initial' : Taille native de l'image
+     * - 'ajuster' : Image inscrite dans la zone (object-fit: contain)
+     * - 'couper' : Image remplit la zone (object-fit: cover)
+     * 
+     * @param {string|HTMLElement} zoneIdOrEl - ID de la zone ("zone-1") ou élément DOM
+     * @param {ImageZoneData} [zoneDataParam] - Données de la zone (requis si zoneIdOrEl est un élément)
+     * @returns {void}
+     * 
+     * @example
+     * // Appel par ID (récupère les données automatiquement)
+     * updateImageZoneDisplay('zone-1');
+     * 
+     * // Appel avec élément et données (pendant création)
+     * updateImageZoneDisplay(zoneEl, zoneData);
+     * 
+     * @see updateDpiBadge - Mise à jour du badge DPI après affichage
      */
     function updateImageZoneDisplay(zoneIdOrEl, zoneDataParam) {
         // Supporter les deux signatures : (zoneEl, zoneData) et (zoneId)
@@ -4373,8 +5129,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
-     * Met à jour l'affichage d'une zone code-barres (type 'barcode')
-     * @param {string} zoneId - ID de la zone
+     * Met à jour l'affichage visuel d'une zone code-barres (nouveau type 'barcode').
+     * Génère l'image du code-barres via bwip-js et met à jour les badges.
+     * 
+     * Éléments mis à jour :
+     * - Image du code-barres (via generateBarcodeImage)
+     * - Badge type (en haut à gauche, ex: "Code 128")
+     * - Badge champ (en bas à droite, ex: "@NumeroCommande" ou "(Aucun champ)")
+     * - Texte lisible optionnel sous le code
+     * - Classe CSS 1D/2D pour l'étirement correct
+     * 
+     * @param {string} zoneId - Identifiant de la zone (ex: "zone-1")
+     * @returns {void}
+     * 
+     * @example
+     * // Après modification du type ou du champ de fusion
+     * zoneData.typeCodeBarres = 'ean13';
+     * zoneData.champFusion = 'CodeEAN';
+     * updateBarcodeZoneDisplay('zone-1');
+     * 
+     * @see generateBarcodeImage - Génération de l'image code-barres
+     * @see updateQrZoneDisplay - Pour les zones QR (ancien format)
+     * @see BARCODE_BWIPJS_CONFIG - Configuration des types de code-barres
      */
     function updateBarcodeZoneDisplay(zoneId) {
         const zonesData = getCurrentPageZones();
@@ -4469,8 +5245,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
-     * Met à jour l'affichage d'une zone QR code (ancien type 'qr')
-     * @param {string} zoneId - ID de la zone
+     * Met à jour l'affichage visuel d'une zone QR code (ancien type 'qr').
+     * Génère l'image du code QR via bwip-js et met à jour les badges.
+     * 
+     * Note : Ce type 'qr' est l'ancien format pour rétrocompatibilité.
+     * Les nouvelles zones code-barres utilisent le type 'barcode'.
+     * 
+     * Éléments mis à jour :
+     * - Image du code QR (via generateBarcodeImage)
+     * - Badge type (ex: "QR Code", "Data Matrix")
+     * - Texte lisible optionnel
+     * - Classe CSS 2D pour affichage carré
+     * 
+     * @param {string} zoneId - Identifiant de la zone (ex: "zone-1")
+     * @returns {void}
+     * 
+     * @example
+     * // Mettre à jour après changement de couleur
+     * zoneData.qrColor = '#0000FF';
+     * updateQrZoneDisplay('zone-1');
+     * 
+     * @see updateBarcodeZoneDisplay - Pour les zones code-barres (nouveau format)
+     * @see generateBarcodeImage - Génération de l'image
      */
     function updateQrZoneDisplay(zoneId) {
         const zonesData = getCurrentPageZones();
@@ -6023,6 +6819,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    /**
+     * Désélectionne toutes les zones et réinitialise le formulaire.
+     * Cache le panneau de propriétés et vide tous les champs de saisie.
+     * 
+     * Actions effectuées :
+     * - Retire la classe 'selected' de toutes les zones
+     * - Vide le tableau selectedZoneIds
+     * - Désactive le bouton Supprimer
+     * - Cache le panneau de propriétés (coordsPanel)
+     * - Réinitialise tous les inputs à leurs valeurs par défaut
+     * 
+     * @returns {void}
+     * 
+     * @example
+     * // Désélectionner avant de changer de page
+     * deselectAll();
+     * loadCurrentPage();
+     * 
+     * // Désélectionner après suppression
+     * delete zonesData[id];
+     * deselectAll();
+     * 
+     * @see selectZone - Sélectionner une zone
+     * @see selectedZoneIds - Tableau des zones sélectionnées
+     */
     function deselectAll() {
         // Désélectionner toutes les zones
         selectedZoneIds.forEach(zoneId => {
@@ -6849,6 +7670,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // ─────────────────────────────── FIN SECTION 18 ───────────────────────────────
 
     // --- 6. SAUVEGARDE / CHARGEMENT LOCAL ---
+
+    /**
+     * Sauvegarde l'état complet du document dans le localStorage.
+     * Synchronise d'abord les positions DOM vers documentState, puis persiste.
+     * 
+     * Données sauvegardées :
+     * - 'marketeam_document_state' : Structure complète multipage (nouveau format)
+     * - 'marketeam_zones' : Zones de la page courante (rétrocompat ancien format)
+     * - 'marketeam_zone_counter' : Compteur de zones (rétrocompat)
+     * 
+     * @returns {void}
+     * @fires notifyParentOfChange - Notifie WebDev parent des modifications
+     * 
+     * @example
+     * // Après toute modification utilisateur
+     * zoneData.content = 'Nouveau texte';
+     * saveToLocalStorage();
+     * 
+     * @see loadFromLocalStorage - Chargement au démarrage
+     * @see saveState - Sauvegarde dans l'historique (Undo/Redo)
+     */
     function saveToLocalStorage() {
         // On ajoute la position/taille actuelle du DOM dans les données avant de sauver
         const zonesData = getCurrentPageZones();
@@ -6901,9 +7743,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // ───────────────────────────────────────────────────────────────────────────────
     
     /**
-     * Convertit une zone texte du format JSON WebDev vers le format interne documentState
-     * @param {Object} zoneJson - Zone texte au format WebDev
-     * @returns {Object} - Zone au format documentState interne
+     * Convertit une zone texte du format JSON WebDev vers le format interne documentState.
+     * Effectue la conversion des unités (mm → pixels) et le mapping des propriétés
+     * (noms français WebDev → noms anglais internes).
+     * 
+     * @param {ZoneTexteJsonWebDev} zoneJson - Zone texte au format JSON WebDev
+     * @returns {TextZoneData} Zone texte au format documentState interne
+     * 
+     * @example
+     * // Entrée JSON WebDev :
+     * // { geometrie: { xMm: 10, yMm: 20, largeurMm: 50, hauteurMm: 20 },
+     * //   contenu: 'Texte', style: { police: 'Arial', taillePt: 12 } }
+     * // Sortie interne :
+     * // { type: 'text', x: 37.8, y: 75.6, w: 189, h: 75.6,
+     * //   content: 'Texte', font: 'Arial', size: 12 }
      */
     function convertZoneTexteFromJson(zoneJson) {
         // Conversion mm → pixels
@@ -6994,9 +7847,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
-     * Convertit une zone code-barres du format JSON WebDev vers le format interne documentState
-     * @param {Object} zoneJson - Zone code-barres au format WebDev
-     * @returns {Object} - Zone au format documentState interne
+     * Convertit une zone code-barres du format JSON WebDev vers le format interne documentState.
+     * Gère deux formats d'entrée :
+     * - Nouveau format : zones code-barres avec champFusion (type interne 'barcode')
+     * - Ancien format : zones QR simples avec contenu fixe (type interne 'qr')
+     * 
+     * @param {ZoneCodeBarresJsonWebDev|ZoneQrJsonWebDev} zoneJson - Zone code-barres au format JSON WebDev
+     * @returns {BarcodeZoneData|QrZoneData} Zone au format documentState interne
+     * 
+     * @example
+     * // Nouveau format (barcode) :
+     * // { typeCodeBarres: 'code128', champFusion: 'NumeroCommande' }
+     * // → { type: 'barcode', typeCodeBarres: 'code128', champFusion: 'NumeroCommande' }
+     * 
+     * // Ancien format (qr) :
+     * // { typeCode: 'QRCode', contenu: 'https://...' }
+     * // → { type: 'qr', typeCode: 'QRCode', content: 'https://...' }
      */
     function convertZoneCodeBarresFromJson(zoneJson) {
         // Conversion mm → pixels
@@ -7080,9 +7946,36 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
-     * Charge un document depuis une configuration JSON envoyée par WebDev
-     * @param {Object} jsonData - Configuration du document au format WebDev
-     * @returns {boolean} - true si le chargement a réussi, false sinon
+     * Charge un document depuis une configuration JSON envoyée par WebDev.
+     * Fonction principale d'import : reconstruit l'état complet du document
+     * à partir des données JSON WebDev.
+     * 
+     * Étapes du chargement :
+     * 1. Nettoyage du DOM (suppression des zones existantes)
+     * 2. Reset de documentState
+     * 3. Application des métadonnées (format, dimensions)
+     * 4. Conversion et création des zones (texte, code-barres, images)
+     * 5. Initialisation de l'historique
+     * 
+     * @param {DocumentJsonWebDev} jsonData - Document complet au format JSON WebDev
+     * @param {Object} [jsonData.identification] - Métadonnées du document (nom, auteur, etc.)
+     * @param {FormatDocumentJsonWebDev} [jsonData.formatDocument] - Dimensions en mm
+     * @param {Array} [jsonData.pages] - Pages du document (pour multipage futur)
+     * @param {ZoneTexteJsonWebDev[]} [jsonData.zonesTexte] - Zones de texte
+     * @param {(ZoneCodeBarresJsonWebDev|ZoneQrJsonWebDev)[]} [jsonData.zonesCodeBarres] - Zones code-barres/QR
+     * @param {ZoneImageJsonWebDev[]} [jsonData.zonesImage] - Zones image
+     * @returns {boolean} true si le chargement a réussi, false en cas d'erreur
+     * 
+     * @fires window.postMessage - Envoie 'DESIGNER_LOAD_COMPLETE' au parent iframe
+     * @see exportToWebDev - Fonction inverse (export)
+     * 
+     * @example
+     * // Chargement depuis postMessage (WebDev → Designer)
+     * const jsonData = {
+     *   formatDocument: { largeurMm: 210, hauteurMm: 297 },
+     *   zonesTexte: [{ contenu: 'Bonjour', geometrie: {...} }]
+     * };
+     * loadFromWebDev(jsonData); // → true
      */
     function loadFromWebDev(jsonData) {
         console.log('=== loadFromWebDev() : Début du chargement ===');
@@ -7370,7 +8263,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
-     * Convertit une zone image depuis le format JSON WebDev vers le format interne
+     * Convertit une zone image du format JSON WebDev vers le format interne documentState.
+     * Effectue la conversion des unités (mm → pixels) et le mapping des propriétés
+     * de source et redimensionnement.
+     * 
+     * @param {ZoneImageJsonWebDev} zoneJson - Zone image au format JSON WebDev
+     * @returns {ImageZoneData} Zone image au format documentState interne
+     * 
+     * @example
+     * // Entrée JSON WebDev :
+     * // { geometrie: { xMm: 10, yMm: 10, largeurMm: 40, hauteurMm: 40 },
+     * //   source: { type: 'fixe', valeur: '' },
+     * //   redimensionnement: { mode: 'ajuster' } }
+     * // Sortie interne :
+     * // { type: 'image', x: 37.8, y: 37.8, w: 151.2, h: 151.2,
+     * //   source: { type: 'fixe', valeur: '' },
+     * //   redimensionnement: { mode: 'ajuster', alignementH: 'center', alignementV: 'middle' } }
      */
     function convertZoneImageFromJson(zoneJson) {
         const mmToPixels = (mm) => mm / MM_PER_PIXEL;
@@ -7445,11 +8353,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // ───────────────────────────────────────────────────────────────────────────────
     
     /**
-     * Convertit une zone texte du format documentState vers le format JSON WebDev
+     * Convertit une zone texte du format documentState vers le format JSON WebDev.
+     * Effectue la conversion des unités (pixels → mm si nécessaire) et le mapping
+     * des propriétés (noms anglais internes → noms français WebDev).
+     * Utilise les valeurs mm stockées si disponibles pour préserver la précision.
+     * 
      * @param {string} id - Identifiant de la zone (ex: "zone-1")
-     * @param {Object} zoneData - Données de la zone au format interne
+     * @param {TextZoneData} zoneData - Données de la zone au format interne
      * @param {number} pageNumero - Numéro de page (1-based pour WebDev)
-     * @returns {Object} - Zone au format JSON WebDev
+     * @returns {ZoneTexteJsonWebDev} Zone au format JSON WebDev
+     * 
+     * @example
+     * // Entrée interne :
+     * // { type: 'text', content: 'Texte', font: 'Arial', size: 12 }
+     * // Sortie JSON WebDev :
+     * // { id: 'zone-1', page: 1, contenu: 'Texte',
+     * //   style: { police: 'Arial', taillePt: 12 } }
      */
     function convertZoneTexteToJson(id, zoneData, pageNumero) {
         // Conversion pixels → mm
@@ -7534,12 +8453,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
-     * Convertit une zone code-barres du format documentState vers le format JSON WebDev
-     * Gère les deux types : 'qr' (ancien format) et 'barcode' (nouveau format)
+     * Convertit une zone code-barres du format documentState vers le format JSON WebDev.
+     * Gère les deux types internes :
+     * - 'barcode' : Nouveau format avec champ de fusion
+     * - 'qr' : Ancien format QR avec contenu fixe (rétrocompatibilité)
+     * 
      * @param {string} id - Identifiant de la zone (ex: "zone-2")
-     * @param {Object} zoneData - Données de la zone au format interne
+     * @param {BarcodeZoneData|QrZoneData} zoneData - Données de la zone au format interne
      * @param {number} pageNumero - Numéro de page (1-based pour WebDev)
-     * @returns {Object} - Zone au format JSON WebDev
+     * @returns {ZoneCodeBarresJsonWebDev|ZoneQrJsonWebDev} Zone au format JSON WebDev
+     * 
+     * @example
+     * // Type 'barcode' → nouveau format WebDev :
+     * // { type: 'barcode', typeCodeBarres: 'code128', champFusion: 'NumeroCommande' }
+     * // → { typeCodeBarres: 'code128', champFusion: 'NumeroCommande', ... }
+     * 
+     * // Type 'qr' → ancien format WebDev :
+     * // { type: 'qr', typeCode: 'QRCode', content: 'https://...' }
+     * // → { typeCode: 'QRCode', contenu: 'https://...', couleurs: {...} }
      */
     function convertZoneCodeBarresToJson(id, zoneData, pageNumero) {
         // Conversion pixels → mm
@@ -7608,7 +8539,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
-     * Convertit une zone image du format interne vers le format JSON WebDev
+     * Convertit une zone image du format documentState vers le format JSON WebDev.
+     * Effectue la conversion des unités (pixels → mm si nécessaire) et le mapping
+     * des propriétés de source et redimensionnement.
+     * Utilise les valeurs mm stockées si disponibles pour préserver la précision.
+     * 
+     * @param {string} id - Identifiant de la zone (ex: "zone-3")
+     * @param {ImageZoneData} zoneData - Données de la zone au format interne
+     * @param {number} pageNumero - Numéro de page (1-based pour WebDev)
+     * @returns {ZoneImageJsonWebDev} Zone au format JSON WebDev
+     * 
+     * @example
+     * // Entrée interne :
+     * // { type: 'image', source: { type: 'fixe', valeur: '' },
+     * //   redimensionnement: { mode: 'ajuster' } }
+     * // Sortie JSON WebDev :
+     * // { id: 'zone-3', page: 1, source: { type: 'fixe', valeur: '' },
+     * //   redimensionnement: { mode: 'ajuster' }, geometrie: {...} }
      */
     function convertZoneImageToJson(id, zoneData, pageNumero) {
         const pixelsToMm = (px) => px * MM_PER_PIXEL;
@@ -7651,8 +8598,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
-     * Exporte documentState vers le format JSON WebDev (inverse de loadFromWebDev)
-     * @returns {Object} - Document complet au format JSON WebDev
+     * Exporte documentState vers le format JSON WebDev (inverse de loadFromWebDev).
+     * Fonction principale d'export : génère le JSON complet pour transmission à WebDev.
+     * 
+     * Étapes de l'export :
+     * 1. Synchronisation DOM → documentState (positions actuelles)
+     * 2. Construction des métadonnées (format, dimensions)
+     * 3. Conversion des zones par type (texte, code-barres, images)
+     * 4. Génération du JSON final
+     * 
+     * @returns {DocumentJsonWebDev} Document complet au format JSON WebDev
+     * 
+     * @see loadFromWebDev - Fonction inverse (import)
+     * @see convertZoneTexteToJson - Conversion zones texte
+     * @see convertZoneCodeBarresToJson - Conversion zones code-barres
+     * @see convertZoneImageToJson - Conversion zones image
+     * 
+     * @example
+     * // Export vers WebDev (bouton "Générer JSON")
+     * const jsonWebDev = exportToWebDev();
+     * // → { formatDocument: {...}, zonesTexte: [...], zonesCodeBarres: [...], zonesImage: [...] }
+     * window.parent.postMessage({ type: 'DESIGNER_EXPORT', data: jsonWebDev }, '*');
      */
     function exportToWebDev() {
         console.log('=== exportToWebDev() : Début de l\'export ===');
@@ -7987,6 +8953,34 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    /**
+     * Charge et affiche la page courante du document.
+     * Recrée toutes les zones dans le DOM à partir de documentState.
+     * 
+     * Étapes du chargement :
+     * 1. Récupère la page courante (via currentPageIndex)
+     * 2. Assure les dimensions (migration/rétrocompat)
+     * 3. Applique les dimensions au DOM (applyPageDimensions)
+     * 4. Met à jour l'image de fond
+     * 5. Recrée chaque zone via createZoneDOM (sans auto-sélection)
+     * 6. Applique les positions/tailles sauvegardées
+     * 7. Met à jour l'affichage selon le type (texte, image, code-barres)
+     * 
+     * @returns {void}
+     * 
+     * @example
+     * // Charger après changement de page (Recto/Verso)
+     * documentState.currentPageIndex = 1; // Verso
+     * loadCurrentPage();
+     * 
+     * // Charger après restauration (Undo/Redo)
+     * restoreState(snapshot);
+     * // → appelle loadCurrentPage() internement
+     * 
+     * @see switchToPage - Navigation entre pages
+     * @see createZoneDOM - Création des zones
+     * @see applyPageDimensions - Application des dimensions
+     */
     function loadCurrentPage() {
         const currentPage = getCurrentPage();
         const zonesData = currentPage.zones;
