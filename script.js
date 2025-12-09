@@ -623,14 +623,60 @@ document.addEventListener('DOMContentLoaded', () => {
     window.updateFontSelectUI = updateFontSelectUI;
 
     const MM_PER_PIXEL = 25.4 / 96;
+    const DEFAULT_SECURITY_MARGIN_MM = 8;  // Marge de sécurité par défaut : 8mm
+    
+    /**
+     * Convertit des mm en pixels
+     * @param {number} mm - Valeur en millimètres
+     * @returns {number} Valeur en pixels
+     */
+    function mmToPx(mm) {
+        return mm / MM_PER_PIXEL;
+    }
+    
+    /**
+     * Convertit des pixels en mm (arrondi à 1 décimale)
+     * @param {number} px - Valeur en pixels
+     * @returns {number} Valeur en millimètres
+     */
+    function pxToMm(px) {
+        return Math.round(px * MM_PER_PIXEL * 10) / 10;
+    }
+    
+    /**
+     * Retourne la marge de sécurité en mm
+     * @returns {number} Marge en mm
+     */
+    function getSecurityMarginMm() {
+        return documentState.formatDocument?.margeSecuriteMm || DEFAULT_SECURITY_MARGIN_MM;
+    }
     
     /**
      * Retourne la marge de sécurité en pixels pour la page courante
      * @returns {number} Marge en pixels (0 si non définie)
      */
     function getSecurityMarginPx() {
-        const marginMm = documentState.formatDocument?.margeSecuriteMm || 0;
-        return marginMm / MM_PER_PIXEL;
+        return mmToPx(getSecurityMarginMm());
+    }
+    
+    /**
+     * Calcule les limites de positionnement et dimensionnement avec marge de sécurité
+     * @returns {Object} Limites en mm
+     */
+    function getGeometryLimits() {
+        const marginMm = getSecurityMarginMm();
+        const pageWidthMm = pxToMm(getPageWidth());
+        const pageHeightMm = pxToMm(getPageHeight());
+        
+        return {
+            minX: marginMm,
+            minY: marginMm,
+            maxX: pageWidthMm - marginMm,
+            maxY: pageHeightMm - marginMm,
+            pageWidthMm: pageWidthMm,
+            pageHeightMm: pageHeightMm,
+            marginMm: marginMm
+        };
     }
     
     // --- CONSTANTES LIMITES ZONES IMAGE ---
@@ -1593,23 +1639,23 @@ document.addEventListener('DOMContentLoaded', () => {
     let documentState = {
         currentPageIndex: 0, // 0 = Recto
         pages: [
-            { 
-                id: 'page-1', 
-                name: 'Recto', 
-                image: 'a4_template_recto.jpg', 
+            {
+                id: 'page-1',
+                name: 'Recto',
+                image: 'a4_template_recto.jpg',
                 format: DEFAULT_FORMAT, // Format de la page
                 width: DOCUMENT_FORMATS[DEFAULT_FORMAT].width, // Largeur en pixels
                 height: DOCUMENT_FORMATS[DEFAULT_FORMAT].height, // Hauteur en pixels
-                zones: {} 
+                zones: {}
             },
-            { 
-                id: 'page-2', 
-                name: 'Verso', 
-                image: 'a4_template_verso.jpg', 
+            {
+                id: 'page-2',
+                name: 'Verso',
+                image: 'a4_template_verso.jpg',
                 format: DEFAULT_FORMAT,
                 width: DOCUMENT_FORMATS[DEFAULT_FORMAT].width,
                 height: DOCUMENT_FORMATS[DEFAULT_FORMAT].height,
-                zones: {} 
+                zones: {}
             }
         ],
         zoneCounter: 0 // Compteur global pour ID uniques
@@ -2769,6 +2815,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         chkLock.checked = data.locked || false;
         
+        // Activer/désactiver les champs de géométrie selon le verrouillage
+        const isLocked = data.locked || false;
+        inputX.disabled = isLocked;
+        inputY.disabled = isLocked;
+        inputW.disabled = isLocked;
+        inputH.disabled = isLocked;
+        
         // Afficher/masquer la section Lignes vides selon le type de zone (texte uniquement)
         if (emptyLinesSection) {
             emptyLinesSection.style.display = (zoneType === 'text') ? 'block' : 'none';
@@ -3420,6 +3473,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             // Mettre à jour l'affichage des poignées (prend en compte sélection + verrouillage)
             updateHandlesVisibility();
+            // Activer/désactiver les champs de géométrie selon le verrouillage
+            inputX.disabled = chkLock.checked;
+            inputY.disabled = chkLock.checked;
+            inputW.disabled = chkLock.checked;
+            inputH.disabled = chkLock.checked;
             // Régénérer le code-barres avec les nouvelles propriétés
             updateQrZoneDisplay(selectedId);
             saveToLocalStorage();
@@ -3496,6 +3554,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         // Mettre à jour l'affichage des poignées (prend en compte sélection + verrouillage)
         updateHandlesVisibility();
+        
+        // Activer/désactiver les champs de géométrie selon le verrouillage
+        inputX.disabled = chkLock.checked;
+        inputY.disabled = chkLock.checked;
+        inputW.disabled = chkLock.checked;
+        inputH.disabled = chkLock.checked;
         
         // Alignement Horizontal (géré par le texte lui-même)
         contentEl.style.textAlign = inputAlign.value;
@@ -4192,6 +4256,12 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             zoneEl.classList.remove('locked');
         }
+        
+        // Activer/désactiver les champs de géométrie selon le verrouillage
+        inputX.disabled = chkLock?.checked || false;
+        inputY.disabled = chkLock?.checked || false;
+        inputW.disabled = chkLock?.checked || false;
+        inputH.disabled = chkLock?.checked || false;
         
         // IMPORTANT : Mettre à jour l'affichage de l'image
         updateImageZoneDisplay(zoneEl, zoneData);
@@ -5885,13 +5955,34 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('mouseup', () => {
         // Sauvegarder UNIQUEMENT si un vrai changement a eu lieu (drag ou resize avec mouvement)
         if (hasActuallyMoved && (isDragging || isResizing)) {
+            // Mettre à jour les valeurs mm pour toutes les zones déplacées/redimensionnées
+            const zonesData = getCurrentPageZones();
+            selectedZoneIds.forEach(zoneId => {
+                const zoneEl = document.getElementById(zoneId);
+                const zoneData = zonesData[zoneId];
+                if (zoneEl && zoneData) {
+                    // Convertir les positions/dimensions pixels en mm
+                    zoneData.xMm = pxToMm(parseFloat(zoneEl.style.left) || zoneEl.offsetLeft);
+                    zoneData.yMm = pxToMm(parseFloat(zoneEl.style.top) || zoneEl.offsetTop);
+                    zoneData.wMm = pxToMm(zoneEl.offsetWidth);
+                    zoneData.hMm = pxToMm(zoneEl.offsetHeight);
+                }
+            });
+            
+            // Mettre à jour l'affichage des champs de géométrie
+            if (selectedZoneIds.length === 1) {
+                const zoneEl = document.getElementById(selectedZoneIds[0]);
+                if (zoneEl) {
+                    updateGeomDisplay(zoneEl);
+                }
+            }
+            
             saveToLocalStorage();
             saveState(); // Snapshot APRÈS le déplacement/redimensionnement
 
             // Régénérer les codes-barres après redimensionnement
             if (isResizing && selectedZoneIds.length === 1) {
                 const zoneId = selectedZoneIds[0];
-                const zonesData = getCurrentPageZones();
                 const zoneData = zonesData[zoneId];
                 if (zoneData) {
                     if (zoneData.type === 'qr') {
@@ -5904,23 +5995,255 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }
-        
-        isDragging = false; 
+
+        isDragging = false;
         isResizing = false;
         hasActuallyMoved = false;
         startPositions = [];
-        
+
         // Réinitialiser le debounce des messages de contrainte
         lastConstraintMessage = '';
         lastConstraintTime = 0;
     });
 
-    function updateGeomDisplay(el) {
-        inputX.value = (el.offsetLeft * MM_PER_PIXEL).toFixed(2);
-        inputY.value = (el.offsetTop * MM_PER_PIXEL).toFixed(2);
-        inputW.value = (el.offsetWidth * MM_PER_PIXEL).toFixed(2);
-        inputH.value = (el.offsetHeight * MM_PER_PIXEL).toFixed(2);
+    /**
+     * Met à jour les champs de géométrie avec les valeurs mm stockées ou calculées
+     * @param {HTMLElement|Object} zoneDataOrEl - Élément DOM ou données de la zone
+     */
+    function updateGeomDisplay(zoneDataOrEl) {
+        let xMm, yMm, wMm, hMm;
+        
+        if (zoneDataOrEl instanceof HTMLElement) {
+            // Élément DOM passé : récupérer les données de la zone
+            const zoneEl = zoneDataOrEl;
+            const zonesData = getCurrentPageZones();
+            const zoneData = zonesData[zoneEl.id];
+            
+            if (zoneData && zoneData.xMm !== undefined) {
+                // Utiliser les valeurs mm stockées
+                xMm = zoneData.xMm;
+                yMm = zoneData.yMm;
+                wMm = zoneData.wMm;
+                hMm = zoneData.hMm;
+            } else {
+                // Fallback : convertir depuis les pixels
+                xMm = pxToMm(zoneEl.offsetLeft);
+                yMm = pxToMm(zoneEl.offsetTop);
+                wMm = pxToMm(zoneEl.offsetWidth);
+                hMm = pxToMm(zoneEl.offsetHeight);
+            }
+        } else {
+            // Objet zoneData passé directement
+            const zoneData = zoneDataOrEl;
+            if (zoneData.xMm !== undefined) {
+                xMm = zoneData.xMm;
+                yMm = zoneData.yMm;
+                wMm = zoneData.wMm;
+                hMm = zoneData.hMm;
+            } else {
+                // Fallback : convertir depuis les pixels
+                xMm = pxToMm(zoneData.x || 0);
+                yMm = pxToMm(zoneData.y || 0);
+                wMm = pxToMm(zoneData.w || 100);
+                hMm = pxToMm(zoneData.h || 50);
+            }
+        }
+        
+        // Afficher avec 1 décimale
+        inputX.value = xMm.toFixed(1);
+        inputY.value = yMm.toFixed(1);
+        inputW.value = wMm.toFixed(1);
+        inputH.value = hMm.toFixed(1);
     }
+    
+    /**
+     * Applique une nouvelle valeur de géométrie avec contraintes de marge
+     * @param {string} property - 'x', 'y', 'w' ou 'h'
+     * @param {number} valueMm - Nouvelle valeur en mm
+     */
+    function applyGeometryChange(property, valueMm) {
+        if (selectedZoneIds.length !== 1) return;
+        
+        const zoneId = selectedZoneIds[0];
+        const zoneEl = document.getElementById(zoneId);
+        if (!zoneEl) return;
+        
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        if (!zoneData || zoneData.locked) return;
+        
+        // Récupérer les limites avec marge de sécurité
+        const limits = getGeometryLimits();
+        
+        // Récupérer les valeurs actuelles en mm
+        let xMm = zoneData.xMm !== undefined ? zoneData.xMm : pxToMm(zoneEl.offsetLeft);
+        let yMm = zoneData.yMm !== undefined ? zoneData.yMm : pxToMm(zoneEl.offsetTop);
+        let wMm = zoneData.wMm !== undefined ? zoneData.wMm : pxToMm(zoneEl.offsetWidth);
+        let hMm = zoneData.hMm !== undefined ? zoneData.hMm : pxToMm(zoneEl.offsetHeight);
+        
+        // Taille minimum (2mm)
+        const minSizeMm = 2;
+        
+        // Vérifier si c'est un code 2D (doit rester carré)
+        let is2D = false;
+        if (zoneData.type === 'qr') {
+            const typeCode = zoneData.typeCode || 'QRCode';
+            const config = BARCODE_BWIPJS_CONFIG[typeCode];
+            is2D = config ? config.is2D : false;
+        } else if (zoneData.type === 'barcode') {
+            const typeCode = zoneData.typeCodeBarres || 'code128';
+            const config = BARCODE_BWIPJS_CONFIG[typeCode];
+            is2D = config ? config.is2D : false;
+        }
+        
+        // Fonction d'arrondi à 1 décimale
+        const round1 = (val) => Math.round(val * 10) / 10;
+        
+        // ============================================
+        // APPLIQUER LES CONTRAINTES SELON LA PROPRIÉTÉ
+        // ============================================
+        
+        switch (property) {
+            case 'x':
+                // Contraindre X entre marge min et (marge max - largeur)
+                xMm = valueMm;
+                const maxX = round1(limits.maxX - wMm);
+                xMm = round1(Math.max(limits.minX, Math.min(xMm, maxX)));
+                break;
+                
+            case 'y':
+                // Contraindre Y entre marge min et (marge max - hauteur)
+                yMm = valueMm;
+                const maxY = round1(limits.maxY - hMm);
+                yMm = round1(Math.max(limits.minY, Math.min(yMm, maxY)));
+                break;
+                
+            case 'w':
+                // NE PAS modifier X, juste limiter la largeur au max possible
+                wMm = Math.max(minSizeMm, valueMm);
+                
+                // Largeur max = bord droit (avec marge) - position X actuelle
+                const maxWidth = round1(limits.maxX - xMm);
+                wMm = round1(Math.min(wMm, maxWidth));
+                
+                // Codes 2D : forcer le carré
+                if (is2D) {
+                    // Aussi vérifier la contrainte de hauteur
+                    const maxHeightFor2D = round1(limits.maxY - yMm);
+                    const maxSquareW = Math.min(wMm, maxHeightFor2D);
+                    wMm = round1(maxSquareW);
+                    hMm = round1(maxSquareW);
+                }
+                break;
+                
+            case 'h':
+                // NE PAS modifier Y, juste limiter la hauteur au max possible
+                hMm = Math.max(minSizeMm, valueMm);
+                
+                // Hauteur max = bord bas (avec marge) - position Y actuelle
+                const maxHeight = round1(limits.maxY - yMm);
+                hMm = round1(Math.min(hMm, maxHeight));
+                
+                // Codes 2D : forcer le carré
+                if (is2D) {
+                    // Aussi vérifier la contrainte de largeur
+                    const maxWidthFor2D = round1(limits.maxX - xMm);
+                    const maxSquareH = Math.min(hMm, maxWidthFor2D);
+                    wMm = round1(maxSquareH);
+                    hMm = round1(maxSquareH);
+                }
+                break;
+        }
+        
+        // Arrondir les valeurs finales
+        xMm = round1(xMm);
+        yMm = round1(yMm);
+        wMm = round1(wMm);
+        hMm = round1(hMm);
+        
+        // ============================================
+        // APPLIQUER LES VALEURS
+        // ============================================
+        
+        // Convertir en pixels pour le CSS
+        const xPx = mmToPx(xMm);
+        const yPx = mmToPx(yMm);
+        const wPx = mmToPx(wMm);
+        const hPx = mmToPx(hMm);
+        
+        // Appliquer au DOM
+        zoneEl.style.left = xPx + 'px';
+        zoneEl.style.top = yPx + 'px';
+        zoneEl.style.width = wPx + 'px';
+        zoneEl.style.height = hPx + 'px';
+        
+        // Stocker les valeurs en pixels ET en mm
+        zoneData.x = xPx;
+        zoneData.y = yPx;
+        zoneData.w = wPx;
+        zoneData.h = hPx;
+        zoneData.xMm = xMm;
+        zoneData.yMm = yMm;
+        zoneData.wMm = wMm;
+        zoneData.hMm = hMm;
+        
+        // Mettre à jour l'affichage des champs avec les valeurs mm (précises)
+        updateGeomDisplay(zoneData);
+        
+        // Actions spécifiques selon le type de zone
+        if (zoneData.type === 'qr') {
+            updateQrZoneDisplay(zoneId);
+        } else if (zoneData.type === 'barcode') {
+            updateBarcodeZoneDisplay(zoneId);
+        } else if (zoneData.type === 'image') {
+            updateImageDpiBadge(zoneId);
+            updateDpiIndicator(zoneId);
+        } else if (zoneData.copyfit) {
+            applyCopyfit(zoneEl, zoneData.size);
+        }
+        
+        saveToLocalStorage();
+        saveState();
+    }
+    
+    // Écouteurs pour les champs de géométrie
+    inputX.addEventListener('change', () => {
+        const value = parseFloat(inputX.value);
+        if (!isNaN(value) && value >= 0) {
+            applyGeometryChange('x', value);
+        }
+    });
+    
+    inputY.addEventListener('change', () => {
+        const value = parseFloat(inputY.value);
+        if (!isNaN(value) && value >= 0) {
+            applyGeometryChange('y', value);
+        }
+    });
+    
+    inputW.addEventListener('change', () => {
+        const value = parseFloat(inputW.value);
+        if (!isNaN(value) && value > 0) {
+            applyGeometryChange('w', value);
+        }
+    });
+    
+    inputH.addEventListener('change', () => {
+        const value = parseFloat(inputH.value);
+        if (!isNaN(value) && value > 0) {
+            applyGeometryChange('h', value);
+        }
+    });
+    
+    // Permettre la validation avec Entrée
+    [inputX, inputY, inputW, inputH].forEach(input => {
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                input.blur(); // Déclenche l'événement change
+            }
+        });
+    });
 
     // --- 6. SAUVEGARDE / CHARGEMENT LOCAL ---
     function saveToLocalStorage() {
@@ -5999,6 +6322,12 @@ document.addEventListener('DOMContentLoaded', () => {
             w: geometrie.largeurMm !== undefined ? mmToPixels(geometrie.largeurMm) : 200,
             h: geometrie.hauteurMm !== undefined ? mmToPixels(geometrie.hauteurMm) : 40,
             
+            // Géométrie en mm (stockée pour précision)
+            xMm: geometrie.xMm !== undefined ? geometrie.xMm : 0,
+            yMm: geometrie.yMm !== undefined ? geometrie.yMm : 0,
+            wMm: geometrie.largeurMm !== undefined ? geometrie.largeurMm : pxToMm(200),
+            hMm: geometrie.hauteurMm !== undefined ? geometrie.hauteurMm : pxToMm(40),
+            
             // Contenu et formatage
             content: zoneJson.contenu || '',
             formatting: formatting,
@@ -6075,7 +6404,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 x: geometrie.xMm !== undefined ? mmToPixels(geometrie.xMm) : 0,
                 y: geometrie.yMm !== undefined ? mmToPixels(geometrie.yMm) : 0,
                 w: geometrie.largeurMm !== undefined ? mmToPixels(geometrie.largeurMm) : 150,
-                h: geometrie.hauteurMm !== undefined ? mmToPixels(geometrie.hauteurMm) : 60
+                h: geometrie.hauteurMm !== undefined ? mmToPixels(geometrie.hauteurMm) : 60,
+                // Géométrie en mm (stockée pour précision)
+                xMm: geometrie.xMm !== undefined ? geometrie.xMm : 0,
+                yMm: geometrie.yMm !== undefined ? geometrie.yMm : 0,
+                wMm: geometrie.largeurMm !== undefined ? geometrie.largeurMm : pxToMm(150),
+                hMm: geometrie.hauteurMm !== undefined ? geometrie.hauteurMm : pxToMm(60)
             };
         }
         
@@ -6106,7 +6440,12 @@ document.addEventListener('DOMContentLoaded', () => {
             x: geometrie.xMm !== undefined ? mmToPixels(geometrie.xMm) : 0,
             y: geometrie.yMm !== undefined ? mmToPixels(geometrie.yMm) : 0,
             w: geometrie.largeurMm !== undefined ? mmToPixels(geometrie.largeurMm) : 100,
-            h: geometrie.hauteurMm !== undefined ? mmToPixels(geometrie.hauteurMm) : 100
+            h: geometrie.hauteurMm !== undefined ? mmToPixels(geometrie.hauteurMm) : 100,
+            // Géométrie en mm (stockée pour précision)
+            xMm: geometrie.xMm !== undefined ? geometrie.xMm : 0,
+            yMm: geometrie.yMm !== undefined ? geometrie.yMm : 0,
+            wMm: geometrie.largeurMm !== undefined ? geometrie.largeurMm : pxToMm(100),
+            hMm: geometrie.hauteurMm !== undefined ? geometrie.hauteurMm : pxToMm(100)
         };
     }
     
@@ -6414,6 +6753,11 @@ document.addEventListener('DOMContentLoaded', () => {
             y: geometrie.yMm !== undefined ? mmToPixels(geometrie.yMm) : 0,
             w: geometrie.largeurMm !== undefined ? mmToPixels(geometrie.largeurMm) : 150,
             h: geometrie.hauteurMm !== undefined ? mmToPixels(geometrie.hauteurMm) : 150,
+            // Géométrie en mm (stockée pour précision)
+            xMm: geometrie.xMm !== undefined ? geometrie.xMm : 0,
+            yMm: geometrie.yMm !== undefined ? geometrie.yMm : 0,
+            wMm: geometrie.largeurMm !== undefined ? geometrie.largeurMm : pxToMm(150),
+            hMm: geometrie.hauteurMm !== undefined ? geometrie.hauteurMm : pxToMm(150),
             source: {
                 type: source.type || 'url',
                 valeur: source.valeur || ''
@@ -6485,14 +6829,14 @@ document.addEventListener('DOMContentLoaded', () => {
             // Lignes vides : export entier (rétrocompatibilité avec ancien booléen)
             supprimerLignesVides: zoneData.emptyLines !== undefined ? zoneData.emptyLines : (zoneData.removeEmptyLines ? 1 : 0),
             
-            // Géométrie (conversion px → mm)
+            // Géométrie (utiliser les valeurs mm stockées si disponibles, sinon convertir)
             geometrie: {
-                xMm: pixelsToMm(zoneData.x || 0),
-                yMm: pixelsToMm(zoneData.y || 0),
-                largeurMm: pixelsToMm(zoneData.w || 200),
-                hauteurMm: pixelsToMm(zoneData.h || 40)
+                xMm: zoneData.xMm !== undefined ? zoneData.xMm : pixelsToMm(zoneData.x || 0),
+                yMm: zoneData.yMm !== undefined ? zoneData.yMm : pixelsToMm(zoneData.y || 0),
+                largeurMm: zoneData.wMm !== undefined ? zoneData.wMm : pixelsToMm(zoneData.w || 200),
+                hauteurMm: zoneData.hMm !== undefined ? zoneData.hMm : pixelsToMm(zoneData.h || 40)
             },
-            
+
             // Contenu et formatage
             contenu: zoneData.content || '',
             formatage: formatage,
@@ -6554,42 +6898,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 taillePolice: zoneData.taillePolice || 8,
                 couleur: zoneData.couleur || '#000000',
                 geometrie: {
-                    xMm: pixelsToMm(zoneData.x || 0),
-                    yMm: pixelsToMm(zoneData.y || 0),
-                    largeurMm: pixelsToMm(zoneData.w || 150),
-                    hauteurMm: pixelsToMm(zoneData.h || 60)
+                    xMm: zoneData.xMm !== undefined ? zoneData.xMm : pixelsToMm(zoneData.x || 0),
+                    yMm: zoneData.yMm !== undefined ? zoneData.yMm : pixelsToMm(zoneData.y || 0),
+                    largeurMm: zoneData.wMm !== undefined ? zoneData.wMm : pixelsToMm(zoneData.w || 150),
+                    hauteurMm: zoneData.hMm !== undefined ? zoneData.hMm : pixelsToMm(zoneData.h || 60)
                 },
                 niveau: zoneData.zIndex || 1,
                 verrouille: zoneData.locked || false
             };
         }
-        
+
         // Ancien format : zone QR simple (rétrocompatibilité)
         return {
             // Identifiant et page
             id: id,
             page: pageNumero,
-            
+
             // Type de code-barres (QRCode, Code128, EAN13, Code39, DataMatrix, PDF417, EanUcc128, UPCA, UPCE)
             typeCode: zoneData.typeCode || 'QRCode',
-            
+
             // Contenu à encoder
             contenu: zoneData.content || '',
-            
+
             // Nom et métadonnées
             nom: zoneData.name || '',
             niveau: zoneData.zIndex || 1,
             rotation: zoneData.rotation || 0,
             verrouille: zoneData.locked || false,
-            
-            // Géométrie (conversion px → mm)
+
+            // Géométrie (utiliser les valeurs mm stockées si disponibles)
             geometrie: {
-                xMm: pixelsToMm(zoneData.x || 0),
-                yMm: pixelsToMm(zoneData.y || 0),
-                largeurMm: pixelsToMm(zoneData.w || 100),
-                hauteurMm: pixelsToMm(zoneData.h || 100)
+                xMm: zoneData.xMm !== undefined ? zoneData.xMm : pixelsToMm(zoneData.x || 0),
+                yMm: zoneData.yMm !== undefined ? zoneData.yMm : pixelsToMm(zoneData.y || 0),
+                largeurMm: zoneData.wMm !== undefined ? zoneData.wMm : pixelsToMm(zoneData.w || 100),
+                hauteurMm: zoneData.hMm !== undefined ? zoneData.hMm : pixelsToMm(zoneData.h || 100)
             },
-            
+
             // Couleurs
             couleurs: {
                 code: zoneData.qrColor || '#000000',
@@ -6603,7 +6947,7 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function convertZoneImageToJson(id, zoneData, pageNumero) {
         const pixelsToMm = (px) => px * MM_PER_PIXEL;
-        
+
         return {
             id: id,
             page: pageNumero,
@@ -6612,10 +6956,10 @@ document.addEventListener('DOMContentLoaded', () => {
             rotation: zoneData.rotation || 0,
             verrouille: zoneData.locked || false,
             geometrie: {
-                xMm: pixelsToMm(zoneData.x || 0),
-                yMm: pixelsToMm(zoneData.y || 0),
-                largeurMm: pixelsToMm(zoneData.w || 150),
-                hauteurMm: pixelsToMm(zoneData.h || 150)
+                xMm: zoneData.xMm !== undefined ? zoneData.xMm : pixelsToMm(zoneData.x || 0),
+                yMm: zoneData.yMm !== undefined ? zoneData.yMm : pixelsToMm(zoneData.y || 0),
+                largeurMm: zoneData.wMm !== undefined ? zoneData.wMm : pixelsToMm(zoneData.w || 150),
+                hauteurMm: zoneData.hMm !== undefined ? zoneData.hMm : pixelsToMm(zoneData.h || 150)
             },
             source: {
                 type: zoneData.source?.type || 'url',

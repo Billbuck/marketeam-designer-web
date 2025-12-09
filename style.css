@@ -370,6 +370,42 @@ button:last-child {
     font-size: 13px;
 }
 
+/* Champs de géométrie éditables */
+#val-x, #val-y, #val-w, #val-h {
+    text-align: right;
+    padding-right: 10px;
+}
+
+#val-x:focus, #val-y:focus, #val-w:focus, #val-h:focus {
+    border-color: #2196F3;
+    outline: none;
+    box-shadow: 0 0 3px rgba(33, 150, 243, 0.3);
+}
+
+/* Champs désactivés (zone verrouillée) */
+#val-x:disabled, #val-y:disabled, #val-w:disabled, #val-h:disabled {
+    background-color: #f0f0f0;
+    color: #999;
+    cursor: not-allowed;
+}
+
+/* Masquer les spinners sur les inputs number */
+#val-x::-webkit-inner-spin-button,
+#val-x::-webkit-outer-spin-button,
+#val-y::-webkit-inner-spin-button,
+#val-y::-webkit-outer-spin-button,
+#val-w::-webkit-inner-spin-button,
+#val-w::-webkit-outer-spin-button,
+#val-h::-webkit-inner-spin-button,
+#val-h::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+#val-x, #val-y, #val-w, #val-h {
+    -moz-appearance: textfield;
+}
+
 .input-group-emphasized textarea {
     border: 2px solid #1a73e8;
     font-size: 14px;
