@@ -16,16 +16,11 @@
         <div class="toolbar">
             <h2>Éditeur VDP</h2>
             
-            <!-- Navigation multipage -->
-            <div class="toolbar-section">
+            <!-- Navigation multipage (générée dynamiquement) -->
+            <div class="toolbar-section" id="pages-section" style="display: none;">
                 <h3 class="section-title">Pages</h3>
-                <div class="page-nav-buttons">
-                    <button class="page-nav-btn btn-primary" data-page-index="0">
-                        <span class="material-icons">description</span> Recto
-                    </button>
-                    <button class="page-nav-btn btn-primary" data-page-index="1">
-                        <span class="material-icons">description</span> Verso
-                    </button>
+                <div id="page-nav-container">
+                    <!-- Contenu généré par renderPageNavigation() -->
                 </div>
             </div>
 
@@ -125,6 +120,19 @@
                 <div id="zone-properties-content">
                 <h3 class="section-title">Propriétés de la Zone</h3>
                 <p class="selection-info">Zone : <strong id="lbl-selected-zone">-</strong></p>
+                
+                <!-- Section déplacement page (visible uniquement si 1 zone sélectionnée) -->
+                <div class="form-group" id="zone-page-section" style="display: none;">
+                    <label for="input-zone-page">
+                        Page :
+                        <span id="zone-page-lock" class="page-lock-icon" style="display: none;" title="Zone système non déplaçable">🔒</span>
+                    </label>
+                    <select id="input-zone-page" class="input-field">
+                        <option value="0">Recto</option>
+                        <option value="1">Verso</option>
+                    </select>
+                </div>
+                
                 <hr>
 
                 <!-- Zone de texte en saisie - MISE EN AVANT -->

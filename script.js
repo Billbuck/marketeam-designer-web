@@ -568,6 +568,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Bouton Ajuster au contenu
     const btnSnapToContent = document.getElementById('btn-snap-to-content');
     
+    // Section déplacement de zone vers une autre page
+    const zonePageSection = document.getElementById('zone-page-section');
+    const inputZonePage = document.getElementById('input-zone-page');
+    const zonePageLock = document.getElementById('zone-page-lock');
+    
+    // Navigation pages dynamique
+    const pagesSection = document.getElementById('pages-section');
+    const pageNavContainer = document.getElementById('page-nav-container');
+    
     // Fonction pour mettre à jour l'affichage du spin button d'épaisseur de bordure
     function updateBorderWidthDisplay(value) {
         if (inputBorderWidthDisplay) {
@@ -3613,6 +3622,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 zoneEl.classList.add('selected');
             }
             updateSelectionUI();
+            updateZonePageUI();
         }
     }
 
@@ -3626,6 +3636,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 zoneEl.classList.remove('selected');
             }
             updateSelectionUI();
+            updateZonePageUI();
         }
     }
 
@@ -4311,6 +4322,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             updateSelectionUI();
+            
+            // Mettre à jour la combo Page
+            updateZonePageUI();
         }
     }
 
@@ -6894,6 +6908,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Désactiver le bouton Ajuster au contenu
         if (btnSnapToContent) btnSnapToContent.disabled = true;
+        
+        // Masquer la section Page
+        updateZonePageUI();
     }
 
     btnDelete.addEventListener('click', () => {
@@ -8259,6 +8276,9 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('État documentState :', documentState);
         console.log(`Résumé : ${documentState.pages.length} page(s), ${zonesTexteCount} zone(s) texte, ${zonesCodeBarresCount} zone(s) code-barres, ${zonesImageCount} zone(s) image`);
         
+        // Regénérer la navigation des pages après import
+        renderPageNavigation();
+        
         return true;
     }
     
@@ -9144,18 +9164,16 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Mettre à jour l'affichage des poignées après le chargement de toutes les zones
         updateHandlesVisibility();
+        
+        // Mettre à jour la section Page (masquée car aucune zone sélectionnée après chargement)
+        updateZonePageUI();
     }
 
-    // --- NAVIGATION MULTIPAGE ---
-    const pageNavButtons = document.querySelectorAll('.page-nav-btn');
-    pageNavButtons.forEach((btn, index) => {
-        btn.addEventListener('click', () => {
-            switchPage(index);
-        });
-    });
-
-    // Charger au démarrage
+    // --- CHARGEMENT AU DÉMARRAGE ---
     loadFromLocalStorage();
+    
+    // Générer la navigation des pages après chargement
+    renderPageNavigation();
     
     // Sauvegarder l'état initial dans l'historique (après le chargement)
     saveState();
@@ -9196,13 +9214,19 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * Gestion de la navigation entre les pages du document.
      * Mise à jour de l'interface de navigation.
+     * Déplacement de zones entre pages.
      * 
      * Fonctions principales :
      *   - switchPage() : Change de page (sauvegarde, vide, charge)
      *   - updatePageNavigationUI() : Met à jour les boutons de navigation
+     *   - moveZoneToPage() : Déplace une zone vers une autre page
+     *   - reorganizePageZIndex() : Réorganise les z-index après déplacement
+     *   - updateZonePageUI() : Met à jour la combo Page dans la toolbar
+     *   - showMoveZoneToast() : Affiche un toast de confirmation
      * 
      * Listeners :
      *   - Boutons de navigation Recto/Verso
+     *   - Combo input-zone-page
      * 
      * Dépendances :
      *   - documentState (Section 12)
@@ -9210,6 +9234,250 @@ document.addEventListener('DOMContentLoaded', () => {
      *   - setZoom() (Section 24)
      */
     // ───────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Affiche un toast de confirmation de déplacement de zone.
+     * Utilise le système de toast existant (undo-redo-toast).
+     * 
+     * @param {string} zoneName - Nom de la zone déplacée (ex: "Zone 1")
+     * @param {string} targetPageName - Nom de la page cible (ex: "Verso")
+     * @returns {void}
+     * 
+     * @example
+     * showMoveZoneToast('Zone 1', 'Verso');
+     * // Affiche "Zone déplacée vers Verso" pendant 2 secondes
+     */
+    function showMoveZoneToast(zoneName, targetPageName) {
+        const toast = document.getElementById('undo-redo-toast');
+        if (toast) {
+            toast.innerHTML = `
+                <span class="material-icons toast-icon">drive_file_move</span>
+                <span>Zone déplacée vers ${targetPageName}</span>
+            `;
+            toast.className = 'undo-toast success show';
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+    }
+
+    /**
+     * Réorganise les z-index d'une page pour combler les trous après suppression/déplacement.
+     * Les z-index sont réattribués de 1 à N dans l'ordre actuel.
+     * 
+     * @param {number} pageIndex - Index de la page à réorganiser (0 = Recto, 1 = Verso)
+     * @returns {void}
+     * 
+     * @example
+     * // Après suppression d'une zone avec z-index 2 sur 4 zones
+     * reorganizePageZIndex(0);
+     * // Les zones 1, 3, 4 deviennent 1, 2, 3
+     */
+    function reorganizePageZIndex(pageIndex) {
+        const page = documentState.pages[pageIndex];
+        if (!page || !page.zones) return;
+        
+        const zones = page.zones;
+        
+        // Récupérer toutes les zones avec leur z-index actuel
+        const zonesWithZIndex = Object.entries(zones)
+            .map(([id, data]) => ({ id, zIndex: data.zIndex || 1 }))
+            .sort((a, b) => a.zIndex - b.zIndex);
+        
+        // Réattribuer les z-index de 1 à N
+        zonesWithZIndex.forEach((zone, index) => {
+            zones[zone.id].zIndex = index + 1;
+        });
+    }
+
+    /**
+     * Déplace une zone vers une autre page du document.
+     * La zone est supprimée de la page source et ajoutée à la page cible.
+     * Les z-index sont réorganisés sur les deux pages.
+     * 
+     * Règles métier :
+     * - Les zones système (systeme === true) ne peuvent pas être déplacées
+     * - La page cible doit être différente de la page source
+     * - La zone arrive au premier plan sur la page cible (z-index max + 1)
+     * - Un seul saveState() est effectué pour l'historique
+     * 
+     * @param {string} zoneId - ID de la zone à déplacer (ex: "zone-1")
+     * @param {number} targetPageIndex - Index de la page cible (0 = Recto, 1 = Verso)
+     * @returns {boolean} true si le déplacement a réussi, false sinon
+     * 
+     * @example
+     * // Déplacer zone-1 vers le Verso
+     * const success = moveZoneToPage('zone-1', 1);
+     * if (success) {
+     *     deselectAll();
+     * }
+     * 
+     * @see reorganizePageZIndex - Réorganisation des z-index
+     * @see showMoveZoneToast - Affichage du toast de confirmation
+     */
+    function moveZoneToPage(zoneId, targetPageIndex) {
+        // 1. Vérifier que la zone existe sur la page courante
+        const sourcePageIndex = documentState.currentPageIndex;
+        const sourcePage = documentState.pages[sourcePageIndex];
+        const sourceZones = sourcePage.zones;
+        
+        if (!sourceZones[zoneId]) {
+            console.warn(`moveZoneToPage: Zone ${zoneId} non trouvée sur la page courante`);
+            return false;
+        }
+        
+        const zoneData = sourceZones[zoneId];
+        
+        // 2. Vérifier que ce n'est pas une zone système
+        if (zoneData.systeme === true) {
+            console.warn(`moveZoneToPage: Zone ${zoneId} est une zone système, déplacement interdit`);
+            return false;
+        }
+        
+        // 3. Vérifier que la page cible est différente de la page actuelle
+        if (targetPageIndex === sourcePageIndex) {
+            console.info(`moveZoneToPage: Zone ${zoneId} déjà sur la page ${targetPageIndex}`);
+            return false;
+        }
+        
+        // 4. Vérifier que la page cible existe
+        if (targetPageIndex < 0 || targetPageIndex >= documentState.pages.length) {
+            console.warn(`moveZoneToPage: Page cible ${targetPageIndex} invalide`);
+            return false;
+        }
+        
+        const targetPage = documentState.pages[targetPageIndex];
+        const targetZones = targetPage.zones;
+        
+        // 5. Calculer le nouveau z-index pour la page cible (au premier plan)
+        let maxZIndex = 0;
+        for (const data of Object.values(targetZones)) {
+            if (data.zIndex && data.zIndex > maxZIndex) {
+                maxZIndex = data.zIndex;
+            }
+        }
+        const newZIndex = maxZIndex + 1;
+        
+        // 6. Copier les données de la zone avec le nouveau z-index
+        const newZoneData = { ...zoneData, zIndex: newZIndex };
+        
+        // 7. Supprimer la zone de la page source
+        delete sourceZones[zoneId];
+        
+        // 8. Réorganiser les z-index de la page source (combler le trou)
+        reorganizePageZIndex(sourcePageIndex);
+        
+        // 9. Ajouter la zone à la page cible
+        targetZones[zoneId] = newZoneData;
+        
+        // 10. Supprimer l'élément DOM de la page courante (si on est sur la page source)
+        const zoneEl = document.getElementById(zoneId);
+        if (zoneEl) {
+            zoneEl.remove();
+        }
+        
+        // 11. Sauvegarder et créer un point d'historique
+        saveToLocalStorage();
+        saveState();
+        
+        // 12. Afficher un toast de confirmation
+        const zoneName = zoneId.replace('zone-', 'Zone ');
+        const targetPageName = targetPageIndex === 0 ? 'Recto' : 'Verso';
+        showMoveZoneToast(zoneName, targetPageName);
+        
+        return true;
+    }
+
+    /**
+     * Met à jour la section "Page" dans la toolbar selon la zone sélectionnée.
+     * Gère l'affichage, la valeur et l'état désactivé de la combo.
+     * 
+     * Comportement :
+     * - 0 zone sélectionnée : Section masquée
+     * - 2+ zones sélectionnées : Section masquée (pas de déplacement multiple)
+     * - 1 zone normale : Combo active, cadenas masqué, page actuelle sélectionnée
+     * - 1 zone système : Combo désactivée, cadenas visible
+     * 
+     * @returns {void}
+     * 
+     * @example
+     * // Après sélection d'une zone
+     * selectZone('zone-1');
+     * updateZonePageUI(); // Met à jour l'affichage de la combo Page
+     * 
+     * @see selectZone - Sélection d'une zone
+     * @see deselectAll - Désélection de toutes les zones
+     */
+    function updateZonePageUI() {
+        // Vérifier que les éléments DOM existent
+        if (!zonePageSection || !inputZonePage) {
+            return;
+        }
+        
+        const pageCount = documentState.pages.length;
+        
+        // Masquer si 1 seule page (pas de déplacement possible)
+        if (pageCount <= 1) {
+            zonePageSection.style.display = 'none';
+            return;
+        }
+        
+        // Masquer si pas exactement 1 zone sélectionnée
+        if (selectedZoneIds.length !== 1) {
+            zonePageSection.style.display = 'none';
+            return;
+        }
+        
+        // 1 zone sélectionnée
+        const zoneId = selectedZoneIds[0];
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        
+        if (!zoneData) {
+            zonePageSection.style.display = 'none';
+            return;
+        }
+        
+        // Afficher la section
+        zonePageSection.style.display = 'block';
+        
+        // Peupler la combo dynamiquement avec les noms des pages
+        inputZonePage.innerHTML = '';
+        documentState.pages.forEach((page, index) => {
+            const option = document.createElement('option');
+            option.value = index;
+            option.textContent = page.name;
+            inputZonePage.appendChild(option);
+        });
+        
+        // Sélectionner la page actuelle
+        inputZonePage.value = documentState.currentPageIndex;
+        
+        // Gérer les zones système
+        if (zoneData.systeme === true) {
+            inputZonePage.disabled = true;
+            if (zonePageLock) zonePageLock.style.display = 'inline';
+        } else {
+            inputZonePage.disabled = false;
+            if (zonePageLock) zonePageLock.style.display = 'none';
+        }
+    }
+
+    // --- Listener sur la combo Page ---
+    if (inputZonePage) {
+        inputZonePage.addEventListener('change', () => {
+            if (selectedZoneIds.length !== 1) return;
+            
+            const zoneId = selectedZoneIds[0];
+            const targetPageIndex = parseInt(inputZonePage.value, 10);
+            
+            const success = moveZoneToPage(zoneId, targetPageIndex);
+            
+            if (success) {
+                // Zone déplacée : elle n'est plus sur la page courante
+                // Donc désélectionner (la zone n'est plus visible)
+                deselectAll();
+            }
+        });
+    }
 
     function switchPage(pageIndex) {
         if (pageIndex < 0 || pageIndex >= documentState.pages.length) {
@@ -9257,16 +9525,122 @@ document.addEventListener('DOMContentLoaded', () => {
         // 9. Le pan est préservé automatiquement
     }
 
+    /**
+     * Génère dynamiquement l'interface de navigation des pages.
+     * Adapte l'affichage selon le nombre de pages :
+     * - 1 page : section masquée
+     * - 2 pages : 2 boutons avec noms des pages
+     * - 3+ pages : 1 combo déroulante
+     * 
+     * Les libellés proviennent de documentState.pages[i].name.
+     * 
+     * @returns {void}
+     * 
+     * @example
+     * // Après chargement ou import
+     * loadFromLocalStorage();
+     * renderPageNavigation();
+     * 
+     * @see updatePageNavigationUI - Met à jour l'état actif
+     * @see switchPage - Change de page
+     */
+    function renderPageNavigation() {
+        const pageCount = documentState.pages.length;
+        
+        // 1 page : masquer la section
+        if (pageCount <= 1) {
+            if (pagesSection) pagesSection.style.display = 'none';
+            return;
+        }
+        
+        // 2+ pages : afficher la section
+        if (pagesSection) pagesSection.style.display = 'block';
+        if (!pageNavContainer) return;
+        
+        // Vider le conteneur
+        pageNavContainer.innerHTML = '';
+        
+        if (pageCount === 2) {
+            // Mode 2 boutons
+            const buttonsDiv = document.createElement('div');
+            buttonsDiv.className = 'page-nav-buttons';
+            
+            documentState.pages.forEach((page, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'page-nav-btn btn-primary';
+                btn.dataset.pageIndex = index;
+                btn.innerHTML = `<span class="material-icons">description</span> ${page.name}`;
+                
+                if (index === documentState.currentPageIndex) {
+                    btn.classList.add('active');
+                }
+                
+                btn.addEventListener('click', () => {
+                    switchPage(index);
+                });
+                
+                buttonsDiv.appendChild(btn);
+            });
+            
+            pageNavContainer.appendChild(buttonsDiv);
+            
+        } else {
+            // Mode combo (3+ pages)
+            const select = document.createElement('select');
+            select.className = 'page-nav-select';
+            select.id = 'page-nav-select';
+            
+            documentState.pages.forEach((page, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = page.name;
+                if (index === documentState.currentPageIndex) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+            
+            select.addEventListener('change', (e) => {
+                switchPage(parseInt(e.target.value, 10));
+            });
+            
+            pageNavContainer.appendChild(select);
+        }
+    }
+
+    /**
+     * Met à jour l'état actif dans la navigation des pages.
+     * Appelé après changement de page via switchPage().
+     * 
+     * Comportement selon le mode :
+     * - Mode 2 boutons : met à jour la classe 'active'
+     * - Mode combo (3+) : met à jour la sélection
+     * 
+     * @returns {void}
+     * 
+     * @see renderPageNavigation - Génère l'interface
+     * @see switchPage - Change de page
+     */
     function updatePageNavigationUI() {
-        // Mettre à jour les boutons de navigation
-        const pageButtons = document.querySelectorAll('.page-nav-btn');
-        pageButtons.forEach((btn, index) => {
-            if (index === documentState.currentPageIndex) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
+        const pageCount = documentState.pages.length;
+        
+        if (pageCount === 2) {
+            // Mode boutons : mettre à jour la classe active
+            const buttons = pageNavContainer?.querySelectorAll('.page-nav-btn');
+            buttons?.forEach((btn, index) => {
+                if (index === documentState.currentPageIndex) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        } else if (pageCount > 2) {
+            // Mode combo : mettre à jour la sélection
+            const select = document.getElementById('page-nav-select');
+            if (select) {
+                select.value = documentState.currentPageIndex;
             }
-        });
+        }
     }
 
     // --- 7. GÉNÉRATION ET TÉLÉCHARGEMENT JSON FINALE ---
