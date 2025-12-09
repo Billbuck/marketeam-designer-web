@@ -1131,6 +1131,82 @@ document.addEventListener('DOMContentLoaded', () => {
         return { dpi, state };
     }
     
+    /**
+     * Met à jour le badge DPI externe d'une zone image
+     * @param {string} zoneId - ID de la zone
+     */
+    function updateImageDpiBadge(zoneId) {
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        
+        if (!zoneData || zoneData.type !== 'image') return;
+        
+        const zoneEl = document.getElementById(zoneId);
+        if (!zoneEl) return;
+        
+        const source = zoneData.source || {};
+        
+        // Créer le badge s'il n'existe pas
+        let dpiBadge = zoneEl.querySelector('.image-dpi-badge');
+        if (!dpiBadge) {
+            dpiBadge = document.createElement('span');
+            dpiBadge.className = 'image-dpi-badge';
+            zoneEl.appendChild(dpiBadge);
+        }
+        
+        // Vérifier si une image est chargée
+        const hasImage = source.imageBase64 || source.valeur;
+        
+        if (!hasImage) {
+            // Pas d'image : masquer le badge
+            zoneEl.classList.remove('has-image');
+            return;
+        }
+        
+        // Image chargée : afficher le badge
+        zoneEl.classList.add('has-image');
+        
+        // Vérifier si c'est un SVG
+        const isSvg = source.nomOriginal ? isSvgFile(source.nomOriginal) : false;
+        
+        if (isSvg) {
+            // SVG : afficher "Vectoriel"
+            dpiBadge.textContent = 'Vectoriel';
+            dpiBadge.className = 'image-dpi-badge dpi-vector';
+            return;
+        }
+        
+        // Calculer le DPI
+        if (!source.largeurPx || !source.hauteurPx) {
+            dpiBadge.textContent = 'DPI ?';
+            dpiBadge.className = 'image-dpi-badge dpi-warning';
+            return;
+        }
+        
+        const zoneWidth = zoneEl.offsetWidth;
+        const zoneHeight = zoneEl.offsetHeight;
+        const displayMode = zoneData.redimensionnement?.mode || 'ajuster';
+        
+        const dpi = calculateImageDpi(
+            source.largeurPx,
+            source.hauteurPx,
+            zoneWidth,
+            zoneHeight,
+            displayMode
+        );
+        
+        // Déterminer la classe selon le DPI
+        let dpiClass = 'dpi-good';
+        if (dpi < 150) {
+            dpiClass = 'dpi-error';
+        } else if (dpi < 200) {
+            dpiClass = 'dpi-warning';
+        }
+        
+        dpiBadge.textContent = dpi + ' dpi';
+        dpiBadge.className = 'image-dpi-badge ' + dpiClass;
+    }
+    
     // ========================================
     // CONTRAINTES REDIMENSIONNEMENT IMAGES
     // ========================================
@@ -1863,9 +1939,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const imageWrapper = document.createElement('div');
             imageWrapper.classList.add('zone-content', 'zone-image-content');
             zone.appendChild(imageWrapper);
-            
+
             // Afficher image réelle ou placeholder
             updateImageZoneDisplay(zone, zoneData);
+            
+            // Créer le badge DPI (sera mis à jour si une image est chargée)
+            const dpiBadge = document.createElement('span');
+            dpiBadge.className = 'image-dpi-badge';
+            zone.appendChild(dpiBadge);
+            
+            // Mettre à jour le badge si une image est déjà chargée
+            setTimeout(() => {
+                updateImageDpiBadge(id);
+            }, 10);
         } else if (zoneType === 'barcode') {
             // Zone code-barres
             const is2D = ['qrcode', 'datamatrix'].includes(zoneData.typeCodeBarres);
@@ -2596,9 +2682,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Afficher les infos fichier si image uploadée
             updateImageFileInfoDisplay(source);
-            
-            // Mettre à jour l'indicateur DPI
+
+            // Mettre à jour l'indicateur DPI et le badge
             updateDpiIndicator(id);
+            updateImageDpiBadge(id);
             
             // Bordure (contrôle commun - doit rester visible)
             if (inputBorderWidth) {
@@ -2812,35 +2899,66 @@ document.addEventListener('DOMContentLoaded', () => {
     // Appliquer la même largeur que la première zone (référence)
     function applySameWidth() {
         if (selectedZoneIds.length < 2) return;
-        
+
         const referenceId = selectedZoneIds[0];
         const referenceZone = document.getElementById(referenceId);
         if (!referenceZone) return;
-        
+
         const refWidth = referenceZone.offsetWidth;
         const zonesData = getCurrentPageZones();
-        
+
         for (let i = 1; i < selectedZoneIds.length; i++) {
             const zoneId = selectedZoneIds[i];
             const zone = document.getElementById(zoneId);
             if (!zone) continue;
-            
+
             if (zonesData[zoneId] && zonesData[zoneId].locked) continue; // Ignorer les zones verrouillées
+
+            const zoneData = zonesData[zoneId];
             
-            // Pour les QR codes, appliquer aussi la hauteur
-            if (zonesData[zoneId] && zonesData[zoneId].type === 'qr') {
-                zone.style.width = refWidth + 'px';
-                zone.style.height = refWidth + 'px';
+            // Pour les codes-barres, vérifier si c'est un code 2D
+            if (zoneData && (zoneData.type === 'qr' || zoneData.type === 'barcode')) {
+                const typeCode = zoneData.type === 'qr' 
+                    ? (zoneData.typeCode || 'QRCode')
+                    : (zoneData.typeCodeBarres || 'code128');
+                const config = BARCODE_BWIPJS_CONFIG[typeCode];
+                const is2D = config ? config.is2D : false;
+                
+                if (is2D) {
+                    // Code 2D : forcer le carré
+                    zone.style.width = refWidth + 'px';
+                    zone.style.height = refWidth + 'px';
+                    zoneData.w = refWidth;
+                    zoneData.h = refWidth;
+                } else {
+                    // Code 1D : seulement la largeur
+                    zone.style.width = refWidth + 'px';
+                    zoneData.w = refWidth;
+                }
+                
+                // Régénérer le code-barres
+                if (zoneData.type === 'qr') {
+                    updateQrZoneDisplay(zoneId);
+                } else {
+                    updateBarcodeZoneDisplay(zoneId);
+                }
             } else {
                 zone.style.width = refWidth + 'px';
+                if (zoneData) zoneData.w = refWidth;
             }
             
+            // Mettre à jour le badge DPI pour les images
+            if (zoneData && zoneData.type === 'image') {
+                updateImageDpiBadge(zoneId);
+            }
+
             // S'assurer que la zone reste dans les limites
             const maxLeft = a4Page.offsetWidth - zone.offsetWidth;
             const currentLeft = parseFloat(zone.style.left) || 0;
             zone.style.left = Math.max(0, Math.min(currentLeft, maxLeft)) + 'px';
+            if (zoneData) zoneData.x = parseFloat(zone.style.left);
         }
-        
+
         saveToLocalStorage();
         saveState(); // Snapshot APRÈS le changement de taille
     }
@@ -2848,35 +2966,66 @@ document.addEventListener('DOMContentLoaded', () => {
     // Appliquer la même hauteur que la première zone (référence)
     function applySameHeight() {
         if (selectedZoneIds.length < 2) return;
-        
+
         const referenceId = selectedZoneIds[0];
         const referenceZone = document.getElementById(referenceId);
         if (!referenceZone) return;
-        
+
         const refHeight = referenceZone.offsetHeight;
         const zonesData = getCurrentPageZones();
-        
+
         for (let i = 1; i < selectedZoneIds.length; i++) {
             const zoneId = selectedZoneIds[i];
             const zone = document.getElementById(zoneId);
             if (!zone) continue;
-            
+
             if (zonesData[zoneId] && zonesData[zoneId].locked) continue; // Ignorer les zones verrouillées
+
+            const zoneData = zonesData[zoneId];
             
-            // Pour les QR codes, appliquer aussi la largeur
-            if (zonesData[zoneId] && zonesData[zoneId].type === 'qr') {
-                zone.style.height = refHeight + 'px';
-                zone.style.width = refHeight + 'px';
+            // Pour les codes-barres, vérifier si c'est un code 2D
+            if (zoneData && (zoneData.type === 'qr' || zoneData.type === 'barcode')) {
+                const typeCode = zoneData.type === 'qr' 
+                    ? (zoneData.typeCode || 'QRCode')
+                    : (zoneData.typeCodeBarres || 'code128');
+                const config = BARCODE_BWIPJS_CONFIG[typeCode];
+                const is2D = config ? config.is2D : false;
+                
+                if (is2D) {
+                    // Code 2D : forcer le carré
+                    zone.style.height = refHeight + 'px';
+                    zone.style.width = refHeight + 'px';
+                    zoneData.h = refHeight;
+                    zoneData.w = refHeight;
+                } else {
+                    // Code 1D : seulement la hauteur
+                    zone.style.height = refHeight + 'px';
+                    zoneData.h = refHeight;
+                }
+                
+                // Régénérer le code-barres
+                if (zoneData.type === 'qr') {
+                    updateQrZoneDisplay(zoneId);
+                } else {
+                    updateBarcodeZoneDisplay(zoneId);
+                }
             } else {
                 zone.style.height = refHeight + 'px';
+                if (zoneData) zoneData.h = refHeight;
             }
             
+            // Mettre à jour le badge DPI pour les images
+            if (zoneData && zoneData.type === 'image') {
+                updateImageDpiBadge(zoneId);
+            }
+
             // S'assurer que la zone reste dans les limites
             const maxTop = a4Page.offsetHeight - zone.offsetHeight;
             const currentTop = parseFloat(zone.style.top) || 0;
             zone.style.top = Math.max(0, Math.min(currentTop, maxTop)) + 'px';
+            if (zoneData) zoneData.y = parseFloat(zone.style.top);
         }
-        
+
         saveToLocalStorage();
         saveState(); // Snapshot APRÈS le changement de taille
     }
@@ -4245,6 +4394,10 @@ document.addEventListener('DOMContentLoaded', () => {
         inputImageMode.addEventListener('change', () => {
             updateActiveImageZoneData();
             updateDpiIndicator(); // Recalculer le DPI avec le nouveau mode
+            // Mettre à jour le badge DPI externe
+            if (selectedZoneIds.length === 1) {
+                updateImageDpiBadge(selectedZoneIds[0]);
+            }
             updateSnapToContentButton(); // Activer/désactiver selon le mode
             saveState();
         });
@@ -4345,10 +4498,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 7. Mettre à jour l'UI du panneau
                 updateImageFileInfoDisplay(zoneData.source);
                 
-                // 8. Mettre à jour le bouton Ajuster au contenu (maintenant que les dimensions sont disponibles)
+                // 8. Mettre à jour le badge DPI externe
+                updateImageDpiBadge(selectedId);
+                
+                // 9. Mettre à jour le bouton Ajuster au contenu (maintenant que les dimensions sont disponibles)
                 updateSnapToContentButton();
                 
-                // 9. Sauvegarder
+                // 10. Sauvegarder
                 saveToLocalStorage();
                 saveState();
                 
@@ -4387,6 +4543,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Mettre à jour l'affichage
             updateImageZoneDisplay(selectedId);
             updateImageFileInfoDisplay(zoneData.source);
+            updateImageDpiBadge(selectedId);  // Masque le badge car plus d'image
             
             // Masquer l'indicateur DPI
             if (imageDpiIndicator) imageDpiIndicator.style.display = 'none';
@@ -5720,6 +5877,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Mettre à jour le DPI si c'est une zone image
             if (zonesData[firstSelectedId] && zonesData[firstSelectedId].type === 'image') {
                 updateDpiIndicator(firstSelectedId);
+                updateImageDpiBadge(firstSelectedId);
             }
         }
     });
@@ -5729,7 +5887,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (hasActuallyMoved && (isDragging || isResizing)) {
             saveToLocalStorage();
             saveState(); // Snapshot APRÈS le déplacement/redimensionnement
-            
+
             // Régénérer les codes-barres après redimensionnement
             if (isResizing && selectedZoneIds.length === 1) {
                 const zoneId = selectedZoneIds[0];
@@ -5740,6 +5898,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         setTimeout(() => updateQrZoneDisplay(zoneId), 50);
                     } else if (zoneData.type === 'barcode') {
                         setTimeout(() => updateBarcodeZoneDisplay(zoneId), 50);
+                    } else if (zoneData.type === 'image') {
+                        setTimeout(() => updateImageDpiBadge(zoneId), 50);
                     }
                 }
             }

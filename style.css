@@ -252,7 +252,7 @@ button:last-child {
 
 /* --- Zones Image --- */
 .zone-image {
-    overflow: hidden;
+    overflow: visible;  /* Permettre au badge DPI de déborder */
     cursor: grab;
 }
 
@@ -1253,6 +1253,43 @@ body.in-iframe .toolbar {
 /* Badge du champ - SANS champ sélectionné (rouge foncé = alerte) */
 .barcode-field-badge.no-field {
     background: rgba(180, 40, 40, 0.9);  /* Rouge foncé */
+}
+
+/* ===== Badge DPI pour les images ===== */
+.image-dpi-badge {
+    position: absolute;
+    bottom: -18px;
+    right: 0;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: Arial, sans-serif;
+    white-space: nowrap;
+    color: white;
+    z-index: 10;
+    display: none;  /* Masqué par défaut */
+}
+
+/* Affiché seulement quand une image est chargée */
+.zone.zone-image.has-image .image-dpi-badge {
+    display: block;
+}
+
+/* Code couleur DPI */
+.image-dpi-badge.dpi-good {
+    background: rgba(40, 160, 40, 0.9);  /* Vert - DPI >= 200 */
+}
+
+.image-dpi-badge.dpi-warning {
+    background: rgba(220, 140, 0, 0.9);  /* Orange - 150 <= DPI < 200 */
+}
+
+.image-dpi-badge.dpi-error {
+    background: rgba(200, 40, 40, 0.9);  /* Rouge foncé - DPI < 150 */
+}
+
+.image-dpi-badge.dpi-vector {
+    background: rgba(100, 100, 100, 0.9);  /* Gris - SVG vectoriel */
 }
 
 /* Section propriétés code-barres */
