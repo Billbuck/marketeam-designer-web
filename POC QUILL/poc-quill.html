@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POC Quill.js - Marketeam Designer</title>
+    
+    <!-- Quill.js -->
+    <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+    
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="poc-quill.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- BARRE DE CHAMPS DE FUSION                                       -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div class="merge-fields-bar">
+            <!-- Bouton Ajouter zone -->
+            <button type="button" class="add-zone-btn" id="btn-add-zone" title="Ajouter une zone de texte">
+                <span class="material-icons">add</span>
+                <span>Ajouter zone</span>
+            </button>
+            
+            <!-- Séparateur -->
+            <div class="bar-separator"></div>
+            
+            <span class="bar-label">Insérer un champ :</span>
+            <button type="button" class="merge-btn" data-field="NOM">@NOM@</button>
+            <button type="button" class="merge-btn" data-field="PRENOM">@PRENOM@</button>
+            <button type="button" class="merge-btn" data-field="SOCIETE">@SOCIETE@</button>
+            <button type="button" class="merge-btn" data-field="ADRESSE">@ADRESSE@</button>
+            <button type="button" class="merge-btn" data-field="CP">@CP@</button>
+            <button type="button" class="merge-btn" data-field="VILLE">@VILLE@</button>
+            
+            <!-- Séparateur -->
+            <div class="bar-separator"></div>
+            
+            <!-- Bouton Aperçu (visible en mode édition) -->
+            <button type="button" class="preview-btn" id="btn-preview" title="Aperçu de la fusion">
+                <span class="material-icons">visibility</span>
+                <span>Aperçu</span>
+            </button>
+            
+            <!-- Contrôles de navigation (visibles en mode aperçu) -->
+            <div class="preview-controls" id="preview-controls" style="display: none;">
+                <button type="button" class="nav-btn" id="btn-prev" title="Enregistrement précédent">
+                    <span class="material-icons">chevron_left</span>
+                </button>
+                <span class="record-indicator" id="record-indicator">1 / 5</span>
+                <button type="button" class="nav-btn" id="btn-next" title="Enregistrement suivant">
+                    <span class="material-icons">chevron_right</span>
+                </button>
+                <button type="button" class="close-preview-btn" id="btn-close-preview" title="Fermer l'aperçu">
+                    <span class="material-icons">close</span>
+                    <span>Fermer</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- WORKSPACE - SIMULATION PAGE A4                                  -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div class="workspace">
+            <div class="page-simulation" id="page-container">
+                <!-- Les zones seront créées dynamiquement par JavaScript -->
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- MINI-TOOLBAR CONTEXTUELLE                                       -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div class="mini-toolbar" id="mini-toolbar" style="display: none;">
+            <button type="button" id="btn-partial-bold" class="mini-btn" title="Gras (Ctrl+B)">
+                <span class="material-icons">format_bold</span>
+            </button>
+            <button type="button" id="btn-partial-underline" class="mini-btn" title="Souligner (Ctrl+U)">
+                <span class="material-icons">format_underlined</span>
+            </button>
+            <button type="button" id="btn-partial-color" class="mini-btn" title="Couleur">
+                <span class="material-icons">format_color_text</span>
+            </button>
+            <input type="color" id="partial-color-picker" style="display: none;">
+            <div class="mini-toolbar-arrow"></div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- TOOLBAR PRINCIPALE FLOTTANTE                                    -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div class="main-toolbar" id="main-toolbar" style="display: none;">
+            <!-- Header déplaçable -->
+            <div class="toolbar-header" id="toolbar-header">
+                <span class="toolbar-title">Propriétés de la zone</span>
+                <button type="button" class="toolbar-close" id="toolbar-close" title="Fermer">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+
+            <div class="toolbar-body">
+                <!-- ═══════════════════════════════════════════════════════ -->
+                <!-- SECTION ZONE                                            -->
+                <!-- ═══════════════════════════════════════════════════════ -->
+                <div class="toolbar-section collapsible" data-section="zone">
+                    <div class="section-header">
+                        <span class="material-icons collapse-icon">expand_more</span>
+                        <span>Zone</span>
+                    </div>
+                    <div class="section-content">
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="chk-locked">
+                            <span class="material-icons">lock</span>
+                            <span>Verrouiller</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- ═══════════════════════════════════════════════════════ -->
+                <!-- SECTION TYPOGRAPHIE                                     -->
+                <!-- ═══════════════════════════════════════════════════════ -->
+                <div class="toolbar-section collapsible" data-section="typography">
+                    <div class="section-header">
+                        <span class="material-icons collapse-icon">expand_more</span>
+                        <span>Typographie</span>
+                    </div>
+                    <div class="section-content">
+                        <!-- Police -->
+                        <div class="prop-row">
+                            <label for="input-font">Police</label>
+                            <select id="input-font">
+                                <option value="Roboto" selected>Roboto</option>
+                                <option value="Open Sans">Open Sans</option>
+                                <option value="Arial">Arial</option>
+                                <option value="Georgia">Georgia</option>
+                                <option value="Times New Roman">Times New Roman</option>
+                                <option value="Courier New">Courier New</option>
+                            </select>
+                        </div>
+                        <!-- Taille -->
+                        <div class="prop-row">
+                            <label for="input-size">Taille</label>
+                            <select id="input-size">
+                                <option value="6">6</option>
+                                <option value="8">8</option>
+                                <option value="10">10</option>
+                                <option value="11">11</option>
+                                <option value="12" selected>12</option>
+                                <option value="14">14</option>
+                                <option value="16">16</option>
+                                <option value="18">18</option>
+                                <option value="20">20</option>
+                                <option value="24">24</option>
+                                <option value="28">28</option>
+                                <option value="32">32</option>
+                                <option value="36">36</option>
+                                <option value="48">48</option>
+                                <option value="72">72</option>
+                            </select>
+                        </div>
+                        <!-- Gras -->
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="chk-bold">
+                            <span class="material-icons">format_bold</span>
+                            <span>Gras (zone entière)</span>
+                        </label>
+                        <!-- Couleur -->
+                        <div class="prop-row">
+                            <label for="input-color">Couleur</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" id="input-color" value="#000000">
+                                <span class="color-value" id="color-value">#000000</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══════════════════════════════════════════════════════ -->
+                <!-- SECTION ALIGNEMENTS                                     -->
+                <!-- ═══════════════════════════════════════════════════════ -->
+                <div class="toolbar-section collapsible" data-section="alignments">
+                    <div class="section-header">
+                        <span class="material-icons collapse-icon">expand_more</span>
+                        <span>Alignements</span>
+                    </div>
+                    <div class="section-content">
+                        <!-- Alignement horizontal -->
+                        <div class="prop-row">
+                            <label>Horizontal</label>
+                            <div class="align-group" id="align-h-group">
+                                <button type="button" class="align-btn active" data-value="left" title="Gauche">
+                                    <span class="material-icons">format_align_left</span>
+                                </button>
+                                <button type="button" class="align-btn" data-value="center" title="Centre">
+                                    <span class="material-icons">format_align_center</span>
+                                </button>
+                                <button type="button" class="align-btn" data-value="right" title="Droite">
+                                    <span class="material-icons">format_align_right</span>
+                                </button>
+                                <button type="button" class="align-btn" data-value="justify" title="Justifié">
+                                    <span class="material-icons">format_align_justify</span>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Alignement vertical -->
+                        <div class="prop-row">
+                            <label>Vertical</label>
+                            <div class="align-group" id="align-v-group">
+                                <button type="button" class="align-btn active" data-value="top" title="Haut">
+                                    <span class="material-icons">vertical_align_top</span>
+                                </button>
+                                <button type="button" class="align-btn" data-value="middle" title="Milieu">
+                                    <span class="material-icons">vertical_align_center</span>
+                                </button>
+                                <button type="button" class="align-btn" data-value="bottom" title="Bas">
+                                    <span class="material-icons">vertical_align_bottom</span>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Interligne -->
+                        <div class="prop-row">
+                            <label for="input-line-height">Interligne</label>
+                            <select id="input-line-height">
+                                <option value="1">1</option>
+                                <option value="1.15">1.15</option>
+                                <option value="1.2" selected>1.2</option>
+                                <option value="1.5">1.5</option>
+                                <option value="2">2</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══════════════════════════════════════════════════════ -->
+                <!-- SECTION FOND                                            -->
+                <!-- ═══════════════════════════════════════════════════════ -->
+                <div class="toolbar-section collapsible" data-section="background">
+                    <div class="section-header">
+                        <span class="material-icons collapse-icon">expand_more</span>
+                        <span>Fond</span>
+                    </div>
+                    <div class="section-content">
+                        <!-- Transparent -->
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="chk-transparent" checked>
+                            <span class="material-icons">texture</span>
+                            <span>Transparent</span>
+                        </label>
+                        <!-- Couleur de fond -->
+                        <div class="prop-row" id="bg-color-row">
+                            <label for="input-bg-color">Couleur</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" id="input-bg-color" value="#ffffff" disabled>
+                                <span class="color-value" id="bg-color-value">#ffffff</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══════════════════════════════════════════════════════ -->
+                <!-- SECTION BORDURE                                         -->
+                <!-- ═══════════════════════════════════════════════════════ -->
+                <div class="toolbar-section collapsible" data-section="border">
+                    <div class="section-header">
+                        <span class="material-icons collapse-icon">expand_more</span>
+                        <span>Bordure</span>
+                    </div>
+                    <div class="section-content">
+                        <!-- Épaisseur -->
+                        <div class="prop-row">
+                            <label for="input-border-width">Épaisseur</label>
+                            <input type="number" id="input-border-width" value="0" min="0" max="10" step="1">
+                            <span class="unit">px</span>
+                        </div>
+                        <!-- Couleur (caché si épaisseur=0) -->
+                        <div class="prop-row border-option" id="border-color-row" style="display: none;">
+                            <label for="input-border-color">Couleur</label>
+                            <input type="color" id="input-border-color" value="#000000">
+                        </div>
+                        <!-- Style (caché si épaisseur=0) -->
+                        <div class="prop-row border-option" id="border-style-row" style="display: none;">
+                            <label for="input-border-style">Style</label>
+                            <select id="input-border-style">
+                                <option value="solid">Plein</option>
+                                <option value="dashed">Tirets</option>
+                                <option value="dotted">Points</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══════════════════════════════════════════════════════ -->
+                <!-- SECTION GÉOMÉTRIE                                       -->
+                <!-- ═══════════════════════════════════════════════════════ -->
+                <div class="toolbar-section collapsible" data-section="geometry">
+                    <div class="section-header">
+                        <span class="material-icons collapse-icon">expand_more</span>
+                        <span>Géométrie (mm)</span>
+                    </div>
+                    <div class="section-content">
+                        <div class="geometry-grid">
+                            <div class="geometry-item">
+                                <label for="val-x">X</label>
+                                <input type="number" id="val-x" value="20" step="0.1">
+                            </div>
+                            <div class="geometry-item">
+                                <label for="val-y">Y</label>
+                                <input type="number" id="val-y" value="20" step="0.1">
+                            </div>
+                            <div class="geometry-item">
+                                <label for="val-w">Largeur</label>
+                                <input type="number" id="val-w" value="150" step="0.1">
+                            </div>
+                            <div class="geometry-item">
+                                <label for="val-h">Hauteur</label>
+                                <input type="number" id="val-h" value="100" step="0.1">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══════════════════════════════════════════════════════ -->
+                <!-- SECTION OPTIONS AVANCÉES                                -->
+                <!-- ═══════════════════════════════════════════════════════ -->
+                <div class="toolbar-section collapsible" data-section="advanced">
+                    <div class="section-header">
+                        <span class="material-icons collapse-icon">expand_more</span>
+                        <span>Options avancées</span>
+                    </div>
+                    <div class="section-content">
+                        <!-- Copyfit -->
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="chk-copyfit">
+                            <span class="material-icons">fit_screen</span>
+                            <span>Copy fitting</span>
+                        </label>
+                        <!-- Lignes vides -->
+                        <div class="prop-row">
+                            <label for="input-empty-lines">Lignes vides</label>
+                            <select id="input-empty-lines">
+                                <option value="0">Conserver</option>
+                                <option value="1">Supprimer toutes</option>
+                                <option value="2">Variables uniquement</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    
+    <script src="poc-quill.js"></script>
+</body>
+</html>
