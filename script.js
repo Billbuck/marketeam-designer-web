@@ -757,6 +757,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const QUILL_DEFAULT_LINE_HEIGHT = 1.15;
 
     /**
+     * Active les logs détaillés du copyfit (debug).
+     * À laisser à false en usage normal (logs très verbeux).
+     * @type {boolean}
+     */
+    const DEBUG_COPYFIT = false;
+
+    /**
+     * Indique si les logs d'événements de chargement de polices (FontFaceSet) ont été installés.
+     * @type {boolean}
+     */
+    let copyfitFontsDebugInstalled = false;
+
+    /**
      * Polices par défaut en mode standalone (hors WebDev).
      * Utilisées si aucune liste de polices n'est fournie par le parent.
      *
@@ -857,6 +870,21 @@ document.addEventListener('DOMContentLoaded', () => {
      * @type {Map<string, Quill>}
      */
     const quillInstances = new Map();
+
+    /**
+     * Stocke les ResizeObservers pour le copyfit réactif des zones textQuill.
+     * Permet de recalculer automatiquement le copyfit quand le contenu change de taille
+     * (ex: chargement de polices, modification du texte).
+     * @type {Map<string, ResizeObserver>}
+     */
+    const copyfitResizeObservers = new Map();
+
+    /**
+     * Flag pour éviter les boucles infinies lors du copyfit réactif.
+     * Quand true, les ResizeObservers ignorent les changements de taille.
+     * @type {boolean}
+     */
+    let isCopyfitRunning = false;
     
     /**
      * Module Clipboard personnalisé (PlainClipboard) pour filtrer le contenu collé.
@@ -3766,6 +3794,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Stocker l'instance
                 quillInstances.set(id, quillInstance);
 
+                // Debug copyfit : tracer le chargement des polices (utile sur Ctrl+F5)
+                if (DEBUG_COPYFIT && !copyfitFontsDebugInstalled && document.fonts && typeof document.fonts.addEventListener === 'function') {
+                    copyfitFontsDebugInstalled = true;
+                    try {
+                        document.fonts.addEventListener('loading', () => {
+                            console.log('🧪 COPYFIT FONTS - loading', { status: document.fonts.status, size: document.fonts.size });
+                        });
+                        document.fonts.addEventListener('loadingdone', (e) => {
+                            console.log('🧪 COPYFIT FONTS - loadingdone', { status: document.fonts.status, size: document.fonts.size, event: e });
+                        });
+                        document.fonts.addEventListener('loadingerror', (e) => {
+                            console.log('🧪 COPYFIT FONTS - loadingerror', { status: document.fonts.status, size: document.fonts.size, event: e });
+                        });
+                        console.log('🧪 COPYFIT FONTS - listeners installed', { status: document.fonts.status, size: document.fonts.size });
+                    } catch (e) {}
+                }
+
                 // Phase 5 : mini-toolbar contextuelle (affichage au-dessus de la sélection)
                 quillInstance.on('selection-change', (range) => {
                     handleTextQuillSelectionChange(id, range);
@@ -3776,7 +3821,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 // NOTE : après Ctrl+F5, certaines sauvegardes peuvent contenir quillDelta sous forme de string JSON,
                 // ou un Delta qui fait échouer setContents() (Quill reste alors vide si on swallow l'erreur).
                 if (zoneData.quillDelta) {
-                    setTimeout(() => {
+                    if (DEBUG_COPYFIT) {
+                        console.group(`🧪 COPYFIT LOAD - before setContents: ${id}`);
+                        try {
+                            const zc = zone.querySelector('.zone-content');
+                            console.log('zoneContent.client (px):', { w: zc ? zc.clientWidth : null, h: zc ? zc.clientHeight : null });
+                            console.log('zone.offset (px):', { w: zone.offsetWidth, h: zone.offsetHeight });
+                            console.log('quill.root (px):', { clientH: quillInstance.root ? quillInstance.root.clientHeight : null, scrollH: quillInstance.root ? quillInstance.root.scrollHeight : null });
+                            console.log('zoneData.copyfit/size:', { copyfit: !!zoneData.copyfit, size: zoneData.size });
+                            console.log('fonts:', document.fonts ? { status: document.fonts.status, size: document.fonts.size } : null);
+                            console.log('computed quill.root:', quillInstance.root ? {
+                                fontFamily: getComputedStyle(quillInstance.root).fontFamily,
+                                fontSize: getComputedStyle(quillInstance.root).fontSize,
+                                lineHeight: getComputedStyle(quillInstance.root).lineHeight
+                            } : null);
+                        } catch (e) {}
+                        console.groupEnd();
+                    }
+                    setTimeout(async () => {
                         try {
                             /** @type {any} */
                             let delta = zoneData.quillDelta;
@@ -3792,8 +3854,48 @@ document.addEventListener('DOMContentLoaded', () => {
                                 quillInstance.setText(fallbackText || '', 'silent');
                                 console.warn('⚠️ BUGFIX - Delta Quill invalide, fallback texte appliqué:', id);
                             }
+                            // BUGFIX: Attendre le chargement des polices avant d'appliquer les styles (copyfit)
+                            // Sinon les métriques de texte sont incorrectes et le texte est coupé
+                            if (document.fonts && document.fonts.status !== 'loaded') {
+                                if (DEBUG_COPYFIT) {
+                                    console.log(`🧪 COPYFIT LOAD - waiting for fonts (Delta): ${id}, status:`, document.fonts.status);
+                                }
+                                await document.fonts.ready;
+                                if (DEBUG_COPYFIT) {
+                                    console.log(`🧪 COPYFIT LOAD - fonts ready (Delta): ${id}, status:`, document.fonts.status);
+                                }
+                            }
                             // Réappliquer les styles APRÈS la restauration du contenu (setContents peut réinitialiser)
+                            if (DEBUG_COPYFIT) {
+                                console.group(`🧪 COPYFIT LOAD - before applyQuillZoneStyles (Delta): ${id}`);
+                                try {
+                                    const zc = zone.querySelector('.zone-content');
+                                    console.log('zoneContent.client (px):', { w: zc ? zc.clientWidth : null, h: zc ? zc.clientHeight : null });
+                                    console.log('quill.root (px):', { clientH: quillInstance.root ? quillInstance.root.clientHeight : null, scrollH: quillInstance.root ? quillInstance.root.scrollHeight : null });
+                                    console.log('fonts:', document.fonts ? { status: document.fonts.status, size: document.fonts.size } : null);
+                                    console.log('computed quill.root:', quillInstance.root ? {
+                                        fontFamily: getComputedStyle(quillInstance.root).fontFamily,
+                                        fontSize: getComputedStyle(quillInstance.root).fontSize,
+                                        lineHeight: getComputedStyle(quillInstance.root).lineHeight
+                                    } : null);
+                                } catch (e) {}
+                                console.groupEnd();
+                            }
                             applyQuillZoneStyles(id);
+                            if (DEBUG_COPYFIT) {
+                                console.group(`🧪 COPYFIT LOAD - after applyQuillZoneStyles (Delta): ${id}`);
+                                try {
+                                    const zc = zone.querySelector('.zone-content');
+                                    console.log('zoneContent.client (px):', { w: zc ? zc.clientWidth : null, h: zc ? zc.clientHeight : null });
+                                    console.log('quill.root (px):', { clientH: quillInstance.root ? quillInstance.root.clientHeight : null, scrollH: quillInstance.root ? quillInstance.root.scrollHeight : null });
+                                    console.log('computed:', {
+                                        editorFontSize: quillInstance.root ? getComputedStyle(quillInstance.root).fontSize : null,
+                                        editorLineHeight: quillInstance.root ? getComputedStyle(quillInstance.root).lineHeight : null
+                                    });
+                                    console.log('fonts:', document.fonts ? { status: document.fonts.status, size: document.fonts.size } : null);
+                                } catch (e) {}
+                                console.groupEnd();
+                            }
                         } catch (e) {
                             console.warn('⚠️ BUGFIX - Échec restauration Quill via Delta, fallback texte:', id, e);
                             try {
@@ -3802,17 +3904,78 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const ops = d && typeof d === 'object' && Array.isArray(d.ops) ? d.ops : [];
                                 const text = ops.map(op => typeof op.insert === 'string' ? op.insert : '').join('');
                                 quillInstance.setText(text || '', 'silent');
+                                // BUGFIX: Attendre le chargement des polices avant d'appliquer les styles (copyfit)
+                                if (document.fonts && document.fonts.status !== 'loaded') {
+                                    await document.fonts.ready;
+                                }
+                                if (DEBUG_COPYFIT) {
+                                    console.group(`🧪 COPYFIT LOAD - before applyQuillZoneStyles (fallback Delta): ${id}`);
+                                    try {
+                                        const zc = zone.querySelector('.zone-content');
+                                        console.log('zoneContent.client (px):', { w: zc ? zc.clientWidth : null, h: zc ? zc.clientHeight : null });
+                                        console.log('quill.root (px):', { clientH: quillInstance.root ? quillInstance.root.clientHeight : null, scrollH: quillInstance.root ? quillInstance.root.scrollHeight : null });
+                                        console.log('fonts:', document.fonts ? { status: document.fonts.status, size: document.fonts.size } : null);
+                                    } catch (e) {}
+                                    console.groupEnd();
+                                }
                                 applyQuillZoneStyles(id);
                             } catch (e2) {}
                         }
                     }, 0);
                 } else if (zoneData.content) {
-                    setTimeout(() => {
+                    if (DEBUG_COPYFIT) {
+                        console.group(`🧪 COPYFIT LOAD - before pasteHTML: ${id}`);
+                        try {
+                            const zc = zone.querySelector('.zone-content');
+                            console.log('zoneContent.client (px):', { w: zc ? zc.clientWidth : null, h: zc ? zc.clientHeight : null });
+                            console.log('zone.offset (px):', { w: zone.offsetWidth, h: zone.offsetHeight });
+                            console.log('quill.root (px):', { clientH: quillInstance.root ? quillInstance.root.clientHeight : null, scrollH: quillInstance.root ? quillInstance.root.scrollHeight : null });
+                            console.log('zoneData.copyfit/size:', { copyfit: !!zoneData.copyfit, size: zoneData.size });
+                            console.log('fonts:', document.fonts ? { status: document.fonts.status, size: document.fonts.size } : null);
+                        } catch (e) {}
+                        console.groupEnd();
+                    }
+                    setTimeout(async () => {
                         try {
                             quillInstance.clipboard.dangerouslyPasteHTML(0, zoneData.content, 'silent');
                             console.log('🔧 BUGFIX - Contenu Quill restauré (HTML):', id);
+                            // BUGFIX: Attendre le chargement des polices avant d'appliquer les styles (copyfit)
+                            // Sinon les métriques de texte sont incorrectes et le texte est coupé
+                            if (document.fonts && document.fonts.status !== 'loaded') {
+                                if (DEBUG_COPYFIT) {
+                                    console.log(`🧪 COPYFIT LOAD - waiting for fonts (HTML): ${id}, status:`, document.fonts.status);
+                                }
+                                await document.fonts.ready;
+                                if (DEBUG_COPYFIT) {
+                                    console.log(`🧪 COPYFIT LOAD - fonts ready (HTML): ${id}, status:`, document.fonts.status);
+                                }
+                            }
                             // Réappliquer les styles APRÈS la restauration du contenu
+                            if (DEBUG_COPYFIT) {
+                                console.group(`🧪 COPYFIT LOAD - before applyQuillZoneStyles (HTML): ${id}`);
+                                try {
+                                    const zc = zone.querySelector('.zone-content');
+                                    console.log('zoneContent.client (px):', { w: zc ? zc.clientWidth : null, h: zc ? zc.clientHeight : null });
+                                    console.log('quill.root (px):', { clientH: quillInstance.root ? quillInstance.root.clientHeight : null, scrollH: quillInstance.root ? quillInstance.root.scrollHeight : null });
+                                    console.log('fonts:', document.fonts ? { status: document.fonts.status, size: document.fonts.size } : null);
+                                } catch (e) {}
+                                console.groupEnd();
+                            }
                             applyQuillZoneStyles(id);
+                            if (DEBUG_COPYFIT) {
+                                console.group(`🧪 COPYFIT LOAD - after applyQuillZoneStyles (HTML): ${id}`);
+                                try {
+                                    const zc = zone.querySelector('.zone-content');
+                                    console.log('zoneContent.client (px):', { w: zc ? zc.clientWidth : null, h: zc ? zc.clientHeight : null });
+                                    console.log('quill.root (px):', { clientH: quillInstance.root ? quillInstance.root.clientHeight : null, scrollH: quillInstance.root ? quillInstance.root.scrollHeight : null });
+                                    console.log('computed:', {
+                                        editorFontSize: quillInstance.root ? getComputedStyle(quillInstance.root).fontSize : null,
+                                        editorLineHeight: quillInstance.root ? getComputedStyle(quillInstance.root).lineHeight : null
+                                    });
+                                    console.log('fonts:', document.fonts ? { status: document.fonts.status, size: document.fonts.size } : null);
+                                } catch (e) {}
+                                console.groupEnd();
+                            }
                         } catch (e) {
                             console.warn('⚠️ BUGFIX - Échec restauration Quill via HTML:', id, e);
                         }
@@ -4785,11 +4948,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (zoneData.copyfit) {
             const maxSize = zoneData.size || QUILL_DEFAULT_SIZE;
             applyCopyfitToQuillZone(zoneEl, quillInstance, maxSize);
+            // Installer le ResizeObserver pour recalculer automatiquement si le contenu change
+            // (ex: chargement de polices après le premier rendu)
+            installCopyfitResizeObserver(zoneId);
         } else {
             const size = zoneData.size || QUILL_DEFAULT_SIZE;
             if (quillInstance && quillInstance.root) {
                 quillInstance.root.style.fontSize = `${size}pt`;
             }
+            // Supprimer l'observer si copyfit désactivé
+            removeCopyfitResizeObserver(zoneId);
         }
         
         // UI poignées
@@ -6279,6 +6447,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Vérifications préliminaires
         if (!zoneEl || !quillInstance || !quillInstance.root) return;
         
+        // Flag pour éviter les boucles infinies avec le ResizeObserver
+        isCopyfitRunning = true;
+        
         const zoneContent = zoneEl.querySelector('.zone-content');
         const editor = quillInstance.root;
         if (!zoneContent || !editor) return;
@@ -6304,6 +6475,34 @@ document.addEventListener('DOMContentLoaded', () => {
         // CAPTURER LA HAUTEUR DISPONIBLE AVANT TOUT CHANGEMENT
         const availableHeight = zoneContent.clientHeight;
         
+        if (DEBUG_COPYFIT) {
+            console.group(`🧪 COPYFIT - start: ${zoneEl.id}`);
+            try {
+                console.log('inputs:', {
+                    maxSizePt,
+                    maxSize,
+                    minSize,
+                    precision,
+                    maxIterations
+                });
+                console.log('measure initial (px):', {
+                    zoneContentClientH: zoneContent.clientHeight,
+                    zoneContentClientW: zoneContent.clientWidth,
+                    editorClientH: editor.clientHeight,
+                    editorScrollH: editor.scrollHeight
+                });
+                console.log('fonts:', document.fonts ? { status: document.fonts.status, size: document.fonts.size } : null);
+                console.log('computed initial:', {
+                    zoneContentJustify: getComputedStyle(zoneContent).justifyContent,
+                    editorFontSize: getComputedStyle(editor).fontSize,
+                    editorLineHeight: getComputedStyle(editor).lineHeight,
+                    editorTextAlign: getComputedStyle(editor).textAlign,
+                    editorFontFamily: getComputedStyle(editor).fontFamily
+                });
+            } catch (e) {}
+            console.groupEnd();
+        }
+        
         // Temporairement aligner en haut pour des calculs précis
         zoneContent.style.justifyContent = 'flex-start';
         
@@ -6318,7 +6517,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const testSize = (sizePt) => {
             editor.style.fontSize = `${sizePt}pt`;
             void zoneContent.offsetHeight; // Force reflow
-            return editor.scrollHeight > availableHeight;
+            const scrollH = editor.scrollHeight;
+            const overflow = scrollH > availableHeight;
+            if (DEBUG_COPYFIT) {
+                console.log('🧪 COPYFIT testSize', {
+                    zoneId: zoneEl.id,
+                    sizePt: Math.round(sizePt * 10) / 10,
+                    availableHeight,
+                    scrollH,
+                    overflow
+                });
+            }
+            return overflow;
         };
         
         // Algorithme par dichotomie pour trouver la taille optimale
@@ -6327,7 +6537,11 @@ document.addEventListener('DOMContentLoaded', () => {
         let optimalSize = minSize;
         
         // D'abord, vérifier si la taille max ne provoque pas d'overflow
-        if (!testSize(maxSize)) {
+        const maxOverflows = testSize(maxSize);
+        if (DEBUG_COPYFIT) {
+            console.log('🧪 COPYFIT maxSize check', { zoneId: zoneEl.id, maxSize, availableHeight, maxOverflows });
+        }
+        if (!maxOverflows) {
             // Pas d'overflow à la taille max → on garde la taille max
             optimalSize = maxSize;
         } else {
@@ -6335,7 +6549,18 @@ document.addEventListener('DOMContentLoaded', () => {
             while ((high - low) > precision && iterations < maxIterations) {
                 const mid = (low + high) / 2;
                 
-                if (testSize(mid)) {
+                const midOverflows = testSize(mid);
+                if (DEBUG_COPYFIT) {
+                    console.log('🧪 COPYFIT mid check', {
+                        zoneId: zoneEl.id,
+                        mid: Math.round(mid * 10) / 10,
+                        low: Math.round(low * 10) / 10,
+                        high: Math.round(high * 10) / 10,
+                        midOverflows
+                    });
+                }
+
+                if (midOverflows) {
                     // Overflow → taille trop grande, chercher plus petit
                     high = mid;
                 } else {
@@ -6344,6 +6569,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     optimalSize = mid;
                 }
                 iterations++;
+                if (DEBUG_COPYFIT) {
+                    console.log('🧪 COPYFIT dichotomy step', {
+                        zoneId: zoneEl.id,
+                        iterations,
+                        low: Math.round(low * 10) / 10,
+                        high: Math.round(high * 10) / 10,
+                        mid: Math.round(mid * 10) / 10,
+                        optimal: Math.round(optimalSize * 10) / 10
+                    });
+                }
             }
             
             // Arrondir à 0.1pt près (vers le bas pour éviter tout overflow)
@@ -6360,6 +6595,25 @@ document.addEventListener('DOMContentLoaded', () => {
         editor.style.fontSize = `${optimalSize}pt`;
         void zoneContent.offsetHeight; // Force reflow final
         
+        if (DEBUG_COPYFIT) {
+            console.group(`🧪 COPYFIT - end: ${zoneEl.id}`);
+            try {
+                console.log('result:', {
+                    optimalSize,
+                    iterations,
+                    availableHeight,
+                    finalScrollH: editor.scrollHeight,
+                    remainingPx: availableHeight - editor.scrollHeight
+                });
+                console.log('computed final:', {
+                    editorFontSize: getComputedStyle(editor).fontSize,
+                    editorLineHeight: getComputedStyle(editor).lineHeight
+                });
+                console.log('fonts:', document.fonts ? { status: document.fonts.status, size: document.fonts.size } : null);
+            } catch (e) {}
+            console.groupEnd();
+        }
+        
         // Restaurer l'alignement vertical original
         if (originalInlineJustifyContent) {
             zoneContent.style.justifyContent = originalInlineJustifyContent;
@@ -6370,6 +6624,100 @@ document.addEventListener('DOMContentLoaded', () => {
                 !zoneContent.classList.contains('valign-middle') &&
                 !zoneContent.classList.contains('valign-bottom')) {
                 zoneContent.style.justifyContent = originalComputedJustifyContent;
+            }
+        }
+
+        // Réactiver le ResizeObserver après un court délai (évite détection immédiate)
+        requestAnimationFrame(() => {
+            isCopyfitRunning = false;
+        });
+    }
+
+    /**
+     * Installe un ResizeObserver sur une zone textQuill pour recalculer le copyfit
+     * automatiquement quand le contenu change de taille (ex: chargement de polices).
+     * 
+     * Le ResizeObserver surveille le `.ql-editor` et relance le copyfit si le scrollHeight
+     * dépasse la hauteur disponible. Un flag `isCopyfitRunning` évite les boucles infinies.
+     * 
+     * @param {string} zoneId - ID de la zone textQuill
+     * @returns {void}
+     */
+    function installCopyfitResizeObserver(zoneId) {
+        // Ne pas réinstaller si déjà présent
+        if (copyfitResizeObservers.has(zoneId)) return;
+
+        const zoneEl = document.getElementById(zoneId);
+        const quillInstance = quillInstances.get(zoneId);
+        if (!zoneEl || !quillInstance || !quillInstance.root) return;
+
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        if (!zoneData || !zoneData.copyfit) return;
+
+        const editor = quillInstance.root;
+        const zoneContent = zoneEl.querySelector('.zone-content');
+        if (!editor || !zoneContent) return;
+
+        // Stocker la dernière scrollHeight connue pour détecter les vrais changements
+        let lastScrollHeight = editor.scrollHeight;
+
+        const observer = new ResizeObserver((entries) => {
+            // Ignorer si un copyfit est déjà en cours (évite boucle infinie)
+            if (isCopyfitRunning) return;
+
+            for (const entry of entries) {
+                const currentScrollHeight = editor.scrollHeight;
+                const availableHeight = zoneContent.clientHeight;
+
+                // Vérifier si le scrollHeight a changé ET dépasse la zone
+                if (currentScrollHeight !== lastScrollHeight && currentScrollHeight > availableHeight) {
+                    if (DEBUG_COPYFIT) {
+                        console.log(`🔄 COPYFIT RESIZE - Recalcul déclenché: ${zoneId}`, {
+                            lastScrollHeight,
+                            currentScrollHeight,
+                            availableHeight,
+                            overflow: currentScrollHeight - availableHeight
+                        });
+                    }
+
+                    lastScrollHeight = currentScrollHeight;
+
+                    // Relancer le copyfit
+                    const currentZonesData = getCurrentPageZones();
+                    const currentZoneData = currentZonesData[zoneId];
+                    if (currentZoneData && currentZoneData.copyfit) {
+                        const maxSize = currentZoneData.size || QUILL_DEFAULT_SIZE;
+                        applyCopyfitToQuillZone(zoneEl, quillInstance, maxSize);
+                        // Mettre à jour lastScrollHeight après le copyfit
+                        lastScrollHeight = editor.scrollHeight;
+                    }
+                }
+            }
+        });
+
+        // Observer le .ql-editor
+        observer.observe(editor);
+        copyfitResizeObservers.set(zoneId, observer);
+
+        if (DEBUG_COPYFIT) {
+            console.log(`🔧 COPYFIT RESIZE - Observer installé: ${zoneId}`);
+        }
+    }
+
+    /**
+     * Supprime le ResizeObserver d'une zone textQuill (appelé lors de la suppression de la zone).
+     * 
+     * @param {string} zoneId - ID de la zone textQuill
+     * @returns {void}
+     */
+    function removeCopyfitResizeObserver(zoneId) {
+        const observer = copyfitResizeObservers.get(zoneId);
+        if (observer) {
+            observer.disconnect();
+            copyfitResizeObservers.delete(zoneId);
+            if (DEBUG_COPYFIT) {
+                console.log(`🔧 COPYFIT RESIZE - Observer supprimé: ${zoneId}`);
             }
         }
     }
@@ -8364,6 +8712,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const el = document.getElementById(zoneId);
                 if (el) el.remove();
                 delete zonesData[zoneId];
+                // Nettoyer les ressources Quill associées
+                quillInstances.delete(zoneId);
+                removeCopyfitResizeObserver(zoneId);
             });
             
             // Renormaliser les z-index après suppression (pour éviter les trous)
@@ -8802,6 +9153,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Ne pas supprimer si c'est une zone système
             if (!zoneData || !zoneData.systeme) {
                 el.remove();
+                // Nettoyer les ressources Quill associées
+                quillInstances.delete(zoneId);
+                removeCopyfitResizeObserver(zoneId);
             }
         });
         
@@ -8833,6 +9187,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Ne pas supprimer si c'est une zone système
             if (!zoneData || !zoneData.systeme) {
                 el.remove();
+                // Nettoyer les ressources Quill associées
+                quillInstances.delete(zoneId);
+                removeCopyfitResizeObserver(zoneId);
             }
         });
         
@@ -10708,7 +11065,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // Supprimer toutes les zones existantes de la page actuelle
         console.log('Étape 1 : Nettoyage du DOM...');
         const existingZones = a4Page.querySelectorAll('.zone');
-        existingZones.forEach(zone => zone.remove());
+        existingZones.forEach(zone => {
+            const zoneId = zone.id;
+            zone.remove();
+            // Nettoyer les ressources Quill associées
+            quillInstances.delete(zoneId);
+            removeCopyfitResizeObserver(zoneId);
+        });
         console.log(`  → ${existingZones.length} zone(s) supprimée(s)`);
         
         // Désélectionner tout
@@ -12571,7 +12934,13 @@ document.addEventListener('DOMContentLoaded', () => {
         deselectAll();
 
         // 3. Vider le workspace (supprimer toutes les zones du DOM)
-        document.querySelectorAll('.zone').forEach(el => el.remove());
+        document.querySelectorAll('.zone').forEach(el => {
+            const zoneId = el.id;
+            el.remove();
+            // Nettoyer les ressources Quill associées
+            quillInstances.delete(zoneId);
+            removeCopyfitResizeObserver(zoneId);
+        });
 
         // 4. Changer l'index de page courante
         documentState.currentPageIndex = pageIndex;

@@ -585,6 +585,8 @@ h4 {
 
 .zone.zone-text-quill .ql-editor {
     padding: 0;
+    /* Padding-bottom pour protéger les descendantes (g, p, y, q, j) de la dernière ligne */
+    padding-bottom: 0.2em;
     min-height: 0;
     height: auto;
     overflow: hidden;
