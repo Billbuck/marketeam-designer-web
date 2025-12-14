@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @typedef {Object} BorderData
      * @property {number} width - Épaisseur en pixels (0 = pas de bordure)
      * @property {string} color - Couleur hexadécimale (ex: '#000000')
-     * @property {'solid'|'dashed'} style - Style du trait
+     * @property {'solid'|'dashed'|'dotted'} style - Style du trait
      * @description Configuration de la bordure d'une zone.
      */
 
@@ -115,8 +115,10 @@ document.addEventListener('DOMContentLoaded', () => {
      * @typedef {Object} TextFormattingAnnotation
      * @property {number} start - Index de début (caractère)
      * @property {number} end - Index de fin (caractère)
-     * @property {'bold'|'color'} type - Type de formatage
-     * @property {string} [value] - Valeur du formatage (ex: couleur hex pour 'color')
+     * @property {Object} styles - Styles appliqués
+     * @property {string} [styles.fontWeight] - Poids de police (ex: 'bold')
+     * @property {string} [styles.textDecoration] - Décoration de texte (ex: 'underline')
+     * @property {string} [styles.color] - Couleur du texte (hex)
      * @description Annotation de formatage partiel pour le texte riche.
      */
 
@@ -124,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * @typedef {Object} BaseZoneData
-     * @property {'text'|'qr'|'barcode'|'image'} type - Type de zone
+     * @property {'text'|'textQuill'|'qr'|'barcode'|'image'} type - Type de zone
      * @property {number} [x] - Position X en pixels (depuis le DOM)
      * @property {number} [y] - Position Y en pixels (depuis le DOM)
      * @property {number} [w] - Largeur en pixels (depuis le DOM)
@@ -158,6 +160,28 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {number} zIndex - Ordre d'empilement
      * @property {BorderData} border - Configuration de la bordure
      * @description Zone de texte avec formatage riche.
+     */
+
+    /**
+     * @typedef {Object} TextQuillZoneData
+     * @property {'textQuill'} type - Type de zone (toujours 'textQuill')
+     * @property {string} [content] - Contenu texte (fallback). Le contenu Quill est édité dans la zone.
+     * @property {Object} [quillDelta] - Contenu Quill au format Delta (pour persistance)
+     * @property {string} font - Police par défaut (ex: 'Roboto')
+     * @property {number} size - Taille par défaut en points
+     * @property {string} color - Couleur du texte (hex)
+     * @property {'left'|'center'|'right'|'justify'} align - Alignement horizontal
+     * @property {'top'|'middle'|'bottom'} valign - Alignement vertical
+     * @property {string} bgColor - Couleur de fond (hex)
+     * @property {boolean} isTransparent - Fond transparent (true = ignore bgColor)
+     * @property {boolean} bold - Gras global (zone entière)
+     * @property {number} lineHeight - Interlignage
+     * @property {boolean} locked - Zone verrouillée
+     * @property {boolean} copyfit - Copy fitting activé
+     * @property {0|1|2} emptyLines - Gestion lignes vides
+     * @property {number} zIndex - Ordre d'empilement
+     * @property {BorderData} border - Configuration de la bordure
+     * @description Zone de texte Quill (WYSIWYG).
      */
 
     /**
@@ -199,7 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
      */
 
     /**
-     * @typedef {TextZoneData|QrZoneData|ImageZoneData|BarcodeZoneData} ZoneData
+     * @typedef {TextZoneData|TextQuillZoneData|QrZoneData|ImageZoneData|BarcodeZoneData} ZoneData
      * @description Union des types de zones possibles.
      */
 
@@ -335,6 +359,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {number} fin - Index de fin (caractère)
      * @property {Object} styles - Styles appliqués
      * @property {boolean} [styles.gras] - Gras
+     * @property {boolean} [styles.souligne] - Souligné
      * @property {string} [styles.couleur] - Couleur hex
      * @description Annotation de formatage partiel au format JSON WebDev.
      */
@@ -369,6 +394,8 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {GeometrieJsonWebDev} geometrie - Géométrie en mm
      * @property {string} contenu - Contenu textuel
      * @property {FormatagePartielJsonWebDev[]} formatage - Formatage partiel
+     * @property {'text'|'textQuill'} [typeZone] - Type interne de zone texte (optionnel, pour roundtrip Designer)
+     * @property {Object} [quillDelta] - Contenu Quill au format Delta (optionnel, pour roundtrip Designer)
      * @property {StyleJsonWebDev} style - Style typographique
      * @property {FondJsonWebDev} fond - Configuration du fond
      * @property {BordureJsonWebDev} bordure - Configuration de la bordure
@@ -443,9 +470,22 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {FormatDocumentJsonWebDev} [formatDocument] - Dimensions du document
      * @property {Array} [pages] - Pages du document
      * @property {ZoneTexteJsonWebDev[]} [zonesTexte] - Zones de texte
+     * @property {ZoneTextQuillJsonWebDev[]} [zonesTextQuill] - Zones texte Quill (Delta + RTF)
      * @property {(ZoneCodeBarresJsonWebDev|ZoneQrJsonWebDev)[]} [zonesCodeBarres] - Zones code-barres
      * @property {ZoneImageJsonWebDev[]} [zonesImage] - Zones image
      * @description Document complet au format JSON WebDev (entrée de loadFromWebDev).
+     */
+
+    /**
+     * @typedef {Object} ZoneTextQuillJsonWebDev
+     * @property {string} id - Identifiant de la zone (ex: "zone-77")
+     * @property {'textQuill'} type - Type (toujours "textQuill")
+     * @property {{x_mm: number, y_mm: number, width_mm: number, height_mm: number}} geometry - Géométrie en mm
+     * @property {Object|string|null} content_quill - Delta Quill ({ops:[...]}) OU texte brut (cas 1)
+     * @property {string} content_rtf - Contenu RTF (cas 2/3)
+     * @property {{font?: string, size_pt?: number, color?: string, align?: string, valign?: string, bold?: boolean, line_height?: number}} style - Style global
+     * @property {{width_px?: number, color?: string, style?: string}} border - Bordure
+     * @description Zone texte Quill au format JSON WebDev (double format Delta + RTF).
      */
 
     // ─────────────────────────── FIN DÉFINITIONS DE TYPES ──────────────────────────
@@ -469,12 +509,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const workspace = document.querySelector('.workspace');
     const workspaceCanvas = document.querySelector('.workspace-canvas');
     const btnAdd = document.getElementById('btn-add-zone');
+    const btnAddTextQuill = document.getElementById('btn-add-zone-quill');
     const btnAddQr = document.getElementById('btn-add-qr');
     const btnAddImage = document.getElementById('btn-add-image');
     const btnDelete = document.getElementById('btn-delete-zone');
     const btnReset = document.getElementById('btn-reset');
-    const btnGenerate = document.getElementById('btn-generate-json');
-    const btnGenerateJsonDebug = document.getElementById('btn-generate-json-debug');
+    const btnExportJson = document.getElementById('btn-export-json');
+    const btnImportJson = document.getElementById('btn-import-json');
+    const inputImportJson = document.getElementById('input-import-json');
     const coordsPanel = document.getElementById('coords-panel');
     
     // Boutons et éléments d'historique (Undo/Redo)
@@ -576,6 +618,49 @@ document.addEventListener('DOMContentLoaded', () => {
     // Navigation pages dynamique
     const pagesSection = document.getElementById('pages-section');
     const pageNavContainer = document.getElementById('page-nav-container');
+
+    // Toolbar Quill (floating)
+    const quillToolbar = document.getElementById('quill-toolbar');
+    const quillToolbarHeader = document.getElementById('quill-toolbar-header');
+    const quillToolbarCloseBtn = document.getElementById('quill-toolbar-close');
+
+    // Mini-toolbar contextuelle (Phase 5 - formatage partiel Quill)
+    const miniToolbar = document.getElementById('mini-toolbar');
+    const btnPartialBold = document.getElementById('btn-partial-bold');
+    const btnPartialUnderline = document.getElementById('btn-partial-underline');
+    const btnPartialColor = document.getElementById('btn-partial-color');
+    const partialColorPicker = document.getElementById('partial-color-picker');
+    
+    // Contrôles toolbar Quill (IDs préfixés "quill-")
+    const quillChkLocked = document.getElementById('quill-chk-locked');
+    const quillInputFont = document.getElementById('quill-input-font');
+    const quillInputSize = document.getElementById('quill-input-size');
+    const quillChkBold = document.getElementById('quill-chk-bold');
+    const quillInputColor = document.getElementById('quill-input-color');
+    const quillColorValue = document.getElementById('quill-color-value');
+    
+    const quillAlignHGroup = document.getElementById('quill-align-h-group');
+    const quillAlignVGroup = document.getElementById('quill-align-v-group');
+    const quillInputLineHeight = document.getElementById('quill-input-line-height');
+    
+    const quillChkTransparent = document.getElementById('quill-chk-transparent');
+    const quillInputBgColor = document.getElementById('quill-input-bg-color');
+    const quillBgColorRow = document.getElementById('quill-bg-color-row');
+    const quillBgColorValue = document.getElementById('quill-bg-color-value');
+    
+    const quillInputBorderWidth = document.getElementById('quill-input-border-width');
+    const quillInputBorderColor = document.getElementById('quill-input-border-color');
+    const quillInputBorderStyle = document.getElementById('quill-input-border-style');
+    const quillBorderColorRow = document.getElementById('quill-border-color-row');
+    const quillBorderStyleRow = document.getElementById('quill-border-style-row');
+    
+    const quillValX = document.getElementById('quill-val-x');
+    const quillValY = document.getElementById('quill-val-y');
+    const quillValW = document.getElementById('quill-val-w');
+    const quillValH = document.getElementById('quill-val-h');
+    
+    const quillChkCopyfit = document.getElementById('quill-chk-copyfit');
+    const quillInputEmptyLines = document.getElementById('quill-input-empty-lines');
     
     // Fonction pour mettre à jour l'affichage du spin button d'épaisseur de bordure
     function updateBorderWidthDisplay(value) {
@@ -622,6 +707,200 @@ document.addEventListener('DOMContentLoaded', () => {
      *   - SVG_BARCODE_1D, SVG_BARCODE_2D : SVG placeholders pour l'affichage
      */
     // ───────────────────────────────────────────────────────────────────────────────
+    
+    // --- CONSTANTES QUILL (Phase 0) ---
+    /**
+     * Police par défaut utilisée par Quill.
+     * @type {string}
+     */
+    const QUILL_DEFAULT_FONT = 'Roboto';
+    
+    /**
+     * Taille de police par défaut utilisée par Quill (en points).
+     * @type {number}
+     */
+    const QUILL_DEFAULT_SIZE = 12;
+    
+    /**
+     * Couleur de texte par défaut utilisée par Quill (hex).
+     * @type {string}
+     */
+    const QUILL_DEFAULT_COLOR = '#000000';
+    
+    /**
+     * Interlignage par défaut utilisé par Quill.
+     * @type {number}
+     */
+    const QUILL_DEFAULT_LINE_HEIGHT = 1.15;
+
+    /**
+     * Active les logs détaillés de debug pour la conversion RTF ↔ Delta (Phase 7).
+     * @type {boolean}
+     */
+    const DEBUG_PHASE7_RTF = false;
+
+    /**
+     * Active les logs de debug pour le fond (bgColor/transparent) des zones textQuill (Phase 7).
+     * @type {boolean}
+     */
+    const DEBUG_PHASE7_BG = true;
+
+    /**
+     * Masque les logs des phases validées (0 à 6) afin de réduire le bruit en console.
+     * (Les warnings/errors ne sont pas affectés.)
+     * @type {boolean}
+     */
+    const FILTER_LEGACY_PHASE_LOGS_0_TO_6 = true;
+
+    /**
+     * Installe un filtre sur console.log pour masquer les logs des phases 0 à 6.
+     * Conçu pour garder la console lisible pendant le debug Phase 7.
+     *
+     * @returns {void}
+     */
+    function installConsoleLogFilter() {
+        if (!FILTER_LEGACY_PHASE_LOGS_0_TO_6) return;
+        if (console.__marketeamPhaseFilterInstalled) return;
+
+        const originalLog = console.log.bind(console);
+        console.__marketeamPhaseFilterInstalled = true;
+
+        console.log = (...args) => {
+            try {
+                const first = args && args.length > 0 ? args[0] : null;
+                if (typeof first === 'string') {
+                    // Formats ciblés : "🔧 PHASE X - ..." et "📋 PHASE X - ..."
+                    const m = first.match(/(?:🔧|📋)\s*PHASE\s*(\d+)\b/i);
+                    if (m) {
+                        const phase = parseInt(m[1], 10);
+                        if (!isNaN(phase) && phase >= 0 && phase <= 6) {
+                            return; // ignorer
+                        }
+                    }
+                }
+            } catch (e) {}
+
+            originalLog(...args);
+        };
+    }
+
+    // Installer le filtre tôt (avant les logs d'init Phase 0-6).
+    installConsoleLogFilter();
+    
+    /**
+     * Stocke les instances Quill par ID de zone.
+     * @type {Map<string, Quill>}
+     */
+    const quillInstances = new Map();
+    
+    /**
+     * Module Clipboard personnalisé (PlainClipboard) pour filtrer le contenu collé.
+     * Implémentation reproduite fidèlement depuis `POC QUILL/poc-quill.js`.
+     *
+     * Note : l'enregistrement est conditionné à la présence de Quill pour éviter
+     * de casser l'application si le CDN n'est pas chargé.
+     *
+     * @extends Quill.import('modules/clipboard')
+     */
+    if (typeof Quill === 'function') {
+        const Clipboard = Quill.import('modules/clipboard');
+        const Delta = Quill.import('delta');
+        
+        class PlainClipboard extends Clipboard {
+            /**
+             * Intercepte le paste et filtre les formats non autorisés
+             * @param {ClipboardEvent} e - Événement paste
+             * @returns {void}
+             */
+            onPaste(e) {
+                e.preventDefault();
+                const range = this.quill.getSelection();
+                if (!range) return;
+                
+                const clipboardData = e.clipboardData || window.clipboardData;
+                const html = clipboardData.getData('text/html');
+                const text = clipboardData.getData('text/plain');
+                
+                if (html) {
+                    const filtered = this.filterHtml(html);
+                    const delta = this.quill.clipboard.convert(filtered);
+                    this.quill.updateContents(
+                        new Delta().retain(range.index).delete(range.length).concat(delta),
+                        'user'
+                    );
+                } else if (text) {
+                    this.quill.insertText(range.index, text, 'user');
+                }
+                
+                setTimeout(() => {
+                    const newRange = this.quill.getSelection();
+                    if (newRange) {
+                        this.quill.setSelection(newRange.index, 0);
+                    }
+                }, 0);
+            }
+            
+            /**
+             * Filtre le HTML pour ne garder que les formats autorisés
+             * @param {string} html - HTML brut
+             * @returns {string} HTML filtré
+             */
+            filterHtml(html) {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = html;
+                
+                /**
+                 * Nettoie récursivement un nœud HTML pour ne conserver que les tags simples.
+                 * @param {Node} node - Nœud à nettoyer
+                 * @returns {string} HTML nettoyé (ou texte)
+                 */
+                const cleanNode = (node) => {
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        return node.textContent;
+                    }
+                    
+                    if (node.nodeType !== Node.ELEMENT_NODE) {
+                        return '';
+                    }
+                    
+                    const tagName = node.tagName.toLowerCase();
+                    let result = '';
+                    
+                    for (const child of node.childNodes) {
+                        result += cleanNode(child);
+                    }
+                    
+                    if (tagName === 'b' || tagName === 'strong') {
+                        return `<strong>${result}</strong>`;
+                    }
+                    if (tagName === 'i' || tagName === 'em') {
+                        return `<em>${result}</em>`;
+                    }
+                    if (tagName === 'u') {
+                        return `<u>${result}</u>`;
+                    }
+                    if (tagName === 'br') {
+                        return '<br>';
+                    }
+                    if (tagName === 'p' || tagName === 'div') {
+                        return `<p>${result}</p>`;
+                    }
+                    
+                    const style = node.getAttribute('style') || '';
+                    const colorMatch = style.match(/color:\s*([^;]+)/i);
+                    if (colorMatch && result) {
+                        return `<span style="color: ${colorMatch[1]}">${result}</span>`;
+                    }
+                    
+                    return result;
+                };
+                
+                return cleanNode(tempDiv);
+            }
+        }
+        
+        Quill.register('modules/clipboard', PlainClipboard, true);
+    }
     
     // Mapping des styles de bordure vers les valeurs PrintShop Mail
     const BORDER_STYLE_TO_PSMD = {
@@ -1053,20 +1332,59 @@ document.addEventListener('DOMContentLoaded', () => {
     updateMergeFieldsUI(mergeFields);
 
     /**
-     * Insère un champ de fusion à la position du curseur dans le textarea
-     * @param {string} fieldName - Nom du champ à insérer
+     * Insère un champ de fusion à la position du curseur.
+     *
+     * Comportement :
+     * - Si une zone `textQuill` est sélectionnée : insertion dans Quill via `quill.insertText()`
+     * - Sinon : insertion dans le textarea (`input-content`) via remplacement de chaîne
+     *
+     * Format inséré : `@NOM_DU_CHAMP@`
+     *
+     * @param {string} fieldName - Nom du champ à insérer (sans les @)
+     * @returns {void}
      */
     function insertTag(fieldName) {
+        const tag = `@${fieldName}@`; // Syntaxe WebDev
+
+        // Phase 6 : insertion dans une zone textQuill (si sélection unique)
+        if (selectedZoneIds.length === 1) {
+            const zoneId = selectedZoneIds[0];
+            const zonesData = getCurrentPageZones();
+            const zoneData = zonesData ? zonesData[zoneId] : null;
+
+            if (zoneData && zoneData.type === 'textQuill') {
+                const quill = quillInstances.get(zoneId);
+                if (quill) {
+                    const range = quill.getSelection(true);
+                    const insertIndex = range
+                        ? range.index
+                        : Math.max(0, (typeof quill.getLength === 'function' ? quill.getLength() : 1) - 1);
+
+                    quill.insertText(insertIndex, tag, 'user');
+                    quill.setSelection(insertIndex + tag.length, 0, 'silent');
+                    try { quill.focus(); } catch (e) {}
+
+                    // Persister immédiatement (en plus du text-change debounce)
+                    zonesData[zoneId].quillDelta = quill.getContents();
+                    saveToLocalStorage();
+                    saveState();
+
+                    console.log('🔧 PHASE 6 - Insertion champ fusion:', fieldName, 'dans zone:', zoneId);
+                    return;
+                }
+            }
+        }
+
+        // Fallback : insertion dans le textarea (zones "text" classiques)
         if (!inputContent) return;
-        
+
         const start = inputContent.selectionStart;
         const end = inputContent.selectionEnd;
         const text = inputContent.value;
-        const tag = `@${fieldName}@`;  // Syntaxe WebDev au lieu de {{}}
-        
+
         // Insertion au curseur
         inputContent.value = text.substring(0, start) + tag + text.substring(end);
-        
+
         // Repositionner le curseur après le tag
         inputContent.selectionStart = inputContent.selectionEnd = start + tag.length;
         inputContent.focus();
@@ -2348,6 +2666,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 data.h = el.offsetHeight;
             }
         }
+        
+        // BUGFIX : persister le contenu Quill dans zonesData avant snapshot (Undo/Redo)
+        persistTextQuillContentForSave(zonesData);
+
         documentState.zoneCounter = zoneCounter;
         
         // Supprimer les états "futurs" si on a fait des undo
@@ -2815,6 +3137,64 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     // ───────────────────────────────────────────────────────────────────────────────
 
+    /**
+     * Crée une nouvelle zone de texte Quill (WYSIWYG) sur la page courante.
+     * - Position : centrée sur la vue (avec contraintes de marge de sécurité)
+     * - Taille par défaut : 80mm x 30mm (convertie en pixels)
+     * - Quill : theme 'snow', toolbar désactivée, placeholder défini
+     *
+     * @returns {void}
+     */
+    function createTextQuillZone() {
+        documentState.zoneCounter++;
+        zoneCounter = documentState.zoneCounter; // Synchroniser pour compatibilité
+        
+        const zoneId = `zone-${zoneCounter}`;
+        const zonesData = getCurrentPageZones();
+        
+        // Calculer le z-index pour mettre la nouvelle zone au premier plan
+        const newZIndex = getMaxZIndex() + 1;
+        
+        // Stocker des valeurs par défaut (les dimensions et la position seront appliquées dans createZoneDOM)
+        zonesData[zoneId] = {
+            type: 'textQuill',
+            content: '',
+            quillDelta: null,
+            font: QUILL_DEFAULT_FONT,
+            size: QUILL_DEFAULT_SIZE,
+            color: QUILL_DEFAULT_COLOR,
+            align: 'left',
+            valign: 'top',
+            bgColor: '#ffffff',
+            isTransparent: true,
+            bold: false,
+            lineHeight: QUILL_DEFAULT_LINE_HEIGHT,
+            locked: false,
+            copyfit: false,
+            emptyLines: 0,
+            zIndex: newZIndex,
+            border: {
+                width: 0,
+                color: '#000000',
+                style: 'solid'
+            }
+        };
+        
+        createZoneDOM(zoneId, zoneCounter, true);
+        
+        const zoneElement = document.getElementById(zoneId);
+        const quillInstance = quillInstances.get(zoneId);
+        
+        console.log('🔧 PHASE 1 - Création zone textQuill:');
+        console.log('  ✓ Zone ID:', zoneId);
+        console.log('  ✓ Element DOM créé:', zoneElement ? 'OUI' : 'NON');
+        console.log('  ✓ Instance Quill créée:', quillInstances.has(zoneId));
+        console.log('  ✓ Quill editor ready:', quillInstance && quillInstance.root ? 'OUI' : 'NON');
+        
+        saveToLocalStorage(); // Sauvegarde auto
+        saveState(); // Snapshot APRÈS la création
+    }
+
     btnAdd.addEventListener('click', () => {
         documentState.zoneCounter++;
         zoneCounter = documentState.zoneCounter; // Synchroniser pour compatibilité
@@ -2853,6 +3233,12 @@ document.addEventListener('DOMContentLoaded', () => {
         saveToLocalStorage(); // Sauvegarde auto
         saveState(); // Snapshot APRÈS la création
     });
+
+    if (btnAddTextQuill) {
+        btnAddTextQuill.addEventListener('click', () => {
+            createTextQuillZone();
+        });
+    }
 
     btnAddQr.addEventListener('click', () => {
         documentState.zoneCounter++;
@@ -2990,6 +3376,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const zone = document.createElement('div');
         zone.classList.add('zone');
+        // Stocker le type sur le DOM pour debug / logique UI (toolbar Quill)
+        zone.dataset.type = zoneType;
         if (zoneType === 'qr') {
             zone.classList.add('zone-qr');
         }
@@ -3017,6 +3405,10 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (zoneType === 'image') {
             defaultZoneWidth = 150;
             defaultZoneHeight = 150;
+        } else if (zoneType === 'textQuill') {
+            // Zone texte Quill : 80mm x 30mm (convertir en pixels)
+            defaultZoneWidth = mmToPx(80);
+            defaultZoneHeight = mmToPx(30);
         } else {
             defaultZoneWidth = 200;
             defaultZoneHeight = 40;
@@ -3133,6 +3525,156 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 updateBarcodeZoneDisplay(id);
             }, 10);
+        } else if (zoneType === 'textQuill') {
+            // Zone texte Quill (WYSIWYG)
+            const defaultW = defaultZoneWidth;
+            const defaultH = defaultZoneHeight;
+            
+            zone.classList.add('zone-text-quill');
+            zone.style.width = (zoneData.w || defaultW) + 'px';
+            zone.style.height = (zoneData.h || defaultH) + 'px';
+            zone.style.left = (zoneData.x !== undefined ? zoneData.x : zoneX) + 'px';
+            zone.style.top = (zoneData.y !== undefined ? zoneData.y : zoneY) + 'px';
+            
+            // Mémoriser les dimensions de base en pixels pour cohérence (export/édition future)
+            zonesData[id].w = parseFloat(zone.style.width);
+            zonesData[id].h = parseFloat(zone.style.height);
+            zonesData[id].x = parseFloat(zone.style.left);
+            zonesData[id].y = parseFloat(zone.style.top);
+            
+            // Fond (ne pas forcer à transparent : respecter les données importées / sauvegardées)
+            zone.style.backgroundColor = zoneData.isTransparent ? 'transparent' : (zoneData.bgColor || '#ffffff');
+            
+            // Bordure utilisateur (si définie)
+            if (zoneData.border) {
+                applyBorderToZone(zone, zoneData.border);
+            }
+
+            // Drag handle (POC) - bandeau supérieur
+            const dragHandle = document.createElement('div');
+            dragHandle.classList.add('zone-drag-handle');
+            zone.appendChild(dragHandle);
+            
+            const contentWrapper = document.createElement('div');
+            contentWrapper.classList.add('zone-content');
+            
+            const editorEl = document.createElement('div');
+            editorEl.classList.add('quill-editor');
+            contentWrapper.appendChild(editorEl);
+            zone.appendChild(contentWrapper);
+
+            // Resize handles (POC) : se, e, s
+            /** @type {Array<{pos: string, className: string}>} */
+            const resizeHandles = [
+                { pos: 'se', className: 'resize-handle resize-handle-se' },
+                { pos: 'e', className: 'resize-handle resize-handle-e' },
+                { pos: 's', className: 'resize-handle resize-handle-s' }
+            ];
+            resizeHandles.forEach(h => {
+                const handleEl = document.createElement('div');
+                handleEl.className = h.className;
+                handleEl.dataset.pos = h.pos;
+                zone.appendChild(handleEl);
+            });
+            
+            // Initialiser Quill si disponible
+            if (typeof Quill === 'function') {
+                const quillInstance = new Quill(editorEl, {
+                    modules: { toolbar: false, clipboard: { matchers: [] } },
+                    theme: 'snow',
+                    placeholder: 'Saisissez votre texte...'
+                });
+                
+                // Appliquer styles par défaut (police, taille, couleur, interlignage)
+                if (quillInstance && quillInstance.root) {
+                    quillInstance.root.style.fontFamily = `${QUILL_DEFAULT_FONT}, sans-serif`;
+                    quillInstance.root.style.fontSize = `${QUILL_DEFAULT_SIZE}pt`;
+                    quillInstance.root.style.color = QUILL_DEFAULT_COLOR;
+                    quillInstance.root.style.lineHeight = String(QUILL_DEFAULT_LINE_HEIGHT);
+                }
+                
+                // Stocker l'instance
+                quillInstances.set(id, quillInstance);
+
+                // Phase 5 : mini-toolbar contextuelle (affichage au-dessus de la sélection)
+                quillInstance.on('selection-change', (range) => {
+                    handleTextQuillSelectionChange(id, range);
+                });
+                
+                // BUGFIX : restaurer le contenu APRÈS stabilisation DOM (sans focus)
+                // Priorité : Delta natif (préserve le formatage). Fallback : HTML pour rétrocompat.
+                // NOTE : après Ctrl+F5, certaines sauvegardes peuvent contenir quillDelta sous forme de string JSON,
+                // ou un Delta qui fait échouer setContents() (Quill reste alors vide si on swallow l'erreur).
+                if (zoneData.quillDelta) {
+                    setTimeout(() => {
+                        try {
+                            /** @type {any} */
+                            let delta = zoneData.quillDelta;
+                            if (typeof delta === 'string') {
+                                try { delta = JSON.parse(delta); } catch (e) {}
+                            }
+                            if (delta && Array.isArray(delta.ops)) {
+                                quillInstance.setContents(delta, 'silent');
+                                console.log('🔧 BUGFIX - Contenu Quill restauré (Delta):', id);
+                            } else {
+                                // Fallback minimal si Delta invalide
+                                const fallbackText = (typeof zoneData.quillDelta === 'string') ? zoneData.quillDelta : '';
+                                quillInstance.setText(fallbackText || '', 'silent');
+                                console.warn('⚠️ BUGFIX - Delta Quill invalide, fallback texte appliqué:', id);
+                            }
+                            // Réappliquer les styles APRÈS la restauration du contenu (setContents peut réinitialiser)
+                            applyQuillZoneStyles(id);
+                        } catch (e) {
+                            console.warn('⚠️ BUGFIX - Échec restauration Quill via Delta, fallback texte:', id, e);
+                            try {
+                                // Fallback : extraire un texte brut du Delta si possible
+                                const d = zoneData.quillDelta;
+                                const ops = d && typeof d === 'object' && Array.isArray(d.ops) ? d.ops : [];
+                                const text = ops.map(op => typeof op.insert === 'string' ? op.insert : '').join('');
+                                quillInstance.setText(text || '', 'silent');
+                                applyQuillZoneStyles(id);
+                            } catch (e2) {}
+                        }
+                    }, 0);
+                } else if (zoneData.content) {
+                    setTimeout(() => {
+                        try {
+                            quillInstance.clipboard.dangerouslyPasteHTML(0, zoneData.content, 'silent');
+                            console.log('🔧 BUGFIX - Contenu Quill restauré (HTML):', id);
+                            // Réappliquer les styles APRÈS la restauration du contenu
+                            applyQuillZoneStyles(id);
+                        } catch (e) {
+                            console.warn('⚠️ BUGFIX - Échec restauration Quill via HTML:', id, e);
+                        }
+                    }, 0);
+                }
+
+                // BUGFIX : persister le contenu lors de la frappe (sinon aucun save après saisie)
+                quillInstance.on('text-change', () => {
+                    // Mettre à jour les données de la zone (objet qui sera sérialisé)
+                    zonesData[id].quillDelta = quillInstance.getContents();
+                    
+                    // Debounce identique au système existant (textarea)
+                    clearTimeout(contentSaveTimeout);
+                    contentSaveTimeout = setTimeout(() => {
+                        saveToLocalStorage();
+                        saveState();
+                    }, 500);
+                });
+                
+                // Focus automatique uniquement en création (pas pendant le chargement/restauration)
+                if (autoSelect && !zoneData.quillDelta && !zoneData.content) {
+                    setTimeout(() => {
+                        try { quillInstance.focus(); } catch (e) {}
+                    }, 0);
+                }
+            }
+            
+            // Phase 4 : appliquer les styles depuis les données stockées.
+            // Important : si on restaure du contenu (Delta/HTML), applyQuillZoneStyles est rappelé après setContents().
+            if (!zoneData.quillDelta && !zoneData.content) {
+                applyQuillZoneStyles(id);
+            }
         } else {
             // Style initial par défaut pour le texte
             zone.style.width = '200px';
@@ -3155,13 +3697,15 @@ document.addEventListener('DOMContentLoaded', () => {
             zone.appendChild(contentSpan);
         }
 
-        // Poignées
-        ['nw', 'ne', 'sw', 'se'].forEach(pos => {
-            const handle = document.createElement('div');
-            handle.classList.add('handle', pos);
-            handle.dataset.pos = pos;
-            zone.appendChild(handle);
-        });
+        // Poignées (zones classiques uniquement)
+        if (zoneType !== 'textQuill') {
+            ['nw', 'ne', 'sw', 'se'].forEach(pos => {
+                const handle = document.createElement('div');
+                handle.classList.add('handle', pos);
+                handle.dataset.pos = pos;
+                zone.appendChild(handle);
+            });
+        }
 
         // Appliquer le z-index
         const zIndex = zoneData.zIndex || 1;
@@ -3650,6 +4194,8 @@ document.addEventListener('DOMContentLoaded', () => {
         allZones.forEach(zoneEl => {
             const handles = zoneEl.querySelectorAll('.handle');
             handles.forEach(h => h.style.display = 'none');
+            const resizeHandles = zoneEl.querySelectorAll('.resize-handle');
+            resizeHandles.forEach(h => h.style.display = 'none');
         });
         
         // Ensuite, afficher les poignées uniquement pour les zones sélectionnées (si sélection unique et non verrouillée)
@@ -3661,9 +4207,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const isLocked = zoneData && zoneData.locked;
                 
                 if (!isLocked) {
-                    // Sélection unique et non verrouillée : afficher les poignées
-                    const handles = zoneEl.querySelectorAll('.handle');
-                    handles.forEach(h => h.style.display = 'block');
+                    // Sélection unique et non verrouillée : afficher les poignées selon le type
+                    if (zoneData && zoneData.type === 'textQuill') {
+                        const resizeHandles = zoneEl.querySelectorAll('.resize-handle');
+                        resizeHandles.forEach(h => h.style.display = 'block');
+                    } else {
+                        const handles = zoneEl.querySelectorAll('.handle');
+                        handles.forEach(h => h.style.display = 'block');
+                    }
                 }
             }
         }
@@ -3704,6 +4255,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // Masquer ou désactiver les champs de propriétés en mode multi-sélection
             setMultiSelectionMode(true);
         }
+
+        // Toolbar Quill (Phase 3) : affichage automatique
+        updateQuillToolbarVisibilityFromSelection();
+
+        // Phase 5 : éviter une mini-toolbar "orpheline" lors d'un changement de sélection
+        // (le show/hide fin est géré par selection-change Quill)
+        hideMiniToolbar();
         
         // Mettre à jour l'affichage des poignées
         updateHandlesVisibility();
@@ -3716,6 +4274,602 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Mettre à jour le bouton Ajuster au contenu
         updateSnapToContentButton();
+    }
+
+    // ─────────────────────────────── TOOLBAR QUILL (PHASE 3) ──────────────────────
+
+    /** @type {boolean} True si la toolbar Quill est visible */
+    let isQuillToolbarVisible = false;
+    
+    /** @type {boolean} True si on est en train de déplacer la toolbar Quill */
+    let isQuillToolbarDragging = false;
+    
+    /** @type {{x: number, y: number}} Offset souris→toolbar au démarrage du drag */
+    let quillToolbarDragOffset = { x: 0, y: 0 };
+    
+    /** @type {{x: number, y: number}|null} Dernière position connue de la toolbar */
+    let quillToolbarLastPos = null;
+
+    /**
+     * Calcule une position initiale (visible) pour la toolbar Quill.
+     * Priorité : dernière position connue > coin haut-droit du workspace (avec marge).
+     *
+     * @returns {{x: number, y: number}} Position (px) dans le viewport
+     */
+    function getInitialQuillToolbarPosition() {
+        if (quillToolbarLastPos) return quillToolbarLastPos;
+        
+        const margin = 16;
+        const w = quillToolbar ? quillToolbar.offsetWidth || 280 : 280;
+        const h = quillToolbar ? quillToolbar.offsetHeight || 200 : 200;
+        
+        // Essayer de se caler sur le workspace (coin haut-droit)
+        if (workspace) {
+            const rect = workspace.getBoundingClientRect();
+            const x = Math.min(window.innerWidth - w - margin, Math.max(margin, rect.right - w - margin));
+            const y = Math.min(window.innerHeight - h - margin, Math.max(margin, rect.top + margin));
+            return { x, y };
+        }
+        
+        // Fallback viewport
+        return { x: window.innerWidth - w - margin, y: margin };
+    }
+
+    /**
+     * Affiche la toolbar Quill.
+     *
+     * @returns {void}
+     */
+    function showQuillToolbar() {
+        console.log('🔧 PHASE 3 - showQuillToolbar()');
+        
+        if (!quillToolbar) return;
+        
+        // Si la toolbar est déjà visible, on se contente de resynchroniser (Phase 4)
+        if (isQuillToolbarVisible) {
+            if (selectedZoneIds.length === 1) {
+                syncQuillToolbarWithZone(selectedZoneIds[0]);
+            }
+            return;
+        }
+        
+        quillToolbar.style.display = 'flex';
+        isQuillToolbarVisible = true;
+        
+        // Positionner la toolbar de façon visible
+        const pos = getInitialQuillToolbarPosition();
+        quillToolbar.style.left = `${pos.x}px`;
+        quillToolbar.style.top = `${pos.y}px`;
+        quillToolbar.style.right = 'auto';
+        quillToolbar.style.bottom = 'auto';
+        
+        // Phase 4 : synchroniser immédiatement avec la zone sélectionnée
+        if (selectedZoneIds.length === 1) {
+            const zoneId = selectedZoneIds[0];
+            syncQuillToolbarWithZone(zoneId);
+        }
+    }
+
+    /**
+     * Masque la toolbar Quill.
+     *
+     * @returns {void}
+     */
+    function hideQuillToolbar() {
+        console.log('🔧 PHASE 3 - hideQuillToolbar()');
+        
+        if (!quillToolbar) return;
+        if (!isQuillToolbarVisible && quillToolbar.style.display === 'none') return;
+        
+        quillToolbar.style.display = 'none';
+        isQuillToolbarVisible = false;
+    }
+
+    /**
+     * Toggle l'état collapsed d'une section de la toolbar.
+     *
+     * @param {HTMLElement} sectionHeader - Le header de section cliqué
+     * @returns {void}
+     */
+    function toggleToolbarSection(sectionHeader) {
+        const section = sectionHeader.closest('.toolbar-section');
+        if (!section) return;
+        
+        section.classList.toggle('collapsed');
+        const collapsed = section.classList.contains('collapsed');
+        
+        console.log('🔧 PHASE 3 - toggleToolbarSection:', sectionHeader.textContent, '→', collapsed ? 'COLLAPSED' : 'EXPANDED');
+    }
+
+    /**
+     * Met à jour la visibilité des options de bordure dans la toolbar Quill.
+     * Règle : afficher couleur/style uniquement si width > 0.
+     *
+     * @param {number} width - Épaisseur de bordure en pixels
+     * @returns {void}
+     */
+    function updateQuillBorderOptionsVisibility(width) {
+        const show = (parseFloat(width) || 0) > 0;
+        if (quillBorderColorRow) quillBorderColorRow.style.display = show ? '' : 'none';
+        if (quillBorderStyleRow) quillBorderStyleRow.style.display = show ? '' : 'none';
+    }
+
+    /**
+     * Met à jour les champs de géométrie (mm) dans la toolbar Quill depuis le DOM.
+     *
+     * @param {string} zoneId - ID de la zone (ex: "zone-3")
+     * @returns {void}
+     */
+    function updateQuillToolbarGeometryFields(zoneId) {
+        const zoneEl = document.getElementById(zoneId);
+        if (!zoneEl) return;
+        
+        const xMm = pxToMm(zoneEl.offsetLeft);
+        const yMm = pxToMm(zoneEl.offsetTop);
+        const wMm = pxToMm(zoneEl.offsetWidth);
+        const hMm = pxToMm(zoneEl.offsetHeight);
+        
+        if (quillValX) quillValX.value = xMm.toFixed(1);
+        if (quillValY) quillValY.value = yMm.toFixed(1);
+        if (quillValW) quillValW.value = wMm.toFixed(1);
+        if (quillValH) quillValH.value = hMm.toFixed(1);
+    }
+
+    /**
+     * Synchronise la toolbar Quill avec les propriétés d'une zone textQuill sélectionnée.
+     *
+     * @param {string} zoneId - ID de la zone
+     * @returns {void}
+     */
+    function syncQuillToolbarWithZone(zoneId) {
+        console.log('🔧 PHASE 4 - syncQuillToolbarWithZone:', zoneId);
+        
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        if (!zoneData || zoneData.type !== 'textQuill') return;
+        
+        // Zone
+        if (quillChkLocked) quillChkLocked.checked = !!zoneData.locked;
+        
+        // Typographie
+        if (quillInputFont) quillInputFont.value = zoneData.font || QUILL_DEFAULT_FONT;
+        if (quillInputSize) quillInputSize.value = String(zoneData.size || QUILL_DEFAULT_SIZE);
+        if (quillChkBold) quillChkBold.checked = !!zoneData.bold;
+        if (quillInputColor) quillInputColor.value = zoneData.color || QUILL_DEFAULT_COLOR;
+        if (quillColorValue) quillColorValue.textContent = (zoneData.color || QUILL_DEFAULT_COLOR);
+        
+        // Alignements
+        if (quillAlignHGroup) {
+            quillAlignHGroup.querySelectorAll('.align-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.value === (zoneData.align || 'left'));
+            });
+        }
+        if (quillAlignVGroup) {
+            quillAlignVGroup.querySelectorAll('.align-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.value === (zoneData.valign || 'top'));
+            });
+        }
+        if (quillInputLineHeight) quillInputLineHeight.value = String(zoneData.lineHeight || QUILL_DEFAULT_LINE_HEIGHT);
+        
+        // Fond
+        if (quillChkTransparent) quillChkTransparent.checked = zoneData.isTransparent !== undefined ? !!zoneData.isTransparent : true;
+        if (quillInputBgColor) {
+            quillInputBgColor.value = zoneData.bgColor || '#ffffff';
+            quillInputBgColor.disabled = !!(quillChkTransparent && quillChkTransparent.checked);
+        }
+        if (quillBgColorValue) quillBgColorValue.textContent = (zoneData.bgColor || '#ffffff');
+        if (quillBgColorRow) quillBgColorRow.style.display = (quillChkTransparent && quillChkTransparent.checked) ? 'none' : '';
+
+        if (DEBUG_PHASE7_BG) {
+            console.log('🔧 PHASE 7 BG - Toolbar sync fond:', zoneId, {
+                isTransparent: zoneData.isTransparent,
+                bgColor: zoneData.bgColor,
+                uiTransparentChecked: !!(quillChkTransparent && quillChkTransparent.checked),
+                uiBgColor: quillInputBgColor ? quillInputBgColor.value : null,
+                uiRowDisplay: quillBgColorRow ? quillBgColorRow.style.display : null
+            });
+        }
+        
+        // Bordure
+        const border = zoneData.border || { width: 0, color: '#000000', style: 'solid' };
+        if (quillInputBorderWidth) quillInputBorderWidth.value = String(border.width || 0);
+        if (quillInputBorderColor) quillInputBorderColor.value = border.color || '#000000';
+        if (quillInputBorderStyle) quillInputBorderStyle.value = border.style || 'solid';
+        updateQuillBorderOptionsVisibility(border.width || 0);
+        
+        // Options avancées
+        if (quillChkCopyfit) quillChkCopyfit.checked = !!zoneData.copyfit;
+        if (quillInputEmptyLines) quillInputEmptyLines.value = String(zoneData.emptyLines || 0);
+        
+        // Géométrie (mm)
+        updateQuillToolbarGeometryFields(zoneId);
+    }
+
+    /**
+     * Applique les styles d'une zone textQuill sur le DOM et l'instance Quill.
+     *
+     * @param {string} zoneId - ID de la zone
+     * @returns {void}
+     */
+    function applyQuillZoneStyles(zoneId) {
+        console.log('🔧 PHASE 4 - applyQuillZoneStyles:', zoneId);
+        
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        const zoneEl = document.getElementById(zoneId);
+        if (!zoneData || zoneData.type !== 'textQuill' || !zoneEl) return;
+        
+        // Verrouillage
+        if (zoneData.locked) zoneEl.classList.add('locked');
+        else zoneEl.classList.remove('locked');
+        
+        // Fond
+        if (zoneData.isTransparent) zoneEl.style.backgroundColor = 'transparent';
+        else zoneEl.style.backgroundColor = zoneData.bgColor || '#ffffff';
+
+        if (DEBUG_PHASE7_BG) {
+            console.log('🔧 PHASE 7 BG - apply fond:', zoneId, {
+                isTransparent: zoneData.isTransparent,
+                bgColor: zoneData.bgColor,
+                applied: zoneEl.style.backgroundColor
+            });
+        }
+        
+        // Bordure
+        applyBorderToZone(zoneEl, zoneData.border);
+        
+        // Alignement vertical (flex sur .zone-content)
+        const contentEl = zoneEl.querySelector('.zone-content');
+        if (contentEl) {
+            // DEBUG : comprendre pourquoi l'alignement vertical semble rester en haut
+            try {
+                const quillEditorEl = zoneEl.querySelector('.quill-editor');
+                const qlContainerEl = zoneEl.querySelector('.ql-container');
+                const qlEditorEl = zoneEl.querySelector('.ql-editor');
+                const csBefore = getComputedStyle(contentEl);
+                console.log('🔧 DEBUG VALIGN - applyQuillZoneStyles BEFORE:', zoneId, {
+                    dataValign: zoneData.valign,
+                    classes: Array.from(contentEl.classList),
+                    inlineJustifyContent: contentEl.style.justifyContent || '(empty)',
+                    computedJustifyContent: csBefore.justifyContent,
+                    computedDisplay: csBefore.display,
+                    contentClientH: contentEl.clientHeight,
+                    contentScrollH: contentEl.scrollHeight,
+                    quillEditorClientH: quillEditorEl ? quillEditorEl.clientHeight : null,
+                    qlContainerClientH: qlContainerEl ? qlContainerEl.clientHeight : null,
+                    qlEditorClientH: qlEditorEl ? qlEditorEl.clientHeight : null,
+                    qlEditorScrollH: qlEditorEl ? qlEditorEl.scrollHeight : null,
+                    qlContainerInlineH: qlContainerEl ? (qlContainerEl.style.height || '(empty)') : null,
+                    qlEditorInlineH: qlEditorEl ? (qlEditorEl.style.height || '(empty)') : null,
+                    qlContainerComputedH: qlContainerEl ? getComputedStyle(qlContainerEl).height : null,
+                    qlEditorComputedH: qlEditorEl ? getComputedStyle(qlEditorEl).height : null
+                });
+            } catch (e) {}
+
+            const valign =
+                (zoneData.valign === 'middle' || zoneData.valign === 'bottom' || zoneData.valign === 'top')
+                    ? zoneData.valign
+                    : 'top';
+
+            // IMPORTANT : on applique le valign via classes CSS (comme dans le POC)
+            // et on garde aussi l'inline pour compatibilité avec du code existant (copyfit notamment).
+            contentEl.classList.remove('valign-top', 'valign-middle', 'valign-bottom');
+            contentEl.classList.add(`valign-${valign}`);
+            contentEl.style.justifyContent = mapValignToFlex(valign);
+
+            // DEBUG : état après application
+            try {
+                const quillEditorEl = zoneEl.querySelector('.quill-editor');
+                const qlContainerEl = zoneEl.querySelector('.ql-container');
+                const qlEditorEl = zoneEl.querySelector('.ql-editor');
+                const csAfter = getComputedStyle(contentEl);
+                console.log('🔧 DEBUG VALIGN - applyQuillZoneStyles AFTER:', zoneId, {
+                    appliedValign: valign,
+                    classes: Array.from(contentEl.classList),
+                    inlineJustifyContent: contentEl.style.justifyContent || '(empty)',
+                    computedJustifyContent: csAfter.justifyContent,
+                    computedDisplay: csAfter.display,
+                    contentClientH: contentEl.clientHeight,
+                    contentScrollH: contentEl.scrollHeight,
+                    quillEditorClientH: quillEditorEl ? quillEditorEl.clientHeight : null,
+                    qlContainerClientH: qlContainerEl ? qlContainerEl.clientHeight : null,
+                    qlEditorClientH: qlEditorEl ? qlEditorEl.clientHeight : null,
+                    qlEditorScrollH: qlEditorEl ? qlEditorEl.scrollHeight : null,
+                    qlContainerInlineH: qlContainerEl ? (qlContainerEl.style.height || '(empty)') : null,
+                    qlEditorInlineH: qlEditorEl ? (qlEditorEl.style.height || '(empty)') : null,
+                    qlContainerComputedH: qlContainerEl ? getComputedStyle(qlContainerEl).height : null,
+                    qlEditorComputedH: qlEditorEl ? getComputedStyle(qlEditorEl).height : null
+                });
+            } catch (e) {}
+        }
+        
+        // Styles Quill (root)
+        const quillInstance = quillInstances.get(zoneId);
+        if (quillInstance && quillInstance.root) {
+            quillInstance.root.style.fontFamily = `${zoneData.font || QUILL_DEFAULT_FONT}, sans-serif`;
+            quillInstance.root.style.color = zoneData.color || QUILL_DEFAULT_COLOR;
+            quillInstance.root.style.lineHeight = String(zoneData.lineHeight || QUILL_DEFAULT_LINE_HEIGHT);
+            quillInstance.root.style.fontWeight = zoneData.bold ? 'bold' : 'normal';
+            quillInstance.root.style.textAlign = zoneData.align || 'left';
+        }
+        
+        // Copyfit (réutilisation du moteur existant) : ajuste la taille de police pour tenir dans la zone
+        if (zoneData.copyfit) {
+            // Point de départ = taille max
+            const maxSize = zoneData.size || QUILL_DEFAULT_SIZE;
+            // Appliquer un font-size temporaire sur le root, puis lancer le copyfit sur la zone
+            if (quillInstance && quillInstance.root) {
+                quillInstance.root.style.fontSize = `${maxSize}pt`;
+            }
+            applyCopyfit(zoneEl, maxSize);
+            // Synchroniser le résultat sur Quill
+            if (quillInstance && quillInstance.root && zoneEl.style.fontSize) {
+                quillInstance.root.style.fontSize = zoneEl.style.fontSize;
+            }
+        } else {
+            const size = zoneData.size || QUILL_DEFAULT_SIZE;
+            if (quillInstance && quillInstance.root) {
+                quillInstance.root.style.fontSize = `${size}pt`;
+            }
+        }
+        
+        // UI poignées
+        updateHandlesVisibility();
+    }
+
+    /**
+     * Initialise les écouteurs des contrôles de la toolbar Quill.
+     * Applique immédiatement les changements à la zone textQuill sélectionnée.
+     *
+     * @returns {void}
+     */
+    function initQuillToolbarEvents() {
+        if (!quillToolbar) return;
+        
+        /**
+         * Retourne l'ID de la zone textQuill sélectionnée (si sélection unique).
+         * @returns {string|null}
+         */
+        const getSelectedTextQuillZoneId = () => {
+            if (selectedZoneIds.length !== 1) return null;
+            const zoneId = selectedZoneIds[0];
+            const zonesData = getCurrentPageZones();
+            if (!zonesData[zoneId] || zonesData[zoneId].type !== 'textQuill') return null;
+            return zoneId;
+        };
+        
+        /**
+         * Applique une mise à jour de données + styles pour la zone sélectionnée.
+         * @param {(zoneData: any, zoneEl: HTMLElement, zoneId: string) => void} mutator - Mutation sur les données de zone
+         * @returns {void}
+         */
+        const updateSelectedZone = (mutator) => {
+            const zoneId = getSelectedTextQuillZoneId();
+            if (!zoneId) return;
+            
+            const zonesData = getCurrentPageZones();
+            const zoneData = zonesData[zoneId];
+            const zoneEl = document.getElementById(zoneId);
+            if (!zoneEl) return;
+            
+            mutator(zoneData, zoneEl, zoneId);
+            applyQuillZoneStyles(zoneId);
+            updateQuillToolbarGeometryFields(zoneId);
+            saveToLocalStorage();
+            saveState();
+        };
+        
+        // Zone : verrouiller
+        if (quillChkLocked) {
+            quillChkLocked.addEventListener('change', () => {
+                updateSelectedZone((zoneData, zoneEl, zoneId) => {
+                    zoneData.locked = !!quillChkLocked.checked;
+                    console.log('🔧 PHASE 4 - locked:', zoneData.locked);
+                });
+            });
+        }
+        
+        // Typographie : police
+        if (quillInputFont) {
+            quillInputFont.addEventListener('change', () => {
+                updateSelectedZone((zoneData) => {
+                    zoneData.font = quillInputFont.value;
+                    console.log('🔧 PHASE 4 - font:', zoneData.font);
+                });
+            });
+        }
+        
+        // Typographie : taille
+        if (quillInputSize) {
+            quillInputSize.addEventListener('change', () => {
+                updateSelectedZone((zoneData) => {
+                    zoneData.size = parseFloat(quillInputSize.value) || QUILL_DEFAULT_SIZE;
+                    console.log('🔧 PHASE 4 - size:', zoneData.size);
+                });
+            });
+        }
+        
+        // Typographie : gras global
+        if (quillChkBold) {
+            quillChkBold.addEventListener('change', () => {
+                updateSelectedZone((zoneData) => {
+                    zoneData.bold = !!quillChkBold.checked;
+                    console.log('🔧 PHASE 4 - bold:', zoneData.bold);
+                });
+            });
+        }
+        
+        // Typographie : couleur
+        if (quillInputColor) {
+            quillInputColor.addEventListener('input', () => {
+                updateSelectedZone((zoneData) => {
+                    zoneData.color = quillInputColor.value;
+                    if (quillColorValue) quillColorValue.textContent = zoneData.color;
+                    console.log('🔧 PHASE 4 - color:', zoneData.color);
+                });
+            });
+        }
+        
+        // Alignement horizontal
+        if (quillAlignHGroup) {
+            const buttons = quillAlignHGroup.querySelectorAll('.align-btn');
+            buttons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    updateSelectedZone((zoneData) => {
+                        zoneData.align = btn.dataset.value || 'left';
+                        buttons.forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        console.log('🔧 PHASE 4 - align:', zoneData.align);
+                    });
+                });
+            });
+        }
+        
+        // Alignement vertical
+        if (quillAlignVGroup) {
+            const buttons = quillAlignVGroup.querySelectorAll('.align-btn');
+            buttons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    updateSelectedZone((zoneData) => {
+                        zoneData.valign = btn.dataset.value || 'top';
+                        buttons.forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        console.log('🔧 PHASE 4 - valign:', zoneData.valign);
+                    });
+                });
+            });
+        }
+        
+        // Interligne
+        if (quillInputLineHeight) {
+            quillInputLineHeight.addEventListener('change', () => {
+                updateSelectedZone((zoneData) => {
+                    zoneData.lineHeight = parseFloat(quillInputLineHeight.value) || QUILL_DEFAULT_LINE_HEIGHT;
+                    console.log('🔧 PHASE 4 - lineHeight:', zoneData.lineHeight);
+                });
+            });
+        }
+        
+        // Fond : transparent + couleur
+        if (quillChkTransparent) {
+            quillChkTransparent.addEventListener('change', () => {
+                updateSelectedZone((zoneData) => {
+                    zoneData.isTransparent = !!quillChkTransparent.checked;
+                    if (quillInputBgColor) quillInputBgColor.disabled = zoneData.isTransparent;
+                    if (quillBgColorRow) quillBgColorRow.style.display = zoneData.isTransparent ? 'none' : '';
+                    console.log('🔧 PHASE 4 - isTransparent:', zoneData.isTransparent);
+                });
+            });
+        }
+        if (quillInputBgColor) {
+            quillInputBgColor.addEventListener('input', () => {
+                updateSelectedZone((zoneData) => {
+                    zoneData.bgColor = quillInputBgColor.value;
+                    if (quillBgColorValue) quillBgColorValue.textContent = zoneData.bgColor;
+                    console.log('🔧 PHASE 4 - bgColor:', zoneData.bgColor);
+                });
+            });
+        }
+        
+        // Bordure
+        if (quillInputBorderWidth) {
+            quillInputBorderWidth.addEventListener('input', () => {
+                updateSelectedZone((zoneData) => {
+                    zoneData.border = zoneData.border || { width: 0, color: '#000000', style: 'solid' };
+                    zoneData.border.width = parseFloat(quillInputBorderWidth.value) || 0;
+                    updateQuillBorderOptionsVisibility(zoneData.border.width);
+                    console.log('🔧 PHASE 4 - border.width:', zoneData.border.width);
+                });
+            });
+        }
+        if (quillInputBorderColor) {
+            quillInputBorderColor.addEventListener('input', () => {
+                updateSelectedZone((zoneData) => {
+                    zoneData.border = zoneData.border || { width: 0, color: '#000000', style: 'solid' };
+                    zoneData.border.color = quillInputBorderColor.value;
+                    console.log('🔧 PHASE 4 - border.color:', zoneData.border.color);
+                });
+            });
+        }
+        if (quillInputBorderStyle) {
+            quillInputBorderStyle.addEventListener('change', () => {
+                updateSelectedZone((zoneData) => {
+                    zoneData.border = zoneData.border || { width: 0, color: '#000000', style: 'solid' };
+                    zoneData.border.style = quillInputBorderStyle.value;
+                    console.log('🔧 PHASE 4 - border.style:', zoneData.border.style);
+                });
+            });
+        }
+        
+        // Options avancées
+        if (quillChkCopyfit) {
+            quillChkCopyfit.addEventListener('change', () => {
+                updateSelectedZone((zoneData) => {
+                    zoneData.copyfit = !!quillChkCopyfit.checked;
+                    console.log('🔧 PHASE 4 - copyfit:', zoneData.copyfit);
+                });
+            });
+        }
+        if (quillInputEmptyLines) {
+            quillInputEmptyLines.addEventListener('change', () => {
+                updateSelectedZone((zoneData) => {
+                    zoneData.emptyLines = parseInt(quillInputEmptyLines.value, 10) || 0;
+                    console.log('🔧 PHASE 4 - emptyLines:', zoneData.emptyLines);
+                });
+            });
+        }
+        
+        // Géométrie (mm) : X/Y/W/H
+        const bindGeom = (inputEl, property) => {
+            if (!inputEl) return;
+            inputEl.addEventListener('change', () => {
+                const zoneId = getSelectedTextQuillZoneId();
+                if (!zoneId) return;
+                
+                const valueMm = parseFloat(inputEl.value);
+                if (isNaN(valueMm)) return;
+                
+                // Réutiliser le moteur existant (selection unique déjà vraie)
+                applyGeometryChange(property, valueMm);
+                
+                // Re-synchroniser les champs (valeurs contraintes + arrondies)
+                syncQuillToolbarWithZone(zoneId);
+                
+                console.log(`🔧 PHASE 4 - geometry.${property}:`, valueMm);
+            });
+        };
+        
+        bindGeom(quillValX, 'x');
+        bindGeom(quillValY, 'y');
+        bindGeom(quillValW, 'w');
+        bindGeom(quillValH, 'h');
+    }
+
+    /**
+     * Met à jour la visibilité de la toolbar Quill en fonction de la sélection actuelle.
+     * Règle : visible uniquement si une zone sélectionnée (unique) est de type "textQuill".
+     *
+     * Ajoute le log DEBUG demandé.
+     *
+     * @returns {void}
+     */
+    function updateQuillToolbarVisibilityFromSelection() {
+        const selectedZone = (selectedZoneIds.length === 1) ? document.getElementById(selectedZoneIds[0]) : null;
+        const type = selectedZone ? (selectedZone.dataset ? selectedZone.dataset.type : undefined) : null;
+        const shouldShow = selectedZone && type === 'textQuill';
+        
+        console.log(
+            '🔧 DEBUG SELECTION - zone:',
+            selectedZone ? (type || 'inconnu') : 'aucune',
+            '→ toolbar:',
+            shouldShow ? 'SHOW' : 'HIDE'
+        );
+        
+        if (shouldShow) {
+            showQuillToolbar();
+        } else {
+            hideQuillToolbar();
+        }
     }
 
     // Charger les données d'une zone dans le formulaire
@@ -3900,6 +5054,25 @@ document.addEventListener('DOMContentLoaded', () => {
             inputBgColor.disabled = chkTransparent.checked;
             
             // Verrouillage (contrôle commun)
+            if (chkLock) chkLock.checked = data.locked || false;
+        } else if (zoneType === 'textQuill') {
+            // Zone texte Quill : édition directement dans la zone (pas via textarea)
+            if (textPropertiesSection) textPropertiesSection.style.display = 'block';
+            if (imagePropertiesSection) imagePropertiesSection.style.display = 'none';
+            if (barcodePropertiesSection) barcodePropertiesSection.style.display = 'none';
+            
+            // Désactiver les contrôles texte pour éviter un conflit avec l'éditeur Quill
+            setTextControlsEnabled(false);
+            inputContent.value = 'Zone Quill (éditez directement dans la zone).';
+            inputContent.placeholder = 'Zone Quill (édition dans la zone)';
+            
+            // Afficher des valeurs par défaut (informatives)
+            inputFont.value = data.font || QUILL_DEFAULT_FONT;
+            inputSize.value = data.size || QUILL_DEFAULT_SIZE;
+            inputColor.value = data.color || QUILL_DEFAULT_COLOR;
+            inputLineHeight.value = data.lineHeight || QUILL_DEFAULT_LINE_HEIGHT;
+            
+            // Fond/bordure/verrouillage : laisser visibles (mais désactivés via setTextControlsEnabled)
             if (chkLock) chkLock.checked = data.locked || false;
         } else {
             // Zone texte
@@ -4652,6 +5825,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (activeStyles.fontWeight === 'bold') {
                     styles.push('font-weight: bold');
                 }
+                if (activeStyles.textDecoration === 'underline') {
+                    styles.push('text-decoration: underline');
+                }
                 if (activeStyles.color) {
                     styles.push(`color: ${activeStyles.color}`);
                 }
@@ -4842,8 +6018,11 @@ document.addEventListener('DOMContentLoaded', () => {
             zoneEl.style.border = 'none';
             zoneEl.classList.remove('has-border');
         } else {
-            // Appliquer la bordure avec le style CSS natif (solid ou dashed)
-            const cssStyle = (style === 'dashed') ? 'dashed' : 'solid';
+            // Appliquer la bordure avec le style CSS natif (solid/dashed/dotted)
+            const cssStyle =
+                (style === 'dashed') ? 'dashed' :
+                (style === 'dotted') ? 'dotted' :
+                'solid';
             zoneEl.style.border = `${width}px ${cssStyle} ${color}`;
             zoneEl.classList.add('has-border');
         }
@@ -4868,13 +6047,21 @@ document.addEventListener('DOMContentLoaded', () => {
     function applyCopyfit(zoneEl, maxSizePt) {
         if (!zoneEl) return;
         const contentEl = zoneEl.querySelector('.zone-content');
+        if (!contentEl) return;
         // Si on passe un objet data au lieu d'un nombre, on extrait la taille
         const targetSize = typeof maxSizePt === 'object' ? parseInt(maxSizePt.size) : parseInt(maxSizePt); 
         
         if (isNaN(targetSize)) return;
 
         // Sauvegarder l'alignement vertical actuel pour le restaurer après
-        const originalJustifyContent = contentEl.style.justifyContent || 'flex-start';
+        const originalInlineJustifyContent = contentEl.style.justifyContent;
+        let originalComputedJustifyContent = 'flex-start';
+        try {
+            // IMPORTANT : le valign peut venir d'une classe CSS (valign-*) → on lit le computed style
+            originalComputedJustifyContent = (getComputedStyle(contentEl).justifyContent || 'flex-start');
+        } catch (e) {
+            originalComputedJustifyContent = 'flex-start';
+        }
         
         // Temporairement mettre l'alignement en haut pour des calculs précis
         // (évite les problèmes avec flex-end qui peut fausser scrollHeight)
@@ -4901,7 +6088,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Restaurer l'alignement vertical original
-        contentEl.style.justifyContent = originalJustifyContent;
+        // - Si l'alignement était en inline → on restaure l'inline
+        // - Sinon → on nettoie l'inline pour laisser les classes CSS s'appliquer
+        if (originalInlineJustifyContent) {
+            contentEl.style.justifyContent = originalInlineJustifyContent;
+        } else {
+            contentEl.style.justifyContent = '';
+            // Sécurité : si aucune classe CSS n'est présente, on réapplique le computed initial
+            // (évite un retour visuel en haut si la classe a été perdue ailleurs)
+            if (!contentEl.classList.contains('valign-top') &&
+                !contentEl.classList.contains('valign-middle') &&
+                !contentEl.classList.contains('valign-bottom')) {
+                contentEl.style.justifyContent = originalComputedJustifyContent;
+            }
+        }
     }
 
     // Helper pour l'alignement vertical flexbox (Axe principal en column)
@@ -5624,6 +6824,270 @@ document.addEventListener('DOMContentLoaded', () => {
         
         updateHandlesVisibility();
         saveToLocalStorage();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // PHASE 5 : MINI-TOOLBAR CONTEXTUELLE (FORMATAGE PARTIEL QUILL)
+    // ═══════════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Retourne l'ID de la zone `textQuill` sélectionnée (si sélection unique).
+     * @returns {string|null}
+     */
+    function getSelectedTextQuillZoneIdForMiniToolbar() {
+        if (selectedZoneIds.length !== 1) return null;
+        const zoneId = selectedZoneIds[0];
+        const zonesData = getCurrentPageZones();
+        if (!zonesData[zoneId] || zonesData[zoneId].type !== 'textQuill') return null;
+        return zoneId;
+    }
+
+    /**
+     * Retourne l'instance Quill active (uniquement si une zone textQuill est sélectionnée).
+     * @returns {{zoneId: string, quill: any}|null}
+     */
+    function getActiveTextQuillForMiniToolbar() {
+        const zoneId = getSelectedTextQuillZoneIdForMiniToolbar();
+        if (!zoneId) return null;
+        const quill = quillInstances.get(zoneId);
+        if (!quill) return null;
+        return { zoneId, quill };
+    }
+
+    /**
+     * Met à jour l'état visuel des boutons (gras / souligné) selon la sélection courante Quill.
+     * @returns {void}
+     */
+    function updateMiniToolbarButtonsState() {
+        const active = getActiveTextQuillForMiniToolbar();
+        if (!active || !btnPartialBold || !btnPartialUnderline) return;
+
+        const range = active.quill.getSelection();
+        if (!range) return;
+
+        const format = active.quill.getFormat(range);
+        btnPartialBold.classList.toggle('active', !!format.bold);
+        btnPartialUnderline.classList.toggle('active', !!format.underline);
+    }
+
+    /**
+     * Affiche la mini-toolbar au-dessus de la sélection de texte.
+     * @returns {void}
+     */
+    function showMiniToolbar() {
+        if (!miniToolbar) return;
+        const active = getActiveTextQuillForMiniToolbar();
+        if (!active) return;
+
+        const range = active.quill.getSelection();
+        if (!range || range.length === 0) return;
+
+        console.log('🔧 PHASE 5 - showMiniToolbar()');
+
+        miniToolbar.style.display = 'flex';
+        updateMiniToolbarButtonsState();
+        updateMiniToolbarPosition();
+    }
+
+    /**
+     * Masque la mini-toolbar.
+     * @returns {void}
+     */
+    function hideMiniToolbar() {
+        if (!miniToolbar) return;
+        if (miniToolbar.style.display === 'none') return;
+
+        console.log('🔧 PHASE 5 - hideMiniToolbar()');
+
+        miniToolbar.style.display = 'none';
+        miniToolbar.classList.remove('below');
+    }
+
+    /**
+     * Met à jour la position de la mini-toolbar en fonction de la sélection Quill.
+     * Utilise `quill.getBounds()` pour se placer au-dessus de la sélection.
+     * @returns {void}
+     */
+    function updateMiniToolbarPosition() {
+        if (!miniToolbar || miniToolbar.style.display === 'none') return;
+
+        const active = getActiveTextQuillForMiniToolbar();
+        if (!active) return;
+
+        const range = active.quill.getSelection();
+        if (!range || range.length === 0) return;
+
+        // Bounds de la sélection (coords relatives au root Quill)
+        const bounds = active.quill.getBounds(range.index, range.length);
+        const rootRect = active.quill.root.getBoundingClientRect();
+        const toolbarRect = miniToolbar.getBoundingClientRect();
+
+        const offset = 10;
+
+        const selectionCenterX = rootRect.left + bounds.left + (bounds.width / 2);
+        const selectionTopY = rootRect.top + bounds.top;
+        const selectionBottomY = rootRect.top + bounds.top + bounds.height;
+
+        // Position au-dessus de la sélection
+        let x = selectionCenterX - (toolbarRect.width / 2);
+        let y = selectionTopY - toolbarRect.height - offset;
+
+        // Clamp horizontal
+        x = Math.max(10, Math.min(x, window.innerWidth - toolbarRect.width - 10));
+
+        // Si pas de place au-dessus, basculer en dessous
+        if (y < 10) {
+            y = selectionBottomY + offset;
+            miniToolbar.classList.add('below');
+        } else {
+            miniToolbar.classList.remove('below');
+        }
+
+        miniToolbar.style.left = `${x}px`;
+        miniToolbar.style.top = `${y}px`;
+    }
+
+    /**
+     * Applique/retire le gras sur la sélection Quill (formatage partiel).
+     * @returns {void}
+     */
+    function applyPartialBold() {
+        console.log('🔧 PHASE 5 - applyPartialBold');
+
+        const active = getActiveTextQuillForMiniToolbar();
+        if (!active) return;
+
+        const range = active.quill.getSelection();
+        if (!range || range.length === 0) {
+            alert('Veuillez sélectionner du texte à formater');
+            return;
+        }
+
+        const format = active.quill.getFormat(range);
+        active.quill.format('bold', !format.bold, 'user');
+        updateMiniToolbarButtonsState();
+        updateMiniToolbarPosition();
+    }
+
+    /**
+     * Applique/retire le soulignement sur la sélection Quill (formatage partiel).
+     * @returns {void}
+     */
+    function applyPartialUnderline() {
+        console.log('🔧 PHASE 5 - applyPartialUnderline');
+
+        const active = getActiveTextQuillForMiniToolbar();
+        if (!active) return;
+
+        const range = active.quill.getSelection();
+        if (!range || range.length === 0) {
+            alert('Veuillez sélectionner du texte à formater');
+            return;
+        }
+
+        const format = active.quill.getFormat(range);
+        active.quill.format('underline', !format.underline, 'user');
+        updateMiniToolbarButtonsState();
+        updateMiniToolbarPosition();
+    }
+
+    /**
+     * Applique une couleur sur la sélection Quill (formatage partiel).
+     * @param {string} color - Couleur hexadécimale (ex: "#ff0000")
+     * @returns {void}
+     */
+    function applyPartialColor(color) {
+        console.log('🔧 PHASE 5 - applyPartialColor:', color);
+
+        const active = getActiveTextQuillForMiniToolbar();
+        if (!active) return;
+
+        const range = active.quill.getSelection();
+        if (!range || range.length === 0) {
+            alert('Veuillez sélectionner du texte à formater');
+            return;
+        }
+
+        active.quill.format('color', color, 'user');
+        updateMiniToolbarPosition();
+    }
+
+    /**
+     * Handler central pour les changements de sélection Quill.
+     * Affiche/masque la mini-toolbar selon la présence d'une sélection non vide.
+     *
+     * @param {string} zoneId - ID de la zone textQuill
+     * @param {{index: number, length: number}|null} range - Sélection courante (null si blur)
+     * @returns {void}
+     */
+    function handleTextQuillSelectionChange(zoneId, range) {
+        // Ignorer si ce n'est pas la zone sélectionnée (ou si multi-sélection)
+        const selectedId = getSelectedTextQuillZoneIdForMiniToolbar();
+        if (!selectedId || selectedId !== zoneId) {
+            hideMiniToolbar();
+            return;
+        }
+
+        if (!range || range.length === 0) {
+            hideMiniToolbar();
+            return;
+        }
+
+        showMiniToolbar();
+    }
+
+    /**
+     * Initialise les événements de la mini-toolbar (boutons + fermeture au clic extérieur).
+     * @returns {void}
+     */
+    function initMiniToolbarEvents() {
+        if (!miniToolbar) return;
+
+        // Empêcher la propagation pour éviter la désélection / perte de focus
+        miniToolbar.addEventListener('mousedown', (e) => e.stopPropagation());
+        miniToolbar.addEventListener('click', (e) => e.stopPropagation());
+
+        if (btnPartialBold) {
+            btnPartialBold.addEventListener('click', (e) => {
+                e.stopPropagation();
+                applyPartialBold();
+                getActiveTextQuillForMiniToolbar()?.quill?.focus();
+            });
+        }
+
+        if (btnPartialUnderline) {
+            btnPartialUnderline.addEventListener('click', (e) => {
+                e.stopPropagation();
+                applyPartialUnderline();
+                getActiveTextQuillForMiniToolbar()?.quill?.focus();
+            });
+        }
+
+        if (btnPartialColor && partialColorPicker) {
+            btnPartialColor.addEventListener('click', (e) => {
+                e.stopPropagation();
+                partialColorPicker.click();
+            });
+
+            partialColorPicker.addEventListener('input', (e) => {
+                applyPartialColor(e.target.value);
+                getActiveTextQuillForMiniToolbar()?.quill?.focus();
+            });
+        }
+
+        // Repositionner au scroll/resize (si visible)
+        window.addEventListener('resize', () => updateMiniToolbarPosition());
+        if (workspace) {
+            workspace.addEventListener('scroll', () => updateMiniToolbarPosition(), { passive: true });
+        }
+
+        // Fermer si clic ailleurs (fallback, Quill émet déjà selection-change=null)
+        document.addEventListener('mousedown', (e) => {
+            if (!miniToolbar || miniToolbar.style.display === 'none') return;
+            if (e.target.closest && e.target.closest('#mini-toolbar')) return;
+            if (e.target.closest && (e.target.closest('.ql-editor') || e.target.closest('.quill-editor'))) return;
+            hideMiniToolbar();
+        });
     }
 
     // ─────────────────────────────── FIN SECTION 15 ───────────────────────────────
@@ -6624,6 +8088,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Désélectionner si clic en dehors (sur le fond ou le workspace)
     document.addEventListener('mousedown', (e) => {
+        // Ne pas désélectionner si le clic vient de la toolbar Quill
+        if (e.target.closest('#quill-toolbar') || e.target.closest('.quill-toolbar')) {
+            console.log('🔧 DEBUG DESELECTION - toolbar click ignoré');
+            return;
+        }
+        
         // Si on clique sur une zone, une poignée, le panneau de contrôle ou la modale, on ne fait rien
         if (e.target.closest('.zone') || 
             e.target.closest('.handle') || 
@@ -6911,6 +8381,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Masquer la section Page
         updateZonePageUI();
+        
+        // Toolbar Quill (Phase 3) : toujours masquer après désélection
+        updateQuillToolbarVisibilityFromSelection();
     }
 
     btnDelete.addEventListener('click', () => {
@@ -6949,6 +8422,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Si la modale de réinitialisation est ouverte, ne pas gérer les autres touches
         if (!resetModal.classList.contains('hidden')) {
+            return;
+        }
+
+        // IMPORTANT : ne pas intercepter les raccourcis quand l'utilisateur édite dans Quill / contenteditable
+        if (isQuillOrContentEditableActiveElement()) {
             return;
         }
 
@@ -7103,6 +8581,98 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // ───────────────────────── TOOLBAR QUILL (PHASE 3) : LISTENERS ─────────────────────────
+    if (quillToolbar) {
+        console.log('🔧 PHASE 3 - Toolbar Quill:');
+        console.log('  ✓ Toolbar element:', quillToolbar ? 'OK' : 'MANQUANT');
+        console.log('  ✓ Sections trouvées:', document.querySelectorAll('#quill-toolbar .toolbar-section').length);
+        
+        // Empêcher la propagation pour éviter la désélection au clic sur la toolbar
+        quillToolbar.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+        });
+        quillToolbar.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    }
+    
+    // Bouton fermer (X)
+    if (quillToolbarCloseBtn) {
+        quillToolbarCloseBtn.addEventListener('click', () => {
+            hideQuillToolbar();
+        });
+    }
+    
+    // Sections collapsibles
+    if (quillToolbar) {
+        const sectionHeaders = quillToolbar.querySelectorAll('.toolbar-section .section-header');
+        sectionHeaders.forEach(header => {
+            header.addEventListener('click', () => {
+                toggleToolbarSection(header);
+            });
+        });
+    }
+    
+    // Écouteurs des contrôles (Phase 4)
+    initQuillToolbarEvents();
+
+    // Phase 5 : mini-toolbar contextuelle (formatage partiel)
+    initMiniToolbarEvents();
+    
+    // Drag de la toolbar (sur header)
+    if (quillToolbar && quillToolbarHeader) {
+        quillToolbarHeader.addEventListener('mousedown', (e) => {
+            // Ne pas drag si on clique sur le bouton fermer
+            if (e.target.closest && e.target.closest('#quill-toolbar-close')) return;
+            
+            isQuillToolbarDragging = true;
+            const rect = quillToolbar.getBoundingClientRect();
+            quillToolbarDragOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            quillToolbar.style.transition = 'none';
+            e.preventDefault();
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (!isQuillToolbarDragging || !quillToolbar) return;
+            
+            const maxX = window.innerWidth - quillToolbar.offsetWidth;
+            const maxY = window.innerHeight - quillToolbar.offsetHeight;
+            
+            const x = Math.max(0, Math.min(e.clientX - quillToolbarDragOffset.x, maxX));
+            const y = Math.max(0, Math.min(e.clientY - quillToolbarDragOffset.y, maxY));
+            
+            quillToolbar.style.left = `${x}px`;
+            quillToolbar.style.top = `${y}px`;
+            quillToolbar.style.right = 'auto';
+            quillToolbar.style.bottom = 'auto';
+        });
+        
+        document.addEventListener('mouseup', () => {
+            if (!isQuillToolbarDragging || !quillToolbar) return;
+            
+            const rect = quillToolbar.getBoundingClientRect();
+            quillToolbarLastPos = { x: rect.left, y: rect.top };
+            quillToolbar.style.transition = '';
+            isQuillToolbarDragging = false;
+        });
+    }
+
+    console.log('═══════════════════════════════════════════════════════════════');
+    console.log('📋 PHASE 4 - Toolbar Quill connectée aux propriétés');
+    console.log('═══════════════════════════════════════════════════════════════');
+
+    console.log('═══════════════════════════════════════════════════════════════');
+    console.log('📋 PHASE 5 - Mini-toolbar contextuelle opérationnelle');
+    console.log('═══════════════════════════════════════════════════════════════');
+
+    console.log('═══════════════════════════════════════════════════════════════');
+    console.log('📋 PHASE 6 - Champs de fusion pour textQuill opérationnels');
+    console.log('═══════════════════════════════════════════════════════════════');
+
+    console.log('═══════════════════════════════════════════════════════════════');
+    console.log('📋 PHASE 7 - Export/Import JSON textQuill opérationnel');
+    console.log('═══════════════════════════════════════════════════════════════');
+
     // ─────────────────────────────── FIN SECTION 16 ───────────────────────────────
 
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -7137,6 +8707,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Stockage des positions initiales de toutes les zones sélectionnées pour le déplacement groupé
     let startPositions = []; // Tableau de {id, left, top, width, height}
     let hasActuallyMoved = false; // Flag pour détecter si un vrai mouvement a eu lieu
+    
+    /** @type {string|null} ID de zone textQuill actuellement en drag (logs PHASE 2) */
+    let activeTextQuillDragZoneId = null;
+    
+    /** @type {string|null} ID de zone textQuill actuellement en resize (logs PHASE 2) */
+    let activeTextQuillResizeZoneId = null;
 
     document.addEventListener('mousedown', (e) => {
         // Si on est en mode pan (Espace pressé ou clic molette), ne pas permettre le drag des zones
@@ -7166,9 +8742,12 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (!clickedZone) return; // Aucune zone sélectionnée cliquée ou toutes verrouillées
             
+            const clickedZoneData = zonesData[clickedZoneId];
+            
             // Gestion du redimensionnement (handle)
             // Ne permettre le redimensionnement que si une seule zone est sélectionnée
-            if (e.target.classList.contains('handle') && clickedZone.contains(e.target)) {
+            const isResizeHandle = e.target.classList.contains('handle') || e.target.classList.contains('resize-handle');
+            if (isResizeHandle && clickedZone.contains(e.target)) {
                 if (selectedZoneIds.length > 1) {
                     // Sélection multiple : empêcher le redimensionnement
                     e.preventDefault();
@@ -7183,13 +8762,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 startW = clickedZone.offsetWidth; startH = clickedZone.offsetHeight;
                 startLeft = clickedZone.offsetLeft; startTop = clickedZone.offsetTop;
                 e.preventDefault();
+                
+                // Logs PHASE 2 (textQuill)
+                if (clickedZoneData && clickedZoneData.type === 'textQuill') {
+                    activeTextQuillResizeZoneId = clickedZoneId;
+                    console.log('🔧 PHASE 2 - Resize START zone textQuill:', clickedZoneId);
+                }
             } else if (clickedZone.contains(e.target) && !e.target.classList.contains('handle')) {
+                // IMPORTANT : ne pas démarrer un drag si on clique dans l'éditeur Quill (permettre saisie/sélection de texte)
+                if (e.target.closest('.ql-editor') || e.target.closest('.quill-editor')) {
+                    return;
+                }
+                
+                // textQuill : drag UNIQUEMENT via le bandeau .zone-drag-handle
+                if (clickedZoneData && clickedZoneData.type === 'textQuill') {
+                    if (!e.target.closest('.zone-drag-handle')) {
+                        return;
+                    }
+                }
                 // Déplacement : sauvegarder les positions de TOUTES les zones sélectionnées
                 isDragging = true;
                 hasActuallyMoved = false;
                 
                 startX = e.clientX; startY = e.clientY;
                 startLeft = clickedZone.offsetLeft; startTop = clickedZone.offsetTop;
+                
+                // Logs PHASE 2 (textQuill)
+                if (clickedZoneData && clickedZoneData.type === 'textQuill') {
+                    activeTextQuillDragZoneId = clickedZoneId;
+                    clickedZone.classList.add('dragging');
+                    document.body.style.cursor = 'grabbing';
+                    console.log('🔧 PHASE 2 - Drag START zone textQuill:', clickedZoneId);
+                }
                 
                 // Sauvegarder les positions initiales de toutes les zones sélectionnées
                 startPositions = [];
@@ -7262,6 +8866,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const zone = document.getElementById(firstSelectedId);
                 if (zone) {
                     updateGeomDisplay(zone);
+                    
+                    // Phase 4 : mettre à jour la géométrie dans la toolbar Quill pendant le drag
+                    const zonesData = getCurrentPageZones();
+                    if (zonesData[firstSelectedId] && zonesData[firstSelectedId].type === 'textQuill') {
+                        updateQuillToolbarGeometryFields(firstSelectedId);
+                    }
                 }
             }
         } else if (isResizing) {
@@ -7322,6 +8932,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 newW = Math.min(newW, maxWidth);
                 newH = Math.min(newH, maxHeight);
                 
+                // === CONTRAINTES MINIMALES ZONE textQuill (mm) ===
+                if (zonesData[firstSelectedId] && zonesData[firstSelectedId].type === 'textQuill') {
+                    const minW = mmToPx(20);
+                    const minH = mmToPx(10);
+                    newW = Math.max(newW, minW);
+                    newH = Math.max(newH, minH);
+                    
+                    // Adapter le curseur selon la poignée
+                    if (currentHandle === 'se') document.body.style.cursor = 'se-resize';
+                    else if (currentHandle === 'e') document.body.style.cursor = 'e-resize';
+                    else if (currentHandle === 's') document.body.style.cursor = 's-resize';
+                }
+                
                 // === CONTRAINTES ZONES IMAGE ===
                 if (zoneDataResize && zoneDataResize.type === 'image' && zoneDataResize.source && 
                     (zoneDataResize.source.imageBase64 || zoneDataResize.source.valeur)) {
@@ -7356,6 +8979,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             updateGeomDisplay(zone);
             
+            // Phase 4 : mettre à jour la géométrie dans la toolbar Quill pendant le resize
+            if (zonesData[firstSelectedId] && zonesData[firstSelectedId].type === 'textQuill') {
+                updateQuillToolbarGeometryFields(firstSelectedId);
+            }
+            
             // Mettre à jour le DPI si c'est une zone image
             if (zonesData[firstSelectedId] && zonesData[firstSelectedId].type === 'image') {
                 updateDpiIndicator(firstSelectedId);
@@ -7378,6 +9006,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     zoneData.yMm = pxToMm(parseFloat(zoneEl.style.top) || zoneEl.offsetTop);
                     zoneData.wMm = pxToMm(zoneEl.offsetWidth);
                     zoneData.hMm = pxToMm(zoneEl.offsetHeight);
+                    
+                    // textQuill : stocker aussi les valeurs pixels (utiles pour recréation DOM cohérente)
+                    if (zoneData.type === 'textQuill') {
+                        zoneData.x = parseFloat(zoneEl.style.left) || zoneEl.offsetLeft;
+                        zoneData.y = parseFloat(zoneEl.style.top) || zoneEl.offsetTop;
+                        zoneData.w = zoneEl.offsetWidth;
+                        zoneData.h = zoneEl.offsetHeight;
+                    }
                 }
             });
             
@@ -7408,10 +9044,121 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // Logs PHASE 2 - Drag END (textQuill)
+        if (activeTextQuillDragZoneId) {
+            const zonesData = getCurrentPageZones();
+            const zoneEl = document.getElementById(activeTextQuillDragZoneId);
+            const zoneData = zonesData[activeTextQuillDragZoneId];
+            if (zoneEl && zoneData && zoneData.type === 'textQuill') {
+                const x = parseFloat(zoneEl.style.left) || zoneEl.offsetLeft;
+                const y = parseFloat(zoneEl.style.top) || zoneEl.offsetTop;
+                console.log('🔧 PHASE 2 - Drag END zone textQuill:', activeTextQuillDragZoneId, 'nouvelle position:', { x, y });
+                zoneEl.classList.remove('dragging');
+            }
+        }
+        
+        // Logs PHASE 2 - Resize END (textQuill)
+        if (activeTextQuillResizeZoneId) {
+            const zonesData = getCurrentPageZones();
+            const zoneEl = document.getElementById(activeTextQuillResizeZoneId);
+            const zoneData = zonesData[activeTextQuillResizeZoneId];
+            if (zoneEl && zoneData && zoneData.type === 'textQuill') {
+                const width = zoneEl.offsetWidth;
+                const height = zoneEl.offsetHeight;
+                console.log('🔧 PHASE 2 - Resize END zone textQuill:', activeTextQuillResizeZoneId, 'nouvelles dimensions:', { width, height });
+
+                // DEBUG : état avant recalcul Quill / réapplication styles
+                try {
+                    const contentEl = zoneEl.querySelector('.zone-content');
+                    const quillInstanceBefore = quillInstances.get(activeTextQuillResizeZoneId);
+                    const cs = contentEl ? getComputedStyle(contentEl) : null;
+                    console.log('🔧 DEBUG VALIGN - Resize END BEFORE:', activeTextQuillResizeZoneId, {
+                        dataValign: zoneData.valign,
+                        contentFound: !!contentEl,
+                        contentClasses: contentEl ? Array.from(contentEl.classList) : null,
+                        contentInlineJustifyContent: contentEl ? (contentEl.style.justifyContent || '(empty)') : null,
+                        contentComputedJustifyContent: cs ? cs.justifyContent : null,
+                        contentComputedDisplay: cs ? cs.display : null,
+                        zoneOffsetH: zoneEl.offsetHeight,
+                        contentClientH: contentEl ? contentEl.clientHeight : null,
+                        contentScrollH: contentEl ? contentEl.scrollHeight : null,
+                        quillContainerInlineH: (quillInstanceBefore && quillInstanceBefore.container) ? (quillInstanceBefore.container.style.height || '(empty)') : null,
+                        quillRootInlineH: (quillInstanceBefore && quillInstanceBefore.root) ? (quillInstanceBefore.root.style.height || '(empty)') : null
+                    });
+                } catch (e) {}
+                
+                // Forcer Quill à se recalculer (sécurité)
+                const quillInstance = quillInstances.get(activeTextQuillResizeZoneId);
+                if (quillInstance) {
+                    try {
+                        // IMPORTANT : ne pas forcer 100% en hauteur → cela supprime l'espace libre,
+                        // rendant l'alignement vertical (valign) visuellement inopérant.
+                        // On laisse Quill en hauteur auto (comme le POC) pour que .zone-content puisse centrer.
+                        if (quillInstance.container) quillInstance.container.style.height = 'auto';
+                        if (quillInstance.root) quillInstance.root.style.height = 'auto';
+                        quillInstance.update('silent');
+                    } catch (e) {}
+                }
+
+                // DEBUG : état juste après update Quill
+                try {
+                    const contentEl = zoneEl.querySelector('.zone-content');
+                    const cs = contentEl ? getComputedStyle(contentEl) : null;
+                    console.log('🔧 DEBUG VALIGN - Resize END AFTER quill.update:', activeTextQuillResizeZoneId, {
+                        dataValign: zoneData.valign,
+                        contentFound: !!contentEl,
+                        contentClasses: contentEl ? Array.from(contentEl.classList) : null,
+                        contentInlineJustifyContent: contentEl ? (contentEl.style.justifyContent || '(empty)') : null,
+                        contentComputedJustifyContent: cs ? cs.justifyContent : null,
+                        contentComputedDisplay: cs ? cs.display : null,
+                        zoneOffsetH: zoneEl.offsetHeight,
+                        contentClientH: contentEl ? contentEl.clientHeight : null,
+                        contentScrollH: contentEl ? contentEl.scrollHeight : null,
+                        quillContainerInlineH: (quillInstance && quillInstance.container) ? (quillInstance.container.style.height || '(empty)') : null,
+                        quillRootInlineH: (quillInstance && quillInstance.root) ? (quillInstance.root.style.height || '(empty)') : null
+                    });
+                } catch (e) {}
+                
+                // Phase 4 : réappliquer les styles après resize (certains recalculs Quill peuvent les écraser)
+                applyQuillZoneStyles(activeTextQuillResizeZoneId);
+
+                // DEBUG : vérifier si un écrasement se produit après coup (async)
+                try {
+                    const logDeferred = (label) => {
+                        const contentEl = zoneEl.querySelector('.zone-content');
+                        const cs = contentEl ? getComputedStyle(contentEl) : null;
+                        const qi = quillInstances.get(activeTextQuillResizeZoneId);
+                        console.log(`🔧 DEBUG VALIGN - Resize END ${label}:`, activeTextQuillResizeZoneId, {
+                            dataValign: zoneData.valign,
+                            contentFound: !!contentEl,
+                            contentClasses: contentEl ? Array.from(contentEl.classList) : null,
+                            contentInlineJustifyContent: contentEl ? (contentEl.style.justifyContent || '(empty)') : null,
+                            contentComputedJustifyContent: cs ? cs.justifyContent : null,
+                            contentComputedDisplay: cs ? cs.display : null,
+                            zoneOffsetH: zoneEl.offsetHeight,
+                            contentClientH: contentEl ? contentEl.clientHeight : null,
+                            contentScrollH: contentEl ? contentEl.scrollHeight : null,
+                            quillContainerInlineH: (qi && qi.container) ? (qi.container.style.height || '(empty)') : null,
+                            quillRootInlineH: (qi && qi.root) ? (qi.root.style.height || '(empty)') : null
+                        });
+                    };
+
+                    if (typeof requestAnimationFrame === 'function') {
+                        requestAnimationFrame(() => logDeferred('rAF'));
+                    }
+                    setTimeout(() => logDeferred('T+0'), 0);
+                    setTimeout(() => logDeferred('T+50ms'), 50);
+                } catch (e) {}
+            }
+        }
+
         isDragging = false;
         isResizing = false;
         hasActuallyMoved = false;
         startPositions = [];
+        activeTextQuillDragZoneId = null;
+        activeTextQuillResizeZoneId = null;
+        document.body.style.cursor = '';
 
         // Réinitialiser le debounce des messages de contrainte
         lastConstraintMessage = '';
@@ -7520,8 +9267,9 @@ document.addEventListener('DOMContentLoaded', () => {
         let wMm = zoneData.wMm !== undefined ? zoneData.wMm : pxToMm(zoneEl.offsetWidth);
         let hMm = zoneData.hMm !== undefined ? zoneData.hMm : pxToMm(zoneEl.offsetHeight);
         
-        // Taille minimum (2mm)
-        const minSizeMm = 2;
+        // Taille minimum (2mm, sauf textQuill : 20mm x 10mm)
+        const minWidthMm = (zoneData.type === 'textQuill') ? 20 : 2;
+        const minHeightMm = (zoneData.type === 'textQuill') ? 10 : 2;
         
         // Vérifier si c'est un code 2D (doit rester carré)
         let is2D = false;
@@ -7559,7 +9307,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
             case 'w':
                 // NE PAS modifier X, juste limiter la largeur au max possible
-                wMm = Math.max(minSizeMm, valueMm);
+                wMm = Math.max(minWidthMm, valueMm);
 
                 // Largeur max = bord droit (avec marge) - position X actuelle
                 const maxWidth = round1(limits.maxX - xMm);
@@ -7577,7 +9325,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
             case 'h':
                 // NE PAS modifier Y, juste limiter la hauteur au max possible
-                hMm = Math.max(minSizeMm, valueMm);
+                hMm = Math.max(minHeightMm, valueMm);
                 
                 // Hauteur max = bord bas (avec marge) - position Y actuelle
                 const maxHeight = round1(limits.maxY - yMm);
@@ -7628,6 +9376,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Mettre à jour l'affichage des champs avec les valeurs mm (précises)
         updateGeomDisplay(zoneData);
+        
+        // Phase 4 : mettre à jour aussi les champs de géométrie de la toolbar Quill
+        if (zoneData.type === 'textQuill') {
+            updateQuillToolbarGeometryFields(zoneId);
+        }
         
         // Actions spécifiques selon le type de zone
         if (zoneData.type === 'qr') {
@@ -7689,6 +9442,54 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 6. SAUVEGARDE / CHARGEMENT LOCAL ---
 
     /**
+     * Capture le contenu des zones `textQuill` (Quill) dans `zonesData[id].content`
+     * afin qu'il soit persisté (localStorage / historique).
+     *
+     * Stockage : HTML (`quill.root.innerHTML`).
+     *
+     * @param {ZonesCollection} zonesData - Collection des zones de la page courante
+     * @returns {void}
+     */
+    function persistTextQuillContentForSave(zonesData) {
+        if (!zonesData) return;
+
+        console.log('🔧 DEBUG - quillInstances.keys():', Array.from(quillInstances.keys()));
+        
+        for (const [zoneId, data] of Object.entries(zonesData)) {
+            if (!data || data.type !== 'textQuill') continue;
+            
+            const quill = quillInstances.get(zoneId);
+            if (!quill || !quill.root) {
+                console.log('🔧 DEBUG - Quill instance introuvable pour:', zoneId);
+                continue;
+            }
+            
+            // Persist Delta (format natif Quill)
+            // IMPORTANT : éviter d'écraser un Delta existant non vide par un Delta "vide"
+            // pendant la fenêtre où Quill vient d'être créé mais n'a pas encore restauré son contenu
+            // (ex: restauration via setTimeout(0) dans createZoneDOM après un import).
+            const currentDelta = quill.getContents();
+            const currentOps = currentDelta && Array.isArray(currentDelta.ops) ? currentDelta.ops : [];
+            const existingOps = data.quillDelta && Array.isArray(data.quillDelta.ops) ? data.quillDelta.ops : [];
+            
+            const isCurrentEmpty = (
+                currentOps.length === 0 ||
+                (currentOps.length === 1 && typeof currentOps[0].insert === 'string' && currentOps[0].insert === '\n')
+            );
+            const isExistingNonEmpty = existingOps.some(op => typeof op.insert === 'string' && op.insert.replace(/\n/g, '').length > 0);
+            
+            if (isCurrentEmpty && isExistingNonEmpty) {
+                // Ne pas écraser : on garde le Delta existant
+                console.log('🔧 BUGFIX - Quill Delta non écrasé (Delta courant vide, Delta existant non vide):', zoneId);
+                continue;
+            }
+            
+            data.quillDelta = currentDelta;
+            console.log('🔧 BUGFIX - Contenu Quill sauvegardé (Delta):', zoneId);
+        }
+    }
+
+    /**
      * Sauvegarde l'état complet du document dans le localStorage.
      * Synchronise d'abord les positions DOM vers documentState, puis persiste.
      * 
@@ -7720,6 +9521,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 data.h = el.offsetHeight;
             }
         }
+
+        // BUGFIX : persister le contenu Quill dans zonesData avant sérialisation
+        persistTextQuillContentForSave(zonesData);
         
         // Synchroniser le compteur global
         documentState.zoneCounter = zoneCounter;
@@ -7758,6 +9562,457 @@ document.addEventListener('DOMContentLoaded', () => {
      *   - loadFontsFromJson() (Section 5)
      */
     // ───────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Convertit un Delta Quill en contenu texte + formatage partiel (format JSON WebDev).
+     *
+     * Règles :
+     * - On ne traite que les inserts de type string (les embeds sont ignorés).
+     * - Les styles supportés pour le formatage partiel WebDev : gras, souligné, couleur.
+     * - Les index (debut/fin) sont calculés sur la chaîne `contenu` générée.
+     *
+     * @param {Object|null|undefined} quillDelta - Delta Quill (ex: { ops: [...] })
+     * @returns {{contenu: string, formatage: FormatagePartielJsonWebDev[]}} Résultat de conversion
+     */
+    function quillDeltaToTextAndFormatage(quillDelta) {
+        const ops = quillDelta && Array.isArray(quillDelta.ops) ? quillDelta.ops : [];
+        let contenu = '';
+        /** @type {FormatagePartielJsonWebDev[]} */
+        const formatage = [];
+
+        /**
+         * Ajoute une annotation de formatage si nécessaire (fusionne si contiguë et styles identiques).
+         * @param {number} debut - Index de début
+         * @param {number} fin - Index de fin
+         * @param {{gras?: boolean, souligne?: boolean, couleur?: string}} styles - Styles WebDev
+         * @returns {void}
+         */
+        function pushFormatage(debut, fin, styles) {
+            if (debut >= fin) return;
+            if (!styles) return;
+
+            const cleaned = {};
+            if (styles.gras === true) cleaned.gras = true;
+            if (styles.souligne === true) cleaned.souligne = true;
+            if (styles.couleur) cleaned.couleur = styles.couleur;
+            if (Object.keys(cleaned).length === 0) return;
+
+            const last = formatage.length > 0 ? formatage[formatage.length - 1] : null;
+            const sameStyles = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+            if (last && last.fin === debut && last.styles && sameStyles(last.styles, cleaned)) {
+                last.fin = fin;
+                return;
+            }
+
+            formatage.push({ debut, fin, styles: cleaned });
+        }
+
+        let index = 0;
+        for (const op of ops) {
+            if (!op) continue;
+            if (typeof op.insert !== 'string') continue;
+
+            const text = op.insert;
+            contenu += text;
+
+            const attrs = op.attributes || {};
+            const styles = {
+                gras: attrs.bold === true,
+                souligne: attrs.underline === true,
+                couleur: typeof attrs.color === 'string' ? attrs.color : undefined
+            };
+            pushFormatage(index, index + text.length, styles);
+            index += text.length;
+        }
+
+        return { contenu, formatage };
+    }
+
+    /**
+     * Reconstruit un Delta Quill à partir d'un contenu texte + formatage partiel (format JSON WebDev).
+     *
+     * @param {string} contenu - Contenu texte
+     * @param {FormatagePartielJsonWebDev[]} formatage - Liste d'annotations (debut/fin + styles)
+     * @returns {Object} Delta Quill (ex: { ops: [...] })
+     */
+    function textAndFormatageToQuillDelta(contenu, formatage) {
+        const text = typeof contenu === 'string' ? contenu : '';
+        const annotations = Array.isArray(formatage) ? formatage : [];
+
+        // Quill attend généralement un \n final. On ne modifie pas la chaîne source,
+        // mais on s'assure qu'une fin de document existe dans le delta.
+        const needsFinalNewline = text.length === 0 || text[text.length - 1] !== '\n';
+
+        const breakpoints = new Set([0, text.length]);
+        annotations.forEach(a => {
+            if (!a) return;
+            if (typeof a.debut === 'number') breakpoints.add(Math.max(0, Math.min(a.debut, text.length)));
+            if (typeof a.fin === 'number') breakpoints.add(Math.max(0, Math.min(a.fin, text.length)));
+        });
+        const points = Array.from(breakpoints).sort((a, b) => a - b);
+
+        const ops = [];
+
+        for (let i = 0; i < points.length - 1; i++) {
+            const segStart = points[i];
+            const segEnd = points[i + 1];
+            if (segStart >= segEnd) continue;
+
+            const segmentText = text.substring(segStart, segEnd);
+            if (!segmentText) continue;
+
+            // Fusionner les styles qui couvrent totalement le segment (logique similaire à renderFormattedContent)
+            const merged = {};
+            annotations.forEach(a => {
+                if (!a || !a.styles) return;
+                if (a.debut <= segStart && a.fin >= segEnd) {
+                    Object.assign(merged, a.styles);
+                }
+            });
+
+            const attributes = {};
+            if (merged.gras === true) attributes.bold = true;
+            if (merged.souligne === true) attributes.underline = true;
+            if (typeof merged.couleur === 'string' && merged.couleur.length > 0) attributes.color = merged.couleur;
+
+            if (Object.keys(attributes).length > 0) {
+                ops.push({ insert: segmentText, attributes });
+            } else {
+                ops.push({ insert: segmentText });
+            }
+        }
+
+        if (needsFinalNewline) {
+            ops.push({ insert: '\n' });
+        }
+
+        return { ops };
+    }
+
+    /**
+     * Échappe une chaîne pour un flux RTF (échappement basique).
+     * @param {string} text - Texte brut
+     * @returns {string} Texte échappé RTF
+     */
+    function escapeRtf(text) {
+        return String(text)
+            .replace(/\\/g, '\\\\')
+            .replace(/\{/g, '\\{')
+            .replace(/\}/g, '\\}')
+            .replace(/\r\n|\r|\n/g, '\\par ');
+    }
+
+    /**
+     * Convertit un delta Quill (ops) en RTF basique pour PrintShop Mail.
+     * Support : texte, gras (\\b ... \\b0), souligné (\\ul ... \\ul0), couleur (\\cfN), retours ligne (\\par).
+     *
+     * @param {Object|null|undefined} delta - Delta Quill (ex: { ops: [...] })
+     * @returns {string} Chaîne RTF
+     */
+    function deltaToRtf(delta) {
+        const ops = delta && Array.isArray(delta.ops) ? delta.ops : [];
+
+        // 1) Collecter les couleurs présentes
+        const colors = [];
+        const colorIndex = (hex) => {
+            if (!hex) return 0;
+            const c = String(hex).toLowerCase();
+            let idx = colors.indexOf(c);
+            if (idx === -1) {
+                colors.push(c);
+                idx = colors.length - 1;
+            }
+            // En RTF, \cf0 = couleur par défaut, donc on décale de +1
+            return idx + 1;
+        };
+
+        for (const op of ops) {
+            if (!op || typeof op.insert !== 'string') continue;
+            const attrs = op.attributes || {};
+            if (typeof attrs.color === 'string' && attrs.color) colorIndex(attrs.color);
+        }
+
+        // 2) Générer table de couleurs
+        let colortbl = '{\\colortbl;';
+        colors.forEach(c => {
+            // Format attendu: #rrggbb
+            const hex = c.startsWith('#') ? c.slice(1) : c;
+            const r = parseInt(hex.slice(0, 2), 16) || 0;
+            const g = parseInt(hex.slice(2, 4), 16) || 0;
+            const b = parseInt(hex.slice(4, 6), 16) || 0;
+            colortbl += `\\red${r}\\green${g}\\blue${b};`;
+        });
+        colortbl += '}';
+
+        // 3) Corps
+        // IMPORTANT : ne jamais ajouter d'espaces "réels" autour des segments formatés,
+        // sinon ils réapparaissent après conversion RTF → Delta (symptôme : espaces avant/après mots formatés).
+        // On encapsule les segments formatés dans des GROUPES RTF "{...}" pour éviter tout reset manuel.
+        let body = '';
+        for (const op of ops) {
+            if (!op || typeof op.insert !== 'string') continue;
+            const text = op.insert;
+            const attrs = op.attributes || {};
+
+            const isBold = attrs.bold === true;
+            const isUnderline = attrs.underline === true;
+            const color = typeof attrs.color === 'string' ? attrs.color : null;
+            const cf = color ? colorIndex(color) : 0;
+
+            const escaped = escapeRtf(text);
+
+            // Aucun attribut : texte brut
+            if (!isBold && !isUnderline && cf === 0) {
+                body += escaped;
+                continue;
+            }
+
+            // Segment formaté : groupe RTF
+            let codes = '';
+            if (isBold) codes += '\\b';
+            if (isUnderline) codes += (codes ? ' ' : '') + '\\ul';
+            if (cf > 0) codes += (codes ? ' ' : '') + `\\cf${cf}`;
+
+            body += `{${codes} ${escaped}}`;
+        }
+
+        const rtf = `{\\rtf1\\ansi${colortbl} ${body}}`;
+        console.log('🔧 PHASE 7 - deltaToRtf:', rtf.substring(0, 50) + '...');
+        return rtf;
+    }
+
+    /**
+     * Convertit une chaîne RTF (basique) en Delta Quill.
+     * Support : \\b/\\b0, \\ul/\\ul0, \\cfN/\\cf0, \\par, table de couleurs.
+     *
+     * @param {string} rtf - Chaîne RTF
+     * @returns {Object} Delta Quill ({ ops: [...] })
+     */
+    function rtfToDelta(rtf) {
+        const input = String(rtf || '');
+        if (DEBUG_PHASE7_RTF) console.log('🔧 rtfToDelta INPUT:', input);
+        if (!input) return { ops: [{ insert: '\n' }] };
+
+        /**
+         * Extrait et supprime une section groupée RTF (ex: "{\\colortbl ... }") en respectant l'imbrication d'accolades.
+         * @param {string} source - RTF complet
+         * @param {string} groupStart - Préfixe de groupe à trouver (ex: "{\\colortbl")
+         * @returns {{cleaned: string, groups: string[]}} RTF sans ces groupes + groupes extraits
+         */
+        const stripGroupsByBraceMatching = (source, groupStart) => {
+            const groups = [];
+            let s = source;
+            let idx;
+            while ((idx = s.toLowerCase().indexOf(groupStart.toLowerCase())) !== -1) {
+                let depth = 0;
+                let end = -1;
+                for (let i = idx; i < s.length; i++) {
+                    const ch = s[i];
+                    if (ch === '{') depth++;
+                    else if (ch === '}') {
+                        depth--;
+                        if (depth === 0) {
+                            end = i;
+                            break;
+                        }
+                    }
+                }
+                if (end === -1) break;
+                groups.push(s.slice(idx, end + 1));
+                s = s.slice(0, idx) + s.slice(end + 1);
+            }
+            return { cleaned: s, groups };
+        };
+
+        // 1) Extraire / supprimer colortbl
+        const { cleaned: withoutColorTbl, groups: colorTblGroups } = stripGroupsByBraceMatching(input, '{\\colortbl');
+
+        /** @type {string[]} */
+        const colors = [];
+        colorTblGroups.forEach(g => {
+            const reColor = /\\red(\d+)\\green(\d+)\\blue(\d+)\s*;/ig;
+            let m;
+            while ((m = reColor.exec(g)) !== null) {
+                const r = Math.max(0, Math.min(255, parseInt(m[1], 10)));
+                const gg = Math.max(0, Math.min(255, parseInt(m[2], 10)));
+                const b = Math.max(0, Math.min(255, parseInt(m[3], 10)));
+                const hex = '#' + [r, gg, b].map(v => v.toString(16).padStart(2, '0')).join('');
+                colors.push(hex);
+            }
+        });
+
+        // 2) Retirer le wrapper initial "{\rtf1..." si présent (sans casser le reste)
+        let body = withoutColorTbl;
+        if (body.startsWith('{\\rtf')) {
+            // retirer la première accolade ouvrante, on ignore les accolades structurelles ensuite
+            body = body.slice(1);
+        }
+
+        // 3) Parsing linéaire : on IGNORE les control-words non supportés
+        const ops = [];
+        let buffer = '';
+        let bold = false;
+        let underline = false;
+        let color = null;
+
+        const flush = () => {
+            if (!buffer) return;
+            const attributes = {};
+            if (bold) attributes.bold = true;
+            if (underline) attributes.underline = true;
+            if (color) attributes.color = color;
+            if (Object.keys(attributes).length > 0) ops.push({ insert: buffer, attributes });
+            else ops.push({ insert: buffer });
+            buffer = '';
+        };
+
+        const isLetter = (c) => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+        const isDigit = (c) => (c >= '0' && c <= '9') || c === '-';
+        const isSpace = (c) => c === ' ' || c === '\t';
+
+        /** @type {Array<{bold: boolean, underline: boolean, color: string|null}>} */
+        const stateStack = [];
+
+        for (let i = 0; i < body.length; i++) {
+            const ch = body[i];
+
+            // Groupes RTF : push/pop état (les styles reviennent à l'état précédent à la fermeture du groupe)
+            if (ch === '{') {
+                // Sauvegarder l'état courant
+                stateStack.push({ bold, underline, color });
+                continue;
+            }
+            if (ch === '}') {
+                // Fermer le segment courant, puis restaurer l'état précédent
+                flush();
+                const prev = stateStack.pop();
+                if (prev) {
+                    bold = prev.bold;
+                    underline = prev.underline;
+                    color = prev.color;
+                }
+                continue;
+            }
+
+            if (ch !== '\\') {
+                // Heuristique Phase 7 : ignorer les espaces utilisés uniquement comme séparateurs
+                // avant un control word (ex: " ...  \\ul" ou "texte : \\cf0").
+                if (isSpace(ch)) {
+                    let k = i;
+                    while (k < body.length && isSpace(body[k])) k++;
+                    if (k < body.length && body[k] === '\\') {
+                        // Ce sont des espaces de séparation RTF → ne pas les conserver
+                        continue;
+                    }
+                }
+                buffer += ch;
+                continue;
+            }
+
+            // \ escape
+            const next = body[i + 1];
+            if (next === '\\' || next === '{' || next === '}') {
+                buffer += next;
+                i += 1;
+                continue;
+            }
+
+            // \'hh hex
+            if (next === '\'' && /^[0-9a-fA-F]{2}$/.test(body.slice(i + 2, i + 4))) {
+                const code = parseInt(body.slice(i + 2, i + 4), 16);
+                buffer += String.fromCharCode(code);
+                i += 3;
+                continue;
+            }
+
+            // Lire control word
+            let j = i + 1;
+            let word = '';
+            while (j < body.length && isLetter(body[j])) {
+                word += body[j];
+                j++;
+            }
+
+            // Optionnel : param numérique
+            let numStr = '';
+            while (j < body.length && isDigit(body[j])) {
+                numStr += body[j];
+                j++;
+            }
+
+            // Consommer un espace délimiteur s'il existe
+            if (j < body.length && body[j] === ' ') j++;
+            // Consommer les espaces supplémentaires entre deux control words (ex: "\\par  \\ul")
+            while (j < body.length && isSpace(body[j])) {
+                let k = j;
+                while (k < body.length && isSpace(body[k])) k++;
+                if (k < body.length && body[k] === '\\') {
+                    j = k;
+                    continue;
+                }
+                break; // espaces avant du texte : conserver
+            }
+
+            // Appliquer commandes supportées, ignorer le reste
+            const num = numStr ? parseInt(numStr, 10) : null;
+
+            if (word === 'par') {
+                buffer += '\n';
+            } else if (word === 'b') {
+                flush();
+                bold = (num === null) ? true : (num !== 0);
+            } else if (word === 'ul') {
+                flush();
+                underline = (num === null) ? true : (num !== 0);
+            } else if (word === 'cf') {
+                flush();
+                const n = (num === null) ? 0 : num;
+                if (n <= 0) color = null;
+                else color = colors[n - 1] || null;
+            } else if (word === 'line') {
+                buffer += '\n';
+            } else if (word === 'tab') {
+                buffer += '\t';
+            } else {
+                // Ignorer : ex \rtf1, \ansi, \deff0, \redN, \greenN, \blueN, \viewkind4, etc.
+            }
+
+            i = j - 1;
+        }
+
+        flush();
+
+        // Quill attend souvent une fin de document \n
+        if (ops.length === 0 || (typeof ops[ops.length - 1].insert === 'string' && !ops[ops.length - 1].insert.endsWith('\n'))) {
+            ops.push({ insert: '\n' });
+        }
+
+        const out = { ops };
+        if (DEBUG_PHASE7_RTF) console.log('🔧 rtfToDelta OUTPUT:', JSON.stringify(out));
+        return out;
+    }
+
+    /**
+     * Construit un Delta Quill à partir d'un texte brut et de styles globaux.
+     * Note : les styles de police/taille/alignement sont gérés globalement via applyQuillZoneStyles(),
+     * seuls bold/underline/color peuvent être injectés en attributs Quill.
+     *
+     * @param {string} text - Texte brut
+     * @param {{bold?: boolean, underline?: boolean, color?: string}} styles - Styles globaux simples
+     * @returns {Object} Delta Quill
+     */
+    function textToDelta(text, styles) {
+        const t = typeof text === 'string' ? text : '';
+        const attrs = {};
+        if (styles && styles.bold === true) attrs.bold = true;
+        if (styles && styles.underline === true) attrs.underline = true;
+        if (styles && typeof styles.color === 'string' && styles.color) attrs.color = styles.color;
+
+        const insertText = t.endsWith('\n') ? t : (t + '\n');
+        if (Object.keys(attrs).length > 0) return { ops: [{ insert: insertText, attributes: attrs }] };
+        return { ops: [{ insert: insertText }] };
+    }
     
     /**
      * Convertit une zone texte du format JSON WebDev vers le format interne documentState.
@@ -7792,6 +10047,7 @@ document.addEventListener('DOMContentLoaded', () => {
             end: f.fin,
             styles: {
                 fontWeight: f.styles?.gras === true ? 'bold' : undefined,
+                textDecoration: f.styles?.souligne === true ? 'underline' : undefined,
                 color: f.styles?.couleur || undefined
             }
         }));
@@ -7803,9 +10059,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         // Construction de l'objet zone interne
+        const isTextQuill = zoneJson.typeZone === 'textQuill' || !!zoneJson.quillDelta;
+
         return {
             // Type de zone
-            type: 'text',
+            type: isTextQuill ? 'textQuill' : 'text',
             
             // Géométrie (conversion mm → px)
             x: geometrie.xMm !== undefined ? mmToPixels(geometrie.xMm) : 0,
@@ -7822,6 +10080,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Contenu et formatage
             content: zoneJson.contenu || '',
             formatting: formatting,
+            // Quill (si zone textQuill importée)
+            quillDelta: isTextQuill
+                ? (zoneJson.quillDelta || textAndFormatageToQuillDelta(zoneJson.contenu || '', zoneJson.formatage || []))
+                : undefined,
             
             // Style typographique
             font: style.police || 'Roboto',
@@ -8003,6 +10265,110 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('loadFromWebDev : JSON invalide ou vide');
             return false;
         }
+
+        /**
+         * Normalise un JSON "template_multipage" (pages[].zones[]) vers un JSON compatible loadFromWebDev().
+         * Permet de tester l'import local des zones, sans passer par WebDev.
+         *
+         * @param {any} input - JSON importé depuis un fichier
+         * @returns {DocumentJsonWebDev} JSON normalisé compatible WebDev
+         */
+        function normalizeTemplateMultipageJson(input) {
+            const pagesIn = Array.isArray(input.pages) ? input.pages : [];
+            const firstPage = pagesIn[0] || {};
+            const widthPx = typeof firstPage.width === 'number' ? firstPage.width : DOCUMENT_FORMATS[DEFAULT_FORMAT].width;
+            const heightPx = typeof firstPage.height === 'number' ? firstPage.height : DOCUMENT_FORMATS[DEFAULT_FORMAT].height;
+
+            /** @type {ZoneTextQuillJsonWebDev[]} */
+            const zonesTextQuill = [];
+
+            pagesIn.forEach((p, idx) => {
+                const zones = Array.isArray(p.zones) ? p.zones : [];
+                zones.forEach(z => {
+                    if (!z || z.type !== 'textQuill') return;
+
+                    const geom = z.geometry || {};
+                    const xMm = parseFloat(geom.x_mm);
+                    const yMm = parseFloat(geom.y_mm);
+                    const wMm = parseFloat(geom.width_mm);
+                    const hMm = parseFloat(geom.height_mm);
+
+                    const style = z.style || {};
+                    const border = z.border || {};
+
+                    zonesTextQuill.push({
+                        id: z.id || `zone-${Date.now()}`,
+                        type: 'textQuill',
+                        geometry: {
+                            x_mm: isNaN(xMm) ? 0 : xMm,
+                            y_mm: isNaN(yMm) ? 0 : yMm,
+                            width_mm: isNaN(wMm) ? 80 : wMm,
+                            height_mm: isNaN(hMm) ? 30 : hMm
+                        },
+                        content_quill: z.content_quill || '',
+                        content_rtf: z.content_rtf || '',
+                        style: {
+                            font: style.font || 'Roboto',
+                            size_pt: style.size_pt || 12,
+                            color: style.color || '#000000',
+                            align: style.align || 'left',
+                            valign: style.valign || 'top',
+                            bold: style.bold || false,
+                            line_height: style.lineHeight !== undefined ? style.lineHeight : (style.line_height !== undefined ? style.line_height : 1.2),
+                            // IMPORTANT : conserver le fond pendant la normalisation
+                            bgColor: (typeof style.bgColor === 'string' && style.bgColor.trim().length > 0) ? style.bgColor : null,
+                            transparent: style.transparent !== undefined ? !!style.transparent : (style.isTransparent !== undefined ? !!style.isTransparent : true),
+                            locked: style.locked === true,
+                            copyfit: style.copyfit === true
+                        },
+                        border: {
+                            width_px: border.width !== undefined ? border.width : (border.width_px !== undefined ? border.width_px : 0),
+                            color: border.color || '#000000',
+                            style: border.style || 'solid'
+                        },
+                        // Note : page non porté par le format "template_multipage" zone-by-zone.
+                        // Ici, les zones seront importées par défaut sur la page 1 (voir Étape 6bis).
+                    });
+                });
+            });
+
+            return {
+                identification: {
+                    idDocument: '',
+                    nomDocument: firstPage.page_name || '',
+                    dateCreation: input.generated_at || ''
+                },
+                formatDocument: {
+                    largeurMm: widthPx * MM_PER_PIXEL,
+                    hauteurMm: heightPx * MM_PER_PIXEL,
+                    fondPerdu: { actif: false, valeurMm: 3 },
+                    traitsCoupe: { actif: false },
+                    margeSecurite: 0,
+                    surfaceMaxImageMm2: DEFAULT_SURFACE_MAX_IMAGE_MM2,
+                    pourcentageMaxImage: DEFAULT_POURCENTAGE_MAX_IMAGE
+                },
+                champsFusion: [],
+                polices: [],
+                pages: pagesIn.map((p, i) => ({
+                    numero: i + 1,
+                    nom: p.page_name || (i === 0 ? 'Recto' : `Page ${i + 1}`),
+                    urlFond: p.image || ''
+                })),
+                zonesTexte: [],
+                zonesTextQuill,
+                zonesCodeBarres: [],
+                zonesImage: []
+            };
+        }
+
+        // Support import tests : format "template_multipage" (pages[].zones[])
+        const isTemplateMultipage = jsonData.document === 'template_multipage' && Array.isArray(jsonData.pages);
+        const hasZonesArray = isTemplateMultipage && jsonData.pages.some(p => Array.isArray(p && p.zones));
+        if (hasZonesArray) {
+            console.log('🔧 PHASE 7 - Import: détection format template_multipage → normalisation WebDev');
+            jsonData = normalizeTemplateMultipageJson(jsonData);
+            console.log('🔧 PHASE 7 - Import: JSON normalisé :', jsonData);
+        }
         
         // --- ÉTAPE 1 : Nettoyer le DOM ---
         // Supprimer toutes les zones existantes de la page actuelle
@@ -8149,6 +10515,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
                 
+                if (zoneData && zoneData.type === 'textQuill') {
+                    console.log('🔧 PHASE 7 - Import zone textQuill:', zoneJson.nom || zoneData.name || zoneId);
+                }
+
                 console.log(`  → Zone texte "${zoneId}" (${zoneData.name || 'sans nom'}) → Page ${pageIndex + 1}`);
                 console.log(`    Position: ${zoneData.x.toFixed(1)}px, ${zoneData.y.toFixed(1)}px | Taille: ${zoneData.w.toFixed(1)}px x ${zoneData.h.toFixed(1)}px`);
             });
@@ -8232,6 +10602,123 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         console.log(`  → ${zonesImageCount} zone(s) image chargée(s)`);
+
+        // --- ÉTAPE 6bis : Charger les zones textQuill (nouveau format Delta + RTF) ---
+        console.log('Étape 6bis : Chargement des zones textQuill (Delta + RTF)...');
+        
+        let zonesTextQuillCount = 0;
+        
+        if (jsonData.zonesTextQuill && Array.isArray(jsonData.zonesTextQuill)) {
+            jsonData.zonesTextQuill.forEach(z => {
+                const zoneId = z.id || `zone-${Date.now()}`;
+                
+                // Nouveau format : pas de page (pour l'instant) → défaut page 1 (index 0)
+                const pageIndex = 0;
+                if (pageIndex < 0 || pageIndex >= documentState.pages.length) return;
+                
+                const geom = z.geometry || {};
+                const style = z.style || {};
+                const border = z.border || {};
+                
+                // NOTE : le JSON peut contenir des valeurs mm en string (ex: "7.94").
+                const xMm = Number.isFinite(parseFloat(geom.x_mm)) ? parseFloat(geom.x_mm) : 0;
+                const yMm = Number.isFinite(parseFloat(geom.y_mm)) ? parseFloat(geom.y_mm) : 0;
+                const wMm = Number.isFinite(parseFloat(geom.width_mm)) ? parseFloat(geom.width_mm) : 80;
+                const hMm = Number.isFinite(parseFloat(geom.height_mm)) ? parseFloat(geom.height_mm) : 30;
+                
+                // Déterminer le Delta selon les 3 cas
+                const hasDeltaObject = z.content_quill && typeof z.content_quill === 'object' && Array.isArray(z.content_quill.ops);
+                const hasDeltaText = typeof z.content_quill === 'string' && z.content_quill.length > 0;
+                const hasRtf = typeof z.content_rtf === 'string' && z.content_rtf.length > 0;
+                
+                /** @type {Object} */
+                let delta;
+                
+                if (hasDeltaText && !hasRtf) {
+                    // Cas 1 : texte brut dans content_quill, RTF vide
+                    console.log('🔧 PHASE 7 - Import textQuill cas 1 (texte brut):', zoneId);
+                    delta = textToDelta(z.content_quill, {
+                        bold: style.bold === true,
+                        underline: false,
+                        color: typeof style.color === 'string' ? style.color : undefined
+                    });
+                } else if (!hasDeltaObject && hasRtf) {
+                    // Cas 2 : pas de delta, RTF présent
+                    console.log('🔧 PHASE 7 - Import textQuill cas 2 (RTF→Delta):', zoneId);
+                    delta = rtfToDelta(z.content_rtf);
+                } else if (hasDeltaObject) {
+                    // Cas 3 : delta + RTF
+                    console.log('🔧 PHASE 7 - Import textQuill cas 3 (Delta direct):', zoneId);
+                    delta = z.content_quill;
+                } else {
+                    // Fallback : delta vide
+                    delta = { ops: [{ insert: '\n' }] };
+                }
+                
+                // Construire la zone interne textQuill
+                const importedIsTransparent =
+                    style.transparent !== undefined
+                        ? !!style.transparent
+                        : (style.isTransparent !== undefined ? !!style.isTransparent : true);
+                const importedBgColor =
+                    (typeof style.bgColor === 'string' && style.bgColor.trim().length > 0)
+                        ? style.bgColor
+                        : '#ffffff';
+
+                if (DEBUG_PHASE7_BG) {
+                    console.log('🔧 PHASE 7 BG - Import style → interne:', zoneId, {
+                        style_bgColor: style.bgColor,
+                        style_transparent: style.transparent,
+                        computed_bgColor: importedBgColor,
+                        computed_isTransparent: importedIsTransparent
+                    });
+                }
+                
+                const zoneData = {
+                    type: 'textQuill',
+                    x: mmToPx(xMm),
+                    y: mmToPx(yMm),
+                    w: mmToPx(wMm),
+                    h: mmToPx(hMm),
+                    xMm,
+                    yMm,
+                    wMm,
+                    hMm,
+                    quillDelta: delta,
+                    font: style.font || 'Roboto',
+                    size: style.size_pt || 12,
+                    color: style.color || '#000000',
+                    align: style.align || 'left',
+                    valign: style.valign || 'top',
+                    bgColor: importedBgColor,
+                    isTransparent: importedIsTransparent,
+                    bold: style.bold || false,
+                    lineHeight: (style.lineHeight !== undefined ? style.lineHeight : (style.line_height !== undefined ? style.line_height : 1.2)),
+                    locked: style.locked === true,
+                    copyfit: style.copyfit === true,
+                    emptyLines: 0,
+                    zIndex: 1,
+                    border: {
+                        width: (border.width_px !== undefined ? border.width_px : (border.width !== undefined ? border.width : 0)) || 0,
+                        color: border.color || '#000000',
+                        style: border.style || 'solid'
+                    },
+                    name: zoneId
+                };
+                
+                documentState.pages[pageIndex].zones[zoneId] = zoneData;
+                zonesTextQuillCount++;
+                
+                // Compteur de zones
+                const idMatch = zoneId.match(/zone-(\d+)/);
+                if (idMatch) {
+                    const idNum = parseInt(idMatch[1], 10);
+                    if (idNum > maxZoneId) maxZoneId = idNum;
+                }
+            });
+        }
+        
+        console.log(`  → ${zonesTextQuillCount} zone(s) textQuill chargée(s)`);
         
         // --- ÉTAPE 7 : Mettre à jour le compteur et l'affichage ---
         console.log('Étape 7 : Finalisation...');
@@ -8257,6 +10744,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // Sauvegarder dans localStorage pour persistance
         saveToLocalStorage();
         console.log('  → État sauvegardé dans localStorage');
+
+        // BUGFIX : pour les zones textQuill, le contenu Quill peut être restauré en async (setTimeout(0) dans createZoneDOM).
+        // On refait une sauvegarde différée pour capturer un quillDelta non vide une fois la restauration effectuée.
+        setTimeout(() => {
+            try {
+                saveToLocalStorage();
+                console.log('🔧 BUGFIX - Post-import saveToLocalStorage() après restauration Quill');
+            } catch (e) {}
+        }, 50);
         
         // Rafraîchir tous les codes-barres pour générer les vrais codes-barres
         setTimeout(() => {
@@ -8393,13 +10889,68 @@ document.addEventListener('DOMContentLoaded', () => {
     function convertZoneTexteToJson(id, zoneData, pageNumero) {
         // Conversion pixels → mm
         const pixelsToMm = (px) => px * MM_PER_PIXEL;
-        
+
+        // Phase 7 : si c'est une zone textQuill, convertir le Delta Quill vers (contenu + formatage WebDev)
+        if (zoneData && zoneData.type === 'textQuill') {
+            console.log('🔧 PHASE 7 - Export zone textQuill:', id);
+
+            const delta = zoneData.quillDelta || null;
+            const converted = quillDeltaToTextAndFormatage(delta);
+
+            return {
+                id: id,
+                page: pageNumero,
+                nom: zoneData.name || '',
+                niveau: zoneData.zIndex || 1,
+                rotation: zoneData.rotation || 0,
+                verrouille: zoneData.locked || false,
+                systeme: zoneData.systeme || false,
+                systemeLibelle: zoneData.systemeLibelle || '',
+                imprimable: zoneData.imprimable !== undefined ? zoneData.imprimable : true,
+                supprimerLignesVides: zoneData.emptyLines !== undefined ? zoneData.emptyLines : 0,
+                geometrie: {
+                    xMm: zoneData.xMm !== undefined ? zoneData.xMm : pixelsToMm(zoneData.x || 0),
+                    yMm: zoneData.yMm !== undefined ? zoneData.yMm : pixelsToMm(zoneData.y || 0),
+                    largeurMm: zoneData.wMm !== undefined ? zoneData.wMm : pixelsToMm(zoneData.w || 200),
+                    hauteurMm: zoneData.hMm !== undefined ? zoneData.hMm : pixelsToMm(zoneData.h || 40)
+                },
+                contenu: converted.contenu,
+                formatage: converted.formatage,
+                typeZone: 'textQuill',
+                quillDelta: delta || undefined,
+                style: {
+                    police: zoneData.font || 'Roboto',
+                    taillePt: zoneData.size || 12,
+                    couleur: zoneData.color || '#000000',
+                    gras: zoneData.bold || false,
+                    interligne: zoneData.lineHeight || 1.2,
+                    alignementH: zoneData.align || 'left',
+                    alignementV: zoneData.valign || 'top'
+                },
+                fond: {
+                    transparent: zoneData.isTransparent !== undefined ? zoneData.isTransparent : true,
+                    couleur: zoneData.bgColor || '#FFFFFF'
+                },
+                bordure: {
+                    epaisseur: zoneData.border?.width || 0,
+                    couleur: zoneData.border?.color || '#000000',
+                    style: zoneData.border?.style || 'solid'
+                },
+                copyfitting: {
+                    actif: zoneData.copyfit || false,
+                    tailleMinimum: zoneData.copyfitMin || 6,
+                    autoriserRetourLigne: zoneData.copyfitWrap !== undefined ? zoneData.copyfitWrap : true
+                }
+            };
+        }
+
         // Mapper le formatage partiel : start/end → debut/fin, noms anglais → français
         const formatage = (zoneData.formatting || []).map(f => ({
             debut: f.start,
             fin: f.end,
             styles: {
                 gras: f.styles?.fontWeight === 'bold' ? true : undefined,
+                souligne: f.styles?.textDecoration === 'underline' ? true : undefined,
                 couleur: f.styles?.color || undefined
             }
         }));
@@ -8438,6 +10989,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Contenu et formatage
             contenu: zoneData.content || '',
             formatage: formatage,
+            typeZone: zoneData.type || 'text',
             
             // Style typographique
             style: {
@@ -8648,6 +11200,8 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Étape 1 : Synchronisation DOM → documentState...');
         
         const currentZones = getCurrentPageZones();
+        // Phase 7 : s'assurer que les zones textQuill ont un Delta à jour avant export
+        persistTextQuillContentForSave(currentZones);
         let syncCount = 0;
         
         for (const [id, data] of Object.entries(currentZones)) {
@@ -8685,6 +11239,7 @@ document.addEventListener('DOMContentLoaded', () => {
             polices: documentState.polices || [],
             pages: [],
             zonesTexte: [],
+            zonesTextQuill: [],
             zonesCodeBarres: [],
             zonesImage: []
         };
@@ -8722,6 +11277,43 @@ document.addEventListener('DOMContentLoaded', () => {
                         convertZoneImageToJson(zoneId, zoneData, pageNumero)
                     );
                     imageCount++;
+                } else if (zoneData.type === 'textQuill') {
+                    // Phase 7 (nouveau format) : zones textQuill dédiées
+                    console.log('🔧 PHASE 7 - Export textQuill:', zoneId);
+
+                    const delta = zoneData.quillDelta || null;
+                    const rtfOutput = deltaToRtf(delta);
+
+                    output.zonesTextQuill.push({
+                        id: zoneId,
+                        type: 'textQuill',
+                        geometry: {
+                            x_mm: zoneData.xMm !== undefined ? zoneData.xMm : (zoneData.x || 0) * MM_PER_PIXEL,
+                            y_mm: zoneData.yMm !== undefined ? zoneData.yMm : (zoneData.y || 0) * MM_PER_PIXEL,
+                            width_mm: zoneData.wMm !== undefined ? zoneData.wMm : (zoneData.w || 200) * MM_PER_PIXEL,
+                            height_mm: zoneData.hMm !== undefined ? zoneData.hMm : (zoneData.h || 40) * MM_PER_PIXEL
+                        },
+                        content_quill: delta,
+                        content_rtf: rtfOutput,
+                        style: {
+                            font: zoneData.font || 'Roboto',
+                            size_pt: zoneData.size || 12,
+                            color: zoneData.color || '#000000',
+                            align: zoneData.align || 'left',
+                            valign: zoneData.valign || 'top',
+                            bold: zoneData.bold || false,
+                            line_height: zoneData.lineHeight || 1.2,
+                            bgColor: zoneData.isTransparent ? null : (zoneData.bgColor || '#ffffff'),
+                            transparent: zoneData.isTransparent !== undefined ? !!zoneData.isTransparent : true,
+                            locked: !!zoneData.locked,
+                            copyfit: !!zoneData.copyfit
+                        },
+                        border: {
+                            width_px: zoneData.border?.width || 0,
+                            color: zoneData.border?.color || '#000000',
+                            style: zoneData.border?.style || 'solid'
+                        }
+                    });
                 } else {
                     output.zonesTexte.push(
                         convertZoneTexteToJson(zoneId, zoneData, pageNumero)
@@ -9643,650 +12235,85 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 7. GÉNÉRATION ET TÉLÉCHARGEMENT JSON FINALE ---
-    btnGenerate.addEventListener('click', () => {
-        saveToLocalStorage(); // Sauvegarde aussi quand on génère le JSON
-        
-        // Générer le JSON pour toutes les pages
-        const pagesOutput = documentState.pages.map((page, pageIndex) => {
-            const zonesOutput = [];
-            const zonesData = page.zones;
-            
-            // On parcourt l'objet de données de cette page
-            for (const [id, data] of Object.entries(zonesData)) {
-                // Note: Les zones du DOM ne sont visibles que pour la page courante
-                // Pour les autres pages, on utilise les données sauvegardées
-                const el = document.getElementById(id);
-                
-                let geometry;
-                if (el && pageIndex === documentState.currentPageIndex) {
-                    // Page courante : utiliser les dimensions du DOM
-                    geometry = {
-                        x_mm: (el.offsetLeft * MM_PER_PIXEL).toFixed(2),
-                        y_mm: (el.offsetTop * MM_PER_PIXEL).toFixed(2),
-                        width_mm: (el.offsetWidth * MM_PER_PIXEL).toFixed(2),
-                        height_mm: (el.offsetHeight * MM_PER_PIXEL).toFixed(2)
-                    };
-                } else {
-                    // Autres pages : utiliser les données sauvegardées
-                    geometry = {
-                        x_mm: (data.x * MM_PER_PIXEL).toFixed(2),
-                        y_mm: (data.y * MM_PER_PIXEL).toFixed(2),
-                        width_mm: (data.w * MM_PER_PIXEL).toFixed(2),
-                        height_mm: (data.h * MM_PER_PIXEL).toFixed(2)
-                    };
-                }
+    // --- 7. EXPORT JSON (format WebDev) ---
 
-                const zoneType = data.type || 'text';
-                if (zoneType === 'qr') {
-                    zonesOutput.push({
-                        id,
-                        type: 'qr',
-                        geometry,
-                        qr: {
-                            color: data.qrColor || '#000000',
-                            background: '#ffffff'
-                        },
-                        locked: data.locked || false
-                    });
-                } else {
-                    // Générer le RTF pour cette zone
-                    const rtfContent = generateRtfForZone(data);
-                    
-                    // Préparer les propriétés de bordure pour l'export
-                    const borderData = data.border || { width: 0, color: '#000000', style: 'solid' };
-                    const borderExport = {
-                        width: borderData.width || 0,
-                        color: borderData.color || '#000000',
-                        style: borderData.style || 'solid',
-                        style_psmd: BORDER_STYLE_TO_PSMD[borderData.style] || 0 // Valeur numérique pour PrintShop Mail
-                    };
-                    
-                    zonesOutput.push({
-                        id,
-                        type: 'text',
-                        geometry,
-                        content: rtfContent, // RTF valide au lieu du texte brut
-                        style: {
-                            font: data.font,
-                            size_pt: data.size,
-                            color: data.color,
-                            align: data.align,
-                            valign: data.valign,
-                            lineHeight: data.lineHeight !== undefined ? data.lineHeight : 1.2,
-                            bgColor: data.isTransparent ? null : data.bgColor,
-                            transparent: data.isTransparent,
-                            locked: data.locked,
-                            copyfit: data.copyfit,
-                            bold: data.bold || false
-                        },
-                        border: borderExport
-                    });
-                }
+    /**
+     * Lit un fichier JSON et retourne l'objet parsé.
+     * @param {File} file - Fichier sélectionné
+     * @returns {Promise<any>} Objet JSON
+     */
+    function readJsonFile(file) {
+        return new Promise((resolve, reject) => {
+            if (!file) {
+                reject(new Error('Aucun fichier sélectionné'));
+                return;
             }
-            
-            return {
-                page_id: page.id,
-                page_name: page.name,
-                image: page.image,
-                format: page.format || DEFAULT_FORMAT,
-                width: page.width || DOCUMENT_FORMATS[DEFAULT_FORMAT].width,
-                height: page.height || DOCUMENT_FORMATS[DEFAULT_FORMAT].height,
-                zones: zonesOutput
+            const reader = new FileReader();
+            reader.onerror = () => reject(new Error('Erreur de lecture du fichier'));
+            reader.onload = () => {
+                try {
+                    const text = String(reader.result || '');
+                    resolve(JSON.parse(text));
+                } catch (e) {
+                    reject(new Error('JSON invalide'));
+                }
             };
+            reader.readAsText(file);
         });
+    }
 
-        const output = {
-            document: "template_multipage",
-            scale_reference: "96 DPI", // Important pour le moteur BAT
-            generated_at: new Date().toISOString(),
-            pages: pagesOutput
-        };
+    btnExportJson.addEventListener('click', () => {
+        saveToLocalStorage(); // Sauvegarde aussi quand on exporte
         
-        const jsonString = JSON.stringify(output, null, 2);
-        
-        // Téléchargement du fichier
-        const blob = new Blob([jsonString], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = "template_vdp.json";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        console.log("JSON généré et téléchargé.");
-    });
-
-    // --- CONVERSION RTF ---
-    
-    /**
-     * Convertit une couleur hexadécimale en RTF (format RGB)
-     * @param {string} hexColor - Couleur hexadécimale (#RRGGBB)
-     * @returns {string} Couleur RTF (r255g0b0)
-     */
-    function hexToRtfColor(hexColor) {
-        if (!hexColor || !hexColor.startsWith('#')) return 'r0g0b0';
-        
-        const hex = hexColor.substring(1);
-        const r = parseInt(hex.substring(0, 2), 16);
-        const g = parseInt(hex.substring(2, 4), 16);
-        const b = parseInt(hex.substring(4, 6), 16);
-        
-        return `r${r}g${g}b${b}`;
-    }
-    
-    /**
-     * Échappe les caractères spéciaux RTF
-     * @param {string} text - Texte à échapper
-     * @returns {string} Texte échappé
-     */
-    function escapeRtf(text) {
-        if (!text) return '';
-        
-        return text
-            .replace(/\\/g, '\\\\')
-            .replace(/{/g, '\\{')
-            .replace(/}/g, '\\}')
-            .replace(/\n/g, '\\par ')
-            .replace(/\r/g, '');
-    }
-    
-    /**
-     * Construit la table de couleurs RTF
-     * @param {Array} zonesData - Données de toutes les zones
-     * @returns {string} Table de couleurs RTF
-     */
-    function buildRtfColorTable(zonesData) {
-        const colors = new Set();
-        
-        // Ajouter la couleur par défaut (noir)
-        colors.add('#000000');
-        
-        // Parcourir toutes les zones pour collecter les couleurs
-        for (const [id, data] of Object.entries(zonesData)) {
-            if (data.type !== 'text') continue;
-            
-            // Couleur globale de la zone
-            if (data.color) colors.add(data.color);
-            
-            // Couleurs du formatage partiel
-            if (data.formatting) {
-                data.formatting.forEach(f => {
-                    if (f.styles && f.styles.color) {
-                        colors.add(f.styles.color);
-                    }
-                });
-            }
-        }
-        
-        // Convertir en tableau et créer la table RTF
-        // Format: {\colortbl ;<couleur1>;<couleur2>;<couleur3>;...}
-        const colorArray = Array.from(colors);
-        let colorTable = '{\\colortbl ;';
-        
-        colorArray.forEach(color => {
-            colorTable += hexToRtfColor(color) + ';';
-        });
-        
-        colorTable += '}';
-        return { table: colorTable, colors: colorArray };
-    }
-    
-    /**
-     * Construit la table de polices RTF
-     * @param {Array} zonesData - Données de toutes les zones
-     * @returns {string} Table de polices RTF
-     */
-    function buildRtfFontTable(zonesData) {
-        const fonts = new Set();
-        
-        // Parcourir toutes les zones pour collecter les polices
-        for (const [id, data] of Object.entries(zonesData)) {
-            if (data.type !== 'text' && data.font) continue;
-            if (data.font) fonts.add(data.font);
-        }
-        
-        // Si aucune police, utiliser la police par défaut
-        if (fonts.size === 0) fonts.add('Arial');
-        
-        // Convertir en tableau et créer la table RTF
-        const fontArray = Array.from(fonts);
-        let fontTable = '{\\fonttbl';
-        
-        fontArray.forEach((font, index) => {
-            fontTable += `{\\f${index} ${font};}`;
-        });
-        
-        fontTable += '}';
-        return { table: fontTable, fonts: fontArray };
-    }
-    
-    /**
-     * Convertit une zone de texte en RTF
-     * @param {Object} zoneData - Données de la zone
-     * @param {Object} colorTable - Table de couleurs (avec colors array)
-     * @param {Object} fontTable - Table de polices (avec fonts array)
-     * @returns {string} RTF de la zone
-     */
-    function convertZoneToRtf(zoneData, colorTable, fontTable) {
-        const { content, formatting, font, size, color, align } = zoneData;
-        
-        if (!content) return '';
-        
-        // Trouver l'index de la police
-        const fontIndex = fontTable.fonts.indexOf(font || 'Arial');
-        const fontCode = fontIndex >= 0 ? fontIndex : 0;
-        
-        // Trouver l'index de la couleur par défaut
-        const defaultColorIndex = colorTable.colors.indexOf(color || '#000000');
-        const defaultColorCode = defaultColorIndex >= 0 ? defaultColorIndex + 1 : 1; // +1 car RTF commence à 1
-        
-        // Taille de police en demi-points (RTF utilise des demi-points)
-        const fontSize = Math.round((size || 12) * 2);
-        
-        // Alignement
-        let alignment = '\\ql'; // left par défaut
-        if (align === 'center') alignment = '\\qc';
-        else if (align === 'right') alignment = '\\qr';
-        else if (align === 'justify') alignment = '\\qj';
-        
-        let rtf = `{\\f${fontCode}\\fs${fontSize}\\cf${defaultColorCode}${alignment} `;
-        
-        // Si pas de formatage partiel, texte simple
-        if (!formatting || formatting.length === 0) {
-            rtf += escapeRtf(content);
-        } else {
-            // Trier les annotations par position
-            const sortedFormatting = [...formatting].sort((a, b) => a.start - b.start);
-            
-            let pos = 0;
-            
-            for (const format of sortedFormatting) {
-                // Texte avant le formatage
-                if (format.start > pos) {
-                    rtf += escapeRtf(content.substring(pos, format.start));
-                }
-                
-                // Texte formaté
-                const formattedText = escapeRtf(content.substring(format.start, format.end));
-                let formatCodes = '';
-                
-                // Gras
-                if (format.styles && format.styles.fontWeight === 'bold') {
-                    formatCodes += '\\b ';
-                }
-                
-                // Couleur
-                if (format.styles && format.styles.color) {
-                    const colorIndex = colorTable.colors.indexOf(format.styles.color);
-                    if (colorIndex >= 0) {
-                        formatCodes += `\\cf${colorIndex + 1} `; // +1 car RTF commence à 1
-                    }
-                }
-                
-                if (formatCodes) {
-                    rtf += `{${formatCodes}${formattedText}}`;
-                } else {
-                    rtf += formattedText;
-                }
-                
-                pos = format.end;
-            }
-            
-            // Texte restant
-            if (pos < content.length) {
-                rtf += escapeRtf(content.substring(pos));
-            }
-        }
-        
-        rtf += '\\par}';
-        return rtf;
-    }
-    
-    /**
-     * Convertit une couleur hexadécimale en format RTF colortbl (\redXXX\greenYYY\blueZZZ)
-     * @param {string} hexColor - Couleur hexadécimale (#RRGGBB)
-     * @returns {string} Couleur RTF pour colortbl (\redXXX\greenYYY\blueZZZ)
-     */
-    function hexToRtfColorTable(hexColor) {
-        if (!hexColor || !hexColor.startsWith('#')) return '\\red0\\green0\\blue0';
-        
-        const hex = hexColor.substring(1);
-        const r = parseInt(hex.substring(0, 2), 16);
-        const g = parseInt(hex.substring(2, 4), 16);
-        const b = parseInt(hex.substring(4, 6), 16);
-        
-        return `\\red${r}\\green${g}\\blue${b}`;
-    }
-    
-    /**
-     * Génère un RTF complet pour une zone de texte individuelle (format PrintShop Mail)
-     * @param {Object} zoneData - Données de la zone
-     * @returns {string} RTF complet pour la zone
-     */
-    function generateRtfForZone(zoneData) {
-        const { content, formatting, font, size, color } = zoneData;
-        
-        if (!content) return '';
-        
-        // Collecter toutes les couleurs utilisées
-        const colors = new Set();
-        colors.add(color || '#000000'); // Couleur par défaut
-        
-        // Collecter les couleurs du formatage partiel
-        if (formatting && formatting.length > 0) {
-            formatting.forEach(f => {
-                if (f.styles && f.styles.color) {
-                    colors.add(f.styles.color);
-                }
-            });
-        }
-        
-        const colorArray = Array.from(colors);
-        const defaultColor = color || '#000000';
-        
-        // Construire la table de couleurs
-        // Format: {\colortbl ;<couleur1>;<couleur2>;<couleur3>;...}
-        let colorTable = '{\\colortbl ;';
-        colorArray.forEach(c => {
-            colorTable += hexToRtfColorTable(c) + ';';
-        });
-        colorTable += '}';
-        
-        // Construire la table de polices
-        const fontName = font || 'Roboto';
-        const fontTable = `{\\fonttbl{\\f0\\fnil\\fcharset0 ${fontName};}}`;
-        
-        // Trouver l'index de la couleur par défaut dans la table
-        const defaultColorIndex = colorArray.indexOf(defaultColor);
-        const defaultColorCode = defaultColorIndex >= 0 ? defaultColorIndex + 1 : 1; // +1 car RTF commence à 1
-        
-        // Taille de police en demi-points (RTF utilise des demi-points)
-        const fontSize = Math.round((size || 12) * 2);
-        
-        // Construire le contenu RTF
-        let rtfContent = '';
-        
-        if (!formatting || formatting.length === 0) {
-            // Pas de formatage partiel, texte simple
-            rtfContent = escapeRtf(content);
-        } else {
-            // Trier les annotations par position
-            const sortedFormatting = [...formatting].sort((a, b) => a.start - b.start);
-            
-            // Créer une fonction pour obtenir les styles actifs à une position donnée
-            function getStylesAtPosition(pos) {
-                const activeStyles = {
-                    bold: false,
-                    italic: false,
-                    underline: false,
-                    color: null
-                };
-                
-                for (const format of sortedFormatting) {
-                    if (pos >= format.start && pos < format.end) {
-                        const styles = format.styles || {};
-                        if (styles.fontWeight === 'bold') activeStyles.bold = true;
-                        if (styles.fontStyle === 'italic') activeStyles.italic = true;
-                        if (styles.textDecoration && styles.textDecoration.includes('underline')) {
-                            activeStyles.underline = true;
-                        }
-                        if (styles.color) {
-                            activeStyles.color = styles.color;
-                        }
-                    }
-                }
-                
-                return activeStyles;
-            }
-            
-            // État actuel des styles
-            let currentBold = false;
-            let currentItalic = false;
-            let currentUnderline = false;
-            let currentColorIndex = defaultColorCode;
-            
-            // Parcourir le texte et détecter les changements de style aux positions exactes
-            for (let pos = 0; pos < content.length; pos++) {
-                const stylesAtPos = getStylesAtPosition(pos);
-                
-                // Construire les codes de changement de style nécessaires
-                const commands = [];
-                
-                // Gras
-                if (stylesAtPos.bold !== currentBold) {
-                    commands.push(stylesAtPos.bold ? '\\b' : '\\b0');
-                    currentBold = stylesAtPos.bold;
-                }
-                
-                // Italique
-                if (stylesAtPos.italic !== currentItalic) {
-                    commands.push(stylesAtPos.italic ? '\\i' : '\\i0');
-                    currentItalic = stylesAtPos.italic;
-                }
-                
-                // Souligné
-                if (stylesAtPos.underline !== currentUnderline) {
-                    commands.push(stylesAtPos.underline ? '\\ul' : '\\ul0');
-                    currentUnderline = stylesAtPos.underline;
-                }
-                
-                // Couleur
-                let newColorIndex = defaultColorCode;
-                if (stylesAtPos.color) {
-                    const colorIndex = colorArray.indexOf(stylesAtPos.color);
-                    if (colorIndex >= 0) {
-                        newColorIndex = colorIndex + 1; // +1 car RTF commence à 1
-                    }
-                }
-                if (newColorIndex !== currentColorIndex) {
-                    commands.push(`\\cf${newColorIndex}`);
-                    currentColorIndex = newColorIndex;
-                }
-                
-                // Ajouter les commandes suivies de {} comme délimiteur universel
-                // {} est un groupe vide qui sépare la commande du texte sans ajouter d'espace visible
-                // Cela préserve exactement le texte original (y compris les espaces)
-                if (commands.length > 0) {
-                    rtfContent += commands.join('') + '{}';
-                }
-                
-                // Ajouter le caractère (échappé si nécessaire)
-                const char = content[pos];
-                rtfContent += escapeRtf(char);
-            }
-            
-            // Fermer tous les styles actifs à la fin
-            let closeCodes = '';
-            if (currentBold) {
-                closeCodes += '\\b0';
-            }
-            if (currentItalic) {
-                closeCodes += '\\i0';
-            }
-            if (currentUnderline) {
-                closeCodes += '\\ul0';
-            }
-            if (currentColorIndex !== defaultColorCode) {
-                closeCodes += `\\cf${defaultColorCode}`;
-            }
-            
-            if (closeCodes) {
-                rtfContent += closeCodes;
-            }
-        }
-        
-        // Construire le RTF complet
-        let rtf = '{\\rtf1\\ansi\\ansicpg1252\\deff0\\deflang1036\n';
-        rtf += fontTable + '\n';
-        rtf += colorTable + '\n';
-        rtf += `\\viewkind4\\uc1\\pard\\f0\\fs${fontSize}\\cf${defaultColorCode}{}`;
-        rtf += rtfContent;
-        rtf += '\\par\n}';
-        
-        return rtf;
-    }
-    
-    /**
-     * Génère le RTF pour toutes les zones de texte de la page courante
-     * @returns {string} RTF complet
-     */
-    function generateRtf() {
-        saveToLocalStorage();
-        
-        const zonesData = getCurrentPageZones();
-        const textZones = [];
-        
-        // Filtrer uniquement les zones de texte
-        for (const [id, data] of Object.entries(zonesData)) {
-            if (data.type === 'text') {
-                textZones.push({ id, ...data });
-            }
-        }
-        
-        if (textZones.length === 0) {
-            alert('Aucune zone de texte à convertir en RTF');
-            return null;
-        }
-        
-        // Construire les tables RTF
-        const colorTable = buildRtfColorTable(zonesData);
-        const fontTable = buildRtfFontTable(zonesData);
-        
-        // Générer le RTF
-        let rtf = '{\\rtf1\\ansi\\deff0';
-        rtf += fontTable.table;
-        rtf += colorTable.table;
-        rtf += '\n';
-        
-        // Convertir chaque zone
-        textZones.forEach((zoneData, index) => {
-            if (index > 0) rtf += '\n';
-            rtf += convertZoneToRtf(zoneData, colorTable, fontTable);
-        });
-        
-        rtf += '\n}';
-        
-        return rtf;
-    }
-    
-    // --- EXPORT JSON DEBUG (ancien format avec texte brut et formatting) ---
-    if (btnGenerateJsonDebug) {
-        btnGenerateJsonDebug.addEventListener('click', () => {
-            saveToLocalStorage(); // Sauvegarde aussi quand on génère le JSON
-            
-            // Générer le JSON pour toutes les pages (format debug : texte brut + formatting)
-            const pagesOutput = documentState.pages.map((page, pageIndex) => {
-                const zonesOutput = [];
-                const zonesData = page.zones;
-                
-                // On parcourt l'objet de données de cette page
-                for (const [id, data] of Object.entries(zonesData)) {
-                    // Note: Les zones du DOM ne sont visibles que pour la page courante
-                    // Pour les autres pages, on utilise les données sauvegardées
-                    const el = document.getElementById(id);
-                    
-                    let geometry;
-                    if (el && pageIndex === documentState.currentPageIndex) {
-                        // Page courante : utiliser les dimensions du DOM
-                        geometry = {
-                            x_mm: (el.offsetLeft * MM_PER_PIXEL).toFixed(2),
-                            y_mm: (el.offsetTop * MM_PER_PIXEL).toFixed(2),
-                            width_mm: (el.offsetWidth * MM_PER_PIXEL).toFixed(2),
-                            height_mm: (el.offsetHeight * MM_PER_PIXEL).toFixed(2)
-                        };
-                    } else {
-                        // Autres pages : utiliser les données sauvegardées
-                        geometry = {
-                            x_mm: (data.x * MM_PER_PIXEL).toFixed(2),
-                            y_mm: (data.y * MM_PER_PIXEL).toFixed(2),
-                            width_mm: (data.w * MM_PER_PIXEL).toFixed(2),
-                            height_mm: (data.h * MM_PER_PIXEL).toFixed(2)
-                        };
-                    }
-
-                    const zoneType = data.type || 'text';
-                    if (zoneType === 'qr') {
-                        zonesOutput.push({
-                            id,
-                            type: 'qr',
-                            geometry,
-                            qr: {
-                                color: data.qrColor || '#000000',
-                                background: '#ffffff'
-                            },
-                            locked: data.locked || false
-                        });
-                    } else {
-                        // Format debug : texte brut + formatting
-                        const borderData = data.border || { width: 0, color: '#000000', style: 'solid' };
-                        
-                        zonesOutput.push({
-                            id,
-                            type: 'text',
-                            geometry,
-                            content: data.content || '', // Texte brut
-                            formatting: data.formatting || [], // Tableau d'annotations
-                            style: {
-                                font: data.font,
-                                size_pt: data.size,
-                                color: data.color,
-                                align: data.align,
-                                valign: data.valign,
-                                lineHeight: data.lineHeight !== undefined ? data.lineHeight : 1.2,
-                                bgColor: data.isTransparent ? null : data.bgColor,
-                                transparent: data.isTransparent,
-                                locked: data.locked,
-                                copyfit: data.copyfit,
-                                bold: data.bold || false
-                            },
-                            border: {
-                                width: borderData.width || 0,
-                                color: borderData.color || '#000000',
-                                style: borderData.style || 'solid',
-                                style_psmd: BORDER_STYLE_TO_PSMD[borderData.style] || 0
-                            }
-                        });
-                    }
-                }
-                
-                return {
-                    page_id: page.id,
-                    page_name: page.name,
-                    image: page.image,
-                    format: page.format || DEFAULT_FORMAT,
-                    width: page.width || DOCUMENT_FORMATS[DEFAULT_FORMAT].width,
-                    height: page.height || DOCUMENT_FORMATS[DEFAULT_FORMAT].height,
-                    zones: zonesOutput
-                };
-            });
-
-            const output = {
-                document: "template_multipage",
-                scale_reference: "96 DPI",
-                generated_at: new Date().toISOString(),
-                pages: pagesOutput
-            };
-            
-            const jsonString = JSON.stringify(output, null, 2);
+        try {
+            // Export (format officiel WebDev)
+            const exported = exportToWebDev();
+            const jsonString = JSON.stringify(exported, null, 2);
             
             // Téléchargement du fichier
             const blob = new Blob([jsonString], { type: "application/json" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = "template_vdp_debug.json";
+            a.download = "template_vdp.json";
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             
-            console.log("JSON debug généré et téléchargé.");
+            console.log("✅ JSON exporté (format WebDev) et téléchargé.");
+        } catch (error) {
+            console.error('❌ Export JSON (format WebDev) en erreur:', error);
+            alert('Export JSON en erreur ❌ (voir console)');
+        }
+    });
+
+    // --- IMPORT JSON (tests) ---
+    if (btnImportJson && inputImportJson) {
+        btnImportJson.addEventListener('click', () => {
+            inputImportJson.click();
+        });
+
+        inputImportJson.addEventListener('change', async (e) => {
+            const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+            // Permettre de re-sélectionner le même fichier
+            e.target.value = '';
+
+            if (!file) return;
+
+            try {
+                const jsonData = await readJsonFile(file);
+                const ok = loadFromWebDev(jsonData);
+                console.log('✅ Import JSON terminé:', ok ? 'OK' : 'ERREUR');
+                alert(ok ? 'Import JSON terminé ✅' : 'Import JSON en erreur ❌ (voir console)');
+            } catch (err) {
+                console.error('❌ Import JSON:', err.message || err);
+                alert('Import JSON impossible ❌ (voir console)');
+            }
         });
     }
 
+ 
     // ─────────────────────────────── FIN SECTION 23 ───────────────────────────────
 
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -10410,8 +12437,46 @@ document.addEventListener('DOMContentLoaded', () => {
     let panPotential = false; // Pour le pan permanent (détection du mouvement)
     const PAN_THRESHOLD = 5; // Seuil de mouvement en pixels avant d'activer le pan
 
+    /**
+     * Indique si l'élément actif est un éditeur Quill (ou plus généralement un contenteditable).
+     * Objectif : ne pas intercepter les touches clavier (ex: Espace) quand l'utilisateur édite du texte riche.
+     *
+     * Conditions demandées :
+     * - document.activeElement est un .ql-editor
+     * - OU document.activeElement.closest('.quill-editor-container') existe
+     * - OU document.activeElement.getAttribute('contenteditable') === 'true'
+     *
+     * @returns {boolean} True si le focus est dans un éditeur Quill/contenteditable
+     */
+    function isQuillOrContentEditableActiveElement() {
+        const activeEl = document.activeElement;
+        if (!activeEl) return false;
+        
+        // Quill
+        if (activeEl.classList && activeEl.classList.contains('ql-editor')) return true;
+        if (activeEl.closest && activeEl.closest('.quill-editor-container')) return true;
+        
+        // Contenteditable générique
+        if (activeEl.getAttribute && activeEl.getAttribute('contenteditable') === 'true') return true;
+        
+        // Filet de sécurité : notre intégration Designer utilise aussi `.quill-editor`
+        if (activeEl.closest && activeEl.closest('.quill-editor')) return true;
+        
+        return false;
+    }
+
     // Détecter quand Espace est pressé
     document.addEventListener('keydown', (e) => {
+        // Log de vérification (temporaire) - uniquement sur la touche Espace
+        if (e.code === 'Space' || e.key === ' ') {
+            console.log('🔧 DEBUG ESPACE - activeElement:', document.activeElement && document.activeElement.className, 'key:', e.key);
+        }
+        
+        // Ne jamais intercepter l'espace si on édite dans Quill / contenteditable
+        if (isQuillOrContentEditableActiveElement()) {
+            return;
+        }
+        
         if (e.code === 'Space' && !e.target.matches('input, textarea')) {
             e.preventDefault(); // Empêcher le scroll de page
             spacePressed = true;
@@ -10514,5 +12579,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ─────────────────────────────── FIN SECTION 24 ───────────────────────────────
+    
+    console.log('🔧 PHASE 0 - Vérification infrastructure Quill:');
+    console.log('  ✓ Quill disponible:', typeof Quill === 'function');
+    console.log('  ✓ quillInstances Map créée:', quillInstances instanceof Map);
+    console.log('  ✓ Constantes QUILL_*:', { QUILL_DEFAULT_FONT, QUILL_DEFAULT_SIZE, QUILL_DEFAULT_COLOR, QUILL_DEFAULT_LINE_HEIGHT });
 
 });

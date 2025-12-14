@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Éditeur VDP - Multi-Zones</title>
+    <!-- Quill.js (CDN) - DOIT être chargé AVANT les autres scripts -->
+    <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <!-- Bibliothèque bwip-js pour génération de codes-barres -->
@@ -29,6 +32,9 @@
                 <h3 class="section-title">Actions principales</h3>
                 <button id="btn-add-zone" class="btn-primary btn-large">
                     <span class="material-icons">add_box</span> Zone de texte
+                </button>
+                <button id="btn-add-zone-quill" class="btn-primary btn-large" title="Ajouter une zone de texte Quill (WYSIWYG)">
+                    <span class="material-icons">text_fields</span> Zone Texte Quill
                 </button>
                 <button id="btn-add-qr" class="btn-primary">
                     <span class="material-icons">qr_code_2</span> QR Code
@@ -490,12 +496,13 @@
                 <button id="btn-reset" class="btn-danger">
                     <span class="material-icons">restart_alt</span> Réinitialiser
                 </button>
-                <button id="btn-generate-json" class="btn-success">
+                <button id="btn-export-json" class="btn-success">
                     <span class="material-icons">code</span> Exporter JSON
                 </button>
-                <button id="btn-generate-json-debug" class="btn-success">
-                    <span class="material-icons">bug_report</span> Exporter JSON (debug)
+                <button id="btn-import-json" class="btn-success" title="Importer un JSON (tests)">
+                    <span class="material-icons">file_upload</span> Importer JSON
                 </button>
+                <input type="file" id="input-import-json" accept=".json,application/json" style="display:none">
             </div>
 
             <!-- Zoom -->
@@ -569,6 +576,263 @@
 
     <!-- Toast notification pour Undo/Redo -->
     <div id="undo-redo-toast" class="undo-toast"></div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- TOOLBAR QUILL FLOTTANTE (Phase 3)                               -->
+    <!-- Reprise fidèle du POC (IDs préfixés pour éviter collisions)     -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div class="main-toolbar" id="quill-toolbar" style="display: none;">
+        <!-- Header déplaçable -->
+        <div class="toolbar-header" id="quill-toolbar-header">
+            <span class="toolbar-title">Propriétés de la zone</span>
+            <button type="button" class="toolbar-close" id="quill-toolbar-close" title="Fermer">
+                <span class="material-icons">close</span>
+            </button>
+        </div>
+
+        <div class="toolbar-body">
+            <!-- SECTION ZONE -->
+            <div class="toolbar-section collapsible" data-section="zone">
+                <div class="section-header">
+                    <span class="material-icons collapse-icon">expand_more</span>
+                    <span>Zone</span>
+                </div>
+                <div class="section-content">
+                    <label class="checkbox-row">
+                        <input type="checkbox" id="quill-chk-locked">
+                        <span class="material-icons">lock</span>
+                        <span>Verrouiller</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- SECTION TYPOGRAPHIE -->
+            <div class="toolbar-section collapsible" data-section="typography">
+                <div class="section-header">
+                    <span class="material-icons collapse-icon">expand_more</span>
+                    <span>Typographie</span>
+                </div>
+                <div class="section-content">
+                    <div class="prop-row">
+                        <label for="quill-input-font">Police</label>
+                        <select id="quill-input-font">
+                            <option value="Roboto" selected>Roboto</option>
+                            <option value="Open Sans">Open Sans</option>
+                            <option value="Arial">Arial</option>
+                            <option value="Georgia">Georgia</option>
+                            <option value="Times New Roman">Times New Roman</option>
+                            <option value="Courier New">Courier New</option>
+                        </select>
+                    </div>
+
+                    <div class="prop-row">
+                        <label for="quill-input-size">Taille</label>
+                        <select id="quill-input-size">
+                            <option value="6">6</option>
+                            <option value="8">8</option>
+                            <option value="10">10</option>
+                            <option value="11">11</option>
+                            <option value="12" selected>12</option>
+                            <option value="14">14</option>
+                            <option value="16">16</option>
+                            <option value="18">18</option>
+                            <option value="20">20</option>
+                            <option value="24">24</option>
+                            <option value="28">28</option>
+                            <option value="32">32</option>
+                            <option value="36">36</option>
+                            <option value="48">48</option>
+                            <option value="72">72</option>
+                        </select>
+                    </div>
+
+                    <label class="checkbox-row">
+                        <input type="checkbox" id="quill-chk-bold">
+                        <span class="material-icons">format_bold</span>
+                        <span>Gras (zone entière)</span>
+                    </label>
+
+                    <div class="prop-row">
+                        <label for="quill-input-color">Couleur</label>
+                        <div class="color-input-wrapper">
+                            <input type="color" id="quill-input-color" value="#000000">
+                            <span class="color-value" id="quill-color-value">#000000</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION ALIGNEMENTS -->
+            <div class="toolbar-section collapsible" data-section="alignments">
+                <div class="section-header">
+                    <span class="material-icons collapse-icon">expand_more</span>
+                    <span>Alignements</span>
+                </div>
+                <div class="section-content">
+                    <div class="prop-row">
+                        <label>Horizontal</label>
+                        <div class="align-group" id="quill-align-h-group">
+                            <button type="button" class="align-btn active" data-value="left" title="Gauche">
+                                <span class="material-icons">format_align_left</span>
+                            </button>
+                            <button type="button" class="align-btn" data-value="center" title="Centre">
+                                <span class="material-icons">format_align_center</span>
+                            </button>
+                            <button type="button" class="align-btn" data-value="right" title="Droite">
+                                <span class="material-icons">format_align_right</span>
+                            </button>
+                            <button type="button" class="align-btn" data-value="justify" title="Justifié">
+                                <span class="material-icons">format_align_justify</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="prop-row">
+                        <label>Vertical</label>
+                        <div class="align-group" id="quill-align-v-group">
+                            <button type="button" class="align-btn active" data-value="top" title="Haut">
+                                <span class="material-icons">vertical_align_top</span>
+                            </button>
+                            <button type="button" class="align-btn" data-value="middle" title="Milieu">
+                                <span class="material-icons">vertical_align_center</span>
+                            </button>
+                            <button type="button" class="align-btn" data-value="bottom" title="Bas">
+                                <span class="material-icons">vertical_align_bottom</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="prop-row">
+                        <label for="quill-input-line-height">Interligne</label>
+                        <select id="quill-input-line-height">
+                            <option value="1">1</option>
+                            <option value="1.15">1.15</option>
+                            <option value="1.2" selected>1.2</option>
+                            <option value="1.5">1.5</option>
+                            <option value="2">2</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION FOND -->
+            <div class="toolbar-section collapsible" data-section="background">
+                <div class="section-header">
+                    <span class="material-icons collapse-icon">expand_more</span>
+                    <span>Fond</span>
+                </div>
+                <div class="section-content">
+                    <label class="checkbox-row">
+                        <input type="checkbox" id="quill-chk-transparent" checked>
+                        <span class="material-icons">texture</span>
+                        <span>Transparent</span>
+                    </label>
+                    <div class="prop-row" id="quill-bg-color-row">
+                        <label for="quill-input-bg-color">Couleur</label>
+                        <div class="color-input-wrapper">
+                            <input type="color" id="quill-input-bg-color" value="#ffffff" disabled>
+                            <span class="color-value" id="quill-bg-color-value">#ffffff</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION BORDURE -->
+            <div class="toolbar-section collapsible" data-section="border">
+                <div class="section-header">
+                    <span class="material-icons collapse-icon">expand_more</span>
+                    <span>Bordure</span>
+                </div>
+                <div class="section-content">
+                    <div class="prop-row">
+                        <label for="quill-input-border-width">Épaisseur</label>
+                        <input type="number" id="quill-input-border-width" value="0" min="0" max="10" step="1">
+                        <span class="unit">px</span>
+                    </div>
+                    <div class="prop-row border-option" id="quill-border-color-row" style="display: none;">
+                        <label for="quill-input-border-color">Couleur</label>
+                        <input type="color" id="quill-input-border-color" value="#000000">
+                    </div>
+                    <div class="prop-row border-option" id="quill-border-style-row" style="display: none;">
+                        <label for="quill-input-border-style">Style</label>
+                        <select id="quill-input-border-style">
+                            <option value="solid">Plein</option>
+                            <option value="dashed">Tirets</option>
+                            <option value="dotted">Points</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION GÉOMÉTRIE -->
+            <div class="toolbar-section collapsible" data-section="geometry">
+                <div class="section-header">
+                    <span class="material-icons collapse-icon">expand_more</span>
+                    <span>Géométrie (mm)</span>
+                </div>
+                <div class="section-content">
+                    <div class="geometry-grid">
+                        <div class="geometry-item">
+                            <label for="quill-val-x">X</label>
+                            <input type="number" id="quill-val-x" value="20" step="0.1">
+                        </div>
+                        <div class="geometry-item">
+                            <label for="quill-val-y">Y</label>
+                            <input type="number" id="quill-val-y" value="20" step="0.1">
+                        </div>
+                        <div class="geometry-item">
+                            <label for="quill-val-w">Largeur</label>
+                            <input type="number" id="quill-val-w" value="80" step="0.1">
+                        </div>
+                        <div class="geometry-item">
+                            <label for="quill-val-h">Hauteur</label>
+                            <input type="number" id="quill-val-h" value="30" step="0.1">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION OPTIONS AVANCÉES -->
+            <div class="toolbar-section collapsible" data-section="advanced">
+                <div class="section-header">
+                    <span class="material-icons collapse-icon">expand_more</span>
+                    <span>Options avancées</span>
+                </div>
+                <div class="section-content">
+                    <label class="checkbox-row">
+                        <input type="checkbox" id="quill-chk-copyfit">
+                        <span class="material-icons">fit_screen</span>
+                        <span>Copy fitting</span>
+                    </label>
+                    <div class="prop-row">
+                        <label for="quill-input-empty-lines">Lignes vides</label>
+                        <select id="quill-input-empty-lines">
+                            <option value="0">Conserver</option>
+                            <option value="1">Supprimer toutes</option>
+                            <option value="2">Variables uniquement</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- PHASE 5 : MINI-TOOLBAR CONTEXTUELLE (FORMATAGE PARTIEL QUILL)   -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div class="mini-toolbar" id="mini-toolbar" style="display: none;">
+        <button type="button" id="btn-partial-bold" class="mini-btn" title="Gras (sélection)">
+            <span class="material-icons">format_bold</span>
+        </button>
+        <button type="button" id="btn-partial-underline" class="mini-btn" title="Souligner (sélection)">
+            <span class="material-icons">format_underlined</span>
+        </button>
+        <button type="button" id="btn-partial-color" class="mini-btn" title="Couleur (sélection)">
+            <span class="material-icons">format_color_text</span>
+        </button>
+        <input type="color" id="partial-color-picker" style="display: none;">
+        <div class="mini-toolbar-arrow"></div>
+    </div>
 
     <script src="script.js"></script>
 </body>
