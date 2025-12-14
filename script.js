@@ -6283,13 +6283,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const editor = quillInstance.root;
         if (!zoneContent || !editor) return;
         
+        const quillEditor = zoneEl.querySelector('.quill-editor');
+        const qlContainer = zoneEl.querySelector('.ql-container');
+        
         const maxSize = parseFloat(maxSizePt) || QUILL_DEFAULT_SIZE;
         const minSize = 6;
-        const precision = 0.5; // Précision de la dichotomie en points
-        const maxIterations = 20; // Sécurité anti-boucle infinie
+        const precision = 0.1; // Précision de la dichotomie en points (fine)
+        const maxIterations = 30; // Sécurité anti-boucle infinie
         let iterations = 0;
         
-        // Sauvegarder l'alignement vertical pour le restaurer après
+        // Sauvegarder les styles originaux pour restaurer après
         const originalInlineJustifyContent = zoneContent.style.justifyContent;
         let originalComputedJustifyContent = 'flex-start';
         try {
@@ -6298,8 +6301,14 @@ document.addEventListener('DOMContentLoaded', () => {
             originalComputedJustifyContent = 'flex-start';
         }
         
+        // CAPTURER LA HAUTEUR DISPONIBLE AVANT TOUT CHANGEMENT
+        const availableHeight = zoneContent.clientHeight;
+        
         // Temporairement aligner en haut pour des calculs précis
         zoneContent.style.justifyContent = 'flex-start';
+        
+        // Force un reflow
+        void zoneContent.offsetHeight;
         
         /**
          * Teste si une taille donnée provoque un overflow
@@ -6309,7 +6318,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const testSize = (sizePt) => {
             editor.style.fontSize = `${sizePt}pt`;
             void zoneContent.offsetHeight; // Force reflow
-            return editor.scrollHeight > zoneContent.clientHeight;
+            return editor.scrollHeight > availableHeight;
         };
         
         // Algorithme par dichotomie pour trouver la taille optimale
@@ -6337,12 +6346,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 iterations++;
             }
             
-            // Arrondir à 0.5pt près (vers le bas pour éviter tout overflow)
-            optimalSize = Math.floor(optimalSize * 2) / 2;
+            // Arrondir à 0.1pt près (vers le bas pour éviter tout overflow)
+            optimalSize = Math.floor(optimalSize * 10) / 10;
             
             // Vérification finale : s'assurer qu'on n'a pas d'overflow
-            if (testSize(optimalSize)) {
-                optimalSize -= precision;
+            while (testSize(optimalSize) && optimalSize > minSize) {
+                optimalSize -= 0.1;
+                optimalSize = Math.round(optimalSize * 10) / 10; // Éviter les erreurs de floating point
             }
         }
         
