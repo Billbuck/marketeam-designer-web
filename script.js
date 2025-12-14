@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {boolean} isTransparent - Fond transparent (true = ignore bgColor)
      * @property {boolean} locked - Zone verrouillée
      * @property {boolean} copyfit - Copy fitting activé (réduit auto la taille)
-     * @property {boolean} bold - Texte en gras
+     * @property {boolean} [bold] - (OBSOLÈTE) Gras "zone entière" supprimé (utiliser le formatage partiel)
      * @property {number} lineHeight - Interlignage (1.2 = 120%)
      * @property {TextFormattingAnnotation[]} formatting - Annotations de formatage partiel
      * @property {0|1|2} emptyLines - Gestion lignes vides (0=Non, 1=Oui, 2=Variables uniquement)
@@ -174,7 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {'top'|'middle'|'bottom'} valign - Alignement vertical
      * @property {string} bgColor - Couleur de fond (hex)
      * @property {boolean} isTransparent - Fond transparent (true = ignore bgColor)
-     * @property {boolean} bold - Gras global (zone entière)
+     * @property {boolean} [bold] - (OBSOLÈTE) Gras global "zone entière" supprimé (utiliser Quill bold)
      * @property {number} lineHeight - Interlignage
      * @property {boolean} locked - Zone verrouillée
      * @property {boolean} copyfit - Copy fitting activé
@@ -323,7 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {string} police - Nom de la police
      * @property {number} taillePt - Taille en points
      * @property {string} couleur - Couleur hex
-     * @property {boolean} gras - Gras activé
+     * @property {boolean} gras - (OBSOLÈTE) Gras "zone entière" (le gras est géré via formatage partiel)
      * @property {number} interligne - Facteur d'interlignage
      * @property {'left'|'center'|'right'|'justify'} alignementH - Alignement horizontal
      * @property {'top'|'middle'|'bottom'} alignementV - Alignement vertical
@@ -483,9 +483,33 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {{x_mm: number, y_mm: number, width_mm: number, height_mm: number}} geometry - Géométrie en mm
      * @property {Object|string|null} content_quill - Delta Quill ({ops:[...]}) OU texte brut (cas 1)
      * @property {string} content_rtf - Contenu RTF (cas 2/3)
-     * @property {{font?: string, size_pt?: number, color?: string, align?: string, valign?: string, bold?: boolean, line_height?: number}} style - Style global
+     * @property {{font?: string, size_pt?: number, color?: string, align?: string, valign?: string, line_height?: number}} style - Style global
      * @property {{width_px?: number, color?: string, style?: string}} border - Bordure
      * @description Zone texte Quill au format JSON WebDev (double format Delta + RTF).
+     */
+
+    // --- STRUCTURES POLICES (DISPONIBLES / UTILISÉES) ---
+
+    /**
+     * @typedef {Object} PoliceDisponible
+     * @property {number} id - ID en base de données
+     * @property {string} nom - Nom affiché (ex: "Roboto", "Roboto Thin")
+     * @property {string} url - URL du fichier police principal
+     * @property {number} weight - Poids CSS (100-950)
+     * @property {string} style - Style CSS ("normal" ou "italic")
+     * @property {string|null} boldUrl - URL variante Bold ou null
+     * @property {string|null} italicUrl - URL variante Italic ou null
+     * @property {string|null} boldItalicUrl - URL variante BoldItalic ou null
+     */
+
+    /**
+     * @typedef {Object} PoliceUtilisee
+     * @property {string} nom - Nom de la police
+     * @property {Object} urls - URLs des variantes utilisées
+     * @property {string|null} urls.regular - URL de la variante regular (null si inconnue)
+     * @property {string|null} urls.bold - URL de la variante bold ou null
+     * @property {string|null} urls.italic - URL de la variante italic ou null
+     * @property {string|null} urls.boldItalic - URL de la variante boldItalic ou null
      */
 
     // ─────────────────────────── FIN DÉFINITIONS DE TYPES ──────────────────────────
@@ -545,7 +569,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const chkTransparent = document.getElementById('chk-transparent');
     const chkLock = document.getElementById('chk-lock');
     const chkCopyfit = document.getElementById('chk-copyfit'); // Copy Fitting
-    const chkBold = document.getElementById('chk-bold'); // Gras
     const inputLineHeight = document.getElementById('input-line-height'); // Interlignage
     
     // Boutons de formatage partiel
@@ -627,6 +650,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Mini-toolbar contextuelle (Phase 5 - formatage partiel Quill)
     const miniToolbar = document.getElementById('mini-toolbar');
     const btnPartialBold = document.getElementById('btn-partial-bold');
+    const btnMiniItalic = document.getElementById('btn-mini-italic');
     const btnPartialUnderline = document.getElementById('btn-partial-underline');
     const btnPartialColor = document.getElementById('btn-partial-color');
     const partialColorPicker = document.getElementById('partial-color-picker');
@@ -635,7 +659,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const quillChkLocked = document.getElementById('quill-chk-locked');
     const quillInputFont = document.getElementById('quill-input-font');
     const quillInputSize = document.getElementById('quill-input-size');
-    const quillChkBold = document.getElementById('quill-chk-bold');
     const quillInputColor = document.getElementById('quill-input-color');
     const quillColorValue = document.getElementById('quill-color-value');
     
@@ -732,6 +755,48 @@ document.addEventListener('DOMContentLoaded', () => {
      * @type {number}
      */
     const QUILL_DEFAULT_LINE_HEIGHT = 1.15;
+
+    /**
+     * Polices par défaut en mode standalone (hors WebDev).
+     * Utilisées si aucune liste de polices n'est fournie par le parent.
+     *
+     * Note : les URLs fonts.gstatic.com évoluent avec le temps (versions vXX).
+     * Les URLs ci-dessous sont celles renvoyées par le CSS Google Fonts au moment de l'implémentation.
+     *
+     * @type {PoliceDisponible[]}
+     */
+    const DEFAULT_FONTS = [
+        // Roboto (regular + variantes)
+        {
+            id: 0,
+            nom: 'Roboto',
+            url: 'https://fonts.gstatic.com/s/roboto/v50/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWubEbWmT.ttf',
+            weight: 400,
+            style: 'normal',
+            boldUrl: 'https://fonts.gstatic.com/s/roboto/v50/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWuYjammT.ttf',
+            italicUrl: 'https://fonts.gstatic.com/s/roboto/v50/KFOKCnqEu92Fr1Mu53ZEC9_Vu3r1gIhOszmOClHrs6ljXfMMLoHQiA8.ttf',
+            boldItalicUrl: 'https://fonts.gstatic.com/s/roboto/v50/KFOKCnqEu92Fr1Mu53ZEC9_Vu3r1gIhOszmOClHrs6ljXfMMLmbXiA8.ttf'
+        },
+        // Roboto déclinaisons (une entrée UI par weight)
+        { id: 0, nom: 'Roboto Thin', url: 'https://fonts.gstatic.com/s/roboto/v50/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWubEbGmT.ttf', weight: 100, style: 'normal', boldUrl: null, italicUrl: null, boldItalicUrl: null },
+        { id: 0, nom: 'Roboto Light', url: 'https://fonts.gstatic.com/s/roboto/v50/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWuaabWmT.ttf', weight: 300, style: 'normal', boldUrl: null, italicUrl: null, boldItalicUrl: null },
+        { id: 0, nom: 'Roboto Medium', url: 'https://fonts.gstatic.com/s/roboto/v50/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWub2bWmT.ttf', weight: 500, style: 'normal', boldUrl: null, italicUrl: null, boldItalicUrl: null },
+        { id: 0, nom: 'Roboto Black', url: 'https://fonts.gstatic.com/s/roboto/v50/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWuZtammT.ttf', weight: 900, style: 'normal', boldUrl: null, italicUrl: null, boldItalicUrl: null },
+
+        // Autres polices
+        { id: 0, nom: 'Open Sans', url: 'https://fonts.gstatic.com/s/opensans/v44/memSYaGs126MiZpBA-UvWbX2vVnXBbObj2OVZyOOSr4dVJWUgsjZ0C4n.ttf', weight: 400, style: 'normal', boldUrl: null, italicUrl: null, boldItalicUrl: null },
+        { id: 0, nom: 'Lato', url: 'https://fonts.gstatic.com/s/lato/v24/S6uyw4BMUTPHjxAwXjeu.woff2', weight: 400, style: 'normal', boldUrl: null, italicUrl: null, boldItalicUrl: null },
+        { id: 0, nom: 'Montserrat', url: 'https://fonts.gstatic.com/s/montserrat/v31/JTUHjIg1_i6t8kCHKm4532VJOt5-QNFgpCtr6Ew-.ttf', weight: 400, style: 'normal', boldUrl: null, italicUrl: null, boldItalicUrl: null },
+        { id: 0, nom: 'Courier Prime', url: 'https://fonts.gstatic.com/s/courierprime/v11/u-450q2lgwslOqpF_6gQ8kELWwY.ttf', weight: 400, style: 'normal', boldUrl: null, italicUrl: null, boldItalicUrl: null }
+    ];
+
+    /**
+     * Liste globale des polices disponibles (envoyées par WebDev au chargement).
+     * Ne doit pas être stockée dans documentState.
+     *
+     * @type {PoliceDisponible[]}
+     */
+    let policesDisponibles = [];
 
     /**
      * Active les logs détaillés de debug pour la conversion RTF ↔ Delta (Phase 7).
@@ -1259,7 +1324,6 @@ document.addEventListener('DOMContentLoaded', () => {
         inputBgColor,
         chkTransparent,
         chkCopyfit,
-        chkBold,
         inputLineHeight,
         inputBorderWidth,
         inputBorderColor,
@@ -1409,8 +1473,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // ───────────────────────────────────────────────────────────────────────────────
     
     /**
-     * Injecte les règles @font-face pour les polices du document
-     * @param {Array} polices - Tableau [{nom: "Roboto", url: "https://..."}, ...]
+     * Injecte les règles @font-face pour les polices disponibles (avec variantes).
+     *
+     * Variantes supportées :
+     * - regular : (weight/style) depuis police.url
+     * - bold : font-weight 700 depuis police.boldUrl
+     * - italic : font-style italic depuis police.italicUrl
+     * - boldItalic : font-weight 700 + italic depuis police.boldItalicUrl
+     *
+     * @param {PoliceDisponible[]} polices - Liste des polices disponibles
+     * @returns {void}
      */
     function loadFontsFromJson(polices) {
         if (!polices || polices.length === 0) {
@@ -1427,31 +1499,71 @@ document.addEventListener('DOMContentLoaded', () => {
         styleEl.id = 'dynamic-fonts-style';
         
         let cssRules = '';
-        
-        polices.forEach(police => {
-            if (!police.nom || !police.url) {
-                console.warn('loadFontsFromJson: Police invalide (nom ou url manquant)', police);
-                return;
-            }
-            
-            // Déterminer le format selon l'extension
-            let format = 'truetype'; // défaut
-            const url = police.url.toLowerCase();
-            if (url.endsWith('.woff2')) format = 'woff2';
-            else if (url.endsWith('.woff')) format = 'woff';
-            else if (url.endsWith('.otf')) format = 'opentype';
-            else if (url.endsWith('.ttf')) format = 'truetype';
-            
+
+        /**
+         * Retourne le format CSS d'une police à partir de son URL.
+         * @param {string} fontUrl - URL du fichier police
+         * @returns {'woff2'|'woff'|'opentype'|'truetype'} format
+         */
+        function getFontFormatFromUrl(fontUrl) {
+            const u = String(fontUrl || '').toLowerCase();
+            if (u.endsWith('.woff2')) return 'woff2';
+            if (u.endsWith('.woff')) return 'woff';
+            if (u.endsWith('.otf')) return 'opentype';
+            return 'truetype';
+        }
+
+        /**
+         * Ajoute une règle @font-face dans la feuille dynamique.
+         * @param {string} family - Nom de la famille (font-family)
+         * @param {string} fontUrl - URL du fichier
+         * @param {number|string} weight - font-weight
+         * @param {'normal'|'italic'} style - font-style
+         * @returns {void}
+         */
+        function addFontFaceRule(family, fontUrl, weight, style) {
+            if (!family || !fontUrl) return;
+            const format = getFontFormatFromUrl(fontUrl);
             cssRules += `
 @font-face {
-    font-family: '${police.nom}';
-    src: url('${police.url}') format('${format}');
-    font-weight: normal;
-    font-style: normal;
+    font-family: '${family}';
+    src: url('${fontUrl}') format('${format}');
+    font-weight: ${weight};
+    font-style: ${style};
     font-display: swap;
 }
 `;
-            console.log(`  → Police "${police.nom}" chargée depuis ${police.url}`);
+        }
+
+        polices.forEach(police => {
+            if (!police || !police.nom || !police.url) {
+                console.warn('loadFontsFromJson: Police invalide (nom ou url manquant)', police);
+                return;
+            }
+
+            const family = police.nom;
+            const baseWeight = typeof police.weight === 'number' ? police.weight : 400;
+            const baseStyle = (police.style === 'italic') ? 'italic' : 'normal';
+
+            // Regular (base)
+            addFontFaceRule(family, police.url, baseWeight, baseStyle);
+
+            // Bold
+            if (police.boldUrl) {
+                addFontFaceRule(family, police.boldUrl, 700, 'normal');
+            }
+
+            // Italic
+            if (police.italicUrl) {
+                addFontFaceRule(family, police.italicUrl, baseWeight, 'italic');
+            }
+
+            // BoldItalic
+            if (police.boldItalicUrl) {
+                addFontFaceRule(family, police.boldItalicUrl, 700, 'italic');
+            }
+
+            console.log(`  → Police "${family}" injectée (regular + variantes si dispo)`);
         });
         
         styleEl.textContent = cssRules;
@@ -1462,7 +1574,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     /**
      * Met à jour la liste des polices dans le sélecteur UI
-     * @param {Array} polices - Tableau [{nom: "Roboto", url: "..."}, ...] ou ["Roboto", "Arial", ...]
+     *
+     * - Affiche toutes les polices reçues
+     * - Ajoute des attributs data-* par option (pour usage futur)
+     *
+     * @param {PoliceDisponible[]|null|undefined} polices - Liste des polices disponibles
+     * @returns {void}
      */
     function updateFontSelectUI(polices) {
         if (!inputFont) return;
@@ -1474,31 +1591,84 @@ document.addEventListener('DOMContentLoaded', () => {
         inputFont.innerHTML = '';
         
         // Si pas de polices fournies, utiliser les polices par défaut
-        const defaultFonts = ['Roboto', 'Open Sans', 'Lato', 'Montserrat', 'Courier Prime'];
-        const fontsToUse = (polices && polices.length > 0) ? polices : defaultFonts;
+        /** @type {PoliceDisponible[]} */
+        const fontsToUse = (polices && Array.isArray(polices) && polices.length > 0) ? polices : DEFAULT_FONTS;
         
         fontsToUse.forEach(police => {
-            const fontName = typeof police === 'object' ? police.nom : police;
+            if (!police || !police.nom) return;
+            const fontName = police.nom;
             const option = document.createElement('option');
             option.value = fontName;
             option.textContent = fontName;
             option.style.fontFamily = `'${fontName}', sans-serif`; // Aperçu dans le dropdown
+            option.dataset.id = String(police.id);
+            option.dataset.hasBold = (police.boldUrl || police.boldItalicUrl) ? '1' : '0';
+            option.dataset.hasItalic = (police.italicUrl || police.boldItalicUrl) ? '1' : '0';
             inputFont.appendChild(option);
         });
         
         // Restaurer la valeur si elle existe toujours, sinon prendre la première
-        if (fontsToUse.some(p => (typeof p === 'object' ? p.nom : p) === currentValue)) {
+        if (fontsToUse.some(p => p && p.nom === currentValue)) {
             inputFont.value = currentValue;
         } else if (fontsToUse.length > 0) {
-            inputFont.value = typeof fontsToUse[0] === 'object' ? fontsToUse[0].nom : fontsToUse[0];
+            inputFont.value = fontsToUse[0].nom;
         }
         
         console.log(`updateFontSelectUI: ${fontsToUse.length} police(s) dans le sélecteur`);
+    }
+
+    /**
+     * Met à jour la liste des polices dans le sélecteur UI de la toolbar Quill.
+     *
+     * - Affiche toutes les polices reçues
+     * - Ajoute des attributs data-* par option (pour usage futur)
+     *
+     * @param {PoliceDisponible[]|null|undefined} polices - Liste des polices disponibles
+     * @returns {void}
+     */
+    function updateQuillFontSelectUI(polices) {
+        if (!quillInputFont) return;
+
+        const currentValue = quillInputFont.value;
+        quillInputFont.innerHTML = '';
+
+        /** @type {PoliceDisponible[]} */
+        const fontsToUse = (polices && Array.isArray(polices) && polices.length > 0) ? polices : DEFAULT_FONTS;
+
+        fontsToUse.forEach(police => {
+            if (!police || !police.nom) return;
+            const fontName = police.nom;
+            const option = document.createElement('option');
+            option.value = fontName;
+            option.textContent = fontName;
+            option.style.fontFamily = `'${fontName}', sans-serif`;
+            option.dataset.id = String(police.id);
+            option.dataset.hasBold = (police.boldUrl || police.boldItalicUrl) ? '1' : '0';
+            option.dataset.hasItalic = (police.italicUrl || police.boldItalicUrl) ? '1' : '0';
+            quillInputFont.appendChild(option);
+        });
+
+        if (fontsToUse.some(p => p && p.nom === currentValue)) {
+            quillInputFont.value = currentValue;
+        } else if (fontsToUse.length > 0) {
+            quillInputFont.value = fontsToUse[0].nom;
+        }
+
+        console.log(`updateQuillFontSelectUI: ${fontsToUse.length} police(s) dans le sélecteur Quill`);
     }
     
     // Exposer les fonctions globalement (pour debug et appel depuis WebDev)
     window.loadFontsFromJson = loadFontsFromJson;
     window.updateFontSelectUI = updateFontSelectUI;
+    window.updateQuillFontSelectUI = updateQuillFontSelectUI;
+
+    // Mode standalone : initialiser les polices par défaut si WebDev n'a pas encore fourni la liste.
+    if (!policesDisponibles || policesDisponibles.length === 0) {
+        policesDisponibles = DEFAULT_FONTS;
+        loadFontsFromJson(policesDisponibles);
+        updateFontSelectUI(policesDisponibles);
+        updateQuillFontSelectUI(policesDisponibles);
+    }
 
     // ─────────────────────────────── FIN SECTION 5 ────────────────────────────────
 
@@ -3757,7 +3927,6 @@ document.addEventListener('DOMContentLoaded', () => {
             isTransparent: zoneData.isTransparent !== undefined ? zoneData.isTransparent : true,
             locked: false, // Toujours réinitialiser à false pour la copie
             copyfit: zoneData.copyfit || false,
-            bold: zoneData.bold || false,
             lineHeight: zoneData.lineHeight !== undefined ? zoneData.lineHeight : 1.2,
             formatting: zoneData.formatting ? JSON.parse(JSON.stringify(zoneData.formatting)) : [], // Copie profonde du formatage
             border: zoneData.border ? JSON.parse(JSON.stringify(zoneData.border)) : { width: 0, color: '#000000', style: 'solid' },
@@ -3809,7 +3978,6 @@ document.addEventListener('DOMContentLoaded', () => {
             isTransparent: copiedZoneData.isTransparent,
             locked: false, // Toujours false pour la copie
             copyfit: copiedZoneData.copyfit,
-            bold: copiedZoneData.bold,
             lineHeight: copiedZoneData.lineHeight,
             formatting: copiedZoneData.formatting ? JSON.parse(JSON.stringify(copiedZoneData.formatting)) : [], // Copie profonde du formatage
             border: copiedZoneData.border ? JSON.parse(JSON.stringify(copiedZoneData.border)) : { width: 0, color: '#000000', style: 'solid' },
@@ -3853,14 +4021,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 newZoneEl.style.fontSize = zoneData.size + 'pt';
             }
             
-            // Gras
-            if (zoneData.bold) {
-                newZoneEl.style.fontWeight = 'bold';
-                if (contentEl) contentEl.style.fontWeight = 'bold';
-            } else {
-                newZoneEl.style.fontWeight = 'normal';
-                if (contentEl) contentEl.style.fontWeight = 'normal';
-            }
+            // Gras "zone entière" supprimé
+            newZoneEl.style.fontWeight = 'normal';
+            if (contentEl) contentEl.style.fontWeight = 'normal';
             
             // Couleur
             newZoneEl.style.color = zoneData.color;
@@ -4434,7 +4597,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Typographie
         if (quillInputFont) quillInputFont.value = zoneData.font || QUILL_DEFAULT_FONT;
         if (quillInputSize) quillInputSize.value = String(zoneData.size || QUILL_DEFAULT_SIZE);
-        if (quillChkBold) quillChkBold.checked = !!zoneData.bold;
         if (quillInputColor) quillInputColor.value = zoneData.color || QUILL_DEFAULT_COLOR;
         if (quillColorValue) quillColorValue.textContent = (zoneData.color || QUILL_DEFAULT_COLOR);
         
@@ -4518,6 +4680,21 @@ document.addEventListener('DOMContentLoaded', () => {
         // Bordure
         applyBorderToZone(zoneEl, zoneData.border);
         
+        // Typographie : appliquer sur zoneEl (héritage CSS vers Quill)
+        // Cela garantit que le style est visible même si quillInstance.root n'est pas encore prêt.
+        const selectedFontName = zoneData.font || QUILL_DEFAULT_FONT;
+        const police = (Array.isArray(policesDisponibles) && policesDisponibles.length > 0)
+            ? policesDisponibles.find(p => p && p.nom === selectedFontName)
+            : DEFAULT_FONTS.find(p => p && p.nom === selectedFontName);
+        const baseWeight = (police && typeof police.weight === 'number') ? police.weight : 400;
+        const baseStyle = (police && police.style === 'italic') ? 'italic' : 'normal';
+        
+        zoneEl.style.fontFamily = `${selectedFontName}, sans-serif`;
+        zoneEl.style.fontWeight = String(baseWeight);
+        zoneEl.style.fontStyle = baseStyle;
+        zoneEl.style.color = zoneData.color || QUILL_DEFAULT_COLOR;
+        zoneEl.style.fontSize = `${zoneData.size || QUILL_DEFAULT_SIZE}pt`;
+        
         // Alignement vertical (flex sur .zone-content)
         const contentEl = zoneEl.querySelector('.zone-content');
         if (contentEl) {
@@ -4583,13 +4760,14 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (e) {}
         }
         
-        // Styles Quill (root)
+        // Styles Quill (root) - réutilise les variables selectedFontName, baseWeight, baseStyle définies plus haut
         const quillInstance = quillInstances.get(zoneId);
         if (quillInstance && quillInstance.root) {
-            quillInstance.root.style.fontFamily = `${zoneData.font || QUILL_DEFAULT_FONT}, sans-serif`;
+            quillInstance.root.style.fontFamily = `${selectedFontName}, sans-serif`;
+            quillInstance.root.style.fontWeight = String(baseWeight);
+            quillInstance.root.style.fontStyle = baseStyle;
             quillInstance.root.style.color = zoneData.color || QUILL_DEFAULT_COLOR;
             quillInstance.root.style.lineHeight = String(zoneData.lineHeight || QUILL_DEFAULT_LINE_HEIGHT);
-            quillInstance.root.style.fontWeight = zoneData.bold ? 'bold' : 'normal';
             quillInstance.root.style.textAlign = zoneData.align || 'left';
         }
         
@@ -4685,16 +4863,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateSelectedZone((zoneData) => {
                     zoneData.size = parseFloat(quillInputSize.value) || QUILL_DEFAULT_SIZE;
                     console.log('🔧 PHASE 4 - size:', zoneData.size);
-                });
-            });
-        }
-        
-        // Typographie : gras global
-        if (quillChkBold) {
-            quillChkBold.addEventListener('change', () => {
-                updateSelectedZone((zoneData) => {
-                    zoneData.bold = !!quillChkBold.checked;
-                    console.log('🔧 PHASE 4 - bold:', zoneData.bold);
                 });
             });
         }
@@ -4920,7 +5088,6 @@ document.addEventListener('DOMContentLoaded', () => {
             inputBgColor.value = '#ffffff';
             chkTransparent.checked = false;
             chkCopyfit.checked = false;
-            chkBold.checked = false;
             inputLineHeight.value = 1.0;
             // Bordures pour zone QR (pas applicable)
             if (inputBorderWidth) {
@@ -4937,8 +5104,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Masquer les contrôles spécifiques texte et fond
             const controlsToHide = [
-                'input-font', 'input-size', 'input-line-height', 
-                'chk-bold', 'chk-copyfit', 'input-color',
+                'input-font', 'input-size', 'input-line-height',
+                'chk-copyfit', 'input-color',
                 'input-align', 'input-valign',
                 'input-bg-color', 'chk-transparent',
                 'input-border-width', 'input-border-color', 'input-border-style'
@@ -4994,8 +5161,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Masquer les contrôles spécifiques texte (Police, Taille, Interlignage, etc.)
             const textOnlyControls = [
-                'input-font', 'input-size', 'input-line-height', 
-                'chk-bold', 'chk-copyfit', 'input-color',
+                'input-font', 'input-size', 'input-line-height',
+                'chk-copyfit', 'input-color',
                 'input-align', 'input-valign'
             ];
             textOnlyControls.forEach(ctrlId => {
@@ -5081,8 +5248,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Réafficher les contrôles spécifiques texte (masqués pour les zones image/barcode)
             const controlsToShow = [
-                'input-font', 'input-size', 'input-line-height', 
-                'chk-bold', 'chk-copyfit', 'input-color',
+                'input-font', 'input-size', 'input-line-height',
+                'chk-copyfit', 'input-color',
                 'input-align', 'input-valign',
                 'input-bg-color', 'chk-transparent',
                 'input-border-width', 'input-border-color', 'input-border-style'
@@ -5109,7 +5276,6 @@ document.addEventListener('DOMContentLoaded', () => {
             inputBgColor.value = data.bgColor || '#ffffff';
             chkTransparent.checked = data.isTransparent !== undefined ? data.isTransparent : true;
             chkCopyfit.checked = data.copyfit || false;
-            chkBold.checked = data.bold || false;
             inputLineHeight.value = data.lineHeight !== undefined ? data.lineHeight : 1.2;
             
             // Initialiser la bordure si nécessaire
@@ -5907,7 +6073,6 @@ document.addEventListener('DOMContentLoaded', () => {
         zonesData[selectedId].isTransparent = chkTransparent.checked;
         zonesData[selectedId].locked = chkLock.checked;
         zonesData[selectedId].copyfit = chkCopyfit.checked;
-        zonesData[selectedId].bold = chkBold.checked;
         zonesData[selectedId].lineHeight = parseFloat(inputLineHeight.value) || 1.2;
         
         // Mise à jour des propriétés de bordure
@@ -5936,14 +6101,9 @@ document.addEventListener('DOMContentLoaded', () => {
             zoneEl.style.fontSize = inputSize.value + 'pt';
         }
         
-        // Gras
-        if (chkBold.checked) {
-            zoneEl.style.fontWeight = 'bold';
-            contentEl.style.fontWeight = 'bold';
-        } else {
-            zoneEl.style.fontWeight = 'normal';
-            contentEl.style.fontWeight = 'normal';
-        }
+        // Gras "zone entière" supprimé : le gras est géré via formatage partiel (Quill) ou annotations.
+        zoneEl.style.fontWeight = 'normal';
+        contentEl.style.fontWeight = 'normal';
         
         // Couleur globale : appliquée sur la zone et sur contentEl
         // La couleur par défaut sera héritée par les segments sans annotation
@@ -6860,14 +7020,15 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function updateMiniToolbarButtonsState() {
         const active = getActiveTextQuillForMiniToolbar();
-        if (!active || !btnPartialBold || !btnPartialUnderline) return;
+        if (!active) return;
 
         const range = active.quill.getSelection();
         if (!range) return;
 
         const format = active.quill.getFormat(range);
-        btnPartialBold.classList.toggle('active', !!format.bold);
-        btnPartialUnderline.classList.toggle('active', !!format.underline);
+        if (btnPartialBold) btnPartialBold.classList.toggle('active', !!format.bold);
+        if (btnMiniItalic) btnMiniItalic.classList.toggle('active', !!format.italic);
+        if (btnPartialUnderline) btnPartialUnderline.classList.toggle('active', !!format.underline);
     }
 
     /**
@@ -6970,6 +7131,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * Applique/retire l'italique sur la sélection Quill (formatage partiel).
+     * @returns {void}
+     */
+    function applyPartialItalic() {
+        console.log('🔧 PHASE 5 - applyPartialItalic');
+
+        const active = getActiveTextQuillForMiniToolbar();
+        if (!active) return;
+
+        const range = active.quill.getSelection();
+        if (!range || range.length === 0) {
+            alert('Veuillez sélectionner du texte à formater');
+            return;
+        }
+
+        const format = active.quill.getFormat(range);
+        active.quill.format('italic', !format.italic, 'user');
+        updateMiniToolbarButtonsState();
+        updateMiniToolbarPosition();
+    }
+
+    /**
      * Applique/retire le soulignement sur la sélection Quill (formatage partiel).
      * @returns {void}
      */
@@ -7055,6 +7238,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        if (btnMiniItalic) {
+            btnMiniItalic.addEventListener('click', (e) => {
+                e.stopPropagation();
+                applyPartialItalic();
+                getActiveTextQuillForMiniToolbar()?.quill?.focus();
+            });
+        }
+
         if (btnPartialUnderline) {
             btnPartialUnderline.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -7102,7 +7293,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * Listeners texte :
      *   - inputContent, inputFont, inputSize, inputColor
      *   - inputAlign, inputValign, inputLineHeight
-     *   - chkBold, chkCopyfit, chkTransparent, chkLock
+     *   - chkCopyfit, chkTransparent, chkLock
      * 
      * Listeners image :
      *   - inputImageSourceType, inputImageChamp, inputImageMode
@@ -7182,7 +7373,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     // 3. Checkboxes SPÉCIFIQUES AU TEXTE
-    [chkCopyfit, chkBold].forEach(el => {
+    [chkCopyfit].forEach(el => {
         if (!el) return;
         el.addEventListener('change', () => {
             updateActiveZoneData(); // Appliquer le changement
@@ -8350,7 +8541,6 @@ document.addEventListener('DOMContentLoaded', () => {
         inputBgColor.value = '#ffffff';
         chkTransparent.checked = true;
         chkCopyfit.checked = false;
-        chkBold.checked = false;
         chkLock.checked = false;
         inputLineHeight.value = 1.2;
         // Réinitialiser les inputs de bordure
@@ -10089,7 +10279,6 @@ document.addEventListener('DOMContentLoaded', () => {
             font: style.police || 'Roboto',
             size: style.taillePt || 12,
             color: style.couleur || '#000000',
-            bold: style.gras || false,
             lineHeight: style.interligne || 1.2,
             align: style.alignementH || 'left',
             valign: style.alignementV || 'top',
@@ -10259,9 +10448,26 @@ document.addEventListener('DOMContentLoaded', () => {
     function loadFromWebDev(jsonData) {
         console.log('=== loadFromWebDev() : Début du chargement ===');
         console.log('Données reçues :', jsonData);
+
+        // Support enveloppe postMessage {action:'load', policesDisponibles:[...], data:{...}}
+        const isLoadEnvelope =
+            !!jsonData &&
+            typeof jsonData === 'object' &&
+            jsonData.action === 'load' &&
+            !!jsonData.data &&
+            typeof jsonData.data === 'object';
+
+        /** @type {DocumentJsonWebDev} */
+        const documentJson = isLoadEnvelope ? jsonData.data : jsonData;
+
+        /** @type {PoliceDisponible[]|null} */
+        const messagePolicesDisponibles =
+            (isLoadEnvelope && Array.isArray(jsonData.policesDisponibles))
+                ? jsonData.policesDisponibles
+                : null;
         
         // Validation de base
-        if (!jsonData || typeof jsonData !== 'object') {
+        if (!documentJson || typeof documentJson !== 'object') {
             console.error('loadFromWebDev : JSON invalide ou vide');
             return false;
         }
@@ -10313,7 +10519,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             color: style.color || '#000000',
                             align: style.align || 'left',
                             valign: style.valign || 'top',
-                            bold: style.bold || false,
                             line_height: style.lineHeight !== undefined ? style.lineHeight : (style.line_height !== undefined ? style.line_height : 1.2),
                             // IMPORTANT : conserver le fond pendant la normalisation
                             bgColor: (typeof style.bgColor === 'string' && style.bgColor.trim().length > 0) ? style.bgColor : null,
@@ -10361,13 +10566,18 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         }
 
+        /** @type {DocumentJsonWebDev} */
+        let effectiveDocumentJson = documentJson;
+
         // Support import tests : format "template_multipage" (pages[].zones[])
-        const isTemplateMultipage = jsonData.document === 'template_multipage' && Array.isArray(jsonData.pages);
-        const hasZonesArray = isTemplateMultipage && jsonData.pages.some(p => Array.isArray(p && p.zones));
+        const isTemplateMultipage = effectiveDocumentJson.document === 'template_multipage' && Array.isArray(effectiveDocumentJson.pages);
+        const hasZonesArray = isTemplateMultipage && effectiveDocumentJson.pages.some(p => Array.isArray(p && p.zones));
         if (hasZonesArray) {
             console.log('🔧 PHASE 7 - Import: détection format template_multipage → normalisation WebDev');
-            jsonData = normalizeTemplateMultipageJson(jsonData);
-            console.log('🔧 PHASE 7 - Import: JSON normalisé :', jsonData);
+            // Note : le format template_multipage est un document JSON (pas une enveloppe postMessage).
+            // On normalise uniquement le document.
+            effectiveDocumentJson = normalizeTemplateMultipageJson(effectiveDocumentJson);
+            console.log('🔧 PHASE 7 - Import: JSON normalisé :', effectiveDocumentJson);
         }
         
         // --- ÉTAPE 1 : Nettoyer le DOM ---
@@ -10385,26 +10595,26 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Étape 2 : Initialisation des métadonnées...');
         
         // Stocker l'identification du document (nouveau champ)
-        if (jsonData.identification) {
+        if (effectiveDocumentJson.identification) {
             documentState.identification = {
-                idDocument: jsonData.identification.idDocument || '',
-                nomDocument: jsonData.identification.nomDocument || '',
-                dateCreation: jsonData.identification.dateCreation || ''
+                idDocument: effectiveDocumentJson.identification.idDocument || '',
+                nomDocument: effectiveDocumentJson.identification.nomDocument || '',
+                dateCreation: effectiveDocumentJson.identification.dateCreation || ''
             };
             console.log('  → Identification :', documentState.identification);
         }
         
         // Stocker le format du document (dimensions mm, fond perdu, traits de coupe, marge de sécurité, limites images)
-        if (jsonData.formatDocument) {
+        if (effectiveDocumentJson.formatDocument) {
             documentState.formatDocument = {
                 // Dimensions exactes en mm (pour les calculs de géométrie précis)
-                largeurMm: jsonData.formatDocument.largeurMm || DOCUMENT_FORMATS_MM[DEFAULT_FORMAT].widthMm,
-                hauteurMm: jsonData.formatDocument.hauteurMm || DOCUMENT_FORMATS_MM[DEFAULT_FORMAT].heightMm,
-                fondPerdu: jsonData.formatDocument.fondPerdu || { actif: false, valeurMm: 3 },
-                traitsCoupe: jsonData.formatDocument.traitsCoupe || { actif: false },
-                margeSecuriteMm: jsonData.formatDocument.margeSecurite || 0,
-                surfaceMaxImageMm2: jsonData.formatDocument?.surfaceMaxImageMm2 || DEFAULT_SURFACE_MAX_IMAGE_MM2,
-                pourcentageMaxImage: jsonData.formatDocument?.pourcentageMaxImage || DEFAULT_POURCENTAGE_MAX_IMAGE
+                largeurMm: effectiveDocumentJson.formatDocument.largeurMm || DOCUMENT_FORMATS_MM[DEFAULT_FORMAT].widthMm,
+                hauteurMm: effectiveDocumentJson.formatDocument.hauteurMm || DOCUMENT_FORMATS_MM[DEFAULT_FORMAT].heightMm,
+                fondPerdu: effectiveDocumentJson.formatDocument.fondPerdu || { actif: false, valeurMm: 3 },
+                traitsCoupe: effectiveDocumentJson.formatDocument.traitsCoupe || { actif: false },
+                margeSecuriteMm: effectiveDocumentJson.formatDocument.margeSecurite || 0,
+                surfaceMaxImageMm2: effectiveDocumentJson.formatDocument?.surfaceMaxImageMm2 || DEFAULT_SURFACE_MAX_IMAGE_MM2,
+                pourcentageMaxImage: effectiveDocumentJson.formatDocument?.pourcentageMaxImage || DEFAULT_POURCENTAGE_MAX_IMAGE
             };
             console.log('  → Format document :', documentState.formatDocument);
             console.log('  → Dimensions :', documentState.formatDocument.largeurMm, 'x', documentState.formatDocument.hauteurMm, 'mm');
@@ -10413,26 +10623,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Stocker les champs de fusion disponibles et mettre à jour l'UI
-        if (jsonData.champsFusion && Array.isArray(jsonData.champsFusion) && jsonData.champsFusion.length > 0) {
-            documentState.champsFusion = jsonData.champsFusion;
-            mergeFields = jsonData.champsFusion;
+        if (effectiveDocumentJson.champsFusion && Array.isArray(effectiveDocumentJson.champsFusion) && effectiveDocumentJson.champsFusion.length > 0) {
+            documentState.champsFusion = effectiveDocumentJson.champsFusion;
+            mergeFields = effectiveDocumentJson.champsFusion;
             updateMergeFieldsUI(mergeFields);
             console.log(`  → ${documentState.champsFusion.length} champ(s) de fusion chargé(s) et affichés dans la toolbar`);
         } else {
             console.log('  → Pas de champs de fusion dans le JSON, conservation des valeurs par défaut');
         }
         
-        // Étape 2c : Charger les polices et mettre à jour l'UI
-        if (jsonData.polices && jsonData.polices.length > 0) {
-            documentState.polices = jsonData.polices;
-            loadFontsFromJson(jsonData.polices);
-            updateFontSelectUI(jsonData.polices);
-            console.log(`  → ${jsonData.polices.length} police(s) chargée(s) et injectée(s)`);
-        } else {
-            console.log('  → Pas de polices dans le JSON, conservation des valeurs par défaut');
-            // Réinitialiser avec les polices par défaut
-            updateFontSelectUI(null);
-        }
+        // Étape 2c : Charger les polices disponibles (message.policesDisponibles au même niveau que data)
+        /** @type {PoliceDisponible[]|null} */
+        const policesFromDocument = Array.isArray(effectiveDocumentJson.polices) ? effectiveDocumentJson.polices : null;
+        /** @type {PoliceDisponible[]|null} */
+        const incomingPolicesDisponibles = (messagePolicesDisponibles && messagePolicesDisponibles.length > 0)
+            ? messagePolicesDisponibles
+            : (policesFromDocument && policesFromDocument.length > 0 ? policesFromDocument : null);
+
+        policesDisponibles = (incomingPolicesDisponibles && incomingPolicesDisponibles.length > 0)
+            ? incomingPolicesDisponibles
+            : DEFAULT_FONTS;
+
+        loadFontsFromJson(policesDisponibles);
+        updateFontSelectUI(policesDisponibles);
+        updateQuillFontSelectUI(policesDisponibles);
+        console.log(`  → ${policesDisponibles.length} police(s) disponible(s) chargée(s) et injectée(s)`);
         
         // --- ÉTAPE 3 : Créer les pages ---
         console.log('Étape 3 : Création des pages...');
@@ -10441,19 +10656,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const mmToPixels = (mm) => mm / MM_PER_PIXEL;
         
         // Récupérer les dimensions du document (appliquées à toutes les pages)
-        const docWidthPx = jsonData.formatDocument?.largeurMm 
-            ? mmToPixels(jsonData.formatDocument.largeurMm) 
+        const docWidthPx = effectiveDocumentJson.formatDocument?.largeurMm 
+            ? mmToPixels(effectiveDocumentJson.formatDocument.largeurMm) 
             : DOCUMENT_FORMATS[DEFAULT_FORMAT].width;
-        const docHeightPx = jsonData.formatDocument?.hauteurMm 
-            ? mmToPixels(jsonData.formatDocument.hauteurMm) 
+        const docHeightPx = effectiveDocumentJson.formatDocument?.hauteurMm 
+            ? mmToPixels(effectiveDocumentJson.formatDocument.hauteurMm) 
             : DOCUMENT_FORMATS[DEFAULT_FORMAT].height;
         
-        console.log(`  → Dimensions : ${jsonData.formatDocument?.largeurMm || 210}mm x ${jsonData.formatDocument?.hauteurMm || 297}mm`);
+        console.log(`  → Dimensions : ${effectiveDocumentJson.formatDocument?.largeurMm || 210}mm x ${effectiveDocumentJson.formatDocument?.hauteurMm || 297}mm`);
         console.log(`  → En pixels : ${Math.round(docWidthPx)}px x ${Math.round(docHeightPx)}px`);
         
         // Créer les pages depuis le JSON
-        if (jsonData.pages && Array.isArray(jsonData.pages) && jsonData.pages.length > 0) {
-            documentState.pages = jsonData.pages.map((pageData, index) => {
+        if (effectiveDocumentJson.pages && Array.isArray(effectiveDocumentJson.pages) && effectiveDocumentJson.pages.length > 0) {
+            documentState.pages = effectiveDocumentJson.pages.map((pageData, index) => {
                 const pageId = `page-${pageData.numero || (index + 1)}`;
                 const pageName = pageData.nom || (index === 0 ? 'Recto' : 'Verso');
                 
@@ -10487,8 +10702,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let maxZoneId = 0; // Pour calculer le zoneCounter
         let zonesTexteCount = 0;
         
-        if (jsonData.zonesTexte && Array.isArray(jsonData.zonesTexte)) {
-            jsonData.zonesTexte.forEach(zoneJson => {
+        if (effectiveDocumentJson.zonesTexte && Array.isArray(effectiveDocumentJson.zonesTexte)) {
+            effectiveDocumentJson.zonesTexte.forEach(zoneJson => {
                 // Déterminer la page cible (WebDev: 1-based → JS: 0-based)
                 const pageIndex = (zoneJson.page || 1) - 1;
                 
@@ -10531,8 +10746,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         let zonesCodeBarresCount = 0;
         
-        if (jsonData.zonesCodeBarres && Array.isArray(jsonData.zonesCodeBarres)) {
-            jsonData.zonesCodeBarres.forEach(zoneJson => {
+        if (effectiveDocumentJson.zonesCodeBarres && Array.isArray(effectiveDocumentJson.zonesCodeBarres)) {
+            effectiveDocumentJson.zonesCodeBarres.forEach(zoneJson => {
                 // Déterminer la page cible (WebDev: 1-based → JS: 0-based)
                 const pageIndex = (zoneJson.page || 1) - 1;
                 
@@ -10574,8 +10789,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         let zonesImageCount = 0;
         
-        if (jsonData.zonesImage && Array.isArray(jsonData.zonesImage)) {
-            jsonData.zonesImage.forEach(zoneJson => {
+        if (effectiveDocumentJson.zonesImage && Array.isArray(effectiveDocumentJson.zonesImage)) {
+            effectiveDocumentJson.zonesImage.forEach(zoneJson => {
                 const pageIndex = (zoneJson.page || 1) - 1;
                 
                 if (pageIndex < 0 || pageIndex >= documentState.pages.length) {
@@ -10608,8 +10823,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         let zonesTextQuillCount = 0;
         
-        if (jsonData.zonesTextQuill && Array.isArray(jsonData.zonesTextQuill)) {
-            jsonData.zonesTextQuill.forEach(z => {
+        if (effectiveDocumentJson.zonesTextQuill && Array.isArray(effectiveDocumentJson.zonesTextQuill)) {
+            effectiveDocumentJson.zonesTextQuill.forEach(z => {
                 const zoneId = z.id || `zone-${Date.now()}`;
                 
                 // Nouveau format : pas de page (pour l'instant) → défaut page 1 (index 0)
@@ -10636,19 +10851,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (hasDeltaText && !hasRtf) {
                     // Cas 1 : texte brut dans content_quill, RTF vide
-                    console.log('🔧 PHASE 7 - Import textQuill cas 1 (texte brut):', zoneId);
                     delta = textToDelta(z.content_quill, {
-                        bold: style.bold === true,
+                        bold: false,
                         underline: false,
                         color: typeof style.color === 'string' ? style.color : undefined
                     });
                 } else if (!hasDeltaObject && hasRtf) {
                     // Cas 2 : pas de delta, RTF présent
-                    console.log('🔧 PHASE 7 - Import textQuill cas 2 (RTF→Delta):', zoneId);
                     delta = rtfToDelta(z.content_rtf);
                 } else if (hasDeltaObject) {
                     // Cas 3 : delta + RTF
-                    console.log('🔧 PHASE 7 - Import textQuill cas 3 (Delta direct):', zoneId);
                     delta = z.content_quill;
                 } else {
                     // Fallback : delta vide
@@ -10692,7 +10904,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     valign: style.valign || 'top',
                     bgColor: importedBgColor,
                     isTransparent: importedIsTransparent,
-                    bold: style.bold || false,
                     lineHeight: (style.lineHeight !== undefined ? style.lineHeight : (style.line_height !== undefined ? style.line_height : 1.2)),
                     locked: style.locked === true,
                     copyfit: style.copyfit === true,
@@ -10922,7 +11133,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     police: zoneData.font || 'Roboto',
                     taillePt: zoneData.size || 12,
                     couleur: zoneData.color || '#000000',
-                    gras: zoneData.bold || false,
+                    gras: false,
                     interligne: zoneData.lineHeight || 1.2,
                     alignementH: zoneData.align || 'left',
                     alignementV: zoneData.valign || 'top'
@@ -10996,7 +11207,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 police: zoneData.font || 'Roboto',
                 taillePt: zoneData.size || 12,
                 couleur: zoneData.color || '#000000',
-                gras: zoneData.bold || false,
+                gras: false,
                 interligne: zoneData.lineHeight || 1.2,
                 alignementH: zoneData.align || 'left',
                 alignementV: zoneData.valign || 'top'
@@ -11170,22 +11381,176 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
+     * Analyse un contenu RTF pour détecter les variantes typographiques utilisées.
+     * Détecte \b / \b0 (gras) et \i / \i0 (italique) en tenant compte des activations/désactivations.
+     *
+     * @param {string} rtfContent - Contenu RTF
+     * @returns {{bold: boolean, italic: boolean, boldItalic: boolean}}
+     */
+    function analyserVariantesRtf(rtfContent) {
+        const rtf = typeof rtfContent === 'string' ? rtfContent : '';
+        const re = /\\([bi])(-?\d+)?/g;
+
+        let boldActive = false;
+        let italicActive = false;
+        let usedBold = false;
+        let usedItalic = false;
+        let usedBoldItalic = false;
+
+        let m;
+        while ((m = re.exec(rtf)) !== null) {
+            const flag = m[1]; // 'b' or 'i'
+            const rawVal = m[2]; // undefined, "0", "1", ...
+            const val = rawVal === undefined ? 1 : parseInt(rawVal, 10);
+            const enable = !(Number.isFinite(val) && val === 0);
+
+            if (flag === 'b') boldActive = enable;
+            if (flag === 'i') italicActive = enable;
+
+            if (boldActive) usedBold = true;
+            if (italicActive) usedItalic = true;
+            if (boldActive && italicActive) usedBoldItalic = true;
+        }
+
+        // Si boldItalic est présent, alors bold et italic le sont nécessairement.
+        if (usedBoldItalic) {
+            usedBold = true;
+            usedItalic = true;
+        }
+
+        return { bold: usedBold, italic: usedItalic, boldItalic: usedBoldItalic };
+    }
+
+    /**
+     * Analyse un Delta Quill pour détecter les variantes typographiques utilisées.
+     *
+     * @param {Object|null} delta - Objet Delta Quill ({ops:[...]}) ou null
+     * @returns {{bold: boolean, italic: boolean, boldItalic: boolean}}
+     */
+    function analyserVariantesDelta(delta) {
+        const ops = delta && typeof delta === 'object' && Array.isArray(delta.ops) ? delta.ops : [];
+        let usedBold = false;
+        let usedItalic = false;
+        let usedBoldItalic = false;
+
+        ops.forEach(op => {
+            const attrs = op && typeof op === 'object' ? op.attributes : null;
+            if (!attrs || typeof attrs !== 'object') return;
+
+            const b = attrs.bold === true;
+            const i = attrs.italic === true;
+
+            if (b) usedBold = true;
+            if (i) usedItalic = true;
+            if (b && i) usedBoldItalic = true;
+        });
+
+        if (usedBoldItalic) {
+            usedBold = true;
+            usedItalic = true;
+        }
+
+        return { bold: usedBold, italic: usedItalic, boldItalic: usedBoldItalic };
+    }
+
+    /**
+     * Extrait la liste des polices utilisées dans le document avec leurs variantes.
+     * Ne conserve que les polices réellement présentes dans les zones texte/textQuill.
+     *
+     * @returns {PoliceUtilisee[]} Liste des polices utilisées
+     */
+    function extractPolicesUtilisees() {
+        /** @type {Map<string, {regular: boolean, bold: boolean, italic: boolean, boldItalic: boolean}>} */
+        const acc = new Map();
+
+        /**
+         * @param {string} nomPolice
+         * @returns {{regular: boolean, bold: boolean, italic: boolean, boldItalic: boolean}}
+         */
+        function ensure(nomPolice) {
+            if (!acc.has(nomPolice)) {
+                acc.set(nomPolice, { regular: true, bold: false, italic: false, boldItalic: false });
+            }
+            // @ts-ignore - Map.get is safe here
+            return acc.get(nomPolice);
+        }
+
+        documentState.pages.forEach(page => {
+            const zones = page && page.zones ? page.zones : {};
+            Object.values(zones).forEach(zoneData => {
+                if (!zoneData || (zoneData.type !== 'text' && zoneData.type !== 'textQuill')) return;
+
+                const fontName = zoneData.font || QUILL_DEFAULT_FONT;
+                const flags = ensure(fontName);
+
+                // Regular est toujours vraie dès lors que la police est référencée.
+                flags.regular = true;
+
+                if (zoneData.type === 'text') {
+                    // Zones texte "legacy" : le gras de zone entière est supprimé, on déduit uniquement depuis les annotations.
+                    const boldFromFormatting = Array.isArray(zoneData.formatting)
+                        ? zoneData.formatting.some(f => f && f.styles && f.styles.fontWeight === 'bold')
+                        : false;
+                    if (boldFromFormatting) flags.bold = true;
+                } else if (zoneData.type === 'textQuill') {
+                    const delta = zoneData.quillDelta || null;
+                    const vDelta = analyserVariantesDelta(delta);
+                    if (vDelta.bold) flags.bold = true;
+                    if (vDelta.italic) flags.italic = true;
+                    if (vDelta.boldItalic) flags.boldItalic = true;
+
+                    // Analyse secondaire via RTF généré (si disponible)
+                    try {
+                        const rtf = deltaToRtf(delta);
+                        const vRtf = analyserVariantesRtf(rtf);
+                        if (vRtf.bold) flags.bold = true;
+                        if (vRtf.italic) flags.italic = true;
+                        if (vRtf.boldItalic) flags.boldItalic = true;
+                    } catch (e) {}
+                }
+            });
+        });
+
+        /** @type {PoliceUtilisee[]} */
+        const result = [];
+        acc.forEach((flags, nom) => {
+            const police = Array.isArray(policesDisponibles)
+                ? policesDisponibles.find(p => p && p.nom === nom)
+                : null;
+
+            result.push({
+                nom,
+                urls: {
+                    regular: police && flags.regular ? (police.url || null) : null,
+                    bold: police && flags.bold ? (police.boldUrl || null) : null,
+                    italic: police && flags.italic ? (police.italicUrl || null) : null,
+                    boldItalic: police && flags.boldItalic ? (police.boldItalicUrl || null) : null
+                }
+            });
+        });
+
+        // Tri stable pour export déterministe
+        result.sort((a, b) => String(a.nom).localeCompare(String(b.nom)));
+        return result;
+    }
+
+    /**
      * Exporte documentState vers le format JSON WebDev (inverse de loadFromWebDev).
      * Fonction principale d'export : génère le JSON complet pour transmission à WebDev.
-     * 
+     *
      * Étapes de l'export :
      * 1. Synchronisation DOM → documentState (positions actuelles)
      * 2. Construction des métadonnées (format, dimensions)
      * 3. Conversion des zones par type (texte, code-barres, images)
      * 4. Génération du JSON final
-     * 
+     *
      * @returns {DocumentJsonWebDev} Document complet au format JSON WebDev
-     * 
+     *
      * @see loadFromWebDev - Fonction inverse (import)
      * @see convertZoneTexteToJson - Conversion zones texte
      * @see convertZoneCodeBarresToJson - Conversion zones code-barres
      * @see convertZoneImageToJson - Conversion zones image
-     * 
+     *
      * @example
      * // Export vers WebDev (bouton "Générer JSON")
      * const jsonWebDev = exportToWebDev();
@@ -11236,7 +11601,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 pourcentageMaxImage: documentState.formatDocument?.pourcentageMaxImage || DEFAULT_POURCENTAGE_MAX_IMAGE
             },
             champsFusion: documentState.champsFusion || [],
-            polices: documentState.polices || [],
             pages: [],
             zonesTexte: [],
             zonesTextQuill: [],
@@ -11301,7 +11665,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             color: zoneData.color || '#000000',
                             align: zoneData.align || 'left',
                             valign: zoneData.valign || 'top',
-                            bold: zoneData.bold || false,
                             line_height: zoneData.lineHeight || 1.2,
                             bgColor: zoneData.isTransparent ? null : (zoneData.bgColor || '#ffffff'),
                             transparent: zoneData.isTransparent !== undefined ? !!zoneData.isTransparent : true,
@@ -11325,16 +11688,10 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log(`    → ${textCount} zone(s) texte, ${barcodeCount} zone(s) code-barres, ${imageCount} zone(s) image`);
         });
         
-        // --- ÉTAPE 4 : Extraire les polices utilisées ---
-        console.log('Étape 4 : Extraction des polices utilisées...');
-        
-        const policesUtilisees = new Set();
-        output.zonesTexte.forEach(z => {
-            if (z.style?.police) policesUtilisees.add(z.style.police);
-        });
-        output.policesUtilisees = Array.from(policesUtilisees);
-        
-        console.log(`  → ${output.policesUtilisees.length} police(s) utilisée(s) : ${output.policesUtilisees.join(', ') || '(aucune)'}`);
+        // --- ÉTAPE 4 : Extraire les polices utilisées (avec variantes) ---
+        console.log('Étape 4 : Extraction des polices utilisées (avec variantes)...');
+        output.policesUtilisees = extractPolicesUtilisees();
+        console.log(`  → ${output.policesUtilisees.length} police(s) utilisée(s)`);
         
         // --- Résumé final ---
         console.log('=== exportToWebDev() : Export terminé ===');
@@ -11430,7 +11787,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Charger un document JSON
                 if (message.data) {
                     try {
-                        loadFromWebDev(message.data);
+                        loadFromWebDev(message);
                         sendMessageToParent({ action: 'loaded', success: true });
                     } catch (error) {
                         console.error('Erreur lors du chargement:', error);
@@ -11706,16 +12063,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     zoneEl.style.fontFamily = data.font + ", sans-serif";
                 }
                 
-                // Gras global (seulement si pas de formatage partiel)
-                if (!data.formatting || data.formatting.length === 0) {
-                    if (data.bold) {
-                        zoneEl.style.fontWeight = 'bold';
-                        if (contentEl) contentEl.style.fontWeight = 'bold';
-                    } else {
-                        zoneEl.style.fontWeight = 'normal';
-                        if (contentEl) contentEl.style.fontWeight = 'normal';
-                    }
-                }
+                // Gras "zone entière" supprimé : le gras est géré via formatage partiel (annotations / Quill).
+                zoneEl.style.fontWeight = 'normal';
+                if (contentEl) contentEl.style.fontWeight = 'normal';
                 
                 // Contenu avec formatage partiel
                 if (contentEl && data.content) {
@@ -12255,7 +12605,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const text = String(reader.result || '');
                     resolve(JSON.parse(text));
                 } catch (e) {
-                    reject(new Error('JSON invalide'));
+                    reject(new Error('JSON invalide: ' + e.message));
                 }
             };
             reader.readAsText(file);

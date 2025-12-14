@@ -336,9 +336,6 @@
                         <input type="number" id="input-line-height" value="1.2" step="0.1" min="0.5" max="3.0">
                     </div>
                     <div class="input-group half">
-                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 12px; margin-top: 20px;">
-                            <input type="checkbox" id="chk-bold"> <strong>Gras</strong>
-                        </label>
                         <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 11px; margin-top: 5px;">
                             <input type="checkbox" id="chk-copyfit"> Ajuster auto.
                         </label>
@@ -646,12 +643,6 @@
                         </select>
                     </div>
 
-                    <label class="checkbox-row">
-                        <input type="checkbox" id="quill-chk-bold">
-                        <span class="material-icons">format_bold</span>
-                        <span>Gras (zone entière)</span>
-                    </label>
-
                     <div class="prop-row">
                         <label for="quill-input-color">Couleur</label>
                         <div class="color-input-wrapper">
@@ -823,6 +814,9 @@
     <div class="mini-toolbar" id="mini-toolbar" style="display: none;">
         <button type="button" id="btn-partial-bold" class="mini-btn" title="Gras (sélection)">
             <span class="material-icons">format_bold</span>
+        </button>
+        <button type="button" id="btn-mini-italic" class="mini-btn" title="Italique (sélection)">
+            <span class="material-icons">format_italic</span>
         </button>
         <button type="button" id="btn-partial-underline" class="mini-btn" title="Souligner (sélection)">
             <span class="material-icons">format_underlined</span>
