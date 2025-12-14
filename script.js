@@ -3824,6 +3824,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Mettre à jour les données de la zone (objet qui sera sérialisé)
                     zonesData[id].quillDelta = quillInstance.getContents();
                     
+                    // Recalculer le copyfit si activé (après que le DOM se soit mis à jour)
+                    if (zonesData[id].copyfit) {
+                        const zoneEl = document.getElementById(id);
+                        if (zoneEl) {
+                            setTimeout(() => {
+                                applyCopyfitToQuillZone(zoneEl, quillInstance, zonesData[id].size || QUILL_DEFAULT_SIZE);
+                            }, 10);
+                        }
+                    }
+                    
                     // Debounce identique au système existant (textarea)
                     clearTimeout(contentSaveTimeout);
                     contentSaveTimeout = setTimeout(() => {
@@ -4771,19 +4781,10 @@ document.addEventListener('DOMContentLoaded', () => {
             quillInstance.root.style.textAlign = zoneData.align || 'left';
         }
         
-        // Copyfit (réutilisation du moteur existant) : ajuste la taille de police pour tenir dans la zone
+        // Copyfit : ajuste la taille de police pour que le contenu tienne dans la zone
         if (zoneData.copyfit) {
-            // Point de départ = taille max
             const maxSize = zoneData.size || QUILL_DEFAULT_SIZE;
-            // Appliquer un font-size temporaire sur le root, puis lancer le copyfit sur la zone
-            if (quillInstance && quillInstance.root) {
-                quillInstance.root.style.fontSize = `${maxSize}pt`;
-            }
-            applyCopyfit(zoneEl, maxSize);
-            // Synchroniser le résultat sur Quill
-            if (quillInstance && quillInstance.root && zoneEl.style.fontSize) {
-                quillInstance.root.style.fontSize = zoneEl.style.fontSize;
-            }
+            applyCopyfitToQuillZone(zoneEl, quillInstance, maxSize);
         } else {
             const size = zoneData.size || QUILL_DEFAULT_SIZE;
             if (quillInstance && quillInstance.root) {
@@ -6260,6 +6261,105 @@ document.addEventListener('DOMContentLoaded', () => {
                 !contentEl.classList.contains('valign-middle') &&
                 !contentEl.classList.contains('valign-bottom')) {
                 contentEl.style.justifyContent = originalComputedJustifyContent;
+            }
+        }
+    }
+
+    /**
+     * Applique le copyfit à une zone textQuill.
+     * Réduit la taille de police pour que le contenu tienne dans la zone.
+     * Utilise une approche en 2 phases : réduction rapide (-2pt) puis fine (-0.5pt).
+     * 
+     * @param {HTMLElement} zoneEl - Élément DOM de la zone
+     * @param {Object} quillInstance - Instance Quill de la zone
+     * @param {number} maxSizePt - Taille de police maximum en points
+     * @returns {void}
+     */
+    function applyCopyfitToQuillZone(zoneEl, quillInstance, maxSizePt) {
+        // Vérifications préliminaires
+        if (!zoneEl || !quillInstance || !quillInstance.root) return;
+        
+        const zoneContent = zoneEl.querySelector('.zone-content');
+        const editor = quillInstance.root;
+        if (!zoneContent || !editor) return;
+        
+        const maxSize = parseFloat(maxSizePt) || QUILL_DEFAULT_SIZE;
+        const minSize = 6;
+        const precision = 0.5; // Précision de la dichotomie en points
+        const maxIterations = 20; // Sécurité anti-boucle infinie
+        let iterations = 0;
+        
+        // Sauvegarder l'alignement vertical pour le restaurer après
+        const originalInlineJustifyContent = zoneContent.style.justifyContent;
+        let originalComputedJustifyContent = 'flex-start';
+        try {
+            originalComputedJustifyContent = getComputedStyle(zoneContent).justifyContent || 'flex-start';
+        } catch (e) {
+            originalComputedJustifyContent = 'flex-start';
+        }
+        
+        // Temporairement aligner en haut pour des calculs précis
+        zoneContent.style.justifyContent = 'flex-start';
+        
+        /**
+         * Teste si une taille donnée provoque un overflow
+         * @param {number} sizePt - Taille en points à tester
+         * @returns {boolean} - true si overflow, false sinon
+         */
+        const testSize = (sizePt) => {
+            editor.style.fontSize = `${sizePt}pt`;
+            void zoneContent.offsetHeight; // Force reflow
+            return editor.scrollHeight > zoneContent.clientHeight;
+        };
+        
+        // Algorithme par dichotomie pour trouver la taille optimale
+        let low = minSize;
+        let high = maxSize;
+        let optimalSize = minSize;
+        
+        // D'abord, vérifier si la taille max ne provoque pas d'overflow
+        if (!testSize(maxSize)) {
+            // Pas d'overflow à la taille max → on garde la taille max
+            optimalSize = maxSize;
+        } else {
+            // Dichotomie pour trouver la taille optimale
+            while ((high - low) > precision && iterations < maxIterations) {
+                const mid = (low + high) / 2;
+                
+                if (testSize(mid)) {
+                    // Overflow → taille trop grande, chercher plus petit
+                    high = mid;
+                } else {
+                    // Pas d'overflow → taille OK, on peut essayer plus grand
+                    low = mid;
+                    optimalSize = mid;
+                }
+                iterations++;
+            }
+            
+            // Arrondir à 0.5pt près (vers le bas pour éviter tout overflow)
+            optimalSize = Math.floor(optimalSize * 2) / 2;
+            
+            // Vérification finale : s'assurer qu'on n'a pas d'overflow
+            if (testSize(optimalSize)) {
+                optimalSize -= precision;
+            }
+        }
+        
+        // Appliquer la taille optimale finale
+        editor.style.fontSize = `${optimalSize}pt`;
+        void zoneContent.offsetHeight; // Force reflow final
+        
+        // Restaurer l'alignement vertical original
+        if (originalInlineJustifyContent) {
+            zoneContent.style.justifyContent = originalInlineJustifyContent;
+        } else {
+            zoneContent.style.justifyContent = '';
+            // Sécurité : si aucune classe CSS n'est présente, réappliquer le computed initial
+            if (!zoneContent.classList.contains('valign-top') &&
+                !zoneContent.classList.contains('valign-middle') &&
+                !zoneContent.classList.contains('valign-bottom')) {
+                zoneContent.style.justifyContent = originalComputedJustifyContent;
             }
         }
     }
@@ -9164,7 +9264,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Recalculer le CopyFit pendant le redimensionnement pour effet temps réel
                 if (zonesData[firstSelectedId].copyfit) {
-                    applyCopyfit(zone, zonesData[firstSelectedId].size);
+                    if (zonesData[firstSelectedId].type === 'textQuill') {
+                        const quillInstance = quillInstances.get(firstSelectedId);
+                        if (quillInstance) {
+                            applyCopyfitToQuillZone(zone, quillInstance, zonesData[firstSelectedId].size);
+                        }
+                    } else {
+                        applyCopyfit(zone, zonesData[firstSelectedId].size);
+                    }
                 }
             }
             updateGeomDisplay(zone);
@@ -9581,7 +9688,14 @@ document.addEventListener('DOMContentLoaded', () => {
             updateImageDpiBadge(zoneId);
             updateDpiIndicator(zoneId);
         } else if (zoneData.copyfit) {
-            applyCopyfit(zoneEl, zoneData.size);
+            if (zoneData.type === 'textQuill') {
+                const quillInstance = quillInstances.get(zoneId);
+                if (quillInstance) {
+                    applyCopyfitToQuillZone(zoneEl, quillInstance, zoneData.size);
+                }
+            } else {
+                applyCopyfit(zoneEl, zoneData.size);
+            }
         }
         
         saveToLocalStorage();
@@ -12039,6 +12153,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Affichage image/placeholder
                     updateImageZoneDisplay(zoneEl, data);
                     
+                    continue;
+                }
+                
+                // Zone textQuill : les styles (dont copyfit) sont gérés par applyQuillZoneStyles() appelé dans createZoneDOM()
+                if (zoneType === 'textQuill') {
+                    // Badge système
+                    updateSystemeBadge(id);
                     continue;
                 }
                 
