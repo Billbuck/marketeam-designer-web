@@ -1123,6 +1123,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
+     * Retourne l'état actuel d'une checkbox POC.
+     * 
+     * @param {string} wrapperId - ID du wrapper (div.checkbox-poc)
+     * @returns {boolean} true si cochée, false sinon
+     */
+    function getCheckboxPocState(wrapperId) {
+        const wrapper = document.getElementById(wrapperId);
+        if (!wrapper) return false;
+        return wrapper.classList.contains('checked');
+    }
+    
+    /**
      * Met à jour le swatch de couleur POC avec une nouvelle couleur.
      * 
      * @param {string} swatchId - ID du swatch (div.color-swatch-poc)
@@ -1692,15 +1704,16 @@ document.addEventListener('DOMContentLoaded', () => {
      * Utilise bwip-js pour générer le code-barres sur un canvas, puis retourne une Data URL PNG.
      * Si bwip-js n'est pas disponible ou si le type est inconnu, retourne un SVG placeholder.
      * 
-     * Note : Le texte lisible est ajouté séparément en HTML/CSS car le champ de fusion
-     * n'est pas connu à ce stade (c'est une métadonnée pour l'export).
+     * Note : L'image est TOUJOURS générée avec un fond transparent (PNG).
+     * Le fond visible est contrôlé par le style CSS de la zone (backgroundColor).
+     * Le texte lisible est ajouté séparément en HTML/CSS.
      * 
      * @param {string} typeCode - Type de code-barres (qrcode, code128, ean13, datamatrix, etc.)
      * @param {string} [color='#000000'] - Couleur du code-barres (format hex)
-     * @returns {string} Data URL de l'image PNG (data:image/png;base64,...) ou SVG inline fallback
+     * @returns {string} Data URL de l'image PNG transparent (data:image/png;base64,...) ou SVG inline fallback
      * 
      * @example
-     * // Générer un Code 128 noir
+     * // Générer un Code 128 noir (fond transparent)
      * const imgSrc = generateBarcodeImage('code128', '#000000');
      * imgElement.src = imgSrc;
      * 
@@ -1727,15 +1740,16 @@ document.addEventListener('DOMContentLoaded', () => {
         // Créer un canvas temporaire
         const canvas = document.createElement('canvas');
         
-        // Options bwip-js - SANS TEXTE (le texte sera ajouté en HTML séparément)
+        // Options bwip-js - SANS TEXTE, FOND TRANSPARENT
+        // Le fond est géré par le CSS de la zone, pas par l'image
         const options = {
             bcid: config.bcid,
             text: valueToEncode,
             scale: 3,                          // Facteur d'échelle pour netteté
             height: config.is2D ? 20 : 10,     // Hauteur en mm (bwip-js utilise mm)
-            backgroundcolor: 'FFFFFF',         // Fond blanc
             barcolor: color.replace('#', ''),  // Couleur du code (sans #)
             includetext: false                 // JAMAIS de texte dans l'image
+            // Pas de backgroundcolor → fond transparent par défaut
         };
         
         // Ajustements spécifiques par type
@@ -3878,8 +3892,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         zonesData[id] = {
             type: 'qr',
+            typeCode: 'QRCode',
             qrColor: '#000000',
             bgColor: '#ffffff',
+            isTransparent: false, // Par défaut non transparent
             locked: false,
             zIndex: newZIndex // Niveau d'empilement (au premier plan)
         };
@@ -3952,6 +3968,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 texteLisible: 'dessous',          // 'aucun', 'dessous'
                 taillePolice: 8,                  // Taille du texte lisible en points
                 couleur: '#000000',               // Couleur du code-barres
+                bgColor: '#ffffff',               // Couleur de fond
+                isTransparent: false,             // Par défaut non transparent
                 locked: false,
                 zIndex: newZIndex
             };
@@ -5633,6 +5651,44 @@ document.addEventListener('DOMContentLoaded', () => {
     /** @type {boolean} True si les composants POC de la toolbar Image ont été initialisés */
     let imageToolbarInitialized = false;
 
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // Toolbar Barcode - Variables d'état
+    // ═══════════════════════════════════════════════════════════════════════════════
+    
+    /** @type {boolean} True si la toolbar Barcode est visible */
+    let isBarcodeToolbarVisible = false;
+    
+    /** @type {boolean} True si on est en train de déplacer la toolbar Barcode */
+    let isBarcodeToolbarDragging = false;
+    
+    /** @type {{x: number, y: number}} Offset souris→toolbar au démarrage du drag */
+    let barcodeToolbarDragOffset = { x: 0, y: 0 };
+    
+    /** @type {{x: number, y: number}|null} Dernière position connue de la toolbar Barcode */
+    let barcodeToolbarLastPos = null;
+    
+    /** @type {boolean} True si les composants POC de la toolbar Barcode ont été initialisés */
+    let barcodeToolbarInitialized = false;
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // Toolbar QR Code - Variables d'état
+    // ═══════════════════════════════════════════════════════════════════════════════
+    
+    /** @type {boolean} True si la toolbar QR Code est visible */
+    let isQrcodeToolbarVisible = false;
+    
+    /** @type {boolean} True si on est en train de déplacer la toolbar QR Code */
+    let isQrcodeToolbarDragging = false;
+    
+    /** @type {{x: number, y: number}} Offset souris→toolbar au démarrage du drag */
+    let qrcodeToolbarDragOffset = { x: 0, y: 0 };
+    
+    /** @type {{x: number, y: number}|null} Dernière position connue de la toolbar QR Code */
+    let qrcodeToolbarLastPos = null;
+    
+    /** @type {boolean} True si les composants POC de la toolbar QR Code ont été initialisés */
+    let qrcodeToolbarInitialized = false;
+
     /**
      * Calcule une position initiale (visible) pour la toolbar Image.
      * Priorité : dernière position connue > coin haut-droit du workspace (avec marge).
@@ -5711,6 +5767,28 @@ document.addEventListener('DOMContentLoaded', () => {
         
         imageToolbar.style.display = 'none';
         isImageToolbarVisible = false;
+    }
+
+    /**
+     * Met à jour les champs de géométrie de la toolbar Image.
+     * Appelé pendant le drag/resize pour affichage temps réel.
+     *
+     * @param {string} zoneId - ID de la zone (ex: "zone-3")
+     * @returns {void}
+     */
+    function updateImageToolbarGeometryFields(zoneId) {
+        const zoneEl = document.getElementById(zoneId);
+        if (!zoneEl) return;
+        
+        const xMm = pxToMm(parseFloat(zoneEl.style.left) || 0);
+        const yMm = pxToMm(parseFloat(zoneEl.style.top) || 0);
+        const wMm = pxToMm(zoneEl.offsetWidth);
+        const hMm = pxToMm(zoneEl.offsetHeight);
+        
+        if (imageValX) imageValX.value = xMm.toFixed(1).replace('.', ',');
+        if (imageValY) imageValY.value = yMm.toFixed(1).replace('.', ',');
+        if (imageValW) imageValW.value = wMm.toFixed(1).replace('.', ',');
+        if (imageValH) imageValH.value = hMm.toFixed(1).replace('.', ',');
     }
 
     /**
@@ -5809,24 +5887,779 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // ─── GÉOMÉTRIE ───
-        const x = parseFloat(zoneEl.style.left) || 0;
-        const y = parseFloat(zoneEl.style.top) || 0;
-        const w = zoneEl.offsetWidth;
-        const h = zoneEl.offsetHeight;
-        
-        // Convertir en mm
-        const xMm = x * MM_PER_PIXEL;
-        const yMm = y * MM_PER_PIXEL;
-        const wMm = w * MM_PER_PIXEL;
-        const hMm = h * MM_PER_PIXEL;
-        
-        if (imageValX) imageValX.value = xMm.toFixed(1).replace('.', ',');
-        if (imageValY) imageValY.value = yMm.toFixed(1).replace('.', ',');
-        if (imageValW) imageValW.value = wMm.toFixed(1).replace('.', ',');
-        if (imageValH) imageValH.value = hMm.toFixed(1).replace('.', ',');
+        updateImageToolbarGeometryFields(zoneId);
         
         // ─── VERROUILLÉ ───
         setCheckboxPocState('image-chk-locked-wrapper', zoneData.locked || false);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // TOOLBAR BARCODE - FONCTIONS
+    // ═══════════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Calcule une position initiale (visible) pour la toolbar Barcode.
+     * Priorité : dernière position connue > coin haut-droit du workspace (avec marge).
+     *
+     * @returns {{x: number, y: number}} Position (px) dans le viewport
+     */
+    function getInitialBarcodeToolbarPosition() {
+        if (barcodeToolbarLastPos) return barcodeToolbarLastPos;
+        
+        const margin = 16;
+        const w = barcodeToolbar ? barcodeToolbar.offsetWidth || 300 : 300;
+        const h = barcodeToolbar ? barcodeToolbar.offsetHeight || 400 : 400;
+        
+        // Essayer de se caler sur le workspace (coin haut-droit)
+        if (workspace) {
+            const rect = workspace.getBoundingClientRect();
+            const x = Math.min(window.innerWidth - w - margin, Math.max(margin, rect.right - w - margin));
+            const y = Math.min(window.innerHeight - h - margin, Math.max(margin, rect.top + margin));
+            return { x, y };
+        }
+        
+        // Fallback viewport
+        return { x: window.innerWidth - w - margin, y: margin };
+    }
+
+    /**
+     * Affiche la toolbar Barcode et synchronise avec la zone sélectionnée.
+     *
+     * @param {string} zoneId - ID de la zone barcode sélectionnée
+     * @returns {void}
+     */
+    function showBarcodeToolbar(zoneId) {
+        console.log('📊 showBarcodeToolbar():', zoneId);
+        
+        if (!barcodeToolbar) return;
+        
+        // Masquer les autres toolbars
+        hideQuillToolbar();
+        hideImageToolbar();
+        hideQrcodeToolbar();
+        
+        // Si la toolbar est déjà visible, on se contente de resynchroniser
+        if (isBarcodeToolbarVisible) {
+            syncBarcodeToolbarWithZone(zoneId);
+            return;
+        }
+        
+        barcodeToolbar.style.display = 'flex';
+        isBarcodeToolbarVisible = true;
+        
+        // Initialiser les composants POC une seule fois (au premier affichage)
+        if (!barcodeToolbarInitialized) {
+            initBarcodeToolbarComponents();
+            barcodeToolbarInitialized = true;
+        }
+        
+        // Positionner la toolbar de façon visible
+        const pos = getInitialBarcodeToolbarPosition();
+        barcodeToolbar.style.left = `${pos.x}px`;
+        barcodeToolbar.style.top = `${pos.y}px`;
+        barcodeToolbar.style.right = 'auto';
+        barcodeToolbar.style.bottom = 'auto';
+        
+        // Synchroniser avec la zone sélectionnée
+        syncBarcodeToolbarWithZone(zoneId);
+    }
+
+    /**
+     * Masque la toolbar Barcode.
+     *
+     * @returns {void}
+     */
+    function hideBarcodeToolbar() {
+        console.log('📊 hideBarcodeToolbar()');
+        
+        if (!barcodeToolbar) return;
+        if (!isBarcodeToolbarVisible && barcodeToolbar.style.display === 'none') return;
+        
+        barcodeToolbar.style.display = 'none';
+        isBarcodeToolbarVisible = false;
+    }
+
+    /**
+     * Synchronise les valeurs de la toolbar Barcode avec une zone barcode.
+     * Remplit tous les champs : type, source, valeur/champ, affichage, fond, géométrie, verrouillé.
+     *
+     * @param {string} zoneId - ID de la zone barcode
+     * @returns {void}
+     */
+    function syncBarcodeToolbarWithZone(zoneId) {
+        console.log('📊 syncBarcodeToolbarWithZone:', zoneId);
+        
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        
+        if (!zoneData || zoneData.type !== 'barcode') return;
+        
+        const zoneEl = document.getElementById(zoneId);
+        if (!zoneEl) return;
+        
+        // ─── PAGE ───
+        if (barcodeInputPage) {
+            barcodeInputPage.value = documentState.currentPageIndex;
+        }
+        
+        // ─── TYPE DE CODE ───
+        if (barcodeInputType) {
+            barcodeInputType.value = zoneData.typeCodeBarres || 'code128';
+        }
+        
+        // ─── SOURCE (champFusion) ───
+        const champFusion = zoneData.champFusion || '';
+        const hasField = champFusion && champFusion.trim() !== '';
+        
+        if (barcodeInputSource) barcodeInputSource.value = hasField ? 'champ' : 'fixe';
+        
+        // Afficher le bon champ selon le type
+        if (hasField) {
+            if (barcodeValueRow) barcodeValueRow.style.display = 'none';
+            if (barcodeFieldRow) barcodeFieldRow.style.display = '';
+            // Peupler les champs de fusion
+            populateBarcodeFieldsSelect(champFusion);
+        } else {
+            if (barcodeValueRow) barcodeValueRow.style.display = '';
+            if (barcodeFieldRow) barcodeFieldRow.style.display = 'none';
+            // Pas de valeur fixe stockée actuellement, afficher le sample
+            const config = BARCODE_BWIPJS_CONFIG[zoneData.typeCodeBarres || 'code128'];
+            if (barcodeInputValue) barcodeInputValue.value = config ? config.sampleValue : '';
+        }
+        
+        // ─── AFFICHAGE (texteLisible / taillePolice) ───
+        const showText = zoneData.texteLisible !== 'aucun';
+        setCheckboxPocState('barcode-chk-show-text-wrapper', showText);
+        
+        // Vérifier si c'est un code 2D (pas de texte possible)
+        const typeCode = zoneData.typeCodeBarres || 'code128';
+        const config = BARCODE_BWIPJS_CONFIG[typeCode];
+        const is2D = config ? config.is2D : false;
+        
+        // Masquer les options de texte pour les codes 2D
+        const showTextSection = document.getElementById('barcode-chk-show-text-wrapper');
+        if (showTextSection) {
+            showTextSection.closest('.form-row-poc').style.display = is2D ? 'none' : '';
+        }
+        
+        // Afficher/masquer la taille selon showText ET pas 2D
+        if (barcodeTextSizeRow) {
+            barcodeTextSizeRow.style.display = (showText && !is2D) ? '' : 'none';
+        }
+        
+        if (barcodeInputTextSize) {
+            barcodeInputTextSize.value = zoneData.taillePolice || 8;
+        }
+        
+        // ─── FOND ───
+        const isTransparent = zoneData.isTransparent !== false;
+        setCheckboxPocState('barcode-chk-transparent-wrapper', isTransparent);
+        
+        // Afficher/masquer la couleur de fond selon transparent
+        if (barcodeBgColorRow) {
+            barcodeBgColorRow.style.display = isTransparent ? 'none' : '';
+        }
+        
+        if (barcodeInputBgColor) {
+            barcodeInputBgColor.value = zoneData.bgColor || '#ffffff';
+            if (barcodeBgColorSwatch) {
+                barcodeBgColorSwatch.style.background = zoneData.bgColor || '#ffffff';
+            }
+        }
+        
+        // ─── GÉOMÉTRIE ───
+        updateBarcodeToolbarGeometryFields(zoneId);
+        
+        // ─── VERROUILLÉ ───
+        setCheckboxPocState('barcode-chk-locked-wrapper', zoneData.locked || false);
+    }
+
+    /**
+     * Met à jour les champs de géométrie de la toolbar Barcode.
+     * Appelé pendant le drag/resize pour affichage temps réel.
+     *
+     * @param {string} zoneId - ID de la zone (ex: "zone-3")
+     * @returns {void}
+     */
+    function updateBarcodeToolbarGeometryFields(zoneId) {
+        const zoneEl = document.getElementById(zoneId);
+        if (!zoneEl) return;
+        
+        const xMm = pxToMm(parseFloat(zoneEl.style.left) || 0);
+        const yMm = pxToMm(parseFloat(zoneEl.style.top) || 0);
+        const wMm = pxToMm(zoneEl.offsetWidth);
+        const hMm = pxToMm(zoneEl.offsetHeight);
+        
+        if (barcodeValX) barcodeValX.value = xMm.toFixed(1).replace('.', ',');
+        if (barcodeValY) barcodeValY.value = yMm.toFixed(1).replace('.', ',');
+        if (barcodeValW) barcodeValW.value = wMm.toFixed(1).replace('.', ',');
+        if (barcodeValH) barcodeValH.value = hMm.toFixed(1).replace('.', ',');
+    }
+
+    /**
+     * Peuple le select des champs de fusion pour barcode.
+     *
+     * @param {string} [selectedValue] - Valeur à sélectionner
+     * @returns {void}
+     */
+    function populateBarcodeFieldsSelect(selectedValue) {
+        if (!barcodeInputField) return;
+        
+        // Vider le select
+        barcodeInputField.innerHTML = '<option value="">Sélectionner...</option>';
+        
+        // Ajouter les champs disponibles
+        if (documentState.mergeFields && Array.isArray(documentState.mergeFields)) {
+            documentState.mergeFields.forEach(field => {
+                const option = document.createElement('option');
+                option.value = field.nom;
+                option.textContent = field.nom;
+                if (selectedValue && field.nom === selectedValue) {
+                    option.selected = true;
+                }
+                barcodeInputField.appendChild(option);
+            });
+        }
+    }
+
+    /**
+     * Initialise les composants POC de la toolbar Barcode.
+     * Configure les spinners, checkboxes et écouteurs d'événements.
+     *
+     * @returns {void}
+     */
+    function initBarcodeToolbarComponents() {
+        if (!barcodeToolbar) return;
+        
+        console.log('📊 initBarcodeToolbarComponents()');
+        
+        /**
+         * Retourne l'ID de la zone barcode sélectionnée (si sélection unique).
+         * @returns {string|null}
+         */
+        const getSelectedBarcodeZoneId = () => {
+            if (selectedZoneIds.length !== 1) return null;
+            const zoneId = selectedZoneIds[0];
+            const zonesData = getCurrentPageZones();
+            if (!zonesData[zoneId] || zonesData[zoneId].type !== 'barcode') return null;
+            return zoneId;
+        };
+        
+        /**
+         * Applique une mise à jour de données pour la zone barcode sélectionnée.
+         * @param {(zoneData: any, zoneEl: HTMLElement, zoneId: string) => void} mutator
+         * @param {boolean} [updateDisplay=true] - Si true, appelle updateBarcodeZoneDisplay
+         * @returns {void}
+         */
+        const updateSelectedBarcodeZone = (mutator, updateDisplay = true) => {
+            const zoneId = getSelectedBarcodeZoneId();
+            if (!zoneId) return;
+            
+            const zonesData = getCurrentPageZones();
+            const zoneData = zonesData[zoneId];
+            const zoneEl = document.getElementById(zoneId);
+            if (!zoneEl) return;
+            
+            mutator(zoneData, zoneEl, zoneId);
+            if (updateDisplay) {
+                updateBarcodeZoneDisplay(zoneId);
+            }
+            saveToLocalStorage();
+            saveState();
+        };
+        
+        // ═══════════════════════════════════════════════════════════════
+        // SPINNERS
+        // ═══════════════════════════════════════════════════════════════
+        
+        // Taille texte (taillePolice dans le modèle)
+        initSpinnerPoc('barcode-input-text-size', 6, 24, 1, (value) => {
+            updateSelectedBarcodeZone((zoneData) => {
+                zoneData.taillePolice = value;
+            });
+        });
+        
+        // ═══════════════════════════════════════════════════════════════
+        // CHECKBOXES
+        // ═══════════════════════════════════════════════════════════════
+        
+        // Afficher texte (texteLisible: 'dessous' ou 'aucun')
+        initCheckboxPoc('barcode-chk-show-text-wrapper', (isChecked) => {
+            // Afficher/masquer la taille texte
+            if (barcodeTextSizeRow) {
+                barcodeTextSizeRow.style.display = isChecked ? '' : 'none';
+            }
+            updateSelectedBarcodeZone((zoneData) => {
+                zoneData.texteLisible = isChecked ? 'dessous' : 'aucun';
+            });
+        });
+        
+        // Transparent (le fond est géré par CSS, l'image du code est toujours transparente)
+        initCheckboxPoc('barcode-chk-transparent-wrapper', (isChecked) => {
+            // Afficher/masquer la couleur fond
+            if (barcodeBgColorRow) {
+                barcodeBgColorRow.style.display = isChecked ? 'none' : '';
+            }
+            updateSelectedBarcodeZone((zoneData, zoneEl) => {
+                zoneData.isTransparent = isChecked;
+                // Appliquer visuellement le fond (CSS uniquement, pas besoin de régénérer l'image)
+                const preview = zoneEl.querySelector('.barcode-preview');
+                if (preview) {
+                    preview.style.backgroundColor = isChecked ? 'transparent' : (zoneData.bgColor || '#ffffff');
+                }
+                zoneEl.style.backgroundColor = isChecked ? 'transparent' : (zoneData.bgColor || '#ffffff');
+            }, false); // Pas besoin de régénérer l'image (toujours transparente)
+        });
+        
+        // Verrouiller
+        initCheckboxPoc('barcode-chk-locked-wrapper', (isChecked) => {
+            updateSelectedBarcodeZone((zoneData, zoneEl) => {
+                zoneData.locked = isChecked;
+                zoneEl.classList.toggle('locked', isChecked);
+            }, false);
+        });
+        
+        // ═══════════════════════════════════════════════════════════════
+        // SELECTS
+        // ═══════════════════════════════════════════════════════════════
+        
+        // Type de code (typeCodeBarres dans le modèle)
+        if (barcodeInputType) {
+            barcodeInputType.addEventListener('change', () => {
+                const newType = barcodeInputType.value;
+                const config = BARCODE_BWIPJS_CONFIG[newType];
+                const is2D = config ? config.is2D : false;
+                
+                // Masquer/afficher les options de texte selon 1D/2D
+                const showTextWrapper = document.getElementById('barcode-chk-show-text-wrapper');
+                if (showTextWrapper) {
+                    showTextWrapper.closest('.form-row-poc').style.display = is2D ? 'none' : '';
+                }
+                
+                // Vérifier si "Afficher texte" est coché (état de la checkbox)
+                const isShowTextChecked = getCheckboxPocState('barcode-chk-show-text-wrapper');
+                
+                // Pour la taille de texte : masquer si 2D, sinon selon l'état de la checkbox
+                if (barcodeTextSizeRow) {
+                    barcodeTextSizeRow.style.display = (is2D || !isShowTextChecked) ? 'none' : '';
+                }
+                
+                updateSelectedBarcodeZone((zoneData) => {
+                    zoneData.typeCodeBarres = newType;
+                    if (is2D) {
+                        // Pour les 2D, forcer "aucun" texte
+                        zoneData.texteLisible = 'aucun';
+                    } else {
+                        // Pour les 1D, restaurer selon l'état de la checkbox
+                        zoneData.texteLisible = isShowTextChecked ? 'dessous' : 'aucun';
+                    }
+                });
+            });
+        }
+        
+        // Source (fixe/champ)
+        if (barcodeInputSource) {
+            barcodeInputSource.addEventListener('change', () => {
+                const sourceType = barcodeInputSource.value;
+                
+                if (sourceType === 'champ') {
+                    if (barcodeValueRow) barcodeValueRow.style.display = 'none';
+                    if (barcodeFieldRow) barcodeFieldRow.style.display = '';
+                    populateBarcodeFieldsSelect();
+                } else {
+                    if (barcodeValueRow) barcodeValueRow.style.display = '';
+                    if (barcodeFieldRow) barcodeFieldRow.style.display = 'none';
+                }
+                
+                // Si on passe en "fixe", vider le champ de fusion
+                if (sourceType === 'fixe') {
+                    updateSelectedBarcodeZone((zoneData) => {
+                        zoneData.champFusion = '';
+                    });
+                }
+            });
+        }
+        
+        // Valeur fixe (note: pas stockée actuellement, juste pour preview)
+        if (barcodeInputValue) {
+            barcodeInputValue.addEventListener('change', () => {
+                // La valeur fixe n'est pas utilisée dans le modèle actuel
+                // Le code-barres utilise toujours sampleValue pour l'aperçu
+                console.log('📊 Valeur fixe changée:', barcodeInputValue.value);
+            });
+        }
+        
+        // Champ de fusion (champFusion dans le modèle)
+        if (barcodeInputField) {
+            barcodeInputField.addEventListener('change', () => {
+                updateSelectedBarcodeZone((zoneData) => {
+                    zoneData.champFusion = barcodeInputField.value;
+                });
+            });
+        }
+        
+        // Page
+        if (barcodeInputPage) {
+            barcodeInputPage.addEventListener('change', () => {
+                const zoneId = getSelectedBarcodeZoneId();
+                if (zoneId) {
+                    moveZoneToPage(zoneId, parseInt(barcodeInputPage.value));
+                }
+            });
+        }
+        
+        // Couleur fond
+        if (barcodeInputBgColor) {
+            barcodeInputBgColor.addEventListener('input', () => {
+                if (barcodeBgColorSwatch) {
+                    barcodeBgColorSwatch.style.background = barcodeInputBgColor.value;
+                }
+                updateSelectedBarcodeZone((zoneData, zoneEl) => {
+                    zoneData.bgColor = barcodeInputBgColor.value;
+                    // Appliquer visuellement si pas transparent
+                    if (!zoneData.isTransparent) {
+                        const preview = zoneEl.querySelector('.barcode-preview');
+                        if (preview) {
+                            preview.style.backgroundColor = barcodeInputBgColor.value;
+                        }
+                        zoneEl.style.backgroundColor = barcodeInputBgColor.value;
+                    }
+                }, false);
+            });
+        }
+        
+        // ═══════════════════════════════════════════════════════════════
+        // GÉOMÉTRIE
+        // ═══════════════════════════════════════════════════════════════
+        
+        const geoInputs = [barcodeValX, barcodeValY, barcodeValW, barcodeValH];
+        geoInputs.forEach((input, index) => {
+            if (!input) return;
+            input.addEventListener('change', () => {
+                const zoneId = getSelectedBarcodeZoneId();
+                if (!zoneId) return;
+                
+                const zoneEl = document.getElementById(zoneId);
+                if (!zoneEl) return;
+                
+                const valueMm = parseFloat(input.value.replace(',', '.')) || 0;
+                const valuePx = valueMm / MM_PER_PIXEL;
+                
+                if (index === 0) zoneEl.style.left = `${valuePx}px`;
+                else if (index === 1) zoneEl.style.top = `${valuePx}px`;
+                else if (index === 2) zoneEl.style.width = `${valuePx}px`;
+                else if (index === 3) zoneEl.style.height = `${valuePx}px`;
+                
+                updateBarcodeZoneDisplay(zoneId);
+                saveToLocalStorage();
+                saveState();
+            });
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // TOOLBAR QR CODE - FONCTIONS
+    // ═══════════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Calcule une position initiale (visible) pour la toolbar QR Code.
+     * Priorité : dernière position connue > coin haut-droit du workspace (avec marge).
+     *
+     * @returns {{x: number, y: number}} Position (px) dans le viewport
+     */
+    function getInitialQrcodeToolbarPosition() {
+        if (qrcodeToolbarLastPos) return qrcodeToolbarLastPos;
+        
+        const margin = 16;
+        const w = qrcodeToolbar ? qrcodeToolbar.offsetWidth || 300 : 300;
+        const h = qrcodeToolbar ? qrcodeToolbar.offsetHeight || 350 : 350;
+        
+        // Essayer de se caler sur le workspace (coin haut-droit)
+        if (workspace) {
+            const rect = workspace.getBoundingClientRect();
+            const x = Math.min(window.innerWidth - w - margin, Math.max(margin, rect.right - w - margin));
+            const y = Math.min(window.innerHeight - h - margin, Math.max(margin, rect.top + margin));
+            return { x, y };
+        }
+        
+        // Fallback viewport
+        return { x: window.innerWidth - w - margin, y: margin };
+    }
+
+    /**
+     * Affiche la toolbar QR Code et synchronise avec la zone sélectionnée.
+     *
+     * @param {string} zoneId - ID de la zone qr sélectionnée
+     * @returns {void}
+     */
+    function showQrcodeToolbar(zoneId) {
+        console.log('📱 showQrcodeToolbar():', zoneId);
+        
+        if (!qrcodeToolbar) return;
+        
+        // Masquer les autres toolbars
+        hideQuillToolbar();
+        hideImageToolbar();
+        hideBarcodeToolbar();
+        
+        // Si la toolbar est déjà visible, on se contente de resynchroniser
+        if (isQrcodeToolbarVisible) {
+            syncQrcodeToolbarWithZone(zoneId);
+            return;
+        }
+        
+        qrcodeToolbar.style.display = 'flex';
+        isQrcodeToolbarVisible = true;
+        
+        // Initialiser les composants POC une seule fois (au premier affichage)
+        if (!qrcodeToolbarInitialized) {
+            initQrcodeToolbarComponents();
+            qrcodeToolbarInitialized = true;
+        }
+        
+        // Positionner la toolbar de façon visible
+        const pos = getInitialQrcodeToolbarPosition();
+        qrcodeToolbar.style.left = `${pos.x}px`;
+        qrcodeToolbar.style.top = `${pos.y}px`;
+        qrcodeToolbar.style.right = 'auto';
+        qrcodeToolbar.style.bottom = 'auto';
+        
+        // Synchroniser avec la zone sélectionnée
+        syncQrcodeToolbarWithZone(zoneId);
+    }
+
+    /**
+     * Masque la toolbar QR Code.
+     *
+     * @returns {void}
+     */
+    function hideQrcodeToolbar() {
+        console.log('📱 hideQrcodeToolbar()');
+        
+        if (!qrcodeToolbar) return;
+        if (!isQrcodeToolbarVisible && qrcodeToolbar.style.display === 'none') return;
+        
+        qrcodeToolbar.style.display = 'none';
+        isQrcodeToolbarVisible = false;
+    }
+
+    /**
+     * Synchronise les valeurs de la toolbar QR Code avec une zone qr.
+     * Remplit tous les champs : page, fond, géométrie, verrouillé.
+     *
+     * @param {string} zoneId - ID de la zone qr
+     * @returns {void}
+     */
+    function syncQrcodeToolbarWithZone(zoneId) {
+        console.log('📱 syncQrcodeToolbarWithZone:', zoneId);
+        
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        
+        if (!zoneData || zoneData.type !== 'qr') return;
+        
+        const zoneEl = document.getElementById(zoneId);
+        if (!zoneEl) return;
+        
+        // ─── PAGE ───
+        if (qrcodeInputPage) {
+            qrcodeInputPage.value = documentState.currentPageIndex;
+        }
+        
+        // ─── FOND ───
+        const isTransparent = zoneData.isTransparent !== false;
+        setCheckboxPocState('qrcode-chk-transparent-wrapper', isTransparent);
+        
+        // Afficher/masquer la couleur de fond selon transparent
+        if (qrcodeBgColorRow) {
+            qrcodeBgColorRow.style.display = isTransparent ? 'none' : '';
+        }
+        
+        if (qrcodeInputBgColor) {
+            qrcodeInputBgColor.value = zoneData.bgColor || '#ffffff';
+            if (qrcodeBgColorSwatch) {
+                qrcodeBgColorSwatch.style.background = zoneData.bgColor || '#ffffff';
+            }
+        }
+        
+        // ─── GÉOMÉTRIE ───
+        updateQrcodeToolbarGeometryFields(zoneId);
+        
+        // ─── VERROUILLÉ ───
+        setCheckboxPocState('qrcode-chk-locked-wrapper', zoneData.locked || false);
+    }
+
+    /**
+     * Met à jour les champs de géométrie de la toolbar QR Code.
+     * Appelé pendant le drag/resize pour affichage temps réel.
+     *
+     * @param {string} zoneId - ID de la zone (ex: "zone-3")
+     * @returns {void}
+     */
+    function updateQrcodeToolbarGeometryFields(zoneId) {
+        const zoneEl = document.getElementById(zoneId);
+        if (!zoneEl) return;
+        
+        const xMm = pxToMm(parseFloat(zoneEl.style.left) || 0);
+        const yMm = pxToMm(parseFloat(zoneEl.style.top) || 0);
+        const wMm = pxToMm(zoneEl.offsetWidth);
+        const hMm = pxToMm(zoneEl.offsetHeight);
+        
+        if (qrcodeValX) qrcodeValX.value = xMm.toFixed(1).replace('.', ',');
+        if (qrcodeValY) qrcodeValY.value = yMm.toFixed(1).replace('.', ',');
+        if (qrcodeValW) qrcodeValW.value = wMm.toFixed(1).replace('.', ',');
+        if (qrcodeValH) qrcodeValH.value = hMm.toFixed(1).replace('.', ',');
+    }
+
+    /**
+     * Initialise les composants POC de la toolbar QR Code.
+     * Configure les checkboxes et écouteurs d'événements.
+     *
+     * @returns {void}
+     */
+    function initQrcodeToolbarComponents() {
+        if (!qrcodeToolbar) return;
+        
+        console.log('📱 initQrcodeToolbarComponents()');
+        
+        /**
+         * Retourne l'ID de la zone qr sélectionnée (si sélection unique).
+         * @returns {string|null}
+         */
+        const getSelectedQrcodeZoneId = () => {
+            if (selectedZoneIds.length !== 1) return null;
+            const zoneId = selectedZoneIds[0];
+            const zonesData = getCurrentPageZones();
+            if (!zonesData[zoneId] || zonesData[zoneId].type !== 'qr') return null;
+            return zoneId;
+        };
+        
+        /**
+         * Applique une mise à jour de données pour la zone qr sélectionnée.
+         * @param {(zoneData: any, zoneEl: HTMLElement, zoneId: string) => void} mutator
+         * @returns {void}
+         */
+        const updateSelectedQrcodeZone = (mutator) => {
+            const zoneId = getSelectedQrcodeZoneId();
+            if (!zoneId) return;
+            
+            const zonesData = getCurrentPageZones();
+            const zoneData = zonesData[zoneId];
+            const zoneEl = document.getElementById(zoneId);
+            if (!zoneEl) return;
+            
+            mutator(zoneData, zoneEl, zoneId);
+            updateQrZoneDisplay(zoneId);
+            saveToLocalStorage();
+            saveState();
+        };
+        
+        // ═══════════════════════════════════════════════════════════════
+        // CHECKBOXES
+        // ═══════════════════════════════════════════════════════════════
+        
+        // Transparent (le fond est géré par CSS, l'image du code est toujours transparente)
+        initCheckboxPoc('qrcode-chk-transparent-wrapper', (isChecked) => {
+            // Afficher/masquer la couleur fond
+            if (qrcodeBgColorRow) {
+                qrcodeBgColorRow.style.display = isChecked ? 'none' : '';
+            }
+            
+            const zoneId = getSelectedQrcodeZoneId();
+            if (!zoneId) return;
+            
+            const zonesData = getCurrentPageZones();
+            const zoneData = zonesData[zoneId];
+            const zoneEl = document.getElementById(zoneId);
+            if (!zoneEl || !zoneData) return;
+            
+            zoneData.isTransparent = isChecked;
+            
+            // Appliquer visuellement le fond (CSS uniquement, pas besoin de régénérer l'image)
+            // Le fond est sur la zone elle-même (.zone-qr), pas sur le contenu
+            zoneEl.style.backgroundColor = isChecked ? 'transparent' : (zoneData.bgColor || '#ffffff');
+            
+            saveToLocalStorage();
+            saveState();
+        });
+        
+        // Verrouiller
+        initCheckboxPoc('qrcode-chk-locked-wrapper', (isChecked) => {
+            updateSelectedQrcodeZone((zoneData, zoneEl) => {
+                zoneData.locked = isChecked;
+                zoneEl.classList.toggle('locked', isChecked);
+            });
+        });
+        
+        // ═══════════════════════════════════════════════════════════════
+        // SELECTS
+        // ═══════════════════════════════════════════════════════════════
+        
+        // Page
+        if (qrcodeInputPage) {
+            qrcodeInputPage.addEventListener('change', () => {
+                const zoneId = getSelectedQrcodeZoneId();
+                if (zoneId) {
+                    moveZoneToPage(zoneId, parseInt(qrcodeInputPage.value));
+                }
+            });
+        }
+        
+        // Couleur fond
+        if (qrcodeInputBgColor) {
+            qrcodeInputBgColor.addEventListener('input', () => {
+                if (qrcodeBgColorSwatch) {
+                    qrcodeBgColorSwatch.style.background = qrcodeInputBgColor.value;
+                }
+                
+                const zoneId = getSelectedQrcodeZoneId();
+                if (!zoneId) return;
+                
+                const zonesData = getCurrentPageZones();
+                const zoneData = zonesData[zoneId];
+                const zoneEl = document.getElementById(zoneId);
+                if (!zoneEl || !zoneData) return;
+                
+                zoneData.bgColor = qrcodeInputBgColor.value;
+                
+                // Appliquer visuellement si pas transparent
+                // Le fond est sur la zone elle-même (.zone-qr), pas sur le contenu
+                if (!zoneData.isTransparent) {
+                    zoneEl.style.backgroundColor = qrcodeInputBgColor.value;
+                }
+                
+                saveToLocalStorage();
+                saveState();
+            });
+        }
+        
+        // ═══════════════════════════════════════════════════════════════
+        // GÉOMÉTRIE
+        // ═══════════════════════════════════════════════════════════════
+        
+        const geoInputs = [qrcodeValX, qrcodeValY, qrcodeValW, qrcodeValH];
+        geoInputs.forEach((input, index) => {
+            if (!input) return;
+            input.addEventListener('change', () => {
+                const zoneId = getSelectedQrcodeZoneId();
+                if (!zoneId) return;
+                
+                const zoneEl = document.getElementById(zoneId);
+                if (!zoneEl) return;
+                
+                const valueMm = parseFloat(input.value.replace(',', '.')) || 0;
+                const valuePx = valueMm / MM_PER_PIXEL;
+                
+                if (index === 0) zoneEl.style.left = `${valuePx}px`;
+                else if (index === 1) zoneEl.style.top = `${valuePx}px`;
+                else if (index === 2) zoneEl.style.width = `${valuePx}px`;
+                else if (index === 3) zoneEl.style.height = `${valuePx}px`;
+                
+                updateQrZoneDisplay(zoneId);
+                saveToLocalStorage();
+                saveState();
+            });
+        });
     }
 
     /**
@@ -5861,6 +6694,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Aucune sélection ou multi-sélection → masquer toutes les toolbars
             hideQuillToolbar();
             hideImageToolbar();
+            hideBarcodeToolbar();
+            hideQrcodeToolbar();
             return;
         }
         
@@ -5868,20 +6703,38 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'text':
             case 'textQuill':
                 hideImageToolbar();
+                hideBarcodeToolbar();
+                hideQrcodeToolbar();
                 showQuillToolbar();
                 break;
                 
             case 'image':
                 hideQuillToolbar();
+                hideBarcodeToolbar();
+                hideQrcodeToolbar();
                 showImageToolbar(zoneId);
                 break;
                 
             case 'barcode':
-            case 'qr':
-            default:
-                // Pas de toolbar pour ces types (pour l'instant)
                 hideQuillToolbar();
                 hideImageToolbar();
+                hideQrcodeToolbar();
+                showBarcodeToolbar(zoneId);
+                break;
+                
+            case 'qr':
+                hideQuillToolbar();
+                hideImageToolbar();
+                hideBarcodeToolbar();
+                showQrcodeToolbar(zoneId);
+                break;
+                
+            default:
+                // Type inconnu → masquer toutes les toolbars
+                hideQuillToolbar();
+                hideImageToolbar();
+                hideBarcodeToolbar();
+                hideQrcodeToolbar();
                 break;
         }
     }
@@ -8017,7 +8870,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fieldBadge.classList.add('no-field');
         }
         
-        // Générer l'image du code-barres (SANS texte)
+        // Générer l'image du code-barres (fond transparent, le fond est géré par CSS)
         const barcodeImage = generateBarcodeImage(typeCode, color);
         
         // Vérifier si c'est un code 2D (jamais de texte pour les codes 2D)
@@ -8143,7 +8996,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fieldBadge.classList.add('no-field');
         }
         
-        // Générer l'image du code-barres (SANS texte)
+        // Générer l'image du code-barres (fond transparent, le fond est géré par CSS)
         const barcodeImage = generateBarcodeImage(typeCode, color);
         
         // Vérifier si c'est un code 2D (jamais de texte pour les codes 2D)
@@ -10352,6 +11205,123 @@ document.addEventListener('DOMContentLoaded', () => {
     // Note : initImageToolbarComponents() est appelée au premier affichage de la toolbar
     // dans showImageToolbar() pour éviter les problèmes avec display:none
 
+    // ─────────────────────────────── TOOLBAR BARCODE - ÉVÉNEMENTS ──────────────────────
+    
+    // Empêcher le clic sur la toolbar de désélectionner la zone
+    if (barcodeToolbar) {
+        barcodeToolbar.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+        });
+        barcodeToolbar.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    }
+    
+    // Bouton fermer (X) de la toolbar barcode
+    if (barcodeToolbarCloseBtn) {
+        barcodeToolbarCloseBtn.addEventListener('click', () => {
+            hideBarcodeToolbar();
+        });
+    }
+    
+    // Drag de la toolbar barcode (sur header)
+    if (barcodeToolbar && barcodeToolbarHeader) {
+        barcodeToolbarHeader.addEventListener('mousedown', (e) => {
+            // Ne pas drag si on clique sur le bouton fermer
+            if (e.target.closest && e.target.closest('#barcode-toolbar-close')) return;
+            
+            isBarcodeToolbarDragging = true;
+            const rect = barcodeToolbar.getBoundingClientRect();
+            barcodeToolbarDragOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            barcodeToolbar.style.transition = 'none';
+            e.preventDefault();
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (!isBarcodeToolbarDragging || !barcodeToolbar) return;
+            
+            const maxX = window.innerWidth - barcodeToolbar.offsetWidth;
+            const maxY = window.innerHeight - barcodeToolbar.offsetHeight;
+            
+            const x = Math.max(0, Math.min(e.clientX - barcodeToolbarDragOffset.x, maxX));
+            const y = Math.max(0, Math.min(e.clientY - barcodeToolbarDragOffset.y, maxY));
+            
+            barcodeToolbar.style.left = `${x}px`;
+            barcodeToolbar.style.top = `${y}px`;
+            barcodeToolbar.style.right = 'auto';
+            barcodeToolbar.style.bottom = 'auto';
+        });
+        
+        document.addEventListener('mouseup', () => {
+            if (!isBarcodeToolbarDragging || !barcodeToolbar) return;
+            
+            const rect = barcodeToolbar.getBoundingClientRect();
+            barcodeToolbarLastPos = { x: rect.left, y: rect.top };
+            barcodeToolbar.style.transition = '';
+            isBarcodeToolbarDragging = false;
+        });
+    }
+
+    // ─────────────────────────────── TOOLBAR QRCODE - ÉVÉNEMENTS ──────────────────────
+    
+    // Empêcher le clic sur la toolbar de désélectionner la zone
+    if (qrcodeToolbar) {
+        qrcodeToolbar.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+        });
+        qrcodeToolbar.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    }
+    
+    // Bouton fermer (X) de la toolbar qrcode
+    if (qrcodeToolbarCloseBtn) {
+        qrcodeToolbarCloseBtn.addEventListener('click', () => {
+            hideQrcodeToolbar();
+        });
+    }
+    
+    // Drag de la toolbar qrcode (sur header)
+    if (qrcodeToolbar && qrcodeToolbarHeader) {
+        qrcodeToolbarHeader.addEventListener('mousedown', (e) => {
+            // Ne pas drag si on clique sur le bouton fermer
+            if (e.target.closest && e.target.closest('#qrcode-toolbar-close')) return;
+            
+            isQrcodeToolbarDragging = true;
+            const rect = qrcodeToolbar.getBoundingClientRect();
+            qrcodeToolbarDragOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            qrcodeToolbar.style.transition = 'none';
+            e.preventDefault();
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (!isQrcodeToolbarDragging || !qrcodeToolbar) return;
+            
+            const maxX = window.innerWidth - qrcodeToolbar.offsetWidth;
+            const maxY = window.innerHeight - qrcodeToolbar.offsetHeight;
+            
+            const x = Math.max(0, Math.min(e.clientX - qrcodeToolbarDragOffset.x, maxX));
+            const y = Math.max(0, Math.min(e.clientY - qrcodeToolbarDragOffset.y, maxY));
+            
+            qrcodeToolbar.style.left = `${x}px`;
+            qrcodeToolbar.style.top = `${y}px`;
+            qrcodeToolbar.style.right = 'auto';
+            qrcodeToolbar.style.bottom = 'auto';
+        });
+        
+        document.addEventListener('mouseup', () => {
+            if (!isQrcodeToolbarDragging || !qrcodeToolbar) return;
+            
+            const rect = qrcodeToolbar.getBoundingClientRect();
+            qrcodeToolbarLastPos = { x: rect.left, y: rect.top };
+            qrcodeToolbar.style.transition = '';
+            isQrcodeToolbarDragging = false;
+        });
+    }
+    
+    // Note : initBarcodeToolbarComponents() et initQrcodeToolbarComponents() sont appelées
+    // au premier affichage de leur toolbar respective pour éviter les problèmes avec display:none
+
     console.log('═══════════════════════════════════════════════════════════════');
     console.log('📋 PHASE 4 - Toolbar Quill connectée aux propriétés');
     console.log('═══════════════════════════════════════════════════════════════');
@@ -10562,10 +11532,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (zone) {
                     updateGeomDisplay(zone);
                     
-                    // Phase 4 : mettre à jour la géométrie dans la toolbar Quill pendant le drag
+                    // Phase 4 : mettre à jour la géométrie dans les toolbars pendant le drag
                     const zonesData = getCurrentPageZones();
-                    if (zonesData[firstSelectedId] && zonesData[firstSelectedId].type === 'textQuill') {
+                    const zoneType = zonesData[firstSelectedId] ? zonesData[firstSelectedId].type : null;
+                    
+                    if (zoneType === 'textQuill') {
                         updateQuillToolbarGeometryFields(firstSelectedId);
+                    } else if (zoneType === 'image') {
+                        updateImageToolbarGeometryFields(firstSelectedId);
+                    } else if (zoneType === 'barcode') {
+                        updateBarcodeToolbarGeometryFields(firstSelectedId);
+                    } else if (zoneType === 'qr') {
+                        updateQrcodeToolbarGeometryFields(firstSelectedId);
                     }
                 }
             }
@@ -10681,9 +11659,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             updateGeomDisplay(zone);
             
-            // Phase 4 : mettre à jour la géométrie dans la toolbar Quill pendant le resize
-            if (zonesData[firstSelectedId] && zonesData[firstSelectedId].type === 'textQuill') {
+            // Phase 4 : mettre à jour la géométrie dans les toolbars pendant le resize
+            const zoneTypeResize = zonesData[firstSelectedId] ? zonesData[firstSelectedId].type : null;
+            
+            if (zoneTypeResize === 'textQuill') {
                 updateQuillToolbarGeometryFields(firstSelectedId);
+            } else if (zoneTypeResize === 'image') {
+                updateImageToolbarGeometryFields(firstSelectedId);
+            } else if (zoneTypeResize === 'barcode') {
+                updateBarcodeToolbarGeometryFields(firstSelectedId);
+            } else if (zoneTypeResize === 'qr') {
+                updateQrcodeToolbarGeometryFields(firstSelectedId);
             }
             
             // Mettre à jour le DPI si c'est une zone image

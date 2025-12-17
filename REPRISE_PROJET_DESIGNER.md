@@ -16,6 +16,8 @@
 | Phase 2.2 | Adaptation JS spinners, toggle-groups, checkboxes POC |
 | Phase 3.1 | Ajout HTML/CSS/DOM toolbar-image (POC) |
 | Phase 3.2 | Logique affichage toolbar-image par type de zone) |
+| Phase 4.1 | Ajout HTML/CSS/DOM toolbar-barcode + toolbar-qrcode (POC) |
+| Phase 4.2 | Logique affichage toolbar-barcode + toolbar-qrcode |
 ---
 
 ## ARCHITECTURE ACTUELLE

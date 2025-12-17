@@ -203,7 +203,7 @@ button:last-child {
     flex-direction: column;    /* Image en haut, texte en bas */
     align-items: center;
     justify-content: center;
-    background-color: #ffffff;
+    background-color: transparent;  /* Fond transparent - le fond est géré par .zone-qr */
     padding: 2px;
     box-sizing: border-box;
 }
