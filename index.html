@@ -207,236 +207,411 @@
     <div id="undo-redo-toast" class="undo-toast"></div>
 
     <!-- ═══════════════════════════════════════════════════════════════ -->
-    <!-- TOOLBAR QUILL FLOTTANTE (Phase 3)                               -->
-    <!-- Reprise fidèle du POC (IDs préfixés pour éviter collisions)     -->
+    <!-- TOOLBAR QUILL FLOTTANTE - Design POC toolbar-texte.html         -->
     <!-- ═══════════════════════════════════════════════════════════════ -->
-    <div class="main-toolbar" id="quill-toolbar" style="display: none;">
+    <div class="toolbar-poc" id="quill-toolbar" style="display: none;" data-toolbar-for="text,textQuill">
         <!-- Header déplaçable -->
-        <div class="toolbar-header" id="quill-toolbar-header">
-            <span class="toolbar-title">Propriétés de la zone</span>
-            <button type="button" class="toolbar-close" id="quill-toolbar-close" title="Fermer">
-                <span class="material-icons">close</span>
+        <div class="toolbar-header-poc" id="quill-toolbar-header">
+            <span class="toolbar-title-poc">PROPRIÉTÉS TEXTE</span>
+            <button type="button" class="toolbar-close-poc" id="quill-toolbar-close" title="Fermer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
             </button>
         </div>
 
-        <div class="toolbar-body">
-            <!-- SECTION ZONE -->
-            <div class="toolbar-section collapsible" data-section="zone">
-                <div class="section-header">
-                    <span class="material-icons collapse-icon">expand_more</span>
-                    <span>Zone</span>
-                </div>
-                <div class="section-content">
-                    <label class="checkbox-row">
-                        <input type="checkbox" id="quill-chk-locked">
-                        <span class="material-icons">lock</span>
-                        <span>Verrouiller</span>
-                    </label>
-                </div>
-            </div>
-
-            <!-- SECTION TYPOGRAPHIE -->
-            <div class="toolbar-section collapsible" data-section="typography">
-                <div class="section-header">
-                    <span class="material-icons collapse-icon">expand_more</span>
-                    <span>Typographie</span>
-                </div>
-                <div class="section-content">
-                    <div class="prop-row">
-                        <label for="quill-input-font">Police</label>
-                        <select id="quill-input-font">
-                            <option value="Roboto" selected>Roboto</option>
-                            <option value="Open Sans">Open Sans</option>
-                            <option value="Arial">Arial</option>
-                            <option value="Georgia">Georgia</option>
-                            <option value="Times New Roman">Times New Roman</option>
-                            <option value="Courier New">Courier New</option>
-                        </select>
-                    </div>
-
-                    <div class="prop-row">
-                        <label for="quill-input-size">Taille</label>
-                        <select id="quill-input-size">
-                            <option value="6">6</option>
-                            <option value="8">8</option>
-                            <option value="10">10</option>
-                            <option value="11">11</option>
-                            <option value="12" selected>12</option>
-                            <option value="14">14</option>
-                            <option value="16">16</option>
-                            <option value="18">18</option>
-                            <option value="20">20</option>
-                            <option value="24">24</option>
-                            <option value="28">28</option>
-                            <option value="32">32</option>
-                            <option value="36">36</option>
-                            <option value="48">48</option>
-                            <option value="72">72</option>
-                        </select>
-                    </div>
-
-                    <div class="prop-row">
-                        <label for="quill-input-color">Couleur</label>
-                        <div class="color-input-wrapper">
-                            <input type="color" id="quill-input-color" value="#000000">
-                            <span class="color-value" id="quill-color-value">#000000</span>
+        <!-- Content -->
+        <div class="toolbar-content-poc">
+            
+            <!-- ==================== SECTION PAGE ==================== -->
+            <div class="section-poc" data-section-id="page">
+                <div class="section-header-poc">Page</div>
+                <div class="section-content-poc">
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Page</label>
+                        <div class="form-control-poc">
+                            <div class="dropdown-poc">
+                                <button type="button" class="dropdown-btn-poc" id="quill-input-page">Recto</button>
+                                <span class="dropdown-arrow-poc">
+                                    <svg viewBox="0 0 12 8">
+                                        <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                    </svg>
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- SECTION ALIGNEMENTS -->
-            <div class="toolbar-section collapsible" data-section="alignments">
-                <div class="section-header">
-                    <span class="material-icons collapse-icon">expand_more</span>
-                    <span>Alignements</span>
-                </div>
-                <div class="section-content">
-                    <div class="prop-row">
-                        <label>Horizontal</label>
-                        <div class="align-group" id="quill-align-h-group">
-                            <button type="button" class="align-btn active" data-value="left" title="Gauche">
-                                <span class="material-icons">format_align_left</span>
-                            </button>
-                            <button type="button" class="align-btn" data-value="center" title="Centre">
-                                <span class="material-icons">format_align_center</span>
-                            </button>
-                            <button type="button" class="align-btn" data-value="right" title="Droite">
-                                <span class="material-icons">format_align_right</span>
-                            </button>
-                            <button type="button" class="align-btn" data-value="justify" title="Justifié">
-                                <span class="material-icons">format_align_justify</span>
-                            </button>
+            <!-- ==================== SECTION TYPOGRAPHIE ==================== -->
+            <div class="section-poc" data-section-id="typography">
+                <div class="section-header-poc">Typographie</div>
+                <div class="section-content-poc">
+                    <!-- Police -->
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Police</label>
+                        <div class="form-control-poc">
+                            <div class="dropdown-poc">
+                                <select class="dropdown-btn-poc dropdown-select-poc" id="quill-input-font">
+                                    <option value="Roboto" selected>Roboto</option>
+                                    <option value="Open Sans">Open Sans</option>
+                                    <option value="Arial">Arial</option>
+                                    <option value="Georgia">Georgia</option>
+                                    <option value="Times New Roman">Times New Roman</option>
+                                    <option value="Courier New">Courier New</option>
+                                </select>
+                                <span class="dropdown-arrow-poc dropdown-arrow-select-poc">
+                                    <svg viewBox="0 0 12 8">
+                                        <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                    </svg>
+                                </span>
+                            </div>
                         </div>
                     </div>
-
-                    <div class="prop-row">
-                        <label>Vertical</label>
-                        <div class="align-group" id="quill-align-v-group">
-                            <button type="button" class="align-btn active" data-value="top" title="Haut">
-                                <span class="material-icons">vertical_align_top</span>
-                            </button>
-                            <button type="button" class="align-btn" data-value="middle" title="Milieu">
-                                <span class="material-icons">vertical_align_center</span>
-                            </button>
-                            <button type="button" class="align-btn" data-value="bottom" title="Bas">
-                                <span class="material-icons">vertical_align_bottom</span>
-                            </button>
+                    <!-- Taille -->
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Taille</label>
+                        <div class="form-control-poc">
+                            <div class="spinner-poc">
+                                <input type="text" class="spinner-input-poc" id="quill-input-size" value="12">
+                                <div class="spinner-buttons-poc">
+                                    <button type="button" class="spinner-btn-poc" data-dir="up">
+                                        <svg viewBox="0 0 12 8">
+                                            <path d="M2 7 C0.5 7 0.5 6 1.2 5.2 L5 1.2 C5.5 0.6 6.5 0.6 7 1.2 L10.8 5.2 C11.5 6 11.5 7 10 7 Z"/>
+                                        </svg>
+                                    </button>
+                                    <button type="button" class="spinner-btn-poc" data-dir="down">
+                                        <svg viewBox="0 0 12 8">
+                                            <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
-
-                    <div class="prop-row">
-                        <label for="quill-input-line-height">Interligne</label>
-                        <select id="quill-input-line-height">
-                            <option value="1">1</option>
-                            <option value="1.15">1.15</option>
-                            <option value="1.2" selected>1.2</option>
-                            <option value="1.5">1.5</option>
-                            <option value="2">2</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <!-- SECTION FOND -->
-            <div class="toolbar-section collapsible" data-section="background">
-                <div class="section-header">
-                    <span class="material-icons collapse-icon">expand_more</span>
-                    <span>Fond</span>
-                </div>
-                <div class="section-content">
-                    <label class="checkbox-row">
-                        <input type="checkbox" id="quill-chk-transparent" checked>
-                        <span class="material-icons">texture</span>
-                        <span>Transparent</span>
-                    </label>
-                    <div class="prop-row" id="quill-bg-color-row">
-                        <label for="quill-input-bg-color">Couleur</label>
-                        <div class="color-input-wrapper">
-                            <input type="color" id="quill-input-bg-color" value="#ffffff" disabled>
-                            <span class="color-value" id="quill-bg-color-value">#ffffff</span>
+                    <!-- Ajustable (Copy Fitting) -->
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Ajustable</label>
+                        <div class="form-control-poc">
+                            <div class="checkbox-poc" id="quill-chk-copyfit-wrapper">
+                                <input type="checkbox" id="quill-chk-copyfit" style="display: none;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- SECTION BORDURE -->
-            <div class="toolbar-section collapsible" data-section="border">
-                <div class="section-header">
-                    <span class="material-icons collapse-icon">expand_more</span>
-                    <span>Bordure</span>
-                </div>
-                <div class="section-content">
-                    <div class="prop-row">
-                        <label for="quill-input-border-width">Épaisseur</label>
-                        <input type="number" id="quill-input-border-width" value="0" min="0" max="10" step="1">
-                        <span class="unit">px</span>
-                    </div>
-                    <div class="prop-row border-option" id="quill-border-color-row" style="display: none;">
-                        <label for="quill-input-border-color">Couleur</label>
-                        <input type="color" id="quill-input-border-color" value="#000000">
-                    </div>
-                    <div class="prop-row border-option" id="quill-border-style-row" style="display: none;">
-                        <label for="quill-input-border-style">Style</label>
-                        <select id="quill-input-border-style">
-                            <option value="solid">Plein</option>
-                            <option value="dashed">Tirets</option>
-                            <option value="dotted">Points</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <!-- SECTION GÉOMÉTRIE -->
-            <div class="toolbar-section collapsible" data-section="geometry">
-                <div class="section-header">
-                    <span class="material-icons collapse-icon">expand_more</span>
-                    <span>Géométrie (mm)</span>
-                </div>
-                <div class="section-content">
-                    <div class="geometry-grid">
-                        <div class="geometry-item">
-                            <label for="quill-val-x">X</label>
-                            <input type="number" id="quill-val-x" value="20" step="0.1">
-                        </div>
-                        <div class="geometry-item">
-                            <label for="quill-val-y">Y</label>
-                            <input type="number" id="quill-val-y" value="20" step="0.1">
-                        </div>
-                        <div class="geometry-item">
-                            <label for="quill-val-w">Largeur</label>
-                            <input type="number" id="quill-val-w" value="80" step="0.1">
-                        </div>
-                        <div class="geometry-item">
-                            <label for="quill-val-h">Hauteur</label>
-                            <input type="number" id="quill-val-h" value="30" step="0.1">
+                    <!-- Couleur -->
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Couleur</label>
+                        <div class="form-control-poc">
+                            <div class="color-picker-poc">
+                                <div class="color-swatch-poc" id="quill-color-swatch" style="background: #000000;">
+                                    <input type="color" id="quill-input-color" value="#000000" style="opacity: 0; width: 100%; height: 100%; cursor: pointer;">
+                                </div>
+                                <div class="cmjn-inputs-poc">
+                                    <div class="cmjn-field-poc">
+                                        <span class="cmjn-label-poc">Cyan</span>
+                                        <input type="text" class="cmjn-input-poc" id="quill-color-c" value="0">
+                                    </div>
+                                    <div class="cmjn-field-poc">
+                                        <span class="cmjn-label-poc">Magenta</span>
+                                        <input type="text" class="cmjn-input-poc" id="quill-color-m" value="0">
+                                    </div>
+                                    <div class="cmjn-field-poc">
+                                        <span class="cmjn-label-poc">Jaune</span>
+                                        <input type="text" class="cmjn-input-poc" id="quill-color-y" value="0">
+                                    </div>
+                                    <div class="cmjn-field-poc">
+                                        <span class="cmjn-label-poc">Noir</span>
+                                        <input type="text" class="cmjn-input-poc" id="quill-color-k" value="100">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- SECTION OPTIONS AVANCÉES -->
-            <div class="toolbar-section collapsible" data-section="advanced">
-                <div class="section-header">
-                    <span class="material-icons collapse-icon">expand_more</span>
-                    <span>Options avancées</span>
-                </div>
-                <div class="section-content">
-                    <label class="checkbox-row">
-                        <input type="checkbox" id="quill-chk-copyfit">
-                        <span class="material-icons">fit_screen</span>
-                        <span>Copy fitting</span>
-                    </label>
-                    <div class="prop-row">
-                        <label for="quill-input-empty-lines">Lignes vides</label>
-                        <select id="quill-input-empty-lines">
-                            <option value="0">Conserver</option>
-                            <option value="1">Supprimer toutes</option>
-                            <option value="2">Variables uniquement</option>
-                        </select>
+            <!-- ==================== SECTION ALIGNEMENTS ==================== -->
+            <div class="section-poc" data-section-id="paragraph">
+                <div class="section-header-poc">Alignements</div>
+                <div class="section-content-poc">
+                    <!-- Alignement horizontal -->
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Horizontal</label>
+                        <div class="form-control-poc">
+                            <div class="toggle-group-poc" id="quill-align-h-group">
+                                <button type="button" class="toggle-btn-poc active" data-value="left" title="Gauche">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M4 21V3H6V21H4ZM8 17V15H20V17H8ZM8 13V11H16V13H8ZM8 9V7H20V9H8Z"/>
+                                    </svg>
+                                </button>
+                                <button type="button" class="toggle-btn-poc" data-value="center" title="Centre">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M11 21V17H4V15H11V13H7V11H11V9H4V7H11V3H13V7H20V9H13V11H17V13H13V15H20V17H13V21H11Z"/>
+                                    </svg>
+                                </button>
+                                <button type="button" class="toggle-btn-poc" data-value="right" title="Droite">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M18 21V3H20V21H18ZM4 17V15H16V17H4ZM8 13V11H16V13H8ZM4 9V7H16V9H4Z"/>
+                                    </svg>
+                                </button>
+                                <button type="button" class="toggle-btn-poc" data-value="justify" title="Justifié">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M3 21V19H21V21H3ZM3 17V15H21V17H3ZM3 13V11H21V13H3ZM3 9V7H21V9H3ZM3 5V3H21V5H3Z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Alignement vertical -->
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Vertical</label>
+                        <div class="form-control-poc">
+                            <div class="toggle-group-poc" id="quill-align-v-group">
+                                <button type="button" class="toggle-btn-poc active" data-value="top" title="Haut">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M3 4H21V6H3V4ZM7 8H9V20H7V8ZM11 8H13V16H11V8ZM15 8H17V20H15V8Z"/>
+                                    </svg>
+                                </button>
+                                <button type="button" class="toggle-btn-poc" data-value="middle" title="Milieu">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M3 11H7V4H9V11H11V7H13V11H15V4H17V11H21V13H17V20H15V13H13V17H11V13H9V20H7V13H3V11Z"/>
+                                    </svg>
+                                </button>
+                                <button type="button" class="toggle-btn-poc" data-value="bottom" title="Bas">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M3 18H21V20H3V18ZM7 4H9V16H7V4ZM11 8H13V16H11V8ZM15 4H17V16H15V4Z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Interligne -->
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Interligne</label>
+                        <div class="form-control-poc">
+                            <div class="spinner-poc">
+                                <input type="text" class="spinner-input-poc" id="quill-input-line-height" value="1.2">
+                                <div class="spinner-buttons-poc">
+                                    <button type="button" class="spinner-btn-poc" data-dir="up">
+                                        <svg viewBox="0 0 12 8">
+                                            <path d="M2 7 C0.5 7 0.5 6 1.2 5.2 L5 1.2 C5.5 0.6 6.5 0.6 7 1.2 L10.8 5.2 C11.5 6 11.5 7 10 7 Z"/>
+                                        </svg>
+                                    </button>
+                                    <button type="button" class="spinner-btn-poc" data-dir="down">
+                                        <svg viewBox="0 0 12 8">
+                                            <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Lignes vides -->
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Lignes vides</label>
+                        <div class="form-control-poc">
+                            <div class="dropdown-poc">
+                                <select class="dropdown-btn-poc dropdown-select-poc" id="quill-input-empty-lines">
+                                    <option value="0" selected>Conserver</option>
+                                    <option value="1">Supprimer toutes</option>
+                                    <option value="2">Variables uniquement</option>
+                                </select>
+                                <span class="dropdown-arrow-poc dropdown-arrow-select-poc">
+                                    <svg viewBox="0 0 12 8">
+                                        <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <!-- ==================== SECTION FOND ==================== -->
+            <div class="section-poc" data-section-id="background">
+                <div class="section-header-poc">Fond</div>
+                <div class="section-content-poc">
+                    <!-- Transparent -->
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Transparent</label>
+                        <div class="form-control-poc">
+                            <div class="checkbox-poc checked" id="quill-chk-transparent-wrapper">
+                                <input type="checkbox" id="quill-chk-transparent" checked style="display: none;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Couleur (visible si NON transparent) -->
+                    <div class="form-row-poc" id="quill-bg-color-row" style="display: none;">
+                        <label class="form-label-poc">Couleur</label>
+                        <div class="form-control-poc">
+                            <div class="color-picker-poc">
+                                <div class="color-swatch-poc" id="quill-bg-color-swatch" style="background: #ffffff;">
+                                    <input type="color" id="quill-input-bg-color" value="#ffffff" style="opacity: 0; width: 100%; height: 100%; cursor: pointer;">
+                                </div>
+                                <div class="cmjn-inputs-poc">
+                                    <div class="cmjn-field-poc">
+                                        <span class="cmjn-label-poc">Cyan</span>
+                                        <input type="text" class="cmjn-input-poc" id="quill-bg-c" value="0">
+                                    </div>
+                                    <div class="cmjn-field-poc">
+                                        <span class="cmjn-label-poc">Magenta</span>
+                                        <input type="text" class="cmjn-input-poc" id="quill-bg-m" value="0">
+                                    </div>
+                                    <div class="cmjn-field-poc">
+                                        <span class="cmjn-label-poc">Jaune</span>
+                                        <input type="text" class="cmjn-input-poc" id="quill-bg-y" value="0">
+                                    </div>
+                                    <div class="cmjn-field-poc">
+                                        <span class="cmjn-label-poc">Noir</span>
+                                        <input type="text" class="cmjn-input-poc" id="quill-bg-k" value="0">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION BORDURE ==================== -->
+            <div class="section-poc" data-section-id="border">
+                <div class="section-header-poc">Bordure</div>
+                <div class="section-content-poc">
+                    <!-- Épaisseur -->
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Épaisseur</label>
+                        <div class="form-control-poc">
+                            <div class="spinner-poc" id="spinner-border-width">
+                                <input type="text" class="spinner-input-poc" id="quill-input-border-width" value="0">
+                                <div class="spinner-buttons-poc">
+                                    <button type="button" class="spinner-btn-poc" data-dir="up">
+                                        <svg viewBox="0 0 12 8">
+                                            <path d="M2 7 C0.5 7 0.5 6 1.2 5.2 L5 1.2 C5.5 0.6 6.5 0.6 7 1.2 L10.8 5.2 C11.5 6 11.5 7 10 7 Z"/>
+                                        </svg>
+                                    </button>
+                                    <button type="button" class="spinner-btn-poc" data-dir="down">
+                                        <svg viewBox="0 0 12 8">
+                                            <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <span class="spinner-unit-poc">px</span>
+                        </div>
+                    </div>
+                    <!-- Style (visible si épaisseur > 0) -->
+                    <div class="form-row-poc" id="quill-border-style-row" style="display: none;">
+                        <label class="form-label-poc">Style</label>
+                        <div class="form-control-poc">
+                            <div class="dropdown-poc">
+                                <select class="dropdown-btn-poc dropdown-select-poc" id="quill-input-border-style">
+                                    <option value="solid" selected>Plein</option>
+                                    <option value="dashed">Tirets</option>
+                                    <option value="dotted">Points</option>
+                                </select>
+                                <span class="dropdown-arrow-poc dropdown-arrow-select-poc">
+                                    <svg viewBox="0 0 12 8">
+                                        <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Couleur (visible si épaisseur > 0) -->
+                    <div class="form-row-poc" id="quill-border-color-row" style="display: none;">
+                        <label class="form-label-poc">Couleur</label>
+                        <div class="form-control-poc">
+                            <div class="color-picker-poc">
+                                <div class="color-swatch-poc" id="quill-border-color-swatch" style="background: #000000;">
+                                    <input type="color" id="quill-input-border-color" value="#000000" style="opacity: 0; width: 100%; height: 100%; cursor: pointer;">
+                                </div>
+                                <div class="cmjn-inputs-poc">
+                                    <div class="cmjn-field-poc">
+                                        <span class="cmjn-label-poc">Cyan</span>
+                                        <input type="text" class="cmjn-input-poc" id="quill-border-c" value="0">
+                                    </div>
+                                    <div class="cmjn-field-poc">
+                                        <span class="cmjn-label-poc">Magenta</span>
+                                        <input type="text" class="cmjn-input-poc" id="quill-border-m" value="0">
+                                    </div>
+                                    <div class="cmjn-field-poc">
+                                        <span class="cmjn-label-poc">Jaune</span>
+                                        <input type="text" class="cmjn-input-poc" id="quill-border-y" value="0">
+                                    </div>
+                                    <div class="cmjn-field-poc">
+                                        <span class="cmjn-label-poc">Noir</span>
+                                        <input type="text" class="cmjn-input-poc" id="quill-border-k" value="100">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION GÉOMÉTRIE ==================== -->
+            <div class="section-poc" data-section-id="geometry">
+                <div class="section-header-poc">Géométrie</div>
+                <div class="section-content-poc">
+                    <div class="geo-grid-poc">
+                        <div class="geo-field-poc">
+                            <label class="geo-label-poc">X</label>
+                            <div class="geo-input-wrapper-poc">
+                                <input type="text" id="quill-val-x" value="22,8">
+                                <span class="unit-poc">mm</span>
+                            </div>
+                        </div>
+                        <div class="geo-field-poc">
+                            <label class="geo-label-poc">Y</label>
+                            <div class="geo-input-wrapper-poc">
+                                <input type="text" id="quill-val-y" value="33,6">
+                                <span class="unit-poc">mm</span>
+                            </div>
+                        </div>
+                        <div class="geo-field-poc">
+                            <label class="geo-label-poc">L</label>
+                            <div class="geo-input-wrapper-poc">
+                                <input type="text" id="quill-val-w" value="133,0">
+                                <span class="unit-poc">mm</span>
+                            </div>
+                        </div>
+                        <div class="geo-field-poc">
+                            <label class="geo-label-poc">H</label>
+                            <div class="geo-input-wrapper-poc">
+                                <input type="text" id="quill-val-h" value="47,0">
+                                <span class="unit-poc">mm</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION ZONE ==================== -->
+            <div class="section-poc" data-section-id="zone">
+                <div class="section-header-poc">Zone</div>
+                <div class="section-content-poc">
+                    <!-- Position Verrouiller -->
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Position</label>
+                        <div class="form-control-poc" style="justify-content: flex-start; gap: 8px;">
+                            <div class="checkbox-poc" id="quill-chk-locked-wrapper">
+                                <input type="checkbox" id="quill-chk-locked" style="display: none;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                            <span style="font-size: 12px; color: var(--poc-text-label);">Verrouiller</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
