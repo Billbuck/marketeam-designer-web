@@ -765,6 +765,118 @@ document.addEventListener('DOMContentLoaded', () => {
     /** @type {HTMLInputElement|null} Checkbox verrouiller (hidden) */
     const imageChkLocked = document.getElementById('image-chk-locked');
     
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // Toolbar Barcode (POC) - Références DOM
+    // ═══════════════════════════════════════════════════════════════════════════════
+    
+    /** @type {HTMLElement|null} Container principal de la toolbar barcode */
+    const barcodeToolbar = document.getElementById('barcode-toolbar');
+    /** @type {HTMLElement|null} Header déplaçable de la toolbar barcode */
+    const barcodeToolbarHeader = document.getElementById('barcode-toolbar-header');
+    /** @type {HTMLButtonElement|null} Bouton fermer de la toolbar barcode */
+    const barcodeToolbarCloseBtn = document.getElementById('barcode-toolbar-close');
+    
+    // Contrôles Section Page
+    /** @type {HTMLSelectElement|null} Dropdown page (recto/verso) */
+    const barcodeInputPage = document.getElementById('barcode-input-page');
+    
+    // Contrôles Section Type de code
+    /** @type {HTMLSelectElement|null} Dropdown type de code-barres */
+    const barcodeInputType = document.getElementById('barcode-input-type');
+    
+    // Contrôles Section Données
+    /** @type {HTMLSelectElement|null} Dropdown source (fixe/champ) */
+    const barcodeInputSource = document.getElementById('barcode-input-source');
+    /** @type {HTMLInputElement|null} Input valeur fixe */
+    const barcodeInputValue = document.getElementById('barcode-input-value');
+    /** @type {HTMLSelectElement|null} Dropdown champ de fusion */
+    const barcodeInputField = document.getElementById('barcode-input-field');
+    /** @type {HTMLElement|null} Row valeur (conditionnelle) */
+    const barcodeValueRow = document.getElementById('barcode-value-row');
+    /** @type {HTMLElement|null} Row champ (conditionnelle) */
+    const barcodeFieldRow = document.getElementById('barcode-field-row');
+    
+    // Contrôles Section Affichage
+    /** @type {HTMLElement|null} Wrapper checkbox afficher texte */
+    const barcodeChkShowTextWrapper = document.getElementById('barcode-chk-show-text-wrapper');
+    /** @type {HTMLInputElement|null} Checkbox afficher texte (hidden) */
+    const barcodeChkShowText = document.getElementById('barcode-chk-show-text');
+    /** @type {HTMLInputElement|null} Spinner taille texte */
+    const barcodeInputTextSize = document.getElementById('barcode-input-text-size');
+    /** @type {HTMLElement|null} Row taille texte (conditionnelle) */
+    const barcodeTextSizeRow = document.getElementById('barcode-text-size-row');
+    
+    // Contrôles Section Fond
+    /** @type {HTMLElement|null} Wrapper checkbox transparent */
+    const barcodeChkTransparentWrapper = document.getElementById('barcode-chk-transparent-wrapper');
+    /** @type {HTMLInputElement|null} Checkbox transparent (hidden) */
+    const barcodeChkTransparent = document.getElementById('barcode-chk-transparent');
+    /** @type {HTMLElement|null} Row couleur fond (conditionnelle) */
+    const barcodeBgColorRow = document.getElementById('barcode-bg-color-row');
+    /** @type {HTMLInputElement|null} Input couleur fond */
+    const barcodeInputBgColor = document.getElementById('barcode-input-bg-color');
+    /** @type {HTMLElement|null} Swatch couleur fond */
+    const barcodeBgColorSwatch = document.getElementById('barcode-bg-color-swatch');
+    
+    // Contrôles Section Géométrie
+    /** @type {HTMLInputElement|null} Input position X (mm) */
+    const barcodeValX = document.getElementById('barcode-val-x');
+    /** @type {HTMLInputElement|null} Input position Y (mm) */
+    const barcodeValY = document.getElementById('barcode-val-y');
+    /** @type {HTMLInputElement|null} Input largeur (mm) */
+    const barcodeValW = document.getElementById('barcode-val-w');
+    /** @type {HTMLInputElement|null} Input hauteur (mm) */
+    const barcodeValH = document.getElementById('barcode-val-h');
+    
+    // Contrôles Section Zone
+    /** @type {HTMLElement|null} Wrapper checkbox verrouiller */
+    const barcodeChkLockedWrapper = document.getElementById('barcode-chk-locked-wrapper');
+    /** @type {HTMLInputElement|null} Checkbox verrouiller (hidden) */
+    const barcodeChkLocked = document.getElementById('barcode-chk-locked');
+    
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // Toolbar QR Code (POC) - Références DOM
+    // ═══════════════════════════════════════════════════════════════════════════════
+    
+    /** @type {HTMLElement|null} Container principal de la toolbar QR Code */
+    const qrcodeToolbar = document.getElementById('qrcode-toolbar');
+    /** @type {HTMLElement|null} Header déplaçable de la toolbar QR Code */
+    const qrcodeToolbarHeader = document.getElementById('qrcode-toolbar-header');
+    /** @type {HTMLButtonElement|null} Bouton fermer de la toolbar QR Code */
+    const qrcodeToolbarCloseBtn = document.getElementById('qrcode-toolbar-close');
+    
+    // Contrôles Section Page
+    /** @type {HTMLSelectElement|null} Dropdown page (recto/verso) */
+    const qrcodeInputPage = document.getElementById('qrcode-input-page');
+    
+    // Contrôles Section Fond
+    /** @type {HTMLElement|null} Wrapper checkbox transparent */
+    const qrcodeChkTransparentWrapper = document.getElementById('qrcode-chk-transparent-wrapper');
+    /** @type {HTMLInputElement|null} Checkbox transparent (hidden) */
+    const qrcodeChkTransparent = document.getElementById('qrcode-chk-transparent');
+    /** @type {HTMLElement|null} Row couleur fond (conditionnelle) */
+    const qrcodeBgColorRow = document.getElementById('qrcode-bg-color-row');
+    /** @type {HTMLInputElement|null} Input couleur fond */
+    const qrcodeInputBgColor = document.getElementById('qrcode-input-bg-color');
+    /** @type {HTMLElement|null} Swatch couleur fond */
+    const qrcodeBgColorSwatch = document.getElementById('qrcode-bg-color-swatch');
+    
+    // Contrôles Section Géométrie
+    /** @type {HTMLInputElement|null} Input position X (mm) */
+    const qrcodeValX = document.getElementById('qrcode-val-x');
+    /** @type {HTMLInputElement|null} Input position Y (mm) */
+    const qrcodeValY = document.getElementById('qrcode-val-y');
+    /** @type {HTMLInputElement|null} Input largeur (mm) */
+    const qrcodeValW = document.getElementById('qrcode-val-w');
+    /** @type {HTMLInputElement|null} Input hauteur (mm) */
+    const qrcodeValH = document.getElementById('qrcode-val-h');
+    
+    // Contrôles Section Zone
+    /** @type {HTMLElement|null} Wrapper checkbox verrouiller */
+    const qrcodeChkLockedWrapper = document.getElementById('qrcode-chk-locked-wrapper');
+    /** @type {HTMLInputElement|null} Checkbox verrouiller (hidden) */
+    const qrcodeChkLocked = document.getElementById('qrcode-chk-locked');
+    
     // Fonction pour mettre à jour l'affichage du spin button d'épaisseur de bordure
     function updateBorderWidthDisplay(value) {
         if (inputBorderWidthDisplay) {

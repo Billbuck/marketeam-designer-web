@@ -2580,3 +2580,64 @@ body.in-iframe .toolbar {
 .conditional-group-poc.hidden {
     display: none;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   COMPOSANTS SPÉCIFIQUES TOOLBAR BARCODE ET QRCODE (POC)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Input texte POC */
+.text-input-poc {
+    flex: 1;
+    padding: 6px 10px;
+    background: var(--poc-bg-input);
+    border: 1.25px solid var(--poc-border-color);
+    border-radius: var(--poc-border-radius-sm);
+    font-size: 13px;
+    color: var(--poc-text-primary);
+    transition: border-color var(--poc-transition-speed);
+}
+
+.text-input-poc:hover {
+    border-color: var(--poc-theme-primary);
+}
+
+.text-input-poc:focus {
+    outline: none;
+    border-color: var(--poc-theme-primary);
+}
+
+.text-input-poc::placeholder {
+    color: var(--poc-text-secondary);
+    font-style: italic;
+}
+
+/* Bandeau informatif QR Code */
+.qrcode-info-banner {
+    background: linear-gradient(135deg, var(--poc-theme-primary-light) 0%, #f0f4ff 100%);
+    border: 1px solid var(--poc-theme-primary);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.qrcode-info-icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    color: var(--poc-theme-primary);
+}
+
+.qrcode-info-text {
+    font-size: 11px;
+    color: var(--poc-text-primary);
+    line-height: 1.4;
+}
+
+.qrcode-info-text strong {
+    display: block;
+    font-size: 12px;
+    margin-bottom: 2px;
+}

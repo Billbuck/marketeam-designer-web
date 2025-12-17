@@ -990,6 +990,441 @@
     <input type="file" id="image-file-input" accept="image/jpeg,image/png,image/gif,image/svg+xml,image/webp" style="display: none;">
 
     <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- TOOLBAR BARCODE FLOTTANTE - Design POC toolbar-barcode.html     -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div class="toolbar-poc" id="barcode-toolbar" style="display: none;" data-toolbar-for="barcode">
+        <!-- Header déplaçable -->
+        <div class="toolbar-header-poc" id="barcode-toolbar-header">
+            <span class="toolbar-title-poc">
+                <span class="toolbar-title-icon">📊</span>
+                PROPRIÉTÉS CODE-BARRES
+            </span>
+            <button type="button" class="toolbar-close-poc" id="barcode-toolbar-close" title="Fermer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Content -->
+        <div class="toolbar-content-poc">
+            
+            <!-- ==================== SECTION PAGE ==================== -->
+            <div class="section-poc" data-section-id="page">
+                <div class="section-header-poc">Page</div>
+                <div class="section-content-poc">
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Page</label>
+                        <div class="form-control-poc">
+                            <div class="dropdown-poc">
+                                <select class="dropdown-btn-poc dropdown-select-poc" id="barcode-input-page">
+                                    <option value="0" selected>Recto</option>
+                                    <option value="1">Verso</option>
+                                </select>
+                                <span class="dropdown-arrow-poc dropdown-arrow-select-poc">
+                                    <svg viewBox="0 0 12 8">
+                                        <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION TYPE DE CODE ==================== -->
+            <div class="section-poc" data-section-id="barcode-type">
+                <div class="section-header-poc">Type de code</div>
+                <div class="section-content-poc">
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Type</label>
+                        <div class="form-control-poc">
+                            <div class="dropdown-poc">
+                                <select class="dropdown-btn-poc dropdown-select-poc" id="barcode-input-type">
+                                    <option value="code128" selected>Code 128</option>
+                                    <option value="code39">Code 39</option>
+                                    <option value="ean13">EAN-13</option>
+                                    <option value="ean8">EAN-8</option>
+                                    <option value="upca">UPC-A</option>
+                                    <option value="itf14">ITF-14</option>
+                                    <option value="pdf417">PDF417</option>
+                                    <option value="datamatrix">DataMatrix</option>
+                                    <option value="aztec">Aztec</option>
+                                </select>
+                                <span class="dropdown-arrow-poc dropdown-arrow-select-poc">
+                                    <svg viewBox="0 0 12 8">
+                                        <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION DONNÉES ==================== -->
+            <div class="section-poc" data-section-id="data">
+                <div class="section-header-poc">Données</div>
+                <div class="section-content-poc">
+                    <!-- Source -->
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Source</label>
+                        <div class="form-control-poc">
+                            <div class="dropdown-poc">
+                                <select class="dropdown-btn-poc dropdown-select-poc" id="barcode-input-source">
+                                    <option value="fixe" selected>Valeur fixe</option>
+                                    <option value="champ">Champ de fusion</option>
+                                </select>
+                                <span class="dropdown-arrow-poc dropdown-arrow-select-poc">
+                                    <svg viewBox="0 0 12 8">
+                                        <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Valeur (visible si source = fixe) -->
+                    <div class="form-row-poc" id="barcode-value-row">
+                        <label class="form-label-poc">Valeur</label>
+                        <div class="form-control-poc">
+                            <input type="text" class="text-input-poc" id="barcode-input-value" placeholder="Entrer la valeur...">
+                        </div>
+                    </div>
+                    <!-- Champ (visible si source = champ) -->
+                    <div class="form-row-poc" id="barcode-field-row" style="display: none;">
+                        <label class="form-label-poc">Champ</label>
+                        <div class="form-control-poc">
+                            <div class="dropdown-poc">
+                                <select class="dropdown-btn-poc dropdown-select-poc" id="barcode-input-field">
+                                    <option value="">Sélectionner...</option>
+                                </select>
+                                <span class="dropdown-arrow-poc dropdown-arrow-select-poc">
+                                    <svg viewBox="0 0 12 8">
+                                        <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION AFFICHAGE ==================== -->
+            <div class="section-poc" data-section-id="display">
+                <div class="section-header-poc">Affichage</div>
+                <div class="section-content-poc">
+                    <!-- Afficher texte -->
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Afficher texte</label>
+                        <div class="form-control-poc">
+                            <div class="checkbox-poc checked" id="barcode-chk-show-text-wrapper">
+                                <input type="checkbox" id="barcode-chk-show-text" checked style="display: none;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Taille texte (visible si texte affiché) -->
+                    <div class="form-row-poc" id="barcode-text-size-row">
+                        <label class="form-label-poc">Taille</label>
+                        <div class="form-control-poc">
+                            <div class="spinner-poc">
+                                <input type="text" class="spinner-input-poc" id="barcode-input-text-size" value="10">
+                                <div class="spinner-buttons-poc">
+                                    <button type="button" class="spinner-btn-poc" data-dir="up">
+                                        <svg viewBox="0 0 12 8">
+                                            <path d="M2 7 C0.5 7 0.5 6 1.2 5.2 L5 1.2 C5.5 0.6 6.5 0.6 7 1.2 L10.8 5.2 C11.5 6 11.5 7 10 7 Z"/>
+                                        </svg>
+                                    </button>
+                                    <button type="button" class="spinner-btn-poc" data-dir="down">
+                                        <svg viewBox="0 0 12 8">
+                                            <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <span class="spinner-unit-poc">px</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION FOND ==================== -->
+            <div class="section-poc" data-section-id="background">
+                <div class="section-header-poc">Fond</div>
+                <div class="section-content-poc">
+                    <!-- Transparent -->
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Transparent</label>
+                        <div class="form-control-poc">
+                            <div class="checkbox-poc checked" id="barcode-chk-transparent-wrapper">
+                                <input type="checkbox" id="barcode-chk-transparent" checked style="display: none;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Couleur fond (visible si NON transparent) -->
+                    <div class="form-row-poc" id="barcode-bg-color-row" style="display: none;">
+                        <label class="form-label-poc">Couleur</label>
+                        <div class="form-control-poc">
+                            <div class="color-picker-poc">
+                                <div class="color-swatch-poc" id="barcode-bg-color-swatch" style="background: #ffffff;">
+                                    <input type="color" id="barcode-input-bg-color" value="#ffffff" style="opacity: 0; width: 100%; height: 100%; cursor: pointer;">
+                                </div>
+                                <div class="cmjn-inputs-poc">
+                                    <div class="cmjn-field-poc">
+                                        <span class="cmjn-label-poc">Cyan</span>
+                                        <input type="text" class="cmjn-input-poc" id="barcode-bg-c" value="0">
+                                    </div>
+                                    <div class="cmjn-field-poc">
+                                        <span class="cmjn-label-poc">Magenta</span>
+                                        <input type="text" class="cmjn-input-poc" id="barcode-bg-m" value="0">
+                                    </div>
+                                    <div class="cmjn-field-poc">
+                                        <span class="cmjn-label-poc">Jaune</span>
+                                        <input type="text" class="cmjn-input-poc" id="barcode-bg-y" value="0">
+                                    </div>
+                                    <div class="cmjn-field-poc">
+                                        <span class="cmjn-label-poc">Noir</span>
+                                        <input type="text" class="cmjn-input-poc" id="barcode-bg-k" value="0">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION GÉOMÉTRIE ==================== -->
+            <div class="section-poc" data-section-id="geometry">
+                <div class="section-header-poc">Géométrie</div>
+                <div class="section-content-poc">
+                    <div class="geo-grid-poc">
+                        <div class="geo-field-poc">
+                            <label class="geo-label-poc">X</label>
+                            <div class="geo-input-wrapper-poc">
+                                <input type="text" id="barcode-val-x" value="50,0">
+                                <span class="unit-poc">mm</span>
+                            </div>
+                        </div>
+                        <div class="geo-field-poc">
+                            <label class="geo-label-poc">Y</label>
+                            <div class="geo-input-wrapper-poc">
+                                <input type="text" id="barcode-val-y" value="30,0">
+                                <span class="unit-poc">mm</span>
+                            </div>
+                        </div>
+                        <div class="geo-field-poc">
+                            <label class="geo-label-poc">L</label>
+                            <div class="geo-input-wrapper-poc">
+                                <input type="text" id="barcode-val-w" value="40,0">
+                                <span class="unit-poc">mm</span>
+                            </div>
+                        </div>
+                        <div class="geo-field-poc">
+                            <label class="geo-label-poc">H</label>
+                            <div class="geo-input-wrapper-poc">
+                                <input type="text" id="barcode-val-h" value="20,0">
+                                <span class="unit-poc">mm</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION ZONE ==================== -->
+            <div class="section-poc" data-section-id="zone">
+                <div class="section-header-poc">Zone</div>
+                <div class="section-content-poc">
+                    <!-- Position Verrouiller -->
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Position</label>
+                        <div class="form-control-poc" style="justify-content: flex-start; gap: 8px;">
+                            <div class="checkbox-poc" id="barcode-chk-locked-wrapper">
+                                <input type="checkbox" id="barcode-chk-locked" style="display: none;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                            <span style="font-size: 12px; color: var(--poc-text-label);">Verrouiller</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- TOOLBAR QR CODE FLOTTANTE - Design POC toolbar-qrcode.html      -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div class="toolbar-poc" id="qrcode-toolbar" style="display: none;" data-toolbar-for="qrcode">
+        <!-- Header déplaçable -->
+        <div class="toolbar-header-poc" id="qrcode-toolbar-header">
+            <span class="toolbar-title-poc">
+                <span class="toolbar-title-icon">📱</span>
+                QR CODE INTERACTIF
+            </span>
+            <button type="button" class="toolbar-close-poc" id="qrcode-toolbar-close" title="Fermer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Content -->
+        <div class="toolbar-content-poc">
+            
+            <!-- ==================== BANDEAU INFORMATIF ==================== -->
+            <div class="qrcode-info-banner">
+                <svg class="qrcode-info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <div class="qrcode-info-text">
+                    <strong>QR Code Marketeam</strong>
+                    Lié à la landing page de votre campagne
+                </div>
+            </div>
+
+            <!-- ==================== SECTION PAGE ==================== -->
+            <div class="section-poc" data-section-id="page">
+                <div class="section-header-poc">Page</div>
+                <div class="section-content-poc">
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Page</label>
+                        <div class="form-control-poc">
+                            <div class="dropdown-poc">
+                                <select class="dropdown-btn-poc dropdown-select-poc" id="qrcode-input-page">
+                                    <option value="0" selected>Recto</option>
+                                    <option value="1">Verso</option>
+                                </select>
+                                <span class="dropdown-arrow-poc dropdown-arrow-select-poc">
+                                    <svg viewBox="0 0 12 8">
+                                        <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION FOND ==================== -->
+            <div class="section-poc" data-section-id="background">
+                <div class="section-header-poc">Fond</div>
+                <div class="section-content-poc">
+                    <!-- Transparent -->
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Transparent</label>
+                        <div class="form-control-poc">
+                            <div class="checkbox-poc checked" id="qrcode-chk-transparent-wrapper">
+                                <input type="checkbox" id="qrcode-chk-transparent" checked style="display: none;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Couleur fond (visible si NON transparent) -->
+                    <div class="form-row-poc" id="qrcode-bg-color-row" style="display: none;">
+                        <label class="form-label-poc">Couleur</label>
+                        <div class="form-control-poc">
+                            <div class="color-picker-poc">
+                                <div class="color-swatch-poc" id="qrcode-bg-color-swatch" style="background: #ffffff;">
+                                    <input type="color" id="qrcode-input-bg-color" value="#ffffff" style="opacity: 0; width: 100%; height: 100%; cursor: pointer;">
+                                </div>
+                                <div class="cmjn-inputs-poc">
+                                    <div class="cmjn-field-poc">
+                                        <span class="cmjn-label-poc">Cyan</span>
+                                        <input type="text" class="cmjn-input-poc" id="qrcode-bg-c" value="0">
+                                    </div>
+                                    <div class="cmjn-field-poc">
+                                        <span class="cmjn-label-poc">Magenta</span>
+                                        <input type="text" class="cmjn-input-poc" id="qrcode-bg-m" value="0">
+                                    </div>
+                                    <div class="cmjn-field-poc">
+                                        <span class="cmjn-label-poc">Jaune</span>
+                                        <input type="text" class="cmjn-input-poc" id="qrcode-bg-y" value="0">
+                                    </div>
+                                    <div class="cmjn-field-poc">
+                                        <span class="cmjn-label-poc">Noir</span>
+                                        <input type="text" class="cmjn-input-poc" id="qrcode-bg-k" value="0">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION GÉOMÉTRIE ==================== -->
+            <div class="section-poc" data-section-id="geometry">
+                <div class="section-header-poc">Géométrie</div>
+                <div class="section-content-poc">
+                    <div class="geo-grid-poc">
+                        <div class="geo-field-poc">
+                            <label class="geo-label-poc">X</label>
+                            <div class="geo-input-wrapper-poc">
+                                <input type="text" id="qrcode-val-x" value="50,0">
+                                <span class="unit-poc">mm</span>
+                            </div>
+                        </div>
+                        <div class="geo-field-poc">
+                            <label class="geo-label-poc">Y</label>
+                            <div class="geo-input-wrapper-poc">
+                                <input type="text" id="qrcode-val-y" value="30,0">
+                                <span class="unit-poc">mm</span>
+                            </div>
+                        </div>
+                        <div class="geo-field-poc">
+                            <label class="geo-label-poc">L</label>
+                            <div class="geo-input-wrapper-poc">
+                                <input type="text" id="qrcode-val-w" value="25,0">
+                                <span class="unit-poc">mm</span>
+                            </div>
+                        </div>
+                        <div class="geo-field-poc">
+                            <label class="geo-label-poc">H</label>
+                            <div class="geo-input-wrapper-poc">
+                                <input type="text" id="qrcode-val-h" value="25,0">
+                                <span class="unit-poc">mm</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION ZONE ==================== -->
+            <div class="section-poc" data-section-id="zone">
+                <div class="section-header-poc">Zone</div>
+                <div class="section-content-poc">
+                    <!-- Position Verrouiller -->
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Position</label>
+                        <div class="form-control-poc" style="justify-content: flex-start; gap: 8px;">
+                            <div class="checkbox-poc" id="qrcode-chk-locked-wrapper">
+                                <input type="checkbox" id="qrcode-chk-locked" style="display: none;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                            <span style="font-size: 12px; color: var(--poc-text-label);">Verrouiller</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
     <!-- PHASE 5 : MINI-TOOLBAR CONTEXTUELLE (FORMATAGE PARTIEL QUILL)   -->
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <div class="mini-toolbar" id="mini-toolbar" style="display: none;">
