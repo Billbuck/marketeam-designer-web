@@ -2,8 +2,8 @@
 
 ## ÉTAT ACTUEL
 
-**Dernière phase terminée** : Phase 3.1
-**Prochain prompt à lancer** : Phase 3.2 (logique affichage toolbar par type de zone)
+**Dernière phase terminée** : Phase 4.2
+**Prochain prompt à lancer** : Phase 5.1 (toolbar-data - champs de fusion)
 
 ---
 
@@ -15,21 +15,36 @@
 | Phase 2.1 | Remplacement HTML/CSS toolbar-texte (POC) |
 | Phase 2.2 | Adaptation JS spinners, toggle-groups, checkboxes POC |
 | Phase 3.1 | Ajout HTML/CSS/DOM toolbar-image (POC) |
-| Phase 3.2 | Logique affichage toolbar-image par type de zone) |
+| Phase 3.2 | Logique affichage toolbar-image par type de zone |
 | Phase 4.1 | Ajout HTML/CSS/DOM toolbar-barcode + toolbar-qrcode (POC) |
 | Phase 4.2 | Logique affichage toolbar-barcode + toolbar-qrcode |
+
+---
+
+## PHASES RESTANTES
+
+| Phase | Description | Statut |
+|-------|-------------|--------|
+| Phase 5 | Toolbar data (champs de fusion) | ⏳ À faire |
+| Phase 6 | Sidebar (POC) | ⏳ À faire |
+| Phase 7 | Nettoyage et tests | ⏳ À faire |
+
 ---
 
 ## ARCHITECTURE ACTUELLE
 
-### Toolbars existantes
-- `#quill-toolbar` → zones text/textQuill (fonctionnelle)
-- `#image-toolbar` → zones image (HTML/CSS prêt, JS en attente)
+### Toolbars intégrées (fonctionnelles)
+- `#quill-toolbar` → zones text/textQuill ✅
+- `#image-toolbar` → zones image ✅
+- `#barcode-toolbar` → zones barcode ✅
+- `#qrcode-toolbar` → zones qr ✅
 
 ### Toolbars à créer
-- `#barcode-toolbar` → zones barcode
-- `#qrcode-toolbar` → zones qr
-- `#data-toolbar` → champs de fusion (zones textQuill uniquement)
+- `#data-toolbar` → champs de fusion (zones textQuill uniquement, si champs reçus)
+
+### Sidebar
+- Actuelle : ancienne version
+- À faire : remplacer par POC sidebar
 
 ### Fichiers principaux
 - `index.html` - Structure HTML
@@ -43,8 +58,9 @@
 ### IDs des toolbars
 - Toolbar texte : préfixe `quill-` (ex: `quill-input-font`)
 - Toolbar image : préfixe `image-` (ex: `image-input-mode`)
-- Toolbar barcode : préfixe `barcode-`
-- Toolbar qrcode : préfixe `qrcode-`
+- Toolbar barcode : préfixe `barcode-` (ex: `barcode-input-type`)
+- Toolbar qrcode : préfixe `qrcode-` (ex: `qrcode-chk-transparent`)
+- Toolbar data : préfixe `data-`
 
 ### Composants POC réutilisables
 - `initSpinnerPoc(inputId, min, max, step, onChange)`
@@ -95,10 +111,11 @@
 ## FICHIERS POC DE RÉFÉRENCE
 
 - `toolbar-texte.html` ✅ Intégré
-- `toolbar-image.html` ✅ HTML intégré, JS en cours
-- `toolbar-barcode.html` - À intégrer
-- `toolbar-qrcode.html` - À intégrer
-- `toolbar-data.html` - À intégrer
+- `toolbar-image.html` ✅ Intégré
+- `toolbar-barcode.html` ✅ Intégré
+- `toolbar-qrcode.html` ✅ Intégré
+- `toolbar-data.html` - À intégrer (Phase 5)
+- `test-integration.html` - Contient le POC sidebar à intégrer (Phase 6)
 
 ---
 
