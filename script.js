@@ -819,16 +819,29 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function initSpinnerPoc(inputId, min, max, step, onChange) {
+        console.log('🔧 initSpinnerPoc - inputId:', inputId);
+        
         const input = document.getElementById(inputId);
-        if (!input) return;
+        console.log('   input element:', input);
+        if (!input) {
+            console.warn('   ❌ Input non trouvé !');
+            return;
+        }
         
         const spinner = input.closest('.spinner-poc');
-        if (!spinner) return;
+        console.log('   spinner container:', spinner);
+        if (!spinner) {
+            console.warn('   ❌ Container .spinner-poc non trouvé !');
+            return;
+        }
         
         const buttons = spinner.querySelectorAll('.spinner-btn-poc');
+        console.log('   buttons trouvés:', buttons.length);
         
         buttons.forEach(btn => {
+            console.log('   Ajout listener sur bouton:', btn.dataset.dir);
             btn.addEventListener('click', () => {
+                console.log('🔧 Spinner click:', inputId, btn.dataset.dir);
                 // Gérer les valeurs avec virgule (format français)
                 let currentValue = parseFloat(input.value.replace(',', '.')) || min;
                 const dir = btn.dataset.dir;
@@ -4885,8 +4898,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // coordsPanel supprimé - ne rien faire
         }
 
-        // Toolbar Quill (Phase 3) : affichage automatique
-        updateQuillToolbarVisibilityFromSelection();
+        // Toolbars conditionnelles : affichage selon le type de zone
+        updateToolbarVisibility();
 
         // Phase 5 : éviter une mini-toolbar "orpheline" lors d'un changement de sélection
         // (le show/hide fin est géré par selection-change Quill)
@@ -5489,6 +5502,570 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             hideQuillToolbar();
         }
+    }
+
+    // ─────────────────────────────── TOOLBAR IMAGE ──────────────────────────────────
+
+    /** @type {boolean} True si la toolbar Image est visible */
+    let isImageToolbarVisible = false;
+    
+    /** @type {boolean} True si on est en train de déplacer la toolbar Image */
+    let isImageToolbarDragging = false;
+    
+    /** @type {{x: number, y: number}} Offset souris→toolbar au démarrage du drag */
+    let imageToolbarDragOffset = { x: 0, y: 0 };
+    
+    /** @type {{x: number, y: number}|null} Dernière position connue de la toolbar Image */
+    let imageToolbarLastPos = null;
+    
+    /** @type {boolean} True si les composants POC de la toolbar Image ont été initialisés */
+    let imageToolbarInitialized = false;
+
+    /**
+     * Calcule une position initiale (visible) pour la toolbar Image.
+     * Priorité : dernière position connue > coin haut-droit du workspace (avec marge).
+     *
+     * @returns {{x: number, y: number}} Position (px) dans le viewport
+     */
+    function getInitialImageToolbarPosition() {
+        if (imageToolbarLastPos) return imageToolbarLastPos;
+        
+        const margin = 16;
+        const w = imageToolbar ? imageToolbar.offsetWidth || 280 : 280;
+        const h = imageToolbar ? imageToolbar.offsetHeight || 200 : 200;
+        
+        // Essayer de se caler sur le workspace (coin haut-droit)
+        if (workspace) {
+            const rect = workspace.getBoundingClientRect();
+            const x = Math.min(window.innerWidth - w - margin, Math.max(margin, rect.right - w - margin));
+            const y = Math.min(window.innerHeight - h - margin, Math.max(margin, rect.top + margin));
+            return { x, y };
+        }
+        
+        // Fallback viewport
+        return { x: window.innerWidth - w - margin, y: margin };
+    }
+
+    /**
+     * Affiche la toolbar Image et synchronise avec la zone sélectionnée.
+     *
+     * @param {string} zoneId - ID de la zone image sélectionnée
+     * @returns {void}
+     */
+    function showImageToolbar(zoneId) {
+        console.log('🖼️ showImageToolbar():', zoneId);
+        
+        if (!imageToolbar) return;
+        
+        // Masquer la toolbar Quill si visible
+        hideQuillToolbar();
+        
+        // Si la toolbar est déjà visible, on se contente de resynchroniser
+        if (isImageToolbarVisible) {
+            syncImageToolbarWithZone(zoneId);
+            return;
+        }
+        
+        imageToolbar.style.display = 'flex';
+        isImageToolbarVisible = true;
+        
+        // Initialiser les composants POC une seule fois (au premier affichage)
+        if (!imageToolbarInitialized) {
+            initImageToolbarComponents();
+            imageToolbarInitialized = true;
+        }
+        
+        // Positionner la toolbar de façon visible
+        const pos = getInitialImageToolbarPosition();
+        imageToolbar.style.left = `${pos.x}px`;
+        imageToolbar.style.top = `${pos.y}px`;
+        imageToolbar.style.right = 'auto';
+        imageToolbar.style.bottom = 'auto';
+        
+        // Synchroniser avec la zone sélectionnée
+        syncImageToolbarWithZone(zoneId);
+    }
+
+    /**
+     * Masque la toolbar Image.
+     *
+     * @returns {void}
+     */
+    function hideImageToolbar() {
+        console.log('🖼️ hideImageToolbar()');
+        
+        if (!imageToolbar) return;
+        if (!isImageToolbarVisible && imageToolbar.style.display === 'none') return;
+        
+        imageToolbar.style.display = 'none';
+        isImageToolbarVisible = false;
+    }
+
+    /**
+     * Synchronise les valeurs de la toolbar Image avec une zone image.
+     * Remplit tous les champs : source, DPI, affichage, fond, bordure, géométrie, verrouillé.
+     *
+     * @param {string} zoneId - ID de la zone image
+     * @returns {void}
+     */
+    function syncImageToolbarWithZone(zoneId) {
+        console.log('🖼️ syncImageToolbarWithZone:', zoneId);
+        
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        
+        if (!zoneData || zoneData.type !== 'image') return;
+        
+        const zoneEl = document.getElementById(zoneId);
+        if (!zoneEl) return;
+        
+        // ─── PAGE ───
+        // La zone est sur la page courante, donc on affiche l'index courant
+        if (imageInputPage) {
+            imageInputPage.value = documentState.currentPageIndex;
+        }
+        
+        // ─── SOURCE ───
+        const source = zoneData.source || { type: 'fixe', valeur: '' };
+        const sourceType = source.type === 'url' ? 'fixe' : source.type;
+        
+        if (imageInputSourceType) imageInputSourceType.value = sourceType;
+        
+        // Afficher le bon groupe selon le type
+        if (sourceType === 'champ') {
+            if (imageUploadGroup) imageUploadGroup.classList.add('hidden');
+            if (imageChampGroup) imageChampGroup.classList.remove('hidden');
+            populateImageFieldsSelect(source.valeur);
+        } else {
+            if (imageUploadGroup) imageUploadGroup.classList.remove('hidden');
+            if (imageChampGroup) imageChampGroup.classList.add('hidden');
+        }
+        
+        // Infos fichier et DPI
+        updateImageFileInfoDisplay(source);
+        updateDpiIndicator(zoneId);
+        
+        // ─── AFFICHAGE ───
+        const redim = zoneData.redimensionnement || { mode: 'ajuster', alignementH: 'center', alignementV: 'middle' };
+        
+        // Mode de redimensionnement (mapping interne → select)
+        const modeMapping = {
+            'initial': 'original',
+            'ajuster': 'contain',
+            'couper': 'cover'
+        };
+        if (imageInputMode) imageInputMode.value = modeMapping[redim.mode] || 'contain';
+        
+        // Alignements (toggle-groups)
+        setToggleGroupPocValue('image-align-h-group', redim.alignementH || 'center');
+        setToggleGroupPocValue('image-align-v-group', redim.alignementV || 'middle');
+        
+        // ─── FOND ───
+        const isTransparent = zoneData.isTransparent !== false;
+        setCheckboxPocState('image-chk-transparent-wrapper', isTransparent);
+        
+        // Afficher/masquer la couleur de fond selon transparent
+        if (imageBgColorRow) {
+            imageBgColorRow.style.display = isTransparent ? 'none' : '';
+        }
+        
+        if (imageInputBgColor) {
+            imageInputBgColor.value = zoneData.bgColor || '#ffffff';
+            if (imageBgColorSwatch) {
+                imageBgColorSwatch.style.background = zoneData.bgColor || '#ffffff';
+            }
+        }
+        
+        // ─── BORDURE ───
+        const border = zoneData.border || { width: 0, color: '#000000', style: 'solid' };
+        
+        if (imageInputBorderWidth) {
+            imageInputBorderWidth.value = border.width || 0;
+        }
+        
+        // Afficher/masquer style et couleur selon épaisseur
+        const hasBorder = (border.width || 0) > 0;
+        if (imageBorderStyleRow) imageBorderStyleRow.style.display = hasBorder ? '' : 'none';
+        if (imageBorderColorRow) imageBorderColorRow.style.display = hasBorder ? '' : 'none';
+        
+        if (imageInputBorderStyle) imageInputBorderStyle.value = border.style || 'solid';
+        if (imageInputBorderColor) {
+            imageInputBorderColor.value = border.color || '#000000';
+            if (imageBorderColorSwatch) {
+                imageBorderColorSwatch.style.background = border.color || '#000000';
+            }
+        }
+        
+        // ─── GÉOMÉTRIE ───
+        const x = parseFloat(zoneEl.style.left) || 0;
+        const y = parseFloat(zoneEl.style.top) || 0;
+        const w = zoneEl.offsetWidth;
+        const h = zoneEl.offsetHeight;
+        
+        // Convertir en mm
+        const xMm = x * MM_PER_PIXEL;
+        const yMm = y * MM_PER_PIXEL;
+        const wMm = w * MM_PER_PIXEL;
+        const hMm = h * MM_PER_PIXEL;
+        
+        if (imageValX) imageValX.value = xMm.toFixed(1).replace('.', ',');
+        if (imageValY) imageValY.value = yMm.toFixed(1).replace('.', ',');
+        if (imageValW) imageValW.value = wMm.toFixed(1).replace('.', ',');
+        if (imageValH) imageValH.value = hMm.toFixed(1).replace('.', ',');
+        
+        // ─── VERROUILLÉ ───
+        setCheckboxPocState('image-chk-locked-wrapper', zoneData.locked || false);
+    }
+
+    /**
+     * Affiche la toolbar appropriée selon le type de zone sélectionnée.
+     * Une seule toolbar visible à la fois.
+     * 
+     * Règles :
+     * - Aucune sélection ou multi-sélection → tout masquer
+     * - 1 zone text/textQuill → toolbar Quill
+     * - 1 zone image → toolbar Image
+     * - Autres types → aucune toolbar
+     *
+     * @returns {void}
+     */
+    function updateToolbarVisibility() {
+        // Récupérer le type de la zone sélectionnée (si une seule)
+        let zoneType = null;
+        let zoneId = null;
+        
+        if (selectedZoneIds.length === 1) {
+            zoneId = selectedZoneIds[0];
+            const zoneEl = document.getElementById(zoneId);
+            if (zoneEl && zoneEl.dataset) {
+                zoneType = zoneEl.dataset.type;
+            }
+        }
+        
+        console.log('🔧 updateToolbarVisibility - count:', selectedZoneIds.length, 'type:', zoneType);
+        
+        // Décider quelle toolbar afficher
+        if (selectedZoneIds.length !== 1 || !zoneType) {
+            // Aucune sélection ou multi-sélection → masquer toutes les toolbars
+            hideQuillToolbar();
+            hideImageToolbar();
+            return;
+        }
+        
+        switch (zoneType) {
+            case 'text':
+            case 'textQuill':
+                hideImageToolbar();
+                showQuillToolbar();
+                break;
+                
+            case 'image':
+                hideQuillToolbar();
+                showImageToolbar(zoneId);
+                break;
+                
+            case 'barcode':
+            case 'qr':
+            default:
+                // Pas de toolbar pour ces types (pour l'instant)
+                hideQuillToolbar();
+                hideImageToolbar();
+                break;
+        }
+    }
+
+    /**
+     * Initialise les composants POC de la toolbar Image.
+     * Configure les spinners, toggle-groups, checkboxes et écouteurs d'événements.
+     *
+     * @returns {void}
+     */
+    function initImageToolbarComponents() {
+        if (!imageToolbar) return;
+        
+        console.log('🖼️ initImageToolbarComponents()');
+        
+        /**
+         * Retourne l'ID de la zone image sélectionnée (si sélection unique).
+         * @returns {string|null}
+         */
+        const getSelectedImageZoneId = () => {
+            if (selectedZoneIds.length !== 1) return null;
+            const zoneId = selectedZoneIds[0];
+            const zonesData = getCurrentPageZones();
+            if (!zonesData[zoneId] || zonesData[zoneId].type !== 'image') return null;
+            return zoneId;
+        };
+        
+        /**
+         * Applique une mise à jour de données pour la zone image sélectionnée.
+         * @param {(zoneData: any, zoneEl: HTMLElement, zoneId: string) => void} mutator
+         * @returns {void}
+         */
+        const updateSelectedImageZone = (mutator) => {
+            const zoneId = getSelectedImageZoneId();
+            if (!zoneId) return;
+            
+            const zonesData = getCurrentPageZones();
+            const zoneData = zonesData[zoneId];
+            const zoneEl = document.getElementById(zoneId);
+            if (!zoneEl) return;
+            
+            mutator(zoneData, zoneEl, zoneId);
+            updateImageZoneDisplay(zoneId);
+            saveToLocalStorage();
+            saveState();
+        };
+        
+        // ═══════════════════════════════════════════════════════════════
+        // SPINNERS
+        // ═══════════════════════════════════════════════════════════════
+        console.log('🔧 initImageToolbarComponents - Initialisation des SPINNERS');
+        console.log('   imageToolbar visible ?', imageToolbar.style.display);
+        console.log('   imageToolbar offsetHeight:', imageToolbar.offsetHeight);
+        
+        // Épaisseur bordure
+        initSpinnerPoc('image-input-border-width', 0, 20, 1, (value) => {
+            console.log('🔧 Spinner border-width callback, value:', value);
+            updateSelectedImageZone((zoneData, zoneEl) => {
+                if (!zoneData.border) zoneData.border = { width: 0, color: '#000000', style: 'solid' };
+                zoneData.border.width = value;
+                
+                // Afficher/masquer style et couleur selon épaisseur
+                const hasBorder = value > 0;
+                if (imageBorderStyleRow) imageBorderStyleRow.style.display = hasBorder ? '' : 'none';
+                if (imageBorderColorRow) imageBorderColorRow.style.display = hasBorder ? '' : 'none';
+                
+                // Appliquer visuellement la bordure
+                applyBorderToZone(zoneEl, zoneData.border);
+            });
+        });
+        
+        // ═══════════════════════════════════════════════════════════════
+        // TOGGLE-GROUPS (alignements)
+        // ═══════════════════════════════════════════════════════════════
+        
+        // Note : déjà initialisés via initToggleGroupPoc plus tôt dans le code
+        // On ajoute ici les callbacks de mise à jour
+        initToggleGroupPoc('image-align-h-group', (value) => {
+            updateSelectedImageZone((zoneData) => {
+                if (!zoneData.redimensionnement) {
+                    zoneData.redimensionnement = { mode: 'ajuster', alignementH: 'center', alignementV: 'middle' };
+                }
+                zoneData.redimensionnement.alignementH = value;
+            });
+        });
+        
+        initToggleGroupPoc('image-align-v-group', (value) => {
+            updateSelectedImageZone((zoneData) => {
+                if (!zoneData.redimensionnement) {
+                    zoneData.redimensionnement = { mode: 'ajuster', alignementH: 'center', alignementV: 'middle' };
+                }
+                zoneData.redimensionnement.alignementV = value;
+            });
+        });
+        
+        // ═══════════════════════════════════════════════════════════════
+        // CHECKBOXES
+        // ═══════════════════════════════════════════════════════════════
+        
+        // Fond transparent
+        initCheckboxPoc('image-chk-transparent-wrapper', (checked) => {
+            updateSelectedImageZone((zoneData, zoneEl) => {
+                zoneData.isTransparent = checked;
+                
+                // Afficher/masquer la couleur de fond
+                if (imageBgColorRow) {
+                    imageBgColorRow.style.display = checked ? 'none' : '';
+                }
+                
+                // Appliquer visuellement le fond
+                zoneEl.style.backgroundColor = checked ? 'transparent' : (zoneData.bgColor || '#ffffff');
+            });
+        });
+        
+        // Verrouiller
+        initCheckboxPoc('image-chk-locked-wrapper', (checked) => {
+            updateSelectedImageZone((zoneData, zoneEl) => {
+                zoneData.locked = checked;
+                zoneEl.classList.toggle('locked', checked);
+                updateHandlesVisibility();
+            });
+        });
+        
+        // ═══════════════════════════════════════════════════════════════
+        // SELECTS
+        // ═══════════════════════════════════════════════════════════════
+        
+        // Page (Recto/Verso) - déplacer la zone vers une autre page
+        if (imageInputPage) {
+            imageInputPage.addEventListener('change', () => {
+                const zoneId = getSelectedImageZoneId();
+                if (!zoneId) return;
+                
+                const targetPageIndex = parseInt(imageInputPage.value, 10);
+                const success = moveZoneToPage(zoneId, targetPageIndex);
+                
+                if (success) {
+                    // Zone déplacée : elle n'est plus sur la page courante
+                    // Donc désélectionner (la zone n'est plus visible)
+                    deselectAll();
+                }
+            });
+        }
+        
+        // Type de source (fixe/champ)
+        if (imageInputSourceType) {
+            imageInputSourceType.addEventListener('change', () => {
+                const sourceType = imageInputSourceType.value;
+                
+                // Afficher le bon groupe
+                if (sourceType === 'champ') {
+                    if (imageUploadGroup) imageUploadGroup.classList.add('hidden');
+                    if (imageChampGroup) imageChampGroup.classList.remove('hidden');
+                } else {
+                    if (imageUploadGroup) imageUploadGroup.classList.remove('hidden');
+                    if (imageChampGroup) imageChampGroup.classList.add('hidden');
+                }
+                
+                updateSelectedImageZone((zoneData) => {
+                    if (!zoneData.source) zoneData.source = { type: 'fixe', valeur: '' };
+                    zoneData.source.type = sourceType;
+                });
+            });
+        }
+        
+        // Mode de redimensionnement
+        if (imageInputMode) {
+            imageInputMode.addEventListener('change', () => {
+                // Mapping select → interne
+                const modeMapping = {
+                    'original': 'initial',
+                    'contain': 'ajuster',
+                    'cover': 'couper',
+                    'stretch': 'ajuster'
+                };
+                
+                updateSelectedImageZone((zoneData, zoneEl, zoneId) => {
+                    if (!zoneData.redimensionnement) {
+                        zoneData.redimensionnement = { mode: 'ajuster', alignementH: 'center', alignementV: 'middle' };
+                    }
+                    zoneData.redimensionnement.mode = modeMapping[imageInputMode.value] || 'ajuster';
+                    
+                    // Mettre à jour l'indicateur DPI
+                    updateDpiIndicator(zoneId);
+                    updateImageDpiBadge(zoneId);
+                });
+            });
+        }
+        
+        // Champ de fusion
+        if (imageInputChamp) {
+            imageInputChamp.addEventListener('change', () => {
+                updateSelectedImageZone((zoneData) => {
+                    if (!zoneData.source) zoneData.source = { type: 'champ', valeur: '' };
+                    zoneData.source.valeur = imageInputChamp.value;
+                });
+            });
+        }
+        
+        // Style bordure
+        if (imageInputBorderStyle) {
+            imageInputBorderStyle.addEventListener('change', () => {
+                updateSelectedImageZone((zoneData, zoneEl) => {
+                    if (!zoneData.border) zoneData.border = { width: 0, color: '#000000', style: 'solid' };
+                    zoneData.border.style = imageInputBorderStyle.value;
+                    // Appliquer visuellement la bordure
+                    applyBorderToZone(zoneEl, zoneData.border);
+                });
+            });
+        }
+        
+        // ═══════════════════════════════════════════════════════════════
+        // COULEURS
+        // ═══════════════════════════════════════════════════════════════
+        
+        // Couleur de fond
+        if (imageInputBgColor) {
+            imageInputBgColor.addEventListener('input', () => {
+                if (imageBgColorSwatch) {
+                    imageBgColorSwatch.style.background = imageInputBgColor.value;
+                }
+                updateSelectedImageZone((zoneData, zoneEl) => {
+                    zoneData.bgColor = imageInputBgColor.value;
+                    // Appliquer visuellement le fond (seulement si pas transparent)
+                    if (!zoneData.isTransparent) {
+                        zoneEl.style.backgroundColor = zoneData.bgColor;
+                    }
+                });
+            });
+        }
+        
+        // Couleur bordure
+        if (imageInputBorderColor) {
+            imageInputBorderColor.addEventListener('input', () => {
+                if (imageBorderColorSwatch) {
+                    imageBorderColorSwatch.style.background = imageInputBorderColor.value;
+                }
+                updateSelectedImageZone((zoneData, zoneEl) => {
+                    if (!zoneData.border) zoneData.border = { width: 0, color: '#000000', style: 'solid' };
+                    zoneData.border.color = imageInputBorderColor.value;
+                    // Appliquer visuellement la bordure
+                    applyBorderToZone(zoneEl, zoneData.border);
+                });
+            });
+        }
+        
+        // ═══════════════════════════════════════════════════════════════
+        // GÉOMÉTRIE (inputs mm)
+        // ═══════════════════════════════════════════════════════════════
+        
+        const geoInputs = [imageValX, imageValY, imageValW, imageValH];
+        geoInputs.forEach((input, index) => {
+            if (!input) return;
+            
+            input.addEventListener('change', () => {
+                const zoneId = getSelectedImageZoneId();
+                if (!zoneId) return;
+                
+                const zoneEl = document.getElementById(zoneId);
+                if (!zoneEl) return;
+                
+                // Parser la valeur (format français avec virgule)
+                const valueMm = parseFloat(input.value.replace(',', '.')) || 0;
+                const valuePx = valueMm / MM_PER_PIXEL;
+                
+                // Appliquer selon l'index
+                switch (index) {
+                    case 0: // X
+                        zoneEl.style.left = `${valuePx}px`;
+                        break;
+                    case 1: // Y
+                        zoneEl.style.top = `${valuePx}px`;
+                        break;
+                    case 2: // W
+                        zoneEl.style.width = `${Math.max(20, valuePx)}px`;
+                        break;
+                    case 3: // H
+                        zoneEl.style.height = `${Math.max(20, valuePx)}px`;
+                        break;
+                }
+                
+                // Reformater l'input
+                input.value = valueMm.toFixed(1).replace('.', ',');
+                
+                // Mettre à jour DPI si largeur/hauteur changée
+                if (index >= 2) {
+                    updateDpiIndicator(zoneId);
+                    updateImageDpiBadge(zoneId);
+                }
+                
+                saveToLocalStorage();
+                saveState();
+            });
+        });
+        
+        console.log('🖼️ Toolbar Image - composants POC initialisés');
     }
 
     // Charger les données d'une zone dans le formulaire
@@ -8210,16 +8787,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Initialisation des toggle-groups alignement image (POC)
-    initToggleGroupPoc('image-align-h-group', () => {
-        updateActiveImageZoneData();
-        saveState();
-    });
-    
-    initToggleGroupPoc('image-align-v-group', () => {
-        updateActiveImageZoneData();
-        saveState();
-    });
+    // Note : Les toggle-groups image sont initialisés dans initImageToolbarComponents()
     
     // ========================================
     // EVENT LISTENERS - Upload Image
@@ -9322,8 +9890,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Masquer la section Page
         updateZonePageUI();
         
-        // Toolbar Quill (Phase 3) : toujours masquer après désélection
-        updateQuillToolbarVisibilityFromSelection();
+        // Toolbars : toujours masquer après désélection
+        updateToolbarVisibility();
     }
 
     btnDelete.addEventListener('click', () => {
@@ -9602,6 +10170,75 @@ document.addEventListener('DOMContentLoaded', () => {
             isQuillToolbarDragging = false;
         });
     }
+
+    // ─────────────────────────────── TOOLBAR IMAGE - ÉVÉNEMENTS ──────────────────────
+    
+    // Empêcher le clic sur les toolbars de désélectionner la zone
+    if (quillToolbar) {
+        quillToolbar.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+        });
+        quillToolbar.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    }
+    
+    if (imageToolbar) {
+        imageToolbar.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+        });
+        imageToolbar.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    }
+    
+    // Bouton fermer (X) de la toolbar image
+    if (imageToolbarCloseBtn) {
+        imageToolbarCloseBtn.addEventListener('click', () => {
+            hideImageToolbar();
+        });
+    }
+    
+    // Drag de la toolbar image (sur header)
+    if (imageToolbar && imageToolbarHeader) {
+        imageToolbarHeader.addEventListener('mousedown', (e) => {
+            // Ne pas drag si on clique sur le bouton fermer
+            if (e.target.closest && e.target.closest('#image-toolbar-close')) return;
+            
+            isImageToolbarDragging = true;
+            const rect = imageToolbar.getBoundingClientRect();
+            imageToolbarDragOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            imageToolbar.style.transition = 'none';
+            e.preventDefault();
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (!isImageToolbarDragging || !imageToolbar) return;
+            
+            const maxX = window.innerWidth - imageToolbar.offsetWidth;
+            const maxY = window.innerHeight - imageToolbar.offsetHeight;
+            
+            const x = Math.max(0, Math.min(e.clientX - imageToolbarDragOffset.x, maxX));
+            const y = Math.max(0, Math.min(e.clientY - imageToolbarDragOffset.y, maxY));
+            
+            imageToolbar.style.left = `${x}px`;
+            imageToolbar.style.top = `${y}px`;
+            imageToolbar.style.right = 'auto';
+            imageToolbar.style.bottom = 'auto';
+        });
+        
+        document.addEventListener('mouseup', () => {
+            if (!isImageToolbarDragging || !imageToolbar) return;
+            
+            const rect = imageToolbar.getBoundingClientRect();
+            imageToolbarLastPos = { x: rect.left, y: rect.top };
+            imageToolbar.style.transition = '';
+            isImageToolbarDragging = false;
+        });
+    }
+    
+    // Note : initImageToolbarComponents() est appelée au premier affichage de la toolbar
+    // dans showImageToolbar() pour éviter les problèmes avec display:none
 
     console.log('═══════════════════════════════════════════════════════════════');
     console.log('📋 PHASE 4 - Toolbar Quill connectée aux propriétés');
@@ -13048,9 +13685,20 @@ document.addEventListener('DOMContentLoaded', () => {
      * @see showMoveZoneToast - Affichage du toast de confirmation
      */
     function moveZoneToPage(zoneId, targetPageIndex) {
+        // 🔧 DEBUG - Logs de diagnostic
+        console.log('🔧 moveZoneToPage - DÉBUT');
+        console.log('   zoneId:', zoneId);
+        console.log('   targetPageIndex:', targetPageIndex, 'type:', typeof targetPageIndex);
+        console.log('   documentState.pages.length:', documentState.pages.length);
+        console.log('   documentState.pages:', documentState.pages);
+        
         // 1. Vérifier que la zone existe sur la page courante
         const sourcePageIndex = documentState.currentPageIndex;
+        console.log('   sourcePageIndex:', sourcePageIndex);
+        
         const sourcePage = documentState.pages[sourcePageIndex];
+        console.log('   sourcePage:', sourcePage);
+        
         const sourceZones = sourcePage.zones;
         
         if (!sourceZones[zoneId]) {
@@ -13073,13 +13721,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // 4. Vérifier que la page cible existe
+        console.log('   Vérification page cible:', targetPageIndex, '>=', 0, 'et <', documentState.pages.length);
         if (targetPageIndex < 0 || targetPageIndex >= documentState.pages.length) {
             console.warn(`moveZoneToPage: Page cible ${targetPageIndex} invalide`);
             return false;
         }
         
         const targetPage = documentState.pages[targetPageIndex];
+        console.log('   targetPage:', targetPage);
+        
         const targetZones = targetPage.zones;
+        console.log('   targetZones:', targetZones);
         
         // 5. Calculer le nouveau z-index pour la page cible (au premier plan)
         let maxZIndex = 0;

@@ -1995,13 +1995,15 @@ body.in-iframe .toolbar {
     position: fixed;
     top: 20px;
     right: 20px;
-    width: 280px;
+    width: 300px;
     z-index: 2000;
     background: var(--poc-bg-toolbar);
     border-radius: var(--poc-border-radius);
     box-shadow: var(--poc-shadow-toolbar);
     overflow: hidden;
     user-select: none;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Header */
