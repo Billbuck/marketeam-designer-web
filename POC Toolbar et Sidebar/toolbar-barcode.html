@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marketeam - Toolbar Code-barres</title>
+    <!--
+        ╔══════════════════════════════════════════════════════════════════╗
+        ║  MARKETEAM DESIGNER - POC TOOLBAR CODE-BARRES                    ║
+        ╠══════════════════════════════════════════════════════════════════╣
+        ║  Compatibilité : Marketeam Designer v1.0                         ║
+        ║  Type de zone : barcode                                          ║
+        ║  Communication : postMessage (voir documentation_communication)  ║
+        ╠══════════════════════════════════════════════════════════════════╣
+        ║  Types de codes-barres supportés :                               ║
+        ║  - Code 128, Code 39, EAN-13, EAN-8, UPC-A                       ║
+        ║  - ITF-14, PDF417, DataMatrix, Aztec                             ║
+        ╚══════════════════════════════════════════════════════════════════╝
+    -->
+    <style>
+        /* ═══════════════════════════════════════════════════════════════
+           VARIABLES CSS
+           ═══════════════════════════════════════════════════════════════ */
+        :root {
+            --theme-primary: #934BB7;
+            --theme-primary-light: #F4E6FA;
+            --theme-primary-dark: #62307B;
+            
+            --bg-body: #f3f4f6;
+            --bg-toolbar: #ffffff;
+            --bg-section-header: #f5f5f5;
+            --bg-input: #ffffff;
+            
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --text-label: #4b5563;
+            
+            --border-color: #e5e7eb;
+            --border-radius: 8px;
+            --border-radius-sm: 6px;
+            
+            --shadow-toolbar: 0 10px 40px rgba(0, 0, 0, 0.15), 0 2px 10px rgba(0, 0, 0, 0.1);
+            
+            --transition-speed: 0.15s;
+            
+            --header-bg: #62307B;
+            --header-text: #ffffff;
+            
+            --active-bg: #934BB7;
+            --active-text: #ffffff;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           THÈMES ALTERNATIFS
+           ═══════════════════════════════════════════════════════════════ */
+        .theme-yellow {
+            --theme-primary: #EAB400;
+            --theme-primary-light: #FCF4C2;
+            --theme-primary-dark: #DA9900;
+            --active-bg: #EAB400;
+            --active-text: #ffffff;
+            --header-bg: #DA9900;
+        }
+
+        .theme-blue {
+            --theme-primary: #0079BF;
+            --theme-primary-light: #D4F0FF;
+            --theme-primary-dark: #004D80;
+            --active-bg: #0079BF;
+            --header-bg: #004D80;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           RESET & BASE
+           ═══════════════════════════════════════════════════════════════ */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg-body);
+            min-height: 100vh;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        body[data-supported-zone-types] {
+            /* Attribut pour la compatibilité Designer */
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           TOOLBAR CONTAINER
+           ═══════════════════════════════════════════════════════════════ */
+        .toolbar {
+            width: 300px;
+            background: var(--bg-toolbar);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-toolbar);
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           HEADER
+           ═══════════════════════════════════════════════════════════════ */
+        .toolbar-header {
+            background: var(--header-bg);
+            color: var(--header-text);
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: move;
+        }
+
+        .toolbar-title {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toolbar-title-icon {
+            font-size: 14px;
+        }
+
+        .toolbar-close {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            color: var(--header-text);
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background var(--transition-speed);
+        }
+
+        .toolbar-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .toolbar-close svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           CONTENT
+           ═══════════════════════════════════════════════════════════════ */
+        .toolbar-content {
+            max-height: 80vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           SECTIONS
+           ═══════════════════════════════════════════════════════════════ */
+        .section {
+            transition: opacity 0.2s ease, max-height 0.3s ease;
+            overflow: visible;
+        }
+
+        .section.hidden {
+            opacity: 0;
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            margin-top: 0;
+            margin-bottom: 0;
+            border: none;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        /* Masquage propre de la toolbar entière */
+        .toolbar[style*="display: none"] {
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .section-header {
+            background: var(--bg-section-header);
+            padding: 6px 12px;
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .section:first-child .section-header {
+            border-top: none;
+        }
+
+        .section-content {
+            padding: 8px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           FORM ROW
+           ═══════════════════════════════════════════════════════════════ */
+        .form-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-label {
+            width: 80px;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: var(--text-label);
+        }
+
+        .form-control {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           DROPDOWN / SELECT
+           ═══════════════════════════════════════════════════════════════ */
+        .dropdown {
+            flex: 1;
+            position: relative;
+        }
+
+        .dropdown-btn {
+            width: 100%;
+            padding: 6px 10px;
+            padding-right: 30px;
+            background: var(--bg-input);
+            border: 1.25px solid var(--border-color);
+            border-radius: var(--border-radius-sm);
+            font-size: 13px;
+            color: var(--text-primary);
+            text-align: left;
+            cursor: pointer;
+            transition: border-color var(--transition-speed), background var(--transition-speed);
+        }
+
+        .dropdown-btn:hover {
+            border-color: var(--theme-primary);
+        }
+
+        .dropdown-btn:focus {
+            outline: none;
+            border-color: var(--theme-primary);
+        }
+
+        .dropdown-arrow {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dropdown-arrow svg {
+            width: 12px;
+            height: 8px;
+            fill: var(--theme-primary);
+            display: block;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--bg-input);
+            border: 1.25px solid var(--border-color);
+            border-radius: var(--border-radius-sm);
+            margin-top: 2px;
+            z-index: 1000;
+            max-height: 200px;
+            overflow-y: auto;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .dropdown.open .dropdown-content {
+            display: block;
+        }
+
+        .dropdown-item {
+            padding: 8px 10px;
+            font-size: 13px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: background var(--transition-speed);
+        }
+
+        .dropdown-item:hover {
+            background: var(--theme-primary-light);
+        }
+
+        .dropdown-item.selected {
+            background: var(--theme-primary);
+            color: white;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           TEXT INPUT
+           ═══════════════════════════════════════════════════════════════ */
+        .text-input {
+            flex: 1;
+            padding: 6px 10px;
+            background: var(--bg-input);
+            border: 1.25px solid var(--border-color);
+            border-radius: var(--border-radius-sm);
+            font-size: 13px;
+            color: var(--text-primary);
+            transition: border-color var(--transition-speed);
+        }
+
+        .text-input:hover {
+            border-color: var(--theme-primary);
+        }
+
+        .text-input:focus {
+            outline: none;
+            border-color: var(--theme-primary);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           SPINNER INPUT
+           ═══════════════════════════════════════════════════════════════ */
+        .spinner {
+            display: flex;
+            align-items: center;
+            border: 1.25px solid var(--border-color);
+            border-radius: var(--border-radius-sm);
+            overflow: hidden;
+            background: var(--bg-input);
+            transition: border-color var(--transition-speed);
+        }
+
+        .spinner:hover {
+            border-color: var(--theme-primary);
+        }
+
+        .spinner:focus-within {
+            border-color: var(--theme-primary);
+        }
+
+        .spinner-input {
+            width: 40px;
+            padding: 6px 4px 6px 10px;
+            border: none;
+            font-size: 13px;
+            color: var(--text-primary);
+            text-align: left;
+            background: transparent;
+        }
+
+        .spinner-input:focus {
+            outline: none;
+        }
+
+        .spinner-buttons {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            padding: 4px 8px 4px 4px;
+        }
+
+        .spinner-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .spinner-btn svg {
+            width: 14px;
+            height: 10px;
+            fill: var(--theme-primary);
+            transition: opacity var(--transition-speed);
+        }
+
+        .spinner-btn:hover svg {
+            opacity: 0.7;
+        }
+
+        .spinner-unit {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-left: 4px;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           CHECKBOX
+           ═══════════════════════════════════════════════════════════════ */
+        .checkbox {
+            width: 18px;
+            height: 18px;
+            border: 1.25px solid var(--border-color);
+            border-radius: 3px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-input);
+            transition: all var(--transition-speed);
+        }
+
+        .checkbox:hover {
+            border-color: var(--theme-primary);
+        }
+
+        .checkbox.checked {
+            background: var(--theme-primary);
+            border-color: var(--theme-primary);
+        }
+
+        .checkbox svg {
+            width: 12px;
+            height: 12px;
+            color: white;
+            opacity: 0;
+            transition: opacity var(--transition-speed);
+        }
+
+        .checkbox.checked svg {
+            opacity: 1;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           COLOR PICKER
+           ═══════════════════════════════════════════════════════════════ */
+        .color-picker {
+            display: flex;
+            align-items: flex-end;
+            gap: 6px;
+        }
+
+        .color-swatch {
+            width: 34px;
+            height: 34px;
+            border-radius: 6px;
+            border: 1.25px solid var(--border-color);
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: transform var(--transition-speed), border-color var(--transition-speed);
+        }
+
+        .color-swatch:hover {
+            transform: scale(1.05);
+            border-color: var(--theme-primary);
+        }
+
+        .cmjn-inputs {
+            display: flex;
+            gap: 3px;
+            flex: 1;
+        }
+
+        .cmjn-field {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+        }
+
+        .cmjn-label {
+            font-size: 7px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin-bottom: 2px;
+            letter-spacing: 0.3px;
+        }
+
+        .cmjn-input {
+            width: 100%;
+            height: 22px;
+            border-radius: 4px;
+            border: 1.25px solid var(--border-color);
+            background: var(--bg-input);
+            font-size: 13px;
+            text-align: center;
+            color: var(--text-primary);
+            outline: none;
+            transition: border-color var(--transition-speed);
+        }
+
+        .cmjn-input:hover,
+        .cmjn-input:focus {
+            border-color: var(--theme-primary);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           GÉOMÉTRIE GRID
+           ═══════════════════════════════════════════════════════════════ */
+        .geo-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+
+        .geo-field {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .geo-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            min-width: 12px;
+        }
+
+        .geo-input-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            border: 1.25px solid var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+            background: var(--bg-input);
+            transition: border-color var(--transition-speed);
+        }
+
+        .geo-input-wrapper:hover {
+            border-color: var(--theme-primary);
+        }
+
+        .geo-input-wrapper:focus-within {
+            border-color: var(--theme-primary);
+        }
+
+        .geo-input-wrapper input {
+            flex: 1;
+            padding: 5px 8px 5px 6px;
+            border: none;
+            font-size: 12px;
+            color: var(--text-primary);
+            background: transparent;
+            min-width: 0;
+            width: 100%;
+            text-align: right;
+        }
+
+        .geo-input-wrapper input:focus {
+            outline: none;
+        }
+
+        .geo-input-wrapper .unit {
+            padding: 5px 6px;
+            background: var(--bg-section-header);
+            font-size: 10px;
+            color: var(--text-secondary);
+            flex-shrink: 0;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           PRÉVISUALISATION CODE-BARRES (OPTIONNEL)
+           ═══════════════════════════════════════════════════════════════ */
+        .barcode-preview {
+            background: #f5f5f5;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .barcode-preview-placeholder {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           INDICATEUR TYPE DE CODE
+           ═══════════════════════════════════════════════════════════════ */
+        .barcode-type-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            background: var(--theme-primary-light);
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--theme-primary-dark);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           SCROLLBAR
+           ═══════════════════════════════════════════════════════════════ */
+        .toolbar-content::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .toolbar-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .toolbar-content::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 2px;
+        }
+
+        .toolbar-content::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           DEMO CONTROLS
+           ═══════════════════════════════════════════════════════════════ */
+        .demo-controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            padding: 10px 16px;
+            background: white;
+            border-radius: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .demo-btn {
+            padding: 8px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            background: white;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.15s ease;
+        }
+
+        .demo-btn:hover {
+            background: var(--bg-section-header);
+        }
+
+        .demo-btn.active {
+            background: var(--theme-primary);
+            border-color: var(--theme-primary);
+            color: white;
+        }
+    </style>
+</head>
+<body data-supported-zone-types="barcode">
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         SÉLECTEUR DE THÈME (DEMO)
+         ═══════════════════════════════════════════════════════════════ -->
+    <div style="position: fixed; top: 20px; right: 20px; display: flex; gap: 8px; z-index: 1000;">
+        <button onclick="setTheme('')" style="width: 32px; height: 32px; border-radius: 50%; background: #934BB7; border: 3px solid white; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2);"></button>
+        <button onclick="setTheme('theme-yellow')" style="width: 32px; height: 32px; border-radius: 50%; background: #EAB400; border: 3px solid white; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2);"></button>
+        <button onclick="setTheme('theme-blue')" style="width: 32px; height: 32px; border-radius: 50%; background: #0079BF; border: 3px solid white; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2);"></button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         TOOLBAR CODE-BARRES
+         ═══════════════════════════════════════════════════════════════ -->
+    <div class="toolbar" id="toolbar" data-toolbar-for="barcode">
+        <!-- Header -->
+        <div class="toolbar-header" id="toolbarHeader">
+            <span class="toolbar-title">
+                <span class="toolbar-title-icon">📊</span>
+                Propriétés Code-barres
+            </span>
+            <button class="toolbar-close" title="Fermer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Content -->
+        <div class="toolbar-content">
+            
+            <!-- ==================== SECTION PAGE ==================== -->
+            <div class="section" data-section-id="page" data-visible-for="barcode">
+                <div class="section-header">Page</div>
+                <div class="section-content">
+                    <!-- Page -->
+                    <div class="form-row">
+                        <label class="form-label">Page</label>
+                        <div class="form-control">
+                            <div class="dropdown" id="dropdown-page">
+                                <button class="dropdown-btn" data-value="recto">Recto</button>
+                                <span class="dropdown-arrow">
+                                    <svg viewBox="0 0 12 8">
+                                        <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                    </svg>
+                                </span>
+                                <div class="dropdown-content">
+                                    <div class="dropdown-item selected" data-value="recto">Recto</div>
+                                    <div class="dropdown-item" data-value="verso">Verso</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION TYPE DE CODE ==================== -->
+            <div class="section" data-section-id="barcode-type" data-visible-for="barcode">
+                <div class="section-header">Type de code</div>
+                <div class="section-content">
+                    <!-- Type -->
+                    <div class="form-row">
+                        <label class="form-label">Type</label>
+                        <div class="form-control">
+                            <div class="dropdown" id="dropdown-barcode-type">
+                                <button class="dropdown-btn" id="btn-barcode-type" data-value="code128">Code 128</button>
+                                <span class="dropdown-arrow">
+                                    <svg viewBox="0 0 12 8">
+                                        <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                    </svg>
+                                </span>
+                                <div class="dropdown-content">
+                                    <div class="dropdown-item selected" data-value="code128">Code 128</div>
+                                    <div class="dropdown-item" data-value="code39">Code 39</div>
+                                    <div class="dropdown-item" data-value="ean13">EAN-13</div>
+                                    <div class="dropdown-item" data-value="ean8">EAN-8</div>
+                                    <div class="dropdown-item" data-value="upca">UPC-A</div>
+                                    <div class="dropdown-item" data-value="itf14">ITF-14</div>
+                                    <div class="dropdown-item" data-value="pdf417">PDF417</div>
+                                    <div class="dropdown-item" data-value="datamatrix">DataMatrix</div>
+                                    <div class="dropdown-item" data-value="aztec">Aztec</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION DONNÉES ==================== -->
+            <div class="section" data-section-id="data" data-visible-for="barcode">
+                <div class="section-header">Données</div>
+                <div class="section-content">
+                    <!-- Source -->
+                    <div class="form-row">
+                        <label class="form-label">Source</label>
+                        <div class="form-control">
+                            <div class="dropdown" id="dropdown-source">
+                                <button class="dropdown-btn" id="btn-source-type" data-value="fixe">Valeur fixe</button>
+                                <span class="dropdown-arrow">
+                                    <svg viewBox="0 0 12 8">
+                                        <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                    </svg>
+                                </span>
+                                <div class="dropdown-content">
+                                    <div class="dropdown-item selected" data-value="fixe">Valeur fixe</div>
+                                    <div class="dropdown-item" data-value="champ">Champ de fusion</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Valeur (visible si source = fixe) -->
+                    <div class="form-row" id="valeur-row">
+                        <label class="form-label">Valeur</label>
+                        <div class="form-control">
+                            <input type="text" class="text-input" id="input-valeur" placeholder="Entrer la valeur...">
+                        </div>
+                    </div>
+                    <!-- Champ (visible si source = champ) -->
+                    <div class="form-row" id="champ-row" style="display: none;">
+                        <label class="form-label">Champ</label>
+                        <div class="form-control">
+                            <div class="dropdown" id="dropdown-champ">
+                                <button class="dropdown-btn" data-value="">Sélectionner...</button>
+                                <span class="dropdown-arrow">
+                                    <svg viewBox="0 0 12 8">
+                                        <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                    </svg>
+                                </span>
+                                <div class="dropdown-content">
+                                    <div class="dropdown-item" data-value="sku">SKU</div>
+                                    <div class="dropdown-item" data-value="ean">EAN</div>
+                                    <div class="dropdown-item" data-value="reference">Référence</div>
+                                    <div class="dropdown-item" data-value="code_produit">Code produit</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION AFFICHAGE ==================== -->
+            <div class="section" data-section-id="display" data-visible-for="barcode">
+                <div class="section-header">Affichage</div>
+                <div class="section-content">
+                    <!-- Afficher texte -->
+                    <div class="form-row" id="afficher-texte-row">
+                        <label class="form-label">Afficher texte</label>
+                        <div class="form-control">
+                            <div class="checkbox checked" id="chk-afficher-texte">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Taille (visible si texte affiché) -->
+                    <div class="form-row" id="taille-row">
+                        <label class="form-label">Taille</label>
+                        <div class="form-control">
+                            <div class="spinner">
+                                <input type="text" class="spinner-input" id="input-taille-texte" value="10">
+                                <div class="spinner-buttons">
+                                    <button class="spinner-btn" data-dir="up">
+                                        <svg viewBox="0 0 12 8">
+                                            <path d="M2 7 C0.5 7 0.5 6 1.2 5.2 L5 1.2 C5.5 0.6 6.5 0.6 7 1.2 L10.8 5.2 C11.5 6 11.5 7 10 7 Z"/>
+                                        </svg>
+                                    </button>
+                                    <button class="spinner-btn" data-dir="down">
+                                        <svg viewBox="0 0 12 8">
+                                            <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <span class="spinner-unit">px</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION FOND ==================== -->
+            <div class="section" data-section-id="background" data-visible-for="barcode">
+                <div class="section-header">Fond</div>
+                <div class="section-content">
+                    <!-- Transparent -->
+                    <div class="form-row">
+                        <label class="form-label">Transparent</label>
+                        <div class="form-control">
+                            <div class="checkbox checked" id="chk-transparent" onclick="toggleTransparent(this);">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Couleur fond (visible si NON transparent) -->
+                    <div class="form-row" id="bg-color-row" style="display: none;">
+                        <label class="form-label">Couleur</label>
+                        <div class="form-control">
+                            <div class="color-picker">
+                                <div class="color-swatch" id="bg-color-swatch" style="background: #ffffff;"></div>
+                                <div class="cmjn-inputs">
+                                    <div class="cmjn-field">
+                                        <span class="cmjn-label">C</span>
+                                        <input type="text" class="cmjn-input" id="bg-c" value="0">
+                                    </div>
+                                    <div class="cmjn-field">
+                                        <span class="cmjn-label">M</span>
+                                        <input type="text" class="cmjn-input" id="bg-m" value="0">
+                                    </div>
+                                    <div class="cmjn-field">
+                                        <span class="cmjn-label">J</span>
+                                        <input type="text" class="cmjn-input" id="bg-j" value="0">
+                                    </div>
+                                    <div class="cmjn-field">
+                                        <span class="cmjn-label">N</span>
+                                        <input type="text" class="cmjn-input" id="bg-n" value="0">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION GÉOMÉTRIE ==================== -->
+            <div class="section" data-section-id="geometry" data-visible-for="barcode">
+                <div class="section-header">Géométrie</div>
+                <div class="section-content">
+                    <!-- X / Y / Largeur / Hauteur -->
+                    <div class="geo-grid">
+                        <div class="geo-field">
+                            <label class="geo-label">X</label>
+                            <div class="geo-input-wrapper">
+                                <input type="text" id="input-x" value="50,0">
+                                <span class="unit">mm</span>
+                            </div>
+                        </div>
+                        <div class="geo-field">
+                            <label class="geo-label">Y</label>
+                            <div class="geo-input-wrapper">
+                                <input type="text" id="input-y" value="30,0">
+                                <span class="unit">mm</span>
+                            </div>
+                        </div>
+                        <div class="geo-field">
+                            <label class="geo-label">L</label>
+                            <div class="geo-input-wrapper">
+                                <input type="text" id="input-largeur" value="40,0">
+                                <span class="unit">mm</span>
+                            </div>
+                        </div>
+                        <div class="geo-field">
+                            <label class="geo-label">H</label>
+                            <div class="geo-input-wrapper">
+                                <input type="text" id="input-hauteur" value="20,0">
+                                <span class="unit">mm</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION ZONE ==================== -->
+            <div class="section" data-section-id="zone" data-visible-for="barcode">
+                <div class="section-header">Zone</div>
+                <div class="section-content">
+                    <!-- Position Verrouiller -->
+                    <div class="form-row">
+                        <label class="form-label">Position</label>
+                        <div class="form-control" style="justify-content: flex-start; gap: 8px;">
+                            <div class="checkbox" id="chk-verrouiller" onclick="toggleCheckbox(this)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                            <span style="font-size: 12px; color: var(--text-label);">Verrouiller</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Demo controls -->
+    <div class="demo-controls">
+        <button class="demo-btn active" onclick="setTheme('')">Violet</button>
+        <button class="demo-btn" onclick="setTheme('theme-yellow')">Jaune</button>
+        <button class="demo-btn" onclick="setTheme('theme-blue')">Bleu</button>
+    </div>
+
+    <script>
+        // ═══════════════════════════════════════════════════════════════
+        // FONCTIONS UTILITAIRES UI
+        // ═══════════════════════════════════════════════════════════════
+
+        /**
+         * Change le thème de la toolbar
+         * @param {string} theme - Classe du thème ('' pour violet, 'theme-yellow', 'theme-blue')
+         */
+        function setTheme(theme) {
+            document.body.className = theme ? theme : '';
+            document.querySelectorAll('.demo-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        /**
+         * Toggle l'état d'une checkbox
+         * @param {HTMLElement} el - Élément checkbox
+         */
+        function toggleCheckbox(el) {
+            el.classList.toggle('checked');
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // GESTION DES DROPDOWNS
+        // ═══════════════════════════════════════════════════════════════
+
+        /**
+         * Initialise tous les dropdowns de la page
+         */
+        function initDropdowns() {
+            document.querySelectorAll('.dropdown').forEach(dropdown => {
+                const btn = dropdown.querySelector('.dropdown-btn');
+                const content = dropdown.querySelector('.dropdown-content');
+                const items = dropdown.querySelectorAll('.dropdown-item');
+
+                if (!btn || !content) return;
+
+                // Toggle dropdown on button click
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    // Close other dropdowns
+                    document.querySelectorAll('.dropdown.open').forEach(d => {
+                        if (d !== dropdown) d.classList.remove('open');
+                    });
+                    dropdown.classList.toggle('open');
+                });
+
+                // Handle item selection
+                items.forEach(item => {
+                    item.addEventListener('click', () => {
+                        const value = item.dataset.value;
+                        const text = item.textContent;
+                        
+                        // Update button
+                        btn.textContent = text;
+                        btn.dataset.value = value;
+                        
+                        // Update selected state
+                        items.forEach(i => i.classList.remove('selected'));
+                        item.classList.add('selected');
+                        
+                        // Close dropdown
+                        dropdown.classList.remove('open');
+                        
+                        // Dispatch custom event
+                        dropdown.dispatchEvent(new CustomEvent('change', { 
+                            detail: { value, text } 
+                        }));
+                    });
+                });
+            });
+
+            // Close dropdowns when clicking outside
+            document.addEventListener('click', () => {
+                document.querySelectorAll('.dropdown.open').forEach(d => {
+                    d.classList.remove('open');
+                });
+            });
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // SPINNER BUTTONS
+        // ═══════════════════════════════════════════════════════════════
+
+        document.querySelectorAll('.spinner').forEach(spinner => {
+            const input = spinner.querySelector('.spinner-input');
+            const buttons = spinner.querySelectorAll('.spinner-btn');
+            
+            buttons[0].addEventListener('click', () => {
+                let val = parseInt(input.value) || 0;
+                val += 1;
+                input.value = val;
+                input.dispatchEvent(new Event('input'));
+            });
+            
+            buttons[1].addEventListener('click', () => {
+                let val = parseInt(input.value) || 0;
+                val -= 1;
+                if (val < 1) val = 1;
+                input.value = val;
+                input.dispatchEvent(new Event('input'));
+            });
+        });
+
+        // ═══════════════════════════════════════════════════════════════
+        // DRAGGABLE TOOLBAR
+        // ═══════════════════════════════════════════════════════════════
+
+        const toolbar = document.getElementById('toolbar');
+        const header = document.getElementById('toolbarHeader');
+        let isDragging = false;
+        let offsetX, offsetY;
+
+        header.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.toolbar-close')) return;
+            isDragging = true;
+            const rect = toolbar.getBoundingClientRect();
+            offsetX = e.clientX - rect.left;
+            offsetY = e.clientY - rect.top;
+            toolbar.style.position = 'fixed';
+            toolbar.style.margin = '0';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            toolbar.style.left = (e.clientX - offsetX) + 'px';
+            toolbar.style.top = (e.clientY - offsetY) + 'px';
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // ═══════════════════════════════════════════════════════════════
+        // LOGIQUE SPÉCIFIQUE TOOLBAR CODE-BARRES
+        // ═══════════════════════════════════════════════════════════════
+
+        /**
+         * Met à jour la visibilité des champs selon le type de source
+         * @param {string} sourceType - 'fixe' ou 'champ'
+         */
+        function updateSourceTypeVisibility(sourceType) {
+            const valeurRow = document.getElementById('valeur-row');
+            const champRow = document.getElementById('champ-row');
+            
+            if (sourceType === 'fixe') {
+                valeurRow.style.display = '';
+                champRow.style.display = 'none';
+            } else {
+                valeurRow.style.display = 'none';
+                champRow.style.display = '';
+            }
+            
+            console.log('📊 Source type:', sourceType);
+        }
+
+        /**
+         * Met à jour la visibilité des options de texte selon l'état de la checkbox
+         * @param {boolean} showText - true si le texte doit être affiché
+         */
+        function updateTextOptionsVisibility(showText) {
+            const tailleRow = document.getElementById('taille-row');
+            
+            if (tailleRow) tailleRow.style.display = showText ? '' : 'none';
+            
+            console.log('📊 Options texte:', showText ? 'visible' : 'hidden');
+        }
+
+        /**
+         * Met à jour la visibilité de la couleur de fond selon l'état transparent
+         * @param {boolean} isTransparent - true si fond transparent
+         */
+        function updateBgColorVisibility(isTransparent) {
+            const colorRow = document.getElementById('bg-color-row');
+            if (colorRow) {
+                colorRow.style.display = isTransparent ? 'none' : '';
+            }
+            console.log('🎨 Fond couleur:', isTransparent ? 'hidden' : 'visible');
+        }
+
+        /**
+         * Toggle l'état transparent et met à jour la visibilité
+         * @param {HTMLElement} checkbox - Élément checkbox cliqué
+         */
+        function toggleTransparent(checkbox) {
+            checkbox.classList.toggle('checked');
+            const isTransparent = checkbox.classList.contains('checked');
+            updateBgColorVisibility(isTransparent);
+        }
+
+        /**
+         * Retourne les caractéristiques d'un type de code-barres
+         * @param {string} type - Type de code-barres
+         * @returns {Object} Caractéristiques (dimension, texteAutorise)
+         */
+        function getBarcodeTypeInfo(type) {
+            const types = {
+                'code128': { dimension: '1D', texteAutorise: true, label: 'Code 128' },
+                'code39': { dimension: '1D', texteAutorise: true, label: 'Code 39' },
+                'ean13': { dimension: '1D', texteAutorise: true, label: 'EAN-13' },
+                'ean8': { dimension: '1D', texteAutorise: true, label: 'EAN-8' },
+                'upca': { dimension: '1D', texteAutorise: true, label: 'UPC-A' },
+                'itf14': { dimension: '1D', texteAutorise: true, label: 'ITF-14' },
+                'pdf417': { dimension: '2D', texteAutorise: false, label: 'PDF417' },
+                'datamatrix': { dimension: '2D', texteAutorise: false, label: 'DataMatrix' },
+                'aztec': { dimension: '2D', texteAutorise: false, label: 'Aztec' }
+            };
+            return types[type] || { dimension: '1D', texteAutorise: true, label: type };
+        }
+
+        /**
+         * Met à jour l'interface selon le type de code-barres sélectionné
+         * @param {string} type - Type de code-barres
+         */
+        function updateBarcodeTypeUI(type) {
+            const info = getBarcodeTypeInfo(type);
+            
+            // Pour les codes 2D, masquer les options de texte
+            const afficherTexteRow = document.getElementById('afficher-texte-row');
+            if (afficherTexteRow) {
+                afficherTexteRow.style.display = info.texteAutorise ? '' : 'none';
+            }
+            
+            // Si texte non autorisé, masquer aussi les options police/taille
+            if (!info.texteAutorise) {
+                updateTextOptionsVisibility(false);
+            } else {
+                // Si texte autorisé, vérifier l'état de la checkbox
+                const chkAfficherTexte = document.getElementById('chk-afficher-texte');
+                if (chkAfficherTexte) {
+                    updateTextOptionsVisibility(chkAfficherTexte.classList.contains('checked'));
+                }
+            }
+            
+            console.log('📊 Type code-barres:', info.label, '(', info.dimension, ')');
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // GESTION DE LA VISIBILITÉ DE LA TOOLBAR
+        // ═══════════════════════════════════════════════════════════════
+
+        /**
+         * Met à jour la visibilité de la toolbar entière
+         * @param {SelectionContext} context - Contexte de sélection
+         */
+        function updateToolbarVisibility(context) {
+            const toolbar = document.getElementById('toolbar');
+            if (!toolbar) return;
+            
+            const toolbarFor = toolbar.dataset.toolbarFor;
+            if (!toolbarFor) return;
+            
+            const allowedTypes = toolbarFor.split(',');
+            
+            // La toolbar est visible si :
+            // - Une seule zone est sélectionnée (selectionCount === 1)
+            // - ET le type de zone correspond à data-toolbar-for
+            const shouldShow = context.selectionCount === 1 && 
+                               context.zoneType && 
+                               allowedTypes.includes(context.zoneType);
+            
+            toolbar.style.display = shouldShow ? '' : 'none';
+            
+            console.log('🔧 Toolbar visibility:', shouldShow ? 'visible' : 'hidden', 
+                        '(type:', context.zoneType, ', allowed:', allowedTypes, ')');
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // GESTION DE LA VISIBILITÉ DES SECTIONS
+        // ═══════════════════════════════════════════════════════════════
+
+        /**
+         * @typedef {Object} SelectionContext
+         * @property {string|null} zoneType - Type de zone sélectionnée
+         * @property {number} selectionCount - Nombre de zones sélectionnées
+         * @property {string[]} selectedZoneIds - IDs des zones sélectionnées
+         */
+
+        const SectionVisibility = {
+            /**
+             * Met à jour la visibilité de toutes les sections selon le contexte
+             * @param {SelectionContext} context - Contexte de sélection
+             */
+            update(context) {
+                // D'abord vérifier si la toolbar doit être visible
+                updateToolbarVisibility(context);
+                
+                // Ensuite mettre à jour les sections
+                const sections = document.querySelectorAll('.section[data-visible-for]');
+                sections.forEach(section => {
+                    if (this.shouldBeVisible(section, context)) {
+                        section.classList.remove('hidden');
+                    } else {
+                        section.classList.add('hidden');
+                    }
+                });
+                console.log('👁️ Visibilité mise à jour:', context);
+            },
+
+            /**
+             * Vérifie si une section doit être visible pour un contexte donné
+             * @param {HTMLElement} section - Élément section avec data-visible-for
+             * @param {SelectionContext} context - Contexte de sélection
+             * @returns {boolean} True si la section doit être visible
+             */
+            shouldBeVisible(section, context) {
+                const visibleFor = section.dataset.visibleFor;
+                if (!visibleFor) return false;
+                
+                const contexts = visibleFor.split(',');
+                
+                // ═══════════════════════════════════════════════════════════
+                // MODE MULTI-SÉLECTION : logique exclusive
+                // ═══════════════════════════════════════════════════════════
+                if (context.selectionCount >= 2) {
+                    if (context.selectionCount >= 3) {
+                        return contexts.includes('multi-3') || contexts.includes('multi-2');
+                    }
+                    return contexts.includes('multi-2');
+                }
+                
+                // ═══════════════════════════════════════════════════════════
+                // MODE SÉLECTION SIMPLE OU AUCUNE : logique normale
+                // ═══════════════════════════════════════════════════════════
+                for (const ctx of contexts) {
+                    switch (ctx) {
+                        case 'always':
+                            return true;
+                            
+                        case 'no-selection':
+                            if (context.selectionCount === 0) return true;
+                            break;
+                            
+                        case 'single':
+                            if (context.selectionCount === 1) return true;
+                            break;
+                            
+                        case 'text':
+                        case 'textQuill':
+                        case 'image':
+                        case 'barcode':
+                        case 'qrcode':
+                            if (context.zoneType === ctx && context.selectionCount === 1) return true;
+                            break;
+                    }
+                }
+                return false;
+            },
+
+            /**
+             * Masque toutes les sections
+             */
+            hideAll() {
+                const sections = document.querySelectorAll('.section[data-visible-for]');
+                sections.forEach(section => {
+                    section.classList.add('hidden');
+                });
+                console.log('👁️ Toutes les sections masquées');
+            },
+
+            /**
+             * Affiche toutes les sections (mode debug)
+             */
+            showAll() {
+                const sections = document.querySelectorAll('.section[data-visible-for]');
+                sections.forEach(section => {
+                    section.classList.remove('hidden');
+                });
+                console.log('👁️ Toutes les sections affichées');
+            }
+        };
+
+        // ═══════════════════════════════════════════════════════════════
+        // COMMUNICATION POSTMESSAGE AVEC LE DESIGNER
+        // ═══════════════════════════════════════════════════════════════
+
+        const DesignerBridge = {
+            /** @type {boolean} Indique si on est dans une iframe */
+            isInIframe: window.parent !== window,
+
+            /**
+             * Envoie un message au Designer parent
+             * @param {string} action - Nom de l'action
+             * @param {Object} [data] - Données optionnelles
+             */
+            send(action, data = {}) {
+                if (this.isInIframe) {
+                    window.parent.postMessage({
+                        action: action,
+                        source: 'toolbar-barcode',
+                        data: data,
+                        timestamp: Date.now()
+                    }, '*');
+                    console.log('📤 [POC→Designer]', action, data);
+                }
+            },
+
+            /**
+             * Gestionnaire des messages reçus du Designer
+             * @param {MessageEvent} event - Événement message
+             */
+            handleMessage(event) {
+                const message = event.data;
+                if (!message || typeof message !== 'object' || !message.action) return;
+
+                console.log('📩 [Designer→POC]', message.action, message);
+
+                switch (message.action) {
+                    case 'selectionChanged':
+                        SectionVisibility.update(message.data);
+                        break;
+
+                    case 'updateBarcodeProperties':
+                        // Synchronisation des propriétés de la zone code-barres
+                        const props = message.data;
+                        
+                        // Type de code-barres
+                        if (props.barcodeType) {
+                            const btn = document.getElementById('btn-barcode-type');
+                            if (btn) {
+                                btn.dataset.value = props.barcodeType;
+                                const info = getBarcodeTypeInfo(props.barcodeType);
+                                btn.textContent = info.label;
+                                updateBarcodeTypeUI(props.barcodeType);
+                            }
+                        }
+                        
+                        // Source
+                        if (props.source) {
+                            const btn = document.getElementById('btn-source-type');
+                            if (btn) {
+                                btn.dataset.value = props.source.type || 'fixe';
+                                btn.textContent = props.source.type === 'champ' ? 'Champ de fusion' : 'Valeur fixe';
+                                updateSourceTypeVisibility(props.source.type || 'fixe');
+                            }
+                            
+                            if (props.source.value) {
+                                const inputValeur = document.getElementById('input-valeur');
+                                if (inputValeur) inputValeur.value = props.source.value;
+                            }
+                        }
+                        
+                        // Afficher texte
+                        if (props.showText !== undefined) {
+                            const chk = document.getElementById('chk-afficher-texte');
+                            if (chk) {
+                                if (props.showText) {
+                                    chk.classList.add('checked');
+                                } else {
+                                    chk.classList.remove('checked');
+                                }
+                                updateTextOptionsVisibility(props.showText);
+                            }
+                        }
+                        break;
+
+                    case 'ping':
+                        DesignerBridge.send('pong');
+                        break;
+
+                    case 'showAllSections':
+                        SectionVisibility.showAll();
+                        break;
+
+                    case 'hideAllSections':
+                        SectionVisibility.hideAll();
+                        break;
+                }
+            },
+
+            /**
+             * Initialise l'écoute des messages
+             */
+            init() {
+                window.addEventListener('message', this.handleMessage.bind(this));
+
+                // Signaler que le POC est prêt
+                setTimeout(() => {
+                    this.send('ready');
+                }, 100);
+
+                console.log('🔌 DesignerBridge initialisé (iframe:', this.isInIframe, ')');
+            }
+        };
+
+        // ═══════════════════════════════════════════════════════════════
+        // EVENT LISTENERS SPÉCIFIQUES
+        // ═══════════════════════════════════════════════════════════════
+
+        // Listener pour le dropdown source
+        document.getElementById('dropdown-source')?.addEventListener('change', (e) => {
+            updateSourceTypeVisibility(e.detail.value);
+        });
+
+        // Listener pour le dropdown type de code-barres
+        document.getElementById('dropdown-barcode-type')?.addEventListener('change', (e) => {
+            updateBarcodeTypeUI(e.detail.value);
+        });
+
+        // Listener pour la checkbox afficher texte
+        document.getElementById('chk-afficher-texte')?.addEventListener('click', function() {
+            this.classList.toggle('checked');
+            const info = getBarcodeTypeInfo(document.getElementById('btn-barcode-type')?.dataset.value || 'code128');
+            if (info.texteAutorise) {
+                updateTextOptionsVisibility(this.classList.contains('checked'));
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════════
+        // INITIALISATION
+        // ═══════════════════════════════════════════════════════════════
+
+        // Initialiser les dropdowns
+        initDropdowns();
+
+        // Initialiser le bridge de communication
+        DesignerBridge.init();
+
+        // État initial : aucune sélection = toolbar masquée
+        SectionVisibility.update({
+            zoneType: null,
+            selectionCount: 0,
+            selectedZoneIds: []
+        });
+
+        // État initial des conditionnements
+        updateSourceTypeVisibility('fixe');
+        updateTextOptionsVisibility(true); // Par défaut, texte affiché pour les codes 1D
+
+        // État initial du fond (transparent coché par défaut)
+        const chkTransparent = document.getElementById('chk-transparent');
+        if (chkTransparent) {
+            const isTransparent = chkTransparent.classList.contains('checked');
+            updateBgColorVisibility(isTransparent);
+        }
+
+        // Exposer pour debug
+        window.SectionVisibility = SectionVisibility;
+        window.DesignerBridge = DesignerBridge;
+        window.updateSourceTypeVisibility = updateSourceTypeVisibility;
+        window.updateTextOptionsVisibility = updateTextOptionsVisibility;
+        window.updateBarcodeTypeUI = updateBarcodeTypeUI;
+        window.getBarcodeTypeInfo = getBarcodeTypeInfo;
+        window.updateBgColorVisibility = updateBgColorVisibility;
+
+        console.log('📊 Toolbar Code-barres initialisée');
+        console.log('📌 Fonctions debug disponibles:');
+        console.log('   - SectionVisibility.update({ zoneType: "barcode", selectionCount: 1, selectedZoneIds: ["zone-1"] })');
+        console.log('   - updateBarcodeTypeUI("datamatrix")');
+        console.log('   - updateSourceTypeVisibility("champ")');
+        console.log('   - updateTextOptionsVisibility(false)');
+        console.log('   - updateBgColorVisibility(false)');
+        console.log('   - getBarcodeTypeInfo("ean13")');
+    </script>
+
+</body>
+</html>
+

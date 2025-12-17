@@ -1,0 +1,1445 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <!--
+        ╔══════════════════════════════════════════════════════════════════╗
+        ║  MARKETEAM DESIGNER - TOOLBAR TEXTE                              ║
+        ╠══════════════════════════════════════════════════════════════════╣
+        ║  Compatibilité : Marketeam Designer v1.0                         ║
+        ║  Types de zones : text, textQuill, image, barcode, qrcode        ║
+        ║  Communication : postMessage (voir documentation_communication)  ║
+        ╠══════════════════════════════════════════════════════════════════╣
+        ║  Contextes de visibilité (data-visible-for) :                    ║
+        ║  - always : toujours visible                                     ║
+        ║  - no-selection : visible si aucune zone sélectionnée            ║
+        ║  - single : visible si exactement 1 zone sélectionnée            ║
+        ║  - text, textQuill, image, barcode, qrcode : par type de zone    ║
+        ║  - multi-2, multi-3 : multi-sélection                            ║
+        ╚══════════════════════════════════════════════════════════════════╝
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marketeam - Toolbar Texte</title>
+    <style>
+        /* ==================== VARIABLES & RESET ==================== */
+        :root {
+            --theme-primary: #934BB7;
+            --theme-primary-light: #F4E6FA;
+            --theme-primary-dark: #62307B;
+            
+            --bg-body: #f3f4f6;
+            --bg-toolbar: #ffffff;
+            --bg-section-header: #f5f5f5;
+            --bg-input: #ffffff;
+            
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --text-label: #4b5563;
+            
+            --border-color: #e5e7eb;
+            --border-radius: 8px;
+            --border-radius-sm: 6px;
+            
+            --shadow-toolbar: 0 10px 40px rgba(0, 0, 0, 0.15), 0 2px 10px rgba(0, 0, 0, 0.1);
+            
+            --transition-speed: 0.15s;
+            
+            --header-bg: #62307B;
+            --header-text: #ffffff;
+            
+            --active-bg: #934BB7;
+            --active-text: #ffffff;
+        }
+
+        /* Thèmes alternatifs */
+        .theme-yellow {
+            --theme-primary: #EAB400;
+            --theme-primary-light: #FCF4C2;
+            --theme-primary-dark: #DA9900;
+            --active-bg: #EAB400;
+            --active-text: #ffffff;
+            --header-bg: #DA9900;
+        }
+
+        .theme-blue {
+            --theme-primary: #0079BF;
+            --theme-primary-light: #D4F0FF;
+            --theme-primary-dark: #004D80;
+            --active-bg: #0079BF;
+            --header-bg: #004D80;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg-body);
+            min-height: 100vh;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        /* ==================== TOOLBAR CONTAINER ==================== */
+        .toolbar {
+            width: 280px;
+            background: var(--bg-toolbar);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-toolbar);
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* ==================== HEADER ==================== */
+        .toolbar-header {
+            background: var(--header-bg);
+            color: var(--header-text);
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: move;
+        }
+
+        .toolbar-title {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .toolbar-close {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            color: var(--header-text);
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background var(--transition-speed);
+        }
+
+        .toolbar-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .toolbar-close svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* ==================== CONTENT ==================== */
+        .toolbar-content {
+            max-height: 80vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        /* ==================== SECTIONS ==================== */
+        .section-header {
+            background: var(--bg-section-header);
+            padding: 6px 12px;
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .section:first-child .section-header {
+            border-top: none;
+        }
+
+        .section-content {
+            padding: 8px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        /* ==================== FORM ROW ==================== */
+        .form-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-label {
+            width: 75px;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: var(--text-label);
+        }
+
+        .form-control {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* ==================== DROPDOWN / SELECT ==================== */
+        .dropdown {
+            flex: 1;
+            position: relative;
+        }
+
+        .dropdown-btn {
+            width: 100%;
+            padding: 6px 10px;
+            padding-right: 30px;
+            background: var(--bg-input);
+            border: 1.25px solid var(--border-color);
+            border-radius: var(--border-radius-sm);
+            font-size: 13px;
+            color: var(--text-primary);
+            text-align: left;
+            cursor: pointer;
+            transition: border-color var(--transition-speed), background var(--transition-speed);
+        }
+
+        .dropdown-btn:hover {
+            border-color: var(--theme-primary);
+        }
+
+        .dropdown-btn:focus {
+            outline: none;
+            border-color: var(--theme-primary);
+        }
+
+        .dropdown-arrow {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dropdown-arrow svg {
+            width: 12px;
+            height: 8px;
+            fill: var(--theme-primary);
+            display: block;
+        }
+
+        /* ==================== SPINNER INPUT ==================== */
+        .spinner {
+            display: flex;
+            align-items: center;
+            border: 1.25px solid var(--border-color);
+            border-radius: var(--border-radius-sm);
+            overflow: hidden;
+            background: var(--bg-input);
+            transition: border-color var(--transition-speed);
+        }
+
+        .spinner:hover {
+            border-color: var(--theme-primary);
+        }
+
+        .spinner:focus-within {
+            border-color: var(--theme-primary);
+        }
+
+        .spinner-input {
+            width: 36px;
+            padding: 6px 4px 6px 10px;
+            border: none;
+            font-size: 13px;
+            color: var(--text-primary);
+            text-align: left;
+            background: transparent;
+        }
+
+        .spinner-input:focus {
+            outline: none;
+        }
+
+        .spinner-buttons {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            padding: 4px 8px 4px 4px;
+        }
+
+        .spinner-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .spinner-btn svg {
+            width: 14px;
+            height: 10px;
+            fill: var(--theme-primary);
+            transition: opacity var(--transition-speed);
+        }
+
+        .spinner-btn:hover svg {
+            opacity: 0.7;
+        }
+
+        .spinner-unit {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-left: 4px;
+        }
+
+        /* ==================== CHECKBOX ==================== */
+        .checkbox {
+            width: 18px;
+            height: 18px;
+            border: 1.25px solid var(--border-color);
+            border-radius: 3px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-input);
+            transition: all var(--transition-speed);
+        }
+
+        .checkbox:hover {
+            border-color: var(--theme-primary);
+        }
+
+        .checkbox.checked {
+            background: var(--theme-primary);
+            border-color: var(--theme-primary);
+        }
+
+        .checkbox svg {
+            width: 12px;
+            height: 12px;
+            color: white;
+            opacity: 0;
+            transition: opacity var(--transition-speed);
+        }
+
+        .checkbox.checked svg {
+            opacity: 1;
+        }
+
+        /* ==================== COLOR PICKER ==================== */
+        .color-picker {
+            display: flex;
+            align-items: flex-end;
+            gap: 6px;
+        }
+
+        .color-swatch {
+            width: 34px;
+            height: 34px;
+            border-radius: 6px;
+            border: 1.25px solid var(--border-color);
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: transform var(--transition-speed), border-color var(--transition-speed);
+        }
+
+        .color-swatch:hover {
+            transform: scale(1.05);
+            border-color: var(--theme-primary);
+        }
+
+        .cmjn-inputs {
+            display: flex;
+            gap: 3px;
+            flex: 1;
+        }
+
+        .cmjn-field {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+        }
+
+        .cmjn-label {
+            font-size: 7px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin-bottom: 2px;
+            letter-spacing: 0.3px;
+        }
+
+        .cmjn-input {
+            width: 100%;
+            height: 22px;
+            border-radius: 4px;
+            border: 1.25px solid var(--border-color);
+            background: var(--bg-input);
+            font-size: 13px;
+            text-align: center;
+            color: var(--text-primary);
+            outline: none;
+            transition: border-color var(--transition-speed);
+        }
+
+        .cmjn-input:hover,
+        .cmjn-input:focus {
+            border-color: var(--theme-primary);
+        }
+
+        /* ==================== TOGGLE BUTTONS GROUP ==================== */
+        .toggle-group {
+            display: flex;
+            gap: 4px;
+        }
+
+        .toggle-btn {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-input);
+            border: 1.25px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: all var(--transition-speed);
+        }
+
+        .toggle-btn:hover {
+            border-color: var(--theme-primary);
+            color: var(--theme-primary);
+        }
+
+        .toggle-btn.active {
+            background: var(--active-bg);
+            border-color: var(--active-bg);
+            color: var(--active-text);
+        }
+
+        .toggle-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .toggle-btn.icon-v-middle svg {
+            width: 12px;
+            height: 24px;
+        }
+
+        /* ==================== INPUT FIELD ==================== */
+        .input-field {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .input-label {
+            display: block;
+            font-size: 9px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 3px;
+        }
+
+        .input-wrapper {
+            display: flex;
+            align-items: center;
+            border: 1.25px solid var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+            background: var(--bg-input);
+            transition: border-color var(--transition-speed);
+        }
+
+        .input-wrapper:hover {
+            border-color: var(--theme-primary);
+        }
+
+        .input-wrapper:focus-within {
+            border-color: var(--theme-primary);
+        }
+
+        .input-wrapper input {
+            flex: 1;
+            padding: 6px 12px 6px 8px;
+            border: none;
+            font-size: 13px;
+            color: var(--text-primary);
+            background: transparent;
+            min-width: 0;
+            width: 100%;
+            text-align: right;
+        }
+
+        .input-wrapper input:focus {
+            outline: none;
+        }
+
+        .input-wrapper .unit {
+            padding: 6px 8px;
+            background: var(--bg-section-header);
+            font-size: 11px;
+            color: var(--text-secondary);
+            flex-shrink: 0;
+        }
+
+        /* ==================== GRID LAYOUT ==================== */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .geo-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+
+        .geo-field {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .geo-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            min-width: 12px;
+        }
+
+        .geo-input-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            border: 1.25px solid var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+            background: var(--bg-input);
+            transition: border-color var(--transition-speed);
+        }
+
+        .geo-input-wrapper:hover {
+            border-color: var(--theme-primary);
+        }
+
+        .geo-input-wrapper:focus-within {
+            border-color: var(--theme-primary);
+        }
+
+        .geo-input-wrapper input {
+            flex: 1;
+            padding: 5px 8px 5px 6px;
+            border: none;
+            font-size: 12px;
+            color: var(--text-primary);
+            background: transparent;
+            min-width: 0;
+            width: 100%;
+            text-align: right;
+        }
+
+        .geo-input-wrapper input:focus {
+            outline: none;
+        }
+
+        .geo-input-wrapper .unit {
+            padding: 5px 6px;
+            background: var(--bg-section-header);
+            font-size: 10px;
+            color: var(--text-secondary);
+            flex-shrink: 0;
+        }
+
+        /* ==================== DEMO CONTROLS ==================== */
+        .demo-controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            padding: 10px 16px;
+            background: white;
+            border-radius: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .demo-btn {
+            padding: 8px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            background: white;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.15s ease;
+        }
+
+        .demo-btn:hover {
+            background: var(--bg-section-header);
+        }
+
+        .demo-btn.active {
+            background: var(--theme-primary);
+            border-color: var(--theme-primary);
+            color: white;
+        }
+
+        /* ==================== SCROLLBAR ==================== */
+        .toolbar-content::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .toolbar-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .toolbar-content::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 2px;
+        }
+
+        .toolbar-content::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        /* ==================== VISIBILITÉ DES SECTIONS ==================== */
+        .section[data-visible-for] {
+            transition: opacity 0.2s ease, max-height 0.3s ease;
+            overflow: hidden;
+        }
+
+        .section.hidden {
+            opacity: 0;
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            margin-top: 0;
+            margin-bottom: 0;
+            border: none;
+            pointer-events: none;
+        }
+
+        /* Masquage propre de la toolbar entière */
+        .toolbar[style*="display: none"] {
+            visibility: hidden;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body data-supported-zone-types="text,textQuill,image,barcode,qrcode">
+
+    <!-- Sélecteur de thème (pour démo) -->
+    <div style="position: fixed; top: 20px; right: 20px; display: flex; gap: 8px; z-index: 1000;">
+        <button onclick="setTheme('')" style="width: 32px; height: 32px; border-radius: 50%; background: #934BB7; border: 3px solid white; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2);"></button>
+        <button onclick="setTheme('theme-yellow')" style="width: 32px; height: 32px; border-radius: 50%; background: #EAB400; border: 3px solid white; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2);"></button>
+        <button onclick="setTheme('theme-blue')" style="width: 32px; height: 32px; border-radius: 50%; background: #0079BF; border: 3px solid white; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2);"></button>
+    </div>
+
+    <div class="toolbar" id="toolbar" data-toolbar-for="text,textQuill">
+        <!-- Header -->
+        <div class="toolbar-header" id="toolbarHeader">
+            <span class="toolbar-title">PROPRIÉTÉS TEXTE</span>
+            <button class="toolbar-close" title="Fermer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Content -->
+        <div class="toolbar-content">
+            
+            <!-- ==================== SECTION PAGE ==================== -->
+            <div class="section" data-section-id="page" data-visible-for="text,textQuill,image,barcode,qrcode">
+                <div class="section-header">Page</div>
+                <div class="section-content">
+                    <!-- Page -->
+                    <div class="form-row">
+                        <label class="form-label">Page</label>
+                        <div class="form-control">
+                            <div class="dropdown">
+                                <button class="dropdown-btn">Recto</button>
+                                <span class="dropdown-arrow">
+                                    <svg viewBox="0 0 12 8">
+                                        <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION TYPOGRAPHIE ==================== -->
+            <div class="section" data-section-id="typography" data-visible-for="text,textQuill">
+                <div class="section-header">Typographie</div>
+                <div class="section-content">
+                    <!-- Police -->
+                    <div class="form-row">
+                        <label class="form-label">Police</label>
+                        <div class="form-control">
+                            <div class="dropdown">
+                                <button class="dropdown-btn">Roboto</button>
+                                <span class="dropdown-arrow">
+                                    <svg viewBox="0 0 12 8">
+                                        <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Taille -->
+                    <div class="form-row">
+                        <label class="form-label">Taille</label>
+                        <div class="form-control">
+                            <div class="spinner">
+                                <input type="text" class="spinner-input" value="16">
+                                <div class="spinner-buttons">
+                                    <button class="spinner-btn" data-dir="up">
+                                        <svg viewBox="0 0 12 8">
+                                            <path d="M2 7 C0.5 7 0.5 6 1.2 5.2 L5 1.2 C5.5 0.6 6.5 0.6 7 1.2 L10.8 5.2 C11.5 6 11.5 7 10 7 Z"/>
+                                        </svg>
+                                    </button>
+                                    <button class="spinner-btn" data-dir="down">
+                                        <svg viewBox="0 0 12 8">
+                                            <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Ajustable -->
+                    <div class="form-row">
+                        <label class="form-label">Ajustable</label>
+                        <div class="form-control">
+                            <div class="checkbox" onclick="this.classList.toggle('checked')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Couleur -->
+                    <div class="form-row">
+                        <label class="form-label">Couleur</label>
+                        <div class="form-control">
+                            <div class="color-picker">
+                                <div class="color-swatch" style="background: #d64074;"></div>
+                                <div class="cmjn-inputs">
+                                    <div class="cmjn-field">
+                                        <span class="cmjn-label">Cyan</span>
+                                        <input type="text" class="cmjn-input" value="10">
+                                    </div>
+                                    <div class="cmjn-field">
+                                        <span class="cmjn-label">Magenta</span>
+                                        <input type="text" class="cmjn-input" value="85">
+                                    </div>
+                                    <div class="cmjn-field">
+                                        <span class="cmjn-label">Jaune</span>
+                                        <input type="text" class="cmjn-input" value="152">
+                                    </div>
+                                    <div class="cmjn-field">
+                                        <span class="cmjn-label">Noir</span>
+                                        <input type="text" class="cmjn-input" value="9">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION PARAGRAPHE ==================== -->
+            <div class="section" data-section-id="paragraph" data-visible-for="text,textQuill">
+                <div class="section-header">Alignements</div>
+                <div class="section-content">
+                    <!-- Alignement horizontal -->
+                    <div class="form-row">
+                        <label class="form-label">Horizontal</label>
+                        <div class="form-control">
+                            <div class="toggle-group">
+                                <button class="toggle-btn active" data-group="h-align" title="Gauche">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M4 21V3H6V21H4ZM8 17V15H20V17H8ZM8 13V11H16V13H8ZM8 9V7H20V9H8Z"/>
+                                    </svg>
+                                </button>
+                                <button class="toggle-btn" data-group="h-align" title="Centre">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M11 21V17H4V15H11V13H7V11H11V9H4V7H11V3H13V7H20V9H13V11H17V13H13V15H20V17H13V21H11Z"/>
+                                    </svg>
+                                </button>
+                                <button class="toggle-btn" data-group="h-align" title="Droite">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M18 21V3H20V21H18ZM4 17V15H16V17H4ZM8 13V11H16V13H8ZM4 9V7H16V9H4Z"/>
+                                    </svg>
+                                </button>
+                                <button class="toggle-btn" data-group="h-align" title="Justifié">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M3 21V19H21V21H3ZM3 17V15H21V17H3ZM3 13V11H21V13H3ZM3 9V7H21V9H3ZM3 5V3H21V5H3Z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Alignement vertical -->
+                    <div class="form-row">
+                        <label class="form-label">Vertical</label>
+                        <div class="form-control">
+                            <div class="toggle-group">
+                                <button class="toggle-btn" data-group="v-align" title="Haut">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M3 4H21V6H3V4ZM7 8H9V20H7V8ZM11 8H13V16H11V8ZM15 8H17V20H15V8Z"/>
+                                    </svg>
+                                </button>
+                                <button class="toggle-btn active" data-group="v-align" title="Milieu">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M3 11H7V4H9V11H11V7H13V11H15V4H17V11H21V13H17V20H15V13H13V17H11V13H9V20H7V13H3V11Z"/>
+                                    </svg>
+                                </button>
+                                <button class="toggle-btn" data-group="v-align" title="Bas">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M3 18H21V20H3V18ZM7 4H9V16H7V4ZM11 8H13V16H11V8ZM15 4H17V16H15V4Z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Interligne -->
+                    <div class="form-row">
+                        <label class="form-label">Interligne</label>
+                        <div class="form-control">
+                            <div class="spinner">
+                                <input type="text" class="spinner-input" value="1.5">
+                                <div class="spinner-buttons">
+                                    <button class="spinner-btn" data-dir="up">
+                                        <svg viewBox="0 0 12 8">
+                                            <path d="M2 7 C0.5 7 0.5 6 1.2 5.2 L5 1.2 C5.5 0.6 6.5 0.6 7 1.2 L10.8 5.2 C11.5 6 11.5 7 10 7 Z"/>
+                                        </svg>
+                                    </button>
+                                    <button class="spinner-btn" data-dir="down">
+                                        <svg viewBox="0 0 12 8">
+                                            <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Lignes vides -->
+                    <div class="form-row">
+                        <label class="form-label">Lignes vides</label>
+                        <div class="form-control">
+                            <div class="dropdown">
+                                <button class="dropdown-btn">Conserver</button>
+                                <span class="dropdown-arrow">
+                                    <svg viewBox="0 0 12 8">
+                                        <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION FOND ==================== -->
+            <div class="section" data-section-id="background" data-visible-for="text,textQuill,image">
+                <div class="section-header">Fond</div>
+                <div class="section-content">
+                    <!-- Transparent (toujours visible) -->
+                    <div class="form-row">
+                        <label class="form-label">Transparent</label>
+                        <div class="form-control">
+                            <div class="checkbox checked" id="chk-transparent" onclick="toggleTransparent(this)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Couleur (visible si NON transparent) -->
+                    <div class="form-row" id="bg-color-row" style="display: none;">
+                        <label class="form-label">Couleur</label>
+                        <div class="form-control">
+                            <div class="color-picker">
+                                <div class="color-swatch" id="bg-color-swatch" style="background: #ffffff;"></div>
+                                <div class="cmjn-inputs">
+                                    <div class="cmjn-field">
+                                        <span class="cmjn-label">Cyan</span>
+                                        <input type="text" class="cmjn-input" value="0">
+                                    </div>
+                                    <div class="cmjn-field">
+                                        <span class="cmjn-label">Magenta</span>
+                                        <input type="text" class="cmjn-input" value="0">
+                                    </div>
+                                    <div class="cmjn-field">
+                                        <span class="cmjn-label">Jaune</span>
+                                        <input type="text" class="cmjn-input" value="0">
+                                    </div>
+                                    <div class="cmjn-field">
+                                        <span class="cmjn-label">Noir</span>
+                                        <input type="text" class="cmjn-input" value="0">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION BORDURE ==================== -->
+            <div class="section" data-section-id="border" data-visible-for="text,textQuill,image">
+                <div class="section-header">Bordure</div>
+                <div class="section-content">
+                    <!-- Épaisseur (toujours visible) -->
+                    <div class="form-row">
+                        <label class="form-label">Épaisseur</label>
+                        <div class="form-control">
+                            <div class="spinner" id="spinner-border-width">
+                                <input type="text" class="spinner-input" id="input-border-width" value="0">
+                                <div class="spinner-buttons">
+                                    <button class="spinner-btn" data-dir="up">
+                                        <svg viewBox="0 0 12 8">
+                                            <path d="M2 7 C0.5 7 0.5 6 1.2 5.2 L5 1.2 C5.5 0.6 6.5 0.6 7 1.2 L10.8 5.2 C11.5 6 11.5 7 10 7 Z"/>
+                                        </svg>
+                                    </button>
+                                    <button class="spinner-btn" data-dir="down">
+                                        <svg viewBox="0 0 12 8">
+                                            <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <span class="spinner-unit">px</span>
+                        </div>
+                    </div>
+                    <!-- Style (visible si épaisseur > 0) -->
+                    <div class="form-row" id="border-style-row" style="display: none;">
+                        <label class="form-label">Style</label>
+                        <div class="form-control">
+                            <div class="dropdown">
+                                <button class="dropdown-btn" id="input-border-style">Plein</button>
+                                <span class="dropdown-arrow">
+                                    <svg viewBox="0 0 12 8">
+                                        <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Couleur (visible si épaisseur > 0) -->
+                    <div class="form-row" id="border-color-row" style="display: none;">
+                        <label class="form-label">Couleur</label>
+                        <div class="form-control">
+                            <div class="color-picker">
+                                <div class="color-swatch" id="border-color-swatch" style="background: #000000;"></div>
+                                <div class="cmjn-inputs">
+                                    <div class="cmjn-field">
+                                        <span class="cmjn-label">Cyan</span>
+                                        <input type="text" class="cmjn-input" value="0">
+                                    </div>
+                                    <div class="cmjn-field">
+                                        <span class="cmjn-label">Magenta</span>
+                                        <input type="text" class="cmjn-input" value="0">
+                                    </div>
+                                    <div class="cmjn-field">
+                                        <span class="cmjn-label">Jaune</span>
+                                        <input type="text" class="cmjn-input" value="0">
+                                    </div>
+                                    <div class="cmjn-field">
+                                        <span class="cmjn-label">Noir</span>
+                                        <input type="text" class="cmjn-input" value="100">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION GÉOMÉTRIE ==================== -->
+            <div class="section" data-section-id="geometry" data-visible-for="single">
+                <div class="section-header">Géométrie</div>
+                <div class="section-content">
+                    <!-- X / Y / Largeur / Hauteur -->
+                    <div class="geo-grid">
+                        <div class="geo-field">
+                            <label class="geo-label">X</label>
+                            <div class="geo-input-wrapper">
+                                <input type="text" value="22,8">
+                                <span class="unit">mm</span>
+                            </div>
+                        </div>
+                        <div class="geo-field">
+                            <label class="geo-label">Y</label>
+                            <div class="geo-input-wrapper">
+                                <input type="text" value="33,6">
+                                <span class="unit">mm</span>
+                            </div>
+                        </div>
+                        <div class="geo-field">
+                            <label class="geo-label">L</label>
+                            <div class="geo-input-wrapper">
+                                <input type="text" value="133,0">
+                                <span class="unit">mm</span>
+                            </div>
+                        </div>
+                        <div class="geo-field">
+                            <label class="geo-label">H</label>
+                            <div class="geo-input-wrapper">
+                                <input type="text" value="47,0">
+                                <span class="unit">mm</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION ZONE ==================== -->
+            <div class="section" data-section-id="zone" data-visible-for="text,textQuill,image,barcode,qrcode">
+                <div class="section-header">Zone</div>
+                <div class="section-content">
+                    <!-- Position Verrouiller -->
+                    <div class="form-row">
+                        <label class="form-label">Position</label>
+                        <div class="form-control" style="justify-content: flex-start; gap: 8px;">
+                            <div class="checkbox" onclick="this.classList.toggle('checked')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                            <span style="font-size: 12px; color: var(--text-label);">Verrouiller</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Demo controls -->
+    <div class="demo-controls">
+        <button class="demo-btn active" onclick="setTheme('')">Violet</button>
+        <button class="demo-btn" onclick="setTheme('yellow')">Jaune</button>
+        <button class="demo-btn" onclick="setTheme('blue')">Bleu</button>
+    </div>
+
+    <script>
+        // Theme switcher
+        function setTheme(theme) {
+            document.body.className = theme;
+        }
+        // Theme switcher
+        function setTheme(theme) {
+            document.body.className = theme ? `theme-${theme}` : '';
+            document.querySelectorAll('.demo-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // CONDITIONNEMENT AFFICHAGE BORDURE
+        // ═══════════════════════════════════════════════════════════════
+
+        /**
+         * Met à jour la visibilité des options de bordure selon l'épaisseur
+         * @param {number|string} width - Épaisseur en pixels
+         */
+        function updateBorderOptionsVisibility(width) {
+            const numWidth = parseFloat(width) || 0;
+            const show = numWidth > 0;
+            
+            const styleRow = document.getElementById('border-style-row');
+            const colorRow = document.getElementById('border-color-row');
+            
+            if (styleRow) styleRow.style.display = show ? '' : 'none';
+            if (colorRow) colorRow.style.display = show ? '' : 'none';
+            
+            console.log('🎨 Bordure options:', show ? 'visible' : 'hidden', '(width:', numWidth, ')');
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // CONDITIONNEMENT AFFICHAGE FOND
+        // ═══════════════════════════════════════════════════════════════
+
+        /**
+         * Met à jour la visibilité de la couleur de fond selon l'état transparent
+         * @param {boolean} isTransparent - true si fond transparent
+         */
+        function updateBgColorVisibility(isTransparent) {
+            const colorRow = document.getElementById('bg-color-row');
+            if (colorRow) {
+                colorRow.style.display = isTransparent ? 'none' : '';
+            }
+            console.log('🎨 Fond couleur:', isTransparent ? 'hidden' : 'visible');
+        }
+
+        /**
+         * Toggle l'état transparent et met à jour la visibilité
+         * @param {HTMLElement} checkbox - Élément checkbox cliqué
+         */
+        function toggleTransparent(checkbox) {
+            checkbox.classList.toggle('checked');
+            const isTransparent = checkbox.classList.contains('checked');
+            updateBgColorVisibility(isTransparent);
+        }
+
+        // Toggle buttons
+        document.querySelectorAll('.toggle-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const group = btn.dataset.group;
+                document.querySelectorAll(`.toggle-btn[data-group="${group}"]`).forEach(b => {
+                    b.classList.remove('active');
+                });
+                btn.classList.add('active');
+            });
+        });
+
+        // Spinner buttons
+        document.querySelectorAll('.spinner').forEach(spinner => {
+            const input = spinner.querySelector('.spinner-input');
+            const buttons = spinner.querySelectorAll('.spinner-btn');
+            
+            buttons[0].addEventListener('click', () => {
+                let val = parseFloat(input.value.replace(',', '.')) || 0;
+                val += input.value.includes('.') || input.value.includes(',') ? 0.1 : 1;
+                input.value = val.toString().replace('.', ',');
+            });
+            
+            buttons[1].addEventListener('click', () => {
+                let val = parseFloat(input.value.replace(',', '.')) || 0;
+                val -= input.value.includes('.') || input.value.includes(',') ? 0.1 : 1;
+                if (val < 0) val = 0;
+                input.value = val.toFixed(1).replace('.', ',').replace(',0', '');
+            });
+        });
+
+        // Draggable toolbar
+        const toolbar = document.getElementById('toolbar');
+        const header = document.getElementById('toolbarHeader');
+        let isDragging = false;
+        let offsetX, offsetY;
+
+        header.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.toolbar-close')) return;
+            isDragging = true;
+            const rect = toolbar.getBoundingClientRect();
+            offsetX = e.clientX - rect.left;
+            offsetY = e.clientY - rect.top;
+            toolbar.style.position = 'fixed';
+            toolbar.style.margin = '0';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            toolbar.style.left = (e.clientX - offsetX) + 'px';
+            toolbar.style.top = (e.clientY - offsetY) + 'px';
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // ═══════════════════════════════════════════════════════════════
+        // GESTION DE LA VISIBILITÉ DE LA TOOLBAR
+        // ═══════════════════════════════════════════════════════════════
+
+        /**
+         * Met à jour la visibilité de la toolbar entière
+         * @param {SelectionContext} context - Contexte de sélection
+         */
+        function updateToolbarVisibility(context) {
+            const toolbar = document.getElementById('toolbar');
+            if (!toolbar) return;
+            
+            const toolbarFor = toolbar.dataset.toolbarFor;
+            if (!toolbarFor) return;
+            
+            const allowedTypes = toolbarFor.split(',');
+            
+            // La toolbar est visible si :
+            // - Une seule zone est sélectionnée (selectionCount === 1)
+            // - ET le type de zone correspond à data-toolbar-for
+            const shouldShow = context.selectionCount === 1 && 
+                               context.zoneType && 
+                               allowedTypes.includes(context.zoneType);
+            
+            toolbar.style.display = shouldShow ? '' : 'none';
+            
+            console.log('🔧 Toolbar visibility:', shouldShow ? 'visible' : 'hidden', 
+                        '(type:', context.zoneType, ', allowed:', allowedTypes, ')');
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // GESTION DE LA VISIBILITÉ DES SECTIONS
+        // ═══════════════════════════════════════════════════════════════
+
+        /**
+         * @typedef {Object} SelectionContext
+         * @property {string|null} zoneType - Type de zone sélectionnée ('text'|'textQuill'|'image'|'barcode'|'qrcode'|null)
+         * @property {number} selectionCount - Nombre de zones sélectionnées (0, 1, 2, 3+)
+         * @property {string[]} selectedZoneIds - IDs des zones sélectionnées
+         */
+
+        /**
+         * Module de gestion de la visibilité des sections
+         * Contrôle l'affichage/masquage des sections selon le contexte de sélection
+         */
+        const SectionVisibility = {
+            /**
+             * Met à jour la visibilité de toutes les sections selon le contexte
+             * @param {SelectionContext} context - Contexte de sélection
+             */
+            update(context) {
+                // D'abord vérifier si la toolbar doit être visible
+                updateToolbarVisibility(context);
+                
+                // Ensuite mettre à jour les sections
+                const sections = document.querySelectorAll('.section[data-visible-for]');
+                sections.forEach(section => {
+                    if (this.shouldBeVisible(section, context)) {
+                        section.classList.remove('hidden');
+                    } else {
+                        section.classList.add('hidden');
+                    }
+                });
+                console.log('👁️ Visibilité mise à jour:', context);
+            },
+
+            /**
+             * Vérifie si une section doit être visible pour un contexte donné
+             * @param {HTMLElement} section - Élément section avec data-visible-for
+             * @param {SelectionContext} context - Contexte de sélection
+             * @returns {boolean} True si la section doit être visible
+             */
+            shouldBeVisible(section, context) {
+                const visibleFor = section.dataset.visibleFor;
+                if (!visibleFor) return false;
+                
+                const contexts = visibleFor.split(',');
+                
+                // ═══════════════════════════════════════════════════════════
+                // MODE MULTI-SÉLECTION : logique exclusive
+                // Seules les sections multi-2 ou multi-3 sont autorisées
+                // ═══════════════════════════════════════════════════════════
+                if (context.selectionCount >= 2) {
+                    // Multi-sélection 3+ zones
+                    if (context.selectionCount >= 3) {
+                        // Visible si contient multi-3 OU multi-2
+                        return contexts.includes('multi-3') || contexts.includes('multi-2');
+                    }
+                    // Multi-sélection 2 zones exactement
+                    // Visible uniquement si contient multi-2
+                    return contexts.includes('multi-2');
+                }
+                
+                // ═══════════════════════════════════════════════════════════
+                // MODE SÉLECTION SIMPLE OU AUCUNE : logique normale
+                // ═══════════════════════════════════════════════════════════
+                for (const ctx of contexts) {
+                    switch (ctx) {
+                        case 'always':
+                            return true;
+                            
+                        case 'no-selection':
+                            // Visible UNIQUEMENT si aucune zone sélectionnée
+                            if (context.selectionCount === 0) return true;
+                            break;
+                            
+                        case 'single':
+                            if (context.selectionCount === 1) return true;
+                            break;
+                            
+                        case 'text':
+                        case 'textQuill':
+                        case 'image':
+                        case 'barcode':
+                        case 'qrcode':
+                            if (context.zoneType === ctx && context.selectionCount === 1) return true;
+                            break;
+                        // multi-2 et multi-3 déjà gérés au-dessus
+                    }
+                }
+                return false;
+            },
+
+            /**
+             * Masque toutes les sections (état initial ou aucune sélection)
+             */
+            hideAll() {
+                const sections = document.querySelectorAll('.section[data-visible-for]');
+                sections.forEach(section => {
+                    const visibleFor = section.dataset.visibleFor.split(',');
+                    if (!visibleFor.includes('always')) {
+                        section.classList.add('hidden');
+                    }
+                });
+                console.log('👁️ Toutes les sections masquées (sauf always)');
+            },
+
+            /**
+             * Affiche toutes les sections (mode debug)
+             */
+            showAll() {
+                const sections = document.querySelectorAll('.section[data-visible-for]');
+                sections.forEach(section => {
+                    section.classList.remove('hidden');
+                });
+                console.log('👁️ Toutes les sections affichées (mode debug)');
+            }
+        };
+
+        // ═══════════════════════════════════════════════════════════════
+        // COMMUNICATION POSTMESSAGE AVEC LE DESIGNER
+        // ═══════════════════════════════════════════════════════════════
+
+        /**
+         * Module de communication avec le Designer parent via postMessage
+         * Gère l'envoi et la réception des messages entre le POC et le Designer
+         */
+        const DesignerBridge = {
+            /** @type {boolean} Indique si on est dans une iframe */
+            isInIframe: window.parent !== window,
+
+            /**
+             * Envoie un message au Designer parent
+             * @param {string} action - Nom de l'action
+             * @param {Object} [data={}] - Données optionnelles
+             */
+            send(action, data = {}) {
+                if (this.isInIframe) {
+                    window.parent.postMessage({
+                        action: action,
+                        source: 'toolbar',
+                        data: data,
+                        timestamp: Date.now()
+                    }, '*');
+                    console.log('📤 [POC→Designer]', action, data);
+                }
+            },
+
+            /**
+             * Gestionnaire des messages reçus du Designer
+             * @param {MessageEvent} event - Événement de message
+             */
+            handleMessage(event) {
+                const message = event.data;
+                if (!message || typeof message !== 'object' || !message.action) return;
+
+                console.log('📩 [Designer→POC]', message.action, message);
+
+                switch (message.action) {
+                    case 'selectionChanged':
+                        // Le Designer notifie un changement de sélection
+                        SectionVisibility.update(message.data);
+                        break;
+
+                    case 'ping':
+                        DesignerBridge.send('pong');
+                        break;
+
+                    case 'showAllSections':
+                        SectionVisibility.showAll();
+                        break;
+
+                    case 'hideAllSections':
+                        SectionVisibility.hideAll();
+                        break;
+                }
+            },
+
+            /**
+             * Initialise l'écoute des messages
+             */
+            init() {
+                window.addEventListener('message', this.handleMessage.bind(this));
+
+                // Signaler que le POC est prêt
+                setTimeout(() => {
+                    this.send('ready');
+                }, 100);
+
+                console.log('🔌 DesignerBridge initialisé (iframe:', this.isInIframe, ')');
+            }
+        };
+
+        // ═══════════════════════════════════════════════════════════════
+        // INITIALISATION COMMUNICATION DESIGNER
+        // ═══════════════════════════════════════════════════════════════
+
+        // Initialiser le bridge de communication
+        DesignerBridge.init();
+
+        // État initial : aucune sélection = toolbar masquée
+        SectionVisibility.update({
+            zoneType: null,
+            selectionCount: 0,
+            selectedZoneIds: []
+        });
+
+        // ═══════════════════════════════════════════════════════════════
+        // INITIALISATION CONDITIONNEMENTS UI
+        // ═══════════════════════════════════════════════════════════════
+
+        // Event listener pour l'épaisseur de bordure
+        const inputBorderWidth = document.getElementById('input-border-width');
+        if (inputBorderWidth) {
+            // Sur changement direct de la valeur
+            inputBorderWidth.addEventListener('input', (e) => {
+                updateBorderOptionsVisibility(e.target.value);
+            });
+            
+            // Sur les boutons spinner
+            const spinnerBorderWidth = document.getElementById('spinner-border-width');
+            if (spinnerBorderWidth) {
+                spinnerBorderWidth.querySelectorAll('.spinner-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        setTimeout(() => {
+                            updateBorderOptionsVisibility(inputBorderWidth.value);
+                        }, 10);
+                    });
+                });
+            }
+            
+            // État initial de la bordure
+            updateBorderOptionsVisibility(inputBorderWidth.value);
+        }
+
+        // État initial du fond (transparent coché par défaut)
+        const chkTransparent = document.getElementById('chk-transparent');
+        if (chkTransparent) {
+            const isTransparent = chkTransparent.classList.contains('checked');
+            updateBgColorVisibility(isTransparent);
+        }
+
+        // Exposer pour debug
+        window.SectionVisibility = SectionVisibility;
+        window.DesignerBridge = DesignerBridge;
+        window.updateBorderOptionsVisibility = updateBorderOptionsVisibility;
+        window.updateBgColorVisibility = updateBgColorVisibility;
+
+    </script>
+
+</body>
+</html>

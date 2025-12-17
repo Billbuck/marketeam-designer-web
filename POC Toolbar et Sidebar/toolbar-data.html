@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marketeam - Toolbar Champs de fusion</title>
+    <!--
+        ╔══════════════════════════════════════════════════════════════════╗
+        ║  MARKETEAM DESIGNER - POC TOOLBAR DATA (CHAMPS DE FUSION)        ║
+        ╠══════════════════════════════════════════════════════════════════╣
+        ║  Compatibilité : Marketeam Designer v1.0                         ║
+        ║  Communication : postMessage (voir documentation_communication)  ║
+        ╠══════════════════════════════════════════════════════════════════╣
+        ║  Fonctionnalités :                                               ║
+        ║  - Réception des champs via postMessage 'setMergeFields'         ║
+        ║  - Drag & Drop vers zones textQuill                              ║
+        ║  - Double-clic pour insertion                                    ║
+        ║  - Format d'insertion : @NOM_CHAMP@                              ║
+        ╠══════════════════════════════════════════════════════════════════╣
+        ║  Visibilité :                                                    ║
+        ║  - Visible si zone textQuill sélectionnée ET champs reçus        ║
+        ╚══════════════════════════════════════════════════════════════════╝
+    -->
+    <style>
+        /* ═══════════════════════════════════════════════════════════════
+           VARIABLES CSS
+           ═══════════════════════════════════════════════════════════════ */
+        :root {
+            --theme-primary: #934BB7;
+            --theme-primary-light: #F4E6FA;
+            --theme-primary-dark: #62307B;
+            
+            --bg-body: #f3f4f6;
+            --bg-toolbar: #ffffff;
+            --bg-section-header: #f5f5f5;
+            --bg-input: #ffffff;
+            
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --text-label: #4b5563;
+            
+            --border-color: #e5e7eb;
+            --border-radius: 8px;
+            --border-radius-sm: 6px;
+            
+            --shadow-toolbar: 0 10px 40px rgba(0, 0, 0, 0.15), 0 2px 10px rgba(0, 0, 0, 0.1);
+            
+            --transition-speed: 0.15s;
+            
+            --header-bg: #62307B;
+            --header-text: #ffffff;
+            
+            --active-bg: #934BB7;
+            --active-text: #ffffff;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           THÈMES ALTERNATIFS
+           ═══════════════════════════════════════════════════════════════ */
+        .theme-yellow {
+            --theme-primary: #EAB400;
+            --theme-primary-light: #FCF4C2;
+            --theme-primary-dark: #DA9900;
+            --active-bg: #EAB400;
+            --active-text: #ffffff;
+            --header-bg: #DA9900;
+        }
+
+        .theme-blue {
+            --theme-primary: #0079BF;
+            --theme-primary-light: #D4F0FF;
+            --theme-primary-dark: #004D80;
+            --active-bg: #0079BF;
+            --header-bg: #004D80;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           RESET & BASE
+           ═══════════════════════════════════════════════════════════════ */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg-body);
+            min-height: 100vh;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           TOOLBAR CONTAINER
+           ═══════════════════════════════════════════════════════════════ */
+        .toolbar {
+            width: 260px;
+            background: var(--bg-toolbar);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-toolbar);
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* Masquage propre de la toolbar entière */
+        .toolbar[style*="display: none"] {
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           HEADER
+           ═══════════════════════════════════════════════════════════════ */
+        .toolbar-header {
+            background: var(--header-bg);
+            color: var(--header-text);
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: move;
+        }
+
+        .toolbar-title {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toolbar-title-icon {
+            font-size: 14px;
+        }
+
+        .toolbar-close {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            color: var(--header-text);
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background var(--transition-speed);
+        }
+
+        .toolbar-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .toolbar-close svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           CONTENT
+           ═══════════════════════════════════════════════════════════════ */
+        .toolbar-content {
+            max-height: 80vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        /* ==================== COMPTEUR DE CHAMPS ==================== */
+        .fields-count {
+            padding: 6px 12px;
+            background: var(--bg-section-header);
+            border-bottom: 1px solid var(--border-color);
+            font-size: 10px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        /* ==================== LISTE DES CHAMPS ==================== */
+        .fields-list {
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .fields-empty {
+            padding: 20px;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-style: italic;
+        }
+
+        /* ==================== CHAMP INDIVIDUEL ==================== */
+        .field-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-sm);
+            cursor: grab;
+            transition: all var(--transition-speed);
+            user-select: none;
+            position: relative;
+        }
+
+        .field-item:hover {
+            border-color: var(--theme-primary);
+            background: var(--theme-primary-light);
+        }
+
+        .field-item:active {
+            cursor: grabbing;
+        }
+
+        .field-item.dragging {
+            opacity: 0.5;
+            border-style: dashed;
+        }
+
+        .field-icon {
+            width: 16px;
+            height: 16px;
+            color: var(--theme-primary);
+            flex-shrink: 0;
+        }
+
+        .field-name {
+            flex: 1;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-primary);
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        /* ==================== ÉTAT DE DRAG ==================== */
+        .field-item[draggable="true"] {
+            cursor: grab;
+        }
+
+        .field-item[draggable="true"]:active {
+            cursor: grabbing;
+        }
+
+        /* ==================== TOOLTIP INSERTION ==================== */
+        .field-item::after {
+            content: 'Double-clic pour insérer';
+            position: absolute;
+            bottom: -24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            z-index: 10;
+        }
+
+        .field-item:hover::after {
+            opacity: 1;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           SCROLLBAR
+           ═══════════════════════════════════════════════════════════════ */
+        .toolbar-content::-webkit-scrollbar,
+        .fields-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .toolbar-content::-webkit-scrollbar-track,
+        .fields-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .toolbar-content::-webkit-scrollbar-thumb,
+        .fields-list::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 2px;
+        }
+
+        .toolbar-content::-webkit-scrollbar-thumb:hover,
+        .fields-list::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           DEMO CONTROLS
+           ═══════════════════════════════════════════════════════════════ */
+        .demo-controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            padding: 10px 16px;
+            background: white;
+            border-radius: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .demo-btn {
+            padding: 8px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            background: white;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.15s ease;
+        }
+
+        .demo-btn:hover {
+            background: var(--bg-section-header);
+        }
+
+        .demo-btn.active {
+            background: var(--theme-primary);
+            border-color: var(--theme-primary);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         SÉLECTEUR DE THÈME (DEMO)
+         ═══════════════════════════════════════════════════════════════ -->
+    <div style="position: fixed; top: 20px; right: 20px; display: flex; gap: 8px; z-index: 1000;">
+        <button onclick="setTheme('')" style="width: 32px; height: 32px; border-radius: 50%; background: #934BB7; border: 3px solid white; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2);"></button>
+        <button onclick="setTheme('theme-yellow')" style="width: 32px; height: 32px; border-radius: 50%; background: #EAB400; border: 3px solid white; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2);"></button>
+        <button onclick="setTheme('theme-blue')" style="width: 32px; height: 32px; border-radius: 50%; background: #0079BF; border: 3px solid white; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2);"></button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         TOOLBAR CHAMPS DE FUSION
+         ═══════════════════════════════════════════════════════════════ -->
+    <div class="toolbar" id="toolbar">
+        <!-- Header -->
+        <div class="toolbar-header" id="toolbarHeader">
+            <span class="toolbar-title">
+                <span class="toolbar-title-icon">📋</span>
+                Champs de fusion
+            </span>
+            <button class="toolbar-close" title="Fermer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Liste des champs -->
+        <div class="toolbar-content">
+            <div class="fields-count" id="fields-count">0 champ disponible</div>
+            <div class="fields-list" id="fields-list">
+                <!-- Les champs seront générés dynamiquement -->
+                <div class="fields-empty" id="fields-empty">
+                    Aucun champ disponible
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Demo controls -->
+    <div class="demo-controls">
+        <button class="demo-btn active" onclick="setTheme('')">Violet</button>
+        <button class="demo-btn" onclick="setTheme('theme-yellow')">Jaune</button>
+        <button class="demo-btn" onclick="setTheme('theme-blue')">Bleu</button>
+    </div>
+
+    <script>
+        // ═══════════════════════════════════════════════════════════════
+        // FONCTIONS UTILITAIRES UI
+        // ═══════════════════════════════════════════════════════════════
+
+        /**
+         * Change le thème de la toolbar
+         * @param {string} theme - Classe du thème ('' pour violet, 'theme-yellow', 'theme-blue')
+         */
+        function setTheme(theme) {
+            document.body.className = theme ? theme : '';
+            document.querySelectorAll('.demo-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // ÉTAT DE LA TOOLBAR DATA
+        // ═══════════════════════════════════════════════════════════════
+
+        /**
+         * État interne de la toolbar
+         * @type {{fields: string[], isTextQuillSelected: boolean}}
+         */
+        const toolbarState = {
+            fields: [],
+            isTextQuillSelected: false
+        };
+
+        /**
+         * Met à jour la visibilité de la toolbar
+         * Visible si : zone textQuill sélectionnée ET champs reçus
+         */
+        function updateToolbarVisibility() {
+            const toolbar = document.getElementById('toolbar');
+            const shouldShow = toolbarState.isTextQuillSelected && toolbarState.fields.length > 0;
+            
+            toolbar.style.display = shouldShow ? '' : 'none';
+            
+            console.log('📋 Toolbar Data visibility:', shouldShow ? 'visible' : 'hidden',
+                        '(textQuill:', toolbarState.isTextQuillSelected, 
+                        ', fields:', toolbarState.fields.length, ')');
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // GESTION DES CHAMPS DE FUSION
+        // ═══════════════════════════════════════════════════════════════
+
+        /**
+         * Met à jour la liste des champs affichés
+         * @param {string[]} fields - Tableau des noms de champs
+         */
+        function updateFieldsList(fields) {
+            const container = document.getElementById('fields-list');
+            const emptyMessage = document.getElementById('fields-empty');
+            const countElement = document.getElementById('fields-count');
+            
+            // Vider la liste existante (garder le message vide)
+            container.querySelectorAll('.field-item').forEach(item => item.remove());
+            
+            // Mettre à jour le compteur
+            const count = fields.length;
+            countElement.textContent = count === 0 ? '0 champ disponible' 
+                                     : count === 1 ? '1 champ disponible' 
+                                     : `${count} champs disponibles`;
+            
+            if (fields.length === 0) {
+                emptyMessage.style.display = '';
+                return;
+            }
+            
+            emptyMessage.style.display = 'none';
+            
+            // Créer les éléments pour chaque champ
+            fields.forEach(fieldName => {
+                const fieldElement = createFieldElement(fieldName);
+                container.appendChild(fieldElement);
+            });
+            
+            console.log('📋 Liste des champs mise à jour:', fields.length, 'champs');
+        }
+
+        /**
+         * Crée un élément DOM pour un champ de fusion
+         * @param {string} fieldName - Nom du champ
+         * @returns {HTMLElement} Élément du champ
+         */
+        function createFieldElement(fieldName) {
+            const div = document.createElement('div');
+            div.className = 'field-item';
+            div.draggable = true;
+            div.dataset.field = fieldName;
+            
+            div.innerHTML = `
+                <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                </svg>
+                <span class="field-name">${fieldName}</span>
+            `;
+            
+            // Event listeners
+            setupFieldEvents(div, fieldName);
+            
+            return div;
+        }
+
+        /**
+         * Configure les événements pour un élément de champ
+         * @param {HTMLElement} element - Élément DOM du champ
+         * @param {string} fieldName - Nom du champ
+         */
+        function setupFieldEvents(element, fieldName) {
+            // Double-clic pour insertion
+            element.addEventListener('dblclick', () => {
+                insertField(fieldName);
+            });
+            
+            // Drag start
+            element.addEventListener('dragstart', (e) => {
+                element.classList.add('dragging');
+                e.dataTransfer.setData('text/plain', `@${fieldName}@`);
+                e.dataTransfer.setData('application/x-merge-field', fieldName);
+                e.dataTransfer.effectAllowed = 'copy';
+                
+                console.log('🎯 Drag start:', fieldName);
+            });
+            
+            // Drag end
+            element.addEventListener('dragend', () => {
+                element.classList.remove('dragging');
+                console.log('🎯 Drag end:', fieldName);
+            });
+        }
+
+        /**
+         * Demande l'insertion d'un champ dans la zone textQuill active
+         * @param {string} fieldName - Nom du champ à insérer
+         */
+        function insertField(fieldName) {
+            const fieldText = `@${fieldName}@`;
+            
+            // Envoyer au Designer pour insertion dans la zone textQuill active
+            DesignerBridge.send('insertMergeField', {
+                field: fieldName,
+                text: fieldText
+            });
+            
+            console.log('📝 Demande insertion:', fieldText);
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // COMMUNICATION POSTMESSAGE AVEC LE DESIGNER
+        // ═══════════════════════════════════════════════════════════════
+
+        /**
+         * Module de communication avec le Designer parent via postMessage
+         * Gère l'envoi et la réception des messages entre la toolbar et le Designer
+         */
+        const DesignerBridge = {
+            /** @type {boolean} Indique si on est dans une iframe */
+            isInIframe: window.parent !== window,
+
+            /**
+             * Envoie un message au Designer parent
+             * @param {string} action - Nom de l'action
+             * @param {Object} [data={}] - Données optionnelles
+             */
+            send(action, data = {}) {
+                if (this.isInIframe) {
+                    window.parent.postMessage({
+                        action: action,
+                        source: 'toolbar-data',
+                        data: data,
+                        timestamp: Date.now()
+                    }, '*');
+                    console.log('📤 [toolbar-data→Designer]', action, data);
+                }
+            },
+
+            /**
+             * Gestionnaire des messages reçus du Designer
+             * @param {MessageEvent} event - Événement de message
+             */
+            handleMessage(event) {
+                const message = event.data;
+                if (!message || typeof message !== 'object' || !message.action) return;
+
+                console.log('📩 [Designer→toolbar-data]', message.action, message);
+
+                switch (message.action) {
+                    case 'setMergeFields':
+                        // Réception des champs de fusion depuis WebDev
+                        toolbarState.fields = message.data.fields || [];
+                        updateFieldsList(toolbarState.fields);
+                        updateToolbarVisibility();
+                        break;
+
+                    case 'selectionChanged':
+                        // Mise à jour selon la sélection
+                        const context = message.data;
+                        toolbarState.isTextQuillSelected = 
+                            context.selectionCount === 1 && context.zoneType === 'textQuill';
+                        updateToolbarVisibility();
+                        break;
+
+                    case 'ping':
+                        DesignerBridge.send('pong');
+                        break;
+
+                    case 'showAllSections':
+                        document.getElementById('toolbar').style.display = '';
+                        break;
+
+                    case 'hideAllSections':
+                        document.getElementById('toolbar').style.display = 'none';
+                        break;
+                }
+            },
+
+            /**
+             * Initialise l'écoute des messages
+             */
+            init() {
+                window.addEventListener('message', this.handleMessage.bind(this));
+
+                // Signaler que la toolbar est prête
+                setTimeout(() => {
+                    this.send('ready');
+                }, 100);
+
+                console.log('🔌 DesignerBridge (toolbar-data) initialisé');
+            }
+        };
+
+        // ═══════════════════════════════════════════════════════════════
+        // DRAGGABLE TOOLBAR
+        // ═══════════════════════════════════════════════════════════════
+
+        const toolbar = document.getElementById('toolbar');
+        const header = document.getElementById('toolbarHeader');
+        let isDragging = false;
+        let offsetX, offsetY;
+
+        header.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.toolbar-close')) return;
+            isDragging = true;
+            const rect = toolbar.getBoundingClientRect();
+            offsetX = e.clientX - rect.left;
+            offsetY = e.clientY - rect.top;
+            toolbar.style.position = 'fixed';
+            toolbar.style.margin = '0';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            toolbar.style.left = (e.clientX - offsetX) + 'px';
+            toolbar.style.top = (e.clientY - offsetY) + 'px';
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // ═══════════════════════════════════════════════════════════════
+        // INITIALISATION
+        // ═══════════════════════════════════════════════════════════════
+
+        // Initialiser le bridge de communication
+        DesignerBridge.init();
+
+        // État initial : toolbar masquée (pas de textQuill sélectionné, pas de champs)
+        updateToolbarVisibility();
+
+        // Exposer pour debug
+        window.toolbarState = toolbarState;
+        window.DesignerBridge = DesignerBridge;
+        window.updateFieldsList = updateFieldsList;
+        window.updateToolbarVisibility = updateToolbarVisibility;
+        window.insertField = insertField;
+
+        console.log('📋 Toolbar Data (Champs de fusion) initialisée');
+        console.log('📌 Fonctions debug disponibles:');
+        console.log('   - toolbarState');
+        console.log('   - updateFieldsList(["SOCIETE", "CONTACT", "ADRESSE1"])');
+        console.log('   - DesignerBridge.handleMessage({ data: { action: "setMergeFields", data: { fields: [...] } } })');
+
+    </script>
+
+</body>
+</html>
+

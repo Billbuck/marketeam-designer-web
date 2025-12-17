@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Intégration POC - Marketeam Designer</title>
+    <!--
+        ╔══════════════════════════════════════════════════════════════════╗
+        ║  PAGE DE TEST - Intégration POC Sidebar & Toolbars               ║
+        ╠══════════════════════════════════════════════════════════════════╣
+        ║  Affiche UNE SEULE toolbar à la fois selon la sélection :        ║
+        ║  - text/textQuill → Toolbar Texte                                ║
+        ║  - image → Toolbar Image                                         ║
+        ║  - barcode → Toolbar Code-barres                                 ║
+        ╚══════════════════════════════════════════════════════════════════╝
+    -->
+    <style>
+        :root {
+            --primary-color: #1a73e8;
+            --bg-color: #e0e0e0;
+            --panel-bg: #ffffff;
+            --border-color: #ddd;
+            --success-color: #34a853;
+            --error-color: #ea4335;
+            --workspace-bg: #b0b0b0;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* ═══════ HEADER ═══════ */
+        .header {
+            background: var(--primary-color);
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .header h1 { font-size: 16px; font-weight: 600; }
+        
+        .header .status {
+            display: flex;
+            gap: 12px;
+            font-size: 11px;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--error-color);
+        }
+        
+        .status-dot.ready { background: var(--success-color); }
+        
+        /* ═══════ LAYOUT ═══════ */
+        .main-layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        /* ═══════ PANNEAU CONTRÔLE ═══════ */
+        .control-panel {
+            width: 200px;
+            background: var(--panel-bg);
+            border-right: 1px solid var(--border-color);
+            padding: 12px;
+            overflow-y: auto;
+        }
+        
+        .control-section { margin-bottom: 15px; }
+        
+        .control-section h3 {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: #666;
+            margin-bottom: 8px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .btn {
+            padding: 8px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background: white;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s;
+        }
+        
+        .btn:hover {
+            border-color: var(--primary-color);
+            background: #f0f7ff;
+        }
+        
+        .btn.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        .context-info {
+            background: #e3f2fd;
+            border: 1px solid #90caf9;
+            border-radius: 5px;
+            padding: 8px;
+            font-size: 11px;
+            margin-top: 10px;
+        }
+        
+        /* ═══════ SIDEBAR ═══════ */
+        .sidebar-wrapper {
+            width: 300px;
+            background: white;
+            border-right: 1px solid var(--border-color);
+        }
+        
+        .sidebar-wrapper iframe {
+            border: none;
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* ═══════ ZONE DE TRAVAIL ═══════ */
+        .workspace {
+            flex: 1;
+            background: var(--workspace-bg);
+            display: flex;
+            overflow: hidden;
+        }
+        
+        /* Canvas central */
+        .canvas-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .canvas {
+            width: 350px;
+            height: 450px;
+            background: white;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+            border-radius: 3px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .canvas-icon { font-size: 48px; margin-bottom: 10px; }
+        .canvas-text { font-size: 14px; }
+        .canvas-hint { font-size: 11px; color: #aaa; margin-top: 5px; }
+        
+        /* Zone toolbar (à droite du canvas) */
+        .toolbar-zone {
+            width: 320px;
+            background: #a0a0a0;
+            border-left: 1px solid #888;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .toolbar-zone-header {
+            background: #666;
+            color: white;
+            padding: 8px 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .toolbar-frame-container {
+            flex: 1;
+            position: relative;
+        }
+        
+        .toolbar-frame-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: none;
+        }
+        
+        .toolbar-frame-container iframe.visible {
+            display: block;
+        }
+        
+        .toolbar-empty {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 12px;
+            font-style: italic;
+        }
+        
+        /* ═══════ LOGS ═══════ */
+        .log-panel-header {
+            background: #333;
+            color: white;
+            padding: 5px 12px;
+            font-size: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .btn-clear-logs {
+            background: transparent;
+            border: 1px solid #666;
+            color: #ccc;
+            padding: 2px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 10px;
+        }
+        
+        .log-panel {
+            height: 100px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Consolas', monospace;
+            font-size: 10px;
+            overflow-y: auto;
+            padding: 6px;
+        }
+        
+        .log-entry {
+            padding: 1px 0;
+            display: flex;
+            gap: 6px;
+        }
+        
+        .log-time { color: #666; }
+        .log-direction { width: 80px; }
+        .log-direction.incoming { color: #4fc3f7; }
+        .log-direction.outgoing { color: #81c784; }
+        .log-content { color: #fff; }
+    </style>
+</head>
+<body>
+    <!-- ═══════ HEADER ═══════ -->
+    <header class="header">
+        <h1>🧪 Test Intégration - Marketeam Designer</h1>
+        <div class="status">
+            <div class="status-item">
+                <span class="status-dot" id="status-sidebar"></span>
+                <span>Sidebar</span>
+            </div>
+            <div class="status-item">
+                <span class="status-dot" id="status-toolbar-text"></span>
+                <span>Texte</span>
+            </div>
+            <div class="status-item">
+                <span class="status-dot" id="status-toolbar-image"></span>
+                <span>Image</span>
+            </div>
+            <div class="status-item">
+                <span class="status-dot" id="status-toolbar-barcode"></span>
+                <span>Barcode</span>
+            </div>
+            <div class="status-item">
+                <span class="status-dot" id="status-toolbar-qrcode"></span>
+                <span>QR Code</span>
+            </div>
+        </div>
+    </header>
+    
+    <!-- ═══════ LAYOUT ═══════ -->
+    <div class="main-layout">
+        <!-- Panneau de contrôle -->
+        <aside class="control-panel">
+            <div class="control-section">
+                <h3>📌 Sélection</h3>
+                <div class="btn-group">
+                    <button class="btn active" data-action="none">⭕ Aucune</button>
+                    <button class="btn" data-action="text">📄 Texte</button>
+                    <button class="btn" data-action="textQuill">✏️ Texte Quill</button>
+                    <button class="btn" data-action="image">🖼️ Image</button>
+                    <button class="btn" data-action="barcode">📊 Code-barres</button>
+                    <button class="btn" data-action="qrcode">📱 QR Code</button>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <h3>👥 Multi</h3>
+                <div class="btn-group">
+                    <button class="btn" data-action="multi-2">2️⃣ 2 zones</button>
+                    <button class="btn" data-action="multi-3">3️⃣ 3 zones</button>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <h3>🛠️ Debug</h3>
+                <div class="btn-group">
+                    <button class="btn" data-action="showAll">👁️ Tout afficher</button>
+                    <button class="btn" data-action="ping">🏓 Ping</button>
+                </div>
+            </div>
+            
+            <div class="context-info">
+                <strong>Toolbar active :</strong>
+                <span id="active-toolbar">Aucune</span>
+            </div>
+        </aside>
+        
+        <!-- Sidebar -->
+        <div class="sidebar-wrapper">
+            <iframe id="iframe-sidebar" src="marketeam-sidebar-fixed.html"></iframe>
+        </div>
+        
+        <!-- Zone de travail -->
+        <div class="workspace">
+            <!-- Canvas -->
+            <div class="canvas-container">
+                <div class="canvas">
+                    <div class="canvas-icon" id="canvas-icon">📄</div>
+                    <div class="canvas-text" id="canvas-text">Aucune sélection</div>
+                    <div class="canvas-hint">Cliquez sur un type de zone à gauche</div>
+                </div>
+            </div>
+            
+            <!-- Zone Toolbar (une seule visible à la fois) -->
+            <div class="toolbar-zone">
+                <div class="toolbar-zone-header">⚙️ Propriétés</div>
+                <div class="toolbar-frame-container" id="toolbar-container">
+                    <iframe id="iframe-toolbar-text" src="toolbar-texte.html"></iframe>
+                    <iframe id="iframe-toolbar-image" src="toolbar-image.html"></iframe>
+                    <iframe id="iframe-toolbar-barcode" src="toolbar-barcode.html"></iframe>
+                    <iframe id="iframe-toolbar-qrcode" src="toolbar-qrcode.html"></iframe>
+                </div>
+                <div class="toolbar-empty" id="toolbar-empty">
+                    Sélectionnez une zone pour voir ses propriétés
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ═══════ LOGS ═══════ -->
+    <div class="log-panel-header">
+        <span>📋 Console</span>
+        <button class="btn-clear-logs" id="btn-clear-logs">Effacer</button>
+    </div>
+    <div class="log-panel" id="log-panel"></div>
+    
+    <script>
+        // ═══════════════════════════════════════════════════════════════
+        // ÉLÉMENTS DOM
+        // ═══════════════════════════════════════════════════════════════
+        
+        const iframeSidebar = document.getElementById('iframe-sidebar');
+        const iframeToolbarText = document.getElementById('iframe-toolbar-text');
+        const iframeToolbarImage = document.getElementById('iframe-toolbar-image');
+        const iframeToolbarBarcode = document.getElementById('iframe-toolbar-barcode');
+        const iframeToolbarQRCode = document.getElementById('iframe-toolbar-qrcode');
+        
+        const toolbarEmpty = document.getElementById('toolbar-empty');
+        const activeToolbarDisplay = document.getElementById('active-toolbar');
+        const canvasIcon = document.getElementById('canvas-icon');
+        const canvasText = document.getElementById('canvas-text');
+        const logPanel = document.getElementById('log-panel');
+        
+        const statusDots = {
+            sidebar: document.getElementById('status-sidebar'),
+            text: document.getElementById('status-toolbar-text'),
+            image: document.getElementById('status-toolbar-image'),
+            barcode: document.getElementById('status-toolbar-barcode'),
+            qrcode: document.getElementById('status-toolbar-qrcode')
+        };
+        
+        // ═══════════════════════════════════════════════════════════════
+        // GESTION DES TOOLBARS - UNE SEULE VISIBLE À LA FOIS
+        // ═══════════════════════════════════════════════════════════════
+        
+        /**
+         * Affiche la toolbar correspondant au type de zone
+         * @param {string|null} zoneType - Type de zone sélectionnée
+         */
+        function showToolbarFor(zoneType) {
+            // Masquer toutes les toolbars
+            iframeToolbarText.classList.remove('visible');
+            iframeToolbarImage.classList.remove('visible');
+            iframeToolbarBarcode.classList.remove('visible');
+            iframeToolbarQRCode.classList.remove('visible');
+            
+            let toolbarName = 'Aucune';
+            let showEmpty = true;
+            
+            // Afficher la toolbar appropriée
+            switch (zoneType) {
+                case 'text':
+                case 'textQuill':
+                    iframeToolbarText.classList.add('visible');
+                    toolbarName = 'Texte';
+                    showEmpty = false;
+                    break;
+                case 'image':
+                    iframeToolbarImage.classList.add('visible');
+                    toolbarName = 'Image';
+                    showEmpty = false;
+                    break;
+                case 'barcode':
+                    iframeToolbarBarcode.classList.add('visible');
+                    toolbarName = 'Code-barres';
+                    showEmpty = false;
+                    break;
+                case 'qrcode':
+                    iframeToolbarQRCode.classList.add('visible');
+                    toolbarName = 'QR Code';
+                    showEmpty = false;
+                    break;
+            }
+            
+            toolbarEmpty.style.display = showEmpty ? 'flex' : 'none';
+            activeToolbarDisplay.textContent = toolbarName;
+        }
+        
+        /**
+         * Met à jour le canvas pour refléter la sélection
+         * @param {string} action - Action de sélection
+         */
+        function updateCanvas(action) {
+            const icons = {
+                'none': '📄',
+                'text': '📝',
+                'textQuill': '✏️',
+                'image': '🖼️',
+                'barcode': '📊',
+                'qrcode': '📱',
+                'multi-2': '📑',
+                'multi-3': '📚'
+            };
+            
+            const texts = {
+                'none': 'Aucune sélection',
+                'text': 'Zone Texte sélectionnée',
+                'textQuill': 'Zone Texte Quill sélectionnée',
+                'image': 'Zone Image sélectionnée',
+                'barcode': 'Zone Code-barres sélectionnée',
+                'qrcode': 'Zone QR Code sélectionnée',
+                'multi-2': '2 zones sélectionnées',
+                'multi-3': '3 zones sélectionnées'
+            };
+            
+            canvasIcon.textContent = icons[action] || '📄';
+            canvasText.textContent = texts[action] || 'Aucune sélection';
+        }
+        
+        // ═══════════════════════════════════════════════════════════════
+        // COMMUNICATION POSTMESSAGE
+        // ═══════════════════════════════════════════════════════════════
+        
+        function addLog(direction, source, message) {
+            const time = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `
+                <span class="log-time">${time}</span>
+                <span class="log-direction ${direction}">${direction === 'incoming' ? '←' : '→'} ${source}</span>
+                <span class="log-content">${message.action}</span>
+            `;
+            logPanel.appendChild(entry);
+            logPanel.scrollTop = logPanel.scrollHeight;
+        }
+        
+        document.getElementById('btn-clear-logs').addEventListener('click', () => {
+            logPanel.innerHTML = '';
+        });
+        
+        function sendToIframes(message) {
+            const msg = { ...message, timestamp: Date.now() };
+            
+            [iframeSidebar, iframeToolbarText, iframeToolbarImage, iframeToolbarBarcode, iframeToolbarQRCode].forEach(iframe => {
+                if (iframe?.contentWindow) {
+                    iframe.contentWindow.postMessage(msg, '*');
+                }
+            });
+            addLog('outgoing', 'Designer', msg);
+        }
+        
+        window.addEventListener('message', (event) => {
+            const message = event.data;
+            if (!message?.action) return;
+            
+            const source = message.source || 'unknown';
+            addLog('incoming', source, message);
+            
+            if (message.action === 'ready') {
+                switch (source) {
+                    case 'sidebar': statusDots.sidebar.classList.add('ready'); break;
+                    case 'toolbar': statusDots.text.classList.add('ready'); break;
+                    case 'toolbar-image': statusDots.image.classList.add('ready'); break;
+                    case 'toolbar-barcode': statusDots.barcode.classList.add('ready'); break;
+                    case 'toolbar-qrcode': statusDots.qrcode.classList.add('ready'); break;
+                }
+            }
+        });
+        
+        // ═══════════════════════════════════════════════════════════════
+        // CONTEXTES DE SÉLECTION
+        // ═══════════════════════════════════════════════════════════════
+        
+        function generateContext(action) {
+            const contexts = {
+                'none': { zoneType: null, selectionCount: 0, selectedZoneIds: [] },
+                'text': { zoneType: 'text', selectionCount: 1, selectedZoneIds: ['zone-1'] },
+                'textQuill': { zoneType: 'textQuill', selectionCount: 1, selectedZoneIds: ['zone-2'] },
+                'image': { zoneType: 'image', selectionCount: 1, selectedZoneIds: ['zone-3'] },
+                'barcode': { zoneType: 'barcode', selectionCount: 1, selectedZoneIds: ['zone-4'] },
+                'qrcode': { zoneType: 'qrcode', selectionCount: 1, selectedZoneIds: ['zone-5'] },
+                'multi-2': { zoneType: null, selectionCount: 2, selectedZoneIds: ['zone-1', 'zone-2'] },
+                'multi-3': { zoneType: null, selectionCount: 3, selectedZoneIds: ['zone-1', 'zone-2', 'zone-3'] }
+            };
+            return contexts[action] || contexts['none'];
+        }
+        
+        // ═══════════════════════════════════════════════════════════════
+        // BOUTONS
+        // ═══════════════════════════════════════════════════════════════
+        
+        document.querySelectorAll('.btn[data-action]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const action = btn.dataset.action;
+                
+                // Mettre à jour les boutons
+                document.querySelectorAll('.btn[data-action]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                // Debug
+                if (action === 'showAll') {
+                    sendToIframes({ action: 'showAllSections' });
+                    // Afficher toutes les toolbars en mode debug
+                    iframeToolbarText.classList.add('visible');
+                    iframeToolbarImage.classList.add('visible');
+                    iframeToolbarBarcode.classList.add('visible');
+                    iframeToolbarQRCode.classList.add('visible');
+                    toolbarEmpty.style.display = 'none';
+                    activeToolbarDisplay.textContent = 'Toutes (debug)';
+                    return;
+                }
+                if (action === 'ping') {
+                    sendToIframes({ action: 'ping' });
+                    return;
+                }
+                
+                // Sélection normale
+                const context = generateContext(action);
+                updateCanvas(action);
+                showToolbarFor(context.zoneType);
+                sendToIframes({ action: 'selectionChanged', data: context });
+            });
+        });
+        
+        // ═══════════════════════════════════════════════════════════════
+        // INIT
+        // ═══════════════════════════════════════════════════════════════
+        
+        // État initial : aucune toolbar
+        showToolbarFor(null);
+        
+        addLog('outgoing', 'Designer', { action: 'init' });
+        console.log('🧪 Page de test initialisée');
+    </script>
+</body>
+</html>
