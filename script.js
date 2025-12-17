@@ -684,6 +684,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const quillChkCopyfit = document.getElementById('quill-chk-copyfit');
     const quillInputEmptyLines = document.getElementById('quill-input-empty-lines');
     
+    // Wrappers pour les checkboxes POC (design Marketeam)
+    const quillChkLockedWrapper = document.getElementById('quill-chk-locked-wrapper');
+    const quillChkTransparentWrapper = document.getElementById('quill-chk-transparent-wrapper');
+    const quillChkCopyfitWrapper = document.getElementById('quill-chk-copyfit-wrapper');
+    
+    // Color swatches POC
+    const quillColorSwatch = document.getElementById('quill-color-swatch');
+    const quillBgColorSwatch = document.getElementById('quill-bg-color-swatch');
+    const quillBorderColorSwatch = document.getElementById('quill-border-color-swatch');
+    
     // Fonction pour mettre à jour l'affichage du spin button d'épaisseur de bordure
     function updateBorderWidthDisplay(value) {
         if (inputBorderWidthDisplay) {
@@ -714,6 +724,210 @@ document.addEventListener('DOMContentLoaded', () => {
             saveState();
         });
     });
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // COMPOSANTS POC TOOLBAR (DESIGN MARKETEAM)
+    // ═══════════════════════════════════════════════════════════════════════════════
+    
+    /**
+     * Initialise un spinner POC avec incrément/décrément.
+     * Structure attendue :
+     * <div class="spinner-poc">
+     *     <input type="text" class="spinner-input-poc" id="xxx">
+     *     <div class="spinner-buttons-poc">
+     *         <button class="spinner-btn-poc" data-dir="up">...</button>
+     *         <button class="spinner-btn-poc" data-dir="down">...</button>
+     *     </div>
+     * </div>
+     * 
+     * @param {string} inputId - ID de l'input du spinner
+     * @param {number} min - Valeur minimum
+     * @param {number} max - Valeur maximum
+     * @param {number} step - Pas d'incrément
+     * @param {Function} onChange - Callback appelé après changement (reçoit la nouvelle valeur)
+     * @returns {void}
+     */
+    function initSpinnerPoc(inputId, min, max, step, onChange) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        
+        const spinner = input.closest('.spinner-poc');
+        if (!spinner) return;
+        
+        const buttons = spinner.querySelectorAll('.spinner-btn-poc');
+        
+        buttons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Gérer les valeurs avec virgule (format français)
+                let currentValue = parseFloat(input.value.replace(',', '.')) || min;
+                const dir = btn.dataset.dir;
+                
+                if (dir === 'up') {
+                    currentValue = Math.min(max, currentValue + step);
+                } else if (dir === 'down') {
+                    currentValue = Math.max(min, currentValue - step);
+                }
+                
+                // Formater selon le step (entier ou décimal)
+                if (step >= 1) {
+                    input.value = String(Math.round(currentValue));
+                } else {
+                    input.value = currentValue.toFixed(1).replace('.', ',');
+                }
+                
+                if (onChange) onChange(currentValue);
+            });
+        });
+        
+        // Aussi écouter les changements manuels sur l'input
+        input.addEventListener('change', () => {
+            let value = parseFloat(input.value.replace(',', '.')) || min;
+            value = Math.max(min, Math.min(max, value));
+            
+            if (step >= 1) {
+                input.value = String(Math.round(value));
+            } else {
+                input.value = value.toFixed(1).replace('.', ',');
+            }
+            
+            if (onChange) onChange(value);
+        });
+    }
+    
+    /**
+     * Définit la valeur d'un spinner POC.
+     * 
+     * @param {string} inputId - ID de l'input du spinner
+     * @param {number} value - Valeur à définir
+     * @param {number} step - Pas (pour formater : entier si >= 1, décimal sinon)
+     * @returns {void}
+     */
+    function setSpinnerPocValue(inputId, value, step) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        
+        if (step >= 1) {
+            input.value = String(Math.round(value));
+        } else {
+            input.value = value.toFixed(1).replace('.', ',');
+        }
+    }
+    
+    /**
+     * Initialise un toggle-group POC (un seul bouton actif à la fois).
+     * Structure attendue :
+     * <div class="toggle-group-poc" id="xxx">
+     *     <button class="toggle-btn-poc active" data-value="left">...</button>
+     *     <button class="toggle-btn-poc" data-value="center">...</button>
+     * </div>
+     * 
+     * @param {string} groupId - ID du conteneur
+     * @param {Function} onChange - Callback avec la valeur sélectionnée
+     * @returns {void}
+     */
+    function initToggleGroupPoc(groupId, onChange) {
+        const group = document.getElementById(groupId);
+        if (!group) return;
+        
+        const buttons = group.querySelectorAll('.toggle-btn-poc');
+        
+        buttons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Retirer active de tous les boutons du groupe
+                buttons.forEach(b => b.classList.remove('active'));
+                // Activer le bouton cliqué
+                btn.classList.add('active');
+                
+                const value = btn.dataset.value;
+                if (onChange) onChange(value);
+            });
+        });
+    }
+    
+    /**
+     * Définit la valeur active d'un toggle-group POC.
+     * 
+     * @param {string} groupId - ID du conteneur
+     * @param {string} value - Valeur à activer
+     * @returns {void}
+     */
+    function setToggleGroupPocValue(groupId, value) {
+        const group = document.getElementById(groupId);
+        if (!group) return;
+        
+        const buttons = group.querySelectorAll('.toggle-btn-poc');
+        buttons.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.value === value);
+        });
+    }
+    
+    /**
+     * Initialise une checkbox POC.
+     * Structure attendue :
+     * <div class="checkbox-poc" id="xxx-wrapper">
+     *     <input type="checkbox" id="xxx" style="display: none;">
+     *     <svg>...</svg>
+     * </div>
+     * La classe "checked" est ajoutée/retirée sur le wrapper pour l'état visuel.
+     * 
+     * @param {string} wrapperId - ID du wrapper (div.checkbox-poc)
+     * @param {Function} onChange - Callback avec l'état (true/false)
+     * @returns {void}
+     */
+    function initCheckboxPoc(wrapperId, onChange) {
+        const wrapper = document.getElementById(wrapperId);
+        if (!wrapper) return;
+        
+        const input = wrapper.querySelector('input[type="checkbox"]');
+        
+        wrapper.addEventListener('click', () => {
+            const isChecked = wrapper.classList.toggle('checked');
+            
+            // Synchroniser l'input caché si présent
+            if (input) input.checked = isChecked;
+            
+            if (onChange) onChange(isChecked);
+        });
+    }
+    
+    /**
+     * Définit l'état d'une checkbox POC.
+     * 
+     * @param {string} wrapperId - ID du wrapper (div.checkbox-poc)
+     * @param {boolean} checked - État à définir
+     * @returns {void}
+     */
+    function setCheckboxPocState(wrapperId, checked) {
+        const wrapper = document.getElementById(wrapperId);
+        if (!wrapper) return;
+        
+        const input = wrapper.querySelector('input[type="checkbox"]');
+        
+        if (checked) {
+            wrapper.classList.add('checked');
+        } else {
+            wrapper.classList.remove('checked');
+        }
+        
+        if (input) input.checked = checked;
+    }
+    
+    /**
+     * Met à jour le swatch de couleur POC avec une nouvelle couleur.
+     * 
+     * @param {string} swatchId - ID du swatch (div.color-swatch-poc)
+     * @param {string} color - Couleur hex (#RRGGBB)
+     * @returns {void}
+     */
+    function updateColorSwatchPoc(swatchId, color) {
+        const swatch = document.getElementById(swatchId);
+        if (!swatch) return;
+        swatch.style.background = color;
+        
+        // Mettre à jour l'input color caché si présent
+        const colorInput = swatch.querySelector('input[type="color"]');
+        if (colorInput) colorInput.value = color;
+    }
 
     // ─────────────────────────────── FIN SECTION 1 ────────────────────────────────
 
@@ -4752,57 +4966,60 @@ document.addEventListener('DOMContentLoaded', () => {
         const zoneData = zonesData[zoneId];
         if (!zoneData || zoneData.type !== 'textQuill') return;
         
-        // Zone
-        if (quillChkLocked) quillChkLocked.checked = !!zoneData.locked;
+        // Zone - Checkbox POC
+        setCheckboxPocState('quill-chk-locked-wrapper', !!zoneData.locked);
         
         // Typographie
         if (quillInputFont) quillInputFont.value = zoneData.font || QUILL_DEFAULT_FONT;
-        if (quillInputSize) quillInputSize.value = String(zoneData.size || QUILL_DEFAULT_SIZE);
-        if (quillInputColor) quillInputColor.value = zoneData.color || QUILL_DEFAULT_COLOR;
-        if (quillColorValue) quillColorValue.textContent = (zoneData.color || QUILL_DEFAULT_COLOR);
         
-        // Alignements
-        if (quillAlignHGroup) {
-            quillAlignHGroup.querySelectorAll('.align-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.value === (zoneData.align || 'left'));
-            });
-        }
-        if (quillAlignVGroup) {
-            quillAlignVGroup.querySelectorAll('.align-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.value === (zoneData.valign || 'top'));
-            });
-        }
-        if (quillInputLineHeight) quillInputLineHeight.value = String(zoneData.lineHeight || QUILL_DEFAULT_LINE_HEIGHT);
+        // Taille - Spinner POC
+        setSpinnerPocValue('quill-input-size', zoneData.size || QUILL_DEFAULT_SIZE, 1);
         
-        // Fond
-        if (quillChkTransparent) quillChkTransparent.checked = zoneData.isTransparent !== undefined ? !!zoneData.isTransparent : true;
-        if (quillInputBgColor) {
-            quillInputBgColor.value = zoneData.bgColor || '#ffffff';
-            quillInputBgColor.disabled = !!(quillChkTransparent && quillChkTransparent.checked);
-        }
-        if (quillBgColorValue) quillBgColorValue.textContent = (zoneData.bgColor || '#ffffff');
-        if (quillBgColorRow) quillBgColorRow.style.display = (quillChkTransparent && quillChkTransparent.checked) ? 'none' : '';
+        // Couleur texte
+        const textColor = zoneData.color || QUILL_DEFAULT_COLOR;
+        if (quillInputColor) quillInputColor.value = textColor;
+        updateColorSwatchPoc('quill-color-swatch', textColor);
+        
+        // Copyfit - Checkbox POC
+        setCheckboxPocState('quill-chk-copyfit-wrapper', !!zoneData.copyfit);
+        
+        // Alignements - Toggle-groups POC
+        setToggleGroupPocValue('quill-align-h-group', zoneData.align || 'left');
+        setToggleGroupPocValue('quill-align-v-group', zoneData.valign || 'top');
+        
+        // Interligne - Spinner POC
+        setSpinnerPocValue('quill-input-line-height', zoneData.lineHeight || QUILL_DEFAULT_LINE_HEIGHT, 0.1);
+        
+        // Lignes vides
+        if (quillInputEmptyLines) quillInputEmptyLines.value = String(zoneData.emptyLines || 0);
+        
+        // Fond - Checkbox POC
+        const isTransparent = zoneData.isTransparent !== undefined ? !!zoneData.isTransparent : true;
+        setCheckboxPocState('quill-chk-transparent-wrapper', isTransparent);
+        
+        // Couleur fond
+        const bgColor = zoneData.bgColor || '#ffffff';
+        if (quillInputBgColor) quillInputBgColor.value = bgColor;
+        updateColorSwatchPoc('quill-bg-color-swatch', bgColor);
+        if (quillBgColorRow) quillBgColorRow.style.display = isTransparent ? 'none' : '';
 
         if (DEBUG_PHASE7_BG) {
             console.log('🔧 PHASE 7 BG - Toolbar sync fond:', zoneId, {
                 isTransparent: zoneData.isTransparent,
                 bgColor: zoneData.bgColor,
-                uiTransparentChecked: !!(quillChkTransparent && quillChkTransparent.checked),
+                uiTransparentChecked: isTransparent,
                 uiBgColor: quillInputBgColor ? quillInputBgColor.value : null,
                 uiRowDisplay: quillBgColorRow ? quillBgColorRow.style.display : null
             });
         }
         
-        // Bordure
+        // Bordure - Spinner POC + couleur
         const border = zoneData.border || { width: 0, color: '#000000', style: 'solid' };
-        if (quillInputBorderWidth) quillInputBorderWidth.value = String(border.width || 0);
+        setSpinnerPocValue('quill-input-border-width', border.width || 0, 1);
         if (quillInputBorderColor) quillInputBorderColor.value = border.color || '#000000';
+        updateColorSwatchPoc('quill-border-color-swatch', border.color || '#000000');
         if (quillInputBorderStyle) quillInputBorderStyle.value = border.style || 'solid';
         updateQuillBorderOptionsVisibility(border.width || 0);
-        
-        // Options avancées
-        if (quillChkCopyfit) quillChkCopyfit.checked = !!zoneData.copyfit;
-        if (quillInputEmptyLines) quillInputEmptyLines.value = String(zoneData.emptyLines || 0);
         
         // Géométrie (mm)
         updateQuillToolbarGeometryFields(zoneId);
@@ -4994,17 +5211,19 @@ document.addEventListener('DOMContentLoaded', () => {
             saveState();
         };
         
-        // Zone : verrouiller
-        if (quillChkLocked) {
-            quillChkLocked.addEventListener('change', () => {
-                updateSelectedZone((zoneData, zoneEl, zoneId) => {
-                    zoneData.locked = !!quillChkLocked.checked;
-                    console.log('🔧 PHASE 4 - locked:', zoneData.locked);
-                });
-            });
-        }
+        // ═══════════════════════════════════════════════════════════════
+        // INITIALISATION COMPOSANTS POC
+        // ═══════════════════════════════════════════════════════════════
         
-        // Typographie : police
+        // Zone : verrouiller - Checkbox POC
+        initCheckboxPoc('quill-chk-locked-wrapper', (checked) => {
+            updateSelectedZone((zoneData) => {
+                zoneData.locked = checked;
+                console.log('🔧 PHASE 4 - locked:', zoneData.locked);
+            });
+        });
+        
+        // Typographie : police (select natif POC)
         if (quillInputFont) {
             quillInputFont.addEventListener('change', () => {
                 updateSelectedZone((zoneData) => {
@@ -5014,132 +5233,116 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
-        // Typographie : taille
-        if (quillInputSize) {
-            quillInputSize.addEventListener('change', () => {
-                updateSelectedZone((zoneData) => {
-                    zoneData.size = parseFloat(quillInputSize.value) || QUILL_DEFAULT_SIZE;
-                    console.log('🔧 PHASE 4 - size:', zoneData.size);
-                });
+        // Typographie : taille - Spinner POC
+        initSpinnerPoc('quill-input-size', 6, 72, 1, (value) => {
+            updateSelectedZone((zoneData) => {
+                zoneData.size = value;
+                console.log('🔧 PHASE 4 - size:', zoneData.size);
             });
-        }
+        });
+        
+        // Typographie : Ajustable (copyfit) - Checkbox POC
+        initCheckboxPoc('quill-chk-copyfit-wrapper', (checked) => {
+            updateSelectedZone((zoneData) => {
+                zoneData.copyfit = checked;
+                console.log('🔧 PHASE 4 - copyfit:', zoneData.copyfit);
+            });
+        });
         
         // Typographie : couleur
         if (quillInputColor) {
             quillInputColor.addEventListener('input', () => {
                 updateSelectedZone((zoneData) => {
                     zoneData.color = quillInputColor.value;
-                    if (quillColorValue) quillColorValue.textContent = zoneData.color;
+                    updateColorSwatchPoc('quill-color-swatch', zoneData.color);
                     console.log('🔧 PHASE 4 - color:', zoneData.color);
                 });
             });
         }
         
-        // Alignement horizontal
-        if (quillAlignHGroup) {
-            const buttons = quillAlignHGroup.querySelectorAll('.align-btn');
-            buttons.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    updateSelectedZone((zoneData) => {
-                        zoneData.align = btn.dataset.value || 'left';
-                        buttons.forEach(b => b.classList.remove('active'));
-                        btn.classList.add('active');
-                        console.log('🔧 PHASE 4 - align:', zoneData.align);
-                    });
-                });
+        // Alignement horizontal - Toggle-group POC
+        initToggleGroupPoc('quill-align-h-group', (value) => {
+            updateSelectedZone((zoneData) => {
+                zoneData.align = value;
+                console.log('🔧 PHASE 4 - align:', zoneData.align);
             });
-        }
+        });
         
-        // Alignement vertical
-        if (quillAlignVGroup) {
-            const buttons = quillAlignVGroup.querySelectorAll('.align-btn');
-            buttons.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    updateSelectedZone((zoneData) => {
-                        zoneData.valign = btn.dataset.value || 'top';
-                        buttons.forEach(b => b.classList.remove('active'));
-                        btn.classList.add('active');
-                        console.log('🔧 PHASE 4 - valign:', zoneData.valign);
-                    });
-                });
+        // Alignement vertical - Toggle-group POC
+        initToggleGroupPoc('quill-align-v-group', (value) => {
+            updateSelectedZone((zoneData) => {
+                zoneData.valign = value;
+                console.log('🔧 PHASE 4 - valign:', zoneData.valign);
             });
-        }
+        });
         
-        // Interligne
-        if (quillInputLineHeight) {
-            quillInputLineHeight.addEventListener('change', () => {
+        // Interligne - Spinner POC
+        initSpinnerPoc('quill-input-line-height', 1, 3, 0.1, (value) => {
+            updateSelectedZone((zoneData) => {
+                zoneData.lineHeight = value;
+                console.log('🔧 PHASE 4 - lineHeight:', zoneData.lineHeight);
+            });
+        });
+        
+        // Lignes vides (select natif POC)
+        if (quillInputEmptyLines) {
+            quillInputEmptyLines.addEventListener('change', () => {
                 updateSelectedZone((zoneData) => {
-                    zoneData.lineHeight = parseFloat(quillInputLineHeight.value) || QUILL_DEFAULT_LINE_HEIGHT;
-                    console.log('🔧 PHASE 4 - lineHeight:', zoneData.lineHeight);
+                    zoneData.emptyLines = parseInt(quillInputEmptyLines.value, 10) || 0;
+                    console.log('🔧 PHASE 4 - emptyLines:', zoneData.emptyLines);
                 });
             });
         }
         
-        // Fond : transparent + couleur
-        if (quillChkTransparent) {
-            quillChkTransparent.addEventListener('change', () => {
-                updateSelectedZone((zoneData) => {
-                    zoneData.isTransparent = !!quillChkTransparent.checked;
-                    if (quillInputBgColor) quillInputBgColor.disabled = zoneData.isTransparent;
-                    if (quillBgColorRow) quillBgColorRow.style.display = zoneData.isTransparent ? 'none' : '';
-                    console.log('🔧 PHASE 4 - isTransparent:', zoneData.isTransparent);
-                });
+        // Fond : transparent - Checkbox POC
+        initCheckboxPoc('quill-chk-transparent-wrapper', (checked) => {
+            updateSelectedZone((zoneData) => {
+                zoneData.isTransparent = checked;
+                if (quillBgColorRow) quillBgColorRow.style.display = checked ? 'none' : '';
+                console.log('🔧 PHASE 4 - isTransparent:', zoneData.isTransparent);
             });
-        }
+        });
+        
+        // Fond : couleur
         if (quillInputBgColor) {
             quillInputBgColor.addEventListener('input', () => {
                 updateSelectedZone((zoneData) => {
                     zoneData.bgColor = quillInputBgColor.value;
-                    if (quillBgColorValue) quillBgColorValue.textContent = zoneData.bgColor;
+                    updateColorSwatchPoc('quill-bg-color-swatch', zoneData.bgColor);
                     console.log('🔧 PHASE 4 - bgColor:', zoneData.bgColor);
                 });
             });
         }
         
-        // Bordure
-        if (quillInputBorderWidth) {
-            quillInputBorderWidth.addEventListener('input', () => {
-                updateSelectedZone((zoneData) => {
-                    zoneData.border = zoneData.border || { width: 0, color: '#000000', style: 'solid' };
-                    zoneData.border.width = parseFloat(quillInputBorderWidth.value) || 0;
-                    updateQuillBorderOptionsVisibility(zoneData.border.width);
-                    console.log('🔧 PHASE 4 - border.width:', zoneData.border.width);
-                });
+        // Bordure : épaisseur - Spinner POC
+        initSpinnerPoc('quill-input-border-width', 0, 10, 1, (value) => {
+            updateSelectedZone((zoneData) => {
+                zoneData.border = zoneData.border || { width: 0, color: '#000000', style: 'solid' };
+                zoneData.border.width = value;
+                updateQuillBorderOptionsVisibility(value);
+                console.log('🔧 PHASE 4 - border.width:', zoneData.border.width);
             });
-        }
+        });
+        
+        // Bordure : couleur
         if (quillInputBorderColor) {
             quillInputBorderColor.addEventListener('input', () => {
                 updateSelectedZone((zoneData) => {
                     zoneData.border = zoneData.border || { width: 0, color: '#000000', style: 'solid' };
                     zoneData.border.color = quillInputBorderColor.value;
+                    updateColorSwatchPoc('quill-border-color-swatch', zoneData.border.color);
                     console.log('🔧 PHASE 4 - border.color:', zoneData.border.color);
                 });
             });
         }
+        
+        // Bordure : style (select natif POC)
         if (quillInputBorderStyle) {
             quillInputBorderStyle.addEventListener('change', () => {
                 updateSelectedZone((zoneData) => {
                     zoneData.border = zoneData.border || { width: 0, color: '#000000', style: 'solid' };
                     zoneData.border.style = quillInputBorderStyle.value;
                     console.log('🔧 PHASE 4 - border.style:', zoneData.border.style);
-                });
-            });
-        }
-        
-        // Options avancées
-        if (quillChkCopyfit) {
-            quillChkCopyfit.addEventListener('change', () => {
-                updateSelectedZone((zoneData) => {
-                    zoneData.copyfit = !!quillChkCopyfit.checked;
-                    console.log('🔧 PHASE 4 - copyfit:', zoneData.copyfit);
-                });
-            });
-        }
-        if (quillInputEmptyLines) {
-            quillInputEmptyLines.addEventListener('change', () => {
-                updateSelectedZone((zoneData) => {
-                    zoneData.emptyLines = parseInt(quillInputEmptyLines.value, 10) || 0;
-                    console.log('🔧 PHASE 4 - emptyLines:', zoneData.emptyLines);
                 });
             });
         }
