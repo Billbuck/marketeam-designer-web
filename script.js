@@ -4083,12 +4083,18 @@ document.addEventListener('DOMContentLoaded', () => {
             // Utiliser la position sauvegardée si elle existe, sinon le centre de la vue
             zone.style.left = (zoneData.x !== undefined ? zoneData.x : zoneX) + 'px';
             zone.style.top = (zoneData.y !== undefined ? zoneData.y : zoneY) + 'px';
-            zone.style.backgroundColor = zoneData.bgColor || '#ffffff';
             
+            // Fond : respecter isTransparent et bgColor (comme les autres types de zones)
+            if (zoneData.isTransparent) {
+                zone.style.backgroundColor = 'transparent';
+            } else {
+                zone.style.backgroundColor = zoneData.bgColor || '#ffffff';
+            }
+
             const qrWrapper = document.createElement('div');
             qrWrapper.classList.add('zone-content');
             zone.appendChild(qrWrapper);
-            
+
             // Générer le vrai code-barres après ajout au DOM
             // (utilise setTimeout pour s'assurer que les dimensions sont calculées)
             setTimeout(() => {
@@ -4141,7 +4147,13 @@ document.addEventListener('DOMContentLoaded', () => {
             zone.style.height = (zoneData.h || defaultHeight) + 'px';
             zone.style.left = (zoneData.x !== undefined ? zoneData.x : zoneX) + 'px';
             zone.style.top = (zoneData.y !== undefined ? zoneData.y : zoneY) + 'px';
-            zone.style.backgroundColor = '#ffffff';
+            
+            // Fond : respecter isTransparent et bgColor (comme les autres types de zones)
+            if (zoneData.isTransparent) {
+                zone.style.backgroundColor = 'transparent';
+            } else {
+                zone.style.backgroundColor = zoneData.bgColor || '#ffffff';
+            }
             
             // Badge type de code-barres (en haut à gauche)
             const typeBadge = document.createElement('span');
@@ -4152,6 +4164,12 @@ document.addEventListener('DOMContentLoaded', () => {
             // Container preview
             const preview = document.createElement('div');
             preview.className = 'barcode-preview';
+            // Appliquer le même fond au container preview
+            if (zoneData.isTransparent) {
+                preview.style.backgroundColor = 'transparent';
+            } else {
+                preview.style.backgroundColor = zoneData.bgColor || '#ffffff';
+            }
             
             // Container pour le code-barres généré
             const svgContainer = document.createElement('div');
@@ -14511,6 +14529,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (zoneType === 'qr') {
                     zoneEl.classList.add('zone-qr');
+                    
+                    // Fond (doit être appliqué AVANT updateQrZoneDisplay)
+                    if (data.isTransparent) {
+                        zoneEl.style.backgroundColor = 'transparent';
+                    } else {
+                        zoneEl.style.backgroundColor = data.bgColor || '#ffffff';
+                    }
+                    
                     // Régénérer le vrai code-barres
                     setTimeout(() => updateQrZoneDisplay(id), 10);
                     if (data.locked) {
@@ -14523,6 +14549,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (zoneType === 'barcode') {
                     zoneEl.classList.add('barcode-zone');
+                    
+                    // Fond (doit être appliqué AVANT updateBarcodeZoneDisplay)
+                    if (data.isTransparent) {
+                        zoneEl.style.backgroundColor = 'transparent';
+                    } else {
+                        zoneEl.style.backgroundColor = data.bgColor || '#ffffff';
+                    }
+                    // Appliquer également le fond au container .barcode-preview
+                    const barcodePreview = zoneEl.querySelector('.barcode-preview');
+                    if (barcodePreview) {
+                        if (data.isTransparent) {
+                            barcodePreview.style.backgroundColor = 'transparent';
+                        } else {
+                            barcodePreview.style.backgroundColor = data.bgColor || '#ffffff';
+                        }
+                    }
+                    
                     // Régénérer le vrai code-barres
                     setTimeout(() => updateBarcodeZoneDisplay(id), 10);
                     if (data.locked) {
