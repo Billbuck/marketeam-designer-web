@@ -610,24 +610,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const barcodeFontsizeGroup = null; // SUPPRIMÉ
     const inputBarcodeColor = null; // SUPPRIMÉ
     
-    const inputImageSourceType = null; // SUPPRIMÉ
-    const inputImageChamp = null; // SUPPRIMÉ
-    const inputImageMode = null; // SUPPRIMÉ
-    const inputImageAlignH = null; // SUPPRIMÉ
-    const inputImageAlignV = null; // SUPPRIMÉ
-    const imageUploadGroup = null; // SUPPRIMÉ
-    const imageChampGroup = null; // SUPPRIMÉ
-    
-    // Éléments upload image (SUPPRIMÉS)
-    const btnImageUpload = null; // SUPPRIMÉ
-    const btnImageClear = null; // SUPPRIMÉ
-    const inputImageFile = null; // SUPPRIMÉ
-    const imageFileInfo = null; // SUPPRIMÉ
-    const imageFileName = null; // SUPPRIMÉ
-    const imageFileDimensions = null; // SUPPRIMÉ
-    const imageFileSize = null; // SUPPRIMÉ
-    const imageDpiIndicator = null; // SUPPRIMÉ
-    const imageDpiValue = null; // SUPPRIMÉ
+    // Note : Les références DOM pour les zones image sont maintenant dans la section
+    // "Toolbar Image (POC)" plus bas (lignes ~700+)
     
     // Bouton Ajuster au contenu (SUPPRIMÉ)
     const btnSnapToContent = null; // SUPPRIMÉ
@@ -693,6 +677,93 @@ document.addEventListener('DOMContentLoaded', () => {
     const quillColorSwatch = document.getElementById('quill-color-swatch');
     const quillBgColorSwatch = document.getElementById('quill-bg-color-swatch');
     const quillBorderColorSwatch = document.getElementById('quill-border-color-swatch');
+    
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // Toolbar Image (POC) - Références DOM
+    // ═══════════════════════════════════════════════════════════════════════════════
+    
+    /** @type {HTMLElement|null} Container principal de la toolbar image */
+    const imageToolbar = document.getElementById('image-toolbar');
+    /** @type {HTMLElement|null} Header déplaçable de la toolbar image */
+    const imageToolbarHeader = document.getElementById('image-toolbar-header');
+    /** @type {HTMLElement|null} Bouton fermer de la toolbar image */
+    const imageToolbarCloseBtn = document.getElementById('image-toolbar-close');
+    
+    // Contrôles Section Page
+    /** @type {HTMLSelectElement|null} Dropdown page (recto/verso) */
+    const imageInputPage = document.getElementById('image-input-page');
+    
+    // Contrôles Section Source
+    /** @type {HTMLSelectElement|null} Dropdown type source (fixe/champ) */
+    const imageInputSourceType = document.getElementById('image-input-source-type');
+    /** @type {HTMLButtonElement|null} Bouton importer image */
+    const imageBtnImport = document.getElementById('image-btn-import');
+    /** @type {HTMLButtonElement|null} Bouton vider image */
+    const imageBtnClear = document.getElementById('image-btn-clear');
+    /** @type {HTMLElement|null} Zone info fichier */
+    const imageFileInfo = document.getElementById('image-file-info');
+    /** @type {HTMLElement|null} Groupe upload (visible si type = fixe) */
+    const imageUploadGroup = document.getElementById('image-upload-group');
+    /** @type {HTMLElement|null} Groupe champ de fusion (visible si type = champ) */
+    const imageChampGroup = document.getElementById('image-champ-group');
+    /** @type {HTMLSelectElement|null} Dropdown champ de fusion */
+    const imageInputChamp = document.getElementById('image-input-champ');
+    /** @type {HTMLInputElement|null} Input fichier caché */
+    const imageFileInput = document.getElementById('image-file-input');
+    
+    // Contrôles Section Résolution
+    /** @type {HTMLElement|null} Indicateur DPI */
+    const imageDpiIndicator = document.getElementById('image-dpi-indicator');
+    
+    // Contrôles Section Affichage
+    /** @type {HTMLSelectElement|null} Dropdown mode affichage */
+    const imageInputMode = document.getElementById('image-input-mode');
+    /** @type {HTMLElement|null} Toggle-group alignement horizontal */
+    const imageAlignHGroup = document.getElementById('image-align-h-group');
+    /** @type {HTMLElement|null} Toggle-group alignement vertical */
+    const imageAlignVGroup = document.getElementById('image-align-v-group');
+    
+    // Contrôles Section Fond
+    /** @type {HTMLElement|null} Wrapper checkbox transparent */
+    const imageChkTransparentWrapper = document.getElementById('image-chk-transparent-wrapper');
+    /** @type {HTMLInputElement|null} Checkbox transparent (hidden) */
+    const imageChkTransparent = document.getElementById('image-chk-transparent');
+    /** @type {HTMLElement|null} Row couleur fond (conditionnelle) */
+    const imageBgColorRow = document.getElementById('image-bg-color-row');
+    /** @type {HTMLInputElement|null} Input couleur fond */
+    const imageInputBgColor = document.getElementById('image-input-bg-color');
+    /** @type {HTMLElement|null} Swatch couleur fond */
+    const imageBgColorSwatch = document.getElementById('image-bg-color-swatch');
+    
+    // Contrôles Section Bordure
+    /** @type {HTMLInputElement|null} Spinner épaisseur bordure */
+    const imageInputBorderWidth = document.getElementById('image-input-border-width');
+    /** @type {HTMLElement|null} Row style bordure (conditionnelle) */
+    const imageBorderStyleRow = document.getElementById('image-border-style-row');
+    /** @type {HTMLSelectElement|null} Select style bordure */
+    const imageInputBorderStyle = document.getElementById('image-input-border-style');
+    /** @type {HTMLElement|null} Row couleur bordure (conditionnelle) */
+    const imageBorderColorRow = document.getElementById('image-border-color-row');
+    /** @type {HTMLInputElement|null} Input couleur bordure */
+    const imageInputBorderColor = document.getElementById('image-input-border-color');
+    /** @type {HTMLElement|null} Swatch couleur bordure */
+    const imageBorderColorSwatch = document.getElementById('image-border-color-swatch');
+    
+    // Contrôles Section Géométrie
+    /** @type {HTMLInputElement|null} Input position X (mm) */
+    const imageValX = document.getElementById('image-val-x');
+    /** @type {HTMLInputElement|null} Input position Y (mm) */
+    const imageValY = document.getElementById('image-val-y');
+    /** @type {HTMLInputElement|null} Input largeur (mm) */
+    const imageValW = document.getElementById('image-val-w');
+    /** @type {HTMLInputElement|null} Input hauteur (mm) */
+    const imageValH = document.getElementById('image-val-h');
+    
+    // Contrôles Section Zone
+    /** @type {HTMLElement|null} Wrapper checkbox verrouiller */
+    const imageChkLockedWrapper = document.getElementById('image-chk-locked-wrapper');
+    /** @type {HTMLInputElement|null} Checkbox verrouiller (hidden) */
+    const imageChkLocked = document.getElementById('image-chk-locked');
     
     // Fonction pour mettre à jour l'affichage du spin button d'épaisseur de bordure
     function updateBorderWidthDisplay(value) {
@@ -842,6 +913,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (onChange) onChange(value);
             });
         });
+    }
+    
+    /**
+     * Récupère la valeur active d'un toggle-group POC.
+     * 
+     * @param {string} groupId - ID du conteneur
+     * @returns {string|null} Valeur du bouton actif ou null si aucun
+     */
+    function getToggleGroupPocValue(groupId) {
+        const group = document.getElementById(groupId);
+        if (!group) return null;
+        
+        const activeBtn = group.querySelector('.toggle-btn-poc.active');
+        return activeBtn ? activeBtn.dataset.value : null;
     }
     
     /**
@@ -2341,32 +2426,42 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
-     * Met à jour l'affichage des infos fichier dans le panneau
+     * Met à jour l'affichage des infos fichier dans le panneau (structure POC)
      * @param {Object} source - Données source de la zone image
      */
     function updateImageFileInfoDisplay(source) {
         if (!source || !source.imageBase64) {
-            // Pas d'image : masquer les infos
-            if (imageFileInfo) imageFileInfo.style.display = 'none';
-            if (imageDpiIndicator) imageDpiIndicator.style.display = 'none';
-            if (btnImageClear) btnImageClear.disabled = true;
+            // Pas d'image : afficher le placeholder
+            if (imageFileInfo) {
+                imageFileInfo.className = 'file-info-poc empty';
+                imageFileInfo.innerHTML = 'Aucune image sélectionnée';
+            }
+            if (imageDpiIndicator) {
+                imageDpiIndicator.className = 'dpi-indicator-poc';
+                imageDpiIndicator.innerHTML = '— Aucune image';
+            }
+            if (imageBtnClear) imageBtnClear.disabled = true;
             return;
         }
         
-        // Afficher les infos
+        // Afficher les infos (structure POC)
         if (imageFileInfo) {
-            imageFileInfo.style.display = 'block';
-            if (imageFileName) imageFileName.textContent = source.nomOriginal || 'image';
-            if (imageFileDimensions) {
-                imageFileDimensions.textContent = `${source.largeurPx} × ${source.hauteurPx} px`;
-            }
-            if (imageFileSize) {
-                imageFileSize.textContent = formatFileSize(source.poidsCompresse || source.poidsBrut || 0);
-            }
+            imageFileInfo.className = 'file-info-poc';
+            const fileName = source.nomOriginal || 'image';
+            const dimensions = `${source.largeurPx || 0} × ${source.hauteurPx || 0} px`;
+            const fileSize = formatFileSize(source.poidsCompresse || source.poidsBrut || 0);
+            
+            imageFileInfo.innerHTML = `
+                <div class="file-info-name-poc">📎 ${fileName}</div>
+                <div class="file-info-details-poc">
+                    <span>${dimensions}</span>
+                    <span>${fileSize}</span>
+                </div>
+            `;
         }
         
         // Activer le bouton Vider
-        if (btnImageClear) btnImageClear.disabled = false;
+        if (imageBtnClear) imageBtnClear.disabled = false;
         
         // Mettre à jour l'indicateur DPI
         updateDpiIndicator();
@@ -2613,20 +2708,16 @@ document.addEventListener('DOMContentLoaded', () => {
             state = getDpiState(dpi, false);
         }
         
-        // Mettre à jour l'affichage
-        if (imageDpiIndicator && imageDpiValue) {
-            imageDpiIndicator.style.display = 'block';
-            
+        // Mettre à jour l'affichage (structure POC)
+        if (imageDpiIndicator) {
             const displayInfo = getDpiDisplayInfo(dpi, state);
             
-            // Mettre à jour la classe CSS
-            imageDpiValue.className = 'dpi-value dpi-' + state;
+            // Mettre à jour la classe CSS (dpi-indicator-poc + dpi-good/warning/error)
+            imageDpiIndicator.className = 'dpi-indicator-poc dpi-' + state;
             
-            // Mettre à jour le contenu
-            imageDpiValue.innerHTML = `
-                <span class="material-icons dpi-icon">${displayInfo.icon}</span>
-                <span class="dpi-text">${displayInfo.text}</span>
-            `;
+            // Mettre à jour le contenu avec emoji + texte
+            const emoji = state === 'good' ? '✅' : state === 'warning' ? '⚠️' : state === 'vector' ? '🔷' : '❌';
+            imageDpiIndicator.innerHTML = `${emoji} ${displayInfo.text}`;
         }
         
         return { dpi, state };
@@ -5542,10 +5633,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Rétrocompatibilité : 'url' devient 'fixe' dans le select
             const selectType = source.type === 'url' ? 'fixe' : source.type;
-            if (inputImageSourceType) inputImageSourceType.value = selectType;
-            if (inputImageMode) inputImageMode.value = redim.mode;
-            if (inputImageAlignH) inputImageAlignH.value = redim.alignementH;
-            if (inputImageAlignV) inputImageAlignV.value = redim.alignementV;
+            if (imageInputSourceType) imageInputSourceType.value = selectType;
+            if (imageInputMode) imageInputMode.value = redim.mode;
+            setToggleGroupPocValue('image-align-h-group', redim.alignementH);
+            setToggleGroupPocValue('image-align-v-group', redim.alignementV);
             
             // Afficher le bon groupe selon le type
             // 'fixe' : afficher le groupe upload
@@ -7104,9 +7195,9 @@ document.addEventListener('DOMContentLoaded', () => {
      * Remplit le select des champs de fusion de type IMG
      */
     function populateImageFieldsSelect(selectedValue) {
-        if (!inputImageChamp) return;
+        if (!imageInputChamp) return;
         
-        inputImageChamp.innerHTML = '';
+        imageInputChamp.innerHTML = '';
         
         // Récupérer les champs de fusion de type IMG
         const champs = documentState.champsFusion || [];
@@ -7119,7 +7210,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const emptyOption = document.createElement('option');
         emptyOption.value = '';
         emptyOption.textContent = '-- Sélectionner --';
-        inputImageChamp.appendChild(emptyOption);
+        imageInputChamp.appendChild(emptyOption);
         
         imgChamps.forEach(champ => {
             const option = document.createElement('option');
@@ -7127,7 +7218,7 @@ document.addEventListener('DOMContentLoaded', () => {
             option.value = fieldName;
             option.textContent = fieldName;
             if (fieldName === selectedValue) option.selected = true;
-            inputImageChamp.appendChild(option);
+            imageInputChamp.appendChild(option);
         });
     }
     
@@ -7519,8 +7610,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (zoneData.systeme) return;
         
         // Mettre à jour la source (avec vérifications null)
-        if (inputImageSourceType) {
-            const sourceType = inputImageSourceType.value;
+        if (imageInputSourceType) {
+            const sourceType = imageInputSourceType.value;
             
             // Préserver les données existantes (base64, dimensions, etc.)
             const existingSource = zoneData.source || {};
@@ -7529,7 +7620,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 type: sourceType,
                 // Pour 'champ' : utiliser le nom du champ de fusion
                 // Pour 'fixe' : valeur vide (image stockée en base64)
-                valeur: sourceType === 'champ' ? (inputImageChamp?.value || '') : '',
+                valeur: sourceType === 'champ' ? (imageInputChamp?.value || '') : '',
                 // Propriétés pour images uploadées (préservées si existantes)
                 imageBase64: existingSource.imageBase64 || null,
                 nomOriginal: existingSource.nomOriginal || null,
@@ -7541,11 +7632,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Mettre à jour le redimensionnement (avec vérifications null)
-        if (inputImageMode && inputImageAlignH && inputImageAlignV) {
+        if (imageInputMode) {
             zoneData.redimensionnement = {
-                mode: inputImageMode.value,
-                alignementH: inputImageAlignH.value,
-                alignementV: inputImageAlignV.value
+                mode: imageInputMode.value,
+                alignementH: getToggleGroupPocValue('image-align-h-group') || 'center',
+                alignementV: getToggleGroupPocValue('image-align-v-group') || 'middle'
             };
         }
         
@@ -7951,8 +8042,8 @@ document.addEventListener('DOMContentLoaded', () => {
      *   - chkCopyfit, chkTransparent, chkLock
      * 
      * Listeners image :
-     *   - inputImageSourceType, inputImageChamp, inputImageMode
-     *   - inputImageAlignH, inputImageAlignV, inputImageFile
+     *   - imageInputSourceType, imageInputChamp, imageInputMode
+     *   - imageAlignHGroup, imageAlignVGroup, imageFileInput
      * 
      * Listeners code-barres :
      *   - inputBarcodeName, inputBarcodeType, inputBarcodeField
@@ -8083,9 +8174,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- LISTENERS POUR ZONES IMAGE ---
     
-    if (inputImageSourceType) {
-        inputImageSourceType.addEventListener('change', () => {
-            const sourceType = inputImageSourceType.value;
+    if (imageInputSourceType) {
+        imageInputSourceType.addEventListener('change', () => {
+            const sourceType = imageInputSourceType.value;
             const isChamp = sourceType === 'champ';
             
             // 'fixe' : afficher le groupe upload
@@ -8099,15 +8190,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    if (inputImageChamp) {
-        inputImageChamp.addEventListener('change', () => {
+    if (imageInputChamp) {
+        imageInputChamp.addEventListener('change', () => {
             updateActiveImageZoneData();
             saveState();
         });
     }
     
-    if (inputImageMode) {
-        inputImageMode.addEventListener('change', () => {
+    if (imageInputMode) {
+        imageInputMode.addEventListener('change', () => {
             updateActiveImageZoneData();
             updateDpiIndicator(); // Recalculer le DPI avec le nouveau mode
             // Mettre à jour le badge DPI externe
@@ -8119,34 +8210,31 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    if (inputImageAlignH) {
-        inputImageAlignH.addEventListener('change', () => {
-            updateActiveImageZoneData();
-            saveState();
-        });
-    }
+    // Initialisation des toggle-groups alignement image (POC)
+    initToggleGroupPoc('image-align-h-group', () => {
+        updateActiveImageZoneData();
+        saveState();
+    });
     
-    if (inputImageAlignV) {
-        inputImageAlignV.addEventListener('change', () => {
-            updateActiveImageZoneData();
-            saveState();
-        });
-    }
+    initToggleGroupPoc('image-align-v-group', () => {
+        updateActiveImageZoneData();
+        saveState();
+    });
     
     // ========================================
     // EVENT LISTENERS - Upload Image
     // ========================================
     
     // Bouton Importer : ouvre le sélecteur de fichier
-    if (btnImageUpload) {
-        btnImageUpload.addEventListener('click', () => {
-            if (inputImageFile) inputImageFile.click();
+    if (imageBtnImport) {
+        imageBtnImport.addEventListener('click', () => {
+            if (imageFileInput) imageFileInput.click();
         });
     }
     
     // Sélection d'un fichier
-    if (inputImageFile) {
-        inputImageFile.addEventListener('change', async (e) => {
+    if (imageFileInput) {
+        imageFileInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
             
@@ -8235,8 +8323,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Bouton Vider : supprime l'image de la zone
-    if (btnImageClear) {
-        btnImageClear.addEventListener('click', () => {
+    if (imageBtnClear) {
+        imageBtnClear.addEventListener('click', () => {
             // Vérifier qu'une zone image est sélectionnée
             if (selectedZoneIds.length !== 1) return;
             const selectedId = selectedZoneIds[0];

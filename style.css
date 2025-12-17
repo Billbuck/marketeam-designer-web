@@ -2444,3 +2444,137 @@ body.in-iframe .toolbar {
 .toolbar-content-poc::-webkit-scrollbar-thumb:hover {
     background: var(--poc-text-secondary);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   COMPOSANTS SPÉCIFIQUES TOOLBAR IMAGE (POC)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Icône titre toolbar */
+.toolbar-title-icon {
+    font-size: 14px;
+    margin-right: 4px;
+}
+
+/* Indicateur DPI POC */
+.dpi-indicator-poc {
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f5f5f5;
+    color: var(--poc-text-secondary);
+    border: 1px solid var(--poc-border-color);
+}
+
+.dpi-indicator-poc.dpi-good {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #a5d6a7;
+}
+
+.dpi-indicator-poc.dpi-warning {
+    background: #fff3e0;
+    color: #ef6c00;
+    border: 1px solid #ffcc80;
+}
+
+.dpi-indicator-poc.dpi-error {
+    background: #ffebee;
+    color: #c62828;
+    border: 1px solid #ef9a9a;
+}
+
+/* Zone Info Fichier POC */
+.file-info-poc {
+    background: #f5f5f5;
+    border-radius: 6px;
+    padding: 10px;
+    font-size: 12px;
+    margin-top: 6px;
+}
+
+.file-info-poc.empty {
+    color: var(--poc-text-secondary);
+    font-style: italic;
+    text-align: center;
+}
+
+.file-info-poc .file-info-name-poc {
+    font-weight: 600;
+    color: var(--poc-text-primary);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.file-info-poc .file-info-details-poc {
+    color: var(--poc-text-secondary);
+    display: flex;
+    gap: 10px;
+}
+
+/* Boutons Upload POC */
+.btn-upload-group-poc {
+    display: flex;
+    gap: 6px;
+}
+
+.btn-upload-poc {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.15s;
+    width: auto;
+    margin: 0;
+}
+
+.btn-upload-primary-poc {
+    background: var(--poc-theme-primary);
+    color: white;
+    border: none;
+}
+
+.btn-upload-primary-poc:hover {
+    background: var(--poc-theme-primary-dark);
+}
+
+.btn-upload-secondary-poc {
+    background: white;
+    color: var(--poc-text-primary);
+    border: 1px solid var(--poc-border-color);
+}
+
+.btn-upload-secondary-poc:hover {
+    border-color: var(--poc-theme-primary);
+}
+
+.btn-upload-secondary-poc:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-upload-secondary-poc:disabled:hover {
+    border-color: var(--poc-border-color);
+}
+
+/* Groupe Conditionnel POC */
+.conditional-group-poc {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.conditional-group-poc.hidden {
+    display: none;
+}

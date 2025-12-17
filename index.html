@@ -616,6 +616,380 @@
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- TOOLBAR IMAGE FLOTTANTE - Design POC toolbar-image.html          -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div class="toolbar-poc" id="image-toolbar" style="display: none;" data-toolbar-for="image">
+        <!-- Header déplaçable -->
+        <div class="toolbar-header-poc" id="image-toolbar-header">
+            <span class="toolbar-title-poc">
+                <span class="toolbar-title-icon">🖼️</span>
+                PROPRIÉTÉS IMAGE
+            </span>
+            <button type="button" class="toolbar-close-poc" id="image-toolbar-close" title="Fermer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Content -->
+        <div class="toolbar-content-poc">
+            
+            <!-- ==================== SECTION PAGE ==================== -->
+            <div class="section-poc" data-section-id="page">
+                <div class="section-header-poc">Page</div>
+                <div class="section-content-poc">
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Page</label>
+                        <div class="form-control-poc">
+                            <div class="dropdown-poc">
+                                <select class="dropdown-btn-poc dropdown-select-poc" id="image-input-page">
+                                    <option value="recto" selected>Recto</option>
+                                    <option value="verso">Verso</option>
+                                </select>
+                                <span class="dropdown-arrow-poc dropdown-arrow-select-poc">
+                                    <svg viewBox="0 0 12 8">
+                                        <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION SOURCE ==================== -->
+            <div class="section-poc" data-section-id="source">
+                <div class="section-header-poc">Source de l'image</div>
+                <div class="section-content-poc">
+                    <!-- Type de source -->
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Type</label>
+                        <div class="form-control-poc">
+                            <div class="dropdown-poc">
+                                <select class="dropdown-btn-poc dropdown-select-poc" id="image-input-source-type">
+                                    <option value="fixe" selected>Image fixe</option>
+                                    <option value="champ">Champ de fusion</option>
+                                </select>
+                                <span class="dropdown-arrow-poc dropdown-arrow-select-poc">
+                                    <svg viewBox="0 0 12 8">
+                                        <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Groupe Upload (visible si type = fixe) -->
+                    <div class="conditional-group-poc" id="image-upload-group">
+                        <!-- Boutons Importer / Vider -->
+                        <div class="btn-upload-group-poc">
+                            <button type="button" class="btn-upload-poc btn-upload-primary-poc" id="image-btn-import">
+                                📁 Importer
+                            </button>
+                            <button type="button" class="btn-upload-poc btn-upload-secondary-poc" id="image-btn-clear" disabled>
+                                🗑️ Vider
+                            </button>
+                        </div>
+
+                        <!-- Info fichier -->
+                        <div class="file-info-poc empty" id="image-file-info">
+                            Aucune image sélectionnée
+                        </div>
+                    </div>
+
+                    <!-- Groupe Champ de fusion (visible si type = champ) -->
+                    <div class="conditional-group-poc hidden" id="image-champ-group">
+                        <div class="form-row-poc">
+                            <label class="form-label-poc">Champ</label>
+                            <div class="form-control-poc">
+                                <div class="dropdown-poc">
+                                    <select class="dropdown-btn-poc dropdown-select-poc" id="image-input-champ">
+                                        <option value="">Sélectionner...</option>
+                                    </select>
+                                    <span class="dropdown-arrow-poc dropdown-arrow-select-poc">
+                                        <svg viewBox="0 0 12 8">
+                                            <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                        </svg>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION RÉSOLUTION ==================== -->
+            <div class="section-poc" data-section-id="resolution">
+                <div class="section-header-poc">Résolution</div>
+                <div class="section-content-poc">
+                    <div class="dpi-indicator-poc" id="image-dpi-indicator">
+                        — Aucune image
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION AFFICHAGE ==================== -->
+            <div class="section-poc" data-section-id="display">
+                <div class="section-header-poc">Affichage</div>
+                <div class="section-content-poc">
+                    <!-- Mode de redimensionnement -->
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Mode</label>
+                        <div class="form-control-poc">
+                            <div class="dropdown-poc">
+                                <select class="dropdown-btn-poc dropdown-select-poc" id="image-input-mode">
+                                    <option value="contain" selected>Ajuster dans le cadre</option>
+                                    <option value="cover">Remplir le cadre</option>
+                                    <option value="stretch">Étirer</option>
+                                    <option value="original">Taille originale</option>
+                                </select>
+                                <span class="dropdown-arrow-poc dropdown-arrow-select-poc">
+                                    <svg viewBox="0 0 12 8">
+                                        <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Alignement horizontal -->
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Horizontal</label>
+                        <div class="form-control-poc">
+                            <div class="toggle-group-poc" id="image-align-h-group">
+                                <button type="button" class="toggle-btn-poc" data-value="left" title="Gauche">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M4 21V3H6V21H4ZM8 17V15H20V17H8ZM8 13V11H16V13H8ZM8 9V7H20V9H8Z"/>
+                                    </svg>
+                                </button>
+                                <button type="button" class="toggle-btn-poc active" data-value="center" title="Centre">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M11 21V17H4V15H11V13H7V11H11V9H4V7H11V3H13V7H20V9H13V11H17V13H13V15H20V17H13V21H11Z"/>
+                                    </svg>
+                                </button>
+                                <button type="button" class="toggle-btn-poc" data-value="right" title="Droite">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M18 21V3H20V21H18ZM4 17V15H16V17H4ZM8 13V11H16V13H8ZM4 9V7H16V9H4Z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Alignement vertical -->
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Vertical</label>
+                        <div class="form-control-poc">
+                            <div class="toggle-group-poc" id="image-align-v-group">
+                                <button type="button" class="toggle-btn-poc" data-value="top" title="Haut">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M3 4H21V6H3V4ZM7 8H9V20H7V8ZM11 8H13V16H11V8ZM15 8H17V20H15V8Z"/>
+                                    </svg>
+                                </button>
+                                <button type="button" class="toggle-btn-poc active" data-value="middle" title="Milieu">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M3 11H7V4H9V11H11V7H13V11H15V4H17V11H21V13H17V20H15V13H13V17H11V13H9V20H7V13H3V11Z"/>
+                                    </svg>
+                                </button>
+                                <button type="button" class="toggle-btn-poc" data-value="bottom" title="Bas">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M3 18H21V20H3V18ZM7 4H9V16H7V4ZM11 8H13V16H11V8ZM15 4H17V16H15V4Z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION FOND ==================== -->
+            <div class="section-poc" data-section-id="background">
+                <div class="section-header-poc">Fond</div>
+                <div class="section-content-poc">
+                    <!-- Transparent -->
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Transparent</label>
+                        <div class="form-control-poc">
+                            <div class="checkbox-poc checked" id="image-chk-transparent-wrapper">
+                                <input type="checkbox" id="image-chk-transparent" checked style="display: none;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Couleur (visible si NON transparent) -->
+                    <div class="form-row-poc" id="image-bg-color-row" style="display: none;">
+                        <label class="form-label-poc">Couleur</label>
+                        <div class="form-control-poc">
+                            <div class="color-picker-poc">
+                                <div class="color-swatch-poc" id="image-bg-color-swatch" style="background: #ffffff;">
+                                    <input type="color" id="image-input-bg-color" value="#ffffff" style="opacity: 0; width: 100%; height: 100%; cursor: pointer;">
+                                </div>
+                                <div class="cmjn-inputs-poc">
+                                    <div class="cmjn-field-poc">
+                                        <span class="cmjn-label-poc">Cyan</span>
+                                        <input type="text" class="cmjn-input-poc" id="image-bg-c" value="0">
+                                    </div>
+                                    <div class="cmjn-field-poc">
+                                        <span class="cmjn-label-poc">Magenta</span>
+                                        <input type="text" class="cmjn-input-poc" id="image-bg-m" value="0">
+                                    </div>
+                                    <div class="cmjn-field-poc">
+                                        <span class="cmjn-label-poc">Jaune</span>
+                                        <input type="text" class="cmjn-input-poc" id="image-bg-y" value="0">
+                                    </div>
+                                    <div class="cmjn-field-poc">
+                                        <span class="cmjn-label-poc">Noir</span>
+                                        <input type="text" class="cmjn-input-poc" id="image-bg-k" value="0">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION BORDURE ==================== -->
+            <div class="section-poc" data-section-id="border">
+                <div class="section-header-poc">Bordure</div>
+                <div class="section-content-poc">
+                    <!-- Épaisseur -->
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Épaisseur</label>
+                        <div class="form-control-poc">
+                            <div class="spinner-poc">
+                                <input type="text" class="spinner-input-poc" id="image-input-border-width" value="0">
+                                <div class="spinner-buttons-poc">
+                                    <button type="button" class="spinner-btn-poc" data-dir="up">
+                                        <svg viewBox="0 0 12 8">
+                                            <path d="M2 7 C0.5 7 0.5 6 1.2 5.2 L5 1.2 C5.5 0.6 6.5 0.6 7 1.2 L10.8 5.2 C11.5 6 11.5 7 10 7 Z"/>
+                                        </svg>
+                                    </button>
+                                    <button type="button" class="spinner-btn-poc" data-dir="down">
+                                        <svg viewBox="0 0 12 8">
+                                            <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <span class="spinner-unit-poc">px</span>
+                        </div>
+                    </div>
+                    <!-- Style (visible si épaisseur > 0) -->
+                    <div class="form-row-poc" id="image-border-style-row" style="display: none;">
+                        <label class="form-label-poc">Style</label>
+                        <div class="form-control-poc">
+                            <div class="dropdown-poc">
+                                <select class="dropdown-btn-poc dropdown-select-poc" id="image-input-border-style">
+                                    <option value="solid" selected>Plein</option>
+                                    <option value="dashed">Tirets</option>
+                                    <option value="dotted">Points</option>
+                                </select>
+                                <span class="dropdown-arrow-poc dropdown-arrow-select-poc">
+                                    <svg viewBox="0 0 12 8">
+                                        <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Couleur (visible si épaisseur > 0) -->
+                    <div class="form-row-poc" id="image-border-color-row" style="display: none;">
+                        <label class="form-label-poc">Couleur</label>
+                        <div class="form-control-poc">
+                            <div class="color-picker-poc">
+                                <div class="color-swatch-poc" id="image-border-color-swatch" style="background: #000000;">
+                                    <input type="color" id="image-input-border-color" value="#000000" style="opacity: 0; width: 100%; height: 100%; cursor: pointer;">
+                                </div>
+                                <div class="cmjn-inputs-poc">
+                                    <div class="cmjn-field-poc">
+                                        <span class="cmjn-label-poc">Cyan</span>
+                                        <input type="text" class="cmjn-input-poc" id="image-border-c" value="0">
+                                    </div>
+                                    <div class="cmjn-field-poc">
+                                        <span class="cmjn-label-poc">Magenta</span>
+                                        <input type="text" class="cmjn-input-poc" id="image-border-m" value="0">
+                                    </div>
+                                    <div class="cmjn-field-poc">
+                                        <span class="cmjn-label-poc">Jaune</span>
+                                        <input type="text" class="cmjn-input-poc" id="image-border-y" value="0">
+                                    </div>
+                                    <div class="cmjn-field-poc">
+                                        <span class="cmjn-label-poc">Noir</span>
+                                        <input type="text" class="cmjn-input-poc" id="image-border-k" value="100">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION GÉOMÉTRIE ==================== -->
+            <div class="section-poc" data-section-id="geometry">
+                <div class="section-header-poc">Géométrie</div>
+                <div class="section-content-poc">
+                    <div class="geo-grid-poc">
+                        <div class="geo-field-poc">
+                            <label class="geo-label-poc">X</label>
+                            <div class="geo-input-wrapper-poc">
+                                <input type="text" id="image-val-x" value="0,0">
+                                <span class="unit-poc">mm</span>
+                            </div>
+                        </div>
+                        <div class="geo-field-poc">
+                            <label class="geo-label-poc">Y</label>
+                            <div class="geo-input-wrapper-poc">
+                                <input type="text" id="image-val-y" value="0,0">
+                                <span class="unit-poc">mm</span>
+                            </div>
+                        </div>
+                        <div class="geo-field-poc">
+                            <label class="geo-label-poc">L</label>
+                            <div class="geo-input-wrapper-poc">
+                                <input type="text" id="image-val-w" value="80,0">
+                                <span class="unit-poc">mm</span>
+                            </div>
+                        </div>
+                        <div class="geo-field-poc">
+                            <label class="geo-label-poc">H</label>
+                            <div class="geo-input-wrapper-poc">
+                                <input type="text" id="image-val-h" value="60,0">
+                                <span class="unit-poc">mm</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== SECTION ZONE ==================== -->
+            <div class="section-poc" data-section-id="zone">
+                <div class="section-header-poc">Zone</div>
+                <div class="section-content-poc">
+                    <!-- Position Verrouiller -->
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Position</label>
+                        <div class="form-control-poc" style="justify-content: flex-start; gap: 8px;">
+                            <div class="checkbox-poc" id="image-chk-locked-wrapper">
+                                <input type="checkbox" id="image-chk-locked" style="display: none;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                            <span style="font-size: 12px; color: var(--poc-text-label);">Verrouiller</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Input fichier caché pour import image -->
+    <input type="file" id="image-file-input" accept="image/jpeg,image/png,image/gif,image/svg+xml,image/webp" style="display: none;">
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
     <!-- PHASE 5 : MINI-TOOLBAR CONTEXTUELLE (FORMATAGE PARTIEL QUILL)   -->
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <div class="mini-toolbar" id="mini-toolbar" style="display: none;">
