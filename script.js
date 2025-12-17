@@ -541,7 +541,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnExportJson = document.getElementById('btn-export-json');
     const btnImportJson = document.getElementById('btn-import-json');
     const inputImportJson = document.getElementById('input-import-json');
-    const coordsPanel = document.getElementById('coords-panel');
+    const coordsPanel = null; // SUPPRIMÉ - était #coords-panel
     
     // Boutons et éléments d'historique (Undo/Redo)
     const btnUndo = document.getElementById('btn-undo');
@@ -549,7 +549,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const historyPositionEl = document.getElementById('history-position');
     const historyTotalEl = document.getElementById('history-total');
     const undoRedoToast = document.getElementById('undo-redo-toast');
-    const lblSelected = document.getElementById('lbl-selected-zone');
+    const lblSelected = null; // SUPPRIMÉ - était #lbl-selected-zone
     
     // Contrôles de zoom
     const zoomSlider = document.getElementById('zoom-slider');
@@ -557,86 +557,85 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnZoomOut = document.getElementById('btn-zoom-out');
     const zoomValue = document.getElementById('zoom-value');
 
-    // Inputs du formulaire
-    const inputContent = document.getElementById('input-content');
-    const inputFont = document.getElementById('input-font');
-    const inputSize = document.getElementById('input-size');
-    const inputColor = document.getElementById('input-color');
-    const inputAlign = document.getElementById('input-align');
-    const inputValign = document.getElementById('input-valign');
-    // Nouveaux inputs
-    const inputBgColor = document.getElementById('input-bg-color');
-    const chkTransparent = document.getElementById('chk-transparent');
-    const chkLock = document.getElementById('chk-lock');
-    const chkCopyfit = document.getElementById('chk-copyfit'); // Copy Fitting
-    const inputLineHeight = document.getElementById('input-line-height'); // Interlignage
+    // Inputs du formulaire (SUPPRIMÉS - ancien panneau de propriétés)
+    const inputContent = null; // SUPPRIMÉ
+    const inputFont = null; // SUPPRIMÉ
+    const inputSize = null; // SUPPRIMÉ
+    const inputColor = null; // SUPPRIMÉ
+    const inputAlign = null; // SUPPRIMÉ
+    const inputValign = null; // SUPPRIMÉ
+    const inputBgColor = null; // SUPPRIMÉ
+    const chkTransparent = null; // SUPPRIMÉ
+    const chkLock = null; // SUPPRIMÉ
+    const chkCopyfit = null; // SUPPRIMÉ
+    const inputLineHeight = null; // SUPPRIMÉ
     
-    // Boutons de formatage partiel
-    const btnFormatBold = document.getElementById('btn-format-bold');
-    const btnFormatColor = document.getElementById('btn-format-color');
-    const btnFormatClear = document.getElementById('btn-format-clear');
+    // Boutons de formatage partiel (SUPPRIMÉS)
+    const btnFormatBold = null; // SUPPRIMÉ
+    const btnFormatColor = null; // SUPPRIMÉ
+    const btnFormatClear = null; // SUPPRIMÉ
     
     // Input color caché pour le formatage de texte
     const colorPickerInput = document.getElementById('color-picker-input');
     let savedColorSelection = null; // Sauvegarde la sélection pour le color picker
     
-    // Inputs de bordure
-    const inputBorderWidth = document.getElementById('input-border-width');
-    const inputBorderWidthDisplay = document.getElementById('input-border-width-display');
-    const inputBorderColor = document.getElementById('input-border-color');
-    const inputBorderStyle = document.getElementById('input-border-style');
+    // Inputs de bordure (SUPPRIMÉS)
+    const inputBorderWidth = null; // SUPPRIMÉ
+    const inputBorderWidthDisplay = null; // SUPPRIMÉ
+    const inputBorderColor = null; // SUPPRIMÉ
+    const inputBorderStyle = null; // SUPPRIMÉ
     
-    // Boutons d'arrangement (z-index)
-    const btnToFront = document.getElementById('btn-to-front');
-    const btnForward = document.getElementById('btn-forward');
-    const btnBackward = document.getElementById('btn-backward');
-    const btnToBack = document.getElementById('btn-to-back');
+    // Boutons d'arrangement (z-index) (SUPPRIMÉS)
+    const btnToFront = null; // SUPPRIMÉ
+    const btnForward = null; // SUPPRIMÉ
+    const btnBackward = null; // SUPPRIMÉ
+    const btnToBack = null; // SUPPRIMÉ
     
-    // Contrôle lignes vides
-    const inputEmptyLines = document.getElementById('input-empty-lines');
-    const emptyLinesSection = document.getElementById('empty-lines-section');
+    // Contrôle lignes vides (SUPPRIMÉS)
+    const inputEmptyLines = null; // SUPPRIMÉ
+    const emptyLinesSection = null; // SUPPRIMÉ
     
-    // Inputs pour zones image
-    const imagePropertiesSection = document.getElementById('image-properties-section');
-    const textPropertiesSection = document.getElementById('text-properties-section');
+    // Inputs pour zones image (SUPPRIMÉS)
+    const imagePropertiesSection = null; // SUPPRIMÉ
+    const textPropertiesSection = null; // SUPPRIMÉ
     
-    // Inputs pour zones code-barres
-    const barcodePropertiesSection = document.getElementById('barcode-properties-section');
-    const inputBarcodeName = document.getElementById('input-barcode-name');
-    const inputBarcodeType = document.getElementById('input-barcode-type');
-    const inputBarcodeField = document.getElementById('input-barcode-field');
-    const inputBarcodeReadable = document.getElementById('input-barcode-readable');
-    const barcodeReadableGroup = document.getElementById('barcode-readable-group');
-    const inputBarcodeFontsize = document.getElementById('input-barcode-fontsize');
-    const barcodeFontsizeGroup = document.getElementById('barcode-fontsize-group');
-    const inputBarcodeColor = document.getElementById('input-barcode-color');
+    // Inputs pour zones code-barres (SUPPRIMÉS)
+    const barcodePropertiesSection = null; // SUPPRIMÉ
+    const inputBarcodeName = null; // SUPPRIMÉ
+    const inputBarcodeType = null; // SUPPRIMÉ
+    const inputBarcodeField = null; // SUPPRIMÉ
+    const inputBarcodeReadable = null; // SUPPRIMÉ
+    const barcodeReadableGroup = null; // SUPPRIMÉ
+    const inputBarcodeFontsize = null; // SUPPRIMÉ
+    const barcodeFontsizeGroup = null; // SUPPRIMÉ
+    const inputBarcodeColor = null; // SUPPRIMÉ
     
-    const inputImageSourceType = document.getElementById('input-image-source-type');
-    const inputImageChamp = document.getElementById('input-image-champ');
-    const inputImageMode = document.getElementById('input-image-mode');
-    const inputImageAlignH = document.getElementById('input-image-align-h');
-    const inputImageAlignV = document.getElementById('input-image-align-v');
-    const imageUploadGroup = document.getElementById('image-upload-group');
-    const imageChampGroup = document.getElementById('image-champ-group');
+    const inputImageSourceType = null; // SUPPRIMÉ
+    const inputImageChamp = null; // SUPPRIMÉ
+    const inputImageMode = null; // SUPPRIMÉ
+    const inputImageAlignH = null; // SUPPRIMÉ
+    const inputImageAlignV = null; // SUPPRIMÉ
+    const imageUploadGroup = null; // SUPPRIMÉ
+    const imageChampGroup = null; // SUPPRIMÉ
     
-    // Éléments upload image
-    const btnImageUpload = document.getElementById('btn-image-upload');
-    const btnImageClear = document.getElementById('btn-image-clear');
-    const inputImageFile = document.getElementById('input-image-file');
-    const imageFileInfo = document.getElementById('image-file-info');
-    const imageFileName = document.getElementById('image-file-name');
-    const imageFileDimensions = document.getElementById('image-file-dimensions');
-    const imageFileSize = document.getElementById('image-file-size');
-    const imageDpiIndicator = document.getElementById('image-dpi-indicator');
-    const imageDpiValue = document.getElementById('image-dpi-value');
+    // Éléments upload image (SUPPRIMÉS)
+    const btnImageUpload = null; // SUPPRIMÉ
+    const btnImageClear = null; // SUPPRIMÉ
+    const inputImageFile = null; // SUPPRIMÉ
+    const imageFileInfo = null; // SUPPRIMÉ
+    const imageFileName = null; // SUPPRIMÉ
+    const imageFileDimensions = null; // SUPPRIMÉ
+    const imageFileSize = null; // SUPPRIMÉ
+    const imageDpiIndicator = null; // SUPPRIMÉ
+    const imageDpiValue = null; // SUPPRIMÉ
     
-    // Bouton Ajuster au contenu
-    const btnSnapToContent = document.getElementById('btn-snap-to-content');
+    // Bouton Ajuster au contenu (SUPPRIMÉ)
+    const btnSnapToContent = null; // SUPPRIMÉ
     
-    // Section déplacement de zone vers une autre page
-    const zonePageSection = document.getElementById('zone-page-section');
-    const inputZonePage = document.getElementById('input-zone-page');
-    const zonePageLock = document.getElementById('zone-page-lock');
+    // Section déplacement de zone vers une autre page (SUPPRIMÉS)
+    const zonePageSection = null; // SUPPRIMÉ
+    const inputZonePage = null; // SUPPRIMÉ
+    const zonePageLock = null; // SUPPRIMÉ
     
     // Navigation pages dynamique
     const pagesSection = document.getElementById('pages-section');
@@ -1363,16 +1362,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!ctrl) return;
             ctrl.disabled = !enabled;
         });
-        inputContent.placeholder = enabled ? "Ex: Cher {{NOM}}," : "Zone QR statique (non modifiable)";
+        if (inputContent) inputContent.placeholder = enabled ? "Ex: Cher {{NOM}}," : "Zone QR statique (non modifiable)";
     }
 
     setTextControlsEnabled(true);
 
-    // Inputs géométrie
-    const inputX = document.getElementById('val-x');
-    const inputY = document.getElementById('val-y');
-    const inputW = document.getElementById('val-w');
-    const inputH = document.getElementById('val-h');
+    // Inputs géométrie (SUPPRIMÉS - ancien panneau, remplacés par quill-val-x/y/w/h)
+    const inputX = null; // SUPPRIMÉ - était #val-x
+    const inputY = null; // SUPPRIMÉ - était #val-y
+    const inputW = null; // SUPPRIMÉ - était #val-w
+    const inputH = null; // SUPPRIMÉ - était #val-h
 
     // Champs de fusion
     const mergeFieldsContainer = document.getElementById('merge-fields-list');
@@ -4563,9 +4562,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (count === 0) {
             // Aucune sélection
             btnDelete.disabled = true;
-            coordsPanel.style.display = 'none';
-            coordsPanel.style.pointerEvents = 'none';
-            lblSelected.innerText = "-";
+            // coordsPanel supprimé - ne rien faire
         } else if (count === 1) {
             // Sélection unique : afficher les propriétés de la zone
             const id = selectedZoneIds[0];
@@ -4575,21 +4572,12 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Griser le bouton Supprimer si zone système
             btnDelete.disabled = isSysteme;
-            coordsPanel.style.display = 'block';
-            coordsPanel.style.pointerEvents = 'auto';
-            lblSelected.innerText = `Zone ${id.split('-')[1]}`;
-
-            // Charger les données de la zone unique
-            loadZoneDataToForm(id);
+            // coordsPanel supprimé - ne rien faire
+            // loadZoneDataToForm supprimé - toolbar Quill gère l'affichage
         } else {
             // Sélection multiple : afficher le nombre de zones
             btnDelete.disabled = false;
-            coordsPanel.style.display = 'block';
-            coordsPanel.style.pointerEvents = 'auto';
-            lblSelected.innerText = `${count} zones sélectionnées`;
-            
-            // Masquer ou désactiver les champs de propriétés en mode multi-sélection
-            setMultiSelectionMode(true);
+            // coordsPanel supprimé - ne rien faire
         }
 
         // Toolbar Quill (Phase 3) : affichage automatique
@@ -5248,16 +5236,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (barcodePropertiesSection) barcodePropertiesSection.style.display = 'none';
             
             setTextControlsEnabled(false);
-            inputContent.value = 'Zone QR statique (non modifiable)';
-            inputFont.value = 'Roboto';
-            inputSize.value = 12;
-            inputColor.value = '#000000';
-            inputAlign.value = 'center';
-            inputValign.value = 'middle';
-            inputBgColor.value = '#ffffff';
-            chkTransparent.checked = false;
-            chkCopyfit.checked = false;
-            inputLineHeight.value = 1.0;
+            if (inputContent) inputContent.value = 'Zone QR statique (non modifiable)';
+            if (inputFont) inputFont.value = 'Roboto';
+            if (inputSize) inputSize.value = 12;
+            if (inputColor) inputColor.value = '#000000';
+            if (inputAlign) inputAlign.value = 'center';
+            if (inputValign) inputValign.value = 'middle';
+            if (inputBgColor) inputBgColor.value = '#ffffff';
+            if (chkTransparent) chkTransparent.checked = false;
+            if (chkCopyfit) chkCopyfit.checked = false;
+            if (inputLineHeight) inputLineHeight.value = 1.0;
             // Bordures pour zone QR (pas applicable)
             if (inputBorderWidth) {
                 inputBorderWidth.value = 0;
@@ -5385,9 +5373,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (inputBorderStyle) inputBorderStyle.value = data.border?.style || 'solid';
             
             // Fond (contrôle commun - doit rester visible)
-            inputBgColor.value = data.bgColor || '#ffffff';
-            chkTransparent.checked = data.isTransparent !== undefined ? data.isTransparent : true;
-            inputBgColor.disabled = chkTransparent.checked;
+            if (inputBgColor) inputBgColor.value = data.bgColor || '#ffffff';
+            if (chkTransparent) chkTransparent.checked = data.isTransparent !== undefined ? data.isTransparent : true;
+            if (inputBgColor && chkTransparent) inputBgColor.disabled = chkTransparent.checked;
             
             // Verrouillage (contrôle commun)
             if (chkLock) chkLock.checked = data.locked || false;
@@ -5399,14 +5387,16 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Désactiver les contrôles texte pour éviter un conflit avec l'éditeur Quill
             setTextControlsEnabled(false);
-            inputContent.value = 'Zone Quill (éditez directement dans la zone).';
-            inputContent.placeholder = 'Zone Quill (édition dans la zone)';
+            if (inputContent) {
+                inputContent.value = 'Zone Quill (éditez directement dans la zone).';
+                inputContent.placeholder = 'Zone Quill (édition dans la zone)';
+            }
             
             // Afficher des valeurs par défaut (informatives)
-            inputFont.value = data.font || QUILL_DEFAULT_FONT;
-            inputSize.value = data.size || QUILL_DEFAULT_SIZE;
-            inputColor.value = data.color || QUILL_DEFAULT_COLOR;
-            inputLineHeight.value = data.lineHeight || QUILL_DEFAULT_LINE_HEIGHT;
+            if (inputFont) inputFont.value = data.font || QUILL_DEFAULT_FONT;
+            if (inputSize) inputSize.value = data.size || QUILL_DEFAULT_SIZE;
+            if (inputColor) inputColor.value = data.color || QUILL_DEFAULT_COLOR;
+            if (inputLineHeight) inputLineHeight.value = data.lineHeight || QUILL_DEFAULT_LINE_HEIGHT;
             
             // Fond/bordure/verrouillage : laisser visibles (mais désactivés via setTextControlsEnabled)
             if (chkLock) chkLock.checked = data.locked || false;
@@ -5436,16 +5426,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (barcodePropertiesSection) barcodePropertiesSection.style.display = 'none';
             
             setTextControlsEnabled(true);
-            inputContent.value = data.content || '';
-            inputFont.value = data.font || 'Roboto';
-            inputSize.value = data.size || 12;
-            inputColor.value = data.color || '#000000';
-            inputAlign.value = data.align || 'left';
-            inputValign.value = data.valign || 'top';
-            inputBgColor.value = data.bgColor || '#ffffff';
-            chkTransparent.checked = data.isTransparent !== undefined ? data.isTransparent : true;
-            chkCopyfit.checked = data.copyfit || false;
-            inputLineHeight.value = data.lineHeight !== undefined ? data.lineHeight : 1.2;
+            if (inputContent) inputContent.value = data.content || '';
+            if (inputFont) inputFont.value = data.font || 'Roboto';
+            if (inputSize) inputSize.value = data.size || 12;
+            if (inputColor) inputColor.value = data.color || '#000000';
+            if (inputAlign) inputAlign.value = data.align || 'left';
+            if (inputValign) inputValign.value = data.valign || 'top';
+            if (inputBgColor) inputBgColor.value = data.bgColor || '#ffffff';
+            if (chkTransparent) chkTransparent.checked = data.isTransparent !== undefined ? data.isTransparent : true;
+            if (chkCopyfit) chkCopyfit.checked = data.copyfit || false;
+            if (inputLineHeight) inputLineHeight.value = data.lineHeight !== undefined ? data.lineHeight : 1.2;
             
             // Initialiser la bordure si nécessaire
             if (!data.border) {
@@ -5474,16 +5464,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 zonesData[id].formatting = [];
             }
         }
-        chkLock.checked = data.locked || false;
+        if (chkLock) chkLock.checked = data.locked || false;
         
         // Activer/désactiver les champs de géométrie selon le verrouillage ou système
         const isLocked = data.locked || false;
         const isSysteme = data.systeme || false;
         const isReadOnly = isLocked || isSysteme;
-        inputX.disabled = isReadOnly;
-        inputY.disabled = isReadOnly;
-        inputW.disabled = isReadOnly;
-        inputH.disabled = isReadOnly;
+        if (inputX) inputX.disabled = isReadOnly;
+        if (inputY) inputY.disabled = isReadOnly;
+        if (inputW) inputW.disabled = isReadOnly;
+        if (inputH) inputH.disabled = isReadOnly;
         
         // Désactiver le checkbox de verrouillage si la zone est système
         if (chkLock) chkLock.disabled = isSysteme;
@@ -6211,8 +6201,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const contentEl = zoneEl.querySelector('.zone-content');
 
         if (zoneType === 'qr') {
-            zonesData[selectedId].locked = chkLock.checked;
-            if (chkLock.checked) {
+            if (chkLock) zonesData[selectedId].locked = chkLock.checked;
+            if (chkLock && chkLock.checked) {
                 zoneEl.classList.add('locked');
             } else {
                 zoneEl.classList.remove('locked');
@@ -6220,29 +6210,30 @@ document.addEventListener('DOMContentLoaded', () => {
             // Mettre à jour l'affichage des poignées (prend en compte sélection + verrouillage)
             updateHandlesVisibility();
             // Activer/désactiver les champs de géométrie selon le verrouillage
-            inputX.disabled = chkLock.checked;
-            inputY.disabled = chkLock.checked;
-            inputW.disabled = chkLock.checked;
-            inputH.disabled = chkLock.checked;
+            const isLockedQr = chkLock ? chkLock.checked : false;
+            if (inputX) inputX.disabled = isLockedQr;
+            if (inputY) inputY.disabled = isLockedQr;
+            if (inputW) inputW.disabled = isLockedQr;
+            if (inputH) inputH.disabled = isLockedQr;
             // Régénérer le code-barres avec les nouvelles propriétés
             updateQrZoneDisplay(selectedId);
             saveToLocalStorage();
             return;
         }
 
-        // Mise à jour de l'objet de données
-        zonesData[selectedId].content = inputContent.value;
-        zonesData[selectedId].font = inputFont.value;
-        zonesData[selectedId].size = inputSize.value;
-        zonesData[selectedId].color = inputColor.value;
-        zonesData[selectedId].align = inputAlign.value;
-        zonesData[selectedId].valign = inputValign.value;
+        // Mise à jour de l'objet de données (protégé car éléments supprimés)
+        if (inputContent) zonesData[selectedId].content = inputContent.value;
+        if (inputFont) zonesData[selectedId].font = inputFont.value;
+        if (inputSize) zonesData[selectedId].size = inputSize.value;
+        if (inputColor) zonesData[selectedId].color = inputColor.value;
+        if (inputAlign) zonesData[selectedId].align = inputAlign.value;
+        if (inputValign) zonesData[selectedId].valign = inputValign.value;
         // Nouvelles propriétés
-        zonesData[selectedId].bgColor = inputBgColor.value;
-        zonesData[selectedId].isTransparent = chkTransparent.checked;
-        zonesData[selectedId].locked = chkLock.checked;
-        zonesData[selectedId].copyfit = chkCopyfit.checked;
-        zonesData[selectedId].lineHeight = parseFloat(inputLineHeight.value) || 1.2;
+        if (inputBgColor) zonesData[selectedId].bgColor = inputBgColor.value;
+        if (chkTransparent) zonesData[selectedId].isTransparent = chkTransparent.checked;
+        if (chkLock) zonesData[selectedId].locked = chkLock.checked;
+        if (chkCopyfit) zonesData[selectedId].copyfit = chkCopyfit.checked;
+        if (inputLineHeight) zonesData[selectedId].lineHeight = parseFloat(inputLineHeight.value) || 1.2;
         
         // Mise à jour des propriétés de bordure
         if (!zonesData[selectedId].border) {
@@ -6253,20 +6244,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (inputBorderStyle) zonesData[selectedId].border.style = inputBorderStyle.value;
 
         // Gestion UI Checkbox
-        inputBgColor.disabled = chkTransparent.checked;
+        if (inputBgColor && chkTransparent) inputBgColor.disabled = chkTransparent.checked;
 
         // Mise à jour visuelle avec formatage partiel
         const formatting = zonesData[selectedId].formatting || [];
-        const defaultColor = formatting.length > 0 ? inputColor.value : null;
+        const defaultColor = formatting.length > 0 && inputColor ? inputColor.value : null;
         const emptyLinesValue = zonesData[selectedId].emptyLines || 0;
-        contentEl.innerHTML = renderFormattedContent(inputContent.value, formatting, defaultColor, emptyLinesValue);
-        zoneEl.style.fontFamily = inputFont.value + ", sans-serif";
+        if (inputContent) contentEl.innerHTML = renderFormattedContent(inputContent.value, formatting, defaultColor, emptyLinesValue);
+        if (inputFont) zoneEl.style.fontFamily = inputFont.value + ", sans-serif";
         // Note: Le rendu 'pt' web n'est pas 100% identique au print, mais proche
         
         // Application de la taille (Soit Copyfit, soit Taille Fixe)
-        if (chkCopyfit.checked) {
+        if (chkCopyfit && chkCopyfit.checked && inputSize) {
             applyCopyfit(zoneEl, inputSize.value);
-        } else {
+        } else if (inputSize) {
             zoneEl.style.fontSize = inputSize.value + 'pt';
         }
         
@@ -6276,18 +6267,21 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Couleur globale : appliquée sur la zone et sur contentEl
         // La couleur par défaut sera héritée par les segments sans annotation
-        zoneEl.style.color = inputColor.value;
-        contentEl.style.color = inputColor.value;
+        if (inputColor) {
+            zoneEl.style.color = inputColor.value;
+            contentEl.style.color = inputColor.value;
+        }
         
         // Fond
-        if (chkTransparent.checked) {
+        if (chkTransparent && chkTransparent.checked) {
             zoneEl.style.backgroundColor = 'transparent';
-        } else {
+        } else if (inputBgColor) {
             zoneEl.style.backgroundColor = inputBgColor.value;
         }
 
         // Verrouillage (Visuel)
-        if (chkLock.checked) {
+        const isLockedText = chkLock ? chkLock.checked : false;
+        if (isLockedText) {
             zoneEl.classList.add('locked');
         } else {
             zoneEl.classList.remove('locked');
@@ -6296,20 +6290,20 @@ document.addEventListener('DOMContentLoaded', () => {
         updateHandlesVisibility();
         
         // Activer/désactiver les champs de géométrie selon le verrouillage
-        inputX.disabled = chkLock.checked;
-        inputY.disabled = chkLock.checked;
-        inputW.disabled = chkLock.checked;
-        inputH.disabled = chkLock.checked;
+        if (inputX) inputX.disabled = isLockedText;
+        if (inputY) inputY.disabled = isLockedText;
+        if (inputW) inputW.disabled = isLockedText;
+        if (inputH) inputH.disabled = isLockedText;
         
         // Alignement Horizontal (géré par le texte lui-même)
-        contentEl.style.textAlign = inputAlign.value;
+        if (inputAlign) contentEl.style.textAlign = inputAlign.value;
         
         // Interlignage
-        contentEl.style.lineHeight = inputLineHeight.value;
+        if (inputLineHeight) contentEl.style.lineHeight = inputLineHeight.value;
         
         // Alignement Vertical
         // Comme .zone-content est en flex-column, l'axe principal (vertical) est géré par justify-content
-        contentEl.style.justifyContent = mapValignToFlex(inputValign.value);
+        if (inputValign) contentEl.style.justifyContent = mapValignToFlex(inputValign.value);
         
         // Nettoyage des styles conflictuels sur le parent
         zoneEl.style.alignItems = 'normal'; 
@@ -7381,10 +7375,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Activer/désactiver les champs de géométrie selon le verrouillage
-        inputX.disabled = chkLock?.checked || false;
-        inputY.disabled = chkLock?.checked || false;
-        inputW.disabled = chkLock?.checked || false;
-        inputH.disabled = chkLock?.checked || false;
+        if (inputX) inputX.disabled = chkLock?.checked || false;
+        if (inputY) inputY.disabled = chkLock?.checked || false;
+        if (inputW) inputW.disabled = chkLock?.checked || false;
+        if (inputH) inputH.disabled = chkLock?.checked || false;
         
         // IMPORTANT : Mettre à jour l'affichage de l'image
         updateImageZoneDisplay(zoneEl, zoneData);
@@ -7770,13 +7764,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Écouteur spécifique pour le contenu texte (avec debounce pour l'historique)
     // L'état AVANT la modification est déjà dans l'historique (dernier snapshot)
     // On sauvegarde l'état APRÈS 500ms d'inactivité
-    inputContent.addEventListener('input', () => {
-        clearTimeout(contentSaveTimeout);
-        contentSaveTimeout = setTimeout(() => {
-            saveState(); // Snapshot APRÈS la saisie (500ms après dernière frappe)
-        }, 500);
-        // Note: updateActiveZoneData() est appelé par l'écouteur de formatage plus bas
-    });
+    if (inputContent) {
+        inputContent.addEventListener('input', () => {
+            clearTimeout(contentSaveTimeout);
+            contentSaveTimeout = setTimeout(() => {
+                saveState(); // Snapshot APRÈS la saisie (500ms après dernière frappe)
+            }, 500);
+            // Note: updateActiveZoneData() est appelé par l'écouteur de formatage plus bas
+        });
+    }
     
     // Écouteurs pour les autres inputs (éviter les doubles snapshots)
     // IMPORTANT: saveState() est appelé APRÈS updateActiveZoneData() pour capturer l'état APRÈS la modification
@@ -8078,59 +8074,52 @@ document.addEventListener('DOMContentLoaded', () => {
     let previousSelectionStart = 0;
     let previousSelectionEnd = 0;
     
-    inputContent.addEventListener('focus', () => {
-        // Sauvegarder l'état initial quand on focus le textarea
-        previousContent = inputContent.value;
-        previousSelectionStart = inputContent.selectionStart;
-        previousSelectionEnd = inputContent.selectionEnd;
-    });
-    
-    // Mettre à jour la sélection en temps réel pour détecter correctement les remplacements
-    document.addEventListener('selectionchange', () => {
-        if (document.activeElement === inputContent) {
+    if (inputContent) {
+        inputContent.addEventListener('focus', () => {
+            // Sauvegarder l'état initial quand on focus le textarea
+            previousContent = inputContent.value;
             previousSelectionStart = inputContent.selectionStart;
             previousSelectionEnd = inputContent.selectionEnd;
-        }
-    });
-    
-    // Mettre à jour aussi lors de la perte de focus
-    inputContent.addEventListener('blur', () => {
-        previousSelectionStart = inputContent.selectionStart;
-        previousSelectionEnd = inputContent.selectionEnd;
-    });
-    
-    // Mettre à jour aussi lors des événements de sélection (mouseup, keyup)
-    inputContent.addEventListener('mouseup', () => {
-        previousSelectionStart = inputContent.selectionStart;
-        previousSelectionEnd = inputContent.selectionEnd;
-    });
-    
-    inputContent.addEventListener('keyup', () => {
-        previousSelectionStart = inputContent.selectionStart;
-        previousSelectionEnd = inputContent.selectionEnd;
-    });
-    
-    inputContent.addEventListener('input', (e) => {
-        if (selectedZoneIds.length !== 1) {
-            updateActiveZoneData();
-            return;
-        }
+        });
         
-        const selectedId = selectedZoneIds[0];
-        const zonesData = getCurrentPageZones();
-        const zoneData = zonesData[selectedId];
+        // Mettre à jour aussi lors de la perte de focus
+        inputContent.addEventListener('blur', () => {
+            previousSelectionStart = inputContent.selectionStart;
+            previousSelectionEnd = inputContent.selectionEnd;
+        });
         
-        if (!zoneData || !zoneData.formatting || zoneData.formatting.length === 0) {
-            updateActiveZoneData();
-            previousContent = inputContent.value;
-            return;
-        }
+        // Mettre à jour aussi lors des événements de sélection (mouseup, keyup)
+        inputContent.addEventListener('mouseup', () => {
+            previousSelectionStart = inputContent.selectionStart;
+            previousSelectionEnd = inputContent.selectionEnd;
+        });
         
-        // Logs pour diagnostiquer
-        const currentContent = inputContent.value;
-        const currentSelectionStart = inputContent.selectionStart;
-        const currentSelectionEnd = inputContent.selectionEnd;
-        const oldLength = previousContent.length;
+        inputContent.addEventListener('keyup', () => {
+            previousSelectionStart = inputContent.selectionStart;
+            previousSelectionEnd = inputContent.selectionEnd;
+        });
+        
+        inputContent.addEventListener('input', (e) => {
+            if (selectedZoneIds.length !== 1) {
+                updateActiveZoneData();
+                return;
+            }
+            
+            const selectedId = selectedZoneIds[0];
+            const zonesData = getCurrentPageZones();
+            const zoneData = zonesData[selectedId];
+            
+            if (!zoneData || !zoneData.formatting || zoneData.formatting.length === 0) {
+                updateActiveZoneData();
+                previousContent = inputContent.value;
+                return;
+            }
+            
+            // Logs pour diagnostiquer
+            const currentContent = inputContent.value;
+            const currentSelectionStart = inputContent.selectionStart;
+            const currentSelectionEnd = inputContent.selectionEnd;
+            const oldLength = previousContent.length;
         const newLength = currentContent.length;
         
         
@@ -8359,6 +8348,15 @@ document.addEventListener('DOMContentLoaded', () => {
         previousSelectionEnd = currentSelectionEnd;
         
         // Afficher les annotations en détail APRÈS
+        });
+    } // Fin if (inputContent)
+    
+    // Mettre à jour la sélection en temps réel pour détecter correctement les remplacements
+    document.addEventListener('selectionchange', () => {
+        if (inputContent && document.activeElement === inputContent) {
+            previousSelectionStart = inputContent.selectionStart;
+            previousSelectionEnd = inputContent.selectionEnd;
+        }
     });
     
     // Event listeners pour les boutons de formatage
@@ -8368,11 +8366,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    if (btnFormatColor && colorPickerInput) {
+    if (btnFormatColor && colorPickerInput && inputContent) {
         btnFormatColor.addEventListener('click', () => {
             
             // Vérifier qu'il y a une sélection dans le textarea
             const textarea = inputContent;
+            if (!textarea) return;
             const start = textarea.selectionStart;
             const end = textarea.selectionEnd;
             
@@ -8989,21 +8988,20 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Cacher complètement le panneau et vider toutes les valeurs
         btnDelete.disabled = true;
-        coordsPanel.style.display = 'none';
-        coordsPanel.style.pointerEvents = 'none';
+        // coordsPanel supprimé - ne rien faire
         
-        // Vider tous les champs
-        inputContent.value = '';
-        inputFont.value = 'Roboto';
-        inputSize.value = 12;
-        inputColor.value = '#000000';
-        inputAlign.value = 'left';
-        inputValign.value = 'top';
-        inputBgColor.value = '#ffffff';
-        chkTransparent.checked = true;
-        chkCopyfit.checked = false;
-        chkLock.checked = false;
-        inputLineHeight.value = 1.2;
+        // Vider tous les champs (protégés car éléments supprimés)
+        if (inputContent) inputContent.value = '';
+        if (inputFont) inputFont.value = 'Roboto';
+        if (inputSize) inputSize.value = 12;
+        if (inputColor) inputColor.value = '#000000';
+        if (inputAlign) inputAlign.value = 'left';
+        if (inputValign) inputValign.value = 'top';
+        if (inputBgColor) inputBgColor.value = '#ffffff';
+        if (chkTransparent) chkTransparent.checked = true;
+        if (chkCopyfit) chkCopyfit.checked = false;
+        if (chkLock) chkLock.checked = false;
+        if (inputLineHeight) inputLineHeight.value = 1.2;
         // Réinitialiser les inputs de bordure
         if (inputBorderWidth) {
             inputBorderWidth.value = 0;
@@ -9011,11 +9009,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (inputBorderColor) inputBorderColor.value = '#000000';
         if (inputBorderStyle) inputBorderStyle.value = 'solid';
-        inputX.value = '';
-        inputY.value = '';
-        inputW.value = '';
-        inputH.value = '';
-        lblSelected.innerText = "-";
+        if (inputX) inputX.value = '';
+        if (inputY) inputY.value = '';
+        if (inputW) inputW.value = '';
+        if (inputH) inputH.value = '';
+        // lblSelected supprimé - ne rien faire
         setTextControlsEnabled(true);
         
         // Masquer les sections d'alignement et taille
@@ -9900,10 +9898,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Afficher avec 1 décimale
-        inputX.value = xMm.toFixed(1);
-        inputY.value = yMm.toFixed(1);
-        inputW.value = wMm.toFixed(1);
-        inputH.value = hMm.toFixed(1);
+        if (inputX) inputX.value = xMm.toFixed(1);
+        if (inputY) inputY.value = yMm.toFixed(1);
+        if (inputW) inputW.value = wMm.toFixed(1);
+        if (inputH) inputH.value = hMm.toFixed(1);
     }
     
     /**
@@ -10069,37 +10067,46 @@ document.addEventListener('DOMContentLoaded', () => {
         saveState();
     }
     
-    // Écouteurs pour les champs de géométrie
-    inputX.addEventListener('change', () => {
-        const value = parseFloat(inputX.value);
-        if (!isNaN(value) && value >= 0) {
-            applyGeometryChange('x', value);
-        }
-    });
+    // Écouteurs pour les champs de géométrie (anciens inputs supprimés, gérés par toolbar Quill)
+    if (inputX) {
+        inputX.addEventListener('change', () => {
+            const value = parseFloat(inputX.value);
+            if (!isNaN(value) && value >= 0) {
+                applyGeometryChange('x', value);
+            }
+        });
+    }
     
-    inputY.addEventListener('change', () => {
-        const value = parseFloat(inputY.value);
-        if (!isNaN(value) && value >= 0) {
-            applyGeometryChange('y', value);
-        }
-    });
+    if (inputY) {
+        inputY.addEventListener('change', () => {
+            const value = parseFloat(inputY.value);
+            if (!isNaN(value) && value >= 0) {
+                applyGeometryChange('y', value);
+            }
+        });
+    }
     
-    inputW.addEventListener('change', () => {
-        const value = parseFloat(inputW.value);
-        if (!isNaN(value) && value > 0) {
-            applyGeometryChange('w', value);
-        }
-    });
+    if (inputW) {
+        inputW.addEventListener('change', () => {
+            const value = parseFloat(inputW.value);
+            if (!isNaN(value) && value > 0) {
+                applyGeometryChange('w', value);
+            }
+        });
+    }
     
-    inputH.addEventListener('change', () => {
-        const value = parseFloat(inputH.value);
-        if (!isNaN(value) && value > 0) {
-            applyGeometryChange('h', value);
-        }
-    });
+    if (inputH) {
+        inputH.addEventListener('change', () => {
+            const value = parseFloat(inputH.value);
+            if (!isNaN(value) && value > 0) {
+                applyGeometryChange('h', value);
+            }
+        });
+    }
     
     // Permettre la validation avec Entrée
     [inputX, inputY, inputW, inputH].forEach(input => {
+        if (!input) return;
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
