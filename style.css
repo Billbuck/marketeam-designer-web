@@ -1687,6 +1687,17 @@ body.in-iframe .toolbar {
     pointer-events: none;
 }
 
+/* Variables d'espacement du texte pour codes 1D */
+.zone.barcode-zone.barcode-1d {
+    --barcode-text-pad-top: 3px;      /* Espace entre code-barres et texte */
+    --barcode-text-pad-bottom: 2px;   /* Espace entre texte et bas du cadre */
+}
+
+/* Codes 1D : le padding bas du conteneur est géré par le padding du texte */
+.zone.barcode-zone.barcode-1d .barcode-preview {
+    padding: 4px 4px 0 4px;  /* padding-bottom à 0, géré par --barcode-text-pad-bottom */
+}
+
 /* Conteneur du code-barres */
 .zone.barcode-zone .barcode-preview .barcode-svg {
     width: 100%;
@@ -1695,6 +1706,11 @@ body.in-iframe .toolbar {
     flex-direction: column;    /* Image en haut, texte en bas */
     align-items: center;
     justify-content: center;
+}
+
+/* Codes 1D : étirer l'image et coller le texte en bas */
+.zone.barcode-zone.barcode-1d .barcode-preview .barcode-svg {
+    justify-content: flex-start;  /* L'image s'étire, le texte suit directement */
 }
 
 .zone.barcode-zone .barcode-preview svg {
@@ -1733,12 +1749,19 @@ body.in-iframe .toolbar {
     font-family: 'Courier New', Courier, monospace;
     font-size: 8pt;
     color: #000000;
-    padding: 2px 0;
+    line-height: 1;             /* Hauteur de ligne minimale - évite l'espace "fantôme" */
+    padding: 0;                 /* Par défaut pas de padding (2D) */
     flex-shrink: 0;             /* Ne rétrécit JAMAIS */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
+}
+
+/* Codes 1D : padding configurable via variables CSS */
+.zone.barcode-zone.barcode-1d .barcode-svg .barcode-text {
+    padding-top: var(--barcode-text-pad-top, 3px);       /* Espace code-barres ↔ texte */
+    padding-bottom: var(--barcode-text-pad-bottom, 3px); /* Espace texte ↔ bas du cadre */
 }
 
 .zone.barcode-zone .barcode-label {
