@@ -2980,6 +2980,15 @@ body.in-iframe .toolbar {
 .sidebar.collapsed .btn-group:not(.grid-2):not(.grid-3) {
     width: 44px;                 /* POC: carré 44x44 */
     align-self: center;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Boutons dans btn-group simple en mode collapsed */
+.sidebar.collapsed .btn-group:not(.grid-2):not(.grid-3) .btn {
+    width: 44px;
+    padding: 10px;
+    justify-content: center;
 }
 
 /* Grille 2 colonnes en mode collapsed - GARDE 2 colonnes */
