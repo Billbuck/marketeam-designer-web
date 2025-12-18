@@ -565,9 +565,19 @@ document.addEventListener('DOMContentLoaded', () => {
     /** @type {HTMLElement|null} Tooltip global de la sidebar */
     const sidebarTooltip = document.getElementById('sidebar-tooltip');
 
-    // Section Position (nouvelle - z-index)
+    // Sections de la sidebar
+    /** @type {HTMLElement|null} Section Actions dans la sidebar */
+    const actionsSection = document.getElementById('actions-section');
+    /** @type {HTMLElement|null} Section Historique dans la sidebar */
+    const historySection = document.getElementById('history-section');
     /** @type {HTMLElement|null} Section Position dans la sidebar */
     const positionSection = document.getElementById('position-section');
+    /** @type {HTMLElement|null} Section Outils dans la sidebar */
+    const toolsSection = document.getElementById('tools-section');
+    /** @type {HTMLElement|null} Section Zoom dans la sidebar */
+    const zoomSection = document.getElementById('zoom-section');
+    
+    // Boutons Position (z-index)
     /** @type {HTMLButtonElement|null} Bouton Premier plan (devant tout) */
     const btnBringFront = document.getElementById('btn-bring-front');
     /** @type {HTMLButtonElement|null} Bouton Arrière-plan (derrière tout) */
@@ -5077,7 +5087,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateHandlesVisibility();
         
         // Afficher/masquer les sections d'alignement et taille
-        updateAlignmentToolbarVisibility();
+        updateSidebarSectionsVisibility();
         
         // Mettre à jour les boutons d'arrangement (z-index)
         updateArrangementButtons();
@@ -7398,36 +7408,70 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * Mettre à jour la visibilité des sections de la sidebar selon la sélection
-     * @description Affiche/masque les sections Position, Alignement, Taille et Espacement
-     * selon le nombre de zones sélectionnées :
-     *   - Position : 1 zone exactement (single)
-     *   - Alignement : 2+ zones (multi-2)
-     *   - Taille : 2+ zones (multi-2)
-     *   - Espacement : 3+ zones (multi-3)
+     * @description Logique POC :
+     *   - Multi-sélection (2+) : SEULES les sections multi sont visibles
+     *   - Sélection simple (1) : always + single visibles, no-selection masqué
+     *   - Aucune sélection (0) : always + no-selection visibles, single masqué
      */
-    function updateAlignmentToolbarVisibility() {
+    function updateSidebarSectionsVisibility() {
+        const count = selectedZoneIds.length;
+        
+        // Récupérer les sections par ID
+        const pagesSection = document.getElementById('pages-section');
         const alignmentSection = document.getElementById('alignment-section');
         const sizeSection = document.getElementById('size-section');
         const spacingSection = document.getElementById('spacing-section');
-        const count = selectedZoneIds.length;
         
-        // Section Position : visible si exactement 1 zone sélectionnée
-        if (positionSection) {
-            positionSection.style.display = count === 1 ? 'block' : 'none';
+        // ═══════════════════════════════════════════════════════════════════════
+        // MODE MULTI-SÉLECTION (2+ zones) : logique EXCLUSIVE
+        // Seules les sections multi-2 et multi-3 sont visibles
+        // ═══════════════════════════════════════════════════════════════════════
+        if (count >= 2) {
+            // Masquer toutes les autres sections
+            if (pagesSection) pagesSection.style.display = 'none';
+            if (actionsSection) actionsSection.style.display = 'none';
+            if (historySection) historySection.style.display = 'none';
+            if (positionSection) positionSection.style.display = 'none';
+            if (toolsSection) toolsSection.style.display = 'none';
+            if (zoomSection) zoomSection.style.display = 'none';
+            
+            // Afficher les sections multi
+            if (alignmentSection) alignmentSection.style.display = 'block';
+            if (sizeSection) sizeSection.style.display = 'block';
+            if (spacingSection) spacingSection.style.display = count >= 3 ? 'block' : 'none';
+            return;
         }
         
-        // Section Alignement : visible si 2+ zones sélectionnées
-        if (alignmentSection) {
-            alignmentSection.style.display = count >= 2 ? 'block' : 'none';
+        // ═══════════════════════════════════════════════════════════════════════
+        // MODE SÉLECTION SIMPLE (1 zone)
+        // always + single visibles, no-selection masqué
+        // ═══════════════════════════════════════════════════════════════════════
+        if (count === 1) {
+            if (pagesSection) pagesSection.style.display = 'none';      // no-selection
+            if (actionsSection) actionsSection.style.display = 'block'; // always
+            if (historySection) historySection.style.display = 'block'; // always
+            if (positionSection) positionSection.style.display = 'block'; // single
+            if (alignmentSection) alignmentSection.style.display = 'none';
+            if (sizeSection) sizeSection.style.display = 'none';
+            if (spacingSection) spacingSection.style.display = 'none';
+            if (toolsSection) toolsSection.style.display = 'none';      // no-selection
+            if (zoomSection) zoomSection.style.display = 'block';       // always
+            return;
         }
-        // Section Taille : visible si 2+ zones sélectionnées
-        if (sizeSection) {
-            sizeSection.style.display = count >= 2 ? 'block' : 'none';
-        }
-        // Section Espacement : visible si 3+ zones sélectionnées
-        if (spacingSection) {
-            spacingSection.style.display = count >= 3 ? 'block' : 'none';
-        }
+        
+        // ═══════════════════════════════════════════════════════════════════════
+        // MODE AUCUNE SÉLECTION (0 zone)
+        // always + no-selection visibles, single masqué
+        // ═══════════════════════════════════════════════════════════════════════
+        if (pagesSection) pagesSection.style.display = 'block';     // no-selection
+        if (actionsSection) actionsSection.style.display = 'block'; // always
+        if (historySection) historySection.style.display = 'block'; // always
+        if (positionSection) positionSection.style.display = 'none'; // single
+        if (alignmentSection) alignmentSection.style.display = 'none';
+        if (sizeSection) sizeSection.style.display = 'none';
+        if (spacingSection) spacingSection.style.display = 'none';
+        if (toolsSection) toolsSection.style.display = 'block';     // no-selection
+        if (zoomSection) zoomSection.style.display = 'block';       // always
     }
 
     // --- FONCTIONS D'ALIGNEMENT ---
@@ -10895,7 +10939,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTextControlsEnabled(true);
         
         // Masquer les sections d'alignement et taille
-        updateAlignmentToolbarVisibility();
+        updateSidebarSectionsVisibility();
         
         // Masquer les poignées (aucune sélection)
         updateHandlesVisibility();
@@ -14748,7 +14792,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updatePageNavigationUI();
     
     // Initialiser la visibilité des sections d'alignement et taille
-    updateAlignmentToolbarVisibility();
+    updateSidebarSectionsVisibility();
     
     // Initialiser les boutons d'arrangement (désactivés au démarrage)
     updateArrangementButtons();

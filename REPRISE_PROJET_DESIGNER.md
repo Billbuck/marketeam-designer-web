@@ -18,7 +18,8 @@
 | Phase 3.2 | Logique affichage toolbar-image par type de zone |
 | Phase 4.1 | Ajout HTML/CSS/DOM toolbar-barcode + toolbar-qrcode (POC) |
 | Phase 4.2 | Logique affichage toolbar-barcode + toolbar-qrcode |
-
+| Phase 6.1 | Sidebar POC - HTML/CSS intégré (design Marketeam) |
+| Phase 6.2 | Logique visibilité sections sidebar (POC) |
 ---
 
 ## PHASES RESTANTES
