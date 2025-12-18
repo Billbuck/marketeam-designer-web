@@ -1044,16 +1044,8 @@ h4 {
     border-bottom: 8px solid #ffffff;
 }
 
-/* Conteneur pour le texte formaté (inline) - enveloppe le contenu */
-.zone-content > span {
-    display: inline-block;
-    width: 100%;
-}
-
-/* Assurer que les spans internes sont inline */
-.zone-content span span {
-    display: inline;
-}
+/* NOTE: Les styles pour .zone-content > span ont été supprimés (ancien type 'text').
+   Le formatage riche est maintenant géré par Quill (.ql-editor). */
 
 /* --- Switch (Interrupteur) pour le verrouillage --- */
 .switch-container {
@@ -1189,55 +1181,9 @@ body.in-iframe .toolbar {
     width: auto;
 }
 
-/* --- Barre d'outils de formatage --- */
-.formatting-toolbar {
-    display: flex;
-    gap: 5px;
-    margin-bottom: 8px;
-    padding: 6px;
-    background-color: #f5f5f5;
-    border-radius: 4px;
-    border: 1px solid #e0e0e0;
-}
-
-.format-btn {
-    width: auto !important;
-    min-width: 32px;
-    height: 32px;
-    padding: 4px 8px !important;
-    margin: 0 !important;
-    background-color: #fff;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-}
-
-.format-btn:hover {
-    background-color: #f0f0f0;
-    border-color: #1a73e8;
-}
-
-.format-btn.active {
-    background-color: #1a73e8;
-    color: white;
-    border-color: #1a73e8;
-}
-
-.format-btn .material-icons {
-    font-size: 18px;
-}
-
-.formatting-hint {
-    display: block;
-    margin-top: 5px;
-    font-size: 10px;
-    color: #999;
-    font-style: italic;
-}
+/* NOTE: Les styles .formatting-toolbar et .format-btn ont été supprimés.
+   L'ancien système de formatage textarea (type 'text') a été remplacé par Quill (type 'textQuill').
+   Le formatage partiel est maintenant géré par la mini-toolbar (#mini-toolbar). */
 
 /* --- Modale de Confirmation --- */
 .modal-overlay {
