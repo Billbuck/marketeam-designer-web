@@ -14959,6 +14959,11 @@ document.addEventListener('DOMContentLoaded', () => {
      *   - generatePsmdBarcodeObject() : Zone code-barres/QR
      *   - generatePsmdObject() : Dispatch selon type
      * 
+     * Fonctions variables et layouts :
+     *   - generatePsmdVariables() : Extraction et génération des variables
+     *   - generatePsmdLayout() : Génération d'une page
+     *   - generatePsmdLayouts() : Génération de toutes les pages
+     * 
      * Fonction principale :
      *   - exportToPsmd() : Génère le fichier .psmd complet
      */
@@ -15478,11 +15483,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const name = escapeXmlPsmd(zone.nom || 'Zone');
         const locked = zone.verrouille ? 'yes' : 'no';
         
+        // Protection géométrie avec valeurs par défaut
+        const geom = zone.geometrie || { x_mm: 0, y_mm: 0, width_mm: 50, height_mm: 20 };
+        
         // Conversion coordonnées mm → points
-        const left = mmToPoints(zone.geometrie.x_mm);
-        const top = mmToPoints(zone.geometrie.y_mm);
-        const right = mmToPoints(zone.geometrie.x_mm + zone.geometrie.width_mm);
-        const bottom = mmToPoints(zone.geometrie.y_mm + zone.geometrie.height_mm);
+        const left = mmToPoints(geom.x_mm || 0);
+        const top = mmToPoints(geom.y_mm || 0);
+        const right = mmToPoints((geom.x_mm || 0) + (geom.width_mm || 50));
+        const bottom = mmToPoints((geom.y_mm || 0) + (geom.height_mm || 20));
         
         // Couleurs de fond et bordure
         const fillColor = zone.fond?.couleur ? rgbToCmyk(zone.fond.couleur) : { c: 0, m: 0, y: 0, k: 0 };
@@ -15671,6 +15679,127 @@ ${generatePsmdColor('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 }, 0)}
         }
     }
 
+    /**
+     * Extrait tous les champs de fusion de toutes les zones texte et génère la section <variables>.
+     * Parcourt toutes les pages et zones, extrait les marqueurs @XXX@ des contenus RTF,
+     * et génère une déclaration de variable pour chaque champ unique.
+     * 
+     * @param {Array<Object>} pages - Tableau des pages exportées (format JSON WebDev)
+     * @returns {string} XML de la section <variables>
+     * 
+     * @example
+     * const pages = [{ zones: [{ type: 'textQuill', content_rtf: '@NOM@ @PRENOM@' }] }];
+     * generatePsmdVariables(pages);
+     * // Retourne <variables> avec NOM et PRENOM déclarés
+     */
+    function generatePsmdVariables(pages) {
+        const allFields = new Set();
+        
+        // Parcourir toutes les pages et zones
+        for (const page of pages) {
+            if (!page.zones) continue;
+            
+            for (const zone of page.zones) {
+                // Extraire les champs uniquement des zones texte
+                if (zone.type === 'textQuill' && zone.content_rtf) {
+                    const fields = extractMergeFields(zone.content_rtf);
+                    fields.forEach(field => allFields.add(field));
+                }
+            }
+        }
+        
+        // Générer la section variables
+        if (allFields.size === 0) {
+            return '<variables>\n</variables>';
+        }
+        
+        let xml = '<variables>\n';
+        
+        for (const field of allFields) {
+            xml += generatePsmdVariable(field) + '\n';
+        }
+        
+        xml += '</variables>';
+        
+        return xml;
+    }
+
+    /**
+     * Génère une section <layout> (page) complète pour le PSMD.
+     * 
+     * @param {Object} page - Données de la page exportée
+     * @param {number} pageIndex - Index de la page (0-based)
+     * @param {number} pageWidthPt - Largeur de la page en points
+     * @param {number} pageHeightPt - Hauteur de la page en points
+     * @param {string} devmodeBase64 - DEVMODE encodé en Base64
+     * @returns {string} XML de la section layout
+     */
+    function generatePsmdLayout(page, pageIndex, pageWidthPt, pageHeightPt, devmodeBase64) {
+        const layoutName = `Page ${pageIndex + 1}`;
+        
+        let xml = `<layout>
+<dimensions>
+<size x="${pageWidthPt}" y="${pageHeightPt}"/>
+<automatic_size>yes</automatic_size>
+<custom_size>no</custom_size>
+<fit_to_objects>no</fit_to_objects>
+</dimensions>
+<attributes>
+<n>${escapeXmlPsmd(layoutName)}</n>
+<condition_expression>Print</condition_expression>
+<copies_expression>1</copies_expression>
+</attributes>
+<printer_preferences>
+<windows_devmode>${devmodeBase64}</windows_devmode>
+<tray_name> Sélection automatique</tray_name>
+</printer_preferences>
+`;
+        
+        // Générer les objets (zones) de la page
+        if (page.zones && page.zones.length > 0) {
+            for (const zone of page.zones) {
+                const objectXml = generatePsmdObject(zone);
+                if (objectXml) {
+                    xml += objectXml + '\n';
+                }
+            }
+        }
+        
+        xml += '</layout>';
+        
+        return xml;
+    }
+
+    /**
+     * Génère la section <layouts> complète avec toutes les pages.
+     * 
+     * @param {Array<Object>} pages - Tableau des pages exportées
+     * @param {number} largeurMm - Largeur du document en mm
+     * @param {number} hauteurMm - Hauteur du document en mm
+     * @returns {string} XML de la section layouts
+     */
+    function generatePsmdLayouts(pages, largeurMm, hauteurMm) {
+        // Convertir dimensions en points
+        const pageWidthPt = mmToPoints(largeurMm);
+        const pageHeightPt = mmToPoints(hauteurMm);
+        
+        // Déterminer l'orientation
+        const orientation = largeurMm > hauteurMm ? 'PAYSAGE' : 'PORTRAIT';
+        
+        // Générer le DEVMODE
+        const devmodeBase64 = generateWindowsDevmode(orientation, hauteurMm, largeurMm);
+        
+        let xml = '<layouts>\n';
+        
+        for (let i = 0; i < pages.length; i++) {
+            xml += generatePsmdLayout(pages[i], i, pageWidthPt, pageHeightPt, devmodeBase64) + '\n';
+        }
+        
+        xml += '</layouts>';
+        
+        return xml;
+    }
+
     // Exposer les fonctions utilitaires PSMD sur window pour les tests et l'accès externe
     window.mmToPoints = mmToPoints;
     window.rgbToCmyk = rgbToCmyk;
@@ -15694,6 +15823,9 @@ ${generatePsmdColor('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 }, 0)}
     window.generatePsmdImageObject = generatePsmdImageObject;
     window.generatePsmdBarcodeObject = generatePsmdBarcodeObject;
     window.generatePsmdObject = generatePsmdObject;
+    window.generatePsmdVariables = generatePsmdVariables;
+    window.generatePsmdLayout = generatePsmdLayout;
+    window.generatePsmdLayouts = generatePsmdLayouts;
 
     // ─────────────────────────────── FIN SECTION 25 ───────────────────────────────
     
