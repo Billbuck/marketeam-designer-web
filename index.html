@@ -1628,6 +1628,36 @@
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- TOOLBAR DATA - Champs de fusion (POC)                          -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div class="toolbar-poc toolbar-data" id="toolbar-data" style="display: none;">
+        <!-- Header déplaçable -->
+        <div class="toolbar-header-poc toolbar-header-data" id="toolbar-data-header">
+            <span class="toolbar-title-poc">
+                <span class="toolbar-title-icon">📋</span>
+                CHAMPS DE FUSION
+            </span>
+            <button type="button" class="toolbar-close-poc" id="toolbar-data-close" title="Fermer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        
+        <!-- Content -->
+        <div class="toolbar-content-poc toolbar-content-data">
+            <div class="fields-count" id="fields-count">0 champ disponible</div>
+            <div class="fields-list" id="merge-fields-list">
+                <!-- Les champs seront générés par updateMergeFieldsUI() -->
+                <div class="fields-empty" id="fields-empty">
+                    Aucun champ disponible
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
     <!-- PHASE 5 : MINI-TOOLBAR CONTEXTUELLE (FORMATAGE PARTIEL QUILL)   -->
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <div class="mini-toolbar" id="mini-toolbar" style="display: none;">

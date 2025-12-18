@@ -3190,3 +3190,156 @@ body.in-iframe .toolbar {
     transition: opacity 0.2s ease, max-height 0.3s ease;
     overflow: hidden;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TOOLBAR DATA - CHAMPS DE FUSION (POC)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Container spécifique */
+.toolbar-data {
+    width: 260px;
+    max-height: 400px;
+}
+
+/* Header avec couleur spécifique */
+.toolbar-header-data {
+    background: var(--theme-primary-dark, #62307B);
+}
+
+.toolbar-title-icon {
+    font-size: 14px;
+}
+
+/* Content scrollable */
+.toolbar-content-data {
+    padding: 12px;
+    max-height: 340px;
+    overflow-y: auto;
+}
+
+/* Compteur de champs */
+.fields-count {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Liste des champs */
+.fields-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* Message si aucun champ */
+.fields-empty {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 12px;
+    padding: 20px 10px;
+    font-style: italic;
+}
+
+/* ==================== CHAMP INDIVIDUEL (merge-tag) ==================== */
+.field-item,
+.merge-tag {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--bg-input, #ffffff);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    cursor: grab;
+    transition: all 0.15s ease;
+    user-select: none;
+    position: relative;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-primary);
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.field-item:hover,
+.merge-tag:hover {
+    border-color: var(--theme-primary);
+    background: var(--theme-primary-light);
+}
+
+.field-item:active,
+.merge-tag:active {
+    cursor: grabbing;
+}
+
+.field-item.dragging,
+.merge-tag.dragging {
+    opacity: 0.5;
+    border-style: dashed;
+}
+
+/* Icône du champ */
+.field-icon {
+    width: 16px;
+    height: 16px;
+    color: var(--theme-primary);
+    flex-shrink: 0;
+}
+
+/* Types de champs - couleurs différentes */
+.merge-tag-sys {
+    border-left: 3px solid #EAB400;
+}
+
+.merge-tag-img {
+    border-left: 3px solid #0079BF;
+}
+
+/* Tooltip au survol */
+.field-item::after,
+.merge-tag::after {
+    content: 'Double-clic pour insérer';
+    position: absolute;
+    bottom: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-family: sans-serif;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    z-index: 10;
+}
+
+.field-item:hover::after,
+.merge-tag:hover::after {
+    opacity: 1;
+}
+
+/* Scrollbar personnalisée */
+.toolbar-content-data::-webkit-scrollbar,
+.fields-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.toolbar-content-data::-webkit-scrollbar-track,
+.fields-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.toolbar-content-data::-webkit-scrollbar-thumb,
+.fields-list::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 2px;
+}
+
+.toolbar-content-data::-webkit-scrollbar-thumb:hover,
+.fields-list::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+}

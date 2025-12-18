@@ -907,6 +907,21 @@ document.addEventListener('DOMContentLoaded', () => {
     /** @type {HTMLInputElement|null} Checkbox verrouiller (hidden) */
     const qrcodeChkLocked = document.getElementById('qrcode-chk-locked');
     
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // Toolbar Data (Champs de fusion) - Références DOM
+    // ═══════════════════════════════════════════════════════════════════════════════
+    
+    /** @type {HTMLElement|null} Toolbar flottante des champs de fusion */
+    const toolbarData = document.getElementById('toolbar-data');
+    /** @type {HTMLElement|null} Header de la toolbar data (pour drag) */
+    const toolbarDataHeader = document.getElementById('toolbar-data-header');
+    /** @type {HTMLButtonElement|null} Bouton fermer toolbar data */
+    const toolbarDataClose = document.getElementById('toolbar-data-close');
+    /** @type {HTMLElement|null} Compteur de champs */
+    const fieldsCount = document.getElementById('fields-count');
+    /** @type {HTMLElement|null} Message si aucun champ */
+    const fieldsEmpty = document.getElementById('fields-empty');
+    
     // Fonction pour mettre à jour l'affichage du spin button d'épaisseur de bordure
     function updateBorderWidthDisplay(value) {
         if (inputBorderWidthDisplay) {
@@ -1854,8 +1869,23 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateMergeFieldsUI(champs) {
         if (!mergeFieldsContainer) return;
         
-        // Vider le conteneur
-        mergeFieldsContainer.innerHTML = '';
+        // Mettre à jour le compteur
+        const count = champs.length;
+        if (fieldsCount) {
+            fieldsCount.textContent = count === 0 ? '0 champ disponible' 
+                                     : count === 1 ? '1 champ disponible' 
+                                     : `${count} champs disponibles`;
+        }
+        
+        // Afficher/masquer le message vide
+        if (fieldsEmpty) {
+            fieldsEmpty.style.display = count === 0 ? '' : 'none';
+        }
+        
+        // Vider le conteneur (sauf le message vide)
+        mergeFieldsContainer.querySelectorAll('.merge-tag').forEach(tag => tag.remove());
+        
+        if (champs.length === 0) return;
         
         // Parcourir les champs
         champs.forEach(champ => {
@@ -1870,21 +1900,69 @@ document.addEventListener('DOMContentLoaded', () => {
             if (fieldType === 'SYS') tag.classList.add('merge-tag-sys');
             if (fieldType === 'IMG') tag.classList.add('merge-tag-img');
             
-            tag.innerText = fieldName;
-            tag.title = `Type: ${fieldType} - Cliquez pour insérer @${fieldName}@`;
+            // Ajouter icône + nom
+            tag.innerHTML = `
+                <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                </svg>
+                <span class="field-name">${fieldName}</span>
+            `;
+            tag.title = `Type: ${fieldType} - Double-clic ou glisser pour insérer @${fieldName}@`;
             
-            tag.addEventListener('click', () => insertTag(fieldName));
+            // Double-clic pour insertion
+            tag.addEventListener('dblclick', () => insertTag(fieldName));
             
             // Drag & drop avec syntaxe @CHAMP@
             tag.draggable = true;
             tag.addEventListener('dragstart', (e) => {
+                tag.classList.add('dragging');
                 e.dataTransfer.setData('text/plain', `@${fieldName}@`);
+                e.dataTransfer.setData('application/x-merge-field', fieldName);
+                e.dataTransfer.effectAllowed = 'copy';
+            });
+            tag.addEventListener('dragend', () => {
+                tag.classList.remove('dragging');
             });
             
             mergeFieldsContainer.appendChild(tag);
         });
         
-        console.log(`updateMergeFieldsUI: ${champs.length} champ(s) de fusion chargé(s)`);
+        console.log(`📋 updateMergeFieldsUI: ${champs.length} champ(s) de fusion chargé(s)`);
+        
+        // Mettre à jour la visibilité de la toolbar
+        updateToolbarDataVisibility();
+    }
+    
+    /**
+     * Met à jour la visibilité de la toolbar Data (champs de fusion)
+     * Visible si : zone textQuill sélectionnée ET champs disponibles
+     */
+    function updateToolbarDataVisibility() {
+        if (!toolbarData) return;
+        
+        // Protection : selectedZoneIds peut ne pas être encore initialisée au chargement
+        // (déclarée plus bas dans le script)
+        let hasTextQuillSelected = false;
+        try {
+            if (typeof selectedZoneIds !== 'undefined' && selectedZoneIds.length === 1) {
+                const zoneId = selectedZoneIds[0];
+                const zonesData = getCurrentPageZones();
+                hasTextQuillSelected = zonesData && zonesData[zoneId] && zonesData[zoneId].type === 'textQuill';
+            }
+        } catch (e) {
+            // selectedZoneIds pas encore déclarée - cas d'initialisation
+            hasTextQuillSelected = false;
+        }
+        
+        const hasFields = mergeFields && mergeFields.length > 0;
+        const shouldShow = hasFields && hasTextQuillSelected;
+        toolbarData.style.display = shouldShow ? '' : 'none';
+        
+        console.log('📋 Toolbar Data visibility:', shouldShow ? 'visible' : 'hidden',
+                    '(textQuill:', hasTextQuillSelected, ', fields:', hasFields, ')');
     }
 
     // Initialisation des champs de fusion avec les valeurs par défaut
@@ -6785,6 +6863,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 hideQrcodeToolbar();
                 break;
         }
+        
+        // Mettre à jour la toolbar Data (champs de fusion)
+        updateToolbarDataVisibility();
     }
 
     /**
@@ -11422,6 +11503,56 @@ document.addEventListener('DOMContentLoaded', () => {
             qrcodeToolbarLastPos = { x: rect.left, y: rect.top };
             qrcodeToolbar.style.transition = '';
             isQrcodeToolbarDragging = false;
+        });
+    }
+    
+    // ─────────────────────────────── TOOLBAR DATA - ÉVÉNEMENTS ──────────────────────────
+    
+    // Empêcher le clic sur la toolbar de désélectionner la zone
+    if (toolbarData) {
+        toolbarData.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+        });
+        toolbarData.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    }
+    
+    // Bouton fermer (X) de la toolbar data
+    if (toolbarDataClose) {
+        toolbarDataClose.addEventListener('click', () => {
+            if (toolbarData) toolbarData.style.display = 'none';
+        });
+    }
+    
+    // Drag de la toolbar data (sur header)
+    if (toolbarDataHeader && toolbarData) {
+        /** @type {boolean} True si on est en train de déplacer la toolbar Data */
+        let isDraggingToolbarData = false;
+        /** @type {number} Offset X souris→toolbar au démarrage du drag */
+        let toolbarDataOffsetX = 0;
+        /** @type {number} Offset Y souris→toolbar au démarrage du drag */
+        let toolbarDataOffsetY = 0;
+        
+        toolbarDataHeader.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.toolbar-close-poc')) return;
+            isDraggingToolbarData = true;
+            const rect = toolbarData.getBoundingClientRect();
+            toolbarDataOffsetX = e.clientX - rect.left;
+            toolbarDataOffsetY = e.clientY - rect.top;
+            toolbarData.style.position = 'fixed';
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (!isDraggingToolbarData) return;
+            toolbarData.style.left = (e.clientX - toolbarDataOffsetX) + 'px';
+            toolbarData.style.top = (e.clientY - toolbarDataOffsetY) + 'px';
+            toolbarData.style.right = 'auto';
+            toolbarData.style.bottom = 'auto';
+        });
+        
+        document.addEventListener('mouseup', () => {
+            isDraggingToolbarData = false;
         });
     }
     
