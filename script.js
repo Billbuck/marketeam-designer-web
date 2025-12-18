@@ -10598,10 +10598,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnSpaceVertical = document.getElementById('btn-space-vertical');
 
     if (btnAlignLeft) btnAlignLeft.addEventListener('click', () => alignZones('left'));
-    if (btnAlignCenter) btnAlignCenter.addEventListener('click', () => alignZones('center'));
+    if (btnAlignCenter) btnAlignCenter.addEventListener('click', () => alignZones('middle')); // Centrer horizontalement → middle (même X)
     if (btnAlignRight) btnAlignRight.addEventListener('click', () => alignZones('right'));
     if (btnAlignTop) btnAlignTop.addEventListener('click', () => alignZones('top'));
-    if (btnAlignMiddle) btnAlignMiddle.addEventListener('click', () => alignZones('middle'));
+    if (btnAlignMiddle) btnAlignMiddle.addEventListener('click', () => alignZones('center')); // Centrer verticalement → center (même Y)
     if (btnAlignBottom) btnAlignBottom.addEventListener('click', () => alignZones('bottom'));
     if (btnSameWidth) btnSameWidth.addEventListener('click', () => applySameWidth());
     if (btnSameHeight) btnSameHeight.addEventListener('click', () => applySameHeight());
@@ -10667,11 +10667,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // Si on clique sur une zone, une poignée, le panneau de contrôle ou la modale, on ne fait rien
+        // Si on clique sur une zone, une poignée, le panneau de contrôle, la modale ou la sidebar, on ne fait rien
         if (e.target.closest('.zone') || 
             e.target.closest('.handle') || 
             e.target.closest('.toolbar') ||
-            e.target.closest('.modal-box')) {
+            e.target.closest('.modal-box') ||
+            e.target.closest('.sidebar')) {
             return;
         }
         

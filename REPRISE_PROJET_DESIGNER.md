@@ -20,6 +20,8 @@
 | Phase 4.2 | Logique affichage toolbar-barcode + toolbar-qrcode |
 | Phase 6.1 | Sidebar POC - HTML/CSS intégré (design Marketeam) |
 | Phase 6.2 | Logique visibilité sections sidebar (POC) |
+| Phase 6.2 | Connexions JS sidebar - visibilité sections, clics, alignements |
+
 ---
 
 ## PHASES RESTANTES
