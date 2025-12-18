@@ -14947,6 +14947,18 @@ document.addEventListener('DOMContentLoaded', () => {
      *   - generatePsmdColor() : Balise couleur CMYK
      *   - generatePsmdVariable() : Section <variable>
      * 
+     * Constantes de mapping :
+     *   - BARCODE_TYPE_MAP : Types codes-barres Designer → PSMD
+     *   - HALIGN_MAP : Alignements horizontaux
+     *   - VALIGN_MAP : Alignements verticaux
+     * 
+     * Fonctions génération objets zones :
+     *   - generatePsmdObjectCommon() : Propriétés communes
+     *   - generatePsmdTextObject() : Zone texte
+     *   - generatePsmdImageObject() : Zone image
+     *   - generatePsmdBarcodeObject() : Zone code-barres/QR
+     *   - generatePsmdObject() : Dispatch selon type
+     * 
      * Fonction principale :
      *   - exportToPsmd() : Génère le fichier .psmd complet
      */
@@ -15417,6 +15429,248 @@ document.addEventListener('DOMContentLoaded', () => {
 </variable>`;
     }
 
+    /**
+     * Mapping des types de codes-barres Designer → PrintShop Mail.
+     * @type {Object.<string, string>}
+     */
+    const BARCODE_TYPE_MAP = {
+        'code128': 'Code128',
+        'code39': 'Code39',
+        'ean13': 'EAN13',
+        'ean8': 'EAN8',
+        'upca': 'UPCA',
+        'upce': 'UPCE',
+        'itf14': 'ITF14',
+        'interleaved2of5': 'Interleaved2of5',
+        'datamatrix': 'DataMatrix',
+        'qrcode': 'QRCode'
+    };
+
+    /**
+     * Mapping des alignements horizontaux Designer → PrintShop Mail.
+     * @type {Object.<string, number>}
+     */
+    const HALIGN_MAP = {
+        'left': 2,
+        'center': 4,
+        'right': 1,
+        'justify': 6
+    };
+
+    /**
+     * Mapping des alignements verticaux Designer → PrintShop Mail.
+     * @type {Object.<string, number>}
+     */
+    const VALIGN_MAP = {
+        'top': 0,
+        'middle': 4,
+        'bottom': 6
+    };
+
+    /**
+     * Génère les propriétés communes à tous les objets PSMD.
+     * 
+     * @param {Object} zone - Données de la zone exportée (format JSON WebDev)
+     * @returns {string} XML des propriétés communes
+     */
+    function generatePsmdObjectCommon(zone) {
+        const guid = generateGuid();
+        const name = escapeXmlPsmd(zone.nom || 'Zone');
+        const locked = zone.verrouille ? 'yes' : 'no';
+        
+        // Conversion coordonnées mm → points
+        const left = mmToPoints(zone.geometrie.x_mm);
+        const top = mmToPoints(zone.geometrie.y_mm);
+        const right = mmToPoints(zone.geometrie.x_mm + zone.geometrie.width_mm);
+        const bottom = mmToPoints(zone.geometrie.y_mm + zone.geometrie.height_mm);
+        
+        // Couleurs de fond et bordure
+        const fillColor = zone.fond?.couleur ? rgbToCmyk(zone.fond.couleur) : { c: 0, m: 0, y: 0, k: 0 };
+        const fillAlpha = (zone.fond?.couleur && zone.fond.couleur !== 'transparent') ? 1 : 0;
+        
+        const borderColor = zone.bordure?.couleur ? rgbToCmyk(zone.bordure.couleur) : { c: 0, m: 0, y: 0, k: 0 };
+        const borderSize = zone.bordure?.epaisseur || 0;
+        const borderStyle = borderSize > 0 ? 2 : 0; // 0=none, 2=solid
+        
+        return `<object>
+<identifier>${guid}</identifier>
+<n>${name}</n>
+<locked>${locked}</locked>
+<knockout>no</knockout>
+<border_size>${borderSize}</border_size>
+<border_style>${borderStyle}</border_style>
+${generatePsmdColor('fillcolor', fillColor, fillAlpha)}
+${generatePsmdColor('bordercolor', borderColor, 0)}
+<rotation>0</rotation>
+<bounds left="${left}" top="${top}" right="${right}" bottom="${bottom}"/>
+<snap_frame_to_content>no</snap_frame_to_content>
+<show_mode>
+<editor>yes</editor>
+<jpeg_preview>yes</jpeg_preview>
+<pdf_preview>yes</pdf_preview>
+<print_preview>yes</print_preview>
+<print>yes</print>
+</show_mode>
+<anchor>
+<horizontal>0</horizontal>
+<vertical>0</vertical>
+<source></source>
+<source_bounds left="0" top="0" right="0" bottom="0"/>
+</anchor>`;
+    }
+
+    /**
+     * Génère un objet texte PSMD (text_object).
+     * 
+     * @param {Object} zone - Données de la zone texte exportée
+     * @returns {string} XML complet de l'objet texte
+     */
+    function generatePsmdTextObject(zone) {
+        // Récupérer le RTF et l'encoder en Base64
+        const rtfContent = zone.content_rtf || '';
+        const rtfBase64 = rtfToBase64(rtfContent);
+        
+        // Alignements
+        const hAlign = HALIGN_MAP[zone.typographie?.alignement] || 2; // left par défaut
+        const vAlign = VALIGN_MAP[zone.typographie?.alignementVertical] || 0; // top par défaut
+        
+        // Copyfitting
+        const copyfitting = zone.copyfitting || {};
+        const reduceToFit = copyfitting.reduirePolice ? 'yes' : 'no';
+        const minFontSize = copyfitting.tailleMin || 8;
+        
+        // Gestion lignes vides
+        const emptyLines = zone.lignesVides || 0; // 0=conserver, 1=supprimer, 2=supprimer si vide
+        
+        // Couleur texte par défaut
+        const textColor = zone.typographie?.couleur ? rgbToCmyk(zone.typographie.couleur) : { c: 0, m: 0, y: 0, k: 1 };
+        
+        let xml = generatePsmdObjectCommon(zone);
+        
+        xml += `
+<text_object>
+<backwardlink>{00000000-0000-0000-0000-000000000000}</backwardlink>
+<forwardlink>{00000000-0000-0000-0000-000000000000}</forwardlink>
+<rtf_data>${rtfBase64}</rtf_data>
+<emptylines_property>${emptyLines}</emptylines_property>
+<horizontal_alignment>${hAlign}</horizontal_alignment>
+<vertical_alignment>${vAlign}</vertical_alignment>
+<vertical_text>no</vertical_text>
+${generatePsmdColor('textcolor', textColor, 0)}
+<cmyk_output>no</cmyk_output>
+<copy_fitting>
+<reduce_to_fit>${reduceToFit}</reduce_to_fit>
+<fontsize_minimum>${minFontSize}</fontsize_minimum>
+<allow_line_breaks>yes</allow_line_breaks>
+</copy_fitting>
+</text_object>
+</object>`;
+        
+        return xml;
+    }
+
+    /**
+     * Génère un objet image PSMD (image_object).
+     * 
+     * @param {Object} zone - Données de la zone image exportée
+     * @returns {string} XML complet de l'objet image
+     */
+    function generatePsmdImageObject(zone) {
+        const name = escapeXmlPsmd(zone.nom || 'Image');
+        const fileName = zone.source?.nomOriginal || zone.source?.nomFichier || '';
+        
+        // Mode de redimensionnement
+        const keepAspectRatio = zone.redimensionnement?.mode === 'proportionnel' ? 'yes' : 'no';
+        
+        let xml = generatePsmdObjectCommon(zone);
+        
+        xml += `
+<image_object>
+<scale>2</scale>
+<keep_aspect_ratio>${keepAspectRatio}</keep_aspect_ratio>
+<horizontal_alignment>4</horizontal_alignment>
+<vertical_alignment>4</vertical_alignment>
+<variable_name>${name}</variable_name>
+<default_image_folder></default_image_folder>
+<default_folder></default_folder>
+<subfolders>no</subfolders>
+<file_name>${escapeXmlPsmd(fileName)}</file_name>
+<pdf_pagenumber_expression>1</pdf_pagenumber_expression>
+<global_scope>no</global_scope>
+<filters>
+<two_color convert="no">
+<threshold>50</threshold>
+${generatePsmdColor('backgroundcolor', { c: 0, m: 0, y: 0, k: 0 }, 0)}
+${generatePsmdColor('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 }, 0)}
+</two_color>
+</filters>
+</image_object>
+</object>`;
+        
+        return xml;
+    }
+
+    /**
+     * Génère un objet code-barres PSMD (plugin_object).
+     * 
+     * @param {Object} zone - Données de la zone code-barres exportée
+     * @param {string} barcodeType - Type de code-barres ('barcode' ou 'qr')
+     * @returns {string} XML complet de l'objet code-barres
+     */
+    function generatePsmdBarcodeObject(zone, barcodeType) {
+        // Déterminer le type PrintShop
+        let psType;
+        if (barcodeType === 'qr') {
+            psType = 'QRCode';
+        } else {
+            // Récupérer le type depuis les données de la zone
+            const designerType = zone.barcodeType || zone.typeCode || 'code128';
+            psType = BARCODE_TYPE_MAP[designerType.toLowerCase()] || 'Code128';
+        }
+        
+        // Contenu du code-barres
+        const data = zone.valeur || zone.contenu || '';
+        
+        let xml = generatePsmdObjectCommon(zone);
+        
+        // Modifier snap_frame_to_content pour les codes-barres
+        xml = xml.replace('<snap_frame_to_content>no</snap_frame_to_content>', '<snap_frame_to_content>yes</snap_frame_to_content>');
+        
+        xml += `
+<plugin_object title="Barcode" assembly_name="Barcode.plugins.dll" assembly_version="2.2.3.9078" class_name="Barcode" url="http://www.printshopmail.com/plugins/barcode/" url_download_version="http://www.printshopmail.com/plugins/barcode/2_2/Barcode.plugins.dll">
+<property_bag><Barcode><RotationFixed>0</RotationFixed><BoundsIsRotated>False</BoundsIsRotated><Initialized>True</Initialized><Type>${psType}</Type><Data>${escapeXmlPsmd(data)}</Data><Alignment>0;0</Alignment></Barcode>
+</property_bag>
+</plugin_object>
+</object>`;
+        
+        return xml;
+    }
+
+    /**
+     * Génère un objet PSMD selon le type de zone.
+     * Dispatch vers la fonction appropriée selon le type.
+     * 
+     * @param {Object} zone - Données de la zone exportée (format JSON WebDev)
+     * @returns {string} XML de l'objet ou chaîne vide si type non supporté
+     */
+    function generatePsmdObject(zone) {
+        const type = zone.type;
+        
+        switch (type) {
+            case 'textQuill':
+                return generatePsmdTextObject(zone);
+            case 'image':
+                return generatePsmdImageObject(zone);
+            case 'barcode':
+                return generatePsmdBarcodeObject(zone, 'barcode');
+            case 'qr':
+                return generatePsmdBarcodeObject(zone, 'qr');
+            default:
+                console.warn(`Type de zone non supporté pour export PSMD: ${type}`);
+                return '';
+        }
+    }
+
     // Exposer les fonctions utilitaires PSMD sur window pour les tests et l'accès externe
     window.mmToPoints = mmToPoints;
     window.rgbToCmyk = rgbToCmyk;
@@ -15435,6 +15689,11 @@ document.addEventListener('DOMContentLoaded', () => {
     window.generatePsmdFooterSections = generatePsmdFooterSections;
     window.generatePsmdColor = generatePsmdColor;
     window.generatePsmdVariable = generatePsmdVariable;
+    window.generatePsmdObjectCommon = generatePsmdObjectCommon;
+    window.generatePsmdTextObject = generatePsmdTextObject;
+    window.generatePsmdImageObject = generatePsmdImageObject;
+    window.generatePsmdBarcodeObject = generatePsmdBarcodeObject;
+    window.generatePsmdObject = generatePsmdObject;
 
     // ─────────────────────────────── FIN SECTION 25 ───────────────────────────────
     
