@@ -14934,6 +14934,9 @@ document.addEventListener('DOMContentLoaded', () => {
      *   - generateGuid() : Génération d'un GUID unique
      *   - formatIsoDateTime() : Date/heure au format ISO
      *   - escapeXmlPsmd() : Échappement des caractères XML
+     *   - toHexLE16() : Conversion entier → hex little-endian 16 bits
+     *   - hexToBase64() : Conversion hex → Base64
+     *   - generateWindowsDevmode() : Génération blob DEVMODE pour impression
      * 
      * Fonction principale :
      *   - exportToPsmd() : Génère le fichier .psmd complet
@@ -15093,6 +15096,112 @@ document.addEventListener('DOMContentLoaded', () => {
             .replace(/'/g, '&apos;');
     }
 
+    /**
+     * Convertit un entier en hexadécimal little-endian sur 2 octets.
+     * 
+     * @param {number} value - Valeur entière à convertir
+     * @returns {string} Chaîne hexadécimale (4 caractères, little-endian)
+     * 
+     * @example
+     * toHexLE16(1);    // → '0100' (Portrait)
+     * toHexLE16(2);    // → '0200' (Paysage)
+     * toHexLE16(2970); // → '9A0B' (A4 hauteur en 1/10 mm)
+     * toHexLE16(2100); // → '3408' (A4 largeur en 1/10 mm)
+     */
+    function toHexLE16(value) {
+        const lowByte = value % 256;
+        const highByte = Math.floor(value / 256);
+        return lowByte.toString(16).toUpperCase().padStart(2, '0') + 
+               highByte.toString(16).toUpperCase().padStart(2, '0');
+    }
+
+    /**
+     * Convertit une chaîne hexadécimale en Base64.
+     * 
+     * @param {string} hexString - Chaîne hexadécimale (sans espaces)
+     * @returns {string} Chaîne encodée en Base64
+     */
+    function hexToBase64(hexString) {
+        // Convertir hex en tableau d'octets
+        const bytes = [];
+        for (let i = 0; i < hexString.length; i += 2) {
+            bytes.push(parseInt(hexString.substr(i, 2), 16));
+        }
+        
+        // Convertir en chaîne binaire puis en Base64
+        const binary = String.fromCharCode.apply(null, bytes);
+        return btoa(binary);
+    }
+
+    /**
+     * Génère le blob DEVMODE encodé en Base64 pour PrintShop Mail.
+     * Définit l'orientation et les dimensions de la page pour l'impression.
+     * 
+     * @param {string} orientation - 'PORTRAIT' ou 'PAYSAGE'
+     * @param {number} hauteurMm - Hauteur de la page en millimètres
+     * @param {number} largeurMm - Largeur de la page en millimètres
+     * @returns {string} DEVMODE encodé en Base64
+     * 
+     * @example
+     * // A4 Portrait
+     * generateWindowsDevmode('PORTRAIT', 297, 210);
+     * 
+     * // A4 Paysage
+     * generateWindowsDevmode('PAYSAGE', 210, 297);
+     */
+    function generateWindowsDevmode(orientation, hauteurMm, largeurMm) {
+        // Orientation : 1 = Portrait, 2 = Paysage
+        const nOrientation = (orientation.toUpperCase() === 'PAYSAGE' || 
+                              orientation.toUpperCase() === 'LANDSCAPE') ? 2 : 1;
+        
+        // Convertir en 1/10 mm
+        const hauteur10mm = Math.round(hauteurMm * 10);
+        const largeur10mm = Math.round(largeurMm * 10);
+        
+        // Encoder en little-endian hex
+        const hexOrientation = toHexLE16(nOrientation);
+        const hexHauteur = toHexLE16(hauteur10mm);
+        const hexLargeur = toHexLE16(largeur10mm);
+        
+        // Template DEVMODE en hexadécimal (basé sur PrintShop Mail Printer)
+        // Les placeholders sont remplacés par les valeurs calculées
+        const hexTemplate = 
+            'FFFEFF165000720069006E007400530068006F00700020004D00610069006C002000500072' +
+            '0069006E00740065007200780400005000720069006E007400530068006F00700020004D00' +
+            '610069006C0020005000720069006E0074006500720000000000000000000000000000000000' +
+            '0000000001040006DC009C0353EF80' + hexOrientation + '00FF' + hexHauteur + hexLargeur + 
+            '04640001000F004800020001004800030001000000000000000000000000000000000000000' +
+            '0000000000000000000000000000000000000000000000000000000000000000000000000000' +
+            '0000000000000000000000000000000000000010000000000000001000000020000000100000' +
+            '0000000000000000000000000000000000000000050524956E23000000000000000000000000' +
+            '0000000000000000000000000000000000000000000000000000000000000000000000000000' +
+            '0000000000000000000000000000000000000000000000000000000000000000018000000000' +
+            '01027102710270000102700000000000000000C8009C0300000000000000000000000000000' +
+            '000000000000000000003000000000000000000100050BD0100887E030000000000000000000' +
+            '000000000000000000000000000000000000000449F6BE605000000000025' +
+            '00FF00FF0000000000000000000000000000000000000000000000000000000000000000000' +
+            '0000000000000000000000000000000000000000000000000000000000000000000000000000' +
+            '0000000000000000000000000000000000000000000000000000000000000000000000000000' +
+            '0000000000000000000000000000000000000000000000000000000000000000000000000000' +
+            '0000000000000000000000000000000000000000000000000000000000000000000000000000' +
+            '0000000000000000000000000000000000000000000000000000000000000000000000000000' +
+            '0000000000000000000000000000000000000000000000000000000000000000000000000000' +
+            '0000000000000000000000000000000000000000000000000000000000000000000000000000' +
+            '0000000000000000000000000000000000000000000000000000000000000000000000000000' +
+            '0000000000000000000000000000000000000000000000000000000000000000000000000000' +
+            '0000000000000000000000000000000000000000000000000000000000000000000000000000' +
+            '0000000000000000000000000001000000000000000000000000000000C8000000534D544A00' +
+            '0000001000B8005000720069006E007400530068006F00700020004D00610069006C00200050' +
+            '00720069006E0074006500720020004400720069007600650072002000280050005300290000' +
+            '005265736F6C7574696F6E003732647069005061676553697A6500437573746F6D5061676553' +
+            '697A650050616765526567696F6E00004C656164696E674564676500' +
+            '00496E707574536C6F74002A557365466F726D547261795461626C6500000000000000000000' +
+            '0000000000000000000000';
+        
+        // Convertir hex en Base64
+        return hexToBase64(hexTemplate);
+    }
+
     // Exposer les fonctions utilitaires PSMD sur window pour les tests et l'accès externe
     window.mmToPoints = mmToPoints;
     window.rgbToCmyk = rgbToCmyk;
@@ -15101,6 +15210,9 @@ document.addEventListener('DOMContentLoaded', () => {
     window.generateGuid = generateGuid;
     window.formatIsoDateTime = formatIsoDateTime;
     window.escapeXmlPsmd = escapeXmlPsmd;
+    window.toHexLE16 = toHexLE16;
+    window.hexToBase64 = hexToBase64;
+    window.generateWindowsDevmode = generateWindowsDevmode;
 
     // ─────────────────────────────── FIN SECTION 25 ───────────────────────────────
     
