@@ -584,7 +584,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Input color caché pour le formatage de texte
     const colorPickerInput = document.getElementById('color-picker-input');
-    let savedColorSelection = null; // Sauvegarde la sélection pour le color picker
     
     // Inputs de bordure (SUPPRIMÉS)
     const inputBorderWidth = null; // SUPPRIMÉ
@@ -8052,152 +8051,16 @@ document.addEventListener('DOMContentLoaded', () => {
      * Le formatage riche est maintenant géré par Quill (type 'textQuill').
      * 
      * Fonctions principales :
-     *   - updateActiveZoneData() : Synchronise formulaire → données zone
      *   - applyBorderToZone() : Applique les bordures utilisateur
+     *   - updateActiveZone() : Wrapper pour les contrôles communs (Section 15)
+     *   - updateActiveImageZoneData() : Synchronise formulaire → zone image
+     *   - updateActiveQrZoneData() : Synchronise formulaire → zone QR
      */
     // ───────────────────────────────────────────────────────────────────────────────
     
-    // --- 3. ÉCOUTEURS SUR LE FORMULAIRE (DATA BINDING) ---
-    // Quand on tape dans le formulaire, on met à jour l'objet ET le visuel
-    
-    function updateActiveZoneData() {
-        // Ne fonctionne qu'en mode sélection unique
-        if (selectedZoneIds.length !== 1) return;
-
-        const selectedId = selectedZoneIds[0];
-        const zoneEl = document.getElementById(selectedId);
-        if (!zoneEl) return;
-
-        const zonesData = getCurrentPageZones();
-        
-        // Bloquer si zone système
-        if (zonesData[selectedId] && zonesData[selectedId].systeme) return;
-        
-        const zoneType = zonesData[selectedId].type || 'text';
-        const contentEl = zoneEl.querySelector('.zone-content');
-
-        if (zoneType === 'qr') {
-            if (chkLock) zonesData[selectedId].locked = chkLock.checked;
-            if (chkLock && chkLock.checked) {
-                zoneEl.classList.add('locked');
-            } else {
-                zoneEl.classList.remove('locked');
-            }
-            // Mettre à jour l'affichage des poignées (prend en compte sélection + verrouillage)
-            updateHandlesVisibility();
-            // Activer/désactiver les champs de géométrie selon le verrouillage
-            const isLockedQr = chkLock ? chkLock.checked : false;
-            if (inputX) inputX.disabled = isLockedQr;
-            if (inputY) inputY.disabled = isLockedQr;
-            if (inputW) inputW.disabled = isLockedQr;
-            if (inputH) inputH.disabled = isLockedQr;
-            // Régénérer le code-barres avec les nouvelles propriétés
-            updateQrZoneDisplay(selectedId);
-            saveToLocalStorage();
-            return;
-        }
-
-        // Mise à jour de l'objet de données (protégé car éléments supprimés)
-        if (inputContent) zonesData[selectedId].content = inputContent.value;
-        if (inputFont) zonesData[selectedId].font = inputFont.value;
-        if (inputSize) zonesData[selectedId].size = inputSize.value;
-        if (inputColor) zonesData[selectedId].color = inputColor.value;
-        if (inputAlign) zonesData[selectedId].align = inputAlign.value;
-        if (inputValign) zonesData[selectedId].valign = inputValign.value;
-        // Nouvelles propriétés
-        if (inputBgColor) zonesData[selectedId].bgColor = inputBgColor.value;
-        if (chkTransparent) zonesData[selectedId].isTransparent = chkTransparent.checked;
-        if (chkLock) zonesData[selectedId].locked = chkLock.checked;
-        if (chkCopyfit) zonesData[selectedId].copyfit = chkCopyfit.checked;
-        if (inputLineHeight) zonesData[selectedId].lineHeight = parseFloat(inputLineHeight.value) || 1.2;
-        
-        // Mise à jour des propriétés de bordure
-        if (!zonesData[selectedId].border) {
-            zonesData[selectedId].border = { width: 0, color: '#000000', style: 'solid' };
-        }
-        if (inputBorderWidth) zonesData[selectedId].border.width = parseFloat(inputBorderWidth.value) || 0;
-        if (inputBorderColor) zonesData[selectedId].border.color = inputBorderColor.value;
-        if (inputBorderStyle) zonesData[selectedId].border.style = inputBorderStyle.value;
-
-        // Gestion UI Checkbox
-        if (inputBgColor && chkTransparent) inputBgColor.disabled = chkTransparent.checked;
-
-        // Mise à jour visuelle avec formatage partiel
-        const formatting = zonesData[selectedId].formatting || [];
-        const defaultColor = formatting.length > 0 && inputColor ? inputColor.value : null;
-        const emptyLinesValue = zonesData[selectedId].emptyLines || 0;
-        if (inputContent) contentEl.innerHTML = renderFormattedContent(inputContent.value, formatting, defaultColor, emptyLinesValue);
-        if (inputFont) zoneEl.style.fontFamily = inputFont.value + ", sans-serif";
-        // Note: Le rendu 'pt' web n'est pas 100% identique au print, mais proche
-        
-        // Application de la taille (Soit Copyfit, soit Taille Fixe)
-        if (chkCopyfit && chkCopyfit.checked && inputSize) {
-            applyCopyfit(zoneEl, inputSize.value);
-        } else if (inputSize) {
-            zoneEl.style.fontSize = inputSize.value + 'pt';
-        }
-        
-        // Gras "zone entière" supprimé : le gras est géré via formatage partiel (Quill) ou annotations.
-        zoneEl.style.fontWeight = 'normal';
-        contentEl.style.fontWeight = 'normal';
-        
-        // Couleur globale : appliquée sur la zone et sur contentEl
-        // La couleur par défaut sera héritée par les segments sans annotation
-        if (inputColor) {
-            zoneEl.style.color = inputColor.value;
-            contentEl.style.color = inputColor.value;
-        }
-        
-        // Fond
-        if (chkTransparent && chkTransparent.checked) {
-            zoneEl.style.backgroundColor = 'transparent';
-        } else if (inputBgColor) {
-            zoneEl.style.backgroundColor = inputBgColor.value;
-        }
-
-        // Verrouillage (Visuel)
-        const isLockedText = chkLock ? chkLock.checked : false;
-        if (isLockedText) {
-            zoneEl.classList.add('locked');
-        } else {
-            zoneEl.classList.remove('locked');
-        }
-        // Mettre à jour l'affichage des poignées (prend en compte sélection + verrouillage)
-        updateHandlesVisibility();
-        
-        // Activer/désactiver les champs de géométrie selon le verrouillage
-        if (inputX) inputX.disabled = isLockedText;
-        if (inputY) inputY.disabled = isLockedText;
-        if (inputW) inputW.disabled = isLockedText;
-        if (inputH) inputH.disabled = isLockedText;
-        
-        // Alignement Horizontal (géré par le texte lui-même)
-        if (inputAlign) contentEl.style.textAlign = inputAlign.value;
-        
-        // Interlignage
-        if (inputLineHeight) contentEl.style.lineHeight = inputLineHeight.value;
-        
-        // Alignement Vertical
-        // Comme .zone-content est en flex-column, l'axe principal (vertical) est géré par justify-content
-        if (inputValign) contentEl.style.justifyContent = mapValignToFlex(inputValign.value);
-        
-        // Nettoyage des styles conflictuels sur le parent
-        zoneEl.style.alignItems = 'normal'; 
-        zoneEl.style.justifyContent = 'normal';
-
-        // Appliquer le Copy Fitting si activé
-        if (chkCopyfit.checked) {
-            applyCopyfit(zoneEl, zonesData[selectedId].size);
-        } else {
-            // Si désactivé, on remet la taille normale définie
-            zoneEl.style.fontSize = inputSize.value + 'pt';
-        }
-        
-        // Appliquer la bordure utilisateur
-        applyBorderToZone(zoneEl, zonesData[selectedId].border);
-
-        saveToLocalStorage(); // Sauvegarder à chaque modif
-    }
+    // NOTE: La fonction updateActiveZoneData() a été supprimée car elle gérait l'ancien type 'text'.
+    // Les zones textQuill sont gérées directement par Quill et les toolbars flottantes.
+    // Les zones image/QR/barcode sont gérées par updateActiveImageZoneData() et updateActiveQrZoneData().
     
     /**
      * Applique les styles de bordure à une zone
@@ -9264,8 +9127,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
-     * Fonction wrapper qui détecte le type de zone et appelle la bonne fonction de mise à jour
-     * Utilisée pour les contrôles communs (bordure, fond, verrouillage)
+     * Fonction wrapper qui détecte le type de zone et appelle la bonne fonction de mise à jour.
+     * Utilisée pour les contrôles communs (bordure, fond, verrouillage).
+     * Note : Les zones textQuill sont gérées directement par Quill et les toolbars flottantes.
      */
     function updateActiveZone() {
         if (selectedZoneIds.length !== 1) return;
@@ -9280,9 +9144,8 @@ document.addEventListener('DOMContentLoaded', () => {
             updateActiveImageZoneData();
         } else if (zoneData.type === 'qr') {
             updateActiveQrZoneData();
-        } else {
-            updateActiveZoneData();
         }
+        // Note : textQuill, barcode et qrcode sont gérés par leurs toolbars respectives
     }
     
     /**
@@ -9618,73 +9481,28 @@ document.addEventListener('DOMContentLoaded', () => {
      * Écouteurs d'événements pour les contrôles du formulaire.
      * Gère la synchronisation entre l'UI et les données des zones.
      * 
-     * Listeners texte :
-     *   - inputContent, inputFont, inputSize, inputColor
-     *   - inputAlign, inputValign, inputLineHeight
-     *   - chkCopyfit, chkTransparent, chkLock
+     * Note : Les listeners de l'ancien type 'text' (inputContent, inputFont, inputSize, etc.)
+     * ont été supprimés. Les zones textQuill sont gérées par Quill et les toolbars flottantes.
      * 
      * Listeners image :
      *   - imageInputSourceType, imageInputChamp, imageInputMode
      *   - imageAlignHGroup, imageAlignVGroup, imageFileInput
      * 
-     * Listeners code-barres :
-     *   - inputBarcodeName, inputBarcodeType, inputBarcodeField
-     *   - inputBarcodeReadable, inputBarcodeFontsize, inputBarcodeColor
+     * Listeners communs :
+     *   - inputBgColor, inputBorderColor, inputBorderStyle
+     *   - chkTransparent, chkLock
      * 
      * Dépendances :
-     *   - updateActiveZoneData() (Section 14)
+     *   - updateActiveZone(), updateActiveImageZoneData(), updateActiveQrZoneData()
      *   - saveState() (Section 11)
      */
     // ───────────────────────────────────────────────────────────────────────────────
     
-    // Écouteur spécifique pour le contenu texte (avec debounce pour l'historique)
-    // L'état AVANT la modification est déjà dans l'historique (dernier snapshot)
-    // On sauvegarde l'état APRÈS 500ms d'inactivité
-    if (inputContent) {
-        inputContent.addEventListener('input', () => {
-            clearTimeout(contentSaveTimeout);
-            contentSaveTimeout = setTimeout(() => {
-                saveState(); // Snapshot APRÈS la saisie (500ms après dernière frappe)
-            }, 500);
-            // Note: updateActiveZoneData() est appelé par l'écouteur de formatage plus bas
-        });
-    }
+    // NOTE: Les listeners pour inputContent, inputFont, inputSize, inputColor, inputAlign, 
+    // inputValign, inputLineHeight ont été supprimés car ces inputs sont null 
+    // et l'ancien type 'text' a été remplacé par textQuill (géré par Quill).
     
-    // Écouteurs pour les autres inputs (éviter les doubles snapshots)
-    // IMPORTANT: saveState() est appelé APRÈS updateActiveZoneData() pour capturer l'état APRÈS la modification
-    
-    // 1. Inputs numériques : input pour l'aperçu temps réel, change pour saveState
-    // Note: inputBorderWidth est maintenant un hidden géré par les boutons spin
-    [inputSize, inputLineHeight].forEach(el => {
-        if (!el) return;
-        el.addEventListener('input', () => {
-            updateActiveZoneData(); // Aperçu temps réel sans snapshot
-        });
-        el.addEventListener('change', () => {
-            updateActiveZoneData(); // Appliquer le changement
-            saveState(); // Snapshot APRÈS le changement
-        });
-    });
-    
-    // 2. Selects et color pickers SPÉCIFIQUES AU TEXTE
-    [inputFont, inputColor, inputAlign, inputValign].forEach(el => {
-        if (!el) return;
-        
-        // Pour les color pickers : input pour l'aperçu temps réel
-        if (el.type === 'color') {
-            el.addEventListener('input', () => {
-                updateActiveZoneData(); // Aperçu temps réel sans snapshot
-            });
-        }
-        
-        // Pour tous : change pour la sauvegarde finale
-        el.addEventListener('change', () => {
-            updateActiveZoneData();
-            saveState(); // Snapshot APRÈS le changement
-        });
-    });
-    
-    // 2b. Contrôles COMMUNS (fond, bordure) - utilisent updateActiveZone()
+    // Contrôles COMMUNS (fond, bordure) - utilisent updateActiveZone()
     [inputBgColor, inputBorderColor, inputBorderStyle].forEach(el => {
         if (!el) return;
         
@@ -9702,14 +9520,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     
-    // 3. Checkboxes SPÉCIFIQUES AU TEXTE
-    [chkCopyfit].forEach(el => {
-        if (!el) return;
-        el.addEventListener('change', () => {
-            updateActiveZoneData(); // Appliquer le changement
-            saveState(); // Snapshot APRÈS le changement
-        });
-    });
+    // NOTE: Le listener chkCopyfit a été supprimé car il utilisait updateActiveZoneData() 
+    // qui gérait l'ancien type 'text'. Le copyfit pour textQuill est géré par applyQuillZoneStyles().
     
     // 3a. Select Lignes vides (SPÉCIFIQUE AU TEXTE)
     // NOTE: Pour les zones textQuill, la gestion des lignes vides est gérée différemment via Quill
@@ -9917,295 +9729,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Gérer les modifications du texte pour ajuster les annotations
-    let previousContent = '';
-    let previousSelectionStart = 0;
-    let previousSelectionEnd = 0;
-    
-    if (inputContent) {
-        inputContent.addEventListener('focus', () => {
-            // Sauvegarder l'état initial quand on focus le textarea
-            previousContent = inputContent.value;
-            previousSelectionStart = inputContent.selectionStart;
-            previousSelectionEnd = inputContent.selectionEnd;
-        });
-        
-        // Mettre à jour aussi lors de la perte de focus
-        inputContent.addEventListener('blur', () => {
-            previousSelectionStart = inputContent.selectionStart;
-            previousSelectionEnd = inputContent.selectionEnd;
-        });
-        
-        // Mettre à jour aussi lors des événements de sélection (mouseup, keyup)
-        inputContent.addEventListener('mouseup', () => {
-            previousSelectionStart = inputContent.selectionStart;
-            previousSelectionEnd = inputContent.selectionEnd;
-        });
-        
-        inputContent.addEventListener('keyup', () => {
-            previousSelectionStart = inputContent.selectionStart;
-            previousSelectionEnd = inputContent.selectionEnd;
-        });
-        
-        inputContent.addEventListener('input', (e) => {
-            if (selectedZoneIds.length !== 1) {
-                updateActiveZoneData();
-                return;
-            }
-            
-            const selectedId = selectedZoneIds[0];
-            const zonesData = getCurrentPageZones();
-            const zoneData = zonesData[selectedId];
-            
-            if (!zoneData || !zoneData.formatting || zoneData.formatting.length === 0) {
-                updateActiveZoneData();
-                previousContent = inputContent.value;
-                return;
-            }
-            
-            // Logs pour diagnostiquer
-            const currentContent = inputContent.value;
-            const currentSelectionStart = inputContent.selectionStart;
-            const currentSelectionEnd = inputContent.selectionEnd;
-            const oldLength = previousContent.length;
-        const newLength = currentContent.length;
-        
-        
-        // Détecter le type de modification et ajuster les annotations
-        // Calculer la différence de longueur
-        const diff = newLength - oldLength;
-        
-        // Trouver où la modification a eu lieu
-        // On utilise la position du curseur avant et après pour déterminer la zone modifiée
-        let modificationPos;
-        let modificationEnd;
-        
-        
-        // Vérifier si la sélection était vraiment active au moment de la modification
-        // Si la sélection n'est plus active maintenant, c'est probablement une insertion/suppression simple
-        const hadActiveSelection = previousSelectionStart !== previousSelectionEnd;
-        const hasActiveSelectionNow = currentSelectionStart !== currentSelectionEnd;
-        
-        if (diff < 0) {
-            // SUPPRESSION
-            // Le curseur avant indique où la suppression a commencé
-            // Le curseur après indique où on se trouve maintenant
-            // La zone supprimée va de previousSelectionStart à previousSelectionStart + |diff|
-            modificationPos = previousSelectionStart; // Position où commence la suppression
-            modificationEnd = previousSelectionStart + Math.abs(diff); // Position où se terminait la suppression
-        } else if (diff > 0) {
-            // INSERTION
-            // Si on avait une sélection (previousSelectionStart != previousSelectionEnd)
-            // et qu'on insère, c'est un remplacement de sélection
-            if (previousSelectionStart !== previousSelectionEnd) {
-                // Remplacement de sélection : la zone modifiée est la sélection originale
-                modificationPos = previousSelectionStart;
-                modificationEnd = previousSelectionEnd;
-            } else {
-                // Insertion simple : le curseur avant indique où l'insertion a commencé
-                modificationPos = previousSelectionStart;
-                modificationEnd = previousSelectionStart; // L'insertion est un point (pas une plage)
-            }
-        } else {
-            // Pas de changement de longueur (remplacement ?)
-            modificationPos = previousSelectionStart;
-            modificationEnd = previousSelectionEnd;
-        }
-        
-        
-        // Ajuster les annotations selon la modification
-        // On travaille sur une copie pour éviter les modifications pendant l'itération
-        const annotationsToKeep = [];
-        const annotationsToRemove = [];
-        
-        zoneData.formatting.forEach((f, i) => {
-            const oldStart = f.start;
-            const oldEnd = f.end;
-            const annotationLength = oldEnd - oldStart;
-            
-            
-            if (diff < 0) {
-                // SUPPRESSION
-                // modificationPos = position après suppression, modificationEnd = position avant suppression
-                if (f.start >= modificationEnd) {
-                    // L'annotation est complètement après la suppression : on décale vers la gauche
-                    const newStart = Math.max(0, f.start + diff);
-                    const newEnd = Math.max(newStart, f.end + diff);
-                    if (newStart < newEnd) {
-                        f.start = newStart;
-                        f.end = newEnd;
-                        annotationsToKeep.push(f);
-                    } else {
-                        annotationsToRemove.push(i);
-                    }
-                } else if (f.end > modificationPos) {
-                    // L'annotation chevauche la zone supprimée
-                    if (f.start < modificationPos) {
-                        // L'annotation commence avant la suppression
-                        // Si la suppression est complètement à l'intérieur de l'annotation, on décale juste la fin
-                        // Si la suppression commence à la fin de l'annotation, on tronque
-                        if (f.end > modificationEnd) {
-                            // La suppression est à l'intérieur de l'annotation : on décale la fin
-                            f.end += diff; // diff est négatif, donc cela décale vers la gauche
-                            annotationsToKeep.push(f);
-                        } else {
-                            // La suppression commence à la fin ou après : on tronque
-                            f.end = modificationPos;
-                            if (f.end > f.start) {
-                                annotationsToKeep.push(f);
-                            } else {
-                                annotationsToRemove.push(i);
-                            }
-                        }
-                    } else if (f.start >= modificationPos && f.start < modificationEnd) {
-                        // L'annotation commence dans la zone supprimée
-                        if (f.end <= modificationEnd) {
-                            // L'annotation est complètement dans la zone supprimée : on la supprime
-                            annotationsToRemove.push(i);
-                        } else {
-                            // L'annotation commence dans la zone supprimée mais se termine après
-                            // On décale le début à la fin de la zone supprimée
-                            f.start = modificationPos;
-                            f.end = f.end + diff; // On décale aussi la fin
-                            if (f.end > f.start) {
-                                annotationsToKeep.push(f);
-                            } else {
-                                annotationsToRemove.push(i);
-                            }
-                        }
-                    } else {
-                        // L'annotation commence après la zone supprimée : on la décale
-                        f.start = Math.max(0, f.start + diff);
-                        f.end = Math.max(f.start, f.end + diff);
-                        if (f.start < f.end) {
-                            annotationsToKeep.push(f);
-                        } else {
-                            annotationsToRemove.push(i);
-                            console.log(`  Annotation [${i}] supprimée (devenue invalide)`);
-                        }
-                    }
-                } else {
-                    // L'annotation est complètement avant la suppression : on la garde telle quelle
-                    annotationsToKeep.push(f);
-                }
-            } else if (diff > 0) {
-                // INSERTION
-                // Détecter un vrai remplacement de sélection : sélection active avant ET sélection perdue après
-                // Si la sélection est toujours active après, ce n'est pas un remplacement mais une insertion simple
-                if (hadActiveSelection && !hasActiveSelectionNow && modificationEnd - modificationPos > 0) {
-                    // REMPLACEMENT DE SÉLECTION (insertion dans une sélection qui a été remplacée)
-                    // IMPORTANT: On ne doit PAS étendre l'annotation pour inclure le nouveau texte
-                    // Le nouveau texte ne doit pas hériter du formatage de l'ancien texte
-                    if (f.start >= modificationEnd) {
-                        // L'annotation est complètement après la zone modifiée : on décale
-                        f.start += diff;
-                        f.end += diff;
-                        annotationsToKeep.push(f);
-                    } else if (f.end > modificationPos) {
-                        // L'annotation chevauche la zone modifiée
-                        if (f.start < modificationPos) {
-                            // L'annotation commence avant : on tronque à la position de début
-                            // Le texte remplacé perd son formatage
-                            f.end = modificationPos;
-                            if (f.end > f.start) {
-                                annotationsToKeep.push(f);
-                            } else {
-                                annotationsToRemove.push(i);
-                            }
-                        } else {
-                            // L'annotation commence dans la zone modifiée : on la supprime
-                            // Le texte formaté a été remplacé
-                            annotationsToRemove.push(i);
-                        }
-                    } else {
-                        // L'annotation est complètement avant : on la garde
-                        annotationsToKeep.push(f);
-                    }
-                } else {
-                    // INSERTION SIMPLE (pas de sélection)
-                    if (f.start >= modificationPos) {
-                        // L'annotation est complètement après l'insertion : on décale toute l'annotation
-                        f.start += diff;
-                        f.end += diff;
-                        annotationsToKeep.push(f);
-                    } else if (f.end > modificationPos) {
-                        // L'annotation s'étend jusqu'à ou au-delà de la position d'insertion
-                        // IMPORTANT: On n'étend PAS l'annotation pour inclure le nouveau texte
-                        // Le nouveau texte ne doit pas hériter du formatage
-                        // On décale seulement la fin pour maintenir la position relative du texte formaté
-                        f.end += diff;
-                        annotationsToKeep.push(f);
-                    } else {
-                        // L'annotation est complètement avant l'insertion : on la garde telle quelle
-                        annotationsToKeep.push(f);
-                    }
-                }
-            } else {
-                // Pas de changement de longueur (remplacement ?) : on garde l'annotation
-                annotationsToKeep.push(f);
-            }
-        });
-        
-        // Mettre à jour le tableau de formatage
-        zoneData.formatting = annotationsToKeep;
-        
-        // Nettoyer les annotations invalides (seulement celles vraiment invalides)
-        const beforeClean = zoneData.formatting.length;
-        zoneData.formatting = zoneData.formatting.filter(f => {
-            // Vérifier que l'annotation a des positions valides
-            if (f.start < 0 || f.end < 0) {
-                return false;
-            }
-            
-            // Vérifier que start < end
-            if (f.start >= f.end) {
-                return false;
-            }
-            
-            // Vérifier que l'annotation ne dépasse pas la longueur du contenu
-            if (f.start > currentContent.length) {
-                return false;
-            }
-            
-            // Ajuster la fin si elle dépasse (au lieu de supprimer)
-            if (f.end > currentContent.length) {
-                f.end = currentContent.length;
-                // Si après ajustement la plage est invalide, supprimer
-                if (f.start >= f.end) {
-                    return false;
-                }
-            }
-            
-            // Vérifier que l'annotation a au moins un style
-            if (!f.styles || Object.keys(f.styles).length === 0) {
-                return false;
-            }
-            
-            return true;
-        });
-        const afterClean = zoneData.formatting.length;
-        if (beforeClean !== afterClean) {
-        }
-        
-        // Mettre à jour l'affichage
-        updateActiveZoneData();
-        
-        // Sauvegarder l'état pour la prochaine modification
-        previousContent = currentContent;
-        previousSelectionStart = currentSelectionStart;
-        previousSelectionEnd = currentSelectionEnd;
-        
-        // Afficher les annotations en détail APRÈS
-        });
-    } // Fin if (inputContent)
-    
-    // Mettre à jour la sélection en temps réel pour détecter correctement les remplacements
-    document.addEventListener('selectionchange', () => {
-        if (inputContent && document.activeElement === inputContent) {
-            previousSelectionStart = inputContent.selectionStart;
-            previousSelectionEnd = inputContent.selectionEnd;
-        }
-    });
+    // NOTE: Le bloc de gestion des annotations de formatage textarea (inputContent) a été supprimé
+    // car il gérait l'ancien type 'text'. Le formatage riche est maintenant géré par Quill (type 'textQuill').
     
     // NOTE: Les boutons de formatage (btnFormatBold, btnFormatColor, btnFormatClear) ont été supprimés
     // car ils étaient liés à l'ancien système textarea (type 'text').
@@ -13902,7 +13427,7 @@ document.addEventListener('DOMContentLoaded', () => {
         documentState.pages.forEach(page => {
             const zones = page && page.zones ? page.zones : {};
             Object.values(zones).forEach(zoneData => {
-                if (!zoneData || (zoneData.type !== 'text' && zoneData.type !== 'textQuill')) return;
+                if (!zoneData || zoneData.type !== 'textQuill') return;
 
                 const fontName = zoneData.font || QUILL_DEFAULT_FONT;
                 const flags = ensure(fontName);
@@ -13910,13 +13435,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Regular est toujours vraie dès lors que la police est référencée.
                 flags.regular = true;
 
-                if (zoneData.type === 'text') {
-                    // Zones texte "legacy" : le gras de zone entière est supprimé, on déduit uniquement depuis les annotations.
-                    const boldFromFormatting = Array.isArray(zoneData.formatting)
-                        ? zoneData.formatting.some(f => f && f.styles && f.styles.fontWeight === 'bold')
-                        : false;
-                    if (boldFromFormatting) flags.bold = true;
-                } else if (zoneData.type === 'textQuill') {
+                // Zones textQuill : analyse du Delta Quill pour détecter les variantes
+                if (zoneData.type === 'textQuill') {
                     const delta = zoneData.quillDelta || null;
                     const vDelta = analyserVariantesDelta(delta);
                     if (vDelta.bold) flags.bold = true;
