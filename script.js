@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * @typedef {Object} BaseZoneData
-     * @property {'text'|'textQuill'|'qr'|'barcode'|'image'} type - Type de zone
+     * @property {'textQuill'|'qr'|'barcode'|'image'} type - Type de zone
      * @property {number} [x] - Position X en pixels (depuis le DOM)
      * @property {number} [y] - Position Y en pixels (depuis le DOM)
      * @property {number} [w] - Largeur en pixels (depuis le DOM)
@@ -138,28 +138,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {boolean} [locked] - Zone verrouillée (non modifiable)
      * @property {number} [zIndex] - Ordre d'empilement (z-index CSS)
      * @description Propriétés communes à toutes les zones.
-     */
-
-    /**
-     * @typedef {Object} TextZoneData
-     * @property {'text'} type - Type de zone (toujours 'text')
-     * @property {string} content - Contenu textuel
-     * @property {string} font - Nom de la police (ex: 'Roboto')
-     * @property {number} size - Taille en points
-     * @property {string} color - Couleur du texte (hex, ex: '#000000')
-     * @property {'left'|'center'|'right'|'justify'} align - Alignement horizontal
-     * @property {'top'|'middle'|'bottom'} valign - Alignement vertical
-     * @property {string} bgColor - Couleur de fond (hex)
-     * @property {boolean} isTransparent - Fond transparent (true = ignore bgColor)
-     * @property {boolean} locked - Zone verrouillée
-     * @property {boolean} copyfit - Copy fitting activé (réduit auto la taille)
-     * @property {boolean} [bold] - (OBSOLÈTE) Gras "zone entière" supprimé (utiliser le formatage partiel)
-     * @property {number} lineHeight - Interlignage (1.2 = 120%)
-     * @property {TextFormattingAnnotation[]} formatting - Annotations de formatage partiel
-     * @property {0|1|2} emptyLines - Gestion lignes vides (0=Non, 1=Oui, 2=Variables uniquement)
-     * @property {number} zIndex - Ordre d'empilement
-     * @property {BorderData} border - Configuration de la bordure
-     * @description Zone de texte avec formatage riche.
      */
 
     /**
@@ -532,7 +510,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const a4Page = document.getElementById('a4-page');
     const workspace = document.querySelector('.workspace');
     const workspaceCanvas = document.querySelector('.workspace-canvas');
-    const btnAdd = document.getElementById('btn-add-zone');
     const btnAddTextQuill = document.getElementById('btn-add-zone-quill');
     const btnAddQr = document.getElementById('btn-add-qr');
     const btnAddImage = document.getElementById('btn-add-image');
@@ -3706,7 +3683,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * 
      * @example
      * // Après une modification (création, déplacement, suppression de zone)
-     * zonesData[id] = { type: 'text', content: 'Nouveau' };
+     * zonesData[id] = { type: 'textQuill', content: 'Nouveau' };
      * saveState(); // Snapshot pour pouvoir annuler
      * 
      * @see undo - Annuler la dernière action
@@ -4185,7 +4162,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * Fonctions de copier-coller de zones.
      * 
      * Event Listeners :
-     *   - btnAdd : Créer zone texte
+     *   - btnAddTextQuill : Créer zone texte Quill
      *   - btnAddQr : Créer zone QR
      *   - btnAddImage : Créer zone image
      *   - btnAddBarcode : Créer zone code-barres
@@ -4258,45 +4235,6 @@ document.addEventListener('DOMContentLoaded', () => {
         saveToLocalStorage(); // Sauvegarde auto
         saveState(); // Snapshot APRÈS la création
     }
-
-    btnAdd.addEventListener('click', () => {
-        documentState.zoneCounter++;
-        zoneCounter = documentState.zoneCounter; // Synchroniser pour compatibilité
-        const id = `zone-${zoneCounter}`;
-        const zonesData = getCurrentPageZones();
-        
-        // Calculer le z-index pour mettre la nouvelle zone au premier plan
-        const newZIndex = getMaxZIndex() + 1;
-        
-        // Initialiser les données par défaut pour cette zone
-        zonesData[id] = {
-            type: 'text',
-            content: `Texte Zone ${zoneCounter}`,
-            font: 'Roboto',
-            size: 12,
-            color: '#000000',
-            align: 'left',
-            valign: 'top',
-            bgColor: '#ffffff',
-            isTransparent: true, // Transparent par défaut
-            locked: false,
-            copyfit: false, // Désactivé par défaut
-            bold: false, // Gras désactivé par défaut
-            lineHeight: 1.2, // Interlignage par défaut (120%)
-            formatting: [], // Tableau d'annotations pour le formatage partiel
-            emptyLines: 0, // 0 = Non, 1 = Oui, 2 = Variables uniquement
-            zIndex: newZIndex, // Niveau d'empilement (au premier plan)
-            border: {
-                width: 0,           // 0 = pas de bordure, sinon épaisseur en px
-                color: '#000000',   // Couleur de la bordure
-                style: 'solid'      // Style de la bordure (solid par défaut)
-            }
-        };
-
-        createZoneDOM(id, zoneCounter);
-        saveToLocalStorage(); // Sauvegarde auto
-        saveState(); // Snapshot APRÈS la création
-    });
 
     if (btnAddTextQuill) {
         btnAddTextQuill.addEventListener('click', () => {
@@ -4424,7 +4362,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * 
      * @example
      * // Créer une nouvelle zone et la sélectionner
-     * zonesData['zone-5'] = { type: 'text', content: 'Nouveau texte' };
+     * zonesData['zone-5'] = { type: 'textQuill', content: 'Nouveau texte' };
      * createZoneDOM('zone-5', 5);
      * 
      * // Restaurer une zone sans la sélectionner (chargement)
@@ -4439,7 +4377,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function createZoneDOM(id, labelNum, autoSelect = true) {
         const zonesData = getCurrentPageZones();
         const zoneData = zonesData[id] || {};
-        const zoneType = zoneData.type || 'text';
+        const zoneType = zoneData.type || 'textQuill';
         zonesData[id] = { type: zoneType, ...zoneData };
 
         const zone = document.createElement('div');
@@ -4473,13 +4411,10 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (zoneType === 'image') {
             defaultZoneWidth = 150;
             defaultZoneHeight = 150;
-        } else if (zoneType === 'textQuill') {
-            // Zone texte Quill : 80mm x 30mm (convertir en pixels)
+        } else {
+            // Zone texte Quill (par défaut) : 80mm x 30mm (convertir en pixels)
             defaultZoneWidth = mmToPx(80);
             defaultZoneHeight = mmToPx(30);
-        } else {
-            defaultZoneWidth = 200;
-            defaultZoneHeight = 40;
         }
         
         // Obtenir la marge de sécurité et les dimensions de la page
@@ -4909,26 +4844,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!zoneData.quillDelta && !zoneData.content) {
                 applyQuillZoneStyles(id);
             }
-        } else {
-            // Style initial par défaut pour le texte
-            zone.style.width = '200px';
-            zone.style.height = '40px';
-            // Utiliser la position sauvegardée si elle existe, sinon le centre de la vue
-            zone.style.left = (zoneData.x !== undefined ? zoneData.x : zoneX) + 'px';
-            zone.style.top = (zoneData.y !== undefined ? zoneData.y : zoneY) + 'px';
-            zone.style.fontFamily = 'Roboto, sans-serif';
-            zone.style.fontSize = '12pt';
-            zone.style.textAlign = 'left';
-            zone.style.color = '#000000';
-            zone.style.backgroundColor = 'transparent';
-            zone.style.alignItems = 'flex-start';
-
-            const contentSpan = document.createElement('div');
-            contentSpan.classList.add('zone-content');
-            // Utiliser le formatage si disponible
-            const formatting = zoneData.formatting || [];
-            contentSpan.innerHTML = renderFormattedContent(zoneData.content || '', formatting, null, zoneData.emptyLines || 0);
-            zone.appendChild(contentSpan);
         }
 
         // Poignées (zones classiques uniquement)
@@ -4959,56 +4874,76 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- COPIE/COLLER DE ZONES ---
     
-    // Copier la zone sélectionnée
+    /**
+     * Copie la zone textQuill sélectionnée dans le presse-papier interne.
+     * Seules les zones de type 'textQuill' peuvent être copiées.
+     * Le contenu Quill (Delta) est copié en profondeur pour préserver le formatage.
+     * 
+     * @returns {void}
+     */
     function copySelectedZone() {
         // Vérifier qu'une seule zone est sélectionnée
         if (selectedZoneIds.length !== 1) {
-            return; // Ne rien faire si aucune zone ou plusieurs zones sélectionnées
+            return;
         }
         
         const zoneId = selectedZoneIds[0];
         const zonesData = getCurrentPageZones();
         const zoneData = zonesData[zoneId];
         
-        // Vérifier que c'est une zone de texte (pas QR)
-        if (!zoneData || zoneData.type !== 'text') {
-            return; // Ne copier que les zones de texte
+        // Seules les zones textQuill peuvent être copiées
+        if (!zoneData || zoneData.type !== 'textQuill') {
+            return;
         }
         
         const zoneEl = document.getElementById(zoneId);
         if (!zoneEl) return;
         
-        // Copier toutes les propriétés de la zone
+        // Récupérer l'instance Quill pour obtenir le Delta actuel
+        const quillInstance = quillInstances.get(zoneId);
+        const currentDelta = quillInstance ? quillInstance.getContents() : zoneData.quillDelta;
+        
+        // Copier toutes les propriétés de la zone textQuill
         copiedZoneData = {
-            type: 'text',
+            type: 'textQuill',
             content: zoneData.content || '',
-            font: zoneData.font || 'Roboto',
-            size: zoneData.size || 12,
-            color: zoneData.color || '#000000',
+            quillDelta: currentDelta ? JSON.parse(JSON.stringify(currentDelta)) : null,
+            font: zoneData.font || QUILL_DEFAULT_FONT,
+            size: zoneData.size || QUILL_DEFAULT_SIZE,
+            color: zoneData.color || QUILL_DEFAULT_COLOR,
             align: zoneData.align || 'left',
             valign: zoneData.valign || 'top',
             bgColor: zoneData.bgColor || '#ffffff',
             isTransparent: zoneData.isTransparent !== undefined ? zoneData.isTransparent : true,
             locked: false, // Toujours réinitialiser à false pour la copie
             copyfit: zoneData.copyfit || false,
-            lineHeight: zoneData.lineHeight !== undefined ? zoneData.lineHeight : 1.2,
-            formatting: zoneData.formatting ? JSON.parse(JSON.stringify(zoneData.formatting)) : [], // Copie profonde du formatage
+            lineHeight: zoneData.lineHeight !== undefined ? zoneData.lineHeight : QUILL_DEFAULT_LINE_HEIGHT,
+            emptyLines: zoneData.emptyLines || 0,
             border: zoneData.border ? JSON.parse(JSON.stringify(zoneData.border)) : { width: 0, color: '#000000', style: 'solid' },
-            emptyLines: zoneData.emptyLines || 0, // Lignes vides
             // Géométrie : utiliser les dimensions actuelles du DOM
             w: zoneEl.offsetWidth,
             h: zoneEl.offsetHeight,
-            // Position de référence (sera décalée lors du collage)
             x: zoneEl.offsetLeft,
             y: zoneEl.offsetTop
         };
     }
     
-    // Coller la zone copiée
+    /**
+     * Colle la zone textQuill précédemment copiée.
+     * Crée une nouvelle zone décalée de 20px vers le bas.
+     * Le contenu Quill (Delta) est restauré automatiquement par createZoneDOM.
+     * 
+     * @returns {void}
+     */
     function pasteZone() {
         // Vérifier qu'il y a des données copiées
         if (!copiedZoneData) {
-            return; // Rien à coller
+            return;
+        }
+        
+        // Vérifier que c'est bien une zone textQuill
+        if (copiedZoneData.type !== 'textQuill') {
+            return;
         }
         
         // Créer un nouvel ID pour la zone dupliquée
@@ -5020,19 +4955,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // Calculer le z-index pour mettre la zone dupliquée au premier plan
         const newZIndex = getMaxZIndex() + 1;
         
-        // Créer une copie des données avec un décalage de position
-        const pageWidth = getPageWidth();
-        const pageHeight = getPageHeight();
-        const offsetY = 20; // Décalage de 20px vers le bas
-        
         // Calculer la nouvelle position (20px en dessous)
+        const pageHeight = getPageHeight();
+        const offsetY = 20;
         const newX = copiedZoneData.x;
         const newY = Math.min(copiedZoneData.y + offsetY, pageHeight - copiedZoneData.h);
         
-        // Créer les données de la nouvelle zone
+        // Créer les données de la nouvelle zone textQuill
         zonesData[newId] = {
-            type: 'text',
-            content: copiedZoneData.content,
+            type: 'textQuill',
+            content: copiedZoneData.content || '',
+            quillDelta: copiedZoneData.quillDelta ? JSON.parse(JSON.stringify(copiedZoneData.quillDelta)) : null,
             font: copiedZoneData.font,
             size: copiedZoneData.size,
             color: copiedZoneData.color,
@@ -5040,13 +4973,12 @@ document.addEventListener('DOMContentLoaded', () => {
             valign: copiedZoneData.valign,
             bgColor: copiedZoneData.bgColor,
             isTransparent: copiedZoneData.isTransparent,
-            locked: false, // Toujours false pour la copie
+            locked: false,
             copyfit: copiedZoneData.copyfit,
             lineHeight: copiedZoneData.lineHeight,
-            formatting: copiedZoneData.formatting ? JSON.parse(JSON.stringify(copiedZoneData.formatting)) : [], // Copie profonde du formatage
+            emptyLines: copiedZoneData.emptyLines || 0,
             border: copiedZoneData.border ? JSON.parse(JSON.stringify(copiedZoneData.border)) : { width: 0, color: '#000000', style: 'solid' },
-            emptyLines: copiedZoneData.emptyLines || 0, // Lignes vides
-            zIndex: newZIndex, // Z-index au premier plan (pas hérité de l'original)
+            zIndex: newZIndex,
             // Position et taille
             x: newX,
             y: newY,
@@ -5054,68 +4986,12 @@ document.addEventListener('DOMContentLoaded', () => {
             h: copiedZoneData.h
         };
         
-        // Créer la zone dans le DOM
+        // Créer la zone dans le DOM (createZoneDOM gère la restauration du Delta Quill)
         createZoneDOM(newId, zoneCounter, true);
-        
-        // Appliquer tous les styles depuis les données copiées
-        const newZoneEl = document.getElementById(newId);
-        if (newZoneEl) {
-            const contentEl = newZoneEl.querySelector('.zone-content');
-            const zoneData = zonesData[newId];
-            
-            // Position et taille
-            newZoneEl.style.left = newX + 'px';
-            newZoneEl.style.top = newY + 'px';
-            newZoneEl.style.width = zoneData.w + 'px';
-            newZoneEl.style.height = zoneData.h + 'px';
-            
-            // Contenu avec formatage
-            if (contentEl) {
-                const formatting = zoneData.formatting || [];
-                contentEl.innerHTML = renderFormattedContent(zoneData.content || '', formatting, null, zoneData.emptyLines || 0);
-            }
-            
-            // Police
-            newZoneEl.style.fontFamily = zoneData.font + ", sans-serif";
-            
-            // Taille (Copyfit ou fixe)
-            if (zoneData.copyfit) {
-                applyCopyfit(newZoneEl, zoneData.size);
-            } else {
-                newZoneEl.style.fontSize = zoneData.size + 'pt';
-            }
-            
-            // Gras "zone entière" supprimé
-            newZoneEl.style.fontWeight = 'normal';
-            if (contentEl) contentEl.style.fontWeight = 'normal';
-            
-            // Couleur
-            newZoneEl.style.color = zoneData.color;
-            if (contentEl) contentEl.style.color = zoneData.color;
-            
-            // Fond
-            if (zoneData.isTransparent) {
-                newZoneEl.style.backgroundColor = 'transparent';
-            } else {
-                newZoneEl.style.backgroundColor = zoneData.bgColor;
-            }
-            
-            // Alignements
-            if (contentEl) {
-                contentEl.style.textAlign = zoneData.align;
-                contentEl.style.justifyContent = mapValignToFlex(zoneData.valign);
-                contentEl.style.lineHeight = zoneData.lineHeight;
-            }
-            
-            // Appliquer la bordure utilisateur
-            if (zoneData.border) {
-                applyBorderToZone(newZoneEl, zoneData.border);
-            }
-        }
         
         // Sauvegarder
         saveToLocalStorage();
-        saveState(); // Snapshot APRÈS le collage
+        saveState();
     }
 
     // ─────────────────────────────── FIN SECTION 13 ───────────────────────────────
@@ -5155,7 +5031,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * 
      * @example
      * const newZIndex = getMaxZIndex() + 1; // Place la nouvelle zone au premier plan
-     * zonesData[newId] = { type: 'text', zIndex: newZIndex };
+     * zonesData[newId] = { type: 'textQuill', zIndex: newZIndex };
      * 
      * @see findZoneByZIndex - Trouver une zone par son z-index
      */
@@ -11131,7 +11007,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const zoneEl = document.getElementById(zoneId);
         if (!zoneEl) return;
         
-        const zoneType = zoneData.type || 'text';
+        const zoneType = zoneData.type || 'textQuill';
         let newW = zoneData.w || zoneEl.offsetWidth;
         let newH = zoneData.h || zoneEl.offsetHeight;
         
