@@ -3322,6 +3322,19 @@ body.in-iframe .toolbar {
     opacity: 1;
 }
 
+/* Masquer le tooltip pendant le drag */
+.field-item.dragging::after,
+.merge-tag.dragging::after {
+    opacity: 0 !important;
+    display: none;
+}
+
+/* Élément temporaire pour drag image - pas de tooltip */
+.merge-tag.no-tooltip::after,
+.field-item.no-tooltip::after {
+    display: none !important;
+}
+
 /* Scrollbar personnalisée */
 .toolbar-content-data::-webkit-scrollbar,
 .fields-list::-webkit-scrollbar {
@@ -3342,4 +3355,71 @@ body.in-iframe .toolbar {
 .toolbar-content-data::-webkit-scrollbar-thumb:hover,
 .fields-list::-webkit-scrollbar-thumb:hover {
     background: var(--text-secondary);
+}
+
+/* Zone textQuill en mode drop target */
+.zone.zone-text-quill.drop-target,
+.zone.drop-target {
+    outline: 2px dashed var(--theme-primary, #934BB7);
+    outline-offset: 2px;
+    background-color: var(--theme-primary-light, #F4E6FA);
+}
+
+/* Zone textQuill - drop interdit (au milieu d'un mot) */
+.zone.zone-text-quill.drop-target-invalid,
+.zone.drop-target-invalid {
+    outline: 2px dashed #dc3545;
+    outline-offset: 2px;
+    background-color: rgba(220, 53, 69, 0.1);
+    cursor: not-allowed;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TOAST NOTIFICATION
+   ═══════════════════════════════════════════════════════════════════════════ */
+.toast-notification {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: #333;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    z-index: 999999;
+}
+
+.toast-notification.visible {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+    visibility: visible;
+}
+
+.toast-notification.toast-error {
+    background: #dc3545;
+}
+
+.toast-notification.toast-success {
+    background: #28a745;
+}
+
+.toast-notification.toast-warning {
+    background: #f39c12;
+}
+
+.toast-icon {
+    font-size: 16px;
+}
+
+.toast-message {
+    max-width: 300px;
 }

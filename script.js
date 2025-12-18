@@ -1921,7 +1921,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 tag.classList.add('dragging');
                 e.dataTransfer.setData('text/plain', `@${fieldName}@`);
                 e.dataTransfer.setData('application/x-merge-field', fieldName);
-                e.dataTransfer.effectAllowed = 'copy';
+                e.dataTransfer.effectAllowed = 'copyMove';
+                
+                // Créer une image de drag personnalisée (sans tooltip, transparence uniforme)
+                const dragImage = tag.cloneNode(true);
+                dragImage.classList.remove('dragging');
+                dragImage.classList.add('no-tooltip');
+                dragImage.style.cssText = `
+                    position: absolute;
+                    top: -1000px;
+                    left: -1000px;
+                    opacity: 0.7;
+                    background: var(--theme-primary-light, #F4E6FA);
+                    border: 1px solid var(--theme-primary, #934BB7);
+                    border-radius: 6px;
+                    padding: 8px 10px;
+                    pointer-events: none;
+                `;
+                document.body.appendChild(dragImage);
+                e.dataTransfer.setDragImage(dragImage, 20, -15);
+                
+                // Nettoyer l'élément temporaire après le début du drag
+                setTimeout(() => {
+                    if (dragImage.parentNode) {
+                        document.body.removeChild(dragImage);
+                    }
+                }, 0);
             });
             tag.addEventListener('dragend', () => {
                 tag.classList.remove('dragging');
@@ -1964,6 +1989,283 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('📋 Toolbar Data visibility:', shouldShow ? 'visible' : 'hidden',
                     '(textQuill:', hasTextQuillSelected, ', fields:', hasFields, ')');
     }
+    
+    /**
+     * Vérifie si un caractère est alphanumérique (lettre ou chiffre)
+     * @param {string} char - Caractère à tester
+     * @returns {boolean}
+     */
+    function isAlphanumeric(char) {
+        if (!char || char === '') return false;
+        // Inclut les lettres accentuées françaises
+        return /[a-zA-Z0-9àâäéèêëïîôöùûüçÀÂÄÉÈÊËÏÎÔÖÙÛÜÇ]/.test(char);
+    }
+    
+    /**
+     * Vérifie si une position est à l'intérieur d'un champ de fusion @...@
+     * @param {string} text - Le texte complet
+     * @param {number} position - La position à vérifier
+     * @returns {boolean} true si la position est à l'intérieur d'un champ
+     */
+    /**
+     * Vérifie si une position est à l'intérieur d'un champ de fusion @...@
+     * Logique : compter les @ avant la position
+     * - Si PAIR → on est DEHORS d'un champ (après un champ fermé ou avant tout champ)
+     * - Si IMPAIR → on est DEDANS d'un champ (entre le @ ouvrant et le @ fermant)
+     * @param {string} text - Le texte complet
+     * @param {number} position - La position à vérifier
+     * @returns {boolean} true si la position est à l'intérieur d'un champ
+     */
+    function isInsideMergeField(text, position) {
+        // Compter les @ avant la position
+        let atCount = 0;
+        for (let i = 0; i < position; i++) {
+            if (text.charAt(i) === '@') {
+                atCount++;
+            }
+        }
+        
+        // Si le nombre de @ est impair, on est à l'intérieur d'un champ
+        const isInside = (atCount % 2) === 1;
+        
+        if (isInside) {
+            console.log('🔍 Position', position, '- @ avant:', atCount, '(impair) → DEDANS un champ');
+        } else {
+            console.log('🔍 Position', position, '- @ avant:', atCount, '(pair) → DEHORS');
+        }
+        
+        return isInside;
+    }
+    
+    /**
+     * Calcule les espaces à ajouter autour d'un champ de fusion selon le contexte
+     * @param {Object} quill - Instance Quill
+     * @param {number} insertIndex - Position d'insertion
+     * @param {string} fieldText - Texte du champ à insérer (ex: "@NOM@")
+     * @returns {{text: string, cursorOffset: number}|null} Texte avec espaces et offset, ou null si interdit
+     */
+    function getFieldTextWithSpaces(quill, insertIndex, fieldText) {
+        const text = quill.getText();
+        const length = text.length;
+        
+        // Caractère avant la position d'insertion
+        const charBefore = insertIndex > 0 ? text.charAt(insertIndex - 1) : '';
+        // Caractère après la position d'insertion
+        const charAfter = insertIndex < length ? text.charAt(insertIndex) : '';
+        
+        // INTERDIT : au milieu d'un mot (caractère alphanumérique avant ET après)
+        if (isAlphanumeric(charBefore) && isAlphanumeric(charAfter)) {
+            console.log('❌ Drop interdit: au milieu d\'un mot', {
+                charBefore,
+                charAfter
+            });
+            return null; // Signale que le drop est interdit
+        }
+        
+        // INTERDIT : à l'intérieur d'un champ de fusion existant @...@
+        if (isInsideMergeField(text, insertIndex)) {
+            console.log('❌ Drop interdit: à l\'intérieur d\'un champ de fusion existant');
+            return null;
+        }
+        
+        let spaceBefore = '';
+        let spaceAfter = '';
+        
+        // Déterminer si on doit ajouter un espace AVANT
+        if (insertIndex > 0 && charBefore !== '') {
+            // Pas d'espace si :
+            // - caractère avant est un retour ligne (\n)
+            // - caractère avant est déjà un espace
+            // - on est au tout début
+            if (charBefore !== '\n' && charBefore !== ' ' && charBefore !== '\t') {
+                spaceBefore = ' ';
+            }
+        }
+        
+        // Déterminer si on doit ajouter un espace APRÈS
+        // Note: le dernier caractère de Quill est toujours \n, donc on vérifie length - 1
+        if (insertIndex < length - 1 && charAfter !== '') {
+            // Pas d'espace si :
+            // - caractère après est un retour ligne (\n)
+            // - caractère après est déjà un espace
+            // - caractère après est une ponctuation (, . ; : ! ?)
+            // - on est à la fin
+            const punctuation = [',', '.', ';', ':', '!', '?'];
+            if (charAfter !== '\n' && charAfter !== ' ' && charAfter !== '\t' && !punctuation.includes(charAfter)) {
+                spaceAfter = ' ';
+            }
+        }
+        
+        // Remplacer les espaces normales par des espaces insécables dans le champ
+        const fieldTextNbsp = fieldText.replace(/ /g, '\u00A0');
+        const finalText = spaceBefore + fieldTextNbsp + spaceAfter;
+        const cursorOffset = spaceBefore.length + fieldTextNbsp.length;
+        
+        console.log('📋 Espaces auto:', {
+            charBefore: charBefore === '\n' ? '\\n' : charBefore === ' ' ? '(espace)' : charBefore || '(début)',
+            charAfter: charAfter === '\n' ? '\\n' : charAfter === ' ' ? '(espace)' : charAfter || '(fin)',
+            spaceBefore: spaceBefore ? 'OUI' : 'NON',
+            spaceAfter: spaceAfter ? 'OUI' : 'NON',
+            result: finalText
+        });
+        
+        return {
+            text: finalText,
+            cursorOffset: cursorOffset
+        };
+    }
+    
+    /**
+     * Configure les événements drag-and-drop pour une zone textQuill
+     * Permet de recevoir les champs de fusion par glisser-déposer
+     * Utilise caretRangeFromPoint pour détecter la position d'insertion sous la souris
+     * @param {HTMLElement} zoneElement - L'élément DOM de la zone
+     * @param {string} zoneId - L'ID de la zone
+     */
+    function setupTextQuillDropZone(zoneElement, zoneId) {
+        if (!zoneElement) return;
+        
+        // Variable pour stocker la position d'insertion détectée
+        let dropInsertIndex = null;
+        
+        // Empêcher le comportement par défaut pour autoriser le drop
+        zoneElement.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Récupérer l'instance Quill
+            const quill = quillInstances.get(zoneId);
+            if (!quill) return;
+            
+            // Trouver la position du texte sous la souris
+            const editorElement = zoneElement.querySelector('.ql-editor');
+            if (editorElement) {
+                // Utiliser caretRangeFromPoint pour trouver la position
+                const range = document.caretRangeFromPoint(e.clientX, e.clientY);
+                if (range && editorElement.contains(range.startContainer)) {
+                    // Convertir la position DOM en index Quill
+                    const blot = Quill.find(range.startContainer, true);
+                    if (blot) {
+                        const index = quill.getIndex(blot) + range.startOffset;
+                        dropInsertIndex = index;
+                        
+                        // Afficher le curseur à cette position
+                        quill.setSelection(index, 0, 'silent');
+                    }
+                }
+            }
+            
+            // Vérifier si le drop est autorisé à cette position
+            if (dropInsertIndex !== null) {
+                const text = quill.getText();
+                const charBefore = dropInsertIndex > 0 ? text.charAt(dropInsertIndex - 1) : '';
+                const charAfter = dropInsertIndex < text.length ? text.charAt(dropInsertIndex) : '';
+                
+                // Vérifier si position invalide (milieu d'un mot OU dans un champ existant)
+                const isInvalidPosition = (isAlphanumeric(charBefore) && isAlphanumeric(charAfter)) 
+                                        || isInsideMergeField(text, dropInsertIndex);
+
+                if (isInvalidPosition) {
+                    // Position invalide - afficher en rouge avec curseur interdit
+                    zoneElement.classList.add('drop-target-invalid');
+                    zoneElement.classList.remove('drop-target');
+                    e.dataTransfer.dropEffect = 'none';
+                    return;
+                }
+            }
+            
+            zoneElement.classList.remove('drop-target-invalid');
+            zoneElement.classList.add('drop-target');
+            e.dataTransfer.dropEffect = 'copy';
+        });
+        
+        zoneElement.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            zoneElement.classList.remove('drop-target');
+            zoneElement.classList.remove('drop-target-invalid');
+            dropInsertIndex = null;
+            
+            // Masquer le curseur si on quitte la zone
+            const quill = quillInstances.get(zoneId);
+            if (quill) {
+                quill.blur();
+            }
+        });
+        
+        zoneElement.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            zoneElement.classList.remove('drop-target');
+            zoneElement.classList.remove('drop-target-invalid');
+            
+            // Récupérer le champ de fusion
+            const fieldName = e.dataTransfer.getData('application/x-merge-field');
+            const fieldText = e.dataTransfer.getData('text/plain');
+            
+            if (!fieldText) {
+                dropInsertIndex = null;
+                return;
+            }
+            
+            // Récupérer l'instance Quill
+            const quill = quillInstances.get(zoneId);
+            if (!quill) {
+                console.warn('❌ Drop: instance Quill non trouvée pour', zoneId);
+                dropInsertIndex = null;
+                return;
+            }
+            
+            // Utiliser la position détectée pendant le dragover, sinon fin du texte
+            const insertIndex = (dropInsertIndex !== null) 
+                ? dropInsertIndex 
+                : quill.getLength() - 1;
+            
+            // Calculer les espaces selon le contexte (ou null si interdit)
+            const result = getFieldTextWithSpaces(quill, insertIndex, fieldText);
+            
+            if (result === null) {
+                // Drop interdit - position invalide
+                console.log('❌ Drop annulé: position invalide');
+                dropInsertIndex = null;
+                return;
+            }
+            
+            const { text: textWithSpaces, cursorOffset } = result;
+            
+            // Sélectionner la zone si pas déjà fait
+            if (!selectedZoneIds.includes(zoneId)) {
+                deselectAll();
+                selectZone(zoneElement);
+            }
+            
+            // Focus sur l'éditeur Quill
+            quill.focus();
+            
+            quill.insertText(insertIndex, textWithSpaces, 'user');
+            
+            // Placer le curseur après le texte inséré (incluant l'espace avant)
+            quill.setSelection(insertIndex + cursorOffset, 0);
+            
+            console.log('📋 Drop réussi:', textWithSpaces, 'dans', zoneId, 'à position', insertIndex);
+            
+            // Reset
+            dropInsertIndex = null;
+            
+            // Sauvegarder le contenu Quill
+            try {
+                const zonesData = getCurrentPageZones();
+                if (zonesData && zonesData[zoneId]) {
+                    zonesData[zoneId].quillDelta = quill.getContents();
+                }
+                saveToLocalStorage();
+                saveState();
+            } catch (e) {
+                console.warn('⚠️ Erreur sauvegarde après drop:', e);
+            }
+        });
+        
+        console.log('🎯 Drop zone configurée pour', zoneId);
+    }
 
     // Initialisation des champs de fusion avec les valeurs par défaut
     updateMergeFieldsUI(mergeFields);
@@ -1981,7 +2283,9 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function insertTag(fieldName) {
-        const tag = `@${fieldName}@`; // Syntaxe WebDev
+        // Remplacer les espaces par des espaces insécables dans le nom du champ
+        const fieldNameNbsp = fieldName.replace(/ /g, '\u00A0');
+        const tag = `@${fieldNameNbsp}@`; // Syntaxe WebDev avec espaces insécables
 
         // Phase 6 : insertion dans une zone textQuill (si sélection unique)
         if (selectedZoneIds.length === 1) {
@@ -1997,8 +2301,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         ? range.index
                         : Math.max(0, (typeof quill.getLength === 'function' ? quill.getLength() : 1) - 1);
 
-                    quill.insertText(insertIndex, tag, 'user');
-                    quill.setSelection(insertIndex + tag.length, 0, 'silent');
+                    // Calculer les espaces selon le contexte (ou null si interdit)
+                    const result = getFieldTextWithSpaces(quill, insertIndex, tag);
+                    
+                    if (result === null) {
+                        // Déterminer la raison pour le message
+                        console.log('❌ Insertion annulée: position invalide');
+                        return;
+                    }
+                    
+                    const { text: textWithSpaces, cursorOffset } = result;
+                    
+                    quill.insertText(insertIndex, textWithSpaces, 'user');
+                    quill.setSelection(insertIndex + cursorOffset, 0, 'silent');
                     try { quill.focus(); } catch (e) {}
 
                     // Persister immédiatement (en plus du text-change debounce)
@@ -2006,7 +2321,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     saveToLocalStorage();
                     saveState();
 
-                    console.log('🔧 PHASE 6 - Insertion champ fusion:', fieldName, 'dans zone:', zoneId);
+                    console.log('🔧 PHASE 6 - Insertion champ fusion:', textWithSpaces, 'dans zone:', zoneId);
                     return;
                 }
             }
@@ -4584,6 +4899,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         try { quillInstance.focus(); } catch (e) {}
                     }, 0);
                 }
+                
+                // Phase 5 : configurer le drop zone pour les champs de fusion
+                setupTextQuillDropZone(zone, id);
             }
             
             // Phase 4 : appliquer les styles depuis les données stockées.
@@ -5234,6 +5552,9 @@ document.addEventListener('DOMContentLoaded', () => {
         quillToolbar.style.display = 'flex';
         isQuillToolbarVisible = true;
         
+        // Synchroniser la toolbar Data (champs de fusion)
+        updateToolbarDataVisibility();
+        
         // Positionner la toolbar de façon visible
         const pos = getInitialQuillToolbarPosition();
         quillToolbar.style.left = `${pos.x}px`;
@@ -5261,6 +5582,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         quillToolbar.style.display = 'none';
         isQuillToolbarVisible = false;
+        
+        // Masquer aussi la toolbar Data (champs de fusion)
+        if (toolbarData) toolbarData.style.display = 'none';
     }
 
     /**
