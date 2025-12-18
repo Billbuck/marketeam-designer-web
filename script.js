@@ -517,6 +517,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnDelete = document.getElementById('btn-delete-zone');
     const btnReset = document.getElementById('btn-reset');
     const btnExportJson = document.getElementById('btn-export-json');
+    const btnExportPsmd = document.getElementById('btn-export-psmd');
     const btnImportJson = document.getElementById('btn-import-json');
     const inputImportJson = document.getElementById('input-import-json');
     const coordsPanel = null; // SUPPRIMÉ - était #coords-panel
@@ -14582,6 +14583,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // ───────────────────────────────────────────────────────────────────────────────
+    // Export PSMD (PrintShop Mail)
+    // ───────────────────────────────────────────────────────────────────────────────
+    if (btnExportPsmd) {
+        btnExportPsmd.addEventListener('click', () => {
+            console.log('Clic sur bouton Export PSMD');
+            exportToPsmd();
+        });
+    }
+
     // --- IMPORT JSON (tests) ---
     if (btnImportJson && inputImportJson) {
         btnImportJson.addEventListener('click', () => {
@@ -14965,7 +14976,7 @@ document.addEventListener('DOMContentLoaded', () => {
      *   - generatePsmdLayouts() : Génération de toutes les pages
      * 
      * Fonction principale :
-     *   - exportToPsmd() : Génère le fichier .psmd complet
+     *   - exportToPsmd() : Génère le fichier .psmd complet et déclenche le téléchargement
      */
     // ───────────────────────────────────────────────────────────────────────────────
 
@@ -15474,30 +15485,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * Génère les propriétés communes à tous les objets PSMD.
+     * Gère les deux formats de données (zonesTextQuill vs autres zones).
      * 
-     * @param {Object} zone - Données de la zone exportée (format JSON WebDev)
+     * @param {Object} zone - Données de la zone exportée
      * @returns {string} XML des propriétés communes
      */
     function generatePsmdObjectCommon(zone) {
         const guid = generateGuid();
-        const name = escapeXmlPsmd(zone.nom || 'Zone');
-        const locked = zone.verrouille ? 'yes' : 'no';
+        const name = escapeXmlPsmd(zone.nom || zone.id || 'Zone');
+        const locked = (zone.verrouille || zone.style?.locked) ? 'yes' : 'no';
         
-        // Protection géométrie avec valeurs par défaut
-        const geom = zone.geometrie || { x_mm: 0, y_mm: 0, width_mm: 50, height_mm: 20 };
+        // Gérer les deux formats de géométrie
+        const geom = zone.geometry || zone.geometrie || {};
+        const xMm = geom.x_mm ?? geom.xMm ?? 0;
+        const yMm = geom.y_mm ?? geom.yMm ?? 0;
+        const widthMm = geom.width_mm ?? geom.largeur_mm ?? 50;
+        const heightMm = geom.height_mm ?? geom.hauteur_mm ?? 20;
         
         // Conversion coordonnées mm → points
-        const left = mmToPoints(geom.x_mm || 0);
-        const top = mmToPoints(geom.y_mm || 0);
-        const right = mmToPoints((geom.x_mm || 0) + (geom.width_mm || 50));
-        const bottom = mmToPoints((geom.y_mm || 0) + (geom.height_mm || 20));
+        const left = mmToPoints(xMm);
+        const top = mmToPoints(yMm);
+        const right = mmToPoints(xMm + widthMm);
+        const bottom = mmToPoints(yMm + heightMm);
         
-        // Couleurs de fond et bordure
-        const fillColor = zone.fond?.couleur ? rgbToCmyk(zone.fond.couleur) : { c: 0, m: 0, y: 0, k: 0 };
-        const fillAlpha = (zone.fond?.couleur && zone.fond.couleur !== 'transparent') ? 1 : 0;
+        // Couleurs de fond - gérer les deux formats
+        let fillColor = { c: 0, m: 0, y: 0, k: 0 };
+        let fillAlpha = 0;
         
-        const borderColor = zone.bordure?.couleur ? rgbToCmyk(zone.bordure.couleur) : { c: 0, m: 0, y: 0, k: 0 };
-        const borderSize = zone.bordure?.epaisseur || 0;
+        if (zone.fond?.couleur) {
+            fillColor = rgbToCmyk(zone.fond.couleur);
+            fillAlpha = zone.fond.couleur !== 'transparent' ? 1 : 0;
+        } else if (zone.style?.bgColor && !zone.style?.transparent) {
+            fillColor = rgbToCmyk(zone.style.bgColor);
+            fillAlpha = 1;
+        }
+        
+        // Couleurs de bordure
+        let borderColor = { c: 0, m: 0, y: 0, k: 0 };
+        let borderSize = 0;
+        
+        if (zone.bordure?.epaisseur) {
+            borderSize = zone.bordure.epaisseur;
+            borderColor = zone.bordure.couleur ? rgbToCmyk(zone.bordure.couleur) : { c: 0, m: 0, y: 0, k: 1 };
+        } else if (zone.border?.width_px) {
+            borderSize = zone.border.width_px;
+            borderColor = zone.border.color ? rgbToCmyk(zone.border.color) : { c: 0, m: 0, y: 0, k: 1 };
+        }
+        
         const borderStyle = borderSize > 0 ? 2 : 0; // 0=none, 2=solid
         
         return `<object>
@@ -15529,29 +15563,34 @@ ${generatePsmdColor('bordercolor', borderColor, 0)}
 
     /**
      * Génère un objet texte PSMD (text_object).
+     * Gère le format zonesTextQuill de exportToWebDev().
      * 
      * @param {Object} zone - Données de la zone texte exportée
      * @returns {string} XML complet de l'objet texte
      */
     function generatePsmdTextObject(zone) {
         // Récupérer le RTF et l'encoder en Base64
-        const rtfContent = zone.content_rtf || '';
+        const rtfContent = zone.content_rtf || zone.contenu_rtf || '';
         const rtfBase64 = rtfToBase64(rtfContent);
         
-        // Alignements
-        const hAlign = HALIGN_MAP[zone.typographie?.alignement] || 2; // left par défaut
-        const vAlign = VALIGN_MAP[zone.typographie?.alignementVertical] || 0; // top par défaut
+        // Alignements - gérer les deux formats
+        const hAlignValue = zone.style?.align || zone.typographie?.alignement || 'left';
+        const vAlignValue = zone.style?.valign || zone.typographie?.alignementVertical || 'top';
+        
+        const hAlign = HALIGN_MAP[hAlignValue] || 2; // left par défaut
+        const vAlign = VALIGN_MAP[vAlignValue] || 0; // top par défaut
         
         // Copyfitting
         const copyfitting = zone.copyfitting || {};
-        const reduceToFit = copyfitting.reduirePolice ? 'yes' : 'no';
+        const reduceToFit = (copyfitting.reduirePolice || zone.style?.copyfit) ? 'yes' : 'no';
         const minFontSize = copyfitting.tailleMin || 8;
         
         // Gestion lignes vides
-        const emptyLines = zone.lignesVides || 0; // 0=conserver, 1=supprimer, 2=supprimer si vide
+        const emptyLines = zone.lignesVides || 0;
         
         // Couleur texte par défaut
-        const textColor = zone.typographie?.couleur ? rgbToCmyk(zone.typographie.couleur) : { c: 0, m: 0, y: 0, k: 1 };
+        const textColorValue = zone.style?.color || zone.typographie?.couleur || '#000000';
+        const textColor = rgbToCmyk(textColorValue);
         
         let xml = generatePsmdObjectCommon(zone);
         
@@ -15584,11 +15623,12 @@ ${generatePsmdColor('textcolor', textColor, 0)}
      * @returns {string} XML complet de l'objet image
      */
     function generatePsmdImageObject(zone) {
-        const name = escapeXmlPsmd(zone.nom || 'Image');
-        const fileName = zone.source?.nomOriginal || zone.source?.nomFichier || '';
+        const name = escapeXmlPsmd(zone.nom || zone.id || 'Image');
+        const fileName = zone.source?.nomOriginal || zone.source?.nomFichier || zone.source?.url || '';
         
         // Mode de redimensionnement
-        const keepAspectRatio = zone.redimensionnement?.mode === 'proportionnel' ? 'yes' : 'no';
+        const keepAspectRatio = (zone.redimensionnement?.mode === 'proportionnel' || 
+                                zone.redimensionnement?.conserverRatio) ? 'yes' : 'no';
         
         let xml = generatePsmdObjectCommon(zone);
         
@@ -15632,7 +15672,7 @@ ${generatePsmdColor('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 }, 0)}
             psType = 'QRCode';
         } else {
             // Récupérer le type depuis les données de la zone
-            const designerType = zone.barcodeType || zone.typeCode || 'code128';
+            const designerType = zone.typeCode || zone.barcodeType || 'code128';
             psType = BARCODE_TYPE_MAP[designerType.toLowerCase()] || 'Code128';
         }
         
@@ -15680,31 +15720,26 @@ ${generatePsmdColor('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 }, 0)}
     }
 
     /**
-     * Extrait tous les champs de fusion de toutes les zones texte et génère la section <variables>.
-     * Parcourt toutes les pages et zones, extrait les marqueurs @XXX@ des contenus RTF,
-     * et génère une déclaration de variable pour chaque champ unique.
+     * Extrait tous les champs de fusion et génère la section <variables>.
+     * Parcourt les zonesTextQuill pour extraire les marqueurs @XXX@.
      * 
-     * @param {Array<Object>} pages - Tableau des pages exportées (format JSON WebDev)
+     * @param {Object} jsonData - Données complètes de exportToWebDev()
      * @returns {string} XML de la section <variables>
      * 
      * @example
-     * const pages = [{ zones: [{ type: 'textQuill', content_rtf: '@NOM@ @PRENOM@' }] }];
-     * generatePsmdVariables(pages);
+     * const jsonData = { zonesTextQuill: [{ content_rtf: '@NOM@ @PRENOM@' }] };
+     * generatePsmdVariables(jsonData);
      * // Retourne <variables> avec NOM et PRENOM déclarés
      */
-    function generatePsmdVariables(pages) {
+    function generatePsmdVariables(jsonData) {
         const allFields = new Set();
         
-        // Parcourir toutes les pages et zones
-        for (const page of pages) {
-            if (!page.zones) continue;
-            
-            for (const zone of page.zones) {
-                // Extraire les champs uniquement des zones texte
-                if (zone.type === 'textQuill' && zone.content_rtf) {
-                    const fields = extractMergeFields(zone.content_rtf);
-                    fields.forEach(field => allFields.add(field));
-                }
+        // Parcourir les zones textQuill
+        const zonesTextQuill = jsonData.zonesTextQuill || [];
+        for (const zone of zonesTextQuill) {
+            if (zone.content_rtf) {
+                const fields = extractMergeFields(zone.content_rtf);
+                fields.forEach(field => allFields.add(field));
             }
         }
         
@@ -15727,7 +15762,7 @@ ${generatePsmdColor('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 }, 0)}
     /**
      * Génère une section <layout> (page) complète pour le PSMD.
      * 
-     * @param {Object} page - Données de la page exportée
+     * @param {Object} page - Données de la page avec zones regroupées
      * @param {number} pageIndex - Index de la page (0-based)
      * @param {number} pageWidthPt - Largeur de la page en points
      * @param {number} pageHeightPt - Hauteur de la page en points
@@ -15735,7 +15770,7 @@ ${generatePsmdColor('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 }, 0)}
      * @returns {string} XML de la section layout
      */
     function generatePsmdLayout(page, pageIndex, pageWidthPt, pageHeightPt, devmodeBase64) {
-        const layoutName = `Page ${pageIndex + 1}`;
+        const layoutName = page.name || `Page ${pageIndex + 1}`;
         
         let xml = `<layout>
 <dimensions>
@@ -15772,13 +15807,14 @@ ${generatePsmdColor('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 }, 0)}
 
     /**
      * Génère la section <layouts> complète avec toutes les pages.
+     * Regroupe les zones par page depuis les tableaux séparés de exportToWebDev().
      * 
-     * @param {Array<Object>} pages - Tableau des pages exportées
+     * @param {Object} jsonData - Données complètes de exportToWebDev()
      * @param {number} largeurMm - Largeur du document en mm
      * @param {number} hauteurMm - Hauteur du document en mm
      * @returns {string} XML de la section layouts
      */
-    function generatePsmdLayouts(pages, largeurMm, hauteurMm) {
+    function generatePsmdLayouts(jsonData, largeurMm, hauteurMm) {
         // Convertir dimensions en points
         const pageWidthPt = mmToPoints(largeurMm);
         const pageHeightPt = mmToPoints(hauteurMm);
@@ -15789,13 +15825,137 @@ ${generatePsmdColor('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 }, 0)}
         // Générer le DEVMODE
         const devmodeBase64 = generateWindowsDevmode(orientation, hauteurMm, largeurMm);
         
+        // Regrouper les zones par page
+        const zonesByPage = {};
+        
+        // Initialiser les pages
+        const pages = jsonData.pages || [];
+        pages.forEach((page, index) => {
+            const pageNum = index + 1;
+            zonesByPage[pageNum] = [];
+        });
+        
+        // Si aucune page, créer une page par défaut
+        if (pages.length === 0) {
+            zonesByPage[1] = [];
+        }
+        
+        // Ajouter les zones textQuill
+        (jsonData.zonesTextQuill || []).forEach(zone => {
+            const pageNum = zone.page || 1;
+            if (!zonesByPage[pageNum]) zonesByPage[pageNum] = [];
+            zonesByPage[pageNum].push({ ...zone, type: 'textQuill' });
+        });
+        
+        // Ajouter les zones code-barres (barcode et qr)
+        (jsonData.zonesCodeBarres || []).forEach(zone => {
+            const pageNum = zone.page || 1;
+            if (!zonesByPage[pageNum]) zonesByPage[pageNum] = [];
+            // Déterminer le type (qr ou barcode)
+            const type = (zone.typeCode === 'qrcode' || zone.type === 'qr') ? 'qr' : 'barcode';
+            zonesByPage[pageNum].push({ ...zone, type: type });
+        });
+        
+        // Ajouter les zones image
+        (jsonData.zonesImage || []).forEach(zone => {
+            const pageNum = zone.page || 1;
+            if (!zonesByPage[pageNum]) zonesByPage[pageNum] = [];
+            zonesByPage[pageNum].push({ ...zone, type: 'image' });
+        });
+        
+        // Générer le XML
         let xml = '<layouts>\n';
         
-        for (let i = 0; i < pages.length; i++) {
-            xml += generatePsmdLayout(pages[i], i, pageWidthPt, pageHeightPt, devmodeBase64) + '\n';
+        const pageNumbers = Object.keys(zonesByPage).map(Number).sort((a, b) => a - b);
+        
+        for (const pageNum of pageNumbers) {
+            const pageData = {
+                zones: zonesByPage[pageNum],
+                name: pages[pageNum - 1]?.name || `Page ${pageNum}`
+            };
+            xml += generatePsmdLayout(pageData, pageNum - 1, pageWidthPt, pageHeightPt, devmodeBase64) + '\n';
         }
         
         xml += '</layouts>';
+        
+        return xml;
+    }
+
+    /**
+     * Exporte le document courant au format .psmd (PrintShop Mail XML).
+     * Génère un fichier XML complet et déclenche son téléchargement.
+     * 
+     * Utilise exportToWebDev() pour récupérer les données structurées,
+     * puis convertit chaque élément au format PrintShop Mail.
+     * 
+     * @returns {string} Contenu XML du fichier PSMD
+     * 
+     * @example
+     * // Déclenché par le bouton "Export PSMD"
+     * exportToPsmd();
+     */
+    function exportToPsmd() {
+        console.log('=== exportToPsmd() : Début de l\'export PSMD ===');
+        
+        // 1. Récupérer les données via exportToWebDev()
+        const jsonData = exportToWebDev();
+        
+        if (!jsonData) {
+            console.error('exportToPsmd: Aucune donnée à exporter');
+            alert('Erreur : Aucune donnée à exporter');
+            return '';
+        }
+        
+        // Compter les zones
+        const nbZones = (jsonData.zonesTextQuill?.length || 0) + 
+                        (jsonData.zonesCodeBarres?.length || 0) + 
+                        (jsonData.zonesImage?.length || 0);
+        
+        console.log(`exportToPsmd: ${jsonData.pages?.length || 1} page(s), ${nbZones} zone(s) à exporter`);
+        
+        // 2. Récupérer les dimensions du document
+        const largeurMm = jsonData.formatDocument?.largeurMm || 210;
+        const hauteurMm = jsonData.formatDocument?.hauteurMm || 297;
+        
+        console.log(`exportToPsmd: Format ${largeurMm}mm x ${hauteurMm}mm`);
+        
+        // 3. Construire le XML
+        let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+        xml += '<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.printshopmail.com/support/xml/schemas/win/version-7_1_0/printshopmail7.xsd">\n';
+        
+        // Sections statiques
+        xml += generatePsmdInfo() + '\n';
+        xml += generatePsmdPrinter() + '\n';
+        xml += '<operator_instructions></operator_instructions>\n';
+        xml += generatePsmdPreferences() + '\n';
+        xml += generatePsmdDatabaseSettings() + '\n';
+        
+        // Section layouts (pages avec zones) - PASSER jsonData complet
+        xml += generatePsmdLayouts(jsonData, largeurMm, hauteurMm) + '\n';
+        
+        // Section variables (champs de fusion) - PASSER jsonData complet
+        xml += generatePsmdVariables(jsonData) + '\n';
+        
+        // Sections finales
+        xml += generatePsmdFooterSections() + '\n';
+        
+        xml += '</document>';
+        
+        console.log('=== exportToPsmd() : XML généré ===');
+        console.log(`exportToPsmd: Taille du fichier: ${xml.length} caractères`);
+        
+        // 4. Télécharger le fichier
+        const blob = new Blob([xml], { type: 'application/xml' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'template_vdp.psmd';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        console.log('=== exportToPsmd() : Téléchargement déclenché ===');
         
         return xml;
     }
@@ -15826,6 +15986,7 @@ ${generatePsmdColor('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 }, 0)}
     window.generatePsmdVariables = generatePsmdVariables;
     window.generatePsmdLayout = generatePsmdLayout;
     window.generatePsmdLayouts = generatePsmdLayouts;
+    window.exportToPsmd = exportToPsmd;
 
     // ─────────────────────────────── FIN SECTION 25 ───────────────────────────────
     
