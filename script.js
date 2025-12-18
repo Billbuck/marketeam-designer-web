@@ -14938,6 +14938,15 @@ document.addEventListener('DOMContentLoaded', () => {
      *   - hexToBase64() : Conversion hex → Base64
      *   - generateWindowsDevmode() : Génération blob DEVMODE pour impression
      * 
+     * Fonctions templates XML :
+     *   - generatePsmdInfo() : Section <info>
+     *   - generatePsmdPrinter() : Section <printer>
+     *   - generatePsmdPreferences() : Section <preferences>
+     *   - generatePsmdDatabaseSettings() : Section <database_settings>
+     *   - generatePsmdFooterSections() : Sections finales
+     *   - generatePsmdColor() : Balise couleur CMYK
+     *   - generatePsmdVariable() : Section <variable>
+     * 
      * Fonction principale :
      *   - exportToPsmd() : Génère le fichier .psmd complet
      */
@@ -15202,6 +15211,212 @@ document.addEventListener('DOMContentLoaded', () => {
         return hexToBase64(hexTemplate);
     }
 
+    /**
+     * Génère la section <info> du fichier PSMD.
+     * 
+     * @returns {string} XML de la section info
+     */
+    function generatePsmdInfo() {
+        return `<info>
+<user_name>Marketeam Designer</user_name>
+<date_time>${formatIsoDateTime()}</date_time>
+<app_version>Version 7.2.4 (construire 7893)</app_version>
+<published>no</published>
+</info>`;
+    }
+
+    /**
+     * Génère la section <printer> du fichier PSMD.
+     * 
+     * @returns {string} XML de la section printer
+     */
+    function generatePsmdPrinter() {
+        return `<printer>
+<printer_name>PrintShop Mail Printer</printer_name>
+</printer>`;
+    }
+
+    /**
+     * Génère la section <preferences> du fichier PSMD.
+     * 
+     * @returns {string} XML de la section preferences
+     */
+    function generatePsmdPreferences() {
+        return `<preferences>
+<program>
+<default_tabstop_interval>36</default_tabstop_interval>
+<markers begin="@" end="@"/>
+<items_without_database>1</items_without_database>
+</program>
+<print_job>
+<collate>yes</collate>
+<use_split_job>no</use_split_job>
+<split_job_size>1000</split_job_size>
+<split_by>0</split_by>
+<forms>
+<store_on_disk>yes</store_on_disk>
+<use_custom_cache_size>no</use_custom_cache_size>
+<cache_size>4096</cache_size>
+<use_opi>0</use_opi>
+</forms>
+<master>
+<freeform2_master_name>Master1</freeform2_master_name>
+<print_mode>3</print_mode>
+</master>
+<ppml>
+<environment>psmail\\Sans titre</environment>
+<send_images>0</send_images>
+<zip>yes</zip>
+<embed_images_in_pdf>yes</embed_images_in_pdf>
+</ppml>
+<vipp>
+<project_folder>projects\\psmail</project_folder>
+<do_not_spool_images>0</do_not_spool_images>
+</vipp>
+<vps>
+<generate_booklets>yes</generate_booklets>
+<use_apr>0</use_apr>
+</vps>
+<pdf>
+<joboptions></joboptions>
+</pdf>
+<pdfvt>
+<joboptions></joboptions>
+</pdfvt>
+<margins option="0" left="0" top="0" right="0" bottom="0"/>
+<technology>0</technology>
+</print_job>
+<repetition>
+<repeat_hor>1</repeat_hor>
+<repeat_ver>1</repeat_ver>
+<print_priority>4</print_priority>
+<print_priority>0</print_priority>
+<print_priority>2</print_priority>
+<spacing_between_layouts x="0" y="0"/>
+<duplex_print>0</duplex_print>
+</repetition>
+<imposition>
+<bleed>
+<mode>0</mode>
+<size>40</size>
+</bleed>
+<cropmarks>
+<mode>1</mode>
+<size>6</size>
+<double_sided>no</double_sided>
+<color colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></color>
+</cropmarks>
+<folding_lines>
+<size>40</size>
+</folding_lines>
+</imposition>
+<colormanagement intent_generic="relative" colormanage="no"><colorspace id="RGB"><profile source="iccfile"><file name="srgb color space profile.icm" description="sRGB IEC61966-2.1">AA==</file></profile></colorspace><colorspace id="CMYK"><profile source="iccfile"><file name="uswebcoatedswop.icc" description="U.S. Web Coated (SWOP) v2">AA==</file></profile></colorspace><colorspace id="GRAY"><profile source="gamma"><gamma>2.2</gamma></profile></colorspace><colorspace id="defaultRGB"><profile source="iccfile"><file name="srgb color space profile.icm" description="sRGB IEC61966-2.1">AA==</file></profile></colorspace><colorspace id="defaultCMYK"><profile source="iccfile"><file name="uswebcoatedswop.icc" description="U.S. Web Coated (SWOP) v2">AA==</file></profile></colorspace><colorspace id="defaultGRAY"><profile source="gamma"><gamma>2.2</gamma></profile></colorspace></colormanagement>
+<ppconnect>
+<namevalue name="__#PPSuite#Connection_FaxNumber" expression=""></namevalue>
+<namevalue name="__#PPSuite#Connection_FaxDescription" expression=""></namevalue>
+<namevalue name="__#PPSuite#Connection_eMailAddress" expression=""></namevalue>
+<namevalue name="__#PPSuite#Connection_eMailSubject" expression=""></namevalue>
+<namevalue name="__#PPSuite#Connection_eMailBodyText" expression=""></namevalue>
+<namevalue name="__#PPSuite#Connection_PDFBookmark" expression=""></namevalue>
+</ppconnect>
+</preferences>`;
+    }
+
+    /**
+     * Génère la section <database_settings> du fichier PSMD.
+     * 
+     * @returns {string} XML de la section database_settings
+     */
+    function generatePsmdDatabaseSettings() {
+        return `<database_settings>
+<table_name>Pas de source de données</table_name>
+<db_type>3</db_type>
+<db_pathsettings></db_pathsettings>
+<extended_properties>
+<colnameheader>yes</colnameheader>
+<format></format>
+<encoding></encoding>
+</extended_properties>
+<filter_sort_settings>
+<filter></filter>
+<sort></sort>
+<db_filter_enable>no</db_filter_enable>
+<db_sort_enable>no</db_sort_enable>
+</filter_sort_settings>
+<filter_array_size>0</filter_array_size>
+</database_settings>`;
+    }
+
+    /**
+     * Génère les sections finales du fichier PSMD (data_fields, template_folders, embedded_ps).
+     * 
+     * @returns {string} XML des sections finales
+     */
+    function generatePsmdFooterSections() {
+        return `<data_fields>
+</data_fields>
+<template_folders>
+</template_folders>
+<embedded_ps>
+<author>PrintShop Mail</author>
+<creation_date>1992-07-01T11:00:00</creation_date>
+<last_modification_date>1992-07-01T11:00:00</last_modification_date>
+<n>Ne rien intégrer</n>
+<description></description>
+<start_of_page></start_of_page>
+<start_of_job></start_of_job>
+<between_sets></between_sets>
+</embedded_ps>`;
+    }
+
+    /**
+     * Génère une section <fillcolor> ou <bordercolor> CMYK.
+     * 
+     * @param {string} tagName - Nom de la balise ('fillcolor' ou 'bordercolor')
+     * @param {{c: number, m: number, y: number, k: number}} cmyk - Valeurs CMYK (0-1)
+     * @param {number} [alpha=0] - Transparence (0 = transparent, 1 = opaque)
+     * @returns {string} XML de la couleur
+     */
+    function generatePsmdColor(tagName, cmyk, alpha = 0) {
+        const c = cmyk.c.toFixed(2).replace(/\.?0+$/, '') || '0';
+        const m = cmyk.m.toFixed(2).replace(/\.?0+$/, '') || '0';
+        const y = cmyk.y.toFixed(2).replace(/\.?0+$/, '') || '0';
+        const k = cmyk.k.toFixed(2).replace(/\.?0+$/, '') || '0';
+        
+        return `<${tagName} colorspace="CMYK" alpha="${alpha}" downgrade_c="${c}" downgrade_m="${m}" downgrade_y="${y}" downgrade_k="${k}"><component>${c}</component><component>${m}</component><component>${y}</component><component>${k}</component></${tagName}>`;
+    }
+
+    /**
+     * Génère la section <variable> pour un champ de fusion.
+     * 
+     * @param {string} fieldName - Nom du champ (sans les @)
+     * @returns {string} XML de la variable
+     */
+    function generatePsmdVariable(fieldName) {
+        return `<variable>
+<n>${escapeXmlPsmd(fieldName)}</n>
+<global>no</global>
+<expression>""</expression>
+<Formatting>3</Formatting>
+<Locale_ID>1036</Locale_ID>
+<Currency_Symbol>€</Currency_Symbol>
+<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+<Currency_GroupingSymbol> </Currency_GroupingSymbol>
+<Currency_NegativeFormat>8</Currency_NegativeFormat>
+<Currency_PositiveFormat>3</Currency_PositiveFormat>
+<Number_DecimalSymbol>,</Number_DecimalSymbol>
+<Number_DecimalPlaces>2</Number_DecimalPlaces>
+<Number_DigitsInGroup>3</Number_DigitsInGroup>
+<Number_GroupingSymbol> </Number_GroupingSymbol>
+<Number_LeadingZeros>1</Number_LeadingZeros>
+<Number_NegativeSymbol>-</Number_NegativeSymbol>
+<Number_NegativeFormat>1</Number_NegativeFormat>
+<Date_Style>dddd d MMMM yyyy</Date_Style>
+</variable>`;
+    }
+
     // Exposer les fonctions utilitaires PSMD sur window pour les tests et l'accès externe
     window.mmToPoints = mmToPoints;
     window.rgbToCmyk = rgbToCmyk;
@@ -15213,6 +15428,13 @@ document.addEventListener('DOMContentLoaded', () => {
     window.toHexLE16 = toHexLE16;
     window.hexToBase64 = hexToBase64;
     window.generateWindowsDevmode = generateWindowsDevmode;
+    window.generatePsmdInfo = generatePsmdInfo;
+    window.generatePsmdPrinter = generatePsmdPrinter;
+    window.generatePsmdPreferences = generatePsmdPreferences;
+    window.generatePsmdDatabaseSettings = generatePsmdDatabaseSettings;
+    window.generatePsmdFooterSections = generatePsmdFooterSections;
+    window.generatePsmdColor = generatePsmdColor;
+    window.generatePsmdVariable = generatePsmdVariable;
 
     // ─────────────────────────────── FIN SECTION 25 ───────────────────────────────
     
