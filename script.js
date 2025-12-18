@@ -32,10 +32,11 @@ document.addEventListener('DOMContentLoaded', () => {
      * ║  SECTION 22 : CHARGEMENT PAGE ET LOCALSTORAGE ........... ligne ~7904       ║
      * ║  SECTION 23 : NAVIGATION MULTIPAGE ...................... ligne ~8200       ║
      * ║  SECTION 24 : ZOOM ET PAN ............................... ligne ~8925       ║
+     * ║  SECTION 25 : EXPORT PSMD (PRINTSHOP MAIL) ............. ligne ~14920      ║
      * ║                                                                              ║
      * ╠══════════════════════════════════════════════════════════════════════════════╣
      * ║  Version : 1.0.0                                                             ║
-     * ║  Dernière modification : 09/12/2025                                          ║
+     * ║  Dernière modification : 18/12/2025                                          ║
      * ╚══════════════════════════════════════════════════════════════════════════════╝
      */
 
@@ -14917,6 +14918,191 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ─────────────────────────────── FIN SECTION 24 ───────────────────────────────
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SECTION 25 : EXPORT PSMD (PRINTSHOP MAIL)
+    // ═══════════════════════════════════════════════════════════════════════════════
+    /**
+     * Fonctions d'export vers le format .psmd (PrintShop Mail XML).
+     * Permet de générer des fichiers directement exploitables pour la production VDP.
+     * 
+     * Fonctions utilitaires :
+     *   - mmToPoints() : Conversion mm → points (72 dpi)
+     *   - rgbToCmyk() : Conversion couleur RGB hex → CMYK
+     *   - rtfToBase64() : Encodage RTF en Base64
+     *   - extractMergeFields() : Extraction des champs @XXX@
+     *   - generateGuid() : Génération d'un GUID unique
+     *   - formatIsoDateTime() : Date/heure au format ISO
+     *   - escapeXmlPsmd() : Échappement des caractères XML
+     * 
+     * Fonction principale :
+     *   - exportToPsmd() : Génère le fichier .psmd complet
+     */
+    // ───────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Convertit des millimètres en points (72 dpi).
+     * PrintShop Mail utilise des points pour les coordonnées.
+     * 
+     * @param {number} mm - Valeur en millimètres
+     * @returns {number} Valeur en points (72 dpi)
+     * 
+     * @example
+     * mmToPoints(210);  // → 595.27559 (largeur A4)
+     * mmToPoints(297);  // → 841.88976 (hauteur A4)
+     * mmToPoints(25.4); // → 72 (1 pouce)
+     */
+    function mmToPoints(mm) {
+        return mm * 72 / 25.4;
+    }
+
+    /**
+     * Convertit une couleur RGB hexadécimale en CMYK.
+     * PrintShop Mail utilise des couleurs CMYK (composants 0-1).
+     * 
+     * @param {string} hexColor - Couleur hex (#RRGGBB ou #RGB)
+     * @returns {{c: number, m: number, y: number, k: number}} Valeurs CMYK entre 0 et 1
+     * 
+     * @example
+     * rgbToCmyk('#000000'); // → { c: 0, m: 0, y: 0, k: 1 } (noir)
+     * rgbToCmyk('#FFFFFF'); // → { c: 0, m: 0, y: 0, k: 0 } (blanc)
+     * rgbToCmyk('#FF0000'); // → { c: 0, m: 1, y: 1, k: 0 } (rouge)
+     */
+    function rgbToCmyk(hexColor) {
+        // Normaliser le format hex
+        let hex = (hexColor || '#000000').replace('#', '');
+        if (hex.length === 3) {
+            hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+        }
+        
+        // Extraire et normaliser RGB (0-1)
+        const r = parseInt(hex.substring(0, 2), 16) / 255;
+        const g = parseInt(hex.substring(2, 4), 16) / 255;
+        const b = parseInt(hex.substring(4, 6), 16) / 255;
+        
+        // Calculer K (noir)
+        const k = 1 - Math.max(r, g, b);
+        
+        // Si noir pur, éviter division par zéro
+        if (k === 1) {
+            return { c: 0, m: 0, y: 0, k: 1 };
+        }
+        
+        // Calculer C, M, Y
+        const c = (1 - r - k) / (1 - k);
+        const m = (1 - g - k) / (1 - k);
+        const y = (1 - b - k) / (1 - k);
+        
+        return { c, m, y, k };
+    }
+
+    /**
+     * Encode une chaîne RTF en Base64 pour PrintShop Mail.
+     * 
+     * @param {string} rtfString - Chaîne RTF brute
+     * @returns {string} RTF encodé en Base64
+     * 
+     * @example
+     * rtfToBase64('{\\rtf1\\ansi Hello}'); // → 'e1xydGYxXGFuc2kgSGVsbG99'
+     */
+    function rtfToBase64(rtfString) {
+        if (!rtfString) return '';
+        try {
+            // Encoder en UTF-8 puis en Base64
+            return btoa(unescape(encodeURIComponent(rtfString)));
+        } catch (e) {
+            console.error('Erreur encodage RTF Base64:', e);
+            return '';
+        }
+    }
+
+    /**
+     * Extrait les champs de fusion @XXX@ d'une chaîne RTF.
+     * Les champs sont identifiés par les marqueurs @ au début et à la fin.
+     * 
+     * @param {string} rtfString - Chaîne RTF contenant les champs
+     * @returns {string[]} Liste des noms de champs uniques (sans les @)
+     * 
+     * @example
+     * extractMergeFields('@SOCIETE@\\par @CONTACT@'); // → ['SOCIETE', 'CONTACT']
+     * extractMergeFields('@NOM@ et @NOM@'); // → ['NOM'] (dédupliqué)
+     */
+    function extractMergeFields(rtfString) {
+        if (!rtfString) return [];
+        
+        const regex = /@([A-Za-z0-9_]+)@/g;
+        const fields = new Set();
+        let match;
+        
+        while ((match = regex.exec(rtfString)) !== null) {
+            fields.add(match[1]); // Ajoute le nom sans les @
+        }
+        
+        return Array.from(fields);
+    }
+
+    /**
+     * Génère un GUID unique au format PrintShop Mail.
+     * Format : {XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX}
+     * 
+     * @returns {string} GUID avec accolades
+     * 
+     * @example
+     * generateGuid(); // → '{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}'
+     */
+    function generateGuid() {
+        const hex = () => Math.floor(Math.random() * 16).toString(16).toUpperCase();
+        const block = (n) => Array(n).fill(0).map(hex).join('');
+        
+        return `{${block(8)}-${block(4)}-${block(4)}-${block(4)}-${block(12)}}`;
+    }
+
+    /**
+     * Formate la date et heure courante au format ISO pour PrintShop Mail.
+     * Format : YYYY-MM-DDTHH:MM:SS
+     * 
+     * @returns {string} Date/heure au format ISO
+     * 
+     * @example
+     * formatIsoDateTime(); // → '2025-12-18T20:30:45'
+     */
+    function formatIsoDateTime() {
+        const now = new Date();
+        const pad = (n) => String(n).padStart(2, '0');
+        
+        return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    }
+
+    /**
+     * Échappe les caractères spéciaux XML.
+     * 
+     * @param {string} str - Chaîne à échapper
+     * @returns {string} Chaîne échappée pour XML
+     * 
+     * @example
+     * escapeXmlPsmd('Tom & Jerry'); // → 'Tom &amp; Jerry'
+     * escapeXmlPsmd('<tag>'); // → '&lt;tag&gt;'
+     */
+    function escapeXmlPsmd(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&apos;');
+    }
+
+    // Exposer les fonctions utilitaires PSMD sur window pour les tests et l'accès externe
+    window.mmToPoints = mmToPoints;
+    window.rgbToCmyk = rgbToCmyk;
+    window.rtfToBase64 = rtfToBase64;
+    window.extractMergeFields = extractMergeFields;
+    window.generateGuid = generateGuid;
+    window.formatIsoDateTime = formatIsoDateTime;
+    window.escapeXmlPsmd = escapeXmlPsmd;
+
+    // ─────────────────────────────── FIN SECTION 25 ───────────────────────────────
     
     console.log('🔧 PHASE 0 - Vérification infrastructure Quill:');
     console.log('  ✓ Quill disponible:', typeof Quill === 'function');
