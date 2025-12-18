@@ -1693,9 +1693,9 @@ body.in-iframe .toolbar {
     --barcode-text-pad-bottom: 2px;   /* Espace entre texte et bas du cadre */
 }
 
-/* Codes 1D : le padding bas du conteneur est géré par le padding du texte */
+/* Codes 1D : padding haut/bas à 0, espacement géré par le padding du texte */
 .zone.barcode-zone.barcode-1d .barcode-preview {
-    padding: 4px 4px 0 4px;  /* padding-bottom à 0, géré par --barcode-text-pad-bottom */
+    padding: 0 4px;  /* Pas de marge verticale, le code-barres touche le cadre */
 }
 
 /* Conteneur du code-barres */
