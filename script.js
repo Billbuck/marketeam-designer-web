@@ -557,6 +557,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnZoomOut = document.getElementById('btn-zoom-out');
     const zoomValue = document.getElementById('zoom-value');
 
+    // Sidebar et toggle (nouvelle sidebar POC)
+    /** @type {HTMLElement|null} Container principal de la sidebar */
+    const sidebar = document.getElementById('sidebar');
+    /** @type {HTMLButtonElement|null} Bouton toggle pour réduire/agrandir la sidebar */
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    /** @type {HTMLElement|null} Tooltip global de la sidebar */
+    const sidebarTooltip = document.getElementById('sidebar-tooltip');
+
+    // Section Position (nouvelle - z-index)
+    /** @type {HTMLElement|null} Section Position dans la sidebar */
+    const positionSection = document.getElementById('position-section');
+    /** @type {HTMLButtonElement|null} Bouton Premier plan (devant tout) */
+    const btnBringFront = document.getElementById('btn-bring-front');
+    /** @type {HTMLButtonElement|null} Bouton Arrière-plan (derrière tout) */
+    const btnSendBack = document.getElementById('btn-send-back');
+    /** @type {HTMLButtonElement|null} Bouton Avancer d'un niveau (dessus) */
+    const btnBringForward = document.getElementById('btn-bring-forward');
+    /** @type {HTMLButtonElement|null} Bouton Reculer d'un niveau (dessous) */
+    const btnSendBackward = document.getElementById('btn-send-backward');
+
     // Inputs du formulaire (SUPPRIMÉS - ancien panneau de propriétés)
     const inputContent = null; // SUPPRIMÉ
     const inputFont = null; // SUPPRIMÉ
@@ -7376,19 +7396,35 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Mettre à jour la visibilité de la toolbar d'alignement, taille et espacement
+    /**
+     * Mettre à jour la visibilité des sections de la sidebar selon la sélection
+     * @description Affiche/masque les sections Position, Alignement, Taille et Espacement
+     * selon le nombre de zones sélectionnées :
+     *   - Position : 1 zone exactement (single)
+     *   - Alignement : 2+ zones (multi-2)
+     *   - Taille : 2+ zones (multi-2)
+     *   - Espacement : 3+ zones (multi-3)
+     */
     function updateAlignmentToolbarVisibility() {
         const alignmentSection = document.getElementById('alignment-section');
         const sizeSection = document.getElementById('size-section');
         const spacingSection = document.getElementById('spacing-section');
         const count = selectedZoneIds.length;
         
+        // Section Position : visible si exactement 1 zone sélectionnée
+        if (positionSection) {
+            positionSection.style.display = count === 1 ? 'block' : 'none';
+        }
+        
+        // Section Alignement : visible si 2+ zones sélectionnées
         if (alignmentSection) {
             alignmentSection.style.display = count >= 2 ? 'block' : 'none';
         }
+        // Section Taille : visible si 2+ zones sélectionnées
         if (sizeSection) {
             sizeSection.style.display = count >= 2 ? 'block' : 'none';
         }
+        // Section Espacement : visible si 3+ zones sélectionnées
         if (spacingSection) {
             spacingSection.style.display = count >= 3 ? 'block' : 'none';
         }
@@ -10894,10 +10930,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- EVENT LISTENERS ARRANGEMENT (Z-INDEX) ---
+    // Anciens boutons (supprimés de l'interface)
     if (btnToFront) btnToFront.addEventListener('click', bringToFront);
     if (btnForward) btnForward.addEventListener('click', bringForward);
     if (btnBackward) btnBackward.addEventListener('click', sendBackward);
     if (btnToBack) btnToBack.addEventListener('click', sendToBack);
+    
+    // Nouveaux boutons de position dans la sidebar POC
+    if (btnBringFront) btnBringFront.addEventListener('click', bringToFront);
+    if (btnBringForward) btnBringForward.addEventListener('click', bringForward);
+    if (btnSendBackward) btnSendBackward.addEventListener('click', sendBackward);
+    if (btnSendBack) btnSendBack.addEventListener('click', sendToBack);
     
     // Event listener pour le bouton Ajuster au contenu
     if (btnSnapToContent) btnSnapToContent.addEventListener('click', snapToContent);
@@ -15094,15 +15137,20 @@ document.addEventListener('DOMContentLoaded', () => {
         pageNavContainer.innerHTML = '';
         
         if (pageCount === 2) {
-            // Mode 2 boutons
-            const buttonsDiv = document.createElement('div');
-            buttonsDiv.className = 'page-nav-buttons';
-            
+            // Mode 2 boutons - utilise les classes de la sidebar
             documentState.pages.forEach((page, index) => {
                 const btn = document.createElement('button');
-                btn.className = 'page-nav-btn btn-primary';
+                btn.className = 'btn page-nav-btn';
                 btn.dataset.pageIndex = index;
-                btn.innerHTML = `<span class="material-icons">description</span> ${page.name}`;
+                btn.dataset.tooltip = page.name;
+                btn.innerHTML = `
+                    <span class="btn-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                            <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                        </svg>
+                    </span>
+                    <span class="btn-label">${page.name}</span>
+                `;
                 
                 if (index === documentState.currentPageIndex) {
                     btn.classList.add('active');
@@ -15112,10 +15160,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     switchPage(index);
                 });
                 
-                buttonsDiv.appendChild(btn);
+                pageNavContainer.appendChild(btn);
             });
-            
-            pageNavContainer.appendChild(buttonsDiv);
             
         } else {
             // Mode combo (3+ pages)
@@ -15358,6 +15404,51 @@ document.addEventListener('DOMContentLoaded', () => {
     btnZoomOut.addEventListener('click', () => {
         setZoom(zoomLevel - 0.1);
     });
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SIDEBAR TOGGLE ET TOOLTIPS
+    // ═══════════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Toggle de la sidebar (réduire/agrandir)
+     * @description Bascule la classe 'collapsed' sur la sidebar
+     */
+    if (sidebarToggle && sidebar) {
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            // Mettre à jour le title du bouton
+            const isCollapsed = sidebar.classList.contains('collapsed');
+            sidebarToggle.title = isCollapsed ? 'Agrandir' : 'Réduire';
+        });
+    }
+
+    /**
+     * Système de tooltips pour la sidebar (mode collapsed)
+     * @description Affiche les tooltips au survol des boutons quand la sidebar est réduite
+     */
+    if (sidebar && sidebarTooltip) {
+        const buttonsWithTooltip = sidebar.querySelectorAll('[data-tooltip]');
+        
+        buttonsWithTooltip.forEach(btn => {
+            btn.addEventListener('mouseenter', (e) => {
+                // Afficher tooltip uniquement en mode collapsed
+                if (!sidebar.classList.contains('collapsed')) return;
+                
+                const text = btn.getAttribute('data-tooltip');
+                sidebarTooltip.textContent = text;
+                
+                const rect = btn.getBoundingClientRect();
+                sidebarTooltip.style.left = (rect.right + 10) + 'px';
+                sidebarTooltip.style.top = (rect.top + rect.height / 2) + 'px';
+                sidebarTooltip.style.transform = 'translateY(-50%)';
+                sidebarTooltip.classList.add('visible');
+            });
+
+            btn.addEventListener('mouseleave', () => {
+                sidebarTooltip.classList.remove('visible');
+            });
+        });
+    }
 
     // Zoom avec molette (Ctrl + Molette)
     workspace.addEventListener('wheel', (e) => {
