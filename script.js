@@ -4449,6 +4449,12 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 zone.style.backgroundColor = zoneData.bgColor || '#ffffff';
             }
+            
+            // Mémoriser les dimensions de base en pixels pour cohérence (export/édition future)
+            zonesData[id].w = parseFloat(zone.style.width);
+            zonesData[id].h = parseFloat(zone.style.height);
+            zonesData[id].x = parseFloat(zone.style.left);
+            zonesData[id].y = parseFloat(zone.style.top);
 
             const qrWrapper = document.createElement('div');
             qrWrapper.classList.add('zone-content');
@@ -4474,6 +4480,12 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 zone.style.backgroundColor = zoneData.bgColor || '#ffffff';
             }
+            
+            // Mémoriser les dimensions de base en pixels pour cohérence (export/édition future)
+            zonesData[id].w = parseFloat(zone.style.width);
+            zonesData[id].h = parseFloat(zone.style.height);
+            zonesData[id].x = parseFloat(zone.style.left);
+            zonesData[id].y = parseFloat(zone.style.top);
             
             // Bordure
             if (zoneData.border) {
@@ -4513,6 +4525,12 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 zone.style.backgroundColor = zoneData.bgColor || '#ffffff';
             }
+            
+            // Mémoriser les dimensions de base en pixels pour cohérence (export/édition future)
+            zonesData[id].w = parseFloat(zone.style.width);
+            zonesData[id].h = parseFloat(zone.style.height);
+            zonesData[id].x = parseFloat(zone.style.left);
+            zonesData[id].y = parseFloat(zone.style.top);
             
             // Badge type de code-barres (en haut à gauche)
             const typeBadge = document.createElement('span');
@@ -6672,10 +6690,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 const valueMm = parseFloat(input.value.replace(',', '.')) || 0;
                 const valuePx = valueMm / MM_PER_PIXEL;
                 
-                if (index === 0) zoneEl.style.left = `${valuePx}px`;
-                else if (index === 1) zoneEl.style.top = `${valuePx}px`;
-                else if (index === 2) zoneEl.style.width = `${valuePx}px`;
-                else if (index === 3) zoneEl.style.height = `${valuePx}px`;
+                // Récupérer les données de la zone pour mise à jour
+                const zonesData = getCurrentPageZones();
+                const zoneData = zonesData[zoneId];
+                
+                // Appliquer selon l'index (CSS + zonesData en pixels ET mm)
+                if (index === 0) {
+                    zoneEl.style.left = `${valuePx}px`;
+                    if (zoneData) {
+                        zoneData.x = valuePx;
+                        zoneData.xMm = valueMm;
+                    }
+                } else if (index === 1) {
+                    zoneEl.style.top = `${valuePx}px`;
+                    if (zoneData) {
+                        zoneData.y = valuePx;
+                        zoneData.yMm = valueMm;
+                    }
+                } else if (index === 2) {
+                    zoneEl.style.width = `${valuePx}px`;
+                    if (zoneData) {
+                        zoneData.w = valuePx;
+                        zoneData.wMm = valueMm;
+                    }
+                } else if (index === 3) {
+                    zoneEl.style.height = `${valuePx}px`;
+                    if (zoneData) {
+                        zoneData.h = valuePx;
+                        zoneData.hMm = valueMm;
+                    }
+                }
                 
                 updateBarcodeZoneDisplay(zoneId);
                 saveToLocalStorage();
@@ -6977,10 +7021,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 const valueMm = parseFloat(input.value.replace(',', '.')) || 0;
                 const valuePx = valueMm / MM_PER_PIXEL;
                 
-                if (index === 0) zoneEl.style.left = `${valuePx}px`;
-                else if (index === 1) zoneEl.style.top = `${valuePx}px`;
-                else if (index === 2) zoneEl.style.width = `${valuePx}px`;
-                else if (index === 3) zoneEl.style.height = `${valuePx}px`;
+                // Récupérer les données de la zone pour mise à jour
+                const zonesData = getCurrentPageZones();
+                const zoneData = zonesData[zoneId];
+                
+                // Appliquer selon l'index (CSS + zonesData en pixels ET mm)
+                if (index === 0) {
+                    zoneEl.style.left = `${valuePx}px`;
+                    if (zoneData) {
+                        zoneData.x = valuePx;
+                        zoneData.xMm = valueMm;
+                    }
+                } else if (index === 1) {
+                    zoneEl.style.top = `${valuePx}px`;
+                    if (zoneData) {
+                        zoneData.y = valuePx;
+                        zoneData.yMm = valueMm;
+                    }
+                } else if (index === 2) {
+                    zoneEl.style.width = `${valuePx}px`;
+                    if (zoneData) {
+                        zoneData.w = valuePx;
+                        zoneData.wMm = valueMm;
+                    }
+                } else if (index === 3) {
+                    zoneEl.style.height = `${valuePx}px`;
+                    if (zoneData) {
+                        zoneData.h = valuePx;
+                        zoneData.hMm = valueMm;
+                    }
+                }
                 
                 updateQrZoneDisplay(zoneId);
                 saveToLocalStorage();
@@ -7237,8 +7307,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const modeMapping = {
                     'original': 'initial',
                     'contain': 'ajuster',
-                    'cover': 'couper',
-                    'stretch': 'ajuster'
+                    'cover': 'couper'
                 };
                 
                 updateSelectedImageZone((zoneData, zoneEl, zoneId) => {
@@ -7330,19 +7399,39 @@ document.addEventListener('DOMContentLoaded', () => {
                 const valueMm = parseFloat(input.value.replace(',', '.')) || 0;
                 const valuePx = valueMm / MM_PER_PIXEL;
                 
-                // Appliquer selon l'index
+                // Récupérer les données de la zone pour mise à jour
+                const zonesData = getCurrentPageZones();
+                const zoneData = zonesData[zoneId];
+                
+                // Appliquer selon l'index (CSS + zonesData en pixels ET mm)
                 switch (index) {
                     case 0: // X
                         zoneEl.style.left = `${valuePx}px`;
+                        if (zoneData) {
+                            zoneData.x = valuePx;
+                            zoneData.xMm = valueMm;
+                        }
                         break;
                     case 1: // Y
                         zoneEl.style.top = `${valuePx}px`;
+                        if (zoneData) {
+                            zoneData.y = valuePx;
+                            zoneData.yMm = valueMm;
+                        }
                         break;
                     case 2: // W
                         zoneEl.style.width = `${Math.max(20, valuePx)}px`;
+                        if (zoneData) {
+                            zoneData.w = Math.max(20, valuePx);
+                            zoneData.wMm = Math.max(20 * MM_PER_PIXEL, valueMm);
+                        }
                         break;
                     case 3: // H
                         zoneEl.style.height = `${Math.max(20, valuePx)}px`;
+                        if (zoneData) {
+                            zoneData.h = Math.max(20, valuePx);
+                            zoneData.hMm = Math.max(20 * MM_PER_PIXEL, valueMm);
+                        }
                         break;
                 }
                 
@@ -13395,7 +13484,11 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             source: {
                 type: zoneData.source?.type || 'url',
-                valeur: zoneData.source?.valeur || ''
+                valeur: zoneData.source?.valeur || '',
+                nomOriginal: zoneData.source?.nomOriginal || '',
+                imageBase64: zoneData.source?.imageBase64 || null,
+                largeurPx: zoneData.source?.largeurPx || null,
+                hauteurPx: zoneData.source?.hauteurPx || null
             },
             redimensionnement: {
                 mode: zoneData.redimensionnement?.mode || 'ajuster',
@@ -15509,6 +15602,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * Génère une balise couleur CMYK PSMD SANS attribut alpha.
+     * Utilisé pour backgroundcolor et foregroundcolor dans les filtres two_color.
+     * 
+     * @param {string} tagName - Nom de la balise (backgroundcolor, foregroundcolor)
+     * @param {Object} cmyk - Couleur CMYK {c, m, y, k}
+     * @returns {string} XML de la couleur sans alpha
+     */
+    function generatePsmdColorNoAlpha(tagName, cmyk) {
+        const c = cmyk.c || 0;
+        const m = cmyk.m || 0;
+        const y = cmyk.y || 0;
+        const k = cmyk.k || 0;
+        
+        return `<${tagName} colorspace="CMYK" downgrade_c="${c}" downgrade_m="${m}" downgrade_y="${y}" downgrade_k="${k}"><component>${c}</component><component>${m}</component><component>${y}</component><component>${k}</component></${tagName}>`;
+    }
+
+    /**
      * Génère la section <variable> pour un champ de fusion.
      * 
      * @param {string} fieldName - Nom du champ (sans les @)
@@ -15516,9 +15626,42 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function generatePsmdVariable(fieldName) {
         return `<variable>
-<n>${escapeXmlPsmd(fieldName)}</n>
+<name>${escapeXmlPsmd(fieldName)}</name>
 <global>no</global>
 <expression>""</expression>
+<Formatting>3</Formatting>
+<Locale_ID>1036</Locale_ID>
+<Currency_Symbol>€</Currency_Symbol>
+<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+<Currency_GroupingSymbol> </Currency_GroupingSymbol>
+<Currency_NegativeFormat>8</Currency_NegativeFormat>
+<Currency_PositiveFormat>3</Currency_PositiveFormat>
+<Number_DecimalSymbol>,</Number_DecimalSymbol>
+<Number_DecimalPlaces>2</Number_DecimalPlaces>
+<Number_DigitsInGroup>3</Number_DigitsInGroup>
+<Number_GroupingSymbol> </Number_GroupingSymbol>
+<Number_LeadingZeros>1</Number_LeadingZeros>
+<Number_NegativeSymbol>-</Number_NegativeSymbol>
+<Number_NegativeFormat>1</Number_NegativeFormat>
+<Date_Style>dddd d MMMM yyyy</Date_Style>
+</variable>`;
+    }
+
+    /**
+     * Génère une variable d'image pour la section <variables> du PSMD.
+     * PrintShop Mail utilise cette variable pour lier l'objet image au fichier.
+     * 
+     * @param {string} varName - Nom de la variable (correspond à <variable_name> dans image_object)
+     * @param {string} fileName - Nom du fichier image
+     * @returns {string} XML de la variable image
+     */
+    function generatePsmdImageVariable(varName, fileName) {
+        return `<variable>
+<name>${escapeXmlPsmd(varName)}</name>
+<global>no</global>
+<expression>"${escapeXmlPsmd(fileName)}"</expression>
 <Formatting>3</Formatting>
 <Locale_ID>1036</Locale_ID>
 <Currency_Symbol>€</Currency_Symbol>
@@ -15593,8 +15736,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const geom = zone.geometry || zone.geometrie || {};
         const xMm = geom.x_mm ?? geom.xMm ?? 0;
         const yMm = geom.y_mm ?? geom.yMm ?? 0;
-        const widthMm = geom.width_mm ?? geom.largeur_mm ?? 50;
-        const heightMm = geom.height_mm ?? geom.hauteur_mm ?? 20;
+        const widthMm = geom.width_mm ?? geom.largeur_mm ?? geom.largeurMm ?? 50;
+        const heightMm = geom.height_mm ?? geom.hauteur_mm ?? geom.hauteurMm ?? 20;
         
         // Conversion coordonnées mm → points
         const left = mmToPoints(xMm);
@@ -15604,18 +15747,23 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Couleurs de fond - gérer les deux formats
         let fillColor = { c: 0, m: 0, y: 0, k: 0 };
+        // Alpha toujours à 0 pour toutes les zones (requis par PrintShop Mail)
         let fillAlpha = 0;
         
         if (zone.fond?.couleur) {
             fillColor = rgbToCmyk(zone.fond.couleur);
-            fillAlpha = zone.fond.couleur !== 'transparent' ? 1 : 0;
+            // Ne modifier fillAlpha que pour les zones NON-image
+            if (zone.type !== 'image') {
+                fillAlpha = (zone.fond.transparent !== true && zone.fond.couleur !== 'transparent') ? 1 : 0;
+            }
         } else if (zone.style?.bgColor && !zone.style?.transparent) {
             fillColor = rgbToCmyk(zone.style.bgColor);
             fillAlpha = 1;
         }
         
         // Couleurs de bordure - CMYK (comme toutes les couleurs PSMD)
-        let borderColor = { c: 0, m: 0, y: 0, k: 0 };
+        // downgrade_k="1" par défaut requis par PrintShop Mail
+        let borderColor = { c: 0, m: 0, y: 0, k: 1 };
         let borderSize = 0;
         
         if (zone.bordure?.epaisseur) {
@@ -15630,7 +15778,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         return `<object>
 <identifier>${guid}</identifier>
-<n>${name}</n>
+<name>${name}</name>
 <locked>${locked}</locked>
 <knockout>no</knockout>
 <border_size>${borderSize}</border_size>
@@ -15711,6 +15859,54 @@ ${generatePsmdColor('textcolor', textColor)}
     }
 
     /**
+     * Convertit l'alignement horizontal Designer en valeur PrintShop.
+     * 
+     * @param {Object} zone - Données de la zone image
+     * @returns {number} Valeur PrintShop (2=gauche, 4=centre, 6=droite)
+     */
+    function getImageAlignmentH(zone) {
+        const alignH = zone.redimensionnement?.alignementH || 'center';
+        const mapping = {
+            'left': 2,
+            'center': 4,
+            'right': 6
+        };
+        return mapping[alignH] || 4;
+    }
+
+    /**
+     * Convertit l'alignement vertical Designer en valeur PrintShop.
+     * 
+     * @param {Object} zone - Données de la zone image
+     * @returns {number} Valeur PrintShop (6=haut, 4=centre, 2=bas)
+     */
+    function getImageAlignmentV(zone) {
+        const alignV = zone.redimensionnement?.alignementV || 'middle';
+        const mapping = {
+            'top': 6,
+            'middle': 4,
+            'bottom': 2
+        };
+        return mapping[alignV] || 4;
+    }
+
+    /**
+     * Convertit le mode de redimensionnement Designer en valeur scale PrintShop.
+     * 
+     * @param {Object} zone - Données de la zone image
+     * @returns {number} Valeur PrintShop (1=taille initiale, 2=ajuster, 3=couper)
+     */
+    function getImageScaleMode(zone) {
+        const mode = zone.redimensionnement?.mode || 'ajuster';
+        const mapping = {
+            'initial': 1,
+            'ajuster': 2,
+            'couper': 3
+        };
+        return mapping[mode] || 2;
+    }
+
+    /**
      * Génère un objet image PSMD (image_object).
      * 
      * @param {Object} zone - Données de la zone image exportée
@@ -15728,10 +15924,10 @@ ${generatePsmdColor('textcolor', textColor)}
         
         xml += `
 <image_object>
-<scale>2</scale>
+<scale>${getImageScaleMode(zone)}</scale>
 <keep_aspect_ratio>${keepAspectRatio}</keep_aspect_ratio>
-<horizontal_alignment>4</horizontal_alignment>
-<vertical_alignment>4</vertical_alignment>
+<horizontal_alignment>${getImageAlignmentH(zone)}</horizontal_alignment>
+<vertical_alignment>${getImageAlignmentV(zone)}</vertical_alignment>
 <variable_name>${name}</variable_name>
 <default_image_folder></default_image_folder>
 <default_folder></default_folder>
@@ -15742,8 +15938,8 @@ ${generatePsmdColor('textcolor', textColor)}
 <filters>
 <two_color convert="no">
 <threshold>50</threshold>
-${generatePsmdColor('backgroundcolor', { c: 0, m: 0, y: 0, k: 0 }, 0)}
-${generatePsmdColor('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 }, 0)}
+${generatePsmdColorNoAlpha('backgroundcolor', { c: 0, m: 0, y: 0, k: 0 })}
+${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
 </two_color>
 </filters>
 </image_object>
@@ -15828,7 +16024,7 @@ ${generatePsmdColor('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 }, 0)}
     function generatePsmdVariables(jsonData) {
         const allFields = new Set();
         
-        // Parcourir les zones textQuill
+        // Parcourir les zones textQuill pour les champs de fusion
         const zonesTextQuill = jsonData.zonesTextQuill || [];
         for (const zone of zonesTextQuill) {
             if (zone.content_rtf) {
@@ -15837,15 +16033,33 @@ ${generatePsmdColor('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 }, 0)}
             }
         }
         
+        // Collecter les variables d'images
+        const imageVariables = [];
+        const zonesImage = jsonData.zonesImage || [];
+        for (const zone of zonesImage) {
+            // Utiliser les mêmes fallbacks que generatePsmdImageObject()
+            const fileName = zone.source?.nomOriginal || zone.source?.nomFichier || zone.source?.url || '';
+            if (fileName) {
+                const varName = zone.nom || zone.id || 'Image';
+                imageVariables.push({ varName, fileName });
+            }
+        }
+        
         // Générer la section variables
-        if (allFields.size === 0) {
+        if (allFields.size === 0 && imageVariables.length === 0) {
             return '<variables>\n</variables>';
         }
         
         let xml = '<variables>\n';
         
+        // Variables de champs de fusion
         for (const field of allFields) {
             xml += generatePsmdVariable(field) + '\n';
+        }
+        
+        // Variables d'images
+        for (const imgVar of imageVariables) {
+            xml += generatePsmdImageVariable(imgVar.varName, imgVar.fileName) + '\n';
         }
         
         xml += '</variables>';
