@@ -11826,50 +11826,112 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Échappe une chaîne pour un flux RTF (échappement basique).
+     * Échappe et encode une chaîne pour un flux RTF compatible PrintShop Mail.
+     * - Échappe les caractères spéciaux RTF (\\, {, })
+     * - Encode les caractères non-ASCII (> 127) en format \'XX (hexadécimal)
+     * - Convertit les sauts de ligne en \par
+     * 
      * @param {string} text - Texte brut
-     * @returns {string} Texte échappé RTF
+     * @returns {string} Texte échappé et encodé pour RTF
      */
     function escapeRtf(text) {
-        return String(text)
-            .replace(/\\/g, '\\\\')
-            .replace(/\{/g, '\\{')
-            .replace(/\}/g, '\\}')
-            .replace(/\r\n|\r|\n/g, '\\par ');
+        let result = '';
+        const str = String(text);
+        
+        for (let i = 0; i < str.length; i++) {
+            const char = str[i];
+            const code = char.charCodeAt(0);
+            
+            // Sauts de ligne → \par
+            if (char === '\r' && str[i + 1] === '\n') {
+                result += '\\par ';
+                i++; // Sauter le \n
+                continue;
+            }
+            if (char === '\r' || char === '\n') {
+                result += '\\par ';
+                continue;
+            }
+            
+            // Caractères RTF spéciaux
+            if (char === '\\') {
+                result += '\\\\';
+            } else if (char === '{') {
+                result += '\\{';
+            } else if (char === '}') {
+                result += '\\}';
+            } else if (code > 127) {
+                // Caractères non-ASCII : encoder en \'XX (code Windows-1252)
+                // Pour les caractères courants, utiliser les codes Windows-1252
+                result += "\\'" + code.toString(16).padStart(2, '0');
+            } else {
+                result += char;
+            }
+        }
+        
+        return result;
     }
 
     /**
-     * Convertit un delta Quill (ops) en RTF basique pour PrintShop Mail.
-     * Support : texte, gras (\\b ... \\b0), souligné (\\ul ... \\ul0), couleur (\\cfN), retours ligne (\\par).
+     * Mapping des alignements Quill/Designer vers codes RTF.
+     * @type {Object.<string, string>}
+     */
+    const RTF_ALIGN_MAP = {
+        'left': '',        // \ql est implicite en RTF
+        'center': '\\qc',
+        'right': '\\qr',
+        'justify': '\\qj'
+    };
+
+    /**
+     * Convertit un delta Quill (ops) en RTF complet compatible PrintShop Mail.
+     * Support : texte, gras (\\b), italique (\\i), souligné (\\ul), couleur (\\cfN), retours ligne (\\par), alignement (\\qc, \\qr, \\qj).
+     * 
+     * Format RTF généré :
+     * - Header complet : \\rtf1\\ansi\\ansicpg1252\\deff0\\deflang1036
+     * - Table des polices : {\\fonttbl{\\f0\\fnil\\fcharset0 POLICE;}}
+     * - Table des couleurs : {\\colortbl ;\\redR\\greenG\\blueB;...}
+     * - Corps avec styles : \\viewkind4\\uc1\\pard[\\qX]\\cfN\\f0\\fsS TEXTE\\par
      *
      * @param {Object|null|undefined} delta - Delta Quill (ex: { ops: [...] })
-     * @returns {string} Chaîne RTF
+     * @param {string} [fontName='Roboto'] - Nom de la police par défaut
+     * @param {number} [fontSize=12] - Taille de police en points
+     * @param {string} [defaultColor='#000000'] - Couleur par défaut au format hex
+     * @param {string} [align='left'] - Alignement horizontal ('left', 'center', 'right', 'justify')
+     * @returns {string} Chaîne RTF complète compatible PrintShop Mail
      */
-    function deltaToRtf(delta) {
+    function deltaToRtf(delta, fontName = 'Roboto', fontSize = 12, defaultColor = '#000000', align = 'left') {
         const ops = delta && Array.isArray(delta.ops) ? delta.ops : [];
 
-        // 1) Collecter les couleurs présentes
-        const colors = [];
+        // Normaliser la couleur par défaut
+        const normalizedDefaultColor = String(defaultColor || '#000000').toLowerCase();
+
+        // 1) Collecter les couleurs présentes (la couleur par défaut en premier, index 1)
+        const colors = [normalizedDefaultColor];
         const colorIndex = (hex) => {
-            if (!hex) return 0;
+            if (!hex) return 1; // Utiliser la couleur par défaut (index 1)
             const c = String(hex).toLowerCase();
             let idx = colors.indexOf(c);
             if (idx === -1) {
                 colors.push(c);
                 idx = colors.length - 1;
             }
-            // En RTF, \cf0 = couleur par défaut, donc on décale de +1
+            // En RTF, \cf1 = première couleur de la table (index 0 du tableau = cf1)
             return idx + 1;
         };
 
+        // Pré-collecter les couleurs inline du Delta
         for (const op of ops) {
             if (!op || typeof op.insert !== 'string') continue;
             const attrs = op.attributes || {};
             if (typeof attrs.color === 'string' && attrs.color) colorIndex(attrs.color);
         }
 
-        // 2) Générer table de couleurs
-        let colortbl = '{\\colortbl;';
+        // 2) Générer la table des polices
+        const fonttbl = `{\\fonttbl{\\f0\\fnil\\fcharset0 ${fontName};}}`;
+
+        // 3) Générer la table des couleurs (avec espace après le ; initial)
+        let colortbl = '{\\colortbl ;';
         colors.forEach(c => {
             // Format attendu: #rrggbb
             const hex = c.startsWith('#') ? c.slice(1) : c;
@@ -11880,7 +11942,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         colortbl += '}';
 
-        // 3) Corps
+        // 4) Taille de police en demi-points (RTF utilise des demi-points)
+        const fsValue = Math.round(fontSize * 2);
+
+        // 5) Corps du texte
         // IMPORTANT : ne jamais ajouter d'espaces "réels" autour des segments formatés,
         // sinon ils réapparaissent après conversion RTF → Delta (symptôme : espaces avant/après mots formatés).
         // On encapsule les segments formatés dans des GROUPES RTF "{...}" pour éviter tout reset manuel.
@@ -11891,14 +11956,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const attrs = op.attributes || {};
 
             const isBold = attrs.bold === true;
+            const isItalic = attrs.italic === true;
             const isUnderline = attrs.underline === true;
             const color = typeof attrs.color === 'string' ? attrs.color : null;
-            const cf = color ? colorIndex(color) : 0;
+            // Si pas de couleur inline, utiliser la couleur par défaut (index 1)
+            const cf = color ? colorIndex(color) : 1;
 
             const escaped = escapeRtf(text);
 
-            // Aucun attribut : texte brut
-            if (!isBold && !isUnderline && cf === 0) {
+            // Aucun attribut spécial (utilise la couleur par défaut) : texte brut
+            if (!isBold && !isItalic && !isUnderline && cf === 1) {
                 body += escaped;
                 continue;
             }
@@ -11906,14 +11973,24 @@ document.addEventListener('DOMContentLoaded', () => {
             // Segment formaté : groupe RTF
             let codes = '';
             if (isBold) codes += '\\b';
+            if (isItalic) codes += (codes ? ' ' : '') + '\\i';
             if (isUnderline) codes += (codes ? ' ' : '') + '\\ul';
-            if (cf > 0) codes += (codes ? ' ' : '') + `\\cf${cf}`;
+            if (cf !== 1) codes += (codes ? ' ' : '') + `\\cf${cf}`;
 
             body += `{${codes} ${escaped}}`;
         }
 
-        const rtf = `{\\rtf1\\ansi${colortbl} ${body}}`;
-        console.log('🔧 PHASE 7 - deltaToRtf:', rtf.substring(0, 50) + '...');
+        // 6) Code d'alignement RTF
+        const alignCode = RTF_ALIGN_MAP[align] || '';
+
+        // 7) Assembler le RTF complet au format PrintShop Mail
+        // Header : \rtf1\ansi\ansicpg1252\deff0\deflang1036
+        // Préambule corps : \viewkind4\uc1\pard[\qX]\cf1\f0\fsN
+        // Ne pas ajouter \par final si le body se termine déjà par \par (évite le double saut de ligne)
+        const needsFinalPar = !body.endsWith('\\par ') && !body.endsWith('\\par');
+        const finalPar = needsFinalPar ? '\\par' : '';
+        const rtf = `{\\rtf1\\ansi\\ansicpg1252\\deff0\\deflang1036${fonttbl}\n${colortbl}\n\\viewkind4\\uc1\\pard${alignCode}\\cf1\\f0\\fs${fsValue} ${body}${finalPar}\n}`;
+        console.log('🔧 PHASE 7 - deltaToRtf:', rtf.substring(0, 80) + '...');
         return rtf;
     }
 
@@ -11988,6 +12065,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const ops = [];
         let buffer = '';
         let bold = false;
+        let italic = false;
         let underline = false;
         let color = null;
 
@@ -11995,6 +12073,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!buffer) return;
             const attributes = {};
             if (bold) attributes.bold = true;
+            if (italic) attributes.italic = true;
             if (underline) attributes.underline = true;
             if (color) attributes.color = color;
             if (Object.keys(attributes).length > 0) ops.push({ insert: buffer, attributes });
@@ -12006,7 +12085,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const isDigit = (c) => (c >= '0' && c <= '9') || c === '-';
         const isSpace = (c) => c === ' ' || c === '\t';
 
-        /** @type {Array<{bold: boolean, underline: boolean, color: string|null}>} */
+        /** @type {Array<{bold: boolean, italic: boolean, underline: boolean, color: string|null}>} */
         const stateStack = [];
 
         for (let i = 0; i < body.length; i++) {
@@ -12015,7 +12094,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Groupes RTF : push/pop état (les styles reviennent à l'état précédent à la fermeture du groupe)
             if (ch === '{') {
                 // Sauvegarder l'état courant
-                stateStack.push({ bold, underline, color });
+                stateStack.push({ bold, italic, underline, color });
                 continue;
             }
             if (ch === '}') {
@@ -12024,6 +12103,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const prev = stateStack.pop();
                 if (prev) {
                     bold = prev.bold;
+                    italic = prev.italic;
                     underline = prev.underline;
                     color = prev.color;
                 }
@@ -12097,6 +12177,9 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (word === 'b') {
                 flush();
                 bold = (num === null) ? true : (num !== 0);
+            } else if (word === 'i') {
+                flush();
+                italic = (num === null) ? true : (num !== 0);
             } else if (word === 'ul') {
                 flush();
                 underline = (num === null) ? true : (num !== 0);
@@ -13592,7 +13675,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.log('🔧 PHASE 7 - Export textQuill:', zoneId);
 
                     const delta = zoneData.quillDelta || null;
-                    const rtfOutput = deltaToRtf(delta);
+                    // Passer les paramètres de style pour générer un RTF complet PrintShop Mail
+                    const rtfOutput = deltaToRtf(
+                        delta,
+                        zoneData.font || 'Roboto',
+                        zoneData.size || 12,
+                        zoneData.color || '#000000',
+                        zoneData.align || 'left'
+                    );
 
                     output.zonesTextQuill.push({
                         id: zoneId,
@@ -15398,20 +15488,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Génère une section <fillcolor> ou <bordercolor> CMYK.
+     * Génère une section <fillcolor>, <bordercolor> ou <textcolor> CMYK.
+     * L'attribut alpha est optionnel : utilisé pour fillcolor, omis pour bordercolor et textcolor.
      * 
-     * @param {string} tagName - Nom de la balise ('fillcolor' ou 'bordercolor')
+     * @param {string} tagName - Nom de la balise ('fillcolor', 'bordercolor', 'textcolor')
      * @param {{c: number, m: number, y: number, k: number}} cmyk - Valeurs CMYK (0-1)
-     * @param {number} [alpha=0] - Transparence (0 = transparent, 1 = opaque)
-     * @returns {string} XML de la couleur
+     * @param {number|null} [alpha=null] - Transparence (null = pas d'attribut alpha, 0-1 sinon)
+     * @returns {string} XML de la couleur CMYK
      */
-    function generatePsmdColor(tagName, cmyk, alpha = 0) {
+    function generatePsmdColor(tagName, cmyk, alpha = null) {
         const c = cmyk.c.toFixed(2).replace(/\.?0+$/, '') || '0';
         const m = cmyk.m.toFixed(2).replace(/\.?0+$/, '') || '0';
         const y = cmyk.y.toFixed(2).replace(/\.?0+$/, '') || '0';
         const k = cmyk.k.toFixed(2).replace(/\.?0+$/, '') || '0';
         
-        return `<${tagName} colorspace="CMYK" alpha="${alpha}" downgrade_c="${c}" downgrade_m="${m}" downgrade_y="${y}" downgrade_k="${k}"><component>${c}</component><component>${m}</component><component>${y}</component><component>${k}</component></${tagName}>`;
+        // Alpha seulement si explicitement fourni (pas null)
+        const alphaAttr = alpha !== null ? ` alpha="${alpha}"` : '';
+        
+        return `<${tagName} colorspace="CMYK"${alphaAttr} downgrade_c="${c}" downgrade_m="${m}" downgrade_y="${y}" downgrade_k="${k}"><component>${c}</component><component>${m}</component><component>${y}</component><component>${k}</component></${tagName}>`;
     }
 
     /**
@@ -15520,7 +15614,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fillAlpha = 1;
         }
         
-        // Couleurs de bordure
+        // Couleurs de bordure - CMYK (comme toutes les couleurs PSMD)
         let borderColor = { c: 0, m: 0, y: 0, k: 0 };
         let borderSize = 0;
         
@@ -15542,7 +15636,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <border_size>${borderSize}</border_size>
 <border_style>${borderStyle}</border_style>
 ${generatePsmdColor('fillcolor', fillColor, fillAlpha)}
-${generatePsmdColor('bordercolor', borderColor, 0)}
+${generatePsmdColor('bordercolor', borderColor)}
 <rotation>0</rotation>
 <bounds left="${left}" top="${top}" right="${right}" bottom="${bottom}"/>
 <snap_frame_to_content>no</snap_frame_to_content>
@@ -15603,7 +15697,7 @@ ${generatePsmdColor('bordercolor', borderColor, 0)}
 <horizontal_alignment>${hAlign}</horizontal_alignment>
 <vertical_alignment>${vAlign}</vertical_alignment>
 <vertical_text>no</vertical_text>
-${generatePsmdColor('textcolor', textColor, 0)}
+${generatePsmdColor('textcolor', textColor)}
 <cmyk_output>no</cmyk_output>
 <copy_fitting>
 <reduce_to_fit>${reduceToFit}</reduce_to_fit>
