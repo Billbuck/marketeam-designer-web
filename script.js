@@ -2680,7 +2680,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const DEFAULT_SURFACE_MAX_IMAGE_MM2 = 20000;  // Surface max absolue en mm²
     const DEFAULT_POURCENTAGE_MAX_IMAGE = 50;     // % max de la surface document
     const IMAGE_MAX_DIMENSION_PX = 1500;          // Dimension max après compression
-    const IMAGE_COMPRESSION_QUALITY = 0.85;       // Qualité WebP/JPEG (85%)
+    // const IMAGE_COMPRESSION_QUALITY = 0.85;    // Obsolète : PNG utilisé (lossless)
     const IMAGE_MAX_UPLOAD_SIZE = 10 * 1024 * 1024;  // 10 Mo max à l'upload
     const IMAGE_MAX_COMPRESSED_SIZE = 2 * 1024 * 1024;  // 2 Mo max après compression
     const DPI_MINIMUM = 150;
@@ -2727,7 +2727,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * Fonctions pour l'upload, la compression et l'affichage des images.
      * 
      * Fonctions principales :
-     *   - supportsWebP() : Détection support WebP
      *   - formatFileSize() : Formatage taille fichier
      *   - isImageFormatAccepted() : Validation format fichier
      *   - isSvgFile() : Détection fichier SVG
@@ -2739,7 +2738,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * 
      * Dépendances :
      *   - imageFileInfo, imageDpiIndicator (Section 1)
-     *   - IMAGE_MAX_DIMENSION_PX, IMAGE_COMPRESSION_QUALITY (Section 7)
+     *   - IMAGE_MAX_DIMENSION_PX (Section 7)
      */
     // ───────────────────────────────────────────────────────────────────────────────
     
@@ -2747,12 +2746,13 @@ document.addEventListener('DOMContentLoaded', () => {
      * Vérifie si le navigateur supporte le format WebP
      * @returns {boolean}
      */
-    function supportsWebP() {
-        const canvas = document.createElement('canvas');
-        canvas.width = 1;
-        canvas.height = 1;
-        return canvas.toDataURL('image/webp').startsWith('data:image/webp');
-    }
+    // Fonction obsolète : PNG utilisé systématiquement pour compatibilité PrintShop Mail
+    // function supportsWebP() {
+    //     const canvas = document.createElement('canvas');
+    //     canvas.width = 1;
+    //     canvas.height = 1;
+    //     return canvas.toDataURL('image/webp').startsWith('data:image/webp');
+    // }
     
     /**
      * Formate une taille de fichier en Ko ou Mo
@@ -2792,8 +2792,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
-     * Compresse une image via Canvas
-     * @param {File} file - Fichier image original
+     * Redimensionne une image via Canvas et l'encode en PNG.
+     * Le format PNG est utilisé pour la compatibilité PrintShop Mail et le support de la transparence.
+     * 
+     * @param {File} file - Fichier image original (JPG, PNG, WebP)
      * @returns {Promise<{base64: string, width: number, height: number, size: number}>}
      */
     function compressImage(file) {
@@ -2825,9 +2827,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
                     
-                    // Choisir le format de sortie
-                    const outputFormat = supportsWebP() ? 'image/webp' : 'image/jpeg';
-                    const base64 = canvas.toDataURL(outputFormat, IMAGE_COMPRESSION_QUALITY);
+                    // Format PNG : compatible PrintShop Mail + supporte la transparence
+                    const base64 = canvas.toDataURL('image/png');
                     
                     // Calculer la taille du base64 (approximation)
                     const base64Size = Math.round((base64.length - 22) * 3 / 4);
@@ -15918,7 +15919,8 @@ ${generatePsmdColor('textcolor', textColor)}
      */
     function generatePsmdImageObject(zone) {
         const name = escapeXmlPsmd(zone.nom || zone.id || 'Image');
-        const fileName = zone.source?.nomOriginal || zone.source?.nomFichier || zone.source?.url || '';
+        // Utiliser le nom exporté si disponible, sinon le nom original
+        const fileName = zone.exportedFileName || zone.source?.nomOriginal || zone.source?.nomFichier || zone.source?.url || '';
         
         // Mode de redimensionnement
         const keepAspectRatio = (zone.redimensionnement?.mode === 'proportionnel' || 
@@ -16018,14 +16020,15 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
      * Parcourt les zonesTextQuill pour extraire les marqueurs @XXX@.
      * 
      * @param {Object} jsonData - Données complètes de exportToWebDev()
+     * @param {string|null} exportPrefix - Préfixe pour les noms de fichiers exportés (ex: "vdp_20251224_112005")
      * @returns {string} XML de la section <variables>
      * 
      * @example
      * const jsonData = { zonesTextQuill: [{ content_rtf: '@NOM@ @PRENOM@' }] };
-     * generatePsmdVariables(jsonData);
-     * // Retourne <variables> avec NOM et PRENOM déclarés
+     * generatePsmdVariables(jsonData, "vdp_20251224_112005");
+     * // Retourne <variables> avec NOM, PRENOM et variables d'images
      */
-    function generatePsmdVariables(jsonData) {
+    function generatePsmdVariables(jsonData, exportPrefix = null) {
         const allFields = new Set();
         
         // Parcourir les zones textQuill pour les champs de fusion
@@ -16041,10 +16044,19 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
         const imageVariables = [];
         const zonesImage = jsonData.zonesImage || [];
         for (const zone of zonesImage) {
-            // Utiliser les mêmes fallbacks que generatePsmdImageObject()
-            const fileName = zone.source?.nomOriginal || zone.source?.nomFichier || zone.source?.url || '';
+            const varName = zone.nom || zone.id || 'Image';
+            
+            // Générer le nom de fichier exporté si prefix fourni et image base64 présente
+            let fileName = '';
+            if (exportPrefix && zone.source?.imageBase64) {
+                const ext = getExtensionFromBase64(zone.source.imageBase64);
+                fileName = `${exportPrefix}_${zone.id}.${ext}`;
+            } else {
+                // Fallback sur le nom original si pas de base64 ou pas de prefix
+                fileName = zone.source?.nomOriginal || zone.source?.nomFichier || zone.source?.url || '';
+            }
+            
             if (fileName) {
-                const varName = zone.nom || zone.id || 'Image';
                 imageVariables.push({ varName, fileName });
             }
         }
@@ -16124,9 +16136,10 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
      * @param {Object} jsonData - Données complètes de exportToWebDev()
      * @param {number} largeurMm - Largeur du document en mm
      * @param {number} hauteurMm - Hauteur du document en mm
+     * @param {string|null} exportPrefix - Préfixe pour les noms de fichiers exportés (optionnel)
      * @returns {string} XML de la section layouts
      */
-    function generatePsmdLayouts(jsonData, largeurMm, hauteurMm) {
+    function generatePsmdLayouts(jsonData, largeurMm, hauteurMm, exportPrefix = null) {
         // Convertir dimensions en points
         const pageWidthPt = mmToPoints(largeurMm);
         const pageHeightPt = mmToPoints(hauteurMm);
@@ -16172,7 +16185,20 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
         (jsonData.zonesImage || []).forEach(zone => {
             const pageNum = zone.page || 1;
             if (!zonesByPage[pageNum]) zonesByPage[pageNum] = [];
-            zonesByPage[pageNum].push({ ...zone, type: 'image', zIndex: zone.niveau || zone.zIndex || 1 });
+            
+            // Générer le nom de fichier exporté si prefix fourni et image base64 présente
+            let exportedFileName = zone.source?.nomOriginal || '';
+            if (exportPrefix && zone.source?.imageBase64) {
+                const ext = getExtensionFromBase64(zone.source.imageBase64);
+                exportedFileName = `${exportPrefix}_${zone.id}.${ext}`;
+            }
+            
+            zonesByPage[pageNum].push({ 
+                ...zone, 
+                type: 'image', 
+                zIndex: zone.niveau || zone.zIndex || 1,
+                exportedFileName: exportedFileName
+            });
         });
         
         // Générer le XML
@@ -16201,8 +16227,98 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
     }
 
     /**
+     * Génère un préfixe unique basé sur la date et l'heure.
+     * Format : vdp_YYYYMMDD_HHmmss
+     * 
+     * @returns {string} Préfixe unique pour le document
+     * 
+     * @example
+     * generateExportPrefix(); // "vdp_20251224_103045"
+     */
+    function generateExportPrefix() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        
+        return `vdp_${year}${month}${day}_${hours}${minutes}${seconds}`;
+    }
+
+    /**
+     * Extrait l'extension de fichier depuis un data URL base64.
+     * 
+     * @param {string} base64 - Data URL (ex: "data:image/jpeg;base64,...")
+     * @returns {string} Extension de fichier (jpg, png, webp, svg)
+     * 
+     * @example
+     * getExtensionFromBase64("data:image/jpeg;base64,..."); // "jpg"
+     * getExtensionFromBase64("data:image/png;base64,..."); // "png"
+     */
+    function getExtensionFromBase64(base64) {
+        if (!base64 || typeof base64 !== 'string') return 'jpg';
+        
+        const match = base64.match(/^data:image\/(\w+);/);
+        if (!match) return 'jpg';
+        
+        const mimeType = match[1].toLowerCase();
+        
+        // Mapping MIME → extension
+        const extensions = {
+            'jpeg': 'jpg',
+            'jpg': 'jpg',
+            'png': 'png',
+            'webp': 'webp',
+            'svg+xml': 'svg',
+            'svg': 'svg'
+        };
+        
+        return extensions[mimeType] || 'jpg';
+    }
+
+    /**
+     * Télécharge une image depuis un data URL base64.
+     * 
+     * @param {string} base64 - Data URL de l'image
+     * @param {string} fileName - Nom du fichier à télécharger
+     * 
+     * @example
+     * downloadImageFromBase64("data:image/jpeg;base64,...", "vdp_20251224_103045_zone-1.jpg");
+     */
+    function downloadImageFromBase64(base64, fileName) {
+        if (!base64 || !fileName) return;
+        
+        // Convertir base64 en Blob
+        const byteString = atob(base64.split(',')[1]);
+        const mimeType = base64.match(/^data:([^;]+);/)?.[1] || 'image/jpeg';
+        
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i);
+        }
+        
+        const blob = new Blob([ab], { type: mimeType });
+        
+        // Télécharger
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        console.log(`📥 Image exportée : ${fileName}`);
+    }
+
+    /**
      * Exporte le document courant au format .psmd (PrintShop Mail XML).
      * Génère un fichier XML complet et déclenche son téléchargement.
+     * Exporte également les images avec des noms uniques liés au document.
      * 
      * Utilise exportToWebDev() pour récupérer les données structurées,
      * puis convertit chaque élément au format PrintShop Mail.
@@ -16225,6 +16341,10 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
             return '';
         }
         
+        // 2. Générer le préfixe unique pour ce export
+        const exportPrefix = generateExportPrefix();
+        console.log(`exportToPsmd: Préfixe d'export : ${exportPrefix}`);
+        
         // Compter les zones
         const nbZones = (jsonData.zonesTextQuill?.length || 0) + 
                         (jsonData.zonesCodeBarres?.length || 0) + 
@@ -16232,13 +16352,29 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
         
         console.log(`exportToPsmd: ${jsonData.pages?.length || 1} page(s), ${nbZones} zone(s) à exporter`);
         
-        // 2. Récupérer les dimensions du document
+        // 3. Récupérer les dimensions du document
         const largeurMm = jsonData.formatDocument?.largeurMm || 210;
         const hauteurMm = jsonData.formatDocument?.hauteurMm || 297;
         
         console.log(`exportToPsmd: Format ${largeurMm}mm x ${hauteurMm}mm`);
         
-        // 3. Construire le XML
+        // 4. Collecter les images à exporter AVANT génération XML
+        const imagesToExport = [];
+        (jsonData.zonesImage || []).forEach(zone => {
+            if (zone.source?.imageBase64) {
+                const ext = getExtensionFromBase64(zone.source.imageBase64);
+                const fileName = `${exportPrefix}_${zone.id}.${ext}`;
+                imagesToExport.push({
+                    base64: zone.source.imageBase64,
+                    fileName: fileName,
+                    zoneId: zone.id
+                });
+            }
+        });
+        
+        console.log(`exportToPsmd: ${imagesToExport.length} image(s) à exporter`);
+        
+        // 5. Construire le XML (passer le préfixe pour nommer les images)
         let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
         xml += '<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.printshopmail.com/support/xml/schemas/win/version-7_1_0/printshopmail7.xsd">\n';
         
@@ -16249,11 +16385,11 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
         xml += generatePsmdPreferences() + '\n';
         xml += generatePsmdDatabaseSettings() + '\n';
         
-        // Section layouts (pages avec zones) - PASSER jsonData complet
-        xml += generatePsmdLayouts(jsonData, largeurMm, hauteurMm) + '\n';
+        // Section layouts (pages avec zones) - PASSER jsonData complet ET le préfixe
+        xml += generatePsmdLayouts(jsonData, largeurMm, hauteurMm, exportPrefix) + '\n';
         
-        // Section variables (champs de fusion) - PASSER jsonData complet
-        xml += generatePsmdVariables(jsonData) + '\n';
+        // Section variables (champs de fusion) - PASSER jsonData complet ET le préfixe
+        xml += generatePsmdVariables(jsonData, exportPrefix) + '\n';
         
         // Sections finales
         xml += generatePsmdFooterSections() + '\n';
@@ -16263,18 +16399,33 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
         console.log('=== exportToPsmd() : XML généré ===');
         console.log(`exportToPsmd: Taille du fichier: ${xml.length} caractères`);
         
-        // 4. Télécharger le fichier
+        // 6. Télécharger le fichier PSMD
+        const psmdFileName = `${exportPrefix}.psmd`;
         const blob = new Blob([xml], { type: 'application/xml' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'template_vdp.psmd';
+        a.download = psmdFileName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         
-        console.log('=== exportToPsmd() : Téléchargement déclenché ===');
+        console.log(`📥 Document exporté : ${psmdFileName}`);
+        
+        // 7. Télécharger les images (avec un léger délai entre chaque)
+        if (imagesToExport.length > 0) {
+            console.log('=== exportToPsmd() : Export des images ===');
+            
+            imagesToExport.forEach((img, index) => {
+                // Délai de 200ms entre chaque téléchargement pour éviter les blocages navigateur
+                setTimeout(() => {
+                    downloadImageFromBase64(img.base64, img.fileName);
+                }, (index + 1) * 200);
+            });
+        }
+        
+        console.log('=== exportToPsmd() : Téléchargement(s) déclenché(s) ===');
         
         return xml;
     }
