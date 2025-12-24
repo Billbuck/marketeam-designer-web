@@ -15732,7 +15732,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function generatePsmdObjectCommon(zone) {
         const guid = generateGuid();
         const name = escapeXmlPsmd(zone.nom || zone.id || 'Zone');
-        const locked = (zone.verrouille || zone.style?.locked) ? 'yes' : 'no';
+        // Export PSMD : toutes les zones sont verrouillées pour empêcher les modifications dans PrintShop Mail
+        // Note : le statut de verrouillage utilisateur est conservé dans exportToWebDev() pour la communication WebDev
+        const locked = 'yes';
         
         // Gérer les deux formats de géométrie
         const geom = zone.geometry || zone.geometrie || {};
