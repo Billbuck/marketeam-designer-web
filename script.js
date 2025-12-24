@@ -4637,6 +4637,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Stocker l'instance
                 quillInstances.set(id, quillInstance);
 
+                // Zone système : désactiver l'édition Quill
+                if (zoneData.systeme) {
+                    quillInstance.disable();
+                }
+
                 // Debug copyfit : tracer le chargement des polices (utile sur Ctrl+F5)
                 if (DEBUG_COPYFIT && !copyfitFontsDebugInstalled && document.fonts && typeof document.fonts.addEventListener === 'function') {
                     copyfitFontsDebugInstalled = true;
@@ -4913,6 +4918,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Seules les zones textQuill peuvent être copiées
         if (!zoneData || zoneData.type !== 'textQuill') {
+            return;
+        }
+        
+        // Les zones système ne peuvent pas être copiées
+        if (zoneData.systeme) {
             return;
         }
         
@@ -7087,13 +7097,22 @@ document.addEventListener('DOMContentLoaded', () => {
         
         console.log('🔧 updateToolbarVisibility - count:', selectedZoneIds.length, 'type:', zoneType);
         
+        // Vérifier si la zone est système
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        const isSysteme = zoneData && zoneData.systeme;
+        
         // Décider quelle toolbar afficher
-        if (selectedZoneIds.length !== 1 || !zoneType) {
-            // Aucune sélection ou multi-sélection → masquer toutes les toolbars
+        if (selectedZoneIds.length !== 1 || !zoneType || isSysteme) {
+            // Aucune sélection, multi-sélection, ou zone système → masquer toutes les toolbars
             hideQuillToolbar();
             hideImageToolbar();
             hideBarcodeToolbar();
             hideQrcodeToolbar();
+            // Masquer aussi la toolbar Data pour les zones système
+            if (isSysteme && toolbarData) {
+                toolbarData.style.display = 'none';
+            }
             return;
         }
         
@@ -10412,6 +10431,14 @@ document.addEventListener('DOMContentLoaded', () => {
             // Ne pas supprimer si l'utilisateur tape dans un input ou textarea
             if (isInInput) return;
             
+            // Ne pas supprimer si une zone système est sélectionnée
+            const zonesData = getCurrentPageZones();
+            const hasSystemeSelected = selectedZoneIds.some(id => {
+                const zoneData = zonesData[id];
+                return zoneData && zoneData.systeme;
+            });
+            if (hasSystemeSelected) return;
+            
             showDeleteConfirmation();
         }
     });
@@ -12367,11 +12394,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         // Construction de l'objet zone interne
-        const isTextQuill = zoneJson.typeZone === 'textQuill' || !!zoneJson.quillDelta;
+        // NOTE: L'ancien type 'text' (textarea) a été supprimé. Toutes les zones texte sont désormais 'textQuill' (Quill.js).
 
         return {
-            // Type de zone
-            type: isTextQuill ? 'textQuill' : 'text',
+            // Type de zone (toujours textQuill, seul type texte supporté)
+            type: 'textQuill',
             
             // Géométrie (conversion mm → px)
             x: geometrie.xMm !== undefined ? mmToPixels(geometrie.xMm) : 0,
@@ -12388,10 +12415,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Contenu et formatage
             content: zoneJson.contenu || '',
             formatting: formatting,
-            // Quill (si zone textQuill importée)
-            quillDelta: isTextQuill
-                ? (zoneJson.quillDelta || textAndFormatageToQuillDelta(zoneJson.contenu || '', zoneJson.formatage || []))
-                : undefined,
+            // Quill Delta (toujours présent pour les zones textQuill)
+            quillDelta: zoneJson.quillDelta || textAndFormatageToQuillDelta(zoneJson.contenu || '', zoneJson.formatage || []),
             
             // Style typographique
             font: style.police || 'Roboto',
