@@ -15751,18 +15751,18 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Couleurs de fond - gérer les deux formats
         let fillColor = { c: 0, m: 0, y: 0, k: 0 };
-        // Alpha toujours à 0 pour toutes les zones (requis par PrintShop Mail)
+        // Alpha : 0 si transparent, null si opaque (pas d'attribut alpha pour PrintShop Mail)
         let fillAlpha = 0;
         
         if (zone.fond?.couleur) {
             fillColor = rgbToCmyk(zone.fond.couleur);
-            // Ne modifier fillAlpha que pour les zones NON-image
+            // Pour les zones NON-image : null si opaque (pas d'attribut), 0 si transparent
             if (zone.type !== 'image') {
-                fillAlpha = (zone.fond.transparent !== true && zone.fond.couleur !== 'transparent') ? 1 : 0;
+                fillAlpha = (zone.fond.transparent !== true && zone.fond.couleur !== 'transparent') ? null : 0;
             }
         } else if (zone.style?.bgColor && !zone.style?.transparent) {
             fillColor = rgbToCmyk(zone.style.bgColor);
-            fillAlpha = 1;
+            fillAlpha = null;  // Pas d'attribut alpha pour les zones avec fond coloré
         }
         
         // Couleurs de bordure - CMYK (comme toutes les couleurs PSMD)
