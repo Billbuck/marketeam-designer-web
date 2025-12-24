@@ -2829,7 +2829,13 @@ body.in-iframe .toolbar {
     width: calc(50% - 3px);      /* POC: Calcul exact pour 2 colonnes avec gap 6px */
     justify-content: flex-start; /* Icône à gauche, texte suit */
     padding: 10px 8px;           /* Padding horizontal réduit pour grille */
-    gap: 8px;                    /* Gap réduit pour grille */
+    gap: 2px;                    /* Gap minimal pour éviter troncature du texte */
+}
+
+/* Padding réduit sur les icônes des boutons grid-2 */
+.sidebar .btn-group.grid-2 .btn-icon {
+    padding-left: 8px;
+    padding-right: 2px;
 }
 
 .sidebar .btn {
@@ -3134,7 +3140,6 @@ body.in-iframe .toolbar {
 /* ==================== VISIBILITÉ DES SECTIONS (data-visible-for) ==================== */
 .sidebar .section[data-visible-for] {
     transition: opacity 0.2s ease, max-height 0.3s ease;
-    overflow: hidden;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
