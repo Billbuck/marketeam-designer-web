@@ -383,6 +383,24 @@ document.addEventListener('DOMContentLoaded', () => {
      */
 
     /**
+     * @typedef {Object} ZoneQRJsonWebDev
+     * @property {string} id - Identifiant de la zone
+     * @property {number} page - Numéro de page (1-based)
+     * @property {string} nom - Nom de la zone
+     * @property {number} niveau - Z-index
+     * @property {number} rotation - Rotation en degrés
+     * @property {boolean} verrouille - Zone verrouillée
+     * @property {boolean} systeme - Zone système
+     * @property {string} systemeLibelle - Libellé système
+     * @property {boolean} imprimable - Zone imprimable
+     * @property {GeometrieJsonWebDev} geometrie - Géométrie en mm
+     * @property {string} typeCode - Type de code (toujours "QRCode")
+     * @property {string} contenu - Contenu/URL à encoder
+     * @property {{code: string, fond: string}} couleurs - Couleurs du QR
+     * @description Zone QR Code au format JSON WebDev.
+     */
+
+    /**
      * @typedef {Object} ZoneCodeBarresJsonWebDev
      * @property {string} id - Identifiant de la zone
      * @property {number} page - Numéro de page (1-based)
@@ -394,24 +412,15 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {string} systemeLibelle - Libellé système
      * @property {boolean} imprimable - Zone imprimable
      * @property {GeometrieJsonWebDev} geometrie - Géométrie en mm
-     * @property {string} typeCodeBarres - Type de code (code128, ean13, qrcode, etc.)
-     * @property {string} champFusion - Nom du champ de fusion (sans @)
-     * @property {'aucun'|'dessous'} texteLisible - Affichage du texte
-     * @property {number} taillePolice - Taille du texte lisible
+     * @property {string} typeCodeBarres - Type de code (code128, code39, ean13, datamatrix, etc.)
+     * @property {string} champFusion - Nom du champ de fusion (sans @), vide si statique
+     * @property {string} valeurStatique - Valeur statique si pas de champ fusion
+     * @property {string} texteLisible - Affichage du texte ('aucun' ou 'dessous')
+     * @property {number} taillePolice - Taille du texte lisible en points
      * @property {string} couleur - Couleur du code hex
-     * @description Zone code-barres au format JSON WebDev (nouveau format).
-     */
-
-    /**
-     * @typedef {Object} ZoneQrJsonWebDev
-     * @property {string} id - Identifiant de la zone
-     * @property {number} page - Numéro de page (1-based)
-     * @property {string} nom - Nom de la zone
-     * @property {GeometrieJsonWebDev} geometrie - Géométrie en mm
-     * @property {string} typeCode - Type de code (QRCode, Code128, etc.)
-     * @property {string} contenu - Contenu à encoder
-     * @property {{code: string, fond: string}} couleurs - Couleurs du code
-     * @description Zone QR au format JSON WebDev (ancien format rétrocompatible).
+     * @property {string} couleurFond - Couleur de fond hex
+     * @property {boolean} transparent - Fond transparent
+     * @description Zone Code-barres au format JSON WebDev.
      */
 
     /**
@@ -450,9 +459,10 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {Array} [pages] - Pages du document
      * @property {ZoneTexteJsonWebDev[]} [zonesTexte] - Zones de texte
      * @property {ZoneTextQuillJsonWebDev[]} [zonesTextQuill] - Zones texte Quill (Delta + RTF)
-     * @property {(ZoneCodeBarresJsonWebDev|ZoneQrJsonWebDev)[]} [zonesCodeBarres] - Zones code-barres
+     * @property {ZoneQRJsonWebDev[]} [zonesQR] - Zones QR Code
+     * @property {ZoneCodeBarresJsonWebDev[]} [zonesCodeBarres] - Zones Code-barres
      * @property {ZoneImageJsonWebDev[]} [zonesImage] - Zones image
-     * @description Document complet au format JSON WebDev (entrée de loadFromWebDev).
+     * @description Document complet au format JSON WebDev.
      */
 
     /**
@@ -12460,95 +12470,76 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * Convertit une zone code-barres du format JSON WebDev vers le format interne documentState.
      * Gère deux formats d'entrée :
-     * - Nouveau format : zones code-barres avec champFusion (type interne 'barcode')
-     * - Ancien format : zones QR simples avec contenu fixe (type interne 'qr')
-     * 
-     * @param {ZoneCodeBarresJsonWebDev|ZoneQrJsonWebDev} zoneJson - Zone code-barres au format JSON WebDev
-     * @returns {BarcodeZoneData|QrZoneData} Zone au format documentState interne
+     * @param {ZoneCodeBarresJsonWebDev} zoneJson - Zone code-barres au format JSON WebDev
+     * @returns {BarcodeZoneData} Zone au format documentState interne
      * 
      * @example
-     * // Nouveau format (barcode) :
      * // { typeCodeBarres: 'code128', champFusion: 'NumeroCommande' }
      * // → { type: 'barcode', typeCodeBarres: 'code128', champFusion: 'NumeroCommande' }
-     * 
-     * // Ancien format (qr) :
-     * // { typeCode: 'QRCode', contenu: 'https://...' }
-     * // → { type: 'qr', typeCode: 'QRCode', content: 'https://...' }
      */
     function convertZoneCodeBarresFromJson(zoneJson) {
-        // Conversion mm → pixels
         const mmToPixels = (mm) => mm / MM_PER_PIXEL;
         
-        // Extraction des données avec valeurs par défaut
         const geometrie = zoneJson.geometrie || {};
-        const couleurs = zoneJson.couleurs || {};
         
-        // Détecter si c'est le nouveau format (avec typeCodeBarres et champFusion)
-        // ou l'ancien format QR simple (avec typeCode et contenu)
-        const isNewBarcodeFormat = zoneJson.typeCodeBarres !== undefined || 
-                                    zoneJson.champFusion !== undefined || 
-                                    zoneJson.texteLisible !== undefined;
-        
-        if (isNewBarcodeFormat) {
-            // Nouveau format : zone code-barres complète avec champ de fusion
-            return {
-                type: 'barcode',
-                nom: zoneJson.nom || 'Code-barres',
-                typeCodeBarres: zoneJson.typeCodeBarres || 'code128',
-                champFusion: zoneJson.champFusion || '',
-                texteLisible: zoneJson.texteLisible || 'dessous',
-                taillePolice: zoneJson.taillePolice || 8,
-                couleur: zoneJson.couleur || (couleurs.code || '#000000'),
-                locked: zoneJson.verrouille || false,
-                systeme: zoneJson.systeme || false,
-                systemeLibelle: zoneJson.systemeLibelle || '',
-                imprimable: zoneJson.imprimable !== undefined ? zoneJson.imprimable : true,
-                zIndex: zoneJson.niveau || 1,
-                rotation: zoneJson.rotation || 0,
-                x: geometrie.xMm !== undefined ? mmToPixels(geometrie.xMm) : 0,
-                y: geometrie.yMm !== undefined ? mmToPixels(geometrie.yMm) : 0,
-                w: geometrie.largeurMm !== undefined ? mmToPixels(geometrie.largeurMm) : 150,
-                h: geometrie.hauteurMm !== undefined ? mmToPixels(geometrie.hauteurMm) : 60,
-                // Géométrie en mm (stockée pour précision)
-                xMm: geometrie.xMm !== undefined ? geometrie.xMm : 0,
-                yMm: geometrie.yMm !== undefined ? geometrie.yMm : 0,
-                wMm: geometrie.largeurMm !== undefined ? geometrie.largeurMm : pxToMm(150),
-                hMm: geometrie.hauteurMm !== undefined ? geometrie.hauteurMm : pxToMm(60)
-            };
-        }
-        
-        // Ancien format : zone QR simple (rétrocompatibilité)
         return {
-            // Type interne 'qr' pour compatibilité avec createZoneDOM()
-            type: 'qr',
-            
-            // Type réel du code-barres (QRCode, Code128, EAN13, Code39, DataMatrix, PDF417, EanUcc128, UPCA, UPCE)
-            typeCode: zoneJson.typeCode || 'QRCode',
-            
-            // Contenu à encoder dans le code-barres
-            content: zoneJson.contenu || '',
-            
-            // Couleurs
-            qrColor: couleurs.code || '#000000',
-            bgColor: couleurs.fond || '#FFFFFF',
-            
-            // État
+            type: 'barcode',
+            nom: zoneJson.nom || 'Code-barres',
+            typeCodeBarres: zoneJson.typeCodeBarres || 'code128',
+            champFusion: zoneJson.champFusion || '',
+            valeurStatique: zoneJson.valeurStatique || '',
+            texteLisible: zoneJson.texteLisible || 'dessous',
+            taillePolice: zoneJson.taillePolice || 8,
+            couleur: zoneJson.couleur || '#000000',
+            bgColor: zoneJson.couleurFond || '#FFFFFF',
+            isTransparent: zoneJson.transparent || false,
             locked: zoneJson.verrouille || false,
             systeme: zoneJson.systeme || false,
             systemeLibelle: zoneJson.systemeLibelle || '',
             imprimable: zoneJson.imprimable !== undefined ? zoneJson.imprimable : true,
-            
-            // Nouvelles propriétés (stockées pour utilisation future)
+            zIndex: zoneJson.niveau || 1,
+            rotation: zoneJson.rotation || 0,
+            x: geometrie.xMm !== undefined ? mmToPixels(geometrie.xMm) : 0,
+            y: geometrie.yMm !== undefined ? mmToPixels(geometrie.yMm) : 0,
+            w: geometrie.largeurMm !== undefined ? mmToPixels(geometrie.largeurMm) : 150,
+            h: geometrie.hauteurMm !== undefined ? mmToPixels(geometrie.hauteurMm) : 60,
+            xMm: geometrie.xMm !== undefined ? geometrie.xMm : 0,
+            yMm: geometrie.yMm !== undefined ? geometrie.yMm : 0,
+            wMm: geometrie.largeurMm !== undefined ? geometrie.largeurMm : pxToMm(150),
+            hMm: geometrie.hauteurMm !== undefined ? geometrie.hauteurMm : pxToMm(60)
+        };
+    }
+
+    /**
+     * Convertit une zone QR du format JSON WebDev vers le format interne documentState.
+     * 
+     * @param {ZoneQRJsonWebDev} zoneJson - Zone QR au format JSON WebDev
+     * @returns {QrZoneData} Zone au format documentState interne
+     */
+    function convertZoneQRFromJson(zoneJson) {
+        const mmToPixels = (mm) => mm / MM_PER_PIXEL;
+        
+        const geometrie = zoneJson.geometrie || {};
+        const couleurs = zoneJson.couleurs || {};
+        
+        return {
+            type: 'qr',
+            typeCode: zoneJson.typeCode || 'QRCode',
+            content: zoneJson.contenu || '',
+            qrColor: couleurs.code || '#000000',
+            bgColor: couleurs.fond || '#FFFFFF',
+            isTransparent: false,
+            locked: zoneJson.verrouille || false,
+            systeme: zoneJson.systeme || false,
+            systemeLibelle: zoneJson.systemeLibelle || '',
+            imprimable: zoneJson.imprimable !== undefined ? zoneJson.imprimable : true,
             name: zoneJson.nom || '',
             zIndex: zoneJson.niveau || 1,
             rotation: zoneJson.rotation || 0,
-            
-            // Géométrie (conversion mm → px)
             x: geometrie.xMm !== undefined ? mmToPixels(geometrie.xMm) : 0,
             y: geometrie.yMm !== undefined ? mmToPixels(geometrie.yMm) : 0,
             w: geometrie.largeurMm !== undefined ? mmToPixels(geometrie.largeurMm) : 100,
             h: geometrie.hauteurMm !== undefined ? mmToPixels(geometrie.hauteurMm) : 100,
-            // Géométrie en mm (stockée pour précision)
             xMm: geometrie.xMm !== undefined ? geometrie.xMm : 0,
             yMm: geometrie.yMm !== undefined ? geometrie.yMm : 0,
             wMm: geometrie.largeurMm !== undefined ? geometrie.largeurMm : pxToMm(100),
@@ -12890,31 +12881,26 @@ document.addEventListener('DOMContentLoaded', () => {
         
         console.log(`  → ${zonesTexteCount} zone(s) texte chargée(s)`);
         
-        // --- ÉTAPE 5 : Charger les zones code-barres ---
-        console.log('Étape 5 : Chargement des zones code-barres...');
+        // --- ÉTAPE 5 : Charger les zones QR ---
+        console.log('Étape 5 : Chargement des zones QR...');
         
-        let zonesCodeBarresCount = 0;
+        let zonesQRCount = 0;
         
-        if (effectiveDocumentJson.zonesCodeBarres && Array.isArray(effectiveDocumentJson.zonesCodeBarres)) {
-            effectiveDocumentJson.zonesCodeBarres.forEach(zoneJson => {
-                // Déterminer la page cible (WebDev: 1-based → JS: 0-based)
+        if (effectiveDocumentJson.zonesQR && Array.isArray(effectiveDocumentJson.zonesQR)) {
+            effectiveDocumentJson.zonesQR.forEach(zoneJson => {
                 const pageIndex = (zoneJson.page || 1) - 1;
                 
-                // Vérifier que la page existe
                 if (pageIndex < 0 || pageIndex >= documentState.pages.length) {
-                    console.warn(`  ⚠ Zone code-barres "${zoneJson.id}" : page ${zoneJson.page} inexistante, ignorée`);
+                    console.warn(`  ⚠ Zone QR "${zoneJson.id}" : page ${zoneJson.page} inexistante, ignorée`);
                     return;
                 }
                 
-                // Convertir la zone vers le format interne
-                const zoneData = convertZoneCodeBarresFromJson(zoneJson);
+                const zoneData = convertZoneQRFromJson(zoneJson);
                 const zoneId = zoneJson.id || `zone-${Date.now()}`;
                 
-                // Ajouter la zone à la page cible
                 documentState.pages[pageIndex].zones[zoneId] = zoneData;
-                zonesCodeBarresCount++;
+                zonesQRCount++;
                 
-                // Extraire le numéro de l'ID pour le compteur (ex: "zone-5" → 5)
                 const idMatch = zoneId.match(/zone-(\d+)/);
                 if (idMatch) {
                     const idNum = parseInt(idMatch[1]);
@@ -12923,18 +12909,48 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
                 
-                console.log(`  → Zone code-barres "${zoneId}" (${zoneData.typeCode}) → Page ${pageIndex + 1}`);
-                console.log(`    Position: ${zoneData.x.toFixed(1)}px, ${zoneData.y.toFixed(1)}px | Taille: ${zoneData.w.toFixed(1)}px x ${zoneData.h.toFixed(1)}px`);
-                if (zoneData.content) {
-                    console.log(`    Contenu: ${zoneData.content.substring(0, 50)}${zoneData.content.length > 50 ? '...' : ''}`);
+                console.log(`  → Zone QR "${zoneId}" → Page ${pageIndex + 1}`);
+            });
+        }
+        
+        console.log(`  → ${zonesQRCount} zone(s) QR chargée(s)`);
+        
+        // --- ÉTAPE 6 : Charger les zones code-barres ---
+        console.log('Étape 6 : Chargement des zones code-barres...');
+        
+        let zonesCodeBarresCount = 0;
+        
+        if (effectiveDocumentJson.zonesCodeBarres && Array.isArray(effectiveDocumentJson.zonesCodeBarres)) {
+            effectiveDocumentJson.zonesCodeBarres.forEach(zoneJson => {
+                const pageIndex = (zoneJson.page || 1) - 1;
+                
+                if (pageIndex < 0 || pageIndex >= documentState.pages.length) {
+                    console.warn(`  ⚠ Zone code-barres "${zoneJson.id}" : page ${zoneJson.page} inexistante, ignorée`);
+                    return;
                 }
+                
+                const zoneData = convertZoneCodeBarresFromJson(zoneJson);
+                const zoneId = zoneJson.id || `zone-${Date.now()}`;
+                
+                documentState.pages[pageIndex].zones[zoneId] = zoneData;
+                zonesCodeBarresCount++;
+                
+                const idMatch = zoneId.match(/zone-(\d+)/);
+                if (idMatch) {
+                    const idNum = parseInt(idMatch[1]);
+                    if (idNum > maxZoneId) {
+                        maxZoneId = idNum;
+                    }
+                }
+                
+                console.log(`  → Zone code-barres "${zoneId}" (${zoneData.typeCodeBarres}) → Page ${pageIndex + 1}`);
             });
         }
         
         console.log(`  → ${zonesCodeBarresCount} zone(s) code-barres chargée(s)`);
         
-        // --- ÉTAPE 6 : Charger les zones image ---
-        console.log('Étape 6 : Chargement des zones image...');
+        // --- ÉTAPE 7 : Charger les zones image ---
+        console.log('Étape 7 : Chargement des zones image...');
         
         let zonesImageCount = 0;
         
@@ -13080,7 +13096,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         console.log(`  → ${zonesTextQuillCount} zone(s) textQuill chargée(s)`);
         
-        // --- ÉTAPE 7 : Mettre à jour le compteur et l'affichage ---
+        // --- ÉTAPE 8 : Mettre à jour le compteur et l'affichage ---
         console.log('Étape 7 : Finalisation...');
         
         // Mettre à jour le compteur de zones (max ID trouvé + 1 pour la prochaine zone)
@@ -13386,83 +13402,75 @@ document.addEventListener('DOMContentLoaded', () => {
     
     /**
      * Convertit une zone code-barres du format documentState vers le format JSON WebDev.
-     * Gère les deux types internes :
-     * - 'barcode' : Nouveau format avec champ de fusion
-     * - 'qr' : Ancien format QR avec contenu fixe (rétrocompatibilité)
      * 
      * @param {string} id - Identifiant de la zone (ex: "zone-2")
-     * @param {BarcodeZoneData|QrZoneData} zoneData - Données de la zone au format interne
+     * @param {BarcodeZoneData} zoneData - Données de la zone au format interne
      * @param {number} pageNumero - Numéro de page (1-based pour WebDev)
-     * @returns {ZoneCodeBarresJsonWebDev|ZoneQrJsonWebDev} Zone au format JSON WebDev
+     * @returns {ZoneCodeBarresJsonWebDev} Zone au format JSON WebDev
      * 
      * @example
-     * // Type 'barcode' → nouveau format WebDev :
      * // { type: 'barcode', typeCodeBarres: 'code128', champFusion: 'NumeroCommande' }
      * // → { typeCodeBarres: 'code128', champFusion: 'NumeroCommande', ... }
-     * 
-     * // Type 'qr' → ancien format WebDev :
-     * // { type: 'qr', typeCode: 'QRCode', content: 'https://...' }
-     * // → { typeCode: 'QRCode', contenu: 'https://...', couleurs: {...} }
      */
     function convertZoneCodeBarresToJson(id, zoneData, pageNumero) {
-        // Conversion pixels → mm
         const pixelsToMm = (px) => px * MM_PER_PIXEL;
         
-        // Nouveau format : zone code-barres avec champ de fusion
-        if (zoneData.type === 'barcode') {
-            return {
-                id: id,
-                page: pageNumero,
-                nom: zoneData.nom || 'Code-barres',
-                typeCodeBarres: zoneData.typeCodeBarres || 'code128',
-                champFusion: zoneData.champFusion || '',
-                texteLisible: zoneData.texteLisible || 'dessous',
-                taillePolice: zoneData.taillePolice || 8,
-                couleur: zoneData.couleur || '#000000',
-                geometrie: {
-                    xMm: zoneData.xMm !== undefined ? zoneData.xMm : pixelsToMm(zoneData.x || 0),
-                    yMm: zoneData.yMm !== undefined ? zoneData.yMm : pixelsToMm(zoneData.y || 0),
-                    largeurMm: zoneData.wMm !== undefined ? zoneData.wMm : pixelsToMm(zoneData.w || 150),
-                    hauteurMm: zoneData.hMm !== undefined ? zoneData.hMm : pixelsToMm(zoneData.h || 60)
-                },
-                niveau: zoneData.zIndex || 1,
-                verrouille: zoneData.locked || false,
-                systeme: zoneData.systeme || false,
-                systemeLibelle: zoneData.systemeLibelle || '',
-                imprimable: zoneData.imprimable !== undefined ? zoneData.imprimable : true
-            };
-        }
-
-        // Ancien format : zone QR simple (rétrocompatibilité)
         return {
-            // Identifiant et page
             id: id,
             page: pageNumero,
-
-            // Type de code-barres (QRCode, Code128, EAN13, Code39, DataMatrix, PDF417, EanUcc128, UPCA, UPCE)
-            typeCode: zoneData.typeCode || 'QRCode',
-
-            // Contenu à encoder
-            contenu: zoneData.content || '',
-
-            // Nom et métadonnées
-            nom: zoneData.name || '',
+            nom: zoneData.nom || 'Code-barres',
             niveau: zoneData.zIndex || 1,
             rotation: zoneData.rotation || 0,
             verrouille: zoneData.locked || false,
             systeme: zoneData.systeme || false,
             systemeLibelle: zoneData.systemeLibelle || '',
             imprimable: zoneData.imprimable !== undefined ? zoneData.imprimable : true,
+            geometrie: {
+                xMm: zoneData.xMm !== undefined ? zoneData.xMm : pixelsToMm(zoneData.x || 0),
+                yMm: zoneData.yMm !== undefined ? zoneData.yMm : pixelsToMm(zoneData.y || 0),
+                largeurMm: zoneData.wMm !== undefined ? zoneData.wMm : pixelsToMm(zoneData.w || 150),
+                hauteurMm: zoneData.hMm !== undefined ? zoneData.hMm : pixelsToMm(zoneData.h || 60)
+            },
+            typeCodeBarres: zoneData.typeCodeBarres || 'code128',
+            champFusion: zoneData.champFusion || '',
+            valeurStatique: zoneData.valeurStatique || '',
+            texteLisible: zoneData.texteLisible || 'dessous',
+            taillePolice: zoneData.taillePolice || 8,
+            couleur: zoneData.couleur || '#000000',
+            couleurFond: zoneData.bgColor || '#FFFFFF',
+            transparent: zoneData.isTransparent || false
+        };
+    }
 
-            // Géométrie (utiliser les valeurs mm stockées si disponibles)
+    /**
+     * Convertit une zone QR du format documentState vers le format JSON WebDev.
+     * 
+     * @param {string} id - Identifiant de la zone
+     * @param {QrZoneData} zoneData - Données de la zone au format interne
+     * @param {number} pageNumero - Numéro de page (1-based)
+     * @returns {ZoneQRJsonWebDev} Zone au format JSON WebDev
+     */
+    function convertZoneQRToJson(id, zoneData, pageNumero) {
+        const pixelsToMm = (px) => px * MM_PER_PIXEL;
+        
+        return {
+            id: id,
+            page: pageNumero,
+            nom: zoneData.name || 'QR Code',
+            niveau: zoneData.zIndex || 1,
+            rotation: zoneData.rotation || 0,
+            verrouille: zoneData.locked || false,
+            systeme: zoneData.systeme || false,
+            systemeLibelle: zoneData.systemeLibelle || '',
+            imprimable: zoneData.imprimable !== undefined ? zoneData.imprimable : true,
             geometrie: {
                 xMm: zoneData.xMm !== undefined ? zoneData.xMm : pixelsToMm(zoneData.x || 0),
                 yMm: zoneData.yMm !== undefined ? zoneData.yMm : pixelsToMm(zoneData.y || 0),
                 largeurMm: zoneData.wMm !== undefined ? zoneData.wMm : pixelsToMm(zoneData.w || 100),
                 hauteurMm: zoneData.hMm !== undefined ? zoneData.hMm : pixelsToMm(zoneData.h || 100)
             },
-
-            // Couleurs
+            typeCode: zoneData.typeCode || 'QRCode',
+            contenu: zoneData.content || '',
             couleurs: {
                 code: zoneData.qrColor || '#000000',
                 fond: zoneData.bgColor || '#FFFFFF'
@@ -13752,6 +13760,7 @@ document.addEventListener('DOMContentLoaded', () => {
             pages: [],
             zonesTexte: [],
             zonesTextQuill: [],
+            zonesQR: [],
             zonesCodeBarres: [],
             zonesImage: []
         };
@@ -13775,11 +13784,15 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log(`  → Page ${pageNumero} : "${page.name}" (fond: ${page.image ? 'oui' : 'non'})`);
             
             // Parcourir les zones de cette page
-            let textCount = 0, barcodeCount = 0, imageCount = 0;
+            let textCount = 0, qrCount = 0, barcodeCount = 0, imageCount = 0;
             
             for (const [zoneId, zoneData] of Object.entries(page.zones || {})) {
-                if (zoneData.type === 'qr' || zoneData.type === 'barcode') {
-                    // Les deux types (qr et barcode) vont dans zonesCodeBarres
+                if (zoneData.type === 'qr') {
+                    output.zonesQR.push(
+                        convertZoneQRToJson(zoneId, zoneData, pageNumero)
+                    );
+                    qrCount++;
+                } else if (zoneData.type === 'barcode') {
                     output.zonesCodeBarres.push(
                         convertZoneCodeBarresToJson(zoneId, zoneData, pageNumero)
                     );
@@ -13842,7 +13855,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             
-            console.log(`    → ${textCount} zone(s) texte, ${barcodeCount} zone(s) code-barres, ${imageCount} zone(s) image`);
+            console.log(`    → ${textCount} zone(s) texte, ${qrCount} zone(s) QR, ${barcodeCount} zone(s) code-barres, ${imageCount} zone(s) image`);
         });
         
         // --- ÉTAPE 4 : Extraire les polices utilisées (avec variantes) ---
@@ -16197,13 +16210,18 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
             zonesByPage[pageNum].push({ ...zone, type: 'textQuill', zIndex: zone.niveau || zone.zIndex || 1 });
         });
         
-        // Ajouter les zones code-barres (barcode et qr)
+        // Ajouter les zones code-barres (barcode)
         (jsonData.zonesCodeBarres || []).forEach(zone => {
             const pageNum = zone.page || 1;
             if (!zonesByPage[pageNum]) zonesByPage[pageNum] = [];
-            // Déterminer le type (qr ou barcode)
-            const type = (zone.typeCode === 'qrcode' || zone.type === 'qr') ? 'qr' : 'barcode';
-            zonesByPage[pageNum].push({ ...zone, type: type, zIndex: zone.niveau || zone.zIndex || 1 });
+            zonesByPage[pageNum].push({ ...zone, type: 'barcode', zIndex: zone.niveau || zone.zIndex || 1 });
+        });
+        
+        // Ajouter les zones QR
+        (jsonData.zonesQR || []).forEach(zone => {
+            const pageNum = zone.page || 1;
+            if (!zonesByPage[pageNum]) zonesByPage[pageNum] = [];
+            zonesByPage[pageNum].push({ ...zone, type: 'qr', zIndex: zone.niveau || zone.zIndex || 1 });
         });
         
         // Ajouter les zones image
