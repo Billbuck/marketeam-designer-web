@@ -15993,7 +15993,7 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
             psType = 'QRCode';
         } else {
             // Récupérer le type depuis les données de la zone
-            const designerType = zone.typeCode || zone.barcodeType || 'code128';
+            const designerType = zone.typeCodeBarres || zone.typeCode || 'code128';
             psType = BARCODE_TYPE_MAP[designerType.toLowerCase()] || 'Code128';
         }
         
