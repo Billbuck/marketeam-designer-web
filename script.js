@@ -13780,6 +13780,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     output.zonesTextQuill.push({
                         id: zoneId,
                         type: 'textQuill',
+                        page: pageNumero,
+                        niveau: zoneData.zIndex || 1,
                         geometry: {
                             x_mm: zoneData.xMm !== undefined ? zoneData.xMm : (zoneData.x || 0) * MM_PER_PIXEL,
                             y_mm: zoneData.yMm !== undefined ? zoneData.yMm : (zoneData.y || 0) * MM_PER_PIXEL,
@@ -16152,7 +16154,7 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
         (jsonData.zonesTextQuill || []).forEach(zone => {
             const pageNum = zone.page || 1;
             if (!zonesByPage[pageNum]) zonesByPage[pageNum] = [];
-            zonesByPage[pageNum].push({ ...zone, type: 'textQuill' });
+            zonesByPage[pageNum].push({ ...zone, type: 'textQuill', zIndex: zone.niveau || zone.zIndex || 1 });
         });
         
         // Ajouter les zones code-barres (barcode et qr)
@@ -16161,14 +16163,14 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
             if (!zonesByPage[pageNum]) zonesByPage[pageNum] = [];
             // Déterminer le type (qr ou barcode)
             const type = (zone.typeCode === 'qrcode' || zone.type === 'qr') ? 'qr' : 'barcode';
-            zonesByPage[pageNum].push({ ...zone, type: type });
+            zonesByPage[pageNum].push({ ...zone, type: type, zIndex: zone.niveau || zone.zIndex || 1 });
         });
         
         // Ajouter les zones image
         (jsonData.zonesImage || []).forEach(zone => {
             const pageNum = zone.page || 1;
             if (!zonesByPage[pageNum]) zonesByPage[pageNum] = [];
-            zonesByPage[pageNum].push({ ...zone, type: 'image' });
+            zonesByPage[pageNum].push({ ...zone, type: 'image', zIndex: zone.niveau || zone.zIndex || 1 });
         });
         
         // Générer le XML
@@ -16177,8 +16179,15 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
         const pageNumbers = Object.keys(zonesByPage).map(Number).sort((a, b) => a - b);
         
         for (const pageNum of pageNumbers) {
+            // Trier les zones par z-index croissant (premier = arrière-plan, dernier = premier plan)
+            const sortedZones = zonesByPage[pageNum].sort((a, b) => {
+                const zIndexA = a.niveau || a.zIndex || 1;
+                const zIndexB = b.niveau || b.zIndex || 1;
+                return zIndexA - zIndexB;
+            });
+            
             const pageData = {
-                zones: zonesByPage[pageNum],
+                zones: sortedZones,
                 name: pages[pageNum - 1]?.name || `Page ${pageNum}`
             };
             xml += generatePsmdLayout(pageData, pageNum - 1, pageWidthPt, pageHeightPt, devmodeBase64) + '\n';
