@@ -5864,9 +5864,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const success = moveZoneToPage(zoneId, targetPageIndex);
                 
                 if (success) {
-                    // Zone déplacée : elle n'est plus sur la page courante
-                    // Donc désélectionner (la zone n'est plus visible)
-                    deselectAll();
+                    // Basculer sur la page de destination et sélectionner la zone
+                    switchPage(targetPageIndex);
+                    // Attendre que les zones soient recréées puis sélectionner
+                    setTimeout(() => {
+                        selectZone(zoneId);
+                    }, 100);
                     console.log('🔧 PHASE 4 - Zone textQuill déplacée vers page:', targetPageIndex);
                 }
             });
@@ -6753,12 +6756,22 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
-        // Page
+        // Page (Recto/Verso) - déplacer la zone vers une autre page
         if (barcodeInputPage) {
             barcodeInputPage.addEventListener('change', () => {
                 const zoneId = getSelectedBarcodeZoneId();
-                if (zoneId) {
-                    moveZoneToPage(zoneId, parseInt(barcodeInputPage.value));
+                if (!zoneId) return;
+                
+                const targetPageIndex = parseInt(barcodeInputPage.value, 10);
+                const success = moveZoneToPage(zoneId, targetPageIndex);
+                
+                if (success) {
+                    // Basculer sur la page de destination et sélectionner la zone
+                    switchPage(targetPageIndex);
+                    // Attendre que les zones soient recréées puis sélectionner
+                    setTimeout(() => {
+                        selectZone(zoneId);
+                    }, 100);
                 }
             });
         }
@@ -7123,12 +7136,22 @@ document.addEventListener('DOMContentLoaded', () => {
         // SELECTS
         // ═══════════════════════════════════════════════════════════════
         
-        // Page
+        // Page (Recto/Verso) - déplacer la zone vers une autre page
         if (qrcodeInputPage) {
             qrcodeInputPage.addEventListener('change', () => {
                 const zoneId = getSelectedQrcodeZoneId();
-                if (zoneId) {
-                    moveZoneToPage(zoneId, parseInt(qrcodeInputPage.value));
+                if (!zoneId) return;
+                
+                const targetPageIndex = parseInt(qrcodeInputPage.value, 10);
+                const success = moveZoneToPage(zoneId, targetPageIndex);
+                
+                if (success) {
+                    // Basculer sur la page de destination et sélectionner la zone
+                    switchPage(targetPageIndex);
+                    // Attendre que les zones soient recréées puis sélectionner
+                    setTimeout(() => {
+                        selectZone(zoneId);
+                    }, 100);
                 }
             });
         }
@@ -7477,9 +7500,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const success = moveZoneToPage(zoneId, targetPageIndex);
                 
                 if (success) {
-                    // Zone déplacée : elle n'est plus sur la page courante
-                    // Donc désélectionner (la zone n'est plus visible)
-                    deselectAll();
+                    // Basculer sur la page de destination et sélectionner la zone
+                    switchPage(targetPageIndex);
+                    // Attendre que les zones soient recréées puis sélectionner
+                    setTimeout(() => {
+                        selectZone(zoneId);
+                    }, 100);
                 }
             });
         }
