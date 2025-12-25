@@ -594,6 +594,22 @@ h4 {
 }
 
 /* ───────────────────────────────────────────────────────────────────────────────
+   Fix Bold/Italic : forcer font-weight/font-style explicites
+   Quill utilise <strong> avec font-weight: bolder (relatif).
+   Depuis un weight 100-300, bolder donne 400, pas 700.
+   On force 700 pour garantir l'utilisation du @font-face Bold.
+   ─────────────────────────────────────────────────────────────────────────────── */
+.zone.zone-text-quill .ql-editor strong,
+.zone.zone-text-quill .ql-editor b {
+    font-weight: 700 !important;
+}
+
+.zone.zone-text-quill .ql-editor em,
+.zone.zone-text-quill .ql-editor i {
+    font-style: italic !important;
+}
+
+/* ───────────────────────────────────────────────────────────────────────────────
    Drag handle + Resize handles (textQuill) - fidèle au POC
    ─────────────────────────────────────────────────────────────────────────────── */
 
