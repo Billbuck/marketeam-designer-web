@@ -6823,30 +6823,56 @@ document.addEventListener('DOMContentLoaded', () => {
                 const zonesData = getCurrentPageZones();
                 const zoneData = zonesData[zoneId];
                 
+                // Vérifier si c'est un code 2D (doit rester carré)
+                const typeCode = zoneData ? (zoneData.typeCodeBarres || 'code128') : 'code128';
+                const isCode2D = is2DBarcode(typeCode);
+                
                 // Appliquer selon l'index (CSS + zonesData en pixels ET mm)
                 if (index === 0) {
+                    // X - Position horizontale
                     zoneEl.style.left = `${valuePx}px`;
                     if (zoneData) {
                         zoneData.x = valuePx;
                         zoneData.xMm = valueMm;
                     }
                 } else if (index === 1) {
+                    // Y - Position verticale
                     zoneEl.style.top = `${valuePx}px`;
                     if (zoneData) {
                         zoneData.y = valuePx;
                         zoneData.yMm = valueMm;
                     }
                 } else if (index === 2) {
+                    // W - Largeur
                     zoneEl.style.width = `${valuePx}px`;
                     if (zoneData) {
                         zoneData.w = valuePx;
                         zoneData.wMm = valueMm;
                     }
+                    // Code 2D : synchroniser H
+                    if (isCode2D) {
+                        zoneEl.style.height = `${valuePx}px`;
+                        if (zoneData) {
+                            zoneData.h = valuePx;
+                            zoneData.hMm = valueMm;
+                        }
+                        if (barcodeValH) barcodeValH.value = valueMm.toFixed(1).replace('.', ',');
+                    }
                 } else if (index === 3) {
+                    // H - Hauteur
                     zoneEl.style.height = `${valuePx}px`;
                     if (zoneData) {
                         zoneData.h = valuePx;
                         zoneData.hMm = valueMm;
+                    }
+                    // Code 2D : synchroniser W
+                    if (isCode2D) {
+                        zoneEl.style.width = `${valuePx}px`;
+                        if (zoneData) {
+                            zoneData.w = valuePx;
+                            zoneData.wMm = valueMm;
+                        }
+                        if (barcodeValW) barcodeValW.value = valueMm.toFixed(1).replace('.', ',');
                     }
                 }
                 
@@ -7183,29 +7209,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Appliquer selon l'index (CSS + zonesData en pixels ET mm)
                 if (index === 0) {
+                    // X - Position horizontale
                     zoneEl.style.left = `${valuePx}px`;
                     if (zoneData) {
                         zoneData.x = valuePx;
                         zoneData.xMm = valueMm;
                     }
                 } else if (index === 1) {
+                    // Y - Position verticale
                     zoneEl.style.top = `${valuePx}px`;
                     if (zoneData) {
                         zoneData.y = valuePx;
                         zoneData.yMm = valueMm;
                     }
                 } else if (index === 2) {
+                    // W - Largeur (QR code = toujours carré → aussi modifier H)
                     zoneEl.style.width = `${valuePx}px`;
+                    zoneEl.style.height = `${valuePx}px`; // Synchroniser H
                     if (zoneData) {
                         zoneData.w = valuePx;
                         zoneData.wMm = valueMm;
+                        zoneData.h = valuePx;    // Synchroniser H
+                        zoneData.hMm = valueMm;  // Synchroniser H
                     }
+                    // Mettre à jour le champ H dans la toolbar
+                    if (qrcodeValH) qrcodeValH.value = valueMm.toFixed(1).replace('.', ',');
                 } else if (index === 3) {
+                    // H - Hauteur (QR code = toujours carré → aussi modifier W)
                     zoneEl.style.height = `${valuePx}px`;
+                    zoneEl.style.width = `${valuePx}px`; // Synchroniser W
                     if (zoneData) {
                         zoneData.h = valuePx;
                         zoneData.hMm = valueMm;
+                        zoneData.w = valuePx;    // Synchroniser W
+                        zoneData.wMm = valueMm;  // Synchroniser W
                     }
+                    // Mettre à jour le champ W dans la toolbar
+                    if (qrcodeValW) qrcodeValW.value = valueMm.toFixed(1).replace('.', ',');
                 }
                 
                 updateQrZoneDisplay(zoneId);
