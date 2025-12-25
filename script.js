@@ -5535,7 +5535,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Met à jour les champs de géométrie (mm) dans la toolbar Quill depuis le DOM.
+     * Met à jour les champs de géométrie (mm) dans la toolbar Quill.
+     * Utilise les valeurs mm stockées dans zoneData si disponibles,
+     * sinon recalcule depuis le DOM (fallback pour compatibilité).
      *
      * @param {string} zoneId - ID de la zone (ex: "zone-3")
      * @returns {void}
@@ -5544,10 +5546,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const zoneEl = document.getElementById(zoneId);
         if (!zoneEl) return;
         
-        const xMm = pxToMm(zoneEl.offsetLeft);
-        const yMm = pxToMm(zoneEl.offsetTop);
-        const wMm = pxToMm(zoneEl.offsetWidth);
-        const hMm = pxToMm(zoneEl.offsetHeight);
+        // Récupérer les données de zone
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        
+        // Utiliser les valeurs mm stockées si disponibles (précision conservée)
+        // Sinon fallback sur la conversion depuis le DOM
+        let xMm, yMm, wMm, hMm;
+        
+        if (zoneData && zoneData.xMm !== undefined) {
+            xMm = zoneData.xMm;
+            yMm = zoneData.yMm;
+            wMm = zoneData.wMm;
+            hMm = zoneData.hMm;
+        } else {
+            // Fallback : recalculer depuis le DOM (perte de précision possible)
+            xMm = pxToMm(zoneEl.offsetLeft);
+            yMm = pxToMm(zoneEl.offsetTop);
+            wMm = pxToMm(zoneEl.offsetWidth);
+            hMm = pxToMm(zoneEl.offsetHeight);
+        }
         
         if (quillValX) quillValX.value = xMm.toFixed(1);
         if (quillValY) quillValY.value = yMm.toFixed(1);
