@@ -5586,6 +5586,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const textColor = zoneData.color || QUILL_DEFAULT_COLOR;
         if (quillInputColor) quillInputColor.value = textColor;
         updateColorSwatchPoc('quill-color-swatch', textColor);
+        // Synchroniser les champs CMJN couleur texte
+        updateCmjnFieldsFromHex('quill-color', textColor);
         
         // Copyfit - Checkbox POC
         setCheckboxPocState('quill-chk-copyfit-wrapper', !!zoneData.copyfit);
@@ -5608,6 +5610,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const bgColor = zoneData.bgColor || '#ffffff';
         if (quillInputBgColor) quillInputBgColor.value = bgColor;
         updateColorSwatchPoc('quill-bg-color-swatch', bgColor);
+        // Synchroniser les champs CMJN couleur fond
+        updateCmjnFieldsFromHex('quill-bg', bgColor);
         if (quillBgColorRow) quillBgColorRow.style.display = isTransparent ? 'none' : '';
 
         if (DEBUG_PHASE7_BG) {
@@ -5625,6 +5629,8 @@ document.addEventListener('DOMContentLoaded', () => {
         setSpinnerPocValue('quill-input-border-width', border.width || 0, 1);
         if (quillInputBorderColor) quillInputBorderColor.value = border.color || '#000000';
         updateColorSwatchPoc('quill-border-color-swatch', border.color || '#000000');
+        // Synchroniser les champs CMJN couleur bordure
+        updateCmjnFieldsFromHex('quill-border', border.color || '#000000');
         if (quillInputBorderStyle) quillInputBorderStyle.value = border.style || 'solid';
         updateQuillBorderOptionsVisibility(border.width || 0);
         
@@ -5874,16 +5880,27 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         
-        // Typographie : couleur
+        // Typographie : couleur (RGB → CMJN sync)
         if (quillInputColor) {
             quillInputColor.addEventListener('input', () => {
                 updateSelectedZone((zoneData) => {
                     zoneData.color = quillInputColor.value;
                     updateColorSwatchPoc('quill-color-swatch', zoneData.color);
+                    updateCmjnFieldsFromHex('quill-color', zoneData.color);
                     console.log('🔧 PHASE 4 - color:', zoneData.color);
                 });
             });
         }
+
+        // Typographie : couleur CMJN (CMJN → RGB sync)
+        initCmjnFieldsListeners('quill-color', (newHex) => {
+            updateSelectedZone((zoneData) => {
+                zoneData.color = newHex;
+                if (quillInputColor) quillInputColor.value = newHex;
+                updateColorSwatchPoc('quill-color-swatch', newHex);
+                console.log('🔧 PHASE 4 - color (CMJN):', newHex);
+            });
+        });
         
         // Alignement horizontal - Toggle-group POC
         initToggleGroupPoc('quill-align-h-group', (value) => {
@@ -5928,16 +5945,27 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         
-        // Fond : couleur
+        // Fond : couleur (RGB → CMJN sync)
         if (quillInputBgColor) {
             quillInputBgColor.addEventListener('input', () => {
                 updateSelectedZone((zoneData) => {
                     zoneData.bgColor = quillInputBgColor.value;
                     updateColorSwatchPoc('quill-bg-color-swatch', zoneData.bgColor);
+                    updateCmjnFieldsFromHex('quill-bg', zoneData.bgColor);
                     console.log('🔧 PHASE 4 - bgColor:', zoneData.bgColor);
                 });
             });
         }
+
+        // Fond : couleur CMJN (CMJN → RGB sync)
+        initCmjnFieldsListeners('quill-bg', (newHex) => {
+            updateSelectedZone((zoneData) => {
+                zoneData.bgColor = newHex;
+                if (quillInputBgColor) quillInputBgColor.value = newHex;
+                updateColorSwatchPoc('quill-bg-color-swatch', newHex);
+                console.log('🔧 PHASE 4 - bgColor (CMJN):', newHex);
+            });
+        });
         
         // Bordure : épaisseur - Spinner POC
         initSpinnerPoc('quill-input-border-width', 0, 10, 1, (value) => {
@@ -5949,17 +5977,29 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         
-        // Bordure : couleur
+        // Bordure : couleur (RGB → CMJN sync)
         if (quillInputBorderColor) {
             quillInputBorderColor.addEventListener('input', () => {
                 updateSelectedZone((zoneData) => {
                     zoneData.border = zoneData.border || { width: 0, color: '#000000', style: 'solid' };
                     zoneData.border.color = quillInputBorderColor.value;
                     updateColorSwatchPoc('quill-border-color-swatch', zoneData.border.color);
+                    updateCmjnFieldsFromHex('quill-border', zoneData.border.color);
                     console.log('🔧 PHASE 4 - border.color:', zoneData.border.color);
                 });
             });
         }
+
+        // Bordure : couleur CMJN (CMJN → RGB sync)
+        initCmjnFieldsListeners('quill-border', (newHex) => {
+            updateSelectedZone((zoneData) => {
+                zoneData.border = zoneData.border || { width: 0, color: '#000000', style: 'solid' };
+                zoneData.border.color = newHex;
+                if (quillInputBorderColor) quillInputBorderColor.value = newHex;
+                updateColorSwatchPoc('quill-border-color-swatch', newHex);
+                console.log('🔧 PHASE 4 - border.color (CMJN):', newHex);
+            });
+        });
         
         // Bordure : style (select natif POC)
         if (quillInputBorderStyle) {
@@ -6256,6 +6296,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 imageBgColorSwatch.style.background = zoneData.bgColor || '#ffffff';
             }
         }
+        // Synchroniser les champs CMJN couleur fond
+        updateCmjnFieldsFromHex('image-bg', zoneData.bgColor || '#ffffff');
         
         // ─── BORDURE ───
         const border = zoneData.border || { width: 0, color: '#000000', style: 'solid' };
@@ -6276,6 +6318,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 imageBorderColorSwatch.style.background = border.color || '#000000';
             }
         }
+        // Synchroniser les champs CMJN couleur bordure
+        updateCmjnFieldsFromHex('image-border', border.color || '#000000');
         
         // ─── GÉOMÉTRIE ───
         updateImageToolbarGeometryFields(zoneId);
@@ -6457,6 +6501,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 barcodeBgColorSwatch.style.background = zoneData.bgColor || '#ffffff';
             }
         }
+        // Synchroniser les champs CMJN couleur fond
+        updateCmjnFieldsFromHex('barcode-bg', zoneData.bgColor || '#ffffff');
         
         // ─── GÉOMÉTRIE ───
         updateBarcodeToolbarGeometryFields(zoneId);
@@ -6699,7 +6745,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
-        // Couleur fond
+        // Couleur fond (RGB → CMJN sync)
         if (barcodeInputBgColor) {
             barcodeInputBgColor.addEventListener('input', () => {
                 if (barcodeBgColorSwatch) {
@@ -6707,6 +6753,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 updateSelectedBarcodeZone((zoneData, zoneEl) => {
                     zoneData.bgColor = barcodeInputBgColor.value;
+                    updateCmjnFieldsFromHex('barcode-bg', zoneData.bgColor);
                     // Appliquer visuellement si pas transparent
                     if (!zoneData.isTransparent) {
                         const preview = zoneEl.querySelector('.barcode-preview');
@@ -6718,6 +6765,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 }, false);
             });
         }
+        
+        // Couleur fond CMJN (CMJN → RGB sync)
+        initCmjnFieldsListeners('barcode-bg', (newHex) => {
+            updateSelectedBarcodeZone((zoneData, zoneEl) => {
+                zoneData.bgColor = newHex;
+                if (barcodeInputBgColor) barcodeInputBgColor.value = newHex;
+                if (barcodeBgColorSwatch) barcodeBgColorSwatch.style.background = newHex;
+                // Appliquer visuellement si pas transparent
+                if (!zoneData.isTransparent) {
+                    const preview = zoneEl.querySelector('.barcode-preview');
+                    if (preview) {
+                        preview.style.backgroundColor = newHex;
+                    }
+                    zoneEl.style.backgroundColor = newHex;
+                }
+                console.log('📊 Barcode bgColor (CMJN):', newHex);
+            }, false);
+        });
         
         // ═══════════════════════════════════════════════════════════════
         // GÉOMÉTRIE
@@ -6898,6 +6963,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 qrcodeBgColorSwatch.style.background = zoneData.bgColor || '#ffffff';
             }
         }
+        // Synchroniser les champs CMJN couleur fond
+        updateCmjnFieldsFromHex('qrcode-bg', zoneData.bgColor || '#ffffff');
         
         // ─── GÉOMÉTRIE ───
         updateQrcodeToolbarGeometryFields(zoneId);
@@ -7022,7 +7089,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
-        // Couleur fond
+        // Couleur fond (RGB → CMJN sync)
         if (qrcodeInputBgColor) {
             qrcodeInputBgColor.addEventListener('input', () => {
                 if (qrcodeBgColorSwatch) {
@@ -7038,6 +7105,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!zoneEl || !zoneData) return;
                 
                 zoneData.bgColor = qrcodeInputBgColor.value;
+                updateCmjnFieldsFromHex('qrcode-bg', zoneData.bgColor);
                 
                 // Appliquer visuellement si pas transparent
                 // Le fond est sur la zone elle-même (.zone-qr), pas sur le contenu
@@ -7049,6 +7117,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 saveState();
             });
         }
+        
+        // Couleur fond CMJN (CMJN → RGB sync)
+        initCmjnFieldsListeners('qrcode-bg', (newHex) => {
+            const zoneId = getSelectedQrcodeZoneId();
+            if (!zoneId) return;
+            
+            const zonesData = getCurrentPageZones();
+            const zoneData = zonesData[zoneId];
+            const zoneEl = document.getElementById(zoneId);
+            if (!zoneEl || !zoneData) return;
+            
+            zoneData.bgColor = newHex;
+            if (qrcodeInputBgColor) qrcodeInputBgColor.value = newHex;
+            if (qrcodeBgColorSwatch) qrcodeBgColorSwatch.style.background = newHex;
+            
+            // Appliquer visuellement si pas transparent
+            if (!zoneData.isTransparent) {
+                zoneEl.style.backgroundColor = newHex;
+            }
+            
+            saveToLocalStorage();
+            saveState();
+            console.log('📱 QRCode bgColor (CMJN):', newHex);
+        });
         
         // ═══════════════════════════════════════════════════════════════
         // GÉOMÉTRIE
@@ -7404,7 +7496,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // COULEURS
         // ═══════════════════════════════════════════════════════════════
         
-        // Couleur de fond
+        // Couleur de fond (RGB → CMJN sync)
         if (imageInputBgColor) {
             imageInputBgColor.addEventListener('input', () => {
                 if (imageBgColorSwatch) {
@@ -7412,6 +7504,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 updateSelectedImageZone((zoneData, zoneEl) => {
                     zoneData.bgColor = imageInputBgColor.value;
+                    updateCmjnFieldsFromHex('image-bg', zoneData.bgColor);
                     // Appliquer visuellement le fond (seulement si pas transparent)
                     if (!zoneData.isTransparent) {
                         zoneEl.style.backgroundColor = zoneData.bgColor;
@@ -7420,7 +7513,21 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
-        // Couleur bordure
+        // Couleur de fond CMJN (CMJN → RGB sync)
+        initCmjnFieldsListeners('image-bg', (newHex) => {
+            updateSelectedImageZone((zoneData, zoneEl) => {
+                zoneData.bgColor = newHex;
+                if (imageInputBgColor) imageInputBgColor.value = newHex;
+                if (imageBgColorSwatch) imageBgColorSwatch.style.background = newHex;
+                // Appliquer visuellement le fond (seulement si pas transparent)
+                if (!zoneData.isTransparent) {
+                    zoneEl.style.backgroundColor = newHex;
+                }
+                console.log('🖼️ Image bgColor (CMJN):', newHex);
+            });
+        });
+        
+        // Couleur bordure (RGB → CMJN sync)
         if (imageInputBorderColor) {
             imageInputBorderColor.addEventListener('input', () => {
                 if (imageBorderColorSwatch) {
@@ -7429,11 +7536,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateSelectedImageZone((zoneData, zoneEl) => {
                     if (!zoneData.border) zoneData.border = { width: 0, color: '#000000', style: 'solid' };
                     zoneData.border.color = imageInputBorderColor.value;
+                    updateCmjnFieldsFromHex('image-border', zoneData.border.color);
                     // Appliquer visuellement la bordure
                     applyBorderToZone(zoneEl, zoneData.border);
                 });
             });
         }
+        
+        // Couleur bordure CMJN (CMJN → RGB sync)
+        initCmjnFieldsListeners('image-border', (newHex) => {
+            updateSelectedImageZone((zoneData, zoneEl) => {
+                if (!zoneData.border) zoneData.border = { width: 0, color: '#000000', style: 'solid' };
+                zoneData.border.color = newHex;
+                if (imageInputBorderColor) imageInputBorderColor.value = newHex;
+                if (imageBorderColorSwatch) imageBorderColorSwatch.style.background = newHex;
+                // Appliquer visuellement la bordure
+                applyBorderToZone(zoneEl, zoneData.border);
+                console.log('🖼️ Image border.color (CMJN):', newHex);
+            });
+        });
         
         // ═══════════════════════════════════════════════════════════════
         // GÉOMÉTRIE (inputs mm)
@@ -15283,6 +15404,140 @@ document.addEventListener('DOMContentLoaded', () => {
         const y = (1 - b - k) / (1 - k);
         
         return { c, m, y, k };
+    }
+
+    /**
+     * Convertit des valeurs CMJN en couleur hexadécimale RGB.
+     * Fonction inverse de rgbToCmyk().
+     * 
+     * @param {number} c - Cyan (0-100)
+     * @param {number} m - Magenta (0-100)
+     * @param {number} y - Jaune (0-100)
+     * @param {number} k - Noir (0-100)
+     * @returns {string} Couleur hexadécimale (#RRGGBB)
+     * 
+     * @example
+     * cmykToHex(0, 0, 0, 100);   // → '#000000' (noir)
+     * cmykToHex(0, 0, 0, 0);     // → '#ffffff' (blanc)
+     * cmykToHex(0, 100, 100, 0); // → '#ff0000' (rouge)
+     */
+    function cmykToHex(c, m, y, k) {
+        // Normaliser les valeurs en 0-1
+        const C = Math.max(0, Math.min(100, c)) / 100;
+        const M = Math.max(0, Math.min(100, m)) / 100;
+        const Y = Math.max(0, Math.min(100, y)) / 100;
+        const K = Math.max(0, Math.min(100, k)) / 100;
+        
+        // Convertir CMYK → RGB
+        const r = Math.round(255 * (1 - C) * (1 - K));
+        const g = Math.round(255 * (1 - M) * (1 - K));
+        const b = Math.round(255 * (1 - Y) * (1 - K));
+        
+        // Formater en hex
+        const toHex = (val) => val.toString(16).padStart(2, '0');
+        return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    }
+
+    /**
+     * Met à jour les 4 champs CMJN d'un groupe à partir d'une couleur hexadécimale.
+     * Utilise rgbToCmyk() pour la conversion.
+     * 
+     * @param {string} prefix - Préfixe des IDs (ex: 'quill-color', 'image-bg')
+     * @param {string} hexColor - Couleur hexadécimale (#RRGGBB)
+     * @returns {void}
+     * 
+     * @example
+     * updateCmjnFieldsFromHex('quill-color', '#ff0000'); // Met à jour quill-color-c/m/y/k
+     * updateCmjnFieldsFromHex('image-bg', '#ffffff');    // Met à jour image-bg-c/m/y/k
+     */
+    function updateCmjnFieldsFromHex(prefix, hexColor) {
+        const cmyk = rgbToCmyk(hexColor);
+        
+        // Convertir 0-1 en 0-100 et arrondir
+        const cPercent = Math.round(cmyk.c * 100);
+        const mPercent = Math.round(cmyk.m * 100);
+        const yPercent = Math.round(cmyk.y * 100);
+        const kPercent = Math.round(cmyk.k * 100);
+        
+        // Mettre à jour les champs
+        const inputC = document.getElementById(`${prefix}-c`);
+        const inputM = document.getElementById(`${prefix}-m`);
+        const inputY = document.getElementById(`${prefix}-y`);
+        const inputK = document.getElementById(`${prefix}-k`);
+        
+        if (inputC) inputC.value = cPercent;
+        if (inputM) inputM.value = mPercent;
+        if (inputY) inputY.value = yPercent;
+        if (inputK) inputK.value = kPercent;
+    }
+
+    /**
+     * Lit les 4 champs CMJN d'un groupe et retourne la couleur hexadécimale correspondante.
+     * Utilise cmykToHex() pour la conversion.
+     * 
+     * @param {string} prefix - Préfixe des IDs (ex: 'quill-color', 'image-bg')
+     * @returns {string} Couleur hexadécimale (#RRGGBB)
+     * 
+     * @example
+     * getHexFromCmjnFields('quill-color'); // Lit quill-color-c/m/y/k → '#rrggbb'
+     */
+    function getHexFromCmjnFields(prefix) {
+        const inputC = document.getElementById(`${prefix}-c`);
+        const inputM = document.getElementById(`${prefix}-m`);
+        const inputY = document.getElementById(`${prefix}-y`);
+        const inputK = document.getElementById(`${prefix}-k`);
+        
+        const c = inputC ? parseInt(inputC.value, 10) || 0 : 0;
+        const m = inputM ? parseInt(inputM.value, 10) || 0 : 0;
+        const y = inputY ? parseInt(inputY.value, 10) || 0 : 0;
+        const k = inputK ? parseInt(inputK.value, 10) || 0 : 0;
+        
+        return cmykToHex(c, m, y, k);
+    }
+
+    /**
+     * Initialise les event listeners pour un groupe de champs CMJN.
+     * À chaque modification d'un champ C/M/J/N, convertit en RGB et appelle le callback.
+     * 
+     * @param {string} prefix - Préfixe des IDs (ex: 'quill-color', 'image-bg')
+     * @param {function(string): void} onColorChange - Callback appelé avec la nouvelle couleur hex
+     * @returns {void}
+     * 
+     * @example
+     * initCmjnFieldsListeners('quill-color', (hex) => {
+     *     zoneData.color = hex;
+     *     updateColorSwatchPoc('quill-color-swatch', hex);
+     * });
+     */
+    function initCmjnFieldsListeners(prefix, onColorChange) {
+        const fields = ['c', 'm', 'y', 'k'];
+        
+        fields.forEach(field => {
+            const input = document.getElementById(`${prefix}-${field}`);
+            if (!input) return;
+            
+            // Valider et limiter la saisie (0-100)
+            input.addEventListener('input', () => {
+                let val = parseInt(input.value, 10);
+                if (isNaN(val)) val = 0;
+                if (val < 0) val = 0;
+                if (val > 100) val = 100;
+                input.value = val;
+                
+                // Convertir CMJN → Hex et notifier
+                const newHex = getHexFromCmjnFields(prefix);
+                onColorChange(newHex);
+            });
+            
+            // Permettre la validation au blur (si champ vide)
+            input.addEventListener('blur', () => {
+                if (input.value === '') {
+                    input.value = '0';
+                    const newHex = getHexFromCmjnFields(prefix);
+                    onColorChange(newHex);
+                }
+            });
+        });
     }
 
     /**
