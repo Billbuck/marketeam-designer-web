@@ -659,6 +659,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Contrôles toolbar Quill (IDs préfixés "quill-")
     const quillChkLocked = document.getElementById('quill-chk-locked');
     const quillInputFont = document.getElementById('quill-input-font');
+    /** @type {HTMLSelectElement|null} Dropdown page (recto/verso) pour zones textQuill */
+    const quillInputPage = document.getElementById('quill-input-page');
     const quillInputSize = document.getElementById('quill-input-size');
     const quillInputColor = document.getElementById('quill-input-color');
     const quillColorValue = document.getElementById('quill-color-value');
@@ -5569,6 +5571,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Zone - Checkbox POC
         setCheckboxPocState('quill-chk-locked-wrapper', !!zoneData.locked);
         
+        // Page (Recto/Verso)
+        if (quillInputPage) {
+            quillInputPage.value = String(documentState.currentPageIndex);
+        }
+        
         // Typographie
         if (quillInputFont) quillInputFont.value = zoneData.font || QUILL_DEFAULT_FONT;
         
@@ -5822,6 +5829,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log('🔧 PHASE 4 - locked:', zoneData.locked);
             });
         });
+        
+        // Page (Recto/Verso) - déplacer la zone vers une autre page
+        if (quillInputPage) {
+            quillInputPage.addEventListener('change', () => {
+                const zoneId = getSelectedTextQuillZoneId();
+                if (!zoneId) return;
+                
+                const targetPageIndex = parseInt(quillInputPage.value, 10);
+                const success = moveZoneToPage(zoneId, targetPageIndex);
+                
+                if (success) {
+                    // Zone déplacée : elle n'est plus sur la page courante
+                    // Donc désélectionner (la zone n'est plus visible)
+                    deselectAll();
+                    console.log('🔧 PHASE 4 - Zone textQuill déplacée vers page:', targetPageIndex);
+                }
+            });
+        }
         
         // Typographie : police (select natif POC)
         if (quillInputFont) {
