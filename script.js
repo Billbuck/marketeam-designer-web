@@ -1501,6 +1501,18 @@ document.addEventListener('DOMContentLoaded', () => {
 </g>
 </svg>`;
 
+    /**
+     * Couleur thème du Designer (utilisée pour les placeholders et éléments UI).
+     * @type {string}
+     */
+    const THEME_COLOR = '#7c3aed'; // Violet Marketeam
+
+    /**
+     * Proportion par défaut de l'icône placeholder image (0.5 = 50% de la zone).
+     * @type {number}
+     */
+    const IMAGE_PLACEHOLDER_SCALE = 0.5;
+
     // ─────────────────────────────── FIN SECTION 2 ────────────────────────────────
 
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -8976,15 +8988,35 @@ document.addEventListener('DOMContentLoaded', () => {
         return 'center';
     }
     
-    function getImagePlaceholderSvg(champName) {
-        const label = champName ? `@${champName}@` : 'Image';
+    /**
+     * Génère le SVG placeholder pour les zones image.
+     * L'icône est homothétique (conserve ses proportions) et centrée dans la zone.
+     * 
+     * @param {string|null} champName - Nom du champ de fusion (affiche @NOM@ si défini)
+     * @param {string} [color=THEME_COLOR] - Couleur de l'icône (défaut: couleur thème)
+     * @param {number} [scale=IMAGE_PLACEHOLDER_SCALE] - Proportion de l'icône (0.5 = 50% de la zone)
+     * @returns {string} HTML du placeholder (container + SVG)
+     * 
+     * @example
+     * getImagePlaceholderSvg(null);                    // Placeholder standard
+     * getImagePlaceholderSvg('PHOTO');                 // Affiche @PHOTO@
+     * getImagePlaceholderSvg(null, '#ff0000', 0.6);   // Rouge, 60% de la zone
+     */
+    function getImagePlaceholderSvg(champName, color = THEME_COLOR, scale = IMAGE_PLACEHOLDER_SCALE) {
+        const label = champName ? `@${champName}@` : '';
+        const scalePercent = Math.round(scale * 100);
+        
+        // Container flex pour centrer l'icône et maintenir l'homothétie
+        // L'icône utilise aspect-ratio pour rester carrée
         return `
-<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width: 80%; height: 80%; opacity: 0.5;">
-    <rect x="5" y="5" width="90" height="90" fill="none" stroke="#999" stroke-width="2" stroke-dasharray="5,5" rx="5"/>
-    <path d="M30 65 L45 45 L55 55 L70 35 L85 65 Z" fill="#ccc"/>
-    <circle cx="35" cy="35" r="8" fill="#ccc"/>
-    <text x="50" y="85" text-anchor="middle" font-size="10" fill="#666">${label}</text>
-</svg>`;
+<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; gap: 4px;">
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" 
+         style="width: ${scalePercent}%; max-height: ${scalePercent}%; aspect-ratio: 1;">
+        <path fill="${color}" d="M85.3 7.5H14.7C8 7.5 2.5 13 2.5 19.7v60.6c0 6.7 5.5 12.2 12.2 12.2h70.6c6.7 0 12.2-5.5 12.2-12.2V19.7c0-6.7-5.5-12.2-12.2-12.2zM14.7 13.9h70.6c3.2 0 5.8 2.6 5.8 5.8v29.2L79 36.9c-2.1-2.1-5.6-2.1-7.8 0l-23 23-10.3-10.4c-2.1-2.1-5.6-2.1-7.8 0L8.9 70.8V19.7c0-3.2 2.6-5.8 5.8-5.8z"/>
+        <path fill="${color}" d="M50.4 30.3c0 4.9-4 9-9 9s-9-4-9-9 4-9 9-9 9 4 9 9"/>
+    </svg>
+    ${label ? `<span style="font-size: 11px; color: ${color}; font-weight: 500;">${label}</span>` : ''}
+</div>`;
     }
     
     /**

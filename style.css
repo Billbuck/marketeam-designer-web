@@ -1578,8 +1578,7 @@ body.in-iframe .toolbar {
 }
 
 .zone-image .zone-content.no-image {
-    background-color: #f5f5f5;
-    border: 2px dashed #bdbdbd;
+    background-color: transparent;
 }
 
 /* === BOUTONS ARRANGEMENT (Z-INDEX) === */
