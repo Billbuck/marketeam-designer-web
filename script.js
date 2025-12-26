@@ -4302,6 +4302,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Exposer pour debug console
     window.debugPreviewData = debugPreviewData;
     window.previewState = previewState;
+    window.replaceMergeFields = replaceMergeFields;
+    window.displayMergedContent = displayMergedContent;
     // Note: window.documentState est exposé dans la section de démarrage (après loadFromLocalStorage)
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -4470,6 +4472,135 @@ document.addEventListener('DOMContentLoaded', () => {
         previewState.savedContents.clear();
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Aperçu de fusion - Remplacement des champs
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Remplace tous les @CHAMP@ dans un texte par les valeurs d'un enregistrement.
+     * 
+     * @param {string} text - Texte contenant des @CHAMP@ à remplacer
+     * @param {EchantillonData} record - Enregistrement contenant les valeurs
+     * @returns {string} Texte avec les champs remplacés par les valeurs
+     * 
+     * @example
+     * const text = "Bonjour @PRENOM@ @NOM@";
+     * const record = { PRENOM: "Jean", NOM: "DUPONT" };
+     * replaceMergeFields(text, record); // → "Bonjour Jean DUPONT"
+     */
+    function replaceMergeFields(text, record) {
+        if (!text || !record) return text;
+        
+        // Regex pour capturer @CHAMP@ (lettres, chiffres, underscore)
+        // Le ? rend la capture non-greedy pour éviter @A@...@B@ → une seule capture
+        const regex = /@([A-Za-z0-9_]+)@/g;
+        
+        return text.replace(regex, (match, fieldName) => {
+            // Chercher la valeur dans l'enregistrement (insensible à la casse)
+            const upperFieldName = fieldName.toUpperCase();
+            
+            // Chercher la clé correspondante dans record
+            const recordKey = Object.keys(record).find(
+                key => key.toUpperCase() === upperFieldName
+            );
+            
+            if (recordKey !== undefined && record[recordKey] !== undefined) {
+                const value = record[recordKey];
+                // Si la valeur est vide ou null, retourner chaîne vide
+                return (value === null || value === '') ? '' : String(value);
+            }
+            
+            // Champ non trouvé : garder le placeholder original
+            console.warn(`⚠️ Champ de fusion non trouvé: ${fieldName}`);
+            return match;
+        });
+    }
+
+    /**
+     * Crée un Delta Quill avec les champs de fusion remplacés.
+     * Préserve le formatage (gras, couleur, etc.) du Delta original.
+     * 
+     * @param {Object} originalDelta - Delta Quill original
+     * @param {EchantillonData} record - Enregistrement contenant les valeurs
+     * @returns {Object} Nouveau Delta avec les champs remplacés
+     */
+    function createMergedDelta(originalDelta, record) {
+        if (!originalDelta || !originalDelta.ops) {
+            return originalDelta;
+        }
+        
+        // Créer une copie profonde du Delta
+        const newOps = originalDelta.ops.map(op => {
+            // Copier l'opération
+            const newOp = { ...op };
+            
+            // Si c'est une insertion de texte, remplacer les champs
+            if (typeof newOp.insert === 'string') {
+                newOp.insert = replaceMergeFields(newOp.insert, record);
+            }
+            
+            // Conserver les attributs (formatage) tels quels
+            if (op.attributes) {
+                newOp.attributes = { ...op.attributes };
+            }
+            
+            return newOp;
+        });
+        
+        return { ops: newOps };
+    }
+
+    /**
+     * Affiche le contenu fusionné pour un enregistrement donné dans toutes les zones.
+     * 
+     * @param {number} recordIndex - Index de l'enregistrement (0-based)
+     * @returns {boolean} true si l'affichage a réussi
+     */
+    function displayMergedContent(recordIndex) {
+        console.log(`📊 displayMergedContent(${recordIndex})`);
+        
+        // Vérifier que l'index est valide
+        if (recordIndex < 0 || recordIndex >= documentState.donneesApercu.length) {
+            console.error(`❌ Index d'enregistrement invalide: ${recordIndex}`);
+            return false;
+        }
+        
+        // Récupérer l'enregistrement
+        const record = documentState.donneesApercu[recordIndex];
+        console.log(`  → Enregistrement: ${record.PRENOM || ''} ${record.NOM || ''}`);
+        
+        // Parcourir toutes les zones sauvegardées
+        previewState.savedContents.forEach((savedData, zoneId) => {
+            const quillInstance = quillInstances.get(zoneId);
+            
+            if (!quillInstance) {
+                console.warn(`  ⚠️ Instance Quill non trouvée pour ${zoneId}`);
+                return;
+            }
+            
+            if (!savedData.quillDelta) {
+                console.warn(`  ⚠️ Pas de Delta sauvegardé pour ${zoneId}`);
+                return;
+            }
+            
+            // Créer le Delta fusionné
+            const mergedDelta = createMergedDelta(savedData.quillDelta, record);
+            
+            // Appliquer le Delta fusionné à Quill (sans déclencher d'événements)
+            quillInstance.setContents(mergedDelta, 'silent');
+            
+            console.log(`  ✅ Zone ${zoneId} fusionnée`);
+        });
+        
+        // Mettre à jour l'index courant
+        previewState.currentIndex = recordIndex;
+        
+        // Mettre à jour l'indicateur
+        updateRecordIndicator();
+        
+        return true;
+    }
+
     /**
      * Active le mode aperçu de fusion.
      * - Sauvegarde le contenu original
@@ -4526,7 +4657,8 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('✅ Mode aperçu activé');
         console.log('═══════════════════════════════════════════════════════════');
         
-        // TODO Phase 4 : displayMergedContent(0)
+        // Afficher le premier enregistrement fusionné
+        displayMergedContent(0);
         
         return true;
     }
@@ -15277,35 +15409,50 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Bouton "Précédent" - Placeholder (logique Phase 5)
+    // Bouton "Précédent" - Enregistrement précédent
     if (btnPrevRecord) {
         btnPrevRecord.addEventListener('click', () => {
             console.log('🔘 Clic sur Précédent');
             if (previewState.currentIndex > 0) {
-                previewState.currentIndex--;
-                updateRecordIndicator();
-                // TODO Phase 5 : displayMergedContent(previewState.currentIndex)
+                displayMergedContent(previewState.currentIndex - 1);
             }
         });
     }
 
-    // Bouton "Suivant" - Placeholder (logique Phase 5)
+    // Bouton "Suivant" - Enregistrement suivant
     if (btnNextRecord) {
         btnNextRecord.addEventListener('click', () => {
             console.log('🔘 Clic sur Suivant');
             if (previewState.currentIndex < documentState.donneesApercu.length - 1) {
-                previewState.currentIndex++;
-                updateRecordIndicator();
-                // TODO Phase 5 : displayMergedContent(previewState.currentIndex)
+                displayMergedContent(previewState.currentIndex + 1);
             }
         });
     }
 
-    // Raccourci clavier Échap pour fermer l'aperçu
+    // Raccourcis clavier pour l'aperçu
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && previewState.active) {
-            e.preventDefault();
-            deactivatePreview();
+        // Seulement si en mode aperçu
+        if (!previewState.active) return;
+        
+        switch (e.key) {
+            case 'Escape':
+                e.preventDefault();
+                deactivatePreview();
+                break;
+                
+            case 'ArrowLeft':
+                e.preventDefault();
+                if (previewState.currentIndex > 0) {
+                    displayMergedContent(previewState.currentIndex - 1);
+                }
+                break;
+                
+            case 'ArrowRight':
+                e.preventDefault();
+                if (previewState.currentIndex < documentState.donneesApercu.length - 1) {
+                    displayMergedContent(previewState.currentIndex + 1);
+                }
+                break;
         }
     });
 
