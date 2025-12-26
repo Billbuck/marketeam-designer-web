@@ -517,6 +517,33 @@ document.addEventListener('DOMContentLoaded', () => {
      * { nom: "LOGO", libelle: "Logo entreprise", type: "IMG", ordre: 30 }
      */
 
+    // --- STRUCTURES APERÇU DONNÉES ---
+
+    /**
+     * @typedef {Object.<string, string>} EchantillonData
+     * @description Un enregistrement d'échantillon pour l'aperçu.
+     * Les clés correspondent aux noms des champs de fusion (ex: "NOM", "PRENOM").
+     * Les valeurs sont les données textuelles à afficher.
+     * @example
+     * // Enregistrement typique
+     * {
+     *   "CIVILITE": "Monsieur",
+     *   "NOM": "DUPONT",
+     *   "PRENOM": "Jean",
+     *   "ADRESSE1": "12 rue des Lilas",
+     *   "CP": "75009",
+     *   "VILLE": "PARIS"
+     * }
+     */
+
+    /**
+     * @typedef {Object} PreviewState
+     * @property {boolean} active - Mode aperçu actif ou non
+     * @property {number} currentIndex - Index de l'enregistrement courant (0-based)
+     * @property {Map<string, Object>} savedContents - Contenus originaux sauvegardés par zone
+     * @description État du mode aperçu de fusion.
+     */
+
     // ─────────────────────────── FIN DÉFINITIONS DE TYPES ──────────────────────────
 
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -3911,9 +3938,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1. Supprimer toutes les zones du DOM
         document.querySelectorAll('.zone').forEach(el => el.remove());
         
+        // 1b. Sauvegarder les données d'aperçu (ne doivent pas être perdues lors du Undo/Redo)
+        const savedDonneesApercu = documentState.donneesApercu || [];
+        
         // 2. Restaurer documentState
         documentState = JSON.parse(JSON.stringify(snapshot));
         zoneCounter = documentState.zoneCounter;
+        
+        // 2b. Restaurer les données d'aperçu
+        documentState.donneesApercu = savedDonneesApercu;
         
         // 3. Recharger la page courante (recrée les zones dans le DOM)
         loadCurrentPage();
@@ -4052,8 +4085,196 @@ document.addEventListener('DOMContentLoaded', () => {
                 zones: {}
             }
         ],
-        zoneCounter: 0 // Compteur global pour ID uniques
+        zoneCounter: 0, // Compteur global pour ID uniques
+        /**
+         * Données d'échantillon pour l'aperçu de fusion
+         * @type {EchantillonData[]}
+         */
+        donneesApercu: []
     };
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // État du mode aperçu de fusion
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * État du mode aperçu de fusion des données
+     * @type {PreviewState}
+     */
+    const previewState = {
+        /** @type {boolean} Mode aperçu actif */
+        active: false,
+        /** @type {number} Index de l'enregistrement courant (0-based) */
+        currentIndex: 0,
+        /** @type {Map<string, {quillDelta: Object|null, htmlContent: string}>} Contenus originaux sauvegardés */
+        savedContents: new Map()
+    };
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Données fictives pour tests hors WebDev
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Données d'échantillon fictives pour tester l'aperçu hors contexte WebDev.
+     * Ces données seront remplacées par celles de WebDev lors d'un vrai chargement.
+     * @type {EchantillonData[]}
+     */
+    const DEFAULT_PREVIEW_DATA = [
+        {
+            CIVILITE: "Monsieur",
+            NOM: "DUPONT",
+            PRENOM: "Jean",
+            SOCIETE: "Acme Corporation",
+            ADRESSE1: "12 rue des Lilas",
+            ADRESSE2: "Bâtiment A",
+            CP: "75009",
+            VILLE: "PARIS",
+            EMAIL: "jean.dupont@acme.com",
+            TELEPHONE: "01 23 45 67 89"
+        },
+        {
+            CIVILITE: "Madame",
+            NOM: "MARTIN",
+            PRENOM: "Sophie",
+            SOCIETE: "Tech Solutions SAS",
+            ADRESSE1: "8 avenue Victor Hugo",
+            ADRESSE2: "",
+            CP: "69001",
+            VILLE: "LYON",
+            EMAIL: "sophie.martin@techsol.fr",
+            TELEPHONE: "04 78 12 34 56"
+        },
+        {
+            CIVILITE: "Monsieur",
+            NOM: "BERNARD",
+            PRENOM: "Pierre",
+            SOCIETE: "Global Services",
+            ADRESSE1: "45 boulevard Gambetta",
+            ADRESSE2: "Étage 3",
+            CP: "33000",
+            VILLE: "BORDEAUX",
+            EMAIL: "p.bernard@globalservices.com",
+            TELEPHONE: "05 56 78 90 12"
+        },
+        {
+            CIVILITE: "Madame",
+            NOM: "PETIT",
+            PRENOM: "Marie",
+            SOCIETE: "Innovation Labs",
+            ADRESSE1: "123 rue de la République",
+            ADRESSE2: "",
+            CP: "59000",
+            VILLE: "LILLE",
+            EMAIL: "marie.petit@innolabs.fr",
+            TELEPHONE: "03 20 45 67 89"
+        },
+        {
+            CIVILITE: "Monsieur",
+            NOM: "ROBERT",
+            PRENOM: "François",
+            SOCIETE: "Delta Industries",
+            ADRESSE1: "7 place Bellecour",
+            ADRESSE2: "BP 456",
+            CP: "13001",
+            VILLE: "MARSEILLE",
+            EMAIL: "frobert@delta-ind.com",
+            TELEPHONE: "04 91 23 45 67"
+        },
+        {
+            CIVILITE: "Madame",
+            NOM: "DURAND",
+            PRENOM: "Catherine",
+            SOCIETE: "Consulting Plus",
+            ADRESSE1: "28 rue du Commerce",
+            ADRESSE2: "",
+            CP: "44000",
+            VILLE: "NANTES",
+            EMAIL: "c.durand@consultingplus.fr",
+            TELEPHONE: "02 40 12 34 56"
+        },
+        {
+            CIVILITE: "Monsieur",
+            NOM: "LEROY",
+            PRENOM: "Thomas",
+            SOCIETE: "Digital Factory",
+            ADRESSE1: "15 avenue Jean Jaurès",
+            ADRESSE2: "Zone Industrielle Nord",
+            CP: "31000",
+            VILLE: "TOULOUSE",
+            EMAIL: "thomas.leroy@digitalfactory.com",
+            TELEPHONE: "05 61 78 90 12"
+        },
+        {
+            CIVILITE: "Madame",
+            NOM: "MOREAU",
+            PRENOM: "Isabelle",
+            SOCIETE: "Média Group",
+            ADRESSE1: "52 rue de la Paix",
+            ADRESSE2: "",
+            CP: "67000",
+            VILLE: "STRASBOURG",
+            EMAIL: "i.moreau@mediagroup.eu",
+            TELEPHONE: "03 88 45 67 89"
+        },
+        {
+            CIVILITE: "Monsieur",
+            NOM: "GARCIA",
+            PRENOM: "Antoine",
+            SOCIETE: "Eco Solutions",
+            ADRESSE1: "3 impasse des Roses",
+            ADRESSE2: "Résidence Les Jardins",
+            CP: "06000",
+            VILLE: "NICE",
+            EMAIL: "a.garcia@ecosolutions.fr",
+            TELEPHONE: "04 93 12 34 56"
+        },
+        {
+            CIVILITE: "Madame",
+            NOM: "ROUX-FONTAINE",
+            PRENOM: "Élisabeth-Marie",
+            SOCIETE: "Cabinet d'Architecture et d'Urbanisme du Grand Sud-Ouest",
+            ADRESSE1: "1247 boulevard du Maréchal de Lattre de Tassigny",
+            ADRESSE2: "Immeuble Le Panoramique - Entrée B",
+            CP: "34000",
+            VILLE: "MONTPELLIER",
+            EMAIL: "elisabeth-marie.roux-fontaine@archi-urbanisme-grandsudouest.fr",
+            TELEPHONE: "04 67 89 01 23"
+        }
+    ];
+
+    /**
+     * Initialise les données d'aperçu avec les valeurs par défaut si aucune donnée WebDev
+     * @returns {void}
+     */
+    function initDefaultPreviewData() {
+        if (!documentState.donneesApercu || documentState.donneesApercu.length === 0) {
+            documentState.donneesApercu = [...DEFAULT_PREVIEW_DATA];
+            console.log(`📊 initDefaultPreviewData: ${DEFAULT_PREVIEW_DATA.length} échantillon(s) fictif(s) chargé(s)`);
+        }
+    }
+
+    /**
+     * Affiche les données d'aperçu dans la console (debug)
+     * @returns {void}
+     */
+    function debugPreviewData() {
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log('📊 DONNÉES D\'APERÇU DISPONIBLES');
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log(`Nombre d'enregistrements: ${documentState.donneesApercu.length}`);
+        console.log('───────────────────────────────────────────────────────────');
+        
+        documentState.donneesApercu.forEach((record, index) => {
+            console.log(`[${index + 1}] ${record.CIVILITE || ''} ${record.PRENOM || ''} ${record.NOM || ''} - ${record.SOCIETE || ''}`);
+        });
+        
+        console.log('═══════════════════════════════════════════════════════════');
+    }
+
+    // Exposer pour debug console
+    window.debugPreviewData = debugPreviewData;
+    window.previewState = previewState;
+    // Note: window.documentState est exposé dans la section de démarrage (après loadFromLocalStorage)
 
     // --- FONCTIONS HELPER POUR ACCÈS AUX DONNÉES ---
 
@@ -14643,6 +14864,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- CHARGEMENT AU DÉMARRAGE ---
     loadFromLocalStorage();
+    
+    // Initialiser les données d'aperçu fictives (pour tests hors WebDev)
+    // Note: doit être APRÈS loadFromLocalStorage() car celui-ci peut écraser documentState
+    initDefaultPreviewData();
+    
+    // Exposer documentState pour debug console (après toutes les initialisations)
+    window.documentState = documentState;
     
     // Générer la navigation des pages après chargement
     renderPageNavigation();
