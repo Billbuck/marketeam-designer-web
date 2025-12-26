@@ -2118,10 +2118,22 @@ document.addEventListener('DOMContentLoaded', () => {
     
     /**
      * Met à jour la visibilité de la toolbar Data (champs de fusion)
-     * Visible si : zone textQuill sélectionnée ET champs disponibles
+     * Visible si : zone textQuill sélectionnée ET champs disponibles ET pas en mode aperçu
      */
     function updateToolbarDataVisibility() {
         if (!toolbarData) return;
+        
+        // Ne pas afficher en mode aperçu
+        // Protection : previewState peut ne pas être encore initialisée au chargement
+        try {
+            if (typeof previewState !== 'undefined' && previewState.active) {
+                toolbarData.style.display = 'none';
+                console.log('📋 Toolbar Data masquée en mode aperçu');
+                return;
+            }
+        } catch (e) {
+            // previewState pas encore déclarée - cas d'initialisation
+        }
         
         // Protection : selectedZoneIds peut ne pas être encore initialisée au chargement
         // (déclarée plus bas dans le script)
@@ -4824,6 +4836,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // 2. Désélectionner toutes les zones
         deselectAll();
         
+        // 2b. Masquer la toolbar data si elle est visible
+        if (toolbarData) {
+            toolbarData.style.display = 'none';
+            console.log('📋 Toolbar Data masquée pour le mode aperçu');
+        }
+        
         // 3. Désactiver l'édition de toutes les zones Quill
         quillInstances.forEach((quill, zoneId) => {
             quill.disable();
@@ -4897,6 +4915,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // 5. Réactiver le drag & drop des zones
         enableZoneInteractions();
         
+        // 6. Réafficher la toolbar data si une zone texte est sélectionnée
+        updateToolbarDataVisibility();
+        
         console.log('✅ Mode édition restauré');
         console.log('═══════════════════════════════════════════════════════════');
     }
@@ -4906,54 +4927,33 @@ document.addEventListener('DOMContentLoaded', () => {
      * Utilisé en mode aperçu pour empêcher les modifications.
      * @returns {void}
      */
+    /**
+     * Désactive les interactions d'édition en mode aperçu
+     * Note : Le déplacement et redimensionnement restent actifs pour ajuster les zones
+     * @returns {void}
+     */
     function disableZoneInteractions() {
-        console.log('🔒 disableZoneInteractions()');
+        console.log('🔒 disableZoneInteractions() - Édition désactivée, déplacement/resize autorisés');
         
-        // Parcourir toutes les zones de la page courante
-        const zones = a4Page.querySelectorAll('.zone-frame');
-        zones.forEach(zone => {
-            // Désactiver le drag
-            zone.setAttribute('data-preview-draggable', zone.draggable);
-            zone.draggable = false;
-            
-            // Ajouter une classe pour le style
-            zone.classList.add('interactions-disabled');
+        // Ajouter la classe pour les styles visuels (curseur, etc.)
+        document.querySelectorAll('.zone-frame').forEach(zone => {
+            zone.classList.add('preview-mode');
         });
         
-        // Désactiver les handles de redimensionnement
-        const handles = a4Page.querySelectorAll('.resize-handle');
-        handles.forEach(handle => {
-            handle.style.pointerEvents = 'none';
-            handle.style.display = 'none';
-        });
+        // NOTE : On ne désactive PAS le drag ni le resize
+        // L'utilisateur peut ajuster la position et taille en voyant les vraies valeurs
     }
 
     /**
-     * Réactive les interactions de manipulation des zones
+     * Réactive les interactions après le mode aperçu
      * @returns {void}
      */
     function enableZoneInteractions() {
-        console.log('🔓 enableZoneInteractions()');
+        console.log('🔓 enableZoneInteractions() - Édition réactivée');
         
-        // Parcourir toutes les zones de la page courante
-        const zones = a4Page.querySelectorAll('.zone-frame');
-        zones.forEach(zone => {
-            // Restaurer le drag
-            const wasDraggable = zone.getAttribute('data-preview-draggable');
-            if (wasDraggable !== null) {
-                zone.draggable = (wasDraggable === 'true');
-                zone.removeAttribute('data-preview-draggable');
-            }
-            
-            // Retirer la classe
-            zone.classList.remove('interactions-disabled');
-        });
-        
-        // Réactiver les handles de redimensionnement
-        const handles = a4Page.querySelectorAll('.resize-handle');
-        handles.forEach(handle => {
-            handle.style.pointerEvents = '';
-            handle.style.display = '';
+        // Retirer la classe preview-mode
+        document.querySelectorAll('.zone-frame').forEach(zone => {
+            zone.classList.remove('preview-mode');
         });
     }
 
@@ -12254,10 +12254,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return; // Laisser le pan gérer
         }
         
-        // Bloquer le drag/resize en mode aperçu
-        if (previewState.active) {
-            return;
-        }
+        // NOTE: Le drag/resize est maintenant autorisé en mode aperçu
+        // pour permettre à l'utilisateur d'ajuster les zones en voyant les vraies valeurs
         
         // Vérifier si on clique sur une zone sélectionnée (pour le drag/resize)
         if (selectedZoneIds.length > 0) {

@@ -3488,9 +3488,27 @@ body.in-iframe .toolbar {
     border-color: #4CAF50;
 }
 
-/* Curseur lecture seule en mode aperçu */
+/* Zone en mode aperçu - édition désactivée mais déplacement/resize autorisés */
+.zone-frame.preview-mode {
+    outline: 2px dashed #4CAF50 !important;
+    outline-offset: 2px;
+}
+
+/* Curseur lecture seule en mode aperçu (éditeur Quill) */
 .zone-frame.preview-mode .ql-editor {
     cursor: default;
+}
+
+/* La poignée de drag reste active en mode aperçu */
+.zone-frame.preview-mode .zone-drag-handle {
+    cursor: move !important;
+    display: block !important;
+}
+
+/* Les poignées de resize restent actives en mode aperçu */
+.zone-frame.preview-mode .resize-handle {
+    display: block !important;
+    pointer-events: auto !important;
 }
 
 /* Désactiver les boutons d'action en mode aperçu */
