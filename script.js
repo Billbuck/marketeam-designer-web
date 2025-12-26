@@ -3901,7 +3901,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // BUGFIX : persister le contenu Quill dans zonesData avant snapshot (Undo/Redo)
-        persistTextQuillContentForSave(zonesData);
+        // NE PAS persister en mode aperçu (le contenu affiché est fusionné, pas l'original)
+        if (!previewState || !previewState.active) {
+            persistTextQuillContentForSave(zonesData);
+        }
 
         documentState.zoneCounter = zoneCounter;
         
@@ -9031,6 +9034,11 @@ document.addEventListener('DOMContentLoaded', () => {
      *   - Aucune sélection (0) : always + no-selection visibles, single masqué
      */
     function updateSidebarSectionsVisibility() {
+        // Si mode aperçu actif, ne pas modifier la visibilité des sections
+        if (previewState && previewState.active) {
+            return;
+        }
+        
         const count = selectedZoneIds.length;
         
         // Récupérer les sections par ID
@@ -13103,7 +13111,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // BUGFIX : persister le contenu Quill dans zonesData avant sérialisation
-        persistTextQuillContentForSave(zonesData);
+        // NE PAS persister en mode aperçu (le contenu affiché est fusionné, pas l'original)
+        if (!previewState || !previewState.active) {
+            persistTextQuillContentForSave(zonesData);
+        }
         
         // Synchroniser le compteur global
         documentState.zoneCounter = zoneCounter;
@@ -15063,7 +15074,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const currentZones = getCurrentPageZones();
         // Phase 7 : s'assurer que les zones textQuill ont un Delta à jour avant export
-        persistTextQuillContentForSave(currentZones);
+        // NE PAS persister en mode aperçu (le contenu affiché est fusionné, pas l'original)
+        if (!previewState || !previewState.active) {
+            persistTextQuillContentForSave(currentZones);
+        }
         let syncCount = 0;
         
         for (const [id, data] of Object.entries(currentZones)) {
