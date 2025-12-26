@@ -4865,6 +4865,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // 7. Désactiver le drag & drop des zones
         disableZoneInteractions();
         
+        // 8. Masquer toutes les sections de la sidebar sauf Aperçu
+        document.querySelectorAll('.sidebar .section').forEach(section => {
+            if (section.id !== 'preview-section') {
+                section.style.display = 'none';
+            }
+        });
+        // S'assurer que la section Aperçu est visible
+        if (previewSection) {
+            previewSection.style.display = 'block';
+        }
+        
         console.log('✅ Mode aperçu activé');
         console.log('═══════════════════════════════════════════════════════════');
         
@@ -4917,6 +4928,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 6. Réafficher la toolbar data si une zone texte est sélectionnée
         updateToolbarDataVisibility();
+        
+        // 7. Restaurer la visibilité normale des sections de la sidebar
+        updateSidebarSectionsVisibility();
         
         console.log('✅ Mode édition restauré');
         console.log('═══════════════════════════════════════════════════════════');
@@ -9031,6 +9045,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // ═══════════════════════════════════════════════════════════════════════
         if (count >= 2) {
             // Masquer toutes les autres sections
+            if (previewSection) previewSection.style.display = 'none';
             if (pagesSection) pagesSection.style.display = 'none';
             if (actionsSection) actionsSection.style.display = 'none';
             if (historySection) historySection.style.display = 'none';
@@ -9050,6 +9065,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // always + single visibles, no-selection masqué
         // ═══════════════════════════════════════════════════════════════════════
         if (count === 1) {
+            if (previewSection) previewSection.style.display = 'none';  // no-selection
             if (pagesSection) pagesSection.style.display = 'none';      // no-selection
             if (actionsSection) actionsSection.style.display = 'block'; // always
             if (historySection) historySection.style.display = 'block'; // always
@@ -9066,6 +9082,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // MODE AUCUNE SÉLECTION (0 zone)
         // always + no-selection visibles, single masqué
         // ═══════════════════════════════════════════════════════════════════════
+        if (previewSection) previewSection.style.display = 'block'; // no-selection
         if (pagesSection) pagesSection.style.display = 'block';     // no-selection
         if (actionsSection) actionsSection.style.display = 'block'; // always
         if (historySection) historySection.style.display = 'block'; // always

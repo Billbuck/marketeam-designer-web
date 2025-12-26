@@ -3427,65 +3427,13 @@ body.in-iframe .toolbar {
     color: var(--theme-primary, #1976D2);
 }
 
-/* Bouton Aperçu - Style vert distinctif */
-.btn.btn-preview-activate {
-    background: linear-gradient(135deg, #4CAF50 0%, #43A047 100%);
-    color: white;
-    border: none;
-}
-
-.btn.btn-preview-activate:hover {
-    background: linear-gradient(135deg, #43A047 0%, #388E3C 100%);
-}
-
-.btn.btn-preview-activate:disabled {
-    background: var(--theme-bg-tertiary, #e0e0e0);
-    color: var(--theme-text-disabled, #999);
-}
-
-.btn.btn-preview-activate .btn-icon svg {
-    fill: white;
-}
-
-/* Bouton Fermer - Style gris */
-.btn.btn-preview-close {
-    background: var(--theme-bg-tertiary, #f5f5f5);
-    color: var(--theme-text-secondary, #666);
-    border: 1px solid var(--theme-border, #e0e0e0);
-}
-
-.btn.btn-preview-close:hover {
-    background: var(--gray-300, #e0e0e0);
-    color: var(--theme-text-primary, #333);
-}
-
 /* ═══════════════════════════════════════════════════════════════════════════
    MODE APERÇU ACTIF - INDICATEURS VISUELS
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* Section Aperçu en mode actif */
-#preview-section.preview-active {
-    background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
-    border-radius: 8px;
-    margin: -8px;
-    padding: 8px;
-}
-
-#preview-section.preview-active .section-title {
-    color: #2E7D32;
-}
-
-#preview-section.preview-active .section-title::after {
-    content: ' (actif)';
-    font-size: 10px;
-    font-weight: 400;
-    text-transform: uppercase;
-}
-
-/* Badge APERÇU sur le titre de section */
-#preview-section.preview-active .preview-record-indicator {
-    background: white;
-    border-color: #4CAF50;
+/* Fond du workspace en mode aperçu - couleur claire du thème */
+body.preview-mode-active .workspace {
+    background-color: var(--theme-primary-light, #F6EDFA);
 }
 
 /* Zone en mode aperçu - édition désactivée mais déplacement/resize autorisés */
@@ -3515,11 +3463,6 @@ body.in-iframe .toolbar {
 body.preview-mode-active #actions-section .btn:not(#btn-delete-zone) {
     opacity: 0.5;
     pointer-events: none;
-}
-
-/* Indicateur global dans la sidebar */
-body.preview-mode-active .sidebar {
-    border-right: 3px solid #4CAF50;
 }
 
 /* Zones avec interactions désactivées */
