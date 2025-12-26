@@ -4440,7 +4440,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     previewState.savedContents.set(zoneId, {
                         pageIndex: pageIndex,
                         quillDelta: JSON.parse(JSON.stringify(delta)), // Deep copy
-                        htmlContent: htmlContent
+                        htmlContent: htmlContent,
+                        originalFontSize: parseFloat(quillInstance.root.style.fontSize) || zoneData.size || 12
                     });
                     
                     console.log(`  → Zone ${zoneId} (page ${pageIndex + 1}) sauvegardée`);
@@ -4464,6 +4465,18 @@ document.addEventListener('DOMContentLoaded', () => {
             if (quillInstance && savedData.quillDelta) {
                 // Restaurer le Delta Quill
                 quillInstance.setContents(savedData.quillDelta, 'silent');
+                
+                // Restaurer la taille de police originale si modifiée par copyfit
+                if (savedData.originalFontSize) {
+                    quillInstance.root.style.fontSize = `${savedData.originalFontSize}pt`;
+                }
+                
+                // Retirer l'indicateur de copyfit
+                const zoneEl = document.getElementById(zoneId);
+                if (zoneEl) {
+                    zoneEl.classList.remove('copyfit-active');
+                }
+                
                 console.log(`  → Zone ${zoneId} restaurée`);
             }
         });
@@ -4598,7 +4611,72 @@ document.addEventListener('DOMContentLoaded', () => {
         // Mettre à jour l'indicateur
         updateRecordIndicator();
         
+        // Déclencher le copyfit pour toutes les zones fusionnées
+        triggerCopyfitForPreview();
+        
         return true;
+    }
+
+    /**
+     * Déclenche le copyfit pour toutes les zones texte après une fusion.
+     * Utilise requestAnimationFrame pour laisser Quill mettre à jour le DOM.
+     * @returns {void}
+     */
+    function triggerCopyfitForPreview() {
+        console.log('📐 triggerCopyfitForPreview()');
+        
+        // Petit délai pour laisser Quill mettre à jour le DOM
+        requestAnimationFrame(() => {
+            previewState.savedContents.forEach((savedData, zoneId) => {
+                const zonesData = getPageZonesByIndex(savedData.pageIndex);
+                const zoneData = zonesData ? zonesData[zoneId] : null;
+                
+                // Vérifier si la zone a le copyfit activé
+                if (zoneData && zoneData.copyfit === true) {
+                    const zoneEl = document.getElementById(zoneId);
+                    if (zoneEl) {
+                        const quillInstance = quillInstances.get(zoneId);
+                        
+                        // Appeler la fonction de copyfit existante pour Quill
+                        if (quillInstance && typeof applyCopyfitToQuillZone === 'function') {
+                            applyCopyfitToQuillZone(zoneEl, quillInstance, zoneData.size);
+                            console.log(`  📐 Copyfit appliqué à ${zoneId}`);
+                            // Ajouter indicateur visuel
+                            zoneEl.classList.add('copyfit-active');
+                        } else if (typeof applyCopyfit === 'function') {
+                            applyCopyfit(zoneEl, zoneData.size);
+                            console.log(`  📐 Copyfit appliqué à ${zoneId}`);
+                            zoneEl.classList.add('copyfit-active');
+                        }
+                    }
+                }
+            });
+        });
+    }
+
+    /**
+     * Récupère les zones d'une page par son index.
+     * @param {number} pageIndex - Index de la page (0-based)
+     * @returns {Object|null} Objet des zones ou null
+     */
+    function getPageZonesByIndex(pageIndex) {
+        if (pageIndex < 0 || pageIndex >= documentState.pages.length) {
+            return null;
+        }
+        return documentState.pages[pageIndex].zones || {};
+    }
+
+    /**
+     * Appelé après un changement de page pour mettre à jour l'aperçu si actif.
+     * @returns {void}
+     */
+    function refreshPreviewAfterPageChange() {
+        if (previewState.active) {
+            console.log('🔄 refreshPreviewAfterPageChange()');
+            setTimeout(() => {
+                displayMergedContent(previewState.currentIndex);
+            }, 100);
+        }
     }
 
     /**
@@ -15831,6 +15909,9 @@ document.addEventListener('DOMContentLoaded', () => {
         updatePageNavigationUI();
 
         // 9. Le pan est préservé automatiquement
+        
+        // 10. Si en mode aperçu, réafficher le contenu fusionné
+        refreshPreviewAfterPageChange();
     }
 
     /**

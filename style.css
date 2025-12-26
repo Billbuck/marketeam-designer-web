@@ -3517,3 +3517,17 @@ body.preview-mode-active .sidebar {
 .zone-frame.preview-mode * {
     user-select: none;
 }
+
+/* Indicateur de copyfit actif en mode aperçu */
+.zone-frame.preview-mode.copyfit-active::before {
+    content: '📐';
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    font-size: 12px;
+    background: white;
+    border-radius: 50%;
+    padding: 2px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    z-index: 10;
+}
