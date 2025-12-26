@@ -537,6 +537,21 @@ document.addEventListener('DOMContentLoaded', () => {
      */
 
     /**
+     * @typedef {Object} DocumentJsonWebDev
+     * @property {Object} [identification] - Identification du document
+     * @property {Object} [formatDocument] - Format et dimensions
+     * @property {ChampFusion[]} [champsFusion] - Champs de fusion disponibles
+     * @property {EchantillonData[]} [donneesApercu] - Échantillons de données pour l'aperçu
+     * @property {Object[]} [polices] - Polices disponibles
+     * @property {Object[]} [pages] - Pages du document
+     * @property {Object[]} [zonesTexte] - Zones de texte
+     * @property {Object[]} [zonesTextQuill] - Zones texte Quill
+     * @property {Object[]} [zonesCodeBarres] - Zones codes-barres
+     * @property {Object[]} [zonesImage] - Zones images
+     * @description Structure complète du document JSON envoyé par WebDev.
+     */
+
+    /**
      * @typedef {Object} PreviewState
      * @property {boolean} active - Mode aperçu actif ou non
      * @property {number} currentIndex - Index de l'enregistrement courant (0-based)
@@ -13973,6 +13988,19 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('  → Pas de champs de fusion dans le JSON, conservation des valeurs par défaut');
         }
         
+        // Stocker les données d'aperçu (échantillons de la base de données)
+        if (effectiveDocumentJson.donneesApercu && Array.isArray(effectiveDocumentJson.donneesApercu) && effectiveDocumentJson.donneesApercu.length > 0) {
+            documentState.donneesApercu = effectiveDocumentJson.donneesApercu;
+            console.log(`  → ${documentState.donneesApercu.length} échantillon(s) de données chargé(s) pour l'aperçu`);
+            
+            // Mettre à jour l'état du bouton aperçu
+            updatePreviewButtonState();
+        } else {
+            // Utiliser les données fictives par défaut si aucune donnée WebDev
+            console.log('  → Pas de données d\'aperçu dans le JSON, utilisation des données fictives');
+            initDefaultPreviewData();
+        }
+        
         // Étape 2c : Charger les polices disponibles (message.policesDisponibles au même niveau que data)
         /** @type {PoliceDisponible[]|null} */
         const policesFromDocument = Array.isArray(effectiveDocumentJson.polices) ? effectiveDocumentJson.polices : null;
@@ -15100,6 +15128,56 @@ document.addEventListener('DOMContentLoaded', () => {
      *   - export : Exporter le document
      *   - getState : Retourner l'état
      *   - ping/pong : Test de connexion
+     *   - updatePreviewData : Mise à jour dynamique des échantillons d'aperçu
+     *   - getPreviewStatus : Retourne l'état de l'aperçu (actif, index, total)
+     * 
+     * ═══════════════════════════════════════════════════════════════════════════
+     * ACTIONS POSTMESSAGE - APERÇU DE FUSION
+     * ═══════════════════════════════════════════════════════════════════════════
+     * 
+     * === CHARGEMENT INITIAL (dans action 'load') ===
+     * WebDev → Designer :
+     * {
+     *   "action": "load",
+     *   "data": {
+     *     "champsFusion": [...],
+     *     "donneesApercu": [
+     *       { "NOM": "DUPONT", "PRENOM": "Jean", ... },
+     *       { "NOM": "MARTIN", "PRENOM": "Sophie", ... }
+     *     ],
+     *     ...
+     *   }
+     * }
+     * 
+     * === MISE À JOUR DYNAMIQUE ===
+     * WebDev → Designer :
+     * {
+     *   "action": "updatePreviewData",
+     *   "data": {
+     *     "donneesApercu": [...]
+     *   }
+     * }
+     * 
+     * Designer → WebDev :
+     * {
+     *   "action": "previewDataUpdated",
+     *   "success": true,
+     *   "count": 50
+     * }
+     * 
+     * === STATUT DE L'APERÇU ===
+     * WebDev → Designer :
+     * { "action": "getPreviewStatus" }
+     * 
+     * Designer → WebDev :
+     * {
+     *   "action": "previewStatus",
+     *   "active": false,
+     *   "currentIndex": 0,
+     *   "totalRecords": 50,
+     *   "hasData": true
+     * }
+     * ═══════════════════════════════════════════════════════════════════════════
      * 
      * Dépendances :
      *   - loadFromWebDev() (Section 19)
@@ -15186,6 +15264,51 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'ping':
                 // Test de connexion
                 sendMessageToParent({ action: 'pong' });
+                break;
+                
+            case 'updatePreviewData':
+                // Mise à jour dynamique des données d'aperçu sans recharger le document
+                console.log('📊 Action: updatePreviewData');
+                
+                if (message.data && Array.isArray(message.data.donneesApercu)) {
+                    documentState.donneesApercu = message.data.donneesApercu;
+                    console.log(`  → ${documentState.donneesApercu.length} échantillon(s) mis à jour`);
+                    
+                    // Mettre à jour l'état du bouton
+                    updatePreviewButtonState();
+                    
+                    // Si en mode aperçu, réafficher avec les nouvelles données
+                    if (previewState.active) {
+                        // Réinitialiser à l'index 0 car les données ont changé
+                        displayMergedContent(0);
+                    }
+                    
+                    // Notifier le parent
+                    sendMessageToParent({
+                        action: 'previewDataUpdated',
+                        success: true,
+                        count: documentState.donneesApercu.length
+                    });
+                } else {
+                    console.warn('⚠️ updatePreviewData: données invalides');
+                    sendMessageToParent({
+                        action: 'previewDataUpdated',
+                        success: false,
+                        error: 'Données invalides ou manquantes'
+                    });
+                }
+                break;
+                
+            case 'getPreviewStatus':
+                // Retourne l'état actuel de l'aperçu
+                console.log('📊 Action: getPreviewStatus');
+                sendMessageToParent({
+                    action: 'previewStatus',
+                    active: previewState.active,
+                    currentIndex: previewState.currentIndex,
+                    totalRecords: documentState.donneesApercu.length,
+                    hasData: hasPreviewData()
+                });
                 break;
                 
             default:
