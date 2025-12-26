@@ -501,6 +501,22 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {string|null} urls.boldItalic - URL de la variante boldItalic ou null
      */
 
+    /**
+     * @typedef {Object} ChampFusion
+     * @property {string} nom - Code technique du champ (ex: "NOM", "CIVILITE") - utilisé pour @NOM@
+     * @property {string} libelle - Libellé affiché à l'utilisateur (ex: "Nom", "Civilité")
+     * @property {'TXT'|'SYS'|'IMG'} type - Type de champ (TXT=texte BDD, SYS=système, IMG=image)
+     * @property {number} ordre - Ordre d'affichage (tri croissant)
+     * @description Structure d'un champ de fusion/personnalisation provenant de la BDD.
+     * @example
+     * // Champ texte standard
+     * { nom: "NOM", libelle: "Nom", type: "TXT", ordre: 2 }
+     * // Variable système
+     * { nom: "SEQUENTIEL", libelle: "N° séquentiel", type: "SYS", ordre: 20 }
+     * // Champ image dynamique
+     * { nom: "LOGO", libelle: "Logo entreprise", type: "IMG", ordre: 30 }
+     */
+
     // ─────────────────────────── FIN DÉFINITIONS DE TYPES ──────────────────────────
 
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -621,7 +637,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const barcodePropertiesSection = null; // SUPPRIMÉ
     const inputBarcodeName = null; // SUPPRIMÉ
     const inputBarcodeType = null; // SUPPRIMÉ
-    const inputBarcodeField = null; // SUPPRIMÉ
+    // inputBarcodeField est déclaré plus bas (ligne ~829) avec getElementById sous le nom barcodeInputField
+    // const inputBarcodeField = null; // SUPPRIMÉ - DOUBLON
     const inputBarcodeReadable = null; // SUPPRIMÉ
     const barcodeReadableGroup = null; // SUPPRIMÉ
     const inputBarcodeFontsize = null; // SUPPRIMÉ
@@ -1879,18 +1896,51 @@ document.addEventListener('DOMContentLoaded', () => {
     // Champs de fusion
     const mergeFieldsContainer = document.getElementById('merge-fields-list');
     
-    // Champs de fusion par défaut (seront remplacés par ceux du JSON WebDev)
-    let mergeFields = ['Civilité', 'Nom', 'Prénom', 'Adresse 1', 'Adresse 2', 'CP', 'Ville', 'Téléphone', 'Champ 1'];
+    /**
+     * Champs de fusion par défaut (version démonstration hors WebDev)
+     * Seront remplacés par ceux du JSON WebDev lors d'un chargement
+     * @type {ChampFusion[]}
+     */
+    let mergeFields = [
+        { nom: "CIVILITE", libelle: "Civilité", type: "TXT", ordre: 1 },
+        { nom: "NOM", libelle: "Nom", type: "TXT", ordre: 2 },
+        { nom: "PRENOM", libelle: "Prénom", type: "TXT", ordre: 3 },
+        { nom: "SOCIETE", libelle: "Société", type: "TXT", ordre: 4 },
+        { nom: "ADRESSE1", libelle: "Adresse 1", type: "TXT", ordre: 5 },
+        { nom: "ADRESSE2", libelle: "Adresse 2", type: "TXT", ordre: 6 },
+        { nom: "CP", libelle: "Code postal", type: "TXT", ordre: 7 },
+        { nom: "VILLE", libelle: "Ville", type: "TXT", ordre: 8 },
+        { nom: "PAYS", libelle: "Pays", type: "TXT", ordre: 9 },
+        { nom: "EMAIL", libelle: "Email", type: "TXT", ordre: 10 },
+        { nom: "TELEPHONE", libelle: "Téléphone", type: "TXT", ordre: 11 },
+        { nom: "NUMERO_CLIENT", libelle: "N° Client", type: "TXT", ordre: 12 },
+        { nom: "SEQUENTIEL", libelle: "N° séquentiel", type: "SYS", ordre: 20 },
+        { nom: "DATE_JOUR", libelle: "Date du jour", type: "SYS", ordre: 21 },
+        { nom: "LOGO", libelle: "Logo entreprise", type: "IMG", ordre: 30 },
+        { nom: "PHOTO", libelle: "Photo contact", type: "IMG", ordre: 31 }
+    ];
 
     /**
-     * Met à jour l'affichage des champs de fusion dans la toolbar
-     * @param {Array} champs - Tableau des champs [{nom: "NOM", type: "TXT"}, ...] ou ["NOM", "PRENOM", ...]
+     * Met à jour l'affichage des champs de fusion dans la toolbar Data
+     * Affiche le libelle, trie par ordre, et utilise nom pour la syntaxe @NOM@
+     * @param {ChampFusion[]} champs - Tableau des champs de fusion
      */
     function updateMergeFieldsUI(champs) {
         if (!mergeFieldsContainer) return;
         
+        // Normaliser : si tableau de strings, convertir en objets
+        const champsNormalises = champs.map((champ, index) => {
+            if (typeof champ === 'string') {
+                return { nom: champ.toUpperCase().replace(/\s+/g, '_'), libelle: champ, type: 'TXT', ordre: index + 1 };
+            }
+            return champ;
+        });
+        
+        // Trier par ordre croissant
+        const champsTries = [...champsNormalises].sort((a, b) => (a.ordre || 0) - (b.ordre || 0));
+        
         // Mettre à jour le compteur
-        const count = champs.length;
+        const count = champsTries.length;
         if (fieldsCount) {
             fieldsCount.textContent = count === 0 ? '0 champ disponible' 
                                      : count === 1 ? '1 champ disponible' 
@@ -1905,13 +1955,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // Vider le conteneur (sauf le message vide)
         mergeFieldsContainer.querySelectorAll('.merge-tag').forEach(tag => tag.remove());
         
-        if (champs.length === 0) return;
+        if (champsTries.length === 0) return;
         
-        // Parcourir les champs
-        champs.forEach(champ => {
-            // Supporter les 2 formats : objet {nom, type} ou string simple
-            const fieldName = typeof champ === 'object' ? champ.nom : champ;
-            const fieldType = typeof champ === 'object' ? champ.type : 'TXT';
+        // Parcourir les champs triés
+        champsTries.forEach(champ => {
+            const fieldName = champ.nom;           // Valeur technique pour @NOM@
+            const fieldLabel = champ.libelle || champ.nom;  // Libellé affiché
+            const fieldType = champ.type || 'TXT';
             
             const tag = document.createElement('div');
             tag.classList.add('merge-tag');
@@ -1920,7 +1970,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (fieldType === 'SYS') tag.classList.add('merge-tag-sys');
             if (fieldType === 'IMG') tag.classList.add('merge-tag-img');
             
-            // Ajouter icône + nom
+            // Ajouter icône + libellé (affiché)
             tag.innerHTML = `
                 <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -1928,14 +1978,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     <line x1="16" y1="13" x2="8" y2="13"></line>
                     <line x1="16" y1="17" x2="8" y2="17"></line>
                 </svg>
-                <span class="field-name">${fieldName}</span>
+                <span class="field-name">${fieldLabel}</span>
             `;
-            tag.title = `Type: ${fieldType} - Double-clic ou glisser pour insérer @${fieldName}@`;
+            tag.title = `${fieldLabel} (${fieldType}) - Double-clic ou glisser pour insérer @${fieldName}@`;
+            tag.dataset.fieldName = fieldName;  // Stocker le nom technique
             
-            // Double-clic pour insertion
+            // Double-clic pour insertion (utilise le nom technique)
             tag.addEventListener('dblclick', () => insertTag(fieldName));
             
-            // Drag & drop avec syntaxe @CHAMP@
+            // Drag & drop avec syntaxe @CHAMP@ (nom technique)
             tag.draggable = true;
             tag.addEventListener('dragstart', (e) => {
                 tag.classList.add('dragging');
@@ -1943,7 +1994,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.dataTransfer.setData('application/x-merge-field', fieldName);
                 e.dataTransfer.effectAllowed = 'copyMove';
                 
-                // Créer une image de drag personnalisée (sans tooltip, transparence uniforme)
+                // Créer une image de drag personnalisée
                 const dragImage = tag.cloneNode(true);
                 dragImage.classList.remove('dragging');
                 dragImage.classList.add('no-tooltip');
@@ -1961,7 +2012,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.body.appendChild(dragImage);
                 e.dataTransfer.setDragImage(dragImage, 20, -15);
                 
-                // Nettoyer l'élément temporaire après le début du drag
+                // Nettoyer l'élément temporaire
                 setTimeout(() => {
                     if (dragImage.parentNode) {
                         document.body.removeChild(dragImage);
@@ -1975,10 +2026,13 @@ document.addEventListener('DOMContentLoaded', () => {
             mergeFieldsContainer.appendChild(tag);
         });
         
-        console.log(`📋 updateMergeFieldsUI: ${champs.length} champ(s) de fusion chargé(s)`);
+        console.log(`📋 updateMergeFieldsUI: ${champsTries.length} champ(s) de fusion chargé(s) (triés par ordre)`);
         
         // Mettre à jour la visibilité de la toolbar
         updateToolbarDataVisibility();
+        
+        // Mettre à jour les combos des autres zones (image, barcode)
+        updateAllFieldSelects();
     }
     
     /**
@@ -2287,8 +2341,9 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('🎯 Drop zone configurée pour', zoneId);
     }
 
-    // Initialisation des champs de fusion avec les valeurs par défaut
+    // Initialiser la toolbar Data et les combos avec les champs par défaut
     updateMergeFieldsUI(mergeFields);
+    // Note : updateAllFieldSelects() est appelé dans updateMergeFieldsUI()
 
     /**
      * Insère un champ de fusion à la position du curseur.
@@ -6503,8 +6558,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (hasField) {
             if (barcodeValueRow) barcodeValueRow.style.display = 'none';
             if (barcodeFieldRow) barcodeFieldRow.style.display = '';
-            // Peupler les champs de fusion
-            populateBarcodeFieldsSelect(champFusion);
+            // Peupler les champs de fusion et sélectionner la valeur
+            updateBarcodeFieldSelect();
+            if (barcodeInputField && champFusion) barcodeInputField.value = champFusion;
         } else {
             if (barcodeValueRow) barcodeValueRow.style.display = '';
             if (barcodeFieldRow) barcodeFieldRow.style.display = 'none';
@@ -6582,32 +6638,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (barcodeValY) barcodeValY.value = yMm.toFixed(1).replace('.', ',');
         if (barcodeValW) barcodeValW.value = wMm.toFixed(1).replace('.', ',');
         if (barcodeValH) barcodeValH.value = hMm.toFixed(1).replace('.', ',');
-    }
-
-    /**
-     * Peuple le select des champs de fusion pour barcode.
-     *
-     * @param {string} [selectedValue] - Valeur à sélectionner
-     * @returns {void}
-     */
-    function populateBarcodeFieldsSelect(selectedValue) {
-        if (!barcodeInputField) return;
-        
-        // Vider le select
-        barcodeInputField.innerHTML = '<option value="">Sélectionner...</option>';
-        
-        // Ajouter les champs disponibles
-        if (documentState.mergeFields && Array.isArray(documentState.mergeFields)) {
-            documentState.mergeFields.forEach(field => {
-                const option = document.createElement('option');
-                option.value = field.nom;
-                option.textContent = field.nom;
-                if (selectedValue && field.nom === selectedValue) {
-                    option.selected = true;
-                }
-                barcodeInputField.appendChild(option);
-            });
-        }
     }
 
     /**
@@ -6753,7 +6783,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (sourceType === 'champ') {
                     if (barcodeValueRow) barcodeValueRow.style.display = 'none';
                     if (barcodeFieldRow) barcodeFieldRow.style.display = '';
-                    populateBarcodeFieldsSelect();
+                    updateBarcodeFieldSelect();
                 } else {
                     if (barcodeValueRow) barcodeValueRow.style.display = '';
                     if (barcodeFieldRow) barcodeFieldRow.style.display = 'none';
@@ -7852,7 +7882,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Remplir le select des champs de fusion
             updateBarcodeFieldSelect();
-            if (inputBarcodeField) inputBarcodeField.value = data.champFusion || '';
+            if (barcodeInputField) barcodeInputField.value = data.champFusion || '';
             
             // Verrouillage
             if (chkLock) chkLock.checked = data.locked || false;
@@ -9046,34 +9076,50 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
-     * Remplit le select des champs de fusion de type IMG
+     * Remplit le select des champs de fusion de type IMG pour les zones image
+     * Affiche le libelle, trie par ordre, utilise nom comme value
+     * @param {string} [selectedValue=''] - Valeur à pré-sélectionner
      */
-    function populateImageFieldsSelect(selectedValue) {
+    function populateImageFieldsSelect(selectedValue = '') {
         if (!imageInputChamp) return;
         
         imageInputChamp.innerHTML = '';
         
-        // Récupérer les champs de fusion de type IMG
-        const champs = documentState.champsFusion || [];
+        // Récupérer les champs de fusion (protection si documentState pas encore initialisé)
+        let champs;
+        try {
+            champs = (documentState && documentState.champsFusion) || mergeFields || [];
+        } catch (e) {
+            champs = mergeFields || [];
+        }
+        
+        // Filtrer les champs de type IMG uniquement
         const imgChamps = champs.filter(c => {
             if (typeof c === 'object') return c.type === 'IMG';
             return false;
         });
         
+        // Trier par ordre croissant
+        const champsTries = [...imgChamps].sort((a, b) => (a.ordre || 0) - (b.ordre || 0));
+        
         // Ajouter une option vide
         const emptyOption = document.createElement('option');
         emptyOption.value = '';
-        emptyOption.textContent = '-- Sélectionner --';
+        emptyOption.textContent = '-- Sélectionner un champ --';
         imageInputChamp.appendChild(emptyOption);
         
-        imgChamps.forEach(champ => {
+        // Ajouter les champs triés
+        champsTries.forEach(champ => {
             const option = document.createElement('option');
-            const fieldName = typeof champ === 'object' ? champ.nom : champ;
+            const fieldName = champ.nom;                    // Valeur technique
+            const fieldLabel = champ.libelle || champ.nom;  // Libellé affiché
             option.value = fieldName;
-            option.textContent = fieldName;
+            option.textContent = fieldLabel;
             if (fieldName === selectedValue) option.selected = true;
             imageInputChamp.appendChild(option);
         });
+        
+        console.log(`🖼️ populateImageFieldsSelect: ${champsTries.length} champ(s) IMG disponible(s)`);
     }
     
     // ========================================
@@ -9081,25 +9127,76 @@ document.addEventListener('DOMContentLoaded', () => {
     // ========================================
     
     /**
-     * Remplit le select des champs de fusion pour les code-barres
+     * Remplit le select des champs de fusion pour les zones code-barres
+     * Affiche le libelle, trie par ordre, utilise nom comme value
+     * Inclut tous les types de champs (TXT, SYS) sauf IMG
      */
     function updateBarcodeFieldSelect() {
-        if (!inputBarcodeField) return;
+        if (!barcodeInputField) return;
         
         // Vider et ajouter l'option par défaut
-        inputBarcodeField.innerHTML = '<option value="">-- Sélectionner un champ --</option>';
+        barcodeInputField.innerHTML = '';
         
-        // Ajouter les champs de fusion disponibles
-        const champs = documentState.champsFusion || mergeFields || [];
-        champs.forEach(champ => {
-            const fieldName = typeof champ === 'object' ? champ.nom : champ;
-            const fieldType = typeof champ === 'object' ? champ.type : 'TXT';
-            
-            const option = document.createElement('option');
-            option.value = fieldName;
-            option.textContent = fieldName + (fieldType !== 'TXT' ? ` (${fieldType})` : '');
-            inputBarcodeField.appendChild(option);
+        const emptyOption = document.createElement('option');
+        emptyOption.value = '';
+        emptyOption.textContent = '-- Sélectionner un champ --';
+        barcodeInputField.appendChild(emptyOption);
+        
+        // Récupérer les champs de fusion (protection si documentState pas encore initialisé)
+        let champs;
+        try {
+            champs = (documentState && documentState.champsFusion) || mergeFields || [];
+        } catch (e) {
+            champs = mergeFields || [];
+        }
+        
+        // Normaliser si nécessaire (tableau de strings)
+        const champsNormalises = champs.map((champ, index) => {
+            if (typeof champ === 'string') {
+                return { nom: champ.toUpperCase().replace(/\s+/g, '_'), libelle: champ, type: 'TXT', ordre: index + 1 };
+            }
+            return champ;
         });
+        
+        // Filtrer : exclure les champs IMG (pas pertinent pour code-barres)
+        const champsBarcode = champsNormalises.filter(c => c.type !== 'IMG');
+        
+        // Trier par ordre croissant
+        const champsTries = [...champsBarcode].sort((a, b) => (a.ordre || 0) - (b.ordre || 0));
+        
+        // Ajouter les champs triés
+        champsTries.forEach(champ => {
+            const option = document.createElement('option');
+            const fieldName = champ.nom;                    // Valeur technique
+            const fieldLabel = champ.libelle || champ.nom;  // Libellé affiché
+            const fieldType = champ.type || 'TXT';
+            
+            option.value = fieldName;
+            // Afficher le libellé + indication du type si SYS
+            option.textContent = fieldLabel + (fieldType === 'SYS' ? ' (système)' : '');
+            barcodeInputField.appendChild(option);
+        });
+        
+        console.log(`📊 updateBarcodeFieldSelect: ${champsTries.length} champ(s) disponible(s) pour code-barres`);
+    }
+    
+    /**
+     * Met à jour tous les selects de champs de fusion (image et code-barres)
+     * Appelée après chargement des champs ou modification de la liste
+     * Vérifie que documentState est initialisé avant d'exécuter
+     */
+    function updateAllFieldSelects() {
+        // Protection : documentState peut ne pas être encore initialisé au chargement
+        // (variable let dans la TDZ - temporal dead zone)
+        try {
+            if (!documentState) return;
+        } catch (e) {
+            // documentState pas encore déclaré/initialisé
+            return;
+        }
+        populateImageFieldsSelect('');
+        updateBarcodeFieldSelect();
+        console.log('🔄 updateAllFieldSelects: tous les combos de champs mis à jour');
     }
     
     /**
@@ -9342,7 +9439,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Mettre à jour les données
         if (inputBarcodeName) zoneData.nom = inputBarcodeName.value;
         if (inputBarcodeType) zoneData.typeCodeBarres = inputBarcodeType.value;
-        if (inputBarcodeField) zoneData.champFusion = inputBarcodeField.value;
+        if (barcodeInputField) zoneData.champFusion = barcodeInputField.value;
         if (inputBarcodeReadable) zoneData.texteLisible = inputBarcodeReadable.value;
         if (inputBarcodeFontsize) zoneData.taillePolice = parseInt(inputBarcodeFontsize.value) || 8;
         if (inputBarcodeColor) zoneData.couleur = inputBarcodeColor.value;
@@ -9409,8 +9506,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    if (inputBarcodeField) {
-        inputBarcodeField.addEventListener('change', () => {
+    if (barcodeInputField) {
+        barcodeInputField.addEventListener('change', () => {
             updateActiveBarcodeZoneData();
             saveState();
         });
