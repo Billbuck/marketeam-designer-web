@@ -537,6 +537,17 @@ document.addEventListener('DOMContentLoaded', () => {
      */
 
     /**
+     * @typedef {Object} ChampValeurWebDev
+     * @property {string} nom - Nom du champ (ex: "CIVILITE", "NOM")
+     * @property {string} valeur - Valeur du champ (ex: "Monsieur", "DUPONT")
+     */
+
+    /**
+     * @typedef {Object} EnregistrementWebDev
+     * @property {ChampValeurWebDev[]} enregistrement - Tableau des paires nom/valeur
+     */
+
+    /**
      * @typedef {Object} DocumentJsonWebDev
      * @property {Object} [identification] - Identification du document
      * @property {Object} [formatDocument] - Format et dimensions
@@ -4297,6 +4308,52 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * Convertit un enregistrement WebDev (tableau nom/valeur) en objet plat
+     * @param {EnregistrementWebDev} enregistrementWebDev - Enregistrement au format WebDev
+     * @returns {EchantillonData} Objet plat avec clés dynamiques
+     * @example
+     * // Entrée : {enregistrement: [{nom: "NOM", valeur: "DUPONT"}, {nom: "PRENOM", valeur: "Jean"}]}
+     * // Sortie : {NOM: "DUPONT", PRENOM: "Jean"}
+     */
+    function convertEnregistrementToObject(enregistrementWebDev) {
+        const obj = {};
+        
+        if (!enregistrementWebDev || !Array.isArray(enregistrementWebDev.enregistrement)) {
+            console.warn('⚠️ convertEnregistrementToObject: format invalide', enregistrementWebDev);
+            return obj;
+        }
+        
+        for (const champ of enregistrementWebDev.enregistrement) {
+            if (champ && champ.nom !== undefined) {
+                obj[champ.nom] = champ.valeur || '';
+            }
+        }
+        
+        return obj;
+    }
+
+    /**
+     * Convertit le tableau donneesApercu WebDev en format interne Designer
+     * @param {EnregistrementWebDev[]} donneesApercuWebDev - Tableau au format WebDev
+     * @returns {EchantillonData[]} Tableau d'objets plats pour le Designer
+     */
+    function convertDonneesApercuFromWebDev(donneesApercuWebDev) {
+        if (!Array.isArray(donneesApercuWebDev)) {
+            console.warn('⚠️ convertDonneesApercuFromWebDev: pas un tableau', donneesApercuWebDev);
+            return [];
+        }
+        
+        const result = donneesApercuWebDev.map((enreg, index) => {
+            const converted = convertEnregistrementToObject(enreg);
+            console.log(`📄 Enregistrement ${index + 1} converti:`, converted);
+            return converted;
+        });
+        
+        console.log(`✅ ${result.length} enregistrement(s) converti(s) depuis WebDev`);
+        return result;
+    }
+
+    /**
      * Affiche les données d'aperçu dans la console (debug)
      * @returns {void}
      */
@@ -4314,11 +4371,54 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('═══════════════════════════════════════════════════════════');
     }
 
+    /**
+     * Teste la conversion du format WebDev vers format interne
+     * À appeler depuis la console : testConversionWebDev()
+     * @returns {void}
+     */
+    function testConversionWebDev() {
+        const testDataWebDev = [
+            {
+                enregistrement: [
+                    {nom: "CIVILITE", valeur: "Monsieur"},
+                    {nom: "NOM", valeur: "TEST-WEBDEV"},
+                    {nom: "PRENOM", valeur: "Jean"}
+                ]
+            },
+            {
+                enregistrement: [
+                    {nom: "CIVILITE", valeur: "Madame"},
+                    {nom: "NOM", valeur: "CONVERSION"},
+                    {nom: "PRENOM", valeur: "Marie"}
+                ]
+            }
+        ];
+        
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log('🧪 TEST CONVERSION FORMAT WEBDEV');
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log('Entrée (format WebDev):', JSON.stringify(testDataWebDev, null, 2));
+        
+        const converted = convertDonneesApercuFromWebDev(testDataWebDev);
+        
+        console.log('───────────────────────────────────────────────────────────');
+        console.log('Sortie (format interne):', JSON.stringify(converted, null, 2));
+        console.log('═══════════════════════════════════════════════════════════');
+        
+        // Vérification
+        if (converted[0].NOM === "TEST-WEBDEV" && converted[1].PRENOM === "Marie") {
+            console.log('✅ TEST RÉUSSI');
+        } else {
+            console.log('❌ TEST ÉCHOUÉ');
+        }
+    }
+
     // Exposer pour debug console
     window.debugPreviewData = debugPreviewData;
     window.previewState = previewState;
     window.replaceMergeFields = replaceMergeFields;
     window.displayMergedContent = displayMergedContent;
+    window.testConversionWebDev = testConversionWebDev;
     // Note: window.documentState est exposé dans la section de démarrage (après loadFromLocalStorage)
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -13990,7 +14090,17 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Stocker les données d'aperçu (échantillons de la base de données)
         if (effectiveDocumentJson.donneesApercu && Array.isArray(effectiveDocumentJson.donneesApercu) && effectiveDocumentJson.donneesApercu.length > 0) {
-            documentState.donneesApercu = effectiveDocumentJson.donneesApercu;
+            // Vérifier si c'est le format WebDev (avec enregistrement) ou format plat
+            if (effectiveDocumentJson.donneesApercu.length > 0 && 
+                effectiveDocumentJson.donneesApercu[0].enregistrement !== undefined) {
+                // Format WebDev : convertir en format interne
+                console.log('📥 donneesApercu: format WebDev détecté, conversion...');
+                documentState.donneesApercu = convertDonneesApercuFromWebDev(effectiveDocumentJson.donneesApercu);
+            } else {
+                // Format plat (données fictives ou déjà converties)
+                console.log('📥 donneesApercu: format plat détecté');
+                documentState.donneesApercu = effectiveDocumentJson.donneesApercu;
+            }
             console.log(`  → ${documentState.donneesApercu.length} échantillon(s) de données chargé(s) pour l'aperçu`);
             
             // Mettre à jour l'état du bouton aperçu
