@@ -12480,7 +12480,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // === CONTRAINTES MINIMALES ZONE textQuill (mm) ===
                 if (zonesData[firstSelectedId] && zonesData[firstSelectedId].type === 'textQuill') {
                     const minW = mmToPx(20);
-                    const minH = mmToPx(10);
+                    const minH = mmToPx(5);
                     newW = Math.max(newW, minW);
                     newH = Math.max(newH, minH);
                     
@@ -12827,9 +12827,9 @@ document.addEventListener('DOMContentLoaded', () => {
         let wMm = zoneData.wMm !== undefined ? zoneData.wMm : pxToMm(zoneEl.offsetWidth);
         let hMm = zoneData.hMm !== undefined ? zoneData.hMm : pxToMm(zoneEl.offsetHeight);
         
-        // Taille minimum (2mm, sauf textQuill : 20mm x 10mm)
+        // Taille minimum (2mm, sauf textQuill : 20mm x 5mm)
         const minWidthMm = (zoneData.type === 'textQuill') ? 20 : 2;
-        const minHeightMm = (zoneData.type === 'textQuill') ? 10 : 2;
+        const minHeightMm = (zoneData.type === 'textQuill') ? 5 : 2;
         
         // Vérifier si c'est un code 2D (doit rester carré)
         let is2D = false;
