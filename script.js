@@ -4406,6 +4406,232 @@ document.addEventListener('DOMContentLoaded', () => {
             : 'Aucune donnée d\'aperçu disponible';
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Aperçu de fusion - Sauvegarde/Restauration du contenu
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Sauvegarde le contenu original de toutes les zones texte (toutes pages)
+     * pour pouvoir le restaurer après l'aperçu.
+     * @returns {void}
+     */
+    function saveAllZonesContent() {
+        console.log('💾 saveAllZonesContent() - Sauvegarde du contenu original');
+        
+        previewState.savedContents.clear();
+        
+        // Parcourir toutes les pages
+        documentState.pages.forEach((page, pageIndex) => {
+            const zones = page.zones || {};
+            
+            Object.entries(zones).forEach(([zoneId, zoneData]) => {
+                // Uniquement les zones texte Quill
+                if (zoneData.type !== 'textQuill') return;
+                
+                const quillInstance = quillInstances.get(zoneId);
+                
+                if (quillInstance) {
+                    // Sauvegarder le Delta Quill (format riche)
+                    const delta = quillInstance.getContents();
+                    const htmlContent = quillInstance.root.innerHTML;
+                    
+                    previewState.savedContents.set(zoneId, {
+                        pageIndex: pageIndex,
+                        quillDelta: JSON.parse(JSON.stringify(delta)), // Deep copy
+                        htmlContent: htmlContent
+                    });
+                    
+                    console.log(`  → Zone ${zoneId} (page ${pageIndex + 1}) sauvegardée`);
+                }
+            });
+        });
+        
+        console.log(`💾 ${previewState.savedContents.size} zone(s) sauvegardée(s)`);
+    }
+
+    /**
+     * Restaure le contenu original de toutes les zones texte
+     * @returns {void}
+     */
+    function restoreAllZonesContent() {
+        console.log('🔄 restoreAllZonesContent() - Restauration du contenu original');
+        
+        previewState.savedContents.forEach((savedData, zoneId) => {
+            const quillInstance = quillInstances.get(zoneId);
+            
+            if (quillInstance && savedData.quillDelta) {
+                // Restaurer le Delta Quill
+                quillInstance.setContents(savedData.quillDelta, 'silent');
+                console.log(`  → Zone ${zoneId} restaurée`);
+            }
+        });
+        
+        console.log(`🔄 ${previewState.savedContents.size} zone(s) restaurée(s)`);
+        previewState.savedContents.clear();
+    }
+
+    /**
+     * Active le mode aperçu de fusion.
+     * - Sauvegarde le contenu original
+     * - Désactive l'édition des zones
+     * - Affiche les contrôles de navigation
+     * @returns {boolean} true si l'activation a réussi
+     */
+    function activatePreview() {
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log('👁️ activatePreview() - Activation du mode aperçu');
+        console.log('═══════════════════════════════════════════════════════════');
+        
+        // Vérifier qu'on a des données d'aperçu
+        if (!hasPreviewData()) {
+            console.warn('⚠️ Aucune donnée d\'aperçu disponible');
+            return false;
+        }
+        
+        // Déjà en mode aperçu ?
+        if (previewState.active) {
+            console.log('ℹ️ Déjà en mode aperçu');
+            return true;
+        }
+        
+        // 1. Sauvegarder le contenu original de toutes les zones
+        saveAllZonesContent();
+        
+        // 2. Désélectionner toutes les zones
+        deselectAll();
+        
+        // 3. Désactiver l'édition de toutes les zones Quill
+        quillInstances.forEach((quill, zoneId) => {
+            quill.disable();
+            
+            // Ajouter la classe visuelle
+            const zoneEl = document.getElementById(zoneId);
+            if (zoneEl) {
+                zoneEl.classList.add('preview-mode');
+            }
+        });
+        
+        // 4. Réinitialiser l'index à 0
+        previewState.currentIndex = 0;
+        
+        // 5. Marquer le mode aperçu actif
+        previewState.active = true;
+        
+        // 6. Afficher les contrôles de navigation
+        showPreviewControls();
+        
+        // 7. Désactiver le drag & drop des zones
+        disableZoneInteractions();
+        
+        console.log('✅ Mode aperçu activé');
+        console.log('═══════════════════════════════════════════════════════════');
+        
+        // TODO Phase 4 : displayMergedContent(0)
+        
+        return true;
+    }
+
+    /**
+     * Désactive le mode aperçu et restaure le mode édition.
+     * - Restaure le contenu original
+     * - Réactive l'édition des zones
+     * - Masque les contrôles de navigation
+     * @returns {void}
+     */
+    function deactivatePreview() {
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log('👁️ deactivatePreview() - Désactivation du mode aperçu');
+        console.log('═══════════════════════════════════════════════════════════');
+        
+        // Pas en mode aperçu ?
+        if (!previewState.active) {
+            console.log('ℹ️ Pas en mode aperçu');
+            return;
+        }
+        
+        // 1. Restaurer le contenu original de toutes les zones
+        restoreAllZonesContent();
+        
+        // 2. Réactiver l'édition de toutes les zones Quill
+        quillInstances.forEach((quill, zoneId) => {
+            quill.enable();
+            
+            // Retirer la classe visuelle
+            const zoneEl = document.getElementById(zoneId);
+            if (zoneEl) {
+                zoneEl.classList.remove('preview-mode');
+            }
+        });
+        
+        // 3. Marquer le mode aperçu inactif
+        previewState.active = false;
+        
+        // 4. Masquer les contrôles de navigation
+        hidePreviewControls();
+        
+        // 5. Réactiver le drag & drop des zones
+        enableZoneInteractions();
+        
+        console.log('✅ Mode édition restauré');
+        console.log('═══════════════════════════════════════════════════════════');
+    }
+
+    /**
+     * Désactive les interactions de manipulation des zones (drag, resize)
+     * Utilisé en mode aperçu pour empêcher les modifications.
+     * @returns {void}
+     */
+    function disableZoneInteractions() {
+        console.log('🔒 disableZoneInteractions()');
+        
+        // Parcourir toutes les zones de la page courante
+        const zones = a4Page.querySelectorAll('.zone-frame');
+        zones.forEach(zone => {
+            // Désactiver le drag
+            zone.setAttribute('data-preview-draggable', zone.draggable);
+            zone.draggable = false;
+            
+            // Ajouter une classe pour le style
+            zone.classList.add('interactions-disabled');
+        });
+        
+        // Désactiver les handles de redimensionnement
+        const handles = a4Page.querySelectorAll('.resize-handle');
+        handles.forEach(handle => {
+            handle.style.pointerEvents = 'none';
+            handle.style.display = 'none';
+        });
+    }
+
+    /**
+     * Réactive les interactions de manipulation des zones
+     * @returns {void}
+     */
+    function enableZoneInteractions() {
+        console.log('🔓 enableZoneInteractions()');
+        
+        // Parcourir toutes les zones de la page courante
+        const zones = a4Page.querySelectorAll('.zone-frame');
+        zones.forEach(zone => {
+            // Restaurer le drag
+            const wasDraggable = zone.getAttribute('data-preview-draggable');
+            if (wasDraggable !== null) {
+                zone.draggable = (wasDraggable === 'true');
+                zone.removeAttribute('data-preview-draggable');
+            }
+            
+            // Retirer la classe
+            zone.classList.remove('interactions-disabled');
+        });
+        
+        // Réactiver les handles de redimensionnement
+        const handles = a4Page.querySelectorAll('.resize-handle');
+        handles.forEach(handle => {
+            handle.style.pointerEvents = '';
+            handle.style.display = '';
+        });
+    }
+
     // --- FONCTIONS HELPER POUR ACCÈS AUX DONNÉES ---
 
     /**
@@ -4637,6 +4863,12 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function createTextQuillZone() {
+        // Bloquer la création de zones en mode aperçu
+        if (previewState.active) {
+            console.warn('⚠️ Création de zone bloquée en mode aperçu');
+            return null;
+        }
+        
         documentState.zoneCounter++;
         zoneCounter = documentState.zoneCounter; // Synchroniser pour compatibilité
         
@@ -4693,6 +4925,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     btnAddQr.addEventListener('click', () => {
+        // Bloquer la création de zones en mode aperçu
+        if (previewState.active) {
+            console.warn('⚠️ Création de zone QR bloquée en mode aperçu');
+            return;
+        }
+        
         documentState.zoneCounter++;
         zoneCounter = documentState.zoneCounter; // Synchroniser pour compatibilité
         const id = `zone-${zoneCounter}`;
@@ -4717,6 +4955,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Listener pour créer une zone image
     btnAddImage.addEventListener('click', () => {
+        // Bloquer la création de zones en mode aperçu
+        if (previewState.active) {
+            console.warn('⚠️ Création de zone image bloquée en mode aperçu');
+            return;
+        }
+        
         documentState.zoneCounter++;
         zoneCounter = documentState.zoneCounter;
         const id = `zone-${zoneCounter}`;
@@ -4763,6 +5007,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnAddBarcode = document.getElementById('btn-add-barcode');
     if (btnAddBarcode) {
         btnAddBarcode.addEventListener('click', () => {
+            // Bloquer la création de zones en mode aperçu
+            if (previewState.active) {
+                console.warn('⚠️ Création de zone code-barres bloquée en mode aperçu');
+                return;
+            }
+            
             documentState.zoneCounter++;
             zoneCounter = documentState.zoneCounter;
             const id = `zone-${zoneCounter}`;
@@ -11679,6 +11929,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return; // Laisser le pan gérer
         }
         
+        // Bloquer le drag/resize en mode aperçu
+        if (previewState.active) {
+            return;
+        }
+        
         // Vérifier si on clique sur une zone sélectionnée (pour le drag/resize)
         if (selectedZoneIds.length > 0) {
             const zonesData = getCurrentPageZones();
@@ -15006,21 +15261,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // Aperçu de fusion - Event Listeners (Phase 2 - UI seulement)
     // ─────────────────────────────────────────────────────────────────────────
 
-    // Bouton "Aperçu" - Placeholder (logique Phase 3)
+    // Bouton "Aperçu" - Activer le mode aperçu
     if (btnPreview) {
         btnPreview.addEventListener('click', () => {
             console.log('🔘 Clic sur Aperçu');
-            // TODO Phase 3 : activatePreview()
-            showPreviewControls(); // Test UI uniquement
+            activatePreview();
         });
     }
 
-    // Bouton "Fermer" - Placeholder (logique Phase 3)
+    // Bouton "Fermer" - Désactiver le mode aperçu
     if (btnClosePreview) {
         btnClosePreview.addEventListener('click', () => {
             console.log('🔘 Clic sur Fermer');
-            // TODO Phase 3 : deactivatePreview()
-            hidePreviewControls(); // Test UI uniquement
+            deactivatePreview();
         });
     }
 
@@ -15047,6 +15300,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Raccourci clavier Échap pour fermer l'aperçu
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && previewState.active) {
+            e.preventDefault();
+            deactivatePreview();
+        }
+    });
 
     // Initialiser l'état du bouton Aperçu
     updatePreviewButtonState();

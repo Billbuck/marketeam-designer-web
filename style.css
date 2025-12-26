@@ -3488,12 +3488,6 @@ body.in-iframe .toolbar {
     border-color: #4CAF50;
 }
 
-/* Zones en mode aperçu - indicateur visuel */
-.zone-frame.preview-mode {
-    outline: 2px dashed #4CAF50 !important;
-    outline-offset: 2px;
-}
-
 /* Curseur lecture seule en mode aperçu */
 .zone-frame.preview-mode .ql-editor {
     cursor: default;
@@ -3508,4 +3502,18 @@ body.preview-mode-active #actions-section .btn:not(#btn-delete-zone) {
 /* Indicateur global dans la sidebar */
 body.preview-mode-active .sidebar {
     border-right: 3px solid #4CAF50;
+}
+
+/* Zones avec interactions désactivées */
+.zone-frame.interactions-disabled {
+    cursor: default !important;
+}
+
+.zone-frame.interactions-disabled .zone-drag-handle {
+    display: none !important;
+}
+
+/* Empêcher la sélection en mode aperçu */
+.zone-frame.preview-mode * {
+    user-select: none;
 }
