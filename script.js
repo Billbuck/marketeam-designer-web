@@ -955,6 +955,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const fieldsCount = document.getElementById('fields-count');
     /** @type {HTMLElement|null} Message si aucun champ */
     const fieldsEmpty = document.getElementById('fields-empty');
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Aperçu de fusion - Références DOM
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /** @type {HTMLElement|null} Section Aperçu dans la sidebar */
+    const previewSection = document.getElementById('preview-section');
+
+    /** @type {HTMLElement|null} Container du bouton Aperçu */
+    const previewBtnContainer = document.getElementById('preview-btn-container');
+
+    /** @type {HTMLButtonElement|null} Bouton activer aperçu */
+    const btnPreview = document.getElementById('btn-preview');
+
+    /** @type {HTMLElement|null} Container des contrôles de navigation */
+    const previewControls = document.getElementById('preview-controls');
+
+    /** @type {HTMLButtonElement|null} Bouton enregistrement précédent */
+    const btnPrevRecord = document.getElementById('btn-prev-record');
+
+    /** @type {HTMLButtonElement|null} Bouton enregistrement suivant */
+    const btnNextRecord = document.getElementById('btn-next-record');
+
+    /** @type {HTMLSpanElement|null} Indicateur d'enregistrement courant */
+    const recordIndicator = document.getElementById('record-indicator');
+
+    /** @type {HTMLButtonElement|null} Bouton fermer aperçu */
+    const btnClosePreview = document.getElementById('btn-close-preview');
     
     // Fonction pour mettre à jour l'affichage du spin button d'épaisseur de bordure
     function updateBorderWidthDisplay(value) {
@@ -4275,6 +4303,108 @@ document.addEventListener('DOMContentLoaded', () => {
     window.debugPreviewData = debugPreviewData;
     window.previewState = previewState;
     // Note: window.documentState est exposé dans la section de démarrage (après loadFromLocalStorage)
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Aperçu de fusion - Fonctions UI
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Met à jour l'indicateur d'enregistrement (ex: "3 / 10")
+     * @returns {void}
+     */
+    function updateRecordIndicator() {
+        if (!recordIndicator) return;
+        
+        const total = documentState.donneesApercu.length;
+        const current = previewState.currentIndex + 1; // 1-based pour l'affichage
+        
+        recordIndicator.textContent = `${current} / ${total}`;
+        
+        // Désactiver les boutons aux extrémités
+        if (btnPrevRecord) {
+            btnPrevRecord.disabled = (previewState.currentIndex === 0);
+        }
+        if (btnNextRecord) {
+            btnNextRecord.disabled = (previewState.currentIndex >= total - 1);
+        }
+    }
+
+    /**
+     * Affiche les contrôles d'aperçu (mode aperçu)
+     * @returns {void}
+     */
+    function showPreviewControls() {
+        console.log('👁️ showPreviewControls()');
+        
+        // Masquer le bouton Aperçu
+        if (previewBtnContainer) {
+            previewBtnContainer.style.display = 'none';
+        }
+        
+        // Afficher les contrôles de navigation
+        if (previewControls) {
+            previewControls.style.display = 'flex';
+        }
+        
+        // Ajouter la classe preview-active à la section
+        if (previewSection) {
+            previewSection.classList.add('preview-active');
+        }
+        
+        // Ajouter la classe sur le body pour les styles globaux
+        document.body.classList.add('preview-mode-active');
+        
+        // Mettre à jour l'indicateur
+        updateRecordIndicator();
+    }
+
+    /**
+     * Masque les contrôles d'aperçu (retour mode édition)
+     * @returns {void}
+     */
+    function hidePreviewControls() {
+        console.log('👁️ hidePreviewControls()');
+        
+        // Afficher le bouton Aperçu
+        if (previewBtnContainer) {
+            previewBtnContainer.style.display = 'block';
+        }
+        
+        // Masquer les contrôles de navigation
+        if (previewControls) {
+            previewControls.style.display = 'none';
+        }
+        
+        // Retirer la classe preview-active de la section
+        if (previewSection) {
+            previewSection.classList.remove('preview-active');
+        }
+        
+        // Retirer la classe du body
+        document.body.classList.remove('preview-mode-active');
+    }
+
+    /**
+     * Vérifie si des données d'aperçu sont disponibles
+     * @returns {boolean} true si au moins un enregistrement existe
+     */
+    function hasPreviewData() {
+        return documentState.donneesApercu && documentState.donneesApercu.length > 0;
+    }
+
+    /**
+     * Met à jour l'état du bouton Aperçu selon la disponibilité des données
+     * @returns {void}
+     */
+    function updatePreviewButtonState() {
+        if (!btnPreview) return;
+        
+        const hasData = hasPreviewData();
+        btnPreview.disabled = !hasData;
+        btnPreview.title = hasData 
+            ? `Aperçu de la fusion (${documentState.donneesApercu.length} enregistrement(s))`
+            : 'Aucune donnée d\'aperçu disponible';
+    }
 
     // --- FONCTIONS HELPER POUR ACCÈS AUX DONNÉES ---
 
@@ -14871,6 +15001,55 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Exposer documentState pour debug console (après toutes les initialisations)
     window.documentState = documentState;
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Aperçu de fusion - Event Listeners (Phase 2 - UI seulement)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // Bouton "Aperçu" - Placeholder (logique Phase 3)
+    if (btnPreview) {
+        btnPreview.addEventListener('click', () => {
+            console.log('🔘 Clic sur Aperçu');
+            // TODO Phase 3 : activatePreview()
+            showPreviewControls(); // Test UI uniquement
+        });
+    }
+
+    // Bouton "Fermer" - Placeholder (logique Phase 3)
+    if (btnClosePreview) {
+        btnClosePreview.addEventListener('click', () => {
+            console.log('🔘 Clic sur Fermer');
+            // TODO Phase 3 : deactivatePreview()
+            hidePreviewControls(); // Test UI uniquement
+        });
+    }
+
+    // Bouton "Précédent" - Placeholder (logique Phase 5)
+    if (btnPrevRecord) {
+        btnPrevRecord.addEventListener('click', () => {
+            console.log('🔘 Clic sur Précédent');
+            if (previewState.currentIndex > 0) {
+                previewState.currentIndex--;
+                updateRecordIndicator();
+                // TODO Phase 5 : displayMergedContent(previewState.currentIndex)
+            }
+        });
+    }
+
+    // Bouton "Suivant" - Placeholder (logique Phase 5)
+    if (btnNextRecord) {
+        btnNextRecord.addEventListener('click', () => {
+            console.log('🔘 Clic sur Suivant');
+            if (previewState.currentIndex < documentState.donneesApercu.length - 1) {
+                previewState.currentIndex++;
+                updateRecordIndicator();
+                // TODO Phase 5 : displayMergedContent(previewState.currentIndex)
+            }
+        });
+    }
+
+    // Initialiser l'état du bouton Aperçu
+    updatePreviewButtonState();
     
     // Générer la navigation des pages après chargement
     renderPageNavigation();
