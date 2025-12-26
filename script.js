@@ -6557,31 +6557,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const zoneEl = document.getElementById(zoneId);
         if (!zoneEl) return;
         
-        // Récupérer les données de zone
-        const zonesData = getCurrentPageZones();
-        const zoneData = zonesData[zoneId];
+        // Lire directement depuis le DOM pour refléter les changements en temps réel
+        // (pendant le drag/resize, les valeurs zoneData.xMm ne sont pas encore mises à jour)
+        const xMm = pxToMm(parseFloat(zoneEl.style.left) || 0);
+        const yMm = pxToMm(parseFloat(zoneEl.style.top) || 0);
+        const wMm = pxToMm(zoneEl.offsetWidth);
+        const hMm = pxToMm(zoneEl.offsetHeight);
         
-        // Utiliser les valeurs mm stockées si disponibles (précision conservée)
-        // Sinon fallback sur la conversion depuis le DOM
-        let xMm, yMm, wMm, hMm;
-        
-        if (zoneData && zoneData.xMm !== undefined) {
-            xMm = zoneData.xMm;
-            yMm = zoneData.yMm;
-            wMm = zoneData.wMm;
-            hMm = zoneData.hMm;
-        } else {
-            // Fallback : recalculer depuis le DOM (perte de précision possible)
-            xMm = pxToMm(zoneEl.offsetLeft);
-            yMm = pxToMm(zoneEl.offsetTop);
-            wMm = pxToMm(zoneEl.offsetWidth);
-            hMm = pxToMm(zoneEl.offsetHeight);
-        }
-        
-        if (quillValX) quillValX.value = xMm.toFixed(1);
-        if (quillValY) quillValY.value = yMm.toFixed(1);
-        if (quillValW) quillValW.value = wMm.toFixed(1);
-        if (quillValH) quillValH.value = hMm.toFixed(1);
+        if (quillValX) quillValX.value = xMm.toFixed(1).replace('.', ',');
+        if (quillValY) quillValY.value = yMm.toFixed(1).replace('.', ',');
+        if (quillValW) quillValW.value = wMm.toFixed(1).replace('.', ',');
+        if (quillValH) quillValH.value = hMm.toFixed(1).replace('.', ',');
     }
 
     /**
@@ -12514,8 +12500,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 // === FIN CONTRAINTES ZONES IMAGE ===
                 
-                if (newW > 20) zone.style.width = newW + 'px';
-                if (newH > 20) zone.style.height = newH + 'px';
+                // Garde-fou minimal en pixels (15px ≈ 4mm, inférieur à tous les minimums définis)
+                if (newW > 15) zone.style.width = newW + 'px';
+                if (newH > 15) zone.style.height = newH + 'px';
                 
                 // Recalculer le CopyFit pendant le redimensionnement pour effet temps réel
                 if (zonesData[firstSelectedId].copyfit) {
