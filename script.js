@@ -9292,6 +9292,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Récupérer les sections par ID
         const pagesSection = document.getElementById('pages-section');
         const resetSection = document.getElementById('reset-section');
+        const deleteSection = document.getElementById('delete-section');
         const alignmentSection = document.getElementById('alignment-section');
         const sizeSection = document.getElementById('size-section');
         const spacingSection = document.getElementById('spacing-section');
@@ -9315,6 +9316,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (alignmentSection) alignmentSection.style.display = 'block';
             if (sizeSection) sizeSection.style.display = 'block';
             if (spacingSection) spacingSection.style.display = count >= 3 ? 'block' : 'none';
+            if (deleteSection) deleteSection.style.display = 'block'; // Visible pour supprimer plusieurs zones
             return;
         }
         
@@ -9325,8 +9327,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (count === 1) {
             if (previewSection) previewSection.style.display = 'none';  // no-selection
             if (pagesSection) pagesSection.style.display = 'none';      // no-selection
-            if (resetSection) resetSection.style.display = 'block';     // always
-            if (actionsSection) actionsSection.style.display = 'block'; // always
+            if (resetSection) resetSection.style.display = 'none';      // masqué avec sélection
+            if (actionsSection) actionsSection.style.display = 'none';  // masqué avec sélection
             if (historySection) historySection.style.display = 'block'; // always
             if (positionSection) positionSection.style.display = 'block'; // single
             if (alignmentSection) alignmentSection.style.display = 'none';
@@ -9334,6 +9336,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (spacingSection) spacingSection.style.display = 'none';
             if (toolsSection) toolsSection.style.display = 'none';      // no-selection
             if (zoomSection) zoomSection.style.display = 'block';       // always
+            if (deleteSection) deleteSection.style.display = 'block';   // visible avec sélection
             return;
         }
         
@@ -9343,8 +9346,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // ═══════════════════════════════════════════════════════════════════════
         if (previewSection) previewSection.style.display = 'block'; // no-selection
         if (pagesSection) pagesSection.style.display = 'block';     // no-selection
-        if (resetSection) resetSection.style.display = 'block';     // always
-        if (actionsSection) actionsSection.style.display = 'block'; // always
+        if (resetSection) resetSection.style.display = 'block';     // visible sans sélection
+        if (actionsSection) actionsSection.style.display = 'block'; // visible sans sélection
         if (historySection) historySection.style.display = 'block'; // always
         if (positionSection) positionSection.style.display = 'none'; // single
         if (alignmentSection) alignmentSection.style.display = 'none';
@@ -9352,6 +9355,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (spacingSection) spacingSection.style.display = 'none';
         if (toolsSection) toolsSection.style.display = 'block';     // no-selection
         if (zoomSection) zoomSection.style.display = 'block';       // always
+        if (deleteSection) deleteSection.style.display = 'none';    // masquée sans sélection
     }
 
     // --- FONCTIONS D'ALIGNEMENT ---
