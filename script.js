@@ -4004,6 +4004,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function restoreState(snapshot) {
         historyManager.isRestoring = true;
         
+        // AJOUT Phase 6 : Sauvegarder la sélection actuelle avant restauration
+        const previousSelection = [...selectedZoneIds];
+        
         // 1. Supprimer toutes les zones du DOM
         document.querySelectorAll('.zone').forEach(el => el.remove());
         
@@ -4020,11 +4023,28 @@ document.addEventListener('DOMContentLoaded', () => {
         // 3. Recharger la page courante (recrée les zones dans le DOM)
         loadCurrentPage();
         
-        // 4. Désélectionner tout
+        // 4. Phase 6 : Restaurer la sélection pour les zones qui existent encore
         selectedZoneIds = [];
-        deselectAll();
+        const zonesData = getCurrentPageZones();
         
-        // 5. Sauvegarder dans localStorage (sans ajouter à l'historique)
+        previousSelection.forEach(zoneId => {
+            // Vérifier si la zone existe dans l'état restauré ET dans le DOM
+            if (zonesData[zoneId] && document.getElementById(zoneId)) {
+                selectedZoneIds.push(zoneId);
+                document.getElementById(zoneId).classList.add('selected');
+            }
+        });
+        
+        // 5. Mettre à jour l'interface selon la nouvelle sélection
+        if (selectedZoneIds.length === 0) {
+            // Aucune zone à resélectionner : désélection complète
+            deselectAll();
+        } else {
+            // Mettre à jour l'UI pour refléter la sélection restaurée
+            updateSelectionUI();
+        }
+        
+        // 6. Sauvegarder dans localStorage (sans ajouter à l'historique)
         saveToLocalStorage();
         
         historyManager.isRestoring = false;
