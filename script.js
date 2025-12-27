@@ -12004,7 +12004,12 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 4. Sauvegarder l'état
         saveToLocalStorage();
-        saveState(); // Snapshot APRÈS la réinitialisation
+        
+        // AJOUT : Réinitialiser l'historique Undo/Redo
+        historyManager.states = [];
+        historyManager.currentIndex = -1;
+        
+        saveState(); // Snapshot APRÈS la réinitialisation (nouveau point de départ)
         
         hideResetConfirmation();
     }
@@ -12040,7 +12045,12 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 4. Sauvegarder l'état
         saveToLocalStorage();
-        saveState(); // Snapshot APRÈS la réinitialisation
+        
+        // AJOUT : Réinitialiser l'historique Undo/Redo
+        historyManager.states = [];
+        historyManager.currentIndex = -1;
+        
+        saveState(); // Snapshot APRÈS la réinitialisation (nouveau point de départ)
         
         hideResetConfirmation();
     }
