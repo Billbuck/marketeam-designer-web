@@ -1031,24 +1031,25 @@
                 fillAlpha = null;  // Opaque
             }
         }
-        // Format image : zone.fond.couleur / zone.fond.couleurCmyk
-        else if ((zone.fond && zone.fond.couleur) || (zone.fond && zone.fond.couleurCmyk)) {
-            if (!(zone.fond && zone.fond.transparent)) {
-                fillColor = getCmykForPsmd(zone.fond.couleur, zone.fond.couleurCmyk);
+        // Format image : zone.fond.couleurCmjn (WebDev utilise "couleurCmjn" pas "couleur" ni "couleurCmyk")
+        else if (zone.fond && zone.fond.couleurCmjn) {
+            if (!zone.fond.transparent) {
+                fillColor = getCmykForPsmd(null, zone.fond.couleurCmjn);
                 fillAlpha = null;  // Opaque
             }
         }
-        // Format barcode : zone.couleurFond / zone.couleurFondCmyk
-        else if (zone.couleurFond || zone.couleurFondCmyk) {
+        // Format barcode : zone.couleurFondCmjn (WebDev utilise "Cmjn" pas "Cmyk")
+        else if (zone.couleurFondCmjn) {
             if (!zone.transparent) {
-                fillColor = getCmykForPsmd(zone.couleurFond, zone.couleurFondCmyk);
+                // couleurFondCmjn est au format 0-100, getCmykForPsmd attend null pour hex et l'objet CMYK en 2e param
+                fillColor = getCmykForPsmd(null, zone.couleurFondCmjn);
                 fillAlpha = null;  // Opaque
             }
         }
-        // Format QR : zone.couleurs.fond / zone.couleurs.fondCmyk
-        else if ((zone.couleurs && zone.couleurs.fond) || (zone.couleurs && zone.couleurs.fondCmyk)) {
-            // QR codes n'ont pas de flag transparent explicite, on considère opaque si couleur définie
-            fillColor = getCmykForPsmd(zone.couleurs.fond, zone.couleurs.fondCmyk);
+        // Format QR : zone.couleurs.fondCmjn (WebDev utilise "fondCmjn" pas "fond" ni "fondCmyk")
+        else if (zone.couleurs && zone.couleurs.fondCmjn) {
+            // QR codes : toujours opaque si couleur définie (pas de flag transparent dans l'export)
+            fillColor = getCmykForPsmd(null, zone.couleurs.fondCmjn);
             fillAlpha = null;  // Opaque
         }
         
@@ -1057,15 +1058,33 @@
         var borderColor = { c: 0, m: 0, y: 0, k: 1 };
         var borderSize = 0;
         
+        // Mapping des styles de bordure Designer → PrintShop Mail
+        // 0 = solid (plein), 1 = dotted (points), 2 = dashed (tirets)
+        var BORDER_STYLE_MAP = {
+            'solid': 0,
+            'dotted': 1,
+            'dashed': 2
+        };
+        
+        // Lire le style de bordure depuis les données de la zone
+        var borderStyleName = 'solid'; // défaut
+        
         if (zone.bordure && zone.bordure.epaisseur) {
             borderSize = zone.bordure.epaisseur;
             borderColor = getCmykForPsmd(zone.bordure.couleur, zone.bordure.couleurCmyk, { c: 0, m: 0, y: 0, k: 1 });
+            if (zone.bordure.style) {
+                borderStyleName = zone.bordure.style;
+            }
         } else if (zone.border && zone.border.width_px) {
             borderSize = zone.border.width_px;
             borderColor = getCmykForPsmd(zone.border.color, zone.border.colorCmyk, { c: 0, m: 0, y: 0, k: 1 });
+            if (zone.border.style) {
+                borderStyleName = zone.border.style;
+            }
         }
         
-        var borderStyle = borderSize > 0 ? 2 : 0; // 0=none, 2=solid
+        // Convertir en valeur PrintShop Mail (0 = solid par défaut)
+        var borderStyle = BORDER_STYLE_MAP[borderStyleName] || 0;
         
         return `<object>
 <identifier>${guid}</identifier>

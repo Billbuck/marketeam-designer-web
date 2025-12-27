@@ -18719,8 +18719,8 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
      * Génère un fichier XML complet et déclenche son téléchargement.
      * Exporte également les images avec des noms uniques liés au document.
      * 
-     * Utilise exportToWebDev() pour récupérer les données structurées,
-     * puis convertit chaque élément au format PrintShop Mail.
+     * Utilise PsmdGenerator.generatePsmdFromJson() pour la génération XML,
+     * puis gère le téléchargement des fichiers via le DOM.
      * 
      * @returns {string} Contenu XML du fichier PSMD
      * 
@@ -18740,83 +18740,31 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
             return '';
         }
         
-        // 2. Générer le préfixe unique pour ce export
-        const exportPrefix = generateExportPrefix();
-        console.log(`exportToPsmd: Préfixe d'export : ${exportPrefix}`);
+        // 2. Utiliser le générateur PSMD externe
+        const result = PsmdGenerator.generatePsmdFromJson(jsonData);
         
-        // Compter les zones
-        const nbZones = (jsonData.zonesTextQuill?.length || 0) + 
-                        (jsonData.zonesCodeBarres?.length || 0) + 
-                        (jsonData.zonesImage?.length || 0);
+        console.log(`exportToPsmd: Fichier généré : ${result.fileName}`);
+        console.log(`exportToPsmd: ${result.images.length} image(s) à exporter`);
+        console.log(`exportToPsmd: Taille du fichier: ${result.xml.length} caractères`);
         
-        console.log(`exportToPsmd: ${jsonData.pages?.length || 1} page(s), ${nbZones} zone(s) à exporter`);
-        
-        // 3. Récupérer les dimensions du document
-        const largeurMm = jsonData.formatDocument?.largeurMm || 210;
-        const hauteurMm = jsonData.formatDocument?.hauteurMm || 297;
-        
-        console.log(`exportToPsmd: Format ${largeurMm}mm x ${hauteurMm}mm`);
-        
-        // 4. Collecter les images à exporter AVANT génération XML
-        const imagesToExport = [];
-        (jsonData.zonesImage || []).forEach(zone => {
-            if (zone.source?.imageBase64) {
-                const ext = getExtensionFromBase64(zone.source.imageBase64);
-                const fileName = `${exportPrefix}_${zone.id}.${ext}`;
-                imagesToExport.push({
-                    base64: zone.source.imageBase64,
-                    fileName: fileName,
-                    zoneId: zone.id
-                });
-            }
-        });
-        
-        console.log(`exportToPsmd: ${imagesToExport.length} image(s) à exporter`);
-        
-        // 5. Construire le XML (passer le préfixe pour nommer les images)
-        let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
-        xml += '<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.printshopmail.com/support/xml/schemas/win/version-7_1_0/printshopmail7.xsd">\n';
-        
-        // Sections statiques
-        xml += generatePsmdInfo() + '\n';
-        xml += generatePsmdPrinter() + '\n';
-        xml += '<operator_instructions></operator_instructions>\n';
-        xml += generatePsmdPreferences() + '\n';
-        xml += generatePsmdDatabaseSettings() + '\n';
-        
-        // Section layouts (pages avec zones) - PASSER jsonData complet ET le préfixe
-        xml += generatePsmdLayouts(jsonData, largeurMm, hauteurMm, exportPrefix) + '\n';
-        
-        // Section variables (champs de fusion) - PASSER jsonData complet ET le préfixe
-        xml += generatePsmdVariables(jsonData, exportPrefix) + '\n';
-        
-        // Sections finales
-        xml += generatePsmdFooterSections() + '\n';
-        
-        xml += '</document>';
-        
-        console.log('=== exportToPsmd() : XML généré ===');
-        console.log(`exportToPsmd: Taille du fichier: ${xml.length} caractères`);
-        
-        // 6. Télécharger le fichier PSMD
-        const psmdFileName = `${exportPrefix}.psmd`;
-        const blob = new Blob([xml], { type: 'application/xml' });
+        // 3. Télécharger le fichier PSMD
+        const blob = new Blob([result.xml], { type: 'application/xml' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = psmdFileName;
+        a.download = result.fileName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         
-        console.log(`📥 Document exporté : ${psmdFileName}`);
+        console.log(`📥 Document exporté : ${result.fileName}`);
         
-        // 7. Télécharger les images (avec un léger délai entre chaque)
-        if (imagesToExport.length > 0) {
+        // 4. Télécharger les images (avec un léger délai entre chaque)
+        if (result.images.length > 0) {
             console.log('=== exportToPsmd() : Export des images ===');
             
-            imagesToExport.forEach((img, index) => {
+            result.images.forEach((img, index) => {
                 // Délai de 200ms entre chaque téléchargement pour éviter les blocages navigateur
                 setTimeout(() => {
                     downloadImageFromBase64(img.base64, img.fileName);
@@ -18826,7 +18774,7 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
         
         console.log('=== exportToPsmd() : Téléchargement(s) déclenché(s) ===');
         
-        return xml;
+        return result.xml;
     }
 
     // Exposer les fonctions utilitaires PSMD sur window pour les tests et l'accès externe
