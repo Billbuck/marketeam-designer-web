@@ -157,7 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {number} lineHeight - Interlignage
      * @property {boolean} locked - Zone verrouillée
      * @property {boolean} copyfit - Copy fitting activé
-     * @property {0|1|2} emptyLines - Gestion lignes vides
+     * @property {0|1} emptyLines - Gestion lignes vides (0=Conserver, 1=Variables uniquement)
      * @property {number} zIndex - Ordre d'empilement
      * @property {BorderData} border - Configuration de la bordure
      * @description Zone de texte Quill (WYSIWYG).
@@ -369,7 +369,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {boolean} systeme - Zone système (non modifiable par l'utilisateur)
      * @property {string} systemeLibelle - Libellé système
      * @property {boolean} imprimable - Zone imprimable
-     * @property {number|boolean} supprimerLignesVides - Gestion lignes vides (0/1/2 ou booléen)
+     * @property {number|boolean} supprimerLignesVides - Gestion lignes vides (0=Conserver, 1=Variables uniquement, ou booléen legacy)
      * @property {GeometrieJsonWebDev} geometrie - Géométrie en mm
      * @property {string} contenu - Contenu textuel
      * @property {FormatagePartielJsonWebDev[]} formatage - Formatage partiel
@@ -4571,7 +4571,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         pageIndex: pageIndex,
                         quillDelta: JSON.parse(JSON.stringify(delta)), // Deep copy
                         htmlContent: htmlContent,
-                        originalFontSize: parseFloat(quillInstance.root.style.fontSize) || zoneData.size || 12
+                        originalFontSize: parseFloat(quillInstance.root.style.fontSize) || zoneData.size || 12,
+                        emptyLines: zoneData.emptyLines || 0
                     });
                     
                     console.log(`  → Zone ${zoneId} (page ${pageIndex + 1}) sauvegardée`);
@@ -4694,6 +4695,153 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * Analyse un Delta Quill pour identifier les lignes ne contenant que des variables.
+     * Une ligne "variables uniquement" ne contient que des @CHAMP@ sans texte fixe ni espaces.
+     * 
+     * @param {Object} delta - Delta Quill original
+     * @returns {Set<number>} Ensemble des indices de lignes (0-based) qui ne contiennent que des variables
+     */
+    function identifyVariableOnlyLines(delta) {
+        const variableOnlyLines = new Set();
+        
+        if (!delta || !delta.ops) {
+            return variableOnlyLines;
+        }
+        
+        // Reconstruire le texte complet pour analyse ligne par ligne
+        let fullText = '';
+        for (const op of delta.ops) {
+            if (typeof op.insert === 'string') {
+                fullText += op.insert;
+            }
+        }
+        
+        // Découper en lignes
+        const lines = fullText.split('\n');
+        
+        // Pattern : une ou plusieurs variables collées, sans rien d'autre
+        // ^(@[A-Za-z0-9_]+@)+$ : commence et finit par des variables collées
+        const variableOnlyPattern = /^(@[A-Za-z0-9_]+@)+$/;
+        
+        lines.forEach((line, index) => {
+            // Ignorer la dernière "ligne" si c'est juste le résidu après le dernier \n
+            if (index === lines.length - 1 && line === '') {
+                return;
+            }
+            
+            if (variableOnlyPattern.test(line)) {
+                variableOnlyLines.add(index);
+                console.log(`  📋 Ligne ${index} identifiée comme "variables uniquement": "${line}"`);
+            }
+        });
+        
+        return variableOnlyLines;
+    }
+
+    /**
+     * Supprime les lignes vides d'un Delta fusionné si elles correspondaient à des lignes "variables uniquement".
+     * 
+     * @param {Object} mergedDelta - Delta après remplacement des variables
+     * @param {Set<number>} variableOnlyLines - Lignes identifiées comme "variables uniquement"
+     * @returns {Object} Delta nettoyé
+     */
+    function removeEmptyVariableLines(mergedDelta, variableOnlyLines) {
+        if (!mergedDelta || !mergedDelta.ops || variableOnlyLines.size === 0) {
+            return mergedDelta;
+        }
+        
+        // Reconstruire le texte pour identifier les lignes vides
+        let fullText = '';
+        for (const op of mergedDelta.ops) {
+            if (typeof op.insert === 'string') {
+                fullText += op.insert;
+            }
+        }
+        
+        const lines = fullText.split('\n');
+        
+        // Identifier les lignes à supprimer (vides ET dans variableOnlyLines)
+        const linesToRemove = new Set();
+        lines.forEach((line, index) => {
+            if (variableOnlyLines.has(index) && line.length === 0) {
+                linesToRemove.add(index);
+                console.log(`  🗑️ Ligne ${index} sera supprimée (variable vide)`);
+            }
+        });
+        
+        if (linesToRemove.size === 0) {
+            return mergedDelta;
+        }
+        
+        // Reconstruire le Delta en sautant les lignes à supprimer
+        const newOps = [];
+        let currentLine = 0;
+        let pendingText = '';
+        let pendingAttributes = null;
+        
+        for (const op of mergedDelta.ops) {
+            if (typeof op.insert !== 'string') {
+                // Embed (image, etc.) : ajouter tel quel
+                if (pendingText) {
+                    newOps.push(pendingAttributes ? { insert: pendingText, attributes: pendingAttributes } : { insert: pendingText });
+                    pendingText = '';
+                    pendingAttributes = null;
+                }
+                newOps.push({ ...op });
+                continue;
+            }
+            
+            const text = op.insert;
+            const attrs = op.attributes ? { ...op.attributes } : null;
+            
+            // Traiter caractère par caractère pour gérer les sauts de ligne
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                
+                if (char === '\n') {
+                    // Fin de ligne : décider si on garde ou pas
+                    if (linesToRemove.has(currentLine)) {
+                        // Supprimer cette ligne : ne pas ajouter le \n ni le texte accumulé
+                        pendingText = '';
+                        pendingAttributes = null;
+                    } else {
+                        // Garder cette ligne
+                        pendingText += '\n';
+                        if (pendingText) {
+                            newOps.push(attrs ? { insert: pendingText, attributes: attrs } : { insert: pendingText });
+                            pendingText = '';
+                            pendingAttributes = null;
+                        }
+                    }
+                    currentLine++;
+                } else {
+                    // Caractère normal : accumuler
+                    if (pendingAttributes === null || JSON.stringify(pendingAttributes) === JSON.stringify(attrs)) {
+                        pendingText += char;
+                        pendingAttributes = attrs;
+                    } else {
+                        // Changement d'attributs : flush
+                        if (pendingText) {
+                            newOps.push(pendingAttributes ? { insert: pendingText, attributes: pendingAttributes } : { insert: pendingText });
+                        }
+                        pendingText = char;
+                        pendingAttributes = attrs;
+                    }
+                }
+            }
+        }
+        
+        // Ajouter le texte restant
+        if (pendingText) {
+            newOps.push(pendingAttributes ? { insert: pendingText, attributes: pendingAttributes } : { insert: pendingText });
+        }
+        
+        console.log(`  ✂️ ${linesToRemove.size} ligne(s) supprimée(s)`);
+        
+        return { ops: newOps };
+    }
+
+    /**
      * Affiche le contenu fusionné pour un enregistrement donné dans toutes les zones.
      * 
      * @param {number} recordIndex - Index de l'enregistrement (0-based)
@@ -4727,7 +4875,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             // Créer le Delta fusionné
-            const mergedDelta = createMergedDelta(savedData.quillDelta, record);
+            let mergedDelta = createMergedDelta(savedData.quillDelta, record);
+            
+            // Gestion des lignes vides si emptyLines === 1 (Variables uniquement)
+            if (savedData.emptyLines === 1) {
+                const variableOnlyLines = identifyVariableOnlyLines(savedData.quillDelta);
+                if (variableOnlyLines.size > 0) {
+                    mergedDelta = removeEmptyVariableLines(mergedDelta, variableOnlyLines);
+                }
+            }
             
             // Appliquer le Delta fusionné à Quill (sans déclencher d'événements)
             quillInstance.setContents(mergedDelta, 'silent');
@@ -6332,6 +6488,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Ajouter une zone à la sélection
     function addToSelection(id) {
+        // Bloquer en mode Aperçu
+        if (previewState && previewState.active) return;
+        
         if (!selectedZoneIds.includes(id)) {
             selectedZoneIds.push(id);
             const zoneEl = document.getElementById(id);
@@ -6631,8 +6790,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Interligne - Spinner POC
         setSpinnerPocValue('quill-input-line-height', zoneData.lineHeight || QUILL_DEFAULT_LINE_HEIGHT, 0.1);
         
-        // Lignes vides
-        if (quillInputEmptyLines) quillInputEmptyLines.value = String(zoneData.emptyLines || 0);
+        // Lignes vides (migration : valeur 2 → 1 si anciens documents)
+        if (quillInputEmptyLines) {
+            let emptyLinesVal = zoneData.emptyLines || 0;
+            if (emptyLinesVal === 2) emptyLinesVal = 1;
+            quillInputEmptyLines.value = String(emptyLinesVal);
+        }
         
         // Fond - Checkbox POC
         const isTransparent = zoneData.isTransparent !== undefined ? !!zoneData.isTransparent : true;
@@ -8280,6 +8443,15 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function updateToolbarVisibility() {
+        // Masquer toutes les toolbars en mode Aperçu
+        if (previewState && previewState.active) {
+            hideQuillToolbar();
+            hideImageToolbar();
+            hideBarcodeToolbar();
+            hideQrcodeToolbar();
+            return;
+        }
+        
         // Récupérer le type de la zone sélectionnée (si une seule)
         let zoneType = null;
         let zoneId = null;
@@ -8960,6 +9132,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Ancien format booléen
                     emptyLinesValue = data.removeEmptyLines ? 1 : 0;
                 }
+                // Migration : ancienne valeur 2 → nouvelle valeur 1
+                if (emptyLinesValue === 2) emptyLinesValue = 1;
                 inputEmptyLines.value = emptyLinesValue;
             }
             
@@ -9329,6 +9503,12 @@ document.addEventListener('DOMContentLoaded', () => {
      * @see removeFromSelection - Retirer de la multi-sélection
      */
     function selectZone(id, event = null) {
+        // Bloquer la sélection en mode Aperçu
+        if (previewState && previewState.active) {
+            console.log('🚫 selectZone() bloquée - mode Aperçu actif');
+            return;
+        }
+        
         const isCtrlPressed = event && (event.ctrlKey || event.metaKey);
         const isAlreadySelected = selectedZoneIds.includes(id);
         
@@ -13789,10 +13969,15 @@ document.addEventListener('DOMContentLoaded', () => {
             rotation: zoneJson.rotation || 0,
             copyfitMin: copyfitting.tailleMinimum || 6,
             copyfitWrap: copyfitting.autoriserRetourLigne !== undefined ? copyfitting.autoriserRetourLigne : true,
-            // Lignes vides : rétrocompatibilité booléen → entier
-            emptyLines: typeof zoneJson.supprimerLignesVides === 'number' 
-                ? zoneJson.supprimerLignesVides 
-                : (zoneJson.supprimerLignesVides ? 1 : 0)
+            // Lignes vides : rétrocompatibilité booléen → entier + migration 2→1
+            emptyLines: (() => {
+                let val = typeof zoneJson.supprimerLignesVides === 'number' 
+                    ? zoneJson.supprimerLignesVides 
+                    : (zoneJson.supprimerLignesVides ? 1 : 0);
+                // Migration : ancienne valeur 2 → nouvelle valeur 1
+                if (val === 2) val = 1;
+                return val;
+            })()
         };
     }
     
