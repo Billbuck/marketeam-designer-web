@@ -1259,6 +1259,46 @@ body.in-iframe .toolbar {
     margin-bottom: 20px;
 }
 
+/* === Modale Check (vérification pré-export) === */
+
+.check-modal-icon {
+    color: var(--poc-theme-primary);
+}
+
+/* Liste d'erreurs pour la modale Check */
+.check-errors-list {
+    list-style: none;
+    padding: 0;
+    margin: 12px 0 0 0;
+    max-height: 250px;
+    overflow-y: auto;
+    text-align: left;
+}
+
+.check-errors-list li {
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    background: var(--poc-theme-primary-light);
+    border-left: 3px solid var(--poc-theme-primary);
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.check-errors-list li:last-child {
+    margin-bottom: 0;
+}
+
+.check-error-location {
+    font-weight: 600;
+    color: var(--poc-theme-primary-dark);
+    display: block;
+    margin-bottom: 2px;
+}
+
+.check-error-message {
+    color: #555;
+}
+
 .modal-buttons {
     display: flex;
     justify-content: flex-end;

@@ -597,6 +597,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnReset = document.getElementById('btn-reset');
     const btnExportJson = document.getElementById('btn-export-json');
     const btnExportPsmd = document.getElementById('btn-export-psmd');
+    const btnCheck = document.getElementById('btn-check');
     const btnImportJson = document.getElementById('btn-import-json');
     const inputImportJson = document.getElementById('input-import-json');
     const coordsPanel = null; // SUPPRIMÉ - était #coords-panel
@@ -12043,6 +12044,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnResetCurrentPage = document.getElementById('btn-reset-current-page');
     const btnResetAllPages = document.getElementById('btn-reset-all-pages');
 
+    // --- MODALE CHECK (vérification pré-export) ---
+    const checkModal = document.getElementById('check-modal');
+    const checkModalSummary = document.getElementById('check-modal-summary');
+    const checkModalErrors = document.getElementById('check-modal-errors');
+    const btnCheckClose = document.getElementById('btn-check-close');
+
     function showResetConfirmation() {
         // Afficher ou masquer le bouton "Toutes les pages" selon le nombre de pages
         if (documentState.pages.length > 1) {
@@ -12152,12 +12159,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Raccourci clavier : Escape pour fermer la modale de réinitialisation
+    // --- Event listeners pour la modale Check ---
+    // Bouton Fermer de la modale Check
+    if (btnCheckClose) {
+        btnCheckClose.addEventListener('click', hideCheckModal);
+    }
+
+    // Fermer la modale Check en cliquant sur l'overlay
+    if (checkModal) {
+        checkModal.addEventListener('click', (e) => {
+            if (e.target === checkModal) {
+                hideCheckModal();
+            }
+        });
+    }
+
+    // Raccourci clavier : Escape pour fermer les modales
     document.addEventListener('keydown', (e) => {
-        // Si la modale de réinitialisation est ouverte
-        if (!resetModal.classList.contains('hidden')) {
-            if (e.key === 'Escape') {
+        if (e.key === 'Escape') {
+            // Fermer la modale de réinitialisation si ouverte
+            if (resetModal && !resetModal.classList.contains('hidden')) {
                 hideResetConfirmation();
+            }
+            // Fermer la modale Check si ouverte
+            if (checkModal && !checkModal.classList.contains('hidden')) {
+                hideCheckModal();
             }
         }
     });
@@ -16615,6 +16641,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ───────────────────────────────────────────────────────────────────────────────
+    // Check (vérification pré-export)
+    // ───────────────────────────────────────────────────────────────────────────────
+    if (btnCheck) {
+        btnCheck.addEventListener('click', () => {
+            console.log('Clic sur bouton Check');
+            const result = checkDocumentIntegrity();
+            showCheckResult(result);
+        });
+    }
+
+    // ───────────────────────────────────────────────────────────────────────────────
     // Export PSMD (PrintShop Mail)
     // ───────────────────────────────────────────────────────────────────────────────
     if (btnExportPsmd) {
@@ -18297,6 +18334,207 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
         URL.revokeObjectURL(url);
         
         console.log(`📥 Image exportée : ${fileName}`);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // VÉRIFICATION PRÉ-EXPORT (CHECK)
+    // ═══════════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Vérifie l'intégrité de toutes les zones du document avant export.
+     * Contrôle les zones image, barcode et textQuill.
+     * 
+     * @returns {{success: boolean, errors: Array<{page: string, zoneId: string, zoneName: string, message: string}>}}
+     */
+    function checkDocumentIntegrity() {
+        console.log('🔍 checkDocumentIntegrity() - Vérification du document');
+        
+        const errors = [];
+        
+        // Récupérer les champs disponibles (objets avec propriété 'nom')
+        const availableFields = (documentState && documentState.champsFusion) || mergeFields || [];
+        const availableFieldsUpper = availableFields.map(f => {
+            // Gérer les deux formats : objet {nom: "..."} ou chaîne simple
+            const fieldName = (typeof f === 'string') ? f : (f.nom || '');
+            return fieldName.toUpperCase();
+        });
+        
+        // Parcourir toutes les pages
+        documentState.pages.forEach((page, pageIndex) => {
+            const pageName = page.name || `Page ${pageIndex + 1}`;
+            const zones = page.zones || {};
+            
+            Object.entries(zones).forEach(([zoneId, zoneData]) => {
+                const zoneName = zoneData.nom || zoneId;
+                
+                // ═══════════════════════════════════════════════════════════════
+                // VÉRIFICATION ZONE IMAGE
+                // ═══════════════════════════════════════════════════════════════
+                if (zoneData.type === 'image') {
+                    const source = zoneData.source || {};
+                    
+                    // Source fixe : vérifier présence d'une image
+                    if (source.type === 'fixe' || source.type === 'url') {
+                        const hasImage = source.imageBase64 || (source.valeur && source.valeur.trim() !== '');
+                        if (!hasImage) {
+                            errors.push({
+                                page: pageName,
+                                zoneId: zoneId,
+                                zoneName: zoneName,
+                                type: 'image',
+                                message: 'Aucune image sélectionnée (source fixe)'
+                            });
+                        }
+                    }
+                    
+                    // Source champ : vérifier qu'un champ est sélectionné
+                    if (source.type === 'champ') {
+                        const hasField = source.valeur && source.valeur.trim() !== '';
+                        if (!hasField) {
+                            errors.push({
+                                page: pageName,
+                                zoneId: zoneId,
+                                zoneName: zoneName,
+                                type: 'image',
+                                message: 'Aucun champ de fusion sélectionné'
+                            });
+                        }
+                    }
+                }
+                
+                // ═══════════════════════════════════════════════════════════════
+                // VÉRIFICATION ZONE BARCODE
+                // ═══════════════════════════════════════════════════════════════
+                if (zoneData.type === 'barcode') {
+                    const champFusion = zoneData.champFusion || '';
+                    const hasChampFusion = champFusion.trim() !== '';
+                    
+                    // Source champ : vérifier qu'un champ est sélectionné
+                    if (hasChampFusion) {
+                        // OK - un champ est sélectionné
+                    } else {
+                        // Source fixe : vérifier qu'une valeur est saisie
+                        const valeurStatique = zoneData.valeurStatique || '';
+                        if (valeurStatique.trim() === '') {
+                            errors.push({
+                                page: pageName,
+                                zoneId: zoneId,
+                                zoneName: zoneName,
+                                type: 'barcode',
+                                message: 'Aucune valeur saisie (source fixe) et aucun champ sélectionné'
+                            });
+                        }
+                    }
+                }
+                
+                // ═══════════════════════════════════════════════════════════════
+                // VÉRIFICATION ZONE TEXTQUILL
+                // ═══════════════════════════════════════════════════════════════
+                if (zoneData.type === 'textQuill') {
+                    const delta = zoneData.quillDelta;
+                    if (delta && delta.ops) {
+                        // Extraire le texte complet du delta
+                        let fullText = '';
+                        delta.ops.forEach(op => {
+                            if (typeof op.insert === 'string') {
+                                fullText += op.insert;
+                            }
+                        });
+                        
+                        // Chercher tous les @CHAMP@ dans le texte
+                        const regex = /@([A-Za-z0-9_]+)@/g;
+                        let match;
+                        while ((match = regex.exec(fullText)) !== null) {
+                            const fieldName = match[1];
+                            const fieldNameUpper = fieldName.toUpperCase();
+                            
+                            // Vérifier si le champ existe dans les champs disponibles
+                            if (!availableFieldsUpper.includes(fieldNameUpper)) {
+                                errors.push({
+                                    page: pageName,
+                                    zoneId: zoneId,
+                                    zoneName: zoneName,
+                                    type: 'textQuill',
+                                    message: `Champ inconnu : @${fieldName}@`
+                                });
+                            }
+                        }
+                    }
+                }
+            });
+        });
+        
+        console.log(`🔍 Vérification terminée : ${errors.length} erreur(s) trouvée(s)`);
+        
+        return {
+            success: errors.length === 0,
+            errors: errors
+        };
+    }
+
+    /**
+     * Affiche le résultat de la vérification.
+     * - Succès : toast discret (pas d'interruption)
+     * - Erreurs : modale élégante avec liste des problèmes
+     * 
+     * @param {{success: boolean, errors: Array<{page: string, zoneId: string, zoneName: string, message: string}>}} result
+     * @returns {void}
+     */
+    function showCheckResult(result) {
+        if (result.success) {
+            // Succès : toast discret (ne bloque pas l'export)
+            showUndoRedoToast('✅ Document OK - Prêt pour l\'export', 'success', 'check_circle');
+        } else {
+            // Erreurs : afficher la modale
+            showCheckErrorsModal(result.errors);
+        }
+    }
+
+    /**
+     * Affiche la modale avec la liste des erreurs de vérification.
+     * 
+     * @param {Array<{page: string, zoneId: string, zoneName: string, message: string}>} errors
+     * @returns {void}
+     */
+    function showCheckErrorsModal(errors) {
+        if (!checkModal || !checkModalSummary || !checkModalErrors) {
+            // Fallback si la modale n'existe pas
+            console.warn('⚠️ Modale Check non trouvée, fallback alert()');
+            let msg = `${errors.length} problème(s) détecté(s) :\n\n`;
+            errors.forEach((e, i) => {
+                msg += `${i + 1}. [${e.page}] ${e.zoneName}\n   → ${e.message}\n\n`;
+            });
+            alert(msg);
+            return;
+        }
+        
+        // Mettre à jour le résumé
+        checkModalSummary.textContent = `${errors.length} problème(s) détecté(s) :`;
+        
+        // Vider et remplir la liste d'erreurs
+        checkModalErrors.innerHTML = '';
+        
+        errors.forEach(error => {
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <span class="check-error-location">[${error.page}] ${error.zoneName}</span>
+                <span class="check-error-message">→ ${error.message}</span>
+            `;
+            checkModalErrors.appendChild(li);
+        });
+        
+        // Afficher la modale
+        checkModal.classList.remove('hidden');
+    }
+
+    /**
+     * Ferme la modale de vérification Check.
+     * @returns {void}
+     */
+    function hideCheckModal() {
+        if (checkModal) {
+            checkModal.classList.add('hidden');
+        }
     }
 
     /**

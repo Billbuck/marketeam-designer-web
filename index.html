@@ -368,6 +368,15 @@
                             </span>
                             <span class="btn-label">Import</span>
                         </button>
+                        <!-- Bouton Check (vérification pré-export) -->
+                        <button class="btn" id="btn-check" data-tooltip="Vérifier le document avant export">
+                            <span class="btn-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+                                </svg>
+                            </span>
+                            <span class="btn-label">Check</span>
+                        </button>
                         <!-- Bouton Export PSMD (PrintShop Mail) -->
                         <button class="btn" id="btn-export-psmd" data-tooltip="Exporter en format PrintShop Mail (.psmd)">
                             <span class="btn-icon">
@@ -469,6 +478,25 @@
                 <button id="btn-reset-cancel" class="btn-secondary">Annuler</button>
                 <button id="btn-reset-current-page" class="btn-danger">Page courante</button>
                 <button id="btn-reset-all-pages" class="btn-danger">Toutes les pages</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale de résultat de vérification (Check) -->
+    <div id="check-modal" class="modal-overlay hidden">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span class="material-icons check-modal-icon">warning</span>
+                <h3>Vérification échouée</h3>
+            </div>
+            <div class="modal-body">
+                <p id="check-modal-summary">Problème(s) détecté(s) :</p>
+                <ul id="check-modal-errors" class="check-errors-list">
+                    <!-- Erreurs générées dynamiquement -->
+                </ul>
+            </div>
+            <div class="modal-buttons">
+                <button id="btn-check-close" class="btn-secondary">Fermer</button>
             </div>
         </div>
     </div>
