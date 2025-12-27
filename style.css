@@ -285,7 +285,7 @@ button:last-child {
 
 .zone.selected {
     /* Utiliser outline pour la sélection - préserve la bordure utilisateur */
-    outline: 2px solid #1a73e8;
+    outline: 2px solid var(--poc-theme-primary);
     outline-offset: -1px;
     z-index: 50; /* Met la zone sélectionnée au premier plan */
 }
@@ -309,7 +309,7 @@ button:last-child {
 
 .zone-label {
     font-size: 12px;
-    color: #1a73e8;
+    color: var(--poc-theme-primary);
     font-weight: bold;
     pointer-events: none;
     user-select: none;
@@ -320,7 +320,7 @@ button:last-child {
     width: 8px;
     height: 8px;
     background-color: white;
-    border: 1px solid #1a73e8;
+    border: 1px solid var(--poc-theme-primary);
     position: absolute;
     display: none; /* Cachées par défaut - gérées par JavaScript */
 }
@@ -641,19 +641,19 @@ h4 {
     right: 0;
     top: -2px;
     height: 6px;
-    background: rgba(26, 115, 232, 0.2);
+    background: var(--poc-theme-primary);
     opacity: 0;
     transition: opacity 0.15s ease;
 }
 
 .zone.zone-text-quill.selected .zone-drag-handle:hover::after {
-    opacity: 1;
+    opacity: 0.3;
 }
 
 /* Resize handles */
 .zone.zone-text-quill .resize-handle {
     position: absolute;
-    background: #1a73e8;
+    background: var(--poc-theme-primary);
     z-index: 60;
     opacity: 0;
     transition: opacity 0.2s ease;
@@ -693,7 +693,7 @@ h4 {
 }
 
 .zone.zone-text-quill .resize-handle:hover {
-    background: #1557b0;
+    background: var(--poc-theme-primary-dark);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
