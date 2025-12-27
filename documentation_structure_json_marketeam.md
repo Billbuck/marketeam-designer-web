@@ -168,7 +168,12 @@ Ce document décrit la structure JSON utilisée pour initialiser le Designer Mar
     "style": {
       "police": "string",     // Nom de la police
       "taillePt": "number",   // Taille en points
-      "couleur": "string",    // Couleur par défaut (hex)
+      "couleurCmjn": {        // Couleur CMJN
+        "c": "number",        // Cyan (0-100)
+        "m": "number",        // Magenta (0-100)
+        "y": "number",        // Jaune (0-100)
+        "k": "number"         // Noir (0-100)
+      },
       "gras": "boolean",      // Gras par défaut
       "interligne": "number", // Interligne (ex: 1.2)
       "alignementH": "string",// "left", "center", "right", "justify"
@@ -177,12 +182,16 @@ Ce document décrit la structure JSON utilisée pour initialiser le Designer Mar
     
     "fond": {
       "transparent": "boolean",
-      "couleur": "string"     // Couleur de fond (hex)
+      "couleurCmjn": {        // Couleur de fond CMJN
+        "c": "number", "m": "number", "y": "number", "k": "number"
+      }
     },
     
     "bordure": {
       "epaisseur": "number",  // Épaisseur en pixels (0 = pas de bordure)
-      "couleur": "string",    // Couleur (hex)
+      "couleurCmjn": {        // Couleur CMJN
+        "c": "number", "m": "number", "y": "number", "k": "number"
+      },
       "style": "string"       // "solid", "dashed"
     },
     
@@ -252,9 +261,18 @@ Ce document décrit la structure JSON utilisée pour initialiser le Designer Mar
       "pagePdf": "integer"          // Numéro de page si PDF multi-pages
     },
     
+    "fond": {
+      "transparent": "boolean",
+      "couleurCmjn": {        // Couleur de fond CMJN
+        "c": "number", "m": "number", "y": "number", "k": "number"
+      }
+    },
+    
     "bordure": {
       "epaisseur": "number",
-      "couleur": "string",
+      "couleurCmjn": {        // Couleur CMJN
+        "c": "number", "m": "number", "y": "number", "k": "number"
+      },
       "style": "string"
     }
   }
@@ -302,9 +320,13 @@ Ce document décrit la structure JSON utilisée pour initialiser le Designer Mar
     "typeCode": "string",     // Type de code-barres
     "contenu": "string",      // Données avec variables @CHAMP@
     
-    "style": {
-      "couleurCode": "string",// Couleur du code (hex)
-      "couleurFond": "string" // Couleur de fond (hex)
+    "couleurs": {
+      "codeCmjn": {           // Couleur du code CMJN
+        "c": "number", "m": "number", "y": "number", "k": "number"
+      },
+      "fondCmjn": {           // Couleur de fond CMJN
+        "c": "number", "m": "number", "y": "number", "k": "number"
+      }
     }
   }
 ]
@@ -329,6 +351,14 @@ Ce document décrit la structure JSON utilisée pour initialiser le Designer Mar
 
 ## Valeurs par défaut recommandées
 
+### Format CMJN
+
+Toutes les couleurs sont désormais au format CMJN avec des valeurs entières de 0 à 100 :
+```json
+{ "c": 0, "m": 0, "y": 0, "k": 100 }  // Noir
+{ "c": 0, "m": 0, "y": 0, "k": 0 }    // Blanc
+```
+
 ### Propriétés communes
 
 | Propriété | Valeur par défaut |
@@ -337,7 +367,7 @@ Ce document décrit la structure JSON utilisée pour initialiser le Designer Mar
 | `verrouille` | false |
 | `rotation` | 0 |
 | `bordure.epaisseur` | 0 |
-| `bordure.couleur` | "#000000" |
+| `bordure.couleurCmjn` | `{c:0, m:0, y:0, k:100}` (noir) |
 | `bordure.style` | "solid" |
 
 ### Zones de texte
@@ -346,13 +376,13 @@ Ce document décrit la structure JSON utilisée pour initialiser le Designer Mar
 |-----------|-------------------|
 | `style.police` | "Roboto" |
 | `style.taillePt` | 10 |
-| `style.couleur` | "#000000" |
+| `style.couleurCmjn` | `{c:0, m:0, y:0, k:100}` (noir) |
 | `style.gras` | false |
 | `style.interligne` | 1.2 |
 | `style.alignementH` | "left" |
 | `style.alignementV` | "top" |
 | `fond.transparent` | true |
-| `fond.couleur` | "#FFFFFF" |
+| `fond.couleurCmjn` | `{c:0, m:0, y:0, k:0}` (blanc) |
 | `copyfitting.actif` | false |
 | `copyfitting.tailleMinimum` | 6 |
 | `copyfitting.autoriserRetourLigne` | false |
@@ -368,14 +398,16 @@ Ce document décrit la structure JSON utilisée pour initialiser le Designer Mar
 | `affichage.alignementH` | "center" |
 | `affichage.alignementV` | "middle" |
 | `affichage.pagePdf` | 1 |
+| `fond.couleurCmjn` | `{c:0, m:0, y:0, k:0}` (blanc) |
+| `bordure.couleurCmjn` | `{c:0, m:0, y:0, k:100}` (noir) |
 
-### Zones code-barres
+### Zones code-barres / QR
 
 | Propriété | Valeur par défaut |
 |-----------|-------------------|
 | `typeCode` | "QRCode" |
-| `style.couleurCode` | "#000000" |
-| `style.couleurFond` | "#FFFFFF" |
+| `couleurs.codeCmjn` | `{c:0, m:0, y:0, k:100}` (noir) |
+| `couleurs.fondCmjn` | `{c:0, m:0, y:0, k:0}` (blanc) |
 
 ---
 

@@ -314,10 +314,19 @@ document.addEventListener('DOMContentLoaded', () => {
      */
 
     /**
+     * @typedef {Object} CmjnWebDev
+     * @property {number} c - Cyan (0-100)
+     * @property {number} m - Magenta (0-100)
+     * @property {number} y - Jaune (0-100)
+     * @property {number} k - Noir (0-100)
+     * @description Couleur CMJN au format WebDev.
+     */
+
+    /**
      * @typedef {Object} StyleJsonWebDev
      * @property {string} police - Nom de la police
      * @property {number} taillePt - Taille en points
-     * @property {string} couleur - Couleur hex
+     * @property {CmjnWebDev} [couleurCmjn] - Couleur CMJN
      * @property {boolean} gras - (OBSOLÈTE) Gras "zone entière" (le gras est géré via formatage partiel)
      * @property {number} interligne - Facteur d'interlignage
      * @property {'left'|'center'|'right'|'justify'} alignementH - Alignement horizontal
@@ -328,14 +337,14 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * @typedef {Object} FondJsonWebDev
      * @property {boolean} transparent - Fond transparent
-     * @property {string} couleur - Couleur de fond hex
+     * @property {CmjnWebDev} [couleurCmjn] - Couleur de fond CMJN
      * @description Configuration du fond au format JSON WebDev.
      */
 
     /**
      * @typedef {Object} BordureJsonWebDev
      * @property {number} epaisseur - Épaisseur en pixels
-     * @property {string} couleur - Couleur hex
+     * @property {CmjnWebDev} [couleurCmjn] - Couleur CMJN
      * @property {'solid'|'dashed'} style - Style du trait
      * @description Configuration de bordure au format JSON WebDev.
      */
@@ -412,7 +421,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {GeometrieJsonWebDev} geometrie - Géométrie en mm
      * @property {string} typeCode - Type de code (toujours "QRCode")
      * @property {string} contenu - Contenu/URL à encoder
-     * @property {{code: string, fond: string}} couleurs - Couleurs du QR
+     * @property {{codeCmjn: CmjnWebDev, fondCmjn: CmjnWebDev}} couleurs - Couleurs du QR en CMJN
      * @description Zone QR Code au format JSON WebDev.
      */
 
@@ -433,8 +442,8 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {string} valeurStatique - Valeur statique si pas de champ fusion
      * @property {string} texteLisible - Affichage du texte ('aucun' ou 'dessous')
      * @property {number} taillePolice - Taille du texte lisible en points
-     * @property {string} couleur - Couleur du code hex
-     * @property {string} couleurFond - Couleur de fond hex
+     * @property {CmjnWebDev} [couleurCmjn] - Couleur du code CMJN
+     * @property {CmjnWebDev} [couleurFondCmjn] - Couleur de fond CMJN
      * @property {boolean} transparent - Fond transparent
      * @description Zone Code-barres au format JSON WebDev.
      */
@@ -14088,19 +14097,22 @@ document.addEventListener('DOMContentLoaded', () => {
             // Style typographique
             font: style.police || 'Roboto',
             size: style.taillePt || 12,
-            color: style.couleur || '#000000',
+            color: cmjnWebDevToHex(style.couleurCmjn, '#000000'),
+            colorCmyk: style.couleurCmjn || { c: 0, m: 0, y: 0, k: 100 },
             lineHeight: style.interligne || 1.2,
             align: style.alignementH || 'left',
             valign: style.alignementV || 'top',
             
             // Fond
             isTransparent: fond.transparent !== undefined ? fond.transparent : true,
-            bgColor: fond.couleur || '#FFFFFF',
+            bgColor: cmjnWebDevToHex(fond.couleurCmjn, '#FFFFFF'),
+            bgColorCmyk: fond.couleurCmjn || { c: 0, m: 0, y: 0, k: 0 },
             
             // Bordure
             border: {
                 width: bordure.epaisseur || 0,
-                color: bordure.couleur || '#000000',
+                color: cmjnWebDevToHex(bordure.couleurCmjn, '#000000'),
+                colorCmyk: bordure.couleurCmjn || { c: 0, m: 0, y: 0, k: 100 },
                 style: bordure.style || 'solid'
             },
             
@@ -14152,8 +14164,10 @@ document.addEventListener('DOMContentLoaded', () => {
             valeurStatique: zoneJson.valeurStatique || '',
             texteLisible: zoneJson.texteLisible || 'dessous',
             taillePolice: zoneJson.taillePolice || 8,
-            couleur: zoneJson.couleur || '#000000',
-            bgColor: zoneJson.couleurFond || '#FFFFFF',
+            couleur: cmjnWebDevToHex(zoneJson.couleurCmjn, '#000000'),
+            couleurCmyk: zoneJson.couleurCmjn || { c: 0, m: 0, y: 0, k: 100 },
+            bgColor: cmjnWebDevToHex(zoneJson.couleurFondCmjn, '#FFFFFF'),
+            bgColorCmyk: zoneJson.couleurFondCmjn || { c: 0, m: 0, y: 0, k: 0 },
             isTransparent: zoneJson.transparent || false,
             locked: zoneJson.verrouille || false,
             systeme: zoneJson.systeme || false,
@@ -14188,8 +14202,10 @@ document.addEventListener('DOMContentLoaded', () => {
             type: 'qr',
             typeCode: zoneJson.typeCode || 'QRCode',
             content: zoneJson.contenu || '',
-            qrColor: couleurs.code || '#000000',
-            bgColor: couleurs.fond || '#FFFFFF',
+            qrColor: cmjnWebDevToHex(couleurs.codeCmjn, '#000000'),
+            qrColorCmyk: couleurs.codeCmjn || { c: 0, m: 0, y: 0, k: 100 },
+            bgColor: cmjnWebDevToHex(couleurs.fondCmjn, '#FFFFFF'),
+            bgColorCmyk: couleurs.fondCmjn || { c: 0, m: 0, y: 0, k: 0 },
             isTransparent: false,
             locked: zoneJson.verrouille || false,
             systeme: zoneJson.systeme || false,
@@ -14886,7 +14902,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 alignementH: redim.alignementH || 'center',
                 alignementV: redim.alignementV || 'middle'
             },
-            bgColor: fond.couleur || '#ffffff',
+            bgColor: cmjnWebDevToHex(fond.couleurCmjn, '#ffffff'),
+            bgColorCmyk: fond.couleurCmjn || { c: 0, m: 0, y: 0, k: 0 },
             isTransparent: fond.transparent !== undefined ? fond.transparent : true,
             locked: zoneJson.verrouille || false,
             systeme: zoneJson.systeme || false,
@@ -14895,7 +14912,8 @@ document.addEventListener('DOMContentLoaded', () => {
             rotation: zoneJson.rotation || 0,
             border: {
                 width: bordure.epaisseur || 0,
-                color: bordure.couleur || '#000000',
+                color: cmjnWebDevToHex(bordure.couleurCmjn, '#000000'),
+                colorCmyk: bordure.couleurCmjn || { c: 0, m: 0, y: 0, k: 100 },
                 style: bordure.style || 'solid'
             },
             name: zoneJson.nom || '',
@@ -14982,10 +15000,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 style: {
                     police: zoneData.font || 'Roboto',
                     taillePt: zoneData.size || 12,
-                    couleur: zoneData.color || '#000000',
-                    colorCmyk: zoneData.colorCmyk || null,
-                    bgColor: zoneData.bgColor || '#FFFFFF',
-                    bgColorCmyk: zoneData.bgColorCmyk || null,
+                    couleurCmjn: zoneData.colorCmyk || hexToCmjnWebDev(zoneData.color || '#000000'),
                     gras: false,
                     interligne: zoneData.lineHeight || 1.2,
                     alignementH: zoneData.align || 'left',
@@ -14993,13 +15008,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 fond: {
                     transparent: zoneData.isTransparent !== undefined ? zoneData.isTransparent : true,
-                    couleur: zoneData.bgColor || '#FFFFFF',
-                    couleurCmyk: zoneData.bgColorCmyk || null
+                    couleurCmjn: zoneData.bgColorCmyk || hexToCmjnWebDev(zoneData.bgColor || '#FFFFFF')
                 },
                 bordure: {
                     epaisseur: zoneData.border?.width || 0,
-                    couleur: zoneData.border?.color || '#000000',
-                    couleurCmyk: zoneData.border?.colorCmyk || null,
+                    couleurCmjn: zoneData.border?.colorCmyk || hexToCmjnWebDev(zoneData.border?.color || '#000000'),
                     style: zoneData.border?.style || 'solid'
                 },
                 copyfitting: {
@@ -15061,7 +15074,7 @@ document.addEventListener('DOMContentLoaded', () => {
             style: {
                 police: zoneData.font || 'Roboto',
                 taillePt: zoneData.size || 12,
-                couleur: zoneData.color || '#000000',
+                couleurCmjn: zoneData.colorCmyk || hexToCmjnWebDev(zoneData.color || '#000000'),
                 gras: false,
                 interligne: zoneData.lineHeight || 1.2,
                 alignementH: zoneData.align || 'left',
@@ -15071,13 +15084,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // Fond
             fond: {
                 transparent: zoneData.isTransparent !== undefined ? zoneData.isTransparent : true,
-                couleur: zoneData.bgColor || '#FFFFFF'
+                couleurCmjn: zoneData.bgColorCmyk || hexToCmjnWebDev(zoneData.bgColor || '#FFFFFF')
             },
             
             // Bordure
             bordure: {
                 epaisseur: zoneData.border?.width || 0,
-                couleur: zoneData.border?.color || '#000000',
+                couleurCmjn: zoneData.border?.colorCmyk || hexToCmjnWebDev(zoneData.border?.color || '#000000'),
                 style: zoneData.border?.style || 'solid'
             },
             
@@ -15126,9 +15139,8 @@ document.addEventListener('DOMContentLoaded', () => {
             valeurStatique: zoneData.valeurStatique || '',
             texteLisible: zoneData.texteLisible || 'dessous',
             taillePolice: zoneData.taillePolice || 8,
-            couleur: zoneData.couleur || '#000000',
-            couleurFond: zoneData.bgColor || '#FFFFFF',
-            couleurFondCmyk: zoneData.bgColorCmyk || null,
+            couleurCmjn: zoneData.couleurCmyk || hexToCmjnWebDev(zoneData.couleur || '#000000'),
+            couleurFondCmjn: zoneData.bgColorCmyk || hexToCmjnWebDev(zoneData.bgColor || '#FFFFFF'),
             transparent: zoneData.isTransparent || false
         };
     }
@@ -15163,9 +15175,8 @@ document.addEventListener('DOMContentLoaded', () => {
             typeCode: zoneData.typeCode || 'QRCode',
             contenu: zoneData.content || '',
             couleurs: {
-                code: zoneData.qrColor || '#000000',
-                fond: zoneData.bgColor || '#FFFFFF',
-                fondCmyk: zoneData.bgColorCmyk || null
+                codeCmjn: zoneData.qrColorCmyk || hexToCmjnWebDev(zoneData.qrColor || '#000000'),
+                fondCmjn: zoneData.bgColorCmyk || hexToCmjnWebDev(zoneData.bgColor || '#FFFFFF')
             }
         };
     }
@@ -15223,13 +15234,11 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             fond: {
                 transparent: zoneData.isTransparent !== undefined ? zoneData.isTransparent : true,
-                couleur: zoneData.bgColor || '#FFFFFF',
-                couleurCmyk: zoneData.bgColorCmyk || null
+                couleurCmjn: zoneData.bgColorCmyk || hexToCmjnWebDev(zoneData.bgColor || '#FFFFFF')
             },
             bordure: {
                 epaisseur: zoneData.border?.width || 0,
-                couleur: zoneData.border?.color || '#000000',
-                couleurCmyk: zoneData.border?.colorCmyk || null,
+                couleurCmjn: zoneData.border?.colorCmyk || hexToCmjnWebDev(zoneData.border?.color || '#000000'),
                 style: zoneData.border?.style || 'solid'
             }
         };
@@ -17176,6 +17185,47 @@ document.addEventListener('DOMContentLoaded', () => {
         // Formater en hex
         const toHex = (val) => val.toString(16).padStart(2, '0');
         return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    }
+
+    /**
+     * Convertit une couleur CMJN WebDev en hexadécimal RGB.
+     * 
+     * @param {CmjnWebDev|null} cmjn - Couleur CMJN WebDev
+     * @param {string} [defaultHex='#000000'] - Couleur par défaut si cmjn est null/undefined
+     * @returns {string} Couleur hexadécimale (#RRGGBB)
+     * 
+     * @example
+     * cmjnWebDevToHex({c: 0, m: 0, y: 0, k: 100});  // → '#000000' (noir)
+     * cmjnWebDevToHex({c: 0, m: 0, y: 0, k: 0});    // → '#ffffff' (blanc)
+     * cmjnWebDevToHex(null, '#FF0000');              // → '#FF0000' (défaut)
+     */
+    function cmjnWebDevToHex(cmjn, defaultHex = '#000000') {
+        if (!cmjn || typeof cmjn.c !== 'number') {
+            return defaultHex;
+        }
+        return cmykToHex(cmjn.c, cmjn.m, cmjn.y, cmjn.k);
+    }
+
+    /**
+     * Convertit une couleur hexadécimale RGB en CMJN WebDev.
+     * Utilisé uniquement si pas de CMJN natif disponible.
+     * 
+     * @param {string} hex - Couleur hexadécimale (#RRGGBB)
+     * @returns {CmjnWebDev} Couleur CMJN WebDev (valeurs 0-100)
+     * 
+     * @example
+     * hexToCmjnWebDev('#000000'); // → {c: 0, m: 0, y: 0, k: 100} (noir)
+     * hexToCmjnWebDev('#FFFFFF'); // → {c: 0, m: 0, y: 0, k: 0} (blanc)
+     * hexToCmjnWebDev('#FF0000'); // → {c: 0, m: 100, y: 100, k: 0} (rouge)
+     */
+    function hexToCmjnWebDev(hex) {
+        const cmyk = rgbToCmyk(hex);
+        return {
+            c: Math.round(cmyk.c * 100),
+            m: Math.round(cmyk.m * 100),
+            y: Math.round(cmyk.y * 100),
+            k: Math.round(cmyk.k * 100)
+        };
     }
 
     /**

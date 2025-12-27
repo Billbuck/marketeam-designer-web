@@ -32,7 +32,7 @@
       "style": {
         "police": "Roboto",
         "taillePt": 10,
-        "couleur": "#000000",
+        "couleurCmjn": { "c": 0, "m": 0, "y": 0, "k": 100 },
         "gras": false,
         "interligne": 1.2,
         "alignementH": "left",
@@ -40,11 +40,11 @@
       },
       "fond": {
         "transparent": false,
-        "couleur": "#FFFFFF"
+        "couleurCmjn": { "c": 0, "m": 0, "y": 0, "k": 0 }
       },
       "bordure": {
         "epaisseur": 1,
-        "couleur": "#999999",
+        "couleurCmjn": { "c": 0, "m": 0, "y": 0, "k": 40 },
         "style": "dashed"
       },
       "copyfitting": {
@@ -72,7 +72,7 @@
       "style": {
         "police": "Verdana",
         "taillePt": 10,
-        "couleur": "#000000",
+        "couleurCmjn": { "c": 0, "m": 0, "y": 0, "k": 100 },
         "gras": false,
         "interligne": 1.2,
         "alignementH": "left",
@@ -80,11 +80,11 @@
       },
       "fond": {
         "transparent": true,
-        "couleur": "#FFFFFF"
+        "couleurCmjn": { "c": 0, "m": 0, "y": 0, "k": 0 }
       },
       "bordure": {
         "epaisseur": 0,
-        "couleur": "#000000",
+        "couleurCmjn": { "c": 0, "m": 0, "y": 0, "k": 100 },
         "style": "solid"
       },
       "copyfitting": {
@@ -112,7 +112,7 @@
       "style": {
         "police": "Verdana",
         "taillePt": 6,
-        "couleur": "#000000",
+        "couleurCmjn": { "c": 0, "m": 0, "y": 0, "k": 100 },
         "gras": false,
         "interligne": 1.0,
         "alignementH": "left",
@@ -120,11 +120,11 @@
       },
       "fond": {
         "transparent": true,
-        "couleur": "#FFFFFF"
+        "couleurCmjn": { "c": 0, "m": 0, "y": 0, "k": 0 }
       },
       "bordure": {
         "epaisseur": 0,
-        "couleur": "#000000",
+        "couleurCmjn": { "c": 0, "m": 0, "y": 0, "k": 100 },
         "style": "solid"
       },
       "copyfitting": {
@@ -160,7 +160,7 @@
       "style": {
         "police": "Roboto",
         "taillePt": 11,
-        "couleur": "#333333",
+        "couleurCmjn": { "c": 0, "m": 0, "y": 0, "k": 80 },
         "gras": false,
         "interligne": 1.4,
         "alignementH": "justify",
@@ -168,11 +168,11 @@
       },
       "fond": {
         "transparent": true,
-        "couleur": "#FFFFFF"
+        "couleurCmjn": { "c": 0, "m": 0, "y": 0, "k": 0 }
       },
       "bordure": {
         "epaisseur": 0,
-        "couleur": "#000000",
+        "couleurCmjn": { "c": 0, "m": 0, "y": 0, "k": 100 },
         "style": "solid"
       },
       "copyfitting": {
@@ -210,9 +210,13 @@
         "alignementV": "middle",
         "pagePdf": 1
       },
+      "fond": {
+        "transparent": true,
+        "couleurCmjn": { "c": 0, "m": 0, "y": 0, "k": 0 }
+      },
       "bordure": {
         "epaisseur": 0,
-        "couleur": "#000000",
+        "couleurCmjn": { "c": 0, "m": 0, "y": 0, "k": 100 },
         "style": "solid"
       }
     },
@@ -243,15 +247,19 @@
         "alignementV": "middle",
         "pagePdf": 1
       },
+      "fond": {
+        "transparent": true,
+        "couleurCmjn": { "c": 0, "m": 0, "y": 0, "k": 0 }
+      },
       "bordure": {
         "epaisseur": 1,
-        "couleur": "#cccccc",
+        "couleurCmjn": { "c": 0, "m": 0, "y": 0, "k": 20 },
         "style": "solid"
       }
     }
   ],
 
-  "zonesCodeBarres": [
+  "zonesQR": [
     {
       "id": "cb-1",
       "page": 1,
@@ -267,11 +275,14 @@
       },
       "typeCode": "QRCode",
       "contenu": "https://marketeam.com/track/@IDENVOI@",
-      "style": {
-        "couleurCode": "#000000",
-        "couleurFond": "#FFFFFF"
+      "couleurs": {
+        "codeCmjn": { "c": 0, "m": 0, "y": 0, "k": 100 },
+        "fondCmjn": { "c": 0, "m": 0, "y": 0, "k": 0 }
       }
-    },
+    }
+  ],
+
+  "zonesCodeBarres": [
     {
       "id": "cb-2",
       "page": 1,
@@ -285,12 +296,14 @@
         "largeurMm": 60.0,
         "hauteurMm": 15.0
       },
-      "typeCode": "Code128",
-      "contenu": "@CODE_PRODUIT@",
-      "style": {
-        "couleurCode": "#000000",
-        "couleurFond": "#FFFFFF"
-      }
+      "typeCodeBarres": "code128",
+      "champFusion": "CODE_PRODUIT",
+      "valeurStatique": "",
+      "texteLisible": "dessous",
+      "taillePolice": 8,
+      "couleurCmjn": { "c": 0, "m": 0, "y": 0, "k": 100 },
+      "couleurFondCmjn": { "c": 0, "m": 0, "y": 0, "k": 0 },
+      "transparent": false
     }
   ]
 }
