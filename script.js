@@ -9291,6 +9291,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Récupérer les sections par ID
         const pagesSection = document.getElementById('pages-section');
+        const resetSection = document.getElementById('reset-section');
         const alignmentSection = document.getElementById('alignment-section');
         const sizeSection = document.getElementById('size-section');
         const spacingSection = document.getElementById('spacing-section');
@@ -9303,6 +9304,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Masquer toutes les autres sections
             if (previewSection) previewSection.style.display = 'none';
             if (pagesSection) pagesSection.style.display = 'none';
+            if (resetSection) resetSection.style.display = 'none';
             if (actionsSection) actionsSection.style.display = 'none';
             if (historySection) historySection.style.display = 'none';
             if (positionSection) positionSection.style.display = 'none';
@@ -9323,6 +9325,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (count === 1) {
             if (previewSection) previewSection.style.display = 'none';  // no-selection
             if (pagesSection) pagesSection.style.display = 'none';      // no-selection
+            if (resetSection) resetSection.style.display = 'block';     // always
             if (actionsSection) actionsSection.style.display = 'block'; // always
             if (historySection) historySection.style.display = 'block'; // always
             if (positionSection) positionSection.style.display = 'block'; // single
@@ -9340,6 +9343,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // ═══════════════════════════════════════════════════════════════════════
         if (previewSection) previewSection.style.display = 'block'; // no-selection
         if (pagesSection) pagesSection.style.display = 'block';     // no-selection
+        if (resetSection) resetSection.style.display = 'block';     // always
         if (actionsSection) actionsSection.style.display = 'block'; // always
         if (historySection) historySection.style.display = 'block'; // always
         if (positionSection) positionSection.style.display = 'none'; // single
