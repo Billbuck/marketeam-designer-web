@@ -14983,6 +14983,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     police: zoneData.font || 'Roboto',
                     taillePt: zoneData.size || 12,
                     couleur: zoneData.color || '#000000',
+                    colorCmyk: zoneData.colorCmyk || null,
+                    bgColor: zoneData.bgColor || '#FFFFFF',
+                    bgColorCmyk: zoneData.bgColorCmyk || null,
                     gras: false,
                     interligne: zoneData.lineHeight || 1.2,
                     alignementH: zoneData.align || 'left',
@@ -14990,11 +14993,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 fond: {
                     transparent: zoneData.isTransparent !== undefined ? zoneData.isTransparent : true,
-                    couleur: zoneData.bgColor || '#FFFFFF'
+                    couleur: zoneData.bgColor || '#FFFFFF',
+                    couleurCmyk: zoneData.bgColorCmyk || null
                 },
                 bordure: {
                     epaisseur: zoneData.border?.width || 0,
                     couleur: zoneData.border?.color || '#000000',
+                    couleurCmyk: zoneData.border?.colorCmyk || null,
                     style: zoneData.border?.style || 'solid'
                 },
                 copyfitting: {
@@ -15123,6 +15128,7 @@ document.addEventListener('DOMContentLoaded', () => {
             taillePolice: zoneData.taillePolice || 8,
             couleur: zoneData.couleur || '#000000',
             couleurFond: zoneData.bgColor || '#FFFFFF',
+            couleurFondCmyk: zoneData.bgColorCmyk || null,
             transparent: zoneData.isTransparent || false
         };
     }
@@ -15158,7 +15164,8 @@ document.addEventListener('DOMContentLoaded', () => {
             contenu: zoneData.content || '',
             couleurs: {
                 code: zoneData.qrColor || '#000000',
-                fond: zoneData.bgColor || '#FFFFFF'
+                fond: zoneData.bgColor || '#FFFFFF',
+                fondCmyk: zoneData.bgColorCmyk || null
             }
         };
     }
@@ -15216,11 +15223,13 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             fond: {
                 transparent: zoneData.isTransparent !== undefined ? zoneData.isTransparent : true,
-                couleur: zoneData.bgColor || '#FFFFFF'
+                couleur: zoneData.bgColor || '#FFFFFF',
+                couleurCmyk: zoneData.bgColorCmyk || null
             },
             bordure: {
                 epaisseur: zoneData.border?.width || 0,
                 couleur: zoneData.border?.color || '#000000',
+                couleurCmyk: zoneData.border?.colorCmyk || null,
                 style: zoneData.border?.style || 'solid'
             }
         };
@@ -15521,10 +15530,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             font: zoneData.font || 'Roboto',
                             size_pt: zoneData.size || 12,
                             color: zoneData.color || '#000000',
+                            colorCmyk: zoneData.colorCmyk || null,
                             align: zoneData.align || 'left',
                             valign: zoneData.valign || 'top',
                             line_height: zoneData.lineHeight || 1.2,
                             bgColor: zoneData.isTransparent ? null : (zoneData.bgColor || '#ffffff'),
+                            bgColorCmyk: zoneData.isTransparent ? null : (zoneData.bgColorCmyk || null),
                             transparent: zoneData.isTransparent !== undefined ? !!zoneData.isTransparent : true,
                             locked: !!zoneData.locked,
                             copyfit: !!zoneData.copyfit
@@ -15532,6 +15543,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         border: {
                             width_px: zoneData.border?.width || 0,
                             color: zoneData.border?.color || '#000000',
+                            colorCmyk: zoneData.border?.colorCmyk || null,
                             style: zoneData.border?.style || 'solid'
                         }
                     });
@@ -17808,6 +17820,35 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     /**
+     * Récupère la couleur CMYK pour l'export PSMD.
+     * Utilise les valeurs CMJN natives si disponibles, sinon convertit depuis hex.
+     * 
+     * @param {string|null} hexColor - Couleur hexadécimale (#RRGGBB)
+     * @param {{c: number, m: number, y: number, k: number}|null} cmykNative - Valeurs CMJN natives (0-100)
+     * @param {{c: number, m: number, y: number, k: number}} [defaultCmyk] - Valeur par défaut
+     * @returns {{c: number, m: number, y: number, k: number}} Couleur CMYK (0-1) pour PSMD
+     */
+    function getCmykForPsmd(hexColor, cmykNative, defaultCmyk = { c: 0, m: 0, y: 0, k: 0 }) {
+        // Priorité aux valeurs CMJN natives
+        if (cmykNative && typeof cmykNative.c === 'number') {
+            // Convertir 0-100 en 0-1
+            return {
+                c: cmykNative.c / 100,
+                m: cmykNative.m / 100,
+                y: cmykNative.y / 100,
+                k: cmykNative.k / 100
+            };
+        }
+        
+        // Fallback : convertir depuis hex
+        if (hexColor && hexColor !== 'transparent') {
+            return rgbToCmyk(hexColor);
+        }
+        
+        return defaultCmyk;
+    }
+
+    /**
      * Génère les propriétés communes à tous les objets PSMD.
      * Gère les deux formats de données (zonesTextQuill vs autres zones).
      * 
@@ -17834,33 +17875,50 @@ document.addEventListener('DOMContentLoaded', () => {
         const right = mmToPoints(xMm + widthMm);
         const bottom = mmToPoints(yMm + heightMm);
         
-        // Couleurs de fond - gérer les deux formats
+        // Couleurs de fond - gérer tous les formats (textQuill, image, barcode, qr)
         let fillColor = { c: 0, m: 0, y: 0, k: 0 };
         // Alpha : 0 si transparent, null si opaque (pas d'attribut alpha pour PrintShop Mail)
         let fillAlpha = 0;
         
-        if (zone.fond?.couleur) {
-            fillColor = rgbToCmyk(zone.fond.couleur);
-            // Pour les zones NON-image : null si opaque (pas d'attribut), 0 si transparent
-            if (zone.type !== 'image') {
-                fillAlpha = (zone.fond.transparent !== true && zone.fond.couleur !== 'transparent') ? null : 0;
+        // Format textQuill : zone.style.bgColor / zone.style.bgColorCmyk
+        if (zone.style?.bgColor || zone.style?.bgColorCmyk) {
+            if (!zone.style?.transparent) {
+                fillColor = getCmykForPsmd(zone.style.bgColor, zone.style.bgColorCmyk);
+                fillAlpha = null;  // Opaque
             }
-        } else if (zone.style?.bgColor && !zone.style?.transparent) {
-            fillColor = rgbToCmyk(zone.style.bgColor);
-            fillAlpha = null;  // Pas d'attribut alpha pour les zones avec fond coloré
+        }
+        // Format image : zone.fond.couleur / zone.fond.couleurCmyk
+        else if (zone.fond?.couleur || zone.fond?.couleurCmyk) {
+            if (!zone.fond?.transparent) {
+                fillColor = getCmykForPsmd(zone.fond.couleur, zone.fond.couleurCmyk);
+                fillAlpha = null;  // Opaque
+            }
+        }
+        // Format barcode : zone.couleurFond / zone.couleurFondCmyk
+        else if (zone.couleurFond || zone.couleurFondCmyk) {
+            if (!zone.transparent) {
+                fillColor = getCmykForPsmd(zone.couleurFond, zone.couleurFondCmyk);
+                fillAlpha = null;  // Opaque
+            }
+        }
+        // Format QR : zone.couleurs.fond / zone.couleurs.fondCmyk
+        else if (zone.couleurs?.fond || zone.couleurs?.fondCmyk) {
+            // QR codes n'ont pas de flag transparent explicite, on considère opaque si couleur définie
+            fillColor = getCmykForPsmd(zone.couleurs.fond, zone.couleurs.fondCmyk);
+            fillAlpha = null;  // Opaque
         }
         
-        // Couleurs de bordure - CMYK (comme toutes les couleurs PSMD)
+        // Couleurs de bordure - utiliser CMJN natif si disponible
         // downgrade_k="1" par défaut requis par PrintShop Mail
         let borderColor = { c: 0, m: 0, y: 0, k: 1 };
         let borderSize = 0;
         
         if (zone.bordure?.epaisseur) {
             borderSize = zone.bordure.epaisseur;
-            borderColor = zone.bordure.couleur ? rgbToCmyk(zone.bordure.couleur) : { c: 0, m: 0, y: 0, k: 1 };
+            borderColor = getCmykForPsmd(zone.bordure.couleur, zone.bordure.couleurCmyk, { c: 0, m: 0, y: 0, k: 1 });
         } else if (zone.border?.width_px) {
             borderSize = zone.border.width_px;
-            borderColor = zone.border.color ? rgbToCmyk(zone.border.color) : { c: 0, m: 0, y: 0, k: 1 };
+            borderColor = getCmykForPsmd(zone.border.color, zone.border.colorCmyk, { c: 0, m: 0, y: 0, k: 1 });
         }
         
         const borderStyle = borderSize > 0 ? 2 : 0; // 0=none, 2=solid
@@ -17919,9 +17977,10 @@ ${generatePsmdColor('bordercolor', borderColor)}
         // Gestion lignes vides
         const emptyLines = zone.lignesVides || 0;
         
-        // Couleur texte par défaut
-        const textColorValue = zone.style?.color || zone.typographie?.couleur || '#000000';
-        const textColor = rgbToCmyk(textColorValue);
+        // Couleur texte - utiliser CMJN natif si disponible
+        const textColorHex = zone.style?.color || zone.typographie?.couleur || '#000000';
+        const textColorCmyk = zone.style?.colorCmyk || zone.typographie?.couleurCmyk || null;
+        const textColor = getCmykForPsmd(textColorHex, textColorCmyk, { c: 0, m: 0, y: 0, k: 1 });
         
         let xml = generatePsmdObjectCommon(zone);
         
