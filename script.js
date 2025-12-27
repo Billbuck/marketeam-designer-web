@@ -4976,13 +4976,62 @@ document.addEventListener('DOMContentLoaded', () => {
      * Appelé après un changement de page pour mettre à jour l'aperçu si actif.
      * @returns {void}
      */
+    /**
+     * Appelé après un changement de page pour mettre à jour l'aperçu si actif.
+     * Sauvegarde les zones de la nouvelle page et affiche le contenu fusionné.
+     * @returns {void}
+     */
     function refreshPreviewAfterPageChange() {
-        if (previewState.active) {
-            console.log('🔄 refreshPreviewAfterPageChange()');
-            setTimeout(() => {
-                displayMergedContent(previewState.currentIndex);
-            }, 100);
-        }
+        if (!previewState.active) return;
+        
+        console.log('🔄 refreshPreviewAfterPageChange()');
+        
+        // 1. Sauvegarder les zones texte de la nouvelle page courante
+        const currentPageIndex = documentState.currentPageIndex;
+        const zones = getCurrentPageZones();
+        
+        Object.entries(zones).forEach(([zoneId, zoneData]) => {
+            // Uniquement les zones texte Quill non déjà sauvegardées
+            if (zoneData.type !== 'textQuill') return;
+            if (previewState.savedContents.has(zoneId)) return; // Déjà sauvegardée
+            
+            // CORRECTION : Lire le contenu depuis zoneData.quillDelta (déjà dans documentState)
+            // au lieu de quillInstance.getContents() qui peut être vide si Quill n'a pas encore chargé
+            if (zoneData.quillDelta) {
+                // Parser le Delta si c'est une chaîne JSON
+                let delta = zoneData.quillDelta;
+                if (typeof delta === 'string') {
+                    try { delta = JSON.parse(delta); } catch (e) { delta = null; }
+                }
+                
+                if (delta && Array.isArray(delta.ops)) {
+                    previewState.savedContents.set(zoneId, {
+                        pageIndex: currentPageIndex,
+                        quillDelta: JSON.parse(JSON.stringify(delta)), // Deep copy
+                        htmlContent: '', // Non utilisé pour la fusion
+                        originalFontSize: zoneData.size || 12,
+                        emptyLines: zoneData.emptyLines || 0
+                    });
+                    
+                    console.log(`  💾 Zone ${zoneId} (page ${currentPageIndex + 1}) sauvegardée depuis zoneData`);
+                }
+            }
+        });
+        
+        // 2. Désactiver l'édition des zones Quill de la nouvelle page et ajouter classe preview-mode
+        quillInstances.forEach((quill, zoneId) => {
+            quill.disable();
+            
+            const zoneEl = document.getElementById(zoneId);
+            if (zoneEl) {
+                zoneEl.classList.add('preview-mode');
+            }
+        });
+        
+        // 3. Afficher le contenu fusionné après un court délai (laisser le DOM se stabiliser)
+        setTimeout(() => {
+            displayMergedContent(previewState.currentIndex);
+        }, 100);
     }
 
     /**
@@ -5044,15 +5093,20 @@ document.addEventListener('DOMContentLoaded', () => {
         // 7. Désactiver le drag & drop des zones
         disableZoneInteractions();
         
-        // 8. Masquer toutes les sections de la sidebar sauf Aperçu
+        // 8. Masquer toutes les sections de la sidebar sauf Aperçu et Pages
         document.querySelectorAll('.sidebar .section').forEach(section => {
-            if (section.id !== 'preview-section') {
+            if (section.id !== 'preview-section' && section.id !== 'pages-section') {
                 section.style.display = 'none';
             }
         });
         // S'assurer que la section Aperçu est visible
         if (previewSection) {
             previewSection.style.display = 'block';
+        }
+        // S'assurer que la section Pages est visible (pour naviguer entre les pages)
+        const pagesSection = document.getElementById('pages-section');
+        if (pagesSection) {
+            pagesSection.style.display = 'block';
         }
         
         console.log('✅ Mode aperçu activé');
