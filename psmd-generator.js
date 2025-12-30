@@ -354,7 +354,7 @@
     function extractMergeFields(rtfString) {
         if (!rtfString) return [];
         
-        const regex = /@([A-Za-z0-9_]+)@/g;
+        const regex = /@([A-Za-z0-9_ ]+)@/g;
         const fields = new Set();
         let match;
         
@@ -730,13 +730,38 @@
     }
 
     /**
+     * Génère un élément <data_field> pour la section <data_fields>.
+     * Chaque champ de fusion doit être déclaré pour que PrintShop Mail le reconnaisse.
+     * 
+     * @param {string} fieldName - Nom du champ (sans les @)
+     * @returns {string} XML du data_field
+     */
+    function generatePsmdDataField(fieldName) {
+        return `<data_field>
+<in_use>yes</in_use>
+<n>${escapeXmlPsmd(fieldName)}</n>
+<default_value></default_value>
+<source>user_input</source>
+<remarks></remarks>
+</data_field>`;
+    }
+
+    /**
      * Génère les sections finales du fichier PSMD (data_fields, template_folders, embedded_ps).
      * 
+     * @param {string[]} mergeFields - Liste des noms de champs de fusion (sans les @)
      * @returns {string} XML des sections finales
      */
-    function generatePsmdFooterSections() {
-        return `<data_fields>
-</data_fields>
+    function generatePsmdFooterSections(mergeFields) {
+        mergeFields = mergeFields || [];
+        
+        var dataFieldsXml = '<data_fields>\n';
+        for (var i = 0; i < mergeFields.length; i++) {
+            dataFieldsXml += generatePsmdDataField(mergeFields[i]) + '\n';
+        }
+        dataFieldsXml += '</data_fields>';
+        
+        return dataFieldsXml + `
 <template_folders>
 </template_folders>
 <embedded_ps>
@@ -809,7 +834,7 @@
         return `<variable>
 <name>${escapeXmlPsmd(fieldName)}</name>
 <global>no</global>
-<expression>""</expression>
+<expression>[${escapeXmlPsmd(fieldName)}]</expression>
 <Formatting>3</Formatting>
 <Locale_ID>1036</Locale_ID>
 <Currency_Symbol>€</Currency_Symbol>
@@ -1531,11 +1556,26 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
         // Section layouts (pages avec zones)
         xml += generatePsmdLayouts(jsonData, largeurMm, hauteurMm, exportPrefix) + '\n';
         
+        // Extraire tous les champs de fusion pour les passer aux sections finales
+        var allMergeFields = [];
+        var zonesTextQuill = jsonData.zonesTextQuill || [];
+        for (var i = 0; i < zonesTextQuill.length; i++) {
+            var zone = zonesTextQuill[i];
+            if (zone.content_rtf) {
+                var fields = extractMergeFields(zone.content_rtf);
+                for (var j = 0; j < fields.length; j++) {
+                    if (allMergeFields.indexOf(fields[j]) === -1) {
+                        allMergeFields.push(fields[j]);
+                    }
+                }
+            }
+        }
+        
         // Section variables (champs de fusion)
         xml += generatePsmdVariables(jsonData, exportPrefix) + '\n';
         
-        // Sections finales
-        xml += generatePsmdFooterSections() + '\n';
+        // Sections finales (avec data_fields rempli)
+        xml += generatePsmdFooterSections(allMergeFields) + '\n';
         
         xml += '</document>';
         
