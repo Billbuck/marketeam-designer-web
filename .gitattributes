@@ -1,0 +1,18 @@
+# Normalisation automatique des fins de ligne
+* text=auto
+
+# Fichiers texte explicites (CRLF sur Windows, LF sur Linux/Mac)
+*.html text
+*.css text
+*.js text
+*.json text
+*.md text
+*.txt text
+
+# Fichiers binaires (ne pas toucher)
+*.jpg binary
+*.png binary
+*.svg binary
+*.cdr binary
+*.psmd binary
+
