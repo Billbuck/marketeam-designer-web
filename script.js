@@ -5648,6 +5648,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 nom: 'Code-barres',
                 typeCodeBarres: 'code128',       // Type par défaut
                 champFusion: '',                  // Champ de fusion (sans les @)
+                valeurStatique: '',               // Valeur fixe si pas de champ fusion
                 texteLisible: 'dessous',          // 'aucun', 'dessous'
                 taillePolice: DEFAULT_BARCODE_FONT_SIZE,                  // Taille du texte lisible en points
                 couleur: DEFAULT_TEXT_COLOR,               // Couleur du code-barres
@@ -7786,9 +7787,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             if (barcodeValueRow) barcodeValueRow.style.display = '';
             if (barcodeFieldRow) barcodeFieldRow.style.display = 'none';
-            // Pas de valeur fixe stockée actuellement, afficher le sample
-            const config = BARCODE_BWIPJS_CONFIG[zoneData.typeCodeBarres || 'code128'];
-            if (barcodeInputValue) barcodeInputValue.value = config ? config.sampleValue : '';
+            // Afficher la valeur statique sauvegardée (vide si non définie)
+            if (barcodeInputValue) barcodeInputValue.value = zoneData.valeurStatique || '';
         }
         
         // ─── AFFICHAGE (texteLisible / taillePolice) ───
@@ -8020,12 +8020,13 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
-        // Valeur fixe (note: pas stockée actuellement, juste pour preview)
+        // Valeur fixe (input pour sauvegarder à chaque frappe, avant désélection)
         if (barcodeInputValue) {
-            barcodeInputValue.addEventListener('change', () => {
-                // La valeur fixe n'est pas utilisée dans le modèle actuel
-                // Le code-barres utilise toujours sampleValue pour l'aperçu
-                console.log('📊 Valeur fixe changée:', barcodeInputValue.value);
+            barcodeInputValue.addEventListener('input', () => {
+                updateSelectedBarcodeZone((zoneData) => {
+                    zoneData.valeurStatique = barcodeInputValue.value;
+                    console.log('📊 Valeur fixe sauvegardée:', barcodeInputValue.value);
+                });
             });
         }
         
