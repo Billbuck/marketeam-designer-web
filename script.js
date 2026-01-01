@@ -1831,6 +1831,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
+     * Formate un nom de champ avec les @ pour l'affichage (ex: "NOM" → "@NOM@")
+     * @param {string} fieldName - Nom du champ (avec ou sans @)
+     * @returns {string} Nom formaté avec @ (ex: "@NOM@")
+     */
+    function formatFieldWithAt(fieldName) {
+        if (!fieldName || fieldName.trim() === '') {
+            return '';
+        }
+        // Retirer les @ existants puis en ajouter
+        const cleanName = fieldName.replace(/^@/, '').replace(/@$/, '');
+        return `@${cleanName}@`;
+    }
+    
+    /**
      * Détermine si un type de code-barres est 2D
      * @param {string} typeCode - Type du code-barres (ex: 'QRCode', 'qrcode', 'Code128')
      * @returns {boolean} - true si 2D, false si 1D
@@ -1899,6 +1913,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * 
      * @param {string} typeCode - Type de code-barres (qrcode, code128, ean13, datamatrix, etc.)
      * @param {string} [color='#000000'] - Couleur du code-barres (format hex)
+     * @param {string|null} [customValue=null] - Valeur personnalisée à encoder (si null ou vide, utilise sampleValue)
      * @returns {string} Data URL de l'image PNG transparent (data:image/png;base64,...) ou SVG inline fallback
      * 
      * @example
@@ -1906,10 +1921,15 @@ document.addEventListener('DOMContentLoaded', () => {
      * const imgSrc = generateBarcodeImage('code128', '#000000');
      * imgElement.src = imgSrc;
      * 
+     * @example
+     * // Générer un EAN-13 avec une valeur personnalisée
+     * const imgSrc = generateBarcodeImage('ean13', '#000000', '5901234123457');
+     * imgElement.src = imgSrc;
+     * 
      * @see BARCODE_BWIPJS_CONFIG - Configuration bwip-js par type
      * @see getFallbackBarcodeSvg - SVG de secours si bwip-js échoue
      */
-    function generateBarcodeImage(typeCode, color = DEFAULT_TEXT_COLOR) {
+    function generateBarcodeImage(typeCode, color = DEFAULT_TEXT_COLOR, customValue = null) {
         // Vérifier que bwip-js est chargé
         if (typeof bwipjs === 'undefined') {
             console.warn('bwip-js non chargé, utilisation du fallback');
@@ -1923,8 +1943,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return getFallbackBarcodeSvg(typeCode);
         }
         
-        // Toujours utiliser la valeur fictive (le champ est une métadonnée pour l'export, pas pour l'affichage)
-        const valueToEncode = config.sampleValue;
+        // Utiliser la valeur personnalisée si fournie, sinon la valeur fictive du type
+        const valueToEncode = (customValue && customValue.trim() !== '') ? customValue : config.sampleValue;
         
         // Créer un canvas temporaire
         const canvas = document.createElement('canvas');
@@ -4684,6 +4704,22 @@ document.addEventListener('DOMContentLoaded', () => {
         
         console.log(`🔄 ${previewState.savedContents.size} zone(s) restaurée(s)`);
         previewState.savedContents.clear();
+        
+        // Rafraîchir les codes-barres (retour aux valeurs normales)
+        const allPages = documentState.pages || [];
+        allPages.forEach((page, pageIndex) => {
+            const zones = page.zones || {};
+            Object.entries(zones).forEach(([zoneId, zoneData]) => {
+                if (zoneData.type === 'barcode') {
+                    // Rafraîchir sans valeur de prévisualisation
+                    if (pageIndex === documentState.currentPageIndex) {
+                        updateBarcodeZoneDisplay(zoneId, null);
+                    }
+                }
+            });
+        });
+        
+        console.log('  ✅ Codes-barres restaurés (mode normal)');
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -4969,6 +5005,27 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Déclencher le copyfit pour toutes les zones fusionnées
         triggerCopyfitForPreview();
+        
+        // Mettre à jour les codes-barres avec les valeurs de l'enregistrement
+        const allPages = documentState.pages || [];
+        allPages.forEach((page, pageIndex) => {
+            const zones = page.zones || {};
+            Object.entries(zones).forEach(([zoneId, zoneData]) => {
+                if (zoneData.type === 'barcode' && zoneData.champFusion) {
+                    // Récupérer la valeur du champ dans l'enregistrement
+                    const fieldName = zoneData.champFusion.toUpperCase();
+                    const fieldValue = record[fieldName] || record[zoneData.champFusion] || '';
+                    
+                    // Mettre à jour l'affichage avec la valeur de prévisualisation
+                    // Seulement si la zone est sur la page courante (visible)
+                    if (pageIndex === documentState.currentPageIndex) {
+                        updateBarcodeZoneDisplay(zoneId, fieldValue);
+                    }
+                }
+            });
+        });
+        
+        console.log('  ✅ Codes-barres mis à jour avec les données de l\'enregistrement');
         
         return true;
     }
@@ -5649,6 +5706,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 typeCodeBarres: 'code128',       // Type par défaut
                 champFusion: '',                  // Champ de fusion (sans les @)
                 valeurStatique: '',               // Valeur fixe si pas de champ fusion
+                sourceType: 'fixe',               // Source de données : 'fixe' ou 'champ'
                 texteLisible: 'dessous',          // 'aucun', 'dessous'
                 taillePolice: DEFAULT_BARCODE_FONT_SIZE,                  // Taille du texte lisible en points
                 couleur: DEFAULT_TEXT_COLOR,               // Couleur du code-barres
@@ -7771,24 +7829,25 @@ document.addEventListener('DOMContentLoaded', () => {
             barcodeInputType.value = zoneData.typeCodeBarres || 'code128';
         }
         
-        // ─── SOURCE (champFusion) ───
+        // ─── SOURCE ───
         const champFusion = zoneData.champFusion || '';
+        const valeurStatique = zoneData.valeurStatique || '';
+        const sourceType = zoneData.sourceType || 'fixe';
         const hasField = champFusion && champFusion.trim() !== '';
         
-        if (barcodeInputSource) barcodeInputSource.value = hasField ? 'champ' : 'fixe';
+        // Utiliser sourceType pour la combo (pas hasField)
+        if (barcodeInputSource) barcodeInputSource.value = sourceType;
         
-        // Afficher le bon champ selon le type
-        if (hasField) {
+        // Afficher le bon champ/valeur selon sourceType
+        if (sourceType === 'champ') {
             if (barcodeValueRow) barcodeValueRow.style.display = 'none';
             if (barcodeFieldRow) barcodeFieldRow.style.display = '';
-            // Peupler les champs de fusion et sélectionner la valeur
             updateBarcodeFieldSelect();
-            if (barcodeInputField && champFusion) barcodeInputField.value = champFusion;
+            if (barcodeInputField && hasField) barcodeInputField.value = champFusion;
         } else {
             if (barcodeValueRow) barcodeValueRow.style.display = '';
             if (barcodeFieldRow) barcodeFieldRow.style.display = 'none';
-            // Afficher la valeur statique sauvegardée (vide si non définie)
-            if (barcodeInputValue) barcodeInputValue.value = zoneData.valeurStatique || '';
+            if (barcodeInputValue) barcodeInputValue.value = valeurStatique;
         }
         
         // ─── AFFICHAGE (texteLisible / taillePolice) ───
@@ -8006,15 +8065,29 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (barcodeValueRow) barcodeValueRow.style.display = 'none';
                     if (barcodeFieldRow) barcodeFieldRow.style.display = '';
                     updateBarcodeFieldSelect();
+                    
+                    // Vider l'input valeur (DOM)
+                    if (barcodeInputValue) barcodeInputValue.value = '';
+                    
+                    // Vider la valeur statique, mettre à jour sourceType et rafraîchir l'affichage
+                    updateSelectedBarcodeZone((zoneData, zoneEl) => {
+                        zoneData.valeurStatique = '';
+                        zoneData.sourceType = 'champ';
+                        if (zoneEl) {
+                            updateBarcodeZoneDisplay(zoneEl.id);
+                        }
+                    });
                 } else {
                     if (barcodeValueRow) barcodeValueRow.style.display = '';
                     if (barcodeFieldRow) barcodeFieldRow.style.display = 'none';
-                }
-                
-                // Si on passe en "fixe", vider le champ de fusion
-                if (sourceType === 'fixe') {
-                    updateSelectedBarcodeZone((zoneData) => {
+                    
+                    // Vider le champ de fusion, mettre à jour sourceType et rafraîchir l'affichage
+                    updateSelectedBarcodeZone((zoneData, zoneEl) => {
                         zoneData.champFusion = '';
+                        zoneData.sourceType = 'fixe';
+                        if (zoneEl) {
+                            updateBarcodeZoneDisplay(zoneEl.id);
+                        }
                     });
                 }
             });
@@ -10475,6 +10548,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * - Classe CSS 1D/2D pour l'étirement correct
      * 
      * @param {string} zoneId - Identifiant de la zone (ex: "zone-1")
+     * @param {string|null} [previewValue=null] - Valeur d'aperçu (mode preview avec champ de fusion)
      * @returns {void}
      * 
      * @example
@@ -10483,11 +10557,15 @@ document.addEventListener('DOMContentLoaded', () => {
      * zoneData.champFusion = 'CodeEAN';
      * updateBarcodeZoneDisplay('zone-1');
      * 
+     * @example
+     * // En mode aperçu, avec la valeur de l'enregistrement
+     * updateBarcodeZoneDisplay('zone-1', '01 23 45 67 89');
+     * 
      * @see generateBarcodeImage - Génération de l'image code-barres
      * @see updateQrZoneDisplay - Pour les zones QR (ancien format)
      * @see BARCODE_BWIPJS_CONFIG - Configuration des types de code-barres
      */
-    function updateBarcodeZoneDisplay(zoneId) {
+    function updateBarcodeZoneDisplay(zoneId, previewValue = null) {
         const zonesData = getCurrentPageZones();
         const zoneData = zonesData[zoneId];
         if (!zoneData || zoneData.type !== 'barcode') return;
@@ -10501,9 +10579,42 @@ document.addEventListener('DOMContentLoaded', () => {
         const texteLisible = zoneData.texteLisible || 'dessous';
         const taillePolice = zoneData.taillePolice || DEFAULT_BARCODE_FONT_SIZE;
         
-        // Récupérer la valeur fictive pour le texte
+        // Récupérer la configuration pour le texte et le type 2D
         const config = BARCODE_BWIPJS_CONFIG[typeCode];
-        const sampleValue = config ? config.sampleValue : 'SAMPLE';
+        
+        // Déterminer la source et les valeurs à afficher/encoder
+        const champFusion = zoneData.champFusion || '';
+        const valeurStatique = zoneData.valeurStatique || '';
+        const sourceType = zoneData.sourceType || 'fixe';
+        const hasField = champFusion && champFusion.trim() !== '';
+        const hasStaticValue = valeurStatique && valeurStatique.trim() !== '';
+        
+        // Texte à afficher (dans badge ou texte lisible)
+        let displayText;
+        let valueToEncode;
+        
+        if (previewValue !== null && hasField) {
+            // Mode aperçu avec champ de fusion : utiliser la valeur de l'enregistrement
+            displayText = previewValue || '(Valeur vide)';
+            valueToEncode = previewValue || null;
+        } else if (sourceType === 'champ') {
+            // Source "Champ de fusion"
+            if (hasField) {
+                displayText = formatFieldWithAt(champFusion);
+            } else {
+                displayText = '(Aucun champ)';
+            }
+            valueToEncode = null; // Utilisera sampleValue
+        } else {
+            // Source "Valeur fixe"
+            if (hasStaticValue) {
+                displayText = valeurStatique;
+                valueToEncode = valeurStatique;
+            } else {
+                displayText = '(Aucune valeur)';
+                valueToEncode = null;
+            }
+        }
         
         // Mettre à jour la classe 1D/2D pour l'étirement
         updateBarcodeDimensionClass(zoneEl, typeCode);
@@ -10523,28 +10634,37 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         typeBadge.textContent = getBarcodeTypeLabel(typeCode);
         
-        // Badge du champ - en bas à droite, en-dessous du cadre
+        // Badge du champ - affiché SEULEMENT si texteLisible === 'aucun'
         let fieldBadge = zoneEl.querySelector('.barcode-field-badge');
-        if (!fieldBadge) {
-            fieldBadge = document.createElement('span');
-            fieldBadge.className = 'barcode-field-badge';
-            zoneEl.appendChild(fieldBadge);
-        }
         
-        // Vérifier si un champ est sélectionné
-        const champFusion = zoneData.champFusion || '';
-        const hasField = champFusion && champFusion.trim() !== '';
-        
-        if (hasField) {
-            fieldBadge.textContent = getFieldDisplayName(champFusion);
-            fieldBadge.classList.remove('no-field');
+        if (texteLisible === 'aucun') {
+            // Créer le badge s'il n'existe pas
+            if (!fieldBadge) {
+                fieldBadge = document.createElement('span');
+                fieldBadge.className = 'barcode-field-badge';
+                zoneEl.appendChild(fieldBadge);
+            }
+            
+            // Mettre à jour le contenu et le style
+            fieldBadge.textContent = displayText;
+            
+            // Classe no-field si aucune valeur (ni champ ni valeur statique)
+            if (!hasField && !hasStaticValue) {
+                fieldBadge.classList.add('no-field');
+            } else {
+                fieldBadge.classList.remove('no-field');
+            }
+            
+            fieldBadge.style.display = '';
         } else {
-            fieldBadge.textContent = '(Aucun champ)';
-            fieldBadge.classList.add('no-field');
+            // Masquer le badge si le texte est affiché
+            if (fieldBadge) {
+                fieldBadge.style.display = 'none';
+            }
         }
         
         // Générer l'image du code-barres (fond transparent, le fond est géré par CSS)
-        const barcodeImage = generateBarcodeImage(typeCode, color);
+        const barcodeImage = generateBarcodeImage(typeCode, color, valueToEncode);
         
         // Vérifier si c'est un code 2D (jamais de texte pour les codes 2D)
         const is2D = config ? config.is2D : false;
@@ -10554,9 +10674,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (svgContainer) {
             let html = `<img class="barcode-image" src="${barcodeImage}" alt="${typeCode}">`;
             
-            // Ajouter le texte SEULEMENT pour les codes 1D
+            // Ajouter le texte lisible SEULEMENT pour les codes 1D et si texteLisible !== 'aucun'
             if (!is2D && texteLisible !== 'aucun') {
-                html += `<span class="barcode-text" style="font-size: ${taillePolice}pt; color: ${color};">${sampleValue}</span>`;
+                html += `<span class="barcode-text" style="font-size: ${taillePolice}pt; color: ${color};">${displayText}</span>`;
             }
             
             svgContainer.innerHTML = html;
