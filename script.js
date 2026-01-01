@@ -14774,7 +14774,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     locked: style.locked === true,
                     copyfit: style.copyfit === true,
                     emptyLines: 0,
-                    zIndex: 1,
+                    zIndex: z.niveau || 1,
                     border: {
                         width: (border.width_px !== undefined ? border.width_px : (border.width !== undefined ? border.width : 0)) || 0,
                         color: border.color || '#000000',
