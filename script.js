@@ -1909,7 +1909,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @see BARCODE_BWIPJS_CONFIG - Configuration bwip-js par type
      * @see getFallbackBarcodeSvg - SVG de secours si bwip-js échoue
      */
-    function generateBarcodeImage(typeCode, color = '#000000') {
+    function generateBarcodeImage(typeCode, color = DEFAULT_TEXT_COLOR) {
         // Vérifier que bwip-js est chargé
         if (typeof bwipjs === 'undefined') {
             console.warn('bwip-js non chargé, utilisation du fallback');
@@ -2901,6 +2901,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const IMAGE_MAX_COMPRESSED_SIZE = 2 * 1024 * 1024;  // 2 Mo max après compression
     const DPI_MINIMUM = 150;
     const DPI_RECOMMENDED = 200;
+
+    // === VALEURS PAR DÉFAUT DES ZONES ===
+    /** @type {string} Police par défaut pour les zones texte */
+    const DEFAULT_FONT = 'Roboto';
+    /** @type {number} Taille de police par défaut (points) */
+    const DEFAULT_FONT_SIZE = 12;
+    /** @type {number} Interligne par défaut */
+    const DEFAULT_LINE_HEIGHT = 1.2;
+    /** @type {string} Couleur de texte par défaut (hex) */
+    const DEFAULT_TEXT_COLOR = '#000000';
+    /** @type {string} Couleur de fond par défaut (hex) */
+    const DEFAULT_BG_COLOR = '#ffffff';
+    /** @type {string} Couleur de bordure par défaut (hex) */
+    const DEFAULT_BORDER_COLOR = '#000000';
+    /** @type {number} Taille minimum pour le copyfit (points) */
+    const DEFAULT_COPYFIT_MIN_SIZE = 6;
+    /** @type {number} Taille de police pour texte lisible des codes-barres (points) */
+    const DEFAULT_BARCODE_FONT_SIZE = 8;
+    /** @type {string} Alignement horizontal par défaut */
+    const DEFAULT_ALIGN_H = 'left';
+    /** @type {string} Alignement vertical par défaut */
+    const DEFAULT_ALIGN_V = 'top';
+    /** @type {string} Style de bordure par défaut */
+    const DEFAULT_BORDER_STYLE = 'solid';
     
     /**
      * Calcule la surface limite effective pour les zones images
@@ -4617,7 +4641,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         pageIndex: pageIndex,
                         quillDelta: JSON.parse(JSON.stringify(delta)), // Deep copy
                         htmlContent: htmlContent,
-                        originalFontSize: parseFloat(quillInstance.root.style.fontSize) || zoneData.size || 12,
+                        originalFontSize: parseFloat(quillInstance.root.style.fontSize) || zoneData.size || DEFAULT_FONT_SIZE,
                         emptyLines: zoneData.emptyLines || 0
                     });
                     
@@ -5035,7 +5059,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         pageIndex: currentPageIndex,
                         quillDelta: JSON.parse(JSON.stringify(delta)), // Deep copy
                         htmlContent: '', // Non utilisé pour la fusion
-                        originalFontSize: zoneData.size || 12,
+                        originalFontSize: zoneData.size || DEFAULT_FONT_SIZE,
                         emptyLines: zoneData.emptyLines || 0
                     });
                     
@@ -5484,9 +5508,9 @@ document.addEventListener('DOMContentLoaded', () => {
             font: QUILL_DEFAULT_FONT,
             size: QUILL_DEFAULT_SIZE,
             color: QUILL_DEFAULT_COLOR,
-            align: 'left',
-            valign: 'top',
-            bgColor: '#ffffff',
+            align: DEFAULT_ALIGN_H,
+            valign: DEFAULT_ALIGN_V,
+            bgColor: DEFAULT_BG_COLOR,
             isTransparent: true,
             bold: false,
             lineHeight: QUILL_DEFAULT_LINE_HEIGHT,
@@ -5496,8 +5520,8 @@ document.addEventListener('DOMContentLoaded', () => {
             zIndex: newZIndex,
             border: {
                 width: 0,
-                color: '#000000',
-                style: 'solid'
+                color: DEFAULT_BORDER_COLOR,
+                style: DEFAULT_BORDER_STYLE
             }
         };
         
@@ -5540,8 +5564,8 @@ document.addEventListener('DOMContentLoaded', () => {
         zonesData[id] = {
             type: 'qr',
             typeCode: 'QRCode',
-            qrColor: '#000000',
-            bgColor: '#ffffff',
+            qrColor: DEFAULT_TEXT_COLOR,
+            bgColor: DEFAULT_BG_COLOR,
             isTransparent: false, // Par défaut non transparent
             locked: false,
             zIndex: newZIndex // Niveau d'empilement (au premier plan)
@@ -5584,15 +5608,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 alignementH: 'center',
                 alignementV: 'middle'
             },
-            bgColor: '#ffffff',
+            bgColor: DEFAULT_BG_COLOR,
             isTransparent: true,
             locked: false,
             rotation: 0,
             zIndex: newZIndex, // Niveau d'empilement (au premier plan)
             border: {
                 width: 0,
-                color: '#000000',
-                style: 'solid'
+                color: DEFAULT_BORDER_COLOR,
+                style: DEFAULT_BORDER_STYLE
             }
         };
         
@@ -5625,9 +5649,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 typeCodeBarres: 'code128',       // Type par défaut
                 champFusion: '',                  // Champ de fusion (sans les @)
                 texteLisible: 'dessous',          // 'aucun', 'dessous'
-                taillePolice: 8,                  // Taille du texte lisible en points
-                couleur: '#000000',               // Couleur du code-barres
-                bgColor: '#ffffff',               // Couleur de fond
+                taillePolice: DEFAULT_BARCODE_FONT_SIZE,                  // Taille du texte lisible en points
+                couleur: DEFAULT_TEXT_COLOR,               // Couleur du code-barres
+                bgColor: DEFAULT_BG_COLOR,               // Couleur de fond
                 isTransparent: false,             // Par défaut non transparent
                 locked: false,
                 zIndex: newZIndex
@@ -5744,7 +5768,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (zoneData.isTransparent) {
                 zone.style.backgroundColor = 'transparent';
             } else {
-                zone.style.backgroundColor = zoneData.bgColor || '#ffffff';
+                zone.style.backgroundColor = zoneData.bgColor || DEFAULT_BG_COLOR;
             }
             
             // Mémoriser les dimensions de base en pixels pour cohérence (export/édition future)
@@ -5775,7 +5799,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (zoneData.isTransparent) {
                 zone.style.backgroundColor = 'transparent';
             } else {
-                zone.style.backgroundColor = zoneData.bgColor || '#ffffff';
+                zone.style.backgroundColor = zoneData.bgColor || DEFAULT_BG_COLOR;
             }
             
             // Mémoriser les dimensions de base en pixels pour cohérence (export/édition future)
@@ -5820,7 +5844,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (zoneData.isTransparent) {
                 zone.style.backgroundColor = 'transparent';
             } else {
-                zone.style.backgroundColor = zoneData.bgColor || '#ffffff';
+                zone.style.backgroundColor = zoneData.bgColor || DEFAULT_BG_COLOR;
             }
             
             // Mémoriser les dimensions de base en pixels pour cohérence (export/édition future)
@@ -5842,7 +5866,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (zoneData.isTransparent) {
                 preview.style.backgroundColor = 'transparent';
             } else {
-                preview.style.backgroundColor = zoneData.bgColor || '#ffffff';
+                preview.style.backgroundColor = zoneData.bgColor || DEFAULT_BG_COLOR;
             }
             
             // Container pour le code-barres généré
@@ -5880,7 +5904,7 @@ document.addEventListener('DOMContentLoaded', () => {
             zonesData[id].y = parseFloat(zone.style.top);
             
             // Fond (ne pas forcer à transparent : respecter les données importées / sauvegardées)
-            zone.style.backgroundColor = zoneData.isTransparent ? 'transparent' : (zoneData.bgColor || '#ffffff');
+            zone.style.backgroundColor = zoneData.isTransparent ? 'transparent' : (zoneData.bgColor || DEFAULT_BG_COLOR);
             
             // Bordure utilisateur (si définie)
             if (zoneData.border) {
@@ -6237,15 +6261,15 @@ document.addEventListener('DOMContentLoaded', () => {
             font: zoneData.font || QUILL_DEFAULT_FONT,
             size: zoneData.size || QUILL_DEFAULT_SIZE,
             color: zoneData.color || QUILL_DEFAULT_COLOR,
-            align: zoneData.align || 'left',
-            valign: zoneData.valign || 'top',
-            bgColor: zoneData.bgColor || '#ffffff',
+            align: zoneData.align || DEFAULT_ALIGN_H,
+            valign: zoneData.valign || DEFAULT_ALIGN_V,
+            bgColor: zoneData.bgColor || DEFAULT_BG_COLOR,
             isTransparent: zoneData.isTransparent !== undefined ? zoneData.isTransparent : true,
             locked: false, // Toujours réinitialiser à false pour la copie
             copyfit: zoneData.copyfit || false,
             lineHeight: zoneData.lineHeight !== undefined ? zoneData.lineHeight : QUILL_DEFAULT_LINE_HEIGHT,
             emptyLines: zoneData.emptyLines || 0,
-            border: zoneData.border ? JSON.parse(JSON.stringify(zoneData.border)) : { width: 0, color: '#000000', style: 'solid' },
+            border: zoneData.border ? JSON.parse(JSON.stringify(zoneData.border)) : { width: 0, color: DEFAULT_BORDER_COLOR, style: DEFAULT_BORDER_STYLE },
             // Géométrie : utiliser les dimensions actuelles du DOM
             w: zoneEl.offsetWidth,
             h: zoneEl.offsetHeight,
@@ -6303,7 +6327,7 @@ document.addEventListener('DOMContentLoaded', () => {
             copyfit: copiedZoneData.copyfit,
             lineHeight: copiedZoneData.lineHeight,
             emptyLines: copiedZoneData.emptyLines || 0,
-            border: copiedZoneData.border ? JSON.parse(JSON.stringify(copiedZoneData.border)) : { width: 0, color: '#000000', style: 'solid' },
+            border: copiedZoneData.border ? JSON.parse(JSON.stringify(copiedZoneData.border)) : { width: 0, color: DEFAULT_BORDER_COLOR, style: DEFAULT_BORDER_STYLE },
             zIndex: newZIndex,
             // Position et taille
             x: newX,
@@ -6884,8 +6908,8 @@ document.addEventListener('DOMContentLoaded', () => {
         setCheckboxPocState('quill-chk-copyfit-wrapper', !!zoneData.copyfit);
         
         // Alignements - Toggle-groups POC
-        setToggleGroupPocValue('quill-align-h-group', zoneData.align || 'left');
-        setToggleGroupPocValue('quill-align-v-group', zoneData.valign || 'top');
+        setToggleGroupPocValue('quill-align-h-group', zoneData.align || DEFAULT_ALIGN_H);
+        setToggleGroupPocValue('quill-align-v-group', zoneData.valign || DEFAULT_ALIGN_V);
         
         // Interligne - Spinner POC
         setSpinnerPocValue('quill-input-line-height', zoneData.lineHeight || QUILL_DEFAULT_LINE_HEIGHT, 0.1);
@@ -6902,7 +6926,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setCheckboxPocState('quill-chk-transparent-wrapper', isTransparent);
         
         // Couleur fond
-        const bgColor = zoneData.bgColor || '#ffffff';
+        const bgColor = zoneData.bgColor || DEFAULT_BG_COLOR;
         if (quillInputBgColor) quillInputBgColor.value = bgColor;
         updateColorSwatchPoc('quill-bg-color-swatch', bgColor);
         // Synchroniser les champs CMJN couleur fond (utiliser CMJN natif si disponible)
@@ -6920,13 +6944,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Bordure - Spinner POC + couleur
-        const border = zoneData.border || { width: 0, color: '#000000', style: 'solid' };
+        const border = zoneData.border || { width: 0, color: DEFAULT_BORDER_COLOR, style: DEFAULT_BORDER_STYLE };
         setSpinnerPocValue('quill-input-border-width', border.width || 0, 1);
-        if (quillInputBorderColor) quillInputBorderColor.value = border.color || '#000000';
-        updateColorSwatchPoc('quill-border-color-swatch', border.color || '#000000');
+        if (quillInputBorderColor) quillInputBorderColor.value = border.color || DEFAULT_BORDER_COLOR;
+        updateColorSwatchPoc('quill-border-color-swatch', border.color || DEFAULT_BORDER_COLOR);
         // Synchroniser les champs CMJN couleur bordure (utiliser CMJN natif si disponible)
-        updateCmjnFieldsFromHex('quill-border', border.color || '#000000', border.colorCmyk);
-        if (quillInputBorderStyle) quillInputBorderStyle.value = border.style || 'solid';
+        updateCmjnFieldsFromHex('quill-border', border.color || DEFAULT_BORDER_COLOR, border.colorCmyk);
+        if (quillInputBorderStyle) quillInputBorderStyle.value = border.style || DEFAULT_BORDER_STYLE;
         updateQuillBorderOptionsVisibility(border.width || 0);
         
         // Géométrie (mm)
@@ -6953,7 +6977,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Fond
         if (zoneData.isTransparent) zoneEl.style.backgroundColor = 'transparent';
-        else zoneEl.style.backgroundColor = zoneData.bgColor || '#ffffff';
+        else zoneEl.style.backgroundColor = zoneData.bgColor || DEFAULT_BG_COLOR;
 
         if (DEBUG_PHASE7_BG) {
             console.log('🔧 PHASE 7 BG - apply fond:', zoneId, {
@@ -7054,7 +7078,7 @@ document.addEventListener('DOMContentLoaded', () => {
             quillInstance.root.style.fontStyle = baseStyle;
             quillInstance.root.style.color = zoneData.color || QUILL_DEFAULT_COLOR;
             quillInstance.root.style.lineHeight = String(zoneData.lineHeight || QUILL_DEFAULT_LINE_HEIGHT);
-            quillInstance.root.style.textAlign = zoneData.align || 'left';
+            quillInstance.root.style.textAlign = zoneData.align || DEFAULT_ALIGN_H;
         }
         
         // Copyfit : ajuste la taille de police pour que le contenu tienne dans la zone
@@ -7272,7 +7296,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Bordure : épaisseur - Spinner POC
         initSpinnerPoc('quill-input-border-width', 0, 10, 1, (value) => {
             updateSelectedZone((zoneData) => {
-                zoneData.border = zoneData.border || { width: 0, color: '#000000', style: 'solid' };
+                zoneData.border = zoneData.border || { width: 0, color: DEFAULT_BORDER_COLOR, style: DEFAULT_BORDER_STYLE };
                 zoneData.border.width = value;
                 updateQuillBorderOptionsVisibility(value);
                 console.log('🔧 PHASE 4 - border.width:', zoneData.border.width);
@@ -7283,7 +7307,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (quillInputBorderColor) {
             quillInputBorderColor.addEventListener('input', () => {
                 updateSelectedZone((zoneData) => {
-                    zoneData.border = zoneData.border || { width: 0, color: '#000000', style: 'solid' };
+                    zoneData.border = zoneData.border || { width: 0, color: DEFAULT_BORDER_COLOR, style: DEFAULT_BORDER_STYLE };
                     zoneData.border.color = quillInputBorderColor.value;
                     zoneData.border.colorCmyk = null;  // Effacer CMJN car saisie RGB
                     updateColorSwatchPoc('quill-border-color-swatch', zoneData.border.color);
@@ -7296,7 +7320,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Bordure : couleur CMJN (CMJN → RGB sync)
         initCmjnFieldsListeners('quill-border', (newHex, cmykValues) => {
             updateSelectedZone((zoneData) => {
-                zoneData.border = zoneData.border || { width: 0, color: '#000000', style: 'solid' };
+                zoneData.border = zoneData.border || { width: 0, color: DEFAULT_BORDER_COLOR, style: DEFAULT_BORDER_STYLE };
                 zoneData.border.color = newHex;
                 zoneData.border.colorCmyk = cmykValues;  // Stocker CMJN natif
                 if (quillInputBorderColor) quillInputBorderColor.value = newHex;
@@ -7309,7 +7333,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (quillInputBorderStyle) {
             quillInputBorderStyle.addEventListener('change', () => {
                 updateSelectedZone((zoneData) => {
-                    zoneData.border = zoneData.border || { width: 0, color: '#000000', style: 'solid' };
+                    zoneData.border = zoneData.border || { width: 0, color: DEFAULT_BORDER_COLOR, style: DEFAULT_BORDER_STYLE };
                     zoneData.border.style = quillInputBorderStyle.value;
                     console.log('🔧 PHASE 4 - border.style:', zoneData.border.style);
                 });
@@ -7595,16 +7619,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         if (imageInputBgColor) {
-            imageInputBgColor.value = zoneData.bgColor || '#ffffff';
+            imageInputBgColor.value = zoneData.bgColor || DEFAULT_BG_COLOR;
             if (imageBgColorSwatch) {
-                imageBgColorSwatch.style.background = zoneData.bgColor || '#ffffff';
+                imageBgColorSwatch.style.background = zoneData.bgColor || DEFAULT_BG_COLOR;
             }
         }
         // Synchroniser les champs CMJN couleur fond (utiliser CMJN natif si disponible)
-        updateCmjnFieldsFromHex('image-bg', zoneData.bgColor || '#ffffff', zoneData.bgColorCmyk);
+        updateCmjnFieldsFromHex('image-bg', zoneData.bgColor || DEFAULT_BG_COLOR, zoneData.bgColorCmyk);
         
         // ─── BORDURE ───
-        const border = zoneData.border || { width: 0, color: '#000000', style: 'solid' };
+        const border = zoneData.border || { width: 0, color: DEFAULT_BORDER_COLOR, style: DEFAULT_BORDER_STYLE };
         
         if (imageInputBorderWidth) {
             imageInputBorderWidth.value = border.width || 0;
@@ -7615,15 +7639,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (imageBorderStyleRow) imageBorderStyleRow.style.display = hasBorder ? '' : 'none';
         if (imageBorderColorRow) imageBorderColorRow.style.display = hasBorder ? '' : 'none';
         
-        if (imageInputBorderStyle) imageInputBorderStyle.value = border.style || 'solid';
+        if (imageInputBorderStyle) imageInputBorderStyle.value = border.style || DEFAULT_BORDER_STYLE;
         if (imageInputBorderColor) {
-            imageInputBorderColor.value = border.color || '#000000';
+            imageInputBorderColor.value = border.color || DEFAULT_BORDER_COLOR;
             if (imageBorderColorSwatch) {
-                imageBorderColorSwatch.style.background = border.color || '#000000';
+                imageBorderColorSwatch.style.background = border.color || DEFAULT_BORDER_COLOR;
             }
         }
         // Synchroniser les champs CMJN couleur bordure (utiliser CMJN natif si disponible)
-        updateCmjnFieldsFromHex('image-border', border.color || '#000000', border.colorCmyk);
+        updateCmjnFieldsFromHex('image-border', border.color || DEFAULT_BORDER_COLOR, border.colorCmyk);
         
         // ─── GÉOMÉTRIE ───
         updateImageToolbarGeometryFields(zoneId);
@@ -7788,7 +7812,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         if (barcodeInputTextSize) {
-            barcodeInputTextSize.value = zoneData.taillePolice || 8;
+            barcodeInputTextSize.value = zoneData.taillePolice || DEFAULT_BARCODE_FONT_SIZE;
         }
         
         // ─── FOND ───
@@ -7801,13 +7825,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         if (barcodeInputBgColor) {
-            barcodeInputBgColor.value = zoneData.bgColor || '#ffffff';
+            barcodeInputBgColor.value = zoneData.bgColor || DEFAULT_BG_COLOR;
             if (barcodeBgColorSwatch) {
-                barcodeBgColorSwatch.style.background = zoneData.bgColor || '#ffffff';
+                barcodeBgColorSwatch.style.background = zoneData.bgColor || DEFAULT_BG_COLOR;
             }
         }
         // Synchroniser les champs CMJN couleur fond (utiliser CMJN natif si disponible)
-        updateCmjnFieldsFromHex('barcode-bg', zoneData.bgColor || '#ffffff', zoneData.bgColorCmyk);
+        updateCmjnFieldsFromHex('barcode-bg', zoneData.bgColor || DEFAULT_BG_COLOR, zoneData.bgColorCmyk);
         
         // ─── GÉOMÉTRIE ───
         updateBarcodeToolbarGeometryFields(zoneId);
@@ -7921,9 +7945,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Appliquer visuellement le fond (CSS uniquement, pas besoin de régénérer l'image)
                 const preview = zoneEl.querySelector('.barcode-preview');
                 if (preview) {
-                    preview.style.backgroundColor = isChecked ? 'transparent' : (zoneData.bgColor || '#ffffff');
+                    preview.style.backgroundColor = isChecked ? 'transparent' : (zoneData.bgColor || DEFAULT_BG_COLOR);
                 }
-                zoneEl.style.backgroundColor = isChecked ? 'transparent' : (zoneData.bgColor || '#ffffff');
+                zoneEl.style.backgroundColor = isChecked ? 'transparent' : (zoneData.bgColor || DEFAULT_BG_COLOR);
             }, false); // Pas besoin de régénérer l'image (toujours transparente)
         });
         
@@ -8275,13 +8299,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         if (qrcodeInputBgColor) {
-            qrcodeInputBgColor.value = zoneData.bgColor || '#ffffff';
+            qrcodeInputBgColor.value = zoneData.bgColor || DEFAULT_BG_COLOR;
             if (qrcodeBgColorSwatch) {
-                qrcodeBgColorSwatch.style.background = zoneData.bgColor || '#ffffff';
+                qrcodeBgColorSwatch.style.background = zoneData.bgColor || DEFAULT_BG_COLOR;
             }
         }
         // Synchroniser les champs CMJN couleur fond (utiliser CMJN natif si disponible)
-        updateCmjnFieldsFromHex('qrcode-bg', zoneData.bgColor || '#ffffff', zoneData.bgColorCmyk);
+        updateCmjnFieldsFromHex('qrcode-bg', zoneData.bgColor || DEFAULT_BG_COLOR, zoneData.bgColorCmyk);
         
         // ─── GÉOMÉTRIE ───
         updateQrcodeToolbarGeometryFields(zoneId);
@@ -8378,7 +8402,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Appliquer visuellement le fond (CSS uniquement, pas besoin de régénérer l'image)
             // Le fond est sur la zone elle-même (.zone-qr), pas sur le contenu
-            zoneEl.style.backgroundColor = isChecked ? 'transparent' : (zoneData.bgColor || '#ffffff');
+            zoneEl.style.backgroundColor = isChecked ? 'transparent' : (zoneData.bgColor || DEFAULT_BG_COLOR);
             
             saveToLocalStorage();
             saveState();
@@ -8692,7 +8716,7 @@ document.addEventListener('DOMContentLoaded', () => {
         initSpinnerPoc('image-input-border-width', 0, 20, 1, (value) => {
             console.log('🔧 Spinner border-width callback, value:', value);
             updateSelectedImageZone((zoneData, zoneEl) => {
-                if (!zoneData.border) zoneData.border = { width: 0, color: '#000000', style: 'solid' };
+                if (!zoneData.border) zoneData.border = { width: 0, color: DEFAULT_BORDER_COLOR, style: DEFAULT_BORDER_STYLE };
                 zoneData.border.width = value;
                 
                 // Afficher/masquer style et couleur selon épaisseur
@@ -8744,7 +8768,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 // Appliquer visuellement le fond
-                zoneEl.style.backgroundColor = checked ? 'transparent' : (zoneData.bgColor || '#ffffff');
+                zoneEl.style.backgroundColor = checked ? 'transparent' : (zoneData.bgColor || DEFAULT_BG_COLOR);
             });
         });
         
@@ -8839,7 +8863,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (imageInputBorderStyle) {
             imageInputBorderStyle.addEventListener('change', () => {
                 updateSelectedImageZone((zoneData, zoneEl) => {
-                    if (!zoneData.border) zoneData.border = { width: 0, color: '#000000', style: 'solid' };
+                    if (!zoneData.border) zoneData.border = { width: 0, color: DEFAULT_BORDER_COLOR, style: DEFAULT_BORDER_STYLE };
                     zoneData.border.style = imageInputBorderStyle.value;
                     // Appliquer visuellement la bordure
                     applyBorderToZone(zoneEl, zoneData.border);
@@ -8891,7 +8915,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     imageBorderColorSwatch.style.background = imageInputBorderColor.value;
                 }
                 updateSelectedImageZone((zoneData, zoneEl) => {
-                    if (!zoneData.border) zoneData.border = { width: 0, color: '#000000', style: 'solid' };
+                    if (!zoneData.border) zoneData.border = { width: 0, color: DEFAULT_BORDER_COLOR, style: DEFAULT_BORDER_STYLE };
                     zoneData.border.color = imageInputBorderColor.value;
                     zoneData.border.colorCmyk = null;  // Effacer CMJN car saisie RGB
                     updateCmjnFieldsFromHex('image-border', zoneData.border.color);
@@ -8904,7 +8928,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Couleur bordure CMJN (CMJN → RGB sync)
         initCmjnFieldsListeners('image-border', (newHex, cmykValues) => {
             updateSelectedImageZone((zoneData, zoneEl) => {
-                if (!zoneData.border) zoneData.border = { width: 0, color: '#000000', style: 'solid' };
+                if (!zoneData.border) zoneData.border = { width: 0, color: DEFAULT_BORDER_COLOR, style: DEFAULT_BORDER_STYLE };
                 zoneData.border.color = newHex;
                 zoneData.border.colorCmyk = cmykValues;  // Stocker CMJN natif
                 if (imageInputBorderColor) imageInputBorderColor.value = newHex;
@@ -9027,12 +9051,12 @@ document.addEventListener('DOMContentLoaded', () => {
             
             setTextControlsEnabled(false);
             if (inputContent) inputContent.value = 'Zone QR statique (non modifiable)';
-            if (inputFont) inputFont.value = 'Roboto';
-            if (inputSize) inputSize.value = 12;
-            if (inputColor) inputColor.value = '#000000';
+            if (inputFont) inputFont.value = DEFAULT_FONT;
+            if (inputSize) inputSize.value = DEFAULT_FONT_SIZE;
+            if (inputColor) inputColor.value = DEFAULT_TEXT_COLOR;
             if (inputAlign) inputAlign.value = 'center';
             if (inputValign) inputValign.value = 'middle';
-            if (inputBgColor) inputBgColor.value = '#ffffff';
+            if (inputBgColor) inputBgColor.value = DEFAULT_BG_COLOR;
             if (chkTransparent) chkTransparent.checked = false;
             if (chkCopyfit) chkCopyfit.checked = false;
             if (inputLineHeight) inputLineHeight.value = 1.0;
@@ -9041,7 +9065,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 inputBorderWidth.value = 0;
                 updateBorderWidthDisplay(0);
             }
-            if (inputBorderColor) inputBorderColor.value = '#000000';
+            if (inputBorderColor) inputBorderColor.value = DEFAULT_BORDER_COLOR;
             if (inputBorderStyle) inputBorderStyle.value = 'solid';
         } else if (zoneType === 'barcode') {
             // Masquer sections texte et image, afficher section code-barres
@@ -9074,8 +9098,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (inputBarcodeName) inputBarcodeName.value = data.nom || '';
             if (inputBarcodeType) inputBarcodeType.value = data.typeCodeBarres || 'code128';
             if (inputBarcodeReadable) inputBarcodeReadable.value = data.texteLisible || 'dessous';
-            if (inputBarcodeFontsize) inputBarcodeFontsize.value = data.taillePolice || 8;
-            if (inputBarcodeColor) inputBarcodeColor.value = data.couleur || '#000000';
+            if (inputBarcodeFontsize) inputBarcodeFontsize.value = data.taillePolice || DEFAULT_BARCODE_FONT_SIZE;
+            if (inputBarcodeColor) inputBarcodeColor.value = data.couleur || DEFAULT_TEXT_COLOR;
             
             // Vérifier si c'est un code 2D (jamais de texte lisible pour QR/DataMatrix)
             const typeCode = data.typeCodeBarres || 'code128';
@@ -9159,11 +9183,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 inputBorderWidth.value = data.border?.width || 0;
                 updateBorderWidthDisplay(data.border?.width || 0);
             }
-            if (inputBorderColor) inputBorderColor.value = data.border?.color || '#000000';
-            if (inputBorderStyle) inputBorderStyle.value = data.border?.style || 'solid';
+            if (inputBorderColor) inputBorderColor.value = data.border?.color || DEFAULT_BORDER_COLOR;
+            if (inputBorderStyle) inputBorderStyle.value = data.border?.style || DEFAULT_BORDER_STYLE;
             
             // Fond (contrôle commun - doit rester visible)
-            if (inputBgColor) inputBgColor.value = data.bgColor || '#ffffff';
+            if (inputBgColor) inputBgColor.value = data.bgColor || DEFAULT_BG_COLOR;
             if (chkTransparent) chkTransparent.checked = data.isTransparent !== undefined ? data.isTransparent : true;
             if (inputBgColor && chkTransparent) inputBgColor.disabled = chkTransparent.checked;
             
@@ -9217,27 +9241,27 @@ document.addEventListener('DOMContentLoaded', () => {
             
             setTextControlsEnabled(true);
             if (inputContent) inputContent.value = data.content || '';
-            if (inputFont) inputFont.value = data.font || 'Roboto';
-            if (inputSize) inputSize.value = data.size || 12;
-            if (inputColor) inputColor.value = data.color || '#000000';
-            if (inputAlign) inputAlign.value = data.align || 'left';
-            if (inputValign) inputValign.value = data.valign || 'top';
-            if (inputBgColor) inputBgColor.value = data.bgColor || '#ffffff';
+            if (inputFont) inputFont.value = data.font || DEFAULT_FONT;
+            if (inputSize) inputSize.value = data.size || DEFAULT_FONT_SIZE;
+            if (inputColor) inputColor.value = data.color || DEFAULT_TEXT_COLOR;
+            if (inputAlign) inputAlign.value = data.align || DEFAULT_ALIGN_H;
+            if (inputValign) inputValign.value = data.valign || DEFAULT_ALIGN_V;
+            if (inputBgColor) inputBgColor.value = data.bgColor || DEFAULT_BG_COLOR;
             if (chkTransparent) chkTransparent.checked = data.isTransparent !== undefined ? data.isTransparent : true;
             if (chkCopyfit) chkCopyfit.checked = data.copyfit || false;
             if (inputLineHeight) inputLineHeight.value = data.lineHeight !== undefined ? data.lineHeight : 1.2;
             
             // Initialiser la bordure si nécessaire
             if (!data.border) {
-                zonesData[id].border = { width: 0, color: '#000000', style: 'solid' };
+                zonesData[id].border = { width: 0, color: DEFAULT_BORDER_COLOR, style: DEFAULT_BORDER_STYLE };
             }
-            const border = data.border || { width: 0, color: '#000000', style: 'solid' };
+            const border = data.border || { width: 0, color: DEFAULT_BORDER_COLOR, style: DEFAULT_BORDER_STYLE };
             if (inputBorderWidth) {
                 inputBorderWidth.value = border.width || 0;
                 updateBorderWidthDisplay(border.width || 0);
             }
-            if (inputBorderColor) inputBorderColor.value = border.color || '#000000';
-            if (inputBorderStyle) inputBorderStyle.value = border.style || 'solid';
+            if (inputBorderColor) inputBorderColor.value = border.color || DEFAULT_BORDER_COLOR;
+            if (inputBorderStyle) inputBorderStyle.value = border.style || DEFAULT_BORDER_STYLE;
             
             // Charger la valeur des lignes vides (avec rétrocompatibilité)
             if (inputEmptyLines) {
@@ -9720,10 +9744,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function applyBorderToZone(zoneEl, border) {
         if (!zoneEl) return;
         
-        const borderData = border || { width: 0, color: '#000000', style: 'solid' };
+        const borderData = border || { width: 0, color: DEFAULT_BORDER_COLOR, style: DEFAULT_BORDER_STYLE };
         const width = parseFloat(borderData.width) || 0;
-        const color = borderData.color || '#000000';
-        const style = borderData.style || 'solid';
+        const color = borderData.color || DEFAULT_BORDER_COLOR;
+        const style = borderData.style || DEFAULT_BORDER_STYLE;
         
         if (width === 0) {
             // Pas de bordure (épaisseur = 0)
@@ -10472,9 +10496,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Récupérer les propriétés du code-barres
         const typeCode = zoneData.typeCodeBarres || 'code128';
-        const color = zoneData.couleur || '#000000';
+        const color = zoneData.couleur || DEFAULT_TEXT_COLOR;
         const texteLisible = zoneData.texteLisible || 'dessous';
-        const taillePolice = zoneData.taillePolice || 8;
+        const taillePolice = zoneData.taillePolice || DEFAULT_BARCODE_FONT_SIZE;
         
         // Récupérer la valeur fictive pour le texte
         const config = BARCODE_BWIPJS_CONFIG[typeCode];
@@ -10592,8 +10616,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Récupérer les propriétés du code-barres
         const typeCode = zoneData.typeCode || 'QRCode';
         const content = zoneData.content || '';
-        const color = zoneData.qrColor || '#000000';
-        const taillePolice = zoneData.taillePolice || 8;
+        const color = zoneData.qrColor || DEFAULT_TEXT_COLOR;
+        const taillePolice = zoneData.taillePolice || DEFAULT_BARCODE_FONT_SIZE;
         
         // Récupérer la valeur fictive pour le texte
         const config = BARCODE_BWIPJS_CONFIG[typeCode];
@@ -10680,7 +10704,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (inputBarcodeType) zoneData.typeCodeBarres = inputBarcodeType.value;
         if (barcodeInputField) zoneData.champFusion = barcodeInputField.value;
         if (inputBarcodeReadable) zoneData.texteLisible = inputBarcodeReadable.value;
-        if (inputBarcodeFontsize) zoneData.taillePolice = parseInt(inputBarcodeFontsize.value) || 8;
+        if (inputBarcodeFontsize) zoneData.taillePolice = parseInt(inputBarcodeFontsize.value) || DEFAULT_BARCODE_FONT_SIZE;
         if (inputBarcodeColor) zoneData.couleur = inputBarcodeColor.value;
         
         // Mettre à jour l'affichage
@@ -11933,12 +11957,12 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Vider tous les champs (protégés car éléments supprimés)
         if (inputContent) inputContent.value = '';
-        if (inputFont) inputFont.value = 'Roboto';
-        if (inputSize) inputSize.value = 12;
-        if (inputColor) inputColor.value = '#000000';
+        if (inputFont) inputFont.value = DEFAULT_FONT;
+        if (inputSize) inputSize.value = DEFAULT_FONT_SIZE;
+        if (inputColor) inputColor.value = DEFAULT_TEXT_COLOR;
         if (inputAlign) inputAlign.value = 'left';
         if (inputValign) inputValign.value = 'top';
-        if (inputBgColor) inputBgColor.value = '#ffffff';
+        if (inputBgColor) inputBgColor.value = DEFAULT_BG_COLOR;
         if (chkTransparent) chkTransparent.checked = true;
         if (chkCopyfit) chkCopyfit.checked = false;
         if (chkLock) chkLock.checked = false;
@@ -11948,7 +11972,7 @@ document.addEventListener('DOMContentLoaded', () => {
             inputBorderWidth.value = 0;
             updateBorderWidthDisplay(0);
         }
-        if (inputBorderColor) inputBorderColor.value = '#000000';
+        if (inputBorderColor) inputBorderColor.value = DEFAULT_BORDER_COLOR;
         if (inputBorderStyle) inputBorderStyle.value = 'solid';
         if (inputX) inputX.value = '';
         if (inputY) inputY.value = '';
@@ -13693,11 +13717,11 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {string} [align='left'] - Alignement horizontal ('left', 'center', 'right', 'justify')
      * @returns {string} Chaîne RTF complète compatible PrintShop Mail
      */
-    function deltaToRtf(delta, fontName = 'Roboto', fontSize = 12, defaultColor = '#000000', align = 'left') {
+    function deltaToRtf(delta, fontName = DEFAULT_FONT, fontSize = 12, defaultColor = DEFAULT_TEXT_COLOR, align = 'left') {
         const ops = delta && Array.isArray(delta.ops) ? delta.ops : [];
 
         // Normaliser la couleur par défaut
-        const normalizedDefaultColor = String(defaultColor || '#000000').toLowerCase();
+        const normalizedDefaultColor = String(defaultColor || DEFAULT_TEXT_COLOR).toLowerCase();
 
         // 1) Collecter les couleurs présentes (la couleur par défaut en premier, index 1)
         const colors = [normalizedDefaultColor];
@@ -14095,25 +14119,25 @@ document.addEventListener('DOMContentLoaded', () => {
             quillDelta: zoneJson.quillDelta || textAndFormatageToQuillDelta(zoneJson.contenu || '', zoneJson.formatage || []),
             
             // Style typographique
-            font: style.police || 'Roboto',
-            size: style.taillePt || 12,
-            color: cmjnWebDevToHex(style.couleurCmjn, '#000000'),
+            font: style.police || DEFAULT_FONT,
+            size: style.taillePt || DEFAULT_FONT_SIZE,
+            color: cmjnWebDevToHex(style.couleurCmjn, DEFAULT_TEXT_COLOR),
             colorCmyk: style.couleurCmjn || { c: 0, m: 0, y: 0, k: 100 },
-            lineHeight: style.interligne || 1.2,
-            align: style.alignementH || 'left',
-            valign: style.alignementV || 'top',
+            lineHeight: style.interligne || DEFAULT_LINE_HEIGHT,
+            align: style.alignementH || DEFAULT_ALIGN_H,
+            valign: style.alignementV || DEFAULT_ALIGN_V,
             
             // Fond
             isTransparent: fond.transparent !== undefined ? fond.transparent : true,
-            bgColor: cmjnWebDevToHex(fond.couleurCmjn, '#FFFFFF'),
+            bgColor: cmjnWebDevToHex(fond.couleurCmjn, DEFAULT_BG_COLOR),
             bgColorCmyk: fond.couleurCmjn || { c: 0, m: 0, y: 0, k: 0 },
             
             // Bordure
             border: {
                 width: bordure.epaisseur || 0,
-                color: cmjnWebDevToHex(bordure.couleurCmjn, '#000000'),
+                color: cmjnWebDevToHex(bordure.couleurCmjn, DEFAULT_BORDER_COLOR),
                 colorCmyk: bordure.couleurCmjn || { c: 0, m: 0, y: 0, k: 100 },
-                style: bordure.style || 'solid'
+                style: bordure.style || DEFAULT_BORDER_STYLE
             },
             
             // États
@@ -14127,7 +14151,7 @@ document.addEventListener('DOMContentLoaded', () => {
             name: zoneJson.nom || '',
             zIndex: zoneJson.niveau || 1,
             rotation: zoneJson.rotation || 0,
-            copyfitMin: copyfitting.tailleMinimum || 6,
+            copyfitMin: copyfitting.tailleMinimum || DEFAULT_COPYFIT_MIN_SIZE,
             copyfitWrap: copyfitting.autoriserRetourLigne !== undefined ? copyfitting.autoriserRetourLigne : true,
             // Lignes vides : rétrocompatibilité booléen → entier + migration 2→1
             emptyLines: (() => {
@@ -14163,10 +14187,10 @@ document.addEventListener('DOMContentLoaded', () => {
             champFusion: zoneJson.champFusion || '',
             valeurStatique: zoneJson.valeurStatique || '',
             texteLisible: zoneJson.texteLisible || 'dessous',
-            taillePolice: zoneJson.taillePolice || 8,
-            couleur: cmjnWebDevToHex(zoneJson.couleurCmjn, '#000000'),
+            taillePolice: zoneJson.taillePolice || DEFAULT_BARCODE_FONT_SIZE,
+            couleur: cmjnWebDevToHex(zoneJson.couleurCmjn, DEFAULT_TEXT_COLOR),
             couleurCmyk: zoneJson.couleurCmjn || { c: 0, m: 0, y: 0, k: 100 },
-            bgColor: cmjnWebDevToHex(zoneJson.couleurFondCmjn, '#FFFFFF'),
+            bgColor: cmjnWebDevToHex(zoneJson.couleurFondCmjn, DEFAULT_BG_COLOR),
             bgColorCmyk: zoneJson.couleurFondCmjn || { c: 0, m: 0, y: 0, k: 0 },
             isTransparent: zoneJson.transparent || false,
             locked: zoneJson.verrouille || false,
@@ -14202,9 +14226,9 @@ document.addEventListener('DOMContentLoaded', () => {
             type: 'qr',
             typeCode: zoneJson.typeCode || 'QRCode',
             content: zoneJson.contenu || '',
-            qrColor: cmjnWebDevToHex(couleurs.codeCmjn, '#000000'),
+            qrColor: cmjnWebDevToHex(couleurs.codeCmjn, DEFAULT_TEXT_COLOR),
             qrColorCmyk: couleurs.codeCmjn || { c: 0, m: 0, y: 0, k: 100 },
-            bgColor: cmjnWebDevToHex(couleurs.fondCmjn, '#FFFFFF'),
+            bgColor: cmjnWebDevToHex(couleurs.fondCmjn, DEFAULT_BG_COLOR),
             bgColorCmyk: couleurs.fondCmjn || { c: 0, m: 0, y: 0, k: 0 },
             isTransparent: false,
             locked: zoneJson.verrouille || false,
@@ -14326,11 +14350,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         content_quill: z.content_quill || '',
                         content_rtf: z.content_rtf || '',
                         style: {
-                            font: style.font || 'Roboto',
-                            size_pt: style.size_pt || 12,
-                            color: style.color || '#000000',
-                            align: style.align || 'left',
-                            valign: style.valign || 'top',
+                            font: style.font || DEFAULT_FONT,
+                            size_pt: style.size_pt || DEFAULT_FONT_SIZE,
+                            color: style.color || DEFAULT_TEXT_COLOR,
+                            align: style.align || DEFAULT_ALIGN_H,
+                            valign: style.valign || DEFAULT_ALIGN_V,
                             line_height: style.lineHeight !== undefined ? style.lineHeight : (style.line_height !== undefined ? style.line_height : 1.2),
                             // IMPORTANT : conserver le fond pendant la normalisation
                             bgColor: (typeof style.bgColor === 'string' && style.bgColor.trim().length > 0) ? style.bgColor : null,
@@ -14340,8 +14364,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         },
                         border: {
                             width_px: border.width !== undefined ? border.width : (border.width_px !== undefined ? border.width_px : 0),
-                            color: border.color || '#000000',
-                            style: border.style || 'solid'
+                            color: border.color || DEFAULT_BORDER_COLOR,
+                            style: border.style || DEFAULT_BORDER_STYLE
                         },
                         // Note : page non porté par le format "template_multipage" zone-by-zone.
                         // Ici, les zones seront importées par défaut sur la page 1 (voir Étape 6bis).
@@ -14741,7 +14765,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const importedBgColor =
                     (typeof style.bgColor === 'string' && style.bgColor.trim().length > 0)
                         ? style.bgColor
-                        : '#ffffff';
+                        : DEFAULT_BG_COLOR;
 
                 if (DEBUG_PHASE7_BG) {
                     console.log('🔧 PHASE 7 BG - Import style → interne:', zoneId, {
@@ -14763,11 +14787,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     wMm,
                     hMm,
                     quillDelta: delta,
-                    font: style.font || 'Roboto',
-                    size: style.size_pt || 12,
-                    color: style.color || '#000000',
-                    align: style.align || 'left',
-                    valign: style.valign || 'top',
+                    font: style.font || DEFAULT_FONT,
+                    size: style.size_pt || DEFAULT_FONT_SIZE,
+                    color: style.color || DEFAULT_TEXT_COLOR,
+                    align: style.align || DEFAULT_ALIGN_H,
+                    valign: style.valign || DEFAULT_ALIGN_V,
                     bgColor: importedBgColor,
                     isTransparent: importedIsTransparent,
                     lineHeight: (style.lineHeight !== undefined ? style.lineHeight : (style.line_height !== undefined ? style.line_height : 1.2)),
@@ -14777,8 +14801,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     zIndex: z.niveau || 1,
                     border: {
                         width: (border.width_px !== undefined ? border.width_px : (border.width !== undefined ? border.width : 0)) || 0,
-                        color: border.color || '#000000',
-                        style: border.style || 'solid'
+                        color: border.color || DEFAULT_BORDER_COLOR,
+                        style: border.style || DEFAULT_BORDER_STYLE
                     },
                     name: zoneId
                 };
@@ -14902,7 +14926,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 alignementH: redim.alignementH || 'center',
                 alignementV: redim.alignementV || 'middle'
             },
-            bgColor: cmjnWebDevToHex(fond.couleurCmjn, '#ffffff'),
+            bgColor: cmjnWebDevToHex(fond.couleurCmjn, DEFAULT_BG_COLOR),
             bgColorCmyk: fond.couleurCmjn || { c: 0, m: 0, y: 0, k: 0 },
             isTransparent: fond.transparent !== undefined ? fond.transparent : true,
             locked: zoneJson.verrouille || false,
@@ -14912,9 +14936,9 @@ document.addEventListener('DOMContentLoaded', () => {
             rotation: zoneJson.rotation || 0,
             border: {
                 width: bordure.epaisseur || 0,
-                color: cmjnWebDevToHex(bordure.couleurCmjn, '#000000'),
+                color: cmjnWebDevToHex(bordure.couleurCmjn, DEFAULT_BORDER_COLOR),
                 colorCmyk: bordure.couleurCmjn || { c: 0, m: 0, y: 0, k: 100 },
-                style: bordure.style || 'solid'
+                style: bordure.style || DEFAULT_BORDER_STYLE
             },
             name: zoneJson.nom || '',
             zIndex: zoneJson.niveau || 1
@@ -14998,26 +15022,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 typeZone: 'textQuill',
                 quillDelta: delta || undefined,
                 style: {
-                    police: zoneData.font || 'Roboto',
-                    taillePt: zoneData.size || 12,
-                    couleurCmjn: zoneData.colorCmyk || hexToCmjnWebDev(zoneData.color || '#000000'),
+                    police: zoneData.font || DEFAULT_FONT,
+                    taillePt: zoneData.size || DEFAULT_FONT_SIZE,
+                    couleurCmjn: zoneData.colorCmyk || hexToCmjnWebDev(zoneData.color || DEFAULT_TEXT_COLOR),
                     gras: false,
-                    interligne: zoneData.lineHeight || 1.2,
-                    alignementH: zoneData.align || 'left',
-                    alignementV: zoneData.valign || 'top'
+                    interligne: zoneData.lineHeight || DEFAULT_LINE_HEIGHT,
+                    alignementH: zoneData.align || DEFAULT_ALIGN_H,
+                    alignementV: zoneData.valign || DEFAULT_ALIGN_V
                 },
                 fond: {
                     transparent: zoneData.isTransparent !== undefined ? zoneData.isTransparent : true,
-                    couleurCmjn: zoneData.bgColorCmyk || hexToCmjnWebDev(zoneData.bgColor || '#FFFFFF')
+                    couleurCmjn: zoneData.bgColorCmyk || hexToCmjnWebDev(zoneData.bgColor || DEFAULT_BG_COLOR)
                 },
                 bordure: {
                     epaisseur: zoneData.border?.width || 0,
-                    couleurCmjn: zoneData.border?.colorCmyk || hexToCmjnWebDev(zoneData.border?.color || '#000000'),
-                    style: zoneData.border?.style || 'solid'
+                    couleurCmjn: zoneData.border?.colorCmyk || hexToCmjnWebDev(zoneData.border?.color || DEFAULT_BORDER_COLOR),
+                    style: zoneData.border?.style || DEFAULT_BORDER_STYLE
                 },
                 copyfitting: {
                     actif: zoneData.copyfit || false,
-                    tailleMinimum: zoneData.copyfitMin || 6,
+                    tailleMinimum: zoneData.copyfitMin || DEFAULT_COPYFIT_MIN_SIZE,
                     autoriserRetourLigne: zoneData.copyfitWrap !== undefined ? zoneData.copyfitWrap : true
                 }
             };
@@ -15072,32 +15096,32 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Style typographique
             style: {
-                police: zoneData.font || 'Roboto',
-                taillePt: zoneData.size || 12,
-                couleurCmjn: zoneData.colorCmyk || hexToCmjnWebDev(zoneData.color || '#000000'),
+                police: zoneData.font || DEFAULT_FONT,
+                taillePt: zoneData.size || DEFAULT_FONT_SIZE,
+                couleurCmjn: zoneData.colorCmyk || hexToCmjnWebDev(zoneData.color || DEFAULT_TEXT_COLOR),
                 gras: false,
-                interligne: zoneData.lineHeight || 1.2,
-                alignementH: zoneData.align || 'left',
-                alignementV: zoneData.valign || 'top'
+                interligne: zoneData.lineHeight || DEFAULT_LINE_HEIGHT,
+                alignementH: zoneData.align || DEFAULT_ALIGN_H,
+                alignementV: zoneData.valign || DEFAULT_ALIGN_V
             },
             
             // Fond
             fond: {
                 transparent: zoneData.isTransparent !== undefined ? zoneData.isTransparent : true,
-                couleurCmjn: zoneData.bgColorCmyk || hexToCmjnWebDev(zoneData.bgColor || '#FFFFFF')
+                couleurCmjn: zoneData.bgColorCmyk || hexToCmjnWebDev(zoneData.bgColor || DEFAULT_BG_COLOR)
             },
             
             // Bordure
             bordure: {
                 epaisseur: zoneData.border?.width || 0,
-                couleurCmjn: zoneData.border?.colorCmyk || hexToCmjnWebDev(zoneData.border?.color || '#000000'),
-                style: zoneData.border?.style || 'solid'
+                couleurCmjn: zoneData.border?.colorCmyk || hexToCmjnWebDev(zoneData.border?.color || DEFAULT_BORDER_COLOR),
+                style: zoneData.border?.style || DEFAULT_BORDER_STYLE
             },
             
             // Copyfitting
             copyfitting: {
                 actif: zoneData.copyfit || false,
-                tailleMinimum: zoneData.copyfitMin || 6,
+                tailleMinimum: zoneData.copyfitMin || DEFAULT_COPYFIT_MIN_SIZE,
                 autoriserRetourLigne: zoneData.copyfitWrap !== undefined ? zoneData.copyfitWrap : true
             }
         };
@@ -15138,9 +15162,9 @@ document.addEventListener('DOMContentLoaded', () => {
             champFusion: zoneData.champFusion || '',
             valeurStatique: zoneData.valeurStatique || '',
             texteLisible: zoneData.texteLisible || 'dessous',
-            taillePolice: zoneData.taillePolice || 8,
-            couleurCmjn: zoneData.couleurCmyk || hexToCmjnWebDev(zoneData.couleur || '#000000'),
-            couleurFondCmjn: zoneData.bgColorCmyk || hexToCmjnWebDev(zoneData.bgColor || '#FFFFFF'),
+            taillePolice: zoneData.taillePolice || DEFAULT_BARCODE_FONT_SIZE,
+            couleurCmjn: zoneData.couleurCmyk || hexToCmjnWebDev(zoneData.couleur || DEFAULT_TEXT_COLOR),
+            couleurFondCmjn: zoneData.bgColorCmyk || hexToCmjnWebDev(zoneData.bgColor || DEFAULT_BG_COLOR),
             transparent: zoneData.isTransparent || false
         };
     }
@@ -15175,8 +15199,8 @@ document.addEventListener('DOMContentLoaded', () => {
             typeCode: zoneData.typeCode || 'QRCode',
             contenu: zoneData.content || '',
             couleurs: {
-                codeCmjn: zoneData.qrColorCmyk || hexToCmjnWebDev(zoneData.qrColor || '#000000'),
-                fondCmjn: zoneData.bgColorCmyk || hexToCmjnWebDev(zoneData.bgColor || '#FFFFFF')
+                codeCmjn: zoneData.qrColorCmyk || hexToCmjnWebDev(zoneData.qrColor || DEFAULT_TEXT_COLOR),
+                fondCmjn: zoneData.bgColorCmyk || hexToCmjnWebDev(zoneData.bgColor || DEFAULT_BG_COLOR)
             }
         };
     }
@@ -15234,12 +15258,12 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             fond: {
                 transparent: zoneData.isTransparent !== undefined ? zoneData.isTransparent : true,
-                couleurCmjn: zoneData.bgColorCmyk || hexToCmjnWebDev(zoneData.bgColor || '#FFFFFF')
+                couleurCmjn: zoneData.bgColorCmyk || hexToCmjnWebDev(zoneData.bgColor || DEFAULT_BG_COLOR)
             },
             bordure: {
                 epaisseur: zoneData.border?.width || 0,
-                couleurCmjn: zoneData.border?.colorCmyk || hexToCmjnWebDev(zoneData.border?.color || '#000000'),
-                style: zoneData.border?.style || 'solid'
+                couleurCmjn: zoneData.border?.colorCmyk || hexToCmjnWebDev(zoneData.border?.color || DEFAULT_BORDER_COLOR),
+                style: zoneData.border?.style || DEFAULT_BORDER_STYLE
             }
         };
     }
@@ -15516,10 +15540,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Passer les paramètres de style pour générer un RTF complet PrintShop Mail
                     const rtfOutput = deltaToRtf(
                         delta,
-                        zoneData.font || 'Roboto',
-                        zoneData.size || 12,
-                        zoneData.color || '#000000',
-                        zoneData.align || 'left'
+                        zoneData.font || DEFAULT_FONT,
+                        zoneData.size || DEFAULT_FONT_SIZE,
+                        zoneData.color || DEFAULT_TEXT_COLOR,
+                        zoneData.align || DEFAULT_ALIGN_H
                     );
 
                     output.zonesTextQuill.push({
@@ -15536,14 +15560,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         content_quill: delta,
                         content_rtf: rtfOutput,
                         style: {
-                            font: zoneData.font || 'Roboto',
-                            size_pt: zoneData.size || 12,
-                            color: zoneData.color || '#000000',
+                            font: zoneData.font || DEFAULT_FONT,
+                            size_pt: zoneData.size || DEFAULT_FONT_SIZE,
+                            color: zoneData.color || DEFAULT_TEXT_COLOR,
                             colorCmyk: zoneData.colorCmyk || null,
-                            align: zoneData.align || 'left',
-                            valign: zoneData.valign || 'top',
-                            line_height: zoneData.lineHeight || 1.2,
-                            bgColor: zoneData.isTransparent ? null : (zoneData.bgColor || '#ffffff'),
+                            align: zoneData.align || DEFAULT_ALIGN_H,
+                            valign: zoneData.valign || DEFAULT_ALIGN_V,
+                            line_height: zoneData.lineHeight || DEFAULT_LINE_HEIGHT,
+                            bgColor: zoneData.isTransparent ? null : (zoneData.bgColor || DEFAULT_BG_COLOR),
                             bgColorCmyk: zoneData.isTransparent ? null : (zoneData.bgColorCmyk || null),
                             transparent: zoneData.isTransparent !== undefined ? !!zoneData.isTransparent : true,
                             locked: !!zoneData.locked,
@@ -15551,9 +15575,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         },
                         border: {
                             width_px: zoneData.border?.width || 0,
-                            color: zoneData.border?.color || '#000000',
+                            color: zoneData.border?.color || DEFAULT_BORDER_COLOR,
                             colorCmyk: zoneData.border?.colorCmyk || null,
-                            style: zoneData.border?.style || 'solid'
+                            style: zoneData.border?.style || DEFAULT_BORDER_STYLE
                         }
                     });
                 } else {
@@ -15970,7 +15994,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (data.isTransparent) {
                         zoneEl.style.backgroundColor = 'transparent';
                     } else {
-                        zoneEl.style.backgroundColor = data.bgColor || '#ffffff';
+                        zoneEl.style.backgroundColor = data.bgColor || DEFAULT_BG_COLOR;
                     }
                     
                     // Régénérer le vrai code-barres
@@ -15990,7 +16014,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (data.isTransparent) {
                         zoneEl.style.backgroundColor = 'transparent';
                     } else {
-                        zoneEl.style.backgroundColor = data.bgColor || '#ffffff';
+                        zoneEl.style.backgroundColor = data.bgColor || DEFAULT_BG_COLOR;
                     }
                     // Appliquer également le fond au container .barcode-preview
                     const barcodePreview = zoneEl.querySelector('.barcode-preview');
@@ -15998,7 +16022,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (data.isTransparent) {
                             barcodePreview.style.backgroundColor = 'transparent';
                         } else {
-                            barcodePreview.style.backgroundColor = data.bgColor || '#ffffff';
+                            barcodePreview.style.backgroundColor = data.bgColor || DEFAULT_BG_COLOR;
                         }
                     }
                     
@@ -16019,7 +16043,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (data.isTransparent) {
                         zoneEl.style.backgroundColor = 'transparent';
                     } else {
-                        zoneEl.style.backgroundColor = data.bgColor || '#ffffff';
+                        zoneEl.style.backgroundColor = data.bgColor || DEFAULT_BG_COLOR;
                     }
                     
                     // Bordure
