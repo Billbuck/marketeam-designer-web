@@ -1682,92 +1682,124 @@ document.addEventListener('DOMContentLoaded', () => {
             bcid: 'qrcode',
             sampleValue: 'https://example.com',
             is2D: true
+            // Pas de regex pour les 2D (traité plus tard)
         },
         'code128': {
             bcid: 'code128',
             sampleValue: 'ABC-12345',
-            is2D: false
+            is2D: false,
+            regex: /^[\x00-\x7F]+$/,              // Caractères ASCII
+            errorMessage: 'Caractères ASCII uniquement'
         },
         'ean13': {
             bcid: 'ean13',
             sampleValue: '5901234123457',  // Checksum valide
-            is2D: false
+            is2D: false,
+            regex: /^\d{12}$/,                     // Exactement 12 chiffres
+            errorMessage: '12 chiffres requis'
         },
         'ean8': {
             bcid: 'ean8',
             sampleValue: '96385074',       // Checksum valide
-            is2D: false
+            is2D: false,
+            regex: /^\d{7}$/,                      // Exactement 7 chiffres
+            errorMessage: '7 chiffres requis'
         },
         'code39': {
             bcid: 'code39',
             sampleValue: 'CODE39',
-            is2D: false
+            is2D: false,
+            regex: /^[A-Z0-9\-. $/+%]+$/,          // A-Z, 0-9, - . espace $ / + %
+            errorMessage: 'A-Z, 0-9, - . $ / + % uniquement'
         },
         'datamatrix': {
             bcid: 'datamatrix',
             sampleValue: 'DATAMATRIX01',
             is2D: true
+            // Pas de regex pour les 2D
         },
         'pdf417': {
             bcid: 'pdf417',
             sampleValue: 'PDF417 SAMPLE',
-            is2D: false  // Visuellement proche 1D (rectangulaire)
+            is2D: false,  // Visuellement proche 1D (rectangulaire)
+            regex: /^[\x00-\x7F]+$/,              // Caractères ASCII
+            errorMessage: 'Caractères ASCII uniquement'
         },
         'upca': {
             bcid: 'upca',
             sampleValue: '012345678905',   // Checksum valide
-            is2D: false
+            is2D: false,
+            regex: /^\d{7}$|^\d{11}$|^\d{12}$/,   // 7, 11 ou 12 chiffres
+            errorMessage: '7, 11 ou 12 chiffres requis'
         },
         'interleaved2of5': {
             bcid: 'interleaved2of5',
             sampleValue: '1234567890',     // Doit être pair
-            is2D: false
+            is2D: false,
+            regex: /^\d+$/,                        // Chiffres uniquement
+            errorMessage: 'Chiffres uniquement'
         },
         // Mapping supplémentaire pour les anciens types (format WebDev)
         'QRCode': {
             bcid: 'qrcode',
             sampleValue: 'https://example.com',
             is2D: true
+            // Pas de regex pour les 2D
         },
         'Code128': {
             bcid: 'code128',
             sampleValue: 'ABC-12345',
-            is2D: false
+            is2D: false,
+            regex: /^[\x00-\x7F]+$/,
+            errorMessage: 'Caractères ASCII uniquement'
         },
         'EAN13': {
             bcid: 'ean13',
             sampleValue: '5901234123457',
-            is2D: false
+            is2D: false,
+            regex: /^\d{12}$/,
+            errorMessage: '12 chiffres requis'
         },
         'EAN8': {
             bcid: 'ean8',
             sampleValue: '96385074',
-            is2D: false
+            is2D: false,
+            regex: /^\d{7}$/,
+            errorMessage: '7 chiffres requis'
         },
         'Code39': {
             bcid: 'code39',
             sampleValue: 'CODE39',
-            is2D: false
+            is2D: false,
+            regex: /^[A-Z0-9\-. $/+%]+$/,
+            errorMessage: 'A-Z, 0-9, - . $ / + % uniquement'
         },
         'DataMatrix': {
             bcid: 'datamatrix',
             sampleValue: 'DATAMATRIX01',
             is2D: true
+            // Pas de regex pour les 2D
         },
         'PDF417': {
             bcid: 'pdf417',
             sampleValue: 'PDF417 SAMPLE',
-            is2D: false
+            is2D: false,
+            regex: /^[\x00-\x7F]+$/,
+            errorMessage: 'Caractères ASCII uniquement'
         },
         'UPCA': {
             bcid: 'upca',
             sampleValue: '012345678905',
-            is2D: false
+            is2D: false,
+            regex: /^\d{7}$|^\d{11}$|^\d{12}$/,
+            errorMessage: '7, 11 ou 12 chiffres requis'
         },
         'Interleaved2of5': {
             bcid: 'interleaved2of5',
             sampleValue: '1234567890',
-            is2D: false
+            is2D: false,
+            regex: /^\d+$/,
+            errorMessage: 'Chiffres uniquement'
         }
     };
     
@@ -1842,6 +1874,39 @@ document.addEventListener('DOMContentLoaded', () => {
         // Retirer les @ existants puis en ajouter
         const cleanName = fieldName.replace(/^@/, '').replace(/@$/, '');
         return `@${cleanName}@`;
+    }
+    
+    /**
+     * Valide une valeur pour un type de code-barres donné.
+     * Utilise le regex défini dans BARCODE_BWIPJS_CONFIG.
+     * 
+     * @param {string} value - Valeur à valider
+     * @param {string} typeCode - Type de code-barres (ex: 'ean13', 'code128')
+     * @returns {{valid: boolean, errorMessage: string|null}} Résultat de la validation
+     * 
+     * @example
+     * validateBarcodeValue('123456789012', 'ean13'); // { valid: true, errorMessage: null }
+     * validateBarcodeValue('ABC', 'ean13');          // { valid: false, errorMessage: '12 chiffres requis' }
+     */
+    function validateBarcodeValue(value, typeCode) {
+        const config = BARCODE_BWIPJS_CONFIG[typeCode];
+        
+        // Pas de config ou pas de regex → valide par défaut (codes 2D)
+        if (!config || !config.regex) {
+            return { valid: true, errorMessage: null };
+        }
+        
+        // Valeur vide → pas de validation (sera géré ailleurs)
+        if (!value || value.trim() === '') {
+            return { valid: true, errorMessage: null };
+        }
+        
+        // Tester le regex
+        if (config.regex.test(value)) {
+            return { valid: true, errorMessage: null };
+        } else {
+            return { valid: false, errorMessage: config.errorMessage || 'Valeur invalide' };
+        }
     }
     
     /**
@@ -10616,6 +10681,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
+        // ═══ VALIDATION DE LA VALEUR ═══
+        let validationError = null;
+        
+        // Valider seulement si on a une valeur à encoder (source fixe avec valeur)
+        if (valueToEncode && valueToEncode.trim() !== '') {
+            const validation = validateBarcodeValue(valueToEncode, typeCode);
+            if (!validation.valid) {
+                validationError = validation.errorMessage;
+                valueToEncode = null;  // Forcer l'utilisation du placeholder
+            }
+        }
+        
         // Mettre à jour la classe 1D/2D pour l'étirement
         updateBarcodeDimensionClass(zoneEl, typeCode);
         
@@ -10663,8 +10740,34 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // Générer l'image du code-barres (fond transparent, le fond est géré par CSS)
-        const barcodeImage = generateBarcodeImage(typeCode, color, valueToEncode);
+        // Badge d'erreur - affiché si validation échouée
+        let errorBadge = zoneEl.querySelector('.barcode-error-badge');
+        
+        if (validationError) {
+            // Créer le badge s'il n'existe pas
+            if (!errorBadge) {
+                errorBadge = document.createElement('span');
+                errorBadge.className = 'barcode-error-badge';
+                zoneEl.appendChild(errorBadge);
+            }
+            errorBadge.textContent = validationError;
+            errorBadge.style.display = '';
+        } else {
+            // Masquer le badge si pas d'erreur
+            if (errorBadge) {
+                errorBadge.style.display = 'none';
+            }
+        }
+        
+        // Générer l'image du code-barres ou placeholder si erreur de validation
+        let barcodeImage;
+        if (validationError) {
+            // Erreur de validation → utiliser le placeholder
+            const fallbackSvg = config && config.is2D ? SVG_BARCODE_2D_FALLBACK : SVG_BARCODE_FALLBACK;
+            barcodeImage = 'data:image/svg+xml;base64,' + btoa(fallbackSvg);
+        } else {
+            barcodeImage = generateBarcodeImage(typeCode, color, valueToEncode);
+        }
         
         // Vérifier si c'est un code 2D (jamais de texte pour les codes 2D)
         const is2D = config ? config.is2D : false;

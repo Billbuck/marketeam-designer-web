@@ -1817,6 +1817,22 @@ body.in-iframe .toolbar {
     background: rgba(180, 40, 40, 0.9);  /* Rouge foncé */
 }
 
+/* Badge d'erreur de validation code-barres */
+.barcode-error-badge {
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #dc3545;
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    white-space: nowrap;
+    z-index: 10;
+    font-family: Arial, sans-serif;
+}
+
 /* ===== Badge DPI pour les images ===== */
 .image-dpi-badge {
     position: absolute;
