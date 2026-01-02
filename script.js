@@ -6843,6 +6843,35 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    /**
+     * Met à jour la visibilité du bouton "QR Code interactif" dans la sidebar.
+     * Le bouton est masqué si un QR Code Marketeam existe déjà sur le document.
+     * Il ne peut y avoir qu'un seul QR Code interactif par document (toutes pages confondues).
+     * 
+     * @returns {void}
+     * 
+     * @example
+     * // Appeler après création/suppression d'une zone QR
+     * updateQrInteractifButtonVisibility();
+     * 
+     * @see btnAddQr - Bouton "QR Code interactif" dans la sidebar
+     */
+    function updateQrInteractifButtonVisibility() {
+        if (!btnAddQr) return;
+        
+        // Chercher s'il existe une zone QR Marketeam sur TOUTES les pages du document
+        const hasQrMarketeam = documentState.pages.some(page => {
+            return Object.values(page.zones).some(zoneData => {
+                if (zoneData.type !== 'qr') return false;
+                // QR Marketeam = pas de qrConfig ou pas de type dans qrConfig
+                return !zoneData.qrConfig || !zoneData.qrConfig.type;
+            });
+        });
+        
+        // Masquer ou afficher le bouton
+        btnAddQr.style.display = hasQrMarketeam ? 'none' : '';
+    }
+
     btnAddQr.addEventListener('click', () => {
         // Bloquer la création de zones en mode aperçu
         if (previewState.active) {
@@ -6870,6 +6899,9 @@ document.addEventListener('DOMContentLoaded', () => {
         createZoneDOM(id, zoneCounter);
         saveToLocalStorage();
         saveState(); // Snapshot APRÈS la création
+        
+        // Masquer le bouton QR interactif (un seul autorisé)
+        updateQrInteractifButtonVisibility();
     });
 
     // Listener pour créer une zone image
@@ -12256,6 +12288,10 @@ document.addEventListener('DOMContentLoaded', () => {
             oldBadgesContainer.remove();
         }
         
+        // ═══ CAS SPÉCIAL : QR Code Marketeam (sans qrConfig) ═══
+        // Ce QR est lié automatiquement à la landing page de la campagne
+        const isQrMarketeam = !zoneData.qrConfig || !zoneData.qrConfig.type;
+        
         // Badge du type - en haut à gauche, au-dessus du cadre
         let typeBadge = zoneEl.querySelector('.barcode-type-badge');
         if (!typeBadge) {
@@ -12263,7 +12299,8 @@ document.addEventListener('DOMContentLoaded', () => {
             typeBadge.className = 'barcode-type-badge';
             zoneEl.appendChild(typeBadge);
         }
-        typeBadge.textContent = getBarcodeTypeLabel(typeCode.toLowerCase());
+        // QR Marketeam : afficher "QR Code interactif", sinon le label standard
+        typeBadge.textContent = isQrMarketeam ? 'QR Code interactif' : getBarcodeTypeLabel(typeCode.toLowerCase());
         
         // Badge du champ - en bas à droite, en-dessous du cadre
         let fieldBadge = zoneEl.querySelector('.barcode-field-badge');
@@ -12276,7 +12313,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Vérifier si un champ est sélectionné
         const hasField = content && content.trim() !== '';
         
-        if (hasField) {
+        if (isQrMarketeam && !hasField) {
+            // QR Code Marketeam sans champ : afficher "Landing page" (pas d'erreur)
+            fieldBadge.textContent = 'Landing page';
+            fieldBadge.classList.remove('no-field');
+        } else if (hasField) {
             fieldBadge.textContent = getFieldDisplayName(content);
             fieldBadge.classList.remove('no-field');
         } else {
@@ -13302,6 +13343,9 @@ document.addEventListener('DOMContentLoaded', () => {
             saveToLocalStorage();
             saveState(); // Snapshot APRÈS la suppression
             deselectAll();
+            
+            // Réafficher le bouton QR interactif si celui-ci a été supprimé
+            updateQrInteractifButtonVisibility();
         }
         hideDeleteConfirmation();
     }
@@ -13779,6 +13823,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         saveState(); // Snapshot APRÈS la réinitialisation (nouveau point de départ)
         
+        // Réafficher le bouton QR interactif après reset
+        updateQrInteractifButtonVisibility();
+        
         hideResetConfirmation();
     }
 
@@ -13819,6 +13866,9 @@ document.addEventListener('DOMContentLoaded', () => {
         historyManager.currentIndex = -1;
         
         saveState(); // Snapshot APRÈS la réinitialisation (nouveau point de départ)
+        
+        // Réafficher le bouton QR interactif après reset
+        updateQrInteractifButtonVisibility();
         
         hideResetConfirmation();
     }
@@ -17704,6 +17754,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Mettre à jour la section Page (masquée car aucune zone sélectionnée après chargement)
         updateZonePageUI();
+        
+        // Mettre à jour la visibilité du bouton QR interactif
+        updateQrInteractifButtonVisibility();
     }
 
     // --- CHARGEMENT AU DÉMARRAGE ---
@@ -18161,6 +18214,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 10. Si en mode aperçu, réafficher le contenu fusionné
         refreshPreviewAfterPageChange();
+        
+        // 11. Mettre à jour la visibilité du bouton QR interactif
+        updateQrInteractifButtonVisibility();
     }
 
     /**
