@@ -1833,6 +1833,48 @@ body.in-iframe .toolbar {
     font-family: Arial, sans-serif;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   BADGES ZONES - Visibilité conditionnelle (toutes zones)
+   Masqués par défaut, visibles au survol ou quand sélectionné
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Masquer TOUS les badges d'info par défaut (zones non sélectionnées) */
+.zone:not(.selected) .barcode-type-badge,
+.zone:not(.selected) .barcode-field-badge,
+.zone:not(.selected) .image-dpi-badge,
+.zone:not(.selected) .systeme-badge {
+    opacity: 0 !important;
+    visibility: hidden;
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+    pointer-events: none;
+}
+
+/* Afficher les badges au survol de la zone */
+.zone:not(.selected):hover .barcode-type-badge,
+.zone:not(.selected):hover .barcode-field-badge,
+.zone:not(.selected):hover .image-dpi-badge,
+.zone:not(.selected):hover .systeme-badge {
+    opacity: 1 !important;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+/* Afficher les badges quand la zone est sélectionnée */
+.zone.selected .barcode-type-badge,
+.zone.selected .barcode-field-badge,
+.zone.selected .image-dpi-badge,
+.zone.selected .systeme-badge {
+    opacity: 1 !important;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+/* EXCEPTION : Le badge d'erreur reste TOUJOURS visible */
+.zone .barcode-error-badge {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
 /* ===== Badge DPI pour les images ===== */
 .image-dpi-badge {
     position: absolute;
