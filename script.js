@@ -969,6 +969,12 @@ document.addEventListener('DOMContentLoaded', () => {
     /** @type {HTMLButtonElement|null} Bouton fermer de la toolbar QR Code */
     const qrcodeToolbarCloseBtn = document.getElementById('qrcode-toolbar-close');
     
+    // Poignées de redimensionnement
+    /** @type {HTMLElement|null} Poignée de redimensionnement de la toolbar barcode */
+    const barcodeToolbarResizeHandle = document.querySelector('#barcode-toolbar .toolbar-resize-handle');
+    /** @type {HTMLElement|null} Poignée de redimensionnement de la toolbar QR Code */
+    const qrcodeToolbarResizeHandle = document.querySelector('#qrcode-toolbar .toolbar-resize-handle');
+    
     // Contrôles Section Page
     /** @type {HTMLSelectElement|null} Dropdown page (recto/verso) */
     const qrcodeInputPage = document.getElementById('qrcode-input-page');
@@ -1865,7 +1871,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fields: [
                 { id: 'to', label: 'Destinataire', placeholder: 'contact@exemple.com', required: true },
                 { id: 'subject', label: 'Sujet', placeholder: 'Demande de @PRENOM@ @NOM@', required: false },
-                { id: 'body', label: 'Message', placeholder: 'Bonjour...', required: false }
+                { id: 'body', label: 'Message', placeholder: 'Bonjour...', required: false, type: 'textarea' }
             ]
         },
         'tel': {
@@ -1877,6 +1883,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'geo': {
             label: 'Géolocalisation',
             fields: [
+                { id: 'adresse', label: 'Adresse', placeholder: '123 rue de Paris, 75001 Paris', required: false, type: 'geocode' },
                 { id: 'latitude', label: 'Latitude', placeholder: '48.8566', required: true },
                 { id: 'longitude', label: 'Longitude', placeholder: '2.3522', required: true }
             ]
@@ -2162,19 +2169,54 @@ document.addEventListener('DOMContentLoaded', () => {
             const value = (currentValues && currentValues[field.id]) || '';
             const requiredMark = field.required ? ' *' : '';
             
-            html += `
-                <div class="form-row-poc">
-                    <label class="form-label-poc">${escapeHtmlAttr(field.label)}${requiredMark}</label>
-                    <div class="form-control-poc">
-                        <input type="text" 
-                               class="text-input-poc qr-field-input" 
-                               id="qr-field-${field.id}"
-                               data-field-id="${field.id}"
-                               placeholder="${escapeHtmlAttr(field.placeholder)}"
-                               value="${escapeHtmlAttr(value)}">
+            // Déterminer si c'est un textarea, un champ géocode ou un input standard
+            if (field.type === 'textarea') {
+                html += `
+                    <div class="form-row-poc form-row-textarea">
+                        <label class="form-label-poc">${escapeHtmlAttr(field.label)}${requiredMark}</label>
+                        <div class="form-control-poc">
+                            <textarea class="text-input-poc qr-field-input qr-field-textarea" 
+                                      id="qr-field-${field.id}"
+                                      data-field-id="${field.id}"
+                                      placeholder="${escapeHtmlAttr(field.placeholder)}"
+                                      rows="3">${escapeHtmlAttr(value)}</textarea>
+                        </div>
                     </div>
-                </div>
-            `;
+                `;
+            } else if (field.type === 'geocode') {
+                // Champ avec bouton de géocodage
+                html += `
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">${escapeHtmlAttr(field.label)}${requiredMark}</label>
+                        <div class="form-control-poc geocode-control">
+                            <input type="text" 
+                                   class="text-input-poc qr-field-input" 
+                                   id="qr-field-${field.id}"
+                                   data-field-id="${field.id}"
+                                   placeholder="${escapeHtmlAttr(field.placeholder)}"
+                                   value="${escapeHtmlAttr(value)}">
+                            <button type="button" 
+                                    class="geocode-btn" 
+                                    id="qr-geocode-btn"
+                                    title="Géocoder cette adresse">📍</button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">${escapeHtmlAttr(field.label)}${requiredMark}</label>
+                        <div class="form-control-poc">
+                            <input type="text" 
+                                   class="text-input-poc qr-field-input" 
+                                   id="qr-field-${field.id}"
+                                   data-field-id="${field.id}"
+                                   placeholder="${escapeHtmlAttr(field.placeholder)}"
+                                   value="${escapeHtmlAttr(value)}">
+                        </div>
+                    </div>
+                `;
+            }
         });
         
         qrFieldsContainer.innerHTML = html;
@@ -2261,6 +2303,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log(`🔲 Champ ${fieldText} inséré dans ${input.id}`);
             });
         });
+        
+        // Bouton de géocodage (si présent)
+        const geocodeBtn = document.getElementById('qr-geocode-btn');
+        if (geocodeBtn) {
+            geocodeBtn.addEventListener('click', handleGeocodeClick);
+        }
     }
 
     /**
@@ -2289,6 +2337,109 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Déclencher l'événement input pour la sauvegarde
         input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    /**
+     * Géocode une adresse via l'API Nominatim (OpenStreetMap).
+     * Remplit automatiquement les champs latitude et longitude.
+     * 
+     * @param {string} address - L'adresse à géocoder
+     * @returns {Promise<{lat: string, lon: string}|null>} Coordonnées ou null si échec
+     */
+    async function geocodeAddress(address) {
+        if (!address || address.trim() === '') {
+            console.warn('🌍 Géocodage: adresse vide');
+            return null;
+        }
+        
+        // API Nominatim (gratuite, sans clé, limite 1 req/sec)
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
+        
+        try {
+            const response = await fetch(url, {
+                headers: {
+                    'Accept': 'application/json',
+                    // User-Agent recommandé par Nominatim
+                    'User-Agent': 'MarketeamDesigner/1.0'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data && data.length > 0) {
+                const result = data[0];
+                console.log(`🌍 Géocodage réussi: ${result.display_name}`);
+                return {
+                    lat: result.lat,
+                    lon: result.lon
+                };
+            } else {
+                console.warn('🌍 Géocodage: aucun résultat trouvé');
+                return null;
+            }
+        } catch (error) {
+            console.error('🌍 Erreur géocodage:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Gère le clic sur le bouton de géocodage.
+     * Récupère l'adresse, appelle l'API et remplit lat/lon.
+     * 
+     * @returns {Promise<void>}
+     */
+    async function handleGeocodeClick() {
+        const adresseInput = document.getElementById('qr-field-adresse');
+        const latitudeInput = document.getElementById('qr-field-latitude');
+        const longitudeInput = document.getElementById('qr-field-longitude');
+        const geocodeBtn = document.getElementById('qr-geocode-btn');
+        
+        if (!adresseInput || !latitudeInput || !longitudeInput) {
+            console.error('🌍 Champs géolocalisation non trouvés');
+            return;
+        }
+        
+        const adresse = adresseInput.value.trim();
+        if (!adresse) {
+            alert('Veuillez saisir une adresse à géocoder.');
+            adresseInput.focus();
+            return;
+        }
+        
+        // Feedback visuel : désactiver le bouton pendant le traitement
+        if (geocodeBtn) {
+            geocodeBtn.disabled = true;
+            geocodeBtn.textContent = '⏳';
+        }
+        
+        try {
+            const coords = await geocodeAddress(adresse);
+            
+            if (coords) {
+                // Remplir les champs avec les coordonnées
+                latitudeInput.value = coords.lat;
+                longitudeInput.value = coords.lon;
+                
+                // Déclencher les événements input pour sauvegarder
+                latitudeInput.dispatchEvent(new Event('input', { bubbles: true }));
+                longitudeInput.dispatchEvent(new Event('input', { bubbles: true }));
+                
+                console.log(`🌍 Coordonnées insérées: ${coords.lat}, ${coords.lon}`);
+            } else {
+                alert('Adresse non trouvée. Vérifiez l\'orthographe ou essayez une adresse plus précise.');
+            }
+        } finally {
+            // Restaurer le bouton
+            if (geocodeBtn) {
+                geocodeBtn.disabled = false;
+                geocodeBtn.textContent = '📍';
+            }
+        }
     }
 
     /**
@@ -2372,9 +2523,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 return buildWifiContent(fields, record);
             
             case 'geo':
-                const lat = getField('latitude', '48.8566');
-                const lng = getField('longitude', '2.3522');
-                return `geo:${lat},${lng}`;
+                const geoLat = getField('latitude', '48.8566');
+                const geoLng = getField('longitude', '2.3522');
+                return `geo:${geoLat},${geoLng}`;
             
             default:
                 console.warn(`Type QR inconnu: ${type}`);
@@ -2592,8 +2743,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             
             case 'geo':
-                // Vérifier que les coordonnées sont présentes
-                const geoMatch = content.match(/^geo:(.+),(.+)$/);
+                // Vérifier que les coordonnées sont présentes (format standard geo:lat,lng)
+                const geoMatch = content.match(/^geo:(-?\d+\.?\d*),(-?\d+\.?\d*)$/);
                 if (!geoMatch) {
                     return { valid: false, errorMessage: 'Coordonnées invalides' };
                 }
@@ -2647,9 +2798,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 return ssid ? `WiFi: ${ssid}` : '(WiFi vide)';
             
             case 'geo':
-                const lat = fields.latitude || '';
-                const lng = fields.longitude || '';
-                return (lat && lng) ? `${lat}, ${lng}` : '(Geo vide)';
+                const geoPreviewLat = fields.latitude || '';
+                const geoPreviewLng = fields.longitude || '';
+                return (geoPreviewLat && geoPreviewLng) ? `📍 ${geoPreviewLat}, ${geoPreviewLng}` : '(Geo vide)';
             
             default:
                 return typeLabel;
@@ -9244,6 +9395,96 @@ document.addEventListener('DOMContentLoaded', () => {
         // Fallback viewport
         return { x: window.innerWidth - w - margin, y: margin };
     }
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // Toolbar Resize - Redimensionnement horizontal des toolbars
+    // ═══════════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Initialise le redimensionnement horizontal d'une toolbar via sa poignée.
+     * Le redimensionnement se fait depuis le bord gauche (la toolbar étant à droite).
+     * 
+     * @param {HTMLElement} handle - L'élément poignée de redimensionnement
+     * @param {HTMLElement} toolbar - La toolbar à redimensionner
+     * @param {number} [minWidth=280] - Largeur minimale en pixels
+     * @param {number} [maxWidth=500] - Largeur maximale en pixels
+     * @returns {void}
+     */
+    function initToolbarResize(handle, toolbar, minWidth = 280, maxWidth = 500) {
+        if (!handle || !toolbar) return;
+        
+        let isResizing = false;
+        let startX = 0;
+        let startWidth = 0;
+        
+        /**
+         * Démarre le redimensionnement
+         * @param {MouseEvent} e
+         */
+        function startResize(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            isResizing = true;
+            startX = e.clientX;
+            startWidth = toolbar.offsetWidth;
+            
+            // Classes visuelles
+            handle.classList.add('resizing');
+            toolbar.classList.add('resizing');
+            
+            // Listeners globaux
+            document.addEventListener('mousemove', doResize);
+            document.addEventListener('mouseup', stopResize);
+            
+            console.log('📐 Toolbar resize started');
+        }
+        
+        /**
+         * Effectue le redimensionnement
+         * @param {MouseEvent} e
+         */
+        function doResize(e) {
+            if (!isResizing) return;
+            
+            // Calcul : poignée à droite, tirer vers la droite = agrandir
+            // deltaX positif = agrandir, deltaX négatif = réduire
+            const deltaX = e.clientX - startX;
+            let newWidth = startWidth + deltaX;
+            
+            // Contraintes min/max
+            newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+            
+            // Appliquer la nouvelle largeur
+            toolbar.style.width = newWidth + 'px';
+        }
+        
+        /**
+         * Termine le redimensionnement
+         */
+        function stopResize() {
+            if (!isResizing) return;
+            
+            isResizing = false;
+            
+            // Retirer les classes visuelles
+            handle.classList.remove('resizing');
+            toolbar.classList.remove('resizing');
+            
+            // Retirer les listeners globaux
+            document.removeEventListener('mousemove', doResize);
+            document.removeEventListener('mouseup', stopResize);
+            
+            console.log(`📐 Toolbar resize ended: ${toolbar.offsetWidth}px`);
+        }
+        
+        // Attacher l'événement mousedown
+        handle.addEventListener('mousedown', startResize);
+    }
+
+    // Initialiser le redimensionnement des toolbars Barcode et QR Code
+    initToolbarResize(barcodeToolbarResizeHandle, barcodeToolbar);
+    initToolbarResize(qrcodeToolbarResizeHandle, qrcodeToolbar);
 
     /**
      * Affiche la toolbar QR Code et synchronise avec la zone sélectionnée.

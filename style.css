@@ -2036,6 +2036,8 @@ body.in-iframe .toolbar {
     top: 20px;
     right: 20px;
     width: 300px;
+    min-width: 280px;
+    max-width: 500px;
     z-index: 2000;
     background: var(--poc-bg-toolbar);
     border-radius: var(--poc-border-radius);
@@ -2044,6 +2046,66 @@ body.in-iframe .toolbar {
     user-select: none;
     display: flex;
     flex-direction: column;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TOOLBAR RESIZE HANDLE - Poignée de redimensionnement
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.toolbar-resize-handle {
+    position: absolute;
+    right: -4px;
+    top: 0;
+    bottom: 0;
+    width: 12px;
+    cursor: ew-resize;
+    background: transparent;
+    z-index: 10;
+    transition: background-color 0.15s ease;
+}
+
+/* Permettre à la poignée de dépasser la toolbar */
+.toolbar-poc:has(.toolbar-resize-handle) {
+    overflow: visible;
+}
+
+/* Garder le scroll sur le contenu */
+.toolbar-poc:has(.toolbar-resize-handle) .toolbar-content-poc {
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Trait vertical positionné exactement sur le bord droit de la toolbar */
+.toolbar-resize-handle::after {
+    content: '';
+    position: absolute;
+    right: 4px; /* Aligné au bord droit de la toolbar */
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--poc-theme-primary);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+/* Indicateur visuel au survol */
+.toolbar-resize-handle:hover::after {
+    opacity: 1;
+}
+
+/* Indicateur actif pendant le drag */
+.toolbar-resize-handle.resizing::after,
+.toolbar-resize-handle:active::after {
+    opacity: 1;
+}
+
+/* Empêcher la sélection de texte pendant le resize */
+.toolbar-poc.resizing {
+    user-select: none;
+}
+
+.toolbar-poc.resizing * {
+    user-select: none;
 }
 
 /* Header */
@@ -2661,6 +2723,84 @@ body.in-iframe .toolbar {
     border-color: #934BB7 !important;
     background-color: #F4E6FA !important;
     box-shadow: 0 0 0 2px rgba(147, 75, 183, 0.3);
+}
+
+/* QR Code Intelligent - Champs élargis */
+#qr-fields-container .form-row-poc {
+    gap: 6px;
+}
+
+#qr-fields-container .form-label-poc {
+    width: 55px;
+    font-size: 11px;
+    line-height: 1.2;
+}
+
+#qr-fields-container .form-control-poc {
+    flex: 1;
+    min-width: 0; /* Permet au flex-child de rétrécir si nécessaire */
+}
+
+#qr-fields-container .text-input-poc {
+    width: 100%;
+}
+
+/* QR Code Intelligent - Textarea multi-ligne */
+#qr-fields-container .form-row-textarea {
+    align-items: flex-start;
+}
+
+#qr-fields-container .form-row-textarea .form-label-poc {
+    padding-top: 6px;
+}
+
+#qr-fields-container .qr-field-textarea {
+    resize: vertical;
+    min-height: 60px;
+    max-height: 120px;
+    font-family: inherit;
+    line-height: 1.4;
+}
+
+/* QR Code Intelligent - Bouton géocodage */
+#qr-fields-container .geocode-control {
+    display: flex;
+    gap: 4px;
+}
+
+#qr-fields-container .geocode-control .text-input-poc {
+    flex: 1;
+    min-width: 0;
+}
+
+#qr-fields-container .geocode-btn {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    padding: 0;
+    background: var(--poc-theme-primary);
+    border: none;
+    border-radius: var(--poc-border-radius-sm);
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, transform 0.1s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#qr-fields-container .geocode-btn:hover {
+    background: var(--poc-theme-primary-hover);
+}
+
+#qr-fields-container .geocode-btn:active {
+    transform: scale(0.95);
+}
+
+#qr-fields-container .geocode-btn:disabled {
+    background: var(--poc-text-secondary);
+    cursor: wait;
 }
 
 /* Bandeau informatif QR Code */
