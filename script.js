@@ -1669,6 +1669,17 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     const IMAGE_PLACEHOLDER_BORDER_WIDTH = 3;
 
+    /**
+     * État du dernier champ QR Code intelligent focalisé.
+     * Utilisé pour l'insertion par double-clic depuis toolbar-data.
+     * @type {{inputElement: HTMLInputElement|HTMLTextAreaElement|null, selectionStart: number, selectionEnd: number}}
+     */
+    let lastFocusedQrInput = {
+        inputElement: null,
+        selectionStart: 0,
+        selectionEnd: 0
+    };
+
     // ─────────────────────────────── FIN SECTION 2 ────────────────────────────────
 
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -2228,6 +2239,39 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * Met à jour le tracking du dernier input QR focalisé.
+     * Mémorise l'élément et la position du curseur.
+     * 
+     * @param {HTMLInputElement|HTMLTextAreaElement} input - L'input qui a le focus
+     * @returns {void}
+     */
+    function updateQrInputTracking(input) {
+        if (!input) return;
+        
+        lastFocusedQrInput.inputElement = input;
+        lastFocusedQrInput.selectionStart = input.selectionStart ?? 0;
+        lastFocusedQrInput.selectionEnd = input.selectionEnd ?? 0;
+        
+        console.log('🎯 QR Input tracking:', {
+            fieldId: input.dataset.fieldId,
+            selectionStart: lastFocusedQrInput.selectionStart,
+            selectionEnd: lastFocusedQrInput.selectionEnd
+        });
+    }
+
+    /**
+     * Réinitialise le tracking du dernier input QR focalisé.
+     * Appelé quand le focus quitte les inputs QR.
+     * 
+     * @returns {void}
+     */
+    function clearQrInputTracking() {
+        // Ne pas réinitialiser immédiatement pour permettre le double-clic
+        // Le tracking sera réinitialisé quand un autre type de zone prend le focus
+        console.log('🎯 QR Input tracking conservé (pour double-clic)');
+    }
+
+    /**
      * Attache les event listeners aux champs QR dynamiques.
      * Gère la sauvegarde des valeurs dans zoneData.qrConfig.
      * @returns {void}
@@ -2301,6 +2345,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateBarcodeZoneDisplayFromToolbar();
                 
                 console.log(`🔲 Champ ${fieldText} inséré dans ${input.id}`);
+            });
+            
+            // ═══ TRACKING FOCUS/CURSEUR (pour insertion double-clic) ═══
+            
+            // Focus : mémoriser l'input
+            input.addEventListener('focus', () => {
+                updateQrInputTracking(input);
+            });
+            
+            // Clic et navigation clavier : mettre à jour la position du curseur
+            input.addEventListener('click', () => {
+                updateQrInputTracking(input);
+            });
+            
+            input.addEventListener('keyup', () => {
+                updateQrInputTracking(input);
+            });
+            
+            // Sélection de texte : mettre à jour la position
+            input.addEventListener('select', () => {
+                updateQrInputTracking(input);
             });
         });
         
@@ -3348,6 +3413,98 @@ document.addEventListener('DOMContentLoaded', () => {
             cursorOffset: cursorOffset
         };
     }
+
+    /**
+     * Calcule le texte à insérer avec espaces automatiques pour un input/textarea HTML.
+     * Version adaptée de getFieldTextWithSpaces() pour les inputs natifs.
+     * 
+     * Règles d'espacement :
+     * - Ajoute un espace AVANT si le caractère précédent est alphanumérique
+     * - Ajoute un espace APRÈS si le caractère suivant est alphanumérique (sauf ponctuation)
+     * - Interdit l'insertion au milieu d'un mot
+     * - Interdit l'insertion à l'intérieur d'un champ @...@ existant
+     * 
+     * @param {string} text - Le texte actuel de l'input
+     * @param {number} insertIndex - Position d'insertion (selectionStart)
+     * @param {string} fieldText - Le texte du champ à insérer (ex: "@NOM@")
+     * @returns {{text: string, cursorOffset: number}|null} Texte avec espaces et offset curseur, ou null si interdit
+     * 
+     * @example
+     * getFieldTextWithSpacesForInput("Bonjour", 7, "@NOM@"); 
+     * // → { text: " @NOM@", cursorOffset: 6 }
+     * 
+     * @example
+     * getFieldTextWithSpacesForInput("Bonjour ", 8, "@NOM@"); 
+     * // → { text: "@NOM@", cursorOffset: 5 }
+     */
+    function getFieldTextWithSpacesForInput(text, insertIndex, fieldText) {
+        const length = text.length;
+        
+        // Caractère avant la position d'insertion
+        const charBefore = insertIndex > 0 ? text.charAt(insertIndex - 1) : '';
+        // Caractère après la position d'insertion
+        const charAfter = insertIndex < length ? text.charAt(insertIndex) : '';
+        
+        // INTERDIT : au milieu d'un mot (caractère alphanumérique avant ET après)
+        if (isAlphanumeric(charBefore) && isAlphanumeric(charAfter)) {
+            console.log('❌ Insertion interdite: au milieu d\'un mot', {
+                charBefore,
+                charAfter
+            });
+            return null;
+        }
+        
+        // INTERDIT : à l'intérieur d'un champ de fusion existant @...@
+        if (isInsideMergeField(text, insertIndex)) {
+            console.log('❌ Insertion interdite: à l\'intérieur d\'un champ de fusion existant');
+            return null;
+        }
+        
+        let spaceBefore = '';
+        let spaceAfter = '';
+        
+        // Déterminer si on doit ajouter un espace AVANT
+        if (insertIndex > 0 && charBefore !== '') {
+            // Pas d'espace si :
+            // - caractère avant est un retour ligne (\n)
+            // - caractère avant est déjà un espace
+            // - on est au tout début
+            if (charBefore !== '\n' && charBefore !== ' ' && charBefore !== '\t') {
+                spaceBefore = ' ';
+            }
+        }
+        
+        // Déterminer si on doit ajouter un espace APRÈS
+        if (insertIndex < length && charAfter !== '') {
+            // Pas d'espace si :
+            // - caractère après est un retour ligne (\n)
+            // - caractère après est déjà un espace
+            // - caractère après est une ponctuation (, . ; : ! ?)
+            // - on est à la fin
+            const punctuation = [',', '.', ';', ':', '!', '?'];
+            if (charAfter !== '\n' && charAfter !== ' ' && charAfter !== '\t' && !punctuation.includes(charAfter)) {
+                spaceAfter = ' ';
+            }
+        }
+        
+        // Remplacer les espaces normaux par des espaces insécables dans le champ
+        const fieldTextNbsp = fieldText.replace(/ /g, '\u00A0');
+        const finalText = spaceBefore + fieldTextNbsp + spaceAfter;
+        const cursorOffset = spaceBefore.length + fieldTextNbsp.length;
+        
+        console.log('📋 Espaces auto (input):', {
+            charBefore: charBefore === '\n' ? '\\n' : charBefore === ' ' ? '(espace)' : charBefore || '(début)',
+            charAfter: charAfter === '\n' ? '\\n' : charAfter === ' ' ? '(espace)' : charAfter || '(fin)',
+            spaceBefore: spaceBefore ? 'OUI' : 'NON',
+            spaceAfter: spaceAfter ? 'OUI' : 'NON',
+            result: finalText
+        });
+        
+        return {
+            text: finalText,
+            cursorOffset: cursorOffset
+        };
+    }
     
     /**
      * Configure les événements drag-and-drop pour une zone textQuill
@@ -3508,14 +3665,23 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * Insère un champ de fusion à la position du curseur.
      *
-     * Comportement :
-     * - Si une zone `textQuill` est sélectionnée : insertion dans Quill via `quill.insertText()`
-     * - Sinon : insertion dans le textarea (`input-content`) via remplacement de chaîne
+     * Comportement (par priorité) :
+     * 1. Si une zone `textQuill` est sélectionnée : insertion dans Quill via `quill.insertText()`
+     * 2. Si une zone `barcode` (QR Code) est sélectionnée et un input est tracké : insertion dans l'input
+     * 3. Fallback : insertion dans le textarea (`input-content`) via remplacement de chaîne
+     *
+     * Gestion intelligente des espaces :
+     * - Ajoute automatiquement un espace avant/après selon le contexte
+     * - Refuse l'insertion au milieu d'un mot ou dans un champ existant
      *
      * Format inséré : `@NOM_DU_CHAMP@`
      *
      * @param {string} fieldName - Nom du champ à insérer (sans les @)
      * @returns {void}
+     * 
+     * @see getFieldTextWithSpaces - Gestion espaces pour Quill
+     * @see getFieldTextWithSpacesForInput - Gestion espaces pour inputs HTML
+     * @see lastFocusedQrInput - Tracking du dernier input QR focalisé
      */
     function insertTag(fieldName) {
         // Remplacer les espaces par des espaces insécables dans le nom du champ
@@ -3559,6 +3725,53 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.log('🔧 PHASE 6 - Insertion champ fusion:', textWithSpaces, 'dans zone:', zoneId);
                     return;
                 }
+            }
+            
+            // ═══ Insertion dans les champs QR Code intelligent ═══
+            if (zoneData && zoneData.type === 'barcode' && lastFocusedQrInput.inputElement) {
+                const input = lastFocusedQrInput.inputElement;
+                
+                // Vérifier que l'input existe encore dans le DOM
+                if (!document.contains(input)) {
+                    console.log('❌ Insertion QR annulée: input n\'existe plus dans le DOM');
+                    lastFocusedQrInput.inputElement = null;
+                    return;
+                }
+                
+                const text = input.value;
+                const insertIndex = lastFocusedQrInput.selectionStart;
+                
+                // Calculer les espaces selon le contexte
+                const result = getFieldTextWithSpacesForInput(text, insertIndex, tag);
+                
+                if (result === null) {
+                    console.log('❌ Insertion QR annulée: position invalide');
+                    return;
+                }
+                
+                const { text: textWithSpaces, cursorOffset } = result;
+                
+                // Insérer le texte à la position mémorisée
+                const before = text.substring(0, insertIndex);
+                const after = text.substring(lastFocusedQrInput.selectionEnd);
+                input.value = before + textWithSpaces + after;
+                
+                // Repositionner le curseur après le tag
+                const newCursorPos = insertIndex + cursorOffset;
+                input.selectionStart = newCursorPos;
+                input.selectionEnd = newCursorPos;
+                
+                // Mettre le focus sur l'input
+                input.focus();
+                
+                // Mettre à jour le tracking avec la nouvelle position
+                updateQrInputTracking(input);
+                
+                // Déclencher l'événement input pour sauvegarder et mettre à jour l'affichage
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                
+                console.log('🔧 Insertion champ fusion QR:', textWithSpaces, 'dans champ:', input.dataset.fieldId);
+                return;
             }
         }
 
@@ -10979,6 +11192,15 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Mettre à jour la combo Page
             updateZonePageUI();
+            
+            // Réinitialiser le tracking QR si la nouvelle zone n'est pas un QR/barcode
+            if (zoneData && zoneData.type !== 'barcode') {
+                lastFocusedQrInput = {
+                    inputElement: null,
+                    selectionStart: 0,
+                    selectionEnd: 0
+                };
+            }
         }
     }
 
