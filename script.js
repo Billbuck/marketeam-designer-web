@@ -2851,37 +2851,28 @@ document.addEventListener('DOMContentLoaded', () => {
         const qrTypeLabel = QR_TYPES_CONFIG[zoneData.qrConfig?.type]?.label || 'QR Code';
         typeBadge.textContent = qrTypeLabel;
         
-        // Badge champ / résumé (en bas)
+        // Badge champ / résumé / erreur (unifié, en bas à droite)
         let fieldBadge = zoneEl.querySelector('.barcode-field-badge');
         if (!fieldBadge) {
             fieldBadge = document.createElement('span');
             fieldBadge.className = 'barcode-field-badge';
             zoneEl.appendChild(fieldBadge);
         }
-        fieldBadge.textContent = displayText;
-        fieldBadge.style.display = '';
         
-        // Style du badge selon validation
-        if (!validation.valid) {
+        // Afficher le message d'erreur si invalide, sinon le résumé
+        if (!validation.valid && validation.errorMessage) {
+            fieldBadge.textContent = validation.errorMessage;
             fieldBadge.classList.add('no-field');
         } else {
+            fieldBadge.textContent = displayText;
             fieldBadge.classList.remove('no-field');
         }
+        fieldBadge.style.display = '';
         
-        // Badge d'erreur
-        let errorBadge = zoneEl.querySelector('.barcode-error-badge');
-        if (!validation.valid) {
-            if (!errorBadge) {
-                errorBadge = document.createElement('span');
-                errorBadge.className = 'barcode-error-badge';
-                zoneEl.appendChild(errorBadge);
-            }
-            errorBadge.textContent = validation.errorMessage;
-            errorBadge.style.display = '';
-        } else {
-            if (errorBadge) {
-                errorBadge.style.display = 'none';
-            }
+        // Supprimer l'ancien badge d'erreur s'il existe (migration)
+        const oldErrorBadge = zoneEl.querySelector('.barcode-error-badge');
+        if (oldErrorBadge) {
+            oldErrorBadge.remove();
         }
         
         // Image du QR
