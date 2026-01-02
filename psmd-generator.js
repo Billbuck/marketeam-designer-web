@@ -418,41 +418,85 @@
     }
 
     /**
-     * Convertit une valeur de champ QR vers le format PrintShop Mail.
-     * - Si contient @CHAMP@ → extrait le nom et retourne [NomChamp]
-     * - Sinon → retourne "valeur" (entre guillemets)
-     * - Si vide → retourne chaîne vide
+     * Échappe les caractères XML dans le property_bag en préservant les guillemets.
+     * Les guillemets font partie de la syntaxe PrintShop Mail et ne doivent pas être échappés.
+     * 
+     * @param {string} str - Chaîne à échapper
+     * @returns {string} Chaîne échappée (sans échapper les guillemets)
+     */
+    function escapePropertyBag(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+        // Note: on ne remplace PAS " ni ' car ils font partie du format PrintShop Mail
+    }
+
+    /**
+     * Convertit une valeur de champ QR vers le format expression PrintShop Mail.
+     * Génère une expression de concaténation avec & pour les valeurs mixtes.
+     * 
+     * - Valeur vide → chaîne vide
+     * - Variable pure @CHAMP@ → [CHAMP]
+     * - Valeur fixe pure → "valeur"
+     * - Mixte (texte + variables) → "texte"&[CHAMP]&"suite"
      * 
      * @param {string} value - Valeur du champ (peut contenir @CHAMP@ ou texte fixe)
-     * @returns {string} Valeur formatée pour PrintShop Mail
+     * @returns {string} Expression formatée pour PrintShop Mail
      * 
      * @example
-     * convertQrFieldToPsm('@NOM@');           // → '[NOM]'
-     * convertQrFieldToPsm('@PRENOM@');        // → '[PRENOM]'
-     * convertQrFieldToPsm('Directeur');       // → '"Directeur"'
-     * convertQrFieldToPsm('+33 1 23 45');     // → '"+33 1 23 45"'
-     * convertQrFieldToPsm('');                // → ''
+     * convertQrFieldToPsm('');                          // → ''
+     * convertQrFieldToPsm('@NOM@');                     // → '[NOM]'
+     * convertQrFieldToPsm('Directeur');                 // → '"Directeur"'
+     * convertQrFieldToPsm('Bonjour @NOM@');             // → '"Bonjour "&[NOM]'
+     * convertQrFieldToPsm('@PRENOM@ @NOM@');            // → '[PRENOM]&" "&[NOM]'
+     * convertQrFieldToPsm('Cher @CIVILITE@ @NOM@,');    // → '"Cher "&[CIVILITE]&" "&[NOM]&","'
+     * convertQrFieldToPsm('https://site.com/@ID@');     // → '"https://site.com/"&[ID]'
      */
     function convertQrFieldToPsm(value) {
         if (!value || value.trim() === '') {
             return '';
         }
         
-        // Pattern pour détecter @CHAMP@ (un seul champ de fusion)
-        var match = value.match(/^@([^@]+)@$/);
-        if (match) {
-            // Variable : retourner [NomChamp]
-            return '[' + match[1] + ']';
+        // Cas 1 : Variable pure (uniquement @CHAMP@)
+        var pureVarMatch = value.match(/^@([^@]+)@$/);
+        if (pureVarMatch) {
+            return '[' + pureVarMatch[1] + ']';
         }
         
-        // Pattern pour détecter si contient des @CHAMP@ parmi du texte
-        if (value.includes('@') && /@[^@]+@/.test(value)) {
-            // Mixte : remplacer tous les @CHAMP@ par [CHAMP]
-            return value.replace(/@([^@]+)@/g, '[$1]');
+        // Cas 2 : Pas de variable → valeur fixe pure
+        if (!value.includes('@') || !/@[^@]+@/.test(value)) {
+            return '"' + value + '"';
         }
         
-        // Valeur fixe : retourner "valeur"
-        return '"' + value + '"';
+        // Cas 3 : Mixte (texte + variables) → construire expression concaténée
+        var parts = [];
+        var varPattern = /@([^@]+)@/g;
+        var lastIndex = 0;
+        var match;
+        
+        while ((match = varPattern.exec(value)) !== null) {
+            // Ajouter le texte avant la variable (si non vide)
+            var textBefore = value.substring(lastIndex, match.index);
+            if (textBefore.length > 0) {
+                parts.push('"' + textBefore + '"');
+            }
+            
+            // Ajouter la variable
+            parts.push('[' + match[1] + ']');
+            
+            lastIndex = varPattern.lastIndex;
+        }
+        
+        // Ajouter le texte après la dernière variable (si non vide)
+        var textAfter = value.substring(lastIndex);
+        if (textAfter.length > 0) {
+            parts.push('"' + textAfter + '"');
+        }
+        
+        // Joindre avec &
+        return parts.join('&');
     }
 
     /**
@@ -1093,7 +1137,26 @@
      */
     function generatePsmdObjectCommon(zone) {
         var guid = generateGuid();
-        var name = escapeXmlPsmd(zone.nom || zone.id || 'Zone');
+        
+        // Générer un nom unique pour chaque zone
+        // Utilise le nom personnalisé s'il est unique, sinon ajoute l'id
+        var baseName = zone.nom || 'Zone';
+        var name;
+        
+        // Liste des noms génériques qui nécessitent un suffixe d'id
+        var genericNames = ['Code-barres', 'Zone', 'Texte', 'Image', 'QR Code'];
+        
+        if (zone.id && genericNames.indexOf(baseName) !== -1) {
+            // Nom générique : ajouter l'id pour unicité
+            name = escapeXmlPsmd(baseName + ' ' + zone.id);
+        } else if (zone.id) {
+            // Nom personnalisé mais on ajoute quand même l'id pour sécurité
+            name = escapeXmlPsmd(baseName + ' (' + zone.id + ')');
+        } else {
+            // Pas d'id (cas improbable) : utiliser le nom tel quel
+            name = escapeXmlPsmd(baseName);
+        }
+        
         // Export PSMD : toutes les zones sont verrouillées pour empêcher les modifications dans PrintShop Mail
         var locked = 'yes';
         
@@ -1275,7 +1338,21 @@ ${generatePsmdColor('textcolor', textColor)}
      * @returns {string} XML complet de l'objet image
      */
     function generatePsmdImageObject(zone) {
-        var name = escapeXmlPsmd(zone.nom || zone.id || 'Image');
+        // Générer un nom unique pour l'image
+        var baseName = zone.nom || 'Image';
+        var name;
+        
+        // Liste des noms génériques qui nécessitent un suffixe d'id
+        var genericNames = ['Code-barres', 'Zone', 'Texte', 'Image', 'QR Code'];
+        
+        if (zone.id && genericNames.indexOf(baseName) !== -1) {
+            name = escapeXmlPsmd(baseName + ' ' + zone.id);
+        } else if (zone.id) {
+            name = escapeXmlPsmd(baseName + ' (' + zone.id + ')');
+        } else {
+            name = escapeXmlPsmd(baseName);
+        }
+        
         // Utiliser le nom exporté si disponible, sinon le nom original
         var fileName = zone.exportedFileName || 
                       (zone.source && zone.source.nomOriginal) || 
@@ -1358,7 +1435,7 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
         });
         
         xml += '<Alignment>0;0</Alignment>';
-        xml += '</Barcode></property_bag>';
+        xml += '</Barcode>\n</property_bag>';
         
         return xml;
     }
@@ -1377,12 +1454,96 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
             // QR Code vCard intelligent : générer le property_bag structuré
             propertyBagContent = generateVCardPropertyBag(zone.qrConfig);
         } else if (isQrCode) {
-            // QR Code simple (URL, texte, etc.)
+            // QR Code simple (URL, email, tel, geo, etc.)
             psType = 'QRCode';
-            var data = zone.valeur || zone.contenu || '';
-            // Convertir les @CHAMP@ en [CHAMP] si présents
-            data = data.replace(/@([^@]+)@/g, '[$1]');
-            propertyBagContent = '<property_bag><Barcode><RotationFixed>0</RotationFixed><BoundsIsRotated>False</BoundsIsRotated><Initialized>True</Initialized><Type>' + psType + '</Type><Data>' + escapeXmlPsmd(data) + '</Data><Alignment>0;0</Alignment></Barcode></property_bag>';
+            var data = '';
+            
+            // Récupérer les données selon la source
+            if (zone.qrConfig && zone.qrConfig.fields) {
+                // QR Code intelligent : récupérer selon le type
+                var qrType = zone.qrConfig.type || 'url';
+                var fields = zone.qrConfig.fields;
+                
+                switch (qrType) {
+                    case 'url':
+                        data = fields.url || '';
+                        break;
+                    case 'email':
+                        // Format mailto: pour PrintShop Mail
+                        // Construire l'expression directement avec concaténation &
+                        var emailTo = fields.to || '';
+                        var subject = fields.subject || '';
+                        var body = fields.body || '';
+                        
+                        if (emailTo) {
+                            // Construire les parties de l'expression
+                            var emailParts = [];
+                            
+                            // Partie mailto:
+                            emailParts.push('"mailto:"');
+                            emailParts.push(convertQrFieldToPsm(emailTo));
+                            
+                            // Partie subject si présente
+                            if (subject) {
+                                emailParts.push('"?subject="');
+                                emailParts.push(convertQrFieldToPsm(subject));
+                                
+                                // Partie body si présente (après subject)
+                                if (body) {
+                                    emailParts.push('"&body="');
+                                    emailParts.push(convertQrFieldToPsm(body));
+                                }
+                            } else if (body) {
+                                // Body sans subject
+                                emailParts.push('"?body="');
+                                emailParts.push(convertQrFieldToPsm(body));
+                            }
+                            
+                            // Joindre avec & et retourner directement (pas de re-conversion)
+                            data = emailParts.join('&');
+                            
+                            // Marquer comme déjà converti pour ne pas repasser dans convertQrFieldToPsm
+                            zone._emailAlreadyConverted = true;
+                        }
+                        break;
+                    case 'tel':
+                        var tel = fields.tel || '';
+                        if (tel) {
+                            // Vérifier si c'est une variable @CHAMP@ ou une valeur mixte
+                            if (/@[^@]+@/.test(tel)) {
+                                // Contient des variables : construire l'expression concaténée
+                                var telParts = [];
+                                telParts.push('"tel:"');
+                                telParts.push(convertQrFieldToPsm(tel));
+                                data = telParts.join('&');
+                                zone._telAlreadyConverted = true;
+                            } else {
+                                // Valeur fixe : nettoyer le numéro (garder uniquement chiffres et +)
+                                data = 'tel:' + tel.replace(/[^\d+]/g, '');
+                            }
+                        }
+                        break;
+                    case 'geo':
+                        var lat = fields.latitude || '';
+                        var lng = fields.longitude || '';
+                        if (lat && lng) {
+                            data = 'geo:' + lat + ',' + lng;
+                        }
+                        break;
+                    default:
+                        data = fields.url || fields.value || '';
+                }
+            } else {
+                // Fallback : données directes
+                data = zone.valeur || zone.contenu || '';
+            }
+            
+            // Appliquer le format PrintShop Mail (sauf si déjà converti)
+            if (!zone._emailAlreadyConverted && !zone._telAlreadyConverted) {
+                data = convertQrFieldToPsm(data);
+            }
+            
+            propertyBagContent = '<property_bag><Barcode><RotationFixed>0</RotationFixed><BoundsIsRotated>False</BoundsIsRotated><Initialized>True</Initialized><Type>' + psType + '</Type><Data>' + escapePropertyBag(data) + '</Data><Alignment>0;0</Alignment></Barcode>\n</property_bag>';
         } else {
             // Code-barres classique (Code128, EAN13, etc.)
             psType = BARCODE_TYPE_MAP[designerType.toLowerCase()] || 'Code128';
@@ -1393,7 +1554,7 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
             } else {
                 data = data.replace(/@([^@]+)@/g, '[$1]');
             }
-            propertyBagContent = '<property_bag><Barcode><RotationFixed>0</RotationFixed><BoundsIsRotated>False</BoundsIsRotated><Initialized>True</Initialized><Type>' + psType + '</Type><Data>' + escapeXmlPsmd(data) + '</Data><Alignment>0;0</Alignment></Barcode></property_bag>';
+            propertyBagContent = '<property_bag><Barcode><RotationFixed>0</RotationFixed><BoundsIsRotated>False</BoundsIsRotated><Initialized>True</Initialized><Type>' + psType + '</Type><Data>' + escapeXmlPsmd(data) + '</Data><Alignment>0;0</Alignment></Barcode>\n</property_bag>';
         }
         
         var xml = generatePsmdObjectCommon(zone);
