@@ -165,6 +165,38 @@
     };
 
     /**
+     * Mapping des champs vCard Designer → PrintShop Mail.
+     * Clé = id champ Designer, Valeur = nom balise PrintShop Mail
+     * @type {Object.<string, string>}
+     */
+    const VCARD_FIELD_MAP = {
+        'nom': 'LastName',
+        'prenom': 'FirstName',
+        'societe': 'Organization',
+        'fonction': 'JobTitle',
+        'adresse1': 'StreetAddress',
+        'adresse2': 'ExtendedAddress',
+        'codePostal': 'Zip',
+        'ville': 'City',
+        'pays': 'Country',
+        'tel': 'PhoneWork',
+        'mobile': 'MobileWork',
+        'email': 'EmailWork',
+        'siteweb': 'UrlWork'
+    };
+
+    /**
+     * Liste ordonnée des champs vCard pour l'export PSMD.
+     * L'ordre correspond à celui attendu par PrintShop Mail.
+     * @type {string[]}
+     */
+    const VCARD_FIELD_ORDER = [
+        'FirstName', 'LastName', 'JobTitle', 'Organization',
+        'StreetAddress', 'ExtendedAddress', 'PoBox', 'City', 'Region', 'Zip', 'Country',
+        'PhoneWork', 'FaxWork', 'MobileWork', 'UrlWork', 'EmailWork', 'AdditionalTags'
+    ];
+
+    /**
      * Mapping des alignements horizontaux Designer → PrintShop Mail.
      * @type {Object.<string, number>}
      */
@@ -383,6 +415,44 @@
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&apos;');
+    }
+
+    /**
+     * Convertit une valeur de champ QR vers le format PrintShop Mail.
+     * - Si contient @CHAMP@ → extrait le nom et retourne [NomChamp]
+     * - Sinon → retourne "valeur" (entre guillemets)
+     * - Si vide → retourne chaîne vide
+     * 
+     * @param {string} value - Valeur du champ (peut contenir @CHAMP@ ou texte fixe)
+     * @returns {string} Valeur formatée pour PrintShop Mail
+     * 
+     * @example
+     * convertQrFieldToPsm('@NOM@');           // → '[NOM]'
+     * convertQrFieldToPsm('@PRENOM@');        // → '[PRENOM]'
+     * convertQrFieldToPsm('Directeur');       // → '"Directeur"'
+     * convertQrFieldToPsm('+33 1 23 45');     // → '"+33 1 23 45"'
+     * convertQrFieldToPsm('');                // → ''
+     */
+    function convertQrFieldToPsm(value) {
+        if (!value || value.trim() === '') {
+            return '';
+        }
+        
+        // Pattern pour détecter @CHAMP@ (un seul champ de fusion)
+        var match = value.match(/^@([^@]+)@$/);
+        if (match) {
+            // Variable : retourner [NomChamp]
+            return '[' + match[1] + ']';
+        }
+        
+        // Pattern pour détecter si contient des @CHAMP@ parmi du texte
+        if (value.includes('@') && /@[^@]+@/.test(value)) {
+            // Mixte : remplacer tous les @CHAMP@ par [CHAMP]
+            return value.replace(/@([^@]+)@/g, '[$1]');
+        }
+        
+        // Valeur fixe : retourner "valeur"
+        return '"' + value + '"';
     }
 
     /**
@@ -1251,31 +1321,89 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
      * @param {string} barcodeType - Type de code-barres ('barcode' ou 'qr')
      * @returns {string} XML complet de l'objet code-barres
      */
-    function generatePsmdBarcodeObject(zone, barcodeType) {
-        // Déterminer le type PrintShop
-        var psType;
-        if (barcodeType === 'qr') {
-            psType = 'QRCode';
-        } else {
-            // Récupérer le type depuis les données de la zone
-            var designerType = zone.typeCodeBarres || zone.typeCode || 'code128';
-            psType = BARCODE_TYPE_MAP[designerType.toLowerCase()] || 'Code128';
-        }
+
+    /**
+     * Génère le contenu XML property_bag pour un QR Code vCard.
+     * Produit le format structuré attendu par PrintShop Mail.
+     * 
+     * @param {Object} qrConfig - Configuration du QR Code intelligent
+     * @param {string} qrConfig.type - Type de QR ('vcard')
+     * @param {Object} qrConfig.fields - Valeurs des champs vCard
+     * @returns {string} XML du property_bag pour vCard
+     */
+    function generateVCardPropertyBag(qrConfig) {
+        var fields = qrConfig.fields || {};
+        var xml = '<property_bag><Barcode>';
+        xml += '<RotationFixed>0</RotationFixed>';
+        xml += '<BoundsIsRotated>False</BoundsIsRotated>';
+        xml += '<Initialized>True</Initialized>';
+        xml += '<Type>QRCodeVCard</Type>';
         
-        // Contenu du code-barres
-        var data = zone.valeur || zone.contenu || '';
+        // Générer chaque champ dans l'ordre PrintShop Mail
+        VCARD_FIELD_ORDER.forEach(function(psmField) {
+            // Trouver le champ Designer correspondant
+            var designerField = null;
+            for (var key in VCARD_FIELD_MAP) {
+                if (VCARD_FIELD_MAP[key] === psmField) {
+                    designerField = key;
+                    break;
+                }
+            }
+            
+            // Récupérer la valeur et la convertir
+            var value = designerField ? (fields[designerField] || '') : '';
+            var psmValue = convertQrFieldToPsm(value);
+            
+            xml += '<' + psmField + '>' + escapeXmlPsmd(psmValue) + '</' + psmField + '>';
+        });
+        
+        xml += '<Alignment>0;0</Alignment>';
+        xml += '</Barcode></property_bag>';
+        
+        return xml;
+    }
+
+    function generatePsmdBarcodeObject(zone, barcodeType) {
+        // Déterminer le type PrintShop et le contenu
+        var psType;
+        var propertyBagContent;
+        var designerType = zone.typeCodeBarres || zone.typeCode || 'code128';
+        
+        // Vérifier si c'est un QR Code avec configuration vCard
+        var isQrCode = barcodeType === 'qr' || designerType.toLowerCase() === 'qrcode';
+        var hasVCardConfig = zone.qrConfig && zone.qrConfig.type === 'vcard';
+        
+        if (isQrCode && hasVCardConfig) {
+            // QR Code vCard intelligent : générer le property_bag structuré
+            propertyBagContent = generateVCardPropertyBag(zone.qrConfig);
+        } else if (isQrCode) {
+            // QR Code simple (URL, texte, etc.)
+            psType = 'QRCode';
+            var data = zone.valeur || zone.contenu || '';
+            // Convertir les @CHAMP@ en [CHAMP] si présents
+            data = data.replace(/@([^@]+)@/g, '[$1]');
+            propertyBagContent = '<property_bag><Barcode><RotationFixed>0</RotationFixed><BoundsIsRotated>False</BoundsIsRotated><Initialized>True</Initialized><Type>' + psType + '</Type><Data>' + escapeXmlPsmd(data) + '</Data><Alignment>0;0</Alignment></Barcode></property_bag>';
+        } else {
+            // Code-barres classique (Code128, EAN13, etc.)
+            psType = BARCODE_TYPE_MAP[designerType.toLowerCase()] || 'Code128';
+            var data = zone.valeurStatique || zone.valeur || zone.contenu || '';
+            // Pour les codes-barres 1D, convertir aussi les @CHAMP@ en [CHAMP]
+            if (zone.champFusion && zone.champFusion.trim() !== '') {
+                data = '[' + zone.champFusion.replace(/@/g, '') + ']';
+            } else {
+                data = data.replace(/@([^@]+)@/g, '[$1]');
+            }
+            propertyBagContent = '<property_bag><Barcode><RotationFixed>0</RotationFixed><BoundsIsRotated>False</BoundsIsRotated><Initialized>True</Initialized><Type>' + psType + '</Type><Data>' + escapeXmlPsmd(data) + '</Data><Alignment>0;0</Alignment></Barcode></property_bag>';
+        }
         
         var xml = generatePsmdObjectCommon(zone);
         
         // Modifier snap_frame_to_content pour les codes-barres
         xml = xml.replace('<snap_frame_to_content>no</snap_frame_to_content>', '<snap_frame_to_content>yes</snap_frame_to_content>');
         
-        xml += `
-<plugin_object title="Barcode" assembly_name="Barcode.plugins.dll" assembly_version="2.2.3.9078" class_name="Barcode" url="http://www.printshopmail.com/plugins/barcode/" url_download_version="http://www.printshopmail.com/plugins/barcode/2_2/Barcode.plugins.dll">
-<property_bag><Barcode><RotationFixed>0</RotationFixed><BoundsIsRotated>False</BoundsIsRotated><Initialized>True</Initialized><Type>${psType}</Type><Data>${escapeXmlPsmd(data)}</Data><Alignment>0;0</Alignment></Barcode>
-</property_bag>
-</plugin_object>
-</object>`;
+        xml += '\n<plugin_object title="Barcode" assembly_name="Barcode.plugins.dll" assembly_version="2.2.3.9078" class_name="Barcode" url="http://www.printshopmail.com/plugins/barcode/" url_download_version="http://www.printshopmail.com/plugins/barcode/2_2/Barcode.plugins.dll">\n';
+        xml += propertyBagContent;
+        xml += '\n</plugin_object>\n</object>';
         
         return xml;
     }

@@ -2388,17 +2388,33 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {Object} fields - Champs de la vCard
      * @param {Object|null} record - Enregistrement pour le remplacement
      * @returns {string} Contenu vCard formaté
+     * 
+     * Structure ADR : ADR:pobox;extended;street;city;region;postal;country
      */
     function buildVCardContent(fields, record) {
         const getField = (fieldId) => replaceMergeFields(fields[fieldId] || '', record);
         
+        // Identité
         const nom = getField('nom');
         const prenom = getField('prenom');
+        
+        // Professionnel
         const societe = getField('societe');
         const fonction = getField('fonction');
+        
+        // Adresse décomposée
+        const adresse1 = getField('adresse1');
+        const adresse2 = getField('adresse2');
+        const codePostal = getField('codePostal');
+        const ville = getField('ville');
+        const pays = getField('pays');
+        
+        // Téléphones
         const tel = getField('tel');
+        const mobile = getField('mobile');
+        
+        // Contact
         const email = getField('email');
-        const adresse = getField('adresse');
         const siteweb = getField('siteweb');
         
         // Construire la vCard ligne par ligne
@@ -2426,10 +2442,16 @@ document.addEventListener('DOMContentLoaded', () => {
             vcard += `TITLE:${fonction}\n`;
         }
         
-        // Téléphone
+        // Téléphone professionnel
         if (tel) {
             const cleanTel = tel.replace(/[^\d+]/g, '');
-            vcard += `TEL:${cleanTel}\n`;
+            vcard += `TEL;TYPE=WORK:${cleanTel}\n`;
+        }
+        
+        // Téléphone mobile
+        if (mobile) {
+            const cleanMobile = mobile.replace(/[^\d+]/g, '');
+            vcard += `TEL;TYPE=CELL:${cleanMobile}\n`;
         }
         
         // Email
@@ -2437,9 +2459,13 @@ document.addEventListener('DOMContentLoaded', () => {
             vcard += `EMAIL:${email}\n`;
         }
         
-        // Adresse (ADR:;;adresse complète;;;;)
-        if (adresse) {
-            vcard += `ADR:;;${adresse};;;;\n`;
+        // Adresse structurée (ADR:pobox;extended;street;city;region;postal;country)
+        // Format vCard : ADR:;;adresse1;ville;;codePostal;pays
+        // Note: adresse2 est ajouté à adresse1 si présent
+        if (adresse1 || ville || codePostal || pays) {
+            const streetFull = [adresse1, adresse2].filter(Boolean).join(', ');
+            // ADR:pobox;extended;street;city;region;postal;country
+            vcard += `ADR:;;${streetFull};${ville};;${codePostal};${pays}\n`;
         }
         
         // Site web
