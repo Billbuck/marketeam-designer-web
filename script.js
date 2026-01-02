@@ -11884,18 +11884,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         typeBadge.textContent = getBarcodeTypeLabel(typeCode);
         
-        // Badge du champ - affiché SEULEMENT si texteLisible === 'aucun'
+        // Badge du champ / erreur (unifié)
+        // Priorité : erreur (rouge) > valeur (bleu, si texteLisible === 'aucun')
         let fieldBadge = zoneEl.querySelector('.barcode-field-badge');
         
-        if (texteLisible === 'aucun') {
-            // Créer le badge s'il n'existe pas
+        if (validationError) {
+            // ERREUR : Toujours afficher le badge avec le message d'erreur (rouge)
             if (!fieldBadge) {
                 fieldBadge = document.createElement('span');
                 fieldBadge.className = 'barcode-field-badge';
                 zoneEl.appendChild(fieldBadge);
             }
+            fieldBadge.textContent = validationError;
+            fieldBadge.classList.add('no-field');
+            fieldBadge.style.display = '';
             
-            // Mettre à jour le contenu et le style
+        } else if (texteLisible === 'aucun') {
+            // PAS D'ERREUR + texte masqué : afficher la valeur (bleu)
+            if (!fieldBadge) {
+                fieldBadge = document.createElement('span');
+                fieldBadge.className = 'barcode-field-badge';
+                zoneEl.appendChild(fieldBadge);
+            }
             fieldBadge.textContent = displayText;
             
             // Classe no-field si aucune valeur (ni champ ni valeur statique)
@@ -11904,32 +11914,19 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 fieldBadge.classList.remove('no-field');
             }
-            
             fieldBadge.style.display = '';
+            
         } else {
-            // Masquer le badge si le texte est affiché
+            // PAS D'ERREUR + texte affiché sous le code : masquer le badge
             if (fieldBadge) {
                 fieldBadge.style.display = 'none';
             }
         }
         
-        // Badge d'erreur - affiché si validation échouée
-        let errorBadge = zoneEl.querySelector('.barcode-error-badge');
-        
-        if (validationError) {
-            // Créer le badge s'il n'existe pas
-            if (!errorBadge) {
-                errorBadge = document.createElement('span');
-                errorBadge.className = 'barcode-error-badge';
-                zoneEl.appendChild(errorBadge);
-            }
-            errorBadge.textContent = validationError;
-            errorBadge.style.display = '';
-        } else {
-            // Masquer le badge si pas d'erreur
-            if (errorBadge) {
-                errorBadge.style.display = 'none';
-            }
+        // Supprimer l'ancien badge d'erreur s'il existe (migration)
+        const oldErrorBadge = zoneEl.querySelector('.barcode-error-badge');
+        if (oldErrorBadge) {
+            oldErrorBadge.remove();
         }
         
         // Générer l'image du code-barres ou placeholder si erreur de validation

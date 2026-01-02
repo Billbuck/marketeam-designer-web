@@ -2746,20 +2746,20 @@ body.in-iframe .toolbar {
     box-shadow: 0 0 0 2px rgba(147, 75, 183, 0.3);
 }
 
-/* QR Code Intelligent - Champs élargis */
+/* QR Code Intelligent - Champs alignés avec le reste de la toolbar */
 #qr-fields-container .form-row-poc {
-    gap: 6px;
+    gap: 8px;
 }
 
 #qr-fields-container .form-label-poc {
-    width: 55px;
-    font-size: 11px;
+    width: 75px;
+    font-size: 12px;
     line-height: 1.2;
 }
 
 #qr-fields-container .form-control-poc {
     flex: 1;
-    min-width: 0; /* Permet au flex-child de rétrécir si nécessaire */
+    min-width: 0;
 }
 
 #qr-fields-container .text-input-poc {
