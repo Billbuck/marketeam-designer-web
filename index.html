@@ -1413,6 +1413,37 @@
                 </div>
             </div>
 
+            <!-- ==================== SECTION QR CODE INTELLIGENT ==================== -->
+            <div class="section-poc" data-section-id="qr-smart" id="barcode-qr-section" style="display: none;">
+                <div class="section-header-poc">QR Code Intelligent</div>
+                <div class="section-content-poc">
+                    <!-- Type de QR -->
+                    <div class="form-row-poc">
+                        <label class="form-label-poc">Type de QR</label>
+                        <div class="form-control-poc">
+                            <div class="dropdown-poc">
+                                <select class="dropdown-btn-poc dropdown-select-poc" id="qr-type-select">
+                                    <option value="url" selected>URL / Site web</option>
+                                    <option value="vcard">vCard (Carte de visite)</option>
+                                    <option value="email">Email</option>
+                                    <option value="tel">Téléphone</option>
+                                    <option value="geo">Géolocalisation</option>
+                                </select>
+                                <span class="dropdown-arrow-poc dropdown-arrow-select-poc">
+                                    <svg viewBox="0 0 12 8">
+                                        <path d="M2 1 C0.5 1 0.5 2 1.2 2.8 L5 6.8 C5.5 7.4 6.5 7.4 7 6.8 L10.8 2.8 C11.5 2 11.5 1 10 1 Z"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Conteneur des champs dynamiques -->
+                    <div id="qr-fields-container">
+                        <!-- Les champs seront générés dynamiquement par JS -->
+                    </div>
+                </div>
+            </div>
+
             <!-- ==================== SECTION AFFICHAGE ==================== -->
             <div class="section-poc" data-section-id="display">
                 <div class="section-header-poc">Affichage</div>

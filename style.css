@@ -2651,6 +2651,18 @@ body.in-iframe .toolbar {
     font-style: italic;
 }
 
+/* QR Code champs - transition pour animations fluides */
+.qr-field-input {
+    transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* QR Code champs - style drag over */
+.qr-field-input.drag-over {
+    border-color: #934BB7 !important;
+    background-color: #F4E6FA !important;
+    box-shadow: 0 0 0 2px rgba(147, 75, 183, 0.3);
+}
+
 /* Bandeau informatif QR Code */
 .qrcode-info-banner {
     background: linear-gradient(135deg, var(--poc-theme-primary-light) 0%, #f0f4ff 100%);

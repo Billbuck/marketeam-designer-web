@@ -934,6 +934,14 @@ document.addEventListener('DOMContentLoaded', () => {
     /** @type {HTMLElement|null} Swatch couleur fond */
     const barcodeBgColorSwatch = document.getElementById('barcode-bg-color-swatch');
     
+    // QR Code intelligent
+    /** @type {HTMLElement|null} Section QR Code intelligent */
+    const barcodeQrSection = document.getElementById('barcode-qr-section');
+    /** @type {HTMLSelectElement|null} Dropdown type de QR */
+    const qrTypeSelect = document.getElementById('qr-type-select');
+    /** @type {HTMLElement|null} Conteneur des champs QR dynamiques */
+    const qrFieldsContainer = document.getElementById('qr-fields-container');
+    
     // Contrôles Section Géométrie
     /** @type {HTMLInputElement|null} Input position X (mm) */
     const barcodeValX = document.getElementById('barcode-val-x');
@@ -1816,6 +1824,65 @@ document.addEventListener('DOMContentLoaded', () => {
         <text x="50" y="55" text-anchor="middle" font-size="10" fill="#999">2D Code</text>
     </svg>`;
 
+    /**
+     * Configuration des types de QR codes intelligents.
+     * Chaque type définit ses champs et le template de génération du contenu.
+     * 
+     * @type {Object.<string, {label: string, fields: Array<{id: string, label: string, placeholder: string, required: boolean}>}>}
+     */
+    const QR_TYPES_CONFIG = {
+        'url': {
+            label: 'URL / Site web',
+            fields: [
+                { id: 'url', label: 'URL', placeholder: 'https://exemple.com?client=@ID@', required: true }
+            ]
+        },
+        'vcard': {
+            label: 'vCard (Carte de visite)',
+            fields: [
+                // Identité (mapping: LastName, FirstName)
+                { id: 'nom', label: 'Nom', placeholder: '@NOM@', required: true, psm: 'LastName' },
+                { id: 'prenom', label: 'Prénom', placeholder: '@PRENOM@', required: false, psm: 'FirstName' },
+                // Professionnel (mapping: Organization, JobTitle)
+                { id: 'societe', label: 'Société', placeholder: '@SOCIETE@', required: false, psm: 'Organization' },
+                { id: 'fonction', label: 'Fonction', placeholder: 'Directeur Commercial', required: false, psm: 'JobTitle' },
+                // Adresse décomposée (mapping: StreetAddress, ExtendedAddress, Zip, City, Country)
+                { id: 'adresse1', label: 'Adresse 1', placeholder: '@ADRESSE1@', required: false, psm: 'StreetAddress' },
+                { id: 'adresse2', label: 'Adresse 2', placeholder: '@ADRESSE2@', required: false, psm: 'ExtendedAddress' },
+                { id: 'codePostal', label: 'Code postal', placeholder: '@CP@', required: false, psm: 'Zip' },
+                { id: 'ville', label: 'Ville', placeholder: '@VILLE@', required: false, psm: 'City' },
+                { id: 'pays', label: 'Pays', placeholder: 'France', required: false, psm: 'Country' },
+                // Téléphones (mapping: PhoneWork, MobileWork)
+                { id: 'tel', label: 'Téléphone', placeholder: '@TELEPHONE@', required: false, psm: 'PhoneWork' },
+                { id: 'mobile', label: 'Mobile', placeholder: '@PORTABLE@', required: false, psm: 'MobileWork' },
+                // Contact (mapping: EmailWork, UrlWork)
+                { id: 'email', label: 'Email', placeholder: '@EMAIL@', required: false, psm: 'EmailWork' },
+                { id: 'siteweb', label: 'Site web', placeholder: 'https://www.exemple.com', required: false, psm: 'UrlWork' }
+            ]
+        },
+        'email': {
+            label: 'Email',
+            fields: [
+                { id: 'to', label: 'Destinataire', placeholder: 'contact@exemple.com', required: true },
+                { id: 'subject', label: 'Sujet', placeholder: 'Demande de @PRENOM@ @NOM@', required: false },
+                { id: 'body', label: 'Message', placeholder: 'Bonjour...', required: false }
+            ]
+        },
+        'tel': {
+            label: 'Téléphone',
+            fields: [
+                { id: 'tel', label: 'Numéro', placeholder: '+33 1 23 45 67 89', required: true }
+            ]
+        },
+        'geo': {
+            label: 'Géolocalisation',
+            fields: [
+                { id: 'latitude', label: 'Latitude', placeholder: '48.8566', required: true },
+                { id: 'longitude', label: 'Longitude', placeholder: '2.3522', required: true }
+            ]
+        }
+    };
+
     // ─────────────────────────────── FIN SECTION 3 ────────────────────────────────
 
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -1874,6 +1941,26 @@ document.addEventListener('DOMContentLoaded', () => {
         // Retirer les @ existants puis en ajouter
         const cleanName = fieldName.replace(/^@/, '').replace(/@$/, '');
         return `@${cleanName}@`;
+    }
+    
+    /**
+     * Échappe les caractères spéciaux HTML pour insertion sécurisée dans les attributs.
+     * Convertit : & → &amp; < → &lt; > → &gt; " → &quot; ' → &#39;
+     * 
+     * @param {string} str - Chaîne à échapper
+     * @returns {string} Chaîne échappée pour HTML
+     * 
+     * @example
+     * escapeHtmlAttr('Valeur "test" & <script>'); // 'Valeur &quot;test&quot; &amp; &lt;script&gt;'
+     */
+    function escapeHtmlAttr(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     }
     
     /**
@@ -2049,6 +2136,691 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn(`Erreur génération code-barres ${typeCode}:`, e.message);
             return getFallbackBarcodeSvg(typeCode);
         }
+    }
+
+    /**
+     * Génère les champs de saisie pour un type de QR Code.
+     * Les champs sont créés dynamiquement selon QR_TYPES_CONFIG.
+     * Chaque champ supporte le drag & drop depuis toolbar-data.
+     * 
+     * @param {string} qrType - Type de QR (ex: 'url', 'vcard')
+     * @param {Object|null} currentValues - Valeurs actuelles des champs (pour restauration)
+     * @returns {void}
+     */
+    function renderQrFields(qrType, currentValues = null) {
+        if (!qrFieldsContainer) return;
+        
+        const config = QR_TYPES_CONFIG[qrType];
+        if (!config) {
+            qrFieldsContainer.innerHTML = '';
+            return;
+        }
+        
+        let html = '';
+        
+        config.fields.forEach(field => {
+            const value = (currentValues && currentValues[field.id]) || '';
+            const requiredMark = field.required ? ' *' : '';
+            
+            html += `
+                <div class="form-row-poc">
+                    <label class="form-label-poc">${escapeHtmlAttr(field.label)}${requiredMark}</label>
+                    <div class="form-control-poc">
+                        <input type="text" 
+                               class="text-input-poc qr-field-input" 
+                               id="qr-field-${field.id}"
+                               data-field-id="${field.id}"
+                               placeholder="${escapeHtmlAttr(field.placeholder)}"
+                               value="${escapeHtmlAttr(value)}">
+                    </div>
+                </div>
+            `;
+        });
+        
+        qrFieldsContainer.innerHTML = html;
+        
+        // Attacher les event listeners aux nouveaux champs
+        attachQrFieldListeners();
+        
+        console.log(`🔲 QR fields rendered for type: ${qrType}`);
+    }
+
+    /**
+     * Attache les event listeners aux champs QR dynamiques.
+     * Gère la sauvegarde des valeurs dans zoneData.qrConfig.
+     * @returns {void}
+     */
+    function attachQrFieldListeners() {
+        const inputs = qrFieldsContainer.querySelectorAll('.qr-field-input');
+        
+        inputs.forEach(input => {
+            // Sauvegarde sur modification
+            input.addEventListener('input', () => {
+                saveQrFieldsToZone();
+                updateBarcodeZoneDisplayFromToolbar();
+            });
+            
+            // ═══ DRAG & DROP ═══
+            
+            // Dragover : autoriser le drop
+            input.addEventListener('dragover', (e) => {
+                // Vérifier que c'est un champ de fusion
+                if (e.dataTransfer.types.includes('application/x-merge-field') || 
+                    e.dataTransfer.types.includes('text/plain')) {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'copy';
+                    input.classList.add('drag-over');
+                }
+            });
+            
+            // Dragenter : feedback visuel
+            input.addEventListener('dragenter', (e) => {
+                if (e.dataTransfer.types.includes('application/x-merge-field') || 
+                    e.dataTransfer.types.includes('text/plain')) {
+                    e.preventDefault();
+                    input.classList.add('drag-over');
+                }
+            });
+            
+            // Dragleave : retirer le feedback
+            input.addEventListener('dragleave', (e) => {
+                // Vérifier qu'on quitte vraiment l'élément (pas un enfant)
+                if (!input.contains(e.relatedTarget)) {
+                    input.classList.remove('drag-over');
+                }
+            });
+            
+            // Drop : insérer le champ
+            input.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                input.classList.remove('drag-over');
+                
+                // Récupérer le texte du champ (@FIELDNAME@)
+                let fieldText = e.dataTransfer.getData('text/plain');
+                
+                // Vérifier que c'est bien un champ de fusion
+                if (!fieldText || !fieldText.startsWith('@')) {
+                    // Essayer le format alternatif
+                    const fieldName = e.dataTransfer.getData('application/x-merge-field');
+                    if (fieldName) {
+                        fieldText = `@${fieldName}@`;
+                    } else {
+                        console.warn('Drop ignoré : pas un champ de fusion');
+                        return;
+                    }
+                }
+                
+                // Insérer à la position du curseur ou à la fin
+                insertTextAtCursor(input, fieldText);
+                
+                // Sauvegarder et mettre à jour l'affichage
+                saveQrFieldsToZone();
+                updateBarcodeZoneDisplayFromToolbar();
+                
+                console.log(`🔲 Champ ${fieldText} inséré dans ${input.id}`);
+            });
+        });
+    }
+
+    /**
+     * Insère du texte à la position du curseur dans un input.
+     * Si pas de sélection, insère à la fin.
+     * 
+     * @param {HTMLInputElement} input - L'élément input
+     * @param {string} text - Le texte à insérer
+     * @returns {void}
+     */
+    function insertTextAtCursor(input, text) {
+        // Focus sur l'input pour récupérer la position
+        input.focus();
+        
+        const start = input.selectionStart ?? input.value.length;
+        const end = input.selectionEnd ?? input.value.length;
+        
+        // Construire la nouvelle valeur
+        const before = input.value.substring(0, start);
+        const after = input.value.substring(end);
+        input.value = before + text + after;
+        
+        // Positionner le curseur après le texte inséré
+        const newPosition = start + text.length;
+        input.setSelectionRange(newPosition, newPosition);
+        
+        // Déclencher l'événement input pour la sauvegarde
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    /**
+     * Remplace les champs de fusion @CHAMP@ par leurs valeurs dans un enregistrement.
+     * 
+     * @param {string} text - Texte contenant des @CHAMP@
+     * @param {Object|null} record - Enregistrement avec les valeurs (ou null pour garder les @CHAMP@)
+     * @returns {string} Texte avec les champs remplacés
+     * 
+     * @example
+     * replaceMergeFields('Bonjour @PRENOM@', { PRENOM: 'Jean' }); // "Bonjour Jean"
+     * replaceMergeFields('Bonjour @PRENOM@', null); // "Bonjour @PRENOM@"
+     */
+    function replaceMergeFields(text, record) {
+        if (!text) return '';
+        if (!record) return text;
+        
+        return text.replace(/@([A-Z0-9_]+)@/gi, (match, fieldName) => {
+            // Chercher la valeur dans l'enregistrement (insensible à la casse)
+            const upperFieldName = fieldName.toUpperCase();
+            const value = record[upperFieldName] ?? record[fieldName] ?? '';
+            return value;
+        });
+    }
+
+    /**
+     * Construit le contenu à encoder dans un QR code selon son type et ses champs.
+     * 
+     * @param {Object} qrConfig - Configuration du QR code
+     * @param {string} qrConfig.type - Type de QR ('url', 'vcard', 'email', 'tel', 'sms', 'wifi', 'geo')
+     * @param {Object} qrConfig.fields - Valeurs des champs
+     * @param {Object|null} [record=null] - Enregistrement pour remplacer les @CHAMP@ (mode aperçu)
+     * @returns {string} Contenu formaté à encoder dans le QR code
+     * 
+     * @example
+     * // Mode normal (affiche les @CHAMP@)
+     * buildQrContent({ type: 'url', fields: { url: 'https://site.com?id=@ID@' } }, null);
+     * // → "https://site.com?id=@ID@"
+     * 
+     * // Mode aperçu (remplace les @CHAMP@)
+     * buildQrContent({ type: 'url', fields: { url: 'https://site.com?id=@ID@' } }, { ID: '12345' });
+     * // → "https://site.com?id=12345"
+     */
+    function buildQrContent(qrConfig, record = null) {
+        if (!qrConfig || !qrConfig.type) {
+            return '';
+        }
+        
+        const fields = qrConfig.fields || {};
+        const type = qrConfig.type;
+        
+        // Fonction helper pour obtenir une valeur de champ avec remplacement
+        const getField = (fieldId, defaultValue = '') => {
+            const rawValue = fields[fieldId] || defaultValue;
+            return replaceMergeFields(rawValue, record);
+        };
+        
+        switch (type) {
+            case 'url':
+                return getField('url', 'https://exemple.com');
+            
+            case 'vcard':
+                return buildVCardContent(fields, record);
+            
+            case 'email':
+                return buildEmailContent(fields, record);
+            
+            case 'tel':
+                const tel = getField('tel', '+33123456789');
+                // Nettoyer le numéro (garder uniquement chiffres et +)
+                const cleanTel = tel.replace(/[^\d+]/g, '');
+                return `tel:${cleanTel}`;
+            
+            case 'sms':
+                const smsTel = getField('tel', '+33612345678');
+                const smsMsg = getField('message', '');
+                const cleanSmsTel = smsTel.replace(/[^\d+]/g, '');
+                return smsMsg ? `SMSTO:${cleanSmsTel}:${smsMsg}` : `SMSTO:${cleanSmsTel}`;
+            
+            case 'wifi':
+                return buildWifiContent(fields, record);
+            
+            case 'geo':
+                const lat = getField('latitude', '48.8566');
+                const lng = getField('longitude', '2.3522');
+                return `geo:${lat},${lng}`;
+            
+            default:
+                console.warn(`Type QR inconnu: ${type}`);
+                return '';
+        }
+    }
+
+    /**
+     * Construit le contenu vCard.
+     * 
+     * @param {Object} fields - Champs de la vCard
+     * @param {Object|null} record - Enregistrement pour le remplacement
+     * @returns {string} Contenu vCard formaté
+     */
+    function buildVCardContent(fields, record) {
+        const getField = (fieldId) => replaceMergeFields(fields[fieldId] || '', record);
+        
+        const nom = getField('nom');
+        const prenom = getField('prenom');
+        const societe = getField('societe');
+        const fonction = getField('fonction');
+        const tel = getField('tel');
+        const email = getField('email');
+        const adresse = getField('adresse');
+        const siteweb = getField('siteweb');
+        
+        // Construire la vCard ligne par ligne
+        let vcard = 'BEGIN:VCARD\n';
+        vcard += 'VERSION:3.0\n';
+        
+        // Nom structuré (N:Nom;Prénom;;;)
+        if (nom || prenom) {
+            vcard += `N:${nom};${prenom};;;\n`;
+        }
+        
+        // Nom formaté (FN:Prénom Nom)
+        if (nom || prenom) {
+            const fullName = [prenom, nom].filter(Boolean).join(' ');
+            vcard += `FN:${fullName}\n`;
+        }
+        
+        // Organisation
+        if (societe) {
+            vcard += `ORG:${societe}\n`;
+        }
+        
+        // Fonction/Titre
+        if (fonction) {
+            vcard += `TITLE:${fonction}\n`;
+        }
+        
+        // Téléphone
+        if (tel) {
+            const cleanTel = tel.replace(/[^\d+]/g, '');
+            vcard += `TEL:${cleanTel}\n`;
+        }
+        
+        // Email
+        if (email) {
+            vcard += `EMAIL:${email}\n`;
+        }
+        
+        // Adresse (ADR:;;adresse complète;;;;)
+        if (adresse) {
+            vcard += `ADR:;;${adresse};;;;\n`;
+        }
+        
+        // Site web
+        if (siteweb) {
+            vcard += `URL:${siteweb}\n`;
+        }
+        
+        vcard += 'END:VCARD';
+        
+        return vcard;
+    }
+
+    /**
+     * Construit le contenu mailto pour email.
+     * 
+     * @param {Object} fields - Champs de l'email
+     * @param {Object|null} record - Enregistrement pour le remplacement
+     * @returns {string} URL mailto formatée
+     */
+    function buildEmailContent(fields, record) {
+        const getField = (fieldId) => replaceMergeFields(fields[fieldId] || '', record);
+        
+        const to = getField('to');
+        const subject = getField('subject');
+        const body = getField('body');
+        
+        if (!to) return 'mailto:';
+        
+        let mailto = `mailto:${encodeURIComponent(to)}`;
+        
+        const params = [];
+        if (subject) params.push(`subject=${encodeURIComponent(subject)}`);
+        if (body) params.push(`body=${encodeURIComponent(body)}`);
+        
+        if (params.length > 0) {
+            mailto += '?' + params.join('&');
+        }
+        
+        return mailto;
+    }
+
+    /**
+     * Construit le contenu WiFi.
+     * 
+     * @param {Object} fields - Champs WiFi
+     * @param {Object|null} record - Enregistrement pour le remplacement
+     * @returns {string} Chaîne WiFi formatée
+     */
+    function buildWifiContent(fields, record) {
+        const getField = (fieldId) => replaceMergeFields(fields[fieldId] || '', record);
+        
+        const ssid = getField('ssid');
+        const password = getField('password');
+        const security = getField('security') || 'WPA';
+        
+        if (!ssid) return 'WIFI:S:MonReseau;;';
+        
+        // Échapper les caractères spéciaux dans SSID et password
+        const escapeWifi = (str) => str.replace(/([\\;,:"'])/g, '\\$1');
+        
+        let wifi = 'WIFI:';
+        wifi += `T:${security};`;
+        wifi += `S:${escapeWifi(ssid)};`;
+        if (password) {
+            wifi += `P:${escapeWifi(password)};`;
+        }
+        wifi += ';';
+        
+        return wifi;
+    }
+
+    /**
+     * Vérifie si un contenu QR est valide (non vide et avec des données).
+     * 
+     * @param {string} content - Contenu QR généré
+     * @param {string} qrType - Type de QR
+     * @returns {{valid: boolean, errorMessage: string|null}} Résultat de validation
+     */
+    function validateQrContent(content, qrType) {
+        if (!content || content.trim() === '') {
+            return { valid: false, errorMessage: 'Contenu vide' };
+        }
+        
+        switch (qrType) {
+            case 'url':
+                // Vérifier que c'est une URL valide ou contient des @CHAMP@
+                if (!content.includes('@') && !content.match(/^https?:\/\//i)) {
+                    return { valid: false, errorMessage: 'URL invalide (doit commencer par http:// ou https://)' };
+                }
+                break;
+            
+            case 'vcard':
+                // Vérifier qu'il y a au moins un nom
+                if (!content.includes('N:') || content.includes('N:;')) {
+                    // Pas de nom, vérifier s'il y a des champs de fusion
+                    if (!content.includes('@')) {
+                        return { valid: false, errorMessage: 'Nom requis' };
+                    }
+                }
+                break;
+            
+            case 'email':
+                if (content === 'mailto:') {
+                    return { valid: false, errorMessage: 'Destinataire requis' };
+                }
+                break;
+            
+            case 'tel':
+                if (content === 'tel:') {
+                    return { valid: false, errorMessage: 'Numéro requis' };
+                }
+                break;
+            
+            case 'sms':
+                if (content === 'SMSTO:') {
+                    return { valid: false, errorMessage: 'Numéro requis' };
+                }
+                break;
+            
+            case 'wifi':
+                if (!content.includes('S:') || content.includes('S:;')) {
+                    return { valid: false, errorMessage: 'Nom du réseau (SSID) requis' };
+                }
+                break;
+            
+            case 'geo':
+                // Vérifier que les coordonnées sont présentes
+                const geoMatch = content.match(/^geo:(.+),(.+)$/);
+                if (!geoMatch) {
+                    return { valid: false, errorMessage: 'Coordonnées invalides' };
+                }
+                break;
+        }
+        
+        return { valid: true, errorMessage: null };
+    }
+
+    /**
+     * Retourne un résumé lisible du contenu QR pour l'affichage.
+     * 
+     * @param {Object} qrConfig - Configuration QR
+     * @param {Object|null} record - Enregistrement pour le mode aperçu
+     * @returns {string} Résumé à afficher
+     */
+    function getQrDisplaySummary(qrConfig, record) {
+        if (!qrConfig || !qrConfig.type) return '(QR vide)';
+        
+        const fields = qrConfig.fields || {};
+        const typeLabel = QR_TYPES_CONFIG[qrConfig.type]?.label || qrConfig.type;
+        
+        switch (qrConfig.type) {
+            case 'url':
+                const url = fields.url || '';
+                if (!url) return '(URL vide)';
+                // Tronquer si trop long
+                const displayUrl = replaceMergeFields(url, record);
+                return displayUrl.length > 30 ? displayUrl.substring(0, 27) + '...' : displayUrl;
+            
+            case 'vcard':
+                const nom = replaceMergeFields(fields.nom || '', record);
+                const prenom = replaceMergeFields(fields.prenom || '', record);
+                if (!nom && !prenom) return '(vCard vide)';
+                return `${prenom} ${nom}`.trim();
+            
+            case 'email':
+                const to = replaceMergeFields(fields.to || '', record);
+                return to || '(Email vide)';
+            
+            case 'tel':
+                const tel = replaceMergeFields(fields.tel || '', record);
+                return tel || '(Tél vide)';
+            
+            case 'sms':
+                const smsTel = replaceMergeFields(fields.tel || '', record);
+                return smsTel ? `SMS: ${smsTel}` : '(SMS vide)';
+            
+            case 'wifi':
+                const ssid = replaceMergeFields(fields.ssid || '', record);
+                return ssid ? `WiFi: ${ssid}` : '(WiFi vide)';
+            
+            case 'geo':
+                const lat = fields.latitude || '';
+                const lng = fields.longitude || '';
+                return (lat && lng) ? `${lat}, ${lng}` : '(Geo vide)';
+            
+            default:
+                return typeLabel;
+        }
+    }
+
+    /**
+     * Met à jour les éléments visuels d'une zone QR intelligent.
+     * 
+     * @param {HTMLElement} zoneEl - Élément de la zone
+     * @param {Object} zoneData - Données de la zone
+     * @param {string} barcodeImage - Image du QR en base64
+     * @param {string} displayText - Texte à afficher
+     * @param {Object} validation - Résultat de validation {valid, errorMessage}
+     */
+    function updateQrZoneVisuals(zoneEl, zoneData, barcodeImage, displayText, validation) {
+        const typeCode = zoneData.typeCodeBarres || 'qrcode';
+        
+        // Mettre à jour la classe 2D
+        updateBarcodeDimensionClass(zoneEl, typeCode);
+        
+        // Supprimer l'ancien conteneur de badges s'il existe
+        const oldBadgesContainer = zoneEl.querySelector('.barcode-badges');
+        if (oldBadgesContainer) {
+            oldBadgesContainer.remove();
+        }
+        
+        // Supprimer l'ancien label du bas (créé pour les codes-barres 1D, inutile pour QR)
+        const oldLabel = zoneEl.querySelector('.barcode-label');
+        if (oldLabel) {
+            oldLabel.remove();
+        }
+        
+        // Supprimer l'ancien texte lisible s'il existe (créé pour les codes-barres 1D)
+        const oldSvgContainer = zoneEl.querySelector('.barcode-svg');
+        const oldBarcodeText = oldSvgContainer?.querySelector('.barcode-text');
+        if (oldBarcodeText) {
+            oldBarcodeText.remove();
+        }
+        
+        // Badge type (en haut à gauche)
+        let typeBadge = zoneEl.querySelector('.barcode-type-badge');
+        if (!typeBadge) {
+            typeBadge = document.createElement('span');
+            typeBadge.className = 'barcode-type-badge';
+            zoneEl.appendChild(typeBadge);
+        }
+        const qrTypeLabel = QR_TYPES_CONFIG[zoneData.qrConfig?.type]?.label || 'QR Code';
+        typeBadge.textContent = qrTypeLabel;
+        
+        // Badge champ / résumé (en bas)
+        let fieldBadge = zoneEl.querySelector('.barcode-field-badge');
+        if (!fieldBadge) {
+            fieldBadge = document.createElement('span');
+            fieldBadge.className = 'barcode-field-badge';
+            zoneEl.appendChild(fieldBadge);
+        }
+        fieldBadge.textContent = displayText;
+        fieldBadge.style.display = '';
+        
+        // Style du badge selon validation
+        if (!validation.valid) {
+            fieldBadge.classList.add('no-field');
+        } else {
+            fieldBadge.classList.remove('no-field');
+        }
+        
+        // Badge d'erreur
+        let errorBadge = zoneEl.querySelector('.barcode-error-badge');
+        if (!validation.valid) {
+            if (!errorBadge) {
+                errorBadge = document.createElement('span');
+                errorBadge.className = 'barcode-error-badge';
+                zoneEl.appendChild(errorBadge);
+            }
+            errorBadge.textContent = validation.errorMessage;
+            errorBadge.style.display = '';
+        } else {
+            if (errorBadge) {
+                errorBadge.style.display = 'none';
+            }
+        }
+        
+        // Image du QR
+        const svgContainer = zoneEl.querySelector('.barcode-svg');
+        if (svgContainer) {
+            svgContainer.innerHTML = `<img class="barcode-image" src="${barcodeImage}" alt="QR Code">`;
+        }
+    }
+
+    /**
+     * Met à jour les données d'une zone barcode sélectionnée via un callback.
+     * Gère la vérification de sélection unique, récupération des données et sauvegarde.
+     * 
+     * @param {function(Object): void} updateCallback - Fonction recevant zoneData à modifier
+     * @returns {void}
+     */
+    function updateSelectedBarcodeZone(updateCallback) {
+        if (typeof selectedZoneIds === 'undefined' || selectedZoneIds.length !== 1) {
+            return;
+        }
+        
+        const zoneId = selectedZoneIds[0];
+        const zonesData = getCurrentPageZones();
+        
+        if (!zonesData || !zonesData[zoneId]) {
+            return;
+        }
+        
+        const zoneData = zonesData[zoneId];
+        
+        // Appeler le callback pour modifier les données
+        updateCallback(zoneData);
+        
+        // Sauvegarder les changements
+        saveToLocalStorage();
+        saveState();
+    }
+
+    /**
+     * Sauvegarde les valeurs des champs QR dans zoneData.qrConfig.
+     * @returns {void}
+     */
+    function saveQrFieldsToZone() {
+        if (!qrTypeSelect) return;
+        
+        const qrType = qrTypeSelect.value;
+        const config = QR_TYPES_CONFIG[qrType];
+        if (!config) return;
+        
+        const fields = {};
+        config.fields.forEach(field => {
+            const input = document.getElementById(`qr-field-${field.id}`);
+            if (input) {
+                fields[field.id] = input.value;
+            }
+        });
+        
+        updateSelectedBarcodeZone((zoneData) => {
+            zoneData.qrConfig = {
+                type: qrType,
+                fields: fields
+            };
+        });
+    }
+
+    /**
+     * Met à jour l'affichage de la zone barcode depuis la toolbar.
+     * @returns {void}
+     */
+    function updateBarcodeZoneDisplayFromToolbar() {
+        if (typeof selectedZoneIds !== 'undefined' && selectedZoneIds.length === 1) {
+            const zoneId = selectedZoneIds[0];
+            const zonesData = getCurrentPageZones();
+            if (zonesData && zonesData[zoneId] && zonesData[zoneId].type === 'barcode') {
+                updateBarcodeZoneDisplay(zoneId);
+            }
+        }
+    }
+
+    /**
+     * Affiche ou masque la section QR Code intelligent selon le type de code-barres.
+     * Masque la section Données classique quand QR actif.
+     * 
+     * @param {boolean} isQrCode - true si le type est QR Code
+     * @returns {void}
+     */
+    /**
+     * Affiche ou masque la section QR Code intelligent selon le type de code-barres.
+     * Masque la section Données classique et Affichage quand QR actif.
+     * 
+     * @param {boolean} isQrCode - true si le type est QR Code
+     * @returns {void}
+     */
+    function toggleQrCodeSection(isQrCode) {
+        // Section données classique (Source/Valeur/Champ) - ID corrigé : barcode-toolbar
+        const dataSection = document.querySelector('#barcode-toolbar [data-section-id="data"]');
+        // Section affichage (Afficher texte / Taille) - inutile pour QR Code
+        const displaySection = document.querySelector('#barcode-toolbar [data-section-id="display"]');
+        
+        if (isQrCode) {
+            // Masquer section données classique
+            if (dataSection) dataSection.style.display = 'none';
+            // Masquer section affichage (inutile pour QR Code)
+            if (displaySection) displaySection.style.display = 'none';
+            // Afficher section QR intelligent
+            if (barcodeQrSection) barcodeQrSection.style.display = '';
+        } else {
+            // Afficher section données classique
+            if (dataSection) dataSection.style.display = '';
+            // Afficher section affichage
+            if (displaySection) displaySection.style.display = '';
+            // Masquer section QR intelligent
+            if (barcodeQrSection) barcodeQrSection.style.display = 'none';
+        }
+        
+        console.log(`🔲 QR section toggled: ${isQrCode ? 'visible' : 'hidden'}`);
     }
 
     // ─────────────────────────────── FIN SECTION 4 ────────────────────────────────
@@ -2231,6 +3003,10 @@ document.addEventListener('DOMContentLoaded', () => {
      * Met à jour la visibilité de la toolbar Data (champs de fusion)
      * Visible si : zone textQuill sélectionnée ET champs disponibles ET pas en mode aperçu
      */
+    /**
+     * Met à jour la visibilité de la toolbar Data (champs de fusion)
+     * Visible si : (zone textQuill OU zone barcode QR Code) sélectionnée ET champs disponibles ET pas en mode aperçu
+     */
     function updateToolbarDataVisibility() {
         if (!toolbarData) return;
         
@@ -2249,23 +3025,35 @@ document.addEventListener('DOMContentLoaded', () => {
         // Protection : selectedZoneIds peut ne pas être encore initialisée au chargement
         // (déclarée plus bas dans le script)
         let hasTextQuillSelected = false;
+        let hasQrCodeSelected = false;
+        
         try {
             if (typeof selectedZoneIds !== 'undefined' && selectedZoneIds.length === 1) {
                 const zoneId = selectedZoneIds[0];
                 const zonesData = getCurrentPageZones();
-                hasTextQuillSelected = zonesData && zonesData[zoneId] && zonesData[zoneId].type === 'textQuill';
+                const zoneData = zonesData ? zonesData[zoneId] : null;
+                
+                if (zoneData) {
+                    // Zone textQuill
+                    hasTextQuillSelected = zoneData.type === 'textQuill';
+                    
+                    // Zone barcode avec type QR Code
+                    hasQrCodeSelected = zoneData.type === 'barcode' && 
+                                        (zoneData.typeCodeBarres === 'qrcode' || zoneData.typeCodeBarres === 'QRCode');
+                }
             }
         } catch (e) {
             // selectedZoneIds pas encore déclarée - cas d'initialisation
             hasTextQuillSelected = false;
+            hasQrCodeSelected = false;
         }
         
         const hasFields = mergeFields && mergeFields.length > 0;
-        const shouldShow = hasFields && hasTextQuillSelected;
+        const shouldShow = hasFields && (hasTextQuillSelected || hasQrCodeSelected);
         toolbarData.style.display = shouldShow ? '' : 'none';
         
         console.log('📋 Toolbar Data visibility:', shouldShow ? 'visible' : 'hidden',
-                    '(textQuill:', hasTextQuillSelected, ', fields:', hasFields, ')');
+                    '(textQuill:', hasTextQuillSelected, ', qrCode:', hasQrCodeSelected, ', fields:', hasFields, ')');
     }
     
     /**
@@ -5076,15 +5864,21 @@ document.addEventListener('DOMContentLoaded', () => {
         allPages.forEach((page, pageIndex) => {
             const zones = page.zones || {};
             Object.entries(zones).forEach(([zoneId, zoneData]) => {
-                if (zoneData.type === 'barcode' && zoneData.champFusion) {
-                    // Récupérer la valeur du champ dans l'enregistrement
-                    const fieldName = zoneData.champFusion.toUpperCase();
-                    const fieldValue = record[fieldName] || record[zoneData.champFusion] || '';
-                    
-                    // Mettre à jour l'affichage avec la valeur de prévisualisation
+                if (zoneData.type === 'barcode') {
                     // Seulement si la zone est sur la page courante (visible)
                     if (pageIndex === documentState.currentPageIndex) {
-                        updateBarcodeZoneDisplay(zoneId, fieldValue);
+                        const isQrIntelligent = (zoneData.typeCodeBarres === 'qrcode' || zoneData.typeCodeBarres === 'QRCode') 
+                                                 && zoneData.qrConfig;
+                        
+                        if (isQrIntelligent) {
+                            // QR intelligent : passer l'enregistrement complet
+                            updateBarcodeZoneDisplay(zoneId, record);
+                        } else if (zoneData.champFusion) {
+                            // Code-barres classique avec champ de fusion
+                            const fieldName = zoneData.champFusion.toUpperCase();
+                            const fieldValue = record[fieldName] || record[zoneData.champFusion] || '';
+                            updateBarcodeZoneDisplay(zoneId, fieldValue);
+                        }
                     }
                 }
             });
@@ -5777,6 +6571,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 couleur: DEFAULT_TEXT_COLOR,               // Couleur du code-barres
                 bgColor: DEFAULT_BG_COLOR,               // Couleur de fond
                 isTransparent: false,             // Par défaut non transparent
+                qrConfig: null,                   // Configuration QR Code intelligent (type + fields)
                 locked: false,
                 zIndex: newZIndex
             };
@@ -7894,6 +8689,18 @@ document.addEventListener('DOMContentLoaded', () => {
             barcodeInputType.value = zoneData.typeCodeBarres || 'code128';
         }
         
+        // ─── QR CODE INTELLIGENT ───
+        const isQrCode = (zoneData.typeCodeBarres === 'qrcode' || zoneData.typeCodeBarres === 'QRCode');
+        toggleQrCodeSection(isQrCode);
+        
+        if (isQrCode && zoneData.qrConfig) {
+            if (qrTypeSelect) qrTypeSelect.value = zoneData.qrConfig.type || 'url';
+            renderQrFields(zoneData.qrConfig.type || 'url', zoneData.qrConfig.fields);
+        } else if (isQrCode) {
+            // Pas de config existante, initialiser avec URL
+            renderQrFields('url', null);
+        }
+        
         // ─── SOURCE ───
         const champFusion = zoneData.champFusion || '';
         const valeurStatique = zoneData.valeurStatique || '';
@@ -8118,6 +8925,70 @@ document.addEventListener('DOMContentLoaded', () => {
                         zoneData.texteLisible = isShowTextChecked ? 'dessous' : 'aucun';
                     }
                 });
+                
+                // Gérer l'affichage section QR Code intelligent
+                const isQrCode = newType === 'qrcode' || newType === 'QRCode';
+                toggleQrCodeSection(isQrCode);
+                
+                if (isQrCode) {
+                    // Initialiser qrConfig si nécessaire
+                    updateSelectedBarcodeZone((zoneData) => {
+                        if (!zoneData.qrConfig) {
+                            zoneData.qrConfig = {
+                                type: 'url',
+                                fields: {}
+                            };
+                        }
+                    });
+                    
+                    // Récupérer la config actuelle et afficher les champs
+                    const zonesData = getCurrentPageZones();
+                    if (selectedZoneIds.length === 1) {
+                        const zoneData = zonesData[selectedZoneIds[0]];
+                        if (zoneData && zoneData.qrConfig) {
+                            if (qrTypeSelect) qrTypeSelect.value = zoneData.qrConfig.type || 'url';
+                            renderQrFields(zoneData.qrConfig.type || 'url', zoneData.qrConfig.fields);
+                        } else {
+                            renderQrFields('url', null);
+                        }
+                    }
+                }
+                
+                // Mettre à jour la visibilité de toolbar-data (pour QR Code)
+                updateToolbarDataVisibility();
+            });
+        }
+        
+        // Type de QR Code
+        if (qrTypeSelect) {
+            qrTypeSelect.addEventListener('change', () => {
+                const qrType = qrTypeSelect.value;
+                
+                // Sauvegarder le type dans zoneData
+                updateSelectedBarcodeZone((zoneData) => {
+                    if (!zoneData.qrConfig) {
+                        zoneData.qrConfig = { type: qrType, fields: {} };
+                    } else {
+                        // Conserver les champs communs si possible
+                        zoneData.qrConfig.type = qrType;
+                    }
+                });
+                
+                // Récupérer les valeurs existantes
+                const zonesData = getCurrentPageZones();
+                let currentFields = null;
+                if (selectedZoneIds.length === 1) {
+                    const zoneData = zonesData[selectedZoneIds[0]];
+                    if (zoneData && zoneData.qrConfig) {
+                        currentFields = zoneData.qrConfig.fields;
+                    }
+                }
+                
+                // Régénérer les champs
+                renderQrFields(qrType, currentFields);
+                
+                // Mettre à jour l'affichage
+                updateBarcodeZoneDisplayFromToolbar();
             });
         }
         
@@ -8751,8 +9622,8 @@ document.addEventListener('DOMContentLoaded', () => {
             hideImageToolbar();
             hideBarcodeToolbar();
             hideQrcodeToolbar();
-            // Masquer aussi la toolbar Data pour les zones système
-            if (isSysteme && toolbarData) {
+            // Masquer aussi la toolbar Data (aucune zone sélectionnée ou zone système)
+            if (toolbarData) {
                 toolbarData.style.display = 'none';
             }
             return;
@@ -10647,6 +11518,50 @@ document.addEventListener('DOMContentLoaded', () => {
         // Récupérer la configuration pour le texte et le type 2D
         const config = BARCODE_BWIPJS_CONFIG[typeCode];
         
+        // ═══ QR CODE INTELLIGENT ═══
+        const isQrCode = typeCode === 'qrcode' || typeCode === 'QRCode';
+        const hasQrConfig = isQrCode && zoneData.qrConfig && zoneData.qrConfig.type;
+        
+        if (hasQrConfig) {
+            // Utiliser le système QR intelligent
+            // Si previewValue est un objet record complet (mode aperçu), l'utiliser directement
+            let contentForQr;
+            let recordForDisplay = null;
+            
+            if (previewValue && typeof previewValue === 'object') {
+                contentForQr = buildQrContent(zoneData.qrConfig, previewValue);
+                recordForDisplay = previewValue;
+            } else {
+                contentForQr = buildQrContent(zoneData.qrConfig, null);
+            }
+            
+            // Valider le contenu
+            const qrValidation = validateQrContent(contentForQr, zoneData.qrConfig.type);
+            
+            // Déterminer le texte d'affichage (résumé)
+            let qrDisplayText;
+            if (!qrValidation.valid) {
+                qrDisplayText = qrValidation.errorMessage;
+            } else {
+                qrDisplayText = getQrDisplaySummary(zoneData.qrConfig, recordForDisplay);
+            }
+            
+            // Générer l'image QR
+            let barcodeImage;
+            if (qrValidation.valid) {
+                barcodeImage = generateBarcodeImage(typeCode, color, contentForQr);
+            } else {
+                // Placeholder si invalide
+                barcodeImage = 'data:image/svg+xml,' + encodeURIComponent(SVG_BARCODE_2D_FALLBACK);
+            }
+            
+            // Mettre à jour l'affichage
+            updateQrZoneVisuals(zoneEl, zoneData, barcodeImage, qrDisplayText, qrValidation);
+            
+            return; // Sortir car le QR intelligent gère tout
+        }
+        
+        // ═══ CODES-BARRES CLASSIQUES ═══
         // Déterminer la source et les valeurs à afficher/encoder
         const champFusion = zoneData.champFusion || '';
         const valeurStatique = zoneData.valeurStatique || '';
@@ -14408,6 +15323,7 @@ document.addEventListener('DOMContentLoaded', () => {
             type: 'barcode',
             nom: zoneJson.nom || 'Code-barres',
             typeCodeBarres: zoneJson.typeCodeBarres || 'code128',
+            sourceType: zoneJson.sourceType || 'fixe',
             champFusion: zoneJson.champFusion || '',
             valeurStatique: zoneJson.valeurStatique || '',
             texteLisible: zoneJson.texteLisible || 'dessous',
@@ -14418,6 +15334,8 @@ document.addEventListener('DOMContentLoaded', () => {
             bgColorCmyk: zoneJson.couleurFondCmjn || { c: 0, m: 0, y: 0, k: 0 },
             isTransparent: zoneJson.transparent || false,
             locked: zoneJson.verrouille || false,
+            // QR Code intelligent : restaurer la configuration si présente
+            qrConfig: zoneJson.qrConfig || null,
             systeme: zoneJson.systeme || false,
             systemeLibelle: zoneJson.systemeLibelle || '',
             imprimable: zoneJson.imprimable !== undefined ? zoneJson.imprimable : true,
@@ -15383,13 +16301,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 hauteurMm: zoneData.hMm !== undefined ? zoneData.hMm : pixelsToMm(zoneData.h || 60)
             },
             typeCodeBarres: zoneData.typeCodeBarres || 'code128',
+            sourceType: zoneData.sourceType || 'fixe',
             champFusion: zoneData.champFusion || '',
             valeurStatique: zoneData.valeurStatique || '',
             texteLisible: zoneData.texteLisible || 'dessous',
             taillePolice: zoneData.taillePolice || DEFAULT_BARCODE_FONT_SIZE,
             couleurCmjn: zoneData.couleurCmyk || hexToCmjnWebDev(zoneData.couleur || DEFAULT_TEXT_COLOR),
             couleurFondCmjn: zoneData.bgColorCmyk || hexToCmjnWebDev(zoneData.bgColor || DEFAULT_BG_COLOR),
-            transparent: zoneData.isTransparent || false
+            transparent: zoneData.isTransparent || false,
+            // QR Code intelligent : configuration type + champs
+            qrConfig: zoneData.qrConfig || null
         };
     }
 
