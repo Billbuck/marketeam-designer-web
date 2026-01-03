@@ -5184,8 +5184,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const zonesData = getCurrentPageZones();
         const zoneData = zonesData[zoneId];
         
-        // Vérifier si la zone a une area définie
-        if (zoneData && zoneData.contrainte && zoneData.contrainte.area) {
+        // Vérifier si la zone a une area valide (dimensions > 0)
+        if (hasValidArea(zoneData)) {
             const area = zoneData.contrainte.area;
             
             // Convertir l'area en pixels
@@ -5235,8 +5235,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const zonesData = getCurrentPageZones();
         const zoneData = zonesData[zoneId];
         
-        // Vérifier si la zone a une area définie
-        if (zoneData && zoneData.contrainte && zoneData.contrainte.area) {
+        // Vérifier si la zone a une area valide (dimensions > 0)
+        if (hasValidArea(zoneData)) {
             const area = zoneData.contrainte.area;
             
             // Convertir l'area en pixels
@@ -5280,8 +5280,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const zonesData = getCurrentPageZones();
         const zoneData = zonesData[zoneId];
         
-        // Vérifier si la zone a une area définie
-        if (zoneData && zoneData.contrainte && zoneData.contrainte.area) {
+        // Vérifier si la zone a une area valide (dimensions > 0)
+        if (hasValidArea(zoneData)) {
             const area = zoneData.contrainte.area;
             
             return {
@@ -5300,6 +5300,105 @@ document.addEventListener('DOMContentLoaded', () => {
             maxX: defaultLimits.maxX,
             maxY: defaultLimits.maxY
         };
+    }
+
+    /**
+     * Vérifie si une zone a une area valide définie.
+     * Une area est valide si elle existe ET a des dimensions > 0.
+     * Nécessaire car WebDev sérialise toujours la structure area même si non définie
+     * (avec des valeurs 0, 0, 0, 0).
+     * 
+     * @param {Object} zoneData - Données de la zone
+     * @returns {boolean} true si area valide (wMm > 0 ET hMm > 0), false sinon
+     * 
+     * @example
+     * // Area valide
+     * hasValidArea({ contrainte: { area: { xMm: 10, yMm: 10, wMm: 100, hMm: 60 } } }); // true
+     * 
+     * // Area invalide (valeurs par défaut WebDev)
+     * hasValidArea({ contrainte: { area: { xMm: 0, yMm: 0, wMm: 0, hMm: 0 } } }); // false
+     * 
+     * // Pas d'area
+     * hasValidArea({ contrainte: { positionFixe: true } }); // false
+     */
+    function hasValidArea(zoneData) {
+        if (!zoneData || !zoneData.contrainte || !zoneData.contrainte.area) {
+            return false;
+        }
+        const area = zoneData.contrainte.area;
+        return area.wMm > 0 && area.hMm > 0;
+    }
+
+    /**
+     * Vérifie si les contraintes sont réellement définies ou si ce sont des valeurs par défaut.
+     * Les contraintes sont considérées comme "non définies" si :
+     * - L'objet constraints n'existe pas ou est null
+     * - Toutes les autorisations sont false ET toutes les limites sont 0 ou absentes
+     * 
+     * Nécessaire car WebDev sérialise toujours la structure constraints même si non définie
+     * (avec des valeurs false/0 par défaut).
+     * 
+     * @param {Object} constraints - Objet constraints du message WebDev
+     * @returns {boolean} true si constraints valides (au moins une autorisation ou limite définie), false sinon
+     * 
+     * @example
+     * // Constraints valides (au moins une autorisation true)
+     * hasValidConstraints({ autorisations: { textQuill: true, image: false, qr: false, barcode: false } }); // true
+     * 
+     * // Constraints valides (au moins une limite > 0 ou -1)
+     * hasValidConstraints({ autorisations: {...}, limites: { textQuill: -1, image: 0, qr: 0, barcode: 0 } }); // true
+     * 
+     * // Constraints invalides (valeurs par défaut WebDev)
+     * hasValidConstraints({ 
+     *     autorisations: { textQuill: false, image: false, qr: false, barcode: false },
+     *     limites: { textQuill: 0, image: 0, qr: 0, barcode: 0 }
+     * }); // false
+     * 
+     * // Pas de constraints
+     * hasValidConstraints(null); // false
+     * hasValidConstraints(undefined); // false
+     */
+    function hasValidConstraints(constraints) {
+        // Pas de constraints du tout
+        if (!constraints) {
+            return false;
+        }
+        
+        // Vérifier si au moins une autorisation est true
+        const autorisations = constraints.autorisations;
+        if (autorisations) {
+            const hasAnyAutorisation = 
+                autorisations.textQuill === true ||
+                autorisations.image === true ||
+                autorisations.qr === true ||
+                autorisations.barcode === true;
+            
+            if (hasAnyAutorisation) {
+                return true;
+            }
+        }
+        
+        // Vérifier si au moins une limite est différente de 0 (soit > 0, soit -1 pour illimité)
+        const limites = constraints.limites;
+        if (limites) {
+            const hasAnyLimite = 
+                (limites.textQuill !== undefined && limites.textQuill !== 0) ||
+                (limites.image !== undefined && limites.image !== 0) ||
+                (limites.qr !== undefined && limites.qr !== 0) ||
+                (limites.barcode !== undefined && limites.barcode !== 0);
+            
+            if (hasAnyLimite) {
+                return true;
+            }
+        }
+        
+        // Vérifier si des zones prédéfinies existent
+        if (constraints.zonesPredefines && constraints.zonesPredefines.length > 0) {
+            return true;
+        }
+        
+        // Aucune valeur significative trouvée → valeurs par défaut WebDev
+        return false;
     }
 
     /**
@@ -5534,6 +5633,13 @@ document.addEventListener('DOMContentLoaded', () => {
      * });
      */
     function applyConstraints(constraints) {
+        // Vérifier si les contraintes sont réellement définies
+        // (pas juste des valeurs par défaut WebDev : false/0)
+        if (!hasValidConstraints(constraints)) {
+            console.log('⚠️ Constraints non définies ou valeurs par défaut, utilisation de DEFAULT_CONSTRAINTS');
+            constraints = DEFAULT_CONSTRAINTS;
+        }
+        
         if (!constraints || typeof constraints !== 'object') {
             console.warn('⚠️ applyConstraints: constraints invalide');
             return;
@@ -8355,8 +8461,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Mettre à jour le badge contrainte si applicable
         updateContrainteBadge(id);
         
-        // Créer l'area si définie dans les contraintes
-        if (zoneData.contrainte && zoneData.contrainte.area) {
+        // Créer l'area si valide dans les contraintes (dimensions > 0)
+        if (hasValidArea(zoneData)) {
             createAreaElement(id, zoneData.contrainte.area);
         }
         
@@ -18707,6 +18813,8 @@ document.addEventListener('DOMContentLoaded', () => {
     window.getAreaBoundsInPixels = getAreaBoundsInPixels;
     window.getAreaMaxSizeInPixels = getAreaMaxSizeInPixels;
     window.getGeometryLimitsForZone = getGeometryLimitsForZone;
+    window.hasValidArea = hasValidArea;
+    window.hasValidConstraints = hasValidConstraints;
     window.areaElements = areaElements;
     
     // Exposer les boutons sidebar et constantes pour les tests
