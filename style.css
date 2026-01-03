@@ -1826,7 +1826,8 @@ body.in-iframe .toolbar {
 .zone:not(.selected) .barcode-type-badge,
 .zone:not(.selected) .barcode-field-badge,
 .zone:not(.selected) .image-dpi-badge,
-.zone:not(.selected) .systeme-badge {
+.zone:not(.selected) .systeme-badge,
+.zone:not(.selected) .contrainte-badge {
     opacity: 0 !important;
     visibility: hidden;
     transition: opacity 0.15s ease, visibility 0.15s ease;
@@ -1837,7 +1838,8 @@ body.in-iframe .toolbar {
 .zone:not(.selected):hover .barcode-type-badge,
 .zone:not(.selected):hover .barcode-field-badge,
 .zone:not(.selected):hover .image-dpi-badge,
-.zone:not(.selected):hover .systeme-badge {
+.zone:not(.selected):hover .systeme-badge,
+.zone:not(.selected):hover .contrainte-badge {
     opacity: 1 !important;
     visibility: visible;
     pointer-events: auto;
@@ -1847,7 +1849,8 @@ body.in-iframe .toolbar {
 .zone.selected .barcode-type-badge,
 .zone.selected .barcode-field-badge,
 .zone.selected .image-dpi-badge,
-.zone.selected .systeme-badge {
+.zone.selected .systeme-badge,
+.zone.selected .contrainte-badge {
     opacity: 1 !important;
     visibility: visible;
     pointer-events: auto;
@@ -1903,6 +1906,21 @@ body.in-iframe .toolbar {
     white-space: nowrap;
     color: white;
     background: #2196F3;  /* Bleu Material */
+    z-index: 10;
+}
+
+/* Badge Zone contrainte */
+.contrainte-badge {
+    position: absolute;
+    bottom: -18px;
+    left: 0;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: Arial, sans-serif;
+    white-space: nowrap;
+    color: white;
+    background: #FF9800;  /* Orange Material */
     z-index: 10;
 }
 

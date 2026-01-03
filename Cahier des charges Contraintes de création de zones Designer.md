@@ -676,3 +676,4 @@ case 'INIT_DOCUMENT':
 *Document rédigé le 2 janvier 2026*
 *À reprendre : Implémentation Phase 10 - Contraintes génériques*
 
+

@@ -172,6 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {0|1} emptyLines - Gestion lignes vides (0=Conserver, 1=Variables uniquement)
      * @property {number} zIndex - Ordre d'empilement
      * @property {BorderData} border - Configuration de la bordure
+     * @property {ZoneContrainte} [contrainte] - Contraintes de la zone (si zone prédéfinie)
      * @description Zone de texte Quill (WYSIWYG).
      */
 
@@ -183,6 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {CmykData} [bgColorCmyk] - Couleur de fond CMJN native (si saisie en CMJN)
      * @property {boolean} locked - Zone verrouillée
      * @property {number} zIndex - Ordre d'empilement
+     * @property {ZoneContrainte} [contrainte] - Contraintes de la zone (si zone prédéfinie)
      * @description Zone de code QR (contenu géré par champ de fusion).
      */
 
@@ -198,6 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {number} rotation - Rotation en degrés
      * @property {number} zIndex - Ordre d'empilement
      * @property {BorderData} border - Configuration de la bordure
+     * @property {ZoneContrainte} [contrainte] - Contraintes de la zone (si zone prédéfinie)
      * @description Zone image (fixe ou dynamique via fusion).
      */
 
@@ -214,6 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {CmykData} [bgColorCmyk] - Couleur de fond CMJN native (si saisie en CMJN)
      * @property {boolean} locked - Zone verrouillée
      * @property {number} zIndex - Ordre d'empilement
+     * @property {ZoneContrainte} [contrainte] - Contraintes de la zone (si zone prédéfinie)
      * @description Zone code-barres 1D ou 2D.
      */
 
@@ -595,6 +599,66 @@ document.addEventListener('DOMContentLoaded', () => {
      * @description État du mode aperçu de fusion.
      */
 
+    // --- STRUCTURES DE CONTRAINTES DOCUMENT ---
+
+    /**
+     * @typedef {Object} ConstraintsAutorisations
+     * @property {boolean} textQuill - Autoriser création zones texte
+     * @property {boolean} image - Autoriser création zones image
+     * @property {boolean} qr - Autoriser création zones QR Code interactif
+     * @property {boolean} barcode - Autoriser création zones code-barres
+     * @description Autorisations de création de zones par type.
+     */
+
+    /**
+     * @typedef {Object} ConstraintsLimites
+     * @property {number|null} textQuill - Nombre max de zones texte (null = illimité)
+     * @property {number|null} image - Nombre max de zones image (null = illimité)
+     * @property {number|null} qr - Nombre max de zones QR (null = illimité)
+     * @property {number|null} barcode - Nombre max de zones code-barres (null = illimité)
+     * @description Limites de nombre de zones par type (toutes pages confondues).
+     */
+
+    /**
+     * @typedef {Object} ZoneContrainte
+     * @property {boolean} positionFixe - Position non modifiable (drag désactivé)
+     * @property {boolean} nonSupprimable - Zone non supprimable
+     * @property {number} [minWMm] - Largeur minimale en mm
+     * @property {number} [maxWMm] - Largeur maximale en mm
+     * @property {number} [minHMm] - Hauteur minimale en mm
+     * @property {number} [maxHMm] - Hauteur maximale en mm
+     * @description Contraintes appliquées à une zone prédéfinie.
+     */
+
+    /**
+     * @typedef {Object} ZonePredefinie
+     * @property {'textQuill'|'image'} type - Type de zone
+     * @property {number} page - Index de la page (0 = recto, 1 = verso)
+     * @property {number} xMm - Position X en mm
+     * @property {number} yMm - Position Y en mm
+     * @property {number} wMm - Largeur en mm
+     * @property {number} hMm - Hauteur en mm
+     * @property {ZoneContrainte} contrainte - Contraintes de la zone
+     * @description Zone créée automatiquement au chargement avec contraintes.
+     */
+
+    /**
+     * @typedef {Object} DocumentConstraints
+     * @property {ConstraintsAutorisations} autorisations - Autorisations par type
+     * @property {ConstraintsLimites} limites - Limites de nombre par type
+     * @property {ZonePredefinie[]} zonesPredefines - Zones à créer au chargement
+     * @description Contraintes globales du document.
+     */
+
+    /**
+     * @typedef {Object} ZoneCountByType
+     * @property {number} textQuill - Nombre de zones texte
+     * @property {number} image - Nombre de zones image
+     * @property {number} qr - Nombre de zones QR interactif (Marketeam)
+     * @property {number} barcode - Nombre de zones code-barres (inclut QR code-barres)
+     * @description Comptage des zones par type sur tout le document.
+     */
+
     // ─────────────────────────── FIN DÉFINITIONS DE TYPES ──────────────────────────
 
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -618,6 +682,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnAddTextQuill = document.getElementById('btn-add-zone-quill');
     const btnAddQr = document.getElementById('btn-add-qr');
     const btnAddImage = document.getElementById('btn-add-image');
+    const btnAddBarcode = document.getElementById('btn-add-barcode');
     const btnDelete = document.getElementById('btn-delete-zone');
     const btnReset = document.getElementById('btn-reset');
     const btnExportJson = document.getElementById('btn-export-json');
@@ -4886,6 +4951,328 @@ document.addEventListener('DOMContentLoaded', () => {
         badge.textContent = zoneData.systemeLibelle;
     }
 
+    /**
+     * Met à jour le badge "Zone contrainte" pour une zone donnée.
+     * Le badge est affiché uniquement si la zone a une propriété `contrainte` définie.
+     * 
+     * @param {string} zoneId - Identifiant de la zone (ex: "zone-1")
+     * @returns {void}
+     * 
+     * @example
+     * // Zone avec contrainte
+     * zoneData.contrainte = { positionFixe: true, nonSupprimable: true };
+     * updateContrainteBadge('zone-1'); // → Affiche badge "Zone contrainte"
+     * 
+     * // Zone sans contrainte
+     * updateContrainteBadge('zone-2'); // → Supprime le badge
+     */
+    function updateContrainteBadge(zoneId) {
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        if (!zoneData) return;
+        
+        const zoneEl = document.getElementById(zoneId);
+        if (!zoneEl) return;
+        
+        // Chercher un badge existant
+        let badge = zoneEl.querySelector('.contrainte-badge');
+        
+        // Vérifier si on doit afficher le badge
+        const shouldShow = zoneData.contrainte && 
+            (zoneData.contrainte.positionFixe || zoneData.contrainte.nonSupprimable);
+        
+        if (!shouldShow) {
+            // Supprimer le badge s'il existe
+            if (badge) badge.remove();
+            return;
+        }
+        
+        // Créer le badge s'il n'existe pas
+        if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'contrainte-badge';
+            zoneEl.appendChild(badge);
+        }
+        
+        // Mettre à jour le contenu
+        badge.textContent = 'Zone contrainte';
+    }
+
+    /**
+     * Applique les bornes de taille définies dans contrainte à des dimensions.
+     * Convertit les bornes de mm en pixels et contraint newW/newH dans les limites.
+     * 
+     * @param {Object} contrainte - Objet contrainte de la zone
+     * @param {number} [contrainte.minWMm] - Largeur minimale en mm
+     * @param {number} [contrainte.maxWMm] - Largeur maximale en mm
+     * @param {number} [contrainte.minHMm] - Hauteur minimale en mm
+     * @param {number} [contrainte.maxHMm] - Hauteur maximale en mm
+     * @param {number} newW - Nouvelle largeur en pixels (avant contrainte)
+     * @param {number} newH - Nouvelle hauteur en pixels (avant contrainte)
+     * @returns {{w: number, h: number}} Dimensions contraintes en pixels
+     * 
+     * @example
+     * const contrainte = { minWMm: 50, maxWMm: 150, minHMm: 20, maxHMm: 80 };
+     * const result = applyContrainteBounds(contrainte, 100, 50);
+     * // result.w et result.h sont contraints dans les bornes
+     */
+    function applyContrainteBounds(contrainte, newW, newH) {
+        let w = newW;
+        let h = newH;
+        
+        if (!contrainte) return { w, h };
+        
+        // Appliquer les bornes de largeur
+        if (contrainte.minWMm !== undefined) {
+            const minWPx = mmToPx(contrainte.minWMm);
+            w = Math.max(w, minWPx);
+        }
+        if (contrainte.maxWMm !== undefined) {
+            const maxWPx = mmToPx(contrainte.maxWMm);
+            w = Math.min(w, maxWPx);
+        }
+        
+        // Appliquer les bornes de hauteur
+        if (contrainte.minHMm !== undefined) {
+            const minHPx = mmToPx(contrainte.minHMm);
+            h = Math.max(h, minHPx);
+        }
+        if (contrainte.maxHMm !== undefined) {
+            const maxHPx = mmToPx(contrainte.maxHMm);
+            h = Math.min(h, maxHPx);
+        }
+        
+        return { w, h };
+    }
+
+    /**
+     * Crée les zones prédéfinies définies dans documentState.constraints.zonesPredefines.
+     * Chaque zone est créée sur sa page cible avec sa contrainte associée.
+     * Les coordonnées sont converties de mm en pixels.
+     * 
+     * Cette fonction est idempotente : elle vérifie si les zones existent déjà
+     * via un marqueur `_predefinedCreated` pour éviter les doublons au rechargement.
+     * 
+     * @returns {void}
+     * 
+     * @example
+     * // Définir des zones prédéfinies
+     * documentState.constraints.zonesPredefines = [{
+     *     type: 'textQuill',
+     *     page: 0,
+     *     xMm: 10, yMm: 20, wMm: 80, hMm: 30,
+     *     contrainte: { positionFixe: true, nonSupprimable: true }
+     * }];
+     * 
+     * // Créer les zones
+     * createPredefinedZones();
+     */
+    function createPredefinedZones() {
+        const zonesPredefines = documentState.constraints?.zonesPredefines;
+        
+        // Rien à faire si pas de zones prédéfinies
+        if (!zonesPredefines || zonesPredefines.length === 0) {
+            return;
+        }
+        
+        // Éviter les doublons : vérifier si déjà créées
+        if (documentState._predefinedCreated) {
+            console.log('⚠️ Zones prédéfinies déjà créées, ignoré');
+            return;
+        }
+        
+        console.log(`📦 Création de ${zonesPredefines.length} zone(s) prédéfinie(s)...`);
+        
+        // Sauvegarder la page courante
+        const originalPageIndex = documentState.currentPageIndex;
+        
+        zonesPredefines.forEach((zoneDef, index) => {
+            // Valider le type
+            if (!['textQuill', 'image'].includes(zoneDef.type)) {
+                console.warn(`⚠️ Zone prédéfinie #${index}: type "${zoneDef.type}" non supporté`);
+                return;
+            }
+            
+            // Valider la page
+            const pageIndex = zoneDef.page || 0;
+            if (pageIndex < 0 || pageIndex >= documentState.pages.length) {
+                console.warn(`⚠️ Zone prédéfinie #${index}: page ${pageIndex} invalide`);
+                return;
+            }
+            
+            // Incrémenter le compteur de zones
+            documentState.zoneCounter++;
+            zoneCounter = documentState.zoneCounter;
+            const zoneId = `zone-${zoneCounter}`;
+            
+            // Convertir les coordonnées mm en pixels
+            const x = mmToPx(zoneDef.xMm || 0);
+            const y = mmToPx(zoneDef.yMm || 0);
+            const w = mmToPx(zoneDef.wMm || 80);
+            const h = mmToPx(zoneDef.hMm || 30);
+            
+            // Calculer le z-index
+            const pageZones = documentState.pages[pageIndex].zones;
+            const existingZIndexes = Object.values(pageZones).map(z => z.zIndex || 0);
+            const newZIndex = existingZIndexes.length > 0 ? Math.max(...existingZIndexes) + 1 : 1;
+            
+            // Créer le zoneData selon le type
+            let zoneData;
+            
+            if (zoneDef.type === 'textQuill') {
+                zoneData = {
+                    type: 'textQuill',
+                    content: '',
+                    quillDelta: null,
+                    font: QUILL_DEFAULT_FONT,
+                    size: QUILL_DEFAULT_SIZE,
+                    color: QUILL_DEFAULT_COLOR,
+                    align: DEFAULT_ALIGN_H,
+                    valign: DEFAULT_ALIGN_V,
+                    bgColor: DEFAULT_BG_COLOR,
+                    isTransparent: true,
+                    bold: false,
+                    lineHeight: QUILL_DEFAULT_LINE_HEIGHT,
+                    locked: false,
+                    copyfit: false,
+                    emptyLines: 0,
+                    zIndex: newZIndex,
+                    border: {
+                        width: 0,
+                        color: DEFAULT_BORDER_COLOR,
+                        style: DEFAULT_BORDER_STYLE
+                    },
+                    // Position et dimensions en pixels
+                    x: x,
+                    y: y,
+                    w: w,
+                    h: h,
+                    // Contrainte
+                    contrainte: zoneDef.contrainte || null
+                };
+            } else if (zoneDef.type === 'image') {
+                zoneData = {
+                    type: 'image',
+                    source: {
+                        type: 'fixe',
+                        valeur: '',
+                        imageBase64: null,
+                        nomOriginal: null,
+                        largeurPx: null,
+                        hauteurPx: null,
+                        poidsBrut: null,
+                        poidsCompresse: null
+                    },
+                    redimensionnement: {
+                        mode: 'ajuster',
+                        alignementH: 'center',
+                        alignementV: 'middle'
+                    },
+                    bgColor: DEFAULT_BG_COLOR,
+                    isTransparent: true,
+                    locked: false,
+                    rotation: 0,
+                    zIndex: newZIndex,
+                    border: {
+                        width: 0,
+                        color: DEFAULT_BORDER_COLOR,
+                        style: DEFAULT_BORDER_STYLE
+                    },
+                    // Position et dimensions en pixels
+                    x: x,
+                    y: y,
+                    w: w,
+                    h: h,
+                    // Contrainte
+                    contrainte: zoneDef.contrainte || null
+                };
+            }
+            
+            // Ajouter la zone à la page cible
+            documentState.pages[pageIndex].zones[zoneId] = zoneData;
+            
+            console.log(`  ✓ Zone prédéfinie "${zoneId}" (${zoneDef.type}) créée sur page ${pageIndex}`);
+        });
+        
+        // Marquer comme créées
+        documentState._predefinedCreated = true;
+        
+        // Recharger la page courante pour afficher les zones
+        // (si on est sur une page qui a reçu des zones prédéfinies)
+        documentState.currentPageIndex = originalPageIndex;
+        loadCurrentPage();
+        
+        // Mettre à jour la visibilité des boutons (les zones prédéfinies comptent dans les limites)
+        updateZoneButtonsVisibility();
+        
+        // Sauvegarder l'état
+        saveToLocalStorage();
+        
+        console.log('📦 Zones prédéfinies créées avec succès');
+    }
+
+    /**
+     * Applique les contraintes de document reçues de WebDev.
+     * Fusionne les contraintes reçues avec les valeurs par défaut,
+     * puis crée les zones prédéfinies si définies.
+     * 
+     * @param {Object} constraints - Objet constraints reçu de WebDev
+     * @param {ConstraintsAutorisations} [constraints.autorisations] - Autorisations par type
+     * @param {ConstraintsLimites} [constraints.limites] - Limites de nombre par type
+     * @param {ZonePredefinie[]} [constraints.zonesPredefines] - Zones à créer
+     * @returns {void}
+     * 
+     * @example
+     * applyConstraints({
+     *     autorisations: { textQuill: true, image: false },
+     *     limites: { textQuill: 1 },
+     *     zonesPredefines: [{ type: 'textQuill', page: 0, xMm: 20, yMm: 30, wMm: 100, hMm: 40 }]
+     * });
+     */
+    function applyConstraints(constraints) {
+        if (!constraints || typeof constraints !== 'object') {
+            console.warn('⚠️ applyConstraints: constraints invalide');
+            return;
+        }
+        
+        console.log('🔒 Application des contraintes de document...');
+        console.log('  Contraintes reçues:', constraints);
+        
+        // Fusionner avec les valeurs par défaut
+        if (constraints.autorisations) {
+            documentState.constraints.autorisations = {
+                ...DEFAULT_CONSTRAINTS.autorisations,
+                ...constraints.autorisations
+            };
+        }
+        
+        if (constraints.limites) {
+            documentState.constraints.limites = {
+                ...DEFAULT_CONSTRAINTS.limites,
+                ...constraints.limites
+            };
+        }
+        
+        if (Array.isArray(constraints.zonesPredefines)) {
+            documentState.constraints.zonesPredefines = constraints.zonesPredefines;
+        }
+        
+        console.log('  Contraintes appliquées:', documentState.constraints);
+        
+        // Réinitialiser le marqueur pour permettre la création des zones prédéfinies
+        delete documentState._predefinedCreated;
+        
+        // Créer les zones prédéfinies si définies
+        if (documentState.constraints.zonesPredefines.length > 0) {
+            createPredefinedZones();
+        }
+        
+        // Mettre à jour la visibilité des boutons
+        updateZoneButtonsVisibility();
+        
+        console.log('🔒 Contraintes appliquées avec succès');
+    }
+
     // ─────────────────────────────── FIN SECTION 9 ────────────────────────────────
 
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -5316,6 +5703,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 1b. Sauvegarder les données d'aperçu (ne doivent pas être perdues lors du Undo/Redo)
         const savedDonneesApercu = documentState.donneesApercu || [];
+        // 1c. Sauvegarder les contraintes (ne doivent pas être perdues lors du Undo/Redo)
+        const savedConstraints = documentState.constraints || { ...DEFAULT_CONSTRAINTS };
         
         // 2. Restaurer documentState
         documentState = JSON.parse(JSON.stringify(snapshot));
@@ -5323,6 +5712,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 2b. Restaurer les données d'aperçu
         documentState.donneesApercu = savedDonneesApercu;
+        // 2c. Restaurer les contraintes
+        documentState.constraints = savedConstraints;
         
         // 3. Recharger la page courante (recrée les zones dans le DOM)
         loadCurrentPage();
@@ -5454,6 +5845,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // Format par défaut (A4)
     const DEFAULT_FORMAT = 'A4';
 
+    /**
+     * Contraintes par défaut du document (tout autorisé, pas de limites)
+     * @type {DocumentConstraints}
+     */
+    const DEFAULT_CONSTRAINTS = {
+        autorisations: {
+            textQuill: true,
+            image: true,
+            qr: true,
+            barcode: true
+        },
+        limites: {
+            textQuill: null,
+            image: null,
+            qr: 1,        // Un seul QR interactif par document (déjà implémenté)
+            barcode: null
+        },
+        zonesPredefines: []
+    };
+
     // --- STOCKAGE DES DONNÉES (Le "Cerveau") ---
     // Nouvelle structure hiérarchique multipage avec dimensions
     let documentState = {
@@ -5483,7 +5894,12 @@ document.addEventListener('DOMContentLoaded', () => {
          * Données d'échantillon pour l'aperçu de fusion
          * @type {EchantillonData[]}
          */
-        donneesApercu: []
+        donneesApercu: [],
+        /**
+         * Contraintes du document (autorisations, limites, zones prédéfinies)
+         * @type {DocumentConstraints}
+         */
+        constraints: { ...DEFAULT_CONSTRAINTS }
     };
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -6586,6 +7002,67 @@ document.addEventListener('DOMContentLoaded', () => {
         return getCurrentPageZones();
     }
 
+    /**
+     * Compte le nombre de zones par type sur TOUT le document (toutes pages confondues).
+     * 
+     * Note : Les zones QR sont comptées différemment :
+     * - `qr` : QR Code interactif Marketeam (sans qrConfig.type)
+     * - `barcode` : Codes-barres classiques + QR créés via bouton code-barres (avec qrConfig.type)
+     * 
+     * @returns {ZoneCountByType} Comptage par type {textQuill, image, qr, barcode}
+     * 
+     * @example
+     * const counts = countZonesByType();
+     * console.log(counts); // { textQuill: 2, image: 1, qr: 0, barcode: 3 }
+     * 
+     * @example
+     * // Vérifier si la limite de zones texte est atteinte
+     * const counts = countZonesByType();
+     * const limite = documentState.constraints.limites.textQuill;
+     * if (limite !== null && counts.textQuill >= limite) {
+     *     console.log('Limite de zones texte atteinte');
+     * }
+     */
+    function countZonesByType() {
+        const counts = {
+            textQuill: 0,
+            image: 0,
+            qr: 0,
+            barcode: 0
+        };
+        
+        // Parcourir TOUTES les pages du document
+        for (const page of documentState.pages) {
+            for (const zoneData of Object.values(page.zones)) {
+                switch (zoneData.type) {
+                    case 'textQuill':
+                        counts.textQuill++;
+                        break;
+                        
+                    case 'image':
+                        counts.image++;
+                        break;
+                        
+                    case 'qr':
+                        // QR Marketeam = pas de qrConfig ou pas de type dans qrConfig
+                        if (!zoneData.qrConfig || !zoneData.qrConfig.type) {
+                            counts.qr++;
+                        } else {
+                            // QR créé via code-barres (a un qrConfig.type) → compte comme barcode
+                            counts.barcode++;
+                        }
+                        break;
+                        
+                    case 'barcode':
+                        counts.barcode++;
+                        break;
+                }
+            }
+        }
+        
+        return counts;
+    }
+
     // --- FONCTIONS HELPER POUR LES DIMENSIONS DE PAGE ---
 
     /**
@@ -6840,36 +7317,60 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnAddTextQuill) {
         btnAddTextQuill.addEventListener('click', () => {
             createTextQuillZone();
+            updateZoneButtonsVisibility(); // Mettre à jour la visibilité des boutons
         });
     }
 
     /**
-     * Met à jour la visibilité du bouton "QR Code interactif" dans la sidebar.
-     * Le bouton est masqué si un QR Code Marketeam existe déjà sur le document.
-     * Il ne peut y avoir qu'un seul QR Code interactif par document (toutes pages confondues).
+     * Met à jour la visibilité des boutons de création de zones dans la sidebar.
+     * Un bouton est masqué si :
+     * - Le type est interdit (autorisations[type] = false)
+     * - OU la limite de zones est atteinte (limites[type] atteint)
      * 
      * @returns {void}
      * 
      * @example
-     * // Appeler après création/suppression d'une zone QR
-     * updateQrInteractifButtonVisibility();
+     * // Appeler après création/suppression d'une zone
+     * updateZoneButtonsVisibility();
      * 
-     * @see btnAddQr - Bouton "QR Code interactif" dans la sidebar
+     * @see documentState.constraints - Configuration des contraintes
+     * @see countZonesByType - Comptage des zones par type
      */
-    function updateQrInteractifButtonVisibility() {
-        if (!btnAddQr) return;
+    function updateZoneButtonsVisibility() {
+        const { autorisations, limites } = documentState.constraints;
+        const counts = countZonesByType();
         
-        // Chercher s'il existe une zone QR Marketeam sur TOUTES les pages du document
-        const hasQrMarketeam = documentState.pages.some(page => {
-            return Object.values(page.zones).some(zoneData => {
-                if (zoneData.type !== 'qr') return false;
-                // QR Marketeam = pas de qrConfig ou pas de type dans qrConfig
-                return !zoneData.qrConfig || !zoneData.qrConfig.type;
-            });
-        });
+        /**
+         * Détermine si un bouton doit être visible
+         * @param {string} type - Type de zone (textQuill, image, qr, barcode)
+         * @returns {boolean} true si le bouton doit être visible
+         */
+        function isButtonVisible(type) {
+            // Vérifier l'autorisation
+            if (autorisations[type] === false) {
+                return false;
+            }
+            // Vérifier la limite
+            const limite = limites[type];
+            if (limite !== null && counts[type] >= limite) {
+                return false;
+            }
+            return true;
+        }
         
-        // Masquer ou afficher le bouton
-        btnAddQr.style.display = hasQrMarketeam ? 'none' : '';
+        // Mettre à jour chaque bouton
+        if (btnAddTextQuill) {
+            btnAddTextQuill.style.display = isButtonVisible('textQuill') ? '' : 'none';
+        }
+        if (btnAddImage) {
+            btnAddImage.style.display = isButtonVisible('image') ? '' : 'none';
+        }
+        if (btnAddQr) {
+            btnAddQr.style.display = isButtonVisible('qr') ? '' : 'none';
+        }
+        if (btnAddBarcode) {
+            btnAddBarcode.style.display = isButtonVisible('barcode') ? '' : 'none';
+        }
     }
 
     btnAddQr.addEventListener('click', () => {
@@ -6901,7 +7402,7 @@ document.addEventListener('DOMContentLoaded', () => {
         saveState(); // Snapshot APRÈS la création
         
         // Masquer le bouton QR interactif (un seul autorisé)
-        updateQrInteractifButtonVisibility();
+        updateZoneButtonsVisibility();
     });
 
     // Listener pour créer une zone image
@@ -6952,10 +7453,10 @@ document.addEventListener('DOMContentLoaded', () => {
         createZoneDOM(id, zoneCounter);
         saveToLocalStorage();
         saveState();
+        updateZoneButtonsVisibility(); // Mettre à jour la visibilité des boutons
     });
 
     // Listener pour créer une zone code-barres
-    const btnAddBarcode = document.getElementById('btn-add-barcode');
     if (btnAddBarcode) {
         btnAddBarcode.addEventListener('click', () => {
             // Bloquer la création de zones en mode aperçu
@@ -6992,6 +7493,7 @@ document.addEventListener('DOMContentLoaded', () => {
             createZoneDOM(id, zoneCounter);
             saveToLocalStorage();
             saveState();
+            updateZoneButtonsVisibility(); // Mettre à jour la visibilité des boutons
         });
     }
 
@@ -7544,6 +8046,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         a4Page.appendChild(zone);
+        
+        // Mettre à jour le badge contrainte si applicable
+        updateContrainteBadge(id);
+        
         if (autoSelect) {
             selectZone(id);
         }
@@ -8022,9 +8528,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const zonesData = getCurrentPageZones();
             const zoneData = zonesData[id];
             const isSysteme = zoneData && zoneData.systeme;
+            const isNonSupprimable = zoneData && zoneData.contrainte && zoneData.contrainte.nonSupprimable;
             
-            // Griser le bouton Supprimer si zone système
-            btnDelete.disabled = isSysteme;
+            // Griser le bouton Supprimer si zone système OU zone contrainte non supprimable
+            btnDelete.disabled = isSysteme || isNonSupprimable;
             // coordsPanel supprimé - ne rien faire
             // loadZoneDataToForm supprimé - toolbar Quill gère l'affichage
         } else {
@@ -13345,7 +13852,7 @@ document.addEventListener('DOMContentLoaded', () => {
             deselectAll();
             
             // Réafficher le bouton QR interactif si celui-ci a été supprimé
-            updateQrInteractifButtonVisibility();
+            updateZoneButtonsVisibility();
         }
         hideDeleteConfirmation();
     }
@@ -13823,8 +14330,15 @@ document.addEventListener('DOMContentLoaded', () => {
         
         saveState(); // Snapshot APRÈS la réinitialisation (nouveau point de départ)
         
-        // Réafficher le bouton QR interactif après reset
-        updateQrInteractifButtonVisibility();
+        // Recréer les zones prédéfinies si définies
+        if (documentState.constraints.zonesPredefines && documentState.constraints.zonesPredefines.length > 0) {
+            // Réinitialiser le marqueur pour permettre la recréation
+            delete documentState._predefinedCreated;
+            createPredefinedZones();
+        } else {
+            // Pas de zones prédéfinies : juste mettre à jour la visibilité des boutons
+            updateZoneButtonsVisibility();
+        }
         
         hideResetConfirmation();
     }
@@ -13867,8 +14381,15 @@ document.addEventListener('DOMContentLoaded', () => {
         
         saveState(); // Snapshot APRÈS la réinitialisation (nouveau point de départ)
         
-        // Réafficher le bouton QR interactif après reset
-        updateQrInteractifButtonVisibility();
+        // Recréer les zones prédéfinies si définies
+        if (documentState.constraints.zonesPredefines && documentState.constraints.zonesPredefines.length > 0) {
+            // Réinitialiser le marqueur pour permettre la recréation
+            delete documentState._predefinedCreated;
+            createPredefinedZones();
+        } else {
+            // Pas de zones prédéfinies : juste mettre à jour la visibilité des boutons
+            updateZoneButtonsVisibility();
+        }
         
         hideResetConfirmation();
     }
@@ -14375,9 +14896,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectedZoneIds.forEach(zoneId => {
                     const zoneEl = document.getElementById(zoneId);
                     if (zoneEl) {
-                        // Vérifier si la zone n'est pas verrouillée ou système
+                        // Vérifier si la zone n'est pas verrouillée, système ou à position fixe
                         const zoneData = zonesData[zoneId];
-                        if (!zoneData || (!zoneData.locked && !zoneData.systeme)) {
+                        const isPositionFixe = zoneData && zoneData.contrainte && zoneData.contrainte.positionFixe;
+                        if (!zoneData || (!zoneData.locked && !zoneData.systeme && !isPositionFixe)) {
                             startPositions.push({
                                 id: zoneId,
                                 left: zoneEl.offsetLeft,
@@ -14415,9 +14937,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const zoneEl = document.getElementById(pos.id);
                 if (!zoneEl) return;
                 
-                // Vérifier si la zone n'est pas verrouillée ou système
+                // Vérifier si la zone n'est pas verrouillée, système ou à position fixe
                 const zoneData = zonesData[pos.id];
-                if (zoneData && (zoneData.locked || zoneData.systeme)) return; // Ignorer les zones verrouillées ou système
+                const isPositionFixe = zoneData && zoneData.contrainte && zoneData.contrainte.positionFixe;
+                if (zoneData && (zoneData.locked || zoneData.systeme || isPositionFixe)) return; // Ignorer les zones verrouillées, système ou à position fixe
                 
                 // Calculer la nouvelle position
                 const newLeft = pos.left + dx;
@@ -14551,6 +15074,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
                 // === FIN CONTRAINTES ZONES IMAGE ===
+                
+                // === CONTRAINTES ZONES PRÉDÉFINIES (bornes min/max) ===
+                if (zoneDataResize && zoneDataResize.contrainte) {
+                    const bounded = applyContrainteBounds(zoneDataResize.contrainte, newW, newH);
+                    newW = bounded.w;
+                    newH = bounded.h;
+                }
+                // === FIN CONTRAINTES ZONES PRÉDÉFINIES ===
                 
                 // Garde-fou minimal en pixels (15px ≈ 4mm, inférieur à tous les minimums définis)
                 if (newW > 15) zone.style.width = newW + 'px';
@@ -14856,6 +15387,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const zonesData = getCurrentPageZones();
         const zoneData = zonesData[zoneId];
         if (!zoneData || zoneData.locked || zoneData.systeme) return;
+        
+        // Vérifier les contraintes de zone prédéfinie
+        const contrainte = zoneData.contrainte;
+        
+        // Bloquer la modification de X et Y si position fixe
+        if (contrainte && contrainte.positionFixe && (property === 'x' || property === 'y')) {
+            console.log(`⚠️ Modification ${property} bloquée : zone avec position fixe`);
+            return;
+        }
 
         // Récupérer les limites avec marge de sécurité
         const limits = getGeometryLimits();
@@ -14911,6 +15451,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Largeur max = bord droit (avec marge) - position X actuelle
                 const maxWidth = round1(limits.maxX - xMm);
                 wMm = round1(Math.min(wMm, maxWidth));
+                
+                // Appliquer les bornes de contrainte si définies
+                if (contrainte) {
+                    if (contrainte.minWMm !== undefined && contrainte.minWMm > 0) {
+                        wMm = Math.max(wMm, contrainte.minWMm);
+                    }
+                    if (contrainte.maxWMm !== undefined && contrainte.maxWMm > 0) {
+                        wMm = Math.min(wMm, contrainte.maxWMm);
+                    }
+                    wMm = round1(wMm);
+                }
 
                 // Codes 2D : forcer le carré
                 if (is2D) {
@@ -14929,6 +15480,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Hauteur max = bord bas (avec marge) - position Y actuelle
                 const maxHeight = round1(limits.maxY - yMm);
                 hMm = round1(Math.min(hMm, maxHeight));
+                
+                // Appliquer les bornes de contrainte si définies
+                if (contrainte) {
+                    if (contrainte.minHMm !== undefined && contrainte.minHMm > 0) {
+                        hMm = Math.max(hMm, contrainte.minHMm);
+                    }
+                    if (contrainte.maxHMm !== undefined && contrainte.maxHMm > 0) {
+                        hMm = Math.min(hMm, contrainte.maxHMm);
+                    }
+                    hMm = round1(hMm);
+                }
                 
                 // Codes 2D : forcer le carré
                 if (is2D) {
@@ -15146,8 +15708,16 @@ document.addEventListener('DOMContentLoaded', () => {
         // Synchroniser le compteur global
         documentState.zoneCounter = zoneCounter;
         
-        // Sauvegarder la nouvelle structure
-        localStorage.setItem('marketeam_document_state', JSON.stringify(documentState));
+        // Créer une copie de documentState SANS les zonesPredefines et le marqueur _predefinedCreated
+        // Ces données doivent venir de WebDev à chaque chargement, pas du localStorage
+        const stateToSave = JSON.parse(JSON.stringify(documentState));
+        if (stateToSave.constraints) {
+            stateToSave.constraints.zonesPredefines = [];
+        }
+        delete stateToSave._predefinedCreated;
+        
+        // Sauvegarder la nouvelle structure (sans zonesPredefines)
+        localStorage.setItem('marketeam_document_state', JSON.stringify(stateToSave));
         
         // Rétrocompatibilité : sauvegarder aussi l'ancien format pour la page courante
         localStorage.setItem('marketeam_zones', JSON.stringify(zonesData));
@@ -17413,6 +17983,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (message.data) {
                     try {
                         loadFromWebDev(message);
+                        
+                        // Appliquer les contraintes si présentes dans le message load
+                        if (message.constraints) {
+                            applyConstraints(message.constraints);
+                        }
+                        
                         sendMessageToParent({ action: 'loaded', success: true });
                     } catch (error) {
                         console.error('Erreur lors du chargement:', error);
@@ -17487,6 +18063,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 break;
                 
+            case 'setConstraints':
+                // Définir les contraintes du document
+                console.log('🔒 Action: setConstraints');
+                if (message.constraints) {
+                    try {
+                        applyConstraints(message.constraints);
+                        sendMessageToParent({
+                            action: 'constraintsApplied',
+                            success: true,
+                            constraints: documentState.constraints
+                        });
+                    } catch (error) {
+                        console.error('Erreur lors de l\'application des contraintes:', error);
+                        sendMessageToParent({
+                            action: 'constraintsApplied',
+                            success: false,
+                            error: error.message
+                        });
+                    }
+                } else {
+                    console.warn('⚠️ setConstraints: constraints manquant');
+                    sendMessageToParent({
+                        action: 'constraintsApplied',
+                        success: false,
+                        error: 'Propriété constraints manquante'
+                    });
+                }
+                break;
+                
             default:
                 console.warn('Action inconnue:', message.action);
         }
@@ -17538,6 +18143,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (parsedState.pages && Array.isArray(parsedState.pages)) {
                     documentState = parsedState;
                     zoneCounter = documentState.zoneCounter || 0;
+                    
+                    // S'assurer que constraints existe (migration depuis anciennes versions)
+                    if (!documentState.constraints) {
+                        documentState.constraints = { ...DEFAULT_CONSTRAINTS };
+                    }
                     
                     // FORCER la page 0 (Recto) au chargement initial
                     // (l'utilisateur peut ensuite naviguer manuellement)
@@ -17756,7 +18366,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateZonePageUI();
         
         // Mettre à jour la visibilité du bouton QR interactif
-        updateQrInteractifButtonVisibility();
+        updateZoneButtonsVisibility();
     }
 
     // --- CHARGEMENT AU DÉMARRAGE ---
@@ -17768,6 +18378,24 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Exposer documentState pour debug console (après toutes les initialisations)
     window.documentState = documentState;
+    
+    // Exposer les fonctions utiles pour debug/test console
+    window.updateContrainteBadge = updateContrainteBadge;
+    window.updateSelectionUI = updateSelectionUI;
+    window.updateZoneButtonsVisibility = updateZoneButtonsVisibility;
+    window.countZonesByType = countZonesByType;
+    window.createPredefinedZones = createPredefinedZones;
+    window.applyConstraints = applyConstraints;
+    
+    // Exposer les boutons sidebar et constantes pour les tests
+    window.btnAddTextQuill = btnAddTextQuill;
+    window.btnAddImage = btnAddImage;
+    window.btnAddQr = btnAddQr;
+    window.btnAddBarcode = btnAddBarcode;
+    window.DEFAULT_CONSTRAINTS = DEFAULT_CONSTRAINTS;
+    window.pxToMm = pxToMm;
+    window.mmToPx = mmToPx;
+    window.loadCurrentPage = loadCurrentPage;
 
     // ─────────────────────────────────────────────────────────────────────────
     // Aperçu de fusion - Event Listeners (Phase 2 - UI seulement)
@@ -18216,7 +18844,7 @@ document.addEventListener('DOMContentLoaded', () => {
         refreshPreviewAfterPageChange();
         
         // 11. Mettre à jour la visibilité du bouton QR interactif
-        updateQrInteractifButtonVisibility();
+        updateZoneButtonsVisibility();
     }
 
     /**
