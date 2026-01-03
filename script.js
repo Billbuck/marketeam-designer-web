@@ -19005,6 +19005,26 @@ document.addEventListener('DOMContentLoaded', () => {
      * @see applyPageDimensions - Application des dimensions
      */
     function loadCurrentPage() {
+        // === NETTOYAGE DOM PRÉALABLE ===
+        // Empêche les doublons lors d'appels multiples (ex: load + applyConstraints)
+        const existingZones = a4Page.querySelectorAll('.zone');
+        if (existingZones.length > 0) {
+            existingZones.forEach(zone => {
+                const zoneId = zone.id;
+                zone.remove();
+                // Nettoyer les ressources Quill associées
+                quillInstances.delete(zoneId);
+                removeCopyfitResizeObserver(zoneId);
+            });
+            console.log(`🧹 Nettoyage DOM : ${existingZones.length} zone(s) supprimée(s)`);
+        }
+        
+        // Nettoyer aussi les areas (Phase 11)
+        const existingAreas = a4Page.querySelectorAll('.zone-area');
+        if (existingAreas.length > 0) {
+            existingAreas.forEach(area => area.remove());
+        }
+        
         const currentPage = getCurrentPage();
         const zonesData = currentPage.zones;
         
