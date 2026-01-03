@@ -2011,6 +2011,315 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    /**
+     * Table des capacités QR Code par version.
+     * Capacité en caractères alphanumériques avec niveau de correction M (15%).
+     * Source : ISO/IEC 18004 (QR Code standard)
+     * 
+     * @type {Array<{version: number, modules: number, capacity: number}>}
+     */
+    const QR_VERSION_CAPACITIES = [
+        { version: 1,  modules: 21,  capacity: 20 },
+        { version: 2,  modules: 25,  capacity: 38 },
+        { version: 3,  modules: 29,  capacity: 61 },
+        { version: 4,  modules: 33,  capacity: 90 },
+        { version: 5,  modules: 37,  capacity: 122 },
+        { version: 6,  modules: 41,  capacity: 154 },
+        { version: 7,  modules: 45,  capacity: 192 },
+        { version: 8,  modules: 49,  capacity: 230 },
+        { version: 9,  modules: 53,  capacity: 287 },
+        { version: 10, modules: 57,  capacity: 331 },
+        { version: 12, modules: 65,  capacity: 453 },
+        { version: 14, modules: 73,  capacity: 573 },
+        { version: 16, modules: 81,  capacity: 718 },
+        { version: 18, modules: 89,  capacity: 863 },
+        { version: 20, modules: 97,  capacity: 1022 },
+        { version: 25, modules: 117, capacity: 1455 },
+        { version: 30, modules: 137, capacity: 1897 },
+        { version: 35, modules: 157, capacity: 2324 },
+        { version: 40, modules: 177, capacity: 2725 }
+    ];
+
+    /**
+     * Taille minimum d'un module QR en mm pour une impression scannable.
+     * Valeur recommandée : 0.4mm (source : ISO 18004, pratique industrielle)
+     * @type {number}
+     */
+    const QR_MIN_MODULE_SIZE_MM = 0.4;
+
+    /**
+     * Nombre de modules pour la zone de silence (quiet zone) de chaque côté.
+     * Standard : 4 modules minimum.
+     * @type {number}
+     */
+    const QR_QUIET_ZONE_MODULES = 4;
+
+    /**
+     * Estimation du nombre de caractères par champ de fusion selon le type de QR.
+     * Utilisé pour estimer la taille des données variables.
+     * @type {Object<string, number>}
+     */
+    const QR_CHARS_PER_FIELD = {
+        'url': 25,          // Paramètre URL moyen
+        'vcard': 40,        // Ligne vCard moyenne
+        'geo': 15,          // Coordonnée
+        'wifi': 20,         // Paramètre WiFi
+        'email': 30,        // Adresse email
+        'sms': 25,          // Contenu SMS
+        'phone': 15,        // Numéro téléphone
+        'text': 20          // Texte général (défaut)
+    };
+
+    /**
+     * Compte le nombre de champs de fusion (@CHAMP@) dans une chaîne.
+     * 
+     * @param {string} content - Contenu à analyser
+     * @returns {number} Nombre de champs de fusion trouvés
+     * 
+     * @example
+     * countMergeFields('Bonjour @NOM@ @PRENOM@'); // 2
+     * countMergeFields('Texte simple'); // 0
+     */
+    function countMergeFields(content) {
+        if (!content || typeof content !== 'string') return 0;
+        const matches = content.match(/@[^@]+@/g);
+        return matches ? matches.length : 0;
+    }
+
+    /**
+     * Estime la longueur totale des données d'un QR Code.
+     * Pour les champs de fusion, estime une longueur moyenne par champ.
+     * 
+     * @param {string} content - Contenu du QR (peut contenir @CHAMP@)
+     * @param {string} [qrType='text'] - Type de QR ('url', 'vcard', 'geo', 'wifi', 'email', 'sms', 'phone', 'text')
+     * @returns {number} Longueur estimée en caractères
+     * 
+     * @example
+     * estimateQrDataLength('https://example.com?id=@ID@', 'url'); // ~50-60
+     * estimateQrDataLength('BEGIN:VCARD\nN:@NOM@\nEND:VCARD', 'vcard'); // ~70-80
+     */
+    function estimateQrDataLength(content, qrType = 'text') {
+        if (!content || typeof content !== 'string') return 0;
+        
+        // Longueur du contenu statique (sans les champs de fusion)
+        const staticContent = content.replace(/@[^@]+@/g, '');
+        let estimatedLength = staticContent.length;
+        
+        // Ajouter l'estimation pour chaque champ de fusion
+        const nbFields = countMergeFields(content);
+        const charsPerField = QR_CHARS_PER_FIELD[qrType] || QR_CHARS_PER_FIELD['text'];
+        estimatedLength += nbFields * charsPerField;
+        
+        return estimatedLength;
+    }
+
+    /**
+     * Détermine la version QR Code nécessaire pour une longueur de données.
+     * 
+     * @param {number} dataLength - Longueur des données en caractères
+     * @returns {{version: number, modules: number, capacity: number}} Version QR appropriée
+     * 
+     * @example
+     * getQrVersionForDataLength(50);  // { version: 3, modules: 29, capacity: 61 }
+     * getQrVersionForDataLength(200); // { version: 8, modules: 49, capacity: 230 }
+     */
+    function getQrVersionForDataLength(dataLength) {
+        // Trouver la première version capable de contenir les données
+        const version = QR_VERSION_CAPACITIES.find(v => v.capacity >= dataLength);
+        
+        // Si aucune version ne suffit, retourner la plus grande
+        return version || QR_VERSION_CAPACITIES[QR_VERSION_CAPACITIES.length - 1];
+    }
+
+    /**
+     * Calcule la taille minimum d'un QR Code en mm pour être scannable.
+     * Prend en compte la densité de données et la taille minimum des modules.
+     * 
+     * @param {string} content - Contenu du QR (peut contenir @CHAMP@)
+     * @param {string} [qrType='text'] - Type de QR ('url', 'vcard', 'geo', etc.)
+     * @returns {{minSizeMm: number, version: number, modules: number, estimatedChars: number}} Informations de taille
+     * 
+     * @example
+     * calculateQrMinSizeMm('https://example.com', 'url');
+     * // { minSizeMm: 12, version: 2, modules: 25, estimatedChars: 19 }
+     * 
+     * calculateQrMinSizeMm('https://example.com?nom=@NOM@&adr=@ADRESSE@', 'url');
+     * // { minSizeMm: 15, version: 3, modules: 29, estimatedChars: 58 }
+     */
+    function calculateQrMinSizeMm(content, qrType = 'text') {
+        // 1. Estimer la longueur des données
+        const estimatedChars = estimateQrDataLength(content, qrType);
+        
+        // 2. Déterminer la version QR nécessaire
+        const versionInfo = getQrVersionForDataLength(estimatedChars);
+        
+        // 3. Calculer la taille minimum avec zone de silence
+        const totalModules = versionInfo.modules + (QR_QUIET_ZONE_MODULES * 2);
+        const minSizeMm = Math.ceil(totalModules * QR_MIN_MODULE_SIZE_MM);
+        
+        return {
+            minSizeMm: minSizeMm,
+            version: versionInfo.version,
+            modules: versionInfo.modules,
+            estimatedChars: estimatedChars
+        };
+    }
+
+    /**
+     * Vérifie si une zone est un QR Code (type 'qr' ou barcode avec typeCode QR).
+     * 
+     * @param {Object} zoneData - Données de la zone
+     * @returns {boolean} true si c'est un QR Code
+     */
+    function isQrOrQrBarcode(zoneData) {
+        if (!zoneData) return false;
+        
+        // Type 'qr' = QR Code Marketeam
+        if (zoneData.type === 'qr') return true;
+        
+        // Type 'barcode' avec mode QR intelligent activé
+        if (zoneData.type === 'barcode') {
+            // Méthode 1 : typeCode défini (qrcode, datamatrix)
+            const typeCode = (zoneData.typeCode || '').toLowerCase();
+            if (typeCode === 'qrcode' || typeCode === 'datamatrix') {
+                return true;
+            }
+            
+            // Méthode 2 : qrConfig.type défini (mode QR intelligent activé)
+            if (zoneData.qrConfig && zoneData.qrConfig.type) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * Vérifie si une zone est un code-barres avec mode QR intelligent activé.
+     * Exclut volontairement les QR Code Marketeam (type 'qr') car ils n'ont pas
+     * besoin de la contrainte de taille minimum basée sur la densité.
+     * 
+     * @param {Object} zoneData - Données de la zone
+     * @returns {boolean} true si c'est un barcode avec qrConfig.type défini
+     * 
+     * @example
+     * // Zone barcode avec QR intelligent activé
+     * isBarcodeWithQrConfig({ type: 'barcode', qrConfig: { type: 'vcard' } }); // true
+     * 
+     * // Zone QR Marketeam (exclue)
+     * isBarcodeWithQrConfig({ type: 'qr' }); // false
+     */
+    function isBarcodeWithQrConfig(zoneData) {
+        if (!zoneData) return false;
+        
+        // Uniquement les zones de type 'barcode' avec qrConfig.type défini
+        return zoneData.type === 'barcode' && 
+               zoneData.qrConfig && 
+               typeof zoneData.qrConfig.type === 'string' &&
+               zoneData.qrConfig.type.length > 0;
+    }
+
+    /**
+     * Calcule la taille minimum d'une zone QR en fonction de ses données actuelles.
+     * Fonction utilitaire qui extrait les données d'une zone et calcule la taille.
+     * 
+     * @param {string} zoneId - ID de la zone QR
+     * @returns {{minSizeMm: number, version: number, modules: number, estimatedChars: number}|null} 
+     *          Informations de taille ou null si zone non trouvée
+     * 
+     * @example
+     * const info = getQrZoneMinSizeMm('zone-5');
+     * console.log(`Taille min: ${info.minSizeMm}mm (Version ${info.version})`);
+     */
+    function getQrZoneMinSizeMm(zoneId) {
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        
+        // Uniquement pour les codes-barres avec QR intelligent (pas les QR Marketeam)
+        if (!zoneData || !isBarcodeWithQrConfig(zoneData)) {
+            return null;
+        }
+        
+        let content = '';
+        let qrType = 'text';
+        
+        // Utiliser buildQrContent pour obtenir le contenu réel
+        content = buildQrContent(zoneData.qrConfig, null);
+        qrType = zoneData.qrConfig.type;
+        
+        return calculateQrMinSizeMm(content, qrType);
+    }
+
+    /**
+     * Applique la taille minimum à une zone QR si nécessaire.
+     * Agrandit la zone si elle est plus petite que le minimum requis.
+     * 
+     * @param {string} zoneId - ID de la zone QR
+     * @returns {boolean} true si la zone a été agrandie, false sinon
+     * 
+     * @example
+     * // Si la zone fait 15x15mm mais nécessite 20mm minimum
+     * applyQrMinSize('zone-5'); // Agrandit à 20x20mm, retourne true
+     */
+    function applyQrMinSize(zoneId) {
+        const zoneEl = document.getElementById(zoneId);
+        if (!zoneEl) return false;
+        
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        
+        // Uniquement pour les codes-barres avec QR intelligent (pas les QR Marketeam)
+        if (!zoneData || !isBarcodeWithQrConfig(zoneData)) return false;
+        
+        // Calculer la taille minimum requise
+        const minInfo = getQrZoneMinSizeMm(zoneId);
+        if (!minInfo) return false;
+        
+        const minSizePx = mmToPx(minInfo.minSizeMm);
+        const currentW = zoneEl.offsetWidth;
+        const currentH = zoneEl.offsetHeight;
+        
+        // Vérifier si agrandissement nécessaire (QR code est carré)
+        const currentSize = Math.min(currentW, currentH);
+        
+        if (currentSize < minSizePx) {
+            // Agrandir la zone
+            zoneEl.style.width = minSizePx + 'px';
+            zoneEl.style.height = minSizePx + 'px';
+            
+            // Mettre à jour les données
+            zoneData.w = minSizePx;
+            zoneData.h = minSizePx;
+            zoneData.wMm = minInfo.minSizeMm;
+            zoneData.hMm = minInfo.minSizeMm;
+            
+            console.log(`📐 Zone QR ${zoneId} agrandie à ${minInfo.minSizeMm}mm (Version ${minInfo.version}, ${minInfo.estimatedChars} chars estimés)`);
+            
+            // Mettre à jour l'affichage géométrique
+            updateGeomDisplay(zoneEl);
+            
+            // Regénérer le QR Code
+            updateQrZoneDisplay(zoneId);
+            
+            return true;
+        }
+        
+        return false;
+    }
+
+    /**
+     * Retourne la contrainte de taille minimum pour une zone QR en pixels.
+     * Utilisé par le système de redimensionnement.
+     * 
+     * @param {string} zoneId - ID de la zone QR
+     * @returns {number} Taille minimum en pixels (0 si non applicable)
+     */
+    function getQrMinSizeConstraint(zoneId) {
+        const minInfo = getQrZoneMinSizeMm(zoneId);
+        if (!minInfo) return 0;
+        return mmToPx(minInfo.minSizeMm);
+    }
+
     // ─────────────────────────────── FIN SECTION 3 ────────────────────────────────
 
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -3111,6 +3420,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 fields: fields
             };
         });
+        
+        // Vérifier et appliquer la taille minimum après modification du contenu
+        // Note: uniquement pour les codes-barres avec QR intelligent (pas les QR Marketeam)
+        if (typeof selectedZoneIds !== 'undefined' && selectedZoneIds.length === 1) {
+            const zoneId = selectedZoneIds[0];
+            const zonesData = getCurrentPageZones();
+            const zoneData = zonesData ? zonesData[zoneId] : null;
+            
+            if (zonesData && zoneData && isBarcodeWithQrConfig(zoneData)) {
+                applyQrMinSize(zoneId);
+            }
+        }
     }
 
     /**
@@ -10328,6 +10649,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Mettre à jour l'affichage
                 updateBarcodeZoneDisplayFromToolbar();
+                
+                // Vérifier et appliquer la taille minimum après changement de type QR
+                // Uniquement pour les codes-barres avec QR intelligent (pas les QR Marketeam)
+                if (selectedZoneIds.length === 1) {
+                    const zoneId = selectedZoneIds[0];
+                    const zoneData = zonesData[zoneId];
+                    if (zoneData && isBarcodeWithQrConfig(zoneData)) {
+                        applyQrMinSize(zoneId);
+                    }
+                }
             });
         }
         
@@ -10801,9 +11132,10 @@ document.addEventListener('DOMContentLoaded', () => {
         /**
          * Applique une mise à jour de données pour la zone qr sélectionnée.
          * @param {(zoneData: any, zoneEl: HTMLElement, zoneId: string) => void} mutator
+         * @param {boolean} [checkMinSize=false] - Si true, vérifie et applique la taille minimum QR
          * @returns {void}
          */
-        const updateSelectedQrcodeZone = (mutator) => {
+        const updateSelectedQrcodeZone = (mutator, checkMinSize = false) => {
             const zoneId = getSelectedQrcodeZoneId();
             if (!zoneId) return;
             
@@ -10814,6 +11146,12 @@ document.addEventListener('DOMContentLoaded', () => {
             
             mutator(zoneData, zoneEl, zoneId);
             updateQrZoneDisplay(zoneId);
+            
+            // Vérifier et appliquer la taille minimum après modification du contenu
+            if (checkMinSize) {
+                applyQrMinSize(zoneId);
+            }
+            
             saveToLocalStorage();
             saveState();
         };
@@ -15436,18 +15774,35 @@ document.addEventListener('DOMContentLoaded', () => {
             let is2DBarcode = false;
             
             if (zoneDataResize && zoneDataResize.type === 'qr') {
-                const typeCode = zoneDataResize.typeCode || 'QRCode';
-                const config = BARCODE_BWIPJS_CONFIG[typeCode];
-                is2DBarcode = config ? config.is2D : false;
+                // Type 'qr' = QR Code Marketeam, toujours 2D
+                is2DBarcode = true;
             } else if (zoneDataResize && zoneDataResize.type === 'barcode') {
-                const typeCode = zoneDataResize.typeCodeBarres || 'code128';
-                const config = BARCODE_BWIPJS_CONFIG[typeCode];
-                is2DBarcode = config ? config.is2D : false;
+                // Type 'barcode' : vérifier si c'est un code 2D
+                // Méthode 1 : via typeCode ou typeCodeBarres
+                const typeCode = zoneDataResize.typeCode || zoneDataResize.typeCodeBarres || '';
+                if (typeCode) {
+                    const config = BARCODE_BWIPJS_CONFIG[typeCode] || BARCODE_BWIPJS_CONFIG[typeCode.toLowerCase()];
+                    is2DBarcode = config ? config.is2D : false;
+                }
+                // Méthode 2 : qrConfig.type défini = mode QR intelligent activé (toujours 2D)
+                if (!is2DBarcode && zoneDataResize.qrConfig && zoneDataResize.qrConfig.type) {
+                    is2DBarcode = true;
+                }
             }
             
             if (is2DBarcode) {
                 // Codes 2D : forcer un carré
                 let size = Math.max(40, Math.max(newW, newH));
+                
+                // Contrainte taille minimum QR basée sur la densité de données
+                // Uniquement pour les codes-barres avec QR intelligent (pas les QR Marketeam)
+                if (isBarcodeWithQrConfig(zoneDataResize)) {
+                    const qrMinSize = getQrMinSizeConstraint(firstSelectedId);
+                    if (qrMinSize > 0) {
+                        size = Math.max(size, qrMinSize);
+                    }
+                }
+                
                 // Appliquer la contrainte de marge (le plus restrictif entre largeur et hauteur)
                 size = Math.min(size, maxWidth, maxHeight);
                 zone.style.width = size + 'px';
@@ -18826,6 +19181,18 @@ document.addEventListener('DOMContentLoaded', () => {
     window.pxToMm = pxToMm;
     window.mmToPx = mmToPx;
     window.loadCurrentPage = loadCurrentPage;
+    
+    // Exposer les fonctions QR Code pour les tests
+    window.countMergeFields = countMergeFields;
+    window.estimateQrDataLength = estimateQrDataLength;
+    window.getQrVersionForDataLength = getQrVersionForDataLength;
+    window.calculateQrMinSizeMm = calculateQrMinSizeMm;
+    window.getQrZoneMinSizeMm = getQrZoneMinSizeMm;
+    window.applyQrMinSize = applyQrMinSize;
+    window.getQrMinSizeConstraint = getQrMinSizeConstraint;
+    window.isQrOrQrBarcode = isQrOrQrBarcode;
+    window.isBarcodeWithQrConfig = isBarcodeWithQrConfig;
+    window.QR_VERSION_CAPACITIES = QR_VERSION_CAPACITIES;
 
     // ─────────────────────────────────────────────────────────────────────────
     // Aperçu de fusion - Event Listeners (Phase 2 - UI seulement)
