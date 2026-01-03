@@ -620,14 +620,52 @@ document.addEventListener('DOMContentLoaded', () => {
      */
 
     /**
+     * @typedef {Object} AreaContrainte
+     * @property {number} xMm - Position X du coin supérieur gauche de l'area en mm
+     * @property {number} yMm - Position Y du coin supérieur gauche de l'area en mm
+     * @property {number} wMm - Largeur de l'area en mm
+     * @property {number} hMm - Hauteur de l'area en mm
+     * @description Zone rectangulaire dans laquelle une zone contrainte peut être déplacée et redimensionnée.
+     * La zone doit rester entièrement à l'intérieur de l'area.
+     * @example
+     * // Area de 100x60mm positionnée à 5mm des bords
+     * { xMm: 5, yMm: 5, wMm: 100, hMm: 60 }
+     */
+
+    /**
      * @typedef {Object} ZoneContrainte
-     * @property {boolean} positionFixe - Position non modifiable (drag désactivé)
+     * @property {boolean} positionFixe - Position non modifiable (drag désactivé, area ignorée pour position)
      * @property {boolean} nonSupprimable - Zone non supprimable
      * @property {number} [minWMm] - Largeur minimale en mm
      * @property {number} [maxWMm] - Largeur maximale en mm
      * @property {number} [minHMm] - Hauteur minimale en mm
      * @property {number} [maxHMm] - Hauteur maximale en mm
+     * @property {AreaContrainte} [area] - Zone autorisée pour déplacement/redimensionnement
      * @description Contraintes appliquées à une zone prédéfinie.
+     * 
+     * Comportement de l'area :
+     * - Si positionFixe=true : la zone ne bouge pas (area ignorée pour position)
+     * - Si positionFixe=false + area définie : la zone peut bouger uniquement dans l'area
+     * - Si positionFixe=false + pas d'area : la zone peut bouger dans toute la page
+     * 
+     * Le redimensionnement est toujours contraint par l'area si elle est définie,
+     * en plus des bornes minWMm/maxWMm/minHMm/maxHMm.
+     * 
+     * @example
+     * // Zone avec position fixe et bornes de taille
+     * { positionFixe: true, nonSupprimable: true, minWMm: 50, maxWMm: 100 }
+     * 
+     * @example
+     * // Zone mobile dans une area avec bornes de taille
+     * {
+     *     positionFixe: false,
+     *     nonSupprimable: true,
+     *     minWMm: 50,
+     *     maxWMm: 100,
+     *     minHMm: 15,
+     *     maxHMm: 40,
+     *     area: { xMm: 5, yMm: 5, wMm: 100, hMm: 60 }
+     * }
      */
 
     /**
@@ -1551,6 +1589,13 @@ document.addEventListener('DOMContentLoaded', () => {
      * @type {Map<string, ResizeObserver>}
      */
     const copyfitResizeObservers = new Map();
+
+    /**
+     * Stocke les éléments DOM des areas par ID de zone.
+     * Chaque zone avec une contrainte.area a un élément area associé.
+     * @type {Map<string, HTMLElement>}
+     */
+    const areaElements = new Map();
 
     /**
      * Flag pour éviter les boucles infinies lors du copyfit réactif.
@@ -4999,6 +5044,265 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * Crée l'élément DOM de l'area pour une zone contrainte.
+     * L'area est un rectangle avec bordure pointillée qui délimite
+     * la zone autorisée pour le déplacement et le redimensionnement.
+     * 
+     * @param {string} zoneId - ID de la zone associée
+     * @param {AreaContrainte} area - Définition de l'area (xMm, yMm, wMm, hMm)
+     * @returns {HTMLElement} L'élément DOM créé
+     * 
+     * @example
+     * const areaEl = createAreaElement('zone-1', { xMm: 5, yMm: 5, wMm: 100, hMm: 60 });
+     */
+    function createAreaElement(zoneId, area) {
+        // Supprimer l'area existante si présente
+        removeAreaElement(zoneId);
+        
+        // Créer l'élément
+        const areaEl = document.createElement('div');
+        areaEl.classList.add('zone-area');
+        areaEl.dataset.zoneId = zoneId;
+        
+        // Positionner et dimensionner en pixels
+        areaEl.style.left = mmToPx(area.xMm) + 'px';
+        areaEl.style.top = mmToPx(area.yMm) + 'px';
+        areaEl.style.width = mmToPx(area.wMm) + 'px';
+        areaEl.style.height = mmToPx(area.hMm) + 'px';
+        
+        // Ajouter au DOM (avant les zones pour être derrière)
+        a4Page.insertBefore(areaEl, a4Page.firstChild);
+        
+        // Stocker la référence
+        areaElements.set(zoneId, areaEl);
+        
+        console.log(`📐 Area créée pour ${zoneId}:`, area);
+        
+        return areaEl;
+    }
+    
+    /**
+     * Supprime l'élément DOM de l'area d'une zone.
+     * 
+     * @param {string} zoneId - ID de la zone associée
+     * @returns {void}
+     * 
+     * @example
+     * removeAreaElement('zone-1');
+     */
+    function removeAreaElement(zoneId) {
+        const areaEl = areaElements.get(zoneId);
+        if (areaEl) {
+            areaEl.remove();
+            areaElements.delete(zoneId);
+        }
+    }
+
+    /**
+     * Supprime toutes les areas du DOM et vide la Map.
+     * Utilisé lors du reset ou de la restauration d'état.
+     * 
+     * @returns {void}
+     * 
+     * @example
+     * clearAllAreas(); // Supprime toutes les areas
+     */
+    function clearAllAreas() {
+        areaElements.forEach((areaEl, zoneId) => {
+            areaEl.remove();
+        });
+        areaElements.clear();
+        console.log('🧹 Toutes les areas ont été supprimées');
+    }
+    
+    /**
+     * Met à jour la visibilité de l'area d'une zone.
+     * L'area est visible uniquement quand la zone est sélectionnée.
+     * 
+     * @param {string} zoneId - ID de la zone
+     * @param {boolean} visible - true pour afficher, false pour masquer
+     * @returns {void}
+     * 
+     * @example
+     * updateAreaVisibility('zone-1', true);  // Affiche l'area
+     * updateAreaVisibility('zone-1', false); // Masque l'area
+     */
+    function updateAreaVisibility(zoneId, visible) {
+        const areaEl = areaElements.get(zoneId);
+        if (areaEl) {
+            if (visible) {
+                areaEl.classList.add('visible');
+            } else {
+                areaEl.classList.remove('visible');
+            }
+        }
+    }
+
+    /**
+     * Met à jour la visibilité de toutes les areas en fonction de la sélection.
+     * Seule l'area de la zone sélectionnée (en sélection unique) est visible.
+     * En sélection multiple ou sans sélection, toutes les areas sont masquées.
+     * 
+     * @returns {void}
+     * 
+     * @example
+     * // Après un changement de sélection
+     * updateAreasVisibility();
+     */
+    function updateAreasVisibility() {
+        // Masquer toutes les areas
+        areaElements.forEach((areaEl, zoneId) => {
+            areaEl.classList.remove('visible');
+        });
+        
+        // Afficher l'area de la zone sélectionnée (uniquement en sélection unique)
+        if (selectedZoneIds.length === 1) {
+            const selectedId = selectedZoneIds[0];
+            const areaEl = areaElements.get(selectedId);
+            if (areaEl) {
+                areaEl.classList.add('visible');
+            }
+        }
+    }
+
+    /**
+     * Calcule les limites de positionnement pour une zone en pixels.
+     * Si la zone a une area définie, les limites sont celles de l'area.
+     * Sinon, les limites sont celles de la page (avec marge de sécurité).
+     * 
+     * @param {string} zoneId - ID de la zone
+     * @param {number} zoneWidth - Largeur actuelle de la zone en pixels
+     * @param {number} zoneHeight - Hauteur actuelle de la zone en pixels
+     * @returns {{minX: number, maxX: number, minY: number, maxY: number}} Limites en pixels
+     * 
+     * @example
+     * const bounds = getAreaBoundsInPixels('zone-1', 200, 100);
+     * // Avec area: { minX: 19, maxX: 200, minY: 19, maxY: 150 }
+     * // Sans area: { minX: margin, maxX: pageWidth - margin - 200, ... }
+     */
+    function getAreaBoundsInPixels(zoneId, zoneWidth, zoneHeight) {
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        
+        // Vérifier si la zone a une area définie
+        if (zoneData && zoneData.contrainte && zoneData.contrainte.area) {
+            const area = zoneData.contrainte.area;
+            
+            // Convertir l'area en pixels
+            const areaXPx = mmToPx(area.xMm);
+            const areaYPx = mmToPx(area.yMm);
+            const areaWPx = mmToPx(area.wMm);
+            const areaHPx = mmToPx(area.hMm);
+            
+            // La zone doit rester entièrement dans l'area
+            return {
+                minX: areaXPx,
+                maxX: areaXPx + areaWPx - zoneWidth,
+                minY: areaYPx,
+                maxY: areaYPx + areaHPx - zoneHeight
+            };
+        }
+        
+        // Pas d'area : utiliser les limites de la page avec marge de sécurité
+        const margin = getSecurityMarginPx();
+        const pageWidth = getPageWidth();
+        const pageHeight = getPageHeight();
+        
+        return {
+            minX: margin,
+            maxX: pageWidth - margin - zoneWidth,
+            minY: margin,
+            maxY: pageHeight - margin - zoneHeight
+        };
+    }
+
+    /**
+     * Calcule la taille maximale possible pour une zone en pixels.
+     * Si la zone a une area définie, la taille est limitée par l'area.
+     * Sinon, la taille est limitée par la page (avec marge de sécurité).
+     * 
+     * @param {string} zoneId - ID de la zone
+     * @param {number} zoneLeft - Position X actuelle de la zone en pixels
+     * @param {number} zoneTop - Position Y actuelle de la zone en pixels
+     * @returns {{maxWidth: number, maxHeight: number}} Taille maximale en pixels
+     * 
+     * @example
+     * const maxSize = getAreaMaxSizeInPixels('zone-1', 50, 50);
+     * // Avec area: { maxWidth: 300, maxHeight: 180 }
+     * // Sans area: { maxWidth: pageWidth - margin - 50, maxHeight: ... }
+     */
+    function getAreaMaxSizeInPixels(zoneId, zoneLeft, zoneTop) {
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        
+        // Vérifier si la zone a une area définie
+        if (zoneData && zoneData.contrainte && zoneData.contrainte.area) {
+            const area = zoneData.contrainte.area;
+            
+            // Convertir l'area en pixels
+            const areaXPx = mmToPx(area.xMm);
+            const areaYPx = mmToPx(area.yMm);
+            const areaWPx = mmToPx(area.wMm);
+            const areaHPx = mmToPx(area.hMm);
+            
+            // Taille max = bord de l'area - position actuelle
+            return {
+                maxWidth: areaXPx + areaWPx - zoneLeft,
+                maxHeight: areaYPx + areaHPx - zoneTop
+            };
+        }
+        
+        // Pas d'area : utiliser les limites de la page avec marge de sécurité
+        const margin = getSecurityMarginPx();
+        const pageWidth = getPageWidth();
+        const pageHeight = getPageHeight();
+        
+        return {
+            maxWidth: pageWidth - margin - zoneLeft,
+            maxHeight: pageHeight - margin - zoneTop
+        };
+    }
+
+    /**
+     * Calcule les limites de géométrie en mm pour une zone spécifique.
+     * Si la zone a une area définie, les limites sont celles de l'area.
+     * Sinon, les limites sont celles de la page (avec marge de sécurité).
+     * 
+     * @param {string} zoneId - ID de la zone
+     * @returns {{minX: number, minY: number, maxX: number, maxY: number}} Limites en mm
+     * 
+     * @example
+     * const limits = getGeometryLimitsForZone('zone-1');
+     * // Avec area: { minX: 5, minY: 5, maxX: 105, maxY: 65 }
+     * // Sans area: { minX: margin, minY: margin, maxX: pageWidth - margin, ... }
+     */
+    function getGeometryLimitsForZone(zoneId) {
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        
+        // Vérifier si la zone a une area définie
+        if (zoneData && zoneData.contrainte && zoneData.contrainte.area) {
+            const area = zoneData.contrainte.area;
+            
+            return {
+                minX: area.xMm,
+                minY: area.yMm,
+                maxX: area.xMm + area.wMm,
+                maxY: area.yMm + area.hMm
+            };
+        }
+        
+        // Pas d'area : utiliser les limites de la page avec marge de sécurité
+        const defaultLimits = getGeometryLimits();
+        return {
+            minX: defaultLimits.minX,
+            minY: defaultLimits.minY,
+            maxX: defaultLimits.maxX,
+            maxY: defaultLimits.maxY
+        };
+    }
+
+    /**
      * Applique les bornes de taille définies dans contrainte à des dimensions.
      * Convertit les bornes de mm en pixels et contraint newW/newH dans les limites.
      * 
@@ -5698,8 +6002,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // AJOUT Phase 6 : Sauvegarder la sélection actuelle avant restauration
         const previousSelection = [...selectedZoneIds];
         
-        // 1. Supprimer toutes les zones du DOM
+        // 1. Supprimer toutes les zones du DOM et leurs areas
         document.querySelectorAll('.zone').forEach(el => el.remove());
+        clearAllAreas();
         
         // 1b. Sauvegarder les données d'aperçu (ne doivent pas être perdues lors du Undo/Redo)
         const savedDonneesApercu = documentState.donneesApercu || [];
@@ -8050,6 +8355,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Mettre à jour le badge contrainte si applicable
         updateContrainteBadge(id);
         
+        // Créer l'area si définie dans les contraintes
+        if (zoneData.contrainte && zoneData.contrainte.area) {
+            createAreaElement(id, zoneData.contrainte.area);
+        }
+        
         if (autoSelect) {
             selectZone(id);
         }
@@ -8558,6 +8868,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Mettre à jour le bouton Ajuster au contenu
         updateSnapToContentButton();
+        
+        // Mettre à jour la visibilité des areas
+        updateAreasVisibility();
     }
 
     // ─────────────────────────────── TOOLBAR QUILL (PHASE 3) ──────────────────────
@@ -13842,6 +14155,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Nettoyer les ressources Quill associées
                 quillInstances.delete(zoneId);
                 removeCopyfitResizeObserver(zoneId);
+                // Nettoyer l'area associée
+                removeAreaElement(zoneId);
             });
             
             // Renormaliser les z-index après suppression (pour éviter les trous)
@@ -14165,6 +14480,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Toolbars : toujours masquer après désélection
         updateToolbarVisibility();
+        
+        // Masquer toutes les areas
+        updateAreasVisibility();
     }
 
     btnDelete.addEventListener('click', () => {
@@ -14307,6 +14625,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Nettoyer les ressources Quill associées
                 quillInstances.delete(zoneId);
                 removeCopyfitResizeObserver(zoneId);
+                // Nettoyer l'area associée
+                removeAreaElement(zoneId);
             }
         });
         
@@ -14356,6 +14676,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Nettoyer les ressources Quill associées
                 quillInstances.delete(zoneId);
                 removeCopyfitResizeObserver(zoneId);
+                // Nettoyer l'area associée
+                removeAreaElement(zoneId);
             }
         });
         
@@ -14946,16 +15268,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const newLeft = pos.left + dx;
                 const newTop = pos.top + dy;
                 
-                // Appliquer les contraintes de limites avec marge de sécurité
-                const margin = getSecurityMarginPx();
-                const minLeft = margin;
-                const maxLeft = pageWidth - margin - pos.width;
-                const minTop = margin;
-                const maxTop = pageHeight - margin - pos.height;
+                // Appliquer les contraintes de limites (area si définie, sinon marge de sécurité)
+                const bounds = getAreaBoundsInPixels(pos.id, pos.width, pos.height);
                 
-                // Positionner la zone en respectant les limites et la marge
-                zoneEl.style.left = Math.max(minLeft, Math.min(newLeft, maxLeft)) + 'px';
-                zoneEl.style.top = Math.max(minTop, Math.min(newTop, maxTop)) + 'px';
+                // Positionner la zone en respectant les limites
+                zoneEl.style.left = Math.max(bounds.minX, Math.min(newLeft, bounds.maxX)) + 'px';
+                zoneEl.style.top = Math.max(bounds.minY, Math.min(newTop, bounds.maxY)) + 'px';
             });
             
             // Mettre à jour l'affichage géométrique seulement si une seule zone est sélectionnée
@@ -15000,17 +15318,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (currentHandle.includes('w')) { /* ... logique complexe ... */ }
             if (currentHandle.includes('s')) newH = startH + dy;
             
-            // Appliquer les contraintes de marge de sécurité au redimensionnement
-            const margin = getSecurityMarginPx();
-            const pageWidth = getPageWidth();
-            const pageHeight = getPageHeight();
+            // Appliquer les contraintes de taille (area si définie, sinon marge de sécurité)
             const zoneLeft = zone.offsetLeft;
             const zoneTop = zone.offsetTop;
-            
-            // Limiter la largeur pour ne pas dépasser la marge droite
-            const maxWidth = pageWidth - margin - zoneLeft;
-            // Limiter la hauteur pour ne pas dépasser la marge basse
-            const maxHeight = pageHeight - margin - zoneTop;
+            const maxSize = getAreaMaxSizeInPixels(firstSelectedId, zoneLeft, zoneTop);
+            const maxWidth = maxSize.maxWidth;
+            const maxHeight = maxSize.maxHeight;
             
             // Vérifier si c'est un code 2D (QR Code, DataMatrix) qui doit rester carré
             const zoneDataResize = zonesData[firstSelectedId];
@@ -15397,8 +15710,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Récupérer les limites avec marge de sécurité
-        const limits = getGeometryLimits();
+        // Récupérer les limites (area si définie, sinon marge de sécurité)
+        const limits = getGeometryLimitsForZone(zoneId);
         
         // Récupérer les valeurs actuelles en mm
         let xMm = zoneData.xMm !== undefined ? zoneData.xMm : pxToMm(zoneEl.offsetLeft);
@@ -18386,6 +18699,15 @@ document.addEventListener('DOMContentLoaded', () => {
     window.countZonesByType = countZonesByType;
     window.createPredefinedZones = createPredefinedZones;
     window.applyConstraints = applyConstraints;
+    window.createAreaElement = createAreaElement;
+    window.removeAreaElement = removeAreaElement;
+    window.clearAllAreas = clearAllAreas;
+    window.updateAreaVisibility = updateAreaVisibility;
+    window.updateAreasVisibility = updateAreasVisibility;
+    window.getAreaBoundsInPixels = getAreaBoundsInPixels;
+    window.getAreaMaxSizeInPixels = getAreaMaxSizeInPixels;
+    window.getGeometryLimitsForZone = getGeometryLimitsForZone;
+    window.areaElements = areaElements;
     
     // Exposer les boutons sidebar et constantes pour les tests
     window.btnAddTextQuill = btnAddTextQuill;

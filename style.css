@@ -3739,3 +3739,28 @@ body.preview-mode-active #actions-section .btn:not(#btn-delete-zone) {
     box-shadow: 0 1px 3px rgba(0,0,0,0.2);
     z-index: 10;
 }
+
+/* ===========================================
+   AREA DE CONTRAINTE (Phase 11)
+   =========================================== */
+
+.zone-area {
+    position: absolute;
+    border: 1.5px dashed #C4B5FD;  /* Bleu clair thème */
+    background: transparent;
+    pointer-events: none;          /* Ne bloque pas les interactions */
+    z-index: 1;                    /* Derrière les zones */
+    box-sizing: border-box;
+    display: none;                 /* Masquée par défaut */
+    border-radius: 2px;
+}
+
+/* Afficher l'area quand elle a la classe visible */
+.zone-area.visible {
+    display: block;
+}
+
+/* Masquer en mode aperçu */
+.preview-mode .zone-area {
+    display: none !important;
+}
