@@ -5970,20 +5970,26 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * Applique les bornes de taille définies dans contrainte à des dimensions.
      * Convertit les bornes de mm en pixels et contraint newW/newH dans les limites.
+     * Les contraintes sont ignorées si leur valeur est 0 ou non définie.
      * 
-     * @param {Object} contrainte - Objet contrainte de la zone
-     * @param {number} [contrainte.minWMm] - Largeur minimale en mm
-     * @param {number} [contrainte.maxWMm] - Largeur maximale en mm
-     * @param {number} [contrainte.minHMm] - Hauteur minimale en mm
-     * @param {number} [contrainte.maxHMm] - Hauteur maximale en mm
-     * @param {number} newW - Nouvelle largeur en pixels (avant contrainte)
-     * @param {number} newH - Nouvelle hauteur en pixels (avant contrainte)
-     * @returns {{w: number, h: number}} Dimensions contraintes en pixels
+     * @param {Object} contrainte - Objet contrainte contenant les bornes
+     * @param {number} [contrainte.minWMm] - Largeur minimum en mm (0 = pas de contrainte)
+     * @param {number} [contrainte.maxWMm] - Largeur maximum en mm (0 = pas de contrainte)
+     * @param {number} [contrainte.minHMm] - Hauteur minimum en mm (0 = pas de contrainte)
+     * @param {number} [contrainte.maxHMm] - Hauteur maximum en mm (0 = pas de contrainte)
+     * @param {number} newW - Nouvelle largeur demandée en pixels
+     * @param {number} newH - Nouvelle hauteur demandée en pixels
+     * @returns {{w: number, h: number}} Dimensions ajustées selon les contraintes
      * 
      * @example
-     * const contrainte = { minWMm: 50, maxWMm: 150, minHMm: 20, maxHMm: 80 };
-     * const result = applyContrainteBounds(contrainte, 100, 50);
-     * // result.w et result.h sont contraints dans les bornes
+     * // Pas de contrainte (valeurs = 0) → dimensions inchangées
+     * applyContrainteBounds({ minWMm: 0, maxWMm: 0 }, 200, 100);
+     * // → { w: 200, h: 100 }
+     * 
+     * @example
+     * // Avec contraintes actives (valeurs > 0)
+     * applyContrainteBounds({ minWMm: 50, maxWMm: 100 }, 200, 100);
+     * // → { w: ~378 (100mm en px), h: 100 }
      */
     function applyContrainteBounds(contrainte, newW, newH) {
         let w = newW;
@@ -5991,22 +5997,22 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (!contrainte) return { w, h };
         
-        // Appliquer les bornes de largeur
-        if (contrainte.minWMm !== undefined) {
+        // Appliquer les bornes de largeur (seulement si > 0)
+        if (contrainte.minWMm > 0) {
             const minWPx = mmToPx(contrainte.minWMm);
             w = Math.max(w, minWPx);
         }
-        if (contrainte.maxWMm !== undefined) {
+        if (contrainte.maxWMm > 0) {
             const maxWPx = mmToPx(contrainte.maxWMm);
             w = Math.min(w, maxWPx);
         }
         
-        // Appliquer les bornes de hauteur
-        if (contrainte.minHMm !== undefined) {
+        // Appliquer les bornes de hauteur (seulement si > 0)
+        if (contrainte.minHMm > 0) {
             const minHPx = mmToPx(contrainte.minHMm);
             h = Math.max(h, minHPx);
         }
-        if (contrainte.maxHMm !== undefined) {
+        if (contrainte.maxHMm > 0) {
             const maxHPx = mmToPx(contrainte.maxHMm);
             h = Math.min(h, maxHPx);
         }
