@@ -939,6 +939,49 @@
     // ═══════════════════════════════════════════════════════════════════════════════
 
     /**
+     * Génère un nom unique et cohérent pour une zone image PSMD.
+     * Ce nom sera utilisé dans <object>/<n>, <image_object>/<variable_name> et <variable>/<n>.
+     * PrintShop Mail exige que ces 3 noms soient strictement identiques pour lier
+     * l'objet image à sa variable.
+     * 
+     * Format du nom :
+     * - Si zone.nom est défini et non générique → "Zone Image (nom)"
+     * - Sinon → "Zone Image id"
+     * 
+     * @param {Object} zone - Données de la zone image
+     * @param {string} [zone.id] - Identifiant unique de la zone
+     * @param {string} [zone.nom] - Nom personnalisé de la zone
+     * @returns {string} Nom unique pour la zone (déjà échappé XML)
+     * 
+     * @example
+     * getImageZonePsmdName({ id: 'zone-1' });                    // → "Zone Image zone-1"
+     * getImageZonePsmdName({ id: 'zone-1', nom: 'Image' });      // → "Zone Image zone-1" (nom générique)
+     * getImageZonePsmdName({ id: 'zone-1', nom: 'MonLogo' });    // → "Zone Image MonLogo (zone-1)"
+     */
+    function getImageZonePsmdName(zone) {
+        var baseName = zone.nom || 'Image';
+        var zoneId = zone.id || '';
+        
+        // Liste des noms génériques qui nécessitent un suffixe d'id simple
+        var genericNames = ['Image', 'Zone', 'Zone Image'];
+        
+        var name;
+        if (zoneId && genericNames.indexOf(baseName) !== -1) {
+            // Nom générique : format "Zone Image {id}"
+            name = 'Zone Image ' + zoneId;
+        } else if (zoneId) {
+            // Nom personnalisé : format "Zone Image {nom} ({id})"
+            name = 'Zone Image ' + baseName + ' (' + zoneId + ')';
+        } else {
+            // Pas d'id (cas improbable) : format "Zone Image {nom}"
+            name = 'Zone Image ' + baseName;
+        }
+        
+        // Échapper une seule fois pour XML
+        return escapeXmlPsmd(name);
+    }
+
+    /**
      * Génère la section <variable> pour un champ de fusion.
      * 
      * @param {string} fieldName - Nom du champ (sans les @)
@@ -973,13 +1016,15 @@
      * Génère une variable d'image pour la section <variables> du PSMD.
      * PrintShop Mail utilise cette variable pour lier l'objet image au fichier.
      * 
-     * @param {string} varName - Nom de la variable (correspond à <variable_name> dans image_object)
+     * @param {string} varName - Nom de la variable (déjà échappé XML via getImageZonePsmdName)
+     *                           Correspond à <variable_name> dans image_object
      * @param {string} fileName - Nom du fichier image
      * @returns {string} XML de la variable image
      */
     function generatePsmdImageVariable(varName, fileName) {
+        // varName est déjà échappé par getImageZonePsmdName(), ne pas ré-échapper
         return `<variable>
-<name>${escapeXmlPsmd(varName)}</name>
+<name>${varName}</name>
 <global>no</global>
 <expression>"${escapeXmlPsmd(fileName)}"</expression>
 <Formatting>3</Formatting>
@@ -1034,7 +1079,9 @@
         const zonesImage = jsonData.zonesImage || [];
         for (let i = 0; i < zonesImage.length; i++) {
             const zone = zonesImage[i];
-            const varName = zone.nom || zone.id || 'Image';
+            // Utiliser la fonction centralisée pour garantir la cohérence
+            // avec <object>/<n> et <image_object>/<variable_name>
+            const varName = getImageZonePsmdName(zone);
             
             // Générer le nom de fichier exporté si prefix fourni et image base64 présente
             var fileName = '';
@@ -1133,28 +1180,37 @@
      * Gère les deux formats de données (zonesTextQuill vs autres zones).
      * 
      * @param {Object} zone - Données de la zone exportée
+     * @param {string} [zoneType] - Type de zone ('image', 'textQuill', 'barcode', 'qr')
+     *                              Si non fourni, utilise la logique générique
      * @returns {string} XML des propriétés communes
      */
-    function generatePsmdObjectCommon(zone) {
+    function generatePsmdObjectCommon(zone, zoneType) {
         var guid = generateGuid();
         
         // Générer un nom unique pour chaque zone
-        // Utilise le nom personnalisé s'il est unique, sinon ajoute l'id
-        var baseName = zone.nom || 'Zone';
         var name;
         
-        // Liste des noms génériques qui nécessitent un suffixe d'id
-        var genericNames = ['Code-barres', 'Zone', 'Texte', 'Image', 'QR Code'];
-        
-        if (zone.id && genericNames.indexOf(baseName) !== -1) {
-            // Nom générique : ajouter l'id pour unicité
-            name = escapeXmlPsmd(baseName + ' ' + zone.id);
-        } else if (zone.id) {
-            // Nom personnalisé mais on ajoute quand même l'id pour sécurité
-            name = escapeXmlPsmd(baseName + ' (' + zone.id + ')');
+        if (zoneType === 'image') {
+            // Pour les zones image, utiliser la fonction centralisée
+            // qui garantit la cohérence avec <variable_name> et <variable>/<n>
+            name = getImageZonePsmdName(zone);
         } else {
-            // Pas d'id (cas improbable) : utiliser le nom tel quel
-            name = escapeXmlPsmd(baseName);
+            // Pour les autres zones, utiliser la logique existante
+            var baseName = zone.nom || 'Zone';
+            
+            // Liste des noms génériques qui nécessitent un suffixe d'id
+            var genericNames = ['Code-barres', 'Zone', 'Texte', 'QR Code'];
+            
+            if (zone.id && genericNames.indexOf(baseName) !== -1) {
+                // Nom générique : ajouter l'id pour unicité
+                name = escapeXmlPsmd(baseName + ' ' + zone.id);
+            } else if (zone.id) {
+                // Nom personnalisé mais on ajoute quand même l'id pour sécurité
+                name = escapeXmlPsmd(baseName + ' (' + zone.id + ')');
+            } else {
+                // Pas d'id (cas improbable) : utiliser le nom tel quel
+                name = escapeXmlPsmd(baseName);
+            }
         }
         
         // Export PSMD : toutes les zones sont verrouillées pour empêcher les modifications dans PrintShop Mail
@@ -1333,25 +1389,15 @@ ${generatePsmdColor('textcolor', textColor)}
 
     /**
      * Génère un objet image PSMD (image_object).
+     * Utilise getImageZonePsmdName() pour garantir la cohérence du nom
+     * entre <object>/<n>, <image_object>/<variable_name> et <variable>/<n>.
      * 
      * @param {Object} zone - Données de la zone image exportée
      * @returns {string} XML complet de l'objet image
      */
     function generatePsmdImageObject(zone) {
-        // Générer un nom unique pour l'image
-        var baseName = zone.nom || 'Image';
-        var name;
-        
-        // Liste des noms génériques qui nécessitent un suffixe d'id
-        var genericNames = ['Code-barres', 'Zone', 'Texte', 'Image', 'QR Code'];
-        
-        if (zone.id && genericNames.indexOf(baseName) !== -1) {
-            name = escapeXmlPsmd(baseName + ' ' + zone.id);
-        } else if (zone.id) {
-            name = escapeXmlPsmd(baseName + ' (' + zone.id + ')');
-        } else {
-            name = escapeXmlPsmd(baseName);
-        }
+        // Utiliser la fonction centralisée pour le nom (déjà échappé XML)
+        var variableName = getImageZonePsmdName(zone);
         
         // Utiliser le nom exporté si disponible, sinon le nom original
         var fileName = zone.exportedFileName || 
@@ -1363,7 +1409,8 @@ ${generatePsmdColor('textcolor', textColor)}
         var keepAspectRatio = ((zone.redimensionnement && zone.redimensionnement.mode === 'proportionnel') || 
                               (zone.redimensionnement && zone.redimensionnement.conserverRatio)) ? 'yes' : 'no';
         
-        var xml = generatePsmdObjectCommon(zone);
+        // Passer 'image' comme zoneType pour que generatePsmdObjectCommon utilise aussi getImageZonePsmdName
+        var xml = generatePsmdObjectCommon(zone, 'image');
         
         xml += `
 <image_object>
@@ -1371,7 +1418,7 @@ ${generatePsmdColor('textcolor', textColor)}
 <keep_aspect_ratio>${keepAspectRatio}</keep_aspect_ratio>
 <horizontal_alignment>${getImageAlignmentH(zone)}</horizontal_alignment>
 <vertical_alignment>${getImageAlignmentV(zone)}</vertical_alignment>
-<variable_name>${name}</variable_name>
+<variable_name>${variableName}</variable_name>
 <default_image_folder></default_image_folder>
 <default_folder></default_folder>
 <subfolders>no</subfolders>
