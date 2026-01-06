@@ -758,6 +758,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnZoomIn = document.getElementById('btn-zoom-in');
     const btnZoomOut = document.getElementById('btn-zoom-out');
     const zoomValue = document.getElementById('zoom-value');
+    const btnFullscreen = document.getElementById('btn-fullscreen');
 
     // Sidebar et toggle (nouvelle sidebar POC)
     /** @type {HTMLElement|null} Container principal de la sidebar */
@@ -20151,6 +20152,70 @@ document.addEventListener('DOMContentLoaded', () => {
         workspace.scrollTop = scrollTop;
     }
 
+    // ==================== GESTION PLEIN ÉCRAN ====================
+
+    /**
+     * Bascule le mode plein écran du navigateur
+     * Utilise l'API Fullscreen standard avec fallbacks pour les anciens navigateurs
+     * @returns {void}
+     */
+    function toggleFullscreen() {
+        const doc = document;
+        const docEl = document.documentElement;
+        
+        const isFullscreen = doc.fullscreenElement || 
+                             doc.webkitFullscreenElement || 
+                             doc.mozFullScreenElement || 
+                             doc.msFullscreenElement;
+        
+        if (!isFullscreen) {
+            if (docEl.requestFullscreen) {
+                docEl.requestFullscreen();
+            } else if (docEl.webkitRequestFullscreen) {
+                docEl.webkitRequestFullscreen();
+            } else if (docEl.mozRequestFullScreen) {
+                docEl.mozRequestFullScreen();
+            } else if (docEl.msRequestFullscreen) {
+                docEl.msRequestFullscreen();
+            }
+        } else {
+            if (doc.exitFullscreen) {
+                doc.exitFullscreen();
+            } else if (doc.webkitExitFullscreen) {
+                doc.webkitExitFullscreen();
+            } else if (doc.mozCancelFullScreen) {
+                doc.mozCancelFullScreen();
+            } else if (doc.msExitFullscreen) {
+                doc.msExitFullscreen();
+            }
+        }
+    }
+
+    /**
+     * Met à jour l'apparence du bouton plein écran selon l'état actuel
+     * @returns {void}
+     */
+    function updateFullscreenButton() {
+        if (!btnFullscreen) return;
+        
+        const isFullscreen = document.fullscreenElement || 
+                             document.webkitFullscreenElement || 
+                             document.mozFullScreenElement || 
+                             document.msFullscreenElement;
+        
+        const label = btnFullscreen.querySelector('.btn-label');
+        
+        if (isFullscreen) {
+            btnFullscreen.classList.add('is-fullscreen');
+            btnFullscreen.setAttribute('data-tooltip', 'Quitter plein écran');
+            if (label) label.textContent = 'Quitter plein écran';
+        } else {
+            btnFullscreen.classList.remove('is-fullscreen');
+            btnFullscreen.setAttribute('data-tooltip', 'Plein écran');
+            if (label) label.textContent = 'Plein écran';
+        }
+    }
+
     // Event listeners pour les contrôles de zoom
     zoomSlider.addEventListener('input', (e) => {
         const level = parseInt(e.target.value) / 100;
@@ -20164,6 +20229,17 @@ document.addEventListener('DOMContentLoaded', () => {
     btnZoomOut.addEventListener('click', () => {
         setZoom(zoomLevel - 0.1);
     });
+
+    // Event listeners pour le bouton plein écran
+    if (btnFullscreen) {
+        btnFullscreen.addEventListener('click', toggleFullscreen);
+    }
+
+    // Écouter les changements d'état plein écran (tous navigateurs)
+    document.addEventListener('fullscreenchange', updateFullscreenButton);
+    document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
+    document.addEventListener('mozfullscreenchange', updateFullscreenButton);
+    document.addEventListener('MSFullscreenChange', updateFullscreenButton);
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // SIDEBAR TOGGLE ET TOOLTIPS

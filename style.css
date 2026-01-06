@@ -3371,6 +3371,50 @@ body.in-iframe .toolbar {
     overflow: hidden;
 }
 
+/* ==================== BOUTON PLEIN ÉCRAN ==================== */
+
+.sidebar .fullscreen-button-wrapper {
+    display: flex;
+    justify-content: center;
+    padding: 4px 0 8px 0;
+    width: 100%;
+}
+
+.sidebar .btn-fullscreen {
+    width: 100%;
+    justify-content: center;
+    padding: 8px 12px;
+    gap: 8px;
+}
+
+/* Icône minimize masquée par défaut */
+.sidebar .btn-fullscreen .icon-minimize {
+    display: none;
+}
+
+/* État plein écran : inverser les icônes */
+.sidebar .btn-fullscreen.is-fullscreen .icon-expand {
+    display: none;
+}
+
+.sidebar .btn-fullscreen.is-fullscreen .icon-minimize {
+    display: block;
+}
+
+/* Mode sidebar enroulée */
+.sidebar.collapsed .fullscreen-button-wrapper {
+    padding: 4px 0;
+}
+
+.sidebar.collapsed .btn-fullscreen {
+    padding: 8px;
+    width: auto;
+}
+
+.sidebar.collapsed .btn-fullscreen .btn-label {
+    display: none;
+}
+
 .sidebar .zoom-nav-buttons {
     display: none;
     flex-direction: row;
