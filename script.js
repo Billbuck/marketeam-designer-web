@@ -20170,7 +20170,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Marge de sécurité autour du document (en pixels)
-        const MARGIN = 40;
+        const MARGIN = 60;
         
         // Dimensions disponibles dans le workspace
         const availableWidth = workspace.clientWidth - (MARGIN * 2);
