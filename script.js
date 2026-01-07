@@ -20275,6 +20275,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 100);
     }
 
+    // ==================== CORRECTION CONFLIT SLIDER / PAN ====================
+    /**
+     * Empêche le système de pan (déplacement du document) d'intercepter
+     * les événements du slider de zoom.
+     * Sans ce stopPropagation, le mousedown sur le slider déclenche le pan
+     * et la poignée ne peut pas être glissée.
+     */
+    if (zoomSlider) {
+        zoomSlider.addEventListener('mousedown', function(e) {
+            e.stopPropagation();
+        }, true);
+    }
+
     // Event listeners pour les contrôles de zoom
     zoomSlider.addEventListener('input', (e) => {
         const level = parseInt(e.target.value) / 100;
