@@ -21055,23 +21055,129 @@ document.addEventListener('DOMContentLoaded', () => {
                 // VÉRIFICATION ZONE BARCODE
                 // ═══════════════════════════════════════════════════════════════
                 if (zoneData.type === 'barcode') {
-                    const champFusion = zoneData.champFusion || '';
-                    const hasChampFusion = champFusion.trim() !== '';
                     
-                    // Source champ : vérifier qu'un champ est sélectionné
-                    if (hasChampFusion) {
-                        // OK - un champ est sélectionné
-                    } else {
-                        // Source fixe : vérifier qu'une valeur est saisie
-                        const valeurStatique = zoneData.valeurStatique || '';
-                        if (valeurStatique.trim() === '') {
+                    // ─────────────────────────────────────────────────────────────
+                    // CAS 1 : QR Code intelligent (avec qrConfig.type)
+                    // ─────────────────────────────────────────────────────────────
+                    if (zoneData.qrConfig && zoneData.qrConfig.type) {
+                        const qrType = zoneData.qrConfig.type;
+                        const fields = zoneData.qrConfig.fields || {};
+                        
+                        /**
+                         * Vérifie si un champ est rempli (valeur directe ou champ de fusion)
+                         * @param {string} fieldId - Identifiant du champ
+                         * @returns {boolean} True si le champ contient une valeur non vide
+                         */
+                        const isFieldFilled = (fieldId) => {
+                            const value = fields[fieldId] || '';
+                            return value.trim() !== '';
+                        };
+                        
+                        /**
+                         * Ajoute une erreur pour un champ QR manquant
+                         * @param {string} fieldLabel - Libellé du champ pour le message d'erreur
+                         */
+                        const addQrFieldError = (fieldLabel) => {
                             errors.push({
                                 page: pageName,
                                 zoneId: zoneId,
                                 zoneName: zoneName,
                                 type: 'barcode',
-                                message: 'Aucune valeur saisie (source fixe) et aucun champ sélectionné'
+                                message: `QR Code ${qrType.toUpperCase()} : ${fieldLabel} manquant`
                             });
+                        };
+                        
+                        // Vérification selon le type de QR
+                        switch (qrType) {
+                            case 'url':
+                                // URL : vérifier présence d'une URL
+                                if (!isFieldFilled('url')) {
+                                    addQrFieldError('URL');
+                                }
+                                break;
+                                
+                            case 'vcard':
+                                // vCard : Nom + Prénom + Société + (Téléphone OU Mobile)
+                                if (!isFieldFilled('nom')) {
+                                    addQrFieldError('Nom');
+                                }
+                                if (!isFieldFilled('prenom')) {
+                                    addQrFieldError('Prénom');
+                                }
+                                if (!isFieldFilled('societe')) {
+                                    addQrFieldError('Société');
+                                }
+                                if (!isFieldFilled('tel') && !isFieldFilled('mobile')) {
+                                    addQrFieldError('Téléphone ou Mobile');
+                                }
+                                break;
+                                
+                            case 'email':
+                                // Email : Destinataire + Sujet + Message
+                                if (!isFieldFilled('to')) {
+                                    addQrFieldError('Destinataire (email)');
+                                }
+                                if (!isFieldFilled('subject')) {
+                                    addQrFieldError('Sujet');
+                                }
+                                if (!isFieldFilled('body')) {
+                                    addQrFieldError('Message');
+                                }
+                                break;
+                                
+                            case 'tel':
+                                // Téléphone : numéro requis
+                                if (!isFieldFilled('tel')) {
+                                    addQrFieldError('Numéro de téléphone');
+                                }
+                                break;
+                                
+                            case 'geo':
+                                // Géolocalisation : Latitude + Longitude
+                                if (!isFieldFilled('latitude')) {
+                                    addQrFieldError('Latitude');
+                                }
+                                if (!isFieldFilled('longitude')) {
+                                    addQrFieldError('Longitude');
+                                }
+                                break;
+                                
+                            default:
+                                // Type inconnu : vérifier qu'au moins un champ est rempli
+                                const hasAnyField = Object.values(fields).some(v => v && v.trim() !== '');
+                                if (!hasAnyField) {
+                                    errors.push({
+                                        page: pageName,
+                                        zoneId: zoneId,
+                                        zoneName: zoneName,
+                                        type: 'barcode',
+                                        message: `QR Code : Aucun champ renseigné`
+                                    });
+                                }
+                        }
+                        
+                    // ─────────────────────────────────────────────────────────────
+                    // CAS 2 : Codes-barres 1D et Datamatrix (sans qrConfig)
+                    // ─────────────────────────────────────────────────────────────
+                    } else {
+                        const champFusion = zoneData.champFusion || '';
+                        const hasChampFusion = champFusion.trim() !== '';
+                        
+                        // Source champ : vérifier qu'un champ est sélectionné
+                        if (hasChampFusion) {
+                            // OK - un champ est sélectionné
+                        } else {
+                            // Source fixe : vérifier qu'une valeur est saisie
+                            const valeurStatique = zoneData.valeurStatique || '';
+                            if (valeurStatique.trim() === '') {
+                                errors.push({
+                                    page: pageName,
+                                    zoneId: zoneId,
+                                    zoneName: zoneName,
+                                    type: 'barcode',
+                                    message: 'Aucune valeur saisie (source fixe) et aucun champ sélectionné'
+                                });
+                            }
                         }
                     }
                 }
