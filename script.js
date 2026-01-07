@@ -20095,8 +20095,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const CANVAS_PADDING = 60;
 
     function setZoom(level) {
-        // Limiter le zoom entre 25% et 300%
-        zoomLevel = Math.max(0.25, Math.min(3.0, level));
+        // Limiter le zoom entre 25% et 500%
+        zoomLevel = Math.max(0.25, Math.min(5.0, level));
         
         if (!a4Page) return;
         
@@ -20363,13 +20363,92 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Zoom avec molette (Ctrl + Molette)
-    workspace.addEventListener('wheel', (e) => {
-        if (e.ctrlKey || e.metaKey) {
-            e.preventDefault();
-            const delta = e.deltaY > 0 ? -0.1 : 0.1;
-            setZoom(zoomLevel + delta);
-        }
+    /**
+     * Gestion du zoom molette centré sur la position de la souris.
+     * Le point sous le curseur reste fixe pendant le zoom.
+     * Le deltaY est normalisé pour un comportement cohérent sur toutes les souris.
+     * 
+     * @listens wheel
+     */
+    workspace.addEventListener('wheel', function(e) {
+        if (!e.ctrlKey && !e.metaKey) return;
+        
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const oldZoom = zoomLevel;
+        
+        // Sensibilité normalisée pour compatibilité toutes souris
+        // (souris standard ~100 deltaY par cran, souris haute précision variable)
+        const ZOOM_SENSITIVITY = 0.0007;
+        const MIN_ZOOM = 0.25;
+        const MAX_ZOOM = 5.0;
+        
+        // Calcul du nouveau zoom basé sur l'amplitude du deltaY
+        const delta = -e.deltaY * ZOOM_SENSITIVITY;
+        let newZoom = zoomLevel + delta;
+        newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
+        
+        if (Math.abs(newZoom - oldZoom) < 0.001) return;
+        
+        const ratio = newZoom / oldZoom;
+        
+        // Position de la souris dans le workspace (viewport)
+        const workspaceRect = workspace.getBoundingClientRect();
+        const mouseXInWorkspace = e.clientX - workspaceRect.left;
+        const mouseYInWorkspace = e.clientY - workspaceRect.top;
+        
+        // Position de la souris dans le canvas (espace scrollable)
+        const scrollLeftBefore = workspace.scrollLeft;
+        const scrollTopBefore = workspace.scrollTop;
+        const mouseXInCanvas = scrollLeftBefore + mouseXInWorkspace;
+        const mouseYInCanvas = scrollTopBefore + mouseYInWorkspace;
+        
+        // Dimensions du canvas avant le zoom
+        const oldCanvasWidth = workspaceCanvas.offsetWidth;
+        const oldCanvasHeight = workspaceCanvas.offsetHeight;
+        
+        // Appliquer le nouveau zoom
+        zoomLevel = newZoom;
+        a4Page.style.transform = `scale(${zoomLevel})`;
+        a4Page.style.transformOrigin = 'center center';
+        
+        // Mettre à jour l'affichage
+        zoomSlider.value = Math.round(zoomLevel * 100);
+        zoomValue.textContent = Math.round(zoomLevel * 100) + '%';
+        
+        // Recalculer la taille du canvas
+        const pageWidth = getPageWidth();
+        const pageHeight = getPageHeight();
+        const scaledWidth = pageWidth * zoomLevel;
+        const scaledHeight = pageHeight * zoomLevel;
+        
+        const neededWidth = scaledWidth + CANVAS_PADDING * 2;
+        const neededHeight = scaledHeight + CANVAS_PADDING * 2;
+        const newCanvasWidth = Math.max(workspace.clientWidth, neededWidth);
+        const newCanvasHeight = Math.max(workspace.clientHeight, neededHeight);
+        
+        workspaceCanvas.style.width = newCanvasWidth + 'px';
+        workspaceCanvas.style.height = newCanvasHeight + 'px';
+        
+        // Calculer le nouveau scroll pour garder le point sous la souris fixe
+        const oldCenterX = oldCanvasWidth / 2;
+        const oldCenterY = oldCanvasHeight / 2;
+        const newCenterX = newCanvasWidth / 2;
+        const newCenterY = newCanvasHeight / 2;
+        
+        const relativeX = mouseXInCanvas - oldCenterX;
+        const relativeY = mouseYInCanvas - oldCenterY;
+        
+        const newRelativeX = relativeX * ratio;
+        const newRelativeY = relativeY * ratio;
+        
+        const newMouseXInCanvas = newCenterX + newRelativeX;
+        const newMouseYInCanvas = newCenterY + newRelativeY;
+        
+        workspace.scrollLeft = newMouseXInCanvas - mouseXInWorkspace;
+        workspace.scrollTop = newMouseYInCanvas - mouseYInWorkspace;
+        
     }, { passive: false });
 
     // Ajuster le zoom pour afficher le document en entier au chargement
