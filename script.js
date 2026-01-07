@@ -759,6 +759,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnZoomOut = document.getElementById('btn-zoom-out');
     const zoomValue = document.getElementById('zoom-value');
     const btnFullscreen = document.getElementById('btn-fullscreen');
+    const btnFitToView = document.getElementById('btn-fit-to-view');
 
     // Sidebar et toggle (nouvelle sidebar POC)
     /** @type {HTMLElement|null} Container principal de la sidebar */
@@ -19826,8 +19827,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // 6. Charger et afficher les zones de la nouvelle page
         loadCurrentPage();
 
-        // 7. Remettre le zoom à 100% lors du changement de page
-        setZoom(1.0);
+        // 7. Ajuster le zoom pour afficher le document en entier
+        fitToView();
 
         // 8. Mettre à jour l'interface de navigation
         updatePageNavigationUI();
@@ -20152,6 +20153,54 @@ document.addEventListener('DOMContentLoaded', () => {
         workspace.scrollTop = scrollTop;
     }
 
+    /**
+     * Ajuste le niveau de zoom pour que le document soit entièrement visible
+     * dans le workspace avec une marge de sécurité.
+     * Calcule le ratio optimal et applique le zoom via setZoom().
+     * 
+     * @returns {void}
+     * 
+     * @see setZoom - Applique le niveau de zoom calculé
+     * @see centerWorkspace - Centre le document (appelé par setZoom)
+     */
+    function fitToView() {
+        if (!workspace || !a4Page) {
+            console.warn('⚠️ fitToView: éléments workspace ou a4Page non disponibles');
+            return;
+        }
+        
+        // Marge de sécurité autour du document (en pixels)
+        const MARGIN = 40;
+        
+        // Dimensions disponibles dans le workspace
+        const availableWidth = workspace.clientWidth - (MARGIN * 2);
+        const availableHeight = workspace.clientHeight - (MARGIN * 2);
+        
+        // Dimensions originales du document (sans zoom)
+        const docWidth = getPageWidth();
+        const docHeight = getPageHeight();
+        
+        if (docWidth <= 0 || docHeight <= 0) {
+            console.warn('⚠️ fitToView: dimensions du document invalides');
+            return;
+        }
+        
+        // Calculer le ratio de zoom optimal
+        const ratioWidth = availableWidth / docWidth;
+        const ratioHeight = availableHeight / docHeight;
+        
+        // Prendre le plus petit ratio pour que tout le document soit visible
+        let optimalZoom = Math.min(ratioWidth, ratioHeight);
+        
+        // Limiter aux bornes du slider (25% - 300%)
+        optimalZoom = Math.max(0.25, Math.min(3.0, optimalZoom));
+        
+        // Appliquer le zoom
+        setZoom(optimalZoom);
+        
+        console.log('📐 fitToView: zoom ajusté à', Math.round(optimalZoom * 100) + '%');
+    }
+
     // ==================== GESTION PLEIN ÉCRAN ====================
 
     /**
@@ -20192,8 +20241,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Met à jour l'apparence du bouton plein écran selon l'état actuel
+     * Met à jour l'apparence du bouton plein écran et ajuste le zoom.
+     * Appelée lors des événements fullscreenchange.
+     * 
      * @returns {void}
+     * 
+     * @see fitToView - Ajuste le zoom après le changement de taille
      */
     function updateFullscreenButton() {
         if (!btnFullscreen) return;
@@ -20214,6 +20267,12 @@ document.addEventListener('DOMContentLoaded', () => {
             btnFullscreen.setAttribute('data-tooltip', 'Plein écran');
             if (label) label.textContent = 'Plein écran';
         }
+        
+        // Ajuster le zoom après le changement de taille du viewport
+        // Le délai est nécessaire car les dimensions ne sont pas encore mises à jour
+        setTimeout(function() {
+            fitToView();
+        }, 100);
     }
 
     // Event listeners pour les contrôles de zoom
@@ -20233,6 +20292,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Event listeners pour le bouton plein écran
     if (btnFullscreen) {
         btnFullscreen.addEventListener('click', toggleFullscreen);
+    }
+
+    // Bouton "Ajuster à la page"
+    if (btnFitToView) {
+        btnFitToView.addEventListener('click', fitToView);
     }
 
     // Écouter les changements d'état plein écran (tous navigateurs)
@@ -20295,8 +20359,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, { passive: false });
 
-    // Initialiser le zoom à 100%
-    setZoom(1.0);
+    // Ajuster le zoom pour afficher le document en entier au chargement
+    fitToView();
 
     // --- 9. FONCTIONNALITÉ PAN (Déplacement du document) ---
     let isPanning = false;
