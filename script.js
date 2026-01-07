@@ -20986,27 +20986,260 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════
+    // FONCTIONS DE VALIDATION DE FORMAT
+    // ═══════════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Résout les champs de fusion dans une chaîne en utilisant un échantillon de données.
+     * Remplace tous les @CHAMP@ par leurs valeurs correspondantes.
+     * 
+     * @param {string} value - Valeur contenant potentiellement des @CHAMP@
+     * @param {Object.<string, string>} sampleData - Échantillon de données (clé = nom du champ)
+     * @returns {string} Valeur avec les champs résolus
+     * 
+     * @example
+     * resolveMergeFields('@NOM@ - @PRENOM@', {NOM: 'DUPONT', PRENOM: 'Jean'});
+     * // Retourne: 'DUPONT - Jean'
+     */
+    function resolveMergeFields(value, sampleData) {
+        if (!value || typeof value !== 'string') return value || '';
+        if (!sampleData) return value;
+        
+        return value.replace(/@([A-Za-z0-9_]+)@/g, (match, fieldName) => {
+            // Chercher le champ (insensible à la casse)
+            const fieldNameUpper = fieldName.toUpperCase();
+            for (const [key, val] of Object.entries(sampleData)) {
+                if (key.toUpperCase() === fieldNameUpper) {
+                    return val || '';
+                }
+            }
+            return match; // Garder @CHAMP@ si non trouvé
+        });
+    }
+
+    /**
+     * Vérifie si une valeur contient des champs de fusion non résolus.
+     * @param {string} value - Valeur à vérifier
+     * @returns {boolean} true si contient des @CHAMP@
+     */
+    function hasUnresolvedMergeFields(value) {
+        if (!value || typeof value !== 'string') return false;
+        return /@[A-Za-z0-9_]+@/.test(value);
+    }
+
+    /**
+     * Valide un email au format xxx@xxx.xxx
+     * @param {string} email - Email à valider
+     * @returns {boolean} true si valide
+     */
+    function isValidEmail(email) {
+        if (!email || typeof email !== 'string') return false;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+        return emailRegex.test(email.trim());
+    }
+
+    /**
+     * Valide une URL pour QR Code (doit commencer par https://)
+     * Vérifie aussi la présence d'un TLD valide (min 2 caractères).
+     * Gère correctement le préfixe www. pour éviter les faux positifs.
+     * @param {string} url - URL à valider
+     * @returns {boolean} true si valide
+     */
+    function isValidQrUrl(url) {
+        if (!url || typeof url !== 'string') return false;
+        const trimmed = url.trim();
+        // Doit commencer par https://, pas d'espace
+        if (!trimmed.startsWith('https://')) return false;
+        if (/\s/.test(trimmed)) return false;
+        // Vérification structure URL avec TLD obligatoire
+        try {
+            const urlObj = new URL(trimmed);
+            const hostname = urlObj.hostname;
+            
+            // Supprimer le préfixe www. s'il existe pour analyser domaine.tld
+            const hostnameWithoutWww = hostname.startsWith('www.') 
+                ? hostname.substring(4) 
+                : hostname;
+            
+            // Après suppression de www., il doit rester domaine.tld (avec un point)
+            const lastDotIndex = hostnameWithoutWww.lastIndexOf('.');
+            if (lastDotIndex === -1) return false; // Pas de point = pas de TLD
+            if (lastDotIndex === 0) return false; // Commence par un point = invalide
+            
+            const tld = hostnameWithoutWww.substring(lastDotIndex + 1);
+            if (tld.length < 2) return false; // TLD trop court
+            
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Valide une URL pour vCard siteweb (https://, http://, ou www.)
+     * @param {string} url - URL à valider
+     * @returns {boolean} true si valide
+     */
+    function isValidVcardUrl(url) {
+        if (!url || typeof url !== 'string') return false;
+        const trimmed = url.trim();
+        if (!trimmed.startsWith('https://') && !trimmed.startsWith('http://') && !trimmed.startsWith('www.')) {
+            return false;
+        }
+        if (/\s/.test(trimmed)) return false;
+        // Ajouter http:// si commence par www. pour validation
+        const urlToTest = trimmed.startsWith('www.') ? 'http://' + trimmed : trimmed;
+        try {
+            new URL(urlToTest);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Valide un numéro de téléphone pour vCard.
+     * Format souple : chiffres, espaces, tirets, points, parenthèses, + en début.
+     * @param {string} phone - Numéro à valider
+     * @returns {boolean} true si valide
+     */
+    function isValidVcardPhone(phone) {
+        if (!phone || typeof phone !== 'string') return false;
+        const trimmed = phone.trim();
+        // Extraire uniquement les chiffres
+        const digitsOnly = trimmed.replace(/[^0-9]/g, '');
+        // Minimum 7 chiffres
+        if (digitsOnly.length < 7) return false;
+        // Caractères autorisés : chiffres, espaces, tirets, points, parenthèses, +
+        const validCharsRegex = /^[+]?[0-9\s\-\.\(\)]+$/;
+        return validCharsRegex.test(trimmed);
+    }
+
+    /**
+     * Valide un numéro de téléphone pour QR Téléphone (format tel: URI).
+     * Format : chiffres, + en début, tirets autorisés.
+     * @param {string} phone - Numéro à valider
+     * @returns {boolean} true si valide
+     */
+    function isValidQrPhone(phone) {
+        if (!phone || typeof phone !== 'string') return false;
+        const trimmed = phone.trim();
+        // Extraire uniquement les chiffres
+        const digitsOnly = trimmed.replace(/[^0-9]/g, '');
+        // Minimum 7 chiffres
+        if (digitsOnly.length < 7) return false;
+        // Format tel: URI - chiffres, +, tirets
+        const validCharsRegex = /^[+]?[0-9\-]+$/;
+        return validCharsRegex.test(trimmed.replace(/\s/g, ''));
+    }
+
+    /**
+     * Valide une latitude (-90 à +90)
+     * @param {string|number} lat - Latitude à valider
+     * @returns {boolean} true si valide
+     */
+    function isValidLatitude(lat) {
+        if (lat === null || lat === undefined || lat === '') return false;
+        const num = parseFloat(lat);
+        return !isNaN(num) && num >= -90 && num <= 90;
+    }
+
+    /**
+     * Valide une longitude (-180 à +180)
+     * @param {string|number} lng - Longitude à valider
+     * @returns {boolean} true si valide
+     */
+    function isValidLongitude(lng) {
+        if (lng === null || lng === undefined || lng === '') return false;
+        const num = parseFloat(lng);
+        return !isNaN(num) && num >= -180 && num <= 180;
+    }
+
+    /**
+     * Valide une valeur pour Code 39.
+     * Caractères autorisés : A-Z, 0-9, -, ., $, /, +, %, espace
+     * @param {string} value - Valeur à valider
+     * @returns {boolean} true si valide
+     */
+    function isValidCode39(value) {
+        if (!value || typeof value !== 'string') return false;
+        const validCharsRegex = /^[A-Z0-9\-\.\$\/\+\%\s]+$/;
+        return validCharsRegex.test(value.toUpperCase());
+    }
+
+    /**
+     * Valide une valeur pour EAN-13 (12 chiffres, le 13ème est calculé)
+     * @param {string} value - Valeur à valider
+     * @returns {boolean} true si valide
+     */
+    function isValidEan13(value) {
+        if (!value || typeof value !== 'string') return false;
+        const digitsOnly = value.replace(/\s/g, '');
+        return /^\d{12}$/.test(digitsOnly);
+    }
+
+    /**
+     * Valide une valeur pour EAN-8 (7 chiffres, le 8ème est calculé)
+     * @param {string} value - Valeur à valider
+     * @returns {boolean} true si valide
+     */
+    function isValidEan8(value) {
+        if (!value || typeof value !== 'string') return false;
+        const digitsOnly = value.replace(/\s/g, '');
+        return /^\d{7}$/.test(digitsOnly);
+    }
+
+    /**
+     * Valide une valeur pour UPC-A (7, 11 ou 12 chiffres)
+     * @param {string} value - Valeur à valider
+     * @returns {boolean} true si valide
+     */
+    function isValidUpcA(value) {
+        if (!value || typeof value !== 'string') return false;
+        const digitsOnly = value.replace(/\s/g, '');
+        return /^\d{7}$|^\d{11}$|^\d{12}$/.test(digitsOnly);
+    }
+
+    /**
+     * Valide une valeur pour Interleaved 2 of 5 (chiffres uniquement)
+     * @param {string} value - Valeur à valider
+     * @returns {boolean} true si valide
+     */
+    function isValidInterleaved2of5(value) {
+        if (!value || typeof value !== 'string') return false;
+        const digitsOnly = value.replace(/\s/g, '');
+        return /^\d+$/.test(digitsOnly) && digitsOnly.length > 0;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════
     // VÉRIFICATION PRÉ-EXPORT (CHECK)
     // ═══════════════════════════════════════════════════════════════════════════════
 
     /**
-     * Vérifie l'intégrité de toutes les zones du document avant export.
-     * Contrôle les zones image, barcode et textQuill.
+     * Vérifie l'intégrité du document avant export.
+     * - Vérifie les zones image (source fixe/champ)
+     * - Vérifie les zones barcode 1D (format selon type)
+     * - Vérifie les zones QR Code intelligent (champs requis + format)
+     * - Vérifie les zones textQuill (champs de fusion inconnus)
+     * - Résout les champs de fusion avec les échantillons
+     * - Regroupe les erreurs par zone
      * 
-     * @returns {{success: boolean, errors: Array<{page: string, zoneId: string, zoneName: string, message: string}>}}
+     * @returns {{success: boolean, errors: Array<{page: string, zoneId: string, zoneName: string, type: string, message: string}>}}
      */
     function checkDocumentIntegrity() {
         console.log('🔍 checkDocumentIntegrity() - Vérification du document');
         
         const errors = [];
         
-        // Récupérer les champs disponibles (objets avec propriété 'nom')
+        // Récupérer les champs disponibles
         const availableFields = (documentState && documentState.champsFusion) || mergeFields || [];
         const availableFieldsUpper = availableFields.map(f => {
-            // Gérer les deux formats : objet {nom: "..."} ou chaîne simple
             const fieldName = (typeof f === 'string') ? f : (f.nom || '');
             return fieldName.toUpperCase();
         });
+        
+        // Récupérer les échantillons de données
+        const samples = (documentState && documentState.donneesApercu) || [];
         
         // Parcourir toutes les pages
         documentState.pages.forEach((page, pageIndex) => {
@@ -21022,7 +21255,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (zoneData.type === 'image') {
                     const source = zoneData.source || {};
                     
-                    // Source fixe : vérifier présence d'une image
                     if (source.type === 'fixe' || source.type === 'url') {
                         const hasImage = source.imageBase64 || (source.valeur && source.valeur.trim() !== '');
                         if (!hasImage) {
@@ -21036,7 +21268,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                     
-                    // Source champ : vérifier qu'un champ est sélectionné
                     if (source.type === 'champ') {
                         const hasField = source.valeur && source.valeur.trim() !== '';
                         if (!hasField) {
@@ -21055,6 +21286,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // VÉRIFICATION ZONE BARCODE
                 // ═══════════════════════════════════════════════════════════════
                 if (zoneData.type === 'barcode') {
+                    const zoneErrors = []; // Erreurs pour cette zone
                     
                     // ─────────────────────────────────────────────────────────────
                     // CAS 1 : QR Code intelligent (avec qrConfig.type)
@@ -21063,10 +21295,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         const qrType = zoneData.qrConfig.type;
                         const fields = zoneData.qrConfig.fields || {};
                         
+                        // Collecter les erreurs de champs manquants
+                        const missingFields = [];
+                        // Collecter les erreurs de format (par échantillon)
+                        const formatErrors = [];
+                        
                         /**
-                         * Vérifie si un champ est rempli (valeur directe ou champ de fusion)
-                         * @param {string} fieldId - Identifiant du champ
-                         * @returns {boolean} True si le champ contient une valeur non vide
+                         * Vérifie si un champ est rempli
                          */
                         const isFieldFilled = (fieldId) => {
                             const value = fields[fieldId] || '';
@@ -21074,86 +21309,118 @@ document.addEventListener('DOMContentLoaded', () => {
                         };
                         
                         /**
-                         * Ajoute une erreur pour un champ QR manquant
-                         * @param {string} fieldLabel - Libellé du champ pour le message d'erreur
+                         * Valide le format d'un champ sur tous les échantillons
                          */
-                        const addQrFieldError = (fieldLabel) => {
-                            errors.push({
-                                page: pageName,
-                                zoneId: zoneId,
-                                zoneName: zoneName,
-                                type: 'barcode',
-                                message: `QR Code ${qrType.toUpperCase()} : ${fieldLabel} manquant`
+                        const validateFieldFormat = (fieldId, validator, fieldLabel) => {
+                            const rawValue = fields[fieldId] || '';
+                            if (rawValue.trim() === '') return; // Vide = pas de validation format
+                            
+                            // Si pas d'échantillons, valider la valeur brute si pas de @CHAMP@
+                            if (samples.length === 0) {
+                                if (!hasUnresolvedMergeFields(rawValue)) {
+                                    if (!validator(rawValue)) {
+                                        formatErrors.push(`${fieldLabel} invalide : "${rawValue}"`);
+                                    }
+                                }
+                                return;
+                            }
+                            
+                            // Scanner tous les échantillons
+                            samples.forEach((sample, idx) => {
+                                const resolvedValue = resolveMergeFields(rawValue, sample);
+                                // Ignorer si encore des champs non résolus
+                                if (hasUnresolvedMergeFields(resolvedValue)) return;
+                                
+                                if (!validator(resolvedValue)) {
+                                    formatErrors.push(`${fieldLabel} invalide (enreg. #${idx + 1}) : "${resolvedValue}"`);
+                                }
                             });
                         };
                         
                         // Vérification selon le type de QR
                         switch (qrType) {
                             case 'url':
-                                // URL : vérifier présence d'une URL
                                 if (!isFieldFilled('url')) {
-                                    addQrFieldError('URL');
+                                    missingFields.push('URL');
+                                } else {
+                                    validateFieldFormat('url', isValidQrUrl, 'URL');
                                 }
                                 break;
                                 
                             case 'vcard':
-                                // vCard : Nom + Prénom + Société + (Téléphone OU Mobile)
-                                if (!isFieldFilled('nom')) {
-                                    addQrFieldError('Nom');
-                                }
-                                if (!isFieldFilled('prenom')) {
-                                    addQrFieldError('Prénom');
-                                }
-                                if (!isFieldFilled('societe')) {
-                                    addQrFieldError('Société');
-                                }
+                                // Champs obligatoires
+                                if (!isFieldFilled('nom')) missingFields.push('Nom');
+                                if (!isFieldFilled('prenom')) missingFields.push('Prénom');
+                                if (!isFieldFilled('societe')) missingFields.push('Société');
                                 if (!isFieldFilled('tel') && !isFieldFilled('mobile')) {
-                                    addQrFieldError('Téléphone ou Mobile');
+                                    missingFields.push('Téléphone ou Mobile');
+                                }
+                                
+                                // Validation format des champs optionnels remplis
+                                if (isFieldFilled('tel')) {
+                                    validateFieldFormat('tel', isValidVcardPhone, 'Téléphone');
+                                }
+                                if (isFieldFilled('mobile')) {
+                                    validateFieldFormat('mobile', isValidVcardPhone, 'Mobile');
+                                }
+                                if (isFieldFilled('email')) {
+                                    validateFieldFormat('email', isValidEmail, 'Email');
+                                }
+                                if (isFieldFilled('siteweb')) {
+                                    validateFieldFormat('siteweb', isValidVcardUrl, 'Site web');
                                 }
                                 break;
                                 
                             case 'email':
-                                // Email : Destinataire + Sujet + Message
                                 if (!isFieldFilled('to')) {
-                                    addQrFieldError('Destinataire (email)');
+                                    missingFields.push('Destinataire');
+                                } else {
+                                    validateFieldFormat('to', isValidEmail, 'Destinataire');
                                 }
-                                if (!isFieldFilled('subject')) {
-                                    addQrFieldError('Sujet');
-                                }
-                                if (!isFieldFilled('body')) {
-                                    addQrFieldError('Message');
-                                }
+                                if (!isFieldFilled('subject')) missingFields.push('Sujet');
+                                if (!isFieldFilled('body')) missingFields.push('Message');
                                 break;
                                 
                             case 'tel':
-                                // Téléphone : numéro requis
                                 if (!isFieldFilled('tel')) {
-                                    addQrFieldError('Numéro de téléphone');
+                                    missingFields.push('Numéro de téléphone');
+                                } else {
+                                    validateFieldFormat('tel', isValidQrPhone, 'Numéro');
                                 }
                                 break;
                                 
                             case 'geo':
-                                // Géolocalisation : Latitude + Longitude
                                 if (!isFieldFilled('latitude')) {
-                                    addQrFieldError('Latitude');
+                                    missingFields.push('Latitude');
+                                } else {
+                                    validateFieldFormat('latitude', isValidLatitude, 'Latitude');
                                 }
                                 if (!isFieldFilled('longitude')) {
-                                    addQrFieldError('Longitude');
+                                    missingFields.push('Longitude');
+                                } else {
+                                    validateFieldFormat('longitude', isValidLongitude, 'Longitude');
                                 }
                                 break;
                                 
                             default:
-                                // Type inconnu : vérifier qu'au moins un champ est rempli
                                 const hasAnyField = Object.values(fields).some(v => v && v.trim() !== '');
                                 if (!hasAnyField) {
-                                    errors.push({
-                                        page: pageName,
-                                        zoneId: zoneId,
-                                        zoneName: zoneName,
-                                        type: 'barcode',
-                                        message: `QR Code : Aucun champ renseigné`
-                                    });
+                                    missingFields.push('Aucun champ renseigné');
                                 }
+                        }
+                        
+                        // Construire le message d'erreur regroupé
+                        const qrTypeLabel = qrType.toUpperCase();
+                        if (missingFields.length > 0) {
+                            zoneErrors.push(`QR ${qrTypeLabel} - Champs manquants : ${missingFields.join(', ')}`);
+                        }
+                        if (formatErrors.length > 0) {
+                            // Limiter à 3 erreurs de format max pour éviter les messages trop longs
+                            const displayErrors = formatErrors.slice(0, 3);
+                            if (formatErrors.length > 3) {
+                                displayErrors.push(`... et ${formatErrors.length - 3} autre(s)`);
+                            }
+                            zoneErrors.push(`QR ${qrTypeLabel} - ${displayErrors.join(' ; ')}`);
                         }
                         
                     // ─────────────────────────────────────────────────────────────
@@ -21161,24 +21428,88 @@ document.addEventListener('DOMContentLoaded', () => {
                     // ─────────────────────────────────────────────────────────────
                     } else {
                         const champFusion = zoneData.champFusion || '';
+                        const valeurStatique = zoneData.valeurStatique || '';
                         const hasChampFusion = champFusion.trim() !== '';
+                        const hasValeurStatique = valeurStatique.trim() !== '';
+                        const typeCode = (zoneData.typeCodeBarres || '').toLowerCase();
                         
-                        // Source champ : vérifier qu'un champ est sélectionné
-                        if (hasChampFusion) {
-                            // OK - un champ est sélectionné
+                        // Vérifier qu'une valeur est présente
+                        if (!hasChampFusion && !hasValeurStatique) {
+                            zoneErrors.push('Aucune valeur saisie et aucun champ sélectionné');
                         } else {
-                            // Source fixe : vérifier qu'une valeur est saisie
-                            const valeurStatique = zoneData.valeurStatique || '';
-                            if (valeurStatique.trim() === '') {
-                                errors.push({
-                                    page: pageName,
-                                    zoneId: zoneId,
-                                    zoneName: zoneName,
-                                    type: 'barcode',
-                                    message: 'Aucune valeur saisie (source fixe) et aucun champ sélectionné'
-                                });
+                            // Déterminer la valeur à utiliser
+                            // Note: champFusion stocke le nom sans les @ (ex: "CP"), il faut reconstruire "@CP@"
+                            const rawValue = hasChampFusion ? `@${champFusion}@` : valeurStatique;
+                            
+                            // Sélectionner le validateur selon le type
+                            let validator = null;
+                            let typeName = '';
+                            
+                            switch (typeCode) {
+                                case 'code39':
+                                    validator = isValidCode39;
+                                    typeName = 'Code 39';
+                                    break;
+                                case 'ean13':
+                                    validator = isValidEan13;
+                                    typeName = 'EAN-13 (12 chiffres requis)';
+                                    break;
+                                case 'ean8':
+                                    validator = isValidEan8;
+                                    typeName = 'EAN-8 (7 chiffres requis)';
+                                    break;
+                                case 'upca':
+                                    validator = isValidUpcA;
+                                    typeName = 'UPC-A (7, 11 ou 12 chiffres requis)';
+                                    break;
+                                case 'interleaved2of5':
+                                case 'itf':
+                                case 'itf14':
+                                    validator = isValidInterleaved2of5;
+                                    typeName = 'Interleaved 2/5 (chiffres uniquement)';
+                                    break;
+                                // Autres types (code128, datamatrix, etc.) : pas de validation de format spécifique
+                            }
+                            
+                            if (validator) {
+                                const formatErrorsList = [];
+                                
+                                // Si pas d'échantillons ou valeur statique sans @CHAMP@
+                                if (samples.length === 0 || (!hasChampFusion && !hasUnresolvedMergeFields(rawValue))) {
+                                    const testValue = hasChampFusion ? rawValue : valeurStatique;
+                                    if (!hasUnresolvedMergeFields(testValue) && !validator(testValue)) {
+                                        formatErrorsList.push(`Valeur invalide : "${testValue}"`);
+                                    }
+                                } else if (hasChampFusion || hasUnresolvedMergeFields(rawValue)) {
+                                    // Scanner tous les échantillons
+                                    samples.forEach((sample, idx) => {
+                                        const resolvedValue = resolveMergeFields(rawValue, sample);
+                                        if (!hasUnresolvedMergeFields(resolvedValue) && !validator(resolvedValue)) {
+                                            formatErrorsList.push(`Enreg. #${idx + 1} : "${resolvedValue}"`);
+                                        }
+                                    });
+                                }
+                                
+                                if (formatErrorsList.length > 0) {
+                                    const displayErrors = formatErrorsList.slice(0, 3);
+                                    if (formatErrorsList.length > 3) {
+                                        displayErrors.push(`... et ${formatErrorsList.length - 3} autre(s)`);
+                                    }
+                                    zoneErrors.push(`${typeName} - Format invalide : ${displayErrors.join(' ; ')}`);
+                                }
                             }
                         }
+                    }
+                    
+                    // Ajouter l'erreur regroupée pour cette zone
+                    if (zoneErrors.length > 0) {
+                        errors.push({
+                            page: pageName,
+                            zoneId: zoneId,
+                            zoneName: zoneName,
+                            type: 'barcode',
+                            message: zoneErrors.join(' | ')
+                        });
                     }
                 }
                 
@@ -21187,8 +21518,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // ═══════════════════════════════════════════════════════════════
                 if (zoneData.type === 'textQuill') {
                     const delta = zoneData.quillDelta;
+                    const unknownFields = [];
+                    
                     if (delta && delta.ops) {
-                        // Extraire le texte complet du delta
                         let fullText = '';
                         delta.ops.forEach(op => {
                             if (typeof op.insert === 'string') {
@@ -21196,24 +21528,28 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         });
                         
-                        // Chercher tous les @CHAMP@ dans le texte
                         const regex = /@([A-Za-z0-9_]+)@/g;
                         let match;
                         while ((match = regex.exec(fullText)) !== null) {
                             const fieldName = match[1];
                             const fieldNameUpper = fieldName.toUpperCase();
                             
-                            // Vérifier si le champ existe dans les champs disponibles
                             if (!availableFieldsUpper.includes(fieldNameUpper)) {
-                                errors.push({
-                                    page: pageName,
-                                    zoneId: zoneId,
-                                    zoneName: zoneName,
-                                    type: 'textQuill',
-                                    message: `Champ inconnu : @${fieldName}@`
-                                });
+                                if (!unknownFields.includes(fieldName)) {
+                                    unknownFields.push(fieldName);
+                                }
                             }
                         }
+                    }
+                    
+                    if (unknownFields.length > 0) {
+                        errors.push({
+                            page: pageName,
+                            zoneId: zoneId,
+                            zoneName: zoneName,
+                            type: 'textQuill',
+                            message: `Champ(s) inconnu(s) : @${unknownFields.join('@, @')}@`
+                        });
                     }
                 }
             });
