@@ -18080,7 +18080,11 @@ document.addEventListener('DOMContentLoaded', () => {
             hMm: geometrie.hauteurMm !== undefined ? geometrie.hauteurMm : pxToMm(150),
             source: {
                 type: source.type || 'url',
-                valeur: source.valeur || ''
+                valeur: source.valeur || '',
+                imageBase64: source.imageBase64 || null,
+                nomOriginal: source.nomOriginal || '',
+                largeurPx: source.largeurPx || null,
+                hauteurPx: source.hauteurPx || null
             },
             redimensionnement: {
                 mode: redim.mode || 'ajuster',
@@ -20054,7 +20058,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const jsonData = await readJsonFile(file);
                 const ok = loadFromWebDev(jsonData);
                 console.log('✅ Import JSON terminé:', ok ? 'OK' : 'ERREUR');
-                alert(ok ? 'Import JSON terminé ✅' : 'Import JSON en erreur ❌ (voir console)');
+                if (!ok) alert('Import JSON en erreur ❌ (voir console)');
             } catch (err) {
                 console.error('❌ Import JSON:', err.message || err);
                 alert('Import JSON impossible ❌ (voir console)');
