@@ -1485,6 +1485,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const QUILL_DEFAULT_LINE_HEIGHT = 1.15;
 
     /**
+     * Thèmes disponibles pour le Designer.
+     * Chaque thème définit les couleurs primary, light et dark utilisées dans l'interface.
+     * 
+     * @constant {Object.<string, {primary: string, light: string, dark: string}>}
+     */
+    const THEMES = {
+        MKT: { primary: '#0079BF', light: '#D4F0FF', dark: '#004D80' },  // Marketeam / Modèle (Bleu)
+        TTB: { primary: '#934BB7', light: '#F4E6FA', dark: '#62307B' },  // Tract (Violet)
+        LTR: { primary: '#EAB400', light: '#FCF4C2', dark: '#DA9900' }   // Courrier / Lettre (Jaune)
+    };
+
+    /**
+     * Thème par défaut appliqué au chargement.
+     * @type {string}
+     */
+    const DEFAULT_THEME = 'LTR';
+
+    /**
      * Active les logs détaillés du copyfit (debug).
      * À laisser à false en usage normal (logs très verbeux).
      * @type {boolean}
@@ -1806,6 +1824,31 @@ document.addEventListener('DOMContentLoaded', () => {
         selectionStart: 0,
         selectionEnd: 0
     };
+
+    /**
+     * Applique un thème coloré au Designer.
+     * Met à jour l'attribut data-theme sur l'élément racine du document.
+     * 
+     * @param {string} themeName - Code du thème ('MKT', 'TTB', 'LTR')
+     * @returns {void}
+     * 
+     * @example
+     * applyTheme('MKT');  // Applique le thème bleu Marketeam
+     * applyTheme('TTB');  // Applique le thème violet Tract
+     * applyTheme('LTR');  // Applique le thème jaune Courrier
+     */
+    function applyTheme(themeName) {
+        // Valider le thème (fallback sur défaut si invalide)
+        const validTheme = THEMES[themeName] ? themeName : DEFAULT_THEME;
+        
+        // Appliquer l'attribut data-theme sur le document
+        document.documentElement.setAttribute('data-theme', validTheme);
+        
+        console.log(`🎨 Thème appliqué : ${validTheme}`);
+    }
+
+    // Exposer la fonction applyTheme globalement pour les tests
+    window.applyTheme = applyTheme;
 
     // ─────────────────────────────── FIN SECTION 2 ────────────────────────────────
 
@@ -17461,6 +17504,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? jsonData.policesDisponibles
                 : null;
         
+        // Appliquer le thème si fourni dans l'enveloppe
+        if (isLoadEnvelope && jsonData.theme) {
+            applyTheme(jsonData.theme);
+        } else {
+            // Appliquer le thème par défaut
+            applyTheme(DEFAULT_THEME);
+        }
+        
         // Validation de base
         if (!documentJson || typeof documentJson !== 'object') {
             console.error('loadFromWebDev : JSON invalide ou vide');
@@ -20457,6 +20508,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Ajuster le zoom pour afficher le document en entier au chargement
     fitToView();
+
+    // Appliquer le thème par défaut au chargement
+    applyTheme(DEFAULT_THEME);
 
     // --- 9. FONCTIONNALITÉ PAN (Déplacement du document) ---
     let isPanning = false;
