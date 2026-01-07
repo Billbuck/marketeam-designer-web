@@ -12,45 +12,6 @@ body {
     height: 100%;
 }
 
-/* --- Barre d'outils --- */
-.toolbar {
-    width: 300px;
-    min-width: 300px; /* Empêcher le rétrécissement */
-    flex-shrink: 0; /* Ne pas permettre au flexbox de rétrécir cet élément */
-    background-color: #fff;
-    padding: 15px;
-    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
-    z-index: 100;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    overflow-y: auto;
-}
-
-.toolbar h2 {
-    margin: 0 0 10px 0;
-    font-size: 18px;
-    color: #1a73e8;
-    border-bottom: 2px solid #1a73e8;
-    padding-bottom: 8px;
-}
-
-.toolbar-section {
-    padding-bottom: 15px;
-    border-bottom: 1px solid #eee;
-}
-
-.toolbar-section:last-child {
-    border-bottom: none;
-}
-
-.toolbar-section-primary {
-    background-color: #f8f9fa;
-    padding: 12px;
-    border-radius: 6px;
-    border: 1px solid #e0e0e0;
-}
-
 .section-title {
     margin: 0 0 10px 0;
     font-size: 13px;
@@ -106,27 +67,12 @@ button:last-child {
     margin-bottom: 0;
 }
 
-.btn-large {
-    padding: 12px;
-    font-size: 15px;
-    background-color: #1a73e8;
-    box-shadow: 0 2px 4px rgba(26, 115, 232, 0.3);
-}
-
-.btn-large:hover {
-    background-color: #1557b0;
-    box-shadow: 0 3px 6px rgba(26, 115, 232, 0.4);
-}
-
 .btn-icon {
     padding: 8px;
     min-width: 40px;
     width: auto;
     flex: 0 0 auto;
 }
-
-.btn-primary { background-color: #4285f4; color: white; }
-.btn-primary:hover { background-color: #3367d6; }
 
 .btn-danger { background-color: #ea4335; color: white; }
 .btn-danger:disabled { background-color: #e0e0e0; color: #999; cursor: not-allowed; }
@@ -355,13 +301,6 @@ button:last-child {
     font-weight: 500;
 }
 
-.label-emphasized {
-    font-size: 13px !important;
-    font-weight: 600 !important;
-    color: #1a73e8 !important;
-    margin-bottom: 8px !important;
-}
-
 .input-group input,
 .input-group select,
 .input-group textarea {
@@ -409,20 +348,6 @@ button:last-child {
 #val-x, #val-y, #val-w, #val-h {
     appearance: textfield;
     -moz-appearance: textfield;
-}
-
-.input-group-emphasized textarea {
-    border: 2px solid #1a73e8;
-    font-size: 14px;
-    line-height: 1.5;
-    resize: vertical;
-    min-height: 80px;
-}
-
-.input-group-emphasized textarea:focus {
-    outline: none;
-    border-color: #1557b0;
-    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
 }
 
 /* --- Spin Control (pour épaisseur bordure) --- */
@@ -706,7 +631,7 @@ h4 {
     --toolbar-border: #e0e0e0;
     --section-header-bg: #fafafa;
     --input-border: #ddd;
-    --primary-color: #1a73e8;
+    --primary-color: var(--theme-primary, #934BB7);
     --mini-toolbar-offset: 8px;
 }
 
@@ -1135,69 +1060,6 @@ input:checked + .slider:before {
     margin-bottom: 8px;
 }
 
-.merge-tag {
-    background-color: #e8f0fe;
-    color: #1a73e8;
-    border: 1px solid #d2e3fc;
-    border-radius: 12px;
-    padding: 2px 8px;
-    font-size: 11px;
-    cursor: pointer;
-    user-select: none;
-    transition: background-color 0.2s;
-}
-
-.merge-tag:hover {
-    background-color: #d2e3fc;
-    border-color: #1a73e8;
-}
-
-.merge-tag:active {
-    background-color: #aecbfa;
-}
-
-/* Champs de fusion système (SYS) - Orange */
-.merge-tag-sys {
-    background-color: #fff3e0;
-    border-color: #ffb74d;
-    color: #e65100;
-}
-
-.merge-tag-sys:hover {
-    background-color: #ffe0b2;
-    border-color: #ff9800;
-}
-
-.merge-tag-sys:active {
-    background-color: #ffcc80;
-}
-
-/* Champs de fusion image (IMG) - Vert */
-.merge-tag-img {
-    background-color: #e8f5e9;
-    border-color: #81c784;
-    color: #2e7d32;
-}
-
-.merge-tag-img:hover {
-    background-color: #c8e6c9;
-    border-color: #66bb6a;
-}
-
-.merge-tag-img:active {
-    background-color: #a5d6a7;
-}
-
-/* --- Mode iframe (intégration WebDev) --- */
-body.in-iframe .toolbar h2 {
-    font-size: 16px;
-}
-
-body.in-iframe .toolbar {
-    /* Optionnel : ajustements pour l'iframe */
-    width: auto;
-}
-
 /* NOTE: Les styles .formatting-toolbar et .format-btn ont été supprimés.
    L'ancien système de formatage textarea (type 'text') a été remplacé par Quill (type 'textQuill').
    Le formatage partiel est maintenant géré par la mini-toolbar (#mini-toolbar). */
@@ -1316,75 +1178,6 @@ body.in-iframe .toolbar {
 }
 
 
-/* --- Navigation multipage --- */
-.page-nav-btn.active {
-    background-color: #1a73e8 !important;
-    font-weight: bold;
-    box-shadow: 0 2px 4px rgba(26, 115, 232, 0.3);
-}
-
-/* --- Historique (Undo/Redo) --- */
-.toolbar-section-history {
-    background-color: #fafafa;
-    padding: 10px 12px;
-    border-radius: 6px;
-    border: 1px solid #e8e8e8;
-}
-
-.history-controls {
-    display: flex;
-    gap: 8px;
-}
-
-.btn-history {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 8px 12px;
-    background-color: #fff;
-    border: 1px solid #dadce0;
-    border-radius: 6px;
-    color: #3c4043;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s ease;
-}
-
-.btn-history:hover:not(:disabled) {
-    background-color: #f1f3f4;
-    border-color: #1a73e8;
-    color: #1a73e8;
-}
-
-.btn-history:active:not(:disabled) {
-    background-color: #e8f0fe;
-    transform: scale(0.98);
-}
-
-.btn-history:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-}
-
-.btn-history .material-icons {
-    font-size: 18px;
-}
-
-.btn-history .btn-label {
-    font-size: 12px;
-}
-
-.history-status {
-    text-align: center;
-    margin-top: 8px;
-    font-size: 11px;
-    color: #80868b;
-    font-weight: 500;
-}
-
 /* --- Toast Notification --- */
 .undo-toast {
     position: fixed;
@@ -1415,7 +1208,7 @@ body.in-iframe .toolbar {
 }
 
 .undo-toast.success {
-    background: linear-gradient(135deg, #1a73e8 0%, #1557b0 100%);
+    background: linear-gradient(135deg, var(--theme-primary, #934BB7) 0%, var(--theme-primary-dark, #62307B) 100%);
 }
 
 .undo-toast.error {
@@ -2027,12 +1820,6 @@ body.in-iframe .toolbar {
     outline: none;
     border-color: #4285f4;
     box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
-}
-
-/* Bouton de page actif (mode 2 pages) */
-#page-nav-container .page-nav-btn.active {
-    background-color: #1a73e8;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -3466,48 +3253,40 @@ html[data-theme="LTR"] {
     overflow: hidden;
 }
 
-/* ==================== BOUTON PLEIN ÉCRAN ==================== */
-
-.sidebar .fullscreen-button-wrapper {
-    display: flex;
-    justify-content: center;
-    padding: 4px 0 8px 0;
-    width: 100%;
-}
-
-.sidebar .btn-fullscreen {
-    width: 100%;
-    justify-content: center;
-    padding: 8px 12px;
-    gap: 8px;
-}
+/* ==================== BOUTONS PLEIN ÉCRAN / AJUSTER À LA PAGE ==================== */
 
 /* Icône minimize masquée par défaut */
-.sidebar .btn-fullscreen .icon-minimize {
+.sidebar #btn-fullscreen .icon-minimize {
     display: none;
 }
 
 /* État plein écran : inverser les icônes */
-.sidebar .btn-fullscreen.is-fullscreen .icon-expand {
+.sidebar #btn-fullscreen.is-fullscreen .icon-expand {
     display: none;
 }
 
-.sidebar .btn-fullscreen.is-fullscreen .icon-minimize {
+.sidebar #btn-fullscreen.is-fullscreen .icon-minimize {
     display: block;
 }
 
-/* Mode sidebar enroulée */
-.sidebar.collapsed .fullscreen-button-wrapper {
-    padding: 4px 0;
+/* Groupe de boutons zoom-view en mode déplié : empilés verticalement */
+.sidebar .zoom-view-buttons {
+    flex-direction: column;
 }
 
-.sidebar.collapsed .btn-fullscreen {
-    padding: 8px;
-    width: auto;
+/* Groupe de boutons zoom-view en mode collapsed : côte à côte */
+.sidebar.collapsed .zoom-view-buttons {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
 }
 
-.sidebar.collapsed .btn-fullscreen .btn-label {
-    display: none;
+.sidebar.collapsed .zoom-view-buttons .btn {
+    width: calc(50% - 3px);
+    padding: 8px 4px;
+    justify-content: center;
+    gap: 0;
 }
 
 .sidebar .zoom-nav-buttons {
@@ -3520,6 +3299,7 @@ html[data-theme="LTR"] {
 
 .sidebar.collapsed .zoom-nav-buttons {
     display: flex;
+    margin-top: 6px;  /* Même espacement que le gap entre les boutons */
 }
 
 .sidebar .zoom-nav-buttons .btn {
@@ -3761,7 +3541,7 @@ html[data-theme="LTR"] {
 }
 
 .toast-notification.toast-success {
-    background: #28a745;
+    background: linear-gradient(135deg, var(--theme-primary, #934BB7) 0%, var(--theme-primary-dark, #62307B) 100%);
 }
 
 .toast-notification.toast-warning {
@@ -3885,7 +3665,7 @@ body.preview-mode-active #actions-section .btn:not(#btn-delete-zone) {
 
 .zone-area {
     position: absolute;
-    border: 1.5px dashed #C4B5FD;  /* Bleu clair thème */
+    border: 1.5px dashed var(--theme-primary, #934BB7);  /* Couleur du thème */
     background: transparent;
     pointer-events: none;          /* Ne bloque pas les interactions */
     z-index: 1;                    /* Derrière les zones */
