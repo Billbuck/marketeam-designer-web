@@ -2040,17 +2040,23 @@ body.in-iframe .toolbar {
    Styles préfixés avec -poc pour éviter les conflits
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* Variables POC - Thème par défaut (LTR - Jaune) */
+/* Variables POC - Thème par défaut (TTB - Violet) */
 :root {
-    --poc-theme-primary: #EAB400;
-    --poc-theme-primary-light: #FCF4C2;
-    --poc-theme-primary-dark: #DA9900;
+    --poc-theme-primary: #934BB7;
+    --poc-theme-primary-light: #F4E6FA;
+    --poc-theme-primary-dark: #62307B;
     
     /* Variables --theme-* (utilisées par la sidebar et autres composants) */
-    --theme-primary: #EAB400;
-    --theme-primary-light: #FCF4C2;
-    --theme-primary-dark: #DA9900;
-    --theme-primary-hover: #DA9900;
+    --theme-primary: #934BB7;
+    --theme-primary-light: #F6EDFA;
+    --theme-primary-dark: #62307B;
+    --theme-primary-hover: #62307B;
+    
+    /* Couleur du logo SVG */
+    --theme-logo-color: #C366F2;
+    
+    /* Couleur de fond du workspace en mode aperçu */
+    --theme-workspace-bg: #F6E5FF;
     
     --poc-bg-body: #f3f4f6;
     --poc-bg-toolbar: #ffffff;
@@ -2069,15 +2075,15 @@ body.in-iframe .toolbar {
     
     --poc-transition-speed: 0.15s;
     
-    --poc-header-bg: #DA9900;
+    --poc-header-bg: #62307B;
     --poc-header-text: #ffffff;
     
-    --poc-active-bg: #EAB400;
+    --poc-active-bg: #934BB7;
     --poc-active-text: #ffffff;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   THÈMES MARKETEAM
+   THÈMES MARKETEAM (MKT, TTB, LTR)
    Spécificité augmentée avec html[data-theme] pour surcharger tous les :root
    ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -2092,11 +2098,14 @@ html[data-theme="MKT"] {
     --theme-primary-dark: #004D80;
     --theme-primary-hover: #004D80;
     
+    --theme-logo-color: #00B6FE;
+    --theme-workspace-bg: #AEE7FC;
+    
     --poc-header-bg: #004D80;
     --poc-active-bg: #0079BF;
 }
 
-/* Thème TTB - Tract (Violet) */
+/* Thème TTB - Tract (Violet) - Défaut */
 html[data-theme="TTB"] {
     --poc-theme-primary: #934BB7;
     --poc-theme-primary-light: #F4E6FA;
@@ -2107,11 +2116,14 @@ html[data-theme="TTB"] {
     --theme-primary-dark: #62307B;
     --theme-primary-hover: #62307B;
     
+    --theme-logo-color: #C366F2;
+    --theme-workspace-bg: #F6E5FF;
+    
     --poc-header-bg: #62307B;
     --poc-active-bg: #934BB7;
 }
 
-/* Thème LTR - Courrier / Lettre (Jaune) - Défaut */
+/* Thème LTR - Courrier / Lettre (Jaune) */
 html[data-theme="LTR"] {
     --poc-theme-primary: #EAB400;
     --poc-theme-primary-light: #FCF4C2;
@@ -2122,8 +2134,37 @@ html[data-theme="LTR"] {
     --theme-primary-dark: #DA9900;
     --theme-primary-hover: #DA9900;
     
+    --theme-logo-color: #F1CA2D;
+    --theme-workspace-bg: #FAF3CD;
+    
     --poc-header-bg: #DA9900;
     --poc-active-bg: #EAB400;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LOGOS SVG THÉMATISÉS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.logo-svg {
+    display: block;
+    height: 32px;
+    width: auto;
+}
+
+.logo-svg-icon {
+    height: 32px;
+    width: auto;
+}
+
+/* Parties colorées du logo (chevrons + "team") */
+.logo-themed {
+    fill: var(--theme-logo-color);
+    transition: fill 0.3s ease;
+}
+
+/* Partie grise du logo ("marke") - toujours gris */
+.logo-grey {
+    fill: #292929;
 }
 
 /* Toolbar Container */
@@ -3776,9 +3817,9 @@ html[data-theme="LTR"] {
    MODE APERÇU ACTIF - INDICATEURS VISUELS
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* Fond du workspace en mode aperçu - couleur claire du thème */
+/* Fond du workspace en mode aperçu - couleur pastel du thème */
 body.preview-mode-active .workspace {
-    background-color: var(--theme-primary-light, #F6EDFA);
+    background-color: var(--theme-workspace-bg, #F6E5FF);
 }
 
 /* Zone en mode aperçu - édition désactivée mais déplacement/resize autorisés */

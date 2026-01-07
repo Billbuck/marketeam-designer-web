@@ -1486,21 +1486,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * Thèmes disponibles pour le Designer.
-     * Chaque thème définit les couleurs primary, light et dark utilisées dans l'interface.
+     * Chaque thème définit les couleurs primary, light, dark et logo utilisées dans l'interface.
      * 
-     * @constant {Object.<string, {primary: string, light: string, dark: string}>}
+     * @constant {Object.<string, {primary: string, light: string, dark: string, logo: string}>}
      */
     const THEMES = {
-        MKT: { primary: '#0079BF', light: '#D4F0FF', dark: '#004D80' },  // Marketeam / Modèle (Bleu)
-        TTB: { primary: '#934BB7', light: '#F4E6FA', dark: '#62307B' },  // Tract (Violet)
-        LTR: { primary: '#EAB400', light: '#FCF4C2', dark: '#DA9900' }   // Courrier / Lettre (Jaune)
+        MKT: { primary: '#0079BF', light: '#D4F0FF', dark: '#004D80', logo: '#00B6FE' },  // Marketeam / Modèle (Bleu)
+        TTB: { primary: '#934BB7', light: '#F4E6FA', dark: '#62307B', logo: '#C366F2' },  // Tract (Violet)
+        LTR: { primary: '#EAB400', light: '#FCF4C2', dark: '#DA9900', logo: '#F1CA2D' }   // Courrier / Lettre (Jaune)
     };
 
     /**
      * Thème par défaut appliqué au chargement.
      * @type {string}
      */
-    const DEFAULT_THEME = 'LTR';
+    const DEFAULT_THEME = 'TTB';
 
     /**
      * Active les logs détaillés du copyfit (debug).
