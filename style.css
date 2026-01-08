@@ -3683,3 +3683,57 @@ body.preview-mode-active #actions-section .btn:not(#btn-delete-zone) {
 .preview-mode .zone-area {
     display: none !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* ONGLETS TOOLBAR - Personnalisation / Contraintes                */
+/* ═══════════════════════════════════════════════════════════════ */
+
+.toolbar-tabs-poc {
+    display: flex;
+    border-bottom: 1px solid var(--poc-border);
+    background: var(--poc-bg-section);
+    padding: 0 8px;
+    gap: 4px;
+}
+
+.toolbar-tab-poc {
+    padding: 8px 16px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--poc-text-label);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.toolbar-tab-poc:hover {
+    color: var(--poc-text-primary);
+    background: var(--poc-bg-primary);
+}
+
+.toolbar-tab-poc.active {
+    color: var(--poc-accent);
+    border-bottom-color: var(--poc-accent);
+}
+
+.toolbar-tab-poc .tab-icon {
+    font-size: 14px;
+}
+
+.toolbar-tab-content-poc {
+    display: none;
+}
+
+.toolbar-tab-content-poc.active {
+    display: block;
+}
+
+/* Masquer l'onglet Contraintes en mode standard (géré par JS) */
+.toolbar-tab-poc[data-tab="contraintes"].hidden {
+    display: none;
+}

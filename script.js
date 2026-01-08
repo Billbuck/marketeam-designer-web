@@ -7000,6 +7000,65 @@ document.addEventListener('DOMContentLoaded', () => {
         return designerMode === 'template';
     }
 
+    /**
+     * Bascule vers un onglet spécifique dans une toolbar.
+     * @param {HTMLElement} toolbar - L'élément toolbar parent
+     * @param {string} tabName - Le nom de l'onglet ('personnalisation' ou 'contraintes')
+     * @returns {void}
+     */
+    function switchToolbarTab(toolbar, tabName) {
+        if (!toolbar) return;
+        
+        // Mettre à jour les boutons d'onglets
+        const tabs = toolbar.querySelectorAll('.toolbar-tab-poc');
+        tabs.forEach(tab => {
+            if (tab.dataset.tab === tabName) {
+                tab.classList.add('active');
+            } else {
+                tab.classList.remove('active');
+            }
+        });
+        
+        // Mettre à jour le contenu des onglets
+        const contents = toolbar.querySelectorAll('.toolbar-tab-content-poc');
+        contents.forEach(content => {
+            if (content.dataset.tabContent === tabName) {
+                content.classList.add('active');
+            } else {
+                content.classList.remove('active');
+            }
+        });
+    }
+
+    /**
+     * Met à jour la visibilité des onglets Contraintes selon le mode Designer.
+     * En mode Standard, l'onglet Contraintes est masqué.
+     * En mode Template, l'onglet Contraintes est visible.
+     * @returns {void}
+     */
+    function updateToolbarTabsVisibility() {
+        const constraintsTabs = document.querySelectorAll('.toolbar-tab-poc[data-tab="contraintes"]');
+        const isTemplate = isTemplateMode();
+        
+        constraintsTabs.forEach(tab => {
+            if (isTemplate) {
+                tab.classList.remove('hidden');
+            } else {
+                tab.classList.add('hidden');
+                // Si on passe en mode standard et que l'onglet Contraintes était actif,
+                // basculer vers Personnalisation
+                if (tab.classList.contains('active')) {
+                    const toolbar = tab.closest('.toolbar-poc');
+                    if (toolbar) {
+                        switchToolbarTab(toolbar, 'personnalisation');
+                    }
+                }
+            }
+        });
+        
+        console.log(`🔧 Onglets Contraintes ${isTemplate ? 'affichés' : 'masqués'} (mode ${designerMode})`);
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // État du mode aperçu de fusion
     // ─────────────────────────────────────────────────────────────────────────
@@ -14585,6 +14644,23 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     // ───────────────────────────────────────────────────────────────────────────────
     
+    /**
+     * Gestion des clics sur les onglets de toolbar.
+     * Utilise la délégation d'événements pour tous les onglets.
+     * Note: useCapture=true est nécessaire car les toolbars font stopPropagation()
+     */
+    document.addEventListener('click', function(e) {
+        const tab = e.target.closest('.toolbar-tab-poc');
+        if (!tab) return;
+        
+        const toolbar = tab.closest('.toolbar-poc');
+        const tabName = tab.dataset.tab;
+        
+        if (toolbar && tabName) {
+            switchToolbarTab(toolbar, tabName);
+        }
+    }, true); // useCapture=true pour intercepter avant stopPropagation
+    
     // NOTE: Les listeners pour inputContent, inputFont, inputSize, inputColor, inputAlign, 
     // inputValign, inputLineHeight ont été supprimés car ces inputs sont null 
     // et l'ancien type 'text' a été remplacé par textQuill (géré par Quill).
@@ -19703,6 +19779,13 @@ document.addEventListener('DOMContentLoaded', () => {
     window.isQrOrQrBarcode = isQrOrQrBarcode;
     window.isBarcodeWithQrConfig = isBarcodeWithQrConfig;
     window.QR_VERSION_CAPACITIES = QR_VERSION_CAPACITIES;
+    
+    // Exposer les fonctions de mode Designer pour debug/test console
+    window.setDesignerMode = setDesignerMode;
+    window.getDesignerMode = getDesignerMode;
+    window.isTemplateMode = isTemplateMode;
+    window.updateToolbarTabsVisibility = updateToolbarTabsVisibility;
+    window.switchToolbarTab = switchToolbarTab;
 
     // ─────────────────────────────────────────────────────────────────────────
     // Aperçu de fusion - Event Listeners (Phase 2 - UI seulement)
@@ -21956,5 +22039,8 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('  ✓ Quill disponible:', typeof Quill === 'function');
     console.log('  ✓ quillInstances Map créée:', quillInstances instanceof Map);
     console.log('  ✓ Constantes QUILL_*:', { QUILL_DEFAULT_FONT, QUILL_DEFAULT_SIZE, QUILL_DEFAULT_COLOR, QUILL_DEFAULT_LINE_HEIGHT });
+
+    // Initialiser la visibilité des onglets selon le mode par défaut
+    updateToolbarTabsVisibility();
 
 });
