@@ -6957,6 +6957,49 @@ document.addEventListener('DOMContentLoaded', () => {
         constraints: { ...DEFAULT_CONSTRAINTS }
     };
 
+    /**
+     * Mode de fonctionnement du Designer.
+     * - 'standard' : Utilisateur final, contraintes appliquées (sections grisées)
+     * - 'template' : Créateur de template, peut définir les contraintes
+     * @type {'standard'|'template'}
+     */
+    let designerMode = 'standard';
+
+    /**
+     * Définit le mode de fonctionnement du Designer.
+     * @param {'standard'|'template'} mode - Le mode à activer
+     * @returns {void}
+     */
+    function setDesignerMode(mode) {
+        if (mode !== 'standard' && mode !== 'template') {
+            console.warn(`⚠️ Mode invalide "${mode}", utilisation de "standard" par défaut`);
+            mode = 'standard';
+        }
+        designerMode = mode;
+        console.log(`🎨 Mode Designer: ${designerMode}`);
+        
+        // Mettre à jour la visibilité des onglets Contraintes (sera implémenté en Phase 3)
+        if (typeof updateToolbarTabsVisibility === 'function') {
+            updateToolbarTabsVisibility();
+        }
+    }
+
+    /**
+     * Retourne le mode de fonctionnement actuel du Designer.
+     * @returns {'standard'|'template'} Le mode actuel
+     */
+    function getDesignerMode() {
+        return designerMode;
+    }
+
+    /**
+     * Vérifie si le Designer est en mode Template.
+     * @returns {boolean} true si mode template, false sinon
+     */
+    function isTemplateMode() {
+        return designerMode === 'template';
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // État du mode aperçu de fusion
     // ─────────────────────────────────────────────────────────────────────────
@@ -19200,6 +19243,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Charger un document JSON
                 if (message.data) {
                     try {
+                        // Définir le mode AVANT le chargement des données
+                        setDesignerMode(message.mode || 'standard');
+                        console.log(`📄 Chargement document en mode ${designerMode.toUpperCase()}`);
+                        
                         loadFromWebDev(message);
                         
                         // Appliquer les contraintes si présentes dans le message load
