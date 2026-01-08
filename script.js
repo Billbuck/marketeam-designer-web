@@ -636,31 +636,91 @@ document.addEventListener('DOMContentLoaded', () => {
      */
 
     /**
-     * @typedef {Object} ZoneContrainte
-     * @property {boolean} [positionFixe] - Position non modifiable (drag désactivé, area ignorée pour position). Défaut: false
-     * @property {boolean} [nonSupprimable] - Zone non supprimable. Défaut: false
-     * @property {number} [minWMm] - Largeur minimale en mm
-     * @property {number} [maxWMm] - Largeur maximale en mm
-     * @property {number} [minHMm] - Hauteur minimale en mm
-     * @property {number} [maxHMm] - Hauteur maximale en mm
+     * @typedef {Object} ContrainteGeometrie
+     * @property {boolean} [positionFixe] - Position X,Y non modifiable. Défaut: false
+     * @property {boolean} [locked] - Position ET taille non modifiables. Défaut: false
+     * @property {number} [minWMm] - Largeur minimale en mm (0 = pas de contrainte)
+     * @property {number} [maxWMm] - Largeur maximale en mm (0 = pas de contrainte)
+     * @property {number} [minHMm] - Hauteur minimale en mm (0 = pas de contrainte)
+     * @property {number} [maxHMm] - Hauteur maximale en mm (0 = pas de contrainte)
      * @property {AreaContrainte} [area] - Zone autorisée pour déplacement/redimensionnement
-     * @property {boolean} [locked] - Zone verrouillée (position et taille fixes). Défaut: false
-     * @property {boolean} [systeme] - Zone système (entièrement protégée, non éditable). Défaut: false
+     * @description Contraintes de position et taille d'une zone.
+     */
+
+    /**
+     * @typedef {Object} ContrainteGlobal
+     * @property {boolean} [systeme] - Zone système (restrictions automatiques). Défaut: false
      * @property {string} [systemeLibelle] - Libellé affiché dans le badge système. Défaut: ''
-     * @property {boolean} [imprimable] - Zone imprimable ou non. Défaut: true
-     * @property {boolean} [selectionnable] - Si false, la zone ne peut pas être sélectionnée. Défaut: true
-     * @property {boolean} [toolbarAffichable] - Si false, la toolbar flottante n'apparaît pas. Défaut: true
-     * @description Contraintes appliquées à une zone prédéfinie.
+     * @property {boolean} [nonSupprimable] - Zone non supprimable. Défaut: false
+     * @property {boolean} [imprimable] - Zone imprimable. Défaut: true
+     * @property {boolean} [selectionnable] - Zone sélectionnable. Défaut: true
+     * @property {boolean} [toolbarAffichable] - Toolbar visible à la sélection. Défaut: true
+     * @property {boolean} [pageModifiable] - Peut changer de page (Recto/Verso). Défaut: true
+     * @description Contraintes globales de la zone.
+     */
+
+    /**
+     * @typedef {Object} ContrainteStyleTexte
+     * @property {boolean} [contenuModifiable] - Contenu texte modifiable. Défaut: true
+     * @property {boolean} [typographieModifiable] - Section Typographie modifiable. Défaut: true
+     * @property {boolean} [alignementsModifiable] - Section Alignements modifiable. Défaut: true
+     * @property {boolean} [fondModifiable] - Section Fond modifiable. Défaut: true
+     * @property {boolean} [bordureModifiable] - Section Bordure modifiable. Défaut: true
+     * @description Contraintes de style pour les zones texte (textQuill).
+     */
+
+    /**
+     * @typedef {Object} ContrainteStyleImage
+     * @property {boolean} [contenuModifiable] - Image/source modifiable. Défaut: true
+     * @property {boolean} [affichageModifiable] - Section Affichage modifiable. Défaut: true
+     * @property {boolean} [fondModifiable] - Section Fond modifiable. Défaut: true
+     * @property {boolean} [bordureModifiable] - Section Bordure modifiable. Défaut: true
+     * @description Contraintes de style pour les zones image.
+     */
+
+    /**
+     * @typedef {Object} ContrainteStyleBarcode
+     * @property {boolean} [contenuModifiable] - Données code-barres modifiables. Défaut: true
+     * @property {boolean} [apparenceModifiable] - Section Affichage modifiable. Défaut: true
+     * @property {boolean} [fondModifiable] - Section Fond modifiable. Défaut: true
+     * @description Contraintes de style pour les zones code-barres (barcode).
+     */
+
+    /**
+     * @typedef {Object} ContrainteStyleQR
+     * @property {boolean} [couleursModifiable] - Section Fond/Couleurs modifiable. Défaut: true
+     * @description Contraintes de style pour les zones QR interactif Marketeam.
+     */
+
+    /**
+     * @typedef {ContrainteStyleTexte|ContrainteStyleImage|ContrainteStyleBarcode|ContrainteStyleQR} ContrainteStyle
+     * @description Union des contraintes de style selon le type de zone.
+     */
+
+    /**
+     * @typedef {Object} ZoneContrainte
+     * @property {ContrainteGeometrie} [geometrie] - Contraintes de position et taille
+     * @property {ContrainteStyle} [style] - Contraintes de style (sections modifiables)
+     * @property {ContrainteGlobal} [global] - Contraintes globales de la zone
+     * @description Contraintes appliquées à une zone prédéfinie (structure à 3 niveaux).
      * 
      * **Valeurs par défaut (quand la propriété est absente) :**
+     * 
+     * _geometrie:_
      * - positionFixe: false
-     * - nonSupprimable: false
      * - locked: false
+     * - minWMm/maxWMm/minHMm/maxHMm: 0 (pas de contrainte)
+     * 
+     * _global:_
      * - systeme: false
      * - systemeLibelle: ''
+     * - nonSupprimable: false
      * - imprimable: true
      * - selectionnable: true
      * - toolbarAffichable: true
+     * - pageModifiable: true
+     * 
+     * _style:_ (toutes les propriétés = true par défaut)
      * 
      * **Comportement de l'area :**
      * - Si positionFixe=true : la zone ne bouge pas (area ignorée pour position)
@@ -671,28 +731,45 @@ document.addEventListener('DOMContentLoaded', () => {
      * en plus des bornes minWMm/maxWMm/minHMm/maxHMm.
      * 
      * @example
-     * // Zone avec position fixe et bornes de taille
-     * { positionFixe: true, nonSupprimable: true, minWMm: 50, maxWMm: 100 }
+     * // Zone avec position fixe et bornes de taille (nouveau format)
+     * {
+     *     geometrie: { positionFixe: true, minWMm: 50, maxWMm: 100 },
+     *     global: { nonSupprimable: true }
+     * }
      * 
      * @example
      * // Zone mobile dans une area avec bornes de taille
      * {
-     *     positionFixe: false,
-     *     nonSupprimable: true,
-     *     minWMm: 50,
-     *     maxWMm: 100,
-     *     minHMm: 15,
-     *     maxHMm: 40,
-     *     area: { xMm: 5, yMm: 5, wMm: 100, hMm: 60 }
+     *     geometrie: {
+     *         positionFixe: false,
+     *         minWMm: 50,
+     *         maxWMm: 100,
+     *         minHMm: 15,
+     *         maxHMm: 40,
+     *         area: { xMm: 5, yMm: 5, wMm: 100, hMm: 60 }
+     *     },
+     *     global: { nonSupprimable: true }
      * }
      * 
      * @example
      * // Zone système non sélectionnable
      * {
-     *     systeme: true,
-     *     systemeLibelle: 'Zone protégée',
-     *     selectionnable: false,
-     *     toolbarAffichable: false
+     *     geometrie: { locked: true },
+     *     global: {
+     *         systeme: true,
+     *         systemeLibelle: 'Zone protégée',
+     *         selectionnable: false,
+     *         toolbarAffichable: false
+     *     }
+     * }
+     * 
+     * @example
+     * // Zone texte avec typographie verrouillée mais contenu modifiable
+     * {
+     *     style: {
+     *         contenuModifiable: true,
+     *         typographieModifiable: false
+     *     }
      * }
      */
 
@@ -1485,6 +1562,45 @@ document.addEventListener('DOMContentLoaded', () => {
     const QUILL_DEFAULT_LINE_HEIGHT = 1.15;
 
     /**
+     * Restrictions appliquées automatiquement aux zones Système.
+     * Une zone système est complètement INERTE (non sélectionnable, non modifiable).
+     * Ces restrictions sont fusionnées avec les contraintes de la zone quand systeme=true.
+     * 
+     * @constant {Object}
+     * @property {Object} geometrie - Contraintes géométriques système
+     * @property {boolean} geometrie.positionFixe - Position non modifiable (true)
+     * @property {boolean} geometrie.locked - Zone verrouillée (true)
+     * @property {Object} global - Contraintes globales système
+     * @property {boolean} global.nonSupprimable - Non supprimable (true)
+     * @property {boolean} global.selectionnable - Non sélectionnable (false)
+     * @property {boolean} global.toolbarAffichable - Toolbar cachée (false)
+     * @property {boolean} global.pageModifiable - Page non modifiable (false)
+     * @property {Object} style - Contraintes de style système (tout verrouillé)
+     */
+    const SYSTEM_ZONE_RESTRICTIONS = {
+        geometrie: {
+            positionFixe: true,
+            locked: true
+        },
+        global: {
+            nonSupprimable: true,
+            selectionnable: false,
+            toolbarAffichable: false,
+            pageModifiable: false
+        },
+        style: {
+            contenuModifiable: false,
+            typographieModifiable: false,
+            alignementsModifiable: false,
+            fondModifiable: false,
+            bordureModifiable: false,
+            affichageModifiable: false,
+            apparenceModifiable: false,
+            couleursModifiable: false
+        }
+    };
+
+    /**
      * Thèmes disponibles pour le Designer.
      * Chaque thème définit les couleurs primary, light, dark et logo utilisées dans l'interface.
      * 
@@ -1627,7 +1743,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * Stocke les éléments DOM des areas par ID de zone.
-     * Chaque zone avec une contrainte.area a un élément area associé.
+     * Chaque zone avec une contrainte.geometrie.area a un élément area associé.
      * @type {Map<string, HTMLElement>}
      */
     const areaElements = new Map();
@@ -5330,8 +5446,89 @@ document.addEventListener('DOMContentLoaded', () => {
     // ─────────────────────────────────────────────────────────────────────────────
 
     /**
+     * Vérifie si une contrainte est au nouveau format (3 niveaux : geometrie, style, global).
+     * 
+     * @param {Object} constraint - Objet contrainte à vérifier
+     * @returns {boolean} true si au nouveau format, false si ancien format plat
+     * 
+     * @example
+     * isNewConstraintFormat({ geometrie: { locked: true } }); // → true
+     * isNewConstraintFormat({ locked: true }); // → false (ancien format)
+     */
+    function isNewConstraintFormat(constraint) {
+        if (!constraint || typeof constraint !== 'object') return false;
+        // Le nouveau format a au moins une des clés : geometrie, style, global
+        return 'geometrie' in constraint || 'style' in constraint || 'global' in constraint;
+    }
+
+    /**
+     * Migre une contrainte de l'ancien format plat vers le nouveau format à 3 niveaux.
+     * Assure la rétrocompatibilité avec les documents existants.
+     * 
+     * **Mapping ancien → nouveau format :**
+     * - positionFixe, locked, minWMm, maxWMm, minHMm, maxHMm, area → geometrie
+     * - systeme, systemeLibelle, nonSupprimable, imprimable, selectionnable, toolbarAffichable → global
+     * - (les contraintes style n'existaient pas dans l'ancien format)
+     * 
+     * @param {Object} oldConstraint - Contrainte au format plat (ancien format)
+     * @returns {ZoneContrainte} Contrainte au nouveau format
+     * 
+     * @example
+     * // Migration ancien format
+     * migrateConstraintFormat({ locked: true, nonSupprimable: true });
+     * // → { geometrie: { locked: true }, global: { nonSupprimable: true } }
+     * 
+     * @example
+     * // Déjà au nouveau format, retourné tel quel
+     * migrateConstraintFormat({ geometrie: { locked: true } });
+     * // → { geometrie: { locked: true } }
+     */
+    function migrateConstraintFormat(oldConstraint) {
+        // Si null/undefined, retourner objet vide (nouveau format)
+        if (!oldConstraint || typeof oldConstraint !== 'object') {
+            return {};
+        }
+        
+        // Si déjà au nouveau format, retourner tel quel
+        if (isNewConstraintFormat(oldConstraint)) {
+            return oldConstraint;
+        }
+        
+        // Migrer depuis le format plat vers le nouveau format
+        const newConstraint = {};
+        
+        // --- Propriétés vers geometrie ---
+        const geometrieProps = ['positionFixe', 'locked', 'minWMm', 'maxWMm', 'minHMm', 'maxHMm', 'area'];
+        const geometrie = {};
+        geometrieProps.forEach(prop => {
+            if (prop in oldConstraint) {
+                geometrie[prop] = oldConstraint[prop];
+            }
+        });
+        if (Object.keys(geometrie).length > 0) {
+            newConstraint.geometrie = geometrie;
+        }
+        
+        // --- Propriétés vers global ---
+        const globalProps = ['systeme', 'systemeLibelle', 'nonSupprimable', 'imprimable', 'selectionnable', 'toolbarAffichable'];
+        const global = {};
+        globalProps.forEach(prop => {
+            if (prop in oldConstraint) {
+                global[prop] = oldConstraint[prop];
+            }
+        });
+        if (Object.keys(global).length > 0) {
+            newConstraint.global = global;
+        }
+        
+        // Note : pas de migration style car n'existait pas dans l'ancien format
+        
+        return newConstraint;
+    }
+
+    /**
      * Vérifie si une zone est verrouillée.
-     * Lit la propriété `locked` dans `contrainte` avec valeur par défaut `false`.
+     * Lit la propriété `locked` dans `contrainte.geometrie` avec valeur par défaut `false`.
      * 
      * @param {ZoneData} zoneData - Données de la zone
      * @returns {boolean} `true` si la zone est verrouillée, `false` sinon
@@ -5340,17 +5537,17 @@ document.addEventListener('DOMContentLoaded', () => {
      * // Zone sans contrainte
      * isZoneLocked({ type: 'textQuill' }); // → false
      * 
-     * // Zone avec contrainte.locked = true
-     * isZoneLocked({ type: 'textQuill', contrainte: { locked: true } }); // → true
+     * // Zone avec contrainte.geometrie.locked = true
+     * isZoneLocked({ type: 'textQuill', contrainte: { geometrie: { locked: true } } }); // → true
      */
     function isZoneLocked(zoneData) {
         if (!zoneData) return false;
-        return zoneData.contrainte?.locked === true;
+        return zoneData.contrainte?.geometrie?.locked === true;
     }
 
     /**
      * Définit l'état verrouillé d'une zone.
-     * Écrit dans `contrainte.locked`, crée la structure `contrainte` si nécessaire.
+     * Écrit dans `contrainte.geometrie.locked`, crée la structure si nécessaire.
      * 
      * @param {ZoneData} zoneData - Données de la zone à modifier
      * @param {boolean} value - Nouvelle valeur de verrouillage
@@ -5359,19 +5556,22 @@ document.addEventListener('DOMContentLoaded', () => {
      * @example
      * const zoneData = { type: 'textQuill' };
      * setZoneLocked(zoneData, true);
-     * // zoneData.contrainte.locked === true
+     * // zoneData.contrainte.geometrie.locked === true
      */
     function setZoneLocked(zoneData, value) {
         if (!zoneData) return;
         if (!zoneData.contrainte) {
             zoneData.contrainte = {};
         }
-        zoneData.contrainte.locked = value;
+        if (!zoneData.contrainte.geometrie) {
+            zoneData.contrainte.geometrie = {};
+        }
+        zoneData.contrainte.geometrie.locked = value;
     }
 
     /**
      * Vérifie si une zone est une zone système.
-     * Lit la propriété `systeme` dans `contrainte` avec valeur par défaut `false`.
+     * Lit la propriété `systeme` dans `contrainte.global` avec valeur par défaut `false`.
      * 
      * @param {ZoneData} zoneData - Données de la zone
      * @returns {boolean} `true` si la zone est système, `false` sinon
@@ -5381,16 +5581,16 @@ document.addEventListener('DOMContentLoaded', () => {
      * isZoneSysteme({ type: 'textQuill' }); // → false
      * 
      * // Zone système
-     * isZoneSysteme({ type: 'textQuill', contrainte: { systeme: true } }); // → true
+     * isZoneSysteme({ type: 'textQuill', contrainte: { global: { systeme: true } } }); // → true
      */
     function isZoneSysteme(zoneData) {
         if (!zoneData) return false;
-        return zoneData.contrainte?.systeme === true;
+        return zoneData.contrainte?.global?.systeme === true;
     }
 
     /**
      * Définit l'état système d'une zone.
-     * Écrit dans `contrainte.systeme`, crée la structure `contrainte` si nécessaire.
+     * Écrit dans `contrainte.global.systeme`, crée la structure si nécessaire.
      * 
      * @param {ZoneData} zoneData - Données de la zone à modifier
      * @param {boolean} value - Nouvelle valeur système
@@ -5399,19 +5599,22 @@ document.addEventListener('DOMContentLoaded', () => {
      * @example
      * const zoneData = { type: 'textQuill' };
      * setZoneSysteme(zoneData, true);
-     * // zoneData.contrainte.systeme === true
+     * // zoneData.contrainte.global.systeme === true
      */
     function setZoneSysteme(zoneData, value) {
         if (!zoneData) return;
         if (!zoneData.contrainte) {
             zoneData.contrainte = {};
         }
-        zoneData.contrainte.systeme = value;
+        if (!zoneData.contrainte.global) {
+            zoneData.contrainte.global = {};
+        }
+        zoneData.contrainte.global.systeme = value;
     }
 
     /**
      * Retourne le libellé système d'une zone.
-     * Lit la propriété `systemeLibelle` dans `contrainte` avec valeur par défaut `''`.
+     * Lit la propriété `systemeLibelle` dans `contrainte.global` avec valeur par défaut `''`.
      * 
      * @param {ZoneData} zoneData - Données de la zone
      * @returns {string} Le libellé système ou une chaîne vide
@@ -5421,16 +5624,16 @@ document.addEventListener('DOMContentLoaded', () => {
      * getZoneSystemeLibelle({ type: 'textQuill' }); // → ''
      * 
      * // Zone avec libellé
-     * getZoneSystemeLibelle({ type: 'textQuill', contrainte: { systemeLibelle: 'N° Page' } }); // → 'N° Page'
+     * getZoneSystemeLibelle({ type: 'textQuill', contrainte: { global: { systemeLibelle: 'N° Page' } } }); // → 'N° Page'
      */
     function getZoneSystemeLibelle(zoneData) {
         if (!zoneData) return '';
-        return zoneData.contrainte?.systemeLibelle || '';
+        return zoneData.contrainte?.global?.systemeLibelle || '';
     }
 
     /**
      * Définit le libellé système d'une zone.
-     * Écrit dans `contrainte.systemeLibelle`, crée la structure `contrainte` si nécessaire.
+     * Écrit dans `contrainte.global.systemeLibelle`, crée la structure si nécessaire.
      * 
      * @param {ZoneData} zoneData - Données de la zone à modifier
      * @param {string} value - Nouveau libellé système
@@ -5439,19 +5642,22 @@ document.addEventListener('DOMContentLoaded', () => {
      * @example
      * const zoneData = { type: 'textQuill' };
      * setZoneSystemeLibelle(zoneData, 'Adresse destinataire');
-     * // zoneData.contrainte.systemeLibelle === 'Adresse destinataire'
+     * // zoneData.contrainte.global.systemeLibelle === 'Adresse destinataire'
      */
     function setZoneSystemeLibelle(zoneData, value) {
         if (!zoneData) return;
         if (!zoneData.contrainte) {
             zoneData.contrainte = {};
         }
-        zoneData.contrainte.systemeLibelle = value;
+        if (!zoneData.contrainte.global) {
+            zoneData.contrainte.global = {};
+        }
+        zoneData.contrainte.global.systemeLibelle = value;
     }
 
     /**
      * Vérifie si une zone est imprimable.
-     * Lit la propriété `imprimable` dans `contrainte` avec valeur par défaut `true`.
+     * Lit la propriété `imprimable` dans `contrainte.global` avec valeur par défaut `true`.
      * 
      * **Attention** : contrairement à `locked` et `systeme`, la valeur par défaut est `true`.
      * Une zone est imprimable par défaut si la propriété est absente.
@@ -5463,20 +5669,20 @@ document.addEventListener('DOMContentLoaded', () => {
      * // Zone sans contrainte → imprimable par défaut
      * isZoneImprimable({ type: 'textQuill' }); // → true
      * 
-     * // Zone avec contrainte.imprimable = false
-     * isZoneImprimable({ type: 'textQuill', contrainte: { imprimable: false } }); // → false
+     * // Zone avec contrainte.global.imprimable = false
+     * isZoneImprimable({ type: 'textQuill', contrainte: { global: { imprimable: false } } }); // → false
      */
     function isZoneImprimable(zoneData) {
         if (!zoneData) return true;
-        if (!zoneData.contrainte || zoneData.contrainte.imprimable === undefined) {
+        if (!zoneData.contrainte?.global || zoneData.contrainte.global.imprimable === undefined) {
             return true; // Par défaut imprimable
         }
-        return zoneData.contrainte.imprimable;
+        return zoneData.contrainte.global.imprimable;
     }
 
     /**
      * Définit l'état imprimable d'une zone.
-     * Écrit dans `contrainte.imprimable`, crée la structure `contrainte` si nécessaire.
+     * Écrit dans `contrainte.global.imprimable`, crée la structure si nécessaire.
      * 
      * @param {ZoneData} zoneData - Données de la zone à modifier
      * @param {boolean} value - Nouvelle valeur imprimable
@@ -5485,14 +5691,17 @@ document.addEventListener('DOMContentLoaded', () => {
      * @example
      * const zoneData = { type: 'textQuill' };
      * setZoneImprimable(zoneData, false);
-     * // zoneData.contrainte.imprimable === false
+     * // zoneData.contrainte.global.imprimable === false
      */
     function setZoneImprimable(zoneData, value) {
         if (!zoneData) return;
         if (!zoneData.contrainte) {
             zoneData.contrainte = {};
         }
-        zoneData.contrainte.imprimable = value;
+        if (!zoneData.contrainte.global) {
+            zoneData.contrainte.global = {};
+        }
+        zoneData.contrainte.global.imprimable = value;
     }
 
     /**
@@ -5509,20 +5718,20 @@ document.addEventListener('DOMContentLoaded', () => {
      * 
      * @example
      * // Zone système → conservée
-     * isZoneProtegeeAuReset({ contrainte: { systeme: true } }); // → true
+     * isZoneProtegeeAuReset({ contrainte: { global: { systeme: true } } }); // → true
      * 
      * // Zone non supprimable mais pas système → conservée
-     * isZoneProtegeeAuReset({ contrainte: { systeme: false, nonSupprimable: true } }); // → true
+     * isZoneProtegeeAuReset({ contrainte: { global: { systeme: false, nonSupprimable: true } } }); // → true
      * 
      * // Zone normale → supprimée au reset
-     * isZoneProtegeeAuReset({ contrainte: { systeme: false, nonSupprimable: false } }); // → false
+     * isZoneProtegeeAuReset({ contrainte: { global: { systeme: false, nonSupprimable: false } } }); // → false
      * 
      * @see isZoneSysteme
      * @see isZoneNonSupprimable
      */
     function isZoneProtegeeAuReset(zoneData) {
         if (!zoneData) return false;
-        return isZoneSysteme(zoneData) || (zoneData.contrainte?.nonSupprimable === true);
+        return isZoneSysteme(zoneData) || (zoneData.contrainte?.global?.nonSupprimable === true);
     }
 
     /**
@@ -5538,15 +5747,15 @@ document.addEventListener('DOMContentLoaded', () => {
      * // Zone sans contrainte → sélectionnable par défaut
      * isZoneSelectionnable({ type: 'textQuill' }); // → true
      * 
-     * // Zone avec contrainte.selectionnable = false
-     * isZoneSelectionnable({ type: 'textQuill', contrainte: { selectionnable: false } }); // → false
+     * // Zone avec contrainte.global.selectionnable = false
+     * isZoneSelectionnable({ type: 'textQuill', contrainte: { global: { selectionnable: false } } }); // → false
      */
     function isZoneSelectionnable(zoneData) {
         if (!zoneData) return true;
-        if (!zoneData.contrainte || zoneData.contrainte.selectionnable === undefined) {
+        if (!zoneData.contrainte?.global || zoneData.contrainte.global.selectionnable === undefined) {
             return true; // Par défaut sélectionnable
         }
-        return zoneData.contrainte.selectionnable;
+        return zoneData.contrainte.global.selectionnable;
     }
 
     /**
@@ -5562,15 +5771,15 @@ document.addEventListener('DOMContentLoaded', () => {
      * // Zone sans contrainte → toolbar affichable par défaut
      * isZoneToolbarAffichable({ type: 'textQuill' }); // → true
      * 
-     * // Zone avec contrainte.toolbarAffichable = false
-     * isZoneToolbarAffichable({ type: 'image', contrainte: { toolbarAffichable: false } }); // → false
+     * // Zone avec contrainte.global.toolbarAffichable = false
+     * isZoneToolbarAffichable({ type: 'image', contrainte: { global: { toolbarAffichable: false } } }); // → false
      */
     function isZoneToolbarAffichable(zoneData) {
         if (!zoneData) return true;
-        if (!zoneData.contrainte || zoneData.contrainte.toolbarAffichable === undefined) {
+        if (!zoneData.contrainte?.global || zoneData.contrainte.global.toolbarAffichable === undefined) {
             return true; // Par défaut toolbar affichable
         }
-        return zoneData.contrainte.toolbarAffichable;
+        return zoneData.contrainte.global.toolbarAffichable;
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -5658,7 +5867,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Vérifier si on doit afficher le badge
         const shouldShow = zoneData.contrainte && 
-            (zoneData.contrainte.positionFixe || zoneData.contrainte.nonSupprimable);
+            (zoneData.contrainte?.geometrie?.positionFixe || zoneData.contrainte?.global?.nonSupprimable);
         
         if (!shouldShow) {
             // Supprimer le badge s'il existe
@@ -5820,7 +6029,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Vérifier si la zone a une area valide (dimensions > 0)
         if (hasValidArea(zoneData)) {
-            const area = zoneData.contrainte.area;
+            const area = zoneData.contrainte.geometrie.area;
             
             // Convertir l'area en pixels
             const areaXPx = mmToPx(area.xMm);
@@ -5871,7 +6080,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Vérifier si la zone a une area valide (dimensions > 0)
         if (hasValidArea(zoneData)) {
-            const area = zoneData.contrainte.area;
+            const area = zoneData.contrainte.geometrie.area;
             
             // Convertir l'area en pixels
             const areaXPx = mmToPx(area.xMm);
@@ -5916,7 +6125,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Vérifier si la zone a une area valide (dimensions > 0)
         if (hasValidArea(zoneData)) {
-            const area = zoneData.contrainte.area;
+            const area = zoneData.contrainte.geometrie.area;
             
             return {
                 minX: area.xMm,
@@ -5947,19 +6156,19 @@ document.addEventListener('DOMContentLoaded', () => {
      * 
      * @example
      * // Area valide
-     * hasValidArea({ contrainte: { area: { xMm: 10, yMm: 10, wMm: 100, hMm: 60 } } }); // true
+     * hasValidArea({ contrainte: { geometrie: { area: { xMm: 10, yMm: 10, wMm: 100, hMm: 60 } } } }); // true
      * 
      * // Area invalide (valeurs par défaut WebDev)
-     * hasValidArea({ contrainte: { area: { xMm: 0, yMm: 0, wMm: 0, hMm: 0 } } }); // false
+     * hasValidArea({ contrainte: { geometrie: { area: { xMm: 0, yMm: 0, wMm: 0, hMm: 0 } } } }); // false
      * 
      * // Pas d'area
-     * hasValidArea({ contrainte: { positionFixe: true } }); // false
+     * hasValidArea({ contrainte: { geometrie: { positionFixe: true } } }); // false
      */
     function hasValidArea(zoneData) {
-        if (!zoneData || !zoneData.contrainte || !zoneData.contrainte.area) {
+        if (!zoneData || !zoneData.contrainte?.geometrie?.area) {
             return false;
         }
-        const area = zoneData.contrainte.area;
+        const area = zoneData.contrainte.geometrie.area;
         return area.wMm > 0 && area.hMm > 0;
     }
 
@@ -6013,15 +6222,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Applique les bornes de taille définies dans contrainte à des dimensions.
+     * Applique les bornes de taille définies dans les contraintes géométriques.
      * Convertit les bornes de mm en pixels et contraint newW/newH dans les limites.
      * Les contraintes sont ignorées si leur valeur est 0 ou non définie.
      * 
-     * @param {Object} contrainte - Objet contrainte contenant les bornes
-     * @param {number} [contrainte.minWMm] - Largeur minimum en mm (0 = pas de contrainte)
-     * @param {number} [contrainte.maxWMm] - Largeur maximum en mm (0 = pas de contrainte)
-     * @param {number} [contrainte.minHMm] - Hauteur minimum en mm (0 = pas de contrainte)
-     * @param {number} [contrainte.maxHMm] - Hauteur maximum en mm (0 = pas de contrainte)
+     * @param {ContrainteGeometrie} geometrie - Objet contrainte.geometrie contenant les bornes
+     * @param {number} [geometrie.minWMm] - Largeur minimum en mm (0 = pas de contrainte)
+     * @param {number} [geometrie.maxWMm] - Largeur maximum en mm (0 = pas de contrainte)
+     * @param {number} [geometrie.minHMm] - Hauteur minimum en mm (0 = pas de contrainte)
+     * @param {number} [geometrie.maxHMm] - Hauteur maximum en mm (0 = pas de contrainte)
      * @param {number} newW - Nouvelle largeur demandée en pixels
      * @param {number} newH - Nouvelle hauteur demandée en pixels
      * @returns {{w: number, h: number}} Dimensions ajustées selon les contraintes
@@ -6036,29 +6245,29 @@ document.addEventListener('DOMContentLoaded', () => {
      * applyContrainteBounds({ minWMm: 50, maxWMm: 100 }, 200, 100);
      * // → { w: ~378 (100mm en px), h: 100 }
      */
-    function applyContrainteBounds(contrainte, newW, newH) {
+    function applyContrainteBounds(geometrie, newW, newH) {
         let w = newW;
         let h = newH;
         
-        if (!contrainte) return { w, h };
+        if (!geometrie) return { w, h };
         
         // Appliquer les bornes de largeur (seulement si > 0)
-        if (contrainte.minWMm > 0) {
-            const minWPx = mmToPx(contrainte.minWMm);
+        if (geometrie.minWMm > 0) {
+            const minWPx = mmToPx(geometrie.minWMm);
             w = Math.max(w, minWPx);
         }
-        if (contrainte.maxWMm > 0) {
-            const maxWPx = mmToPx(contrainte.maxWMm);
+        if (geometrie.maxWMm > 0) {
+            const maxWPx = mmToPx(geometrie.maxWMm);
             w = Math.min(w, maxWPx);
         }
         
         // Appliquer les bornes de hauteur (seulement si > 0)
-        if (contrainte.minHMm > 0) {
-            const minHPx = mmToPx(contrainte.minHMm);
+        if (geometrie.minHMm > 0) {
+            const minHPx = mmToPx(geometrie.minHMm);
             h = Math.max(h, minHPx);
         }
-        if (contrainte.maxHMm > 0) {
-            const maxHPx = mmToPx(contrainte.maxHMm);
+        if (geometrie.maxHMm > 0) {
+            const maxHPx = mmToPx(geometrie.maxHMm);
             h = Math.min(h, maxHPx);
         }
         
@@ -8914,7 +9123,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Créer l'area si valide dans les contraintes (dimensions > 0)
         if (hasValidArea(zoneData)) {
-            createAreaElement(id, zoneData.contrainte.area);
+            createAreaElement(id, zoneData.contrainte.geometrie.area);
         }
         
         if (autoSelect) {
@@ -9403,7 +9612,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const zonesData = getCurrentPageZones();
             const zoneData = zonesData[id];
             const isSysteme = isZoneSysteme(zoneData);
-            const isNonSupprimable = zoneData && zoneData.contrainte && zoneData.contrainte.nonSupprimable;
+            const isNonSupprimable = zoneData && zoneData.contrainte?.global?.nonSupprimable;
             
             // Griser le bouton Supprimer si zone système OU zone contrainte non supprimable
             btnDelete.disabled = isSysteme || isNonSupprimable;
@@ -15795,7 +16004,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (zoneEl) {
                         // Vérifier si la zone n'est pas verrouillée, système ou à position fixe
                         const zoneData = zonesData[zoneId];
-                        const isPositionFixe = zoneData && zoneData.contrainte && zoneData.contrainte.positionFixe;
+                        const isPositionFixe = zoneData && zoneData.contrainte?.geometrie?.positionFixe;
                         if (!zoneData || (!isZoneLocked(zoneData) && !isZoneSysteme(zoneData) && !isPositionFixe)) {
                             startPositions.push({
                                 id: zoneId,
@@ -15836,7 +16045,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Vérifier si la zone n'est pas verrouillée, système ou à position fixe
                 const zoneData = zonesData[pos.id];
-                const isPositionFixe = zoneData && zoneData.contrainte && zoneData.contrainte.positionFixe;
+                const isPositionFixe = zoneData && zoneData.contrainte?.geometrie?.positionFixe;
                 if (zoneData && (isZoneLocked(zoneData) || isZoneSysteme(zoneData) || isPositionFixe)) return; // Ignorer les zones verrouillées, système ou à position fixe
                 
                 // Calculer la nouvelle position
@@ -15981,8 +16190,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 // === FIN CONTRAINTES ZONES IMAGE ===
                 
                 // === CONTRAINTES ZONES PRÉDÉFINIES (bornes min/max) ===
-                if (zoneDataResize && zoneDataResize.contrainte) {
-                    const bounded = applyContrainteBounds(zoneDataResize.contrainte, newW, newH);
+                if (zoneDataResize && zoneDataResize.contrainte?.geometrie) {
+                    const bounded = applyContrainteBounds(zoneDataResize.contrainte.geometrie, newW, newH);
                     newW = bounded.w;
                     newH = bounded.h;
                 }
@@ -16295,9 +16504,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Vérifier les contraintes de zone prédéfinie
         const contrainte = zoneData.contrainte;
+        const geometrie = contrainte?.geometrie;
         
         // Bloquer la modification de X et Y si position fixe
-        if (contrainte && contrainte.positionFixe && (property === 'x' || property === 'y')) {
+        if (geometrie?.positionFixe && (property === 'x' || property === 'y')) {
             console.log(`⚠️ Modification ${property} bloquée : zone avec position fixe`);
             return;
         }
@@ -16358,12 +16568,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 wMm = round1(Math.min(wMm, maxWidth));
                 
                 // Appliquer les bornes de contrainte si définies
-                if (contrainte) {
-                    if (contrainte.minWMm !== undefined && contrainte.minWMm > 0) {
-                        wMm = Math.max(wMm, contrainte.minWMm);
+                if (geometrie) {
+                    if (geometrie.minWMm !== undefined && geometrie.minWMm > 0) {
+                        wMm = Math.max(wMm, geometrie.minWMm);
                     }
-                    if (contrainte.maxWMm !== undefined && contrainte.maxWMm > 0) {
-                        wMm = Math.min(wMm, contrainte.maxWMm);
+                    if (geometrie.maxWMm !== undefined && geometrie.maxWMm > 0) {
+                        wMm = Math.min(wMm, geometrie.maxWMm);
                     }
                     wMm = round1(wMm);
                 }
@@ -16387,12 +16597,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 hMm = round1(Math.min(hMm, maxHeight));
                 
                 // Appliquer les bornes de contrainte si définies
-                if (contrainte) {
-                    if (contrainte.minHMm !== undefined && contrainte.minHMm > 0) {
-                        hMm = Math.max(hMm, contrainte.minHMm);
+                if (geometrie) {
+                    if (geometrie.minHMm !== undefined && geometrie.minHMm > 0) {
+                        hMm = Math.max(hMm, geometrie.minHMm);
                     }
-                    if (contrainte.maxHMm !== undefined && contrainte.maxHMm > 0) {
-                        hMm = Math.min(hMm, contrainte.maxHMm);
+                    if (geometrie.maxHMm !== undefined && geometrie.maxHMm > 0) {
+                        hMm = Math.min(hMm, geometrie.maxHMm);
                     }
                     hMm = round1(hMm);
                 }
