@@ -3737,3 +3737,153 @@ body.preview-mode-active #actions-section .btn:not(#btn-delete-zone) {
 .toolbar-tab-poc[data-tab="contraintes"].hidden {
     display: none;
 }
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* ONGLET CONTRAINTES - Espacement vertical                        */
+/* ═══════════════════════════════════════════════════════════════ */
+
+[data-tab-content="contraintes"] .form-row-poc {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 4px 12px;
+}
+
+[data-tab-content="contraintes"] .section-content-poc {
+    padding: 4px 0;
+}
+
+[data-tab-content="contraintes"] .form-row-poc > .form-control-poc {
+    order: 1;
+    flex: none;
+    justify-content: flex-start;
+}
+
+[data-tab-content="contraintes"] .form-row-poc > .form-label-poc {
+    order: 2;
+    flex: none;
+    min-width: auto;
+    margin-left: 0;
+    white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* ONGLET CONTRAINTES - Lignes checkbox plus compactes             */
+/* ═══════════════════════════════════════════════════════════════ */
+
+/* Lignes avec checkbox : padding réduit */
+[data-tab-content="contraintes"] .form-row-poc:has(.checkbox-poc) {
+    padding: 2px 12px;
+}
+
+/* Lignes avec champs de saisie : garder plus d'espace */
+#contrainte-area-fields,
+#contrainte-taille-min-fields,
+#contrainte-taille-max-fields {
+    padding: 6px 12px;
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* ONGLET CONTRAINTES - Ligne Libellé Zone système                 */
+/* ═══════════════════════════════════════════════════════════════ */
+
+/* Label à gauche, input à droite, côte à côte */
+#contrainte-systeme-libelle-row.form-row-poc {
+    padding-left: 44px;
+    justify-content: flex-start !important;
+    gap: 8px;
+}
+
+#contrainte-systeme-libelle-row .form-label-poc {
+    order: 1 !important;
+    flex: none;
+    width: auto !important;
+    min-width: auto;
+    margin: 0;
+}
+
+#contrainte-systeme-libelle-row .form-control-poc {
+    order: 2 !important;
+    flex: none;
+}
+
+#contrainte-systeme-libelle-row .form-control-poc input {
+    width: 160px;
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* ONGLET CONTRAINTES - Champs Zone autorisée centrés              */
+/* ═══════════════════════════════════════════════════════════════ */
+
+#contrainte-area-fields {
+    display: flex;
+    justify-content: center;
+}
+
+#contrainte-area-fields .geo-grid-poc {
+    display: grid;
+    grid-template-columns: repeat(2, auto);
+    gap: 8px 16px;
+    justify-content: center;
+}
+
+#contrainte-area-fields .geo-field-poc {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+#contrainte-area-fields .geo-input-wrapper-poc {
+    display: flex;
+    align-items: center;
+}
+
+#contrainte-area-fields .geo-input-wrapper-poc input {
+    width: 55px;
+    text-align: center;
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* ONGLET CONTRAINTES - Bornes de taille empilées et centrées      */
+/* ═══════════════════════════════════════════════════════════════ */
+
+#contrainte-taille-min-fields,
+#contrainte-taille-max-fields {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#contrainte-taille-min-fields .geo-grid-poc,
+#contrainte-taille-max-fields .geo-grid-poc {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+}
+
+#contrainte-taille-min-fields .geo-field-poc,
+#contrainte-taille-max-fields .geo-field-poc {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#contrainte-taille-min-fields .geo-label-poc,
+#contrainte-taille-max-fields .geo-label-poc {
+    width: 60px;
+    text-align: right;
+}
+
+#contrainte-taille-min-fields .geo-input-wrapper-poc input,
+#contrainte-taille-max-fields .geo-input-wrapper-poc input {
+    width: 60px;
+    text-align: center;
+}
+
+/* Section contrainte-style : padding ajusté */
+[data-section-id="contrainte-style"] .section-content-poc {
+    padding: 8px 12px;
+}

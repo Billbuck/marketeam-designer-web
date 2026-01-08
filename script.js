@@ -6963,7 +6963,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * - 'template' : Créateur de template, peut définir les contraintes
      * @type {'standard'|'template'}
      */
-    let designerMode = 'standard';
+    let designerMode = 'template'; // TODO: remettre 'standard' en production
 
     /**
      * Définit le mode de fonctionnement du Designer.
@@ -7057,6 +7057,423 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         console.log(`🔧 Onglets Contraintes ${isTemplate ? 'affichés' : 'masqués'} (mode ${designerMode})`);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Fonctions de gestion de l'onglet Contraintes
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Retourne la toolbar actuellement visible pour le type de zone donné.
+     * @param {string} zoneType - Type de zone ('textQuill', 'image', 'barcode', 'qr')
+     * @returns {HTMLElement|null} L'élément toolbar ou null
+     */
+    function getActiveToolbarForType(zoneType) {
+        const toolbarMap = {
+            'textQuill': 'quill-toolbar',
+            'text': 'quill-toolbar',
+            'image': 'image-toolbar',
+            'barcode': 'barcode-toolbar',
+            'qr': 'qrcode-toolbar'
+        };
+        const toolbarId = toolbarMap[zoneType];
+        return toolbarId ? document.getElementById(toolbarId) : null;
+    }
+
+    /**
+     * Formate une valeur en mm pour l'affichage (avec virgule).
+     * @param {number} value - Valeur en mm
+     * @returns {string} Valeur formatée avec virgule comme séparateur décimal
+     * @example
+     * formatMmValue(10.5); // → "10,5"
+     */
+    function formatMmValue(value) {
+        return String(value).replace('.', ',');
+    }
+
+    /**
+     * Parse une valeur mm depuis un input (avec virgule ou point).
+     * @param {string} value - Valeur depuis l'input
+     * @returns {number} Valeur numérique en mm
+     * @example
+     * parseMmValue("10,5"); // → 10.5
+     */
+    function parseMmValue(value) {
+        return parseFloat(String(value).replace(',', '.')) || 0;
+    }
+
+    /**
+     * Définit l'état d'une checkbox dans une toolbar spécifique.
+     * Met à jour l'input ET le wrapper visuel.
+     * @param {HTMLElement} toolbar - La toolbar contenant la checkbox
+     * @param {string} inputId - L'ID de l'input checkbox
+     * @param {boolean} checked - État coché ou non
+     * @returns {void}
+     */
+    function setCheckboxInToolbar(toolbar, inputId, checked) {
+        const input = toolbar.querySelector(`#${inputId}`);
+        const wrapper = toolbar.querySelector(`#${inputId}-wrapper`);
+        if (input) {
+            input.checked = checked;
+        }
+        if (wrapper) {
+            wrapper.classList.toggle('checked', checked);
+        }
+    }
+
+    /**
+     * Définit la valeur d'un input dans une toolbar spécifique.
+     * @param {HTMLElement} toolbar - La toolbar contenant l'input
+     * @param {string} inputId - L'ID de l'input
+     * @param {string} value - La valeur à définir
+     * @returns {void}
+     */
+    function setInputInToolbar(toolbar, inputId, value) {
+        const input = toolbar.querySelector(`#${inputId}`);
+        if (input) {
+            input.value = value;
+        }
+    }
+
+    /**
+     * Récupère l'état d'une checkbox dans une toolbar.
+     * @param {HTMLElement} toolbar - La toolbar contenant la checkbox
+     * @param {string} inputId - L'ID de l'input
+     * @returns {boolean} État coché
+     */
+    function getCheckboxInToolbar(toolbar, inputId) {
+        const input = toolbar.querySelector(`#${inputId}`);
+        return input ? input.checked : false;
+    }
+
+    /**
+     * Récupère la valeur d'un input dans une toolbar.
+     * @param {HTMLElement} toolbar - La toolbar contenant l'input
+     * @param {string} inputId - L'ID de l'input
+     * @returns {string} Valeur de l'input
+     */
+    function getInputInToolbar(toolbar, inputId) {
+        const input = toolbar.querySelector(`#${inputId}`);
+        return input ? input.value : '';
+    }
+
+    /**
+     * Charge les contraintes d'une zone dans l'onglet Contraintes de sa toolbar.
+     * Remplit les checkboxes et inputs avec les valeurs de zoneData.contrainte.
+     * @param {string} zoneId - ID de la zone
+     * @param {Object} zoneData - Données de la zone avec ses contraintes
+     * @returns {void}
+     */
+    function loadConstraintsToUI(zoneId, zoneData) {
+        const toolbar = getActiveToolbarForType(zoneData.type);
+        if (!toolbar) return;
+        
+        const contrainte = zoneData.contrainte || {};
+        const geometrie = contrainte.geometrie || {};
+        const global = contrainte.global || {};
+        
+        // === SECTION GLOBAL ===
+        setCheckboxInToolbar(toolbar, 'contrainte-non-supprimable', global.nonSupprimable || false);
+        setCheckboxInToolbar(toolbar, 'contrainte-page-modifiable', global.pageModifiable !== false); // défaut true
+        setCheckboxInToolbar(toolbar, 'contrainte-systeme', global.systeme || false);
+        setInputInToolbar(toolbar, 'contrainte-systeme-libelle', global.systemeLibelle || '');
+        
+        // Afficher/masquer le champ libellé système
+        const systemeLibelleRow = toolbar.querySelector('#contrainte-systeme-libelle-row');
+        if (systemeLibelleRow) {
+            systemeLibelleRow.style.display = global.systeme ? '' : 'none';
+        }
+        
+        // === SECTION GÉOMÉTRIE ===
+        setCheckboxInToolbar(toolbar, 'contrainte-position-fixe', geometrie.positionFixe || false);
+        setCheckboxInToolbar(toolbar, 'contrainte-locked', geometrie.locked || false);
+        
+        const hasArea = !!(geometrie.area);
+        setCheckboxInToolbar(toolbar, 'contrainte-area-active', hasArea);
+        
+        // Afficher/masquer et remplir les champs area
+        const areaFields = toolbar.querySelector('#contrainte-area-fields');
+        if (areaFields) {
+            areaFields.style.display = hasArea ? '' : 'none';
+            if (hasArea && geometrie.area) {
+                setInputInToolbar(toolbar, 'contrainte-area-x', formatMmValue(geometrie.area.xMm || 0));
+                setInputInToolbar(toolbar, 'contrainte-area-y', formatMmValue(geometrie.area.yMm || 0));
+                setInputInToolbar(toolbar, 'contrainte-area-w', formatMmValue(geometrie.area.wMm || 100));
+                setInputInToolbar(toolbar, 'contrainte-area-h', formatMmValue(geometrie.area.hMm || 100));
+            }
+        }
+        
+        // === SECTION BORNES DE TAILLE ===
+        const hasMinSize = !!(geometrie.minWMm || geometrie.minHMm);
+        const hasMaxSize = !!(geometrie.maxWMm || geometrie.maxHMm);
+        
+        setCheckboxInToolbar(toolbar, 'contrainte-taille-min-active', hasMinSize);
+        setCheckboxInToolbar(toolbar, 'contrainte-taille-max-active', hasMaxSize);
+        
+        // Afficher/masquer et remplir les champs taille min
+        const minFields = toolbar.querySelector('#contrainte-taille-min-fields');
+        if (minFields) {
+            minFields.style.display = hasMinSize ? '' : 'none';
+            if (hasMinSize) {
+                setInputInToolbar(toolbar, 'contrainte-min-w', formatMmValue(geometrie.minWMm || 0));
+                setInputInToolbar(toolbar, 'contrainte-min-h', formatMmValue(geometrie.minHMm || 0));
+            }
+        }
+        
+        // Afficher/masquer et remplir les champs taille max
+        const maxFields = toolbar.querySelector('#contrainte-taille-max-fields');
+        if (maxFields) {
+            maxFields.style.display = hasMaxSize ? '' : 'none';
+            if (hasMaxSize) {
+                setInputInToolbar(toolbar, 'contrainte-max-w', formatMmValue(geometrie.maxWMm || 0));
+                setInputInToolbar(toolbar, 'contrainte-max-h', formatMmValue(geometrie.maxHMm || 0));
+            }
+        }
+        
+        console.log(`🔒 Contraintes chargées dans UI pour ${zoneId}`);
+    }
+
+    /**
+     * Sauvegarde les contraintes depuis l'UI vers la zone sélectionnée.
+     * Lit les valeurs des checkboxes et inputs et les stocke dans zoneData.contrainte.
+     * @param {string} zoneId - ID de la zone
+     * @param {Object} zoneData - Données de la zone
+     * @returns {void}
+     */
+    function saveConstraintsFromUI(zoneId, zoneData) {
+        const toolbar = getActiveToolbarForType(zoneData.type);
+        if (!toolbar) return;
+        
+        // Initialiser la structure contrainte si nécessaire
+        if (!zoneData.contrainte) {
+            zoneData.contrainte = {};
+        }
+        if (!zoneData.contrainte.geometrie) {
+            zoneData.contrainte.geometrie = {};
+        }
+        if (!zoneData.contrainte.global) {
+            zoneData.contrainte.global = {};
+        }
+        
+        const geometrie = zoneData.contrainte.geometrie;
+        const global = zoneData.contrainte.global;
+        
+        // === SECTION GLOBAL ===
+        global.nonSupprimable = getCheckboxInToolbar(toolbar, 'contrainte-non-supprimable');
+        global.pageModifiable = getCheckboxInToolbar(toolbar, 'contrainte-page-modifiable');
+        global.systeme = getCheckboxInToolbar(toolbar, 'contrainte-systeme');
+        global.systemeLibelle = getInputInToolbar(toolbar, 'contrainte-systeme-libelle');
+        
+        // === SECTION GÉOMÉTRIE ===
+        geometrie.positionFixe = getCheckboxInToolbar(toolbar, 'contrainte-position-fixe');
+        geometrie.locked = getCheckboxInToolbar(toolbar, 'contrainte-locked');
+        
+        // Area
+        const areaActive = getCheckboxInToolbar(toolbar, 'contrainte-area-active');
+        if (areaActive) {
+            geometrie.area = {
+                xMm: parseMmValue(getInputInToolbar(toolbar, 'contrainte-area-x')),
+                yMm: parseMmValue(getInputInToolbar(toolbar, 'contrainte-area-y')),
+                wMm: parseMmValue(getInputInToolbar(toolbar, 'contrainte-area-w')),
+                hMm: parseMmValue(getInputInToolbar(toolbar, 'contrainte-area-h'))
+            };
+        } else {
+            delete geometrie.area;
+        }
+        
+        // Bornes de taille
+        const minActive = getCheckboxInToolbar(toolbar, 'contrainte-taille-min-active');
+        if (minActive) {
+            geometrie.minWMm = parseMmValue(getInputInToolbar(toolbar, 'contrainte-min-w'));
+            geometrie.minHMm = parseMmValue(getInputInToolbar(toolbar, 'contrainte-min-h'));
+        } else {
+            delete geometrie.minWMm;
+            delete geometrie.minHMm;
+        }
+        
+        const maxActive = getCheckboxInToolbar(toolbar, 'contrainte-taille-max-active');
+        if (maxActive) {
+            geometrie.maxWMm = parseMmValue(getInputInToolbar(toolbar, 'contrainte-max-w'));
+            geometrie.maxHMm = parseMmValue(getInputInToolbar(toolbar, 'contrainte-max-h'));
+        } else {
+            delete geometrie.maxWMm;
+            delete geometrie.maxHMm;
+        }
+        
+        console.log(`💾 Contraintes sauvegardées pour ${zoneId}:`, zoneData.contrainte);
+    }
+
+    /**
+     * Sauvegarde les contraintes de la zone actuellement sélectionnée.
+     * Appelée lors de la modification d'un contrôle dans l'onglet Contraintes.
+     * @returns {void}
+     */
+    function saveCurrentZoneConstraints() {
+        if (typeof selectedZoneIds === 'undefined' || selectedZoneIds.length !== 1) return;
+        
+        const zoneId = selectedZoneIds[0];
+        const zones = getCurrentPageZones();
+        const zoneData = zones[zoneId];
+        if (!zoneData) return;
+        
+        saveConstraintsFromUI(zoneId, zoneData);
+    }
+
+    /**
+     * Applique les contraintes géométriques de la zone sélectionnée en temps réel.
+     * Appelé uniquement en mode Template lors de modifications.
+     * @returns {void}
+     */
+    function applyCurrentZoneGeometryConstraints() {
+        if (typeof selectedZoneIds === 'undefined' || selectedZoneIds.length !== 1) return;
+        
+        const zoneId = selectedZoneIds[0];
+        const zones = getCurrentPageZones();
+        const zoneData = zones[zoneId];
+        if (!zoneData || !zoneData.contrainte) return;
+        
+        const geometrie = zoneData.contrainte.geometrie;
+        if (!geometrie) return;
+        
+        // Mettre à jour la visualisation de l'area si elle existe
+        if (geometrie.area) {
+            updateAreaVisualization(zoneId, geometrie.area);
+        } else {
+            removeAreaVisualization(zoneId);
+        }
+        
+        // Note: Le blocage du drag/resize est géré par les fonctions existantes
+        // qui vérifient déjà les contraintes lors des interactions
+        
+        console.log(`🔧 Contraintes géométriques appliquées pour ${zoneId}`);
+    }
+
+    /**
+     * Met à jour la visualisation de la zone area (rectangle de contrainte).
+     * @param {string} zoneId - ID de la zone
+     * @param {Object} area - Objet area avec xMm, yMm, wMm, hMm
+     * @returns {void}
+     */
+    function updateAreaVisualization(zoneId, area) {
+        // TODO: Implémenter la visualisation de l'area (rectangle pointillé)
+        // Pour l'instant, on ne fait que logger
+        console.log(`📐 Area pour ${zoneId}:`, area);
+    }
+
+    /**
+     * Supprime la visualisation de la zone area.
+     * @param {string} zoneId - ID de la zone
+     * @returns {void}
+     */
+    function removeAreaVisualization(zoneId) {
+        // TODO: Implémenter la suppression de la visualisation de l'area
+        console.log(`📐 Area supprimée pour ${zoneId}`);
+    }
+
+    /**
+     * Gère le clic sur une checkbox de contrainte.
+     * Toggle l'état et met à jour les champs conditionnels.
+     * @param {HTMLElement} wrapper - Le wrapper de la checkbox
+     * @returns {void}
+     */
+    function handleConstraintCheckboxClick(wrapper) {
+        const input = wrapper.querySelector('input[type="checkbox"]');
+        if (!input) return;
+        
+        // Toggle l'état
+        input.checked = !input.checked;
+        wrapper.classList.toggle('checked', input.checked);
+        
+        const inputId = input.id;
+        const toolbar = wrapper.closest('.toolbar-poc');
+        
+        // Afficher/masquer les champs conditionnels
+        if (inputId === 'contrainte-systeme') {
+            const libelleRow = toolbar.querySelector('#contrainte-systeme-libelle-row');
+            if (libelleRow) {
+                libelleRow.style.display = input.checked ? '' : 'none';
+            }
+        }
+        
+        if (inputId === 'contrainte-area-active') {
+            const areaFields = toolbar.querySelector('#contrainte-area-fields');
+            if (areaFields) {
+                areaFields.style.display = input.checked ? '' : 'none';
+            }
+        }
+        
+        if (inputId === 'contrainte-taille-min-active') {
+            const minFields = toolbar.querySelector('#contrainte-taille-min-fields');
+            if (minFields) {
+                minFields.style.display = input.checked ? '' : 'none';
+            }
+        }
+        
+        if (inputId === 'contrainte-taille-max-active') {
+            const maxFields = toolbar.querySelector('#contrainte-taille-max-fields');
+            if (maxFields) {
+                maxFields.style.display = input.checked ? '' : 'none';
+            }
+        }
+        
+        // Sauvegarder les contraintes
+        saveCurrentZoneConstraints();
+        
+        // Appliquer les contraintes géométriques en temps réel (mode Template)
+        if (isTemplateMode()) {
+            applyCurrentZoneGeometryConstraints();
+        }
+    }
+
+    /**
+     * Gère la modification d'un input de contrainte.
+     * @param {HTMLElement} input - L'input modifié
+     * @returns {void}
+     */
+    function handleConstraintInputChange(input) {
+        // Sauvegarder les contraintes
+        saveCurrentZoneConstraints();
+        
+        // Appliquer les contraintes géométriques en temps réel (mode Template)
+        if (isTemplateMode()) {
+            applyCurrentZoneGeometryConstraints();
+        }
+    }
+
+    /**
+     * Initialise les event listeners pour l'onglet Contraintes.
+     * Utilise la délégation d'événements pour gérer tous les contrôles.
+     * @returns {void}
+     */
+    function initConstraintsTabListeners() {
+        // Gestion des checkboxes de contraintes (wrappers) - phase capture
+        document.addEventListener('click', function(e) {
+            const wrapper = e.target.closest('[id^="contrainte-"][id$="-wrapper"]');
+            if (wrapper && wrapper.closest('[data-tab-content="contraintes"]')) {
+                handleConstraintCheckboxClick(wrapper);
+                return;
+            }
+        }, true);
+        
+        // Gestion des inputs texte de contraintes
+        document.addEventListener('input', function(e) {
+            const input = e.target.closest('[data-tab-content="contraintes"] input[type="text"]');
+            if (input) {
+                handleConstraintInputChange(input);
+                return;
+            }
+        });
+        
+        // Gestion du champ libellé système (blur/change)
+        document.addEventListener('change', function(e) {
+            const input = e.target.closest('#contrainte-systeme-libelle');
+            if (input) {
+                handleConstraintInputChange(input);
+                return;
+            }
+        });
+        
+        console.log('🔒 Listeners onglet Contraintes initialisés');
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -9983,6 +10400,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Géométrie (mm)
         updateQuillToolbarGeometryFields(zoneId);
+        
+        // Charger les contraintes dans l'onglet Contraintes (si mode Template)
+        if (isTemplateMode()) {
+            loadConstraintsToUI(zoneId, zoneData);
+        }
     }
 
     /**
@@ -10682,6 +11104,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // ─── VERROUILLÉ ───
         setCheckboxPocState('image-chk-locked-wrapper', isZoneLocked(zoneData));
+        
+        // Charger les contraintes dans l'onglet Contraintes (si mode Template)
+        if (isTemplateMode()) {
+            loadConstraintsToUI(zoneId, zoneData);
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -10878,6 +11305,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // ─── VERROUILLÉ ───
         setCheckboxPocState('barcode-chk-locked-wrapper', isZoneLocked(zoneData));
+        
+        // Charger les contraintes dans l'onglet Contraintes (si mode Template)
+        if (isTemplateMode()) {
+            loadConstraintsToUI(zoneId, zoneData);
+        }
     }
 
     /**
@@ -11531,6 +11963,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // ─── VERROUILLÉ ───
         setCheckboxPocState('qrcode-chk-locked-wrapper', isZoneLocked(zoneData));
+        
+        // Charger les contraintes dans l'onglet Contraintes (si mode Template)
+        if (isTemplateMode()) {
+            loadConstraintsToUI(zoneId, zoneData);
+        }
     }
 
     /**
@@ -22042,5 +22479,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialiser la visibilité des onglets selon le mode par défaut
     updateToolbarTabsVisibility();
+    
+    // Initialiser les listeners de l'onglet Contraintes
+    initConstraintsTabListeners();
 
 });
