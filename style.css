@@ -3773,9 +3773,9 @@ body.preview-mode-active #actions-section .btn:not(#btn-delete-zone) {
 /* ONGLET CONTRAINTES - Lignes checkbox plus compactes             */
 /* ═══════════════════════════════════════════════════════════════ */
 
-/* Lignes avec checkbox : padding réduit */
+/* Lignes avec checkbox : padding ajusté */
 [data-tab-content="contraintes"] .form-row-poc:has(.checkbox-poc) {
-    padding: 2px 12px;
+    padding: 1px 10px 1px 20px; /* haut droite bas gauche */
 }
 
 /* Lignes avec champs de saisie : garder plus d'espace */
@@ -3883,7 +3883,7 @@ body.preview-mode-active #actions-section .btn:not(#btn-delete-zone) {
     text-align: center;
 }
 
-/* Section contrainte-style : padding ajusté */
+/* Section contrainte-style : alignement avec les autres sections */
 [data-section-id="contrainte-style"] .section-content-poc {
-    padding: 8px 12px;
+    padding: 4px 0;
 }
