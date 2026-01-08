@@ -3778,6 +3778,15 @@ body.preview-mode-active #actions-section .btn:not(#btn-delete-zone) {
     padding: 1px 10px 1px 20px; /* haut droite bas gauche */
 }
 
+/* Conteneurs masquables pour les contraintes hiérarchiques */
+#contrainte-global-details,
+#contrainte-geometrie-details,
+#contrainte-bornes-section,
+#contrainte-style-section {
+    margin: 0;
+    padding: 0;
+}
+
 /* Lignes avec champs de saisie : garder plus d'espace */
 #contrainte-area-fields,
 #contrainte-taille-min-fields,

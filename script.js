@@ -5922,7 +5922,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Créer l'élément
         const areaEl = document.createElement('div');
-        areaEl.classList.add('zone-area');
+        areaEl.classList.add('zone-area', 'visible');
         areaEl.dataset.zoneId = zoneId;
         
         // Positionner et dimensionner en pixels
@@ -7176,6 +7176,110 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * Réinitialise les contraintes d'une zone aux valeurs par défaut.
+     * @param {Object} zoneData - Données de la zone
+     * @param {string} scope - Portée du reset : 'all' | 'geometrie'
+     * @returns {void}
+     */
+    function resetConstraintsToDefault(zoneData, scope) {
+        if (!zoneData.contrainte) {
+            zoneData.contrainte = {};
+        }
+        
+        if (scope === 'all' || scope === 'geometrie') {
+            // Reset Géométrie
+            zoneData.contrainte.geometrie = {
+                positionFixe: false,
+                locked: false
+                // area, minWMm, minHMm, maxWMm, maxHMm sont supprimés (pas de valeur par défaut)
+            };
+        }
+        
+        if (scope === 'all') {
+            // Reset Global (sauf selectionnable qui vient d'être modifié)
+            if (!zoneData.contrainte.global) {
+                zoneData.contrainte.global = {};
+            }
+            zoneData.contrainte.global.nonSupprimable = false;
+            zoneData.contrainte.global.pageModifiable = true;
+            zoneData.contrainte.global.imprimable = true;
+            // selectionnable est géré séparément
+            
+            // Reset Style
+            zoneData.contrainte.style = {
+                contenuModifiable: true,
+                typographieModifiable: true,
+                alignementsModifiable: true,
+                fondModifiable: true,
+                bordureModifiable: true,
+                affichageModifiable: true,
+                apparenceModifiable: true,
+                couleursModifiable: true
+            };
+        }
+        
+        console.log(`🔄 Contraintes réinitialisées (scope: ${scope}):`, zoneData.contrainte);
+    }
+
+    /**
+     * Vérifie si des contraintes de géométrie sont définies (autres que locked).
+     * @param {Object} geometrie - Objet contrainte.geometrie
+     * @returns {boolean} true si des contraintes sont définies
+     */
+    function hasGeometryConstraintsDefined(geometrie) {
+        if (!geometrie) return false;
+        return !!(
+            geometrie.positionFixe ||
+            geometrie.area ||
+            geometrie.minWMm ||
+            geometrie.minHMm ||
+            geometrie.maxWMm ||
+            geometrie.maxHMm
+        );
+    }
+
+    /**
+     * Met à jour la visibilité des sections de contraintes selon l'état des checkboxes maîtres.
+     * @param {HTMLElement} toolbar - La toolbar contenant les sections
+     * @param {boolean} isSelectionnable - État de la checkbox "Zone sélectionnable"
+     * @param {boolean} isLocked - État de la checkbox "Verrouillé"
+     * @returns {void}
+     */
+    function updateConstraintSectionsVisibility(toolbar, isSelectionnable, isLocked) {
+        // Éléments à masquer si non sélectionnable
+        const globalDetails = toolbar.querySelector('#contrainte-global-details');
+        const geometrieSection = toolbar.querySelector('[data-section-id="contrainte-geometrie"]');
+        const bornesSection = toolbar.querySelector('#contrainte-bornes-section');
+        const styleSection = toolbar.querySelector('#contrainte-style-section');
+        
+        // Éléments à masquer si verrouillé
+        const geometrieDetails = toolbar.querySelector('#contrainte-geometrie-details');
+        
+        if (!isSelectionnable) {
+            // Zone non sélectionnable → tout masquer sauf "Zone sélectionnable"
+            if (globalDetails) globalDetails.style.display = 'none';
+            if (geometrieSection) geometrieSection.style.display = 'none';
+            if (bornesSection) bornesSection.style.display = 'none';
+            if (styleSection) styleSection.style.display = 'none';
+        } else {
+            // Zone sélectionnable → afficher tout
+            if (globalDetails) globalDetails.style.display = '';
+            if (geometrieSection) geometrieSection.style.display = '';
+            if (bornesSection) bornesSection.style.display = '';
+            if (styleSection) styleSection.style.display = '';
+            
+            // Mais si verrouillé → masquer détails géométrie et bornes
+            if (isLocked) {
+                if (geometrieDetails) geometrieDetails.style.display = 'none';
+                if (bornesSection) bornesSection.style.display = 'none';
+            } else {
+                if (geometrieDetails) geometrieDetails.style.display = '';
+                // bornesSection déjà affiché ci-dessus
+            }
+        }
+    }
+
+    /**
      * Charge les contraintes d'une zone dans l'onglet Contraintes de sa toolbar.
      * Remplit les checkboxes et inputs avec les valeurs de zoneData.contrainte.
      * @param {string} zoneId - ID de la zone
@@ -7244,6 +7348,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
+        // Mettre à jour la visibilité des sections selon l'état des checkboxes maîtres
+        const isSelectionnable = getCheckboxInToolbar(toolbar, 'contrainte-selectionnable');
+        const isLocked = getCheckboxInToolbar(toolbar, 'contrainte-locked');
+        updateConstraintSectionsVisibility(toolbar, isSelectionnable, isLocked);
+        
         console.log(`🔒 Contraintes chargées dans UI pour ${zoneId}`);
     }
 
@@ -7252,10 +7361,10 @@ document.addEventListener('DOMContentLoaded', () => {
      * Lit les valeurs des checkboxes et inputs et les stocke dans zoneData.contrainte.
      * @param {string} zoneId - ID de la zone
      * @param {Object} zoneData - Données de la zone
+     * @param {HTMLElement} toolbar - La toolbar contenant les contrôles
      * @returns {void}
      */
-    function saveConstraintsFromUI(zoneId, zoneData) {
-        const toolbar = getActiveToolbarForType(zoneData.type);
+    function saveConstraintsFromUI(zoneId, zoneData, toolbar) {
         if (!toolbar) return;
         
         // Initialiser la structure contrainte si nécessaire
@@ -7320,9 +7429,11 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * Sauvegarde les contraintes de la zone actuellement sélectionnée.
      * Appelée lors de la modification d'un contrôle dans l'onglet Contraintes.
+     * @param {HTMLElement} toolbar - La toolbar contenant les contrôles de contraintes
      * @returns {void}
      */
-    function saveCurrentZoneConstraints() {
+    function saveCurrentZoneConstraints(toolbar) {
+        if (!toolbar) return;
         if (typeof selectedZoneIds === 'undefined' || selectedZoneIds.length !== 1) return;
         
         const zoneId = selectedZoneIds[0];
@@ -7330,7 +7441,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const zoneData = zones[zoneId];
         if (!zoneData) return;
         
-        saveConstraintsFromUI(zoneId, zoneData);
+        saveConstraintsFromUI(zoneId, zoneData, toolbar);
     }
 
     /**
@@ -7394,37 +7505,93 @@ document.addEventListener('DOMContentLoaded', () => {
         const input = wrapper.querySelector('input[type="checkbox"]');
         if (!input) return;
         
-        // Toggle l'état
-        input.checked = !input.checked;
-        wrapper.classList.toggle('checked', input.checked);
-        
         const inputId = input.id;
         const toolbar = wrapper.closest('.toolbar-poc');
+        const newCheckedState = !input.checked;
         
-        // Afficher/masquer les champs conditionnels
+        // Récupérer les données de la zone sélectionnée
+        const zoneId = selectedZoneIds.length === 1 ? selectedZoneIds[0] : null;
+        const zones = getCurrentPageZones();
+        const zoneData = zoneId ? zones[zoneId] : null;
+        
+        // === CAS SPÉCIAL : Zone sélectionnable ===
+        if (inputId === 'contrainte-selectionnable' && !newCheckedState && zoneData) {
+            // On décoche "Zone sélectionnable" → reset toutes les contraintes
+            resetConstraintsToDefault(zoneData, 'all');
+            // Mettre selectionnable à false dans les données
+            if (zoneData.contrainte && zoneData.contrainte.global) {
+                zoneData.contrainte.global.selectionnable = false;
+            }
+            removeAreaVisualization(zoneId);
+        }
+        
+        // === CAS SPÉCIAL : Verrouillé ===
+        if (inputId === 'contrainte-locked' && newCheckedState && zoneData) {
+            // On coche "Verrouillé" → reset contraintes géométrie
+            resetConstraintsToDefault(zoneData, 'geometrie');
+            // Mettre locked à true dans les données
+            if (zoneData.contrainte && zoneData.contrainte.geometrie) {
+                zoneData.contrainte.geometrie.locked = true;
+            }
+            removeAreaVisualization(zoneId);
+        }
+        
+        // Toggle l'état de la checkbox
+        input.checked = newCheckedState;
+        wrapper.classList.toggle('checked', newCheckedState);
+        
+        // Déterminer si on a fait un reset
+        const didResetAll = (inputId === 'contrainte-selectionnable' && !newCheckedState && zoneData);
+        const didResetGeometrie = (inputId === 'contrainte-locked' && newCheckedState && zoneData);
+        
+        // Si on a fait un reset, recharger l'UI pour refléter les valeurs par défaut
+        // et NE PAS sauvegarder (les données sont déjà correctes via resetConstraintsToDefault)
+        if (didResetAll || didResetGeometrie) {
+            // Recharger l'UI avec les valeurs reset
+            loadConstraintsToUI(zoneId, zoneData);
+            
+            // Mettre à jour la visibilité des sections
+            const isSelectionnable = getCheckboxInToolbar(toolbar, 'contrainte-selectionnable');
+            const isLocked = getCheckboxInToolbar(toolbar, 'contrainte-locked');
+            updateConstraintSectionsVisibility(toolbar, isSelectionnable, isLocked);
+            
+            // Appliquer les contraintes géométriques (pour supprimer l'area visuellement)
+            if (isTemplateMode()) {
+                applyCurrentZoneGeometryConstraints();
+            }
+            
+            return; // Sortir ici, pas besoin de sauvegarder
+        }
+        
+        // Afficher/masquer les champs conditionnels existants
         if (inputId === 'contrainte-area-active') {
             const areaFields = toolbar.querySelector('#contrainte-area-fields');
             if (areaFields) {
-                areaFields.style.display = input.checked ? '' : 'none';
+                areaFields.style.display = newCheckedState ? '' : 'none';
             }
         }
         
         if (inputId === 'contrainte-taille-min-active') {
             const minFields = toolbar.querySelector('#contrainte-taille-min-fields');
             if (minFields) {
-                minFields.style.display = input.checked ? '' : 'none';
+                minFields.style.display = newCheckedState ? '' : 'none';
             }
         }
         
         if (inputId === 'contrainte-taille-max-active') {
             const maxFields = toolbar.querySelector('#contrainte-taille-max-fields');
             if (maxFields) {
-                maxFields.style.display = input.checked ? '' : 'none';
+                maxFields.style.display = newCheckedState ? '' : 'none';
             }
         }
         
-        // Sauvegarder les contraintes
-        saveCurrentZoneConstraints();
+        // Mettre à jour la visibilité des sections
+        const isSelectionnable = getCheckboxInToolbar(toolbar, 'contrainte-selectionnable');
+        const isLocked = getCheckboxInToolbar(toolbar, 'contrainte-locked');
+        updateConstraintSectionsVisibility(toolbar, isSelectionnable, isLocked);
+        
+        // Sauvegarder les contraintes (seulement si pas de reset)
+        saveCurrentZoneConstraints(toolbar);
         
         // Appliquer les contraintes géométriques en temps réel (mode Template)
         if (isTemplateMode()) {
@@ -7438,8 +7605,10 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function handleConstraintInputChange(input) {
-        // Sauvegarder les contraintes
-        saveCurrentZoneConstraints();
+        const toolbar = input.closest('.toolbar-poc');
+        
+        // Sauvegarder les contraintes EN PASSANT LA TOOLBAR
+        saveCurrentZoneConstraints(toolbar);
         
         // Appliquer les contraintes géométriques en temps réel (mode Template)
         if (isTemplateMode()) {
@@ -22482,3 +22651,4 @@ document.addEventListener('DOMContentLoaded', () => {
     initConstraintsTabListeners();
 
 });
+

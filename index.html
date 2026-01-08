@@ -960,43 +960,7 @@
             <div class="section-poc" data-section-id="contrainte-global">
                 <div class="section-header-poc">Global</div>
                 <div class="section-content-poc">
-                    <!-- Non supprimable -->
-                    <div class="form-row-poc">
-                        <label class="form-label-poc">Non supprimable</label>
-                        <div class="form-control-poc">
-                            <div class="checkbox-poc" id="contrainte-non-supprimable-wrapper">
-                                <input type="checkbox" id="contrainte-non-supprimable" style="display: none;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Page modifiable -->
-                    <div class="form-row-poc">
-                        <label class="form-label-poc">Page modifiable</label>
-                        <div class="form-control-poc">
-                            <div class="checkbox-poc checked" id="contrainte-page-modifiable-wrapper">
-                                <input type="checkbox" id="contrainte-page-modifiable" checked style="display: none;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Zone imprimable -->
-                    <div class="form-row-poc">
-                        <label class="form-label-poc">Zone imprimable</label>
-                        <div class="form-control-poc">
-                            <div class="checkbox-poc checked" id="contrainte-imprimable-wrapper">
-                                <input type="checkbox" id="contrainte-imprimable" checked style="display: none;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Zone sélectionnable -->
+                    <!-- Zone sélectionnable (PREMIER - contrôle maître) -->
                     <div class="form-row-poc">
                         <label class="form-label-poc">Zone sélectionnable</label>
                         <div class="form-control-poc">
@@ -1008,6 +972,45 @@
                             </div>
                         </div>
                     </div>
+                    <!-- Conteneur pour le reste de Global (masquable) -->
+                    <div id="contrainte-global-details">
+                        <!-- Non supprimable -->
+                        <div class="form-row-poc">
+                            <label class="form-label-poc">Non supprimable</label>
+                            <div class="form-control-poc">
+                                <div class="checkbox-poc" id="contrainte-non-supprimable-wrapper">
+                                    <input type="checkbox" id="contrainte-non-supprimable" style="display: none;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Page modifiable -->
+                        <div class="form-row-poc">
+                            <label class="form-label-poc">Page modifiable</label>
+                            <div class="form-control-poc">
+                                <div class="checkbox-poc checked" id="contrainte-page-modifiable-wrapper">
+                                    <input type="checkbox" id="contrainte-page-modifiable" checked style="display: none;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Zone imprimable -->
+                        <div class="form-row-poc">
+                            <label class="form-label-poc">Zone imprimable</label>
+                            <div class="form-control-poc">
+                                <div class="checkbox-poc checked" id="contrainte-imprimable-wrapper">
+                                    <input type="checkbox" id="contrainte-imprimable" checked style="display: none;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1015,19 +1018,7 @@
             <div class="section-poc" data-section-id="contrainte-geometrie">
                 <div class="section-header-poc">Géométrie</div>
                 <div class="section-content-poc">
-                    <!-- Position fixe -->
-                    <div class="form-row-poc">
-                        <label class="form-label-poc">Position fixe</label>
-                        <div class="form-control-poc">
-                            <div class="checkbox-poc" id="contrainte-position-fixe-wrapper">
-                                <input type="checkbox" id="contrainte-position-fixe" style="display: none;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Verrouillé (position + taille) -->
+                    <!-- Verrouillé (PREMIER - contrôle maître géométrie) -->
                     <div class="form-row-poc">
                         <label class="form-label-poc">Verrouillé</label>
                         <div class="form-control-poc">
@@ -1039,47 +1030,62 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Zone autorisée (area) -->
-                    <div class="form-row-poc">
-                        <label class="form-label-poc">Zone autorisée</label>
-                        <div class="form-control-poc">
-                            <div class="checkbox-poc" id="contrainte-area-active-wrapper">
-                                <input type="checkbox" id="contrainte-area-active" style="display: none;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                </svg>
+                    <!-- Conteneur pour le reste de Géométrie (masquable) -->
+                    <div id="contrainte-geometrie-details">
+                        <!-- Position fixe -->
+                        <div class="form-row-poc">
+                            <label class="form-label-poc">Position fixe</label>
+                            <div class="form-control-poc">
+                                <div class="checkbox-poc" id="contrainte-position-fixe-wrapper">
+                                    <input type="checkbox" id="contrainte-position-fixe" style="display: none;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <!-- Champs area (visibles si area coché) -->
-                    <div class="form-row-poc" id="contrainte-area-fields" style="display: none;">
-                        <div class="geo-grid-poc">
-                            <div class="geo-field-poc">
-                                <label class="geo-label-poc">X</label>
-                                <div class="geo-input-wrapper-poc">
-                                    <input type="text" id="contrainte-area-x" value="0,0">
-                                    <span class="unit-poc">mm</span>
+                        <!-- Zone autorisée (area) -->
+                        <div class="form-row-poc">
+                            <label class="form-label-poc">Zone autorisée</label>
+                            <div class="form-control-poc">
+                                <div class="checkbox-poc" id="contrainte-area-active-wrapper">
+                                    <input type="checkbox" id="contrainte-area-active" style="display: none;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
                                 </div>
                             </div>
-                            <div class="geo-field-poc">
-                                <label class="geo-label-poc">Y</label>
-                                <div class="geo-input-wrapper-poc">
-                                    <input type="text" id="contrainte-area-y" value="0,0">
-                                    <span class="unit-poc">mm</span>
+                        </div>
+                        <!-- Champs area (visibles si area coché) -->
+                        <div class="form-row-poc" id="contrainte-area-fields" style="display: none;">
+                            <div class="geo-grid-poc">
+                                <div class="geo-field-poc">
+                                    <label class="geo-label-poc">X</label>
+                                    <div class="geo-input-wrapper-poc">
+                                        <input type="text" id="contrainte-area-x" value="0,0">
+                                        <span class="unit-poc">mm</span>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="geo-field-poc">
-                                <label class="geo-label-poc">L</label>
-                                <div class="geo-input-wrapper-poc">
-                                    <input type="text" id="contrainte-area-w" value="100,0">
-                                    <span class="unit-poc">mm</span>
+                                <div class="geo-field-poc">
+                                    <label class="geo-label-poc">Y</label>
+                                    <div class="geo-input-wrapper-poc">
+                                        <input type="text" id="contrainte-area-y" value="0,0">
+                                        <span class="unit-poc">mm</span>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="geo-field-poc">
-                                <label class="geo-label-poc">H</label>
-                                <div class="geo-input-wrapper-poc">
-                                    <input type="text" id="contrainte-area-h" value="100,0">
-                                    <span class="unit-poc">mm</span>
+                                <div class="geo-field-poc">
+                                    <label class="geo-label-poc">L</label>
+                                    <div class="geo-input-wrapper-poc">
+                                        <input type="text" id="contrainte-area-w" value="100,0">
+                                        <span class="unit-poc">mm</span>
+                                    </div>
+                                </div>
+                                <div class="geo-field-poc">
+                                    <label class="geo-label-poc">H</label>
+                                    <div class="geo-input-wrapper-poc">
+                                        <input type="text" id="contrainte-area-h" value="100,0">
+                                        <span class="unit-poc">mm</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1088,6 +1094,7 @@
             </div>
 
             <!-- ==================== SECTION BORNES DE TAILLE ==================== -->
+            <div id="contrainte-bornes-section">
             <div class="section-poc" data-section-id="contrainte-taille">
                 <div class="section-header-poc">Bornes de taille</div>
                 <div class="section-content-poc" id="contrainte-taille-content">
@@ -1155,8 +1162,10 @@
                     </div>
                 </div>
             </div>
+            </div>
 
             <!-- ==================== SECTION STYLE (TEXTE) ==================== -->
+            <div id="contrainte-style-section">
             <div class="section-poc" data-section-id="contrainte-style">
                 <div class="section-header-poc">Sections modifiables</div>
                 <div class="section-content-poc" id="contrainte-style-content">
@@ -1221,6 +1230,7 @@
                         <label class="form-label-poc">Bordure</label>
                     </div>
                 </div>
+            </div>
             </div>
 
         </div>
@@ -1615,43 +1625,7 @@
             <div class="section-poc" data-section-id="contrainte-global">
                 <div class="section-header-poc">Global</div>
                 <div class="section-content-poc">
-                    <!-- Non supprimable -->
-                    <div class="form-row-poc">
-                        <label class="form-label-poc">Non supprimable</label>
-                        <div class="form-control-poc">
-                            <div class="checkbox-poc" id="contrainte-non-supprimable-wrapper">
-                                <input type="checkbox" id="contrainte-non-supprimable" style="display: none;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Page modifiable -->
-                    <div class="form-row-poc">
-                        <label class="form-label-poc">Page modifiable</label>
-                        <div class="form-control-poc">
-                            <div class="checkbox-poc checked" id="contrainte-page-modifiable-wrapper">
-                                <input type="checkbox" id="contrainte-page-modifiable" checked style="display: none;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Zone imprimable -->
-                    <div class="form-row-poc">
-                        <label class="form-label-poc">Zone imprimable</label>
-                        <div class="form-control-poc">
-                            <div class="checkbox-poc checked" id="contrainte-imprimable-wrapper">
-                                <input type="checkbox" id="contrainte-imprimable" checked style="display: none;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Zone sélectionnable -->
+                    <!-- Zone sélectionnable (PREMIER - contrôle maître) -->
                     <div class="form-row-poc">
                         <label class="form-label-poc">Zone sélectionnable</label>
                         <div class="form-control-poc">
@@ -1663,6 +1637,45 @@
                             </div>
                         </div>
                     </div>
+                    <!-- Conteneur pour le reste de Global (masquable) -->
+                    <div id="contrainte-global-details">
+                        <!-- Non supprimable -->
+                        <div class="form-row-poc">
+                            <label class="form-label-poc">Non supprimable</label>
+                            <div class="form-control-poc">
+                                <div class="checkbox-poc" id="contrainte-non-supprimable-wrapper">
+                                    <input type="checkbox" id="contrainte-non-supprimable" style="display: none;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Page modifiable -->
+                        <div class="form-row-poc">
+                            <label class="form-label-poc">Page modifiable</label>
+                            <div class="form-control-poc">
+                                <div class="checkbox-poc checked" id="contrainte-page-modifiable-wrapper">
+                                    <input type="checkbox" id="contrainte-page-modifiable" checked style="display: none;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Zone imprimable -->
+                        <div class="form-row-poc">
+                            <label class="form-label-poc">Zone imprimable</label>
+                            <div class="form-control-poc">
+                                <div class="checkbox-poc checked" id="contrainte-imprimable-wrapper">
+                                    <input type="checkbox" id="contrainte-imprimable" checked style="display: none;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1670,19 +1683,7 @@
             <div class="section-poc" data-section-id="contrainte-geometrie">
                 <div class="section-header-poc">Géométrie</div>
                 <div class="section-content-poc">
-                    <!-- Position fixe -->
-                    <div class="form-row-poc">
-                        <label class="form-label-poc">Position fixe</label>
-                        <div class="form-control-poc">
-                            <div class="checkbox-poc" id="contrainte-position-fixe-wrapper">
-                                <input type="checkbox" id="contrainte-position-fixe" style="display: none;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Verrouillé (position + taille) -->
+                    <!-- Verrouillé (PREMIER - contrôle maître géométrie) -->
                     <div class="form-row-poc">
                         <label class="form-label-poc">Verrouillé</label>
                         <div class="form-control-poc">
@@ -1694,47 +1695,62 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Zone autorisée (area) -->
-                    <div class="form-row-poc">
-                        <label class="form-label-poc">Zone autorisée</label>
-                        <div class="form-control-poc">
-                            <div class="checkbox-poc" id="contrainte-area-active-wrapper">
-                                <input type="checkbox" id="contrainte-area-active" style="display: none;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                </svg>
+                    <!-- Conteneur pour le reste de Géométrie (masquable) -->
+                    <div id="contrainte-geometrie-details">
+                        <!-- Position fixe -->
+                        <div class="form-row-poc">
+                            <label class="form-label-poc">Position fixe</label>
+                            <div class="form-control-poc">
+                                <div class="checkbox-poc" id="contrainte-position-fixe-wrapper">
+                                    <input type="checkbox" id="contrainte-position-fixe" style="display: none;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <!-- Champs area (visibles si area coché) -->
-                    <div class="form-row-poc" id="contrainte-area-fields" style="display: none;">
-                        <div class="geo-grid-poc">
-                            <div class="geo-field-poc">
-                                <label class="geo-label-poc">X</label>
-                                <div class="geo-input-wrapper-poc">
-                                    <input type="text" id="contrainte-area-x" value="0,0">
-                                    <span class="unit-poc">mm</span>
+                        <!-- Zone autorisée (area) -->
+                        <div class="form-row-poc">
+                            <label class="form-label-poc">Zone autorisée</label>
+                            <div class="form-control-poc">
+                                <div class="checkbox-poc" id="contrainte-area-active-wrapper">
+                                    <input type="checkbox" id="contrainte-area-active" style="display: none;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
                                 </div>
                             </div>
-                            <div class="geo-field-poc">
-                                <label class="geo-label-poc">Y</label>
-                                <div class="geo-input-wrapper-poc">
-                                    <input type="text" id="contrainte-area-y" value="0,0">
-                                    <span class="unit-poc">mm</span>
+                        </div>
+                        <!-- Champs area (visibles si area coché) -->
+                        <div class="form-row-poc" id="contrainte-area-fields" style="display: none;">
+                            <div class="geo-grid-poc">
+                                <div class="geo-field-poc">
+                                    <label class="geo-label-poc">X</label>
+                                    <div class="geo-input-wrapper-poc">
+                                        <input type="text" id="contrainte-area-x" value="0,0">
+                                        <span class="unit-poc">mm</span>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="geo-field-poc">
-                                <label class="geo-label-poc">L</label>
-                                <div class="geo-input-wrapper-poc">
-                                    <input type="text" id="contrainte-area-w" value="100,0">
-                                    <span class="unit-poc">mm</span>
+                                <div class="geo-field-poc">
+                                    <label class="geo-label-poc">Y</label>
+                                    <div class="geo-input-wrapper-poc">
+                                        <input type="text" id="contrainte-area-y" value="0,0">
+                                        <span class="unit-poc">mm</span>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="geo-field-poc">
-                                <label class="geo-label-poc">H</label>
-                                <div class="geo-input-wrapper-poc">
-                                    <input type="text" id="contrainte-area-h" value="100,0">
-                                    <span class="unit-poc">mm</span>
+                                <div class="geo-field-poc">
+                                    <label class="geo-label-poc">L</label>
+                                    <div class="geo-input-wrapper-poc">
+                                        <input type="text" id="contrainte-area-w" value="100,0">
+                                        <span class="unit-poc">mm</span>
+                                    </div>
+                                </div>
+                                <div class="geo-field-poc">
+                                    <label class="geo-label-poc">H</label>
+                                    <div class="geo-input-wrapper-poc">
+                                        <input type="text" id="contrainte-area-h" value="100,0">
+                                        <span class="unit-poc">mm</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1743,6 +1759,7 @@
             </div>
 
             <!-- ==================== SECTION BORNES DE TAILLE ==================== -->
+            <div id="contrainte-bornes-section">
             <div class="section-poc" data-section-id="contrainte-taille">
                 <div class="section-header-poc">Bornes de taille</div>
                 <div class="section-content-poc" id="contrainte-taille-content">
@@ -1810,8 +1827,10 @@
                     </div>
                 </div>
             </div>
+            </div>
 
             <!-- ==================== SECTION STYLE (IMAGE) ==================== -->
+            <div id="contrainte-style-section">
             <div class="section-poc" data-section-id="contrainte-style">
                 <div class="section-header-poc">Sections modifiables</div>
                 <div class="section-content-poc" id="contrainte-style-content">
@@ -1864,6 +1883,7 @@
                         <label class="form-label-poc">Bordure</label>
                     </div>
                 </div>
+            </div>
             </div>
 
         </div>
@@ -2198,43 +2218,7 @@
             <div class="section-poc" data-section-id="contrainte-global">
                 <div class="section-header-poc">Global</div>
                 <div class="section-content-poc">
-                    <!-- Non supprimable -->
-                    <div class="form-row-poc">
-                        <label class="form-label-poc">Non supprimable</label>
-                        <div class="form-control-poc">
-                            <div class="checkbox-poc" id="contrainte-non-supprimable-wrapper">
-                                <input type="checkbox" id="contrainte-non-supprimable" style="display: none;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Page modifiable -->
-                    <div class="form-row-poc">
-                        <label class="form-label-poc">Page modifiable</label>
-                        <div class="form-control-poc">
-                            <div class="checkbox-poc checked" id="contrainte-page-modifiable-wrapper">
-                                <input type="checkbox" id="contrainte-page-modifiable" checked style="display: none;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Zone imprimable -->
-                    <div class="form-row-poc">
-                        <label class="form-label-poc">Zone imprimable</label>
-                        <div class="form-control-poc">
-                            <div class="checkbox-poc checked" id="contrainte-imprimable-wrapper">
-                                <input type="checkbox" id="contrainte-imprimable" checked style="display: none;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Zone sélectionnable -->
+                    <!-- Zone sélectionnable (PREMIER - contrôle maître) -->
                     <div class="form-row-poc">
                         <label class="form-label-poc">Zone sélectionnable</label>
                         <div class="form-control-poc">
@@ -2246,6 +2230,45 @@
                             </div>
                         </div>
                     </div>
+                    <!-- Conteneur pour le reste de Global (masquable) -->
+                    <div id="contrainte-global-details">
+                        <!-- Non supprimable -->
+                        <div class="form-row-poc">
+                            <label class="form-label-poc">Non supprimable</label>
+                            <div class="form-control-poc">
+                                <div class="checkbox-poc" id="contrainte-non-supprimable-wrapper">
+                                    <input type="checkbox" id="contrainte-non-supprimable" style="display: none;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Page modifiable -->
+                        <div class="form-row-poc">
+                            <label class="form-label-poc">Page modifiable</label>
+                            <div class="form-control-poc">
+                                <div class="checkbox-poc checked" id="contrainte-page-modifiable-wrapper">
+                                    <input type="checkbox" id="contrainte-page-modifiable" checked style="display: none;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Zone imprimable -->
+                        <div class="form-row-poc">
+                            <label class="form-label-poc">Zone imprimable</label>
+                            <div class="form-control-poc">
+                                <div class="checkbox-poc checked" id="contrainte-imprimable-wrapper">
+                                    <input type="checkbox" id="contrainte-imprimable" checked style="display: none;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -2253,19 +2276,7 @@
             <div class="section-poc" data-section-id="contrainte-geometrie">
                 <div class="section-header-poc">Géométrie</div>
                 <div class="section-content-poc">
-                    <!-- Position fixe -->
-                    <div class="form-row-poc">
-                        <label class="form-label-poc">Position fixe</label>
-                        <div class="form-control-poc">
-                            <div class="checkbox-poc" id="contrainte-position-fixe-wrapper">
-                                <input type="checkbox" id="contrainte-position-fixe" style="display: none;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Verrouillé (position + taille) -->
+                    <!-- Verrouillé (PREMIER - contrôle maître géométrie) -->
                     <div class="form-row-poc">
                         <label class="form-label-poc">Verrouillé</label>
                         <div class="form-control-poc">
@@ -2277,47 +2288,62 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Zone autorisée (area) -->
-                    <div class="form-row-poc">
-                        <label class="form-label-poc">Zone autorisée</label>
-                        <div class="form-control-poc">
-                            <div class="checkbox-poc" id="contrainte-area-active-wrapper">
-                                <input type="checkbox" id="contrainte-area-active" style="display: none;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                </svg>
+                    <!-- Conteneur pour le reste de Géométrie (masquable) -->
+                    <div id="contrainte-geometrie-details">
+                        <!-- Position fixe -->
+                        <div class="form-row-poc">
+                            <label class="form-label-poc">Position fixe</label>
+                            <div class="form-control-poc">
+                                <div class="checkbox-poc" id="contrainte-position-fixe-wrapper">
+                                    <input type="checkbox" id="contrainte-position-fixe" style="display: none;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <!-- Champs area (visibles si area coché) -->
-                    <div class="form-row-poc" id="contrainte-area-fields" style="display: none;">
-                        <div class="geo-grid-poc">
-                            <div class="geo-field-poc">
-                                <label class="geo-label-poc">X</label>
-                                <div class="geo-input-wrapper-poc">
-                                    <input type="text" id="contrainte-area-x" value="0,0">
-                                    <span class="unit-poc">mm</span>
+                        <!-- Zone autorisée (area) -->
+                        <div class="form-row-poc">
+                            <label class="form-label-poc">Zone autorisée</label>
+                            <div class="form-control-poc">
+                                <div class="checkbox-poc" id="contrainte-area-active-wrapper">
+                                    <input type="checkbox" id="contrainte-area-active" style="display: none;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
                                 </div>
                             </div>
-                            <div class="geo-field-poc">
-                                <label class="geo-label-poc">Y</label>
-                                <div class="geo-input-wrapper-poc">
-                                    <input type="text" id="contrainte-area-y" value="0,0">
-                                    <span class="unit-poc">mm</span>
+                        </div>
+                        <!-- Champs area (visibles si area coché) -->
+                        <div class="form-row-poc" id="contrainte-area-fields" style="display: none;">
+                            <div class="geo-grid-poc">
+                                <div class="geo-field-poc">
+                                    <label class="geo-label-poc">X</label>
+                                    <div class="geo-input-wrapper-poc">
+                                        <input type="text" id="contrainte-area-x" value="0,0">
+                                        <span class="unit-poc">mm</span>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="geo-field-poc">
-                                <label class="geo-label-poc">L</label>
-                                <div class="geo-input-wrapper-poc">
-                                    <input type="text" id="contrainte-area-w" value="100,0">
-                                    <span class="unit-poc">mm</span>
+                                <div class="geo-field-poc">
+                                    <label class="geo-label-poc">Y</label>
+                                    <div class="geo-input-wrapper-poc">
+                                        <input type="text" id="contrainte-area-y" value="0,0">
+                                        <span class="unit-poc">mm</span>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="geo-field-poc">
-                                <label class="geo-label-poc">H</label>
-                                <div class="geo-input-wrapper-poc">
-                                    <input type="text" id="contrainte-area-h" value="100,0">
-                                    <span class="unit-poc">mm</span>
+                                <div class="geo-field-poc">
+                                    <label class="geo-label-poc">L</label>
+                                    <div class="geo-input-wrapper-poc">
+                                        <input type="text" id="contrainte-area-w" value="100,0">
+                                        <span class="unit-poc">mm</span>
+                                    </div>
+                                </div>
+                                <div class="geo-field-poc">
+                                    <label class="geo-label-poc">H</label>
+                                    <div class="geo-input-wrapper-poc">
+                                        <input type="text" id="contrainte-area-h" value="100,0">
+                                        <span class="unit-poc">mm</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -2326,6 +2352,7 @@
             </div>
 
             <!-- ==================== SECTION BORNES DE TAILLE ==================== -->
+            <div id="contrainte-bornes-section">
             <div class="section-poc" data-section-id="contrainte-taille">
                 <div class="section-header-poc">Bornes de taille</div>
                 <div class="section-content-poc" id="contrainte-taille-content">
@@ -2393,8 +2420,10 @@
                     </div>
                 </div>
             </div>
+            </div>
 
             <!-- ==================== SECTION STYLE (BARCODE) ==================== -->
+            <div id="contrainte-style-section">
             <div class="section-poc" data-section-id="contrainte-style">
                 <div class="section-header-poc">Sections modifiables</div>
                 <div class="section-content-poc" id="contrainte-style-content">
@@ -2435,6 +2464,7 @@
                         <label class="form-label-poc">Fond</label>
                     </div>
                 </div>
+            </div>
             </div>
 
         </div>
@@ -2626,43 +2656,7 @@
             <div class="section-poc" data-section-id="contrainte-global">
                 <div class="section-header-poc">Global</div>
                 <div class="section-content-poc">
-                    <!-- Non supprimable -->
-                    <div class="form-row-poc">
-                        <label class="form-label-poc">Non supprimable</label>
-                        <div class="form-control-poc">
-                            <div class="checkbox-poc" id="contrainte-non-supprimable-wrapper">
-                                <input type="checkbox" id="contrainte-non-supprimable" style="display: none;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Page modifiable -->
-                    <div class="form-row-poc">
-                        <label class="form-label-poc">Page modifiable</label>
-                        <div class="form-control-poc">
-                            <div class="checkbox-poc checked" id="contrainte-page-modifiable-wrapper">
-                                <input type="checkbox" id="contrainte-page-modifiable" checked style="display: none;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Zone imprimable -->
-                    <div class="form-row-poc">
-                        <label class="form-label-poc">Zone imprimable</label>
-                        <div class="form-control-poc">
-                            <div class="checkbox-poc checked" id="contrainte-imprimable-wrapper">
-                                <input type="checkbox" id="contrainte-imprimable" checked style="display: none;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Zone sélectionnable -->
+                    <!-- Zone sélectionnable (PREMIER - contrôle maître) -->
                     <div class="form-row-poc">
                         <label class="form-label-poc">Zone sélectionnable</label>
                         <div class="form-control-poc">
@@ -2674,6 +2668,45 @@
                             </div>
                         </div>
                     </div>
+                    <!-- Conteneur pour le reste de Global (masquable) -->
+                    <div id="contrainte-global-details">
+                        <!-- Non supprimable -->
+                        <div class="form-row-poc">
+                            <label class="form-label-poc">Non supprimable</label>
+                            <div class="form-control-poc">
+                                <div class="checkbox-poc" id="contrainte-non-supprimable-wrapper">
+                                    <input type="checkbox" id="contrainte-non-supprimable" style="display: none;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Page modifiable -->
+                        <div class="form-row-poc">
+                            <label class="form-label-poc">Page modifiable</label>
+                            <div class="form-control-poc">
+                                <div class="checkbox-poc checked" id="contrainte-page-modifiable-wrapper">
+                                    <input type="checkbox" id="contrainte-page-modifiable" checked style="display: none;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Zone imprimable -->
+                        <div class="form-row-poc">
+                            <label class="form-label-poc">Zone imprimable</label>
+                            <div class="form-control-poc">
+                                <div class="checkbox-poc checked" id="contrainte-imprimable-wrapper">
+                                    <input type="checkbox" id="contrainte-imprimable" checked style="display: none;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -2681,19 +2714,7 @@
             <div class="section-poc" data-section-id="contrainte-geometrie">
                 <div class="section-header-poc">Géométrie</div>
                 <div class="section-content-poc">
-                    <!-- Position fixe -->
-                    <div class="form-row-poc">
-                        <label class="form-label-poc">Position fixe</label>
-                        <div class="form-control-poc">
-                            <div class="checkbox-poc" id="contrainte-position-fixe-wrapper">
-                                <input type="checkbox" id="contrainte-position-fixe" style="display: none;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Verrouillé (position + taille) -->
+                    <!-- Verrouillé (PREMIER - contrôle maître géométrie) -->
                     <div class="form-row-poc">
                         <label class="form-label-poc">Verrouillé</label>
                         <div class="form-control-poc">
@@ -2705,47 +2726,62 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Zone autorisée (area) -->
-                    <div class="form-row-poc">
-                        <label class="form-label-poc">Zone autorisée</label>
-                        <div class="form-control-poc">
-                            <div class="checkbox-poc" id="contrainte-area-active-wrapper">
-                                <input type="checkbox" id="contrainte-area-active" style="display: none;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                </svg>
+                    <!-- Conteneur pour le reste de Géométrie (masquable) -->
+                    <div id="contrainte-geometrie-details">
+                        <!-- Position fixe -->
+                        <div class="form-row-poc">
+                            <label class="form-label-poc">Position fixe</label>
+                            <div class="form-control-poc">
+                                <div class="checkbox-poc" id="contrainte-position-fixe-wrapper">
+                                    <input type="checkbox" id="contrainte-position-fixe" style="display: none;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <!-- Champs area (visibles si area coché) -->
-                    <div class="form-row-poc" id="contrainte-area-fields" style="display: none;">
-                        <div class="geo-grid-poc">
-                            <div class="geo-field-poc">
-                                <label class="geo-label-poc">X</label>
-                                <div class="geo-input-wrapper-poc">
-                                    <input type="text" id="contrainte-area-x" value="0,0">
-                                    <span class="unit-poc">mm</span>
+                        <!-- Zone autorisée (area) -->
+                        <div class="form-row-poc">
+                            <label class="form-label-poc">Zone autorisée</label>
+                            <div class="form-control-poc">
+                                <div class="checkbox-poc" id="contrainte-area-active-wrapper">
+                                    <input type="checkbox" id="contrainte-area-active" style="display: none;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
                                 </div>
                             </div>
-                            <div class="geo-field-poc">
-                                <label class="geo-label-poc">Y</label>
-                                <div class="geo-input-wrapper-poc">
-                                    <input type="text" id="contrainte-area-y" value="0,0">
-                                    <span class="unit-poc">mm</span>
+                        </div>
+                        <!-- Champs area (visibles si area coché) -->
+                        <div class="form-row-poc" id="contrainte-area-fields" style="display: none;">
+                            <div class="geo-grid-poc">
+                                <div class="geo-field-poc">
+                                    <label class="geo-label-poc">X</label>
+                                    <div class="geo-input-wrapper-poc">
+                                        <input type="text" id="contrainte-area-x" value="0,0">
+                                        <span class="unit-poc">mm</span>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="geo-field-poc">
-                                <label class="geo-label-poc">L</label>
-                                <div class="geo-input-wrapper-poc">
-                                    <input type="text" id="contrainte-area-w" value="100,0">
-                                    <span class="unit-poc">mm</span>
+                                <div class="geo-field-poc">
+                                    <label class="geo-label-poc">Y</label>
+                                    <div class="geo-input-wrapper-poc">
+                                        <input type="text" id="contrainte-area-y" value="0,0">
+                                        <span class="unit-poc">mm</span>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="geo-field-poc">
-                                <label class="geo-label-poc">H</label>
-                                <div class="geo-input-wrapper-poc">
-                                    <input type="text" id="contrainte-area-h" value="100,0">
-                                    <span class="unit-poc">mm</span>
+                                <div class="geo-field-poc">
+                                    <label class="geo-label-poc">L</label>
+                                    <div class="geo-input-wrapper-poc">
+                                        <input type="text" id="contrainte-area-w" value="100,0">
+                                        <span class="unit-poc">mm</span>
+                                    </div>
+                                </div>
+                                <div class="geo-field-poc">
+                                    <label class="geo-label-poc">H</label>
+                                    <div class="geo-input-wrapper-poc">
+                                        <input type="text" id="contrainte-area-h" value="100,0">
+                                        <span class="unit-poc">mm</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -2754,6 +2790,7 @@
             </div>
 
             <!-- ==================== SECTION BORNES DE TAILLE ==================== -->
+            <div id="contrainte-bornes-section">
             <div class="section-poc" data-section-id="contrainte-taille">
                 <div class="section-header-poc">Bornes de taille</div>
                 <div class="section-content-poc" id="contrainte-taille-content">
@@ -2821,8 +2858,10 @@
                     </div>
                 </div>
             </div>
+            </div>
 
             <!-- ==================== SECTION STYLE (QR MARKETEAM) ==================== -->
+            <div id="contrainte-style-section">
             <div class="section-poc" data-section-id="contrainte-style">
                 <div class="section-header-poc">Sections modifiables</div>
                 <div class="section-content-poc" id="contrainte-style-content">
@@ -2839,6 +2878,7 @@
                         <label class="form-label-poc">Couleurs</label>
                     </div>
                 </div>
+            </div>
             </div>
 
         </div>
