@@ -5736,7 +5736,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * Vérifie si une zone est sélectionnable.
-     * Une zone non sélectionnable ne peut pas être cliquée/sélectionnée par l'utilisateur.
+     * En mode Template, retourne toujours true (créateur peut tout sélectionner).
+     * En mode Standard, respecte la contrainte global.selectionnable.
      * 
      * **Valeur par défaut** : `true` (une zone est sélectionnable par défaut)
      * 
@@ -5752,6 +5753,14 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function isZoneSelectionnable(zoneData) {
         if (!zoneData) return true;
+        
+        // En mode Template, toutes les zones sont sélectionnables
+        // (le créateur doit pouvoir travailler sur toutes les zones)
+        if (isTemplateMode()) {
+            return true;
+        }
+        
+        // En mode Standard, appliquer la contrainte
         if (!zoneData.contrainte?.global || zoneData.contrainte.global.selectionnable === undefined) {
             return true; // Par défaut sélectionnable
         }
@@ -5760,7 +5769,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * Vérifie si la toolbar flottante peut être affichée pour une zone.
-     * Si `false`, la toolbar ne s'affiche pas quand la zone est sélectionnée.
+     * En mode Template, retourne toujours true (créateur peut tout modifier).
+     * En mode Standard, respecte la contrainte global.toolbarAffichable.
      * 
      * **Valeur par défaut** : `true` (toolbar affichable par défaut)
      * 
@@ -5776,6 +5786,14 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function isZoneToolbarAffichable(zoneData) {
         if (!zoneData) return true;
+        
+        // En mode Template, la toolbar est toujours affichable
+        // (le créateur doit pouvoir modifier toutes les zones)
+        if (isTemplateMode()) {
+            return true;
+        }
+        
+        // En mode Standard, appliquer la contrainte
         if (!zoneData.contrainte?.global || zoneData.contrainte.global.toolbarAffichable === undefined) {
             return true; // Par défaut toolbar affichable
         }
@@ -7175,14 +7193,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // === SECTION GLOBAL ===
         setCheckboxInToolbar(toolbar, 'contrainte-non-supprimable', global.nonSupprimable || false);
         setCheckboxInToolbar(toolbar, 'contrainte-page-modifiable', global.pageModifiable !== false); // défaut true
-        setCheckboxInToolbar(toolbar, 'contrainte-systeme', global.systeme || false);
-        setInputInToolbar(toolbar, 'contrainte-systeme-libelle', global.systemeLibelle || '');
-        
-        // Afficher/masquer le champ libellé système
-        const systemeLibelleRow = toolbar.querySelector('#contrainte-systeme-libelle-row');
-        if (systemeLibelleRow) {
-            systemeLibelleRow.style.display = global.systeme ? '' : 'none';
-        }
+        // Zone imprimable (défaut: true)
+        setCheckboxInToolbar(toolbar, 'contrainte-imprimable', global.imprimable !== false);
+        // Zone sélectionnable (défaut: true)
+        setCheckboxInToolbar(toolbar, 'contrainte-selectionnable', global.selectionnable !== false);
         
         // === SECTION GÉOMÉTRIE ===
         setCheckboxInToolbar(toolbar, 'contrainte-position-fixe', geometrie.positionFixe || false);
@@ -7261,8 +7275,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // === SECTION GLOBAL ===
         global.nonSupprimable = getCheckboxInToolbar(toolbar, 'contrainte-non-supprimable');
         global.pageModifiable = getCheckboxInToolbar(toolbar, 'contrainte-page-modifiable');
-        global.systeme = getCheckboxInToolbar(toolbar, 'contrainte-systeme');
-        global.systemeLibelle = getInputInToolbar(toolbar, 'contrainte-systeme-libelle');
+        global.imprimable = getCheckboxInToolbar(toolbar, 'contrainte-imprimable');
+        global.selectionnable = getCheckboxInToolbar(toolbar, 'contrainte-selectionnable');
         
         // === SECTION GÉOMÉTRIE ===
         geometrie.positionFixe = getCheckboxInToolbar(toolbar, 'contrainte-position-fixe');
@@ -7355,9 +7369,9 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function updateAreaVisualization(zoneId, area) {
-        // TODO: Implémenter la visualisation de l'area (rectangle pointillé)
-        // Pour l'instant, on ne fait que logger
-        console.log(`📐 Area pour ${zoneId}:`, area);
+        // Utiliser la fonction existante createAreaElement
+        // Elle supprime l'ancienne area avant d'en créer une nouvelle
+        createAreaElement(zoneId, area);
     }
 
     /**
@@ -7366,8 +7380,8 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function removeAreaVisualization(zoneId) {
-        // TODO: Implémenter la suppression de la visualisation de l'area
-        console.log(`📐 Area supprimée pour ${zoneId}`);
+        // Utiliser la fonction existante removeAreaElement
+        removeAreaElement(zoneId);
     }
 
     /**
@@ -7388,13 +7402,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const toolbar = wrapper.closest('.toolbar-poc');
         
         // Afficher/masquer les champs conditionnels
-        if (inputId === 'contrainte-systeme') {
-            const libelleRow = toolbar.querySelector('#contrainte-systeme-libelle-row');
-            if (libelleRow) {
-                libelleRow.style.display = input.checked ? '' : 'none';
-            }
-        }
-        
         if (inputId === 'contrainte-area-active') {
             const areaFields = toolbar.querySelector('#contrainte-area-fields');
             if (areaFields) {
@@ -7458,15 +7465,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Gestion des inputs texte de contraintes
         document.addEventListener('input', function(e) {
             const input = e.target.closest('[data-tab-content="contraintes"] input[type="text"]');
-            if (input) {
-                handleConstraintInputChange(input);
-                return;
-            }
-        });
-        
-        // Gestion du champ libellé système (blur/change)
-        document.addEventListener('change', function(e) {
-            const input = e.target.closest('#contrainte-systeme-libelle');
             if (input) {
                 handleConstraintInputChange(input);
                 return;
