@@ -5972,6 +5972,11 @@ document.addEventListener('DOMContentLoaded', () => {
             resetImageSourceControls(toolbar);
         }
         
+        // Réafficher les contrôles données barcode
+        if (toolbar.id === 'barcode-toolbar') {
+            resetBarcodeDataControls(toolbar);
+        }
+        
         // Réafficher toutes les sections
         const sections = toolbar.querySelectorAll('.section-hidden');
         sections.forEach(section => section.classList.remove('section-hidden'));
@@ -6145,6 +6150,107 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * Masque les boutons radio de sélection du type de source (Fixe/Champ) dans la toolbar barcode.
+     * 
+     * @param {HTMLElement} toolbar - Toolbar barcode
+     * @returns {void}
+     */
+    function hideBarcodeSourceRadios(toolbar) {
+        if (!toolbar) return;
+        
+        // Masquer le conteneur des boutons radio
+        const radioContainer = toolbar.querySelector('#barcode-source-type-container');
+        if (radioContainer) {
+            radioContainer.style.display = 'none';
+        }
+        
+        // Alternative : chercher par les inputs radio eux-mêmes
+        const radios = toolbar.querySelectorAll('input[name="barcode-source-type"]');
+        radios.forEach(radio => {
+            const wrapper = radio.closest('.radio-wrapper, .radio-group, label');
+            if (wrapper) {
+                wrapper.style.display = 'none';
+            }
+        });
+    }
+
+    /**
+     * Masque les contrôles de données (valeur fixe et sélection champ) dans la toolbar barcode.
+     * 
+     * @param {HTMLElement} toolbar - Toolbar barcode
+     * @returns {void}
+     */
+    function hideBarcodeDataControls(toolbar) {
+        if (!toolbar) return;
+        
+        // Masquer le champ de saisie de valeur fixe
+        const valueInput = toolbar.querySelector('#barcode-value-input, #barcode-static-value, input[name="barcode-value"]');
+        if (valueInput) {
+            const wrapper = valueInput.closest('.input-wrapper, .field-wrapper, .form-group');
+            if (wrapper) {
+                wrapper.style.display = 'none';
+            } else {
+                valueInput.style.display = 'none';
+            }
+        }
+        
+        // Masquer le dropdown de sélection de champ de fusion
+        const fieldSelect = toolbar.querySelector('#barcode-field-select, #barcode-merge-field, select[name="barcode-field"]');
+        if (fieldSelect) {
+            const wrapper = fieldSelect.closest('.select-wrapper, .field-wrapper, .form-group');
+            if (wrapper) {
+                wrapper.style.display = 'none';
+            } else {
+                fieldSelect.style.display = 'none';
+            }
+        }
+    }
+
+    /**
+     * Réaffiche les contrôles de la section données barcode.
+     * Appelé par resetToolbarSectionsVisibility.
+     * 
+     * @param {HTMLElement} toolbar - Toolbar barcode
+     * @returns {void}
+     */
+    function resetBarcodeDataControls(toolbar) {
+        if (!toolbar) return;
+        
+        // Réafficher le conteneur des boutons radio
+        const radioContainer = toolbar.querySelector('#barcode-source-type-container');
+        if (radioContainer) {
+            radioContainer.style.display = '';
+        }
+        
+        // Réafficher les radios individuels
+        const radios = toolbar.querySelectorAll('input[name="barcode-source-type"]');
+        radios.forEach(radio => {
+            const wrapper = radio.closest('.radio-wrapper, .radio-group, label');
+            if (wrapper) {
+                wrapper.style.display = '';
+            }
+        });
+        
+        // Réafficher input valeur
+        const valueInput = toolbar.querySelector('#barcode-value-input, #barcode-static-value, input[name="barcode-value"]');
+        if (valueInput) {
+            const wrapper = valueInput.closest('.input-wrapper, .field-wrapper, .form-group');
+            if (wrapper) {
+                wrapper.style.display = '';
+            }
+        }
+        
+        // Réafficher select champ
+        const fieldSelect = toolbar.querySelector('#barcode-field-select, #barcode-merge-field, select[name="barcode-field"]');
+        if (fieldSelect) {
+            const wrapper = fieldSelect.closest('.select-wrapper, .field-wrapper, .form-group');
+            if (wrapper) {
+                wrapper.style.display = '';
+            }
+        }
+    }
+
+    /**
      * Applique les contraintes de style sur une toolbar en mode Standard.
      * Masque les sections dont la contrainte *Modifiable = false.
      * 
@@ -6266,6 +6372,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (style.typeCodeModifiable === false) {
                     setSectionVisibility(toolbar, 'barcode-type', false);
                 }
+                // typeSourceModifiable → masquer boutons radio Fixe/Champ
+                if (style.typeSourceModifiable === false) {
+                    hideBarcodeSourceRadios(toolbar);
+                }
+                // donneesModifiable → masquer champs valeur/sélection + section qr-smart
+                if (style.donneesModifiable === false) {
+                    hideBarcodeDataControls(toolbar);
+                    setSectionVisibility(toolbar, 'qr-smart', false);
+                }
+                // Si typeSourceModifiable ET donneesModifiable sont false, masquer section data
+                if (style.typeSourceModifiable === false && style.donneesModifiable === false) {
+                    setSectionVisibility(toolbar, 'data', false);
+                }
                 // apparenceModifiable
                 if (style.apparenceModifiable === false) {
                     setSectionVisibility(toolbar, 'display', false);
@@ -6274,7 +6393,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (style.fondModifiable === false) {
                     setSectionVisibility(toolbar, 'background', false);
                 }
-                // Note: typeSourceModifiable et donneesModifiable seront gérés en Phase 7.6
                 break;
                 
             case 'qr':
