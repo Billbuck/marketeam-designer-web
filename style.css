@@ -639,7 +639,7 @@ h4 {
     position: fixed;
     top: 20px;
     right: 20px;
-    width: 280px;
+    width: 300px;
     z-index: 2000;
     background: var(--toolbar-bg);
     border-radius: 8px;
@@ -2041,10 +2041,14 @@ html[data-theme="LTR"] {
     align-items: center;
     justify-content: space-between;
     cursor: move;
+    border-radius: var(--poc-border-radius) var(--poc-border-radius) 0 0;
 }
 
 .toolbar-title-poc {
-    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
     font-weight: 600;
     letter-spacing: 0.5px;
     text-transform: uppercase;
@@ -2479,8 +2483,20 @@ html[data-theme="LTR"] {
 
 /* Icône titre toolbar */
 .toolbar-title-icon {
-    font-size: 14px;
-    margin-right: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    color: white;
+    flex-shrink: 0;
+}
+
+.toolbar-title-icon svg {
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
 }
 
 /* Indicateur DPI POC */
@@ -3339,7 +3355,20 @@ html[data-theme="LTR"] {
 }
 
 .toolbar-title-icon {
-    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    color: white;
+    flex-shrink: 0;
+}
+
+.toolbar-title-icon svg {
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
 }
 
 /* Content scrollable */
@@ -3690,39 +3719,58 @@ body.preview-mode-active #actions-section .btn:not(#btn-delete-zone) {
 
 .toolbar-tabs-poc {
     display: flex;
-    border-bottom: 1px solid var(--poc-border);
     background: var(--poc-bg-section);
-    padding: 0 8px;
-    gap: 4px;
+    padding: 8px;
+    gap: 8px;
 }
 
 .toolbar-tab-poc {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     padding: 8px 16px;
-    background: transparent;
-    border: none;
-    border-bottom: 2px solid transparent;
-    color: var(--poc-text-label);
+    height: 36px;
+    border: 1px solid var(--poc-border-color);
+    border-radius: var(--poc-border-radius-sm, 6px);
+    background: var(--poc-bg-section);
+    color: var(--poc-text-primary);
     font-size: 12px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    transition: all 0.15s ease;
 }
 
 .toolbar-tab-poc:hover {
-    color: var(--poc-text-primary);
-    background: var(--poc-bg-primary);
+    border-color: var(--poc-theme-primary, var(--poc-accent));
+    background: var(--poc-theme-primary-light, rgba(99, 102, 241, 0.1));
+    color: var(--poc-theme-primary-dark, var(--poc-accent));
 }
 
 .toolbar-tab-poc.active {
-    color: var(--poc-accent);
-    border-bottom-color: var(--poc-accent);
+    border-color: var(--poc-theme-primary, var(--poc-accent));
+    background: var(--poc-theme-primary-light, rgba(99, 102, 241, 0.1));
+    color: var(--poc-theme-primary-dark, var(--poc-accent));
 }
 
 .toolbar-tab-poc .tab-icon {
-    font-size: 14px;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--poc-theme-primary, var(--poc-accent));
+    transition: color 0.15s ease;
+}
+
+.toolbar-tab-poc .tab-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.toolbar-tab-poc:hover .tab-icon,
+.toolbar-tab-poc.active .tab-icon {
+    color: var(--poc-theme-primary-dark, var(--poc-accent));
 }
 
 .toolbar-tab-content-poc {
@@ -3785,6 +3833,7 @@ body.preview-mode-active #actions-section .btn:not(#btn-delete-zone) {
 #contrainte-style-section {
     margin: 0;
     padding: 0;
+    display: contents; /* Supprime l'impact du conteneur sur le layout pour uniformiser les espacements */
 }
 
 /* Lignes avec champs de saisie : garder plus d'espace */
