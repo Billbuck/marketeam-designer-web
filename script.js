@@ -206,6 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {'barcode'} type - Type de zone (toujours 'barcode')
      * @property {string} nom - Nom de la zone code-barres
      * @property {string} typeCodeBarres - Type de code (code128, ean13, qrcode, datamatrix, etc.)
+ * @property {'square'|'rectangle'} [forme] - Forme du DataMatrix : 'square' (défaut) ou 'rectangle' (12x36, ratio 3:1)
      * @property {string} champFusion - Nom du champ de fusion (sans les @)
      * @property {'aucun'|'dessous'} texteLisible - Affichage du texte lisible
      * @property {number} taillePolice - Taille du texte lisible en points
@@ -1099,6 +1100,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Contrôles Section Type de code
     /** @type {HTMLSelectElement|null} Dropdown type de code-barres */
     const barcodeInputType = document.getElementById('barcode-input-type');
+    /** @type {HTMLElement|null} Row combo forme DataMatrix (visible si datamatrix) */
+    const barcodeShapeRow = document.getElementById('barcode-shape-row');
+    /** @type {HTMLSelectElement|null} Combo forme DataMatrix (square/rectangle) */
+    const barcodeInputShape = document.getElementById('barcode-input-shape');
     
     // Contrôles Section Données
     /** @type {HTMLSelectElement|null} Dropdown source (fixe/champ) */
@@ -2682,6 +2687,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {string} typeCode - Type de code-barres (qrcode, code128, ean13, datamatrix, etc.)
      * @param {string} [color='#000000'] - Couleur du code-barres (format hex)
      * @param {string|null} [customValue=null] - Valeur personnalisée à encoder (si null ou vide, utilise sampleValue)
+     * @param {'square'|'rectangle'} [forme='square'] - Forme du DataMatrix (ignoré pour autres types). Défaut: 'square'
      * @returns {string} Data URL de l'image PNG transparent (data:image/png;base64,...) ou SVG inline fallback
      * 
      * @example
@@ -2697,7 +2703,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @see BARCODE_BWIPJS_CONFIG - Configuration bwip-js par type
      * @see getFallbackBarcodeSvg - SVG de secours si bwip-js échoue
      */
-    function generateBarcodeImage(typeCode, color = DEFAULT_TEXT_COLOR, customValue = null) {
+    function generateBarcodeImage(typeCode, color = DEFAULT_TEXT_COLOR, customValue = null, forme = 'square') {
         // Vérifier que bwip-js est chargé
         if (typeof bwipjs === 'undefined') {
             console.warn('bwip-js non chargé, utilisation du fallback');
@@ -2730,10 +2736,20 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         
         // Ajustements spécifiques par type
+        // Ajustements spécifiques pour codes 2D
         if (config.is2D) {
-            // Codes 2D : format carré
+            // Codes 2D : format carré par défaut
             options.width = 25;
             options.height = 25;
+        }
+        
+        // DataMatrix rectangulaire : format 12x36 fixe (ratio 3:1, requis La Poste)
+        const isDataMatrix = (typeCode === 'datamatrix' || typeCode === 'DataMatrix');
+        if (isDataMatrix && forme === 'rectangle') {
+            options.dmre = true;
+            options.version = '12x36';
+            delete options.width;
+            delete options.height;
         }
         
         // Ajustement pour PDF417 (plus compact)
@@ -11528,6 +11544,15 @@ document.addEventListener('DOMContentLoaded', () => {
             barcodeInputType.value = zoneData.typeCodeBarres || 'code128';
         }
         
+        // ─── FORME DATAMATRIX ───
+        const isDataMatrix = (zoneData.typeCodeBarres === 'datamatrix' || zoneData.typeCodeBarres === 'DataMatrix');
+        if (barcodeShapeRow) {
+            barcodeShapeRow.style.display = isDataMatrix ? '' : 'none';
+        }
+        if (barcodeInputShape) {
+            barcodeInputShape.value = zoneData.forme || 'square';
+        }
+        
         // ─── QR CODE INTELLIGENT ───
         const isQrCode = (zoneData.typeCodeBarres === 'qrcode' || zoneData.typeCodeBarres === 'QRCode');
         toggleQrCodeSection(isQrCode);
@@ -11759,7 +11784,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     barcodeTextSizeRow.style.display = (is2D || !isShowTextChecked) ? 'none' : '';
                 }
                 
-                updateSelectedBarcodeZone((zoneData) => {
+                // Afficher/masquer le combo Forme selon le type
+                const isDataMatrix = (newType === 'datamatrix' || newType === 'DataMatrix');
+                if (barcodeShapeRow) {
+                    barcodeShapeRow.style.display = isDataMatrix ? '' : 'none';
+                }
+                
+                updateSelectedBarcodeZone((zoneData, zoneEl) => {
+                    // Récupérer l'ancien type pour détecter les changements de "famille"
+                    const oldType = zoneData.typeCodeBarres || 'code128';
+                    const oldConfig = BARCODE_BWIPJS_CONFIG[oldType];
+                    const oldIs2D = oldConfig ? oldConfig.is2D : false;
+                    const oldIsDataMatrixRect = (oldType === 'datamatrix' || oldType === 'DataMatrix') && zoneData.forme === 'rectangle';
+                    
                     zoneData.typeCodeBarres = newType;
                     if (is2D) {
                         // Pour les 2D, forcer "aucun" texte
@@ -11768,6 +11805,71 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Pour les 1D, restaurer selon l'état de la checkbox
                         zoneData.texteLisible = isShowTextChecked ? 'dessous' : 'aucun';
                     }
+                    
+                    // Gérer la forme DataMatrix
+                    if (isDataMatrix) {
+                        // Initialiser la forme si pas définie
+                        if (!zoneData.forme) {
+                            zoneData.forme = 'square';
+                        }
+                        // Synchroniser le combo
+                        if (barcodeInputShape) {
+                            barcodeInputShape.value = zoneData.forme;
+                        }
+                    } else {
+                        // Pas DataMatrix : supprimer la forme
+                        delete zoneData.forme;
+                    }
+                    
+                    // Nettoyer qrConfig si on quitte QR Code
+                    const isQrCode = (newType === 'qrcode' || newType === 'QRCode');
+                    if (!isQrCode && zoneData.qrConfig) {
+                        delete zoneData.qrConfig;
+                    }
+                    
+                    // ═══ RÉAJUSTER LES DIMENSIONS SELON LE NOUVEAU TYPE ═══
+                    const currentWidth = zoneEl.offsetWidth;
+                    const currentHeight = zoneEl.offsetHeight;
+                    const PADDING_BORDER = 10;
+                    
+                    // Déterminer si le nouveau type est DataMatrix Rectangle
+                    const newIsDataMatrixRect = isDataMatrix && zoneData.forme === 'rectangle';
+                    
+                    if (newIsDataMatrixRect) {
+                        // Vers DataMatrix Rectangle : ratio 3:1
+                        const innerWidth = currentWidth - PADDING_BORDER;
+                        const innerHeight = Math.round(innerWidth / 3);
+                        const newHeight = innerHeight + PADDING_BORDER;
+                        
+                        zoneData.w = currentWidth;
+                        zoneData.h = newHeight;
+                        zoneData.wMm = pxToMm(currentWidth);
+                        zoneData.hMm = pxToMm(newHeight);
+                        zoneEl.style.width = currentWidth + 'px';
+                        zoneEl.style.height = newHeight + 'px';
+                    } else if (is2D && !newIsDataMatrixRect) {
+                        // Vers code 2D (QR, DataMatrix carré) : forcer carré
+                        const size = Math.max(currentWidth, currentHeight);
+                        
+                        zoneData.w = size;
+                        zoneData.h = size;
+                        zoneData.wMm = pxToMm(size);
+                        zoneData.hMm = pxToMm(size);
+                        zoneEl.style.width = size + 'px';
+                        zoneEl.style.height = size + 'px';
+                    } else if (!is2D && (oldIs2D || oldIsDataMatrixRect)) {
+                        // Vers code 1D depuis un 2D ou DataMatrix Rectangle : ratio ~3:1 (typique pour code-barres 1D)
+                        const newWidth = Math.max(currentWidth, currentHeight);
+                        const newHeight = Math.max(50, Math.round(newWidth / 3));
+                        
+                        zoneData.w = newWidth;
+                        zoneData.h = newHeight;
+                        zoneData.wMm = pxToMm(newWidth);
+                        zoneData.hMm = pxToMm(newHeight);
+                        zoneEl.style.width = newWidth + 'px';
+                        zoneEl.style.height = newHeight + 'px';
+                    }
+                    // Si on reste dans la même famille (1D→1D ou 2D carré→2D carré), on garde les dimensions
                 });
                 
                 // Gérer l'affichage section QR Code intelligent
@@ -11800,6 +11902,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Mettre à jour la visibilité de toolbar-data (pour QR Code)
                 updateToolbarDataVisibility();
+            });
+        }
+        
+        // Forme DataMatrix (square/rectangle)
+        if (barcodeInputShape) {
+            barcodeInputShape.addEventListener('change', () => {
+                const newForme = barcodeInputShape.value;
+                updateSelectedBarcodeZone((zoneData) => {
+                    zoneData.forme = newForme;
+                });
             });
         }
         
@@ -14521,7 +14633,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Générer l'image QR
             let barcodeImage;
             if (qrValidation.valid) {
-                barcodeImage = generateBarcodeImage(typeCode, color, contentForQr);
+                barcodeImage = generateBarcodeImage(typeCode, color, contentForQr, zoneData.forme);
             } else {
                 // Placeholder si invalide
                 barcodeImage = 'data:image/svg+xml,' + encodeURIComponent(SVG_BARCODE_2D_FALLBACK);
@@ -14650,7 +14762,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const fallbackSvg = config && config.is2D ? SVG_BARCODE_2D_FALLBACK : SVG_BARCODE_FALLBACK;
             barcodeImage = 'data:image/svg+xml;base64,' + btoa(fallbackSvg);
         } else {
-            barcodeImage = generateBarcodeImage(typeCode, color, valueToEncode);
+            barcodeImage = generateBarcodeImage(typeCode, color, valueToEncode, zoneData.forme);
         }
         
         // Vérifier si c'est un code 2D (jamais de texte pour les codes 2D)
@@ -14675,9 +14787,28 @@ document.addEventListener('DOMContentLoaded', () => {
             label.remove();
         }
         
-        // Ajuster les dimensions si passage 1D <-> 2D
-        if (is2D && Math.abs(zoneData.w - zoneData.h) > 10) {
-            // Pour les 2D, rendre carré (prendre la plus petite dimension)
+        // Ajuster les dimensions selon le type et la forme
+        const isDataMatrix = (typeCode === 'datamatrix' || typeCode === 'DataMatrix');
+        const isDataMatrixRect = isDataMatrix && zoneData.forme === 'rectangle';
+        
+        if (isDataMatrixRect) {
+            // DataMatrix rectangulaire : ratio fixe 3:1
+            // Tenir compte du padding (4px×2) + border (~2px) = 10px
+            const PADDING_BORDER = 10;
+            const currentWidth = zoneData.w || zoneEl.offsetWidth || 150;
+            // Calculer la hauteur pour que l'espace INTÉRIEUR ait un ratio 3:1
+            const innerWidth = currentWidth - PADDING_BORDER;
+            const innerHeight = Math.round(innerWidth / 3);
+            const newHeight = innerHeight + PADDING_BORDER;
+            
+            zoneData.w = currentWidth;
+            zoneData.h = newHeight;
+            zoneData.wMm = pxToMm(currentWidth);
+            zoneData.hMm = pxToMm(newHeight);
+            zoneEl.style.width = currentWidth + 'px';
+            zoneEl.style.height = newHeight + 'px';
+        } else if (is2D && Math.abs(zoneData.w - zoneData.h) > 10) {
+            // Autres codes 2D : rendre carré (prendre la plus petite dimension)
             const size = Math.min(zoneData.w || 100, zoneData.h || 100);
             zoneData.w = size;
             zoneData.h = size;
@@ -17094,12 +17225,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             
-            if (is2DBarcode) {
-                // Codes 2D : forcer un carré
+            // Vérifier si c'est un DataMatrix rectangulaire
+            const isDataMatrix = (zoneDataResize.typeCodeBarres === 'datamatrix' || zoneDataResize.typeCodeBarres === 'DataMatrix');
+            const isDataMatrixRect = isDataMatrix && zoneDataResize.forme === 'rectangle';
+            
+            if (isDataMatrixRect) {
+                // DataMatrix rectangulaire : ratio fixe 3:1 pour l'espace INTÉRIEUR
+                // Tenir compte du padding (4px×2) + border (~2px) = 10px
+                const PADDING_BORDER = 10;
+                let targetWidth = Math.max(60, newW);
+                targetWidth = Math.min(targetWidth, maxWidth);
+                
+                // Calculer la hauteur pour que l'espace intérieur ait un ratio 3:1
+                const innerWidth = targetWidth - PADDING_BORDER;
+                const innerHeight = Math.round(innerWidth / 3);
+                const targetHeight = innerHeight + PADDING_BORDER;
+                
+                // Vérifier que la hauteur ne dépasse pas maxHeight
+                if (targetHeight > maxHeight) {
+                    const maxInnerHeight = maxHeight - PADDING_BORDER;
+                    const maxInnerWidth = maxInnerHeight * 3;
+                    targetWidth = maxInnerWidth + PADDING_BORDER;
+                }
+                
+                // Recalculer avec la largeur finale
+                const finalInnerWidth = targetWidth - PADDING_BORDER;
+                const finalInnerHeight = Math.round(finalInnerWidth / 3);
+                const finalHeight = finalInnerHeight + PADDING_BORDER;
+                
+                zone.style.width = targetWidth + 'px';
+                zone.style.height = finalHeight + 'px';
+            } else if (is2DBarcode) {
+                // Autres codes 2D : forcer un carré
                 let size = Math.max(40, Math.max(newW, newH));
                 
                 // Contrainte taille minimum QR basée sur la densité de données
-                // Uniquement pour les codes-barres avec QR intelligent (pas les QR Marketeam)
                 if (isBarcodeWithQrConfig(zoneDataResize)) {
                     const qrMinSize = getQrMinSizeConstraint(firstSelectedId);
                     if (qrMinSize > 0) {
