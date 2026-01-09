@@ -7348,6 +7348,54 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
+        // === SECTION STYLE (Sections modifiables) ===
+        const style = contrainte.style || {};
+        const zoneType = zoneData.type;
+        
+        // Checkboxes communes ou spécifiques selon le type de zone
+        // Zone Texte (textQuill/text) : contenu, typographie, alignements, fond, bordure
+        // Zone Image : contenu, affichage, fond, bordure
+        // Zone Barcode : contenu, apparence, fond
+        // Zone QR : couleurs
+        
+        // Contenu (texte, image, barcode)
+        if (zoneType === 'textQuill' || zoneType === 'text' || zoneType === 'image' || zoneType === 'barcode') {
+            setCheckboxInToolbar(toolbar, 'contrainte-contenu', style.contenuModifiable !== false);
+        }
+        
+        // Typographie (texte uniquement)
+        if (zoneType === 'textQuill' || zoneType === 'text') {
+            setCheckboxInToolbar(toolbar, 'contrainte-typographie', style.typographieModifiable !== false);
+            setCheckboxInToolbar(toolbar, 'contrainte-alignements', style.alignementsModifiable !== false);
+        }
+        
+        // Affichage (image uniquement)
+        if (zoneType === 'image') {
+            setCheckboxInToolbar(toolbar, 'contrainte-affichage', style.affichageModifiable !== false);
+        }
+        
+        // Apparence (barcode uniquement)
+        if (zoneType === 'barcode') {
+            setCheckboxInToolbar(toolbar, 'contrainte-apparence', style.apparenceModifiable !== false);
+        }
+        
+        // Couleurs (QR uniquement)
+        if (zoneType === 'qr') {
+            setCheckboxInToolbar(toolbar, 'contrainte-couleurs', style.couleursModifiable !== false);
+        }
+        
+        // Fond (texte, image, barcode)
+        if (zoneType === 'textQuill' || zoneType === 'text' || zoneType === 'image' || zoneType === 'barcode') {
+            setCheckboxInToolbar(toolbar, 'contrainte-fond', style.fondModifiable !== false);
+        }
+        
+        // Bordure (texte, image)
+        if (zoneType === 'textQuill' || zoneType === 'text' || zoneType === 'image') {
+            setCheckboxInToolbar(toolbar, 'contrainte-bordure', style.bordureModifiable !== false);
+        }
+        
+        console.log(`🎨 Contraintes style chargées pour ${zoneId} (type: ${zoneType}):`, style);
+        
         // Mettre à jour la visibilité des sections selon l'état des checkboxes maîtres
         const isSelectionnable = getCheckboxInToolbar(toolbar, 'contrainte-selectionnable');
         const isLocked = getCheckboxInToolbar(toolbar, 'contrainte-locked');
@@ -7423,6 +7471,57 @@ document.addEventListener('DOMContentLoaded', () => {
             delete geometrie.maxHMm;
         }
         
+        // === SECTION STYLE (Sections modifiables) ===
+        // Initialiser la structure style si nécessaire
+        if (!zoneData.contrainte.style) {
+            zoneData.contrainte.style = {};
+        }
+        const style = zoneData.contrainte.style;
+        const zoneType = zoneData.type;
+        
+        // Sauvegarder uniquement les checkboxes présentes pour ce type de zone
+        // Zone Texte (textQuill/text) : contenu, typographie, alignements, fond, bordure
+        // Zone Image : contenu, affichage, fond, bordure
+        // Zone Barcode : contenu, apparence, fond
+        // Zone QR : couleurs
+        
+        // Contenu (texte, image, barcode)
+        if (zoneType === 'textQuill' || zoneType === 'text' || zoneType === 'image' || zoneType === 'barcode') {
+            style.contenuModifiable = getCheckboxInToolbar(toolbar, 'contrainte-contenu');
+        }
+        
+        // Typographie et alignements (texte uniquement)
+        if (zoneType === 'textQuill' || zoneType === 'text') {
+            style.typographieModifiable = getCheckboxInToolbar(toolbar, 'contrainte-typographie');
+            style.alignementsModifiable = getCheckboxInToolbar(toolbar, 'contrainte-alignements');
+        }
+        
+        // Affichage (image uniquement)
+        if (zoneType === 'image') {
+            style.affichageModifiable = getCheckboxInToolbar(toolbar, 'contrainte-affichage');
+        }
+        
+        // Apparence (barcode uniquement)
+        if (zoneType === 'barcode') {
+            style.apparenceModifiable = getCheckboxInToolbar(toolbar, 'contrainte-apparence');
+        }
+        
+        // Couleurs (QR uniquement)
+        if (zoneType === 'qr') {
+            style.couleursModifiable = getCheckboxInToolbar(toolbar, 'contrainte-couleurs');
+        }
+        
+        // Fond (texte, image, barcode)
+        if (zoneType === 'textQuill' || zoneType === 'text' || zoneType === 'image' || zoneType === 'barcode') {
+            style.fondModifiable = getCheckboxInToolbar(toolbar, 'contrainte-fond');
+        }
+        
+        // Bordure (texte, image)
+        if (zoneType === 'textQuill' || zoneType === 'text' || zoneType === 'image') {
+            style.bordureModifiable = getCheckboxInToolbar(toolbar, 'contrainte-bordure');
+        }
+        
+        console.log(`🎨 Contraintes style sauvegardées pour ${zoneId} (type: ${zoneType}):`, style);
         console.log(`💾 Contraintes sauvegardées pour ${zoneId}:`, zoneData.contrainte);
     }
 
