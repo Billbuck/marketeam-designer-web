@@ -5962,6 +5962,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function resetToolbarSectionsVisibility(toolbar) {
         if (!toolbar) return;
         
+        // Réactiver Quill si c'est une toolbar texte
+        if (toolbar.id === 'quill-toolbar') {
+            setQuillReadonly(false);
+        }
+        
         // Réafficher toutes les sections
         const sections = toolbar.querySelectorAll('.section-hidden');
         sections.forEach(section => section.classList.remove('section-hidden'));
@@ -5974,6 +5979,51 @@ document.addEventListener('DOMContentLoaded', () => {
             const inputs = el.querySelectorAll('input, select, button');
             inputs.forEach(input => input.disabled = false);
         });
+    }
+
+    /**
+     * Active ou désactive le mode lecture seule pour l'éditeur Quill de la zone sélectionnée.
+     * En mode readonly, le texte est visible mais non éditable.
+     * 
+     * @param {boolean} readonly - true pour activer le mode lecture seule
+     * @returns {void}
+     * 
+     * @example
+     * // Passer Quill en lecture seule
+     * setQuillReadonly(true);
+     * 
+     * // Réactiver l'édition
+     * setQuillReadonly(false);
+     */
+    function setQuillReadonly(readonly) {
+        if (selectedZoneIds.length !== 1) return;
+        
+        const zoneId = selectedZoneIds[0];
+        const quillInstance = quillInstances.get(zoneId);
+        
+        if (!quillInstance) return;
+        
+        if (readonly) {
+            quillInstance.disable();
+            // Ajouter une classe visuelle pour indiquer le mode readonly
+            const zoneEl = document.getElementById(zoneId);
+            if (zoneEl) {
+                const editor = zoneEl.querySelector('.ql-editor');
+                if (editor) {
+                    editor.classList.add('quill-readonly');
+                }
+            }
+        } else {
+            quillInstance.enable();
+            // Retirer la classe visuelle
+            const zoneEl = document.getElementById(zoneId);
+            if (zoneEl) {
+                const editor = zoneEl.querySelector('.ql-editor');
+                if (editor) {
+                    editor.classList.remove('quill-readonly');
+                }
+            }
+        }
     }
 
     /**
@@ -6042,6 +6092,12 @@ document.addEventListener('DOMContentLoaded', () => {
         switch (zoneType) {
             case 'text':
             case 'textQuill':
+                // contenuModifiable → Quill readonly
+                if (style.contenuModifiable === false) {
+                    setQuillReadonly(true);
+                } else {
+                    setQuillReadonly(false);
+                }
                 // typographieModifiable
                 if (style.typographieModifiable === false) {
                     setSectionVisibility(toolbar, 'typography', false);
@@ -21113,6 +21169,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.applyConstraintsToToolbar = applyConstraintsToToolbar;
     window.isZoneSupprimable = isZoneSupprimable;
     window.getCurrentPageZones = getCurrentPageZones;
+    window.setQuillReadonly = setQuillReadonly;
 
     // ─────────────────────────────────────────────────────────────────────────
     // Aperçu de fusion - Event Listeners (Phase 2 - UI seulement)

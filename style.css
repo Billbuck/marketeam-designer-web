@@ -3974,3 +3974,13 @@ button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+/* Quill en mode lecture seule */
+.quill-readonly {
+    background-color: #f5f5f5 !important;
+    cursor: not-allowed !important;
+}
+
+.quill-readonly * {
+    cursor: not-allowed !important;
+}
