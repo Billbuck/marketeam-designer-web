@@ -671,7 +671,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * @typedef {Object} ContrainteStyleImage
-     * @property {boolean} [contenuModifiable] - Image/source modifiable. Défaut: true
+     * @property {boolean} [typeSourceModifiable] - Peut basculer entre Image fixe et Champ de fusion. Défaut: true
+     * @property {boolean} [imageModifiable] - Peut changer l'image (upload ou sélection champ). Défaut: true
      * @property {boolean} [affichageModifiable] - Section Affichage modifiable. Défaut: true
      * @property {boolean} [fondModifiable] - Section Fond modifiable. Défaut: true
      * @property {boolean} [bordureModifiable] - Section Bordure modifiable. Défaut: true
@@ -7358,9 +7359,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // Zone Barcode : contenu, apparence, fond
         // Zone QR : couleurs
         
-        // Contenu (texte, image, barcode)
-        if (zoneType === 'textQuill' || zoneType === 'text' || zoneType === 'image' || zoneType === 'barcode') {
+        // Contenu (texte, barcode) - utilise contenuModifiable
+        if (zoneType === 'textQuill' || zoneType === 'text' || zoneType === 'barcode') {
             setCheckboxInToolbar(toolbar, 'contrainte-contenu', style.contenuModifiable !== false);
+        }
+        
+        // Image : typeSourceModifiable + imageModifiable (granularité spécifique)
+        if (zoneType === 'image') {
+            setCheckboxInToolbar(toolbar, 'contrainte-type-source', style.typeSourceModifiable !== false);
+            // Rétrocompat : si imageModifiable absent mais contenuModifiable présent, utiliser contenuModifiable
+            const imageModif = style.imageModifiable !== undefined ? style.imageModifiable : style.contenuModifiable;
+            setCheckboxInToolbar(toolbar, 'contrainte-contenu', imageModif !== false);
         }
         
         // Typographie (texte uniquement)
@@ -7485,9 +7494,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // Zone Barcode : contenu, apparence, fond
         // Zone QR : couleurs
         
-        // Contenu (texte, image, barcode)
-        if (zoneType === 'textQuill' || zoneType === 'text' || zoneType === 'image' || zoneType === 'barcode') {
+        // Contenu (texte, barcode) - utilise contenuModifiable
+        if (zoneType === 'textQuill' || zoneType === 'text' || zoneType === 'barcode') {
             style.contenuModifiable = getCheckboxInToolbar(toolbar, 'contrainte-contenu');
+        }
+        
+        // Image : typeSourceModifiable + imageModifiable (granularité spécifique)
+        if (zoneType === 'image') {
+            style.typeSourceModifiable = getCheckboxInToolbar(toolbar, 'contrainte-type-source');
+            style.imageModifiable = getCheckboxInToolbar(toolbar, 'contrainte-contenu');
+            // Supprimer l'ancienne propriété si présente (migration)
+            delete style.contenuModifiable;
         }
         
         // Typographie et alignements (texte uniquement)
