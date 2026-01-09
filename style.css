@@ -3945,3 +3945,32 @@ body.preview-mode-active #actions-section .btn:not(#btn-delete-zone) {
 [data-section-id="contrainte-style"] .section-content-poc {
     padding: 4px 0;
 }
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* PHASE 7 - APPLICATION DES CONTRAINTES EN MODE STANDARD          */
+/* ═══════════════════════════════════════════════════════════════ */
+
+/* Section masquée (invisible) */
+.section-hidden {
+    display: none !important;
+}
+
+/* Élément grisé (fallback si masquer trop complexe) */
+.element-disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+/* Checkbox grisée - wrapper */
+.element-disabled input[type="checkbox"] {
+    cursor: not-allowed;
+}
+
+/* Assurer que les éléments disabled natifs sont aussi grisés */
+input:disabled,
+select:disabled,
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

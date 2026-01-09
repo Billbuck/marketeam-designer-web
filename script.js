@@ -5820,6 +5820,256 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
+    // APPLICATION DES CONTRAINTES EN MODE STANDARD
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Masque ou affiche une section de toolbar par son data-section-id.
+     * En mode invisible, la section est complètement masquée (display: none).
+     * 
+     * @param {HTMLElement} toolbar - Élément toolbar contenant la section
+     * @param {string} sectionId - Valeur du data-section-id de la section
+     * @param {boolean} visible - true pour afficher, false pour masquer
+     * @returns {void}
+     * 
+     * @example
+     * // Masquer la section typographie
+     * setSectionVisibility(quillToolbar, 'typography', false);
+     * 
+     * // Afficher la section fond
+     * setSectionVisibility(quillToolbar, 'background', true);
+     */
+    function setSectionVisibility(toolbar, sectionId, visible) {
+        if (!toolbar) return;
+        
+        const section = toolbar.querySelector(`[data-section-id="${sectionId}"]`);
+        if (!section) return;
+        
+        if (visible) {
+            section.classList.remove('section-hidden');
+        } else {
+            section.classList.add('section-hidden');
+        }
+    }
+
+    /**
+     * Grise ou active un élément de formulaire.
+     * Utilisé comme fallback si masquer est trop complexe.
+     * 
+     * @param {HTMLElement} element - Élément à griser/activer
+     * @param {boolean} disabled - true pour griser, false pour activer
+     * @returns {void}
+     * 
+     * @example
+     * // Griser un input
+     * setElementDisabled(inputElement, true);
+     */
+    function setElementDisabled(element, disabled) {
+        if (!element) return;
+        
+        if (disabled) {
+            element.classList.add('element-disabled');
+            element.setAttribute('disabled', 'disabled');
+            if (element.tagName === 'INPUT' || element.tagName === 'SELECT') {
+                element.disabled = true;
+            }
+        } else {
+            element.classList.remove('element-disabled');
+            element.removeAttribute('disabled');
+            if (element.tagName === 'INPUT' || element.tagName === 'SELECT') {
+                element.disabled = false;
+            }
+        }
+    }
+
+    /**
+     * Grise ou active une checkbox avec son wrapper.
+     * La checkbox reste visible mais non modifiable si grisée.
+     * 
+     * @param {HTMLElement} toolbar - Élément toolbar contenant la checkbox
+     * @param {string} wrapperId - ID du wrapper de la checkbox
+     * @param {boolean} disabled - true pour griser, false pour activer
+     * @param {boolean} [forceChecked] - Si défini, force l'état coché/décoché
+     * @returns {void}
+     * 
+     * @example
+     * // Griser et cocher la checkbox "Verrouiller"
+     * setCheckboxDisabled(quillToolbar, 'quill-chk-locked-wrapper', true, true);
+     */
+    function setCheckboxDisabled(toolbar, wrapperId, disabled, forceChecked) {
+        if (!toolbar) return;
+        
+        const wrapper = toolbar.querySelector(`#${wrapperId}`);
+        if (!wrapper) return;
+        
+        const checkbox = wrapper.querySelector('input[type="checkbox"]');
+        if (!checkbox) return;
+        
+        if (disabled) {
+            wrapper.classList.add('element-disabled');
+            checkbox.disabled = true;
+            if (forceChecked !== undefined) {
+                checkbox.checked = forceChecked;
+            }
+        } else {
+            wrapper.classList.remove('element-disabled');
+            checkbox.disabled = false;
+        }
+    }
+
+    /**
+     * Réinitialise toutes les sections d'une toolbar à l'état visible.
+     * Appelée avant d'appliquer les contraintes pour partir d'un état propre.
+     * 
+     * @param {HTMLElement} toolbar - Élément toolbar à réinitialiser
+     * @returns {void}
+     * 
+     * @example
+     * resetToolbarSectionsVisibility(quillToolbar);
+     */
+    function resetToolbarSectionsVisibility(toolbar) {
+        if (!toolbar) return;
+        
+        // Réafficher toutes les sections
+        const sections = toolbar.querySelectorAll('.section-hidden');
+        sections.forEach(section => section.classList.remove('section-hidden'));
+        
+        // Réactiver tous les éléments désactivés
+        const disabledElements = toolbar.querySelectorAll('.element-disabled');
+        disabledElements.forEach(el => {
+            el.classList.remove('element-disabled');
+            el.removeAttribute('disabled');
+            const inputs = el.querySelectorAll('input, select, button');
+            inputs.forEach(input => input.disabled = false);
+        });
+    }
+
+    /**
+     * Applique les contraintes de style sur une toolbar en mode Standard.
+     * Masque les sections dont la contrainte *Modifiable = false.
+     * 
+     * En mode Template, cette fonction ne fait rien (le créateur peut tout modifier).
+     * 
+     * @param {HTMLElement} toolbar - Élément toolbar à modifier
+     * @param {string} zoneType - Type de zone ('textQuill', 'image', 'barcode', 'qr')
+     * @param {ZoneContrainte} contrainte - Contraintes de la zone
+     * @returns {void}
+     * 
+     * @example
+     * const contrainte = zoneData.contrainte;
+     * applyConstraintsToToolbar(quillToolbar, 'textQuill', contrainte);
+     */
+    function applyConstraintsToToolbar(toolbar, zoneType, contrainte) {
+        if (!toolbar || !contrainte) return;
+        
+        // En mode Template, ne pas appliquer les contraintes
+        if (isTemplateMode()) {
+            resetToolbarSectionsVisibility(toolbar);
+            return;
+        }
+        
+        // Réinitialiser d'abord
+        resetToolbarSectionsVisibility(toolbar);
+        
+        const { geometrie, style, global } = contrainte;
+        
+        // --- Contraintes globales ---
+        
+        // pageModifiable = false → masquer section "page"
+        if (global?.pageModifiable === false) {
+            setSectionVisibility(toolbar, 'page', false);
+        }
+        
+        // --- Contraintes géométriques ---
+        
+        // locked OU positionFixe → masquer section "geometry"
+        if (geometrie?.locked || geometrie?.positionFixe) {
+            setSectionVisibility(toolbar, 'geometry', false);
+        }
+        
+        // locked → checkbox "Verrouiller" cochée et grisée
+        if (geometrie?.locked) {
+            // Déterminer le wrapper selon le type de zone
+            const lockWrapperIds = {
+                'textQuill': 'quill-chk-locked-wrapper',
+                'text': 'quill-chk-locked-wrapper',
+                'image': 'image-chk-locked-wrapper',
+                'barcode': 'barcode-chk-locked-wrapper',
+                'qr': 'qrcode-chk-locked-wrapper'
+            };
+            const wrapperId = lockWrapperIds[zoneType];
+            if (wrapperId) {
+                setCheckboxDisabled(toolbar, wrapperId, true, true);
+            }
+        }
+        
+        // --- Contraintes de style selon le type de zone ---
+        
+        if (!style) return;
+        
+        switch (zoneType) {
+            case 'text':
+            case 'textQuill':
+                // typographieModifiable
+                if (style.typographieModifiable === false) {
+                    setSectionVisibility(toolbar, 'typography', false);
+                }
+                // alignementsModifiable
+                if (style.alignementsModifiable === false) {
+                    setSectionVisibility(toolbar, 'paragraph', false);
+                }
+                // fondModifiable
+                if (style.fondModifiable === false) {
+                    setSectionVisibility(toolbar, 'background', false);
+                }
+                // bordureModifiable
+                if (style.bordureModifiable === false) {
+                    setSectionVisibility(toolbar, 'border', false);
+                }
+                break;
+                
+            case 'image':
+                // affichageModifiable
+                if (style.affichageModifiable === false) {
+                    setSectionVisibility(toolbar, 'display', false);
+                }
+                // fondModifiable
+                if (style.fondModifiable === false) {
+                    setSectionVisibility(toolbar, 'background', false);
+                }
+                // bordureModifiable
+                if (style.bordureModifiable === false) {
+                    setSectionVisibility(toolbar, 'border', false);
+                }
+                // Note: typeSourceModifiable et imageModifiable seront gérés en Phase 7.5
+                break;
+                
+            case 'barcode':
+                // typeCodeModifiable
+                if (style.typeCodeModifiable === false) {
+                    setSectionVisibility(toolbar, 'barcode-type', false);
+                }
+                // apparenceModifiable
+                if (style.apparenceModifiable === false) {
+                    setSectionVisibility(toolbar, 'display', false);
+                }
+                // fondModifiable
+                if (style.fondModifiable === false) {
+                    setSectionVisibility(toolbar, 'background', false);
+                }
+                // Note: typeSourceModifiable et donneesModifiable seront gérés en Phase 7.6
+                break;
+                
+            case 'qr':
+                // couleursModifiable
+                if (style.couleursModifiable === false) {
+                    setSectionVisibility(toolbar, 'background', false);
+                }
+                break;
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
     // BADGES ZONES
     // ─────────────────────────────────────────────────────────────────────────────
 
@@ -20791,6 +21041,13 @@ document.addEventListener('DOMContentLoaded', () => {
     window.isTemplateMode = isTemplateMode;
     window.updateToolbarTabsVisibility = updateToolbarTabsVisibility;
     window.switchToolbarTab = switchToolbarTab;
+    
+    // Exposer les fonctions de contraintes Mode Standard pour debug/test console
+    window.setSectionVisibility = setSectionVisibility;
+    window.setElementDisabled = setElementDisabled;
+    window.setCheckboxDisabled = setCheckboxDisabled;
+    window.resetToolbarSectionsVisibility = resetToolbarSectionsVisibility;
+    window.applyConstraintsToToolbar = applyConstraintsToToolbar;
 
     // ─────────────────────────────────────────────────────────────────────────
     // Aperçu de fusion - Event Listeners (Phase 2 - UI seulement)
