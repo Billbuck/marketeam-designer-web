@@ -16664,8 +16664,16 @@ document.addEventListener('DOMContentLoaded', () => {
         
         document.addEventListener('mousemove', (e) => {
             if (!isDraggingToolbarData) return;
-            toolbarData.style.left = (e.clientX - toolbarDataOffsetX) + 'px';
-            toolbarData.style.top = (e.clientY - toolbarDataOffsetY) + 'px';
+            
+            // Contraintes de bord pour empêcher la toolbar de sortir de l'écran
+            const maxX = window.innerWidth - toolbarData.offsetWidth;
+            const maxY = window.innerHeight - toolbarData.offsetHeight;
+            
+            const x = Math.max(0, Math.min(e.clientX - toolbarDataOffsetX, maxX));
+            const y = Math.max(0, Math.min(e.clientY - toolbarDataOffsetY, maxY));
+            
+            toolbarData.style.left = `${x}px`;
+            toolbarData.style.top = `${y}px`;
             toolbarData.style.right = 'auto';
             toolbarData.style.bottom = 'auto';
         });
@@ -16677,6 +16685,103 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Note : initBarcodeToolbarComponents() et initQrcodeToolbarComponents() sont appelées
     // au premier affichage de leur toolbar respective pour éviter les problèmes avec display:none
+
+    // ─────────────────────────────── TOOLBARS - REPOSITIONNEMENT VIEWPORT ──────────────────────────
+    
+    /**
+     * Repositionne toutes les toolbars visibles dans le viewport.
+     * Appelée lors du resize de la fenêtre ou du changement de mode plein écran.
+     * Applique une marge de sécurité de 10px par rapport aux bords.
+     * 
+     * @returns {void}
+     */
+    function repositionToolbarsInViewport() {
+        const MARGIN = 10; // Marge de sécurité en pixels
+        
+        /** @type {Array<{element: HTMLElement|null, name: string}>} Liste des toolbars à vérifier */
+        const toolbars = [
+            { element: quillToolbar, name: 'quill-toolbar' },
+            { element: imageToolbar, name: 'image-toolbar' },
+            { element: barcodeToolbar, name: 'barcode-toolbar' },
+            { element: qrcodeToolbar, name: 'qrcode-toolbar' },
+            { element: toolbarData, name: 'toolbar-data' }
+        ];
+        
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        
+        toolbars.forEach(({ element, name }) => {
+            if (!element) return;
+            
+            // Vérifier si la toolbar est visible
+            const style = window.getComputedStyle(element);
+            if (style.display === 'none') return;
+            
+            const rect = element.getBoundingClientRect();
+            let needsRepositioning = false;
+            let newLeft = rect.left;
+            let newTop = rect.top;
+            
+            // Vérifier si la toolbar dépasse à droite
+            if (rect.right > viewportWidth - MARGIN) {
+                newLeft = viewportWidth - rect.width - MARGIN;
+                needsRepositioning = true;
+            }
+            
+            // Vérifier si la toolbar dépasse en bas
+            if (rect.bottom > viewportHeight - MARGIN) {
+                newTop = viewportHeight - rect.height - MARGIN;
+                needsRepositioning = true;
+            }
+            
+            // Vérifier si la toolbar dépasse à gauche
+            if (rect.left < MARGIN) {
+                newLeft = MARGIN;
+                needsRepositioning = true;
+            }
+            
+            // Vérifier si la toolbar dépasse en haut
+            if (rect.top < MARGIN) {
+                newTop = MARGIN;
+                needsRepositioning = true;
+            }
+            
+            // Appliquer le repositionnement si nécessaire
+            if (needsRepositioning) {
+                // S'assurer que les valeurs restent positives
+                newLeft = Math.max(MARGIN, newLeft);
+                newTop = Math.max(MARGIN, newTop);
+                
+                element.style.left = `${newLeft}px`;
+                element.style.top = `${newTop}px`;
+                element.style.right = 'auto';
+                element.style.bottom = 'auto';
+                
+                console.log(`[repositionToolbarsInViewport] ${name} repositionné à (${newLeft}, ${newTop})`);
+            }
+        });
+    }
+    
+    // Repositionner les toolbars lors du redimensionnement de la fenêtre
+    window.addEventListener('resize', () => {
+        repositionToolbarsInViewport();
+    });
+    
+    // Repositionner les toolbars lors du changement de mode plein écran
+    document.addEventListener('fullscreenchange', () => {
+        // Délai pour laisser le temps à la fenêtre de se redimensionner
+        setTimeout(() => {
+            repositionToolbarsInViewport();
+            console.log('[fullscreenchange] Vérification du repositionnement des toolbars');
+        }, 100);
+    });
+    
+    // Support pour les navigateurs avec préfixe
+    document.addEventListener('webkitfullscreenchange', () => {
+        setTimeout(() => {
+            repositionToolbarsInViewport();
+        }, 100);
+    });
 
     console.log('═══════════════════════════════════════════════════════════════');
     console.log('📋 PHASE 4 - Toolbar Quill connectée aux propriétés');
