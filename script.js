@@ -681,7 +681,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * @typedef {Object} ContrainteStyleBarcode
-     * @property {boolean} [contenuModifiable] - Données code-barres modifiables. Défaut: true
+     * @property {boolean} [typeCodeModifiable] - Peut changer le type de code (Code128, DataMatrix, etc.). Défaut: true
+     * @property {boolean} [typeSourceModifiable] - Peut basculer entre Valeur fixe et Champ de fusion. Défaut: true
+     * @property {boolean} [donneesModifiable] - Peut modifier la valeur ou le champ sélectionné. Défaut: true
      * @property {boolean} [apparenceModifiable] - Section Affichage modifiable. Défaut: true
      * @property {boolean} [fondModifiable] - Section Fond modifiable. Défaut: true
      * @description Contraintes de style pour les zones code-barres (barcode).
@@ -7359,9 +7361,18 @@ document.addEventListener('DOMContentLoaded', () => {
         // Zone Barcode : contenu, apparence, fond
         // Zone QR : couleurs
         
-        // Contenu (texte, barcode) - utilise contenuModifiable
-        if (zoneType === 'textQuill' || zoneType === 'text' || zoneType === 'barcode') {
+        // Contenu (texte uniquement) - utilise contenuModifiable
+        if (zoneType === 'textQuill' || zoneType === 'text') {
             setCheckboxInToolbar(toolbar, 'contrainte-contenu', style.contenuModifiable !== false);
+        }
+        
+        // Barcode : typeCodeModifiable + typeSourceModifiable + donneesModifiable (granularité spécifique)
+        if (zoneType === 'barcode') {
+            setCheckboxInToolbar(toolbar, 'contrainte-type-code', style.typeCodeModifiable !== false);
+            setCheckboxInToolbar(toolbar, 'contrainte-type-source', style.typeSourceModifiable !== false);
+            // Rétrocompat : si donneesModifiable absent mais contenuModifiable présent, utiliser contenuModifiable
+            const donneesModif = style.donneesModifiable !== undefined ? style.donneesModifiable : style.contenuModifiable;
+            setCheckboxInToolbar(toolbar, 'contrainte-contenu', donneesModif !== false);
         }
         
         // Image : typeSourceModifiable + imageModifiable (granularité spécifique)
@@ -7494,9 +7505,18 @@ document.addEventListener('DOMContentLoaded', () => {
         // Zone Barcode : contenu, apparence, fond
         // Zone QR : couleurs
         
-        // Contenu (texte, barcode) - utilise contenuModifiable
-        if (zoneType === 'textQuill' || zoneType === 'text' || zoneType === 'barcode') {
+        // Contenu (texte uniquement) - utilise contenuModifiable
+        if (zoneType === 'textQuill' || zoneType === 'text') {
             style.contenuModifiable = getCheckboxInToolbar(toolbar, 'contrainte-contenu');
+        }
+        
+        // Barcode : typeCodeModifiable + typeSourceModifiable + donneesModifiable (granularité spécifique)
+        if (zoneType === 'barcode') {
+            style.typeCodeModifiable = getCheckboxInToolbar(toolbar, 'contrainte-type-code');
+            style.typeSourceModifiable = getCheckboxInToolbar(toolbar, 'contrainte-type-source');
+            style.donneesModifiable = getCheckboxInToolbar(toolbar, 'contrainte-contenu');
+            // Supprimer l'ancienne propriété si présente (migration)
+            delete style.contenuModifiable;
         }
         
         // Image : typeSourceModifiable + imageModifiable (granularité spécifique)
