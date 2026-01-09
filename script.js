@@ -5967,6 +5967,11 @@ document.addEventListener('DOMContentLoaded', () => {
             setQuillReadonly(false);
         }
         
+        // Réafficher les contrôles source image
+        if (toolbar.id === 'image-toolbar') {
+            resetImageSourceControls(toolbar);
+        }
+        
         // Réafficher toutes les sections
         const sections = toolbar.querySelectorAll('.section-hidden');
         sections.forEach(section => section.classList.remove('section-hidden'));
@@ -6022,6 +6027,119 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (editor) {
                     editor.classList.remove('quill-readonly');
                 }
+            }
+        }
+    }
+
+    /**
+     * Masque les boutons radio de sélection du type de source (Fixe/Champ) dans la toolbar image.
+     * 
+     * @param {HTMLElement} toolbar - Toolbar image
+     * @returns {void}
+     */
+    function hideImageSourceRadios(toolbar) {
+        if (!toolbar) return;
+        
+        // Masquer le conteneur des boutons radio
+        const radioContainer = toolbar.querySelector('#image-source-type-container');
+        if (radioContainer) {
+            radioContainer.style.display = 'none';
+        }
+        
+        // Alternative : chercher par les inputs radio eux-mêmes
+        const radios = toolbar.querySelectorAll('input[name="image-source-type"]');
+        radios.forEach(radio => {
+            const wrapper = radio.closest('.radio-wrapper, .radio-group, label');
+            if (wrapper) {
+                wrapper.style.display = 'none';
+            }
+        });
+    }
+
+    /**
+     * Masque les contrôles d'upload et de sélection de champ dans la toolbar image.
+     * 
+     * @param {HTMLElement} toolbar - Toolbar image
+     * @returns {void}
+     */
+    function hideImageControls(toolbar) {
+        if (!toolbar) return;
+        
+        // Masquer le bouton/zone d'upload
+        const uploadBtn = toolbar.querySelector('#image-upload-btn, #image-upload-zone, [data-action="upload-image"]');
+        if (uploadBtn) {
+            uploadBtn.style.display = 'none';
+        }
+        
+        // Masquer l'input file
+        const fileInput = toolbar.querySelector('input[type="file"]');
+        if (fileInput) {
+            const wrapper = fileInput.closest('.upload-wrapper, .file-input-wrapper');
+            if (wrapper) {
+                wrapper.style.display = 'none';
+            } else {
+                fileInput.style.display = 'none';
+            }
+        }
+        
+        // Masquer le dropdown de sélection de champ de fusion
+        const fieldSelect = toolbar.querySelector('#image-field-select, #image-merge-field, select[name="image-field"]');
+        if (fieldSelect) {
+            const wrapper = fieldSelect.closest('.select-wrapper, .field-wrapper');
+            if (wrapper) {
+                wrapper.style.display = 'none';
+            } else {
+                fieldSelect.style.display = 'none';
+            }
+        }
+    }
+
+    /**
+     * Réaffiche les contrôles de la section source image.
+     * Appelé par resetToolbarSectionsVisibility.
+     * 
+     * @param {HTMLElement} toolbar - Toolbar image
+     * @returns {void}
+     */
+    function resetImageSourceControls(toolbar) {
+        if (!toolbar) return;
+        
+        // Réafficher le conteneur des boutons radio
+        const radioContainer = toolbar.querySelector('#image-source-type-container');
+        if (radioContainer) {
+            radioContainer.style.display = '';
+        }
+        
+        // Réafficher les radios individuels
+        const radios = toolbar.querySelectorAll('input[name="image-source-type"]');
+        radios.forEach(radio => {
+            const wrapper = radio.closest('.radio-wrapper, .radio-group, label');
+            if (wrapper) {
+                wrapper.style.display = '';
+            }
+        });
+        
+        // Réafficher upload
+        const uploadBtn = toolbar.querySelector('#image-upload-btn, #image-upload-zone, [data-action="upload-image"]');
+        if (uploadBtn) {
+            uploadBtn.style.display = '';
+        }
+        
+        // Réafficher input file wrapper
+        const fileInput = toolbar.querySelector('input[type="file"]');
+        if (fileInput) {
+            const wrapper = fileInput.closest('.upload-wrapper, .file-input-wrapper');
+            if (wrapper) {
+                wrapper.style.display = '';
+            }
+        }
+        
+        // Réafficher select champ
+        const fieldSelect = toolbar.querySelector('#image-field-select, #image-merge-field, select[name="image-field"]');
+        if (fieldSelect) {
+            const wrapper = fieldSelect.closest('.select-wrapper, .field-wrapper');
+            if (wrapper) {
+                wrapper.style.display = '';
             }
         }
     }
@@ -6117,6 +6235,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
                 
             case 'image':
+                // typeSourceModifiable → masquer boutons radio Fixe/Champ
+                if (style.typeSourceModifiable === false) {
+                    hideImageSourceRadios(toolbar);
+                }
+                // imageModifiable → masquer upload et sélection champ
+                if (style.imageModifiable === false) {
+                    hideImageControls(toolbar);
+                }
+                // Si les deux sont false, masquer toute la section source
+                if (style.typeSourceModifiable === false && style.imageModifiable === false) {
+                    setSectionVisibility(toolbar, 'source', false);
+                }
                 // affichageModifiable
                 if (style.affichageModifiable === false) {
                     setSectionVisibility(toolbar, 'display', false);
@@ -6129,7 +6259,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (style.bordureModifiable === false) {
                     setSectionVisibility(toolbar, 'border', false);
                 }
-                // Note: typeSourceModifiable et imageModifiable seront gérés en Phase 7.5
                 break;
                 
             case 'barcode':
