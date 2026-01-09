@@ -5754,6 +5754,38 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * Vérifie si une zone peut être supprimée.
+     * En mode Template, retourne toujours true (créateur peut tout supprimer).
+     * En mode Standard, respecte la contrainte global.nonSupprimable.
+     * 
+     * @param {ZoneData} zoneData - Données de la zone
+     * @returns {boolean} true si la zone peut être supprimée, false sinon
+     * 
+     * @example
+     * isZoneSupprimable({ contrainte: { global: { nonSupprimable: true } } }); // → false en Standard
+     */
+    function isZoneSupprimable(zoneData) {
+        if (!zoneData) return true;
+        
+        // En mode Template, toutes les zones sont supprimables
+        if (isTemplateMode()) {
+            return true;
+        }
+        
+        // Zone système non supprimable
+        if (isZoneSysteme(zoneData)) {
+            return false;
+        }
+        
+        // Vérifier la contrainte nonSupprimable
+        if (zoneData.contrainte?.global?.nonSupprimable === true) {
+            return false;
+        }
+        
+        return true;
+    }
+
+    /**
      * Vérifie si une zone est sélectionnable.
      * En mode Template, retourne toujours true (créateur peut tout sélectionner).
      * En mode Standard, respecte la contrainte global.selectionnable.
@@ -10699,16 +10731,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const id = selectedZoneIds[0];
             const zonesData = getCurrentPageZones();
             const zoneData = zonesData[id];
-            const isSysteme = isZoneSysteme(zoneData);
-            const isNonSupprimable = zoneData && zoneData.contrainte?.global?.nonSupprimable;
             
-            // Griser le bouton Supprimer si zone système OU zone contrainte non supprimable
-            btnDelete.disabled = isSysteme || isNonSupprimable;
+            // Griser le bouton Supprimer si zone non supprimable (prend en compte le mode Template/Standard)
+            btnDelete.disabled = !isZoneSupprimable(zoneData);
             // coordsPanel supprimé - ne rien faire
             // loadZoneDataToForm supprimé - toolbar Quill gère l'affichage
         } else {
-            // Sélection multiple : afficher le nombre de zones
-            btnDelete.disabled = false;
+            // Sélection multiple : griser si au moins une zone n'est pas supprimable
+            const zonesData = getCurrentPageZones();
+            const hasNonSupprimable = selectedZoneIds.some(id => !isZoneSupprimable(zonesData[id]));
+            btnDelete.disabled = hasNonSupprimable;
             // coordsPanel supprimé - ne rien faire
         }
 
@@ -10809,6 +10841,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedZoneIds.length === 1) {
             const zoneId = selectedZoneIds[0];
             syncQuillToolbarWithZone(zoneId);
+        }
+        
+        // Appliquer les contraintes en mode Standard
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[selectedZoneIds[0]];
+        if (zoneData?.contrainte) {
+            applyConstraintsToToolbar(quillToolbar, 'textQuill', zoneData.contrainte);
         }
     }
 
@@ -11530,6 +11569,13 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Synchroniser avec la zone sélectionnée
         syncImageToolbarWithZone(zoneId);
+        
+        // Appliquer les contraintes en mode Standard
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        if (zoneData?.contrainte) {
+            applyConstraintsToToolbar(imageToolbar, 'image', zoneData.contrainte);
+        }
     }
 
     /**
@@ -11749,6 +11795,13 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Synchroniser avec la zone sélectionnée
         syncBarcodeToolbarWithZone(zoneId);
+        
+        // Appliquer les contraintes en mode Standard
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        if (zoneData?.contrainte) {
+            applyConstraintsToToolbar(barcodeToolbar, 'barcode', zoneData.contrainte);
+        }
     }
 
     /**
@@ -12565,6 +12618,13 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Synchroniser avec la zone sélectionnée
         syncQrcodeToolbarWithZone(zoneId);
+        
+        // Appliquer les contraintes en mode Standard
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        if (zoneData?.contrainte) {
+            applyConstraintsToToolbar(qrcodeToolbar, 'qr', zoneData.contrainte);
+        }
     }
 
     /**
@@ -16612,13 +16672,16 @@ document.addEventListener('DOMContentLoaded', () => {
             // Ne pas supprimer si l'utilisateur tape dans un input ou textarea
             if (isInInput) return;
             
-            // Ne pas supprimer si une zone système est sélectionnée
+            // Ne pas supprimer si une zone non supprimable est sélectionnée (système ou contrainte)
             const zonesData = getCurrentPageZones();
-            const hasSystemeSelected = selectedZoneIds.some(id => {
+            const hasNonSupprimable = selectedZoneIds.some(id => {
                 const zoneData = zonesData[id];
-                return isZoneSysteme(zoneData);
+                return !isZoneSupprimable(zoneData);
             });
-            if (hasSystemeSelected) return;
+            if (hasNonSupprimable) {
+                console.log('🚫 Suppression bloquée - zone non supprimable dans la sélection');
+                return;
+            }
             
             showDeleteConfirmation();
         }
@@ -21048,6 +21111,8 @@ document.addEventListener('DOMContentLoaded', () => {
     window.setCheckboxDisabled = setCheckboxDisabled;
     window.resetToolbarSectionsVisibility = resetToolbarSectionsVisibility;
     window.applyConstraintsToToolbar = applyConstraintsToToolbar;
+    window.isZoneSupprimable = isZoneSupprimable;
+    window.getCurrentPageZones = getCurrentPageZones;
 
     // ─────────────────────────────────────────────────────────────────────────
     // Aperçu de fusion - Event Listeners (Phase 2 - UI seulement)
