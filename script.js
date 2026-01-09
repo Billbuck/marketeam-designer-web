@@ -5851,6 +5851,115 @@ document.addEventListener('DOMContentLoaded', () => {
         return zoneData.contrainte.global.toolbarAffichable;
     }
 
+    /**
+     * Retourne un objet contrainte complet avec les valeurs par défaut.
+     * Les contraintes de style varient selon le type de zone.
+     * 
+     * @param {string} zoneType - Type de zone ('textQuill', 'image', 'barcode', 'qr')
+     * @returns {ZoneContrainte} Objet contrainte avec toutes les valeurs par défaut
+     * 
+     * @example
+     * getDefaultContrainte('textQuill');
+     * // → { geometrie: {...}, style: {...}, global: {...} }
+     */
+    function getDefaultContrainte(zoneType) {
+        // Contraintes géométriques (communes à tous les types)
+        const geometrie = {
+            positionFixe: false,
+            locked: false,
+            minWMm: 0,
+            maxWMm: 0,
+            minHMm: 0,
+            maxHMm: 0,
+            area: null
+        };
+        
+        // Contraintes globales (communes à tous les types)
+        const global = {
+            systeme: false,
+            systemeLibelle: '',
+            nonSupprimable: false,
+            imprimable: true,
+            selectionnable: true,
+            toolbarAffichable: true,
+            pageModifiable: true
+        };
+        
+        // Contraintes de style (spécifiques au type de zone)
+        let style = {};
+        
+        switch (zoneType) {
+            case 'text':
+            case 'textQuill':
+                style = {
+                    contenuModifiable: true,
+                    typographieModifiable: true,
+                    alignementsModifiable: true,
+                    fondModifiable: true,
+                    bordureModifiable: true
+                };
+                break;
+                
+            case 'image':
+                style = {
+                    typeSourceModifiable: true,
+                    imageModifiable: true,
+                    affichageModifiable: true,
+                    fondModifiable: true,
+                    bordureModifiable: true
+                };
+                break;
+                
+            case 'barcode':
+                style = {
+                    typeCodeModifiable: true,
+                    typeSourceModifiable: true,
+                    donneesModifiable: true,
+                    apparenceModifiable: true,
+                    fondModifiable: true
+                };
+                break;
+                
+            case 'qr':
+                style = {
+                    couleursModifiable: true
+                };
+                break;
+                
+            default:
+                style = {};
+        }
+        
+        return { geometrie, style, global };
+    }
+
+    /**
+     * Fusionne les contraintes d'une zone avec les valeurs par défaut.
+     * Assure que toutes les propriétés sont présentes dans l'objet retourné.
+     * 
+     * @param {ZoneContrainte|null|undefined} contrainte - Contraintes de la zone (peut être partiel ou absent)
+     * @param {string} zoneType - Type de zone ('textQuill', 'image', 'barcode', 'qr')
+     * @returns {ZoneContrainte} Objet contrainte complet avec valeurs par défaut pour les propriétés manquantes
+     * 
+     * @example
+     * // Zone avec contrainte partielle
+     * mergeWithDefaultContrainte({ geometrie: { locked: true } }, 'textQuill');
+     * // → { geometrie: { positionFixe: false, locked: true, ... }, style: {...}, global: {...} }
+     */
+    function mergeWithDefaultContrainte(contrainte, zoneType) {
+        const defaults = getDefaultContrainte(zoneType);
+        
+        if (!contrainte) {
+            return defaults;
+        }
+        
+        return {
+            geometrie: { ...defaults.geometrie, ...(contrainte.geometrie || {}) },
+            style: { ...defaults.style, ...(contrainte.style || {}) },
+            global: { ...defaults.global, ...(contrainte.global || {}) }
+        };
+    }
+
     // ─────────────────────────────────────────────────────────────────────────────
     // APPLICATION DES CONTRAINTES EN MODE STANDARD
     // ─────────────────────────────────────────────────────────────────────────────
@@ -19226,31 +19335,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // États
             copyfit: copyfitting.actif || false,
-            // Contraintes : lire depuis zoneJson.contrainte avec fallback sur racine pour rétrocompatibilité
-            contrainte: {
-                // Interaction
-                locked: jsonContrainte.locked ?? zoneJson.verrouille ?? false,
-                selectionnable: jsonContrainte.selectionnable ?? true,
-                toolbarAffichable: jsonContrainte.toolbarAffichable ?? true,
-                
-                // Protection
-                systeme: jsonContrainte.systeme ?? zoneJson.systeme ?? false,
-                systemeLibelle: jsonContrainte.systemeLibelle ?? zoneJson.systemeLibelle ?? '',
-                nonSupprimable: jsonContrainte.nonSupprimable ?? false,
-                
-                // Impression
-                imprimable: jsonContrainte.imprimable ?? zoneJson.imprimable ?? true,
-                
-                // Position et taille
-                positionFixe: jsonContrainte.positionFixe ?? false,
-                minWMm: jsonContrainte.minWMm ?? 0,
-                maxWMm: jsonContrainte.maxWMm ?? 0,
-                minHMm: jsonContrainte.minHMm ?? 0,
-                maxHMm: jsonContrainte.maxHMm ?? 0,
-                
-                // Area
-                area: jsonContrainte.area || null
-            },
+            // Contraintes : format 3 niveaux (geometrie, style, global)
+            contrainte: mergeWithDefaultContrainte(jsonContrainte, 'textQuill'),
             
             // Nouvelles propriétés (stockées pour utilisation future)
             name: zoneJson.nom || '',
@@ -19310,33 +19396,10 @@ document.addEventListener('DOMContentLoaded', () => {
             h: geometrie.hauteurMm !== undefined ? mmToPixels(geometrie.hauteurMm) : 60,
             xMm: geometrie.xMm !== undefined ? geometrie.xMm : 0,
             yMm: geometrie.yMm !== undefined ? geometrie.yMm : 0,
-            wMm: geometrie.largeurMm !== undefined ? geometrie.largeurMm : pxToMm(150),
+            wMm: geometrie.largeurMm !== undefined ? geometrie.largeurMm : pxToMm(60),
             hMm: geometrie.hauteurMm !== undefined ? geometrie.hauteurMm : pxToMm(60),
-            // Contraintes : lire depuis zoneJson.contrainte avec fallback sur racine pour rétrocompatibilité
-            contrainte: {
-                // Interaction
-                locked: jsonContrainte.locked ?? zoneJson.verrouille ?? false,
-                selectionnable: jsonContrainte.selectionnable ?? true,
-                toolbarAffichable: jsonContrainte.toolbarAffichable ?? true,
-                
-                // Protection
-                systeme: jsonContrainte.systeme ?? zoneJson.systeme ?? false,
-                systemeLibelle: jsonContrainte.systemeLibelle ?? zoneJson.systemeLibelle ?? '',
-                nonSupprimable: jsonContrainte.nonSupprimable ?? false,
-                
-                // Impression
-                imprimable: jsonContrainte.imprimable ?? zoneJson.imprimable ?? true,
-                
-                // Position et taille
-                positionFixe: jsonContrainte.positionFixe ?? false,
-                minWMm: jsonContrainte.minWMm ?? 0,
-                maxWMm: jsonContrainte.maxWMm ?? 0,
-                minHMm: jsonContrainte.minHMm ?? 0,
-                maxHMm: jsonContrainte.maxHMm ?? 0,
-                
-                // Area
-                area: jsonContrainte.area || null
-            }
+            // Contraintes : format 3 niveaux (geometrie, style, global)
+            contrainte: mergeWithDefaultContrainte(jsonContrainte, 'barcode')
         };
     }
 
@@ -19373,31 +19436,8 @@ document.addEventListener('DOMContentLoaded', () => {
             yMm: geometrie.yMm !== undefined ? geometrie.yMm : 0,
             wMm: geometrie.largeurMm !== undefined ? geometrie.largeurMm : pxToMm(100),
             hMm: geometrie.hauteurMm !== undefined ? geometrie.hauteurMm : pxToMm(100),
-            // Contraintes : lire depuis zoneJson.contrainte avec fallback sur racine pour rétrocompatibilité
-            contrainte: {
-                // Interaction
-                locked: jsonContrainte.locked ?? zoneJson.verrouille ?? false,
-                selectionnable: jsonContrainte.selectionnable ?? true,
-                toolbarAffichable: jsonContrainte.toolbarAffichable ?? true,
-                
-                // Protection
-                systeme: jsonContrainte.systeme ?? zoneJson.systeme ?? false,
-                systemeLibelle: jsonContrainte.systemeLibelle ?? zoneJson.systemeLibelle ?? '',
-                nonSupprimable: jsonContrainte.nonSupprimable ?? false,
-                
-                // Impression
-                imprimable: jsonContrainte.imprimable ?? zoneJson.imprimable ?? true,
-                
-                // Position et taille
-                positionFixe: jsonContrainte.positionFixe ?? false,
-                minWMm: jsonContrainte.minWMm ?? 0,
-                maxWMm: jsonContrainte.maxWMm ?? 0,
-                minHMm: jsonContrainte.minHMm ?? 0,
-                maxHMm: jsonContrainte.maxHMm ?? 0,
-                
-                // Area
-                area: jsonContrainte.area || null
-            }
+            // Contraintes : format 3 niveaux (geometrie, style, global)
+            contrainte: mergeWithDefaultContrainte(jsonContrainte, 'qr')
         };
     }
     
@@ -19964,8 +20004,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         style: border.style || DEFAULT_BORDER_STYLE
                     },
                     name: zoneId,
-                    // Rétrocompatibilité : lire locked depuis style et écrire dans contrainte
-                    contrainte: { locked: style.locked === true }
+                    // Contraintes : format 3 niveaux (geometrie, style, global)
+                    // Priorité à z.contrainte, fallback sur style.locked pour rétrocompatibilité
+                    contrainte: z.contrainte 
+                        ? mergeWithDefaultContrainte(z.contrainte, 'textQuill')
+                        : mergeWithDefaultContrainte({ geometrie: { locked: style.locked === true } }, 'textQuill')
                 };
                 
                 documentState.pages[pageIndex].zones[zoneId] = zoneData;
@@ -20104,31 +20147,8 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             name: zoneJson.nom || '',
             zIndex: zoneJson.niveau || 1,
-            // Contraintes : lire depuis zoneJson.contrainte avec fallback sur racine pour rétrocompatibilité
-            contrainte: {
-                // Interaction
-                locked: jsonContrainte.locked ?? zoneJson.verrouille ?? false,
-                selectionnable: jsonContrainte.selectionnable ?? true,
-                toolbarAffichable: jsonContrainte.toolbarAffichable ?? true,
-                
-                // Protection
-                systeme: jsonContrainte.systeme ?? zoneJson.systeme ?? false,
-                systemeLibelle: jsonContrainte.systemeLibelle ?? zoneJson.systemeLibelle ?? '',
-                nonSupprimable: jsonContrainte.nonSupprimable ?? false,
-                
-                // Impression
-                imprimable: jsonContrainte.imprimable ?? zoneJson.imprimable ?? true,
-                
-                // Position et taille
-                positionFixe: jsonContrainte.positionFixe ?? false,
-                minWMm: jsonContrainte.minWMm ?? 0,
-                maxWMm: jsonContrainte.maxWMm ?? 0,
-                minHMm: jsonContrainte.minHMm ?? 0,
-                maxHMm: jsonContrainte.maxHMm ?? 0,
-                
-                // Area
-                area: jsonContrainte.area || null
-            }
+            // Contraintes : format 3 niveaux (geometrie, style, global)
+            contrainte: mergeWithDefaultContrainte(jsonContrainte, 'image')
         };
     }
 
@@ -20209,6 +20229,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 contenu: converted.contenu,
                 formatage: converted.formatage,
                 typeZone: 'textQuill',
+                contrainte: mergeWithDefaultContrainte(zoneData.contrainte, 'textQuill'),
                 quillDelta: delta || undefined,
                 style: {
                     police: zoneData.font || DEFAULT_FONT,
@@ -20284,6 +20305,7 @@ document.addEventListener('DOMContentLoaded', () => {
             contenu: zoneData.content || '',
             formatage: formatage,
             typeZone: zoneData.type || 'text',
+            contrainte: mergeWithDefaultContrainte(zoneData.contrainte, 'text'),
             
             // Style typographique
             style: {
@@ -20345,6 +20367,7 @@ document.addEventListener('DOMContentLoaded', () => {
             imprimable: isZoneImprimable(zoneData),
             selectionnable: isZoneSelectionnable(zoneData),
             toolbarAffichable: isZoneToolbarAffichable(zoneData),
+            contrainte: mergeWithDefaultContrainte(zoneData.contrainte, 'barcode'),
             geometrie: {
                 xMm: zoneData.xMm !== undefined ? zoneData.xMm : pixelsToMm(zoneData.x || 0),
                 yMm: zoneData.yMm !== undefined ? zoneData.yMm : pixelsToMm(zoneData.y || 0),
@@ -20388,6 +20411,7 @@ document.addEventListener('DOMContentLoaded', () => {
             imprimable: isZoneImprimable(zoneData),
             selectionnable: isZoneSelectionnable(zoneData),
             toolbarAffichable: isZoneToolbarAffichable(zoneData),
+            contrainte: mergeWithDefaultContrainte(zoneData.contrainte, 'qr'),
             geometrie: {
                 xMm: zoneData.xMm !== undefined ? zoneData.xMm : pixelsToMm(zoneData.x || 0),
                 yMm: zoneData.yMm !== undefined ? zoneData.yMm : pixelsToMm(zoneData.y || 0),
@@ -20437,6 +20461,7 @@ document.addEventListener('DOMContentLoaded', () => {
             imprimable: isZoneImprimable(zoneData),
             selectionnable: isZoneSelectionnable(zoneData),
             toolbarAffichable: isZoneToolbarAffichable(zoneData),
+            contrainte: mergeWithDefaultContrainte(zoneData.contrainte, 'image'),
             geometrie: {
                 xMm: zoneData.xMm !== undefined ? zoneData.xMm : pixelsToMm(zoneData.x || 0),
                 yMm: zoneData.yMm !== undefined ? zoneData.yMm : pixelsToMm(zoneData.y || 0),
@@ -20778,7 +20803,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             color: zoneData.border?.color || DEFAULT_BORDER_COLOR,
                             colorCmyk: zoneData.border?.colorCmyk || null,
                             style: zoneData.border?.style || DEFAULT_BORDER_STYLE
-                        }
+                        },
+                        contrainte: mergeWithDefaultContrainte(zoneData.contrainte, 'textQuill')
                     });
                 } else {
                     output.zonesTexte.push(
