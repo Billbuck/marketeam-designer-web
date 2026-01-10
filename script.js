@@ -19502,6 +19502,12 @@ document.addEventListener('DOMContentLoaded', () => {
             applyTheme(DEFAULT_THEME);
         }
         
+        // Appliquer le mode si fourni dans l'enveloppe
+        if (isLoadEnvelope && jsonData.mode) {
+            setDesignerMode(jsonData.mode);
+            console.log(`📄 Mode Designer défini depuis JSON: ${jsonData.mode.toUpperCase()}`);
+        }
+        
         // Validation de base
         if (!documentJson || typeof documentJson !== 'object') {
             console.error('loadFromWebDev : JSON invalide ou vide');
