@@ -6621,21 +6621,19 @@ document.addEventListener('DOMContentLoaded', () => {
      * Crée l'élément DOM de l'area pour une zone contrainte.
      * L'area est un rectangle avec bordure pointillée qui délimite
      * la zone autorisée pour le déplacement et le redimensionnement.
+     * En mode Template, l'area possède 8 poignées de redimensionnement.
      * 
      * @param {string} zoneId - ID de la zone associée
      * @param {AreaContrainte} area - Définition de l'area (xMm, yMm, wMm, hMm)
      * @returns {HTMLElement} L'élément DOM créé
-     * 
-     * @example
-     * const areaEl = createAreaElement('zone-1', { xMm: 5, yMm: 5, wMm: 100, hMm: 60 });
      */
     function createAreaElement(zoneId, area) {
         // Supprimer l'area existante si présente
         removeAreaElement(zoneId);
         
-        // Créer l'élément
+        // Créer l'élément (masqué par défaut, visible uniquement quand la zone est sélectionnée)
         const areaEl = document.createElement('div');
-        areaEl.classList.add('zone-area', 'visible');
+        areaEl.classList.add('zone-area');
         areaEl.dataset.zoneId = zoneId;
         
         // Positionner et dimensionner en pixels
@@ -6643,6 +6641,15 @@ document.addEventListener('DOMContentLoaded', () => {
         areaEl.style.top = mmToPx(area.yMm) + 'px';
         areaEl.style.width = mmToPx(area.wMm) + 'px';
         areaEl.style.height = mmToPx(area.hMm) + 'px';
+        
+        // Ajouter les 8 poignées de redimensionnement (mode Template uniquement)
+        const handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+        handles.forEach(pos => {
+            const handle = document.createElement('div');
+            handle.className = `area-handle area-handle-${pos}`;
+            handle.dataset.handle = pos;
+            areaEl.appendChild(handle);
+        });
         
         // Ajouter au DOM (avant les zones pour être derrière)
         a4Page.insertBefore(areaEl, a4Page.firstChild);
@@ -6687,6 +6694,303 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         areaElements.clear();
         console.log('🧹 Toutes les areas ont été supprimées');
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // AREA INTERACTIVE - DRAG ET RESIZE (MODE TEMPLATE)
+    // ═══════════════════════════════════════════════════════════════════════════════
+    
+    /** @type {boolean} Flag indiquant si une area est en cours de drag */
+    let isAreaDragging = false;
+    
+    /** @type {boolean} Flag indiquant si une area est en cours de resize */
+    let isAreaResizing = false;
+    
+    /** @type {HTMLElement|null} L'area actuellement manipulée */
+    let activeArea = null;
+    
+    /** @type {string|null} La poignée de resize active (nw, n, ne, e, se, s, sw, w) */
+    let activeAreaHandle = null;
+    
+    /** @type {{x: number, y: number, areaX: number, areaY: number, areaW: number, areaH: number}} Position de départ */
+    let areaStartPos = { x: 0, y: 0, areaX: 0, areaY: 0, areaW: 0, areaH: 0 };
+    
+    /**
+     * Calcule les limites de l'area en fonction du document et de la zone.
+     * L'area ne peut pas sortir des marges du document et doit toujours englober la zone.
+     * @param {string} zoneId - ID de la zone associée
+     * @returns {Object} Limites pour le document et contraintes pour englober la zone
+     */
+    function getAreaLimits(zoneId) {
+        const limits = getGeometryLimits();
+        const zoneEl = document.getElementById(zoneId);
+        
+        // Position et dimensions de la zone (l'area doit toujours l'englober)
+        const zoneLeft = zoneEl ? zoneEl.offsetLeft : 0;
+        const zoneTop = zoneEl ? zoneEl.offsetTop : 0;
+        const zoneWidth = zoneEl ? zoneEl.offsetWidth : 20;
+        const zoneHeight = zoneEl ? zoneEl.offsetHeight : 20;
+        const zoneRight = zoneLeft + zoneWidth;
+        const zoneBottom = zoneTop + zoneHeight;
+        
+        return {
+            // Limites du document (marges)
+            docMinXPx: mmToPx(limits.marginMm),
+            docMinYPx: mmToPx(limits.marginMm),
+            docMaxXPx: mmToPx(limits.maxX),
+            docMaxYPx: mmToPx(limits.maxY),
+            pageWidthPx: mmToPx(limits.pageWidthMm),
+            pageHeightPx: mmToPx(limits.pageHeightMm),
+            // Contraintes pour englober la zone
+            zoneLeft: zoneLeft,
+            zoneTop: zoneTop,
+            zoneRight: zoneRight,
+            zoneBottom: zoneBottom,
+            zoneWidth: zoneWidth,
+            zoneHeight: zoneHeight
+        };
+    }
+    
+    /**
+     * Démarre le drag ou resize d'une area.
+     * @param {MouseEvent} e - Événement mousedown
+     */
+    function startAreaInteraction(e) {
+        // Ne fonctionner qu'en mode Template
+        if (!isTemplateMode()) return;
+        
+        const areaEl = e.target.closest('.zone-area');
+        if (!areaEl) return;
+        
+        const handle = e.target.closest('.area-handle');
+        const zoneId = areaEl.dataset.zoneId;
+        
+        // Stocker les positions de départ
+        areaStartPos = {
+            x: e.clientX,
+            y: e.clientY,
+            areaX: areaEl.offsetLeft,
+            areaY: areaEl.offsetTop,
+            areaW: areaEl.offsetWidth,
+            areaH: areaEl.offsetHeight
+        };
+        
+        activeArea = areaEl;
+        
+        if (handle) {
+            // Resize
+            isAreaResizing = true;
+            activeAreaHandle = handle.dataset.handle;
+            areaEl.classList.add('area-resizing');
+            console.log(`📐 Area resize START (${activeAreaHandle}) pour ${zoneId}`);
+        } else {
+            // Drag
+            isAreaDragging = true;
+            areaEl.classList.add('area-dragging');
+            console.log(`📐 Area drag START pour ${zoneId}`);
+        }
+        
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
+    /**
+     * Gère le déplacement pendant le drag ou resize d'une area.
+     * @param {MouseEvent} e - Événement mousemove
+     */
+    function handleAreaMove(e) {
+        if (!activeArea) return;
+        if (!isAreaDragging && !isAreaResizing) return;
+        
+        const zoneId = activeArea.dataset.zoneId;
+        const limits = getAreaLimits(zoneId);
+        
+        // Diviser par zoomLevel pour compenser le scale CSS de la page
+        const deltaX = (e.clientX - areaStartPos.x) / zoomLevel;
+        const deltaY = (e.clientY - areaStartPos.y) / zoomLevel;
+        
+        let newX = areaStartPos.areaX;
+        let newY = areaStartPos.areaY;
+        let newW = areaStartPos.areaW;
+        let newH = areaStartPos.areaH;
+        
+        if (isAreaDragging) {
+            // Déplacement simple
+            newX = areaStartPos.areaX + deltaX;
+            newY = areaStartPos.areaY + deltaY;
+            
+            // Contraindre aux limites du document
+            newX = Math.max(limits.docMinXPx, Math.min(newX, limits.docMaxXPx - newW));
+            newY = Math.max(limits.docMinYPx, Math.min(newY, limits.docMaxYPx - newH));
+            
+            // Contraindre pour toujours englober la zone
+            // Le bord gauche de l'area ne peut pas dépasser le bord gauche de la zone
+            newX = Math.min(newX, limits.zoneLeft);
+            // Le bord haut de l'area ne peut pas dépasser le bord haut de la zone
+            newY = Math.min(newY, limits.zoneTop);
+            // Le bord droit de l'area doit être >= au bord droit de la zone
+            if (newX + newW < limits.zoneRight) {
+                newX = limits.zoneRight - newW;
+            }
+            // Le bord bas de l'area doit être >= au bord bas de la zone
+            if (newY + newH < limits.zoneBottom) {
+                newY = limits.zoneBottom - newH;
+            }
+            
+        } else if (isAreaResizing) {
+            // Resize selon la poignée
+            switch (activeAreaHandle) {
+                case 'nw': // Nord-Ouest : change X, Y, W, H
+                    newX = areaStartPos.areaX + deltaX;
+                    newY = areaStartPos.areaY + deltaY;
+                    newW = areaStartPos.areaW - deltaX;
+                    newH = areaStartPos.areaH - deltaY;
+                    break;
+                case 'n': // Nord : change Y, H
+                    newY = areaStartPos.areaY + deltaY;
+                    newH = areaStartPos.areaH - deltaY;
+                    break;
+                case 'ne': // Nord-Est : change Y, W, H
+                    newY = areaStartPos.areaY + deltaY;
+                    newW = areaStartPos.areaW + deltaX;
+                    newH = areaStartPos.areaH - deltaY;
+                    break;
+                case 'e': // Est : change W
+                    newW = areaStartPos.areaW + deltaX;
+                    break;
+                case 'se': // Sud-Est : change W, H
+                    newW = areaStartPos.areaW + deltaX;
+                    newH = areaStartPos.areaH + deltaY;
+                    break;
+                case 's': // Sud : change H
+                    newH = areaStartPos.areaH + deltaY;
+                    break;
+                case 'sw': // Sud-Ouest : change X, W, H
+                    newX = areaStartPos.areaX + deltaX;
+                    newW = areaStartPos.areaW - deltaX;
+                    newH = areaStartPos.areaH + deltaY;
+                    break;
+                case 'w': // Ouest : change X, W
+                    newX = areaStartPos.areaX + deltaX;
+                    newW = areaStartPos.areaW - deltaX;
+                    break;
+            }
+            
+            // ═══════════════════════════════════════════════════════════════
+            // CONTRAINTE PRINCIPALE : L'area doit toujours englober la zone
+            // ═══════════════════════════════════════════════════════════════
+            
+            // Bord gauche : ne peut pas être à droite du bord gauche de la zone
+            if (newX > limits.zoneLeft) {
+                const diff = newX - limits.zoneLeft;
+                newX = limits.zoneLeft;
+                // Si on redimensionne par la gauche, ajuster la largeur
+                if (activeAreaHandle.includes('w')) {
+                    newW = areaStartPos.areaW - (limits.zoneLeft - areaStartPos.areaX);
+                }
+            }
+            
+            // Bord haut : ne peut pas être en dessous du bord haut de la zone
+            if (newY > limits.zoneTop) {
+                const diff = newY - limits.zoneTop;
+                newY = limits.zoneTop;
+                // Si on redimensionne par le haut, ajuster la hauteur
+                if (activeAreaHandle.includes('n')) {
+                    newH = areaStartPos.areaH - (limits.zoneTop - areaStartPos.areaY);
+                }
+            }
+            
+            // Bord droit : ne peut pas être à gauche du bord droit de la zone
+            if (newX + newW < limits.zoneRight) {
+                newW = limits.zoneRight - newX;
+            }
+            
+            // Bord bas : ne peut pas être au-dessus du bord bas de la zone
+            if (newY + newH < limits.zoneBottom) {
+                newH = limits.zoneBottom - newY;
+            }
+            
+            // ═══════════════════════════════════════════════════════════════
+            // Contraindre aux limites du document (marges)
+            // ═══════════════════════════════════════════════════════════════
+            newX = Math.max(limits.docMinXPx, newX);
+            newY = Math.max(limits.docMinYPx, newY);
+            if (newX + newW > limits.docMaxXPx) newW = limits.docMaxXPx - newX;
+            if (newY + newH > limits.docMaxYPx) newH = limits.docMaxYPx - newY;
+        }
+        
+        // Appliquer les nouvelles dimensions
+        activeArea.style.left = newX + 'px';
+        activeArea.style.top = newY + 'px';
+        activeArea.style.width = newW + 'px';
+        activeArea.style.height = newH + 'px';
+        
+        // Mettre à jour les champs de la toolbar en temps réel
+        updateAreaFieldsFromPixels(zoneId, newX, newY, newW, newH);
+    }
+    
+    /**
+     * Termine le drag ou resize d'une area.
+     * @param {MouseEvent} e - Événement mouseup
+     */
+    function endAreaInteraction(e) {
+        if (!activeArea) return;
+        if (!isAreaDragging && !isAreaResizing) return;
+        
+        const zoneId = activeArea.dataset.zoneId;
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        
+        // Récupérer les dimensions finales
+        const finalX = activeArea.offsetLeft;
+        const finalY = activeArea.offsetTop;
+        const finalW = activeArea.offsetWidth;
+        const finalH = activeArea.offsetHeight;
+        
+        // Mettre à jour les données de contrainte
+        if (zoneData && zoneData.contrainte && zoneData.contrainte.geometrie) {
+            zoneData.contrainte.geometrie.area = {
+                xMm: pxToMm(finalX),
+                yMm: pxToMm(finalY),
+                wMm: pxToMm(finalW),
+                hMm: pxToMm(finalH)
+            };
+            
+            console.log(`📐 Area ${isAreaDragging ? 'drag' : 'resize'} END pour ${zoneId}:`, zoneData.contrainte.geometrie.area);
+            
+            // Sauvegarder
+            saveToLocalStorage();
+            saveState();
+        }
+        
+        // Reset
+        activeArea.classList.remove('area-dragging', 'area-resizing');
+        activeArea = null;
+        activeAreaHandle = null;
+        isAreaDragging = false;
+        isAreaResizing = false;
+    }
+    
+    /**
+     * Met à jour les champs X, Y, L, H de la toolbar avec les valeurs en pixels converties en mm.
+     * @param {string} zoneId - ID de la zone
+     * @param {number} xPx - Position X en pixels
+     * @param {number} yPx - Position Y en pixels
+     * @param {number} wPx - Largeur en pixels
+     * @param {number} hPx - Hauteur en pixels
+     */
+    function updateAreaFieldsFromPixels(zoneId, xPx, yPx, wPx, hPx) {
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[zoneId];
+        if (!zoneData) return;
+        
+        const toolbar = getActiveToolbarForType(zoneData.type);
+        if (!toolbar) return;
+        
+        setInputInToolbar(toolbar, 'contrainte-area-x', formatMmValue(pxToMm(xPx)));
+        setInputInToolbar(toolbar, 'contrainte-area-y', formatMmValue(pxToMm(yPx)));
+        setInputInToolbar(toolbar, 'contrainte-area-w', formatMmValue(pxToMm(wPx)));
+        setInputInToolbar(toolbar, 'contrainte-area-h', formatMmValue(pxToMm(hPx)));
     }
     
     /**
@@ -7914,6 +8218,15 @@ document.addEventListener('DOMContentLoaded', () => {
         designerMode = mode;
         console.log(`🎨 Mode Designer: ${designerMode}`);
         
+        // Mettre à jour la classe CSS sur le body pour les styles conditionnels
+        if (designerMode === 'template') {
+            document.body.classList.add('template-mode');
+            document.body.classList.remove('standard-mode');
+        } else {
+            document.body.classList.remove('template-mode');
+            document.body.classList.add('standard-mode');
+        }
+        
         // Mettre à jour la visibilité des onglets Contraintes (sera implémenté en Phase 3)
         if (typeof updateToolbarTabsVisibility === 'function') {
             updateToolbarTabsVisibility();
@@ -8748,6 +9061,25 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
+        // Si c'est un champ area, mettre à jour l'area visuellement
+        if (['contrainte-area-x', 'contrainte-area-y', 'contrainte-area-w', 'contrainte-area-h'].includes(inputId)) {
+            const zoneId = selectedZoneIds.length === 1 ? selectedZoneIds[0] : null;
+            if (zoneId) {
+                const areaEl = areaElements.get(zoneId);
+                if (areaEl) {
+                    const xMm = parseMmValue(getInputInToolbar(toolbar, 'contrainte-area-x'));
+                    const yMm = parseMmValue(getInputInToolbar(toolbar, 'contrainte-area-y'));
+                    const wMm = parseMmValue(getInputInToolbar(toolbar, 'contrainte-area-w'));
+                    const hMm = parseMmValue(getInputInToolbar(toolbar, 'contrainte-area-h'));
+                    
+                    areaEl.style.left = mmToPx(xMm) + 'px';
+                    areaEl.style.top = mmToPx(yMm) + 'px';
+                    areaEl.style.width = mmToPx(wMm) + 'px';
+                    areaEl.style.height = mmToPx(hMm) + 'px';
+                }
+            }
+        }
+        
         // Sauvegarder les contraintes EN PASSANT LA TOOLBAR
         saveCurrentZoneConstraints(toolbar);
         
@@ -8839,6 +9171,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 applyCurrentZoneGeometryConstraints();
             }
         }, true); // useCapture=true car les toolbars font stopPropagation()
+        
+        // Gestion du drag/resize des areas (mode Template)
+        document.addEventListener('mousedown', function(e) {
+            if (!isTemplateMode()) return;
+            const areaEl = e.target.closest('.zone-area');
+            if (areaEl) {
+                startAreaInteraction(e);
+            }
+        }, true); // useCapture pour intercepter avant les autres handlers
+        
+        document.addEventListener('mousemove', function(e) {
+            if (isAreaDragging || isAreaResizing) {
+                handleAreaMove(e);
+            }
+        });
+        
+        document.addEventListener('mouseup', function(e) {
+            if (isAreaDragging || isAreaResizing) {
+                endAreaInteraction(e);
+            }
+        });
         
         console.log('🔒 Listeners onglet Contraintes initialisés');
     }
@@ -24057,6 +24410,14 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('  ✓ quillInstances Map créée:', quillInstances instanceof Map);
     console.log('  ✓ Constantes QUILL_*:', { QUILL_DEFAULT_FONT, QUILL_DEFAULT_SIZE, QUILL_DEFAULT_COLOR, QUILL_DEFAULT_LINE_HEIGHT });
 
+    // Initialiser la classe CSS du mode Designer sur le body
+    if (designerMode === 'template') {
+        document.body.classList.add('template-mode');
+    } else {
+        document.body.classList.add('standard-mode');
+    }
+    console.log(`🎨 Mode Designer initial: ${designerMode.toUpperCase()}`);
+    
     // Initialiser la visibilité des onglets selon le mode par défaut
     updateToolbarTabsVisibility();
     

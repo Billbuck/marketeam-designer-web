@@ -3694,12 +3694,12 @@ body.preview-mode-active #actions-section .btn:not(#btn-delete-zone) {
 
 .zone-area {
     position: absolute;
-    border: 1.5px dashed var(--theme-primary, #934BB7);  /* Couleur du thème */
+    border: 1.5px dashed var(--theme-primary, #934BB7);
     background: transparent;
-    pointer-events: none;          /* Ne bloque pas les interactions */
+    pointer-events: none;          /* Non interactif par défaut (mode Standard) */
     z-index: 1;                    /* Derrière les zones */
     box-sizing: border-box;
-    display: none;                 /* Masquée par défaut */
+    display: none;
     border-radius: 2px;
 }
 
@@ -3711,6 +3711,66 @@ body.preview-mode-active #actions-section .btn:not(#btn-delete-zone) {
 /* Masquer en mode aperçu */
 .preview-mode .zone-area {
     display: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* AREA INTERACTIVE - MODE TEMPLATE UNIQUEMENT                     */
+/* ═══════════════════════════════════════════════════════════════ */
+
+/* En mode Template, l'area devient interactive */
+.template-mode .zone-area {
+    pointer-events: auto;
+    cursor: move;
+}
+
+/* Poignées de redimensionnement de l'area */
+.area-handle {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: white;
+    border: 2px solid var(--theme-primary, #934BB7);
+    border-radius: 2px;
+    box-sizing: border-box;
+    display: none;  /* Masquées par défaut */
+    z-index: 10;
+    transition: background-color 0.15s, transform 0.15s;
+}
+
+/* Afficher les poignées en mode Template */
+.template-mode .zone-area .area-handle {
+    display: block;
+}
+
+/* Positionnement des 8 poignées */
+.area-handle-nw { top: -6px; left: -6px; cursor: nw-resize; }
+.area-handle-n  { top: -6px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
+.area-handle-ne { top: -6px; right: -6px; cursor: ne-resize; }
+.area-handle-e  { top: 50%; right: -6px; transform: translateY(-50%); cursor: e-resize; }
+.area-handle-se { bottom: -6px; right: -6px; cursor: se-resize; }
+.area-handle-s  { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
+.area-handle-sw { bottom: -6px; left: -6px; cursor: sw-resize; }
+.area-handle-w  { top: 50%; left: -6px; transform: translateY(-50%); cursor: w-resize; }
+
+/* Hover sur les poignées */
+.area-handle:hover {
+    background: var(--theme-primary, #934BB7);
+    border-color: var(--theme-primary-dark, #62307B);
+    transform: scale(1.2);
+}
+
+/* Ajustement du transform pour les poignées centrées */
+.area-handle-n:hover  { transform: translateX(-50%) scale(1.2); }
+.area-handle-s:hover  { transform: translateX(-50%) scale(1.2); }
+.area-handle-e:hover  { transform: translateY(-50%) scale(1.2); }
+.area-handle-w:hover  { transform: translateY(-50%) scale(1.2); }
+
+/* Area en cours de drag/resize */
+.zone-area.area-dragging,
+.zone-area.area-resizing {
+    border-style: solid;
+    border-width: 2px;
+    z-index: 100;  /* Passer devant les zones pendant l'interaction */
 }
 
 /* ═══════════════════════════════════════════════════════════════ */
