@@ -6765,14 +6765,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const handle = e.target.closest('.area-handle');
         const zoneId = areaEl.dataset.zoneId;
         
-        // Stocker les positions de départ
+        // Stocker les positions de départ (area ET zone)
+        const zoneEl = document.getElementById(zoneId);
         areaStartPos = {
             x: e.clientX,
             y: e.clientY,
             areaX: areaEl.offsetLeft,
             areaY: areaEl.offsetTop,
             areaW: areaEl.offsetWidth,
-            areaH: areaEl.offsetHeight
+            areaH: areaEl.offsetHeight,
+            // Position initiale de la zone (pour la déplacer avec l'area)
+            zoneX: zoneEl ? zoneEl.offsetLeft : 0,
+            zoneY: zoneEl ? zoneEl.offsetTop : 0
         };
         
         activeArea = areaEl;
@@ -6815,26 +6819,43 @@ document.addEventListener('DOMContentLoaded', () => {
         let newH = areaStartPos.areaH;
         
         if (isAreaDragging) {
-            // Déplacement simple
+            // Déplacement simple de l'area
             newX = areaStartPos.areaX + deltaX;
             newY = areaStartPos.areaY + deltaY;
             
-            // Contraindre aux limites du document
+            // Contraindre l'area aux limites du document
             newX = Math.max(limits.docMinXPx, Math.min(newX, limits.docMaxXPx - newW));
             newY = Math.max(limits.docMinYPx, Math.min(newY, limits.docMaxYPx - newH));
             
-            // Contraindre pour toujours englober la zone
-            // Le bord gauche de l'area ne peut pas dépasser le bord gauche de la zone
-            newX = Math.min(newX, limits.zoneLeft);
-            // Le bord haut de l'area ne peut pas dépasser le bord haut de la zone
-            newY = Math.min(newY, limits.zoneTop);
-            // Le bord droit de l'area doit être >= au bord droit de la zone
-            if (newX + newW < limits.zoneRight) {
-                newX = limits.zoneRight - newW;
-            }
-            // Le bord bas de l'area doit être >= au bord bas de la zone
-            if (newY + newH < limits.zoneBottom) {
-                newY = limits.zoneBottom - newH;
+            // Calculer la nouvelle position de la zone (suit l'area)
+            const zoneEl = document.getElementById(zoneId);
+            if (zoneEl) {
+                // Calculer le déplacement RÉEL de l'area (après contraintes aux limites)
+                const realDeltaX = newX - areaStartPos.areaX;
+                const realDeltaY = newY - areaStartPos.areaY;
+                
+                // La zone suit le déplacement RÉEL de l'area, pas le delta brut
+                // Ainsi quand l'area est bloquée, la zone ne bouge plus
+                let newZoneX = areaStartPos.zoneX + realDeltaX;
+                let newZoneY = areaStartPos.zoneY + realDeltaY;
+                
+                // Contraindre la zone pour rester dans l'area
+                // Bord gauche de la zone >= bord gauche de l'area
+                newZoneX = Math.max(newX, newZoneX);
+                // Bord haut de la zone >= bord haut de l'area
+                newZoneY = Math.max(newY, newZoneY);
+                // Bord droit de la zone <= bord droit de l'area
+                if (newZoneX + zoneEl.offsetWidth > newX + newW) {
+                    newZoneX = newX + newW - zoneEl.offsetWidth;
+                }
+                // Bord bas de la zone <= bord bas de l'area
+                if (newZoneY + zoneEl.offsetHeight > newY + newH) {
+                    newZoneY = newY + newH - zoneEl.offsetHeight;
+                }
+                
+                // Appliquer la nouvelle position à la zone
+                zoneEl.style.left = newZoneX + 'px';
+                zoneEl.style.top = newZoneY + 'px';
             }
             
         } else if (isAreaResizing) {
@@ -6957,11 +6978,21 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             
             console.log(`📐 Area ${isAreaDragging ? 'drag' : 'resize'} END pour ${zoneId}:`, zoneData.contrainte.geometrie.area);
-            
-            // Sauvegarder
-            saveToLocalStorage();
-            saveState();
         }
+        
+        // Si c'était un drag, mettre à jour aussi la position de la zone
+        if (isAreaDragging) {
+            const zoneEl = document.getElementById(zoneId);
+            if (zoneEl && zoneData) {
+                zoneData.x = pxToMm(zoneEl.offsetLeft);
+                zoneData.y = pxToMm(zoneEl.offsetTop);
+                console.log(`📐 Zone déplacée avec l'area: x=${zoneData.x.toFixed(1)}mm, y=${zoneData.y.toFixed(1)}mm`);
+            }
+        }
+        
+        // Sauvegarder
+        saveToLocalStorage();
+        saveState();
         
         // Reset
         activeArea.classList.remove('area-dragging', 'area-resizing');
@@ -9086,16 +9117,55 @@ document.addEventListener('DOMContentLoaded', () => {
             const zoneId = selectedZoneIds.length === 1 ? selectedZoneIds[0] : null;
             if (zoneId) {
                 const areaEl = areaElements.get(zoneId);
+                const zoneEl = document.getElementById(zoneId);
                 if (areaEl) {
+                    // Récupérer l'ancienne position de l'area avant modification
+                    const oldAreaX = areaEl.offsetLeft;
+                    const oldAreaY = areaEl.offsetTop;
+                    
+                    // Nouvelles valeurs de l'area
                     const xMm = parseMmValue(getInputInToolbar(toolbar, 'contrainte-area-x'));
                     const yMm = parseMmValue(getInputInToolbar(toolbar, 'contrainte-area-y'));
                     const wMm = parseMmValue(getInputInToolbar(toolbar, 'contrainte-area-w'));
                     const hMm = parseMmValue(getInputInToolbar(toolbar, 'contrainte-area-h'));
                     
-                    areaEl.style.left = mmToPx(xMm) + 'px';
-                    areaEl.style.top = mmToPx(yMm) + 'px';
-                    areaEl.style.width = mmToPx(wMm) + 'px';
-                    areaEl.style.height = mmToPx(hMm) + 'px';
+                    const newAreaX = mmToPx(xMm);
+                    const newAreaY = mmToPx(yMm);
+                    const newAreaW = mmToPx(wMm);
+                    const newAreaH = mmToPx(hMm);
+                    
+                    // Appliquer les nouvelles dimensions à l'area
+                    areaEl.style.left = newAreaX + 'px';
+                    areaEl.style.top = newAreaY + 'px';
+                    areaEl.style.width = newAreaW + 'px';
+                    areaEl.style.height = newAreaH + 'px';
+                    
+                    // Déplacer la zone avec l'area (même delta)
+                    if (zoneEl && (inputId === 'contrainte-area-x' || inputId === 'contrainte-area-y')) {
+                        const deltaX = newAreaX - oldAreaX;
+                        const deltaY = newAreaY - oldAreaY;
+                        
+                        let newZoneX = zoneEl.offsetLeft + deltaX;
+                        let newZoneY = zoneEl.offsetTop + deltaY;
+                        
+                        // Contraindre la zone pour rester dans l'area
+                        newZoneX = Math.max(newAreaX, Math.min(newZoneX, newAreaX + newAreaW - zoneEl.offsetWidth));
+                        newZoneY = Math.max(newAreaY, Math.min(newZoneY, newAreaY + newAreaH - zoneEl.offsetHeight));
+                        
+                        // Appliquer la nouvelle position à la zone
+                        zoneEl.style.left = newZoneX + 'px';
+                        zoneEl.style.top = newZoneY + 'px';
+                        
+                        // Mettre à jour les données de la zone
+                        const zones = getCurrentPageZones();
+                        const zoneData = zones[zoneId];
+                        if (zoneData) {
+                            zoneData.x = pxToMm(newZoneX);
+                            zoneData.y = pxToMm(newZoneY);
+                        }
+                        
+                        console.log(`📐 Zone déplacée avec l'area: deltaX=${pxToMm(deltaX).toFixed(1)}mm, deltaY=${pxToMm(deltaY).toFixed(1)}mm`);
+                    }
                 }
             }
         }
