@@ -7562,6 +7562,211 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * Affiche un toast de notification pour les contraintes.
+     * Utilisé pour les avertissements de validation (limites dépassées, etc.)
+     * @param {string} message - Message à afficher
+     * @param {string} type - Type de toast ('warning', 'info', 'error')
+     * @param {string} [icon='warning'] - Icône Material Icons
+     */
+    function showConstraintToast(message, type = 'warning', icon = 'warning') {
+        if (!undoRedoToast) return;
+        
+        const iconMap = {
+            'warning': 'warning',
+            'info': 'info',
+            'error': 'error',
+            'success': 'check_circle'
+        };
+        
+        const finalIcon = icon || iconMap[type] || 'info';
+        
+        undoRedoToast.innerHTML = `
+            <span class="material-icons toast-icon">${finalIcon}</span>
+            <span>${message}</span>
+        `;
+        undoRedoToast.className = 'undo-toast';
+        undoRedoToast.classList.add(type === 'warning' ? 'toast-theme-warning' : type);
+        undoRedoToast.classList.add('show');
+        
+        setTimeout(() => {
+            undoRedoToast.classList.remove('show');
+        }, 2500);
+    }
+
+    /**
+     * Valide et contraint une valeur de contrainte aux limites du document.
+     * Affiche un toast si la valeur a été corrigée.
+     * @param {number} value - Valeur à valider (en mm)
+     * @param {string} fieldType - Type de champ ('x', 'y', 'w', 'h', 'minW', 'minH', 'maxW', 'maxH')
+     * @param {Object} [currentArea=null] - Valeurs actuelles de l'area {xMm, yMm, wMm, hMm} pour validation contextuelle
+     * @returns {number} Valeur corrigée si nécessaire
+     */
+    function validateConstraintValue(value, fieldType, currentArea = null) {
+        const limits = getGeometryLimits();
+        const marginMm = limits.marginMm;
+        const maxX = limits.maxX;
+        const maxY = limits.maxY;
+        const usableWidth = limits.pageWidthMm - (2 * marginMm);
+        const usableHeight = limits.pageHeightMm - (2 * marginMm);
+        
+        let correctedValue = value;
+        let wasCorrect = true;
+        let message = '';
+        
+        switch (fieldType) {
+            case 'x':
+            case 'areaX':
+                // X doit être >= marge
+                if (value < marginMm) {
+                    correctedValue = marginMm;
+                    wasCorrect = false;
+                    message = `X corrigé : minimum ${formatMmValue(marginMm)} mm (marge document)`;
+                }
+                // X + W ne doit pas dépasser maxX (si currentArea fourni)
+                if (currentArea && value + currentArea.wMm > maxX) {
+                    correctedValue = maxX - currentArea.wMm;
+                    if (correctedValue < marginMm) correctedValue = marginMm;
+                    wasCorrect = false;
+                    message = `X corrigé : la zone dépasserait le document`;
+                }
+                break;
+                
+            case 'y':
+            case 'areaY':
+                // Y doit être >= marge
+                if (value < marginMm) {
+                    correctedValue = marginMm;
+                    wasCorrect = false;
+                    message = `Y corrigé : minimum ${formatMmValue(marginMm)} mm (marge document)`;
+                }
+                // Y + H ne doit pas dépasser maxY (si currentArea fourni)
+                if (currentArea && value + currentArea.hMm > maxY) {
+                    correctedValue = maxY - currentArea.hMm;
+                    if (correctedValue < marginMm) correctedValue = marginMm;
+                    wasCorrect = false;
+                    message = `Y corrigé : la zone dépasserait le document`;
+                }
+                break;
+                
+            case 'w':
+            case 'areaW':
+            case 'minW':
+            case 'maxW':
+                // Largeur doit être > 0 et <= largeur utilisable
+                if (value <= 0) {
+                    correctedValue = 1;
+                    wasCorrect = false;
+                    message = `Largeur corrigée : doit être > 0`;
+                } else if (value > usableWidth) {
+                    correctedValue = usableWidth;
+                    wasCorrect = false;
+                    message = `Largeur corrigée : maximum ${formatMmValue(usableWidth)} mm`;
+                }
+                // Si area, vérifier que X + W <= maxX
+                if (currentArea && currentArea.xMm + value > maxX) {
+                    correctedValue = maxX - currentArea.xMm;
+                    wasCorrect = false;
+                    message = `Largeur corrigée : dépassement du document`;
+                }
+                break;
+                
+            case 'h':
+            case 'areaH':
+            case 'minH':
+            case 'maxH':
+                // Hauteur doit être > 0 et <= hauteur utilisable
+                if (value <= 0) {
+                    correctedValue = 1;
+                    wasCorrect = false;
+                    message = `Hauteur corrigée : doit être > 0`;
+                } else if (value > usableHeight) {
+                    correctedValue = usableHeight;
+                    wasCorrect = false;
+                    message = `Hauteur corrigée : maximum ${formatMmValue(usableHeight)} mm`;
+                }
+                // Si area, vérifier que Y + H <= maxY
+                if (currentArea && currentArea.yMm + value > maxY) {
+                    correctedValue = maxY - currentArea.yMm;
+                    wasCorrect = false;
+                    message = `Hauteur corrigée : dépassement du document`;
+                }
+                break;
+        }
+        
+        // Afficher un toast si correction effectuée
+        if (!wasCorrect && message) {
+            showConstraintToast(message, 'warning', 'straighten');
+        }
+        
+        return Math.round(correctedValue * 10) / 10; // Arrondi à 1 décimale
+    }
+
+    /**
+     * Calcule les valeurs initiales de l'area centrée autour de la zone.
+     * Contraint l'area aux limites du document.
+     * @param {number} zoneXMm - Position X de la zone en mm
+     * @param {number} zoneYMm - Position Y de la zone en mm
+     * @param {number} zoneWMm - Largeur de la zone en mm
+     * @param {number} zoneHMm - Hauteur de la zone en mm
+     * @returns {Object} {xMm, yMm, wMm, hMm} - Valeurs de l'area
+     */
+    function calculateInitialAreaValues(zoneXMm, zoneYMm, zoneWMm, zoneHMm) {
+        const limits = getGeometryLimits();
+        const marginMm = limits.marginMm;
+        const maxX = limits.maxX;
+        const maxY = limits.maxY;
+        
+        // Calculer area centrée : zone au milieu avec marge de 50% de chaque côté
+        let areaX = zoneXMm - (zoneWMm / 2);
+        let areaY = zoneYMm - (zoneHMm / 2);
+        let areaW = zoneWMm * 2;
+        let areaH = zoneHMm * 2;
+        
+        // Contraindre aux limites du document
+        
+        // 1. S'assurer que X >= marge
+        if (areaX < marginMm) {
+            areaX = marginMm;
+        }
+        
+        // 2. S'assurer que Y >= marge
+        if (areaY < marginMm) {
+            areaY = marginMm;
+        }
+        
+        // 3. S'assurer que X + W <= maxX
+        if (areaX + areaW > maxX) {
+            // D'abord essayer de réduire la largeur
+            areaW = maxX - areaX;
+            // Si la largeur devient trop petite, décaler X
+            if (areaW < zoneWMm) {
+                areaW = zoneWMm;
+                areaX = maxX - areaW;
+                if (areaX < marginMm) areaX = marginMm;
+            }
+        }
+        
+        // 4. S'assurer que Y + H <= maxY
+        if (areaY + areaH > maxY) {
+            // D'abord essayer de réduire la hauteur
+            areaH = maxY - areaY;
+            // Si la hauteur devient trop petite, décaler Y
+            if (areaH < zoneHMm) {
+                areaH = zoneHMm;
+                areaY = maxY - areaH;
+                if (areaY < marginMm) areaY = marginMm;
+            }
+        }
+        
+        return {
+            xMm: Math.round(areaX * 10) / 10,
+            yMm: Math.round(areaY * 10) / 10,
+            wMm: Math.round(areaW * 10) / 10,
+            hMm: Math.round(areaH * 10) / 10
+        };
+    }
+
+    /**
      * Met à jour l'interface des boutons et compteur d'historique
      */
     function updateHistoryUI() {
@@ -8050,6 +8255,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 setInputInToolbar(toolbar, 'contrainte-min-h', formatMmValue(geometrie.minHMm || 0));
             }
         }
+        // Afficher/masquer le bouton Mémoriser taille min
+        const btnMemoMin = toolbar.querySelector('#btn-memoriser-taille-min');
+        const lblMemoMin = btnMemoMin?.closest('.form-row-poc')?.querySelector('.memoriser-label');
+        if (btnMemoMin) btnMemoMin.style.display = hasMinSize ? '' : 'none';
+        if (lblMemoMin) lblMemoMin.style.display = hasMinSize ? '' : 'none';
         
         // Afficher/masquer et remplir les champs taille max
         const maxFields = toolbar.querySelector('#contrainte-taille-max-fields');
@@ -8060,6 +8270,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 setInputInToolbar(toolbar, 'contrainte-max-h', formatMmValue(geometrie.maxHMm || 0));
             }
         }
+        // Afficher/masquer le bouton Mémoriser taille max
+        const btnMemoMax = toolbar.querySelector('#btn-memoriser-taille-max');
+        const lblMemoMax = btnMemoMax?.closest('.form-row-poc')?.querySelector('.memoriser-label');
+        if (btnMemoMax) btnMemoMax.style.display = hasMaxSize ? '' : 'none';
+        if (lblMemoMax) lblMemoMax.style.display = hasMaxSize ? '' : 'none';
         
         // === SECTION STYLE (Sections modifiables) ===
         const style = contrainte.style || {};
@@ -8414,6 +8629,38 @@ document.addEventListener('DOMContentLoaded', () => {
             const areaFields = toolbar.querySelector('#contrainte-area-fields');
             if (areaFields) {
                 areaFields.style.display = newCheckedState ? '' : 'none';
+                
+                // Si on coche pour la première fois (champs vides ou par défaut), initialiser avec les dimensions de la zone
+                if (newCheckedState) {
+                    const zoneIdForArea = selectedZoneIds.length === 1 ? selectedZoneIds[0] : null;
+                    if (zoneIdForArea) {
+                        const zoneEl = document.getElementById(zoneIdForArea);
+                        const zonesDataForArea = getCurrentPageZones();
+                        const zoneDataForArea = zonesDataForArea[zoneIdForArea];
+                        
+                        // Vérifier si l'area n'était pas déjà définie (premier cochage)
+                        const wasAreaDefined = zoneDataForArea?.contrainte?.geometrie?.area;
+                        
+                        if (!wasAreaDefined && zoneEl) {
+                            // Récupérer les dimensions actuelles de la zone
+                            const zoneXMm = pxToMm(zoneEl.offsetLeft);
+                            const zoneYMm = pxToMm(zoneEl.offsetTop);
+                            const zoneWMm = pxToMm(zoneEl.offsetWidth);
+                            const zoneHMm = pxToMm(zoneEl.offsetHeight);
+                            
+                            // Calculer les valeurs initiales centrées et contraintes
+                            const initialArea = calculateInitialAreaValues(zoneXMm, zoneYMm, zoneWMm, zoneHMm);
+                            
+                            // Remplir les champs
+                            setInputInToolbar(toolbar, 'contrainte-area-x', formatMmValue(initialArea.xMm));
+                            setInputInToolbar(toolbar, 'contrainte-area-y', formatMmValue(initialArea.yMm));
+                            setInputInToolbar(toolbar, 'contrainte-area-w', formatMmValue(initialArea.wMm));
+                            setInputInToolbar(toolbar, 'contrainte-area-h', formatMmValue(initialArea.hMm));
+                            
+                            console.log('📐 Area initialisée automatiquement:', initialArea);
+                        }
+                    }
+                }
             }
         }
         
@@ -8422,6 +8669,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (minFields) {
                 minFields.style.display = newCheckedState ? '' : 'none';
             }
+            // Afficher/masquer le bouton Mémoriser
+            const btnMemoMin = wrapper.closest('.form-row-poc')?.querySelector('.btn-memoriser');
+            const lblMemoMin = wrapper.closest('.form-row-poc')?.querySelector('.memoriser-label');
+            if (btnMemoMin) btnMemoMin.style.display = newCheckedState ? '' : 'none';
+            if (lblMemoMin) lblMemoMin.style.display = newCheckedState ? '' : 'none';
         }
         
         if (inputId === 'contrainte-taille-max-active') {
@@ -8429,6 +8681,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (maxFields) {
                 maxFields.style.display = newCheckedState ? '' : 'none';
             }
+            // Afficher/masquer le bouton Mémoriser
+            const btnMemoMax = wrapper.closest('.form-row-poc')?.querySelector('.btn-memoriser');
+            const lblMemoMax = wrapper.closest('.form-row-poc')?.querySelector('.memoriser-label');
+            if (btnMemoMax) btnMemoMax.style.display = newCheckedState ? '' : 'none';
+            if (lblMemoMax) lblMemoMax.style.display = newCheckedState ? '' : 'none';
         }
         
         // Mettre à jour la visibilité des sections
@@ -8447,11 +8704,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * Gère la modification d'un input de contrainte.
+     * Valide et contraint les valeurs aux limites du document.
      * @param {HTMLElement} input - L'input modifié
      * @returns {void}
      */
     function handleConstraintInputChange(input) {
         const toolbar = input.closest('.toolbar-poc');
+        const inputId = input.id;
+        
+        // Valider les champs géométriques (area et tailles)
+        const geometryFields = {
+            'contrainte-area-x': 'areaX',
+            'contrainte-area-y': 'areaY',
+            'contrainte-area-w': 'areaW',
+            'contrainte-area-h': 'areaH',
+            'contrainte-min-w': 'minW',
+            'contrainte-min-h': 'minH',
+            'contrainte-max-w': 'maxW',
+            'contrainte-max-h': 'maxH'
+        };
+        
+        if (geometryFields[inputId]) {
+            const fieldType = geometryFields[inputId];
+            const rawValue = parseMmValue(input.value);
+            
+            // Pour les champs area, récupérer le contexte actuel
+            let currentArea = null;
+            if (fieldType.startsWith('area')) {
+                currentArea = {
+                    xMm: parseMmValue(getInputInToolbar(toolbar, 'contrainte-area-x')),
+                    yMm: parseMmValue(getInputInToolbar(toolbar, 'contrainte-area-y')),
+                    wMm: parseMmValue(getInputInToolbar(toolbar, 'contrainte-area-w')),
+                    hMm: parseMmValue(getInputInToolbar(toolbar, 'contrainte-area-h'))
+                };
+            }
+            
+            // Valider et corriger si nécessaire
+            const validatedValue = validateConstraintValue(rawValue, fieldType, currentArea);
+            
+            // Si la valeur a été corrigée, mettre à jour l'input
+            if (Math.abs(validatedValue - rawValue) > 0.01) {
+                input.value = formatMmValue(validatedValue);
+            }
+        }
         
         // Sauvegarder les contraintes EN PASSANT LA TOOLBAR
         saveCurrentZoneConstraints(toolbar);
@@ -8485,6 +8780,65 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
         });
+        
+        // Gestion des boutons "Mémoriser" - useCapture=true car les toolbars font stopPropagation()
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.btn-memoriser');
+            if (!btn) return;
+            
+            const btnId = btn.id;
+            const toolbar = btn.closest('.toolbar-poc');
+            if (!toolbar) return;
+            
+            // Récupérer la zone sélectionnée
+            const zoneIdForMemo = selectedZoneIds.length === 1 ? selectedZoneIds[0] : null;
+            if (!zoneIdForMemo) {
+                showConstraintToast('Aucune zone sélectionnée', 'warning');
+                return;
+            }
+            
+            const zoneEl = document.getElementById(zoneIdForMemo);
+            if (!zoneEl) return;
+            
+            // Récupérer les dimensions actuelles de la zone en mm
+            const widthMm = pxToMm(zoneEl.offsetWidth);
+            const heightMm = pxToMm(zoneEl.offsetHeight);
+            
+            // Valider aux limites du document
+            const limits = getGeometryLimits();
+            const usableWidth = limits.pageWidthMm - (2 * limits.marginMm);
+            const usableHeight = limits.pageHeightMm - (2 * limits.marginMm);
+            
+            const validatedWidth = Math.min(widthMm, usableWidth);
+            const validatedHeight = Math.min(heightMm, usableHeight);
+            
+            if (btnId === 'btn-memoriser-taille-min') {
+                setInputInToolbar(toolbar, 'contrainte-min-w', formatMmValue(validatedWidth));
+                setInputInToolbar(toolbar, 'contrainte-min-h', formatMmValue(validatedHeight));
+                
+                // Sauvegarder les contraintes
+                saveCurrentZoneConstraints(toolbar);
+                
+                showConstraintToast(`Taille minimum mémorisée : ${formatMmValue(validatedWidth)} × ${formatMmValue(validatedHeight)} mm`, 'info', 'check_circle');
+                console.log('📏 Taille minimum mémorisée:', validatedWidth, '×', validatedHeight, 'mm');
+            }
+            
+            if (btnId === 'btn-memoriser-taille-max') {
+                setInputInToolbar(toolbar, 'contrainte-max-w', formatMmValue(validatedWidth));
+                setInputInToolbar(toolbar, 'contrainte-max-h', formatMmValue(validatedHeight));
+                
+                // Sauvegarder les contraintes
+                saveCurrentZoneConstraints(toolbar);
+                
+                showConstraintToast(`Taille maximum mémorisée : ${formatMmValue(validatedWidth)} × ${formatMmValue(validatedHeight)} mm`, 'info', 'check_circle');
+                console.log('📏 Taille maximum mémorisée:', validatedWidth, '×', validatedHeight, 'mm');
+            }
+            
+            // Appliquer les contraintes en temps réel (mode Template)
+            if (isTemplateMode()) {
+                applyCurrentZoneGeometryConstraints();
+            }
+        }, true); // useCapture=true car les toolbars font stopPropagation()
         
         console.log('🔒 Listeners onglet Contraintes initialisés');
     }

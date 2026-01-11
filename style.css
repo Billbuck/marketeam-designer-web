@@ -3807,6 +3807,7 @@ body.preview-mode-active #actions-section .btn:not(#btn-delete-zone) {
     order: 1;
     flex: none;
     justify-content: flex-start;
+    align-self: center;
 }
 
 [data-tab-content="contraintes"] .form-row-poc > .form-label-poc {
@@ -3983,4 +3984,95 @@ button:disabled {
 
 .quill-readonly * {
     cursor: not-allowed !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BOUTONS MÉMORISER - CONTRAINTES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Bouton Mémoriser - enfant direct de form-row-poc dans l'onglet contraintes */
+[data-tab-content="contraintes"] .form-row-poc > .btn-memoriser {
+    order: 3;
+    margin-left: 8px;
+    align-self: center;
+}
+
+[data-tab-content="contraintes"] .form-row-poc > .memoriser-label {
+    order: 4;
+    margin-left: 4px;
+    font-size: 12px;
+    color: var(--poc-text-secondary);
+    align-self: center;
+}
+
+/* Bouton Mémoriser - COPIE EXACTE de .checkbox-poc */
+/* Override des styles généraux de button (ligne 50) */
+.btn-memoriser {
+    width: 20.5px;
+    height: 20.5px;
+    min-width: 20.5px;
+    max-width: 20.5px;
+    min-height: 20.5px;
+    max-height: 20.5px;
+    padding: 0;
+    margin: 0;
+    border: 1.25px solid var(--poc-border-color);
+    border-radius: 3px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--poc-bg-input);
+    transition: all var(--poc-transition-speed);
+    flex-shrink: 0;
+    font-size: 0;
+    color: var(--poc-text-secondary); /* Pour stroke="currentColor" du SVG */
+}
+
+.btn-memoriser:hover {
+    border-color: var(--poc-theme-primary);
+    background: var(--poc-theme-primary);
+    color: white; /* Pour stroke="currentColor" du SVG */
+}
+
+.btn-memoriser:active {
+    transform: scale(0.95);
+}
+
+.btn-memoriser svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* Label du bouton Mémoriser */
+.memoriser-label {
+    font-size: 11px;
+    color: var(--poc-text-secondary);
+    user-select: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TOAST THÉMATIQUE - AVERTISSEMENT CONTRAINTES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Toast info aux couleurs du thème */
+.toast-notification.toast-info {
+    background: linear-gradient(135deg, var(--theme-primary, #934BB7) 0%, var(--theme-primary-dark, #62307B) 100%);
+}
+
+/* Toast warning amélioré avec couleur du thème */
+.toast-notification.toast-theme-warning {
+    background: linear-gradient(135deg, #f5a623 0%, #e8930c 100%);
+    border-left: 4px solid var(--theme-primary, #934BB7);
+}
+
+/* Toast pour undo-toast avec style theme-warning */
+.undo-toast.toast-theme-warning {
+    background: linear-gradient(135deg, #f5a623 0%, #e8930c 100%);
+    border-left: 4px solid var(--poc-theme-primary, #934BB7);
+}
+
+/* Toast info pour undo-toast */
+.undo-toast.info {
+    background: linear-gradient(135deg, var(--poc-theme-primary, #934BB7) 0%, var(--poc-theme-primary-dark, #62307B) 100%);
 }
