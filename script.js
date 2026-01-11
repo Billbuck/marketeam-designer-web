@@ -13809,9 +13809,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         // ═══════════════════════════════════════════════════════════════
-        // GÉOMÉTRIE
+        // GÉOMÉTRIE - Utilise applyGeometryChange pour validation
         // ═══════════════════════════════════════════════════════════════
         
+        const geoProperties = ['x', 'y', 'w', 'h'];
         const geoInputs = [barcodeValX, barcodeValY, barcodeValW, barcodeValH];
         geoInputs.forEach((input, index) => {
             if (!input) return;
@@ -13819,72 +13820,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 const zoneId = getSelectedBarcodeZoneId();
                 if (!zoneId) return;
                 
-                const zoneEl = document.getElementById(zoneId);
-                if (!zoneEl) return;
+                // Parser la valeur (format français avec virgule)
+                const valueMm = parseFloat(input.value.replace(',', '.'));
+                if (isNaN(valueMm)) return;
                 
-                const valueMm = parseFloat(input.value.replace(',', '.')) || 0;
-                const valuePx = valueMm / MM_PER_PIXEL;
+                // Utiliser applyGeometryChange pour validation contre limites
+                // (gère aussi les codes 2D qui doivent rester carrés)
+                applyGeometryChange(geoProperties[index], valueMm);
                 
-                // Récupérer les données de la zone pour mise à jour
-                const zonesData = getCurrentPageZones();
-                const zoneData = zonesData[zoneId];
+                // Re-synchroniser les champs avec les valeurs contraintes
+                updateBarcodeToolbarGeometryFields(zoneId);
                 
-                // Vérifier si c'est un code 2D (doit rester carré)
-                const typeCode = zoneData ? (zoneData.typeCodeBarres || 'code128') : 'code128';
-                const isCode2D = is2DBarcode(typeCode);
-                
-                // Appliquer selon l'index (CSS + zonesData en pixels ET mm)
-                if (index === 0) {
-                    // X - Position horizontale
-                    zoneEl.style.left = `${valuePx}px`;
-                    if (zoneData) {
-                        zoneData.x = valuePx;
-                        zoneData.xMm = valueMm;
-                    }
-                } else if (index === 1) {
-                    // Y - Position verticale
-                    zoneEl.style.top = `${valuePx}px`;
-                    if (zoneData) {
-                        zoneData.y = valuePx;
-                        zoneData.yMm = valueMm;
-                    }
-                } else if (index === 2) {
-                    // W - Largeur
-                    zoneEl.style.width = `${valuePx}px`;
-                    if (zoneData) {
-                        zoneData.w = valuePx;
-                        zoneData.wMm = valueMm;
-                    }
-                    // Code 2D : synchroniser H
-                    if (isCode2D) {
-                        zoneEl.style.height = `${valuePx}px`;
-                        if (zoneData) {
-                            zoneData.h = valuePx;
-                            zoneData.hMm = valueMm;
-                        }
-                        if (barcodeValH) barcodeValH.value = valueMm.toFixed(1).replace('.', ',');
-                    }
-                } else if (index === 3) {
-                    // H - Hauteur
-                    zoneEl.style.height = `${valuePx}px`;
-                    if (zoneData) {
-                        zoneData.h = valuePx;
-                        zoneData.hMm = valueMm;
-                    }
-                    // Code 2D : synchroniser W
-                    if (isCode2D) {
-                        zoneEl.style.width = `${valuePx}px`;
-                        if (zoneData) {
-                            zoneData.w = valuePx;
-                            zoneData.wMm = valueMm;
-                        }
-                        if (barcodeValW) barcodeValW.value = valueMm.toFixed(1).replace('.', ',');
-                    }
-                }
-                
+                // Mettre à jour l'affichage du code-barres
                 updateBarcodeZoneDisplay(zoneId);
-                saveToLocalStorage();
-                saveState();
             });
         });
     }
@@ -14314,9 +14262,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         // ═══════════════════════════════════════════════════════════════
-        // GÉOMÉTRIE
+        // GÉOMÉTRIE - Utilise applyGeometryChange pour validation
         // ═══════════════════════════════════════════════════════════════
         
+        const geoProperties = ['x', 'y', 'w', 'h'];
         const geoInputs = [qrcodeValX, qrcodeValY, qrcodeValW, qrcodeValH];
         geoInputs.forEach((input, index) => {
             if (!input) return;
@@ -14324,60 +14273,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 const zoneId = getSelectedQrcodeZoneId();
                 if (!zoneId) return;
                 
-                const zoneEl = document.getElementById(zoneId);
-                if (!zoneEl) return;
+                // Parser la valeur (format français avec virgule)
+                const valueMm = parseFloat(input.value.replace(',', '.'));
+                if (isNaN(valueMm)) return;
                 
-                const valueMm = parseFloat(input.value.replace(',', '.')) || 0;
-                const valuePx = valueMm / MM_PER_PIXEL;
+                // Utiliser applyGeometryChange pour validation contre limites
+                // (gère aussi le QR code qui doit rester carré)
+                applyGeometryChange(geoProperties[index], valueMm);
                 
-                // Récupérer les données de la zone pour mise à jour
-                const zonesData = getCurrentPageZones();
-                const zoneData = zonesData[zoneId];
+                // Re-synchroniser les champs avec les valeurs contraintes
+                updateQrcodeToolbarGeometryFields(zoneId);
                 
-                // Appliquer selon l'index (CSS + zonesData en pixels ET mm)
-                if (index === 0) {
-                    // X - Position horizontale
-                    zoneEl.style.left = `${valuePx}px`;
-                    if (zoneData) {
-                        zoneData.x = valuePx;
-                        zoneData.xMm = valueMm;
-                    }
-                } else if (index === 1) {
-                    // Y - Position verticale
-                    zoneEl.style.top = `${valuePx}px`;
-                    if (zoneData) {
-                        zoneData.y = valuePx;
-                        zoneData.yMm = valueMm;
-                    }
-                } else if (index === 2) {
-                    // W - Largeur (QR code = toujours carré → aussi modifier H)
-                    zoneEl.style.width = `${valuePx}px`;
-                    zoneEl.style.height = `${valuePx}px`; // Synchroniser H
-                    if (zoneData) {
-                        zoneData.w = valuePx;
-                        zoneData.wMm = valueMm;
-                        zoneData.h = valuePx;    // Synchroniser H
-                        zoneData.hMm = valueMm;  // Synchroniser H
-                    }
-                    // Mettre à jour le champ H dans la toolbar
-                    if (qrcodeValH) qrcodeValH.value = valueMm.toFixed(1).replace('.', ',');
-                } else if (index === 3) {
-                    // H - Hauteur (QR code = toujours carré → aussi modifier W)
-                    zoneEl.style.height = `${valuePx}px`;
-                    zoneEl.style.width = `${valuePx}px`; // Synchroniser W
-                    if (zoneData) {
-                        zoneData.h = valuePx;
-                        zoneData.hMm = valueMm;
-                        zoneData.w = valuePx;    // Synchroniser W
-                        zoneData.wMm = valueMm;  // Synchroniser W
-                    }
-                    // Mettre à jour le champ W dans la toolbar
-                    if (qrcodeValW) qrcodeValW.value = valueMm.toFixed(1).replace('.', ',');
-                }
-                
+                // Mettre à jour l'affichage du QR code
                 updateQrZoneDisplay(zoneId);
-                saveToLocalStorage();
-                saveState();
             });
         });
     }
@@ -14759,9 +14667,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         // ═══════════════════════════════════════════════════════════════
-        // GÉOMÉTRIE (inputs mm)
+        // GÉOMÉTRIE (inputs mm) - Utilise applyGeometryChange pour validation
         // ═══════════════════════════════════════════════════════════════
         
+        const geoProperties = ['x', 'y', 'w', 'h'];
         const geoInputs = [imageValX, imageValY, imageValW, imageValH];
         geoInputs.forEach((input, index) => {
             if (!input) return;
@@ -14770,60 +14679,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 const zoneId = getSelectedImageZoneId();
                 if (!zoneId) return;
                 
-                const zoneEl = document.getElementById(zoneId);
-                if (!zoneEl) return;
-                
                 // Parser la valeur (format français avec virgule)
-                const valueMm = parseFloat(input.value.replace(',', '.')) || 0;
-                const valuePx = valueMm / MM_PER_PIXEL;
+                const valueMm = parseFloat(input.value.replace(',', '.'));
+                if (isNaN(valueMm)) return;
                 
-                // Récupérer les données de la zone pour mise à jour
-                const zonesData = getCurrentPageZones();
-                const zoneData = zonesData[zoneId];
+                // Utiliser applyGeometryChange pour validation contre limites
+                applyGeometryChange(geoProperties[index], valueMm);
                 
-                // Appliquer selon l'index (CSS + zonesData en pixels ET mm)
-                switch (index) {
-                    case 0: // X
-                        zoneEl.style.left = `${valuePx}px`;
-                        if (zoneData) {
-                            zoneData.x = valuePx;
-                            zoneData.xMm = valueMm;
-                        }
-                        break;
-                    case 1: // Y
-                        zoneEl.style.top = `${valuePx}px`;
-                        if (zoneData) {
-                            zoneData.y = valuePx;
-                            zoneData.yMm = valueMm;
-                        }
-                        break;
-                    case 2: // W
-                        zoneEl.style.width = `${Math.max(20, valuePx)}px`;
-                        if (zoneData) {
-                            zoneData.w = Math.max(20, valuePx);
-                            zoneData.wMm = Math.max(20 * MM_PER_PIXEL, valueMm);
-                        }
-                        break;
-                    case 3: // H
-                        zoneEl.style.height = `${Math.max(20, valuePx)}px`;
-                        if (zoneData) {
-                            zoneData.h = Math.max(20, valuePx);
-                            zoneData.hMm = Math.max(20 * MM_PER_PIXEL, valueMm);
-                        }
-                        break;
-                }
-                
-                // Reformater l'input
-                input.value = valueMm.toFixed(1).replace('.', ',');
+                // Re-synchroniser les champs avec les valeurs contraintes
+                updateImageToolbarGeometryFields(zoneId);
                 
                 // Mettre à jour DPI si largeur/hauteur changée
                 if (index >= 2) {
                     updateDpiIndicator(zoneId);
                     updateImageDpiBadge(zoneId);
                 }
-                
-                saveToLocalStorage();
-                saveState();
             });
         });
         
