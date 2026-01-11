@@ -9124,8 +9124,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }, true);
         
-        // Gestion des inputs texte de contraintes
-        document.addEventListener('input', function(e) {
+        // Gestion des inputs texte de contraintes - validation sur 'change' (blur ou Entrée)
+        // Utiliser 'change' au lieu de 'input' pour permettre à l'utilisateur de finir sa saisie
+        document.addEventListener('change', function(e) {
             const input = e.target.closest('[data-tab-content="contraintes"] input[type="text"]');
             if (input) {
                 handleConstraintInputChange(input);

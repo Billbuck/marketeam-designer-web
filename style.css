@@ -4120,16 +4120,14 @@ button:disabled {
     background: linear-gradient(135deg, var(--theme-primary, #934BB7) 0%, var(--theme-primary-dark, #62307B) 100%);
 }
 
-/* Toast warning amélioré avec couleur du thème */
+/* Toast warning aux couleurs du thème */
 .toast-notification.toast-theme-warning {
-    background: linear-gradient(135deg, #f5a623 0%, #e8930c 100%);
-    border-left: 4px solid var(--theme-primary, #934BB7);
+    background: linear-gradient(135deg, var(--theme-primary, #934BB7) 0%, var(--theme-primary-dark, #62307B) 100%);
 }
 
 /* Toast pour undo-toast avec style theme-warning */
 .undo-toast.toast-theme-warning {
-    background: linear-gradient(135deg, #f5a623 0%, #e8930c 100%);
-    border-left: 4px solid var(--poc-theme-primary, #934BB7);
+    background: linear-gradient(135deg, var(--poc-theme-primary, #934BB7) 0%, var(--poc-theme-primary-dark, #62307B) 100%);
 }
 
 /* Toast info pour undo-toast */
