@@ -6994,6 +6994,9 @@ document.addEventListener('DOMContentLoaded', () => {
         saveToLocalStorage();
         saveState();
         
+        // Valider et corriger les contraintes de taille après modification de l'area
+        validateAndCorrectSizeConstraints(zoneId);
+        
         // Reset
         activeArea.classList.remove('area-dragging', 'area-resizing');
         activeArea = null;
@@ -7985,8 +7988,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 
             case 'w':
             case 'areaW':
-            case 'minW':
-            case 'maxW':
                 // Largeur doit être > 0 et <= largeur utilisable
                 if (value <= 0) {
                     correctedValue = 1;
@@ -7998,17 +7999,51 @@ document.addEventListener('DOMContentLoaded', () => {
                     message = `Largeur corrigée : maximum ${formatMmValue(usableWidth)} mm`;
                 }
                 // Si area, vérifier que X + W <= maxX
-                if (currentArea && currentArea.xMm + value > maxX) {
+                if (currentArea && currentArea.xMm !== undefined && currentArea.xMm + value > maxX) {
                     correctedValue = maxX - currentArea.xMm;
                     wasCorrect = false;
                     message = `Largeur corrigée : dépassement du document`;
                 }
                 break;
                 
+            case 'minW':
+            case 'maxW':
+                // Largeur doit être > 0
+                if (value <= 0) {
+                    correctedValue = 1;
+                    wasCorrect = false;
+                    message = `Largeur corrigée : doit être > 0`;
+                } else if (currentArea && currentArea.zoneXMm !== undefined) {
+                    // Calculer la limite max selon le contexte
+                    let maxAllowedWidth;
+                    
+                    if (currentArea.areaWMm !== undefined) {
+                        // Area active : limite = bord droit area - position zone
+                        maxAllowedWidth = (currentArea.areaXMm + currentArea.areaWMm) - currentArea.zoneXMm;
+                        if (value > maxAllowedWidth) {
+                            correctedValue = maxAllowedWidth;
+                            wasCorrect = false;
+                            message = `Largeur corrigée : maximum ${formatMmValue(maxAllowedWidth)} mm (limite area)`;
+                        }
+                    } else {
+                        // Pas d'area : limite = bord droit document - position zone
+                        maxAllowedWidth = maxX - currentArea.zoneXMm;
+                        if (value > maxAllowedWidth) {
+                            correctedValue = maxAllowedWidth;
+                            wasCorrect = false;
+                            message = `Largeur corrigée : maximum ${formatMmValue(maxAllowedWidth)} mm (limite document)`;
+                        }
+                    }
+                } else if (value > usableWidth) {
+                    // Fallback : limite = largeur utilisable
+                    correctedValue = usableWidth;
+                    wasCorrect = false;
+                    message = `Largeur corrigée : maximum ${formatMmValue(usableWidth)} mm`;
+                }
+                break;
+                
             case 'h':
             case 'areaH':
-            case 'minH':
-            case 'maxH':
                 // Hauteur doit être > 0 et <= hauteur utilisable
                 if (value <= 0) {
                     correctedValue = 1;
@@ -8020,10 +8055,46 @@ document.addEventListener('DOMContentLoaded', () => {
                     message = `Hauteur corrigée : maximum ${formatMmValue(usableHeight)} mm`;
                 }
                 // Si area, vérifier que Y + H <= maxY
-                if (currentArea && currentArea.yMm + value > maxY) {
+                if (currentArea && currentArea.yMm !== undefined && currentArea.yMm + value > maxY) {
                     correctedValue = maxY - currentArea.yMm;
                     wasCorrect = false;
                     message = `Hauteur corrigée : dépassement du document`;
+                }
+                break;
+                
+            case 'minH':
+            case 'maxH':
+                // Hauteur doit être > 0
+                if (value <= 0) {
+                    correctedValue = 1;
+                    wasCorrect = false;
+                    message = `Hauteur corrigée : doit être > 0`;
+                } else if (currentArea && currentArea.zoneYMm !== undefined) {
+                    // Calculer la limite max selon le contexte
+                    let maxAllowedHeight;
+                    
+                    if (currentArea.areaHMm !== undefined) {
+                        // Area active : limite = bord bas area - position zone
+                        maxAllowedHeight = (currentArea.areaYMm + currentArea.areaHMm) - currentArea.zoneYMm;
+                        if (value > maxAllowedHeight) {
+                            correctedValue = maxAllowedHeight;
+                            wasCorrect = false;
+                            message = `Hauteur corrigée : maximum ${formatMmValue(maxAllowedHeight)} mm (limite area)`;
+                        }
+                    } else {
+                        // Pas d'area : limite = bord bas document - position zone
+                        maxAllowedHeight = maxY - currentArea.zoneYMm;
+                        if (value > maxAllowedHeight) {
+                            correctedValue = maxAllowedHeight;
+                            wasCorrect = false;
+                            message = `Hauteur corrigée : maximum ${formatMmValue(maxAllowedHeight)} mm (limite document)`;
+                        }
+                    }
+                } else if (value > usableHeight) {
+                    // Fallback : limite = hauteur utilisable
+                    correctedValue = usableHeight;
+                    wasCorrect = false;
+                    message = `Hauteur corrigée : maximum ${formatMmValue(usableHeight)} mm`;
                 }
                 break;
         }
@@ -8034,6 +8105,125 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         return Math.round(correctedValue * 10) / 10; // Arrondi à 1 décimale
+    }
+
+    /**
+     * Valide et corrige les contraintes de taille min/max d'une zone après un déplacement.
+     * Vérifie que les tailles min/max ne feraient pas dépasser la zone du document ou de l'area.
+     * @param {string} zoneId - ID de la zone à valider
+     * @returns {void}
+     */
+    function validateAndCorrectSizeConstraints(zoneId) {
+        const zoneEl = document.getElementById(zoneId);
+        const zones = getCurrentPageZones();
+        const zoneData = zones[zoneId];
+        
+        if (!zoneEl || !zoneData || !zoneData.contrainte || !zoneData.contrainte.geometrie) return;
+        
+        const geometrie = zoneData.contrainte.geometrie;
+        const limits = getGeometryLimits();
+        const maxX = limits.maxX;
+        const maxY = limits.maxY;
+        
+        // Position actuelle de la zone
+        const zoneXMm = pxToMm(zoneEl.offsetLeft);
+        const zoneYMm = pxToMm(zoneEl.offsetTop);
+        
+        // Calculer les limites selon le contexte (area ou document)
+        let maxAllowedWidth, maxAllowedHeight;
+        
+        if (geometrie.area) {
+            // Area active : limite = bord de l'area - position zone
+            maxAllowedWidth = (geometrie.area.xMm + geometrie.area.wMm) - zoneXMm;
+            maxAllowedHeight = (geometrie.area.yMm + geometrie.area.hMm) - zoneYMm;
+        } else {
+            // Pas d'area : limite = bord du document - position zone
+            maxAllowedWidth = maxX - zoneXMm;
+            maxAllowedHeight = maxY - zoneYMm;
+        }
+        
+        // Arrondir les limites à 1 décimale
+        maxAllowedWidth = Math.round(maxAllowedWidth * 10) / 10;
+        maxAllowedHeight = Math.round(maxAllowedHeight * 10) / 10;
+        
+        let corrected = false;
+        let corrections = [];
+        
+        // Corriger la taille minimum si nécessaire (propriétés: minWMm, minHMm)
+        if (geometrie.minWMm !== undefined && geometrie.minWMm > maxAllowedWidth) {
+            geometrie.minWMm = Math.round(Math.max(1, maxAllowedWidth) * 10) / 10;
+            corrected = true;
+            corrections.push(`largeur min → ${geometrie.minWMm.toFixed(1).replace('.', ',')} mm`);
+        }
+        if (geometrie.minHMm !== undefined && geometrie.minHMm > maxAllowedHeight) {
+            geometrie.minHMm = Math.round(Math.max(1, maxAllowedHeight) * 10) / 10;
+            corrected = true;
+            corrections.push(`hauteur min → ${geometrie.minHMm.toFixed(1).replace('.', ',')} mm`);
+        }
+        
+        // Corriger la taille maximum si nécessaire (propriétés: maxWMm, maxHMm)
+        if (geometrie.maxWMm !== undefined && geometrie.maxWMm > maxAllowedWidth) {
+            geometrie.maxWMm = Math.round(Math.max(1, maxAllowedWidth) * 10) / 10;
+            corrected = true;
+            corrections.push(`largeur max → ${geometrie.maxWMm.toFixed(1).replace('.', ',')} mm`);
+        }
+        if (geometrie.maxHMm !== undefined && geometrie.maxHMm > maxAllowedHeight) {
+            geometrie.maxHMm = Math.round(Math.max(1, maxAllowedHeight) * 10) / 10;
+            corrected = true;
+            corrections.push(`hauteur max → ${geometrie.maxHMm.toFixed(1).replace('.', ',')} mm`);
+        }
+        
+        // Mettre à jour les champs de la toolbar si corrections effectuées
+        if (corrected) {
+            // Mapper le type de zone vers le type de toolbar
+            let toolbarType = zoneData.type;
+            if (toolbarType === 'qr') toolbarType = 'qrcode';
+            if (toolbarType === 'text') toolbarType = 'textQuill';
+            
+            // Trouver la toolbar visible pour ce type de zone (attribut data-toolbar-for)
+            const toolbar = document.querySelector(`.toolbar-poc[data-toolbar-for*="${toolbarType}"]`);
+            
+            console.log(`📐 Recherche toolbar pour type "${zoneData.type}" → "${toolbarType}", trouvée:`, !!toolbar);
+            
+            if (toolbar) {
+                // Mettre à jour les champs avec les valeurs arrondies
+                if (geometrie.minWMm !== undefined) {
+                    const inputMinW = toolbar.querySelector('#contrainte-min-w');
+                    if (inputMinW) {
+                        inputMinW.value = geometrie.minWMm.toFixed(1).replace('.', ',');
+                        console.log(`📐 Champ min-w mis à jour: ${inputMinW.value}`);
+                    }
+                }
+                if (geometrie.minHMm !== undefined) {
+                    const inputMinH = toolbar.querySelector('#contrainte-min-h');
+                    if (inputMinH) {
+                        inputMinH.value = geometrie.minHMm.toFixed(1).replace('.', ',');
+                        console.log(`📐 Champ min-h mis à jour: ${inputMinH.value}`);
+                    }
+                }
+                if (geometrie.maxWMm !== undefined) {
+                    const inputMaxW = toolbar.querySelector('#contrainte-max-w');
+                    if (inputMaxW) {
+                        inputMaxW.value = geometrie.maxWMm.toFixed(1).replace('.', ',');
+                        console.log(`📐 Champ max-w mis à jour: ${inputMaxW.value}`);
+                    }
+                }
+                if (geometrie.maxHMm !== undefined) {
+                    const inputMaxH = toolbar.querySelector('#contrainte-max-h');
+                    if (inputMaxH) {
+                        inputMaxH.value = geometrie.maxHMm.toFixed(1).replace('.', ',');
+                        console.log(`📐 Champ max-h mis à jour: ${inputMaxH.value}`);
+                    }
+                }
+            }
+            
+            // Afficher un toast avec les corrections
+            showConstraintToast(`Contraintes ajustées : ${corrections.join(', ')}`, 'warning', 'straighten');
+            console.log(`📐 Contraintes de taille corrigées pour ${zoneId}:`, corrections);
+            
+            // Sauvegarder les modifications
+            saveToLocalStorage();
+        }
     }
 
     /**
@@ -9092,10 +9282,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const fieldType = geometryFields[inputId];
             const rawValue = parseMmValue(input.value);
             
-            // Pour les champs area, récupérer le contexte actuel
-            let currentArea = null;
+            // Contexte pour la validation
+            let validationContext = null;
+            
+            // Pour les champs area, récupérer le contexte de l'area
             if (fieldType.startsWith('area')) {
-                currentArea = {
+                validationContext = {
                     xMm: parseMmValue(getInputInToolbar(toolbar, 'contrainte-area-x')),
                     yMm: parseMmValue(getInputInToolbar(toolbar, 'contrainte-area-y')),
                     wMm: parseMmValue(getInputInToolbar(toolbar, 'contrainte-area-w')),
@@ -9103,8 +9295,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
             }
             
+            // Pour les champs min/max, récupérer la position de la zone ET l'area si active
+            if (fieldType.startsWith('min') || fieldType.startsWith('max')) {
+                const zoneId = selectedZoneIds.length === 1 ? selectedZoneIds[0] : null;
+                if (zoneId) {
+                    const zoneEl = document.getElementById(zoneId);
+                    const zones = getCurrentPageZones();
+                    const zoneData = zones[zoneId];
+                    
+                    if (zoneEl) {
+                        validationContext = {
+                            // Position actuelle de la zone
+                            zoneXMm: pxToMm(zoneEl.offsetLeft),
+                            zoneYMm: pxToMm(zoneEl.offsetTop)
+                        };
+                        
+                        // Ajouter les limites de l'area si active
+                        const areaActive = getCheckboxInToolbar(toolbar, 'contrainte-area-active');
+                        if (areaActive && zoneData?.contrainte?.geometrie?.area) {
+                            const area = zoneData.contrainte.geometrie.area;
+                            validationContext.areaXMm = area.xMm;
+                            validationContext.areaYMm = area.yMm;
+                            validationContext.areaWMm = area.wMm;
+                            validationContext.areaHMm = area.hMm;
+                        }
+                    }
+                }
+            }
+            
             // Valider et corriger si nécessaire
-            const validatedValue = validateConstraintValue(rawValue, fieldType, currentArea);
+            const validatedValue = validateConstraintValue(rawValue, fieldType, validationContext);
             
             // Si la valeur a été corrigée, mettre à jour l'input
             if (Math.abs(validatedValue - rawValue) > 0.01) {
@@ -18918,6 +19138,13 @@ document.addEventListener('DOMContentLoaded', () => {
             
             saveToLocalStorage();
             saveState(); // Snapshot APRÈS le déplacement/redimensionnement
+            
+            // Valider et corriger les contraintes de taille après déplacement (mode Template)
+            if (isDragging && isTemplateMode()) {
+                selectedZoneIds.forEach(zoneId => {
+                    validateAndCorrectSizeConstraints(zoneId);
+                });
+            }
 
             // Régénérer les codes-barres après redimensionnement
             if (isResizing && selectedZoneIds.length === 1) {
