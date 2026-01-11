@@ -8857,6 +8857,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Utiliser la fonction existante createAreaElement
         // Elle supprime l'ancienne area avant d'en créer une nouvelle
         createAreaElement(zoneId, area);
+        
+        // Afficher l'area si la zone est sélectionnée
+        if (selectedZoneIds.length === 1 && selectedZoneIds[0] === zoneId) {
+            updateAreaVisibility(zoneId, true);
+        }
     }
 
     /**
@@ -8940,40 +8945,55 @@ document.addEventListener('DOMContentLoaded', () => {
         // Afficher/masquer les champs conditionnels existants
         if (inputId === 'contrainte-area-active') {
             const areaFields = toolbar.querySelector('#contrainte-area-fields');
+            const zoneIdForArea = selectedZoneIds.length === 1 ? selectedZoneIds[0] : null;
+            
             if (areaFields) {
                 areaFields.style.display = newCheckedState ? '' : 'none';
+            }
+            
+            if (newCheckedState && zoneIdForArea) {
+                // On coche : initialiser et afficher l'area
+                const zoneEl = document.getElementById(zoneIdForArea);
+                const zonesDataForArea = getCurrentPageZones();
+                const zoneDataForArea = zonesDataForArea[zoneIdForArea];
                 
-                // Si on coche pour la première fois (champs vides ou par défaut), initialiser avec les dimensions de la zone
-                if (newCheckedState) {
-                    const zoneIdForArea = selectedZoneIds.length === 1 ? selectedZoneIds[0] : null;
-                    if (zoneIdForArea) {
-                        const zoneEl = document.getElementById(zoneIdForArea);
-                        const zonesDataForArea = getCurrentPageZones();
-                        const zoneDataForArea = zonesDataForArea[zoneIdForArea];
-                        
-                        // Vérifier si l'area n'était pas déjà définie (premier cochage)
-                        const wasAreaDefined = zoneDataForArea?.contrainte?.geometrie?.area;
-                        
-                        if (!wasAreaDefined && zoneEl) {
-                            // Récupérer les dimensions actuelles de la zone
-                            const zoneXMm = pxToMm(zoneEl.offsetLeft);
-                            const zoneYMm = pxToMm(zoneEl.offsetTop);
-                            const zoneWMm = pxToMm(zoneEl.offsetWidth);
-                            const zoneHMm = pxToMm(zoneEl.offsetHeight);
-                            
-                            // Calculer les valeurs initiales centrées et contraintes
-                            const initialArea = calculateInitialAreaValues(zoneXMm, zoneYMm, zoneWMm, zoneHMm);
-                            
-                            // Remplir les champs
-                            setInputInToolbar(toolbar, 'contrainte-area-x', formatMmValue(initialArea.xMm));
-                            setInputInToolbar(toolbar, 'contrainte-area-y', formatMmValue(initialArea.yMm));
-                            setInputInToolbar(toolbar, 'contrainte-area-w', formatMmValue(initialArea.wMm));
-                            setInputInToolbar(toolbar, 'contrainte-area-h', formatMmValue(initialArea.hMm));
-                            
-                            console.log('📐 Area initialisée automatiquement:', initialArea);
-                        }
-                    }
+                // Vérifier si l'area n'était pas déjà définie (premier cochage)
+                const wasAreaDefined = zoneDataForArea?.contrainte?.geometrie?.area;
+                
+                let areaToDisplay = null;
+                
+                if (!wasAreaDefined && zoneEl) {
+                    // Premier cochage : calculer les valeurs initiales
+                    const zoneXMm = pxToMm(zoneEl.offsetLeft);
+                    const zoneYMm = pxToMm(zoneEl.offsetTop);
+                    const zoneWMm = pxToMm(zoneEl.offsetWidth);
+                    const zoneHMm = pxToMm(zoneEl.offsetHeight);
+                    
+                    // Calculer les valeurs initiales centrées et contraintes
+                    areaToDisplay = calculateInitialAreaValues(zoneXMm, zoneYMm, zoneWMm, zoneHMm);
+                    
+                    // Remplir les champs
+                    setInputInToolbar(toolbar, 'contrainte-area-x', formatMmValue(areaToDisplay.xMm));
+                    setInputInToolbar(toolbar, 'contrainte-area-y', formatMmValue(areaToDisplay.yMm));
+                    setInputInToolbar(toolbar, 'contrainte-area-w', formatMmValue(areaToDisplay.wMm));
+                    setInputInToolbar(toolbar, 'contrainte-area-h', formatMmValue(areaToDisplay.hMm));
+                    
+                    console.log('📐 Area initialisée automatiquement:', areaToDisplay);
+                } else if (wasAreaDefined) {
+                    // L'area existait déjà : utiliser les valeurs existantes
+                    areaToDisplay = wasAreaDefined;
                 }
+                
+                // Créer et afficher l'area immédiatement
+                if (areaToDisplay) {
+                    createAreaElement(zoneIdForArea, areaToDisplay);
+                    updateAreaVisibility(zoneIdForArea, true);
+                    console.log('📐 Area créée et affichée pour', zoneIdForArea);
+                }
+            } else if (!newCheckedState && zoneIdForArea) {
+                // On décoche : supprimer l'area visuellement
+                removeAreaElement(zoneIdForArea);
+                console.log('📐 Area supprimée pour', zoneIdForArea);
             }
         }
         
