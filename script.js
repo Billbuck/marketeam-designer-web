@@ -147,6 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {number} [wMm] - Largeur en mm (optionnel, depuis JSON WebDev)
      * @property {number} [hMm] - Hauteur en mm (optionnel, depuis JSON WebDev)
      * @property {number} [zIndex] - Ordre d'empilement (z-index CSS)
+     * @property {boolean} [verrouille] - Zone verrouillée par l'utilisateur (préférence, onglet Personnalisation)
      * @property {ZoneContrainte} [contrainte] - Contraintes de la zone (inclut locked, etc.)
      * @description Propriétés communes à toutes les zones.
      */
@@ -439,6 +440,8 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {boolean} imprimable - Zone imprimable
      * @property {GeometrieJsonWebDev} geometrie - Géométrie en mm
      * @property {string} typeCodeBarres - Type de code (code128, code39, ean13, datamatrix, etc.)
+     * @property {'square'|'rectangle'} [forme] - Forme du DataMatrix ('square' par défaut, 'rectangle' = 12x36)
+     * @property {'fixe'|'champ'} [sourceType] - Type de source ('fixe' = valeur statique, 'champ' = fusion)
      * @property {string} champFusion - Nom du champ de fusion (sans @), vide si statique
      * @property {string} valeurStatique - Valeur statique si pas de champ fusion
      * @property {string} texteLisible - Affichage du texte ('aucun' ou 'dessous')
@@ -446,6 +449,8 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {CmjnWebDev} [couleurCmjn] - Couleur du code CMJN
      * @property {CmjnWebDev} [couleurFondCmjn] - Couleur de fond CMJN
      * @property {boolean} transparent - Fond transparent
+     * @property {Object|null} [qrConfig] - Configuration QR Code intelligent (null si non applicable)
+     * @property {ZoneContrainte} [contrainte] - Contraintes de la zone (format 3 niveaux)
      * @description Zone Code-barres au format JSON WebDev.
      */
 
@@ -5561,7 +5566,8 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function isZoneLocked(zoneData) {
         if (!zoneData) return false;
-        return zoneData.contrainte?.geometrie?.locked === true;
+        // Vérifie la préférence utilisateur (verrouille) ET la contrainte Template (locked)
+        return zoneData.verrouille === true || zoneData.contrainte?.geometrie?.locked === true;
     }
 
     /**
@@ -5586,6 +5592,38 @@ document.addEventListener('DOMContentLoaded', () => {
             zoneData.contrainte.geometrie = {};
         }
         zoneData.contrainte.geometrie.locked = value;
+    }
+
+    /**
+     * Lit la propriété `verrouille` à la racine de zoneData (préférence utilisateur).
+     * Cette propriété est indépendante de `contrainte.geometrie.locked` (contrainte Template).
+     * 
+     * @param {ZoneData} zoneData - Données de la zone
+     * @returns {boolean} true si la zone est verrouillée par l'utilisateur
+     * 
+     * @example
+     * isZoneVerrouillee({ type: 'textQuill' }); // → false
+     * isZoneVerrouillee({ type: 'textQuill', verrouille: true }); // → true
+     */
+    function isZoneVerrouillee(zoneData) {
+        if (!zoneData) return false;
+        return zoneData.verrouille === true;
+    }
+
+    /**
+     * Écrit dans `zoneData.verrouille` (préférence utilisateur).
+     * 
+     * @param {ZoneData} zoneData - Données de la zone
+     * @param {boolean} value - Nouvelle valeur
+     * @returns {void}
+     * 
+     * @example
+     * setZoneVerrouillee(zoneData, true);
+     * // zoneData.verrouille === true
+     */
+    function setZoneVerrouillee(zoneData, value) {
+        if (!zoneData) return;
+        zoneData.verrouille = value;
     }
 
     /**
@@ -12606,7 +12644,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!zoneData || zoneData.type !== 'textQuill') return;
         
         // Zone - Checkbox POC
-        setCheckboxPocState('quill-chk-locked-wrapper', isZoneLocked(zoneData));
+        setCheckboxPocState('quill-chk-locked-wrapper', isZoneVerrouillee(zoneData));
         
         // Page (Recto/Verso)
         if (quillInputPage) {
@@ -12877,8 +12915,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Zone : verrouiller - Checkbox POC
         initCheckboxPoc('quill-chk-locked-wrapper', (checked) => {
             updateSelectedZone((zoneData) => {
-                setZoneLocked(zoneData, checked);
-                console.log('🔧 PHASE 4 - locked:', isZoneLocked(zoneData));
+                setZoneVerrouillee(zoneData, checked);
+                console.log('🔧 PHASE 4 - verrouille:', isZoneVerrouillee(zoneData));
             });
         });
         
@@ -13387,7 +13425,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateImageToolbarGeometryFields(zoneId);
         
         // ─── VERROUILLÉ ───
-        setCheckboxPocState('image-chk-locked-wrapper', isZoneLocked(zoneData));
+        setCheckboxPocState('image-chk-locked-wrapper', isZoneVerrouillee(zoneData));
         
         // Charger les contraintes dans l'onglet Contraintes (si mode Template)
         if (isTemplateMode()) {
@@ -13604,7 +13642,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateBarcodeToolbarGeometryFields(zoneId);
         
         // ─── VERROUILLÉ ───
-        setCheckboxPocState('barcode-chk-locked-wrapper', isZoneLocked(zoneData));
+        setCheckboxPocState('barcode-chk-locked-wrapper', isZoneVerrouillee(zoneData));
         
         // Charger les contraintes dans l'onglet Contraintes (si mode Template)
         if (isTemplateMode()) {
@@ -13726,7 +13764,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Verrouiller
         initCheckboxPoc('barcode-chk-locked-wrapper', (isChecked) => {
             updateSelectedBarcodeZone((zoneData, zoneEl) => {
-                setZoneLocked(zoneData, isChecked);
+                setZoneVerrouillee(zoneData, isChecked);
                 zoneEl.classList.toggle('locked', isChecked);
             }, false);
         });
@@ -14304,7 +14342,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateQrcodeToolbarGeometryFields(zoneId);
         
         // ─── VERROUILLÉ ───
-        setCheckboxPocState('qrcode-chk-locked-wrapper', isZoneLocked(zoneData));
+        setCheckboxPocState('qrcode-chk-locked-wrapper', isZoneVerrouillee(zoneData));
         
         // Charger les contraintes dans l'onglet Contraintes (si mode Template)
         if (isTemplateMode()) {
@@ -14416,7 +14454,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Verrouiller
         initCheckboxPoc('qrcode-chk-locked-wrapper', (isChecked) => {
             updateSelectedQrcodeZone((zoneData, zoneEl) => {
-                setZoneLocked(zoneData, isChecked);
+                setZoneVerrouillee(zoneData, isChecked);
                 zoneEl.classList.toggle('locked', isChecked);
             });
         });
@@ -14741,7 +14779,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Verrouiller
         initCheckboxPoc('image-chk-locked-wrapper', (checked) => {
             updateSelectedImageZone((zoneData, zoneEl) => {
-                setZoneLocked(zoneData, checked);
+                setZoneVerrouillee(zoneData, checked);
                 zoneEl.classList.toggle('locked', checked);
                 updateHandlesVisibility();
             });
@@ -21299,11 +21337,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         style: border.style || DEFAULT_BORDER_STYLE
                     },
                     name: zoneId,
-                    // Contraintes : format 3 niveaux (geometrie, style, global)
-                    // Priorité à z.contrainte, fallback sur style.locked pour rétrocompatibilité
-                    contrainte: z.contrainte 
-                        ? mergeWithDefaultContrainte(z.contrainte, 'textQuill')
-                        : mergeWithDefaultContrainte({ geometrie: { locked: style.locked === true } }, 'textQuill')
+                    // Lire verrouille à la racine (nouvelle propriété)
+                    // Fallback sur style.locked pour rétrocompatibilité avec anciens JSON
+                    verrouille: z.verrouille === true || style.locked === true,
+                    // Contraintes : priorité à z.contrainte, sinon valeurs par défaut
+                    contrainte: mergeWithDefaultContrainte(z.contrainte || {}, 'textQuill')
                 };
                 
                 documentState.pages[pageIndex].zones[zoneId] = zoneData;
@@ -21508,12 +21546,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 nom: zoneData.name || '',
                 niveau: zoneData.zIndex || 1,
                 rotation: zoneData.rotation || 0,
-                verrouille: isZoneLocked(zoneData),
-                systeme: isZoneSysteme(zoneData),
-                systemeLibelle: getZoneSystemeLibelle(zoneData),
-                imprimable: isZoneImprimable(zoneData),
-                selectionnable: isZoneSelectionnable(zoneData),
-                toolbarAffichable: isZoneToolbarAffichable(zoneData),
+                verrouille: isZoneVerrouillee(zoneData),
                 supprimerLignesVides: zoneData.emptyLines !== undefined ? zoneData.emptyLines : 0,
                 geometrie: {
                     xMm: zoneData.xMm !== undefined ? zoneData.xMm : pixelsToMm(zoneData.x || 0),
@@ -21579,12 +21612,7 @@ document.addEventListener('DOMContentLoaded', () => {
             nom: zoneData.name || '',
             niveau: zoneData.zIndex || 1,
             rotation: zoneData.rotation || 0,
-            verrouille: isZoneLocked(zoneData),
-            systeme: isZoneSysteme(zoneData),
-            systemeLibelle: getZoneSystemeLibelle(zoneData),
-            imprimable: isZoneImprimable(zoneData),
-            selectionnable: isZoneSelectionnable(zoneData),
-            toolbarAffichable: isZoneToolbarAffichable(zoneData),
+            verrouille: isZoneVerrouillee(zoneData),
             // Lignes vides : export entier (rétrocompatibilité avec ancien booléen)
             supprimerLignesVides: zoneData.emptyLines !== undefined ? zoneData.emptyLines : (zoneData.removeEmptyLines ? 1 : 0),
             
@@ -21656,12 +21684,7 @@ document.addEventListener('DOMContentLoaded', () => {
             nom: zoneData.nom || 'Code-barres',
             niveau: zoneData.zIndex || 1,
             rotation: zoneData.rotation || 0,
-            verrouille: isZoneLocked(zoneData),
-            systeme: isZoneSysteme(zoneData),
-            systemeLibelle: getZoneSystemeLibelle(zoneData),
-            imprimable: isZoneImprimable(zoneData),
-            selectionnable: isZoneSelectionnable(zoneData),
-            toolbarAffichable: isZoneToolbarAffichable(zoneData),
+            verrouille: isZoneVerrouillee(zoneData),
             contrainte: mergeWithDefaultContrainte(zoneData.contrainte, 'barcode'),
             geometrie: {
                 xMm: zoneData.xMm !== undefined ? zoneData.xMm : pixelsToMm(zoneData.x || 0),
@@ -21670,6 +21693,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 hauteurMm: zoneData.hMm !== undefined ? zoneData.hMm : pixelsToMm(zoneData.h || 60)
             },
             typeCodeBarres: zoneData.typeCodeBarres || 'code128',
+            forme: zoneData.forme || null,
             sourceType: zoneData.sourceType || 'fixe',
             champFusion: zoneData.champFusion || '',
             valeurStatique: zoneData.valeurStatique || '',
@@ -21700,12 +21724,7 @@ document.addEventListener('DOMContentLoaded', () => {
             nom: zoneData.name || 'QR Code',
             niveau: zoneData.zIndex || 1,
             rotation: zoneData.rotation || 0,
-            verrouille: isZoneLocked(zoneData),
-            systeme: isZoneSysteme(zoneData),
-            systemeLibelle: getZoneSystemeLibelle(zoneData),
-            imprimable: isZoneImprimable(zoneData),
-            selectionnable: isZoneSelectionnable(zoneData),
-            toolbarAffichable: isZoneToolbarAffichable(zoneData),
+            verrouille: isZoneVerrouillee(zoneData),
             contrainte: mergeWithDefaultContrainte(zoneData.contrainte, 'qr'),
             geometrie: {
                 xMm: zoneData.xMm !== undefined ? zoneData.xMm : pixelsToMm(zoneData.x || 0),
@@ -21750,12 +21769,7 @@ document.addEventListener('DOMContentLoaded', () => {
             nom: zoneData.name || '',
             niveau: zoneData.zIndex || 1,
             rotation: zoneData.rotation || 0,
-            verrouille: isZoneLocked(zoneData),
-            systeme: isZoneSysteme(zoneData),
-            systemeLibelle: getZoneSystemeLibelle(zoneData),
-            imprimable: isZoneImprimable(zoneData),
-            selectionnable: isZoneSelectionnable(zoneData),
-            toolbarAffichable: isZoneToolbarAffichable(zoneData),
+            verrouille: isZoneVerrouillee(zoneData),
             contrainte: mergeWithDefaultContrainte(zoneData.contrainte, 'image'),
             geometrie: {
                 xMm: zoneData.xMm !== undefined ? zoneData.xMm : pixelsToMm(zoneData.x || 0),
@@ -22071,6 +22085,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         type: 'textQuill',
                         page: pageNumero,
                         niveau: zoneData.zIndex || 1,
+                        verrouille: isZoneVerrouillee(zoneData),
                         geometry: {
                             x_mm: zoneData.xMm !== undefined ? zoneData.xMm : (zoneData.x || 0) * MM_PER_PIXEL,
                             y_mm: zoneData.yMm !== undefined ? zoneData.yMm : (zoneData.y || 0) * MM_PER_PIXEL,
@@ -22090,7 +22105,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             bgColor: zoneData.isTransparent ? null : (zoneData.bgColor || DEFAULT_BG_COLOR),
                             bgColorCmyk: zoneData.isTransparent ? null : (zoneData.bgColorCmyk || null),
                             transparent: zoneData.isTransparent !== undefined ? !!zoneData.isTransparent : true,
-                            locked: isZoneLocked(zoneData),
                             copyfit: !!zoneData.copyfit
                         },
                         border: {
