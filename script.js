@@ -400,8 +400,8 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {GeometrieJsonWebDev} geometrie - Géométrie en mm
      * @property {string} contenu - Contenu textuel
      * @property {FormatagePartielJsonWebDev[]} formatage - Formatage partiel
-     * @property {'text'|'textQuill'} [typeZone] - Type interne de zone texte (optionnel, pour roundtrip Designer)
-     * @property {Object} [quillDelta] - Contenu Quill au format Delta (optionnel, pour roundtrip Designer)
+     * @property {Object} [quillDelta] - Delta Quill (format natif Quill.js)
+     * @property {string} [contenuRtf] - Contenu RTF pour PrintShop Mail
      * @property {StyleJsonWebDev} style - Style typographique
      * @property {FondJsonWebDev} fond - Configuration du fond
      * @property {BordureJsonWebDev} bordure - Configuration de la bordure
@@ -489,23 +489,10 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {FormatDocumentJsonWebDev} [formatDocument] - Dimensions du document
      * @property {Array} [pages] - Pages du document
      * @property {ZoneTexteJsonWebDev[]} [zonesTexte] - Zones de texte
-     * @property {ZoneTextQuillJsonWebDev[]} [zonesTextQuill] - Zones texte Quill (Delta + RTF)
      * @property {ZoneQRJsonWebDev[]} [zonesQR] - Zones QR Code
      * @property {ZoneCodeBarresJsonWebDev[]} [zonesCodeBarres] - Zones Code-barres
      * @property {ZoneImageJsonWebDev[]} [zonesImage] - Zones image
      * @description Document complet au format JSON WebDev.
-     */
-
-    /**
-     * @typedef {Object} ZoneTextQuillJsonWebDev
-     * @property {string} id - Identifiant de la zone (ex: "zone-77")
-     * @property {'textQuill'} type - Type (toujours "textQuill")
-     * @property {{x_mm: number, y_mm: number, width_mm: number, height_mm: number}} geometry - Géométrie en mm
-     * @property {Object|string|null} content_quill - Delta Quill ({ops:[...]}) OU texte brut (cas 1)
-     * @property {string} content_rtf - Contenu RTF (cas 2/3)
-     * @property {{font?: string, size_pt?: number, color?: string, align?: string, valign?: string, line_height?: number}} style - Style global
-     * @property {{width_px?: number, color?: string, style?: string}} border - Bordure
-     * @description Zone texte Quill au format JSON WebDev (double format Delta + RTF).
      */
 
     // --- STRUCTURES POLICES (DISPONIBLES / UTILISÉES) ---
@@ -587,7 +574,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {Object[]} [polices] - Polices disponibles
      * @property {Object[]} [pages] - Pages du document
      * @property {Object[]} [zonesTexte] - Zones de texte
-     * @property {Object[]} [zonesTextQuill] - Zones texte Quill
      * @property {Object[]} [zonesCodeBarres] - Zones codes-barres
      * @property {Object[]} [zonesImage] - Zones images
      * @description Structure complète du document JSON envoyé par WebDev.
@@ -15006,7 +14992,7 @@ document.addEventListener('DOMContentLoaded', () => {
             propertiesContent.style.display = '';
         }
         
-        const zoneType = data.type || 'text';
+        const zoneType = data.type || 'textQuill';
         zonesData[id].type = zoneType;
 
         if (zoneType === 'qr') {
@@ -20841,113 +20827,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return false;
         }
 
-        /**
-         * Normalise un JSON "template_multipage" (pages[].zones[]) vers un JSON compatible loadFromWebDev().
-         * Permet de tester l'import local des zones, sans passer par WebDev.
-         *
-         * @param {any} input - JSON importé depuis un fichier
-         * @returns {DocumentJsonWebDev} JSON normalisé compatible WebDev
-         */
-        function normalizeTemplateMultipageJson(input) {
-            const pagesIn = Array.isArray(input.pages) ? input.pages : [];
-            const firstPage = pagesIn[0] || {};
-            const widthPx = typeof firstPage.width === 'number' ? firstPage.width : DOCUMENT_FORMATS[DEFAULT_FORMAT].width;
-            const heightPx = typeof firstPage.height === 'number' ? firstPage.height : DOCUMENT_FORMATS[DEFAULT_FORMAT].height;
-
-            /** @type {ZoneTextQuillJsonWebDev[]} */
-            const zonesTextQuill = [];
-
-            pagesIn.forEach((p, idx) => {
-                const zones = Array.isArray(p.zones) ? p.zones : [];
-                zones.forEach(z => {
-                    if (!z || z.type !== 'textQuill') return;
-
-                    const geom = z.geometry || {};
-                    const xMm = parseFloat(geom.x_mm);
-                    const yMm = parseFloat(geom.y_mm);
-                    const wMm = parseFloat(geom.width_mm);
-                    const hMm = parseFloat(geom.height_mm);
-
-                    const style = z.style || {};
-                    const border = z.border || {};
-
-                    zonesTextQuill.push({
-                        id: z.id || `zone-${Date.now()}`,
-                        type: 'textQuill',
-                        geometry: {
-                            x_mm: isNaN(xMm) ? 0 : xMm,
-                            y_mm: isNaN(yMm) ? 0 : yMm,
-                            width_mm: isNaN(wMm) ? 80 : wMm,
-                            height_mm: isNaN(hMm) ? 30 : hMm
-                        },
-                        content_quill: z.content_quill || '',
-                        content_rtf: z.content_rtf || '',
-                        style: {
-                            font: style.font || DEFAULT_FONT,
-                            size_pt: style.size_pt || DEFAULT_FONT_SIZE,
-                            color: style.color || DEFAULT_TEXT_COLOR,
-                            align: style.align || DEFAULT_ALIGN_H,
-                            valign: style.valign || DEFAULT_ALIGN_V,
-                            line_height: style.lineHeight !== undefined ? style.lineHeight : (style.line_height !== undefined ? style.line_height : 1.2),
-                            // IMPORTANT : conserver le fond pendant la normalisation
-                            bgColor: (typeof style.bgColor === 'string' && style.bgColor.trim().length > 0) ? style.bgColor : null,
-                            transparent: style.transparent !== undefined ? !!style.transparent : (style.isTransparent !== undefined ? !!style.isTransparent : true),
-                            locked: style.locked === true,
-                            copyfit: style.copyfit === true
-                        },
-                        border: {
-                            width_px: border.width !== undefined ? border.width : (border.width_px !== undefined ? border.width_px : 0),
-                            color: border.color || DEFAULT_BORDER_COLOR,
-                            style: border.style || DEFAULT_BORDER_STYLE
-                        },
-                        // Note : page non porté par le format "template_multipage" zone-by-zone.
-                        // Ici, les zones seront importées par défaut sur la page 1 (voir Étape 6bis).
-                    });
-                });
-            });
-
-            return {
-                identification: {
-                    idDocument: '',
-                    nomDocument: firstPage.page_name || '',
-                    dateCreation: input.generated_at || ''
-                },
-                formatDocument: {
-                    largeurMm: widthPx * MM_PER_PIXEL,
-                    hauteurMm: heightPx * MM_PER_PIXEL,
-                    fondPerdu: { actif: false, valeurMm: 3 },
-                    traitsCoupe: { actif: false },
-                    margeSecurite: 0,
-                    surfaceMaxImageMm2: DEFAULT_SURFACE_MAX_IMAGE_MM2,
-                    pourcentageMaxImage: DEFAULT_POURCENTAGE_MAX_IMAGE
-                },
-                champsFusion: [],
-                polices: [],
-                pages: pagesIn.map((p, i) => ({
-                    numero: i + 1,
-                    nom: p.page_name || (i === 0 ? 'Recto' : `Page ${i + 1}`),
-                    urlFond: p.image || ''
-                })),
-                zonesTexte: [],
-                zonesTextQuill,
-                zonesCodeBarres: [],
-                zonesImage: []
-            };
-        }
-
         /** @type {DocumentJsonWebDev} */
         let effectiveDocumentJson = documentJson;
-
-        // Support import tests : format "template_multipage" (pages[].zones[])
-        const isTemplateMultipage = effectiveDocumentJson.document === 'template_multipage' && Array.isArray(effectiveDocumentJson.pages);
-        const hasZonesArray = isTemplateMultipage && effectiveDocumentJson.pages.some(p => Array.isArray(p && p.zones));
-        if (hasZonesArray) {
-            console.log('🔧 PHASE 7 - Import: détection format template_multipage → normalisation WebDev');
-            // Note : le format template_multipage est un document JSON (pas une enveloppe postMessage).
-            // On normalise uniquement le document.
-            effectiveDocumentJson = normalizeTemplateMultipageJson(effectiveDocumentJson);
-            console.log('🔧 PHASE 7 - Import: JSON normalisé :', effectiveDocumentJson);
-        }
         
         // --- ÉTAPE 1 : Nettoyer le DOM ---
         // Supprimer toutes les zones existantes de la page actuelle
@@ -21240,123 +21121,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         console.log(`  → ${zonesImageCount} zone(s) image chargée(s)`);
-
-        // --- ÉTAPE 6bis : Charger les zones textQuill (nouveau format Delta + RTF) ---
-        console.log('Étape 6bis : Chargement des zones textQuill (Delta + RTF)...');
-        
-        let zonesTextQuillCount = 0;
-        
-        if (effectiveDocumentJson.zonesTextQuill && Array.isArray(effectiveDocumentJson.zonesTextQuill)) {
-            effectiveDocumentJson.zonesTextQuill.forEach(z => {
-                const zoneId = z.id || `zone-${Date.now()}`;
-                
-                // Nouveau format : pas de page (pour l'instant) → défaut page 1 (index 0)
-                const pageIndex = 0;
-                if (pageIndex < 0 || pageIndex >= documentState.pages.length) return;
-                
-                const geom = z.geometry || {};
-                const style = z.style || {};
-                const border = z.border || {};
-                
-                // NOTE : le JSON peut contenir des valeurs mm en string (ex: "7.94").
-                const xMm = Number.isFinite(parseFloat(geom.x_mm)) ? parseFloat(geom.x_mm) : 0;
-                const yMm = Number.isFinite(parseFloat(geom.y_mm)) ? parseFloat(geom.y_mm) : 0;
-                const wMm = Number.isFinite(parseFloat(geom.width_mm)) ? parseFloat(geom.width_mm) : 80;
-                const hMm = Number.isFinite(parseFloat(geom.height_mm)) ? parseFloat(geom.height_mm) : 30;
-                
-                // Déterminer le Delta selon les 3 cas
-                const hasDeltaObject = z.content_quill && typeof z.content_quill === 'object' && Array.isArray(z.content_quill.ops);
-                const hasDeltaText = typeof z.content_quill === 'string' && z.content_quill.length > 0;
-                const hasRtf = typeof z.content_rtf === 'string' && z.content_rtf.length > 0;
-                
-                /** @type {Object} */
-                let delta;
-                
-                if (hasDeltaText && !hasRtf) {
-                    // Cas 1 : texte brut dans content_quill, RTF vide
-                    delta = textToDelta(z.content_quill, {
-                        bold: false,
-                        underline: false,
-                        color: typeof style.color === 'string' ? style.color : undefined
-                    });
-                } else if (!hasDeltaObject && hasRtf) {
-                    // Cas 2 : pas de delta, RTF présent
-                    delta = rtfToDelta(z.content_rtf);
-                } else if (hasDeltaObject) {
-                    // Cas 3 : delta + RTF
-                    delta = z.content_quill;
-                } else {
-                    // Fallback : delta vide
-                    delta = { ops: [{ insert: '\n' }] };
-                }
-                
-                // Construire la zone interne textQuill
-                const importedIsTransparent =
-                    style.transparent !== undefined
-                        ? !!style.transparent
-                        : (style.isTransparent !== undefined ? !!style.isTransparent : true);
-                const importedBgColor =
-                    (typeof style.bgColor === 'string' && style.bgColor.trim().length > 0)
-                        ? style.bgColor
-                        : DEFAULT_BG_COLOR;
-
-                if (DEBUG_PHASE7_BG) {
-                    console.log('🔧 PHASE 7 BG - Import style → interne:', zoneId, {
-                        style_bgColor: style.bgColor,
-                        style_transparent: style.transparent,
-                        computed_bgColor: importedBgColor,
-                        computed_isTransparent: importedIsTransparent
-                    });
-                }
-                
-                const zoneData = {
-                    type: 'textQuill',
-                    x: mmToPx(xMm),
-                    y: mmToPx(yMm),
-                    w: mmToPx(wMm),
-                    h: mmToPx(hMm),
-                    xMm,
-                    yMm,
-                    wMm,
-                    hMm,
-                    quillDelta: delta,
-                    font: style.font || DEFAULT_FONT,
-                    size: style.size_pt || DEFAULT_FONT_SIZE,
-                    color: style.color || DEFAULT_TEXT_COLOR,
-                    align: style.align || DEFAULT_ALIGN_H,
-                    valign: style.valign || DEFAULT_ALIGN_V,
-                    bgColor: importedBgColor,
-                    isTransparent: importedIsTransparent,
-                    lineHeight: (style.lineHeight !== undefined ? style.lineHeight : (style.line_height !== undefined ? style.line_height : 1.2)),
-                    copyfit: style.copyfit === true,
-                    emptyLines: 0,
-                    zIndex: z.niveau || 1,
-                    border: {
-                        width: (border.width_px !== undefined ? border.width_px : (border.width !== undefined ? border.width : 0)) || 0,
-                        color: border.color || DEFAULT_BORDER_COLOR,
-                        style: border.style || DEFAULT_BORDER_STYLE
-                    },
-                    name: zoneId,
-                    // Lire verrouille à la racine (nouvelle propriété)
-                    // Fallback sur style.locked pour rétrocompatibilité avec anciens JSON
-                    verrouille: z.verrouille === true || style.locked === true,
-                    // Contraintes : priorité à z.contrainte, sinon valeurs par défaut
-                    contrainte: mergeWithDefaultContrainte(z.contrainte || {}, 'textQuill')
-                };
-                
-                documentState.pages[pageIndex].zones[zoneId] = zoneData;
-                zonesTextQuillCount++;
-                
-                // Compteur de zones
-                const idMatch = zoneId.match(/zone-(\d+)/);
-                if (idMatch) {
-                    const idNum = parseInt(idMatch[1], 10);
-                    if (idNum > maxZoneId) maxZoneId = idNum;
-                }
-            });
-        }
-        
-        console.log(`  → ${zonesTextQuillCount} zone(s) textQuill chargée(s)`);
         
         // --- ÉTAPE 8 : Mettre à jour le compteur et l'affichage ---
         console.log('Étape 7 : Finalisation...');
@@ -21539,6 +21303,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const delta = zoneData.quillDelta || null;
             const converted = quillDeltaToTextAndFormatage(delta);
+            
+            // Générer le RTF pour PrintShop Mail
+            const rtfOutput = deltaToRtf(
+                delta,
+                zoneData.font || DEFAULT_FONT,
+                zoneData.size || DEFAULT_FONT_SIZE,
+                zoneData.color || DEFAULT_TEXT_COLOR,
+                zoneData.align || DEFAULT_ALIGN_H
+            );
 
             return {
                 id: id,
@@ -21556,9 +21329,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 contenu: converted.contenu,
                 formatage: converted.formatage,
-                typeZone: 'textQuill',
                 contrainte: mergeWithDefaultContrainte(zoneData.contrainte, 'textQuill'),
                 quillDelta: delta || undefined,
+                contenuRtf: rtfOutput,
                 style: {
                     police: zoneData.font || DEFAULT_FONT,
                     taillePt: zoneData.size || DEFAULT_FONT_SIZE,
@@ -21627,8 +21400,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Contenu et formatage
             contenu: zoneData.content || '',
             formatage: formatage,
-            typeZone: zoneData.type || 'text',
-            contrainte: mergeWithDefaultContrainte(zoneData.contrainte, 'text'),
+            contrainte: mergeWithDefaultContrainte(zoneData.contrainte, 'textQuill'),
             
             // Style typographique
             style: {
@@ -22023,7 +21795,6 @@ document.addEventListener('DOMContentLoaded', () => {
             champsFusion: documentState.champsFusion || [],
             pages: [],
             zonesTexte: [],
-            zonesTextQuill: [],
             zonesQR: [],
             zonesCodeBarres: [],
             zonesImage: []
@@ -22067,55 +21838,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     );
                     imageCount++;
                 } else if (zoneData.type === 'textQuill') {
-                    // Phase 7 (nouveau format) : zones textQuill dédiées
-                    console.log('🔧 PHASE 7 - Export textQuill:', zoneId);
-
-                    const delta = zoneData.quillDelta || null;
-                    // Passer les paramètres de style pour générer un RTF complet PrintShop Mail
-                    const rtfOutput = deltaToRtf(
-                        delta,
-                        zoneData.font || DEFAULT_FONT,
-                        zoneData.size || DEFAULT_FONT_SIZE,
-                        zoneData.color || DEFAULT_TEXT_COLOR,
-                        zoneData.align || DEFAULT_ALIGN_H
-                    );
-
-                    output.zonesTextQuill.push({
-                        id: zoneId,
-                        type: 'textQuill',
-                        page: pageNumero,
-                        niveau: zoneData.zIndex || 1,
-                        verrouille: isZoneVerrouillee(zoneData),
-                        geometry: {
-                            x_mm: zoneData.xMm !== undefined ? zoneData.xMm : (zoneData.x || 0) * MM_PER_PIXEL,
-                            y_mm: zoneData.yMm !== undefined ? zoneData.yMm : (zoneData.y || 0) * MM_PER_PIXEL,
-                            width_mm: zoneData.wMm !== undefined ? zoneData.wMm : (zoneData.w || 200) * MM_PER_PIXEL,
-                            height_mm: zoneData.hMm !== undefined ? zoneData.hMm : (zoneData.h || 40) * MM_PER_PIXEL
-                        },
-                        content_quill: delta,
-                        content_rtf: rtfOutput,
-                        style: {
-                            font: zoneData.font || DEFAULT_FONT,
-                            size_pt: zoneData.size || DEFAULT_FONT_SIZE,
-                            color: zoneData.color || DEFAULT_TEXT_COLOR,
-                            colorCmyk: zoneData.colorCmyk || null,
-                            align: zoneData.align || DEFAULT_ALIGN_H,
-                            valign: zoneData.valign || DEFAULT_ALIGN_V,
-                            line_height: zoneData.lineHeight || DEFAULT_LINE_HEIGHT,
-                            bgColor: zoneData.isTransparent ? null : (zoneData.bgColor || DEFAULT_BG_COLOR),
-                            bgColorCmyk: zoneData.isTransparent ? null : (zoneData.bgColorCmyk || null),
-                            transparent: zoneData.isTransparent !== undefined ? !!zoneData.isTransparent : true,
-                            copyfit: !!zoneData.copyfit
-                        },
-                        border: {
-                            width_px: zoneData.border?.width || 0,
-                            color: zoneData.border?.color || DEFAULT_BORDER_COLOR,
-                            colorCmyk: zoneData.border?.colorCmyk || null,
-                            style: zoneData.border?.style || DEFAULT_BORDER_STYLE
-                        },
-                        contrainte: mergeWithDefaultContrainte(zoneData.contrainte, 'textQuill')
-                    });
-                } else {
+                    // V3.3 : Export unifié dans zonesTexte (format français + RTF)
                     output.zonesTexte.push(
                         convertZoneTexteToJson(zoneId, zoneData, pageNumero)
                     );
@@ -22571,7 +22294,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Restaurer chaque zone de la page courante
         for (const [id, data] of Object.entries(zonesData)) {
-            zonesData[id] = { type: data.type || 'text', ...data };
+            zonesData[id] = { type: data.type || 'textQuill', ...data };
             createZoneDOM(id, id.split('-')[1], false); // NE PAS auto-sélectionner pendant le chargement
             
             // Appliquer position/taille sauvegardées
@@ -22584,7 +22307,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // APPLIQUER TOUS LES STYLES AVANT TOUT LE RESTE
                 const contentEl = zoneEl.querySelector('.zone-content');
-                const zoneType = zonesData[id].type || 'text';
+                const zoneType = zonesData[id].type || 'textQuill';
                 
                 if (zoneType === 'qr') {
                     zoneEl.classList.add('zone-qr');
