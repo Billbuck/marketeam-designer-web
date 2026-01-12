@@ -9037,6 +9037,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!zoneData) return;
         
         saveConstraintsFromUI(zoneId, zoneData, toolbar);
+        
+        // Mettre à jour la visibilité de la section Alignement page
+        // car les contraintes modifiées peuvent affecter sa visibilité
+        updateSidebarSectionsVisibility();
     }
 
     /**
@@ -9159,6 +9163,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isTemplateMode()) {
                 applyCurrentZoneGeometryConstraints();
             }
+            
+            // Mettre à jour la section Alignement page dans la sidebar
+            updateSidebarSectionsVisibility();
             
             return; // Sortir ici, pas besoin de sauvegarder
         }
@@ -15028,6 +15035,49 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * Vérifie si une zone a des contraintes empêchant l'alignement sur la page
+     * @param {Object} zoneData - Données de la zone
+     * @returns {boolean} - true si la zone a des contraintes bloquantes
+     */
+    function hasPageAlignmentConstraints(zoneData) {
+        if (!zoneData) return false;
+        
+        // Vérifier verrouillage et système
+        if (isZoneLocked(zoneData) || isZoneSysteme(zoneData)) return true;
+        
+        // Vérifier les contraintes de déplacement dans contrainte.geometrie
+        if (zoneData.contrainte && zoneData.contrainte.geometrie) {
+            // Position fixe (déplacement interdit)
+            if (zoneData.contrainte.geometrie.positionFixe === true) return true;
+            
+            // Area définie (zone limitée à une région - "Zone autorisée")
+            if (zoneData.contrainte.geometrie.area) return true;
+        }
+        
+        return false;
+    }
+
+    /**
+     * Vérifie si la section Alignement page doit être visible
+     * @returns {boolean} - true si visible
+     */
+    function shouldShowPageAlignmentSection() {
+        if (selectedZoneIds.length === 0) return false;
+        
+        const zonesData = getCurrentPageZones();
+        
+        // Vérifier que AUCUNE zone sélectionnée n'a de contraintes
+        for (const zoneId of selectedZoneIds) {
+            const zoneData = zonesData[zoneId];
+            if (hasPageAlignmentConstraints(zoneData)) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
+    /**
      * Mettre à jour la visibilité des sections de la sidebar selon la sélection
      * @description Logique POC :
      *   - Multi-sélection (2+) : SEULES les sections multi sont visibles
@@ -15069,6 +15119,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (alignmentSection) alignmentSection.style.display = 'block';
             if (sizeSection) sizeSection.style.display = 'block';
             if (spacingSection) spacingSection.style.display = count >= 3 ? 'block' : 'none';
+            if (pageAlignmentSection) pageAlignmentSection.style.display = shouldShowPageAlignmentSection() ? 'block' : 'none';
             if (deleteSection) deleteSection.style.display = 'block'; // Visible pour supprimer plusieurs zones
             return;
         }
@@ -15087,6 +15138,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (alignmentSection) alignmentSection.style.display = 'none';
             if (sizeSection) sizeSection.style.display = 'none';
             if (spacingSection) spacingSection.style.display = 'none';
+            if (pageAlignmentSection) pageAlignmentSection.style.display = shouldShowPageAlignmentSection() ? 'block' : 'none';
             if (toolsSection) toolsSection.style.display = 'none';      // no-selection
             if (zoomSection) zoomSection.style.display = 'block';       // always
             if (deleteSection) deleteSection.style.display = 'block';   // visible avec sélection
@@ -15106,6 +15158,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (alignmentSection) alignmentSection.style.display = 'none';
         if (sizeSection) sizeSection.style.display = 'none';
         if (spacingSection) spacingSection.style.display = 'none';
+        if (pageAlignmentSection) pageAlignmentSection.style.display = 'none';
         if (toolsSection) toolsSection.style.display = 'block';     // no-selection
         if (zoomSection) zoomSection.style.display = 'block';       // always
         if (deleteSection) deleteSection.style.display = 'none';    // masquée sans sélection
@@ -15172,6 +15225,106 @@ document.addEventListener('DOMContentLoaded', () => {
         
         saveToLocalStorage();
         saveState(); // Snapshot APRÈS l'alignement
+    }
+
+    /**
+     * Centre les zones sélectionnées horizontalement sur la page
+     * @description Calcule le bounding box des zones et le centre sur l'axe X
+     */
+    function alignZonesToPageHorizontal() {
+        if (selectedZoneIds.length === 0) return;
+        
+        const zonesData = getCurrentPageZones();
+        
+        // Calculer le bounding box de toutes les zones sélectionnées
+        let minX = Infinity, maxX = -Infinity;
+        const zoneElements = [];
+        
+        for (const zoneId of selectedZoneIds) {
+            const zoneEl = document.getElementById(zoneId);
+            if (!zoneEl) continue;
+            
+            const zoneData = zonesData[zoneId];
+            if (hasPageAlignmentConstraints(zoneData)) continue;
+            
+            const left = zoneEl.offsetLeft;
+            const right = left + zoneEl.offsetWidth;
+            
+            minX = Math.min(minX, left);
+            maxX = Math.max(maxX, right);
+            
+            zoneElements.push({ el: zoneEl, data: zoneData, left });
+        }
+        
+        if (zoneElements.length === 0) return;
+        
+        // Calculer le centre du bounding box et le centre de la page
+        const boundingWidth = maxX - minX;
+        const boundingCenterX = minX + boundingWidth / 2;
+        const pageCenterX = a4Page.offsetWidth / 2;
+        
+        // Calculer le décalage à appliquer
+        const deltaX = pageCenterX - boundingCenterX;
+        
+        // Appliquer le décalage à toutes les zones
+        for (const { el, data, left } of zoneElements) {
+            const newLeft = left + deltaX;
+            el.style.left = newLeft + 'px';
+            if (data) data.x = newLeft;
+        }
+        
+        saveToLocalStorage();
+        saveState();
+    }
+
+    /**
+     * Centre les zones sélectionnées verticalement sur la page
+     * @description Calcule le bounding box des zones et le centre sur l'axe Y
+     */
+    function alignZonesToPageVertical() {
+        if (selectedZoneIds.length === 0) return;
+        
+        const zonesData = getCurrentPageZones();
+        
+        // Calculer le bounding box de toutes les zones sélectionnées
+        let minY = Infinity, maxY = -Infinity;
+        const zoneElements = [];
+        
+        for (const zoneId of selectedZoneIds) {
+            const zoneEl = document.getElementById(zoneId);
+            if (!zoneEl) continue;
+            
+            const zoneData = zonesData[zoneId];
+            if (hasPageAlignmentConstraints(zoneData)) continue;
+            
+            const top = zoneEl.offsetTop;
+            const bottom = top + zoneEl.offsetHeight;
+            
+            minY = Math.min(minY, top);
+            maxY = Math.max(maxY, bottom);
+            
+            zoneElements.push({ el: zoneEl, data: zoneData, top });
+        }
+        
+        if (zoneElements.length === 0) return;
+        
+        // Calculer le centre du bounding box et le centre de la page
+        const boundingHeight = maxY - minY;
+        const boundingCenterY = minY + boundingHeight / 2;
+        const pageCenterY = a4Page.offsetHeight / 2;
+        
+        // Calculer le décalage à appliquer
+        const deltaY = pageCenterY - boundingCenterY;
+        
+        // Appliquer le décalage à toutes les zones
+        for (const { el, data, top } of zoneElements) {
+            const newTop = top + deltaY;
+            el.style.top = newTop + 'px';
+            if (data) data.y = newTop;
+        }
+        
+        saveToLocalStorage();
+        saveState();
     }
 
     // --- FONCTIONS DE TAILLE ---
@@ -17502,6 +17655,11 @@ document.addEventListener('DOMContentLoaded', () => {
         saveState(); // Snapshot APRÈS l'espacement
     }
 
+    // Références DOM - Section Alignement page
+    const pageAlignmentSection = document.getElementById('page-alignment-section');
+    const btnPageAlignHorizontal = document.getElementById('btn-page-align-horizontal');
+    const btnPageAlignVertical = document.getElementById('btn-page-align-vertical');
+
     // --- ÉCOUTEURS POUR LES BOUTONS D'ALIGNEMENT ET TAILLE ---
     const btnAlignLeft = document.getElementById('btn-align-left');
     const btnAlignCenter = document.getElementById('btn-align-center');
@@ -17524,6 +17682,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnSameHeight) btnSameHeight.addEventListener('click', () => applySameHeight());
     if (btnSpaceHorizontal) btnSpaceHorizontal.addEventListener('click', () => spaceZonesHorizontally());
     if (btnSpaceVertical) btnSpaceVertical.addEventListener('click', () => spaceZonesVertically());
+
+    // Boutons alignement page
+    if (btnPageAlignHorizontal) btnPageAlignHorizontal.addEventListener('click', () => alignZonesToPageHorizontal());
+    if (btnPageAlignVertical) btnPageAlignVertical.addEventListener('click', () => alignZonesToPageVertical());
 
     // --- 4. SUPPRESSION & DÉSÉLECTION ---
     
