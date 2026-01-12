@@ -21177,6 +21177,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Regénérer la navigation des pages après import
         renderPageNavigation();
         
+        // Ajuster le zoom pour afficher le document en entier après chargement
+        fitToView();
+        
         return true;
     }
     
