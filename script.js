@@ -5725,32 +5725,50 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * Vérifie si une zone doit être conservée lors d'un reset.
-     * Une zone est conservée si elle est **système OU non supprimable**.
+     * 
+     * **Comportement selon le mode** :
+     * - **Mode Template** : Seules les zones **système** sont conservées
+     * - **Mode Normal** : Les zones **système OU nonSupprimable** sont conservées
      * 
      * **Règles de conservation** :
-     * - `systeme: true` → Zone système protégée, toujours conservée
-     * - `nonSupprimable: true` → Zone que l'utilisateur ne peut pas supprimer, conservée au reset
+     * - `systeme: true` → Zone système protégée, toujours conservée (tous modes)
+     * - `nonSupprimable: true` → Conservée uniquement en mode Normal
      * - Les deux à `false` ou absents → Zone supprimée au reset
      * 
      * @param {ZoneData} zoneData - Données de la zone à vérifier
      * @returns {boolean} `true` si la zone doit être conservée au reset, `false` sinon
      * 
      * @example
-     * // Zone système → conservée
+     * // Zone système → conservée (tous modes)
      * isZoneProtegeeAuReset({ contrainte: { global: { systeme: true } } }); // → true
      * 
-     * // Zone non supprimable mais pas système → conservée
-     * isZoneProtegeeAuReset({ contrainte: { global: { systeme: false, nonSupprimable: true } } }); // → true
+     * // Zone non supprimable → conservée en mode Normal, supprimée en mode Template
+     * isZoneProtegeeAuReset({ contrainte: { global: { nonSupprimable: true } } }); 
+     * // → true (mode Normal), false (mode Template)
      * 
      * // Zone normale → supprimée au reset
      * isZoneProtegeeAuReset({ contrainte: { global: { systeme: false, nonSupprimable: false } } }); // → false
      * 
      * @see isZoneSysteme
      * @see isZoneNonSupprimable
+     * @see isTemplateMode
      */
     function isZoneProtegeeAuReset(zoneData) {
         if (!zoneData) return false;
-        return isZoneSysteme(zoneData) || (zoneData.contrainte?.global?.nonSupprimable === true);
+        
+        // Les zones système sont toujours protégées (tous modes)
+        if (isZoneSysteme(zoneData)) {
+            return true;
+        }
+        
+        // En mode Template, seules les zones système sont protégées
+        // Les zones nonSupprimable peuvent être réinitialisées
+        if (isTemplateMode()) {
+            return false;
+        }
+        
+        // En mode Normal, les zones nonSupprimable sont aussi protégées
+        return zoneData.contrainte?.global?.nonSupprimable === true;
     }
 
     /**
@@ -11691,9 +11709,63 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- COPIE/COLLER DE ZONES ---
     
     /**
-     * Copie la zone textQuill sélectionnée dans le presse-papier interne.
-     * Seules les zones de type 'textQuill' peuvent être copiées.
-     * Le contenu Quill (Delta) est copié en profondeur pour préserver le formatage.
+     * Vérifie si une zone d'un type donné peut être créée (collée).
+     * Utilise les contraintes globales (autorisations + limites).
+     * 
+     * @param {string} zoneType - Type de zone ('textQuill', 'image', 'barcode')
+     * @returns {boolean} true si la zone peut être créée
+     */
+    function canPasteZoneType(zoneType) {
+        const { autorisations, limites } = documentState.constraints;
+        const counts = countZonesByType();
+        
+        // 1. Vérifier l'autorisation (false = type interdit)
+        if (autorisations[zoneType] === false) {
+            return false;
+        }
+        
+        // 2. Vérifier la limite (0 ou null = illimité)
+        const limite = limites[zoneType];
+        if (limite !== null && limite > 0 && counts[zoneType] >= limite) {
+            return false; // Limite atteinte
+        }
+        
+        return true;
+    }
+
+    /**
+     * Affiche un toast d'erreur pour le collage impossible.
+     * 
+     * @param {string} reason - Raison du blocage ('unauthorized' ou 'limit')
+     * @param {string} zoneType - Type de zone concerné
+     */
+    function showPasteErrorToast(reason, zoneType) {
+        const typeLabels = {
+            textQuill: 'texte',
+            image: 'image',
+            barcode: 'code-barres'
+        };
+        const label = typeLabels[zoneType] || zoneType;
+        
+        let message = '';
+        if (reason === 'unauthorized') {
+            message = `Collage impossible : les zones ${label} ne sont pas autorisées dans ce document.`;
+        } else if (reason === 'limit') {
+            message = `Collage impossible : limite de zones ${label} atteinte.`;
+        }
+        
+        // Utiliser le système de toast existant ou afficher dans la console
+        if (typeof showUndoRedoToast === 'function') {
+            showUndoRedoToast(message);
+        } else {
+            console.warn('⚠️ ' + message);
+        }
+    }
+
+    /**
+     * Copie la zone sélectionnée (textQuill, image ou barcode).
+     * Les zones QR Marketeam (type 'qr') ne peuvent pas être copiées.
+     * Les zones système ne peuvent pas être copiées.
      * 
      * @returns {void}
      */
@@ -11707,8 +11779,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const zonesData = getCurrentPageZones();
         const zoneData = zonesData[zoneId];
         
-        // Seules les zones textQuill peuvent être copiées
-        if (!zoneData || zoneData.type !== 'textQuill') {
+        if (!zoneData) return;
+        
+        // Les zones QR Marketeam ne peuvent pas être copiées (une seule autorisée)
+        if (zoneData.type === 'qr') {
+            if (typeof showUndoRedoToast === 'function') {
+                showUndoRedoToast('Copie impossible : les zones QR Marketeam ne peuvent pas être dupliquées.');
+            }
+            console.warn('⚠️ Les zones QR Marketeam (type "qr") ne peuvent pas être copiées.');
+            return;
+        }
+        
+        // Seuls textQuill, image et barcode peuvent être copiés
+        if (!['textQuill', 'image', 'barcode'].includes(zoneData.type)) {
+            console.warn(`⚠️ Type de zone non supporté pour la copie: ${zoneData.type}`);
             return;
         }
         
@@ -11720,39 +11804,93 @@ document.addEventListener('DOMContentLoaded', () => {
         const zoneEl = document.getElementById(zoneId);
         if (!zoneEl) return;
         
-        // Récupérer l'instance Quill pour obtenir le Delta actuel
-        const quillInstance = quillInstances.get(zoneId);
-        const currentDelta = quillInstance ? quillInstance.getContents() : zoneData.quillDelta;
-        
-        // Copier toutes les propriétés de la zone textQuill
-        copiedZoneData = {
-            type: 'textQuill',
-            content: zoneData.content || '',
-            quillDelta: currentDelta ? JSON.parse(JSON.stringify(currentDelta)) : null,
-            font: zoneData.font || QUILL_DEFAULT_FONT,
-            size: zoneData.size || QUILL_DEFAULT_SIZE,
-            color: zoneData.color || QUILL_DEFAULT_COLOR,
-            align: zoneData.align || DEFAULT_ALIGN_H,
-            valign: zoneData.valign || DEFAULT_ALIGN_V,
-            bgColor: zoneData.bgColor || DEFAULT_BG_COLOR,
-            isTransparent: zoneData.isTransparent !== undefined ? zoneData.isTransparent : true,
-            copyfit: zoneData.copyfit || false,
-            lineHeight: zoneData.lineHeight !== undefined ? zoneData.lineHeight : QUILL_DEFAULT_LINE_HEIGHT,
-            emptyLines: zoneData.emptyLines || 0,
-            border: zoneData.border ? JSON.parse(JSON.stringify(zoneData.border)) : { width: 0, color: DEFAULT_BORDER_COLOR, style: DEFAULT_BORDER_STYLE },
-            contrainte: { locked: false, imprimable: true, selectionnable: true, toolbarAffichable: true }, // Toujours réinitialiser pour la copie
-            // Géométrie : utiliser les dimensions actuelles du DOM
+        // Géométrie commune à tous les types
+        const baseData = {
+            type: zoneData.type,
             w: zoneEl.offsetWidth,
             h: zoneEl.offsetHeight,
             x: zoneEl.offsetLeft,
-            y: zoneEl.offsetTop
+            y: zoneEl.offsetTop,
+            contrainte: { locked: false, imprimable: true, selectionnable: true, toolbarAffichable: true }
         };
+        
+        // Copier selon le type
+        switch (zoneData.type) {
+            case 'textQuill': {
+                // Récupérer l'instance Quill pour obtenir le Delta actuel
+                const quillInstance = quillInstances.get(zoneId);
+                const currentDelta = quillInstance ? quillInstance.getContents() : zoneData.quillDelta;
+                
+                copiedZoneData = {
+                    ...baseData,
+                    content: zoneData.content || '',
+                    quillDelta: currentDelta ? JSON.parse(JSON.stringify(currentDelta)) : null,
+                    font: zoneData.font || QUILL_DEFAULT_FONT,
+                    size: zoneData.size || QUILL_DEFAULT_SIZE,
+                    color: zoneData.color || QUILL_DEFAULT_COLOR,
+                    align: zoneData.align || DEFAULT_ALIGN_H,
+                    valign: zoneData.valign || DEFAULT_ALIGN_V,
+                    bgColor: zoneData.bgColor || DEFAULT_BG_COLOR,
+                    isTransparent: zoneData.isTransparent !== undefined ? zoneData.isTransparent : true,
+                    copyfit: zoneData.copyfit || false,
+                    lineHeight: zoneData.lineHeight !== undefined ? zoneData.lineHeight : QUILL_DEFAULT_LINE_HEIGHT,
+                    emptyLines: zoneData.emptyLines || 0,
+                    border: zoneData.border ? JSON.parse(JSON.stringify(zoneData.border)) : { width: 0, color: DEFAULT_BORDER_COLOR, style: DEFAULT_BORDER_STYLE }
+                };
+                break;
+            }
+            
+            case 'image': {
+                copiedZoneData = {
+                    ...baseData,
+                    source: zoneData.source ? JSON.parse(JSON.stringify(zoneData.source)) : {
+                        type: 'fixe',
+                        valeur: '',
+                        imageBase64: null,
+                        nomOriginal: null,
+                        largeurPx: null,
+                        hauteurPx: null,
+                        poidsBrut: null,
+                        poidsCompresse: null
+                    },
+                    redimensionnement: zoneData.redimensionnement ? JSON.parse(JSON.stringify(zoneData.redimensionnement)) : {
+                        mode: 'ajuster',
+                        alignementH: 'center',
+                        alignementV: 'middle'
+                    },
+                    bgColor: zoneData.bgColor || DEFAULT_BG_COLOR,
+                    isTransparent: zoneData.isTransparent !== undefined ? zoneData.isTransparent : true,
+                    rotation: zoneData.rotation || 0,
+                    border: zoneData.border ? JSON.parse(JSON.stringify(zoneData.border)) : { width: 0, color: DEFAULT_BORDER_COLOR, style: DEFAULT_BORDER_STYLE }
+                };
+                break;
+            }
+            
+            case 'barcode': {
+                copiedZoneData = {
+                    ...baseData,
+                    nom: zoneData.nom || 'Code-barres',
+                    typeCodeBarres: zoneData.typeCodeBarres || 'code128',
+                    champFusion: zoneData.champFusion || '',
+                    valeurStatique: zoneData.valeurStatique || '',
+                    sourceType: zoneData.sourceType || 'fixe',
+                    texteLisible: zoneData.texteLisible || 'dessous',
+                    taillePolice: zoneData.taillePolice || DEFAULT_BARCODE_FONT_SIZE,
+                    couleur: zoneData.couleur || DEFAULT_TEXT_COLOR,
+                    bgColor: zoneData.bgColor || DEFAULT_BG_COLOR,
+                    isTransparent: zoneData.isTransparent !== undefined ? zoneData.isTransparent : false,
+                    qrConfig: zoneData.qrConfig ? JSON.parse(JSON.stringify(zoneData.qrConfig)) : null,
+                    forme: zoneData.forme || undefined
+                };
+                break;
+            }
+        }
     }
     
     /**
-     * Colle la zone textQuill précédemment copiée.
+     * Colle la zone précédemment copiée (textQuill, image ou barcode).
      * Crée une nouvelle zone décalée de 20px vers le bas.
-     * Le contenu Quill (Delta) est restauré automatiquement par createZoneDOM.
+     * Vérifie les contraintes globales avant collage.
      * 
      * @returns {void}
      */
@@ -11762,8 +11900,38 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // Vérifier que c'est bien une zone textQuill
-        if (copiedZoneData.type !== 'textQuill') {
+        const zoneType = copiedZoneData.type;
+        
+        // Les zones QR Marketeam ne peuvent pas être collées (une seule autorisée)
+        if (zoneType === 'qr') {
+            if (typeof showUndoRedoToast === 'function') {
+                showUndoRedoToast('Collage impossible : les zones QR Marketeam ne peuvent pas être dupliquées.');
+            }
+            console.warn('⚠️ Les zones QR Marketeam ne peuvent pas être collées.');
+            copiedZoneData = null; // Nettoyer le presse-papier
+            return;
+        }
+        
+        // Vérifier que c'est un type supporté
+        if (!['textQuill', 'image', 'barcode'].includes(zoneType)) {
+            console.warn(`⚠️ Type de zone non supporté pour le collage: ${zoneType}`);
+            return;
+        }
+        
+        // Vérifier les contraintes globales
+        const { autorisations, limites } = documentState.constraints;
+        const counts = countZonesByType();
+        
+        // Vérifier l'autorisation
+        if (autorisations[zoneType] === false) {
+            showPasteErrorToast('unauthorized', zoneType);
+            return;
+        }
+        
+        // Vérifier la limite
+        const limite = limites[zoneType];
+        if (limite !== null && limite > 0 && counts[zoneType] >= limite) {
+            showPasteErrorToast('limit', zoneType);
             return;
         }
         
@@ -11782,37 +11950,101 @@ document.addEventListener('DOMContentLoaded', () => {
         const newX = copiedZoneData.x;
         const newY = Math.min(copiedZoneData.y + offsetY, pageHeight - copiedZoneData.h);
         
-        // Créer les données de la nouvelle zone textQuill
-        zonesData[newId] = {
-            type: 'textQuill',
-            content: copiedZoneData.content || '',
-            quillDelta: copiedZoneData.quillDelta ? JSON.parse(JSON.stringify(copiedZoneData.quillDelta)) : null,
-            font: copiedZoneData.font,
-            size: copiedZoneData.size,
-            color: copiedZoneData.color,
-            align: copiedZoneData.align,
-            valign: copiedZoneData.valign,
-            bgColor: copiedZoneData.bgColor,
-            isTransparent: copiedZoneData.isTransparent,
-            copyfit: copiedZoneData.copyfit,
-            lineHeight: copiedZoneData.lineHeight,
-            emptyLines: copiedZoneData.emptyLines || 0,
-            border: copiedZoneData.border ? JSON.parse(JSON.stringify(copiedZoneData.border)) : { width: 0, color: DEFAULT_BORDER_COLOR, style: DEFAULT_BORDER_STYLE },
-            zIndex: newZIndex,
-            contrainte: { locked: false, imprimable: true, selectionnable: true, toolbarAffichable: true },
-            // Position et taille
-            x: newX,
-            y: newY,
-            w: copiedZoneData.w,
-            h: copiedZoneData.h
-        };
+        // Créer les données de la nouvelle zone selon le type
+        switch (zoneType) {
+            case 'textQuill': {
+                zonesData[newId] = {
+                    type: 'textQuill',
+                    content: copiedZoneData.content || '',
+                    quillDelta: copiedZoneData.quillDelta ? JSON.parse(JSON.stringify(copiedZoneData.quillDelta)) : null,
+                    font: copiedZoneData.font,
+                    size: copiedZoneData.size,
+                    color: copiedZoneData.color,
+                    align: copiedZoneData.align,
+                    valign: copiedZoneData.valign,
+                    bgColor: copiedZoneData.bgColor,
+                    isTransparent: copiedZoneData.isTransparent,
+                    copyfit: copiedZoneData.copyfit,
+                    lineHeight: copiedZoneData.lineHeight,
+                    emptyLines: copiedZoneData.emptyLines || 0,
+                    border: copiedZoneData.border ? JSON.parse(JSON.stringify(copiedZoneData.border)) : { width: 0, color: DEFAULT_BORDER_COLOR, style: DEFAULT_BORDER_STYLE },
+                    zIndex: newZIndex,
+                    contrainte: { locked: false, imprimable: true, selectionnable: true, toolbarAffichable: true },
+                    x: newX,
+                    y: newY,
+                    w: copiedZoneData.w,
+                    h: copiedZoneData.h
+                };
+                break;
+            }
+            
+            case 'image': {
+                zonesData[newId] = {
+                    type: 'image',
+                    source: copiedZoneData.source ? JSON.parse(JSON.stringify(copiedZoneData.source)) : {
+                        type: 'fixe',
+                        valeur: '',
+                        imageBase64: null,
+                        nomOriginal: null,
+                        largeurPx: null,
+                        hauteurPx: null,
+                        poidsBrut: null,
+                        poidsCompresse: null
+                    },
+                    redimensionnement: copiedZoneData.redimensionnement ? JSON.parse(JSON.stringify(copiedZoneData.redimensionnement)) : {
+                        mode: 'ajuster',
+                        alignementH: 'center',
+                        alignementV: 'middle'
+                    },
+                    bgColor: copiedZoneData.bgColor,
+                    isTransparent: copiedZoneData.isTransparent,
+                    rotation: copiedZoneData.rotation || 0,
+                    border: copiedZoneData.border ? JSON.parse(JSON.stringify(copiedZoneData.border)) : { width: 0, color: DEFAULT_BORDER_COLOR, style: DEFAULT_BORDER_STYLE },
+                    zIndex: newZIndex,
+                    contrainte: { locked: false, imprimable: true, selectionnable: true, toolbarAffichable: true },
+                    x: newX,
+                    y: newY,
+                    w: copiedZoneData.w,
+                    h: copiedZoneData.h
+                };
+                break;
+            }
+            
+            case 'barcode': {
+                zonesData[newId] = {
+                    type: 'barcode',
+                    nom: copiedZoneData.nom || 'Code-barres',
+                    typeCodeBarres: copiedZoneData.typeCodeBarres,
+                    champFusion: copiedZoneData.champFusion || '',
+                    valeurStatique: copiedZoneData.valeurStatique || '',
+                    sourceType: copiedZoneData.sourceType || 'fixe',
+                    texteLisible: copiedZoneData.texteLisible,
+                    taillePolice: copiedZoneData.taillePolice,
+                    couleur: copiedZoneData.couleur,
+                    bgColor: copiedZoneData.bgColor,
+                    isTransparent: copiedZoneData.isTransparent,
+                    qrConfig: copiedZoneData.qrConfig ? JSON.parse(JSON.stringify(copiedZoneData.qrConfig)) : null,
+                    forme: copiedZoneData.forme || undefined,
+                    zIndex: newZIndex,
+                    contrainte: { locked: false, imprimable: true, selectionnable: true, toolbarAffichable: true },
+                    x: newX,
+                    y: newY,
+                    w: copiedZoneData.w,
+                    h: copiedZoneData.h
+                };
+                break;
+            }
+        }
         
-        // Créer la zone dans le DOM (createZoneDOM gère la restauration du Delta Quill)
+        // Créer la zone dans le DOM
         createZoneDOM(newId, zoneCounter, true);
         
         // Sauvegarder
         saveToLocalStorage();
         saveState();
+        
+        // Mettre à jour la visibilité des boutons (limite peut avoir changé)
+        updateZoneButtonsVisibility();
     }
 
     // ─────────────────────────────── FIN SECTION 13 ───────────────────────────────
