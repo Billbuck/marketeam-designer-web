@@ -15477,6 +15477,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const maxTop = a4Page.offsetHeight - margin - zone.offsetHeight;
             zone.style.left = Math.max(minLeft, Math.min(parseFloat(zone.style.left), maxLeft)) + 'px';
             zone.style.top = Math.max(minTop, Math.min(parseFloat(zone.style.top), maxTop)) + 'px';
+            
+            // Mettre à jour les données de la zone (pixels et millimètres)
+            const zoneData = zonesData[zoneId];
+            if (zoneData) {
+                const finalLeft = parseFloat(zone.style.left);
+                const finalTop = parseFloat(zone.style.top);
+                zoneData.x = finalLeft;
+                zoneData.y = finalTop;
+                zoneData.xMm = pxToMm(finalLeft);
+                zoneData.yMm = pxToMm(finalTop);
+            }
         }
         
         saveToLocalStorage();
@@ -15526,7 +15537,10 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const { el, data, left } of zoneElements) {
             const newLeft = left + deltaX;
             el.style.left = newLeft + 'px';
-            if (data) data.x = newLeft;
+            if (data) {
+                data.x = newLeft;
+                data.xMm = pxToMm(newLeft);
+            }
         }
         
         saveToLocalStorage();
@@ -15576,7 +15590,10 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const { el, data, top } of zoneElements) {
             const newTop = top + deltaY;
             el.style.top = newTop + 'px';
-            if (data) data.y = newTop;
+            if (data) {
+                data.y = newTop;
+                data.yMm = pxToMm(newTop);
+            }
         }
         
         saveToLocalStorage();
