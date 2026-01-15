@@ -1179,10 +1179,17 @@
      * Génère les propriétés communes à tous les objets PSMD.
      * Gère les deux formats de données (zonesTextQuill vs autres zones).
      * 
+     * Gère également la contrainte "Zone imprimable" (contrainte.global.imprimable) :
+     * - Si imprimable = false : la zone est visible dans l'éditeur mais pas à l'impression/preview
+     * - Si imprimable = true ou non défini : comportement par défaut (visible partout)
+     * 
      * @param {Object} zone - Données de la zone exportée
+     * @param {Object} [zone.contrainte] - Contraintes de la zone
+     * @param {Object} [zone.contrainte.global] - Contraintes globales de la zone
+     * @param {boolean} [zone.contrainte.global.imprimable=true] - Si false, la zone n'apparaît pas à l'impression
      * @param {string} [zoneType] - Type de zone ('image', 'textQuill', 'barcode', 'qr')
      *                              Si non fourni, utilise la logique générique
-     * @returns {string} XML des propriétés communes
+     * @returns {string} XML des propriétés communes incluant <show_mode> configuré selon imprimable
      */
     function generatePsmdObjectCommon(zone, zoneType) {
         var guid = generateGuid();
@@ -1300,6 +1307,16 @@
         // Convertir en valeur PrintShop Mail (0 = solid par défaut)
         var borderStyle = BORDER_STYLE_MAP[borderStyleName] || 0;
         
+        // Déterminer si la zone est imprimable (défaut: true)
+        // La propriété est dans contrainte.global.imprimable
+        var isImprimable = true;
+        if (zone.contrainte && zone.contrainte.global && zone.contrainte.global.imprimable === false) {
+            isImprimable = false;
+        }
+        
+        // Si la zone n'est pas imprimable: visible dans l'éditeur mais pas à l'impression/preview
+        var showInPreview = isImprimable ? 'yes' : 'no';
+        
         return `<object>
 <identifier>${guid}</identifier>
 <name>${name}</name>
@@ -1314,10 +1331,10 @@ ${generatePsmdColor('bordercolor', borderColor)}
 <snap_frame_to_content>no</snap_frame_to_content>
 <show_mode>
 <editor>yes</editor>
-<jpeg_preview>yes</jpeg_preview>
-<pdf_preview>yes</pdf_preview>
-<print_preview>yes</print_preview>
-<print>yes</print>
+<jpeg_preview>${showInPreview}</jpeg_preview>
+<pdf_preview>${showInPreview}</pdf_preview>
+<print_preview>${showInPreview}</print_preview>
+<print>${showInPreview}</print>
 </show_mode>
 <anchor>
 <horizontal>0</horizontal>

@@ -4883,7 +4883,7 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function isImageFormatAccepted(fileName) {
         const ext = fileName.toLowerCase().split('.').pop();
-        return ['jpg', 'jpeg', 'png', 'webp', 'svg'].includes(ext);
+        return ['jpg', 'jpeg', 'jpe', 'jfif', 'pjp', 'pjpeg', 'png', 'gif'].includes(ext);
     }
     
     /**
@@ -17691,7 +17691,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // 1. Validation du format
             if (!isImageFormatAccepted(file.name)) {
-                showImageUploadError('Format non supporté. Formats acceptés : JPG, PNG, WebP, SVG');
+                showImageUploadError('Format non supporté. Formats acceptés : JPG, PNG, GIF');
                 return;
             }
             
@@ -17704,16 +17704,8 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 showImageLoading(true);
                 
-                let result;
-                
-                // 3. Traitement selon le type de fichier
-                if (isSvgFile(file.name)) {
-                    // SVG : pas de compression
-                    result = await readSvgFile(file);
-                } else {
-                    // Image bitmap : compression
-                    result = await compressImage(file);
-                }
+                // 3. Compression de l'image (tous les formats acceptés sont des bitmaps)
+                const result = await compressImage(file);
                 
                 showImageLoading(false);
                 
