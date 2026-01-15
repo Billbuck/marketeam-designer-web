@@ -7580,7 +7580,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Si c'est un SVG, pas de contrainte DPI (mais contrainte dimensions)
         const isSvg = source.nomOriginal ? isSvgFile(source.nomOriginal) : false;
         
-        // --- Vérification 1 : Dimensions maximales ---
+        // === CALCUL DES DEUX CONTRAINTES INDÉPENDAMMENT ===
+        
+        let dimensionConstraint = null;  // Contrainte dimensions max document
+        let dpiConstraint = null;        // Contrainte DPI minimum
+        
+        // --- Calcul contrainte 1 : Dimensions maximales ---
         const maxWidthPx = getLargeurMaxImagePx();
         const maxHeightPx = getHauteurMaxImagePx();
         
@@ -7602,15 +7607,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const maxWidthMm = Math.round(getLargeurMaxImageMm());
             const maxHeightMm = Math.round(getHauteurMaxImageMm());
             
-            return {
-                allowed: false,
+            dimensionConstraint = {
                 reason: `Dimensions maximum atteintes (${maxWidthMm} × ${maxHeightMm} mm)`,
                 maxWidth: Math.floor(constrainedWidth),
                 maxHeight: Math.floor(constrainedHeight)
             };
         }
         
-        // --- Vérification 2 : DPI minimum (sauf SVG) ---
+        // --- Calcul contrainte 2 : DPI minimum (sauf SVG) ---
         if (!isSvg && source.largeurPx && source.hauteurPx) {
             const displayMode = zoneData.redimensionnement?.mode || 'ajuster';
             const dpi = calculateImageDpi(
@@ -7631,8 +7635,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     newWidth / newHeight // Ratio actuel
                 );
                 
-                return {
-                    allowed: false,
+                dpiConstraint = {
                     reason: `Résolution minimum atteinte (${DPI_MINIMUM} dpi)`,
                     maxWidth: maxDimensions.width,
                     maxHeight: maxDimensions.height
@@ -7640,7 +7643,53 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        return { allowed: true, reason: null };
+        // === RETOURNER LA CONTRAINTE LA PLUS RESTRICTIVE ===
+        
+        // Si aucune contrainte, autoriser
+        if (!dimensionConstraint && !dpiConstraint) {
+            return { allowed: true, reason: null };
+        }
+        
+        // Si une seule contrainte, la retourner
+        if (dimensionConstraint && !dpiConstraint) {
+            return {
+                allowed: false,
+                reason: dimensionConstraint.reason,
+                maxWidth: dimensionConstraint.maxWidth,
+                maxHeight: dimensionConstraint.maxHeight
+            };
+        }
+        
+        if (dpiConstraint && !dimensionConstraint) {
+            return {
+                allowed: false,
+                reason: dpiConstraint.reason,
+                maxWidth: dpiConstraint.maxWidth,
+                maxHeight: dpiConstraint.maxHeight
+            };
+        }
+        
+        // Si les deux contraintes existent, prendre la plus restrictive (plus petite surface)
+        const dimArea = dimensionConstraint.maxWidth * dimensionConstraint.maxHeight;
+        const dpiArea = dpiConstraint.maxWidth * dpiConstraint.maxHeight;
+        
+        if (dpiArea <= dimArea) {
+            // DPI est plus restrictif
+            return {
+                allowed: false,
+                reason: dpiConstraint.reason,
+                maxWidth: dpiConstraint.maxWidth,
+                maxHeight: dpiConstraint.maxHeight
+            };
+        } else {
+            // Dimensions max est plus restrictif
+            return {
+                allowed: false,
+                reason: dimensionConstraint.reason,
+                maxWidth: dimensionConstraint.maxWidth,
+                maxHeight: dimensionConstraint.maxHeight
+            };
+        }
     }
     
     /**
