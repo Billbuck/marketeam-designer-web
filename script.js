@@ -249,6 +249,8 @@ document.addEventListener('DOMContentLoaded', () => {
      * @typedef {Object} FormatDocumentData
      * @property {number} largeurMm - Largeur du document en mm
      * @property {number} hauteurMm - Hauteur du document en mm
+ * @property {number|null} [largeurMaxImageMm] - Largeur max des zones image en mm (null = 1/3 document)
+ * @property {number|null} [hauteurMaxImageMm] - Hauteur max des zones image en mm (null = 1/3 document)
      * @property {number} [margeSecuriteMm] - Marge de sécurité en mm
      * @property {{actif: boolean, valeurMm: number}} [fondPerdu] - Configuration fond perdu
      * @property {{actif: boolean}} [traitsCoupe] - Configuration traits de coupe
@@ -477,6 +479,8 @@ document.addEventListener('DOMContentLoaded', () => {
      * @typedef {Object} FormatDocumentJsonWebDev
      * @property {number} largeurMm - Largeur en mm
      * @property {number} hauteurMm - Hauteur en mm
+ * @property {number|null} [largeurMaxImageMm] - Largeur max des zones image en mm (null = 1/3 document)
+ * @property {number|null} [hauteurMaxImageMm] - Hauteur max des zones image en mm (null = 1/3 document)
      * @property {number} [margeSecuriteMm] - Marge de sécurité en mm
      * @property {{actif: boolean, valeurMm: number}} [fondPerdu] - Fond perdu
      * @property {{actif: boolean}} [traitsCoupe] - Traits de coupe
@@ -4744,19 +4748,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // ─────────────────────────────── FIN SECTION 6 ────────────────────────────────
 
     // ═══════════════════════════════════════════════════════════════════════════════
-    // SECTION 7 : CONTRAINTES ZONES IMAGE (Surface/DPI)
+    // SECTION 7 : CONTRAINTES ZONES IMAGE (Dimensions/DPI)
     // ═══════════════════════════════════════════════════════════════════════════════
     /**
-     * Constantes et fonctions pour les contraintes des zones image.
-     * Limite la surface maximale et définit les seuils DPI.
+     * Fonctions pour les contraintes des zones image.
+     * Limite les dimensions maximales et définit les seuils DPI.
+     * 
+     * Valeurs par défaut : si non fourni par WebDev, 1/3 des dimensions du document.
      * 
      * Constantes :
-     *   - DEFAULT_SURFACE_MAX_IMAGE_MM2 : Surface max absolue (20000 mm²)
      *   - DPI_MINIMUM, DPI_RECOMMENDED : Seuils qualité (150/200 dpi)
      * 
      * Fonctions principales :
-     *   - getSurfaceLimiteImageMm2() : Surface limite en mm²
-     *   - getSurfaceLimiteImagePx2() : Surface limite en pixels²
+     *   - getLargeurMaxImageMm() / getHauteurMaxImageMm() : Dimensions max en mm
+     *   - getLargeurMaxImagePx() / getHauteurMaxImagePx() : Dimensions max en pixels
+     *   - getDimensionMaxCompressionPx() : Dimension max pour compression upload
      * 
      * Dépendances :
      *   - documentState (Section 12)
@@ -4764,9 +4770,9 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     // ───────────────────────────────────────────────────────────────────────────────
 
-    const DEFAULT_SURFACE_MAX_IMAGE_MM2 = 20000;  // Surface max absolue en mm²
-    const DEFAULT_POURCENTAGE_MAX_IMAGE = 50;     // % max de la surface document
-    const IMAGE_MAX_DIMENSION_PX = 1500;          // Dimension max après compression
+    // Les dimensions max des zones image sont calculées dynamiquement :
+    // - Si fourni par WebDev : utiliser largeurMaxImageMm / hauteurMaxImageMm
+    // - Sinon : 1/3 des dimensions du document
     // const IMAGE_COMPRESSION_QUALITY = 0.85;    // Obsolète : PNG utilisé (lossless)
     const IMAGE_MAX_UPLOAD_SIZE = 10 * 1024 * 1024;  // 10 Mo max à l'upload
     const IMAGE_MAX_COMPRESSED_SIZE = 2 * 1024 * 1024;  // 2 Mo max après compression
@@ -4798,35 +4804,60 @@ document.addEventListener('DOMContentLoaded', () => {
     const DEFAULT_BORDER_STYLE = 'solid';
     
     /**
-     * Calcule la surface limite effective pour les zones images
-     * Retourne le minimum entre la limite absolue et la limite relative (% du document)
-     * @returns {number} Surface limite en mm²
+     * Retourne la largeur maximale autorisée pour les zones image.
+     * Priorité : valeur WebDev > 1/3 du document.
+     * @returns {number} Largeur max en mm
      */
-    function getSurfaceLimiteImageMm2() {
-        // Surface du document en mm²
-        const largeurMm = getPageWidth() * MM_PER_PIXEL;
-        const hauteurMm = getPageHeight() * MM_PER_PIXEL;
-        const surfaceDocMm2 = largeurMm * hauteurMm;
-        
-        // Paramètres (avec valeurs par défaut)
-        const surfaceMaxAbsolue = documentState.formatDocument?.surfaceMaxImageMm2 || DEFAULT_SURFACE_MAX_IMAGE_MM2;
-        const pourcentageMax = documentState.formatDocument?.pourcentageMaxImage || DEFAULT_POURCENTAGE_MAX_IMAGE;
-        
-        // Limite relative
-        const surfaceMaxRelative = surfaceDocMm2 * (pourcentageMax / 100);
-        
-        // Retourne le minimum des deux
-        return Math.min(surfaceMaxAbsolue, surfaceMaxRelative);
+    function getLargeurMaxImageMm() {
+        // Si fourni par WebDev, utiliser cette valeur
+        if (documentState.formatDocument?.largeurMaxImageMm) {
+            return documentState.formatDocument.largeurMaxImageMm;
+        }
+        // Sinon : 1/3 de la largeur du document
+        const largeurDocMm = documentState.formatDocument?.largeurMm || (getPageWidth() * MM_PER_PIXEL);
+        return largeurDocMm / 3;
     }
     
     /**
-     * Convertit la surface limite en pixels² pour comparaison avec les zones
-     * @returns {number} Surface limite en pixels²
+     * Retourne la hauteur maximale autorisée pour les zones image.
+     * Priorité : valeur WebDev > 1/3 du document.
+     * @returns {number} Hauteur max en mm
      */
-    function getSurfaceLimiteImagePx2() {
-        const surfaceMm2 = getSurfaceLimiteImageMm2();
-        const pxPerMm = 1 / MM_PER_PIXEL;
-        return surfaceMm2 * pxPerMm * pxPerMm;
+    function getHauteurMaxImageMm() {
+        // Si fourni par WebDev, utiliser cette valeur
+        if (documentState.formatDocument?.hauteurMaxImageMm) {
+            return documentState.formatDocument.hauteurMaxImageMm;
+        }
+        // Sinon : 1/3 de la hauteur du document
+        const hauteurDocMm = documentState.formatDocument?.hauteurMm || (getPageHeight() * MM_PER_PIXEL);
+        return hauteurDocMm / 3;
+    }
+    
+    /**
+     * Retourne la largeur maximale autorisée pour les zones image en pixels.
+     * @returns {number} Largeur max en pixels
+     */
+    function getLargeurMaxImagePx() {
+        return getLargeurMaxImageMm() / MM_PER_PIXEL;
+    }
+    
+    /**
+     * Retourne la hauteur maximale autorisée pour les zones image en pixels.
+     * @returns {number} Hauteur max en pixels
+     */
+    function getHauteurMaxImagePx() {
+        return getHauteurMaxImageMm() / MM_PER_PIXEL;
+    }
+    
+    /**
+     * Calcule la dimension maximale en pixels pour la compression des images.
+     * Basé sur le plus grand côté autorisé et le DPI minimum (150).
+     * @returns {number} Dimension max en pixels pour la compression
+     */
+    function getDimensionMaxCompressionPx() {
+        const maxDimensionMm = Math.max(getLargeurMaxImageMm(), getHauteurMaxImageMm());
+        const maxDimensionInches = maxDimensionMm / 25.4;
+        return Math.round(maxDimensionInches * DPI_MINIMUM);
     }
 
     // ─────────────────────────────── FIN SECTION 7 ────────────────────────────────
@@ -4849,7 +4880,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * 
      * Dépendances :
      *   - imageFileInfo, imageDpiIndicator (Section 1)
-     *   - IMAGE_MAX_DIMENSION_PX (Section 7)
+     *   - getDimensionMaxCompressionPx() (Section 7)
      */
     // ───────────────────────────────────────────────────────────────────────────────
     
@@ -4903,10 +4934,39 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
-     * Redimensionne une image via Canvas et l'encode en PNG.
-     * Le format PNG est utilisé pour la compatibilité PrintShop Mail et le support de la transparence.
+     * Détecte si un canvas contient des pixels transparents (alpha < 255).
+     * Utilisé pour décider si l'export doit être en PNG (transparence) ou JPEG (opaque).
      * 
-     * @param {File} file - Fichier image original (JPG, PNG, WebP)
+     * @param {CanvasRenderingContext2D} ctx - Contexte 2D du canvas
+     * @param {number} width - Largeur du canvas
+     * @param {number} height - Hauteur du canvas
+     * @returns {boolean} true si des pixels transparents sont détectés
+     */
+    function hasTransparency(ctx, width, height) {
+        // Échantillonner les pixels (pas tous pour performance)
+        // Vérifier les bords et quelques points aléatoires
+        const imageData = ctx.getImageData(0, 0, width, height);
+        const data = imageData.data;
+        
+        // Parcourir les pixels (canal alpha = chaque 4ème valeur, index 3, 7, 11, ...)
+        // Échantillonner 1 pixel sur 100 pour la performance
+        const step = Math.max(4, Math.floor(data.length / 4 / 1000) * 4);
+        
+        for (let i = 3; i < data.length; i += step) {
+            if (data[i] < 255) {
+                return true; // Pixel transparent trouvé
+            }
+        }
+        
+        return false; // Aucune transparence détectée
+    }
+    
+    /**
+     * Redimensionne une image via Canvas et l'encode en JPEG ou PNG.
+     * - PNG uniquement si l'image source contient de la transparence
+     * - JPEG (qualité 85%) pour toutes les autres images (meilleure compression)
+     * 
+     * @param {File} file - Fichier image original (JPG, PNG, GIF)
      * @returns {Promise<{base64: string, width: number, height: number, size: number}>}
      */
     function compressImage(file) {
@@ -4920,14 +4980,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     let width = img.width;
                     let height = img.height;
                     
-                    // Calculer les nouvelles dimensions (max IMAGE_MAX_DIMENSION_PX côté long)
-                    if (width > IMAGE_MAX_DIMENSION_PX || height > IMAGE_MAX_DIMENSION_PX) {
+                    // Calculer les nouvelles dimensions (basé sur les limites du document)
+                    const maxDimensionPx = getDimensionMaxCompressionPx();
+                    if (width > maxDimensionPx || height > maxDimensionPx) {
                         if (width > height) {
-                            height = Math.round(height * IMAGE_MAX_DIMENSION_PX / width);
-                            width = IMAGE_MAX_DIMENSION_PX;
+                            height = Math.round(height * maxDimensionPx / width);
+                            width = maxDimensionPx;
                         } else {
-                            width = Math.round(width * IMAGE_MAX_DIMENSION_PX / height);
-                            height = IMAGE_MAX_DIMENSION_PX;
+                            width = Math.round(width * maxDimensionPx / height);
+                            height = maxDimensionPx;
                         }
                     }
                     
@@ -4938,8 +4999,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
                     
-                    // Format PNG : compatible PrintShop Mail + supporte la transparence
-                    const base64 = canvas.toDataURL('image/png');
+                    // Détecter si l'image contient de la transparence
+                    const isPng = file.type === 'image/png';
+                    const needsTransparency = isPng && hasTransparency(ctx, width, height);
+                    
+                    // Choisir le format de sortie
+                    let base64;
+                    if (needsTransparency) {
+                        // PNG pour conserver la transparence
+                        base64 = canvas.toDataURL('image/png');
+                        console.log('🖼️ Image compressée en PNG (transparence détectée)');
+                    } else {
+                        // JPEG pour une meilleure compression (qualité 85%)
+                        base64 = canvas.toDataURL('image/jpeg', 0.85);
+                        console.log('🖼️ Image compressée en JPEG (qualité 85%)');
+                    }
                     
                     // Calculer la taille du base64 (approximation)
                     const base64Size = Math.round((base64.length - 22) * 3 / 4);
@@ -7446,7 +7520,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ═══════════════════════════════════════════════════════════════════════════════
     /**
      * Vérification et application des contraintes lors du redimensionnement.
-     * Empêche l'agrandissement au-delà des limites de surface et DPI.
+     * Empêche l'agrandissement au-delà des limites de dimensions et DPI.
      * 
      * Fonctions principales :
      *   - checkImageResizeAllowed() : Vérifie si redimensionnement autorisé
@@ -7455,7 +7529,7 @@ document.addEventListener('DOMContentLoaded', () => {
      *   - showResizeConstraintMessageDebounced() : Version avec debounce
      * 
      * Dépendances :
-     *   - getSurfaceLimiteImagePx2() (Section 7)
+     *   - getLargeurMaxImagePx() / getHauteurMaxImagePx() (Section 7)
      *   - calculateImageDpi() (Section 9)
      *   - DPI_MINIMUM (Section 7)
      */
@@ -7464,7 +7538,7 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * Vérifie si un redimensionnement de zone image est autorisé.
      * Applique deux contraintes :
-     * 1. Surface maximale (évite les zones trop grandes)
+     * 1. Dimensions maximales (évite les zones trop grandes)
      * 2. DPI minimum (150 DPI, sauf pour les SVG)
      * 
      * @param {string} zoneId - Identifiant de la zone (ex: "zone-1")
@@ -7479,12 +7553,13 @@ document.addEventListener('DOMContentLoaded', () => {
      * @example
      * const result = checkImageResizeAllowed('zone-1', 500, 500);
      * if (!result.allowed) {
-     *   console.log(result.reason); // "Surface maximum atteinte (100 cm²)"
+     *   console.log(result.reason); // "Dimensions maximum atteintes (70 × 90 mm)"
      *   // Utiliser result.maxWidth et result.maxHeight comme limites
      * }
      * 
      * @see DPI_MINIMUM - Seuil DPI minimum (150)
-     * @see getSurfaceLimiteImagePx2 - Surface maximale autorisée
+     * @see getLargeurMaxImagePx - Largeur maximale autorisée
+     * @see getHauteurMaxImagePx - Hauteur maximale autorisée
      */
     function checkImageResizeAllowed(zoneId, newWidth, newHeight) {
         const zonesData = getCurrentPageZones();
@@ -7502,27 +7577,36 @@ document.addEventListener('DOMContentLoaded', () => {
             return { allowed: true, reason: null };
         }
         
-        // Si c'est un SVG, pas de contrainte DPI (mais contrainte surface)
+        // Si c'est un SVG, pas de contrainte DPI (mais contrainte dimensions)
         const isSvg = source.nomOriginal ? isSvgFile(source.nomOriginal) : false;
         
-        // --- Vérification 1 : Surface maximale ---
-        const surfaceLimitePx2 = getSurfaceLimiteImagePx2();
-        const newSurfacePx2 = newWidth * newHeight;
+        // --- Vérification 1 : Dimensions maximales ---
+        const maxWidthPx = getLargeurMaxImagePx();
+        const maxHeightPx = getHauteurMaxImagePx();
         
-        if (newSurfacePx2 > surfaceLimitePx2) {
+        if (newWidth > maxWidthPx || newHeight > maxHeightPx) {
             // Calculer les dimensions maximales en conservant le ratio
             const currentRatio = newWidth / newHeight;
-            const maxHeight = Math.sqrt(surfaceLimitePx2 / currentRatio);
-            const maxWidth = maxHeight * currentRatio;
+            let constrainedWidth = newWidth;
+            let constrainedHeight = newHeight;
             
-            const surfaceLimiteMm2 = getSurfaceLimiteImageMm2();
-            const surfaceLimiteCm2 = (surfaceLimiteMm2 / 100).toFixed(0);
+            if (newWidth > maxWidthPx) {
+                constrainedWidth = maxWidthPx;
+                constrainedHeight = maxWidthPx / currentRatio;
+            }
+            if (constrainedHeight > maxHeightPx) {
+                constrainedHeight = maxHeightPx;
+                constrainedWidth = maxHeightPx * currentRatio;
+            }
+            
+            const maxWidthMm = Math.round(getLargeurMaxImageMm());
+            const maxHeightMm = Math.round(getHauteurMaxImageMm());
             
             return {
                 allowed: false,
-                reason: `Surface maximum atteinte (${surfaceLimiteCm2} cm²)`,
-                maxWidth: Math.floor(maxWidth),
-                maxHeight: Math.floor(maxHeight)
+                reason: `Dimensions maximum atteintes (${maxWidthMm} × ${maxHeightMm} mm)`,
+                maxWidth: Math.floor(constrainedWidth),
+                maxHeight: Math.floor(constrainedHeight)
             };
         }
         
@@ -7557,6 +7641,81 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         return { allowed: true, reason: null };
+    }
+    
+    /**
+     * Calcule les dimensions optimales d'une zone image pour atteindre le DPI recommandé (200).
+     * Utilisé après upload pour ajuster automatiquement la zone si l'image est trop petite.
+     * 
+     * @param {number} imagePxWidth - Largeur de l'image source en pixels
+     * @param {number} imagePxHeight - Hauteur de l'image source en pixels
+     * @param {number} currentZonePxWidth - Largeur actuelle de la zone en pixels
+     * @param {number} currentZonePxHeight - Hauteur actuelle de la zone en pixels
+     * @param {'initial'|'ajuster'|'couper'} [displayMode='ajuster'] - Mode d'affichage
+     * @returns {{needsResize: boolean, newWidth: number, newHeight: number, currentDpi: number}}
+     */
+    function calculateOptimalZoneDimensions(imagePxWidth, imagePxHeight, currentZonePxWidth, currentZonePxHeight, displayMode = 'ajuster') {
+        // Calculer le DPI actuel
+        const currentDpi = calculateImageDpi(imagePxWidth, imagePxHeight, currentZonePxWidth, currentZonePxHeight, displayMode);
+        
+        // Si DPI >= recommandé, pas besoin de redimensionner
+        if (currentDpi >= DPI_RECOMMENDED) {
+            return {
+                needsResize: false,
+                newWidth: currentZonePxWidth,
+                newHeight: currentZonePxHeight,
+                currentDpi: currentDpi
+            };
+        }
+        
+        // Calculer les dimensions pour atteindre DPI_RECOMMENDED (200)
+        // DPI = pixels_image / taille_pouces → taille_pouces = pixels_image / DPI
+        // taille_mm = taille_pouces × 25.4
+        // taille_px = taille_mm / MM_PER_PIXEL
+        
+        const optimalWidthMm = (imagePxWidth / DPI_RECOMMENDED) * 25.4;
+        const optimalHeightMm = (imagePxHeight / DPI_RECOMMENDED) * 25.4;
+        const optimalWidthPx = optimalWidthMm / MM_PER_PIXEL;
+        const optimalHeightPx = optimalHeightMm / MM_PER_PIXEL;
+        
+        // Conserver le ratio de la zone actuelle si possible
+        const currentRatio = currentZonePxWidth / currentZonePxHeight;
+        const imageRatio = imagePxWidth / imagePxHeight;
+        
+        let newWidth, newHeight;
+        
+        if (displayMode === 'ajuster') {
+            // Mode ajuster : la dimension limitante est celle qui donne le DPI le plus bas
+            if (currentRatio > imageRatio) {
+                // Zone plus large que l'image → hauteur est limitante
+                newHeight = optimalHeightPx;
+                newWidth = newHeight * currentRatio;
+            } else {
+                // Zone plus haute que l'image → largeur est limitante
+                newWidth = optimalWidthPx;
+                newHeight = newWidth / currentRatio;
+            }
+        } else if (displayMode === 'couper') {
+            // Mode couper : on prend la plus grande dimension
+            if (currentRatio > imageRatio) {
+                newWidth = optimalWidthPx;
+                newHeight = newWidth / currentRatio;
+            } else {
+                newHeight = optimalHeightPx;
+                newWidth = newHeight * currentRatio;
+            }
+        } else {
+            // Mode initial : utiliser les dimensions optimales directement
+            newWidth = optimalWidthPx;
+            newHeight = optimalHeightPx;
+        }
+        
+        return {
+            needsResize: true,
+            newWidth: Math.round(newWidth),
+            newHeight: Math.round(newHeight),
+            currentDpi: currentDpi
+        };
     }
     
     /**
@@ -17727,19 +17886,48 @@ document.addEventListener('DOMContentLoaded', () => {
                     poidsCompresse: result.size
                 };
                 
-                // 6. Mettre à jour l'affichage de la zone
+                // 6. Vérifier si la zone doit être redimensionnée pour atteindre 200 DPI
+                const zoneEl = document.getElementById(selectedId);
+                if (zoneEl && result.width && result.height) {
+                    const displayMode = zoneData.redimensionnement?.mode || 'ajuster';
+                    const optimal = calculateOptimalZoneDimensions(
+                        result.width,
+                        result.height,
+                        zoneEl.offsetWidth,
+                        zoneEl.offsetHeight,
+                        displayMode
+                    );
+                    
+                    if (optimal.needsResize) {
+                        console.log('📐 Ajustement zone pour 200 DPI:', 
+                            Math.round(zoneEl.offsetWidth * MM_PER_PIXEL) + '×' + Math.round(zoneEl.offsetHeight * MM_PER_PIXEL) + 'mm',
+                            '→', Math.round(optimal.newWidth * MM_PER_PIXEL) + '×' + Math.round(optimal.newHeight * MM_PER_PIXEL) + 'mm',
+                            '(DPI:', optimal.currentDpi, '→ 200)');
+                        
+                        zoneEl.style.width = optimal.newWidth + 'px';
+                        zoneEl.style.height = optimal.newHeight + 'px';
+                        
+                        // Mettre à jour les valeurs mm
+                        zoneData.xMm = zoneEl.offsetLeft * MM_PER_PIXEL;
+                        zoneData.yMm = zoneEl.offsetTop * MM_PER_PIXEL;
+                        zoneData.wMm = optimal.newWidth * MM_PER_PIXEL;
+                        zoneData.hMm = optimal.newHeight * MM_PER_PIXEL;
+                    }
+                }
+                
+                // 7. Mettre à jour l'affichage de la zone
                 updateImageZoneDisplay(selectedId);
                 
-                // 7. Mettre à jour l'UI du panneau
+                // 8. Mettre à jour l'UI du panneau
                 updateImageFileInfoDisplay(zoneData.source);
                 
-                // 8. Mettre à jour le badge DPI externe
+                // 9. Mettre à jour le badge DPI externe
                 updateImageDpiBadge(selectedId);
                 
-                // 9. Mettre à jour le bouton Ajuster au contenu (maintenant que les dimensions sont disponibles)
+                // 10. Mettre à jour le bouton Ajuster au contenu (maintenant que les dimensions sont disponibles)
                 updateSnapToContentButton();
                 
-                // 10. Sauvegarder
+                // 11. Sauvegarder
                 saveToLocalStorage();
                 saveState();
                 
@@ -19333,22 +19521,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (zoneDataResize && zoneDataResize.type === 'image' && zoneDataResize.source && 
                     (zoneDataResize.source.imageBase64 || zoneDataResize.source.valeur)) {
                     
-                    // Seulement si on agrandit (pas si on réduit)
-                    if (newW > startW || newH > startH) {
-                        const resizeCheck = checkImageResizeAllowed(firstSelectedId, newW, newH);
-                        
-                        if (!resizeCheck.allowed) {
-                            // Limiter aux dimensions maximales
-                            if (resizeCheck.maxWidth !== null) {
-                                newW = Math.min(newW, resizeCheck.maxWidth);
-                            }
-                            if (resizeCheck.maxHeight !== null) {
-                                newH = Math.min(newH, resizeCheck.maxHeight);
-                            }
-                            
-                            // Afficher le message
-                            showResizeConstraintMessageDebounced(resizeCheck.reason);
+                    // Toujours vérifier les contraintes DPI (pas seulement quand on agrandit)
+                    const resizeCheck = checkImageResizeAllowed(firstSelectedId, newW, newH);
+                    
+                    if (!resizeCheck.allowed) {
+                        // Limiter aux dimensions maximales
+                        if (resizeCheck.maxWidth !== null) {
+                            newW = Math.min(newW, resizeCheck.maxWidth);
                         }
+                        if (resizeCheck.maxHeight !== null) {
+                            newH = Math.min(newH, resizeCheck.maxHeight);
+                        }
+                        
+                        // Afficher le message
+                        showResizeConstraintMessageDebounced(resizeCheck.reason);
                     }
                 }
                 // === FIN CONTRAINTES ZONES IMAGE ===
@@ -19958,8 +20144,8 @@ document.addEventListener('DOMContentLoaded', () => {
      * 
      * Données sauvegardées :
      * - 'marketeam_document_state' : Structure complète multipage (nouveau format)
-     * - 'marketeam_zones' : Zones de la page courante (rétrocompat ancien format)
-     * - 'marketeam_zone_counter' : Compteur de zones (rétrocompat)
+     * - 'marketeam_zones' : Zones de la page courante (rétrocompat ancien format, best-effort)
+     * - 'marketeam_zone_counter' : Compteur de zones (rétrocompat, best-effort)
      * 
      * @returns {void}
      * @fires notifyParentOfChange - Notifie WebDev parent des modifications
@@ -19994,12 +20180,31 @@ document.addEventListener('DOMContentLoaded', () => {
         // Synchroniser le compteur global
         documentState.zoneCounter = zoneCounter;
         
-        // Sauvegarder l'état du document
-        localStorage.setItem('marketeam_document_state', JSON.stringify(documentState));
+        // Sauvegarder l'état du document (format principal)
+        try {
+            const documentStateJson = JSON.stringify(documentState);
+            localStorage.setItem('marketeam_document_state', documentStateJson);
+        } catch (error) {
+            console.error('❌ Impossible de sauvegarder documentState dans localStorage.', error);
+        }
         
-        // Rétrocompatibilité : sauvegarder aussi l'ancien format pour la page courante
-        localStorage.setItem('marketeam_zones', JSON.stringify(zonesData));
-        localStorage.setItem('marketeam_zone_counter', zoneCounter);
+        // Rétrocompatibilité : sauvegarder aussi l'ancien format pour la page courante (best-effort)
+        try {
+            const zonesDataJson = JSON.stringify(zonesData);
+            localStorage.setItem('marketeam_zones', zonesDataJson);
+            localStorage.setItem('marketeam_zone_counter', zoneCounter);
+        } catch (error) {
+            const isQuotaError = error && (
+                error.name === 'QuotaExceededError' ||
+                error.name === 'NS_ERROR_DOM_QUOTA_REACHED'
+            );
+            if (isQuotaError) {
+                console.warn('⚠️ localStorage plein : sauvegarde rétrocompat ignorée pour marketeam_zones.');
+                localStorage.removeItem('marketeam_zones');
+            } else {
+                console.error('❌ Erreur lors de la sauvegarde rétrocompat localStorage.', error);
+            }
+        }
         
         // Notifier le parent WebDev qu'il y a eu une modification
         if (typeof notifyParentOfChange === 'function') {
@@ -20878,13 +21083,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 fondPerdu: effectiveDocumentJson.formatDocument.fondPerdu || { actif: false, valeurMm: 3 },
                 traitsCoupe: effectiveDocumentJson.formatDocument.traitsCoupe || { actif: false },
                 margeSecuriteMm: effectiveDocumentJson.formatDocument.margeSecurite || 0,
-                surfaceMaxImageMm2: effectiveDocumentJson.formatDocument?.surfaceMaxImageMm2 || DEFAULT_SURFACE_MAX_IMAGE_MM2,
-                pourcentageMaxImage: effectiveDocumentJson.formatDocument?.pourcentageMaxImage || DEFAULT_POURCENTAGE_MAX_IMAGE
+                largeurMaxImageMm: effectiveDocumentJson.formatDocument?.largeurMaxImageMm || null,
+                hauteurMaxImageMm: effectiveDocumentJson.formatDocument?.hauteurMaxImageMm || null
             };
             console.log('  → Format document :', documentState.formatDocument);
             console.log('  → Dimensions :', documentState.formatDocument.largeurMm, 'x', documentState.formatDocument.hauteurMm, 'mm');
             console.log('  → Marge de sécurité :', documentState.formatDocument.margeSecuriteMm, 'mm');
-            console.log('  → Limites zones image : surface max', documentState.formatDocument.surfaceMaxImageMm2, 'mm², pourcentage max', documentState.formatDocument.pourcentageMaxImage, '%');
+            console.log('  → Limites zones image :', getLargeurMaxImageMm().toFixed(1), 'x', getHauteurMaxImageMm().toFixed(1), 'mm',
+                documentState.formatDocument.largeurMaxImageMm ? '(WebDev)' : '(1/3 document)');
         }
         
         // Stocker les champs de fusion disponibles et mettre à jour l'UI
@@ -21801,8 +22007,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 fondPerdu: documentState.formatDocument?.fondPerdu || { actif: false, valeurMm: 3 },
                 traitsCoupe: documentState.formatDocument?.traitsCoupe || { actif: false },
                 margeSecurite: documentState.formatDocument?.margeSecuriteMm || 0,
-                surfaceMaxImageMm2: documentState.formatDocument?.surfaceMaxImageMm2 || DEFAULT_SURFACE_MAX_IMAGE_MM2,
-                pourcentageMaxImage: documentState.formatDocument?.pourcentageMaxImage || DEFAULT_POURCENTAGE_MAX_IMAGE
+                largeurMaxImageMm: documentState.formatDocument?.largeurMaxImageMm || null,
+                hauteurMaxImageMm: documentState.formatDocument?.hauteurMaxImageMm || null
             },
             champsFusion: documentState.champsFusion || [],
             pages: [],
