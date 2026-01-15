@@ -1304,29 +1304,23 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function initSpinnerPoc(inputId, min, max, step, onChange) {
-        console.log('🔧 initSpinnerPoc - inputId:', inputId);
         
         const input = document.getElementById(inputId);
-        console.log('   input element:', input);
         if (!input) {
             console.warn('   ❌ Input non trouvé !');
             return;
         }
         
         const spinner = input.closest('.spinner-poc');
-        console.log('   spinner container:', spinner);
         if (!spinner) {
             console.warn('   ❌ Container .spinner-poc non trouvé !');
             return;
         }
         
         const buttons = spinner.querySelectorAll('.spinner-btn-poc');
-        console.log('   buttons trouvés:', buttons.length);
         
         buttons.forEach(btn => {
-            console.log('   Ajout listener sur bouton:', btn.dataset.dir);
             btn.addEventListener('click', () => {
-                console.log('🔧 Spinner click:', inputId, btn.dataset.dir);
                 // Gérer les valeurs avec virgule (format français)
                 let currentValue = parseFloat(input.value.replace(',', '.')) || min;
                 const dir = btn.dataset.dir;
@@ -1963,7 +1957,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Appliquer l'attribut data-theme sur le document
         document.documentElement.setAttribute('data-theme', validTheme);
         
-        console.log(`🎨 Thème appliqué : ${validTheme}`);
     }
 
     // Exposer la fonction applyTheme globalement pour les tests
@@ -2472,7 +2465,6 @@ document.addEventListener('DOMContentLoaded', () => {
             zoneData.wMm = minInfo.minSizeMm;
             zoneData.hMm = minInfo.minSizeMm;
             
-            console.log(`📐 Zone QR ${zoneId} agrandie à ${minInfo.minSizeMm}mm (Version ${minInfo.version}, ${minInfo.estimatedChars} chars estimés)`);
             
             // Mettre à jour l'affichage géométrique
             updateGeomDisplay(zoneEl);
@@ -2844,7 +2836,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Attacher les event listeners aux nouveaux champs
         attachQrFieldListeners();
         
-        console.log(`🔲 QR fields rendered for type: ${qrType}`);
     }
 
     /**
@@ -2861,11 +2852,6 @@ document.addEventListener('DOMContentLoaded', () => {
         lastFocusedQrInput.selectionStart = input.selectionStart ?? 0;
         lastFocusedQrInput.selectionEnd = input.selectionEnd ?? 0;
         
-        console.log('🎯 QR Input tracking:', {
-            fieldId: input.dataset.fieldId,
-            selectionStart: lastFocusedQrInput.selectionStart,
-            selectionEnd: lastFocusedQrInput.selectionEnd
-        });
     }
 
     /**
@@ -2877,7 +2863,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function clearQrInputTracking() {
         // Ne pas réinitialiser immédiatement pour permettre le double-clic
         // Le tracking sera réinitialisé quand un autre type de zone prend le focus
-        console.log('🎯 QR Input tracking conservé (pour double-clic)');
     }
 
     /**
@@ -2953,7 +2938,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 saveQrFieldsToZone();
                 updateBarcodeZoneDisplayFromToolbar();
                 
-                console.log(`🔲 Champ ${fieldText} inséré dans ${input.id}`);
             });
             
             // ═══ TRACKING FOCUS/CURSEUR (pour insertion double-clic) ═══
@@ -3046,7 +3030,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (data && data.length > 0) {
                 const result = data[0];
-                console.log(`🌍 Géocodage réussi: ${result.display_name}`);
                 return {
                     lat: result.lat,
                     lon: result.lon
@@ -3103,7 +3086,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 latitudeInput.dispatchEvent(new Event('input', { bubbles: true }));
                 longitudeInput.dispatchEvent(new Event('input', { bubbles: true }));
                 
-                console.log(`🌍 Coordonnées insérées: ${coords.lat}, ${coords.lon}`);
             } else {
                 alert('Adresse non trouvée. Vérifiez l\'orthographe ou essayez une adresse plus précise.');
             }
@@ -3674,7 +3656,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (barcodeQrSection) barcodeQrSection.style.display = 'none';
         }
         
-        console.log(`🔲 QR section toggled: ${isQrCode ? 'visible' : 'hidden'}`);
     }
 
     // ─────────────────────────────── FIN SECTION 4 ────────────────────────────────
@@ -3844,7 +3825,6 @@ document.addEventListener('DOMContentLoaded', () => {
             mergeFieldsContainer.appendChild(tag);
         });
         
-        console.log(`📋 updateMergeFieldsUI: ${champsTries.length} champ(s) de fusion chargé(s) (triés par ordre)`);
         
         // Mettre à jour la visibilité de la toolbar
         updateToolbarDataVisibility();
@@ -3869,7 +3849,6 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             if (typeof previewState !== 'undefined' && previewState.active) {
                 toolbarData.style.display = 'none';
-                console.log('📋 Toolbar Data masquée en mode aperçu');
                 return;
             }
         } catch (e) {
@@ -3906,8 +3885,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const shouldShow = hasFields && (hasTextQuillSelected || hasQrCodeSelected);
         toolbarData.style.display = shouldShow ? '' : 'none';
         
-        console.log('📋 Toolbar Data visibility:', shouldShow ? 'visible' : 'hidden',
-                    '(textQuill:', hasTextQuillSelected, ', qrCode:', hasQrCodeSelected, ', fields:', hasFields, ')');
     }
     
     /**
@@ -3949,9 +3926,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const isInside = (atCount % 2) === 1;
         
         if (isInside) {
-            console.log('🔍 Position', position, '- @ avant:', atCount, '(impair) → DEDANS un champ');
         } else {
-            console.log('🔍 Position', position, '- @ avant:', atCount, '(pair) → DEHORS');
         }
         
         return isInside;
@@ -3975,16 +3950,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // INTERDIT : au milieu d'un mot (caractère alphanumérique avant ET après)
         if (isAlphanumeric(charBefore) && isAlphanumeric(charAfter)) {
-            console.log('❌ Drop interdit: au milieu d\'un mot', {
-                charBefore,
-                charAfter
-            });
             return null; // Signale que le drop est interdit
         }
         
         // INTERDIT : à l'intérieur d'un champ de fusion existant @...@
         if (isInsideMergeField(text, insertIndex)) {
-            console.log('❌ Drop interdit: à l\'intérieur d\'un champ de fusion existant');
             return null;
         }
         
@@ -4021,13 +3991,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const finalText = spaceBefore + fieldTextNbsp + spaceAfter;
         const cursorOffset = spaceBefore.length + fieldTextNbsp.length;
         
-        console.log('📋 Espaces auto:', {
-            charBefore: charBefore === '\n' ? '\\n' : charBefore === ' ' ? '(espace)' : charBefore || '(début)',
-            charAfter: charAfter === '\n' ? '\\n' : charAfter === ' ' ? '(espace)' : charAfter || '(fin)',
-            spaceBefore: spaceBefore ? 'OUI' : 'NON',
-            spaceAfter: spaceAfter ? 'OUI' : 'NON',
-            result: finalText
-        });
         
         return {
             text: finalText,
@@ -4068,16 +4031,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // INTERDIT : au milieu d'un mot (caractère alphanumérique avant ET après)
         if (isAlphanumeric(charBefore) && isAlphanumeric(charAfter)) {
-            console.log('❌ Insertion interdite: au milieu d\'un mot', {
-                charBefore,
-                charAfter
-            });
             return null;
         }
         
         // INTERDIT : à l'intérieur d'un champ de fusion existant @...@
         if (isInsideMergeField(text, insertIndex)) {
-            console.log('❌ Insertion interdite: à l\'intérieur d\'un champ de fusion existant');
             return null;
         }
         
@@ -4113,13 +4071,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const finalText = spaceBefore + fieldTextNbsp + spaceAfter;
         const cursorOffset = spaceBefore.length + fieldTextNbsp.length;
         
-        console.log('📋 Espaces auto (input):', {
-            charBefore: charBefore === '\n' ? '\\n' : charBefore === ' ' ? '(espace)' : charBefore || '(début)',
-            charAfter: charAfter === '\n' ? '\\n' : charAfter === ' ' ? '(espace)' : charAfter || '(fin)',
-            spaceBefore: spaceBefore ? 'OUI' : 'NON',
-            spaceAfter: spaceAfter ? 'OUI' : 'NON',
-            result: finalText
-        });
         
         return {
             text: finalText,
@@ -4237,7 +4188,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (result === null) {
                 // Drop interdit - position invalide
-                console.log('❌ Drop annulé: position invalide');
                 dropInsertIndex = null;
                 return;
             }
@@ -4258,7 +4208,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // Placer le curseur après le texte inséré (incluant l'espace avant)
             quill.setSelection(insertIndex + cursorOffset, 0);
             
-            console.log('📋 Drop réussi:', textWithSpaces, 'dans', zoneId, 'à position', insertIndex);
             
             // Reset
             dropInsertIndex = null;
@@ -4276,7 +4225,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        console.log('🎯 Drop zone configurée pour', zoneId);
     }
 
     // Initialiser la toolbar Data et les combos avec les champs par défaut
@@ -4328,7 +4276,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     if (result === null) {
                         // Déterminer la raison pour le message
-                        console.log('❌ Insertion annulée: position invalide');
                         return;
                     }
                     
@@ -4343,7 +4290,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     saveToLocalStorage();
                     saveState();
 
-                    console.log('🔧 PHASE 6 - Insertion champ fusion:', textWithSpaces, 'dans zone:', zoneId);
                     return;
                 }
             }
@@ -4354,7 +4300,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Vérifier que l'input existe encore dans le DOM
                 if (!document.contains(input)) {
-                    console.log('❌ Insertion QR annulée: input n\'existe plus dans le DOM');
                     lastFocusedQrInput.inputElement = null;
                     return;
                 }
@@ -4366,7 +4311,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const result = getFieldTextWithSpacesForInput(text, insertIndex, tag);
                 
                 if (result === null) {
-                    console.log('❌ Insertion QR annulée: position invalide');
                     return;
                 }
                 
@@ -4391,7 +4335,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Déclencher l'événement input pour sauvegarder et mettre à jour l'affichage
                 input.dispatchEvent(new Event('input', { bubbles: true }));
                 
-                console.log('🔧 Insertion champ fusion QR:', textWithSpaces, 'dans champ:', input.dataset.fieldId);
                 return;
             }
         }
@@ -4443,7 +4386,6 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function loadFontsFromJson(polices) {
         if (!polices || polices.length === 0) {
-            console.log('loadFontsFromJson: Aucune police à charger');
             return;
         }
         
@@ -4520,13 +4462,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 addFontFaceRule(family, police.boldItalicUrl, 700, 'italic');
             }
 
-            console.log(`  → Police "${family}" injectée (regular + variantes si dispo)`);
         });
         
         styleEl.textContent = cssRules;
         document.head.appendChild(styleEl);
         
-        console.log(`loadFontsFromJson: ${polices.length} police(s) injectée(s)`);
     }
     
     /**
@@ -4571,7 +4511,6 @@ document.addEventListener('DOMContentLoaded', () => {
             inputFont.value = fontsToUse[0].nom;
         }
         
-        console.log(`updateFontSelectUI: ${fontsToUse.length} police(s) dans le sélecteur`);
     }
 
     /**
@@ -4611,7 +4550,6 @@ document.addEventListener('DOMContentLoaded', () => {
             quillInputFont.value = fontsToUse[0].nom;
         }
 
-        console.log(`updateQuillFontSelectUI: ${fontsToUse.length} police(s) dans le sélecteur Quill`);
     }
     
     // Exposer les fonctions globalement (pour debug et appel depuis WebDev)
@@ -5008,11 +4946,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (needsTransparency) {
                         // PNG pour conserver la transparence
                         base64 = canvas.toDataURL('image/png');
-                        console.log('🖼️ Image compressée en PNG (transparence détectée)');
                     } else {
                         // JPEG pour une meilleure compression (qualité 85%)
                         base64 = canvas.toDataURL('image/jpeg', 0.85);
-                        console.log('🖼️ Image compressée en JPEG (qualité 85%)');
                     }
                     
                     // Calculer la taille du base64 (approximation)
@@ -6773,7 +6709,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Stocker la référence
         areaElements.set(zoneId, areaEl);
         
-        console.log(`📐 Area créée pour ${zoneId}:`, area);
         
         return areaEl;
     }
@@ -6809,7 +6744,6 @@ document.addEventListener('DOMContentLoaded', () => {
             areaEl.remove();
         });
         areaElements.clear();
-        console.log('🧹 Toutes les areas ont été supprimées');
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -6902,12 +6836,10 @@ document.addEventListener('DOMContentLoaded', () => {
             isAreaResizing = true;
             activeAreaHandle = handle.dataset.handle;
             areaEl.classList.add('area-resizing');
-            console.log(`📐 Area resize START (${activeAreaHandle}) pour ${zoneId}`);
         } else {
             // Drag
             isAreaDragging = true;
             areaEl.classList.add('area-dragging');
-            console.log(`📐 Area drag START pour ${zoneId}`);
         }
         
         e.preventDefault();
@@ -7093,7 +7025,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 hMm: pxToMm(finalH)
             };
             
-            console.log(`📐 Area ${isAreaDragging ? 'drag' : 'resize'} END pour ${zoneId}:`, zoneData.contrainte.geometrie.area);
         }
         
         // Si c'était un drag, mettre à jour aussi la position de la zone
@@ -7102,7 +7033,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (zoneEl && zoneData) {
                 zoneData.x = pxToMm(zoneEl.offsetLeft);
                 zoneData.y = pxToMm(zoneEl.offsetTop);
-                console.log(`📐 Zone déplacée avec l'area: x=${zoneData.x.toFixed(1)}mm, y=${zoneData.y.toFixed(1)}mm`);
             }
         }
         
@@ -7478,7 +7408,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Vérifier si les contraintes sont réellement définies
         // (pas juste des valeurs par défaut WebDev : false/0)
         if (!hasValidConstraints(constraints)) {
-            console.log('⚠️ Constraints non définies ou valeurs par défaut, utilisation de DEFAULT_CONSTRAINTS');
             constraints = DEFAULT_CONSTRAINTS;
         }
         
@@ -7487,8 +7416,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        console.log('🔒 Application des contraintes de document...');
-        console.log('  Contraintes reçues:', constraints);
         
         // Fusionner avec les valeurs par défaut
         if (constraints.autorisations) {
@@ -7505,12 +7432,10 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         }
         
-        console.log('  Contraintes appliquées:', documentState.constraints);
         
         // Mettre à jour la visibilité des boutons
         updateZoneButtonsVisibility();
         
-        console.log('🔒 Contraintes appliquées avec succès');
     }
 
     // ─────────────────────────────── FIN SECTION 9 ────────────────────────────────
@@ -8433,7 +8358,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // Trouver la toolbar visible pour ce type de zone (attribut data-toolbar-for)
             const toolbar = document.querySelector(`.toolbar-poc[data-toolbar-for*="${toolbarType}"]`);
             
-            console.log(`📐 Recherche toolbar pour type "${zoneData.type}" → "${toolbarType}", trouvée:`, !!toolbar);
             
             if (toolbar) {
                 // Mettre à jour les champs avec les valeurs arrondies
@@ -8441,35 +8365,30 @@ document.addEventListener('DOMContentLoaded', () => {
                     const inputMinW = toolbar.querySelector('#contrainte-min-w');
                     if (inputMinW) {
                         inputMinW.value = geometrie.minWMm.toFixed(1).replace('.', ',');
-                        console.log(`📐 Champ min-w mis à jour: ${inputMinW.value}`);
                     }
                 }
                 if (geometrie.minHMm !== undefined) {
                     const inputMinH = toolbar.querySelector('#contrainte-min-h');
                     if (inputMinH) {
                         inputMinH.value = geometrie.minHMm.toFixed(1).replace('.', ',');
-                        console.log(`📐 Champ min-h mis à jour: ${inputMinH.value}`);
                     }
                 }
                 if (geometrie.maxWMm !== undefined) {
                     const inputMaxW = toolbar.querySelector('#contrainte-max-w');
                     if (inputMaxW) {
                         inputMaxW.value = geometrie.maxWMm.toFixed(1).replace('.', ',');
-                        console.log(`📐 Champ max-w mis à jour: ${inputMaxW.value}`);
                     }
                 }
                 if (geometrie.maxHMm !== undefined) {
                     const inputMaxH = toolbar.querySelector('#contrainte-max-h');
                     if (inputMaxH) {
                         inputMaxH.value = geometrie.maxHMm.toFixed(1).replace('.', ',');
-                        console.log(`📐 Champ max-h mis à jour: ${inputMaxH.value}`);
                     }
                 }
             }
             
             // Afficher un toast avec les corrections
             showConstraintToast(`Contraintes ajustées : ${corrections.join(', ')}`, 'warning', 'straighten');
-            console.log(`📐 Contraintes de taille corrigées pour ${zoneId}:`, corrections);
             
             // Sauvegarder les modifications
             saveToLocalStorage();
@@ -8687,7 +8606,6 @@ document.addEventListener('DOMContentLoaded', () => {
             mode = 'standard';
         }
         designerMode = mode;
-        console.log(`🎨 Mode Designer: ${designerMode}`);
         
         // Mettre à jour la classe CSS sur le body pour les styles conditionnels
         if (designerMode === 'template') {
@@ -8776,7 +8694,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        console.log(`🔧 Onglets Contraintes ${isTemplate ? 'affichés' : 'masqués'} (mode ${designerMode})`);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -8920,7 +8837,6 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         }
         
-        console.log(`🔄 Contraintes réinitialisées (scope: ${scope}):`, zoneData.contrainte);
     }
 
     /**
@@ -9123,14 +9039,12 @@ document.addEventListener('DOMContentLoaded', () => {
             setCheckboxInToolbar(toolbar, 'contrainte-bordure', style.bordureModifiable !== false);
         }
         
-        console.log(`🎨 Contraintes style chargées pour ${zoneId} (type: ${zoneType}):`, style);
         
         // Mettre à jour la visibilité des sections selon l'état des checkboxes maîtres
         const isSelectionnable = getCheckboxInToolbar(toolbar, 'contrainte-selectionnable');
         const isLocked = getCheckboxInToolbar(toolbar, 'contrainte-locked');
         updateConstraintSectionsVisibility(toolbar, isSelectionnable, isLocked);
         
-        console.log(`🔒 Contraintes chargées dans UI pour ${zoneId}`);
     }
 
     /**
@@ -9267,8 +9181,6 @@ document.addEventListener('DOMContentLoaded', () => {
             style.bordureModifiable = getCheckboxInToolbar(toolbar, 'contrainte-bordure');
         }
         
-        console.log(`🎨 Contraintes style sauvegardées pour ${zoneId} (type: ${zoneType}):`, style);
-        console.log(`💾 Contraintes sauvegardées pour ${zoneId}:`, zoneData.contrainte);
     }
 
     /**
@@ -9319,7 +9231,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Note: Le blocage du drag/resize est géré par les fonctions existantes
         // qui vérifient déjà les contraintes lors des interactions
         
-        console.log(`🔧 Contraintes géométriques appliquées pour ${zoneId}`);
     }
 
     /**
@@ -9456,7 +9367,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     setInputInToolbar(toolbar, 'contrainte-area-w', formatMmValue(areaToDisplay.wMm));
                     setInputInToolbar(toolbar, 'contrainte-area-h', formatMmValue(areaToDisplay.hMm));
                     
-                    console.log('📐 Area initialisée automatiquement:', areaToDisplay);
                 } else if (wasAreaDefined) {
                     // L'area existait déjà : utiliser les valeurs existantes
                     areaToDisplay = wasAreaDefined;
@@ -9466,12 +9376,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (areaToDisplay) {
                     createAreaElement(zoneIdForArea, areaToDisplay);
                     updateAreaVisibility(zoneIdForArea, true);
-                    console.log('📐 Area créée et affichée pour', zoneIdForArea);
                 }
             } else if (!newCheckedState && zoneIdForArea) {
                 // On décoche : supprimer l'area visuellement
                 removeAreaElement(zoneIdForArea);
-                console.log('📐 Area supprimée pour', zoneIdForArea);
             }
         }
         
@@ -9641,7 +9549,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             zoneData.y = pxToMm(newZoneY);
                         }
                         
-                        console.log(`📐 Zone déplacée avec l'area: deltaX=${pxToMm(deltaX).toFixed(1)}mm, deltaY=${pxToMm(deltaY).toFixed(1)}mm`);
                     }
                 }
             }
@@ -9720,7 +9627,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 saveCurrentZoneConstraints(toolbar);
                 
                 showConstraintToast(`Taille minimum mémorisée : ${formatMmValue(validatedWidth)} × ${formatMmValue(validatedHeight)} mm`, 'info', 'check_circle');
-                console.log('📏 Taille minimum mémorisée:', validatedWidth, '×', validatedHeight, 'mm');
             }
             
             if (btnId === 'btn-memoriser-taille-max') {
@@ -9731,7 +9637,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 saveCurrentZoneConstraints(toolbar);
                 
                 showConstraintToast(`Taille maximum mémorisée : ${formatMmValue(validatedWidth)} × ${formatMmValue(validatedHeight)} mm`, 'info', 'check_circle');
-                console.log('📏 Taille maximum mémorisée:', validatedWidth, '×', validatedHeight, 'mm');
             }
             
             // Appliquer les contraintes en temps réel (mode Template)
@@ -9761,7 +9666,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        console.log('🔒 Listeners onglet Contraintes initialisés');
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -9920,7 +9824,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function initDefaultPreviewData() {
         if (!documentState.donneesApercu || documentState.donneesApercu.length === 0) {
             documentState.donneesApercu = [...DEFAULT_PREVIEW_DATA];
-            console.log(`📊 initDefaultPreviewData: ${DEFAULT_PREVIEW_DATA.length} échantillon(s) fictif(s) chargé(s)`);
         }
     }
 
@@ -9962,11 +9865,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const result = donneesApercuWebDev.map((enreg, index) => {
             const converted = convertEnregistrementToObject(enreg);
-            console.log(`📄 Enregistrement ${index + 1} converti:`, converted);
             return converted;
         });
         
-        console.log(`✅ ${result.length} enregistrement(s) converti(s) depuis WebDev`);
         return result;
     }
 
@@ -9975,17 +9876,10 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function debugPreviewData() {
-        console.log('═══════════════════════════════════════════════════════════');
-        console.log('📊 DONNÉES D\'APERÇU DISPONIBLES');
-        console.log('═══════════════════════════════════════════════════════════');
-        console.log(`Nombre d'enregistrements: ${documentState.donneesApercu.length}`);
-        console.log('───────────────────────────────────────────────────────────');
         
         documentState.donneesApercu.forEach((record, index) => {
-            console.log(`[${index + 1}] ${record.CIVILITE || ''} ${record.PRENOM || ''} ${record.NOM || ''} - ${record.SOCIETE || ''}`);
         });
         
-        console.log('═══════════════════════════════════════════════════════════');
     }
 
     /**
@@ -10011,22 +9905,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         ];
         
-        console.log('═══════════════════════════════════════════════════════════');
-        console.log('🧪 TEST CONVERSION FORMAT WEBDEV');
-        console.log('═══════════════════════════════════════════════════════════');
-        console.log('Entrée (format WebDev):', JSON.stringify(testDataWebDev, null, 2));
         
         const converted = convertDonneesApercuFromWebDev(testDataWebDev);
         
-        console.log('───────────────────────────────────────────────────────────');
-        console.log('Sortie (format interne):', JSON.stringify(converted, null, 2));
-        console.log('═══════════════════════════════════════════════════════════');
         
         // Vérification
         if (converted[0].NOM === "TEST-WEBDEV" && converted[1].PRENOM === "Marie") {
-            console.log('✅ TEST RÉUSSI');
         } else {
-            console.log('❌ TEST ÉCHOUÉ');
         }
     }
 
@@ -10068,7 +9953,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function showPreviewControls() {
-        console.log('👁️ showPreviewControls()');
         
         // Masquer le bouton Aperçu
         if (previewBtnContainer) {
@@ -10097,7 +9981,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function hidePreviewControls() {
-        console.log('👁️ hidePreviewControls()');
         
         // Afficher le bouton Aperçu
         if (previewBtnContainer) {
@@ -10150,7 +10033,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function saveAllZonesContent() {
-        console.log('💾 saveAllZonesContent() - Sauvegarde du contenu original');
         
         previewState.savedContents.clear();
         
@@ -10177,12 +10059,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         emptyLines: zoneData.emptyLines || 0
                     });
                     
-                    console.log(`  → Zone ${zoneId} (page ${pageIndex + 1}) sauvegardée`);
                 }
             });
         });
         
-        console.log(`💾 ${previewState.savedContents.size} zone(s) sauvegardée(s)`);
     }
 
     /**
@@ -10190,7 +10070,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function restoreAllZonesContent() {
-        console.log('🔄 restoreAllZonesContent() - Restauration du contenu original');
         
         previewState.savedContents.forEach((savedData, zoneId) => {
             const quillInstance = quillInstances.get(zoneId);
@@ -10210,11 +10089,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     zoneEl.classList.remove('copyfit-active');
                 }
                 
-                console.log(`  → Zone ${zoneId} restaurée`);
             }
         });
         
-        console.log(`🔄 ${previewState.savedContents.size} zone(s) restaurée(s)`);
         previewState.savedContents.clear();
         
         // Rafraîchir les codes-barres (retour aux valeurs normales)
@@ -10231,7 +10108,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         
-        console.log('  ✅ Codes-barres restaurés (mode normal)');
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -10349,7 +10225,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (variableOnlyPattern.test(line)) {
                 variableOnlyLines.add(index);
-                console.log(`  📋 Ligne ${index} identifiée comme "variables uniquement": "${line}"`);
             }
         });
         
@@ -10383,7 +10258,6 @@ document.addEventListener('DOMContentLoaded', () => {
         lines.forEach((line, index) => {
             if (variableOnlyLines.has(index) && line.length === 0) {
                 linesToRemove.add(index);
-                console.log(`  🗑️ Ligne ${index} sera supprimée (variable vide)`);
             }
         });
         
@@ -10454,7 +10328,6 @@ document.addEventListener('DOMContentLoaded', () => {
             newOps.push(pendingAttributes ? { insert: pendingText, attributes: pendingAttributes } : { insert: pendingText });
         }
         
-        console.log(`  ✂️ ${linesToRemove.size} ligne(s) supprimée(s)`);
         
         return { ops: newOps };
     }
@@ -10466,7 +10339,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {boolean} true si l'affichage a réussi
      */
     function displayMergedContent(recordIndex) {
-        console.log(`📊 displayMergedContent(${recordIndex})`);
         
         // Vérifier que l'index est valide
         if (recordIndex < 0 || recordIndex >= documentState.donneesApercu.length) {
@@ -10476,7 +10348,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Récupérer l'enregistrement
         const record = documentState.donneesApercu[recordIndex];
-        console.log(`  → Enregistrement: ${record.PRENOM || ''} ${record.NOM || ''}`);
         
         // Parcourir toutes les zones sauvegardées
         previewState.savedContents.forEach((savedData, zoneId) => {
@@ -10506,7 +10377,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // Appliquer le Delta fusionné à Quill (sans déclencher d'événements)
             quillInstance.setContents(mergedDelta, 'silent');
             
-            console.log(`  ✅ Zone ${zoneId} fusionnée`);
         });
         
         // Mettre à jour l'index courant
@@ -10543,7 +10413,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         
-        console.log('  ✅ Codes-barres mis à jour avec les données de l\'enregistrement');
         
         return true;
     }
@@ -10554,7 +10423,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function triggerCopyfitForPreview() {
-        console.log('📐 triggerCopyfitForPreview()');
         
         // Petit délai pour laisser Quill mettre à jour le DOM
         requestAnimationFrame(() => {
@@ -10571,12 +10439,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Appeler la fonction de copyfit existante pour Quill
                         if (quillInstance && typeof applyCopyfitToQuillZone === 'function') {
                             applyCopyfitToQuillZone(zoneEl, quillInstance, zoneData.size);
-                            console.log(`  📐 Copyfit appliqué à ${zoneId}`);
                             // Ajouter indicateur visuel
                             zoneEl.classList.add('copyfit-active');
                         } else if (typeof applyCopyfit === 'function') {
                             applyCopyfit(zoneEl, zoneData.size);
-                            console.log(`  📐 Copyfit appliqué à ${zoneId}`);
                             zoneEl.classList.add('copyfit-active');
                         }
                     }
@@ -10609,7 +10475,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function refreshPreviewAfterPageChange() {
         if (!previewState.active) return;
         
-        console.log('🔄 refreshPreviewAfterPageChange()');
         
         // 1. Sauvegarder les zones texte de la nouvelle page courante
         const currentPageIndex = documentState.currentPageIndex;
@@ -10638,7 +10503,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         emptyLines: zoneData.emptyLines || 0
                     });
                     
-                    console.log(`  💾 Zone ${zoneId} (page ${currentPageIndex + 1}) sauvegardée depuis zoneData`);
                 }
             }
         });
@@ -10667,9 +10531,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {boolean} true si l'activation a réussi
      */
     function activatePreview() {
-        console.log('═══════════════════════════════════════════════════════════');
-        console.log('👁️ activatePreview() - Activation du mode aperçu');
-        console.log('═══════════════════════════════════════════════════════════');
         
         // Vérifier qu'on a des données d'aperçu
         if (!hasPreviewData()) {
@@ -10679,7 +10540,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Déjà en mode aperçu ?
         if (previewState.active) {
-            console.log('ℹ️ Déjà en mode aperçu');
             return true;
         }
         
@@ -10692,7 +10552,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // 2b. Masquer la toolbar data si elle est visible
         if (toolbarData) {
             toolbarData.style.display = 'none';
-            console.log('📋 Toolbar Data masquée pour le mode aperçu');
         }
         
         // 3. Désactiver l'édition de toutes les zones Quill
@@ -10734,8 +10593,6 @@ document.addEventListener('DOMContentLoaded', () => {
             pagesSection.style.display = 'block';
         }
         
-        console.log('✅ Mode aperçu activé');
-        console.log('═══════════════════════════════════════════════════════════');
         
         // Afficher le premier enregistrement fusionné
         displayMergedContent(0);
@@ -10751,13 +10608,9 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function deactivatePreview() {
-        console.log('═══════════════════════════════════════════════════════════');
-        console.log('👁️ deactivatePreview() - Désactivation du mode aperçu');
-        console.log('═══════════════════════════════════════════════════════════');
         
         // Pas en mode aperçu ?
         if (!previewState.active) {
-            console.log('ℹ️ Pas en mode aperçu');
             return;
         }
         
@@ -10790,8 +10643,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // 7. Restaurer la visibilité normale des sections de la sidebar
         updateSidebarSectionsVisibility();
         
-        console.log('✅ Mode édition restauré');
-        console.log('═══════════════════════════════════════════════════════════');
     }
 
     /**
@@ -10805,7 +10656,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function disableZoneInteractions() {
-        console.log('🔒 disableZoneInteractions() - Édition désactivée, déplacement/resize autorisés');
         
         // Ajouter la classe pour les styles visuels (curseur, etc.)
         document.querySelectorAll('.zone-frame').forEach(zone => {
@@ -10821,7 +10671,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function enableZoneInteractions() {
-        console.log('🔓 enableZoneInteractions() - Édition réactivée');
         
         // Retirer la classe preview-mode
         document.querySelectorAll('.zone-frame').forEach(zone => {
@@ -11166,11 +11015,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const zoneElement = document.getElementById(zoneId);
         const quillInstance = quillInstances.get(zoneId);
         
-        console.log('🔧 PHASE 1 - Création zone textQuill:');
-        console.log('  ✓ Zone ID:', zoneId);
-        console.log('  ✓ Element DOM créé:', zoneElement ? 'OUI' : 'NON');
-        console.log('  ✓ Instance Quill créée:', quillInstances.has(zoneId));
-        console.log('  ✓ Quill editor ready:', quillInstance && quillInstance.root ? 'OUI' : 'NON');
         
         saveToLocalStorage(); // Sauvegarde auto
         saveState(); // Snapshot APRÈS la création
@@ -11679,15 +11523,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     copyfitFontsDebugInstalled = true;
                     try {
                         document.fonts.addEventListener('loading', () => {
-                            console.log('🧪 COPYFIT FONTS - loading', { status: document.fonts.status, size: document.fonts.size });
                         });
                         document.fonts.addEventListener('loadingdone', (e) => {
-                            console.log('🧪 COPYFIT FONTS - loadingdone', { status: document.fonts.status, size: document.fonts.size, event: e });
                         });
                         document.fonts.addEventListener('loadingerror', (e) => {
-                            console.log('🧪 COPYFIT FONTS - loadingerror', { status: document.fonts.status, size: document.fonts.size, event: e });
                         });
-                        console.log('🧪 COPYFIT FONTS - listeners installed', { status: document.fonts.status, size: document.fonts.size });
                     } catch (e) {}
                 }
 
@@ -11705,16 +11545,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         console.group(`🧪 COPYFIT LOAD - before setContents: ${id}`);
                         try {
                             const zc = zone.querySelector('.zone-content');
-                            console.log('zoneContent.client (px):', { w: zc ? zc.clientWidth : null, h: zc ? zc.clientHeight : null });
-                            console.log('zone.offset (px):', { w: zone.offsetWidth, h: zone.offsetHeight });
-                            console.log('quill.root (px):', { clientH: quillInstance.root ? quillInstance.root.clientHeight : null, scrollH: quillInstance.root ? quillInstance.root.scrollHeight : null });
-                            console.log('zoneData.copyfit/size:', { copyfit: !!zoneData.copyfit, size: zoneData.size });
-                            console.log('fonts:', document.fonts ? { status: document.fonts.status, size: document.fonts.size } : null);
-                            console.log('computed quill.root:', quillInstance.root ? {
-                                fontFamily: getComputedStyle(quillInstance.root).fontFamily,
-                                fontSize: getComputedStyle(quillInstance.root).fontSize,
-                                lineHeight: getComputedStyle(quillInstance.root).lineHeight
-                            } : null);
                         } catch (e) {}
                         console.groupEnd();
                     }
@@ -11727,7 +11557,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                             if (delta && Array.isArray(delta.ops)) {
                                 quillInstance.setContents(delta, 'silent');
-                                console.log('🔧 BUGFIX - Contenu Quill restauré (Delta):', id);
                             } else {
                                 // Fallback minimal si Delta invalide
                                 const fallbackText = (typeof zoneData.quillDelta === 'string') ? zoneData.quillDelta : '';
@@ -11738,11 +11567,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             // Sinon les métriques de texte sont incorrectes et le texte est coupé
                             if (document.fonts && document.fonts.status !== 'loaded') {
                                 if (DEBUG_COPYFIT) {
-                                    console.log(`🧪 COPYFIT LOAD - waiting for fonts (Delta): ${id}, status:`, document.fonts.status);
                                 }
                                 await document.fonts.ready;
                                 if (DEBUG_COPYFIT) {
-                                    console.log(`🧪 COPYFIT LOAD - fonts ready (Delta): ${id}, status:`, document.fonts.status);
                                 }
                             }
                             // Réappliquer les styles APRÈS la restauration du contenu (setContents peut réinitialiser)
@@ -11750,14 +11577,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 console.group(`🧪 COPYFIT LOAD - before applyQuillZoneStyles (Delta): ${id}`);
                                 try {
                                     const zc = zone.querySelector('.zone-content');
-                                    console.log('zoneContent.client (px):', { w: zc ? zc.clientWidth : null, h: zc ? zc.clientHeight : null });
-                                    console.log('quill.root (px):', { clientH: quillInstance.root ? quillInstance.root.clientHeight : null, scrollH: quillInstance.root ? quillInstance.root.scrollHeight : null });
-                                    console.log('fonts:', document.fonts ? { status: document.fonts.status, size: document.fonts.size } : null);
-                                    console.log('computed quill.root:', quillInstance.root ? {
-                                        fontFamily: getComputedStyle(quillInstance.root).fontFamily,
-                                        fontSize: getComputedStyle(quillInstance.root).fontSize,
-                                        lineHeight: getComputedStyle(quillInstance.root).lineHeight
-                                    } : null);
                                 } catch (e) {}
                                 console.groupEnd();
                             }
@@ -11766,13 +11585,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 console.group(`🧪 COPYFIT LOAD - after applyQuillZoneStyles (Delta): ${id}`);
                                 try {
                                     const zc = zone.querySelector('.zone-content');
-                                    console.log('zoneContent.client (px):', { w: zc ? zc.clientWidth : null, h: zc ? zc.clientHeight : null });
-                                    console.log('quill.root (px):', { clientH: quillInstance.root ? quillInstance.root.clientHeight : null, scrollH: quillInstance.root ? quillInstance.root.scrollHeight : null });
-                                    console.log('computed:', {
-                                        editorFontSize: quillInstance.root ? getComputedStyle(quillInstance.root).fontSize : null,
-                                        editorLineHeight: quillInstance.root ? getComputedStyle(quillInstance.root).lineHeight : null
-                                    });
-                                    console.log('fonts:', document.fonts ? { status: document.fonts.status, size: document.fonts.size } : null);
                                 } catch (e) {}
                                 console.groupEnd();
                             }
@@ -11792,9 +11604,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                     console.group(`🧪 COPYFIT LOAD - before applyQuillZoneStyles (fallback Delta): ${id}`);
                                     try {
                                         const zc = zone.querySelector('.zone-content');
-                                        console.log('zoneContent.client (px):', { w: zc ? zc.clientWidth : null, h: zc ? zc.clientHeight : null });
-                                        console.log('quill.root (px):', { clientH: quillInstance.root ? quillInstance.root.clientHeight : null, scrollH: quillInstance.root ? quillInstance.root.scrollHeight : null });
-                                        console.log('fonts:', document.fonts ? { status: document.fonts.status, size: document.fonts.size } : null);
                                     } catch (e) {}
                                     console.groupEnd();
                                 }
@@ -11807,27 +11616,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         console.group(`🧪 COPYFIT LOAD - before pasteHTML: ${id}`);
                         try {
                             const zc = zone.querySelector('.zone-content');
-                            console.log('zoneContent.client (px):', { w: zc ? zc.clientWidth : null, h: zc ? zc.clientHeight : null });
-                            console.log('zone.offset (px):', { w: zone.offsetWidth, h: zone.offsetHeight });
-                            console.log('quill.root (px):', { clientH: quillInstance.root ? quillInstance.root.clientHeight : null, scrollH: quillInstance.root ? quillInstance.root.scrollHeight : null });
-                            console.log('zoneData.copyfit/size:', { copyfit: !!zoneData.copyfit, size: zoneData.size });
-                            console.log('fonts:', document.fonts ? { status: document.fonts.status, size: document.fonts.size } : null);
                         } catch (e) {}
                         console.groupEnd();
                     }
                     setTimeout(async () => {
                         try {
                             quillInstance.clipboard.dangerouslyPasteHTML(0, zoneData.content, 'silent');
-                            console.log('🔧 BUGFIX - Contenu Quill restauré (HTML):', id);
                             // BUGFIX: Attendre le chargement des polices avant d'appliquer les styles (copyfit)
                             // Sinon les métriques de texte sont incorrectes et le texte est coupé
                             if (document.fonts && document.fonts.status !== 'loaded') {
                                 if (DEBUG_COPYFIT) {
-                                    console.log(`🧪 COPYFIT LOAD - waiting for fonts (HTML): ${id}, status:`, document.fonts.status);
                                 }
                                 await document.fonts.ready;
                                 if (DEBUG_COPYFIT) {
-                                    console.log(`🧪 COPYFIT LOAD - fonts ready (HTML): ${id}, status:`, document.fonts.status);
                                 }
                             }
                             // Réappliquer les styles APRÈS la restauration du contenu
@@ -11835,9 +11636,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 console.group(`🧪 COPYFIT LOAD - before applyQuillZoneStyles (HTML): ${id}`);
                                 try {
                                     const zc = zone.querySelector('.zone-content');
-                                    console.log('zoneContent.client (px):', { w: zc ? zc.clientWidth : null, h: zc ? zc.clientHeight : null });
-                                    console.log('quill.root (px):', { clientH: quillInstance.root ? quillInstance.root.clientHeight : null, scrollH: quillInstance.root ? quillInstance.root.scrollHeight : null });
-                                    console.log('fonts:', document.fonts ? { status: document.fonts.status, size: document.fonts.size } : null);
                                 } catch (e) {}
                                 console.groupEnd();
                             }
@@ -11846,13 +11644,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 console.group(`🧪 COPYFIT LOAD - after applyQuillZoneStyles (HTML): ${id}`);
                                 try {
                                     const zc = zone.querySelector('.zone-content');
-                                    console.log('zoneContent.client (px):', { w: zc ? zc.clientWidth : null, h: zc ? zc.clientHeight : null });
-                                    console.log('quill.root (px):', { clientH: quillInstance.root ? quillInstance.root.clientHeight : null, scrollH: quillInstance.root ? quillInstance.root.scrollHeight : null });
-                                    console.log('computed:', {
-                                        editorFontSize: quillInstance.root ? getComputedStyle(quillInstance.root).fontSize : null,
-                                        editorLineHeight: quillInstance.root ? getComputedStyle(quillInstance.root).lineHeight : null
-                                    });
-                                    console.log('fonts:', document.fonts ? { status: document.fonts.status, size: document.fonts.size } : null);
                                 } catch (e) {}
                                 console.groupEnd();
                             }
@@ -12554,7 +12345,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const zonesData = getCurrentPageZones();
         const zoneData = zonesData[id];
         if (!isZoneSelectionnable(zoneData)) {
-            console.log('🚫 addToSelection() bloquée - zone non sélectionnable:', id);
             return;
         }
         
@@ -12713,7 +12503,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function showQuillToolbar() {
-        console.log('🔧 PHASE 3 - showQuillToolbar()');
         
         if (!quillToolbar) return;
         
@@ -12758,7 +12547,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function hideQuillToolbar() {
-        console.log('🔧 PHASE 3 - hideQuillToolbar()');
         
         if (!quillToolbar) return;
         if (!isQuillToolbarVisible && quillToolbar.style.display === 'none') return;
@@ -12783,7 +12571,6 @@ document.addEventListener('DOMContentLoaded', () => {
         section.classList.toggle('collapsed');
         const collapsed = section.classList.contains('collapsed');
         
-        console.log('🔧 PHASE 3 - toggleToolbarSection:', sectionHeader.textContent, '→', collapsed ? 'COLLAPSED' : 'EXPANDED');
     }
 
     /**
@@ -12831,7 +12618,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function syncQuillToolbarWithZone(zoneId) {
-        console.log('🔧 PHASE 4 - syncQuillToolbarWithZone:', zoneId);
         
         const zonesData = getCurrentPageZones();
         const zoneData = zonesData[zoneId];
@@ -12888,13 +12674,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (quillBgColorRow) quillBgColorRow.style.display = isTransparent ? 'none' : '';
 
         if (DEBUG_PHASE7_BG) {
-            console.log('🔧 PHASE 7 BG - Toolbar sync fond:', zoneId, {
-                isTransparent: zoneData.isTransparent,
-                bgColor: zoneData.bgColor,
-                uiTransparentChecked: isTransparent,
-                uiBgColor: quillInputBgColor ? quillInputBgColor.value : null,
-                uiRowDisplay: quillBgColorRow ? quillBgColorRow.style.display : null
-            });
         }
         
         // Bordure - Spinner POC + couleur
@@ -12923,7 +12702,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function applyQuillZoneStyles(zoneId) {
-        console.log('🔧 PHASE 4 - applyQuillZoneStyles:', zoneId);
         
         const zonesData = getCurrentPageZones();
         const zoneData = zonesData[zoneId];
@@ -12939,11 +12717,6 @@ document.addEventListener('DOMContentLoaded', () => {
         else zoneEl.style.backgroundColor = zoneData.bgColor || DEFAULT_BG_COLOR;
 
         if (DEBUG_PHASE7_BG) {
-            console.log('🔧 PHASE 7 BG - apply fond:', zoneId, {
-                isTransparent: zoneData.isTransparent,
-                bgColor: zoneData.bgColor,
-                applied: zoneEl.style.backgroundColor
-            });
         }
         
         // Bordure
@@ -12973,23 +12746,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const qlContainerEl = zoneEl.querySelector('.ql-container');
                 const qlEditorEl = zoneEl.querySelector('.ql-editor');
                 const csBefore = getComputedStyle(contentEl);
-                console.log('🔧 DEBUG VALIGN - applyQuillZoneStyles BEFORE:', zoneId, {
-                    dataValign: zoneData.valign,
-                    classes: Array.from(contentEl.classList),
-                    inlineJustifyContent: contentEl.style.justifyContent || '(empty)',
-                    computedJustifyContent: csBefore.justifyContent,
-                    computedDisplay: csBefore.display,
-                    contentClientH: contentEl.clientHeight,
-                    contentScrollH: contentEl.scrollHeight,
-                    quillEditorClientH: quillEditorEl ? quillEditorEl.clientHeight : null,
-                    qlContainerClientH: qlContainerEl ? qlContainerEl.clientHeight : null,
-                    qlEditorClientH: qlEditorEl ? qlEditorEl.clientHeight : null,
-                    qlEditorScrollH: qlEditorEl ? qlEditorEl.scrollHeight : null,
-                    qlContainerInlineH: qlContainerEl ? (qlContainerEl.style.height || '(empty)') : null,
-                    qlEditorInlineH: qlEditorEl ? (qlEditorEl.style.height || '(empty)') : null,
-                    qlContainerComputedH: qlContainerEl ? getComputedStyle(qlContainerEl).height : null,
-                    qlEditorComputedH: qlEditorEl ? getComputedStyle(qlEditorEl).height : null
-                });
             } catch (e) {}
 
             const valign =
@@ -13009,23 +12765,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const qlContainerEl = zoneEl.querySelector('.ql-container');
                 const qlEditorEl = zoneEl.querySelector('.ql-editor');
                 const csAfter = getComputedStyle(contentEl);
-                console.log('🔧 DEBUG VALIGN - applyQuillZoneStyles AFTER:', zoneId, {
-                    appliedValign: valign,
-                    classes: Array.from(contentEl.classList),
-                    inlineJustifyContent: contentEl.style.justifyContent || '(empty)',
-                    computedJustifyContent: csAfter.justifyContent,
-                    computedDisplay: csAfter.display,
-                    contentClientH: contentEl.clientHeight,
-                    contentScrollH: contentEl.scrollHeight,
-                    quillEditorClientH: quillEditorEl ? quillEditorEl.clientHeight : null,
-                    qlContainerClientH: qlContainerEl ? qlContainerEl.clientHeight : null,
-                    qlEditorClientH: qlEditorEl ? qlEditorEl.clientHeight : null,
-                    qlEditorScrollH: qlEditorEl ? qlEditorEl.scrollHeight : null,
-                    qlContainerInlineH: qlContainerEl ? (qlContainerEl.style.height || '(empty)') : null,
-                    qlEditorInlineH: qlEditorEl ? (qlEditorEl.style.height || '(empty)') : null,
-                    qlContainerComputedH: qlContainerEl ? getComputedStyle(qlContainerEl).height : null,
-                    qlEditorComputedH: qlEditorEl ? getComputedStyle(qlEditorEl).height : null
-                });
             } catch (e) {}
         }
         
@@ -13110,7 +12849,6 @@ document.addEventListener('DOMContentLoaded', () => {
         initCheckboxPoc('quill-chk-locked-wrapper', (checked) => {
             updateSelectedZone((zoneData) => {
                 setZoneVerrouillee(zoneData, checked);
-                console.log('🔧 PHASE 4 - verrouille:', isZoneVerrouillee(zoneData));
             });
         });
         
@@ -13130,7 +12868,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     setTimeout(() => {
                         selectZone(zoneId);
                     }, 100);
-                    console.log('🔧 PHASE 4 - Zone textQuill déplacée vers page:', targetPageIndex);
                 }
             });
         }
@@ -13140,7 +12877,6 @@ document.addEventListener('DOMContentLoaded', () => {
             quillInputFont.addEventListener('change', () => {
                 updateSelectedZone((zoneData) => {
                     zoneData.font = quillInputFont.value;
-                    console.log('🔧 PHASE 4 - font:', zoneData.font);
                 });
             });
         }
@@ -13149,7 +12885,6 @@ document.addEventListener('DOMContentLoaded', () => {
         initSpinnerPoc('quill-input-size', 6, 72, 1, (value) => {
             updateSelectedZone((zoneData) => {
                 zoneData.size = value;
-                console.log('🔧 PHASE 4 - size:', zoneData.size);
             });
         });
         
@@ -13157,7 +12892,6 @@ document.addEventListener('DOMContentLoaded', () => {
         initCheckboxPoc('quill-chk-copyfit-wrapper', (checked) => {
             updateSelectedZone((zoneData) => {
                 zoneData.copyfit = checked;
-                console.log('🔧 PHASE 4 - copyfit:', zoneData.copyfit);
             });
         });
         
@@ -13169,7 +12903,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     zoneData.colorCmyk = null;  // Effacer CMJN car saisie RGB
                     updateColorSwatchPoc('quill-color-swatch', zoneData.color);
                     updateCmjnFieldsFromHex('quill-color', zoneData.color);
-                    console.log('🔧 PHASE 4 - color:', zoneData.color);
                 });
             });
         }
@@ -13181,7 +12914,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 zoneData.colorCmyk = cmykValues;  // Stocker CMJN natif
                 if (quillInputColor) quillInputColor.value = newHex;
                 updateColorSwatchPoc('quill-color-swatch', newHex);
-                console.log('🔧 PHASE 4 - color (CMJN):', newHex, cmykValues);
             });
         });
         
@@ -13189,7 +12921,6 @@ document.addEventListener('DOMContentLoaded', () => {
         initToggleGroupPoc('quill-align-h-group', (value) => {
             updateSelectedZone((zoneData) => {
                 zoneData.align = value;
-                console.log('🔧 PHASE 4 - align:', zoneData.align);
             });
         });
         
@@ -13197,7 +12928,6 @@ document.addEventListener('DOMContentLoaded', () => {
         initToggleGroupPoc('quill-align-v-group', (value) => {
             updateSelectedZone((zoneData) => {
                 zoneData.valign = value;
-                console.log('🔧 PHASE 4 - valign:', zoneData.valign);
             });
         });
         
@@ -13205,7 +12935,6 @@ document.addEventListener('DOMContentLoaded', () => {
         initSpinnerPoc('quill-input-line-height', 1, 3, 0.1, (value) => {
             updateSelectedZone((zoneData) => {
                 zoneData.lineHeight = value;
-                console.log('🔧 PHASE 4 - lineHeight:', zoneData.lineHeight);
             });
         });
         
@@ -13214,7 +12943,6 @@ document.addEventListener('DOMContentLoaded', () => {
             quillInputEmptyLines.addEventListener('change', () => {
                 updateSelectedZone((zoneData) => {
                     zoneData.emptyLines = parseInt(quillInputEmptyLines.value, 10) || 0;
-                    console.log('🔧 PHASE 4 - emptyLines:', zoneData.emptyLines);
                 });
             });
         }
@@ -13224,7 +12952,6 @@ document.addEventListener('DOMContentLoaded', () => {
             updateSelectedZone((zoneData) => {
                 zoneData.isTransparent = checked;
                 if (quillBgColorRow) quillBgColorRow.style.display = checked ? 'none' : '';
-                console.log('🔧 PHASE 4 - isTransparent:', zoneData.isTransparent);
             });
         });
         
@@ -13236,7 +12963,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     zoneData.bgColorCmyk = null;  // Effacer CMJN car saisie RGB
                     updateColorSwatchPoc('quill-bg-color-swatch', zoneData.bgColor);
                     updateCmjnFieldsFromHex('quill-bg', zoneData.bgColor);
-                    console.log('🔧 PHASE 4 - bgColor:', zoneData.bgColor);
                 });
             });
         }
@@ -13248,7 +12974,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 zoneData.bgColorCmyk = cmykValues;  // Stocker CMJN natif
                 if (quillInputBgColor) quillInputBgColor.value = newHex;
                 updateColorSwatchPoc('quill-bg-color-swatch', newHex);
-                console.log('🔧 PHASE 4 - bgColor (CMJN):', newHex, cmykValues);
             });
         });
         
@@ -13258,7 +12983,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 zoneData.border = zoneData.border || { width: 0, color: DEFAULT_BORDER_COLOR, style: DEFAULT_BORDER_STYLE };
                 zoneData.border.width = value;
                 updateQuillBorderOptionsVisibility(value);
-                console.log('🔧 PHASE 4 - border.width:', zoneData.border.width);
             });
         });
         
@@ -13271,7 +12995,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     zoneData.border.colorCmyk = null;  // Effacer CMJN car saisie RGB
                     updateColorSwatchPoc('quill-border-color-swatch', zoneData.border.color);
                     updateCmjnFieldsFromHex('quill-border', zoneData.border.color);
-                    console.log('🔧 PHASE 4 - border.color:', zoneData.border.color);
                 });
             });
         }
@@ -13284,7 +13007,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 zoneData.border.colorCmyk = cmykValues;  // Stocker CMJN natif
                 if (quillInputBorderColor) quillInputBorderColor.value = newHex;
                 updateColorSwatchPoc('quill-border-color-swatch', newHex);
-                console.log('🔧 PHASE 4 - border.color (CMJN):', newHex, cmykValues);
             });
         });
         
@@ -13294,7 +13016,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateSelectedZone((zoneData) => {
                     zoneData.border = zoneData.border || { width: 0, color: DEFAULT_BORDER_COLOR, style: DEFAULT_BORDER_STYLE };
                     zoneData.border.style = quillInputBorderStyle.value;
-                    console.log('🔧 PHASE 4 - border.style:', zoneData.border.style);
                 });
             });
         }
@@ -13315,7 +13036,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Re-synchroniser les champs (valeurs contraintes + arrondies)
                 syncQuillToolbarWithZone(zoneId);
                 
-                console.log(`🔧 PHASE 4 - geometry.${property}:`, valueMm);
             });
         };
         
@@ -13338,12 +13058,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const type = selectedZone ? (selectedZone.dataset ? selectedZone.dataset.type : undefined) : null;
         const shouldShow = selectedZone && type === 'textQuill';
         
-        console.log(
-            '🔧 DEBUG SELECTION - zone:',
-            selectedZone ? (type || 'inconnu') : 'aucune',
-            '→ toolbar:',
-            shouldShow ? 'SHOW' : 'HIDE'
-        );
         
         if (shouldShow) {
             showQuillToolbar();
@@ -13439,7 +13153,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function showImageToolbar(zoneId) {
-        console.log('🖼️ showImageToolbar():', zoneId);
         
         if (!imageToolbar) return;
         
@@ -13485,7 +13198,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function hideImageToolbar() {
-        console.log('🖼️ hideImageToolbar()');
         
         if (!imageToolbar) return;
         if (!isImageToolbarVisible && imageToolbar.style.display === 'none') return;
@@ -13524,7 +13236,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function syncImageToolbarWithZone(zoneId) {
-        console.log('🖼️ syncImageToolbarWithZone:', zoneId);
         
         const zonesData = getCurrentPageZones();
         const zoneData = zonesData[zoneId];
@@ -13663,7 +13374,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function showBarcodeToolbar(zoneId) {
-        console.log('📊 showBarcodeToolbar():', zoneId);
         
         if (!barcodeToolbar) return;
         
@@ -13711,7 +13421,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function hideBarcodeToolbar() {
-        console.log('📊 hideBarcodeToolbar()');
         
         if (!barcodeToolbar) return;
         if (!isBarcodeToolbarVisible && barcodeToolbar.style.display === 'none') return;
@@ -13728,7 +13437,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function syncBarcodeToolbarWithZone(zoneId) {
-        console.log('📊 syncBarcodeToolbarWithZone:', zoneId);
         
         const zonesData = getCurrentPageZones();
         const zoneData = zonesData[zoneId];
@@ -13875,7 +13583,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function initBarcodeToolbarComponents() {
         if (!barcodeToolbar) return;
         
-        console.log('📊 initBarcodeToolbarComponents()');
         
         /**
          * Retourne l'ID de la zone barcode sélectionnée (si sélection unique).
@@ -14204,7 +13911,6 @@ document.addEventListener('DOMContentLoaded', () => {
             barcodeInputValue.addEventListener('input', () => {
                 updateSelectedBarcodeZone((zoneData) => {
                     zoneData.valeurStatique = barcodeInputValue.value;
-                    console.log('📊 Valeur fixe sauvegardée:', barcodeInputValue.value);
                 });
             });
         }
@@ -14275,7 +13981,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     zoneEl.style.backgroundColor = newHex;
                 }
-                console.log('📊 Barcode bgColor (CMJN):', newHex, cmykValues);
             }, false);
         });
         
@@ -14378,7 +14083,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.addEventListener('mousemove', doResize);
             document.addEventListener('mouseup', stopResize);
             
-            console.log('📐 Toolbar resize started');
         }
         
         /**
@@ -14416,7 +14120,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.removeEventListener('mousemove', doResize);
             document.removeEventListener('mouseup', stopResize);
             
-            console.log(`📐 Toolbar resize ended: ${toolbar.offsetWidth}px`);
         }
         
         // Attacher l'événement mousedown
@@ -14434,7 +14137,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function showQrcodeToolbar(zoneId) {
-        console.log('📱 showQrcodeToolbar():', zoneId);
         
         if (!qrcodeToolbar) return;
         
@@ -14482,7 +14184,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function hideQrcodeToolbar() {
-        console.log('📱 hideQrcodeToolbar()');
         
         if (!qrcodeToolbar) return;
         if (!isQrcodeToolbarVisible && qrcodeToolbar.style.display === 'none') return;
@@ -14499,7 +14200,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function syncQrcodeToolbarWithZone(zoneId) {
-        console.log('📱 syncQrcodeToolbarWithZone:', zoneId);
         
         const zonesData = getCurrentPageZones();
         const zoneData = zonesData[zoneId];
@@ -14575,7 +14275,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function initQrcodeToolbarComponents() {
         if (!qrcodeToolbar) return;
         
-        console.log('📱 initQrcodeToolbarComponents()');
         
         /**
          * Retourne l'ID de la zone qr sélectionnée (si sélection unique).
@@ -14729,7 +14428,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             saveToLocalStorage();
             saveState();
-            console.log('📱 QRCode bgColor (CMJN):', newHex);
         });
         
         // ═══════════════════════════════════════════════════════════════
@@ -14795,7 +14493,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        console.log('🔧 updateToolbarVisibility - count:', selectedZoneIds.length, 'type:', zoneType);
         
         // Vérifier si la zone est système ou a la toolbar désactivée
         const zonesData = getCurrentPageZones();
@@ -14869,7 +14566,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function initImageToolbarComponents() {
         if (!imageToolbar) return;
         
-        console.log('🖼️ initImageToolbarComponents()');
         
         /**
          * Retourne l'ID de la zone image sélectionnée (si sélection unique).
@@ -14906,13 +14602,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // ═══════════════════════════════════════════════════════════════
         // SPINNERS
         // ═══════════════════════════════════════════════════════════════
-        console.log('🔧 initImageToolbarComponents - Initialisation des SPINNERS');
-        console.log('   imageToolbar visible ?', imageToolbar.style.display);
-        console.log('   imageToolbar offsetHeight:', imageToolbar.offsetHeight);
         
         // Épaisseur bordure
         initSpinnerPoc('image-input-border-width', 0, 20, 1, (value) => {
-            console.log('🔧 Spinner border-width callback, value:', value);
             updateSelectedImageZone((zoneData, zoneEl) => {
                 if (!zoneData.border) zoneData.border = { width: 0, color: DEFAULT_BORDER_COLOR, style: DEFAULT_BORDER_STYLE };
                 zoneData.border.width = value;
@@ -15102,7 +14794,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!zoneData.isTransparent) {
                     zoneEl.style.backgroundColor = newHex;
                 }
-                console.log('🖼️ Image bgColor (CMJN):', newHex, cmykValues);
             });
         });
         
@@ -15133,7 +14824,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (imageBorderColorSwatch) imageBorderColorSwatch.style.background = newHex;
                 // Appliquer visuellement la bordure
                 applyBorderToZone(zoneEl, zoneData.border);
-                console.log('🖼️ Image border.color (CMJN):', newHex, cmykValues);
             });
         });
         
@@ -15168,7 +14858,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         
-        console.log('🖼️ Toolbar Image - composants POC initialisés');
     }
 
     // Charger les données d'une zone dans le formulaire
@@ -15974,7 +15663,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function selectZone(id, event = null) {
         // Bloquer la sélection en mode Aperçu
         if (previewState && previewState.active) {
-            console.log('🚫 selectZone() bloquée - mode Aperçu actif');
             return;
         }
         
@@ -15988,7 +15676,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Bloquer la sélection si la zone n'est pas sélectionnable
         if (!isZoneSelectionnable(zoneData)) {
-            console.log('🚫 selectZone() bloquée - zone non sélectionnable:', id);
             return;
         }
         
@@ -16223,27 +15910,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (DEBUG_COPYFIT) {
             console.group(`🧪 COPYFIT - start: ${zoneEl.id}`);
             try {
-                console.log('inputs:', {
-                    maxSizePt,
-                    maxSize,
-                    minSize,
-                    precision,
-                    maxIterations
-                });
-                console.log('measure initial (px):', {
-                    zoneContentClientH: zoneContent.clientHeight,
-                    zoneContentClientW: zoneContent.clientWidth,
-                    editorClientH: editor.clientHeight,
-                    editorScrollH: editor.scrollHeight
-                });
-                console.log('fonts:', document.fonts ? { status: document.fonts.status, size: document.fonts.size } : null);
-                console.log('computed initial:', {
-                    zoneContentJustify: getComputedStyle(zoneContent).justifyContent,
-                    editorFontSize: getComputedStyle(editor).fontSize,
-                    editorLineHeight: getComputedStyle(editor).lineHeight,
-                    editorTextAlign: getComputedStyle(editor).textAlign,
-                    editorFontFamily: getComputedStyle(editor).fontFamily
-                });
             } catch (e) {}
             console.groupEnd();
         }
@@ -16265,13 +15931,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const scrollH = editor.scrollHeight;
             const overflow = scrollH > availableHeight;
             if (DEBUG_COPYFIT) {
-                console.log('🧪 COPYFIT testSize', {
-                    zoneId: zoneEl.id,
-                    sizePt: Math.round(sizePt * 10) / 10,
-                    availableHeight,
-                    scrollH,
-                    overflow
-                });
             }
             return overflow;
         };
@@ -16284,7 +15943,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // D'abord, vérifier si la taille max ne provoque pas d'overflow
         const maxOverflows = testSize(maxSize);
         if (DEBUG_COPYFIT) {
-            console.log('🧪 COPYFIT maxSize check', { zoneId: zoneEl.id, maxSize, availableHeight, maxOverflows });
         }
         if (!maxOverflows) {
             // Pas d'overflow à la taille max → on garde la taille max
@@ -16296,13 +15954,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const midOverflows = testSize(mid);
                 if (DEBUG_COPYFIT) {
-                    console.log('🧪 COPYFIT mid check', {
-                        zoneId: zoneEl.id,
-                        mid: Math.round(mid * 10) / 10,
-                        low: Math.round(low * 10) / 10,
-                        high: Math.round(high * 10) / 10,
-                        midOverflows
-                    });
                 }
 
                 if (midOverflows) {
@@ -16315,14 +15966,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 iterations++;
                 if (DEBUG_COPYFIT) {
-                    console.log('🧪 COPYFIT dichotomy step', {
-                        zoneId: zoneEl.id,
-                        iterations,
-                        low: Math.round(low * 10) / 10,
-                        high: Math.round(high * 10) / 10,
-                        mid: Math.round(mid * 10) / 10,
-                        optimal: Math.round(optimalSize * 10) / 10
-                    });
                 }
             }
             
@@ -16343,18 +15986,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (DEBUG_COPYFIT) {
             console.group(`🧪 COPYFIT - end: ${zoneEl.id}`);
             try {
-                console.log('result:', {
-                    optimalSize,
-                    iterations,
-                    availableHeight,
-                    finalScrollH: editor.scrollHeight,
-                    remainingPx: availableHeight - editor.scrollHeight
-                });
-                console.log('computed final:', {
-                    editorFontSize: getComputedStyle(editor).fontSize,
-                    editorLineHeight: getComputedStyle(editor).lineHeight
-                });
-                console.log('fonts:', document.fonts ? { status: document.fonts.status, size: document.fonts.size } : null);
             } catch (e) {}
             console.groupEnd();
         }
@@ -16418,12 +16049,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Vérifier si le scrollHeight a changé ET dépasse la zone
                 if (currentScrollHeight !== lastScrollHeight && currentScrollHeight > availableHeight) {
                     if (DEBUG_COPYFIT) {
-                        console.log(`🔄 COPYFIT RESIZE - Recalcul déclenché: ${zoneId}`, {
-                            lastScrollHeight,
-                            currentScrollHeight,
-                            availableHeight,
-                            overflow: currentScrollHeight - availableHeight
-                        });
                     }
 
                     lastScrollHeight = currentScrollHeight;
@@ -16446,7 +16071,6 @@ document.addEventListener('DOMContentLoaded', () => {
         copyfitResizeObservers.set(zoneId, observer);
 
         if (DEBUG_COPYFIT) {
-            console.log(`🔧 COPYFIT RESIZE - Observer installé: ${zoneId}`);
         }
     }
 
@@ -16462,7 +16086,6 @@ document.addEventListener('DOMContentLoaded', () => {
             observer.disconnect();
             copyfitResizeObservers.delete(zoneId);
             if (DEBUG_COPYFIT) {
-                console.log(`🔧 COPYFIT RESIZE - Observer supprimé: ${zoneId}`);
             }
         }
     }
@@ -16720,7 +16343,6 @@ document.addEventListener('DOMContentLoaded', () => {
             imageInputChamp.appendChild(option);
         });
         
-        console.log(`🖼️ populateImageFieldsSelect: ${champsTries.length} champ(s) IMG disponible(s)`);
     }
     
     // ========================================
@@ -16778,7 +16400,6 @@ document.addEventListener('DOMContentLoaded', () => {
             barcodeInputField.appendChild(option);
         });
         
-        console.log(`📊 updateBarcodeFieldSelect: ${champsTries.length} champ(s) disponible(s) pour code-barres`);
     }
     
     /**
@@ -16797,7 +16418,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         populateImageFieldsSelect('');
         updateBarcodeFieldSelect();
-        console.log('🔄 updateAllFieldSelects: tous les combos de champs mis à jour');
     }
     
     /**
@@ -17495,7 +17115,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const range = active.quill.getSelection();
         if (!range || range.length === 0) return;
 
-        console.log('🔧 PHASE 5 - showMiniToolbar()');
 
         miniToolbar.style.display = 'flex';
         updateMiniToolbarButtonsState();
@@ -17510,7 +17129,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!miniToolbar) return;
         if (miniToolbar.style.display === 'none') return;
 
-        console.log('🔧 PHASE 5 - hideMiniToolbar()');
 
         miniToolbar.style.display = 'none';
         miniToolbar.classList.remove('below');
@@ -17565,7 +17183,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function applyPartialBold() {
-        console.log('🔧 PHASE 5 - applyPartialBold');
 
         const active = getActiveTextQuillForMiniToolbar();
         if (!active) return;
@@ -17587,7 +17204,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function applyPartialItalic() {
-        console.log('🔧 PHASE 5 - applyPartialItalic');
 
         const active = getActiveTextQuillForMiniToolbar();
         if (!active) return;
@@ -17609,7 +17225,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function applyPartialUnderline() {
-        console.log('🔧 PHASE 5 - applyPartialUnderline');
 
         const active = getActiveTextQuillForMiniToolbar();
         if (!active) return;
@@ -17632,7 +17247,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      */
     function applyPartialColor(color) {
-        console.log('🔧 PHASE 5 - applyPartialColor:', color);
 
         const active = getActiveTextQuillForMiniToolbar();
         if (!active) return;
@@ -17948,10 +17562,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     );
                     
                     if (optimal.needsResize) {
-                        console.log('📐 Ajustement zone pour 200 DPI:', 
-                            Math.round(zoneEl.offsetWidth * MM_PER_PIXEL) + '×' + Math.round(zoneEl.offsetHeight * MM_PER_PIXEL) + 'mm',
-                            '→', Math.round(optimal.newWidth * MM_PER_PIXEL) + '×' + Math.round(optimal.newHeight * MM_PER_PIXEL) + 'mm',
-                            '(DPI:', optimal.currentDpi, '→ 200)');
                         
                         zoneEl.style.width = optimal.newWidth + 'px';
                         zoneEl.style.height = optimal.newHeight + 'px';
@@ -17980,7 +17590,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 saveToLocalStorage();
                 saveState();
                 
-                console.log(`✅ Image uploadée : ${file.name} (${result.width}×${result.height}, ${formatFileSize(result.size)})`);
                 
             } catch (error) {
                 showImageLoading(false);
@@ -18024,7 +17633,6 @@ document.addEventListener('DOMContentLoaded', () => {
             saveToLocalStorage();
             saveState();
             
-            console.log('🗑️ Image vidée de la zone');
         });
     }
     
@@ -18249,7 +17857,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('mousedown', (e) => {
         // Ne pas désélectionner si le clic vient de la toolbar Quill
         if (e.target.closest('#quill-toolbar') || e.target.closest('.quill-toolbar')) {
-            console.log('🔧 DEBUG DESELECTION - toolbar click ignoré');
             return;
         }
         
@@ -18330,13 +17937,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Vérifier qu'on a une image avec des dimensions
             if (!source.largeurPx || !source.hauteurPx) {
-                console.log('[snapToContent] Image sans dimensions source');
                 return;
             }
             
             if (mode === 'couper') {
                 // Couper : ne rien faire
-                console.log('[snapToContent] Non applicable en mode "couper"');
                 return;
             }
             
@@ -18403,7 +18008,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 zoneEl.style.left = zoneData.x + 'px';
                 zoneEl.style.top = zoneData.y + 'px';
                 
-                console.log(`[snapToContent] Position ajustée: offset(${Math.round(offsetX)}, ${Math.round(offsetY)}) → nouvelle pos(${zoneData.x}, ${zoneData.y})`);
             }
         }
         
@@ -18426,7 +18030,6 @@ document.addEventListener('DOMContentLoaded', () => {
         saveToLocalStorage();
         saveState();
         
-        console.log(`[snapToContent] ${zoneId} (${zoneType}) → ${zoneData.w}×${zoneData.h}px`);
     }
     
     /**
@@ -18643,7 +18246,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return !isZoneSupprimable(zoneData);
             });
             if (hasNonSupprimable) {
-                console.log('🚫 Suppression bloquée - zone non supprimable dans la sélection');
                 return;
             }
             
@@ -18813,9 +18415,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ───────────────────────── TOOLBAR QUILL (PHASE 3) : LISTENERS ─────────────────────────
     if (quillToolbar) {
-        console.log('🔧 PHASE 3 - Toolbar Quill:');
-        console.log('  ✓ Toolbar element:', quillToolbar ? 'OK' : 'MANQUANT');
-        console.log('  ✓ Sections trouvées:', document.querySelectorAll('#quill-toolbar .toolbar-section').length);
         
         // Empêcher la propagation pour éviter la désélection au clic sur la toolbar
         quillToolbar.addEventListener('mousedown', (e) => {
@@ -19202,7 +18801,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 element.style.right = 'auto';
                 element.style.bottom = 'auto';
                 
-                console.log(`[repositionToolbarsInViewport] ${name} repositionné à (${newLeft}, ${newTop})`);
             }
         });
     }
@@ -19217,7 +18815,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Délai pour laisser le temps à la fenêtre de se redimensionner
         setTimeout(() => {
             repositionToolbarsInViewport();
-            console.log('[fullscreenchange] Vérification du repositionnement des toolbars');
         }, 100);
     });
     
@@ -19228,21 +18825,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 100);
     });
 
-    console.log('═══════════════════════════════════════════════════════════════');
-    console.log('📋 PHASE 4 - Toolbar Quill connectée aux propriétés');
-    console.log('═══════════════════════════════════════════════════════════════');
 
-    console.log('═══════════════════════════════════════════════════════════════');
-    console.log('📋 PHASE 5 - Mini-toolbar contextuelle opérationnelle');
-    console.log('═══════════════════════════════════════════════════════════════');
 
-    console.log('═══════════════════════════════════════════════════════════════');
-    console.log('📋 PHASE 6 - Champs de fusion pour textQuill opérationnels');
-    console.log('═══════════════════════════════════════════════════════════════');
 
-    console.log('═══════════════════════════════════════════════════════════════');
-    console.log('📋 PHASE 7 - Export/Import JSON textQuill opérationnel');
-    console.log('═══════════════════════════════════════════════════════════════');
 
     // ─────────────────────────────── FIN SECTION 16 ───────────────────────────────
 
@@ -19340,7 +18925,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Logs PHASE 2 (textQuill)
                 if (clickedZoneData && clickedZoneData.type === 'textQuill') {
                     activeTextQuillResizeZoneId = clickedZoneId;
-                    console.log('🔧 PHASE 2 - Resize START zone textQuill:', clickedZoneId);
                 }
             } else if (clickedZone.contains(e.target) && !e.target.classList.contains('handle')) {
                 // IMPORTANT : ne pas démarrer un drag si on clique dans l'éditeur Quill (permettre saisie/sélection de texte)
@@ -19366,7 +18950,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     activeTextQuillDragZoneId = clickedZoneId;
                     clickedZone.classList.add('dragging');
                     document.body.style.cursor = 'grabbing';
-                    console.log('🔧 PHASE 2 - Drag START zone textQuill:', clickedZoneId);
                 }
                 
                 // Sauvegarder les positions initiales de toutes les zones sélectionnées
@@ -19702,7 +19285,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (zoneEl && zoneData && zoneData.type === 'textQuill') {
                 const x = parseFloat(zoneEl.style.left) || zoneEl.offsetLeft;
                 const y = parseFloat(zoneEl.style.top) || zoneEl.offsetTop;
-                console.log('🔧 PHASE 2 - Drag END zone textQuill:', activeTextQuillDragZoneId, 'nouvelle position:', { x, y });
                 zoneEl.classList.remove('dragging');
             }
         }
@@ -19715,26 +19297,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (zoneEl && zoneData && zoneData.type === 'textQuill') {
                 const width = zoneEl.offsetWidth;
                 const height = zoneEl.offsetHeight;
-                console.log('🔧 PHASE 2 - Resize END zone textQuill:', activeTextQuillResizeZoneId, 'nouvelles dimensions:', { width, height });
 
                 // DEBUG : état avant recalcul Quill / réapplication styles
                 try {
                     const contentEl = zoneEl.querySelector('.zone-content');
                     const quillInstanceBefore = quillInstances.get(activeTextQuillResizeZoneId);
                     const cs = contentEl ? getComputedStyle(contentEl) : null;
-                    console.log('🔧 DEBUG VALIGN - Resize END BEFORE:', activeTextQuillResizeZoneId, {
-                        dataValign: zoneData.valign,
-                        contentFound: !!contentEl,
-                        contentClasses: contentEl ? Array.from(contentEl.classList) : null,
-                        contentInlineJustifyContent: contentEl ? (contentEl.style.justifyContent || '(empty)') : null,
-                        contentComputedJustifyContent: cs ? cs.justifyContent : null,
-                        contentComputedDisplay: cs ? cs.display : null,
-                        zoneOffsetH: zoneEl.offsetHeight,
-                        contentClientH: contentEl ? contentEl.clientHeight : null,
-                        contentScrollH: contentEl ? contentEl.scrollHeight : null,
-                        quillContainerInlineH: (quillInstanceBefore && quillInstanceBefore.container) ? (quillInstanceBefore.container.style.height || '(empty)') : null,
-                        quillRootInlineH: (quillInstanceBefore && quillInstanceBefore.root) ? (quillInstanceBefore.root.style.height || '(empty)') : null
-                    });
                 } catch (e) {}
                 
                 // Forcer Quill à se recalculer (sécurité)
@@ -19754,19 +19322,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     const contentEl = zoneEl.querySelector('.zone-content');
                     const cs = contentEl ? getComputedStyle(contentEl) : null;
-                    console.log('🔧 DEBUG VALIGN - Resize END AFTER quill.update:', activeTextQuillResizeZoneId, {
-                        dataValign: zoneData.valign,
-                        contentFound: !!contentEl,
-                        contentClasses: contentEl ? Array.from(contentEl.classList) : null,
-                        contentInlineJustifyContent: contentEl ? (contentEl.style.justifyContent || '(empty)') : null,
-                        contentComputedJustifyContent: cs ? cs.justifyContent : null,
-                        contentComputedDisplay: cs ? cs.display : null,
-                        zoneOffsetH: zoneEl.offsetHeight,
-                        contentClientH: contentEl ? contentEl.clientHeight : null,
-                        contentScrollH: contentEl ? contentEl.scrollHeight : null,
-                        quillContainerInlineH: (quillInstance && quillInstance.container) ? (quillInstance.container.style.height || '(empty)') : null,
-                        quillRootInlineH: (quillInstance && quillInstance.root) ? (quillInstance.root.style.height || '(empty)') : null
-                    });
                 } catch (e) {}
                 
                 // Phase 4 : réappliquer les styles après resize (certains recalculs Quill peuvent les écraser)
@@ -19778,19 +19333,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         const contentEl = zoneEl.querySelector('.zone-content');
                         const cs = contentEl ? getComputedStyle(contentEl) : null;
                         const qi = quillInstances.get(activeTextQuillResizeZoneId);
-                        console.log(`🔧 DEBUG VALIGN - Resize END ${label}:`, activeTextQuillResizeZoneId, {
-                            dataValign: zoneData.valign,
-                            contentFound: !!contentEl,
-                            contentClasses: contentEl ? Array.from(contentEl.classList) : null,
-                            contentInlineJustifyContent: contentEl ? (contentEl.style.justifyContent || '(empty)') : null,
-                            contentComputedJustifyContent: cs ? cs.justifyContent : null,
-                            contentComputedDisplay: cs ? cs.display : null,
-                            zoneOffsetH: zoneEl.offsetHeight,
-                            contentClientH: contentEl ? contentEl.clientHeight : null,
-                            contentScrollH: contentEl ? contentEl.scrollHeight : null,
-                            quillContainerInlineH: (qi && qi.container) ? (qi.container.style.height || '(empty)') : null,
-                            quillRootInlineH: (qi && qi.root) ? (qi.root.style.height || '(empty)') : null
-                        });
                     };
 
                     if (typeof requestAnimationFrame === 'function') {
@@ -19914,7 +19456,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Bloquer la modification de X et Y si position fixe
         if (geometrie?.positionFixe && (property === 'x' || property === 'y')) {
-            console.log(`⚠️ Modification ${property} bloquée : zone avec position fixe`);
             return;
         }
 
@@ -20151,14 +19692,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function persistTextQuillContentForSave(zonesData) {
         if (!zonesData) return;
 
-        console.log('🔧 DEBUG - quillInstances.keys():', Array.from(quillInstances.keys()));
         
         for (const [zoneId, data] of Object.entries(zonesData)) {
             if (!data || data.type !== 'textQuill') continue;
             
             const quill = quillInstances.get(zoneId);
             if (!quill || !quill.root) {
-                console.log('🔧 DEBUG - Quill instance introuvable pour:', zoneId);
                 continue;
             }
             
@@ -20178,12 +19717,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (isCurrentEmpty && isExistingNonEmpty) {
                 // Ne pas écraser : on garde le Delta existant
-                console.log('🔧 BUGFIX - Quill Delta non écrasé (Delta courant vide, Delta existant non vide):', zoneId);
                 continue;
             }
             
             data.quillDelta = currentDelta;
-            console.log('🔧 BUGFIX - Contenu Quill sauvegardé (Delta):', zoneId);
         }
     }
 
@@ -20575,7 +20112,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const needsFinalPar = !body.endsWith('\\par ') && !body.endsWith('\\par');
         const finalPar = needsFinalPar ? '\\par' : '';
         const rtf = `{\\rtf1\\ansi\\ansicpg1252\\deff0\\deflang1036${fonttbl}\n${colortbl}\n\\viewkind4\\uc1\\pard${alignCode}\\cf1\\f0\\fs${fsValue} ${body}${finalPar}\n}`;
-        console.log('🔧 PHASE 7 - deltaToRtf:', rtf.substring(0, 80) + '...');
         return rtf;
     }
 
@@ -20588,7 +20124,6 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function rtfToDelta(rtf) {
         const input = String(rtf || '');
-        if (DEBUG_PHASE7_RTF) console.log('🔧 rtfToDelta INPUT:', input);
         if (!input) return { ops: [{ insert: '\n' }] };
 
         /**
@@ -20792,7 +20327,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const out = { ops };
-        if (DEBUG_PHASE7_RTF) console.log('🔧 rtfToDelta OUTPUT:', JSON.stringify(out));
         return out;
     }
 
@@ -21050,8 +20584,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * loadFromWebDev(jsonData); // → true
      */
     function loadFromWebDev(jsonData) {
-        console.log('=== loadFromWebDev() : Début du chargement ===');
-        console.log('Données reçues :', jsonData);
 
         // Support enveloppe postMessage {action:'load', policesDisponibles:[...], data:{...}}
         const isLoadEnvelope =
@@ -21081,7 +20613,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Appliquer le mode si fourni dans l'enveloppe
         if (isLoadEnvelope && jsonData.mode) {
             setDesignerMode(jsonData.mode);
-            console.log(`📄 Mode Designer défini depuis JSON: ${jsonData.mode.toUpperCase()}`);
         }
         
         // Validation de base
@@ -21095,7 +20626,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // --- ÉTAPE 1 : Nettoyer le DOM ---
         // Supprimer toutes les zones existantes de la page actuelle
-        console.log('Étape 1 : Nettoyage du DOM...');
         const existingZones = a4Page.querySelectorAll('.zone');
         existingZones.forEach(zone => {
             const zoneId = zone.id;
@@ -21104,14 +20634,12 @@ document.addEventListener('DOMContentLoaded', () => {
             quillInstances.delete(zoneId);
             removeCopyfitResizeObserver(zoneId);
         });
-        console.log(`  → ${existingZones.length} zone(s) supprimée(s)`);
         
         // Désélectionner tout
         selectedZoneIds = [];
         deselectAll();
         
         // --- ÉTAPE 2 : Initialiser les métadonnées ---
-        console.log('Étape 2 : Initialisation des métadonnées...');
         
         // Stocker l'identification du document (nouveau champ)
         if (effectiveDocumentJson.identification) {
@@ -21120,7 +20648,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 nomDocument: effectiveDocumentJson.identification.nomDocument || '',
                 dateCreation: effectiveDocumentJson.identification.dateCreation || ''
             };
-            console.log('  → Identification :', documentState.identification);
         }
         
         // Stocker le format du document (dimensions mm, fond perdu, traits de coupe, marge de sécurité, limites images)
@@ -21135,11 +20662,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 largeurMaxImageMm: effectiveDocumentJson.formatDocument?.largeurMaxImageMm || null,
                 hauteurMaxImageMm: effectiveDocumentJson.formatDocument?.hauteurMaxImageMm || null
             };
-            console.log('  → Format document :', documentState.formatDocument);
-            console.log('  → Dimensions :', documentState.formatDocument.largeurMm, 'x', documentState.formatDocument.hauteurMm, 'mm');
-            console.log('  → Marge de sécurité :', documentState.formatDocument.margeSecuriteMm, 'mm');
-            console.log('  → Limites zones image :', getLargeurMaxImageMm().toFixed(1), 'x', getHauteurMaxImageMm().toFixed(1), 'mm',
-                documentState.formatDocument.largeurMaxImageMm ? '(WebDev)' : '(1/3 document)');
         }
         
         // Stocker les champs de fusion disponibles et mettre à jour l'UI
@@ -21147,9 +20669,7 @@ document.addEventListener('DOMContentLoaded', () => {
             documentState.champsFusion = effectiveDocumentJson.champsFusion;
             mergeFields = effectiveDocumentJson.champsFusion;
             updateMergeFieldsUI(mergeFields);
-            console.log(`  → ${documentState.champsFusion.length} champ(s) de fusion chargé(s) et affichés dans la toolbar`);
         } else {
-            console.log('  → Pas de champs de fusion dans le JSON, conservation des valeurs par défaut');
         }
         
         // Stocker les données d'aperçu (échantillons de la base de données)
@@ -21158,20 +20678,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (effectiveDocumentJson.donneesApercu.length > 0 && 
                 effectiveDocumentJson.donneesApercu[0].enregistrement !== undefined) {
                 // Format WebDev : convertir en format interne
-                console.log('📥 donneesApercu: format WebDev détecté, conversion...');
                 documentState.donneesApercu = convertDonneesApercuFromWebDev(effectiveDocumentJson.donneesApercu);
             } else {
                 // Format plat (données fictives ou déjà converties)
-                console.log('📥 donneesApercu: format plat détecté');
                 documentState.donneesApercu = effectiveDocumentJson.donneesApercu;
             }
-            console.log(`  → ${documentState.donneesApercu.length} échantillon(s) de données chargé(s) pour l'aperçu`);
             
             // Mettre à jour l'état du bouton aperçu
             updatePreviewButtonState();
         } else {
             // Utiliser les données fictives par défaut si aucune donnée WebDev
-            console.log('  → Pas de données d\'aperçu dans le JSON, utilisation des données fictives');
             initDefaultPreviewData();
         }
         
@@ -21190,10 +20706,8 @@ document.addEventListener('DOMContentLoaded', () => {
         loadFontsFromJson(policesDisponibles);
         updateFontSelectUI(policesDisponibles);
         updateQuillFontSelectUI(policesDisponibles);
-        console.log(`  → ${policesDisponibles.length} police(s) disponible(s) chargée(s) et injectée(s)`);
         
         // --- ÉTAPE 3 : Créer les pages ---
-        console.log('Étape 3 : Création des pages...');
         
         // Conversion mm → pixels
         const mmToPixels = (mm) => mm / MM_PER_PIXEL;
@@ -21206,8 +20720,6 @@ document.addEventListener('DOMContentLoaded', () => {
             ? mmToPixels(effectiveDocumentJson.formatDocument.hauteurMm) 
             : DOCUMENT_FORMATS[DEFAULT_FORMAT].height;
         
-        console.log(`  → Dimensions : ${effectiveDocumentJson.formatDocument?.largeurMm || 210}mm x ${effectiveDocumentJson.formatDocument?.hauteurMm || 297}mm`);
-        console.log(`  → En pixels : ${Math.round(docWidthPx)}px x ${Math.round(docHeightPx)}px`);
         
         // Créer les pages depuis le JSON
         if (effectiveDocumentJson.pages && Array.isArray(effectiveDocumentJson.pages) && effectiveDocumentJson.pages.length > 0) {
@@ -21215,8 +20727,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const pageId = `page-${pageData.numero || (index + 1)}`;
                 const pageName = pageData.nom || (index === 0 ? 'Recto' : 'Verso');
                 
-                console.log(`  → Page ${index + 1} : id="${pageId}", nom="${pageName}"`);
-                console.log(`    Image de fond : ${pageData.urlFond || 'aucune'}`);
                 
                 return {
                     id: pageId,
@@ -21237,10 +20747,8 @@ document.addEventListener('DOMContentLoaded', () => {
             ];
         }
         
-        console.log(`  → ${documentState.pages.length} page(s) créée(s)`);
         
         // --- ÉTAPE 4 : Charger les zones texte ---
-        console.log('Étape 4 : Chargement des zones texte...');
         
         let maxZoneId = 0; // Pour calculer le zoneCounter
         let zonesTexteCount = 0;
@@ -21274,18 +20782,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 if (zoneData && zoneData.type === 'textQuill') {
-                    console.log('🔧 PHASE 7 - Import zone textQuill:', zoneJson.nom || zoneData.name || zoneId);
                 }
 
-                console.log(`  → Zone texte "${zoneId}" (${zoneData.name || 'sans nom'}) → Page ${pageIndex + 1}`);
-                console.log(`    Position: ${zoneData.x.toFixed(1)}px, ${zoneData.y.toFixed(1)}px | Taille: ${zoneData.w.toFixed(1)}px x ${zoneData.h.toFixed(1)}px`);
             });
         }
         
-        console.log(`  → ${zonesTexteCount} zone(s) texte chargée(s)`);
         
         // --- ÉTAPE 5 : Charger les zones QR ---
-        console.log('Étape 5 : Chargement des zones QR...');
         
         let zonesQRCount = 0;
         
@@ -21312,14 +20815,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
                 
-                console.log(`  → Zone QR "${zoneId}" → Page ${pageIndex + 1}`);
             });
         }
         
-        console.log(`  → ${zonesQRCount} zone(s) QR chargée(s)`);
         
         // --- ÉTAPE 6 : Charger les zones code-barres ---
-        console.log('Étape 6 : Chargement des zones code-barres...');
         
         let zonesCodeBarresCount = 0;
         
@@ -21346,14 +20846,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
                 
-                console.log(`  → Zone code-barres "${zoneId}" (${zoneData.typeCodeBarres}) → Page ${pageIndex + 1}`);
             });
         }
         
-        console.log(`  → ${zonesCodeBarresCount} zone(s) code-barres chargée(s)`);
         
         // --- ÉTAPE 7 : Charger les zones image ---
-        console.log('Étape 7 : Chargement des zones image...');
         
         let zonesImageCount = 0;
         
@@ -21378,45 +20875,35 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (idNum > maxZoneId) maxZoneId = idNum;
                 }
                 
-                console.log(`  → Zone image "${zoneId}" → Page ${pageIndex + 1}`);
-                console.log(`    Position: ${zoneData.x.toFixed(1)}px, ${zoneData.y.toFixed(1)}px | Taille: ${zoneData.w.toFixed(1)}px x ${zoneData.h.toFixed(1)}px`);
-                console.log(`    Source: ${zoneData.source.type} = ${zoneData.source.valeur || '(vide)'}`);
             });
         }
         
-        console.log(`  → ${zonesImageCount} zone(s) image chargée(s)`);
         
         // --- ÉTAPE 8 : Mettre à jour le compteur et l'affichage ---
-        console.log('Étape 7 : Finalisation...');
         
         // Mettre à jour le compteur de zones (max ID trouvé + 1 pour la prochaine zone)
         zoneCounter = maxZoneId;
         documentState.zoneCounter = maxZoneId;
-        console.log(`  → Compteur de zones : ${zoneCounter}`);
         
         // Forcer l'affichage de la première page (Recto)
         documentState.currentPageIndex = 0;
         
         // Charger et afficher la page courante (crée les zones dans le DOM)
         loadCurrentPage();
-        console.log('  → Page courante chargée avec ses zones');
         
         // Mettre à jour les onglets de page si la fonction existe
         if (typeof updatePageTabs === 'function') {
             updatePageTabs();
-            console.log('  → Onglets de page mis à jour');
         }
         
         // Sauvegarder dans localStorage pour persistance
         saveToLocalStorage();
-        console.log('  → État sauvegardé dans localStorage');
 
         // BUGFIX : pour les zones textQuill, le contenu Quill peut être restauré en async (setTimeout(0) dans createZoneDOM).
         // On refait une sauvegarde différée pour capturer un quillDelta non vide une fois la restauration effectuée.
         setTimeout(() => {
             try {
                 saveToLocalStorage();
-                console.log('🔧 BUGFIX - Post-import saveToLocalStorage() après restauration Quill');
             } catch (e) {}
         }, 50);
         
@@ -21431,12 +20918,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateBarcodeZoneDisplay(zoneId);
                 }
             });
-            console.log('  → Codes-barres rafraîchis');
         }, 100);
         
-        console.log('=== loadFromWebDev() : Chargement terminé ===');
-        console.log('État documentState :', documentState);
-        console.log(`Résumé : ${documentState.pages.length} page(s), ${zonesTexteCount} zone(s) texte, ${zonesCodeBarresCount} zone(s) code-barres, ${zonesImageCount} zone(s) image`);
         
         // Regénérer la navigation des pages après import
         renderPageNavigation();
@@ -21566,7 +21049,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Phase 7 : si c'est une zone textQuill, convertir le Delta Quill vers (contenu + formatage WebDev)
         if (zoneData && zoneData.type === 'textQuill') {
-            console.log('🔧 PHASE 7 - Export zone textQuill:', id);
 
             const delta = zoneData.quillDelta || null;
             const converted = quillDeltaToTextAndFormatage(delta);
@@ -22014,11 +21496,9 @@ document.addEventListener('DOMContentLoaded', () => {
      * window.parent.postMessage({ type: 'DESIGNER_EXPORT', data: jsonWebDev }, '*');
      */
     function exportToWebDev() {
-        console.log('=== exportToWebDev() : Début de l\'export ===');
         
         // --- ÉTAPE 1 : Synchroniser les positions DOM → documentState ---
         // Pour la page courante, lire les positions actuelles depuis le DOM
-        console.log('Étape 1 : Synchronisation DOM → documentState...');
         
         const currentZones = getCurrentPageZones();
         // Phase 7 : s'assurer que les zones textQuill ont un Delta à jour avant export
@@ -22038,10 +21518,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 syncCount++;
             }
         }
-        console.log(`  → ${syncCount} zone(s) synchronisée(s) depuis le DOM`);
         
         // --- ÉTAPE 2 : Construire l'objet JSON de base ---
-        console.log('Étape 2 : Construction de la structure JSON...');
         
         const output = {
             identification: {
@@ -22067,11 +21545,8 @@ document.addEventListener('DOMContentLoaded', () => {
             zonesImage: []
         };
         
-        console.log(`  → Identification : ${output.identification.idDocument || '(non défini)'}`);
-        console.log(`  → Format : ${output.formatDocument.largeurMm.toFixed(1)}mm x ${output.formatDocument.hauteurMm.toFixed(1)}mm`);
         
         // --- ÉTAPE 3 : Parcourir toutes les pages ---
-        console.log('Étape 3 : Export des pages et zones...');
         
         documentState.pages.forEach((page, index) => {
             const pageNumero = index + 1;
@@ -22083,7 +21558,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 urlFond: page.image || ''
             });
             
-            console.log(`  → Page ${pageNumero} : "${page.name}" (fond: ${page.image ? 'oui' : 'non'})`);
             
             // Parcourir les zones de cette page
             let textCount = 0, qrCount = 0, barcodeCount = 0, imageCount = 0;
@@ -22113,21 +21587,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             
-            console.log(`    → ${textCount} zone(s) texte, ${qrCount} zone(s) QR, ${barcodeCount} zone(s) code-barres, ${imageCount} zone(s) image`);
         });
         
         // --- ÉTAPE 4 : Extraire les polices utilisées (avec variantes) ---
-        console.log('Étape 4 : Extraction des polices utilisées (avec variantes)...');
         output.policesUtilisees = extractPolicesUtilisees();
-        console.log(`  → ${output.policesUtilisees.length} police(s) utilisée(s)`);
         
         // --- Résumé final ---
-        console.log('=== exportToWebDev() : Export terminé ===');
-        console.log(`Résumé :`);
-        console.log(`  → ${output.pages.length} page(s)`);
-        console.log(`  → ${output.zonesTexte.length} zone(s) texte`);
-        console.log(`  → ${output.zonesCodeBarres.length} zone(s) code-barres`);
-        console.log('Données exportées :', output);
         
         return output;
     }
@@ -22218,10 +21683,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const isInIframe = window.parent !== window;
     
     if (isInIframe) {
-        console.log('🖼️ Designer chargé en mode iframe');
         document.body.classList.add('in-iframe');
     } else {
-        console.log('🖥️ Designer chargé en mode standalone');
     }
     
     /**
@@ -22231,9 +21694,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function sendMessageToParent(message) {
         if (window.parent && window.parent !== window) {
             window.parent.postMessage(message, '*');
-            console.log('📤 Message envoyé au parent:', message.action);
         } else {
-            console.log('📤 Mode standalone (pas de parent):', message.action);
         }
     }
     
@@ -22258,7 +21719,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        console.log('📩 Message reçu du parent:', message.action);
         
         switch (message.action) {
             case 'load':
@@ -22267,7 +21727,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     try {
                         // Définir le mode AVANT le chargement des données
                         setDesignerMode(message.mode || 'standard');
-                        console.log(`📄 Chargement document en mode ${designerMode.toUpperCase()}`);
                         
                         loadFromWebDev(message);
                         
@@ -22307,11 +21766,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 
             case 'updatePreviewData':
                 // Mise à jour dynamique des données d'aperçu sans recharger le document
-                console.log('📊 Action: updatePreviewData');
                 
                 if (message.data && Array.isArray(message.data.donneesApercu)) {
                     documentState.donneesApercu = message.data.donneesApercu;
-                    console.log(`  → ${documentState.donneesApercu.length} échantillon(s) mis à jour`);
                     
                     // Mettre à jour l'état du bouton
                     updatePreviewButtonState();
@@ -22340,7 +21797,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 
             case 'getPreviewStatus':
                 // Retourne l'état actuel de l'aperçu
-                console.log('📊 Action: getPreviewStatus');
                 sendMessageToParent({
                     action: 'previewStatus',
                     active: previewState.active,
@@ -22352,7 +21808,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 
             case 'setConstraints':
                 // Définir les contraintes du document
-                console.log('🔒 Action: setConstraints');
                 if (message.constraints) {
                     try {
                         applyConstraints(message.constraints);
@@ -22454,7 +21909,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const savedCounter = localStorage.getItem('marketeam_zone_counter');
 
         if (savedZones && savedCounter) {
-            console.log('Migration des données anciennes vers le nouveau format multipage...');
             zoneCounter = parseInt(savedCounter);
             documentState.zoneCounter = zoneCounter;
             documentState.currentPageIndex = 0; // Forcer Recto lors de la migration
@@ -22529,7 +21983,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 quillInstances.delete(zoneId);
                 removeCopyfitResizeObserver(zoneId);
             });
-            console.log(`🧹 Nettoyage DOM : ${existingZones.length} zone(s) supprimée(s)`);
         }
         
         // Nettoyer aussi les areas (Phase 11)
@@ -22750,7 +22203,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Bouton "Aperçu" - Activer le mode aperçu
     if (btnPreview) {
         btnPreview.addEventListener('click', () => {
-            console.log('🔘 Clic sur Aperçu');
             activatePreview();
         });
     }
@@ -22758,7 +22210,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Bouton "Fermer" - Désactiver le mode aperçu
     if (btnClosePreview) {
         btnClosePreview.addEventListener('click', () => {
-            console.log('🔘 Clic sur Fermer');
             deactivatePreview();
         });
     }
@@ -22766,7 +22217,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Bouton "Précédent" - Enregistrement précédent
     if (btnPrevRecord) {
         btnPrevRecord.addEventListener('click', () => {
-            console.log('🔘 Clic sur Précédent');
             if (previewState.currentIndex > 0) {
                 displayMergedContent(previewState.currentIndex - 1);
             }
@@ -22776,7 +22226,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Bouton "Suivant" - Enregistrement suivant
     if (btnNextRecord) {
         btnNextRecord.addEventListener('click', () => {
-            console.log('🔘 Clic sur Suivant');
             if (previewState.currentIndex < documentState.donneesApercu.length - 1) {
                 displayMergedContent(previewState.currentIndex + 1);
             }
@@ -22956,18 +22405,11 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function moveZoneToPage(zoneId, targetPageIndex) {
         // 🔧 DEBUG - Logs de diagnostic
-        console.log('🔧 moveZoneToPage - DÉBUT');
-        console.log('   zoneId:', zoneId);
-        console.log('   targetPageIndex:', targetPageIndex, 'type:', typeof targetPageIndex);
-        console.log('   documentState.pages.length:', documentState.pages.length);
-        console.log('   documentState.pages:', documentState.pages);
         
         // 1. Vérifier que la zone existe sur la page courante
         const sourcePageIndex = documentState.currentPageIndex;
-        console.log('   sourcePageIndex:', sourcePageIndex);
         
         const sourcePage = documentState.pages[sourcePageIndex];
-        console.log('   sourcePage:', sourcePage);
         
         const sourceZones = sourcePage.zones;
         
@@ -22991,17 +22433,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // 4. Vérifier que la page cible existe
-        console.log('   Vérification page cible:', targetPageIndex, '>=', 0, 'et <', documentState.pages.length);
         if (targetPageIndex < 0 || targetPageIndex >= documentState.pages.length) {
             console.warn(`moveZoneToPage: Page cible ${targetPageIndex} invalide`);
             return false;
         }
         
         const targetPage = documentState.pages[targetPageIndex];
-        console.log('   targetPage:', targetPage);
         
         const targetZones = targetPage.zones;
-        console.log('   targetZones:', targetZones);
         
         // 5. Calculer le nouveau z-index pour la page cible (au premier plan)
         let maxZIndex = 0;
@@ -23360,7 +22799,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             
-            console.log("✅ JSON exporté (format WebDev) et téléchargé.");
         } catch (error) {
             console.error('❌ Export JSON (format WebDev) en erreur:', error);
             alert('Export JSON en erreur ❌ (voir console)');
@@ -23372,7 +22810,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // ───────────────────────────────────────────────────────────────────────────────
     if (btnCheck) {
         btnCheck.addEventListener('click', () => {
-            console.log('Clic sur bouton Check');
             const result = checkDocumentIntegrity();
             showCheckResult(result);
         });
@@ -23383,7 +22820,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // ───────────────────────────────────────────────────────────────────────────────
     if (btnExportPsmd) {
         btnExportPsmd.addEventListener('click', () => {
-            console.log('Clic sur bouton Export PSMD');
             exportToPsmd();
         });
     }
@@ -23404,7 +22840,6 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const jsonData = await readJsonFile(file);
                 const ok = loadFromWebDev(jsonData);
-                console.log('✅ Import JSON terminé:', ok ? 'OK' : 'ERREUR');
                 if (!ok) alert('Import JSON en erreur ❌ (voir console)');
             } catch (err) {
                 console.error('❌ Import JSON:', err.message || err);
@@ -23549,7 +22984,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Appliquer le zoom
         setZoom(optimalZoom);
         
-        console.log('📐 fitToView: zoom ajusté à', Math.round(optimalZoom * 100) + '%');
     }
 
     // ==================== GESTION PLEIN ÉCRAN ====================
@@ -23847,7 +23281,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keydown', (e) => {
         // Log de vérification (temporaire) - uniquement sur la touche Espace
         if (e.code === 'Space' || e.key === ' ') {
-            console.log('🔧 DEBUG ESPACE - activeElement:', document.activeElement && document.activeElement.className, 'key:', e.key);
         }
         
         // Ne jamais intercepter l'espace si on édite dans Quill / contenteditable
@@ -24278,7 +23711,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         
-        console.log(`📥 Image exportée : ${fileName}`);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -24523,7 +23955,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {{success: boolean, errors: Array<{page: string, zoneId: string, zoneName: string, type: string, message: string}>}}
      */
     function checkDocumentIntegrity() {
-        console.log('🔍 checkDocumentIntegrity() - Vérification du document');
         
         const errors = [];
         
@@ -24851,7 +24282,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         
-        console.log(`🔍 Vérification terminée : ${errors.length} erreur(s) trouvée(s)`);
         
         return {
             success: errors.length === 0,
@@ -24939,7 +24369,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * exportToPsmd();
      */
     function exportToPsmd() {
-        console.log('=== exportToPsmd() : Début de l\'export PSMD ===');
         
         // 1. Récupérer les données via exportToWebDev()
         const jsonData = exportToWebDev();
@@ -24953,9 +24382,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // 2. Utiliser le générateur PSMD externe
         const result = PsmdGenerator.generatePsmdFromJson(jsonData);
         
-        console.log(`exportToPsmd: Fichier généré : ${result.fileName}`);
-        console.log(`exportToPsmd: ${result.images.length} image(s) à exporter`);
-        console.log(`exportToPsmd: Taille du fichier: ${result.xml.length} caractères`);
         
         // 3. Télécharger le fichier PSMD
         const blob = new Blob([result.xml], { type: 'application/xml' });
@@ -24968,11 +24394,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         
-        console.log(`📥 Document exporté : ${result.fileName}`);
         
         // 4. Télécharger les images (avec un léger délai entre chaque)
         if (result.images.length > 0) {
-            console.log('=== exportToPsmd() : Export des images ===');
             
             result.images.forEach((img, index) => {
                 // Délai de 200ms entre chaque téléchargement pour éviter les blocages navigateur
@@ -24982,7 +24406,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
-        console.log('=== exportToPsmd() : Téléchargement(s) déclenché(s) ===');
         
         return result.xml;
     }
@@ -24991,10 +24414,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ─────────────────────────────── FIN SECTION 25 ───────────────────────────────
     
-    console.log('🔧 PHASE 0 - Vérification infrastructure Quill:');
-    console.log('  ✓ Quill disponible:', typeof Quill === 'function');
-    console.log('  ✓ quillInstances Map créée:', quillInstances instanceof Map);
-    console.log('  ✓ Constantes QUILL_*:', { QUILL_DEFAULT_FONT, QUILL_DEFAULT_SIZE, QUILL_DEFAULT_COLOR, QUILL_DEFAULT_LINE_HEIGHT });
 
     // Initialiser la classe CSS du mode Designer sur le body
     if (designerMode === 'template') {
@@ -25002,7 +24421,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         document.body.classList.add('standard-mode');
     }
-    console.log(`🎨 Mode Designer initial: ${designerMode.toUpperCase()}`);
     
     // Initialiser la visibilité des onglets selon le mode par défaut
     updateToolbarTabsVisibility();
