@@ -78,10 +78,10 @@
      * @property {string} [nom] - Nom de la zone
      * @property {number} [page] - Numéro de page (1-based)
      * @property {number} [niveau] - Z-index
-     * @property {PsmdGeometry} [geometry] - Géométrie de la zone
-     * @property {string} [content_rtf] - Contenu RTF
-     * @property {Object} [style] - Styles de la zone (bgColor, align, etc.)
-     * @property {Object} [copyfitting] - Options de copyfitting
+     * @property {PsmdGeometry} [geometrie] - Géométrie de la zone (V3.3)
+     * @property {string} [contenuRtf] - Contenu RTF (V3.3)
+     * @property {Object} [style] - Styles V3.3 (alignementH, alignementV, couleurCmjn)
+     * @property {Object} [copyfitting] - Options de copyfitting V3.3 (actif, tailleMinimum)
      */
 
     /**
@@ -1049,14 +1049,14 @@
 
     /**
      * Extrait tous les champs de fusion et génère la section <variables>.
-     * Parcourt les zonesTextQuill pour extraire les marqueurs @XXX@.
+     * Parcourt les zonesTexte V3.3 pour extraire les marqueurs @XXX@.
      * 
      * @param {PsmdInput} jsonData - Données complètes de exportToWebDev()
      * @param {string|null} exportPrefix - Préfixe pour les noms de fichiers exportés (ex: "vdp_20251224_112005")
      * @returns {string} XML de la section <variables>
      * 
      * @example
-     * const jsonData = { zonesTextQuill: [{ content_rtf: '@NOM@ @PRENOM@' }] };
+     * const jsonData = { zonesTexte: [{ contenuRtf: '@NOM@ @PRENOM@' }] };
      * generatePsmdVariables(jsonData, "vdp_20251224_112005");
      * // Retourne <variables> avec NOM, PRENOM et variables d'images
      */
@@ -1064,12 +1064,12 @@
         exportPrefix = exportPrefix || null;
         const allFields = new Set();
         
-        // Parcourir les zones texte pour les champs de fusion (V3.3 : zonesTexte format français)
+        // Parcourir les zones texte V3.3 pour les champs de fusion
         const zonesTexte = jsonData.zonesTexte || [];
         for (let i = 0; i < zonesTexte.length; i++) {
             const zone = zonesTexte[i];
-            if (zone.content_rtf) {
-                const fields = extractMergeFields(zone.content_rtf);
+            if (zone.contenuRtf) {
+                const fields = extractMergeFields(zone.contenuRtf);
                 fields.forEach(function(field) { allFields.add(field); });
             }
         }
@@ -1177,7 +1177,7 @@
 
     /**
      * Génère les propriétés communes à tous les objets PSMD.
-     * Gère les deux formats de données (zonesTextQuill vs autres zones).
+     * Format V3.3 : zonesTexte, zonesImage, zonesCodeBarres, zonesQR.
      * 
      * Gère également la contrainte "Zone imprimable" (contrainte.global.imprimable) :
      * - Si imprimable = false : la zone est visible dans l'éditeur mais pas à l'impression/preview
@@ -1223,16 +1223,12 @@
         // Export PSMD : toutes les zones sont verrouillées pour empêcher les modifications dans PrintShop Mail
         var locked = 'yes';
         
-        // Gérer les deux formats de géométrie
-        var geom = zone.geometry || zone.geometrie || {};
-        var xMm = geom.x_mm !== undefined ? geom.x_mm : (geom.xMm !== undefined ? geom.xMm : 0);
-        var yMm = geom.y_mm !== undefined ? geom.y_mm : (geom.yMm !== undefined ? geom.yMm : 0);
-        var widthMm = geom.width_mm !== undefined ? geom.width_mm : 
-                     (geom.largeur_mm !== undefined ? geom.largeur_mm : 
-                     (geom.largeurMm !== undefined ? geom.largeurMm : 50));
-        var heightMm = geom.height_mm !== undefined ? geom.height_mm : 
-                      (geom.hauteur_mm !== undefined ? geom.hauteur_mm : 
-                      (geom.hauteurMm !== undefined ? geom.hauteurMm : 20));
+        // Géométrie V3.3 : geometrie.xMm, yMm, largeurMm, hauteurMm
+        var geom = zone.geometrie || {};
+        var xMm = geom.xMm !== undefined ? geom.xMm : 0;
+        var yMm = geom.yMm !== undefined ? geom.yMm : 0;
+        var widthMm = geom.largeurMm !== undefined ? geom.largeurMm : 50;
+        var heightMm = geom.hauteurMm !== undefined ? geom.hauteurMm : 20;
         
         // Conversion coordonnées mm → points
         var left = mmToPoints(xMm);
@@ -1265,23 +1261,20 @@
             fillAlpha = null;  // Opaque
         }
         
-        // Couleurs de bordure - utiliser CMJN natif si disponible
+        // Couleurs de bordure V3.3 : zone.bordure.couleurCmjn
         // downgrade_k="1" par défaut requis par PrintShop Mail
         var borderColor = { c: 0, m: 0, y: 0, k: 1 };
         var borderSize = 0;
+        var borderStyleName = 'solid';
         
         // Mapping des styles de bordure Designer → PrintShop Mail
-        // 0 = solid (plein), 1 = dotted (points), 2 = dashed (tirets)
         var BORDER_STYLE_MAP = {
             'solid': 0,
             'dotted': 1,
             'dashed': 2
         };
         
-        // Lire le style de bordure depuis les données de la zone
-        var borderStyleName = 'solid'; // défaut
-        
-        // V3.3 strict : zone.bordure.couleurCmjn (même format que zone.fond.couleurCmjn)
+        // Bordure V3.3 : zone.bordure.epaisseur / couleurCmjn / style
         if (zone.bordure && zone.bordure.epaisseur) {
             borderSize = zone.bordure.epaisseur;
             borderColor = getCmykForPsmd(null, zone.bordure.couleurCmjn, { c: 0, m: 0, y: 0, k: 1 });
@@ -1290,7 +1283,6 @@
             }
         }
         
-        // Convertir en valeur PrintShop Mail (0 = solid par défaut)
         var borderStyle = BORDER_STYLE_MAP[borderStyleName] || 0;
         
         // Déterminer si la zone est imprimable (défaut: true)
@@ -1332,7 +1324,7 @@ ${generatePsmdColor('bordercolor', borderColor)}
 
     /**
      * Génère un objet texte PSMD (text_object).
-     * Gère le format zonesTextQuill de exportToWebDev().
+     * Format V3.3 : zonesTexte avec contenuRtf, style.alignementH/V, copyfitting.actif, etc.
      * 
      * @param {Object} zone - Données de la zone texte exportée
      * @returns {string} XML complet de l'objet texte
@@ -1835,7 +1827,7 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
      * const testData = {
      *     formatDocument: { largeurMm: 210, hauteurMm: 297 },
      *     pages: [{ numero: 1, nom: "Page 1" }],
-     *     zonesTextQuill: [],
+     *     zonesTexte: [],
      *     zonesCodeBarres: [],
      *     zonesQR: [],
      *     zonesImage: []
@@ -1897,13 +1889,13 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
         xml += generatePsmdLayouts(jsonData, largeurMm, hauteurMm, exportPrefix) + '\n';
         
         // Extraire tous les champs de fusion pour les passer aux sections finales
-        // V3.3 : zonesTexte format français
+        // Extraire tous les champs de fusion V3.3
         var allMergeFields = [];
         var zonesTexte = jsonData.zonesTexte || [];
         for (var i = 0; i < zonesTexte.length; i++) {
             var zone = zonesTexte[i];
-            if (zone.content_rtf) {
-                var fields = extractMergeFields(zone.content_rtf);
+            if (zone.contenuRtf) {
+                var fields = extractMergeFields(zone.contenuRtf);
                 for (var j = 0; j < fields.length; j++) {
                     if (allMergeFields.indexOf(fields[j]) === -1) {
                         allMergeFields.push(fields[j]);
