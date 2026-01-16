@@ -116,7 +116,7 @@
      * @typedef {Object} PsmdInput
      * @property {PsmdFormatDocument} formatDocument - Format du document
      * @property {PsmdPage[]} pages - Liste des pages
-     * @property {PsmdZoneTextQuill[]} zonesTextQuill - Zones texte Quill
+     * @property {PsmdZoneTextQuill[]} zonesTexte - Zones texte (V3.3 format français)
      * @property {PsmdZoneImage[]} zonesImage - Zones image
      * @property {PsmdZoneBarcode[]} zonesCodeBarres - Zones code-barres
      * @property {PsmdZoneBarcode[]} zonesQR - Zones QR codes
@@ -1064,10 +1064,10 @@
         exportPrefix = exportPrefix || null;
         const allFields = new Set();
         
-        // Parcourir les zones textQuill pour les champs de fusion
-        const zonesTextQuill = jsonData.zonesTextQuill || [];
-        for (let i = 0; i < zonesTextQuill.length; i++) {
-            const zone = zonesTextQuill[i];
+        // Parcourir les zones texte pour les champs de fusion (V3.3 : zonesTexte format français)
+        const zonesTexte = jsonData.zonesTexte || [];
+        for (let i = 0; i < zonesTexte.length; i++) {
+            const zone = zonesTexte[i];
             if (zone.content_rtf) {
                 const fields = extractMergeFields(zone.content_rtf);
                 fields.forEach(function(field) { allFields.add(field); });
@@ -1240,36 +1240,27 @@
         var right = mmToPoints(xMm + widthMm);
         var bottom = mmToPoints(yMm + heightMm);
         
-        // Couleurs de fond - gérer tous les formats (textQuill, image, barcode, qr)
+        // Couleurs de fond V3.3 strict
         var fillColor = { c: 0, m: 0, y: 0, k: 0 };
         // Alpha : 0 si transparent, null si opaque (pas d'attribut alpha pour PrintShop Mail)
         var fillAlpha = 0;
         
-        // Format textQuill : zone.style.bgColor / zone.style.bgColorCmyk
-        if ((zone.style && zone.style.bgColor) || (zone.style && zone.style.bgColorCmyk)) {
-            if (!(zone.style && zone.style.transparent)) {
-                fillColor = getCmykForPsmd(zone.style.bgColor, zone.style.bgColorCmyk);
-                fillAlpha = null;  // Opaque
-            }
-        }
-        // Format image : zone.fond.couleurCmjn (WebDev utilise "couleurCmjn" pas "couleur" ni "couleurCmyk")
-        else if (zone.fond && zone.fond.couleurCmjn) {
+        // Format texte/image V3.3 : zone.fond.couleurCmjn
+        if (zone.fond && zone.fond.couleurCmjn) {
             if (!zone.fond.transparent) {
                 fillColor = getCmykForPsmd(null, zone.fond.couleurCmjn);
                 fillAlpha = null;  // Opaque
             }
         }
-        // Format barcode : zone.couleurFondCmjn (WebDev utilise "Cmjn" pas "Cmyk")
+        // Format barcode V3.3 : zone.couleurFondCmjn
         else if (zone.couleurFondCmjn) {
             if (!zone.transparent) {
-                // couleurFondCmjn est au format 0-100, getCmykForPsmd attend null pour hex et l'objet CMYK en 2e param
                 fillColor = getCmykForPsmd(null, zone.couleurFondCmjn);
                 fillAlpha = null;  // Opaque
             }
         }
-        // Format QR : zone.couleurs.fondCmjn (WebDev utilise "fondCmjn" pas "fond" ni "fondCmyk")
+        // Format QR V3.3 : zone.couleurs.fondCmjn
         else if (zone.couleurs && zone.couleurs.fondCmjn) {
-            // QR codes : toujours opaque si couleur définie (pas de flag transparent dans l'export)
             fillColor = getCmykForPsmd(null, zone.couleurs.fondCmjn);
             fillAlpha = null;  // Opaque
         }
@@ -1290,17 +1281,12 @@
         // Lire le style de bordure depuis les données de la zone
         var borderStyleName = 'solid'; // défaut
         
+        // V3.3 strict : zone.bordure.couleurCmjn (même format que zone.fond.couleurCmjn)
         if (zone.bordure && zone.bordure.epaisseur) {
             borderSize = zone.bordure.epaisseur;
-            borderColor = getCmykForPsmd(zone.bordure.couleur, zone.bordure.couleurCmyk, { c: 0, m: 0, y: 0, k: 1 });
+            borderColor = getCmykForPsmd(null, zone.bordure.couleurCmjn, { c: 0, m: 0, y: 0, k: 1 });
             if (zone.bordure.style) {
                 borderStyleName = zone.bordure.style;
-            }
-        } else if (zone.border && zone.border.width_px) {
-            borderSize = zone.border.width_px;
-            borderColor = getCmykForPsmd(zone.border.color, zone.border.colorCmyk, { c: 0, m: 0, y: 0, k: 1 });
-            if (zone.border.style) {
-                borderStyleName = zone.border.style;
             }
         }
         
@@ -1353,32 +1339,28 @@ ${generatePsmdColor('bordercolor', borderColor)}
      */
     function generatePsmdTextObject(zone) {
         // Récupérer le RTF et l'encoder en Base64
-        var rtfContent = zone.content_rtf || zone.contenu_rtf || '';
+        // V3.3 strict : script.js exporte sous "contenuRtf"
+        var rtfContent = zone.contenuRtf || '';
         var rtfBase64 = rtfToBase64(rtfContent);
         
-        // Alignements - gérer les deux formats
-        var hAlignValue = (zone.style && zone.style.align) || 
-                         (zone.typographie && zone.typographie.alignement) || 'left';
-        var vAlignValue = (zone.style && zone.style.valign) || 
-                         (zone.typographie && zone.typographie.alignementVertical) || 'top';
+        // Alignements V3.3 strict : style.alignementH / style.alignementV
+        var hAlignValue = (zone.style && zone.style.alignementH) || 'left';
+        var vAlignValue = (zone.style && zone.style.alignementV) || 'top';
         
         var hAlign = HALIGN_MAP[hAlignValue] || 2; // left par défaut
         var vAlign = VALIGN_MAP[vAlignValue] || 0; // top par défaut
         
-        // Copyfitting
+        // Copyfitting V3.3 strict : copyfitting.actif / copyfitting.tailleMinimum
         var copyfitting = zone.copyfitting || {};
-        var reduceToFit = (copyfitting.reduirePolice || (zone.style && zone.style.copyfit)) ? 'yes' : 'no';
-        var minFontSize = copyfitting.tailleMin || 8;
+        var reduceToFit = copyfitting.actif ? 'yes' : 'no';
+        var minFontSize = copyfitting.tailleMinimum || 8;
         
-        // Gestion lignes vides
-        var emptyLines = zone.lignesVides || 0;
+        // Gestion lignes vides V3.3 strict : supprimerLignesVides
+        var emptyLines = zone.supprimerLignesVides || 0;
         
-        // Couleur texte - utiliser CMJN natif si disponible
-        var textColorHex = (zone.style && zone.style.color) || 
-                          (zone.typographie && zone.typographie.couleur) || '#000000';
-        var textColorCmyk = (zone.style && zone.style.colorCmyk) || 
-                           (zone.typographie && zone.typographie.couleurCmyk) || null;
-        var textColor = getCmykForPsmd(textColorHex, textColorCmyk, { c: 0, m: 0, y: 0, k: 1 });
+        // Couleur texte V3.3 strict : style.couleurCmjn
+        var textColorCmyk = (zone.style && zone.style.couleurCmjn) || null;
+        var textColor = getCmykForPsmd(null, textColorCmyk, { c: 0, m: 0, y: 0, k: 1 });
         
         var xml = generatePsmdObjectCommon(zone);
         
@@ -1612,13 +1594,18 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
             // Code-barres classique (Code128, EAN13, etc.)
             psType = BARCODE_TYPE_MAP[designerType.toLowerCase()] || 'Code128';
             var data = zone.valeurStatique || zone.valeur || zone.contenu || '';
-            // Pour les codes-barres 1D, convertir aussi les @CHAMP@ en [CHAMP]
+            // Convertir la valeur vers le format PrintShop Mail :
+            // - @CHAMP@ → [CHAMP] (sans guillemets)
+            // - valeur fixe → "valeur" (avec guillemets)
+            // - mixte → "texte"&[CHAMP]
             if (zone.champFusion && zone.champFusion.trim() !== '') {
+                // Champ de fusion explicite → format [CHAMP]
                 data = '[' + zone.champFusion.replace(/@/g, '') + ']';
             } else {
-                data = data.replace(/@([^@]+)@/g, '[$1]');
+                // Utiliser convertQrFieldToPsm qui gère correctement tous les cas
+                data = convertQrFieldToPsm(data);
             }
-            propertyBagContent = '<property_bag><Barcode><RotationFixed>0</RotationFixed><BoundsIsRotated>False</BoundsIsRotated><Initialized>True</Initialized><Type>' + psType + '</Type><Data>' + escapeXmlPsmd(data) + '</Data><Alignment>0;0</Alignment></Barcode>\n</property_bag>';
+            propertyBagContent = '<property_bag><Barcode><RotationFixed>0</RotationFixed><BoundsIsRotated>False</BoundsIsRotated><Initialized>True</Initialized><Type>' + psType + '</Type><Data>' + escapePropertyBag(data) + '</Data><Alignment>0;0</Alignment></Barcode>\n</property_bag>';
         }
         
         var xml = generatePsmdObjectCommon(zone);
@@ -1763,10 +1750,10 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
             zonesByPage[pNum].push(newZone);
         }
         
-        // Ajouter les zones textQuill
-        var zonesTextQuill = jsonData.zonesTextQuill || [];
-        for (var t = 0; t < zonesTextQuill.length; t++) {
-            addZone(zonesTextQuill[t], 'textQuill');
+        // Ajouter les zones texte (V3.3 : zonesTexte format français)
+        var zonesTexte = jsonData.zonesTexte || [];
+        for (var t = 0; t < zonesTexte.length; t++) {
+            addZone(zonesTexte[t], 'textQuill');
         }
         
         // Ajouter les zones code-barres (barcode)
@@ -1910,10 +1897,11 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
         xml += generatePsmdLayouts(jsonData, largeurMm, hauteurMm, exportPrefix) + '\n';
         
         // Extraire tous les champs de fusion pour les passer aux sections finales
+        // V3.3 : zonesTexte format français
         var allMergeFields = [];
-        var zonesTextQuill = jsonData.zonesTextQuill || [];
-        for (var i = 0; i < zonesTextQuill.length; i++) {
-            var zone = zonesTextQuill[i];
+        var zonesTexte = jsonData.zonesTexte || [];
+        for (var i = 0; i < zonesTexte.length; i++) {
+            var zone = zonesTexte[i];
             if (zone.content_rtf) {
                 var fields = extractMergeFields(zone.content_rtf);
                 for (var j = 0; j < fields.length; j++) {
