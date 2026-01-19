@@ -17736,7 +17736,15 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // S'assurer que la zone reste dans les limites de la page
             const maxLeft = a4Page.offsetWidth - zones[i].width;
-            zones[i].element.style.left = Math.max(0, Math.min(currentX, maxLeft)) + 'px';
+            const finalX = Math.max(0, Math.min(currentX, maxLeft));
+            zones[i].element.style.left = finalX + 'px';
+            
+            // Synchroniser les données de la zone (pixels et mm)
+            const zoneData = zonesData[zones[i].id];
+            if (zoneData) {
+                zoneData.x = finalX;
+                zoneData.xMm = pxToMm(finalX);
+            }
         }
         
         saveToLocalStorage();
@@ -17796,7 +17804,15 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // S'assurer que la zone reste dans les limites de la page
             const maxTop = a4Page.offsetHeight - zones[i].height;
-            zones[i].element.style.top = Math.max(0, Math.min(currentY, maxTop)) + 'px';
+            const finalY = Math.max(0, Math.min(currentY, maxTop));
+            zones[i].element.style.top = finalY + 'px';
+            
+            // Synchroniser les données de la zone (pixels et mm)
+            const zoneData = zonesData[zones[i].id];
+            if (zoneData) {
+                zoneData.y = finalY;
+                zoneData.yMm = pxToMm(finalY);
+            }
         }
         
         saveToLocalStorage();
