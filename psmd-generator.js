@@ -1597,7 +1597,15 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
                 // Utiliser convertQrFieldToPsm qui gère correctement tous les cas
                 data = convertQrFieldToPsm(data);
             }
-            propertyBagContent = '<property_bag><Barcode><RotationFixed>0</RotationFixed><BoundsIsRotated>False</BoundsIsRotated><Initialized>True</Initialized><Type>' + psType + '</Type><Data>' + escapePropertyBag(data) + '</Data><Alignment>0;0</Alignment></Barcode>\n</property_bag>';
+            // Construire le property_bag avec gestion spéciale DataMatrix
+            var symbolSizeTag = '';
+            if (psType === 'DataMatrix') {
+                // DataMatrix : ajouter la taille du symbole
+                // 'rectangle' → Rectangle12x36, sinon vide (carré par défaut)
+                var symbolSize = (zone.forme === 'rectangle') ? 'Rectangle12x36' : '';
+                symbolSizeTag = '<DataMatrix_SymbolSize>' + symbolSize + '</DataMatrix_SymbolSize>';
+            }
+            propertyBagContent = '<property_bag><Barcode><RotationFixed>0</RotationFixed><BoundsIsRotated>False</BoundsIsRotated><Initialized>True</Initialized><Type>' + psType + '</Type>' + symbolSizeTag + '<Data>' + escapePropertyBag(data) + '</Data><Alignment>0;0</Alignment></Barcode>\n</property_bag>';
         }
         
         var xml = generatePsmdObjectCommon(zone);

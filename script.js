@@ -20498,6 +20498,8 @@ document.addEventListener('DOMContentLoaded', () => {
             isTransparent: zoneJson.transparent || false,
             // QR Code intelligent : restaurer la configuration si présente
             qrConfig: zoneJson.qrConfig || null,
+            // Forme DataMatrix : 'square' (défaut) ou 'rectangle' (12x36)
+            forme: zoneJson.forme || undefined,
             zIndex: zoneJson.niveau || 1,
             rotation: zoneJson.rotation || 0,
             x: geometrie.xMm !== undefined ? mmToPixels(geometrie.xMm) : 0,
