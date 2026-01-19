@@ -8010,6 +8010,9 @@ document.addEventListener('DOMContentLoaded', () => {
         documentState = JSON.parse(JSON.stringify(snapshot));
         zoneCounter = documentState.zoneCounter;
         
+        // Synchroniser window.documentState (exposé pour debug console)
+        window.documentState = documentState;
+
         // 2b. Restaurer les données d'aperçu
         documentState.donneesApercu = savedDonneesApercu;
         // 2c. Restaurer les contraintes
@@ -22076,7 +22079,7 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const [id, data] of Object.entries(zonesData)) {
             zonesData[id] = { type: data.type || 'textQuill', ...data };
             createZoneDOM(id, id.split('-')[1], false); // NE PAS auto-sélectionner pendant le chargement
-            
+
             // Appliquer position/taille sauvegardées
             const zoneEl = document.getElementById(id);
             if (zoneEl) {
