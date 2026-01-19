@@ -1556,7 +1556,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * Interlignage par défaut utilisé par Quill.
      * @type {number}
      */
-    const QUILL_DEFAULT_LINE_HEIGHT = 1.15;
+    const QUILL_DEFAULT_LINE_HEIGHT = 1.2;
 
     /**
      * Restrictions appliquées automatiquement aux zones Système.
@@ -11332,6 +11332,11 @@ document.addEventListener('DOMContentLoaded', () => {
             zonesData[id].h = parseFloat(zone.style.height);
             zonesData[id].x = parseFloat(zone.style.left);
             zonesData[id].y = parseFloat(zone.style.top);
+            // Initialiser aussi les valeurs en mm pour cohérence avec l'export
+            zonesData[id].wMm = pxToMm(zonesData[id].w);
+            zonesData[id].hMm = pxToMm(zonesData[id].h);
+            zonesData[id].xMm = pxToMm(zonesData[id].x);
+            zonesData[id].yMm = pxToMm(zonesData[id].y);
 
             const qrWrapper = document.createElement('div');
             qrWrapper.classList.add('zone-content');
@@ -11363,6 +11368,11 @@ document.addEventListener('DOMContentLoaded', () => {
             zonesData[id].h = parseFloat(zone.style.height);
             zonesData[id].x = parseFloat(zone.style.left);
             zonesData[id].y = parseFloat(zone.style.top);
+            // Initialiser aussi les valeurs en mm pour cohérence avec l'export
+            zonesData[id].wMm = pxToMm(zonesData[id].w);
+            zonesData[id].hMm = pxToMm(zonesData[id].h);
+            zonesData[id].xMm = pxToMm(zonesData[id].x);
+            zonesData[id].yMm = pxToMm(zonesData[id].y);
             
             // Bordure
             if (zoneData.border) {
@@ -11408,6 +11418,11 @@ document.addEventListener('DOMContentLoaded', () => {
             zonesData[id].h = parseFloat(zone.style.height);
             zonesData[id].x = parseFloat(zone.style.left);
             zonesData[id].y = parseFloat(zone.style.top);
+            // Initialiser aussi les valeurs en mm pour cohérence avec l'export
+            zonesData[id].wMm = pxToMm(zonesData[id].w);
+            zonesData[id].hMm = pxToMm(zonesData[id].h);
+            zonesData[id].xMm = pxToMm(zonesData[id].x);
+            zonesData[id].yMm = pxToMm(zonesData[id].y);
             
             // Badge type de code-barres (en haut à gauche)
             const typeBadge = document.createElement('span');
@@ -11458,6 +11473,11 @@ document.addEventListener('DOMContentLoaded', () => {
             zonesData[id].h = parseFloat(zone.style.height);
             zonesData[id].x = parseFloat(zone.style.left);
             zonesData[id].y = parseFloat(zone.style.top);
+            // Initialiser aussi les valeurs en mm pour cohérence avec l'export
+            zonesData[id].wMm = pxToMm(zonesData[id].w);
+            zonesData[id].hMm = pxToMm(zonesData[id].h);
+            zonesData[id].xMm = pxToMm(zonesData[id].x);
+            zonesData[id].yMm = pxToMm(zonesData[id].y);
             
             // Fond (ne pas forcer à transparent : respecter les données importées / sauvegardées)
             zone.style.backgroundColor = zoneData.isTransparent ? 'transparent' : (zoneData.bgColor || DEFAULT_BG_COLOR);
@@ -15533,10 +15553,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     zone.style.height = refWidth + 'px';
                     zoneData.w = refWidth;
                     zoneData.h = refWidth;
+                    zoneData.wMm = pxToMm(refWidth);
+                    zoneData.hMm = pxToMm(refWidth);
                 } else {
                     // Code 1D : seulement la largeur
                     zone.style.width = refWidth + 'px';
                     zoneData.w = refWidth;
+                    zoneData.wMm = pxToMm(refWidth);
                 }
                 
                 // Régénérer le code-barres
@@ -15547,7 +15570,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else {
                 zone.style.width = refWidth + 'px';
-                if (zoneData) zoneData.w = refWidth;
+                if (zoneData) {
+                    zoneData.w = refWidth;
+                    zoneData.wMm = pxToMm(refWidth);
+                }
             }
             
             // Mettre à jour le badge DPI pour les images
@@ -15559,7 +15585,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const maxLeft = a4Page.offsetWidth - zone.offsetWidth;
             const currentLeft = parseFloat(zone.style.left) || 0;
             zone.style.left = Math.max(0, Math.min(currentLeft, maxLeft)) + 'px';
-            if (zoneData) zoneData.x = parseFloat(zone.style.left);
+            if (zoneData) {
+                zoneData.x = parseFloat(zone.style.left);
+                zoneData.xMm = pxToMm(zoneData.x);
+            }
         }
 
         saveToLocalStorage();
@@ -15600,10 +15629,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     zone.style.width = refHeight + 'px';
                     zoneData.h = refHeight;
                     zoneData.w = refHeight;
+                    zoneData.hMm = pxToMm(refHeight);
+                    zoneData.wMm = pxToMm(refHeight);
                 } else {
                     // Code 1D : seulement la hauteur
                     zone.style.height = refHeight + 'px';
                     zoneData.h = refHeight;
+                    zoneData.hMm = pxToMm(refHeight);
                 }
                 
                 // Régénérer le code-barres
@@ -15614,7 +15646,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else {
                 zone.style.height = refHeight + 'px';
-                if (zoneData) zoneData.h = refHeight;
+                if (zoneData) {
+                    zoneData.h = refHeight;
+                    zoneData.hMm = pxToMm(refHeight);
+                }
             }
             
             // Mettre à jour le badge DPI pour les images
@@ -15626,7 +15661,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const maxTop = a4Page.offsetHeight - zone.offsetHeight;
             const currentTop = parseFloat(zone.style.top) || 0;
             zone.style.top = Math.max(0, Math.min(currentTop, maxTop)) + 'px';
-            if (zoneData) zoneData.y = parseFloat(zone.style.top);
+            if (zoneData) {
+                zoneData.y = parseFloat(zone.style.top);
+                zoneData.yMm = pxToMm(zoneData.y);
+            }
         }
 
         saveToLocalStorage();
@@ -20020,9 +20058,10 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {number} [fontSize=12] - Taille de police en points
      * @param {string} [defaultColor='#000000'] - Couleur par défaut au format hex
      * @param {string} [align='left'] - Alignement horizontal ('left', 'center', 'right', 'justify')
+     * @param {number} [lineHeight=1.2] - Facteur d'interligne (1.2 = Espace simple PrintShop)
      * @returns {string} Chaîne RTF complète compatible PrintShop Mail
      */
-    function deltaToRtf(delta, fontName = DEFAULT_FONT, fontSize = 12, defaultColor = DEFAULT_TEXT_COLOR, align = 'left') {
+    function deltaToRtf(delta, fontName = DEFAULT_FONT, fontSize = 12, defaultColor = DEFAULT_TEXT_COLOR, align = 'left', lineHeight = 1.2) {
         const ops = delta && Array.isArray(delta.ops) ? delta.ops : [];
 
         // Normaliser la couleur par défaut
@@ -20107,11 +20146,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 7) Assembler le RTF complet au format PrintShop Mail
         // Header : \rtf1\ansi\ansicpg1252\deff0\deflang1036
-        // Préambule corps : \viewkind4\uc1\pard[\qX]\cf1\f0\fsN
+        // Préambule corps : \viewkind4\uc1\pard[\slX\slmult0][\qX]\cf1\f0\fsN
         // Ne pas ajouter \par final si le body se termine déjà par \par (évite le double saut de ligne)
         const needsFinalPar = !body.endsWith('\\par ') && !body.endsWith('\\par');
         const finalPar = needsFinalPar ? '\\par' : '';
-        const rtf = `{\\rtf1\\ansi\\ansicpg1252\\deff0\\deflang1036${fonttbl}\n${colortbl}\n\\viewkind4\\uc1\\pard${alignCode}\\cf1\\f0\\fs${fsValue} ${body}${finalPar}\n}`;
+        // Code d'interligne RTF : vide si 1.2 (Espace simple), sinon \sl-{twips}\slmult0
+        const lineHeightCode = (lineHeight === 1.2) ? '' : `\\sl-${Math.round(fontSize * lineHeight * 20)}\\slmult0`;
+        const rtf = `{\\rtf1\\ansi\\ansicpg1252\\deff0\\deflang1036${fonttbl}\n${colortbl}\n\\viewkind4\\uc1\\pard${lineHeightCode}${alignCode}\\cf1\\f0\\fs${fsValue} ${body}${finalPar}\n}`;
         return rtf;
     }
 
@@ -21061,7 +21102,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 zoneData.font || DEFAULT_FONT,
                 zoneData.size || DEFAULT_FONT_SIZE,
                 zoneData.color || DEFAULT_TEXT_COLOR,
-                zoneData.align || DEFAULT_ALIGN_H
+                zoneData.align || DEFAULT_ALIGN_H,
+                zoneData.lineHeight || QUILL_DEFAULT_LINE_HEIGHT
             );
 
             return {
