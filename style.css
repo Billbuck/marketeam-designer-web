@@ -4134,3 +4134,99 @@ button:disabled {
 .undo-toast.info {
     background: linear-gradient(135deg, var(--poc-theme-primary, #934BB7) 0%, var(--poc-theme-primary-dark, #62307B) 100%);
 }
+
+/* ========================================
+   ZIP UPLOAD - Images dynamiques
+   ======================================== */
+
+.zip-upload-section {
+    margin-top: 8px;
+}
+
+/* Jauge de progression ZIP */
+.zip-progress-container {
+    margin-top: 6px;
+    padding: 6px 8px;
+    background: var(--bg-secondary, #f5f5f5);
+    border-radius: 4px;
+}
+
+.zip-progress-text {
+    font-size: 11px;
+    color: var(--text-secondary, #666);
+    margin-bottom: 4px;
+    text-align: center;
+}
+
+.zip-progress-bar-bg {
+    width: 100%;
+    height: 6px;
+    background: var(--border-color, #e0e0e0);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.zip-progress-bar {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #FF7F00, #FFB347);
+    border-radius: 3px;
+    transition: width 0.2s ease-out;
+}
+
+/* Résultat validation ZIP */
+.zip-result-info {
+    margin-top: 6px;
+    padding: 6px 8px;
+    background: var(--bg-secondary, #f5f5f5);
+    border-radius: 4px;
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.zip-result-info .zip-result-success {
+    color: #2e7d32;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.zip-result-info .zip-result-success .material-icons {
+    font-size: 14px;
+}
+
+.zip-result-info .zip-result-details {
+    color: var(--text-secondary, #666);
+    margin-top: 2px;
+    padding-left: 18px;
+}
+
+.zip-result-info .zip-result-warning {
+    color: #e65100;
+    margin-top: 4px;
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+.zip-result-info .zip-result-warning .material-icons {
+    font-size: 14px;
+    margin-top: 1px;
+}
+
+/* Erreur ZIP */
+.zip-upload-error {
+    margin-top: 6px;
+    padding: 6px 8px;
+    background: #fce4ec;
+    border-radius: 4px;
+    font-size: 11px;
+    color: #c62828;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.zip-upload-error .material-icons {
+    font-size: 14px;
+}

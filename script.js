@@ -229,6 +229,17 @@ document.addEventListener('DOMContentLoaded', () => {
      * @description Collection de zones indexées par leur ID (ex: 'zone-1', 'zone-2').
      */
 
+    // --- AUTHENTIFICATION WEBSERVICE ---
+
+    /**
+     * @typedef {Object} AuthConfig
+     * @property {string} idClient - Identifiant client Marketeam
+     * @property {string} idContact - Identifiant contact (utilisateur)
+     * @property {string} idBase - Identifiant de la base de données (pour vérification correspondance images/valeurs)
+     * @property {string} secretKey - Clé secrète pour signature HMAC-SHA256
+     * @property {string} urlWebservice - URL de base du webservice (ex: "https://wbs.marketeam.direct/v1/api")
+     */
+
     // --- STRUCTURE PAGE ---
 
     /**
@@ -1020,6 +1031,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const imageChampGroup = document.getElementById('image-champ-group');
     /** @type {HTMLSelectElement|null} Dropdown champ de fusion */
     const imageInputChamp = document.getElementById('image-input-champ');
+    /** @type {HTMLButtonElement|null} Bouton importer ZIP images */
+    const imageBtnImportZip = document.getElementById('image-btn-import-zip');
+    /** @type {HTMLButtonElement|null} Bouton vider ZIP images */
+    const imageBtnClearZip = document.getElementById('image-btn-clear-zip');
+    /** @type {HTMLInputElement|null} Input fichier caché pour ZIP */
+    const imageZipFileInput = document.getElementById('image-zip-file-input');
+    /** @type {HTMLElement|null} Section upload ZIP */
+    const imageZipUploadSection = document.getElementById('image-zip-upload-section');
+    /** @type {HTMLElement|null} Conteneur jauge progression ZIP */
+    const imageZipProgress = document.getElementById('image-zip-progress');
+    /** @type {HTMLElement|null} Texte progression ZIP */
+    const imageZipProgressText = document.getElementById('image-zip-progress-text');
+    /** @type {HTMLElement|null} Barre progression ZIP */
+    const imageZipProgressBar = document.getElementById('image-zip-progress-bar');
+    /** @type {HTMLElement|null} Zone résultat validation ZIP */
+    const imageZipResult = document.getElementById('image-zip-result');
+    /** @type {HTMLElement|null} Zone erreur ZIP */
+    const imageZipError = document.getElementById('image-zip-error');
     /** @type {HTMLInputElement|null} Input fichier caché */
     const imageFileInput = document.getElementById('image-file-input');
     
@@ -4717,6 +4746,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const DPI_MINIMUM = 150;
     const DPI_RECOMMENDED = 200;
 
+    // ─── Constantes Upload ZIP Images ───
+    /** Taille max du fichier ZIP (200 Mo) */
+    const ZIP_MAX_FILE_SIZE = 200 * 1024 * 1024;
+    /** Formats d'image acceptés dans le ZIP */
+    const ZIP_ACCEPTED_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif'];
+    /** Taille min d'un fichier image valide (1 Ko — évite les fichiers vides/corrompus) */
+    const ZIP_MIN_IMAGE_SIZE = 1024;
+    /** Taille max d'un fichier image individuel dans le ZIP (20 Mo) */
+    const ZIP_MAX_IMAGE_SIZE = 20 * 1024 * 1024;
+    /** Nombre maximum d'images dans un ZIP */
+    const ZIP_MAX_IMAGE_COUNT = 1000;
+
     // === VALEURS PAR DÉFAUT DES ZONES ===
     /** @type {string} Police par défaut pour les zones texte */
     const DEFAULT_FONT = 'Roboto';
@@ -5130,6 +5171,699 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ─────────────────────────────── FIN SECTION 8 ────────────────────────────────
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SECTION 8b : UPLOAD ET VALIDATION ZIP IMAGES (Images dynamiques)
+    // ═══════════════════════════════════════════════════════════════════════════════
+    /**
+     * Fonctions pour l'upload, la lecture et la validation de fichiers ZIP
+     * contenant des images pour les zones à source "Champ de fusion".
+     * 
+     * Utilise la librairie JSZip (chargée via CDN).
+     * 
+     * Fonctions principales :
+     *   - handleZipFileSelection() : Gestionnaire de sélection de fichier ZIP
+     *   - readAndValidateZip() : Lecture et validation du contenu du ZIP
+     *   - isZipImageFormatAccepted() : Validation extension fichier dans ZIP
+     *   - showZipProgress() : Affichage jauge de progression
+     *   - showZipResult() : Affichage résultat validation
+     *   - showZipError() : Affichage erreur
+     *   - clearZipData() : Réinitialisation données ZIP
+     * 
+     * Dépendances :
+     *   - JSZip (librairie externe)
+     *   - imageBtnImportZip, imageBtnClearZip, imageZipFileInput (Section 1)
+     *   - ZIP_MAX_FILE_SIZE, ZIP_ACCEPTED_IMAGE_EXTENSIONS (Section 2)
+     */
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Stockage temporaire des données du ZIP validé.
+     * Contient la liste des images valides extraites du ZIP.
+     * Sera utilisé pour l'envoi au serveur (prompt suivant).
+     * @type {{
+     *   zipFile: File|null,
+     *   nomFichierZip: string,
+     *   tailleZip: number,
+     *   imagesValides: Array<{nom: string, taille: number, extension: string}>,
+     *   imagesIgnorees: Array<{nom: string, raison: string}>,
+     *   prete: boolean
+     * }}
+     */
+    let zipUploadData = {
+        zipFile: null,
+        nomFichierZip: '',
+        tailleZip: 0,
+        imagesValides: [],
+        imagesIgnorees: [],
+        prete: false
+    };
+
+    // ─── Authentification Webservice ───
+    /**
+     * Configuration d'authentification reçue de WebDev via postMessage 'load'.
+     * Utilisée pour l'upload direct vers le webservice (sans transit WebDev).
+     * @type {AuthConfig|null}
+     */
+    let authConfig = null;
+
+    /**
+     * Vérifie si une extension de fichier est un format d'image accepté dans le ZIP.
+     * @param {string} fileName - Nom du fichier (avec extension)
+     * @returns {boolean} true si le format est accepté
+     */
+    function isZipImageFormatAccepted(fileName) {
+        const ext = fileName.toLowerCase().split('.').pop();
+        return ZIP_ACCEPTED_IMAGE_EXTENSIONS.includes(ext);
+    }
+
+    /**
+     * Extrait l'extension d'un nom de fichier.
+     * @param {string} fileName - Nom du fichier
+     * @returns {string} Extension en minuscules
+     */
+    function getFileExtension(fileName) {
+        return fileName.toLowerCase().split('.').pop();
+    }
+
+    /**
+     * Affiche la jauge de progression ZIP.
+     * @param {string} texte - Texte à afficher
+     * @param {number} pourcentage - Pourcentage (0-100)
+     */
+    function showZipProgress(texte, pourcentage) {
+        if (imageZipProgress) {
+            imageZipProgress.style.display = 'block';
+            if (imageZipProgressText) imageZipProgressText.textContent = texte;
+            if (imageZipProgressBar) imageZipProgressBar.style.width = pourcentage + '%';
+        }
+        if (imageZipResult) imageZipResult.style.display = 'none';
+        if (imageZipError) imageZipError.style.display = 'none';
+    }
+
+    /**
+     * Masque la jauge de progression ZIP.
+     */
+    function hideZipProgress() {
+        if (imageZipProgress) imageZipProgress.style.display = 'none';
+    }
+
+    /**
+     * Affiche le résultat de la validation du ZIP.
+     * @param {number} nbValides - Nombre d'images valides
+     * @param {number} nbIgnorees - Nombre de fichiers ignorés
+     * @param {string} nomZip - Nom du fichier ZIP
+     * @param {Array<{nom: string, raison: string}>} ignorees - Détail des fichiers ignorés
+     */
+    function showZipResult(nbValides, nbIgnorees, nomZip, ignorees) {
+        hideZipProgress();
+        if (!imageZipResult) return;
+
+        let html = '';
+
+        if (nbValides > 0) {
+            html += `<div class="zip-result-success">
+                <span class="material-icons">check_circle</span>
+                <span><strong>${nbValides}</strong> image${nbValides > 1 ? 's' : ''} trouvée${nbValides > 1 ? 's' : ''}</span>
+            </div>`;
+            html += `<div class="zip-result-details">${nomZip}</div>`;
+        }
+
+        if (nbIgnorees > 0) {
+            const details = ignorees.slice(0, 5).map(f => f.nom + ' (' + f.raison + ')').join(', ');
+            const suite = nbIgnorees > 5 ? ` et ${nbIgnorees - 5} autre(s)` : '';
+            html += `<div class="zip-result-warning">
+                <span class="material-icons">warning</span>
+                <span>${nbIgnorees} fichier${nbIgnorees > 1 ? 's' : ''} ignoré${nbIgnorees > 1 ? 's' : ''} : ${details}${suite}</span>
+            </div>`;
+        }
+
+        imageZipResult.innerHTML = html;
+        imageZipResult.style.display = 'block';
+    }
+
+    /**
+     * Affiche une erreur liée au ZIP.
+     * @param {string} message - Message d'erreur
+     */
+    function showZipError(message) {
+        hideZipProgress();
+        if (imageZipResult) imageZipResult.style.display = 'none';
+
+        if (imageZipError) {
+            imageZipError.innerHTML = `<span class="material-icons">error</span><span>${message}</span>`;
+            imageZipError.style.display = 'flex';
+            // Masquer après 8 secondes
+            setTimeout(() => {
+                if (imageZipError) imageZipError.style.display = 'none';
+            }, 8000);
+        }
+    }
+
+    /**
+     * Met à jour la visibilité des éléments du groupe ZIP selon l'état courant.
+     * 
+     * 3 états possibles :
+     * - 'initial' : aucun champ sélectionné → tout masqué sauf la combo
+     * - 'champ_selectionne' : champ choisi, pas encore de ZIP → bouton Importer visible
+     * - 'zip_valide' : ZIP importé et validé → bouton Vider visible, combo verrouillée
+     * 
+     * @param {'initial'|'champ_selectionne'|'zip_valide'} etat - État à appliquer
+     */
+    function updateZipUploadUIState(etat) {
+        switch (etat) {
+            case 'initial':
+                // Combo déverrouillée
+                if (imageInputChamp) imageInputChamp.disabled = false;
+                // Boutons masqués
+                if (imageBtnImportZip) imageBtnImportZip.style.display = 'none';
+                if (imageBtnClearZip) imageBtnClearZip.style.display = 'none';
+                // Résultat/erreur masqués
+                if (imageZipResult) imageZipResult.style.display = 'none';
+                if (imageZipError) imageZipError.style.display = 'none';
+                hideZipProgress();
+                break;
+
+            case 'champ_selectionne':
+                // Combo déverrouillée
+                if (imageInputChamp) imageInputChamp.disabled = false;
+                // Bouton Importer visible, Vider masqué
+                if (imageBtnImportZip) imageBtnImportZip.style.display = '';
+                if (imageBtnClearZip) imageBtnClearZip.style.display = 'none';
+                // Résultat/erreur masqués
+                if (imageZipResult) imageZipResult.style.display = 'none';
+                if (imageZipError) imageZipError.style.display = 'none';
+                hideZipProgress();
+                break;
+
+            case 'zip_valide':
+                // Combo VERROUILLÉE
+                if (imageInputChamp) imageInputChamp.disabled = true;
+                // Bouton Importer masqué, Vider visible
+                if (imageBtnImportZip) imageBtnImportZip.style.display = 'none';
+                if (imageBtnClearZip) imageBtnClearZip.style.display = '';
+                // Le résultat est déjà affiché par showZipResult()
+                break;
+        }
+    }
+
+    /**
+     * Réinitialise les données ZIP et l'interface.
+     */
+    function clearZipData() {
+        zipUploadData = {
+            zipFile: null,
+            nomFichierZip: '',
+            tailleZip: 0,
+            imagesValides: [],
+            imagesIgnorees: [],
+            prete: false
+        };
+
+        hideZipProgress();
+        if (imageZipResult) {
+            imageZipResult.innerHTML = '';
+            imageZipResult.style.display = 'none';
+        }
+        if (imageZipError) imageZipError.style.display = 'none';
+
+        // Mettre à jour la zoneData pour retirer la référence ZIP
+        if (selectedZoneIds.length === 1) {
+            const zonesData = getCurrentPageZones();
+            const zoneData = zonesData[selectedZoneIds[0]];
+            if (zoneData && zoneData.source) {
+                delete zoneData.source.collectionId;
+                delete zoneData.source.urlBase;
+                delete zoneData.source.pattern;
+                delete zoneData.source.zipValide;
+                delete zoneData.source.nbImages;
+                delete zoneData.source.nomZip;
+            }
+        }
+
+        // Rétablir l'état UI selon qu'un champ est sélectionné ou non
+        const champSelectionne = imageInputChamp?.value;
+        if (champSelectionne) {
+            updateZipUploadUIState('champ_selectionne');
+        } else {
+            updateZipUploadUIState('initial');
+        }
+
+        saveState();
+    }
+
+    /**
+     * Lit et valide le contenu d'un fichier ZIP sélectionné par l'utilisateur.
+     * Utilise JSZip pour lire le ZIP côté client.
+     * 
+     * Validations effectuées :
+     * - Taille du ZIP (max ZIP_MAX_FILE_SIZE)
+     * - Le fichier est bien un ZIP valide
+     * - Chaque fichier interne : format accepté, taille min/max
+     * - Nombre total d'images (max ZIP_MAX_IMAGE_COUNT)
+     * - Au moins 1 image valide
+     * 
+     * @param {File} file - Fichier ZIP sélectionné
+     * @returns {Promise<{success: boolean, message?: string}>} Résultat de la validation
+     */
+    async function readAndValidateZip(file) {
+        const imagesValides = [];
+        const imagesIgnorees = [];
+
+        // 1. Vérification taille globale
+        if (file.size > ZIP_MAX_FILE_SIZE) {
+            return {
+                success: false,
+                message: `Fichier trop volumineux (${formatFileSize(file.size)}, max ${formatFileSize(ZIP_MAX_FILE_SIZE)})`
+            };
+        }
+
+        showZipProgress('Lecture du fichier ZIP...', 10);
+
+        // 2. Lire le ZIP avec JSZip
+        let zip;
+        try {
+            zip = await JSZip.loadAsync(file, {
+                // Callback de progression
+                // JSZip ne fournit pas de progression fiable pour loadAsync,
+                // mais on peut simuler via un timer
+            });
+        } catch (e) {
+            return {
+                success: false,
+                message: 'Fichier ZIP invalide ou corrompu'
+            };
+        }
+
+        showZipProgress('Analyse du contenu...', 30);
+
+        // 3. Parcourir les fichiers du ZIP
+        const entries = Object.values(zip.files);
+        const totalEntries = entries.length;
+        let processed = 0;
+
+        for (const entry of entries) {
+            processed++;
+
+            // Ignorer les dossiers
+            if (entry.dir) continue;
+
+            // Extraire le nom de fichier (sans le chemin du dossier)
+            const fullName = entry.name;
+            const fileName = fullName.split('/').pop();
+
+            // Ignorer les fichiers cachés (commençant par . ou __MACOSX)
+            if (fileName.startsWith('.') || fullName.startsWith('__MACOSX')) {
+                continue; // Fichiers système, pas besoin de les lister comme ignorés
+            }
+
+            // Vérifier le format
+            if (!isZipImageFormatAccepted(fileName)) {
+                imagesIgnorees.push({
+                    nom: fileName,
+                    raison: 'format non supporté'
+                });
+                continue;
+            }
+
+            // Récupérer les métadonnées (taille décompressée)
+            // Note : entry._data.uncompressedSize n'est pas toujours disponible
+            // On utilise une approche pragmatique via async decompression
+            let fileSize = 0;
+            try {
+                const blob = await entry.async('blob');
+                fileSize = blob.size;
+            } catch (e) {
+                imagesIgnorees.push({
+                    nom: fileName,
+                    raison: 'lecture impossible'
+                });
+                continue;
+            }
+
+            // Vérifier taille minimale
+            if (fileSize < ZIP_MIN_IMAGE_SIZE) {
+                imagesIgnorees.push({
+                    nom: fileName,
+                    raison: 'trop petit (' + formatFileSize(fileSize) + ')'
+                });
+                continue;
+            }
+
+            // Vérifier taille maximale
+            if (fileSize > ZIP_MAX_IMAGE_SIZE) {
+                imagesIgnorees.push({
+                    nom: fileName,
+                    raison: 'trop volumineux (' + formatFileSize(fileSize) + ')'
+                });
+                continue;
+            }
+
+            imagesValides.push({
+                nom: fileName,
+                taille: fileSize,
+                extension: getFileExtension(fileName)
+            });
+
+            // Vérifier le nombre max d'images
+            if (imagesValides.length > ZIP_MAX_IMAGE_COUNT) {
+                return {
+                    success: false,
+                    message: `Trop d'images dans le ZIP (max ${ZIP_MAX_IMAGE_COUNT})`
+                };
+            }
+
+            // Mise à jour progression
+            const pct = Math.round(30 + (processed / totalEntries) * 60);
+            showZipProgress(`Analyse... ${processed}/${totalEntries}`, pct);
+        }
+
+        showZipProgress('Validation terminée', 100);
+
+        // 4. Vérifier qu'il y a au moins une image valide
+        if (imagesValides.length === 0) {
+            return {
+                success: false,
+                message: 'Aucune image valide trouvée dans le ZIP'
+            };
+        }
+
+        // 5. Stocker les résultats
+        zipUploadData = {
+            zipFile: file,
+            nomFichierZip: file.name,
+            tailleZip: file.size,
+            imagesValides: imagesValides,
+            imagesIgnorees: imagesIgnorees,
+            prete: true
+        };
+
+        return { success: true };
+    }
+
+    /**
+     * Gestionnaire de sélection d'un fichier ZIP.
+     * Déclenché par l'event 'change' sur imageZipFileInput.
+     * @param {Event} e - Événement change du input file
+     */
+    async function handleZipFileSelection(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Réinitialiser l'input pour permettre de resélectionner le même fichier
+        e.target.value = '';
+
+        // Vérifier qu'une zone image champ est sélectionnée
+        if (selectedZoneIds.length !== 1) return;
+        const selectedId = selectedZoneIds[0];
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[selectedId];
+        if (!zoneData || zoneData.type !== 'image') return;
+        if (!zoneData.source || zoneData.source.type !== 'champ') return;
+
+        // Vérifier qu'un champ de fusion est sélectionné
+        const champSelectionne = imageInputChamp?.value;
+        if (!champSelectionne) {
+            showZipError('Veuillez d\'abord sélectionner un champ de fusion');
+            return;
+        }
+
+        // Lancer la lecture/validation
+        console.log('ZIP Upload: Fichier sélectionné:', file.name, '- Taille:', formatFileSize(file.size));
+
+        const result = await readAndValidateZip(file);
+
+        if (result.success) {
+            console.log('ZIP Upload: Validation OK -', zipUploadData.imagesValides.length, 'images valides');
+            showZipResult(
+                zipUploadData.imagesValides.length,
+                zipUploadData.imagesIgnorees.length,
+                zipUploadData.nomFichierZip,
+                zipUploadData.imagesIgnorees
+            );
+
+            // Verrouiller la combo et afficher Vider
+            updateZipUploadUIState('zip_valide');
+
+            // Marquer dans la zoneData que le ZIP est prêt
+            zoneData.source.zipValide = true;
+            zoneData.source.nbImages = zipUploadData.imagesValides.length;
+            zoneData.source.nomZip = zipUploadData.nomFichierZip;
+            saveState();
+
+            // Lancer l'upload vers le webservice si auth disponible
+            if (authConfig && authConfig.urlWebservice) {
+                const uploadResult = await uploadZipToWebservice(champSelectionne);
+                
+                if (uploadResult.success) {
+                    console.log('ZIP Upload: Upload webservice réussi');
+                    handleZipUploadResponse(uploadResult.data);
+                    // Réafficher le résultat final (avec les infos serveur)
+                    showZipResult(
+                        zipUploadData.imagesValides.length,
+                        zipUploadData.imagesIgnorees.length,
+                        zipUploadData.nomFichierZip,
+                        zipUploadData.imagesIgnorees
+                    );
+                } else {
+                    console.warn('ZIP Upload: Échec upload webservice -', uploadResult.message);
+                    showZipError('Upload serveur : ' + uploadResult.message);
+                    // Note : on garde l'état 'zip_valide' car la validation locale a réussi
+                    // L'utilisateur peut réessayer ou vider
+                }
+            } else {
+                // Pas de config auth → mode local uniquement (dev/test)
+                console.log('ZIP Upload: Pas de config auth, mode local uniquement');
+            }
+        } else {
+            console.warn('ZIP Upload: Validation échouée -', result.message);
+            showZipError(result.message);
+            // Rester en état champ sélectionné (bouton Importer visible)
+            updateZipUploadUIState('champ_selectionne');
+        }
+    }
+
+    // ─────────────────────────────── FIN SECTION 8b ───────────────────────────────
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SECTION 8c : UPLOAD ZIP VERS WEBSERVICE (envoi direct)
+    // ═══════════════════════════════════════════════════════════════════════════════
+    /**
+     * Fonctions pour l'envoi direct du fichier ZIP au webservice.
+     * Utilise XMLHttpRequest + FormData (multipart/form-data).
+     * Authentification par signature HMAC-SHA256.
+     * 
+     * Fonctions principales :
+     *   - generateTimestamp() : Génère un timestamp AAAAMMJJHHMMSS
+     *   - generateSignature() : Calcule la signature HMAC-SHA256
+     *   - uploadZipToWebservice() : Envoi du ZIP au webservice
+     *   - handleZipUploadResponse() : Traitement de la réponse
+     * 
+     * Dépendances :
+     *   - authConfig (Section 2)
+     *   - zipUploadData (Section 8b)
+     *   - crypto.subtle (Web Crypto API)
+     */
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Génère un timestamp au format AAAAMMJJHHMMSS pour l'authentification.
+     * @returns {string} Timestamp formaté (ex: "20260201143025")
+     */
+    function generateTimestamp() {
+        const now = new Date();
+        return now.getFullYear().toString() +
+            ('0' + (now.getMonth() + 1)).slice(-2) +
+            ('0' + now.getDate()).slice(-2) +
+            ('0' + now.getHours()).slice(-2) +
+            ('0' + now.getMinutes()).slice(-2) +
+            ('0' + now.getSeconds()).slice(-2);
+    }
+
+    /**
+     * Calcule la signature HMAC-SHA256 pour l'authentification au webservice.
+     * 
+     * Chaîne signée : secretKey + "POST|/api/endpoint|" + idClient + "|" + idContact + "|" + timestamp
+     * ATTENTION : Le chemin est TOUJOURS le chemin FIXE "/api/endpoint", pas l'URL réelle.
+     * 
+     * @param {string} timestamp - Timestamp au format AAAAMMJJHHMMSS
+     * @returns {Promise<string>} Signature SHA-256 en hexadécimal majuscule
+     */
+    async function generateSignature(timestamp) {
+        if (!authConfig) throw new Error('Configuration authentification non disponible');
+
+        // ATTENTION : le chemin est FIXE '/api/endpoint', pas l'URL réelle du webservice
+        const requete = 'POST|/api/endpoint|' + authConfig.idClient + '|' + authConfig.idContact + '|' + timestamp;
+        const dataToSign = authConfig.secretKey + requete;
+
+        const encoder = new TextEncoder();
+        const data = encoder.encode(dataToSign);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+    }
+
+    /**
+     * Envoie le fichier ZIP validé directement au webservice en multipart/form-data.
+     * 
+     * Le fichier est streamé par le navigateur (pas de chargement complet en RAM).
+     * La progression de l'envoi est affichée via showZipProgress().
+     * 
+     * @param {string} champFusion - Nom du champ de fusion associé (ex: "MAGASIN")
+     * @returns {Promise<{success: boolean, data?: Object, message?: string}>} Résultat de l'upload
+     */
+    async function uploadZipToWebservice(champFusion) {
+        // Vérifications préalables
+        if (!authConfig || !authConfig.urlWebservice) {
+            return { success: false, message: 'Configuration webservice non disponible. Vérifiez que le message load contient la propriété auth.' };
+        }
+
+        if (!zipUploadData.prete || !zipUploadData.zipFile) {
+            return { success: false, message: 'Aucun fichier ZIP validé à envoyer' };
+        }
+
+        // Construire le FormData
+        const formData = new FormData();
+        formData.append('idClient', authConfig.idClient);
+        formData.append('idContact', authConfig.idContact);
+        formData.append('idBase', authConfig.idBase);
+        formData.append('champFusion', champFusion);
+        formData.append('nomFichier', zipUploadData.nomFichierZip);
+        formData.append('fichierZip', zipUploadData.zipFile); // Fichier binaire directement
+
+        // Générer l'authentification
+        const timestamp = generateTimestamp();
+        let signature;
+        try {
+            signature = await generateSignature(timestamp);
+        } catch (e) {
+            return { success: false, message: 'Erreur de génération de la signature : ' + e.message };
+        }
+
+        const url = authConfig.urlWebservice.replace(/\/$/, '') + '/images/upload';
+
+        console.log('ZIP Upload: Envoi vers', url, '- Taille:', formatFileSize(zipUploadData.tailleZip));
+
+        showZipProgress('Envoi... 0%', 0);
+
+        // Envoi via XMLHttpRequest (pour la progression upload)
+        return new Promise((resolve) => {
+            const xhr = new XMLHttpRequest();
+            xhr.timeout = 0; // Pas de timeout (fichiers volumineux)
+
+            let intervalAnalyse = null;
+
+            // Phase 1 : Progression de l'envoi
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable) {
+                    const pct = Math.round((e.loaded / e.total) * 100);
+                    showZipProgress('Envoi... ' + pct + '%', pct);
+                }
+            };
+
+            // Envoi terminé → Phase 2 : Traitement serveur (estimation)
+            xhr.upload.onload = () => {
+                console.log('ZIP Upload: Envoi terminé, traitement serveur...');
+                showZipProgress('Traitement serveur...', 0);
+
+                // Animation estimée : ~2s par Mo
+                const tailleMo = zipUploadData.tailleZip / (1024 * 1024);
+                const dureeEstimee = Math.max(3, tailleMo * 2);
+                const intervalMs = 100;
+                const totalSteps = (dureeEstimee * 1000) / intervalMs;
+                let step = 0;
+
+                intervalAnalyse = setInterval(() => {
+                    step++;
+                    const progress = Math.min(95, Math.round((step / totalSteps) * 100));
+                    showZipProgress('Traitement serveur... ' + progress + '%', progress);
+                }, intervalMs);
+            };
+
+            // Réponse reçue
+            xhr.onload = () => {
+                if (intervalAnalyse) clearInterval(intervalAnalyse);
+
+                console.log('ZIP Upload: Réponse reçue - Statut:', xhr.status);
+
+                if (xhr.status === 200) {
+                    showZipProgress('Terminé !', 100);
+                    try {
+                        const reponse = JSON.parse(xhr.responseText);
+                        resolve({ success: true, data: reponse });
+                    } catch (e) {
+                        resolve({ success: false, message: 'Réponse serveur invalide (JSON)' });
+                    }
+                } else {
+                    let errorMsg = 'Erreur serveur (HTTP ' + xhr.status + ')';
+                    try {
+                        const errJson = JSON.parse(xhr.responseText);
+                        if (errJson.message || errJson.erreur) {
+                            errorMsg = errJson.message || errJson.erreur;
+                        }
+                    } catch (e) { /* réponse non-JSON, on garde le message par défaut */ }
+                    resolve({ success: false, message: errorMsg });
+                }
+            };
+
+            // Erreur réseau
+            xhr.onerror = () => {
+                if (intervalAnalyse) clearInterval(intervalAnalyse);
+                console.error('ZIP Upload: Erreur réseau');
+                resolve({ success: false, message: 'Erreur réseau. Vérifiez votre connexion.' });
+            };
+
+            // Timeout (ne devrait pas arriver avec timeout = 0)
+            xhr.ontimeout = () => {
+                if (intervalAnalyse) clearInterval(intervalAnalyse);
+                resolve({ success: false, message: 'Délai d\'attente dépassé' });
+            };
+
+            // Ouvrir la connexion
+            // NE PAS définir Content-Type pour multipart — le navigateur le génère automatiquement
+            xhr.open('POST', url, true);
+            xhr.setRequestHeader('X-IdClient', authConfig.idClient);
+            xhr.setRequestHeader('X-IdContact', authConfig.idContact);
+            xhr.setRequestHeader('X-Timestamp', timestamp);
+            xhr.setRequestHeader('X-Marketeam-Auth', signature);
+
+            xhr.send(formData);
+        });
+    }
+
+    /**
+     * Traite la réponse du webservice après upload réussi.
+     * Met à jour la zoneData avec les informations retournées (collectionId, urlBase).
+     * 
+     * @param {Object} reponse - Réponse JSON du webservice
+     * @param {string} reponse.collectionId - ID unique de la collection
+     * @param {string} reponse.urlBase - URL de base des images
+     * @param {string[]} [reponse.imagesValides] - Liste des images validées par le serveur
+     * @param {string[]} [reponse.erreurs] - Erreurs éventuelles côté serveur
+     */
+    function handleZipUploadResponse(reponse) {
+        if (selectedZoneIds.length !== 1) return;
+
+        const selectedId = selectedZoneIds[0];
+        const zonesData = getCurrentPageZones();
+        const zoneData = zonesData[selectedId];
+        if (!zoneData || zoneData.type !== 'image') return;
+
+        // Mettre à jour la source avec les infos du webservice
+        zoneData.source.collectionId = reponse.collectionId || '';
+        zoneData.source.urlBase = reponse.urlBase || '';
+
+        // Stocker le nombre d'images validées côté serveur (peut différer du client)
+        if (reponse.imagesValides) {
+            zoneData.source.nbImagesServeur = reponse.imagesValides.length;
+        }
+
+        console.log('ZIP Upload: Zone mise à jour - collectionId:', zoneData.source.collectionId, ', urlBase:', zoneData.source.urlBase);
+
+        saveState();
+    }
+
+    // ─────────────────────────────── FIN SECTION 8c ───────────────────────────────
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // SECTION 9 : CALCUL DPI ET BADGES
@@ -13285,6 +14019,24 @@ document.addEventListener('DOMContentLoaded', () => {
             if (imageUploadGroup) imageUploadGroup.classList.add('hidden');
             if (imageChampGroup) imageChampGroup.classList.remove('hidden');
             populateImageFieldsSelect(source.valeur);
+            
+            // Rétablir l'état UI du ZIP selon les données de la zone
+            if (source.valeur && zipUploadData.prete && zipUploadData.nomFichierZip) {
+                // La zone a un ZIP validé → afficher le résultat
+                updateZipUploadUIState('zip_valide');
+                showZipResult(
+                    zipUploadData.imagesValides.length,
+                    zipUploadData.imagesIgnorees.length,
+                    zipUploadData.nomFichierZip,
+                    zipUploadData.imagesIgnorees
+                );
+            } else if (source.valeur) {
+                // Champ sélectionné mais pas de ZIP
+                updateZipUploadUIState('champ_selectionne');
+            } else {
+                // Pas de champ
+                updateZipUploadUIState('initial');
+            }
         } else {
             if (imageUploadGroup) imageUploadGroup.classList.remove('hidden');
             if (imageChampGroup) imageChampGroup.classList.add('hidden');
@@ -15037,6 +15789,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (imageUploadGroup) imageUploadGroup.style.display = 'none';
                 if (imageChampGroup) imageChampGroup.style.display = 'block';
                 populateImageFieldsSelect(source.valeur);
+                
+                // Rétablir l'état UI du ZIP selon les données de la zone
+                if (source.valeur && zipUploadData.prete && zipUploadData.nomFichierZip) {
+                    // La zone a un ZIP validé → afficher le résultat
+                    updateZipUploadUIState('zip_valide');
+                    showZipResult(
+                        zipUploadData.imagesValides.length,
+                        zipUploadData.imagesIgnorees.length,
+                        zipUploadData.nomFichierZip,
+                        zipUploadData.imagesIgnorees
+                    );
+                } else if (source.valeur) {
+                    // Champ sélectionné mais pas de ZIP
+                    updateZipUploadUIState('champ_selectionne');
+                } else {
+                    // Pas de champ
+                    updateZipUploadUIState('initial');
+                }
             } else {
                 // 'fixe' ou 'url' : afficher le groupe upload
                 if (imageUploadGroup) imageUploadGroup.style.display = 'block';
@@ -17495,6 +18265,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (imageUploadGroup) imageUploadGroup.style.display = isChamp ? 'none' : 'block';
             if (imageChampGroup) imageChampGroup.style.display = isChamp ? 'block' : 'none';
             
+            // Si on passe de champ à fixe, réinitialiser les données ZIP
+            if (!isChamp) {
+                clearZipData();
+            }
+            
             if (isChamp) populateImageFieldsSelect('');
             updateActiveImageZoneData();
             saveState();
@@ -17504,6 +18279,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (imageInputChamp) {
         imageInputChamp.addEventListener('change', () => {
             updateActiveImageZoneData();
+            
+            // Gérer la visibilité du bouton Importer ZIP selon la sélection
+            if (imageInputChamp.value) {
+                // Un champ est sélectionné → afficher le bouton Importer (sauf si ZIP déjà validé)
+                if (!zipUploadData.prete) {
+                    updateZipUploadUIState('champ_selectionne');
+                }
+            } else {
+                // Aucun champ → masquer le bouton Importer et réinitialiser le ZIP
+                clearZipData();
+                updateZipUploadUIState('initial');
+            }
+            
             saveState();
         });
     }
@@ -17674,6 +18462,29 @@ document.addEventListener('DOMContentLoaded', () => {
             saveToLocalStorage();
             saveState();
             
+        });
+    }
+
+    // ========================================
+    // EVENT LISTENERS - Upload ZIP Images
+    // ========================================
+
+    // Bouton Importer ZIP : ouvre le sélecteur de fichier .zip
+    if (imageBtnImportZip) {
+        imageBtnImportZip.addEventListener('click', () => {
+            if (imageZipFileInput) imageZipFileInput.click();
+        });
+    }
+
+    // Sélection d'un fichier ZIP
+    if (imageZipFileInput) {
+        imageZipFileInput.addEventListener('change', handleZipFileSelection);
+    }
+
+    // Bouton Vider ZIP
+    if (imageBtnClearZip) {
+        imageBtnClearZip.addEventListener('click', () => {
+            clearZipData();
         });
     }
     
@@ -20675,6 +21486,18 @@ document.addEventListener('DOMContentLoaded', () => {
         // Appliquer le mode si fourni dans l'enveloppe
         if (isLoadEnvelope && jsonData.mode) {
             setDesignerMode(jsonData.mode);
+        }
+        
+        // Stocker les credentials d'authentification si fournis dans l'enveloppe
+        if (isLoadEnvelope && jsonData.auth) {
+            authConfig = {
+                idClient: String(jsonData.auth.idClient || ''),
+                idContact: String(jsonData.auth.idContact || ''),
+                idBase: String(jsonData.auth.idBase || ''),
+                secretKey: String(jsonData.auth.secretKey || ''),
+                urlWebservice: String(jsonData.auth.urlWebservice || '')
+            };
+            console.log('loadFromWebDev: Auth config reçue (idClient:', authConfig.idClient, ', idBase:', authConfig.idBase, ', urlWebservice:', authConfig.urlWebservice, ')');
         }
         
         // Validation de base

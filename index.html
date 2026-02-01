@@ -11,6 +11,8 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <!-- Bibliothèque bwip-js pour génération de codes-barres -->
     <script src="https://cdn.jsdelivr.net/npm/bwip-js@4.5.1/dist/bwip-js-min.min.js"></script>
+    <!-- Bibliothèque JSZip pour lecture de fichiers ZIP côté client -->
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 </head>
 <body>
 
@@ -1423,6 +1425,7 @@
 
                     <!-- Groupe Champ de fusion (visible si type = champ) -->
                     <div class="conditional-group-poc hidden" id="image-champ-group">
+                        <!-- Sélecteur de champ de fusion -->
                         <div class="form-row-poc">
                             <label class="form-label-poc">Champ</label>
                             <div class="form-control-poc">
@@ -1436,6 +1439,36 @@
                                         </svg>
                                     </span>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- Bouton importer ZIP + infos -->
+                        <div class="zip-upload-section" id="image-zip-upload-section">
+                            <!-- Bouton Importer ZIP (caché tant qu'aucun champ n'est sélectionné) -->
+                            <button type="button" class="btn-upload-poc btn-upload-primary-poc" id="image-btn-import-zip" style="display: none;">
+                                📦 Importer images
+                            </button>
+                            <!-- Bouton Vider ZIP (caché, apparaît après import réussi) -->
+                            <button type="button" class="btn-upload-poc btn-upload-secondary-poc" id="image-btn-clear-zip" style="display: none;">
+                                🗑️ Vider
+                            </button>
+
+                            <!-- Jauge de progression lecture ZIP (cachée par défaut) -->
+                            <div class="zip-progress-container" id="image-zip-progress" style="display: none;">
+                                <div class="zip-progress-text" id="image-zip-progress-text">Lecture du ZIP...</div>
+                                <div class="zip-progress-bar-bg">
+                                    <div class="zip-progress-bar" id="image-zip-progress-bar"></div>
+                                </div>
+                            </div>
+
+                            <!-- Résultat de la validation (caché par défaut) -->
+                            <div class="zip-result-info" id="image-zip-result" style="display: none;">
+                                <!-- Rempli dynamiquement par JS -->
+                            </div>
+
+                            <!-- Message d'erreur ZIP (caché par défaut) -->
+                            <div class="zip-upload-error" id="image-zip-error" style="display: none;">
+                                <!-- Rempli dynamiquement par JS -->
                             </div>
                         </div>
                     </div>
@@ -2008,6 +2041,8 @@
 
     <!-- Input fichier caché pour import image -->
     <input type="file" id="image-file-input" accept="image/jpeg,image/png,image/gif" style="display: none;">
+    <!-- Input fichier caché pour sélection ZIP images -->
+    <input type="file" id="image-zip-file-input" accept=".zip" style="display: none;">
 
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <!-- TOOLBAR BARCODE FLOTTANTE - Design POC toolbar-barcode.html     -->
