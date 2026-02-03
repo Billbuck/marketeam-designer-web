@@ -109,6 +109,18 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {number|null} [hauteurPx] - Hauteur image compressée en pixels
      * @property {number|null} [poidsBrut] - Poids avant compression (octets)
      * @property {number|null} [poidsCompresse] - Poids après compression (octets)
+     * @property {string} [nomZip] - Nom du fichier ZIP uploadé (mode champ)
+     * @property {number|string} [collectionId] - ID de la collection créée sur le serveur
+     * @property {string} [urlBase] - URL de base pour accéder aux images de la collection
+     * @property {string} [champFusion] - Nom du champ de fusion retourné par le serveur
+     * @property {Object} [resume] - Résumé du traitement serveur (statistiques)
+     * @property {number} [resume.totalFichiersZip] - Nombre total de fichiers dans le ZIP
+     * @property {number} [resume.imagesStockees] - Nombre d'images stockées sur le serveur
+     * @property {number} [resume.imagesAvecCorrespondance] - Images avec correspondance BDD
+     * @property {number} [resume.imagesSansCorrespondance] - Images sans correspondance BDD
+     * @property {number} [resume.valeursSansImage] - Valeurs BDD sans image correspondante
+     * @property {number} [resume.fichiersIgnores] - Fichiers ignorés (non-images)
+     * @property {number} [nbImagesServeur] - Nombre d'images validées côté serveur
      * @description Source d'image pour les zones de type 'image'.
      */
 
@@ -237,7 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {string} idContact - Identifiant contact (utilisateur)
      * @property {string} idBase - Identifiant de la base de données (pour vérification correspondance images/valeurs)
      * @property {string} secretKey - Clé secrète pour signature HMAC-SHA256
-     * @property {string} urlWebservice - URL de base du webservice (ex: "https://wbs.marketeam.direct/v1/api")
+     * @property {string} urlWebservice - URL complète de l'endpoint upload (ex: "http://localhost/v1/api/designer/image/upload")
      */
 
     // --- STRUCTURE PAGE ---
@@ -5740,7 +5752,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return { success: false, message: 'Erreur de génération de la signature : ' + e.message };
         }
 
-        const url = authConfig.urlWebservice.replace(/\/$/, '') + '/images/upload';
+        const url = authConfig.urlWebservice;
 
         console.log('ZIP Upload: Envoi vers', url, '- Taille:', formatFileSize(zipUploadData.tailleZip));
 
@@ -5790,7 +5802,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     showZipProgress('Terminé !', 100);
                     try {
                         const reponse = JSON.parse(xhr.responseText);
-                        resolve({ success: true, data: reponse });
+                        
+                        // Gérer la structure enveloppée WebDev (GénéreJsonSuccès)
+                        if (reponse.Statut === 'success' && reponse.Details) {
+                            // Structure enveloppée : extraire Details
+                            resolve({ success: true, data: reponse.Details });
+                        } else if (reponse.Statut === 'error') {
+                            // Erreur métier retournée par WebDev
+                            resolve({ success: false, message: reponse.Message || 'Erreur serveur' });
+                        } else if (reponse.success !== undefined) {
+                            // Ancienne structure directe (rétrocompatibilité)
+                            resolve({ success: reponse.success, data: reponse });
+                        } else {
+                            // Structure inconnue, retourner tel quel
+                            resolve({ success: true, data: reponse });
+                        }
                     } catch (e) {
                         resolve({ success: false, message: 'Réponse serveur invalide (JSON)' });
                     }
@@ -5798,7 +5824,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     let errorMsg = 'Erreur serveur (HTTP ' + xhr.status + ')';
                     try {
                         const errJson = JSON.parse(xhr.responseText);
-                        if (errJson.message || errJson.erreur) {
+                        // Gérer les erreurs au format enveloppé WebDev
+                        if (errJson.Statut === 'error' && errJson.Message) {
+                            errorMsg = errJson.Message;
+                        } else if (errJson.message || errJson.erreur) {
                             errorMsg = errJson.message || errJson.erreur;
                         }
                     } catch (e) { /* réponse non-JSON, on garde le message par défaut */ }
@@ -5833,15 +5862,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * Traite la réponse du webservice après upload réussi.
-     * Met à jour la zoneData avec les informations retournées (collectionId, urlBase).
+     * Met à jour la zoneData avec les informations retournées par le serveur.
      * 
-     * @param {Object} reponse - Réponse JSON du webservice
-     * @param {string} reponse.collectionId - ID unique de la collection
-     * @param {string} reponse.urlBase - URL de base des images
-     * @param {string[]} [reponse.imagesValides] - Liste des images validées par le serveur
-     * @param {string[]} [reponse.erreurs] - Erreurs éventuelles côté serveur
+     * @param {Object} details - Objet Details extrait de la réponse JSON enveloppée WebDev
+     * @param {boolean} details.success - Succès du traitement serveur
+     * @param {number|string} details.collectionId - ID unique de la collection créée
+     * @param {string} details.urlBase - URL de base pour accéder aux images
+     * @param {string} details.champFusion - Nom du champ de fusion associé
+     * @param {Object} details.resume - Résumé du traitement
+     * @param {number} details.resume.totalFichiersZip - Nombre total de fichiers dans le ZIP
+     * @param {number} details.resume.imagesStockees - Nombre d'images stockées sur le serveur
+     * @param {number} details.resume.imagesAvecCorrespondance - Images avec correspondance BDD
+     * @param {number} details.resume.imagesSansCorrespondance - Images sans correspondance BDD
+     * @param {number} details.resume.valeursSansImage - Valeurs BDD sans image correspondante
+     * @param {number} details.resume.fichiersIgnores - Fichiers ignorés (non-images)
+     * @param {Array} [details.imagesCorrespondantes] - Liste des images avec correspondance
+     * @param {Array} [details.imagesSansCorrespondance] - Liste des images sans correspondance
+     * @param {Array} [details.valeursSansImage] - Liste des valeurs BDD sans image
+     * @param {Array} [details.fichiersIgnores] - Liste des fichiers ignorés
      */
-    function handleZipUploadResponse(reponse) {
+    function handleZipUploadResponse(details) {
         if (selectedZoneIds.length !== 1) return;
 
         const selectedId = selectedZoneIds[0];
@@ -5850,12 +5890,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!zoneData || zoneData.type !== 'image') return;
 
         // Mettre à jour la source avec les infos du webservice
-        zoneData.source.collectionId = reponse.collectionId || '';
-        zoneData.source.urlBase = reponse.urlBase || '';
-
-        // Stocker le nombre d'images validées côté serveur (peut différer du client)
-        if (reponse.imagesValides) {
-            zoneData.source.nbImagesServeur = reponse.imagesValides.length;
+        zoneData.source.collectionId = details.collectionId || '';
+        zoneData.source.urlBase = details.urlBase || '';
+        zoneData.source.champFusion = details.champFusion || '';
+        
+        // Stocker le résumé complet du traitement serveur
+        if (details.resume) {
+            zoneData.source.resume = details.resume;
+            zoneData.source.nbImagesServeur = details.resume.imagesStockees || 0;
+            
+            // Logger le résumé pour vérification
+            console.log('ZIP Upload: Résumé -',
+                'Stockées:', details.resume.imagesStockees,
+                'Correspondances:', details.resume.imagesAvecCorrespondance,
+                'Sans correspondance:', details.resume.imagesSansCorrespondance,
+                'Valeurs BDD sans image:', details.resume.valeursSansImage
+            );
         }
 
         console.log('ZIP Upload: Zone mise à jour - collectionId:', zoneData.source.collectionId, ', urlBase:', zoneData.source.urlBase);
