@@ -11200,6 +11200,19 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         
+        // Mettre à jour les zones image dynamiques avec les valeurs de l'enregistrement
+        allPages.forEach((page, pageIndex) => {
+            const zones = page.zones || {};
+            Object.entries(zones).forEach(([zoneId, zoneData]) => {
+                if (zoneData.type === 'image' && zoneData.source && zoneData.source.type === 'champ') {
+                    // Seulement si la zone est sur la page courante (visible)
+                    if (pageIndex === documentState.currentPageIndex) {
+                        updateImageZoneForPreview(zoneId, zoneData, record);
+                    }
+                }
+            });
+        });
+        
         
         return true;
     }
@@ -11413,6 +11426,18 @@ document.addEventListener('DOMContentLoaded', () => {
             if (zoneEl) {
                 zoneEl.classList.remove('preview-mode');
             }
+        });
+        
+        // 2b. Restaurer les zones image dynamiques vers leur placeholder
+        const allPagesRestore = documentState.pages || [];
+        allPagesRestore.forEach((page, pageIndex) => {
+            const zones = page.zones || {};
+            Object.entries(zones).forEach(([zoneId, zoneData]) => {
+                if (zoneData.type === 'image' && zoneData.source && zoneData.source.type === 'champ') {
+                    // Restaurer le placeholder (appeler la fonction d'affichage standard)
+                    updateImageZoneDisplay(zoneId);
+                }
+            });
         });
         
         // 3. Marquer le mode aperçu inactif
@@ -17119,6 +17144,77 @@ document.addEventListener('DOMContentLoaded', () => {
         if (align === 'top') return 'flex-start';
         if (align === 'bottom') return 'flex-end';
         return 'center';
+    }
+    
+    /**
+     * Met à jour l'affichage d'une zone image dynamique en mode aperçu.
+     * Construit l'URL depuis urlBase + valeur du champ de fusion dans l'enregistrement.
+     * @param {string} zoneId - ID de la zone image
+     * @param {ImageZoneData} zoneData - Données de la zone
+     * @param {EchantillonData} record - Enregistrement d'aperçu courant
+     * @returns {void}
+     */
+    function updateImageZoneForPreview(zoneId, zoneData, record) {
+        const zoneEl = document.getElementById(zoneId);
+        if (!zoneEl) return;
+        
+        const contentEl = zoneEl.querySelector('.zone-content');
+        if (!contentEl) return;
+        
+        const source = zoneData.source;
+        const redim = zoneData.redimensionnement || { mode: 'ajuster', alignementH: 'center', alignementV: 'middle' };
+        
+        // Récupérer le nom du champ (même logique que barcode)
+        const fieldName = (source.champFusion || source.valeur || '').toUpperCase();
+        const fieldValue = record[fieldName] || record[source.champFusion] || record[source.valeur] || '';
+        
+        if (source.urlBase && fieldValue) {
+            // Construire l'URL complète
+            const imageUrl = source.urlBase + fieldValue;
+            
+            // Vider et afficher l'image
+            contentEl.innerHTML = '';
+            contentEl.classList.add('has-image');
+            contentEl.classList.remove('no-image');
+            
+            const img = document.createElement('img');
+            img.src = imageUrl;
+            img.alt = fieldValue;
+            img.draggable = false;
+            
+            // Appliquer le mode de redimensionnement (fonctions existantes)
+            img.style.objectFit = getObjectFitFromMode(redim.mode);
+            img.style.objectPosition = getObjectPosition(redim.alignementH, redim.alignementV);
+            
+            if (redim.mode === 'initial') {
+                img.style.width = 'auto';
+                img.style.height = 'auto';
+                img.style.maxWidth = 'none';
+                img.style.maxHeight = 'none';
+            } else {
+                img.style.width = '100%';
+                img.style.height = '100%';
+            }
+            
+            // Gérer le cas où l'image ne charge pas
+            img.onerror = () => {
+                console.warn(`⚠️ Image introuvable: ${imageUrl}`);
+                contentEl.innerHTML = getImagePlaceholderSvg(fieldValue + ' ❌');
+                contentEl.classList.remove('has-image');
+                contentEl.classList.add('no-image');
+            };
+            
+            contentEl.appendChild(img);
+            
+            // Appliquer l'alignement au conteneur
+            contentEl.style.justifyContent = mapAlignHToFlex(redim.alignementH);
+            contentEl.style.alignItems = mapAlignVToFlex(redim.alignementV);
+        } else {
+            // Pas d'image disponible : placeholder avec le nom du champ
+            contentEl.innerHTML = getImagePlaceholderSvg(source.valeur || 'Image');
+            contentEl.classList.remove('has-image');
+            contentEl.classList.add('no-image');
+        }
     }
     
     /**
