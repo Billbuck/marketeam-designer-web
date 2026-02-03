@@ -244,10 +244,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- AUTHENTIFICATION WEBSERVICE ---
 
     /**
+     * Entrée d'une base de données dans le tableau auth.tabBase.
+     * Origine 'clt' = base client (nouvellement sélectionnée), 'dos' = base dossier (déjà enregistrée dans l'opération).
+     * @typedef {Object} AuthBaseEntry
+     * @property {number} IdBase - Identifiant de la base
+     * @property {string} origine - Origine de la base ('clt' pour client, 'dos' pour dossier/opération)
+     */
+
+    /**
      * @typedef {Object} AuthConfig
      * @property {string} idClient - Identifiant client Marketeam
      * @property {string} idContact - Identifiant contact (utilisateur)
-     * @property {string} idBase - Identifiant de la base de données (pour vérification correspondance images/valeurs)
+     * @property {AuthBaseEntry[]} tabBase - Tableau des bases de données sélectionnées avec leur origine
      * @property {string} secretKey - Clé secrète pour signature HMAC-SHA256
      * @property {string} urlWebservice - URL complète de l'endpoint upload (ex: "http://localhost/v1/api/designer/image/upload")
      */
@@ -5738,7 +5746,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const formData = new FormData();
         formData.append('idClient', authConfig.idClient);
         formData.append('idContact', authConfig.idContact);
-        formData.append('idBase', authConfig.idBase);
+        formData.append('tabBase', JSON.stringify(authConfig.tabBase));
         formData.append('champFusion', champFusion);
         formData.append('nomFichier', zipUploadData.nomFichierZip);
         formData.append('fichierZip', zipUploadData.zipFile); // Fichier binaire directement
@@ -21636,14 +21644,24 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Stocker les credentials d'authentification si fournis dans l'enveloppe
         if (isLoadEnvelope && jsonData.auth) {
+            // Lire tabBase : tableau d'objets {IdBase, origine}
+            const rawTabBase = Array.isArray(jsonData.auth.tabBase) ? jsonData.auth.tabBase : [];
+            const parsedTabBase = rawTabBase.map(entry => ({
+                IdBase: Number(entry.IdBase) || 0,
+                origine: String(entry.origine || 'clt')
+            }));
+
             authConfig = {
                 idClient: String(jsonData.auth.idClient || ''),
                 idContact: String(jsonData.auth.idContact || ''),
-                idBase: String(jsonData.auth.idBase || ''),
+                tabBase: parsedTabBase,
                 secretKey: String(jsonData.auth.secretKey || ''),
                 urlWebservice: String(jsonData.auth.urlWebservice || '')
             };
-            console.log('loadFromWebDev: Auth config reçue (idClient:', authConfig.idClient, ', idBase:', authConfig.idBase, ', urlWebservice:', authConfig.urlWebservice, ')');
+            console.log('loadFromWebDev: Auth config reçue (idClient:', authConfig.idClient, ', bases:', parsedTabBase.length, ', urlWebservice:', authConfig.urlWebservice, ')');
+            if (parsedTabBase.length > 0) {
+                console.log('loadFromWebDev: Bases:', JSON.stringify(parsedTabBase));
+            }
         }
         
         // Validation de base
