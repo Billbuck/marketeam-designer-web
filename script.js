@@ -560,14 +560,15 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {string} libelle - Libellé affiché à l'utilisateur (ex: "Nom", "Civilité")
      * @property {'TXT'|'SYS'|'IMG'} type - Type de champ (TXT=texte BDD, SYS=système, IMG=image)
      * @property {number} ordre - Ordre d'affichage (tri croissant)
+     * @property {string} [colonne] - Nom de la colonne physique dans la table BDD (ex: "Civilite", "Champ1"). Identique dans toutes les bases sélectionnées (garanti par CalculeTaaBaseChamp côté WebDev).
      * @description Structure d'un champ de fusion/personnalisation provenant de la BDD.
      * @example
      * // Champ texte standard
-     * { nom: "NOM", libelle: "Nom", type: "TXT", ordre: 2 }
-     * // Variable système
+     * { nom: "NOM", libelle: "Nom", type: "TXT", ordre: 2, colonne: "Nom" }
+     * // Variable système (pas de colonne physique)
      * { nom: "SEQUENTIEL", libelle: "N° séquentiel", type: "SYS", ordre: 20 }
      * // Champ image dynamique
-     * { nom: "LOGO", libelle: "Logo entreprise", type: "IMG", ordre: 30 }
+     * { nom: "LOGO", libelle: "Logo entreprise", type: "IMG", ordre: 30, colonne: "Champ1" }
      */
 
     // --- STRUCTURES APERÇU DONNÉES ---
@@ -5729,6 +5730,9 @@ document.addEventListener('DOMContentLoaded', () => {
      * Le fichier est streamé par le navigateur (pas de chargement complet en RAM).
      * La progression de l'envoi est affichée via showZipProgress().
      * 
+     * Données envoyées : idClient, idContact, tabBase (JSON), champFusion, colonne (physique BDD), nomFichier, fichierZip.
+     * La colonne physique est recherchée dans documentState.champsFusion via champObj.colonne.
+     * 
      * @param {string} champFusion - Nom du champ de fusion associé (ex: "MAGASIN")
      * @returns {Promise<{success: boolean, data?: Object, message?: string}>} Résultat de l'upload
      */
@@ -5742,12 +5746,21 @@ document.addEventListener('DOMContentLoaded', () => {
             return { success: false, message: 'Aucun fichier ZIP validé à envoyer' };
         }
 
+        // Trouver la colonne physique pour ce champ de fusion
+        const champs = (documentState && documentState.champsFusion) || mergeFields || [];
+        const champObj = champs.find(c => typeof c === 'object' && c.nom === champFusion);
+        const colonne = (champObj && champObj.colonne) || '';
+        if (!colonne) {
+            console.warn('ZIP Upload: Colonne physique non trouvée pour le champ', champFusion);
+        }
+
         // Construire le FormData
         const formData = new FormData();
         formData.append('idClient', authConfig.idClient);
         formData.append('idContact', authConfig.idContact);
         formData.append('tabBase', JSON.stringify(authConfig.tabBase));
         formData.append('champFusion', champFusion);
+        formData.append('colonne', colonne);
         formData.append('nomFichier', zipUploadData.nomFichierZip);
         formData.append('fichierZip', zipUploadData.zipFile); // Fichier binaire directement
 
