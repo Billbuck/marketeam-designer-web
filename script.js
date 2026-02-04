@@ -14124,14 +14124,27 @@ document.addEventListener('DOMContentLoaded', () => {
         if (imageInputSourceType) imageInputSourceType.value = sourceType;
         
         // Afficher le bon groupe selon le type
+        // Note : vider les styles inline display pour éviter les conflits avec les classes CSS
+        if (imageUploadGroup) imageUploadGroup.style.display = '';
+        if (imageChampGroup) imageChampGroup.style.display = '';
+        
         if (sourceType === 'champ') {
             if (imageUploadGroup) imageUploadGroup.classList.add('hidden');
             if (imageChampGroup) imageChampGroup.classList.remove('hidden');
             populateImageFieldsSelect(source.valeur);
             
-            // Rétablir l'état UI du ZIP selon les données de la zone
-            if (source.valeur && zipUploadData.prete && zipUploadData.nomFichierZip) {
-                // La zone a un ZIP validé → afficher le résultat
+            // Rétablir l'état UI du ZIP selon les données de la ZONE (pas le global zipUploadData)
+            if (source.collectionId && source.urlBase) {
+                // La zone a un upload terminé (collectionId présent) → afficher le résultat
+                updateZipUploadUIState('zip_valide');
+                showZipResult(
+                    source.nbImagesServeur || source.nbImages || 0,
+                    0,
+                    source.nomZip || 'ZIP importé',
+                    []
+                );
+            } else if (source.valeur && zipUploadData.prete && zipUploadData.nomFichierZip) {
+                // ZIP validé en mémoire (pas encore uploadé) → afficher le résultat temporaire
                 updateZipUploadUIState('zip_valide');
                 showZipResult(
                     zipUploadData.imagesValides.length,
@@ -15584,13 +15597,17 @@ document.addEventListener('DOMContentLoaded', () => {
             imageInputSourceType.addEventListener('change', () => {
                 const sourceType = imageInputSourceType.value;
                 
-                // Afficher le bon groupe
+                // Afficher le bon groupe (via classes CSS uniquement)
                 if (sourceType === 'champ') {
                     if (imageUploadGroup) imageUploadGroup.classList.add('hidden');
                     if (imageChampGroup) imageChampGroup.classList.remove('hidden');
+                    // Remplir la liste des champs disponibles
+                    populateImageFieldsSelect('');
                 } else {
                     if (imageUploadGroup) imageUploadGroup.classList.remove('hidden');
                     if (imageChampGroup) imageChampGroup.classList.add('hidden');
+                    // Réinitialiser les données ZIP si on quitte le mode champ
+                    clearZipData();
                 }
                 
                 updateSelectedImageZone((zoneData) => {
@@ -15620,6 +15637,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateDpiIndicator(zoneId);
                     updateImageDpiBadge(zoneId);
                 });
+                
+                // Activer/désactiver le bouton Ajuster au contenu selon le mode
+                updateSnapToContentButton();
             });
         }
         
@@ -15630,6 +15650,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!zoneData.source) zoneData.source = { type: 'champ', valeur: '' };
                     zoneData.source.valeur = imageInputChamp.value;
                 });
+                
+                // Gérer la visibilité du bouton Importer ZIP selon la sélection
+                if (imageInputChamp.value) {
+                    // Un champ est sélectionné → afficher le bouton Importer (sauf si ZIP déjà validé)
+                    if (!zipUploadData.prete) {
+                        updateZipUploadUIState('champ_selectionne');
+                    }
+                } else {
+                    // Aucun champ → masquer le bouton Importer et réinitialiser le ZIP
+                    clearZipData();
+                    updateZipUploadUIState('initial');
+                }
             });
         }
         
@@ -15892,16 +15924,29 @@ document.addEventListener('DOMContentLoaded', () => {
             setToggleGroupPocValue('image-align-v-group', redim.alignementV);
             
             // Afficher le bon groupe selon le type
+            // Note : vider les styles inline display pour éviter les conflits avec les classes CSS
+            if (imageUploadGroup) imageUploadGroup.style.display = '';
+            if (imageChampGroup) imageChampGroup.style.display = '';
+            
             // 'fixe' : afficher le groupe upload
             // 'champ' : afficher le select des champs de fusion
             if (source.type === 'champ') {
-                if (imageUploadGroup) imageUploadGroup.style.display = 'none';
-                if (imageChampGroup) imageChampGroup.style.display = 'block';
+                if (imageUploadGroup) imageUploadGroup.classList.add('hidden');
+                if (imageChampGroup) imageChampGroup.classList.remove('hidden');
                 populateImageFieldsSelect(source.valeur);
                 
-                // Rétablir l'état UI du ZIP selon les données de la zone
-                if (source.valeur && zipUploadData.prete && zipUploadData.nomFichierZip) {
-                    // La zone a un ZIP validé → afficher le résultat
+                // Rétablir l'état UI du ZIP selon les données de la ZONE (pas le global zipUploadData)
+                if (source.collectionId && source.urlBase) {
+                    // La zone a un upload terminé (collectionId présent) → afficher le résultat
+                    updateZipUploadUIState('zip_valide');
+                    showZipResult(
+                        source.nbImagesServeur || source.nbImages || 0,
+                        0,
+                        source.nomZip || 'ZIP importé',
+                        []
+                    );
+                } else if (source.valeur && zipUploadData.prete && zipUploadData.nomFichierZip) {
+                    // ZIP validé en mémoire (pas encore uploadé) → afficher le résultat temporaire
                     updateZipUploadUIState('zip_valide');
                     showZipResult(
                         zipUploadData.imagesValides.length,
@@ -15918,8 +15963,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else {
                 // 'fixe' ou 'url' : afficher le groupe upload
-                if (imageUploadGroup) imageUploadGroup.style.display = 'block';
-                if (imageChampGroup) imageChampGroup.style.display = 'none';
+                if (imageUploadGroup) imageUploadGroup.classList.remove('hidden');
+                if (imageChampGroup) imageChampGroup.classList.add('hidden');
             }
             
             // Afficher les infos fichier si image uploadée
@@ -18435,63 +18480,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     
-    // --- LISTENERS POUR ZONES IMAGE ---
-    
-    if (imageInputSourceType) {
-        imageInputSourceType.addEventListener('change', () => {
-            const sourceType = imageInputSourceType.value;
-            const isChamp = sourceType === 'champ';
-            
-            // 'fixe' : afficher le groupe upload
-            // 'champ' : afficher le select des champs de fusion
-            if (imageUploadGroup) imageUploadGroup.style.display = isChamp ? 'none' : 'block';
-            if (imageChampGroup) imageChampGroup.style.display = isChamp ? 'block' : 'none';
-            
-            // Si on passe de champ à fixe, réinitialiser les données ZIP
-            if (!isChamp) {
-                clearZipData();
-            }
-            
-            if (isChamp) populateImageFieldsSelect('');
-            updateActiveImageZoneData();
-            saveState();
-        });
-    }
-    
-    if (imageInputChamp) {
-        imageInputChamp.addEventListener('change', () => {
-            updateActiveImageZoneData();
-            
-            // Gérer la visibilité du bouton Importer ZIP selon la sélection
-            if (imageInputChamp.value) {
-                // Un champ est sélectionné → afficher le bouton Importer (sauf si ZIP déjà validé)
-                if (!zipUploadData.prete) {
-                    updateZipUploadUIState('champ_selectionne');
-                }
-            } else {
-                // Aucun champ → masquer le bouton Importer et réinitialiser le ZIP
-                clearZipData();
-                updateZipUploadUIState('initial');
-            }
-            
-            saveState();
-        });
-    }
-    
-    if (imageInputMode) {
-        imageInputMode.addEventListener('change', () => {
-            updateActiveImageZoneData();
-            updateDpiIndicator(); // Recalculer le DPI avec le nouveau mode
-            // Mettre à jour le badge DPI externe
-            if (selectedZoneIds.length === 1) {
-                updateImageDpiBadge(selectedZoneIds[0]);
-            }
-            updateSnapToContentButton(); // Activer/désactiver selon le mode
-            saveState();
-        });
-    }
-    
-    // Note : Les toggle-groups image sont initialisés dans initImageToolbarComponents()
+    // Note : Les listeners pour zones image (imageInputSourceType, imageInputChamp, imageInputMode)
+    // sont définis dans initImageToolbarComponents() - ne pas dupliquer ici
     
     // ========================================
     // EVENT LISTENERS - Upload Image
