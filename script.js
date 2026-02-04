@@ -244,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- AUTHENTIFICATION WEBSERVICE ---
 
     /**
-     * Entrée d'une base de données dans le tableau auth.tabBase.
+     * Entrée d'une base de données dans le tableau bases.liste.
      * Origine 'clt' = base client (nouvellement sélectionnée), 'dos' = base dossier (déjà enregistrée dans l'opération).
      * @typedef {Object} AuthBaseEntry
      * @property {number} IdBase - Identifiant de la base
@@ -255,9 +255,15 @@ document.addEventListener('DOMContentLoaded', () => {
      * @typedef {Object} AuthConfig
      * @property {string} idClient - Identifiant client Marketeam
      * @property {string} idContact - Identifiant contact (utilisateur)
-     * @property {AuthBaseEntry[]} tabBase - Tableau des bases de données sélectionnées avec leur origine
      * @property {string} secretKey - Clé secrète pour signature HMAC-SHA256
      * @property {string} urlWebservice - URL complète de l'endpoint upload (ex: "http://localhost/v1/api/designer/image/upload")
+     */
+
+    /**
+     * Configuration des bases de données de l'opération.
+     * Reçue de WebDev via postMessage 'load', dans la propriété 'bases' à la racine.
+     * @typedef {Object} BasesConfig
+     * @property {AuthBaseEntry[]} liste - Tableau des bases de données sélectionnées avec leur origine
      */
 
     // --- STRUCTURE PAGE ---
@@ -556,19 +562,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * @typedef {Object} ChampFusion
-     * @property {string} nom - Code technique du champ (ex: "NOM", "CIVILITE") - utilisé pour @NOM@
+     * @property {string} nom - Nom de la colonne physique dans la table BDD (ex: "Civilite", "Champ1"). Sert aussi de clé pour @NOM@ dans les merge fields. Identique dans toutes les bases sélectionnées (garanti par CalculeTaaBaseChamp côté WebDev).
      * @property {string} libelle - Libellé affiché à l'utilisateur (ex: "Nom", "Civilité")
      * @property {'TXT'|'SYS'|'IMG'} type - Type de champ (TXT=texte BDD, SYS=système, IMG=image)
      * @property {number} ordre - Ordre d'affichage (tri croissant)
-     * @property {string} [colonne] - Nom de la colonne physique dans la table BDD (ex: "Civilite", "Champ1"). Identique dans toutes les bases sélectionnées (garanti par CalculeTaaBaseChamp côté WebDev).
      * @description Structure d'un champ de fusion/personnalisation provenant de la BDD.
      * @example
      * // Champ texte standard
-     * { nom: "NOM", libelle: "Nom", type: "TXT", ordre: 2, colonne: "Nom" }
+     * { nom: "Civilite", libelle: "Civilité", type: "TXT", ordre: 1 }
      * // Variable système (pas de colonne physique)
      * { nom: "SEQUENTIEL", libelle: "N° séquentiel", type: "SYS", ordre: 20 }
      * // Champ image dynamique
-     * { nom: "LOGO", libelle: "Logo entreprise", type: "IMG", ordre: 30, colonne: "Champ1" }
+     * { nom: "Champ1", libelle: "Logo entreprise", type: "IMG", ordre: 30 }
      */
 
     // --- STRUCTURES APERÇU DONNÉES ---
@@ -5249,6 +5254,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let authConfig = null;
 
     /**
+     * Configuration des bases de données de l'opération reçue de WebDev via postMessage 'load'.
+     * Contient la liste des bases (clt/dos) nécessaires pour l'upload webservice.
+     * @type {BasesConfig|null}
+     */
+    let basesConfig = null;
+
+    /**
      * Vérifie si une extension de fichier est un format d'image accepté dans le ZIP.
      * @param {string} fileName - Nom du fichier (avec extension)
      * @returns {boolean} true si le format est accepté
@@ -5730,8 +5742,8 @@ document.addEventListener('DOMContentLoaded', () => {
      * Le fichier est streamé par le navigateur (pas de chargement complet en RAM).
      * La progression de l'envoi est affichée via showZipProgress().
      * 
-     * Données envoyées : idClient, idContact, tabBase (JSON), champFusion, colonne (physique BDD), nomFichier, fichierZip.
-     * La colonne physique est recherchée dans documentState.champsFusion via champObj.colonne.
+     * Données envoyées : idClient, idContact, tabBase (JSON), champFusion, colonne (= champObj.nom, colonne physique BDD), nomFichier, fichierZip.
+     * La colonne physique correspond à champObj.nom dans documentState.champsFusion.
      * 
      * @param {string} champFusion - Nom du champ de fusion associé (ex: "MAGASIN")
      * @returns {Promise<{success: boolean, data?: Object, message?: string}>} Résultat de l'upload
@@ -5746,10 +5758,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return { success: false, message: 'Aucun fichier ZIP validé à envoyer' };
         }
 
-        // Trouver la colonne physique pour ce champ de fusion
+        // Trouver la colonne physique pour ce champ de fusion (= champObj.nom)
         const champs = (documentState && documentState.champsFusion) || mergeFields || [];
         const champObj = champs.find(c => typeof c === 'object' && c.nom === champFusion);
-        const colonne = (champObj && champObj.colonne) || '';
+        const colonne = (champObj && champObj.nom) || '';
         if (!colonne) {
             console.warn('ZIP Upload: Colonne physique non trouvée pour le champ', champFusion);
         }
@@ -5758,7 +5770,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const formData = new FormData();
         formData.append('idClient', authConfig.idClient);
         formData.append('idContact', authConfig.idContact);
-        formData.append('tabBase', JSON.stringify(authConfig.tabBase));
+        formData.append('tabBase', JSON.stringify(basesConfig ? basesConfig.liste : []));
         formData.append('champFusion', champFusion);
         formData.append('colonne', colonne);
         formData.append('nomFichier', zipUploadData.nomFichierZip);
@@ -21657,23 +21669,29 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Stocker les credentials d'authentification si fournis dans l'enveloppe
         if (isLoadEnvelope && jsonData.auth) {
-            // Lire tabBase : tableau d'objets {IdBase, origine}
-            const rawTabBase = Array.isArray(jsonData.auth.tabBase) ? jsonData.auth.tabBase : [];
-            const parsedTabBase = rawTabBase.map(entry => ({
+            authConfig = {
+                idClient: String(jsonData.auth.idClient || ''),
+                idContact: String(jsonData.auth.idContact || ''),
+                secretKey: String(jsonData.auth.secretKey || ''),
+                urlWebservice: String(jsonData.auth.urlWebservice || '')
+            };
+            console.log('loadFromWebDev: Auth config reçue (idClient:', authConfig.idClient, ', urlWebservice:', authConfig.urlWebservice, ')');
+        }
+
+        // Stocker la configuration des bases de données si fournie dans l'enveloppe
+        if (isLoadEnvelope && jsonData.bases) {
+            const rawListe = Array.isArray(jsonData.bases.liste) ? jsonData.bases.liste : [];
+            const parsedListe = rawListe.map(entry => ({
                 IdBase: Number(entry.IdBase) || 0,
                 origine: String(entry.origine || 'clt')
             }));
 
-            authConfig = {
-                idClient: String(jsonData.auth.idClient || ''),
-                idContact: String(jsonData.auth.idContact || ''),
-                tabBase: parsedTabBase,
-                secretKey: String(jsonData.auth.secretKey || ''),
-                urlWebservice: String(jsonData.auth.urlWebservice || '')
+            basesConfig = {
+                liste: parsedListe
             };
-            console.log('loadFromWebDev: Auth config reçue (idClient:', authConfig.idClient, ', bases:', parsedTabBase.length, ', urlWebservice:', authConfig.urlWebservice, ')');
-            if (parsedTabBase.length > 0) {
-                console.log('loadFromWebDev: Bases:', JSON.stringify(parsedTabBase));
+            console.log('loadFromWebDev: Bases config reçue (' + parsedListe.length + ' bases)');
+            if (parsedListe.length > 0) {
+                console.log('loadFromWebDev: Bases:', JSON.stringify(parsedListe));
             }
         }
         
