@@ -11447,10 +11447,14 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // 1. Restaurer le contenu original de toutes les zones
+        // 1. Marquer le mode aperçu inactif EN PREMIER
+        // (nécessaire pour que updateImageZoneDisplay() affiche le placeholder et non l'image)
+        previewState.active = false;
+        
+        // 2. Restaurer le contenu original de toutes les zones
         restoreAllZonesContent();
         
-        // 2. Réactiver l'édition de toutes les zones Quill
+        // 3. Réactiver l'édition de toutes les zones Quill
         quillInstances.forEach((quill, zoneId) => {
             quill.enable();
             
@@ -11461,7 +11465,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        // 2b. Restaurer les zones image dynamiques vers leur placeholder
+        // 3b. Restaurer les zones image dynamiques vers leur placeholder
         const allPagesRestore = documentState.pages || [];
         allPagesRestore.forEach((page, pageIndex) => {
             const zones = page.zones || {};
@@ -11472,9 +11476,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         });
-        
-        // 3. Marquer le mode aperçu inactif
-        previewState.active = false;
         
         // 4. Masquer les contrôles de navigation
         hidePreviewControls();
@@ -17103,12 +17104,20 @@ document.addEventListener('DOMContentLoaded', () => {
             // Ancien format URL (rétrocompatibilité)
             imageUrl = source.valeur;
         } else if (source.type === 'champ') {
-            // Champ de fusion : afficher un placeholder spécial
-            contentEl.innerHTML = getImagePlaceholderSvg(source.valeur);
-            contentEl.classList.remove('has-image');
-            contentEl.classList.add('no-image');
-            contentEl.style.justifyContent = 'center';
-            contentEl.style.alignItems = 'center';
+            // Champ de fusion : vérifier si le mode aperçu est actif
+            if (previewState.active && documentState.donneesApercu.length > 0) {
+                // Mode aperçu actif → ré-afficher l'image dynamique avec les paramètres à jour
+                const zoneId = typeof zoneIdOrEl === 'string' ? zoneIdOrEl : zoneEl.id;
+                const record = documentState.donneesApercu[previewState.currentIndex] || {};
+                updateImageZoneForPreview(zoneId, zoneData, record);
+            } else {
+                // Mode édition → afficher le placeholder
+                contentEl.innerHTML = getImagePlaceholderSvg(source.valeur);
+                contentEl.classList.remove('has-image');
+                contentEl.classList.add('no-image');
+                contentEl.style.justifyContent = 'center';
+                contentEl.style.alignItems = 'center';
+            }
             return;
         }
         
@@ -17929,21 +17938,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (imageInputSourceType) {
             const sourceType = imageInputSourceType.value;
             
-            // Préserver les données existantes (base64, dimensions, etc.)
+            // Préserver TOUTES les données existantes (base64, dimensions, ZIP, collection...)
             const existingSource = zoneData.source || {};
             
             zoneData.source = {
+                // Copier toutes les propriétés existantes (préserve les données ZIP/collection)
+                ...existingSource,
+                // Écraser uniquement les propriétés contrôlées par les inputs
                 type: sourceType,
-                // Pour 'champ' : utiliser le nom du champ de fusion
-                // Pour 'fixe' : valeur vide (image stockée en base64)
-                valeur: sourceType === 'champ' ? (imageInputChamp?.value || '') : '',
-                // Propriétés pour images uploadées (préservées si existantes)
-                imageBase64: existingSource.imageBase64 || null,
-                nomOriginal: existingSource.nomOriginal || null,
-                largeurPx: existingSource.largeurPx || null,
-                hauteurPx: existingSource.hauteurPx || null,
-                poidsBrut: existingSource.poidsBrut || null,
-                poidsCompresse: existingSource.poidsCompresse || null
+                valeur: sourceType === 'champ' ? (imageInputChamp?.value || '') : ''
             };
         }
         
