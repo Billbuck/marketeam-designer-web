@@ -257,6 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {string} idContact - Identifiant contact (utilisateur)
      * @property {string} secretKey - Clé secrète pour signature HMAC-SHA256
      * @property {string} urlWebservice - URL complète de l'endpoint upload (ex: "http://localhost/v1/api/designer/image/upload")
+     * @property {string} urlCollectionListe - URL complète de l'endpoint listing collections (ex: "http://localhost/v1/api/designer/collection/liste")
      */
 
     /**
@@ -1057,6 +1058,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const imageChampGroup = document.getElementById('image-champ-group');
     /** @type {HTMLSelectElement|null} Dropdown champ de fusion */
     const imageInputChamp = document.getElementById('image-input-champ');
+    /** @type {HTMLSelectElement|null} Dropdown collection d'images */
+    const imageInputCollection = document.getElementById('image-input-collection');
+    /** @type {HTMLElement|null} Row collection (conditionnelle) */
+    const imageCollectionRow = document.getElementById('image-collection-row');
     /** @type {HTMLButtonElement|null} Bouton importer ZIP images */
     const imageBtnImportZip = document.getElementById('image-btn-import-zip');
     /** @type {HTMLButtonElement|null} Bouton vider ZIP images */
@@ -5943,7 +5948,133 @@ document.addEventListener('DOMContentLoaded', () => {
 
         console.log('ZIP Upload: Zone mise à jour - collectionId:', zoneData.source.collectionId, ', urlBase:', zoneData.source.urlBase);
 
+        // Ajouter la nouvelle collection à la combo et la sélectionner
+        if (imageInputCollection && details.collectionId) {
+            const newOption = document.createElement('option');
+            newOption.value = String(details.collectionId);
+            const nomCollection = (zipUploadData && zipUploadData.nomFichierZip) 
+                ? zipUploadData.nomFichierZip.replace(/\.zip$/i, '') 
+                : 'Collection ' + details.collectionId;
+            const nbImg = (details.resume && details.resume.imagesStockees) || 0;
+            newOption.textContent = nomCollection + ' (' + nbImg + ' img)';
+            newOption.dataset.urlBase = details.urlBase || '';
+            newOption.dataset.nbImages = String(nbImg);
+            imageInputCollection.appendChild(newOption);
+            imageInputCollection.value = String(details.collectionId);
+            // Afficher la row collection
+            if (imageCollectionRow) imageCollectionRow.style.display = '';
+        }
+
         saveState();
+    }
+
+    /**
+     * Appelle le webservice DesignerCollectionListe pour récupérer les collections
+     * existantes pour une colonne physique donnée, puis remplit la combo collection.
+     * Utilise l'authentification HMAC-SHA256 identique à l'upload.
+     *
+     * @param {string} colonne - Colonne physique du champ de fusion (ex: "Champ1")
+     * @param {string|number} [selectedCollectionId=''] - ID de collection à pré-sélectionner
+     * @returns {Promise<void>}
+     */
+    async function fetchCollections(colonne, selectedCollectionId = '') {
+        if (!authConfig || !authConfig.urlCollectionListe) {
+            console.warn('fetchCollections: URL webservice collection non configurée');
+            populateCollectionSelect([], '');
+            return;
+        }
+
+        if (!colonne) {
+            populateCollectionSelect([], '');
+            return;
+        }
+
+        try {
+            const timestamp = generateTimestamp();
+            const signature = await generateSignature(timestamp);
+
+            const response = await fetch(authConfig.urlCollectionListe, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-IdClient': authConfig.idClient,
+                    'X-IdContact': authConfig.idContact,
+                    'X-Timestamp': timestamp,
+                    'X-Marketeam-Auth': signature
+                },
+                body: JSON.stringify({ colonne: colonne })
+            });
+
+            if (!response.ok) {
+                console.warn('fetchCollections: Erreur HTTP', response.status);
+                populateCollectionSelect([], '');
+                return;
+            }
+
+            const json = await response.json();
+
+            // Réponse enveloppée GénéreJsonSuccès : {Statut, Message, Details}
+            // Details contient la chaîne JSON sérialisée par WLangage, il faut la parser
+            let details = json.Details;
+            if (typeof details === 'string') {
+                try {
+                    details = JSON.parse(details);
+                } catch (e) {
+                    console.warn('fetchCollections: Erreur parsing Details', e);
+                    populateCollectionSelect([], '');
+                    return;
+                }
+            }
+
+            const collections = (details && Array.isArray(details.collections)) ? details.collections : [];
+            console.log('fetchCollections: ' + collections.length + ' collection(s) trouvée(s) pour colonne', colonne);
+            populateCollectionSelect(collections, String(selectedCollectionId));
+
+        } catch (err) {
+            console.warn('fetchCollections: Erreur réseau', err);
+            populateCollectionSelect([], '');
+        }
+    }
+
+    /**
+     * Remplit la combo collection avec les collections fournies.
+     * Affiche ou masque la row collection selon qu'il y a des collections ou non.
+     *
+     * @param {Array<{idCollection: number, nom: string, nbImages: number, urlBase: string, dateCreation: string}>} collections - Tableau de collections
+     * @param {string} [selectedId=''] - ID de collection à pré-sélectionner
+     */
+    function populateCollectionSelect(collections, selectedId = '') {
+        if (!imageInputCollection) return;
+
+        // Vider la combo
+        imageInputCollection.innerHTML = '';
+
+        // Option vide par défaut
+        const emptyOption = document.createElement('option');
+        emptyOption.value = '';
+        emptyOption.textContent = '< sélectionner >';
+        imageInputCollection.appendChild(emptyOption);
+
+        // Ajouter chaque collection
+        collections.forEach(col => {
+            const option = document.createElement('option');
+            option.value = String(col.idCollection);
+            option.textContent = col.nom + ' (' + col.nbImages + ' img)';
+            // Stocker urlBase en data-attribute pour y accéder au changement
+            option.dataset.urlBase = col.urlBase || '';
+            option.dataset.nbImages = String(col.nbImages || 0);
+            if (String(col.idCollection) === selectedId) {
+                option.selected = true;
+            }
+            imageInputCollection.appendChild(option);
+        });
+
+        // Afficher la row collection si au moins 1 collection OU si un champ est sélectionné
+        // (on affiche toujours la combo quand un champ est sélectionné, même si vide, pour cohérence)
+        if (imageCollectionRow) {
+            const champSelectionne = imageInputChamp && imageInputChamp.value;
+            imageCollectionRow.style.display = champSelectionne ? '' : 'none';
+        }
     }
 
     // ─────────────────────────────── FIN SECTION 8c ───────────────────────────────
@@ -14133,6 +14264,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (imageChampGroup) imageChampGroup.classList.remove('hidden');
             populateImageFieldsSelect(source.valeur);
             
+            // Charger les collections pour ce champ et pré-sélectionner celle de la zone
+            if (source.valeur) {
+                fetchCollections(source.valeur, source.collectionId || '');
+            } else {
+                populateCollectionSelect([], '');
+            }
+            
             // Rétablir l'état UI du ZIP selon les données de la ZONE (pas le global zipUploadData)
             if (source.collectionId && source.urlBase) {
                 // La zone a un upload terminé (collectionId présent) → afficher le résultat
@@ -14162,6 +14300,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             if (imageUploadGroup) imageUploadGroup.classList.remove('hidden');
             if (imageChampGroup) imageChampGroup.classList.add('hidden');
+            // Réinitialiser la combo collection (vider les options et masquer la row)
+            populateCollectionSelect([], '');
         }
         
         // Infos fichier et DPI
@@ -15603,6 +15743,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (imageChampGroup) imageChampGroup.classList.remove('hidden');
                     // Remplir la liste des champs disponibles
                     populateImageFieldsSelect('');
+                    // Réinitialiser la combo collection quand on bascule vers "champ"
+                    populateCollectionSelect([], '');
                 } else {
                     if (imageUploadGroup) imageUploadGroup.classList.remove('hidden');
                     if (imageChampGroup) imageChampGroup.classList.add('hidden');
@@ -15649,6 +15791,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateSelectedImageZone((zoneData) => {
                     if (!zoneData.source) zoneData.source = { type: 'champ', valeur: '' };
                     zoneData.source.valeur = imageInputChamp.value;
+                    // Réinitialiser la collection quand le champ change
+                    zoneData.source.collectionId = '';
+                    zoneData.source.urlBase = '';
                 });
                 
                 // Gérer la visibilité du bouton Importer ZIP selon la sélection
@@ -15657,11 +15802,33 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!zipUploadData.prete) {
                         updateZipUploadUIState('champ_selectionne');
                     }
+                    // Charger les collections existantes pour ce champ
+                    // imageInputChamp.value = colonne physique (ex: "Champ1")
+                    fetchCollections(imageInputChamp.value);
                 } else {
                     // Aucun champ → masquer le bouton Importer et réinitialiser le ZIP
                     clearZipData();
                     updateZipUploadUIState('initial');
+                    // Masquer et vider la combo collection
+                    populateCollectionSelect([], '');
                 }
+            });
+        }
+
+        // Collection d'images
+        if (imageInputCollection) {
+            imageInputCollection.addEventListener('change', () => {
+                const selectedOption = imageInputCollection.selectedOptions[0];
+                const collectionId = imageInputCollection.value;
+                const urlBase = selectedOption ? (selectedOption.dataset.urlBase || '') : '';
+
+                updateSelectedImageZone((zoneData) => {
+                    if (!zoneData.source) zoneData.source = { type: 'champ', valeur: '' };
+                    zoneData.source.collectionId = collectionId ? Number(collectionId) : '';
+                    zoneData.source.urlBase = urlBase;
+                });
+
+                console.log('Collection sélectionnée:', collectionId, 'urlBase:', urlBase);
             });
         }
         
@@ -15935,6 +16102,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (imageChampGroup) imageChampGroup.classList.remove('hidden');
                 populateImageFieldsSelect(source.valeur);
                 
+                // Charger les collections pour ce champ et pré-sélectionner celle de la zone
+                if (source.valeur) {
+                    fetchCollections(source.valeur, source.collectionId || '');
+                } else {
+                    populateCollectionSelect([], '');
+                }
+                
                 // Rétablir l'état UI du ZIP selon les données de la ZONE (pas le global zipUploadData)
                 if (source.collectionId && source.urlBase) {
                     // La zone a un upload terminé (collectionId présent) → afficher le résultat
@@ -15965,6 +16139,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 'fixe' ou 'url' : afficher le groupe upload
                 if (imageUploadGroup) imageUploadGroup.classList.remove('hidden');
                 if (imageChampGroup) imageChampGroup.classList.add('hidden');
+                // Réinitialiser la combo collection (vider les options et masquer la row)
+                populateCollectionSelect([], '');
             }
             
             // Afficher les infos fichier si image uploadée
@@ -21666,7 +21842,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 idClient: String(jsonData.auth.idClient || ''),
                 idContact: String(jsonData.auth.idContact || ''),
                 secretKey: String(jsonData.auth.secretKey || ''),
-                urlWebservice: String(jsonData.auth.urlWebservice || '')
+                urlWebservice: String(jsonData.auth.urlWebservice || ''),
+                urlCollectionListe: String(jsonData.auth.urlCollectionListe || '')
             };
             console.log('loadFromWebDev: Auth config reçue (idClient:', authConfig.idClient, ', urlWebservice:', authConfig.urlWebservice, ')');
         }
