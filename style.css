@@ -1162,6 +1162,152 @@ input:checked + .slider:before {
     color: #555;
 }
 
+/* ========================================
+   NOTIFICATION MODAL — Popup thémée générique
+   ======================================== */
+
+.notification-modal-box {
+    width: 480px;
+    max-width: 90%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Inter', sans-serif;
+}
+
+.notification-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--poc-border-color, #e5e7eb);
+}
+
+.notification-modal-header h3 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--poc-text-primary, #1f2937);
+    flex: 1;
+}
+
+.notification-modal-body {
+    overflow-y: auto;
+    max-height: 50vh;
+    margin-bottom: 16px;
+}
+
+/* --- Éléments de message empilés --- */
+
+.notification-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+.notification-item:last-child {
+    margin-bottom: 0;
+}
+
+.notification-item .material-icons {
+    font-size: 22px;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.notification-item-content {
+    flex: 1;
+}
+
+.notification-item-content strong {
+    display: block;
+    margin-bottom: 2px;
+}
+
+.notification-item-content .notification-detail-list {
+    margin: 6px 0 0 0;
+    padding: 0 0 0 16px;
+    font-size: 13px;
+    color: var(--poc-text-secondary, #6b7280);
+}
+
+.notification-item-content .notification-detail-list li {
+    margin-bottom: 2px;
+}
+
+/* --- Niveaux de message (couleurs FIXES, indépendantes du thème) --- */
+
+/* Erreur (rouge) */
+.notification-item.notification-error {
+    background: #fef2f2;
+    border-left: 3px solid #ef4444;
+    color: #991b1b;
+}
+
+.notification-item.notification-error .material-icons {
+    color: #ef4444;
+}
+
+/* Avertissement (orange) */
+.notification-item.notification-warning {
+    background: #fffbeb;
+    border-left: 3px solid #f59e0b;
+    color: #92400e;
+}
+
+.notification-item.notification-warning .material-icons {
+    color: #f59e0b;
+}
+
+/* Info / Succès (vert) */
+.notification-item.notification-info {
+    background: #f0fdf4;
+    border-left: 3px solid #22c55e;
+    color: #166534;
+}
+
+.notification-item.notification-info .material-icons {
+    color: #22c55e;
+}
+
+/* --- Icône header adaptée au niveau --- */
+
+.notification-modal-icon.notification-error {
+    color: #ef4444;
+}
+
+.notification-modal-icon.notification-warning {
+    color: #f59e0b;
+}
+
+.notification-modal-icon.notification-info {
+    color: #22c55e;
+}
+
+/* --- Bouton thème --- */
+
+.btn-primary-theme {
+    background: var(--poc-theme-primary, #934BB7);
+    color: #ffffff;
+    border: none;
+    padding: 8px 24px;
+    border-radius: var(--poc-border-radius-sm, 6px);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.btn-primary-theme:hover {
+    background: var(--poc-theme-primary-dark, #62307B);
+}
+
 .modal-buttons {
     display: flex;
     justify-content: flex-end;

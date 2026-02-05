@@ -865,6 +865,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const historyPositionEl = document.getElementById('history-position');
     const historyTotalEl = document.getElementById('history-total');
     const undoRedoToast = document.getElementById('undo-redo-toast');
+    
+    // Modale de notification générique
+    const notificationModal = document.getElementById('notification-modal');
+    const notificationModalIcon = document.getElementById('notification-modal-icon');
+    const notificationModalTitle = document.getElementById('notification-modal-title');
+    const notificationModalBody = document.getElementById('notification-modal-body');
+    const notificationModalOkBtn = document.getElementById('notification-modal-ok-btn');
+    
     const lblSelected = null; // SUPPRIMÉ - était #lbl-selected-zone
     
     // Contrôles de zoom
@@ -9084,6 +9092,148 @@ document.addEventListener('DOMContentLoaded', () => {
             undoRedoToast.classList.remove('show');
         }, 2500);
     }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // NOTIFICATION MODAL — Popup thémée générique (erreurs, avertissements, infos)
+    // ═══════════════════════════════════════════════════════════════════════════
+    /**
+     * Affiche une popup de notification thémée avec un ou plusieurs messages empilés.
+     * Remplace les alert() navigateur par une modale élégante aux couleurs du thème.
+     *
+     * Chaque message est un objet { level, text, details? } :
+     * - level : 'error' | 'warning' | 'info'
+     * - text : Message principal affiché à l'utilisateur
+     * - details : (optionnel) Tableau de chaînes pour les détails (ex: liste de fichiers ignorés)
+     *
+     * Le titre et l'icône de la popup sont déterminés automatiquement par le niveau
+     * le plus élevé parmi les messages (error > warning > info).
+     *
+     * @param {Array<{level: 'error'|'warning'|'info', text: string, details?: string[]}>} messages - Messages à afficher
+     * @param {Object} [options] - Options supplémentaires
+     * @param {string} [options.title] - Titre personnalisé (sinon auto-déterminé)
+     * @param {string} [options.buttonLabel='Fermer'] - Libellé du bouton
+     * @param {Function} [options.onClose] - Callback appelé à la fermeture
+     * @returns {void}
+     *
+     * @example
+     * // Message unique
+     * showNotification([
+     *     { level: 'error', text: 'Le fichier ZIP est trop volumineux (350 Mo). Maximum autorisé : 200 Mo.' }
+     * ]);
+     *
+     * @example
+     * // Messages empilés après upload
+     * showNotification([
+     *     { level: 'info', text: 'Import réussi ! 150 images associées à des enregistrements.' },
+     *     { level: 'warning', text: '30 image(s) sans correspondance dans la base de données.' },
+     *     { level: 'warning', text: '5 fichier(s) ignoré(s).', details: ['logo.bmp (format non supporté)', 'test.tif (format non supporté)'] }
+     * ]);
+     */
+    function showNotification(messages, options = {}) {
+        if (!notificationModal || !notificationModalBody) return;
+
+        // Déterminer le niveau le plus élevé pour le titre/icône
+        const levelPriority = { error: 3, warning: 2, info: 1 };
+        const levelConfig = {
+            error:   { icon: 'error',        title: 'Erreur',        iconClass: 'notification-error' },
+            warning: { icon: 'warning',      title: 'Avertissement', iconClass: 'notification-warning' },
+            info:    { icon: 'check_circle', title: 'Information',   iconClass: 'notification-info' }
+        };
+
+        let maxLevel = 'info';
+        for (const msg of messages) {
+            if ((levelPriority[msg.level] || 0) > (levelPriority[maxLevel] || 0)) {
+                maxLevel = msg.level;
+            }
+        }
+
+        const config = levelConfig[maxLevel] || levelConfig.info;
+
+        // Titre et icône
+        if (notificationModalTitle) {
+            notificationModalTitle.textContent = options.title || config.title;
+        }
+        if (notificationModalIcon) {
+            notificationModalIcon.textContent = config.icon;
+            notificationModalIcon.className = 'material-icons notification-modal-icon ' + config.iconClass;
+        }
+
+        // Construire le contenu (messages empilés)
+        notificationModalBody.innerHTML = '';
+
+        for (const msg of messages) {
+            const itemConfig = levelConfig[msg.level] || levelConfig.info;
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'notification-item notification-' + msg.level;
+
+            let itemHTML = '<span class="material-icons">' + itemConfig.icon + '</span>';
+            itemHTML += '<div class="notification-item-content">';
+            itemHTML += '<span>' + msg.text + '</span>';
+
+            // Détails optionnels (liste)
+            if (msg.details && Array.isArray(msg.details) && msg.details.length > 0) {
+                itemHTML += '<ul class="notification-detail-list">';
+                // Limiter à 10 détails visibles
+                const maxDetails = 10;
+                const displayed = msg.details.slice(0, maxDetails);
+                for (const detail of displayed) {
+                    itemHTML += '<li>' + detail + '</li>';
+                }
+                if (msg.details.length > maxDetails) {
+                    itemHTML += '<li>… et ' + (msg.details.length - maxDetails) + ' autre(s)</li>';
+                }
+                itemHTML += '</ul>';
+            }
+
+            itemHTML += '</div>';
+            itemDiv.innerHTML = itemHTML;
+            notificationModalBody.appendChild(itemDiv);
+        }
+
+        // Bouton
+        if (notificationModalOkBtn) {
+            notificationModalOkBtn.textContent = options.buttonLabel || 'Fermer';
+        }
+
+        // Stocker le callback onClose
+        notificationModal._onClose = options.onClose || null;
+
+        // Afficher la modale
+        notificationModal.classList.remove('hidden');
+    }
+
+    /**
+     * Ferme la popup de notification.
+     * Appelle le callback onClose si défini.
+     * @returns {void}
+     */
+    function hideNotification() {
+        if (!notificationModal) return;
+        notificationModal.classList.add('hidden');
+
+        // Appeler le callback si défini
+        if (typeof notificationModal._onClose === 'function') {
+            notificationModal._onClose();
+            notificationModal._onClose = null;
+        }
+    }
+
+    // --- Event listeners pour la modale Notification ---
+    if (notificationModalOkBtn) {
+        notificationModalOkBtn.addEventListener('click', hideNotification);
+    }
+    // Fermer en cliquant sur l'overlay
+    if (notificationModal) {
+        notificationModal.addEventListener('click', (e) => {
+            if (e.target === notificationModal) {
+                hideNotification();
+            }
+        });
+    }
+
+    // Exposer les fonctions globalement pour debug console et appel externe
+    window.showNotification = showNotification;
+    window.hideNotification = hideNotification;
 
     /**
      * Valide et contraint une valeur de contrainte aux limites du document.
@@ -19306,6 +19456,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Raccourci clavier : Escape pour fermer les modales
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
+            // Fermer la modale Notification si ouverte
+            if (notificationModal && !notificationModal.classList.contains('hidden')) {
+                hideNotification();
+                return;
+            }
             // Fermer la modale de réinitialisation si ouverte
             if (resetModal && !resetModal.classList.contains('hidden')) {
                 hideResetConfirmation();
