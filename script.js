@@ -1064,8 +1064,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const imageCollectionRow = document.getElementById('image-collection-row');
     /** @type {HTMLButtonElement|null} Bouton importer ZIP images */
     const imageBtnImportZip = document.getElementById('image-btn-import-zip');
-    /** @type {HTMLButtonElement|null} Bouton vider ZIP images */
-    const imageBtnClearZip = document.getElementById('image-btn-clear-zip');
     /** @type {HTMLInputElement|null} Input fichier caché pour ZIP */
     const imageZipFileInput = document.getElementById('image-zip-file-input');
     /** @type {HTMLElement|null} Section upload ZIP */
@@ -5223,7 +5221,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * 
      * Dépendances :
      *   - JSZip (librairie externe)
-     *   - imageBtnImportZip, imageBtnClearZip, imageZipFileInput (Section 1)
+     *   - imageBtnImportZip, imageZipFileInput (Section 1)
      *   - ZIP_MAX_FILE_SIZE, ZIP_ACCEPTED_IMAGE_EXTENSIONS (Section 2)
      */
     // ─────────────────────────────────────────────────────────────────────────────
@@ -5364,7 +5362,9 @@ document.addEventListener('DOMContentLoaded', () => {
      * 3 états possibles :
      * - 'initial' : aucun champ sélectionné → tout masqué sauf la combo
      * - 'champ_selectionne' : champ choisi, pas encore de ZIP → bouton Importer visible
-     * - 'zip_valide' : ZIP importé et validé → bouton Vider visible, combo verrouillée
+     * - 'zip_valide' : ZIP importé et validé → bouton Importer masqué, résultat affiché
+     * 
+     * Note : le verrouillage du champ est géré par le listener de la combo Collection.
      * 
      * @param {'initial'|'champ_selectionne'|'zip_valide'} etat - État à appliquer
      */
@@ -5373,9 +5373,8 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'initial':
                 // Combo déverrouillée
                 if (imageInputChamp) imageInputChamp.disabled = false;
-                // Boutons masqués
+                // Bouton masqué
                 if (imageBtnImportZip) imageBtnImportZip.style.display = 'none';
-                if (imageBtnClearZip) imageBtnClearZip.style.display = 'none';
                 // Résultat/erreur masqués
                 if (imageZipResult) imageZipResult.style.display = 'none';
                 if (imageZipError) imageZipError.style.display = 'none';
@@ -5385,9 +5384,8 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'champ_selectionne':
                 // Combo déverrouillée
                 if (imageInputChamp) imageInputChamp.disabled = false;
-                // Bouton Importer visible, Vider masqué
+                // Bouton Importer visible
                 if (imageBtnImportZip) imageBtnImportZip.style.display = '';
-                if (imageBtnClearZip) imageBtnClearZip.style.display = 'none';
                 // Résultat/erreur masqués
                 if (imageZipResult) imageZipResult.style.display = 'none';
                 if (imageZipError) imageZipError.style.display = 'none';
@@ -5395,11 +5393,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
 
             case 'zip_valide':
-                // Combo VERROUILLÉE
-                if (imageInputChamp) imageInputChamp.disabled = true;
-                // Bouton Importer masqué, Vider visible
+                // Bouton Importer masqué (résultat déjà affiché par showZipResult)
                 if (imageBtnImportZip) imageBtnImportZip.style.display = 'none';
-                if (imageBtnClearZip) imageBtnClearZip.style.display = '';
                 // Le résultat est déjà affiché par showZipResult()
                 break;
         }
@@ -5640,7 +5635,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 zipUploadData.imagesIgnorees
             );
 
-            // Verrouiller la combo et afficher Vider
+            // Afficher l'état zip validé
             updateZipUploadUIState('zip_valide');
 
             // Marquer dans la zoneData que le ZIP est prêt
@@ -15863,6 +15858,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     zoneData.source.urlBase = urlBase;
                 });
 
+                // Verrouiller/déverrouiller le champ selon la sélection de collection
+                if (collectionId) {
+                    // Collection sélectionnée → verrouiller le champ pour éviter un changement accidentel
+                    if (imageInputChamp) imageInputChamp.disabled = true;
+                } else {
+                    // Aucune collection → déverrouiller le champ
+                    if (imageInputChamp) imageInputChamp.disabled = false;
+                }
+
                 console.log('Collection sélectionnée:', collectionId, 'urlBase:', urlBase);
             });
         }
@@ -15976,352 +15980,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         
-    }
-
-    // Charger les données d'une zone dans le formulaire
-    function loadZoneDataToForm(id) {
-        // Empêcher la création de snapshots pendant le chargement du formulaire
-        historyManager.isLoadingForm = true;
-        
-        const zonesData = getCurrentPageZones();
-        const data = zonesData[id];
-        
-        if (!data) {
-            historyManager.isLoadingForm = false;
-            return;
-        }
-        
-        // Zone système : masquer tout le conteneur de propriétés
-        if (isZoneSysteme(data)) {
-            const propertiesContent = document.getElementById('zone-properties-content');
-            if (propertiesContent) {
-                propertiesContent.style.display = 'none';
-            }
-            historyManager.isLoadingForm = false;
-            return;
-        }
-        
-        // Zone normale : s'assurer que le conteneur est visible
-        const propertiesContent = document.getElementById('zone-properties-content');
-        if (propertiesContent) {
-            propertiesContent.style.display = '';
-        }
-        
-        const zoneType = data.type || 'textQuill';
-        zonesData[id].type = zoneType;
-
-        if (zoneType === 'qr') {
-            // Masquer section image et code-barres, afficher section texte (désactivée)
-            if (textPropertiesSection) textPropertiesSection.style.display = 'block';
-            if (imagePropertiesSection) imagePropertiesSection.style.display = 'none';
-            if (barcodePropertiesSection) barcodePropertiesSection.style.display = 'none';
-            
-            setTextControlsEnabled(false);
-            if (inputContent) inputContent.value = 'Zone QR statique (non modifiable)';
-            if (inputFont) inputFont.value = DEFAULT_FONT;
-            if (inputSize) inputSize.value = DEFAULT_FONT_SIZE;
-            if (inputColor) inputColor.value = DEFAULT_TEXT_COLOR;
-            if (inputAlign) inputAlign.value = 'center';
-            if (inputValign) inputValign.value = 'middle';
-            if (inputBgColor) inputBgColor.value = DEFAULT_BG_COLOR;
-            if (chkTransparent) chkTransparent.checked = false;
-            if (chkCopyfit) chkCopyfit.checked = false;
-            if (inputLineHeight) inputLineHeight.value = 1.0;
-            // Bordures pour zone QR (pas applicable)
-            if (inputBorderWidth) {
-                inputBorderWidth.value = 0;
-                updateBorderWidthDisplay(0);
-            }
-            if (inputBorderColor) inputBorderColor.value = DEFAULT_BORDER_COLOR;
-            if (inputBorderStyle) inputBorderStyle.value = 'solid';
-        } else if (zoneType === 'barcode') {
-            // Masquer sections texte et image, afficher section code-barres
-            if (textPropertiesSection) textPropertiesSection.style.display = 'none';
-            if (imagePropertiesSection) imagePropertiesSection.style.display = 'none';
-            if (barcodePropertiesSection) barcodePropertiesSection.style.display = 'block';
-            
-            // Masquer les contrôles spécifiques texte et fond
-            const controlsToHide = [
-                'input-font', 'input-size', 'input-line-height',
-                'chk-copyfit', 'input-color',
-                'input-align', 'input-valign',
-                'input-bg-color', 'chk-transparent',
-                'input-border-width', 'input-border-color', 'input-border-style'
-            ];
-            controlsToHide.forEach(ctrlId => {
-                const el = document.getElementById(ctrlId);
-                if (el) {
-                    const parent = el.closest('.style-row') || el.closest('.input-group');
-                    if (parent) parent.style.display = 'none';
-                }
-            });
-            
-            // Masquer la section bordure
-            const borderSection = document.querySelector('.subsection-title + .style-row');
-            
-            setTextControlsEnabled(false);
-            
-            // Remplir les contrôles code-barres
-            if (inputBarcodeName) inputBarcodeName.value = data.nom || '';
-            if (inputBarcodeType) inputBarcodeType.value = data.typeCodeBarres || 'code128';
-            if (inputBarcodeReadable) inputBarcodeReadable.value = data.texteLisible || 'dessous';
-            if (inputBarcodeFontsize) inputBarcodeFontsize.value = data.taillePolice || DEFAULT_BARCODE_FONT_SIZE;
-            if (inputBarcodeColor) inputBarcodeColor.value = data.couleur || DEFAULT_TEXT_COLOR;
-            
-            // Vérifier si c'est un code 2D (jamais de texte lisible pour QR/DataMatrix)
-            const typeCode = data.typeCodeBarres || 'code128';
-            const config = BARCODE_BWIPJS_CONFIG[typeCode];
-            const is2D = config ? config.is2D : false;
-            
-            // Masquer/afficher les options texte selon le type
-            if (is2D) {
-                // Codes 2D : masquer les options texte lisible
-                if (barcodeReadableGroup) barcodeReadableGroup.style.display = 'none';
-                if (barcodeFontsizeGroup) barcodeFontsizeGroup.style.display = 'none';
-            } else {
-                // Codes 1D : afficher les options texte
-                if (barcodeReadableGroup) barcodeReadableGroup.style.display = '';
-                if (barcodeFontsizeGroup) {
-                    barcodeFontsizeGroup.style.display = (data.texteLisible === 'aucun') ? 'none' : '';
-                }
-            }
-            
-            // Remplir le select des champs de fusion
-            updateBarcodeFieldSelect();
-            if (barcodeInputField) barcodeInputField.value = data.champFusion || '';
-            
-            // Verrouillage
-            if (chkLock) chkLock.checked = isZoneLocked(data);
-        } else if (zoneType === 'image') {
-            // Masquer la section contenu texte et code-barres
-            if (textPropertiesSection) textPropertiesSection.style.display = 'none';
-            if (barcodePropertiesSection) barcodePropertiesSection.style.display = 'none';
-            
-            // Masquer les contrôles spécifiques texte (Police, Taille, Interlignage, etc.)
-            const textOnlyControls = [
-                'input-font', 'input-size', 'input-line-height',
-                'chk-copyfit', 'input-color',
-                'input-align', 'input-valign'
-            ];
-            textOnlyControls.forEach(ctrlId => {
-                const el = document.getElementById(ctrlId);
-                if (el) {
-                    const parent = el.closest('.style-row') || el.closest('.input-group');
-                    if (parent) parent.style.display = 'none';
-                }
-            });
-            
-            // Afficher la section image
-            if (imagePropertiesSection) imagePropertiesSection.style.display = 'block';
-            setTextControlsEnabled(false);
-            
-            const source = data.source || { type: 'fixe', valeur: '' };
-            const redim = data.redimensionnement || { mode: 'ajuster', alignementH: 'center', alignementV: 'middle' };
-            
-            // Rétrocompatibilité : 'url' devient 'fixe' dans le select
-            const selectType = source.type === 'url' ? 'fixe' : source.type;
-            if (imageInputSourceType) imageInputSourceType.value = selectType;
-            if (imageInputMode) imageInputMode.value = redim.mode;
-            setToggleGroupPocValue('image-align-h-group', redim.alignementH);
-            setToggleGroupPocValue('image-align-v-group', redim.alignementV);
-            
-            // Afficher le bon groupe selon le type
-            // Note : vider les styles inline display pour éviter les conflits avec les classes CSS
-            if (imageUploadGroup) imageUploadGroup.style.display = '';
-            if (imageChampGroup) imageChampGroup.style.display = '';
-            
-            // 'fixe' : afficher le groupe upload
-            // 'champ' : afficher le select des champs de fusion
-            if (source.type === 'champ') {
-                if (imageUploadGroup) imageUploadGroup.classList.add('hidden');
-                if (imageChampGroup) imageChampGroup.classList.remove('hidden');
-                populateImageFieldsSelect(source.valeur);
-                
-                // Charger les collections pour ce champ et pré-sélectionner celle de la zone
-                if (source.valeur) {
-                    fetchCollections(source.valeur, source.collectionId || '');
-                } else {
-                    populateCollectionSelect([], '');
-                }
-                
-                // Rétablir l'état UI du ZIP selon les données de la ZONE (pas le global zipUploadData)
-                if (source.collectionId && source.urlBase) {
-                    // La zone a un upload terminé (collectionId présent) → afficher le résultat
-                    updateZipUploadUIState('zip_valide');
-                    showZipResult(
-                        source.nbImagesServeur || source.nbImages || 0,
-                        0,
-                        source.nomZip || 'ZIP importé',
-                        []
-                    );
-                } else if (source.valeur && zipUploadData.prete && zipUploadData.nomFichierZip) {
-                    // ZIP validé en mémoire (pas encore uploadé) → afficher le résultat temporaire
-                    updateZipUploadUIState('zip_valide');
-                    showZipResult(
-                        zipUploadData.imagesValides.length,
-                        zipUploadData.imagesIgnorees.length,
-                        zipUploadData.nomFichierZip,
-                        zipUploadData.imagesIgnorees
-                    );
-                } else if (source.valeur) {
-                    // Champ sélectionné mais pas de ZIP
-                    updateZipUploadUIState('champ_selectionne');
-                } else {
-                    // Pas de champ
-                    updateZipUploadUIState('initial');
-                }
-            } else {
-                // 'fixe' ou 'url' : afficher le groupe upload
-                if (imageUploadGroup) imageUploadGroup.classList.remove('hidden');
-                if (imageChampGroup) imageChampGroup.classList.add('hidden');
-                // Réinitialiser la combo collection (vider les options et masquer la row)
-                populateCollectionSelect([], '');
-                // Réinitialiser l'état ZIP UI (débloquer la combo champ, masquer bouton Vider)
-                updateZipUploadUIState('initial');
-            }
-            
-            // Afficher les infos fichier si image uploadée
-            updateImageFileInfoDisplay(source);
-
-            // Mettre à jour l'indicateur DPI et le badge
-            updateDpiIndicator(id);
-            updateImageDpiBadge(id);
-            
-            // Bordure (contrôle commun - doit rester visible)
-            if (inputBorderWidth) {
-                inputBorderWidth.value = data.border?.width || 0;
-                updateBorderWidthDisplay(data.border?.width || 0);
-            }
-            if (inputBorderColor) inputBorderColor.value = data.border?.color || DEFAULT_BORDER_COLOR;
-            if (inputBorderStyle) inputBorderStyle.value = data.border?.style || DEFAULT_BORDER_STYLE;
-            
-            // Fond (contrôle commun - doit rester visible)
-            if (inputBgColor) inputBgColor.value = data.bgColor || DEFAULT_BG_COLOR;
-            if (chkTransparent) chkTransparent.checked = data.isTransparent !== undefined ? data.isTransparent : true;
-            if (inputBgColor && chkTransparent) inputBgColor.disabled = chkTransparent.checked;
-            
-            // Verrouillage (contrôle commun)
-            if (chkLock) chkLock.checked = isZoneLocked(data);
-        } else if (zoneType === 'textQuill') {
-            // Zone texte Quill : édition directement dans la zone (pas via textarea)
-            if (textPropertiesSection) textPropertiesSection.style.display = 'block';
-            if (imagePropertiesSection) imagePropertiesSection.style.display = 'none';
-            if (barcodePropertiesSection) barcodePropertiesSection.style.display = 'none';
-            
-            // Désactiver les contrôles texte pour éviter un conflit avec l'éditeur Quill
-            setTextControlsEnabled(false);
-            if (inputContent) {
-                inputContent.value = 'Zone Quill (éditez directement dans la zone).';
-                inputContent.placeholder = 'Zone Quill (édition dans la zone)';
-            }
-            
-            // Afficher des valeurs par défaut (informatives)
-            if (inputFont) inputFont.value = data.font || QUILL_DEFAULT_FONT;
-            if (inputSize) inputSize.value = data.size || QUILL_DEFAULT_SIZE;
-            if (inputColor) inputColor.value = data.color || QUILL_DEFAULT_COLOR;
-            if (inputLineHeight) inputLineHeight.value = data.lineHeight || QUILL_DEFAULT_LINE_HEIGHT;
-            
-            // Fond/bordure/verrouillage : laisser visibles (mais désactivés via setTextControlsEnabled)
-            if (chkLock) chkLock.checked = isZoneLocked(data);
-        } else {
-            // Zone texte
-            // Afficher la section contenu texte
-            if (textPropertiesSection) textPropertiesSection.style.display = 'block';
-            
-            // Réafficher les contrôles spécifiques texte (masqués pour les zones image/barcode)
-            const controlsToShow = [
-                'input-font', 'input-size', 'input-line-height',
-                'chk-copyfit', 'input-color',
-                'input-align', 'input-valign',
-                'input-bg-color', 'chk-transparent',
-                'input-border-width', 'input-border-color', 'input-border-style'
-            ];
-            controlsToShow.forEach(ctrlId => {
-                const el = document.getElementById(ctrlId);
-                if (el) {
-                    const parent = el.closest('.style-row') || el.closest('.input-group');
-                    if (parent) parent.style.display = '';
-                }
-            });
-            
-            // Masquer les sections image et code-barres
-            if (imagePropertiesSection) imagePropertiesSection.style.display = 'none';
-            if (barcodePropertiesSection) barcodePropertiesSection.style.display = 'none';
-            
-            setTextControlsEnabled(true);
-            if (inputContent) inputContent.value = data.content || '';
-            if (inputFont) inputFont.value = data.font || DEFAULT_FONT;
-            if (inputSize) inputSize.value = data.size || DEFAULT_FONT_SIZE;
-            if (inputColor) inputColor.value = data.color || DEFAULT_TEXT_COLOR;
-            if (inputAlign) inputAlign.value = data.align || DEFAULT_ALIGN_H;
-            if (inputValign) inputValign.value = data.valign || DEFAULT_ALIGN_V;
-            if (inputBgColor) inputBgColor.value = data.bgColor || DEFAULT_BG_COLOR;
-            if (chkTransparent) chkTransparent.checked = data.isTransparent !== undefined ? data.isTransparent : true;
-            if (chkCopyfit) chkCopyfit.checked = data.copyfit || false;
-            if (inputLineHeight) inputLineHeight.value = data.lineHeight !== undefined ? data.lineHeight : 1.2;
-            
-            // Initialiser la bordure si nécessaire
-            if (!data.border) {
-                zonesData[id].border = { width: 0, color: DEFAULT_BORDER_COLOR, style: DEFAULT_BORDER_STYLE };
-            }
-            const border = data.border || { width: 0, color: DEFAULT_BORDER_COLOR, style: DEFAULT_BORDER_STYLE };
-            if (inputBorderWidth) {
-                inputBorderWidth.value = border.width || 0;
-                updateBorderWidthDisplay(border.width || 0);
-            }
-            if (inputBorderColor) inputBorderColor.value = border.color || DEFAULT_BORDER_COLOR;
-            if (inputBorderStyle) inputBorderStyle.value = border.style || DEFAULT_BORDER_STYLE;
-            
-            // Charger la valeur des lignes vides (avec rétrocompatibilité)
-            if (inputEmptyLines) {
-                let emptyLinesValue = data.emptyLines;
-                if (emptyLinesValue === undefined) {
-                    // Ancien format booléen
-                    emptyLinesValue = data.removeEmptyLines ? 1 : 0;
-                }
-                // Migration : ancienne valeur 2 → nouvelle valeur 1
-                if (emptyLinesValue === 2) emptyLinesValue = 1;
-                inputEmptyLines.value = emptyLinesValue;
-            }
-            
-            // Initialiser le formatage partiel si nécessaire
-            if (!data.formatting) {
-                zonesData[id].formatting = [];
-            }
-        }
-        if (chkLock) chkLock.checked = isZoneLocked(data);
-        
-        // Activer/désactiver les champs de géométrie selon le verrouillage ou système
-        const isLocked = isZoneLocked(data);
-        const isSysteme = isZoneSysteme(data);
-        const isReadOnly = isLocked || isSysteme;
-        if (inputX) inputX.disabled = isReadOnly;
-        if (inputY) inputY.disabled = isReadOnly;
-        if (inputW) inputW.disabled = isReadOnly;
-        if (inputH) inputH.disabled = isReadOnly;
-        
-        // Désactiver le checkbox de verrouillage si la zone est système
-        if (chkLock) chkLock.disabled = isSysteme;
-        
-        // Afficher/masquer la section Lignes vides selon le type de zone (texte uniquement)
-        if (emptyLinesSection) {
-            emptyLinesSection.style.display = (zoneType === 'text') ? 'block' : 'none';
-        }
-        
-        // Gestion état UI couleur fond
-        inputBgColor.disabled = chkTransparent.checked;
-
-        // Mettre à jour les géométries
-        const zoneEl = document.getElementById(id);
-        if (zoneEl) {
-            updateGeomDisplay(zoneEl);
-        }
-        
-        // Désactiver le mode multi-sélection
-        setMultiSelectionMode(false);
-        
-        // Réactiver la sauvegarde dans l'historique
-        historyManager.isLoadingForm = false;
     }
 
     // Activer/désactiver le mode multi-sélection dans le formulaire
@@ -18866,13 +18524,6 @@ document.addEventListener('DOMContentLoaded', () => {
         imageZipFileInput.addEventListener('change', handleZipFileSelection);
     }
 
-    // Bouton Vider ZIP
-    if (imageBtnClearZip) {
-        imageBtnClearZip.addEventListener('click', () => {
-            clearZipData();
-        });
-    }
-    
     // NOTE: Le bloc de gestion des annotations de formatage textarea (inputContent) a été supprimé
     // car il gérait l'ancien type 'text'. Le formatage riche est maintenant géré par Quill (type 'textQuill').
     
