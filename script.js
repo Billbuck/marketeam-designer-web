@@ -4783,17 +4783,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const DPI_MINIMUM = 150;
     const DPI_RECOMMENDED = 200;
 
-    // ─── Constantes Upload ZIP Images ───
-    /** Taille max du fichier ZIP (200 Mo) */
-    const ZIP_MAX_FILE_SIZE = 200 * 1024 * 1024;
-    /** Formats d'image acceptés dans le ZIP */
-    const ZIP_ACCEPTED_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif'];
-    /** Taille min d'un fichier image valide (1 Ko — évite les fichiers vides/corrompus) */
-    const ZIP_MIN_IMAGE_SIZE = 1024;
-    /** Taille max d'un fichier image individuel dans le ZIP (20 Mo) */
-    const ZIP_MAX_IMAGE_SIZE = 20 * 1024 * 1024;
-    /** Nombre maximum d'images dans un ZIP */
-    const ZIP_MAX_IMAGE_COUNT = 1000;
+    // ─── Limites Upload ZIP Images (valeurs par défaut, écrasables via postMessage 'load' → rubrique 'limites') ───
+    /** @type {number} Taille max du fichier ZIP en octets (défaut : 200 Mo). Pilotable par WebDev via limites.zipMaxFileSize */
+    let ZIP_MAX_FILE_SIZE = 200 * 1024 * 1024;
+    /** @type {string[]} Formats d'image acceptés dans le ZIP (défaut : jpg, jpeg, png, gif). Pilotable par WebDev via limites.zipAcceptedImageExtensions */
+    let ZIP_ACCEPTED_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif'];
+    /** @type {number} Taille min d'un fichier image en octets (défaut : 1 Ko). Pilotable par WebDev via limites.zipMinImageSize */
+    let ZIP_MIN_IMAGE_SIZE = 1024;
+    /** @type {number} Taille max d'un fichier image individuel en octets (défaut : 20 Mo). Pilotable par WebDev via limites.zipMaxImageSize */
+    let ZIP_MAX_IMAGE_SIZE = 20 * 1024 * 1024;
+    // NOTE : Pas de limite sur le nombre d'images (ZIP_MAX_IMAGE_COUNT supprimé)
 
     // === VALEURS PAR DÉFAUT DES ZONES ===
     /** @type {string} Police par défaut pour les zones texte */
@@ -5461,7 +5460,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * - Taille du ZIP (max ZIP_MAX_FILE_SIZE)
      * - Le fichier est bien un ZIP valide
      * - Chaque fichier interne : format accepté, taille min/max
-     * - Nombre total d'images (max ZIP_MAX_IMAGE_COUNT)
      * - Au moins 1 image valide
      * 
      * @param {File} file - Fichier ZIP sélectionné
@@ -5565,14 +5563,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 taille: fileSize,
                 extension: getFileExtension(fileName)
             });
-
-            // Vérifier le nombre max d'images
-            if (imagesValides.length > ZIP_MAX_IMAGE_COUNT) {
-                return {
-                    success: false,
-                    message: `Trop d'images dans le ZIP (max ${ZIP_MAX_IMAGE_COUNT})`
-                };
-            }
 
             // Mise à jour progression
             const pct = Math.round(30 + (processed / totalEntries) * 60);
@@ -8374,8 +8364,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * Mappe les clés WebDev vers les clés internes du Designer.
+     * WebDev utilise des noms français (texte), le Designer utilise des noms techniques (textQuill).
+     * @param {Object} obj - Objet à mapper (autorisations ou limites)
+     * @returns {Object} Objet avec les clés mappées
+     */
+    function mapConstraintKeys(obj) {
+        if (!obj || typeof obj !== 'object') return obj;
+        
+        const mapped = { ...obj };
+        
+        // Mapping : texte (WebDev) → textQuill (interne)
+        if ('texte' in mapped && !('textQuill' in mapped)) {
+            mapped.textQuill = mapped.texte;
+            delete mapped.texte;
+        }
+        
+        return mapped;
+    }
+
+    /**
      * Applique les contraintes de document reçues de WebDev.
      * Fusionne les contraintes reçues avec les valeurs par défaut.
+     * Gère le mapping des clés WebDev (texte) vers les clés internes (textQuill).
      * 
      * @param {Object} constraints - Objet constraints reçu de WebDev
      * @param {ConstraintsAutorisations} [constraints.autorisations] - Autorisations par type
@@ -8383,6 +8394,14 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {void}
      * 
      * @example
+     * // Format WebDev (accepté)
+     * applyConstraints({
+     *     autorisations: { texte: true, image: false },
+     *     limites: { texte: 1 }
+     * });
+     * 
+     * @example
+     * // Format interne (accepté aussi)
      * applyConstraints({
      *     autorisations: { textQuill: true, image: false },
      *     limites: { textQuill: 1 }
@@ -8400,22 +8419,29 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
+        // Mapper les clés WebDev vers les clés internes (texte → textQuill)
+        const mappedAutorisations = mapConstraintKeys(constraints.autorisations);
+        const mappedLimites = mapConstraintKeys(constraints.limites);
         
         // Fusionner avec les valeurs par défaut
-        if (constraints.autorisations) {
+        if (mappedAutorisations) {
             documentState.constraints.autorisations = {
                 ...DEFAULT_CONSTRAINTS.autorisations,
-                ...constraints.autorisations
+                ...mappedAutorisations
             };
         }
         
-        if (constraints.limites) {
+        if (mappedLimites) {
             documentState.constraints.limites = {
                 ...DEFAULT_CONSTRAINTS.limites,
-                ...constraints.limites
+                ...mappedLimites
             };
         }
         
+        console.log('applyConstraints: Contraintes appliquées -',
+            'autorisations:', documentState.constraints.autorisations,
+            ', limites:', documentState.constraints.limites
+        );
         
         // Mettre à jour la visibilité des boutons
         updateZoneButtonsVisibility();
@@ -21707,6 +21733,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log('loadFromWebDev: Bases:', JSON.stringify(parsedListe));
             }
         }
+
+        // Appliquer les limites ZIP si fournies dans l'enveloppe
+        if (isLoadEnvelope && jsonData.limites && typeof jsonData.limites === 'object') {
+            const lim = jsonData.limites;
+
+            if (typeof lim.zipMaxFileSize === 'number' && lim.zipMaxFileSize > 0) {
+                ZIP_MAX_FILE_SIZE = lim.zipMaxFileSize;
+            }
+            if (typeof lim.zipMinImageSize === 'number' && lim.zipMinImageSize > 0) {
+                ZIP_MIN_IMAGE_SIZE = lim.zipMinImageSize;
+            }
+            if (typeof lim.zipMaxImageSize === 'number' && lim.zipMaxImageSize > 0) {
+                ZIP_MAX_IMAGE_SIZE = lim.zipMaxImageSize;
+            }
+            if (Array.isArray(lim.zipAcceptedImageExtensions) && lim.zipAcceptedImageExtensions.length > 0) {
+                ZIP_ACCEPTED_IMAGE_EXTENSIONS = lim.zipAcceptedImageExtensions.map(ext => String(ext).toLowerCase());
+            }
+
+            console.log('loadFromWebDev: Limites ZIP reçues -',
+                'maxFile:', formatFileSize(ZIP_MAX_FILE_SIZE),
+                ', minImage:', formatFileSize(ZIP_MIN_IMAGE_SIZE),
+                ', maxImage:', formatFileSize(ZIP_MAX_IMAGE_SIZE),
+                ', extensions:', ZIP_ACCEPTED_IMAGE_EXTENSIONS.join(', ')
+            );
+        }
         
         // Validation de base
         if (!documentJson || typeof documentJson !== 'object') {
@@ -22727,6 +22778,15 @@ document.addEventListener('DOMContentLoaded', () => {
      * WebDev → Designer :
      * {
      *   "action": "load",
+     *   "mode": "standard",
+     *   "auth": { ... },
+     *   "bases": { ... },
+     *   "limites": {
+     *     "zipMaxFileSize": 209715200,
+     *     "zipMinImageSize": 1024,
+     *     "zipMaxImageSize": 20971520,
+     *     "zipAcceptedImageExtensions": ["jpg", "jpeg", "png", "gif"]
+     *   },
      *   "data": {
      *     "champsFusion": [...],
      *     "donneesApercu": [
