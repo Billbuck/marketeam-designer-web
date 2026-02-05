@@ -1084,8 +1084,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const imageZipProgressBar = document.getElementById('image-zip-progress-bar');
     /** @type {HTMLElement|null} Zone résultat validation ZIP */
     const imageZipResult = document.getElementById('image-zip-result');
-    /** @type {HTMLElement|null} Zone erreur ZIP */
-    const imageZipError = document.getElementById('image-zip-error');
     /** @type {HTMLInputElement|null} Input fichier caché */
     const imageFileInput = document.getElementById('image-file-input');
     
@@ -5223,7 +5221,6 @@ document.addEventListener('DOMContentLoaded', () => {
      *   - isZipImageFormatAccepted() : Validation extension fichier dans ZIP
      *   - showZipProgress() : Affichage jauge de progression
      *   - showZipResult() : Affichage résultat validation
-     *   - showZipError() : Affichage erreur
      *   - clearZipData() : Réinitialisation données ZIP
      * 
      * Dépendances :
@@ -5301,7 +5298,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (imageZipProgressBar) imageZipProgressBar.style.width = pourcentage + '%';
         }
         if (imageZipResult) imageZipResult.style.display = 'none';
-        if (imageZipError) imageZipError.style.display = 'none';
     }
 
     /**
@@ -5346,24 +5342,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Affiche une erreur liée au ZIP.
-     * @param {string} message - Message d'erreur
-     */
-    function showZipError(message) {
-        hideZipProgress();
-        if (imageZipResult) imageZipResult.style.display = 'none';
-
-        if (imageZipError) {
-            imageZipError.innerHTML = `<span class="material-icons">error</span><span>${message}</span>`;
-            imageZipError.style.display = 'flex';
-            // Masquer après 8 secondes
-            setTimeout(() => {
-                if (imageZipError) imageZipError.style.display = 'none';
-            }, 8000);
-        }
-    }
-
-    /**
      * Met à jour la visibilité des éléments du groupe ZIP selon l'état courant.
      * 
      * 3 états possibles :
@@ -5382,9 +5360,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (imageInputChamp) imageInputChamp.disabled = false;
                 // Bouton masqué
                 if (imageBtnImportZip) imageBtnImportZip.style.display = 'none';
-                // Résultat/erreur masqués
+                // Résultat masqué
                 if (imageZipResult) imageZipResult.style.display = 'none';
-                if (imageZipError) imageZipError.style.display = 'none';
                 hideZipProgress();
                 break;
 
@@ -5393,9 +5370,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (imageInputChamp) imageInputChamp.disabled = false;
                 // Bouton Importer visible
                 if (imageBtnImportZip) imageBtnImportZip.style.display = '';
-                // Résultat/erreur masqués
+                // Résultat masqué
                 if (imageZipResult) imageZipResult.style.display = 'none';
-                if (imageZipError) imageZipError.style.display = 'none';
                 hideZipProgress();
                 break;
 
@@ -5425,7 +5401,6 @@ document.addEventListener('DOMContentLoaded', () => {
             imageZipResult.innerHTML = '';
             imageZipResult.style.display = 'none';
         }
-        if (imageZipError) imageZipError.style.display = 'none';
 
         // Mettre à jour la zoneData pour retirer la référence ZIP
         if (selectedZoneIds.length === 1) {
@@ -5473,7 +5448,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (file.size > ZIP_MAX_FILE_SIZE) {
             return {
                 success: false,
-                message: `Fichier trop volumineux (${formatFileSize(file.size)}, max ${formatFileSize(ZIP_MAX_FILE_SIZE)})`
+                message: `Le fichier est trop volumineux (${formatFileSize(file.size)}). La taille maximale autorisée est de ${formatFileSize(ZIP_MAX_FILE_SIZE)}.`
             };
         }
 
@@ -5490,7 +5465,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) {
             return {
                 success: false,
-                message: 'Fichier ZIP invalide ou corrompu'
+                message: 'Le fichier sélectionné n\'est pas un fichier ZIP valide ou est endommagé.'
             };
         }
 
@@ -5500,6 +5475,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const entries = Object.values(zip.files);
         const totalEntries = entries.length;
         let processed = 0;
+
+        // 2b. Vérifier si le ZIP est protégé par mot de passe
+        // JSZip ne supporte pas les ZIP chiffrés : on détecte en essayant de lire le premier fichier non-dossier
+        const firstFile = entries.find(e => !e.dir);
+        let firstFileBlob = null;
+        let firstFileName = firstFile ? firstFile.name : null;
+
+        if (firstFile) {
+            try {
+                firstFileBlob = await firstFile.async('blob');
+            } catch (e) {
+                if (e.message && e.message.toLowerCase().includes('encrypted')) {
+                    return {
+                        success: false,
+                        message: 'Le fichier ZIP est protégé par un mot de passe. Veuillez utiliser un ZIP sans mot de passe.'
+                    };
+                }
+                // Autre erreur sur le premier fichier : on continue, elle sera gérée dans la boucle
+            }
+        }
 
         for (const entry of entries) {
             processed++;
@@ -5530,8 +5525,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // On utilise une approche pragmatique via async decompression
             let fileSize = 0;
             try {
-                const blob = await entry.async('blob');
+                // Réutiliser le blob déjà lu pour le premier fichier (test mot de passe)
+                const blob = (entry.name === firstFileName && firstFileBlob) 
+                    ? firstFileBlob 
+                    : await entry.async('blob');
                 fileSize = blob.size;
+                // Libérer la référence après utilisation
+                if (entry.name === firstFileName) firstFileBlob = null;
             } catch (e) {
                 imagesIgnorees.push({
                     nom: fileName,
@@ -5575,7 +5575,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (imagesValides.length === 0) {
             return {
                 success: false,
-                message: 'Aucune image valide trouvée dans le ZIP'
+                message: 'Aucune image utilisable n\'a été trouvée dans le ZIP. Formats acceptés : ' + ZIP_ACCEPTED_IMAGE_EXTENSIONS.map(ext => ext.toUpperCase()).join(', ') + '.'
             };
         }
 
@@ -5612,12 +5612,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!zoneData || zoneData.type !== 'image') return;
         if (!zoneData.source || zoneData.source.type !== 'champ') return;
 
-        // Vérifier qu'un champ de fusion est sélectionné
+        // Vérifier qu'un champ de fusion est sélectionné (sécurité — ne devrait pas arriver car le bouton est masqué sans champ)
         const champSelectionne = imageInputChamp?.value;
-        if (!champSelectionne) {
-            showZipError('Veuillez d\'abord sélectionner un champ de fusion');
-            return;
-        }
+        if (!champSelectionne) return;
 
         // Lancer la lecture/validation
         console.log('ZIP Upload: Fichier sélectionné:', file.name, '- Taille:', formatFileSize(file.size));
@@ -5649,26 +5646,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (uploadResult.success) {
                     console.log('ZIP Upload: Upload webservice réussi');
                     handleZipUploadResponse(uploadResult.data);
-                    // Réafficher le résultat final (avec les infos serveur)
+                    // Réafficher le résultat final inline (toolbar)
                     showZipResult(
                         zipUploadData.imagesValides.length,
                         zipUploadData.imagesIgnorees.length,
                         zipUploadData.nomFichierZip,
                         zipUploadData.imagesIgnorees
                     );
+                    // Afficher le résumé serveur dans une popup
+                    showUploadSummary(uploadResult.data);
                 } else {
                     console.warn('ZIP Upload: Échec upload webservice -', uploadResult.message);
-                    showZipError('Upload serveur : ' + uploadResult.message);
+                    showNotification([{ level: 'error', text: uploadResult.message }], { title: 'Échec de l\'envoi' });
                     // Note : on garde l'état 'zip_valide' car la validation locale a réussi
-                    // L'utilisateur peut réessayer ou vider
                 }
             } else {
                 // Pas de config auth → mode local uniquement (dev/test)
                 console.log('ZIP Upload: Pas de config auth, mode local uniquement');
+                // Popup locale si des fichiers ont été ignorés (pas de résumé serveur disponible)
+                if (zipUploadData.imagesIgnorees.length > 0) {
+                    showNotification([
+                        { level: 'info', text: zipUploadData.imagesValides.length + ' image(s) valide(s) trouvée(s) dans le ZIP.' },
+                        { level: 'warning', text: zipUploadData.imagesIgnorees.length + ' fichier(s) ignoré(s).', details: zipUploadData.imagesIgnorees.map(f => f.nom + ' (' + f.raison + ')') }
+                    ], { title: 'Import partiel' });
+                }
             }
         } else {
             console.warn('ZIP Upload: Validation échouée -', result.message);
-            showZipError(result.message);
+            showNotification([{ level: 'error', text: result.message }]);
             // Rester en état champ sélectionné (bouton Importer visible)
             updateZipUploadUIState('champ_selectionne');
         }
@@ -5749,7 +5754,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function uploadZipToWebservice(champFusion) {
         // Vérifications préalables
         if (!authConfig || !authConfig.urlWebservice) {
-            return { success: false, message: 'Configuration webservice non disponible. Vérifiez que le message load contient la propriété auth.' };
+            return { success: false, message: 'La connexion au serveur n\'est pas configurée. Contactez votre administrateur.' };
         }
 
         if (!zipUploadData.prete || !zipUploadData.zipFile) {
@@ -5762,6 +5767,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const colonne = (champObj && champObj.nom) || '';
         if (!colonne) {
             console.warn('ZIP Upload: Colonne physique non trouvée pour le champ', champFusion);
+            return { success: false, message: 'Le champ de fusion sélectionné n\'a pas pu être identifié dans la base de données.' };
         }
 
         // Construire le FormData
@@ -5780,7 +5786,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             signature = await generateSignature(timestamp);
         } catch (e) {
-            return { success: false, message: 'Erreur de génération de la signature : ' + e.message };
+            return { success: false, message: 'Erreur d\'authentification. Veuillez rafraîchir la page et réessayer.' };
         }
 
         const url = authConfig.urlWebservice;
@@ -5849,10 +5855,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             resolve({ success: true, data: reponse });
                         }
                     } catch (e) {
-                        resolve({ success: false, message: 'Réponse serveur invalide (JSON)' });
+                        resolve({ success: false, message: 'Le serveur a renvoyé une réponse inattendue. Veuillez réessayer.' });
                     }
                 } else {
-                    let errorMsg = 'Erreur serveur (HTTP ' + xhr.status + ')';
+                    let errorMsg = 'Le serveur n\'est pas disponible (erreur ' + xhr.status + '). Veuillez réessayer dans quelques instants.';
                     try {
                         const errJson = JSON.parse(xhr.responseText);
                         // Gérer les erreurs au format enveloppé WebDev
@@ -5870,13 +5876,13 @@ document.addEventListener('DOMContentLoaded', () => {
             xhr.onerror = () => {
                 if (intervalAnalyse) clearInterval(intervalAnalyse);
                 console.error('ZIP Upload: Erreur réseau');
-                resolve({ success: false, message: 'Erreur réseau. Vérifiez votre connexion.' });
+                resolve({ success: false, message: 'La connexion au serveur a échoué. Vérifiez votre connexion internet.' });
             };
 
             // Timeout (ne devrait pas arriver avec timeout = 0)
             xhr.ontimeout = () => {
                 if (intervalAnalyse) clearInterval(intervalAnalyse);
-                resolve({ success: false, message: 'Délai d\'attente dépassé' });
+                resolve({ success: false, message: 'Le serveur met trop de temps à répondre. Veuillez réessayer.' });
             };
 
             // Ouvrir la connexion
@@ -5959,6 +5965,64 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         saveState();
+    }
+
+    /**
+     * Affiche une popup de résumé après upload réussi vers le webservice.
+     * Analyse les données du résumé serveur pour construire les messages :
+     * - Info : nombre d'images associées à des enregistrements
+     * - Avertissement (A13) : images sans correspondance BDD
+     * - Avertissement (A12) : fichiers ignorés côté client
+     *
+     * @param {Object} details - Objet Details de la réponse webservice
+     * @param {Object} details.resume - Résumé du traitement serveur
+     * @param {Array} [details.imagesSansCorrespondance] - Noms des images sans correspondance
+     * @returns {void}
+     */
+    function showUploadSummary(details) {
+        const resume = details && details.resume;
+        if (!resume) return;
+
+        const messages = [];
+
+        // A15 — Info succès : nombre d'images associées
+        const nbAssociees = resume.imagesAvecCorrespondance || 0;
+        const nbStockees = resume.imagesStockees || 0;
+        messages.push({
+            level: 'info',
+            text: 'Import réussi ! ' + nbAssociees + ' image(s) associée(s) à des enregistrements sur ' + nbStockees + ' image(s) importée(s).'
+        });
+
+        // A13 — Avertissement : images sans correspondance BDD
+        const nbSansCorrespondance = resume.imagesSansCorrespondance || 0;
+        if (nbSansCorrespondance > 0) {
+            const detailsSansCorr = Array.isArray(details.imagesSansCorrespondance)
+                ? details.imagesSansCorrespondance
+                : [];
+            const msg = {
+                level: 'warning',
+                text: nbSansCorrespondance + ' image(s) importée(s) n\'ont pas de correspondance dans la base de données. Ces images ne seront pas utilisées.'
+            };
+            if (detailsSansCorr.length > 0) {
+                msg.details = detailsSansCorr;
+            }
+            messages.push(msg);
+        }
+
+        // A12 — Avertissement : fichiers ignorés côté client (depuis zipUploadData)
+        if (zipUploadData.imagesIgnorees && zipUploadData.imagesIgnorees.length > 0) {
+            messages.push({
+                level: 'warning',
+                text: zipUploadData.imagesIgnorees.length + ' fichier(s) ignoré(s) dans le ZIP.',
+                details: zipUploadData.imagesIgnorees.map(f => f.nom + ' (' + f.raison + ')')
+            });
+        }
+
+        // Déterminer le titre selon la présence d'avertissements
+        const hasWarnings = messages.some(m => m.level === 'warning');
+        const title = hasWarnings ? 'Import avec avertissements' : 'Import réussi';
+
+        showNotification(messages, { title: title });
     }
 
     /**
@@ -9260,6 +9324,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Exposer les fonctions globalement pour debug console et appel externe
     window.showNotification = showNotification;
     window.hideNotification = hideNotification;
+    window.showUploadSummary = showUploadSummary;
 
     /**
      * Valide et contraint une valeur de contrainte aux limites du document.
