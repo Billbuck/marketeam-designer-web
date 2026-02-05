@@ -4143,6 +4143,31 @@ button:disabled {
     margin-top: 8px;
 }
 
+/* ==================== COLLECTION LOADING STATE ==================== */
+
+/* Shimmer animation sur la combo collection pendant le chargement */
+@keyframes collection-shimmer {
+    0% {
+        background-position: -200px 0;
+    }
+    100% {
+        background-position: 200px 0;
+    }
+}
+
+.dropdown-select-poc.loading {
+    background: linear-gradient(
+        90deg,
+        var(--poc-bg-input) 25%,
+        var(--poc-theme-primary-light) 50%,
+        var(--poc-bg-input) 75%
+    );
+    background-size: 400px 100%;
+    animation: collection-shimmer 1.5s ease-in-out infinite;
+    color: var(--poc-text-secondary);
+    pointer-events: none;
+}
+
 /* Jauge de progression ZIP */
 .zip-progress-container {
     margin-top: 6px;

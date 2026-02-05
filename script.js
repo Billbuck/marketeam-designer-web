@@ -5969,8 +5969,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * Active ou désactive l'état de chargement visuel sur la combo collection.
+     * En état loading : affiche la row, met le texte "Chargement...", ajoute la classe shimmer, désactive le select.
+     * En état normal : retire la classe shimmer, réactive le select.
+     *
+     * @param {boolean} loading - true pour activer l'état de chargement, false pour le désactiver
+     */
+    function setCollectionLoadingState(loading) {
+        if (!imageInputCollection || !imageCollectionRow) return;
+
+        if (loading) {
+            // Afficher la row immédiatement
+            imageCollectionRow.style.display = '';
+            // Mettre le texte de chargement
+            imageInputCollection.innerHTML = '<option value="">Chargement...</option>';
+            imageInputCollection.disabled = true;
+            imageInputCollection.classList.add('loading');
+        } else {
+            imageInputCollection.disabled = false;
+            imageInputCollection.classList.remove('loading');
+        }
+    }
+
+    /**
      * Appelle le webservice DesignerCollectionListe pour récupérer les collections
      * existantes pour une colonne physique donnée, puis remplit la combo collection.
+     * Affiche un indicateur de chargement pendant l'appel réseau.
      * Utilise l'authentification HMAC-SHA256 identique à l'upload.
      *
      * @param {string} colonne - Colonne physique du champ de fusion (ex: "Champ1")
@@ -5980,14 +6004,19 @@ document.addEventListener('DOMContentLoaded', () => {
     async function fetchCollections(colonne, selectedCollectionId = '') {
         if (!authConfig || !authConfig.urlCollectionListe) {
             console.warn('fetchCollections: URL webservice collection non configurée');
+            setCollectionLoadingState(false);
             populateCollectionSelect([], '');
             return;
         }
 
         if (!colonne) {
+            setCollectionLoadingState(false);
             populateCollectionSelect([], '');
             return;
         }
+
+        // Afficher immédiatement la combo en état de chargement
+        setCollectionLoadingState(true);
 
         try {
             const timestamp = generateTimestamp();
@@ -6007,6 +6036,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!response.ok) {
                 console.warn('fetchCollections: Erreur HTTP', response.status);
+                setCollectionLoadingState(false);
                 populateCollectionSelect([], '');
                 return;
             }
@@ -6021,6 +6051,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     details = JSON.parse(details);
                 } catch (e) {
                     console.warn('fetchCollections: Erreur parsing Details', e);
+                    setCollectionLoadingState(false);
                     populateCollectionSelect([], '');
                     return;
                 }
@@ -6028,10 +6059,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const collections = (details && Array.isArray(details.collections)) ? details.collections : [];
             console.log('fetchCollections: ' + collections.length + ' collection(s) trouvée(s) pour colonne', colonne);
+            setCollectionLoadingState(false);
             populateCollectionSelect(collections, String(selectedCollectionId));
 
         } catch (err) {
             console.warn('fetchCollections: Erreur réseau', err);
+            setCollectionLoadingState(false);
             populateCollectionSelect([], '');
         }
     }
@@ -14302,6 +14335,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (imageChampGroup) imageChampGroup.classList.add('hidden');
             // Réinitialiser la combo collection (vider les options et masquer la row)
             populateCollectionSelect([], '');
+            // Réinitialiser l'état ZIP UI (débloquer la combo champ, masquer bouton Vider)
+            updateZipUploadUIState('initial');
         }
         
         // Infos fichier et DPI
@@ -16141,6 +16176,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (imageChampGroup) imageChampGroup.classList.add('hidden');
                 // Réinitialiser la combo collection (vider les options et masquer la row)
                 populateCollectionSelect([], '');
+                // Réinitialiser l'état ZIP UI (débloquer la combo champ, masquer bouton Vider)
+                updateZipUploadUIState('initial');
             }
             
             // Afficher les infos fichier si image uploadée
