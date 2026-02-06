@@ -6338,6 +6338,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         saveState();
+
+        // Afficher l'aperçu de la première image si des échantillons sont disponibles
+        showFirstCollectionImage(selectedId, zoneData);
+    }
+
+    /**
+     * Affiche dans la zone image l'aperçu de la première image de la collection,
+     * en utilisant le premier enregistrement des données d'échantillon.
+     * Ne fait rien si les données d'échantillon ou l'urlBase ne sont pas disponibles
+     * (le placeholder existant est conservé).
+     * 
+     * @param {string} zoneId - ID de la zone image
+     * @param {Object} zoneData - Données de la zone
+     */
+    function showFirstCollectionImage(zoneId, zoneData) {
+        if (!zoneData || !zoneData.source || !zoneData.source.urlBase) return;
+        if (!documentState.donneesApercu || documentState.donneesApercu.length === 0) return;
+
+        const firstRecord = documentState.donneesApercu[0];
+        updateImageZoneForPreview(zoneId, zoneData, firstRecord);
     }
 
     /**
@@ -12238,14 +12258,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        // 3b. Restaurer les zones image dynamiques vers leur placeholder
+        // 3b. Restaurer les zones image dynamiques : aperçu 1re image si collection, sinon placeholder
         const allPagesRestore = documentState.pages || [];
         allPagesRestore.forEach((page, pageIndex) => {
             const zones = page.zones || {};
             Object.entries(zones).forEach(([zoneId, zoneData]) => {
                 if (zoneData.type === 'image' && zoneData.source && zoneData.source.type === 'champ') {
-                    // Restaurer le placeholder (appeler la fonction d'affichage standard)
-                    updateImageZoneDisplay(zoneId);
+                    if (zoneData.source.urlBase && pageIndex === documentState.currentPageIndex) {
+                        // Collection disponible → afficher la première image
+                        showFirstCollectionImage(zoneId, zoneData);
+                    } else {
+                        // Pas de collection → placeholder standard
+                        updateImageZoneDisplay(zoneId);
+                    }
                 }
             });
         });
@@ -16472,10 +16497,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (collectionId) {
                     // Collection sélectionnée → verrouiller le champ pour éviter un changement accidentel
                     if (imageInputChamp) imageInputChamp.disabled = true;
+
+                    // Afficher l'aperçu de la première image de la collection
+                    if (selectedZoneIds.length === 1) {
+                        const zonesData = getCurrentPageZones();
+                        const zoneData = zonesData[selectedZoneIds[0]];
+                        if (zoneData) showFirstCollectionImage(selectedZoneIds[0], zoneData);
+                    }
                 } else {
                     // Aucune collection → déverrouiller le champ et rétablir l'état Importer
                     if (imageInputChamp) imageInputChamp.disabled = false;
                     updateZipUploadUIState('champ_selectionne');
+
+                    // Rétablir le placeholder dans la zone
+                    if (selectedZoneIds.length === 1) {
+                        const zonesData = getCurrentPageZones();
+                        const zoneData = zonesData[selectedZoneIds[0]];
+                        if (zoneData) updateImageZoneDisplay(selectedZoneIds[0], zoneData);
+                    }
                 }
 
                 console.log('Collection sélectionnée:', collectionId, 'urlBase:', urlBase);
