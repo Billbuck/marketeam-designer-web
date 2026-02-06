@@ -5217,16 +5217,24 @@ document.addEventListener('DOMContentLoaded', () => {
      * 
      * Fonctions principales :
      *   - handleZipFileSelection() : Gestionnaire de sélection de fichier ZIP
-     *   - readAndValidateZip() : Lecture et validation du contenu du ZIP
+     *   - readAndValidateZip() : Lecture et validation du contenu du ZIP (4 phases)
+     *   - getImageDimensions() : Charge une image et retourne ses dimensions
      *   - isZipImageFormatAccepted() : Validation extension fichier dans ZIP
      *   - showZipProgress() : Affichage jauge de progression
      *   - showZipResult() : Affichage résultat validation
      *   - clearZipData() : Réinitialisation données ZIP
      * 
+     * Validations d'homogénéité (rejet total si non conforme) :
+     *   - Phase 1 : Pas de sous-dossiers
+     *   - Phase 2 : Type d'image unique (pas de mix JPEG/PNG/GIF)
+     *   - Phase 3 : Poids min/max par image
+     *   - Phase 4 : Dimensions identiques (tolérance ±1 px)
+     * 
      * Dépendances :
      *   - JSZip (librairie externe)
      *   - imageBtnImportZip, imageZipFileInput (Section 1)
-     *   - ZIP_MAX_FILE_SIZE, ZIP_ACCEPTED_IMAGE_EXTENSIONS (Section 2)
+     *   - ZIP_MAX_FILE_SIZE, ZIP_MIN_IMAGE_SIZE, ZIP_MAX_IMAGE_SIZE (Section 2)
+     *   - ZIP_ACCEPTED_IMAGE_EXTENSIONS (Section 2)
      */
     // ─────────────────────────────────────────────────────────────────────────────
 
@@ -5308,13 +5316,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Affiche le résultat de la validation du ZIP.
+     * Affiche le résultat de la validation du ZIP (résumé succès uniquement).
+     * Les avertissements détaillés sont affichés dans la popup (showUploadSummary).
      * @param {number} nbValides - Nombre d'images valides
-     * @param {number} nbIgnorees - Nombre de fichiers ignorés
      * @param {string} nomZip - Nom du fichier ZIP
-     * @param {Array<{nom: string, raison: string}>} ignorees - Détail des fichiers ignorés
      */
-    function showZipResult(nbValides, nbIgnorees, nomZip, ignorees) {
+    function showZipResult(nbValides, nomZip) {
         hideZipProgress();
         if (!imageZipResult) return;
 
@@ -5326,15 +5333,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span><strong>${nbValides}</strong> image${nbValides > 1 ? 's' : ''} trouvée${nbValides > 1 ? 's' : ''}</span>
             </div>`;
             html += `<div class="zip-result-details">${nomZip}</div>`;
-        }
-
-        if (nbIgnorees > 0) {
-            const details = ignorees.slice(0, 5).map(f => f.nom + ' (' + f.raison + ')').join(', ');
-            const suite = nbIgnorees > 5 ? ` et ${nbIgnorees - 5} autre(s)` : '';
-            html += `<div class="zip-result-warning">
-                <span class="material-icons">warning</span>
-                <span>${nbIgnorees} fichier${nbIgnorees > 1 ? 's' : ''} ignoré${nbIgnorees > 1 ? 's' : ''} : ${details}${suite}</span>
-            </div>`;
         }
 
         imageZipResult.innerHTML = html;
@@ -5428,40 +5426,67 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * Charge une image depuis un Blob et retourne ses dimensions en pixels.
+     * Crée un objet Image temporaire via URL.createObjectURL(), lit naturalWidth/naturalHeight,
+     * puis libère l'URL avec URL.revokeObjectURL().
+     * 
+     * @param {Blob} blob - Blob de l'image à mesurer
+     * @returns {Promise<{width: number, height: number}>} Dimensions de l'image
+     * @throws {Error} Si l'image ne peut pas être chargée (fichier corrompu)
+     */
+    function getImageDimensions(blob) {
+        return new Promise((resolve, reject) => {
+            const url = URL.createObjectURL(blob);
+            const img = new Image();
+            img.onload = () => {
+                const width = img.naturalWidth;
+                const height = img.naturalHeight;
+                URL.revokeObjectURL(url);
+                resolve({ width, height });
+            };
+            img.onerror = () => {
+                URL.revokeObjectURL(url);
+                reject(new Error('Impossible de charger l\'image'));
+            };
+            img.src = url;
+        });
+    }
+
+    /**
      * Lit et valide le contenu d'un fichier ZIP sélectionné par l'utilisateur.
      * Utilise JSZip pour lire le ZIP côté client.
      * 
-     * Validations effectuées :
+     * Philosophie : rejet total du ZIP si UNE SEULE image est non conforme.
+     * Pas de traitement partiel.
+     * 
+     * Validations effectuées (dans cet ordre, arrêt au premier échec) :
      * - Taille du ZIP (max ZIP_MAX_FILE_SIZE)
      * - Le fichier est bien un ZIP valide
-     * - Chaque fichier interne : format accepté, taille min/max
+     * - ZIP non protégé par mot de passe
+     * - Phase 1 : Pas de sous-dossiers (toutes les images à la racine)
+     * - Phase 2 : Type d'image unique (pas de mélange JPEG/PNG/GIF)
+     * - Phase 3 : Poids par image (min ZIP_MIN_IMAGE_SIZE, max ZIP_MAX_IMAGE_SIZE)
+     * - Phase 4 : Dimensions identiques (même largeur × hauteur, tolérance ±1 px)
      * - Au moins 1 image valide
      * 
      * @param {File} file - Fichier ZIP sélectionné
-     * @returns {Promise<{success: boolean, message?: string}>} Résultat de la validation
+     * @returns {Promise<{success: boolean, message?: string, details?: string[], message2?: string, details2?: string[]}>} Résultat de la validation
      */
     async function readAndValidateZip(file) {
-        const imagesValides = [];
-        const imagesIgnorees = [];
-
-        // 1. Vérification taille globale
+        // ── Vérification taille globale ──
         if (file.size > ZIP_MAX_FILE_SIZE) {
             return {
                 success: false,
-                message: `Le fichier est trop volumineux (${formatFileSize(file.size)}). La taille maximale autorisée est de ${formatFileSize(ZIP_MAX_FILE_SIZE)}.`
+                message: 'Le fichier est trop volumineux (' + formatFileSize(file.size) + '). La taille maximale autorisée est de ' + formatFileSize(ZIP_MAX_FILE_SIZE) + '.'
             };
         }
 
         showZipProgress('Lecture du fichier ZIP...', 10);
 
-        // 2. Lire le ZIP avec JSZip
+        // ── Lire le ZIP avec JSZip ──
         let zip;
         try {
-            zip = await JSZip.loadAsync(file, {
-                // Callback de progression
-                // JSZip ne fournit pas de progression fiable pour loadAsync,
-                // mais on peut simuler via un timer
-            });
+            zip = await JSZip.loadAsync(file);
         } catch (e) {
             return {
                 success: false,
@@ -5469,14 +5494,11 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         }
 
-        showZipProgress('Analyse du contenu...', 30);
+        showZipProgress('Analyse du contenu...', 20);
 
-        // 3. Parcourir les fichiers du ZIP
         const entries = Object.values(zip.files);
-        const totalEntries = entries.length;
-        let processed = 0;
 
-        // 2b. Vérifier si le ZIP est protégé par mot de passe
+        // ── Vérifier si le ZIP est protégé par mot de passe ──
         // JSZip ne supporte pas les ZIP chiffrés : on détecte en essayant de lire le premier fichier non-dossier
         const firstFile = entries.find(e => !e.dir);
         let firstFileBlob = null;
@@ -5492,94 +5514,238 @@ document.addEventListener('DOMContentLoaded', () => {
                         message: 'Le fichier ZIP est protégé par un mot de passe. Veuillez utiliser un ZIP sans mot de passe.'
                     };
                 }
-                // Autre erreur sur le premier fichier : on continue, elle sera gérée dans la boucle
+                // Autre erreur sur le premier fichier : on continue, elle sera gérée plus bas
             }
         }
+
+        // ══════════════════════════════════════════════════════════════════
+        // PHASE 1 : Vérification structurelle — pas de sous-dossiers
+        // ══════════════════════════════════════════════════════════════════
+        // Certains outils de compression englobent tous les fichiers dans un dossier racine unique
+        // (ex: Photos/image1.jpg). C'est accepté. En revanche, plusieurs dossiers ou des
+        // sous-dossiers imbriqués (ex: Photos/sub/image.jpg) sont rejetés.
+        const parentDirs = new Set();
+        for (const entry of entries) {
+            if (entry.dir) continue;
+            const fullName = entry.name;
+            // Ignorer les fichiers système (macOS, fichiers cachés)
+            if (fullName.startsWith('__MACOSX')) continue;
+            const fileName = fullName.split('/').pop();
+            if (fileName.startsWith('.')) continue;
+
+            // Extraire le dossier parent ('' si à la racine, 'dossier' si un niveau)
+            const lastSlash = fullName.lastIndexOf('/');
+            const parentDir = lastSlash === -1 ? '' : fullName.substring(0, lastSlash);
+
+            // Rejet immédiat si sous-dossier imbriqué (ex: 'dossier/sous-dossier')
+            if (parentDir.includes('/')) {
+                return {
+                    success: false,
+                    message: 'Le fichier ZIP ne doit pas contenir de sous-dossiers. Placez toutes les images à la racine du ZIP.'
+                };
+            }
+
+            parentDirs.add(parentDir);
+        }
+
+        // Rejet si les fichiers sont répartis dans plusieurs dossiers différents
+        if (parentDirs.size > 1) {
+            return {
+                success: false,
+                message: 'Le fichier ZIP ne doit pas contenir de sous-dossiers. Placez toutes les images à la racine du ZIP.'
+            };
+        }
+
+        showZipProgress('Analyse du contenu...', 30);
+
+        // ══════════════════════════════════════════════════════════════════
+        // PHASE 2 : Catégorisation + vérification type unique
+        // ══════════════════════════════════════════════════════════════════
+        /** @type {Array<{entry: Object, fileName: string, extension: string, normalizedType: string}>} */
+        const candidateEntries = [];
+        /** @type {Array<{nom: string, raison: string}>} */
+        const imagesIgnorees = [];
 
         for (const entry of entries) {
-            processed++;
-
-            // Ignorer les dossiers
             if (entry.dir) continue;
-
-            // Extraire le nom de fichier (sans le chemin du dossier)
             const fullName = entry.name;
             const fileName = fullName.split('/').pop();
+            // Ignorer les fichiers système
+            if (fileName.startsWith('.') || fullName.startsWith('__MACOSX')) continue;
 
-            // Ignorer les fichiers cachés (commençant par . ou __MACOSX)
-            if (fileName.startsWith('.') || fullName.startsWith('__MACOSX')) {
-                continue; // Fichiers système, pas besoin de les lister comme ignorés
-            }
-
-            // Vérifier le format
             if (!isZipImageFormatAccepted(fileName)) {
-                imagesIgnorees.push({
-                    nom: fileName,
-                    raison: 'format non supporté'
-                });
+                imagesIgnorees.push({ nom: fileName, raison: 'format non supporté' });
                 continue;
             }
 
-            // Récupérer les métadonnées (taille décompressée)
-            // Note : entry._data.uncompressedSize n'est pas toujours disponible
-            // On utilise une approche pragmatique via async decompression
-            let fileSize = 0;
-            try {
-                // Réutiliser le blob déjà lu pour le premier fichier (test mot de passe)
-                const blob = (entry.name === firstFileName && firstFileBlob) 
-                    ? firstFileBlob 
-                    : await entry.async('blob');
-                fileSize = blob.size;
-                // Libérer la référence après utilisation
-                if (entry.name === firstFileName) firstFileBlob = null;
-            } catch (e) {
-                imagesIgnorees.push({
-                    nom: fileName,
-                    raison: 'lecture impossible'
-                });
-                continue;
-            }
-
-            // Vérifier taille minimale
-            if (fileSize < ZIP_MIN_IMAGE_SIZE) {
-                imagesIgnorees.push({
-                    nom: fileName,
-                    raison: 'trop petit (' + formatFileSize(fileSize) + ')'
-                });
-                continue;
-            }
-
-            // Vérifier taille maximale
-            if (fileSize > ZIP_MAX_IMAGE_SIZE) {
-                imagesIgnorees.push({
-                    nom: fileName,
-                    raison: 'trop volumineux (' + formatFileSize(fileSize) + ')'
-                });
-                continue;
-            }
-
-            imagesValides.push({
-                nom: fileName,
-                taille: fileSize,
-                extension: getFileExtension(fileName)
-            });
-
-            // Mise à jour progression
-            const pct = Math.round(30 + (processed / totalEntries) * 60);
-            showZipProgress(`Analyse... ${processed}/${totalEntries}`, pct);
+            const ext = getFileExtension(fileName);
+            const normalizedType = (ext === 'jpg' || ext === 'jpeg') ? 'jpeg' : ext;
+            candidateEntries.push({ entry, fileName, extension: ext, normalizedType });
         }
 
-        showZipProgress('Validation terminée', 100);
-
-        // 4. Vérifier qu'il y a au moins une image valide
-        if (imagesValides.length === 0) {
+        // Vérifier qu'il y a au moins une image candidate
+        if (candidateEntries.length === 0) {
             return {
                 success: false,
                 message: 'Aucune image utilisable n\'a été trouvée dans le ZIP. Formats acceptés : ' + ZIP_ACCEPTED_IMAGE_EXTENSIONS.map(ext => ext.toUpperCase()).join(', ') + '.'
             };
         }
 
-        // 5. Stocker les résultats
+        // Vérifier que toutes les images sont du même type
+        const imageTypes = [...new Set(candidateEntries.map(c => c.normalizedType))];
+        if (imageTypes.length > 1) {
+            const typesDisplay = imageTypes.map(t => t.toUpperCase()).join(', ');
+            return {
+                success: false,
+                message: 'Toutes les images doivent être du même format. Le ZIP contient un mélange de ' + typesDisplay + '. Convertissez toutes les images dans un format unique.'
+            };
+        }
+
+        // ══════════════════════════════════════════════════════════════════
+        // PHASE 3 : Lecture des blobs + vérification poids min/max
+        // ══════════════════════════════════════════════════════════════════
+        showZipProgress('Vérification des fichiers...', 40);
+
+        /** @type {Array<{nom: string, taille: number}>} */
+        const imagesTooSmall = [];
+        /** @type {Array<{nom: string, taille: number}>} */
+        const imagesTooBig = [];
+        /** @type {Array<{fileName: string, extension: string, taille: number, entry: Object}>} */
+        const validCandidates = [];
+
+        for (let i = 0; i < candidateEntries.length; i++) {
+            const c = candidateEntries[i];
+
+            // Lire le blob (réutiliser celui du test mot de passe si possible)
+            let blob;
+            try {
+                blob = (c.entry.name === firstFileName && firstFileBlob)
+                    ? firstFileBlob
+                    : await c.entry.async('blob');
+                if (c.entry.name === firstFileName) firstFileBlob = null;
+            } catch (e) {
+                imagesIgnorees.push({ nom: c.fileName, raison: 'lecture impossible' });
+                continue;
+            }
+
+            const fileSize = blob.size;
+
+            if (fileSize < ZIP_MIN_IMAGE_SIZE) {
+                imagesTooSmall.push({ nom: c.fileName, taille: fileSize });
+            } else if (fileSize > ZIP_MAX_IMAGE_SIZE) {
+                imagesTooBig.push({ nom: c.fileName, taille: fileSize });
+            } else {
+                validCandidates.push({ fileName: c.fileName, extension: c.extension, taille: fileSize, entry: c.entry });
+            }
+
+            // Progression : phase 3 occupe 40% → 60%
+            const pct = Math.round(40 + ((i + 1) / candidateEntries.length) * 20);
+            showZipProgress('Vérification des fichiers... ' + (i + 1) + '/' + candidateEntries.length, pct);
+        }
+
+        // Rejet si des images sont trop petites
+        if (imagesTooSmall.length > 0) {
+            const liste = imagesTooSmall.map(f => f.nom + ' (' + formatFileSize(f.taille) + ')').join(', ');
+            return {
+                success: false,
+                message: imagesTooSmall.length + ' image(s) sont trop petites (minimum ' + formatFileSize(ZIP_MIN_IMAGE_SIZE) + '). Images concernées : ' + liste + '.'
+            };
+        }
+
+        // Rejet si des images sont trop volumineuses
+        if (imagesTooBig.length > 0) {
+            const liste = imagesTooBig.map(f => f.nom + ' (' + formatFileSize(f.taille) + ')').join(', ');
+            return {
+                success: false,
+                message: imagesTooBig.length + ' image(s) dépassent la taille maximale (' + formatFileSize(ZIP_MAX_IMAGE_SIZE) + '). Images concernées : ' + liste + '.'
+            };
+        }
+
+        // Vérifier qu'il reste des images après filtrage
+        if (validCandidates.length === 0) {
+            return {
+                success: false,
+                message: 'Aucune image utilisable n\'a été trouvée dans le ZIP. Formats acceptés : ' + ZIP_ACCEPTED_IMAGE_EXTENSIONS.map(ext => ext.toUpperCase()).join(', ') + '.'
+            };
+        }
+
+        // ══════════════════════════════════════════════════════════════════
+        // PHASE 4 : Vérification des dimensions (chargement image par image)
+        // ══════════════════════════════════════════════════════════════════
+        showZipProgress('Vérification des dimensions...', 60);
+
+        // Collecter les dimensions de chaque image, regroupées par taille
+        // Clé : "largeur×hauteur", valeur : { count, fichiers[] }
+        /** @type {Map<string, {count: number, fichiers: string[]}>} */
+        const dimensionGroups = new Map();
+
+        for (let i = 0; i < validCandidates.length; i++) {
+            const c = validCandidates[i];
+
+            try {
+                const blob = await c.entry.async('blob');
+                const dims = await getImageDimensions(blob);
+                const key = dims.width + '×' + dims.height;
+                if (!dimensionGroups.has(key)) {
+                    dimensionGroups.set(key, { count: 0, fichiers: [] });
+                }
+                const group = dimensionGroups.get(key);
+                group.count++;
+                group.fichiers.push(c.fileName);
+            } catch (e) {
+                return {
+                    success: false,
+                    message: 'Impossible de lire l\'image ' + c.fileName + '. Le fichier est peut-être corrompu.'
+                };
+            }
+
+            // Progression : phase 4 occupe 60% → 95%
+            if (validCandidates.length > 1) {
+                const pct = Math.round(60 + (i / (validCandidates.length - 1)) * 35);
+                showZipProgress('Vérification des dimensions... ' + (i + 1) + '/' + validCandidates.length, pct);
+            }
+        }
+
+        // Rejet si plusieurs groupes de dimensions détectés
+        if (dimensionGroups.size > 1) {
+            // Trier par nombre d'images décroissant (la taille majoritaire en premier)
+            const groupesTries = [...dimensionGroups.entries()]
+                .sort((a, b) => b[1].count - a[1].count);
+
+            // Le groupe majoritaire (premier après tri) = la dimension de référence
+            // Lister les fichiers des groupes minoritaires (tous sauf le premier)
+            const fichiersNonConformes = [];
+            for (let g = 1; g < groupesTries.length; g++) {
+                const [dim, group] = groupesTries[g];
+                for (const fichier of group.fichiers) {
+                    fichiersNonConformes.push(fichier + ' (' + dim + ')');
+                }
+            }
+
+            // Résumé des groupes (bullet points)
+            const resumeDetails = groupesTries
+                .map(([dim, g]) => g.count + ' image' + (g.count > 1 ? 's' : '') + ' ' + dim + ' px');
+
+            return {
+                success: false,
+                message: 'Toutes les images doivent avoir les mêmes dimensions.<br>Le ZIP contient :',
+                details: resumeDetails,
+                message2: 'Images non conformes :',
+                details2: fichiersNonConformes
+            };
+        }
+
+        showZipProgress('Validation terminée', 100);
+
+        // ══════════════════════════════════════════════════════════════════
+        // Toutes les validations passées — stocker les résultats
+        // ══════════════════════════════════════════════════════════════════
+        const imagesValides = validCandidates.map(c => ({
+            nom: c.fileName,
+            taille: c.taille,
+            extension: c.extension
+        }));
+
         zipUploadData = {
             zipFile: file,
             nomFichierZip: file.name,
@@ -5625,9 +5791,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('ZIP Upload: Validation OK -', zipUploadData.imagesValides.length, 'images valides');
             showZipResult(
                 zipUploadData.imagesValides.length,
-                zipUploadData.imagesIgnorees.length,
-                zipUploadData.nomFichierZip,
-                zipUploadData.imagesIgnorees
+                zipUploadData.nomFichierZip
             );
 
             // Afficher l'état zip validé
@@ -5649,16 +5813,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Réafficher le résultat final inline (toolbar)
                     showZipResult(
                         zipUploadData.imagesValides.length,
-                        zipUploadData.imagesIgnorees.length,
-                        zipUploadData.nomFichierZip,
-                        zipUploadData.imagesIgnorees
+                        zipUploadData.nomFichierZip
                     );
                     // Afficher le résumé serveur dans une popup
                     showUploadSummary(uploadResult.data);
                 } else {
                     console.warn('ZIP Upload: Échec upload webservice -', uploadResult.message);
                     showNotification([{ level: 'error', text: uploadResult.message }], { title: 'Échec de l\'envoi' });
-                    // Note : on garde l'état 'zip_valide' car la validation locale a réussi
+                    // Nettoyer les données ZIP et restaurer l'accès au bouton Importer
+                    clearZipData();
+                    updateZipUploadUIState('champ_selectionne');
                 }
             } else {
                 // Pas de config auth → mode local uniquement (dev/test)
@@ -5673,7 +5837,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else {
             console.warn('ZIP Upload: Validation échouée -', result.message);
-            showNotification([{ level: 'error', text: result.message }]);
+            const errorMessages = [];
+            const errorMsg = { level: 'error', text: result.message };
+            if (result.details) errorMsg.details = result.details;
+            errorMessages.push(errorMsg);
+            // Second bloc de message (ex: liste des images non conformes)
+            if (result.message2) {
+                const errorMsg2 = { level: 'warning', text: result.message2 };
+                if (result.details2) errorMsg2.details = result.details2;
+                errorMessages.push(errorMsg2);
+            }
+            showNotification(errorMessages);
             // Rester en état champ sélectionné (bouton Importer visible)
             updateZipUploadUIState('champ_selectionne');
         }
@@ -5997,7 +6171,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const nbSansCorrespondance = resume.imagesSansCorrespondance || 0;
         if (nbSansCorrespondance > 0) {
             const detailsSansCorr = Array.isArray(details.imagesSansCorrespondance)
-                ? details.imagesSansCorrespondance
+                ? details.imagesSansCorrespondance.map(f => f.fichier + ' (' + f.raison + ')')
                 : [];
             const msg = {
                 level: 'warning',
@@ -14546,18 +14720,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateZipUploadUIState('zip_valide');
                 showZipResult(
                     source.nbImagesServeur || source.nbImages || 0,
-                    0,
-                    source.nomZip || 'ZIP importé',
-                    []
+                    source.nomZip || 'ZIP importé'
                 );
             } else if (source.valeur && zipUploadData.prete && zipUploadData.nomFichierZip) {
                 // ZIP validé en mémoire (pas encore uploadé) → afficher le résultat temporaire
                 updateZipUploadUIState('zip_valide');
                 showZipResult(
                     zipUploadData.imagesValides.length,
-                    zipUploadData.imagesIgnorees.length,
-                    zipUploadData.nomFichierZip,
-                    zipUploadData.imagesIgnorees
+                    zipUploadData.nomFichierZip
                 );
             } else if (source.valeur) {
                 // Champ sélectionné mais pas de ZIP

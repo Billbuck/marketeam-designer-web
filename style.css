@@ -1233,8 +1233,8 @@ input:checked + .slider:before {
 .notification-item-content .notification-detail-list {
     margin: 6px 0 0 0;
     padding: 0 0 0 16px;
-    font-size: 13px;
-    color: var(--poc-text-secondary, #6b7280);
+    font-size: 14px;
+    color: #111;
 }
 
 .notification-item-content .notification-detail-list li {
@@ -4370,19 +4370,6 @@ button:disabled {
     color: var(--text-secondary, #666);
     margin-top: 2px;
     padding-left: 18px;
-}
-
-.zip-result-info .zip-result-warning {
-    color: #e65100;
-    margin-top: 4px;
-    display: flex;
-    align-items: flex-start;
-    gap: 4px;
-}
-
-.zip-result-info .zip-result-warning .material-icons {
-    font-size: 14px;
-    margin-top: 1px;
 }
 
 /* Erreur ZIP */
