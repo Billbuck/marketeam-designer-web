@@ -5463,20 +5463,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * Affiche la popup de nommage de collection et retourne une Promise.
-     * La Promise se résout avec le nom saisi (Confirmer) ou se rejette (Annuler).
+     * La Promise se résout avec un objet {nomCollection, idCollection} (Confirmer)
+     * ou se rejette (Annuler).
      * 
      * Détecte en temps réel les doublons en comparant la saisie avec les collections
-     * existantes dans la combo imageInputCollection.
+     * existantes dans la combo imageInputCollection. Si doublon détecté, l'idCollection
+     * de la collection existante est inclus dans le résultat pour permettre l'écrasement.
      * 
      * @param {string} nomFichierZip - Nom du fichier ZIP (avec extension) pour pré-remplir le champ
-     * @returns {Promise<string>} Nom de collection confirmé par l'utilisateur
+     * @returns {Promise<{nomCollection: string, idCollection: string|null}>} Nom et ID collection
      * @throws {Error} Si l'utilisateur annule (Promise rejetée)
      */
     function showCollectionNameModal(nomFichierZip) {
         return new Promise((resolve, reject) => {
             if (!collectionNameModal || !collectionNameInput || !collectionNameConfirmBtn || !collectionNameCancelBtn) {
                 // Fallback si la modale n'existe pas : résoudre avec le nom sans extension
-                resolve(nomFichierZip.replace(/\.zip$/i, ''));
+                resolve({ nomCollection: nomFichierZip.replace(/\.zip$/i, ''), idCollection: null });
                 return;
             }
 
@@ -5499,9 +5501,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // ── Fonctions locales (nettoyées à la fermeture) ──
 
+            // ID de la collection existante si doublon détecté, null sinon
+            let detectedIdCollection = null;
+
             /**
              * Vérifie si le nom saisi correspond à une collection existante.
              * Compare en insensible à la casse après trim.
+             * Met à jour detectedIdCollection avec l'ID de la collection trouvée.
              */
             function checkDuplicate() {
                 const saisie = collectionNameInput.value.trim().toLowerCase();
@@ -5509,23 +5515,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Activer/désactiver Confirmer selon que le champ est vide ou non
                 collectionNameConfirmBtn.disabled = saisie.length === 0;
 
+                // Réinitialiser l'ID doublon
+                detectedIdCollection = null;
+
                 if (!collectionNameWarning || !collectionNameWarningText || !imageInputCollection) {
                     return;
                 }
 
                 // Parcourir les options de la combo collection
-                let doublonTrouve = false;
                 for (const option of imageInputCollection.options) {
                     if (!option.value) continue; // Ignorer l'option par défaut vide
                     const nomOption = option.textContent.replace(/\s*\(\d+\s*img\)$/, '').trim().toLowerCase();
                     if (nomOption === saisie) {
-                        doublonTrouve = true;
+                        detectedIdCollection = option.value;
                         collectionNameWarningText.textContent = 'La collection « ' + collectionNameInput.value.trim() + ' » existe déjà et sera écrasée.';
                         break;
                     }
                 }
 
-                if (doublonTrouve) {
+                if (detectedIdCollection) {
                     collectionNameWarning.classList.remove('hidden');
                 } else {
                     collectionNameWarning.classList.add('hidden');
@@ -5542,12 +5550,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 collectionNameInput.removeEventListener('keydown', onKeyDown);
             }
 
-            /** Confirmer : résout la Promise avec le nom trimmé. */
+            /** Confirmer : résout la Promise avec {nomCollection, idCollection}. */
             function onConfirm() {
                 const nom = collectionNameInput.value.trim();
                 if (nom.length === 0) return; // Sécurité supplémentaire
                 closeModal();
-                resolve(nom);
+                resolve({ nomCollection: nom, idCollection: detectedIdCollection });
             }
 
             /** Annuler : rejette la Promise et nettoie les données ZIP. */
@@ -5964,18 +5972,19 @@ document.addEventListener('DOMContentLoaded', () => {
             saveState();
 
             // Demander le nom de la collection avant l'upload
-            let nomCollection;
+            let collectionInfo;
             try {
-                nomCollection = await showCollectionNameModal(zipUploadData.nomFichierZip);
-                console.log('ZIP Upload: Nom de collection confirmé:', nomCollection);
+                collectionInfo = await showCollectionNameModal(zipUploadData.nomFichierZip);
+                console.log('ZIP Upload: Collection confirmée -', 'nom:', collectionInfo.nomCollection, ', idCollection:', collectionInfo.idCollection || '(nouvelle)');
             } catch (e) {
                 // L'utilisateur a annulé → clearZipData + état déjà gérés dans onCancel
                 console.log('ZIP Upload: Nommage annulé par l\'utilisateur');
                 return;
             }
 
-            // Stocker le nom dans zipUploadData pour l'envoi
-            zipUploadData.nomCollection = nomCollection;
+            // Stocker dans zipUploadData pour l'envoi
+            zipUploadData.nomCollection = collectionInfo.nomCollection;
+            zipUploadData.idCollection = collectionInfo.idCollection;
 
             // Lancer l'upload vers le webservice si auth disponible
             if (authConfig && authConfig.urlWebservice) {
@@ -6093,7 +6102,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * Le fichier est streamé par le navigateur (pas de chargement complet en RAM).
      * La progression de l'envoi est affichée via showZipProgress().
      * 
-     * Données envoyées : idClient, idContact, tabBase (JSON), champFusion, colonne (= champObj.nom, colonne physique BDD), nomFichier, nomCollection, fichierZip.
+     * Données envoyées : idClient, idContact, tabBase (JSON), champFusion, colonne (= champObj.nom, colonne physique BDD), nomFichier, nomCollection, idCollection (vide si nouvelle), fichierZip.
      * La colonne physique correspond à champObj.nom dans documentState.champsFusion.
      * 
      * @param {string} champFusion - Nom du champ de fusion associé (ex: "MAGASIN")
@@ -6127,6 +6136,7 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('colonne', colonne);
         formData.append('nomFichier', zipUploadData.nomFichierZip);
         formData.append('nomCollection', zipUploadData.nomCollection || zipUploadData.nomFichierZip.replace(/\.zip$/i, ''));
+        formData.append('idCollection', zipUploadData.idCollection || '');
         formData.append('fichierZip', zipUploadData.zipFile); // Fichier binaire directement
 
         // Générer l'authentification
@@ -6296,19 +6306,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
         console.log('ZIP Upload: Zone mise à jour - collectionId:', zoneData.source.collectionId, ', urlBase:', zoneData.source.urlBase);
 
-        // Ajouter la nouvelle collection à la combo et la sélectionner
+        // Ajouter ou mettre à jour la collection dans la combo et la sélectionner
         if (imageInputCollection && details.collectionId) {
-            const newOption = document.createElement('option');
-            newOption.value = String(details.collectionId);
-            const nomCollection = (zipUploadData && zipUploadData.nomFichierZip) 
-                ? zipUploadData.nomFichierZip.replace(/\.zip$/i, '') 
-                : 'Collection ' + details.collectionId;
+            const collId = String(details.collectionId);
+            const nomCollection = (zipUploadData && zipUploadData.nomCollection)
+                ? zipUploadData.nomCollection
+                : (zipUploadData && zipUploadData.nomFichierZip)
+                    ? zipUploadData.nomFichierZip.replace(/\.zip$/i, '')
+                    : 'Collection ' + collId;
             const nbImg = (details.resume && details.resume.imagesStockees) || 0;
-            newOption.textContent = nomCollection + ' (' + nbImg + ' img)';
-            newOption.dataset.urlBase = details.urlBase || '';
-            newOption.dataset.nbImages = String(nbImg);
-            imageInputCollection.appendChild(newOption);
-            imageInputCollection.value = String(details.collectionId);
+
+            // Chercher si une option avec ce collectionId existe déjà
+            let existingOption = imageInputCollection.querySelector('option[value="' + collId + '"]');
+            if (existingOption) {
+                // Mettre à jour l'option existante
+                existingOption.textContent = nomCollection + ' (' + nbImg + ' img)';
+                existingOption.dataset.urlBase = details.urlBase || '';
+                existingOption.dataset.nbImages = String(nbImg);
+            } else {
+                // Créer une nouvelle option
+                const newOption = document.createElement('option');
+                newOption.value = collId;
+                newOption.textContent = nomCollection + ' (' + nbImg + ' img)';
+                newOption.dataset.urlBase = details.urlBase || '';
+                newOption.dataset.nbImages = String(nbImg);
+                imageInputCollection.appendChild(newOption);
+            }
+            imageInputCollection.value = collId;
             // Afficher la row collection
             if (imageCollectionRow) imageCollectionRow.style.display = '';
         }
@@ -16449,8 +16473,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Collection sélectionnée → verrouiller le champ pour éviter un changement accidentel
                     if (imageInputChamp) imageInputChamp.disabled = true;
                 } else {
-                    // Aucune collection → déverrouiller le champ
+                    // Aucune collection → déverrouiller le champ et rétablir l'état Importer
                     if (imageInputChamp) imageInputChamp.disabled = false;
+                    updateZipUploadUIState('champ_selectionne');
                 }
 
                 console.log('Collection sélectionnée:', collectionId, 'urlBase:', urlBase);
