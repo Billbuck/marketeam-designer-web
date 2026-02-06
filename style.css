@@ -1323,6 +1323,87 @@ input:checked + .slider:before {
     background-color: #e8eaed;
 }
 
+/* --- Modale nommage de collection (Phase 6b) --- */
+
+.collection-name-modal-box {
+    width: 440px;
+    max-width: 90%;
+    font-family: 'Inter', sans-serif;
+}
+
+.collection-name-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--poc-border-color, #e5e7eb);
+}
+
+.collection-name-modal-header h3 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--poc-text-primary, #1f2937);
+    flex: 1;
+}
+
+.collection-name-modal-icon {
+    font-size: 24px;
+    color: var(--poc-theme-primary, #934BB7);
+}
+
+.collection-name-modal-body {
+    margin-bottom: 20px;
+}
+
+.collection-name-label {
+    display: block;
+    font-size: 14px;
+    color: var(--poc-text-secondary, #6b7280);
+    margin-bottom: 8px;
+}
+
+.collection-name-input {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 15px;
+    font-family: 'Inter', sans-serif;
+    border: 1px solid var(--poc-border-color, #d1d5db);
+    border-radius: var(--poc-border-radius-sm, 6px);
+    outline: none;
+    transition: border-color 0.15s;
+    box-sizing: border-box;
+}
+
+.collection-name-input:focus {
+    border-color: var(--poc-theme-primary, #934BB7);
+    box-shadow: 0 0 0 2px rgba(147, 75, 183, 0.15);
+}
+
+.collection-name-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin-top: 10px;
+    padding: 8px 10px;
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    border-radius: var(--poc-border-radius-sm, 6px);
+    font-size: 13px;
+    color: #e65100;
+    line-height: 1.4;
+}
+
+.collection-name-warning .material-icons {
+    font-size: 18px;
+    flex-shrink: 0;
+    margin-top: 0;
+}
+
+.collection-name-warning.hidden {
+    display: none;
+}
 
 /* --- Toast Notification --- */
 .undo-toast {

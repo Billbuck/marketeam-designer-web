@@ -872,6 +872,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const notificationModalTitle = document.getElementById('notification-modal-title');
     const notificationModalBody = document.getElementById('notification-modal-body');
     const notificationModalOkBtn = document.getElementById('notification-modal-ok-btn');
+
+    // Modale nommage de collection (Phase 6b)
+    /** @type {HTMLElement|null} Overlay modale nommage collection */
+    const collectionNameModal = document.getElementById('collection-name-modal');
+    /** @type {HTMLInputElement|null} Input texte nom de collection */
+    const collectionNameInput = document.getElementById('collection-name-input');
+    /** @type {HTMLElement|null} Zone avertissement doublon */
+    const collectionNameWarning = document.getElementById('collection-name-warning');
+    /** @type {HTMLElement|null} Texte avertissement doublon */
+    const collectionNameWarningText = document.getElementById('collection-name-warning-text');
+    /** @type {HTMLButtonElement|null} Bouton Annuler */
+    const collectionNameCancelBtn = document.getElementById('collection-name-cancel-btn');
+    /** @type {HTMLButtonElement|null} Bouton Confirmer */
+    const collectionNameConfirmBtn = document.getElementById('collection-name-confirm-btn');
     
     const lblSelected = null; // SUPPRIMÉ - était #lbl-selected-zone
     
@@ -5220,9 +5234,11 @@ document.addEventListener('DOMContentLoaded', () => {
      *   - readAndValidateZip() : Lecture et validation du contenu du ZIP (4 phases)
      *   - getImageDimensions() : Charge une image et retourne ses dimensions
      *   - isZipImageFormatAccepted() : Validation extension fichier dans ZIP
+     *   - isZipSystemFile() : Détection fichiers système à ignorer (Thumbs.db, __MACOSX, .xxx, desktop.ini)
      *   - showZipProgress() : Affichage jauge de progression
      *   - showZipResult() : Affichage résultat validation
      *   - clearZipData() : Réinitialisation données ZIP
+     *   - showCollectionNameModal() : Popup nommage collection (Promise)
      * 
      * Validations d'homogénéité (rejet total si non conforme) :
      *   - Phase 1 : Pas de sous-dossiers
@@ -5283,6 +5299,26 @@ document.addEventListener('DOMContentLoaded', () => {
     function isZipImageFormatAccepted(fileName) {
         const ext = fileName.toLowerCase().split('.').pop();
         return ZIP_ACCEPTED_IMAGE_EXTENSIONS.includes(ext);
+    }
+
+    /**
+     * Vérifie si un fichier dans le ZIP est un fichier système à ignorer silencieusement.
+     * Couvre les métadonnées macOS (__MACOSX), les fichiers cachés Unix (.xxx),
+     * et les fichiers système Windows (Thumbs.db, desktop.ini).
+     * 
+     * @param {string} fullName - Chemin complet de l'entrée dans le ZIP
+     * @param {string} fileName - Nom du fichier seul (sans le chemin)
+     * @returns {boolean} true si le fichier doit être ignoré silencieusement
+     */
+    function isZipSystemFile(fullName, fileName) {
+        // Métadonnées macOS
+        if (fullName.startsWith('__MACOSX')) return true;
+        // Fichiers cachés Unix
+        if (fileName.startsWith('.')) return true;
+        // Fichiers système Windows
+        const lower = fileName.toLowerCase();
+        if (lower === 'thumbs.db' || lower === 'desktop.ini') return true;
+        return false;
     }
 
     /**
@@ -5426,6 +5462,133 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * Affiche la popup de nommage de collection et retourne une Promise.
+     * La Promise se résout avec le nom saisi (Confirmer) ou se rejette (Annuler).
+     * 
+     * Détecte en temps réel les doublons en comparant la saisie avec les collections
+     * existantes dans la combo imageInputCollection.
+     * 
+     * @param {string} nomFichierZip - Nom du fichier ZIP (avec extension) pour pré-remplir le champ
+     * @returns {Promise<string>} Nom de collection confirmé par l'utilisateur
+     * @throws {Error} Si l'utilisateur annule (Promise rejetée)
+     */
+    function showCollectionNameModal(nomFichierZip) {
+        return new Promise((resolve, reject) => {
+            if (!collectionNameModal || !collectionNameInput || !collectionNameConfirmBtn || !collectionNameCancelBtn) {
+                // Fallback si la modale n'existe pas : résoudre avec le nom sans extension
+                resolve(nomFichierZip.replace(/\.zip$/i, ''));
+                return;
+            }
+
+            // Pré-remplir avec le nom du ZIP sans l'extension .zip
+            const nomDefaut = nomFichierZip.replace(/\.zip$/i, '');
+            collectionNameInput.value = nomDefaut;
+
+            // Masquer l'avertissement doublon
+            if (collectionNameWarning) collectionNameWarning.classList.add('hidden');
+
+            // Activer/désactiver le bouton Confirmer selon le contenu
+            collectionNameConfirmBtn.disabled = nomDefaut.trim().length === 0;
+
+            // Afficher la modale
+            collectionNameModal.classList.remove('hidden');
+
+            // Focus + sélection du texte pour faciliter la modification
+            collectionNameInput.focus();
+            collectionNameInput.select();
+
+            // ── Fonctions locales (nettoyées à la fermeture) ──
+
+            /**
+             * Vérifie si le nom saisi correspond à une collection existante.
+             * Compare en insensible à la casse après trim.
+             */
+            function checkDuplicate() {
+                const saisie = collectionNameInput.value.trim().toLowerCase();
+
+                // Activer/désactiver Confirmer selon que le champ est vide ou non
+                collectionNameConfirmBtn.disabled = saisie.length === 0;
+
+                if (!collectionNameWarning || !collectionNameWarningText || !imageInputCollection) {
+                    return;
+                }
+
+                // Parcourir les options de la combo collection
+                let doublonTrouve = false;
+                for (const option of imageInputCollection.options) {
+                    if (!option.value) continue; // Ignorer l'option par défaut vide
+                    const nomOption = option.textContent.replace(/\s*\(\d+\s*img\)$/, '').trim().toLowerCase();
+                    if (nomOption === saisie) {
+                        doublonTrouve = true;
+                        collectionNameWarningText.textContent = 'La collection « ' + collectionNameInput.value.trim() + ' » existe déjà et sera écrasée.';
+                        break;
+                    }
+                }
+
+                if (doublonTrouve) {
+                    collectionNameWarning.classList.remove('hidden');
+                } else {
+                    collectionNameWarning.classList.add('hidden');
+                }
+            }
+
+            /** Ferme la modale et retire les listeners. */
+            function closeModal() {
+                collectionNameModal.classList.add('hidden');
+                collectionNameInput.removeEventListener('input', checkDuplicate);
+                collectionNameConfirmBtn.removeEventListener('click', onConfirm);
+                collectionNameCancelBtn.removeEventListener('click', onCancel);
+                collectionNameModal.removeEventListener('click', onOverlayClick);
+                collectionNameInput.removeEventListener('keydown', onKeyDown);
+            }
+
+            /** Confirmer : résout la Promise avec le nom trimmé. */
+            function onConfirm() {
+                const nom = collectionNameInput.value.trim();
+                if (nom.length === 0) return; // Sécurité supplémentaire
+                closeModal();
+                resolve(nom);
+            }
+
+            /** Annuler : rejette la Promise et nettoie les données ZIP. */
+            function onCancel() {
+                closeModal();
+                clearZipData();
+                updateZipUploadUIState('champ_selectionne');
+                reject(new Error('Annulé par l\'utilisateur'));
+            }
+
+            /** Fermer en cliquant sur l'overlay. */
+            function onOverlayClick(e) {
+                if (e.target === collectionNameModal) {
+                    onCancel();
+                }
+            }
+
+            /** Raccourcis clavier : Entrée = Confirmer, Échap = Annuler. */
+            function onKeyDown(e) {
+                if (e.key === 'Enter' && !collectionNameConfirmBtn.disabled) {
+                    e.preventDefault();
+                    onConfirm();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    onCancel();
+                }
+            }
+
+            // ── Brancher les listeners ──
+            collectionNameInput.addEventListener('input', checkDuplicate);
+            collectionNameConfirmBtn.addEventListener('click', onConfirm);
+            collectionNameCancelBtn.addEventListener('click', onCancel);
+            collectionNameModal.addEventListener('click', onOverlayClick);
+            collectionNameInput.addEventListener('keydown', onKeyDown);
+
+            // Vérification initiale (le nom par défaut pourrait déjà être un doublon)
+            checkDuplicate();
+        });
+    }
+
+    /**
      * Charge une image depuis un Blob et retourne ses dimensions en pixels.
      * Crée un objet Image temporaire via URL.createObjectURL(), lit naturalWidth/naturalHeight,
      * puis libère l'URL avec URL.revokeObjectURL().
@@ -5528,10 +5691,8 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const entry of entries) {
             if (entry.dir) continue;
             const fullName = entry.name;
-            // Ignorer les fichiers système (macOS, fichiers cachés)
-            if (fullName.startsWith('__MACOSX')) continue;
             const fileName = fullName.split('/').pop();
-            if (fileName.startsWith('.')) continue;
+            if (isZipSystemFile(fullName, fileName)) continue;
 
             // Extraire le dossier parent ('' si à la racine, 'dossier' si un niveau)
             const lastSlash = fullName.lastIndexOf('/');
@@ -5570,8 +5731,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (entry.dir) continue;
             const fullName = entry.name;
             const fileName = fullName.split('/').pop();
-            // Ignorer les fichiers système
-            if (fileName.startsWith('.') || fullName.startsWith('__MACOSX')) continue;
+            if (isZipSystemFile(fullName, fileName)) continue;
 
             if (!isZipImageFormatAccepted(fileName)) {
                 imagesIgnorees.push({ nom: fileName, raison: 'format non supporté' });
@@ -5803,6 +5963,20 @@ document.addEventListener('DOMContentLoaded', () => {
             zoneData.source.nomZip = zipUploadData.nomFichierZip;
             saveState();
 
+            // Demander le nom de la collection avant l'upload
+            let nomCollection;
+            try {
+                nomCollection = await showCollectionNameModal(zipUploadData.nomFichierZip);
+                console.log('ZIP Upload: Nom de collection confirmé:', nomCollection);
+            } catch (e) {
+                // L'utilisateur a annulé → clearZipData + état déjà gérés dans onCancel
+                console.log('ZIP Upload: Nommage annulé par l\'utilisateur');
+                return;
+            }
+
+            // Stocker le nom dans zipUploadData pour l'envoi
+            zipUploadData.nomCollection = nomCollection;
+
             // Lancer l'upload vers le webservice si auth disponible
             if (authConfig && authConfig.urlWebservice) {
                 const uploadResult = await uploadZipToWebservice(champSelectionne);
@@ -5919,7 +6093,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * Le fichier est streamé par le navigateur (pas de chargement complet en RAM).
      * La progression de l'envoi est affichée via showZipProgress().
      * 
-     * Données envoyées : idClient, idContact, tabBase (JSON), champFusion, colonne (= champObj.nom, colonne physique BDD), nomFichier, fichierZip.
+     * Données envoyées : idClient, idContact, tabBase (JSON), champFusion, colonne (= champObj.nom, colonne physique BDD), nomFichier, nomCollection, fichierZip.
      * La colonne physique correspond à champObj.nom dans documentState.champsFusion.
      * 
      * @param {string} champFusion - Nom du champ de fusion associé (ex: "MAGASIN")
@@ -5952,6 +6126,7 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('champFusion', champFusion);
         formData.append('colonne', colonne);
         formData.append('nomFichier', zipUploadData.nomFichierZip);
+        formData.append('nomCollection', zipUploadData.nomCollection || zipUploadData.nomFichierZip.replace(/\.zip$/i, ''));
         formData.append('fichierZip', zipUploadData.zipFile); // Fichier binaire directement
 
         // Générer l'authentification
