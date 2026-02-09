@@ -17822,6 +17822,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 img.style.height = '100%';
             }
             
+            // Capturer les dimensions de l'image pour le calcul DPI et la limitation de taille
+            // Toutes les images d'une collection ont la même taille/format
+            img.onload = () => {
+                if (img.naturalWidth && img.naturalHeight) {
+                    const zonesData = getCurrentPageZones();
+                    const currentZoneData = zonesData[zoneId];
+                    if (currentZoneData && currentZoneData.source) {
+                        currentZoneData.source.largeurPx = img.naturalWidth;
+                        currentZoneData.source.hauteurPx = img.naturalHeight;
+                    }
+                    // Mettre à jour l'indicateur DPI dans le panneau et le badge sur la zone
+                    updateImageDpiBadge(zoneId);
+                    updateDpiIndicator(zoneId);
+                }
+            };
+            
             // Gérer le cas où l'image ne charge pas
             img.onerror = () => {
                 console.warn(`⚠️ Image introuvable: ${imageUrl}`);
