@@ -414,6 +414,11 @@ document.addEventListener('DOMContentLoaded', () => {
      * @typedef {Object} SourceImageJsonWebDev
      * @property {'fixe'|'champ'|'url'} type - Type de source
      * @property {string} valeur - URL ou nom du champ
+     * @property {number|string} [collectionId] - ID de la collection serveur (images dynamiques)
+     * @property {string} [urlBase] - URL de base pour accéder aux images de la collection
+     * @property {string} [champFusion] - Nom du champ de fusion retourné par le serveur
+     * @property {string} [nomZip] - Nom du fichier ZIP d'origine
+     * @property {number} [nbImagesServeur] - Nombre d'images sur le serveur
      * @description Source d'image au format JSON WebDev.
      */
 
@@ -22537,6 +22542,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         }, 100);
+
+        // Rafraîchir les zones images dynamiques après import
+        setTimeout(() => {
+            const zonesData = getCurrentPageZones();
+            Object.keys(zonesData).forEach(zoneId => {
+                const zoneData = zonesData[zoneId];
+                if (zoneData && zoneData.type === 'image' && zoneData.source && zoneData.source.type === 'champ') {
+                    if (zoneData.source.collectionId && zoneData.source.urlBase) {
+                        showFirstCollectionImage(zoneId, zoneData);
+                    }
+                }
+            });
+        }, 150);
         
         
         // Regénérer la navigation des pages après import
@@ -22593,7 +22611,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 imageBase64: source.imageBase64 || null,
                 nomOriginal: source.nomOriginal || '',
                 largeurPx: source.largeurPx || null,
-                hauteurPx: source.hauteurPx || null
+                hauteurPx: source.hauteurPx || null,
+                collectionId: source.collectionId ?? null,
+                urlBase: source.urlBase || '',
+                champFusion: source.champFusion || '',
+                nomZip: source.nomZip || '',
+                nbImagesServeur: source.nbImagesServeur ?? 0
             },
             redimensionnement: {
                 mode: redim.mode || 'ajuster',
@@ -22917,14 +22940,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 largeurMm: zoneData.wMm !== undefined ? zoneData.wMm : pixelsToMm(zoneData.w || 150),
                 hauteurMm: zoneData.hMm !== undefined ? zoneData.hMm : pixelsToMm(zoneData.h || 150)
             },
-            source: {
-                type: zoneData.source?.type || 'url',
-                valeur: zoneData.source?.valeur || '',
-                nomOriginal: zoneData.source?.nomOriginal || '',
-                imageBase64: zoneData.source?.imageBase64 || null,
-                largeurPx: zoneData.source?.largeurPx || null,
-                hauteurPx: zoneData.source?.hauteurPx || null
-            },
+            source: (() => {
+                const s = zoneData.source || {};
+                const type = s.type || 'url';
+                const base = {
+                    type: type,
+                    valeur: s.valeur || '',
+                    nomOriginal: s.nomOriginal || '',
+                    imageBase64: s.imageBase64 || null,
+                    largeurPx: s.largeurPx || null,
+                    hauteurPx: s.hauteurPx || null
+                };
+                if (type === 'champ') {
+                    base.collectionId = s.collectionId ?? null;
+                    base.urlBase = s.urlBase || '';
+                    base.champFusion = s.champFusion || '';
+                    base.nomZip = s.nomZip || '';
+                    base.nbImagesServeur = s.nbImagesServeur ?? 0;
+                }
+                return base;
+            })(),
             redimensionnement: {
                 mode: zoneData.redimensionnement?.mode || 'ajuster',
                 alignementH: zoneData.redimensionnement?.alignementH || 'center',
