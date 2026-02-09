@@ -17683,14 +17683,19 @@ document.addEventListener('DOMContentLoaded', () => {
             // Ancien format URL (rétrocompatibilité)
             imageUrl = source.valeur;
         } else if (source.type === 'champ') {
-            // Champ de fusion : vérifier si le mode aperçu est actif
-            if (previewState.active && documentState.donneesApercu.length > 0) {
-                // Mode aperçu actif → ré-afficher l'image dynamique avec les paramètres à jour
+            // Champ de fusion : vérifier si on peut afficher une image d'aperçu
+            // Cas 1 : mode aperçu formel actif (navigation entre enregistrements)
+            // Cas 2 : collection assignée avec données d'aperçu disponibles (sélection combo)
+            const hasPreviewData = documentState.donneesApercu && documentState.donneesApercu.length > 0;
+            const hasCollection = source.urlBase && source.valeur;
+            if (hasPreviewData && (previewState.active || hasCollection)) {
+                // Afficher l'image dynamique avec les paramètres à jour
                 const zoneId = typeof zoneIdOrEl === 'string' ? zoneIdOrEl : zoneEl.id;
-                const record = documentState.donneesApercu[previewState.currentIndex] || {};
+                const recordIndex = previewState.active ? (previewState.currentIndex || 0) : 0;
+                const record = documentState.donneesApercu[recordIndex] || {};
                 updateImageZoneForPreview(zoneId, zoneData, record);
             } else {
-                // Mode édition → afficher le placeholder
+                // Pas de données d'aperçu ou pas de collection → afficher le placeholder
                 contentEl.innerHTML = getImagePlaceholderSvg(source.valeur);
                 contentEl.classList.remove('has-image');
                 contentEl.classList.add('no-image');
