@@ -92,8 +92,12 @@
      * @property {number} [niveau] - Z-index
      * @property {PsmdGeometry} [geometrie] - Géométrie de la zone
      * @property {Object} [source] - Source de l'image
-     * @property {string} [source.imageBase64] - Image en base64
-     * @property {string} [source.nomOriginal] - Nom original du fichier
+     * @property {'fixe'|'champ'|'url'} [source.type] - Type de source
+     * @property {string} [source.imageBase64] - Image en base64 (fixe)
+     * @property {string} [source.nomOriginal] - Nom original du fichier (fixe)
+     * @property {string} [source.valeur] - Nom du champ de fusion (champ)
+     * @property {string} [source.cheminUNC] - Chemin UNC vers la collection (champ)
+     * @property {number|string} [source.collectionId] - ID collection serveur (champ)
      * @property {Object} [redimensionnement] - Options de redimensionnement
      * @property {Object} [fond] - Couleur de fond
      */
@@ -853,7 +857,7 @@
     function generatePsmdDataField(fieldName) {
         return `<data_field>
 <in_use>yes</in_use>
-<n>${escapeXmlPsmd(fieldName)}</n>
+<name>${escapeXmlPsmd(fieldName)}</name>
 <default_value></default_value>
 <source>user_input</source>
 <remarks></remarks>
@@ -882,7 +886,7 @@
 <author>PrintShop Mail</author>
 <creation_date>1992-07-01T11:00:00</creation_date>
 <last_modification_date>1992-07-01T11:00:00</last_modification_date>
-<n>Ne rien intégrer</n>
+<name>Ne rien intégrer</name>
 <description></description>
 <start_of_page></start_of_page>
 <start_of_job></start_of_job>
@@ -1013,20 +1017,32 @@
     }
 
     /**
-     * Génère une variable d'image pour la section <variables> du PSMD.
+     * Génère une variable PSMD de type image (section <variables> du PSMD).
      * PrintShop Mail utilise cette variable pour lier l'objet image au fichier.
-     * 
-     * @param {string} varName - Nom de la variable (déjà échappé XML via getImageZonePsmdName)
-     *                           Correspond à <variable_name> dans image_object
-     * @param {string} fileName - Nom du fichier image
-     * @returns {string} XML de la variable image
+     * @param {string} varName - Nom de la variable (déjà échappé XML)
+     * @param {string} fileName - Nom du fichier image (pour images fixes)
+     * @param {string} [expressionOverride] - Expression complète (pour images dynamiques, pas d'échappement)
+     * @returns {string} XML de la variable image PSMD
      */
-    function generatePsmdImageVariable(varName, fileName) {
+    function generatePsmdImageVariable(varName, fileName, expressionOverride) {
+        // Si expressionOverride fourni → échapper les caractères XML réservés (& < >)
+        // Les guillemets " sont conservés tels quels (valides en contenu d'élément XML)
+        // Sinon → nom de fichier entre guillemets (image fixe, échappement complet)
+        var expressionValue;
+        if (expressionOverride) {
+            // Échapper & et < > pour le XML, mais PAS les guillemets (nécessaires dans l'expression PSMD)
+            expressionValue = expressionOverride
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        } else {
+            expressionValue = '"' + escapeXmlPsmd(fileName) + '"';
+        }
         // varName est déjà échappé par getImageZonePsmdName(), ne pas ré-échapper
         return `<variable>
 <name>${varName}</name>
 <global>no</global>
-<expression>"${escapeXmlPsmd(fileName)}"</expression>
+<expression>${expressionValue}</expression>
 <Formatting>3</Formatting>
 <Locale_ID>1036</Locale_ID>
 <Currency_Symbol>€</Currency_Symbol>
@@ -1082,21 +1098,27 @@
             // Utiliser la fonction centralisée pour garantir la cohérence
             // avec <object>/<n> et <image_object>/<variable_name>
             const varName = getImageZonePsmdName(zone);
-            
-            // Générer le nom de fichier exporté si prefix fourni et image base64 présente
-            var fileName = '';
-            if (exportPrefix && zone.source && zone.source.imageBase64) {
-                var ext = getExtensionFromBase64(zone.source.imageBase64);
-                fileName = exportPrefix + '_' + zone.id + '.' + ext;
+            const source = zone.source || {};
+
+            if (source.type === 'champ' && source.cheminUNC && source.valeur) {
+                // ─── Image dynamique : expression = chemin UNC & [champ fusion] ───
+                // L'expression doit concaténer le chemin UNC (entre guillemets) avec la variable du champ
+                // Résultat attendu : "\\server\path\Collections\00000006\" & [Champ1]
+                const expression = '"' + source.cheminUNC + '" & [' + source.valeur + ']';
+                imageVariables.push({ varName: varName, expression: expression, isDynamic: true });
+            } else if (exportPrefix && source.imageBase64) {
+                // ─── Image fixe avec base64 ───
+                var ext = getExtensionFromBase64(source.imageBase64);
+                var fileName = exportPrefix + '_' + zone.id + '.' + ext;
+                imageVariables.push({ varName: varName, fileName: fileName, isDynamic: false });
             } else {
-                // Fallback sur le nom original si pas de base64 ou pas de prefix
-                fileName = (zone.source && zone.source.nomOriginal) || 
-                          (zone.source && zone.source.nomFichier) || 
-                          (zone.source && zone.source.url) || '';
-            }
-            
-            if (fileName) {
-                imageVariables.push({ varName: varName, fileName: fileName });
+                // ─── Fallback nom original ───
+                var fileName = (source.nomOriginal) || 
+                          (source.nomFichier) || 
+                          (source.url) || '';
+                if (fileName) {
+                    imageVariables.push({ varName: varName, fileName: fileName, isDynamic: false });
+                }
             }
         }
         
@@ -1115,7 +1137,11 @@
         // Variables d'images
         for (var j = 0; j < imageVariables.length; j++) {
             var imgVar = imageVariables[j];
-            xml += generatePsmdImageVariable(imgVar.varName, imgVar.fileName) + '\n';
+            if (imgVar.isDynamic) {
+                xml += generatePsmdImageVariable(imgVar.varName, '', imgVar.expression) + '\n';
+            } else {
+                xml += generatePsmdImageVariable(imgVar.varName, imgVar.fileName) + '\n';
+            }
         }
         
         xml += '</variables>';
@@ -1390,11 +1416,20 @@ ${generatePsmdColor('textcolor', textColor)}
         // Utiliser la fonction centralisée pour le nom (déjà échappé XML)
         var variableName = getImageZonePsmdName(zone);
         
-        // Utiliser le nom exporté si disponible, sinon le nom original
-        var fileName = zone.exportedFileName || 
-                      (zone.source && zone.source.nomOriginal) || 
-                      (zone.source && zone.source.nomFichier) || 
-                      (zone.source && zone.source.url) || '';
+        // Déterminer le nom de fichier selon le type de source
+        var source = zone.source || {};
+        var fileName = '';
+
+        if (source.type === 'champ' && source.cheminUNC) {
+            // Image dynamique : pas de file_name statique, PrintShop Mail utilise la variable
+            fileName = '';
+        } else {
+            // Image fixe : nom exporté ou nom original
+            fileName = zone.exportedFileName || 
+                      source.nomOriginal || 
+                      source.nomFichier || 
+                      source.url || '';
+        }
         
         // Mode de redimensionnement
         var keepAspectRatio = ((zone.redimensionnement && zone.redimensionnement.mode === 'proportionnel') || 
@@ -1670,7 +1705,7 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
 <fit_to_objects>no</fit_to_objects>
 </dimensions>
 <attributes>
-<n>${escapeXmlPsmd(layoutName)}</n>
+<name>${escapeXmlPsmd(layoutName)}</name>
 <condition_expression>Print</condition_expression>
 <copies_expression>1</copies_expression>
 </attributes>
@@ -1871,6 +1906,8 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
         var zonesImage = jsonData.zonesImage || [];
         for (var i = 0; i < zonesImage.length; i++) {
             var zone = zonesImage[i];
+            // Ne pas exporter les images dynamiques (type 'champ') — elles sont sur le serveur
+            if (zone.source && zone.source.type === 'champ') continue;
             if (zone.source && zone.source.imageBase64) {
                 var ext = getExtensionFromBase64(zone.source.imageBase64);
                 var fileName = exportPrefix + '_' + zone.id + '.' + ext;
@@ -1908,6 +1945,17 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
                     if (allMergeFields.indexOf(fields[j]) === -1) {
                         allMergeFields.push(fields[j]);
                     }
+                }
+            }
+        }
+
+        // Extraire les champs de fusion des zones image dynamiques
+        var zonesImageForFields = jsonData.zonesImage || [];
+        for (var i = 0; i < zonesImageForFields.length; i++) {
+            var zoneImg = zonesImageForFields[i];
+            if (zoneImg.source && zoneImg.source.type === 'champ' && zoneImg.source.valeur) {
+                if (allMergeFields.indexOf(zoneImg.source.valeur) === -1) {
+                    allMergeFields.push(zoneImg.source.valeur);
                 }
             }
         }

@@ -112,6 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {string} [nomZip] - Nom du fichier ZIP uploadé (mode champ)
      * @property {number|string} [collectionId] - ID de la collection créée sur le serveur
      * @property {string} [urlBase] - URL de base pour accéder aux images de la collection
+     * @property {string} [cheminUNC] - Chemin UNC réseau vers le dossier de la collection (pour PSMD)
      * @property {string} [champFusion] - Nom du champ de fusion retourné par le serveur
      * @property {Object} [resume] - Résumé du traitement serveur (statistiques)
      * @property {number} [resume.totalFichiersZip] - Nombre total de fichiers dans le ZIP
@@ -416,6 +417,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {string} valeur - URL ou nom du champ
      * @property {number|string} [collectionId] - ID de la collection serveur (images dynamiques)
      * @property {string} [urlBase] - URL de base pour accéder aux images de la collection
+     * @property {string} [cheminUNC] - Chemin UNC réseau vers le dossier de la collection
      * @property {string} [champFusion] - Nom du champ de fusion retourné par le serveur
      * @property {string} [nomZip] - Nom du fichier ZIP d'origine
      * @property {number} [nbImagesServeur] - Nombre d'images sur le serveur
@@ -6293,6 +6295,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Mettre à jour la source avec les infos du webservice
         zoneData.source.collectionId = details.collectionId || '';
         zoneData.source.urlBase = details.urlBase || '';
+        zoneData.source.cheminUNC = details.cheminUNC || '';
         zoneData.source.champFusion = details.champFusion || '';
         
         // Stocker le résumé complet du traitement serveur
@@ -6327,6 +6330,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Mettre à jour l'option existante
                 existingOption.textContent = nomCollection + ' (' + nbImg + ' img)';
                 existingOption.dataset.urlBase = details.urlBase || '';
+                existingOption.dataset.cheminUNC = details.cheminUNC || '';
                 existingOption.dataset.nbImages = String(nbImg);
             } else {
                 // Créer une nouvelle option
@@ -6334,6 +6338,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 newOption.value = collId;
                 newOption.textContent = nomCollection + ' (' + nbImg + ' img)';
                 newOption.dataset.urlBase = details.urlBase || '';
+                newOption.dataset.cheminUNC = details.cheminUNC || '';
                 newOption.dataset.nbImages = String(nbImg);
                 imageInputCollection.appendChild(newOption);
             }
@@ -6528,7 +6533,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * Remplit la combo collection avec les collections fournies.
      * Affiche ou masque la row collection selon qu'il y a des collections ou non.
      *
-     * @param {Array<{idCollection: number, nom: string, nbImages: number, urlBase: string, dateCreation: string}>} collections - Tableau de collections
+     * @param {Array<{idCollection: number, nom: string, nbImages: number, urlBase: string, cheminUNC: string, dateCreation: string}>} collections - Tableau de collections
      * @param {string} [selectedId=''] - ID de collection à pré-sélectionner
      */
     function populateCollectionSelect(collections, selectedId = '') {
@@ -6548,8 +6553,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const option = document.createElement('option');
             option.value = String(col.idCollection);
             option.textContent = col.nom + ' (' + col.nbImages + ' img)';
-            // Stocker urlBase en data-attribute pour y accéder au changement
+            // Stocker urlBase et cheminUNC en data-attribute pour y accéder au changement
             option.dataset.urlBase = col.urlBase || '';
+            option.dataset.cheminUNC = col.cheminUNC || '';
             option.dataset.nbImages = String(col.nbImages || 0);
             if (String(col.idCollection) === selectedId) {
                 option.selected = true;
@@ -16491,11 +16497,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const selectedOption = imageInputCollection.selectedOptions[0];
                 const collectionId = imageInputCollection.value;
                 const urlBase = selectedOption ? (selectedOption.dataset.urlBase || '') : '';
+                const cheminUNC = selectedOption ? (selectedOption.dataset.cheminUNC || '') : '';
 
                 updateSelectedImageZone((zoneData) => {
                     if (!zoneData.source) zoneData.source = { type: 'champ', valeur: '' };
                     zoneData.source.collectionId = collectionId ? Number(collectionId) : '';
                     zoneData.source.urlBase = urlBase;
+                    zoneData.source.cheminUNC = cheminUNC;
                 });
 
                 // Verrouiller/déverrouiller le champ selon la sélection de collection
@@ -22614,6 +22622,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 hauteurPx: source.hauteurPx || null,
                 collectionId: source.collectionId ?? null,
                 urlBase: source.urlBase || '',
+                cheminUNC: source.cheminUNC || '',
                 champFusion: source.champFusion || '',
                 nomZip: source.nomZip || '',
                 nbImagesServeur: source.nbImagesServeur ?? 0
@@ -22954,6 +22963,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (type === 'champ') {
                     base.collectionId = s.collectionId ?? null;
                     base.urlBase = s.urlBase || '';
+                    base.cheminUNC = s.cheminUNC || '';
                     base.champFusion = s.champFusion || '';
                     base.nomZip = s.nomZip || '';
                     base.nbImagesServeur = s.nbImagesServeur ?? 0;
