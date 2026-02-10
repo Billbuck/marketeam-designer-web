@@ -5291,6 +5291,17 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     let authConfig = null;
 
+    // Restaurer authConfig depuis sessionStorage (survie au F5)
+    try {
+        const savedAuth = sessionStorage.getItem('marketeam_auth_config');
+        if (savedAuth) {
+            authConfig = JSON.parse(savedAuth);
+            console.log('authConfig restauré depuis sessionStorage (idClient:', authConfig.idClient, ')');
+        }
+    } catch (e) {
+        console.warn('⚠️ Impossible de restaurer authConfig depuis sessionStorage', e);
+    }
+
     /**
      * Configuration des bases de données de l'opération reçue de WebDev via postMessage 'load'.
      * Contient la liste des bases (clt/dos) nécessaires pour l'upload webservice.
@@ -22222,6 +22233,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 urlWebservice: String(jsonData.auth.urlWebservice || ''),
                 urlCollectionListe: String(jsonData.auth.urlCollectionListe || '')
             };
+            // Persister authConfig dans sessionStorage pour qu'il survive à un F5
+            try {
+                sessionStorage.setItem('marketeam_auth_config', JSON.stringify(authConfig));
+            } catch (e) {
+                console.warn('⚠️ Impossible de sauvegarder authConfig dans sessionStorage', e);
+            }
             console.log('loadFromWebDev: Auth config reçue (idClient:', authConfig.idClient, ', urlWebservice:', authConfig.urlWebservice, ')');
         }
 
