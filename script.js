@@ -894,8 +894,6 @@ document.addEventListener('DOMContentLoaded', () => {
     /** @type {HTMLButtonElement|null} Bouton Confirmer */
     const collectionNameConfirmBtn = document.getElementById('collection-name-confirm-btn');
     
-    const lblSelected = null; // SUPPRIMÉ - était #lbl-selected-zone
-    
     // Contrôles de zoom
     const zoomSlider = document.getElementById('zoom-slider');
     const btnZoomIn = document.getElementById('btn-zoom-in');
@@ -947,11 +945,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const chkCopyfit = null; // SUPPRIMÉ
     const inputLineHeight = null; // SUPPRIMÉ
     
-    // Boutons de formatage partiel (SUPPRIMÉS)
-    const btnFormatBold = null; // SUPPRIMÉ
-    const btnFormatColor = null; // SUPPRIMÉ
-    const btnFormatClear = null; // SUPPRIMÉ
-    
     // Input color caché pour le formatage de texte
     const colorPickerInput = document.getElementById('color-picker-input');
     
@@ -969,14 +962,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Contrôle lignes vides (SUPPRIMÉS)
     const inputEmptyLines = null; // SUPPRIMÉ
-    const emptyLinesSection = null; // SUPPRIMÉ
-    
-    // Inputs pour zones image (SUPPRIMÉS)
-    const imagePropertiesSection = null; // SUPPRIMÉ
-    const textPropertiesSection = null; // SUPPRIMÉ
     
     // Inputs pour zones code-barres (SUPPRIMÉS)
-    const barcodePropertiesSection = null; // SUPPRIMÉ
     const inputBarcodeName = null; // SUPPRIMÉ
     const inputBarcodeType = null; // SUPPRIMÉ
     // inputBarcodeField est déclaré plus bas (ligne ~829) avec getElementById sous le nom barcodeInputField
@@ -1618,6 +1605,13 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     // ───────────────────────────────────────────────────────────────────────────────
     
+    /**
+     * Active/désactive les messages console.log de debug.
+     * Passer à true pour le développement, false pour la production.
+     * @type {boolean}
+     */
+    const DEBUG = false;
+
     // --- CONSTANTES QUILL (Phase 0) ---
     /**
      * Police par défaut utilisée par Quill.
@@ -2655,6 +2649,14 @@ document.addEventListener('DOMContentLoaded', () => {
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
     }
+
+    /**
+     * Alias de escapeHtmlAttr pour utilisation dans les contenus innerHTML.
+     * Protège contre les injections XSS en échappant les caractères HTML spéciaux.
+     * @param {string} str - Chaîne à échapper
+     * @returns {string} Chaîne échappée (safe pour innerHTML)
+     */
+    const escapeHtml = escapeHtmlAttr;
     
     /**
      * Valide une valeur pour un type de code-barres donné.
@@ -3099,13 +3101,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
         
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
             const response = await fetch(url, {
                 headers: {
                     'Accept': 'application/json',
                     // User-Agent recommandé par Nominatim
                     'User-Agent': 'MarketeamDesigner/1.0'
-                }
+                },
+                signal: controller.signal
             });
+            clearTimeout(timeoutId);
             
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
@@ -3862,7 +3868,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <line x1="16" y1="13" x2="8" y2="13"></line>
                     <line x1="16" y1="17" x2="8" y2="17"></line>
                 </svg>
-                <span class="field-name">${fieldLabel}</span>
+                <span class="field-name">${escapeHtml(fieldLabel)}</span>
             `;
             tag.title = `${fieldLabel} (${fieldType}) - Double-clic ou glisser pour insérer @${fieldName}@`;
             tag.dataset.fieldName = fieldName;  // Stocker le nom technique
@@ -4796,7 +4802,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Les dimensions max des zones image sont calculées dynamiquement :
     // - Si fourni par WebDev : utiliser largeurMaxImageMm / hauteurMaxImageMm
     // - Sinon : 1/3 des dimensions du document
-    // const IMAGE_COMPRESSION_QUALITY = 0.85;    // Obsolète : PNG utilisé (lossless)
     const IMAGE_MAX_UPLOAD_SIZE = 10 * 1024 * 1024;  // 10 Mo max à l'upload
     const IMAGE_MAX_COMPRESSED_SIZE = 2 * 1024 * 1024;  // 2 Mo max après compression
     const DPI_MINIMUM = 150;
@@ -4917,18 +4922,6 @@ document.addEventListener('DOMContentLoaded', () => {
      *   - getDimensionMaxCompressionPx() (Section 7)
      */
     // ───────────────────────────────────────────────────────────────────────────────
-    
-    /**
-     * Vérifie si le navigateur supporte le format WebP
-     * @returns {boolean}
-     */
-    // Fonction obsolète : PNG utilisé systématiquement pour compatibilité PrintShop Mail
-    // function supportsWebP() {
-    //     const canvas = document.createElement('canvas');
-    //     canvas.width = 1;
-    //     canvas.height = 1;
-    //     return canvas.toDataURL('image/webp').startsWith('data:image/webp');
-    // }
     
     /**
      * Formate une taille de fichier en Ko ou Mo
@@ -5210,7 +5203,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const fileSize = formatFileSize(source.poidsCompresse || source.poidsBrut || 0);
             
             imageFileInfo.innerHTML = `
-                <div class="file-info-name-poc">📎 ${fileName}</div>
+                <div class="file-info-name-poc">📎 ${escapeHtml(fileName)}</div>
                 <div class="file-info-details-poc">
                     <span>${dimensions}</span>
                     <span>${fileSize}</span>
@@ -5296,7 +5289,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const savedAuth = sessionStorage.getItem('marketeam_auth_config');
         if (savedAuth) {
             authConfig = JSON.parse(savedAuth);
-            console.log('authConfig restauré depuis sessionStorage (idClient:', authConfig.idClient, ')');
+            if (DEBUG) console.log('authConfig restauré depuis sessionStorage (idClient:', authConfig.idClient, ')');
         }
     } catch (e) {
         console.warn('⚠️ Impossible de restaurer authConfig depuis sessionStorage', e);
@@ -5386,7 +5379,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span class="material-icons">check_circle</span>
                 <span><strong>${nbValides}</strong> image${nbValides > 1 ? 's' : ''} trouvée${nbValides > 1 ? 's' : ''}</span>
             </div>`;
-            html += `<div class="zip-result-details">${nomZip}</div>`;
+            html += `<div class="zip-result-details">${escapeHtml(nomZip)}</div>`;
         }
 
         imageZipResult.innerHTML = html;
@@ -5958,6 +5951,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Vérifier qu'une zone image champ est sélectionnée
         if (selectedZoneIds.length !== 1) return;
+
+        // Empêcher les exécutions concurrentes
+        if (handleZipFileSelection._running) return;
+        handleZipFileSelection._running = true;
+
+        try {
         const selectedId = selectedZoneIds[0];
         const zonesData = getCurrentPageZones();
         const zoneData = zonesData[selectedId];
@@ -5969,12 +5968,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!champSelectionne) return;
 
         // Lancer la lecture/validation
-        console.log('ZIP Upload: Fichier sélectionné:', file.name, '- Taille:', formatFileSize(file.size));
+        if (DEBUG) console.log('ZIP Upload: Fichier sélectionné:', file.name, '- Taille:', formatFileSize(file.size));
 
         const result = await readAndValidateZip(file);
 
         if (result.success) {
-            console.log('ZIP Upload: Validation OK -', zipUploadData.imagesValides.length, 'images valides');
+            if (DEBUG) console.log('ZIP Upload: Validation OK -', zipUploadData.imagesValides.length, 'images valides');
             showZipResult(
                 zipUploadData.imagesValides.length,
                 zipUploadData.nomFichierZip
@@ -5993,10 +5992,10 @@ document.addEventListener('DOMContentLoaded', () => {
             let collectionInfo;
             try {
                 collectionInfo = await showCollectionNameModal(zipUploadData.nomFichierZip);
-                console.log('ZIP Upload: Collection confirmée -', 'nom:', collectionInfo.nomCollection, ', idCollection:', collectionInfo.idCollection || '(nouvelle)');
+                if (DEBUG) console.log('ZIP Upload: Collection confirmée -', 'nom:', collectionInfo.nomCollection, ', idCollection:', collectionInfo.idCollection || '(nouvelle)');
             } catch (e) {
                 // L'utilisateur a annulé → clearZipData + état déjà gérés dans onCancel
-                console.log('ZIP Upload: Nommage annulé par l\'utilisateur');
+                if (DEBUG) console.log('ZIP Upload: Nommage annulé par l\'utilisateur');
                 return;
             }
 
@@ -6009,7 +6008,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const uploadResult = await uploadZipToWebservice(champSelectionne);
                 
                 if (uploadResult.success) {
-                    console.log('ZIP Upload: Upload webservice réussi');
+                    if (DEBUG) console.log('ZIP Upload: Upload webservice réussi');
                     handleZipUploadResponse(uploadResult.data);
                     // Réafficher le résultat final inline (toolbar)
                     showZipResult(
@@ -6027,7 +6026,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else {
                 // Pas de config auth → mode local uniquement (dev/test)
-                console.log('ZIP Upload: Pas de config auth, mode local uniquement');
+                if (DEBUG) console.log('ZIP Upload: Pas de config auth, mode local uniquement');
                 // Popup locale si des fichiers ont été ignorés (pas de résumé serveur disponible)
                 if (zipUploadData.imagesIgnorees.length > 0) {
                     showNotification([
@@ -6051,6 +6050,15 @@ document.addEventListener('DOMContentLoaded', () => {
             showNotification(errorMessages);
             // Rester en état champ sélectionné (bouton Importer visible)
             updateZipUploadUIState('champ_selectionne');
+        }
+
+        } catch (err) {
+            console.error('❌ Erreur inattendue dans handleZipFileSelection:', err);
+            showNotification([{ level: 'error', text: 'Une erreur inattendue est survenue lors de l\'import ZIP.' }]);
+            clearZipData();
+            updateZipUploadUIState('champ_selectionne');
+        } finally {
+            handleZipFileSelection._running = false;
         }
     }
 
@@ -6168,14 +6176,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const url = authConfig.urlWebservice;
 
-        console.log('ZIP Upload: Envoi vers', url, '- Taille:', formatFileSize(zipUploadData.tailleZip));
+        if (DEBUG) console.log('ZIP Upload: Envoi vers', url, '- Taille:', formatFileSize(zipUploadData.tailleZip));
 
         showZipProgress('Envoi... 0%', 0);
 
         // Envoi via XMLHttpRequest (pour la progression upload)
         return new Promise((resolve) => {
             const xhr = new XMLHttpRequest();
-            xhr.timeout = 0; // Pas de timeout (fichiers volumineux)
+            xhr.timeout = 300000; // 5 minutes max pour les fichiers volumineux
 
             let intervalAnalyse = null;
 
@@ -6189,7 +6197,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Envoi terminé → Phase 2 : Traitement serveur (estimation)
             xhr.upload.onload = () => {
-                console.log('ZIP Upload: Envoi terminé, traitement serveur...');
+                if (DEBUG) console.log('ZIP Upload: Envoi terminé, traitement serveur...');
                 showZipProgress('Traitement serveur...', 0);
 
                 // Animation estimée : ~2s par Mo
@@ -6210,7 +6218,7 @@ document.addEventListener('DOMContentLoaded', () => {
             xhr.onload = () => {
                 if (intervalAnalyse) clearInterval(intervalAnalyse);
 
-                console.log('ZIP Upload: Réponse reçue - Statut:', xhr.status);
+                if (DEBUG) console.log('ZIP Upload: Réponse reçue - Statut:', xhr.status);
 
                 if (xhr.status === 200) {
                     showZipProgress('Terminé !', 100);
@@ -6315,7 +6323,7 @@ document.addEventListener('DOMContentLoaded', () => {
             zoneData.source.nbImagesServeur = details.resume.imagesStockees || 0;
             
             // Logger le résumé pour vérification
-            console.log('ZIP Upload: Résumé -',
+            if (DEBUG) console.log('ZIP Upload: Résumé -',
                 'Stockées:', details.resume.imagesStockees,
                 'Correspondances:', details.resume.imagesAvecCorrespondance,
                 'Sans correspondance:', details.resume.imagesSansCorrespondance,
@@ -6323,7 +6331,7 @@ document.addEventListener('DOMContentLoaded', () => {
             );
         }
 
-        console.log('ZIP Upload: Zone mise à jour - collectionId:', zoneData.source.collectionId, ', urlBase:', zoneData.source.urlBase);
+        if (DEBUG) console.log('ZIP Upload: Zone mise à jour - collectionId:', zoneData.source.collectionId, ', urlBase:', zoneData.source.urlBase);
 
         // Ajouter ou mettre à jour la collection dans la combo et la sélectionner
         if (imageInputCollection && details.collectionId) {
@@ -6472,7 +6480,12 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {string|number} [selectedCollectionId=''] - ID de collection à pré-sélectionner
      * @returns {Promise<void>}
      */
+    /** @type {number} Compteur d'appels pour annuler les réponses obsolètes */
+    let _fetchCollectionsSeq = 0;
+
     async function fetchCollections(colonne, selectedCollectionId = '') {
+        const mySeq = ++_fetchCollectionsSeq;
+
         if (!authConfig || !authConfig.urlCollectionListe) {
             console.warn('fetchCollections: URL webservice collection non configurée');
             setCollectionLoadingState(false);
@@ -6493,6 +6506,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const timestamp = generateTimestamp();
             const signature = await generateSignature(timestamp);
 
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
             const response = await fetch(authConfig.urlCollectionListe, {
                 method: 'POST',
                 headers: {
@@ -6502,8 +6517,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     'X-Timestamp': timestamp,
                     'X-Marketeam-Auth': signature
                 },
-                body: JSON.stringify({ colonne: colonne })
+                body: JSON.stringify({ colonne: colonne }),
+                signal: controller.signal
             });
+            clearTimeout(timeoutId);
 
             if (!response.ok) {
                 console.warn('fetchCollections: Erreur HTTP', response.status);
@@ -6529,7 +6546,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const collections = (details && Array.isArray(details.collections)) ? details.collections : [];
-            console.log('fetchCollections: ' + collections.length + ' collection(s) trouvée(s) pour colonne', colonne);
+            if (DEBUG) console.log('fetchCollections: ' + collections.length + ' collection(s) trouvée(s) pour colonne', colonne);
+            // Ignorer la réponse si un appel plus récent a été lancé entre-temps
+            if (mySeq !== _fetchCollectionsSeq) return;
             setCollectionLoadingState(false);
             populateCollectionSelect(collections, String(selectedCollectionId));
 
@@ -8917,7 +8936,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         }
         
-        console.log('applyConstraints: Contraintes appliquées -',
+        if (DEBUG) console.log('applyConstraints: Contraintes appliquées -',
             'autorisations:', documentState.constraints.autorisations,
             ', limites:', documentState.constraints.limites
         );
@@ -10228,7 +10247,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * - 'template' : Créateur de template, peut définir les contraintes
      * @type {'standard'|'template'}
      */
-    let designerMode = 'template'; // TODO: remettre 'standard' en production
+    let designerMode = 'standard';
 
     /**
      * Définit le mode de fonctionnement du Designer.
@@ -16541,7 +16560,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
-                console.log('Collection sélectionnée:', collectionId, 'urlBase:', urlBase);
+                if (DEBUG) console.log('Collection sélectionnée:', collectionId, 'urlBase:', urlBase);
             });
         }
         
@@ -21376,6 +21395,19 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('marketeam_document_state', documentStateJson);
         } catch (error) {
             console.error('❌ Impossible de sauvegarder documentState dans localStorage.', error);
+            const isQuotaError = error && (
+                error.name === 'QuotaExceededError' ||
+                error.name === 'NS_ERROR_DOM_QUOTA_REACHED'
+            );
+            if (isQuotaError) {
+                // Afficher un avertissement visuel à l'utilisateur via le toast existant
+                const toast = document.getElementById('undo-redo-toast');
+                if (toast) {
+                    toast.innerHTML = '<span class="material-icons toast-icon">warning</span><span>Stockage navigateur plein</span>';
+                    toast.className = 'undo-toast error show';
+                    setTimeout(() => { toast.classList.remove('show'); }, 5000);
+                }
+            }
         }
         
         // Rétrocompatibilité : sauvegarder aussi l'ancien format pour la page courante (best-effort)
@@ -22239,7 +22271,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (e) {
                 console.warn('⚠️ Impossible de sauvegarder authConfig dans sessionStorage', e);
             }
-            console.log('loadFromWebDev: Auth config reçue (idClient:', authConfig.idClient, ', urlWebservice:', authConfig.urlWebservice, ')');
+            if (DEBUG) console.log('loadFromWebDev: Auth config reçue (idClient:', authConfig.idClient, ', urlWebservice:', authConfig.urlWebservice, ')');
         }
 
         // Stocker la configuration des bases de données si fournie dans l'enveloppe
@@ -22253,9 +22285,9 @@ document.addEventListener('DOMContentLoaded', () => {
             basesConfig = {
                 liste: parsedListe
             };
-            console.log('loadFromWebDev: Bases config reçue (' + parsedListe.length + ' bases)');
+            if (DEBUG) console.log('loadFromWebDev: Bases config reçue (' + parsedListe.length + ' bases)');
             if (parsedListe.length > 0) {
-                console.log('loadFromWebDev: Bases:', JSON.stringify(parsedListe));
+                if (DEBUG) console.log('loadFromWebDev: Bases:', JSON.stringify(parsedListe));
             }
         }
 
@@ -22276,7 +22308,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 ZIP_ACCEPTED_IMAGE_EXTENSIONS = lim.zipAcceptedImageExtensions.map(ext => String(ext).toLowerCase());
             }
 
-            console.log('loadFromWebDev: Limites ZIP reçues -',
+            if (DEBUG) console.log('loadFromWebDev: Limites ZIP reçues -',
                 'maxFile:', formatFileSize(ZIP_MAX_FILE_SIZE),
                 ', minImage:', formatFileSize(ZIP_MIN_IMAGE_SIZE),
                 ', maxImage:', formatFileSize(ZIP_MAX_IMAGE_SIZE),
@@ -23399,13 +23431,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
-     * Envoie un message au parent (WebDev)
+     * Origine autorisée pour la communication postMessage.
+     * Mémorisée au premier message 'load' reçu du parent.
+     * @type {string|null}
+     */
+    let trustedParentOrigin = null;
+
+    /**
+     * Envoie un message au parent (WebDev).
+     * Utilise l'origine de confiance si connue, sinon '*' (premier échange uniquement).
      * @param {Object} message - Message à envoyer
      */
     function sendMessageToParent(message) {
         if (window.parent && window.parent !== window) {
-            window.parent.postMessage(message, '*');
-        } else {
+            const targetOrigin = trustedParentOrigin || '*';
+            window.parent.postMessage(message, targetOrigin);
         }
     }
     
@@ -23417,11 +23457,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
-     * Gestionnaire des messages reçus du parent (WebDev)
+     * Gestionnaire des messages reçus du parent (WebDev).
+     * Après le premier message 'load', seuls les messages provenant
+     * de la même origine sont acceptés (protection contre XSS).
      */
     function handleParentMessage(event) {
-        // Sécurité : vérifier l'origine si nécessaire
-        // if (event.origin !== "https://votre-domaine-webdev.com") return;
+        // Sécurité : après la première connexion, n'accepter que l'origine connue
+        if (trustedParentOrigin && event.origin !== trustedParentOrigin) {
+            return;
+        }
         
         const message = event.data;
         
@@ -23433,6 +23477,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         switch (message.action) {
             case 'load':
+                // Mémoriser l'origine de confiance au premier 'load'
+                if (!trustedParentOrigin && event.origin) {
+                    trustedParentOrigin = event.origin;
+                }
                 // Charger un document JSON
                 if (message.data) {
                     try {
@@ -23620,32 +23668,39 @@ document.addEventListener('DOMContentLoaded', () => {
         const savedCounter = localStorage.getItem('marketeam_zone_counter');
 
         if (savedZones && savedCounter) {
-            zoneCounter = parseInt(savedCounter);
-            documentState.zoneCounter = zoneCounter;
-            documentState.currentPageIndex = 0; // Forcer Recto lors de la migration
-            const parsedZones = JSON.parse(savedZones);
-            
-            // Migrer toutes les zones vers la page 0 (Recto)
-            // S'assurer que la page a les dimensions par défaut (A4)
-            const defaultFormat = DOCUMENT_FORMATS[DEFAULT_FORMAT];
-            if (!documentState.pages[0].width || !documentState.pages[0].height) {
-                documentState.pages[0].format = DEFAULT_FORMAT;
-                documentState.pages[0].width = defaultFormat.width;
-                documentState.pages[0].height = defaultFormat.height;
+            try {
+                zoneCounter = parseInt(savedCounter);
+                documentState.zoneCounter = zoneCounter;
+                documentState.currentPageIndex = 0; // Forcer Recto lors de la migration
+                const parsedZones = JSON.parse(savedZones);
+                
+                // Migrer toutes les zones vers la page 0 (Recto)
+                // S'assurer que la page a les dimensions par défaut (A4)
+                const defaultFormat = DOCUMENT_FORMATS[DEFAULT_FORMAT];
+                if (!documentState.pages[0].width || !documentState.pages[0].height) {
+                    documentState.pages[0].format = DEFAULT_FORMAT;
+                    documentState.pages[0].width = defaultFormat.width;
+                    documentState.pages[0].height = defaultFormat.height;
+                }
+                if (!documentState.pages[1].width || !documentState.pages[1].height) {
+                    documentState.pages[1].format = DEFAULT_FORMAT;
+                    documentState.pages[1].width = defaultFormat.width;
+                    documentState.pages[1].height = defaultFormat.height;
+                }
+                
+                documentState.pages[0].zones = parsedZones;
+                
+                // Charger la page courante
+                loadCurrentPage();
+                
+                // Sauvegarder immédiatement dans le nouveau format
+                saveToLocalStorage();
+            } catch (e) {
+                console.error('❌ Erreur lors de la migration depuis l\'ancien format localStorage:', e);
+                // Nettoyer les données corrompues
+                localStorage.removeItem('marketeam_zones');
+                localStorage.removeItem('marketeam_zone_counter');
             }
-            if (!documentState.pages[1].width || !documentState.pages[1].height) {
-                documentState.pages[1].format = DEFAULT_FORMAT;
-                documentState.pages[1].width = defaultFormat.width;
-                documentState.pages[1].height = defaultFormat.height;
-            }
-            
-            documentState.pages[0].zones = parsedZones;
-            
-            // Charger la page courante
-            loadCurrentPage();
-            
-            // Sauvegarder immédiatement dans le nouveau format
-            saveToLocalStorage();
         } else {
             // Aucune donnée sauvegardée : s'assurer qu'on est sur la page 0 (Recto)
             documentState.currentPageIndex = 0;
@@ -24391,7 +24446,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
                         </svg>
                     </span>
-                    <span class="btn-label">${page.name}</span>
+                    <span class="btn-label">${escapeHtml(page.name)}</span>
                 `;
                 
                 if (index === documentState.currentPageIndex) {
