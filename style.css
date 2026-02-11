@@ -3008,7 +3008,7 @@ html[data-theme="LTR"] {
 
 /* Variables Sidebar */
 :root {
-    --sidebar-width: 300px;              /* POC: 300px (était 280px) */
+    --sidebar-width: 200px;              /* Réduit de 300px à 200px */
     --sidebar-collapsed-width: 110px;    /* POC: 110px (était 80px) */
     --bg-sidebar: #FFFFFF;
     --bg-section-header: #f5f5f5;
@@ -3046,28 +3046,53 @@ html[data-theme="LTR"] {
 
 /* ==================== SIDEBAR HEADER ==================== */
 .sidebar-header {
-    padding: 12px 16px;
+    padding: 8px;                /* Réduit de 12px 16px à 8px uniforme */
     border-bottom: 1px solid var(--border-color);
-    display: flex;
+    display: none;               /* Masqué par défaut (hors plein écran) */
     align-items: center;
     justify-content: space-between;
-    min-height: 56px;
+    min-height: 48px;            /* Réduit de 56px à 48px */
     flex-shrink: 0;
+}
+
+/* Header visible uniquement en mode plein écran */
+/* Chaque préfixe DOIT être dans sa propre règle sinon le navigateur
+   rejette tout le bloc s'il ne reconnaît pas un des sélecteurs */
+:fullscreen .sidebar-header {
+    display: flex;
+}
+:-webkit-full-screen .sidebar-header {
+    display: flex;
+}
+:-moz-full-screen .sidebar-header {
+    display: flex;
+}
+:-ms-fullscreen .sidebar-header {
+    display: flex;
 }
 
 .sidebar .logo {
     display: flex;
     align-items: center;
     overflow: hidden;
-    height: 32px;
+    height: 24px;                /* Réduit de 32px à 24px pour sidebar 200px */
+    flex: 1;                     /* Prend l'espace restant à côté du toggle */
+    min-width: 0;                /* Permet au flex de rétrécir sous la taille du contenu */
 }
 
 .sidebar .logo-full {
-    height: 32px;
-    flex-shrink: 0;
+    height: 24px;                /* Réduit de 32px à 24px */
+    flex-shrink: 1;              /* Autorise le logo à rétrécir si nécessaire */
     display: flex;
     align-items: center;
+    max-width: 100%;             /* Ne dépasse pas le conteneur */
     transition: opacity var(--transition-speed) var(--transition-easing);
+}
+
+.sidebar .logo-full .logo-svg {
+    height: 24px;                /* Force le SVG à 24px (écrase le height="32" du HTML) */
+    width: auto;                 /* Largeur proportionnelle automatique */
+    max-width: 100%;             /* Ne dépasse jamais le conteneur */
 }
 
 .sidebar .logo-icon {
@@ -3129,7 +3154,7 @@ html[data-theme="LTR"] {
     flex-direction: column;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 16px;               /* POC: 16px */
+    padding: 8px;                /* Réduit de 16px à 8px */
     transition: padding var(--transition-speed) var(--transition-easing);
 }
 
@@ -3175,8 +3200,8 @@ html[data-theme="LTR"] {
     background: var(--bg-section-header);
     border-top: 1px solid var(--border-color);
     border-bottom: 1px solid var(--border-color);
-    margin-left: -16px;          /* POC: -16px */
-    margin-right: -16px;         /* POC: -16px */
+    margin-left: -8px;           /* Aligné sur le padding 8px */
+    margin-right: -8px;          /* Aligné sur le padding 8px */
     text-align: center;
     transition: opacity var(--transition-speed) ease,
                 padding var(--transition-speed) var(--transition-easing);
@@ -3198,7 +3223,7 @@ html[data-theme="LTR"] {
 .sidebar .btn-group {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;                    /* Réduit de 6px à 4px */
     width: 100%;
     transition: width var(--transition-speed) var(--transition-easing);
 }
@@ -3208,29 +3233,29 @@ html[data-theme="LTR"] {
     flex-direction: row;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 6px;
+    gap: 4px;                    /* Réduit de 6px à 4px */
     width: 100%;
 }
 
 .sidebar .btn-group.grid-2 .btn {
-    width: calc(50% - 3px);      /* POC: Calcul exact pour 2 colonnes avec gap 6px */
+    width: calc(50% - 2px);      /* Calcul exact pour 2 colonnes avec gap 4px */
     justify-content: flex-start; /* Icône à gauche, texte suit */
-    padding: 10px 8px;           /* Padding horizontal réduit pour grille */
-    gap: 2px;                    /* Gap minimal pour éviter troncature du texte */
+    padding: 6px 4px 6px 8px;   /* Même padding que les boutons 1 colonne */
+    gap: 8px;                    /* Même gap que les boutons 1 colonne */
 }
 
-/* Padding réduit sur les icônes des boutons grid-2 */
+/* Padding icônes grid-2 : supprimé, le padding du bouton (4px) suffit */
 .sidebar .btn-group.grid-2 .btn-icon {
-    padding-left: 8px;
-    padding-right: 2px;
+    padding-left: 0;
+    padding-right: 0;
 }
 
 .sidebar .btn {
     display: flex;
     align-items: center;
     justify-content: flex-start; /* POC: flex-start pour aligner icône à gauche */
-    gap: 12px;
-    padding: 10px 14px;
+    gap: 8px;
+    padding: 6px 4px 6px 8px;   /* haut:6 droite:4 bas:6 gauche:8 */
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
     background: var(--bg-sidebar);
@@ -3240,10 +3265,10 @@ html[data-theme="LTR"] {
                 background 0.15s ease,
                 border-color 0.15s ease;
     position: relative;
-    height: 44px;                /* POC: hauteur FIXE 44px */
+    height: 32px;                /* 32px : 1+6+18+6+1 = 32px pile */
     width: 100%;
     margin: 0;
-    font-size: 13px;
+    font-size: 12px;             /* Réduit de 13px à 12px */
     font-weight: 500;
     color: var(--text-primary);
 }
@@ -3272,8 +3297,10 @@ html[data-theme="LTR"] {
 }
 
 .sidebar .btn-icon {
-    width: 20px;
-    height: 20px;
+    width: 18px;                 /* Conteneur = taille icône = 18px */
+    height: 18px;                /* Conteneur = taille icône = 18px */
+    min-width: 18px;             /* Annule le min-width: 40px global (ligne 70) */
+    padding: 0;                  /* Annule le padding: 8px global (ligne 70) */
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -3281,15 +3308,15 @@ html[data-theme="LTR"] {
 }
 
 .sidebar .btn-icon svg {
-    width: 20px;
-    height: 20px;
+    width: 18px;                 /* Icône SVG = 18px */
+    height: 18px;                /* Icône SVG = 18px */
     fill: var(--theme-primary);
     stroke-width: 0;
     transition: fill 0.15s ease;
 }
 
 .sidebar .btn-label {
-    font-size: 13px;
+    font-size: 12px;             /* Réduit de 13px à 12px */
     color: var(--text-primary);
     white-space: nowrap;
     overflow: hidden;
@@ -3302,8 +3329,8 @@ html[data-theme="LTR"] {
 
 /* Mode collapsed - boutons */
 .sidebar.collapsed .btn {
-    padding: 10px;
-    height: 44px;                /* POC: hauteur fixe */
+    padding: 6px;                /* 6px pour centrer l'icône 18px dans 32px */
+    height: 32px;                /* 32px cohérent */
     justify-content: center;
     gap: 0;
 }
@@ -3317,7 +3344,7 @@ html[data-theme="LTR"] {
 
 /* Boutons simples (non-grid) en mode collapsed */
 .sidebar.collapsed .btn-group:not(.grid-2):not(.grid-3) {
-    width: 44px;                 /* POC: carré 44x44 */
+    width: 32px;                 /* Carré 32x32 */
     align-self: center;
     margin-left: auto;
     margin-right: auto;
@@ -3325,8 +3352,8 @@ html[data-theme="LTR"] {
 
 /* Boutons dans btn-group simple en mode collapsed */
 .sidebar.collapsed .btn-group:not(.grid-2):not(.grid-3) .btn {
-    width: 44px;
-    padding: 10px;
+    width: 32px;                 /* Carré 32x32 */
+    padding: 6px;                /* 6px pour centrer l'icône 18px */
     justify-content: center;
 }
 
@@ -3334,34 +3361,34 @@ html[data-theme="LTR"] {
 .sidebar.collapsed .btn-group.grid-2 {
     flex-wrap: wrap;             /* POC: garde le wrap */
     justify-content: center;
-    gap: 6px;
+    gap: 4px;                    /* Réduit de 6px à 4px */
     /* NE PAS mettre flex-direction: column */
 }
 
 .sidebar.collapsed .btn-group.grid-2 .btn {
-    width: calc(50% - 3px);      /* Garde le calcul 50% */
-    padding: 8px 4px;            /* Padding très réduit en collapsed */
+    width: calc(50% - 2px);      /* Adapté au gap 4px */
+    padding: 6px;                /* 6px pour centrer l'icône 18px */
     justify-content: center;     /* Centre l'icône quand pas de texte */
     gap: 0;
 }
 
 /* Btn-group-single (bouton Réinitialiser) - centré en mode collapsed */
 .sidebar.collapsed .btn-group-single {
-    width: 44px;
+    width: 32px;                 /* Carré 32x32 */
     align-self: center;
 }
 
 /* Bouton Réinitialiser - forcer centrage en mode collapsed */
 .sidebar.collapsed #pages-section .btn-group-single {
-    width: 44px;
+    width: 32px;                 /* Carré 32x32 */
     align-self: center;
     margin-left: auto;
     margin-right: auto;
 }
 
 .sidebar.collapsed #pages-section .btn-group-single .btn {
-    width: 44px;
-    padding: 10px;
+    width: 32px;                 /* Carré 32x32 */
+    padding: 6px;                /* 6px pour centrer l'icône 18px */
     justify-content: center;
 }
 
@@ -3522,12 +3549,12 @@ html[data-theme="LTR"] {
     flex-direction: row;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 6px;
+    gap: 4px;                    /* Réduit de 6px à 4px */
 }
 
 .sidebar.collapsed .zoom-view-buttons .btn {
-    width: calc(50% - 3px);
-    padding: 8px 4px;
+    width: calc(50% - 2px);     /* Adapté au gap 4px */
+    padding: 6px;                /* 6px pour centrer l'icône 18px */
     justify-content: center;
     gap: 0;
 }
@@ -3548,7 +3575,7 @@ html[data-theme="LTR"] {
 .sidebar .zoom-nav-buttons .btn {
     flex: 1;
     max-width: 45%;
-    padding: 8px;
+    padding: 4px;                /* 4px uniforme */
     justify-content: center;
 }
 
