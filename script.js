@@ -902,13 +902,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnFullscreen = document.getElementById('btn-fullscreen');
     const btnFitToView = document.getElementById('btn-fit-to-view');
 
-    // Sidebar et toggle (nouvelle sidebar POC)
+    // Sidebar (nouvelle sidebar POC - mode collapsed supprimé)
     /** @type {HTMLElement|null} Container principal de la sidebar */
     const sidebar = document.getElementById('sidebar');
-    /** @type {HTMLButtonElement|null} Bouton toggle pour réduire/agrandir la sidebar */
-    const sidebarToggle = document.getElementById('sidebar-toggle');
-    /** @type {HTMLElement|null} Tooltip global de la sidebar */
-    const sidebarTooltip = document.getElementById('sidebar-tooltip');
 
     // Sections de la sidebar
     /** @type {HTMLElement|null} Section Actions dans la sidebar */
@@ -24873,46 +24869,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // SIDEBAR TOGGLE ET TOOLTIPS
     // ═══════════════════════════════════════════════════════════════════════════════
 
-    /**
-     * Toggle de la sidebar (réduire/agrandir)
-     * @description Bascule la classe 'collapsed' sur la sidebar
-     */
-    if (sidebarToggle && sidebar) {
-        sidebarToggle.addEventListener('click', () => {
-            sidebar.classList.toggle('collapsed');
-            // Mettre à jour le title du bouton
-            const isCollapsed = sidebar.classList.contains('collapsed');
-            sidebarToggle.title = isCollapsed ? 'Agrandir' : 'Réduire';
-        });
-    }
-
-    /**
-     * Système de tooltips pour la sidebar (mode collapsed)
-     * @description Affiche les tooltips au survol des boutons quand la sidebar est réduite
-     */
-    if (sidebar && sidebarTooltip) {
-        const buttonsWithTooltip = sidebar.querySelectorAll('[data-tooltip]');
-        
-        buttonsWithTooltip.forEach(btn => {
-            btn.addEventListener('mouseenter', (e) => {
-                // Afficher tooltip uniquement en mode collapsed
-                if (!sidebar.classList.contains('collapsed')) return;
-                
-                const text = btn.getAttribute('data-tooltip');
-                sidebarTooltip.textContent = text;
-                
-                const rect = btn.getBoundingClientRect();
-                sidebarTooltip.style.left = (rect.right + 10) + 'px';
-                sidebarTooltip.style.top = (rect.top + rect.height / 2) + 'px';
-                sidebarTooltip.style.transform = 'translateY(-50%)';
-                sidebarTooltip.classList.add('visible');
-            });
-
-            btn.addEventListener('mouseleave', () => {
-                sidebarTooltip.classList.remove('visible');
-            });
-        });
-    }
+    /* Toggle sidebar et tooltips collapsed supprimés (mode collapsed retiré) */
 
     /**
      * Gestion du zoom molette centré sur la position de la souris.

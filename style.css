@@ -3008,8 +3008,7 @@ html[data-theme="LTR"] {
 
 /* Variables Sidebar */
 :root {
-    --sidebar-width: 200px;              /* Réduit de 300px à 200px */
-    --sidebar-collapsed-width: 110px;    /* POC: 110px (était 80px) */
+    --sidebar-width: 180px;              /* Réduit de 200px à 180px */
     --bg-sidebar: #FFFFFF;
     --bg-section-header: #f5f5f5;
     --text-primary: #333333;
@@ -3037,11 +3036,6 @@ html[data-theme="LTR"] {
                 min-width var(--transition-speed) var(--transition-easing);
     overflow: visible;
     flex-shrink: 0;
-}
-
-.sidebar.collapsed {
-    width: var(--sidebar-collapsed-width);
-    min-width: var(--sidebar-collapsed-width);
 }
 
 /* ==================== SIDEBAR HEADER ==================== */
@@ -3104,48 +3098,7 @@ html[data-theme="LTR"] {
     justify-content: center;
 }
 
-.sidebar.collapsed .logo-full {
-    opacity: 0;
-    width: 0;
-    overflow: hidden;
-}
-
-.sidebar.collapsed .logo-icon {
-    display: flex;
-}
-
-/* Toggle button */
-.sidebar-toggle {
-    width: 32px;
-    height: 32px;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    background: var(--bg-sidebar);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    transition: background 0.15s ease;
-    padding: 0;
-    margin: 0;
-}
-
-.sidebar-toggle:hover {
-    background: var(--theme-primary-light);
-}
-
-.sidebar-toggle svg {
-    width: 16px;
-    height: 16px;
-    stroke: var(--text-secondary);
-    fill: none;
-    transition: transform var(--transition-speed) var(--transition-easing);
-}
-
-.sidebar.collapsed .sidebar-toggle svg {
-    transform: rotate(180deg);
-}
+/* Toggle button et logo-icon collapsed supprimés (mode collapsed retiré) */
 
 /* ==================== SIDEBAR CONTENT ==================== */
 .sidebar-content {
@@ -3158,15 +3111,22 @@ html[data-theme="LTR"] {
     transition: padding var(--transition-speed) var(--transition-easing);
 }
 
-.sidebar.collapsed .sidebar-content {
-    padding: 12px 8px;           /* POC: padding latéral 8px en collapsed */
-    align-items: center;
+/* Scrollbar sidebar : fine (5px) et couleur du thème */
+.sidebar-content::-webkit-scrollbar {
+    width: 5px;
 }
 
-.sidebar.collapsed .section {
-    width: 100%;
-    padding-left: 0;
-    padding-right: 0;
+.sidebar-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb {
+    background: var(--theme-primary);
+    border-radius: 3px;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb:hover {
+    background: var(--theme-primary-hover);
 }
 
 /* ==================== SECTIONS ==================== */
@@ -3207,17 +3167,7 @@ html[data-theme="LTR"] {
                 padding var(--transition-speed) var(--transition-easing);
 }
 
-.sidebar .section:first-child .section-title {
-    border-top: none;
-}
-
-.sidebar.collapsed .section-title {
-    text-align: center;
-    padding: 6px 4px;            /* POC */
-    margin-left: -8px;           /* POC */
-    margin-right: -8px;          /* POC */
-    font-size: 10px;             /* POC */
-}
+/* border-top sur la première section conservée (toutes les sections ont le filet haut) */
 
 /* ==================== BOUTONS ==================== */
 .sidebar .btn-group {
@@ -3327,71 +3277,6 @@ html[data-theme="LTR"] {
                 flex var(--transition-speed) var(--transition-easing);
 }
 
-/* Mode collapsed - boutons */
-.sidebar.collapsed .btn {
-    padding: 6px;                /* 6px pour centrer l'icône 18px dans 32px */
-    height: 32px;                /* 32px cohérent */
-    justify-content: center;
-    gap: 0;
-}
-
-.sidebar.collapsed .btn-label {
-    opacity: 0;
-    width: 0;
-    flex: 0;
-    overflow: hidden;
-}
-
-/* Boutons simples (non-grid) en mode collapsed */
-.sidebar.collapsed .btn-group:not(.grid-2):not(.grid-3) {
-    width: 32px;                 /* Carré 32x32 */
-    align-self: center;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-/* Boutons dans btn-group simple en mode collapsed */
-.sidebar.collapsed .btn-group:not(.grid-2):not(.grid-3) .btn {
-    width: 32px;                 /* Carré 32x32 */
-    padding: 6px;                /* 6px pour centrer l'icône 18px */
-    justify-content: center;
-}
-
-/* Grille 2 colonnes en mode collapsed - GARDE 2 colonnes */
-.sidebar.collapsed .btn-group.grid-2 {
-    flex-wrap: wrap;             /* POC: garde le wrap */
-    justify-content: center;
-    gap: 4px;                    /* Réduit de 6px à 4px */
-    /* NE PAS mettre flex-direction: column */
-}
-
-.sidebar.collapsed .btn-group.grid-2 .btn {
-    width: calc(50% - 2px);      /* Adapté au gap 4px */
-    padding: 6px;                /* 6px pour centrer l'icône 18px */
-    justify-content: center;     /* Centre l'icône quand pas de texte */
-    gap: 0;
-}
-
-/* Btn-group-single (bouton Réinitialiser) - centré en mode collapsed */
-.sidebar.collapsed .btn-group-single {
-    width: 32px;                 /* Carré 32x32 */
-    align-self: center;
-}
-
-/* Bouton Réinitialiser - forcer centrage en mode collapsed */
-.sidebar.collapsed #pages-section .btn-group-single {
-    width: 32px;                 /* Carré 32x32 */
-    align-self: center;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.sidebar.collapsed #pages-section .btn-group-single .btn {
-    width: 32px;                 /* Carré 32x32 */
-    padding: 6px;                /* 6px pour centrer l'icône 18px */
-    justify-content: center;
-}
-
 /* ==================== BOUTONS NAVIGATION PAGES ==================== */
 /* Boutons Recto/Verso dans #page-nav-container - style thème violet */
 .sidebar #page-nav-container .btn,
@@ -3432,29 +3317,6 @@ html[data-theme="LTR"] {
 .sidebar #page-nav-container .btn.active .btn-label,
 .sidebar .page-nav-btn.active .btn-label {
     color: white !important;
-}
-
-/* ==================== TOOLTIP SIDEBAR ==================== */
-#sidebar-tooltip {
-    position: fixed;
-    background: #333;
-    color: white;
-    padding: 8px 14px;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 500;
-    white-space: nowrap;
-    pointer-events: none;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.2s ease, visibility 0.2s ease;
-    z-index: 999999;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-}
-
-#sidebar-tooltip.visible {
-    opacity: 1;
-    visibility: visible;
 }
 
 /* ==================== ZOOM SLIDER (Sidebar) ==================== */
@@ -3515,13 +3377,6 @@ html[data-theme="LTR"] {
     font-weight: 500;
 }
 
-/* Mode collapsed - slider disparaît, boutons apparaissent */
-.sidebar.collapsed .zoom-slider-wrapper {
-    opacity: 0;
-    max-height: 0;
-    padding: 0;
-    overflow: hidden;
-}
 
 /* ==================== BOUTONS PLEIN ÉCRAN / AJUSTER À LA PAGE ==================== */
 
@@ -3544,39 +3399,9 @@ html[data-theme="LTR"] {
     flex-direction: column;
 }
 
-/* Groupe de boutons zoom-view en mode collapsed : côte à côte */
-.sidebar.collapsed .zoom-view-buttons {
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 4px;                    /* Réduit de 6px à 4px */
-}
-
-.sidebar.collapsed .zoom-view-buttons .btn {
-    width: calc(50% - 2px);     /* Adapté au gap 4px */
-    padding: 6px;                /* 6px pour centrer l'icône 18px */
-    justify-content: center;
-    gap: 0;
-}
-
+/* Boutons zoom +/- : masqués (étaient pour le mode collapsed uniquement) */
 .sidebar .zoom-nav-buttons {
     display: none;
-    flex-direction: row;
-    justify-content: center;
-    gap: 4px;
-    width: 100%;
-}
-
-.sidebar.collapsed .zoom-nav-buttons {
-    display: flex;
-    margin-top: 6px;  /* Même espacement que le gap entre les boutons */
-}
-
-.sidebar .zoom-nav-buttons .btn {
-    flex: 1;
-    max-width: 45%;
-    padding: 4px;                /* 4px uniforme */
-    justify-content: center;
 }
 
 /* ==================== HISTORY STATUS INLINE ==================== */
