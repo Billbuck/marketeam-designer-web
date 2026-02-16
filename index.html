@@ -431,6 +431,29 @@
                     </div>
                 </div>
 
+                <!-- ==================== SECTION VALIDATION ==================== -->
+                <div class="section" id="validation-section" data-visible-for="always">
+                    <div class="section-title">Validation</div>
+                    <div class="btn-group btn-group-single">
+                        <button class="btn btn-validate" id="btn-validate" data-tooltip="Valider et envoyer le document">
+                            <span class="btn-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+                                </svg>
+                            </span>
+                            <span class="btn-label">Valider</span>
+                        </button>
+                        <button class="btn btn-cancel-project" id="btn-cancel-project" data-tooltip="Annuler et retourner à WebDev">
+                            <span class="btn-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/>
+                                </svg>
+                            </span>
+                            <span class="btn-label">Annuler</span>
+                        </button>
+                    </div>
+                </div>
+
                 <!-- ==================== SECTION OUTILS ==================== -->
                 <div class="section" id="tools-section" data-visible-for="no-selection">
                     <div class="section-title">Outils</div>
@@ -525,6 +548,56 @@
                 <button id="btn-reset-cancel" class="btn-secondary">Annuler</button>
                 <button id="btn-reset-current-page" class="btn-danger">Page courante</button>
                 <button id="btn-reset-all-pages" class="btn-danger">Toutes les pages</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale de confirmation de validation (envoi à WebDev) -->
+    <div id="validate-modal" class="modal-overlay hidden">
+        <div class="modal-box validate-modal-box">
+            <div class="modal-header">
+                <span class="material-icons" style="color: var(--poc-theme-primary, #934BB7);">verified</span>
+                <h3>Confirmer la validation</h3>
+            </div>
+            <div class="modal-body validate-modal-body">
+                <p>Vous êtes sur le point de <strong>valider</strong> votre document.</p>
+                <div class="validate-checklist">
+                    <div class="validate-checklist-item">
+                        <span class="material-icons validate-check-icon">check_circle</span>
+                        <span>J'ai vérifié le contenu de toutes les zones</span>
+                    </div>
+                    <div class="validate-checklist-item">
+                        <span class="material-icons validate-check-icon">check_circle</span>
+                        <span>J'ai contrôlé l'aperçu avec mes données</span>
+                    </div>
+                    <div class="validate-checklist-item">
+                        <span class="material-icons validate-check-icon">check_circle</span>
+                        <span>J'ai vérifié la mise en page et les visuels</span>
+                    </div>
+                </div>
+                <p class="validate-engagement-text">Vérifiez que votre document est conforme à vos attentes avant de valider.</p>
+            </div>
+            <div class="modal-buttons">
+                <button id="btn-validate-cancel" class="btn-secondary">Retour à l'édition</button>
+                <button id="btn-validate-confirm" class="btn-primary-theme">Valider</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale de confirmation d'annulation (retour WebDev) -->
+    <div id="cancel-project-modal" class="modal-overlay hidden">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span class="material-icons" style="color: #ea4335;">warning</span>
+                <h3>Annuler le projet</h3>
+            </div>
+            <div class="modal-body">
+                <p>Êtes-vous sûr de vouloir <strong>annuler</strong> ce projet de création ?</p>
+                <p class="sub-text">Toutes vos modifications seront perdues.</p>
+            </div>
+            <div class="modal-buttons">
+                <button id="btn-cancel-project-back" class="btn-secondary">Continuer l'édition</button>
+                <button id="btn-cancel-project-confirm" class="btn-danger">Annuler le projet</button>
             </div>
         </div>
     </div>

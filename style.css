@@ -1308,6 +1308,116 @@ input:checked + .slider:before {
     background: var(--poc-theme-primary-dark, #62307B);
 }
 
+/* ========================================
+   SECTION VALIDATION — Boutons Valider / Annuler
+   ======================================== */
+
+/* Bouton Valider — thème primaire */
+.sidebar .btn.btn-validate {
+    background: var(--poc-theme-primary, #934BB7);
+    border-color: var(--poc-theme-primary, #934BB7);
+    color: #ffffff;
+}
+
+.sidebar .btn.btn-validate .btn-icon svg {
+    fill: #ffffff;
+}
+
+.sidebar .btn.btn-validate .btn-label {
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.sidebar .btn.btn-validate:hover {
+    background: var(--poc-theme-primary-dark, #62307B);
+    border-color: var(--poc-theme-primary-dark, #62307B);
+}
+
+.sidebar .btn.btn-validate:hover .btn-icon svg {
+    fill: #ffffff;
+}
+
+.sidebar .btn.btn-validate:hover .btn-label {
+    color: #ffffff;
+}
+
+/* Bouton Annuler — style discret / danger */
+.sidebar .btn.btn-cancel-project {
+    background: transparent;
+    border-color: var(--border-color);
+    color: var(--text-secondary, #666);
+}
+
+.sidebar .btn.btn-cancel-project .btn-icon svg {
+    fill: var(--text-secondary, #999);
+}
+
+.sidebar .btn.btn-cancel-project .btn-label {
+    color: var(--text-secondary, #666);
+    font-weight: 400;
+}
+
+.sidebar .btn.btn-cancel-project:hover {
+    background: #fef2f2;
+    border-color: #ea4335;
+}
+
+.sidebar .btn.btn-cancel-project:hover .btn-icon svg {
+    fill: #ea4335;
+}
+
+.sidebar .btn.btn-cancel-project:hover .btn-label {
+    color: #ea4335;
+}
+
+/* ========================================
+   MODALE VALIDATION — Popup de confirmation
+   ======================================== */
+
+.validate-modal-box {
+    width: 460px;
+    max-width: 90%;
+}
+
+.validate-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.validate-checklist {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 14px 16px;
+    border: 1px solid #e8eaed;
+}
+
+.validate-checklist-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: #3c4043;
+    line-height: 1.4;
+}
+
+.validate-check-icon {
+    font-size: 18px;
+    color: var(--poc-theme-primary, #934BB7);
+    flex-shrink: 0;
+}
+
+.validate-engagement-text {
+    font-size: 12px;
+    color: #999;
+    font-style: italic;
+    margin-top: 4px;
+    line-height: 1.4;
+}
+
 .modal-buttons {
     display: flex;
     justify-content: flex-end;

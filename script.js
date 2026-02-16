@@ -862,6 +862,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnExportJson = document.getElementById('btn-export-json');
     const btnExportPsmd = document.getElementById('btn-export-psmd');
     const btnCheck = document.getElementById('btn-check');
+    const btnValidate = document.getElementById('btn-validate');
+    const btnCancelProject = document.getElementById('btn-cancel-project');
     const btnImportJson = document.getElementById('btn-import-json');
     const inputImportJson = document.getElementById('input-import-json');
     const coordsPanel = null; // SUPPRIMÉ - était #coords-panel
@@ -915,6 +917,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const positionSection = document.getElementById('position-section');
     /** @type {HTMLElement|null} Section Outils dans la sidebar */
     const toolsSection = document.getElementById('tools-section');
+    /** @type {HTMLElement|null} Section Validation dans la sidebar */
+    const validationSection = document.getElementById('validation-section');
     /** @type {HTMLElement|null} Section Zoom dans la sidebar */
     const zoomSection = document.getElementById('zoom-section');
     
@@ -12240,9 +12244,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // 7. Désactiver le drag & drop des zones
         disableZoneInteractions();
         
-        // 8. Masquer toutes les sections de la sidebar sauf Aperçu et Pages
+        // 8. Masquer toutes les sections de la sidebar sauf Aperçu, Pages et Validation
         document.querySelectorAll('.sidebar .section').forEach(section => {
-            if (section.id !== 'preview-section' && section.id !== 'pages-section') {
+            if (section.id !== 'preview-section' && section.id !== 'pages-section' && section.id !== 'validation-section') {
                 section.style.display = 'none';
             }
         });
@@ -12250,10 +12254,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (previewSection) {
             previewSection.style.display = 'block';
         }
-        // S'assurer que la section Pages est visible (pour naviguer entre les pages)
+        // S'assurer que la section Pages est visible uniquement si multi-pages
         const pagesSection = document.getElementById('pages-section');
         if (pagesSection) {
-            pagesSection.style.display = 'block';
+            pagesSection.style.display = documentState.pages.length > 1 ? 'block' : 'none';
+        }
+        // S'assurer que la section Validation est visible (l'utilisateur peut valider depuis l'aperçu)
+        if (validationSection) {
+            validationSection.style.display = 'block';
         }
         
         
@@ -16774,6 +16782,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (positionSection) positionSection.style.display = 'none';
             if (toolsSection) toolsSection.style.display = 'none';
             if (zoomSection) zoomSection.style.display = 'none';
+            if (validationSection) validationSection.style.display = 'none'; // masqué en mode alignement
             
             // Afficher les sections multi
             if (alignmentSection) alignmentSection.style.display = 'block';
@@ -16790,7 +16799,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // ═══════════════════════════════════════════════════════════════════════
         if (count === 1) {
             if (previewSection) previewSection.style.display = 'none';  // no-selection
-            if (pagesSection) pagesSection.style.display = 'none';      // no-selection
+            if (pagesSection) pagesSection.style.display = documentState.pages.length > 1 ? 'block' : 'none'; // conditionné au nombre de pages
             if (resetSection) resetSection.style.display = 'none';      // masqué avec sélection
             if (actionsSection) actionsSection.style.display = 'none';  // masqué avec sélection
             if (historySection) historySection.style.display = 'block'; // always
@@ -16802,6 +16811,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (toolsSection) toolsSection.style.display = 'none';      // no-selection
             if (zoomSection) zoomSection.style.display = 'block';       // always
             if (deleteSection) deleteSection.style.display = 'block';   // visible avec sélection
+            if (validationSection) validationSection.style.display = 'block'; // visible en sélection simple
             return;
         }
         
@@ -16810,7 +16820,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // always + no-selection visibles, single masqué
         // ═══════════════════════════════════════════════════════════════════════
         if (previewSection) previewSection.style.display = 'block'; // no-selection
-        if (pagesSection) pagesSection.style.display = 'block';     // no-selection
+        if (pagesSection) pagesSection.style.display = documentState.pages.length > 1 ? 'block' : 'none'; // conditionné au nombre de pages
         if (resetSection) resetSection.style.display = 'block';     // visible sans sélection
         if (actionsSection) actionsSection.style.display = 'block'; // visible sans sélection
         if (historySection) historySection.style.display = 'block'; // always
@@ -16822,6 +16832,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (toolsSection) toolsSection.style.display = 'block';     // no-selection
         if (zoomSection) zoomSection.style.display = 'block';       // always
         if (deleteSection) deleteSection.style.display = 'none';    // masquée sans sélection
+        if (validationSection) validationSection.style.display = 'block'; // visible sans sélection
     }
 
     // --- FONCTIONS D'ALIGNEMENT ---
@@ -20028,6 +20039,16 @@ document.addEventListener('DOMContentLoaded', () => {
             // Fermer la modale Check si ouverte
             if (checkModal && !checkModal.classList.contains('hidden')) {
                 hideCheckModal();
+            }
+            // Fermer la modale de validation si ouverte
+            const validateModalEl = document.getElementById('validate-modal');
+            if (validateModalEl && !validateModalEl.classList.contains('hidden')) {
+                validateModalEl.classList.add('hidden');
+            }
+            // Fermer la modale d'annulation de projet si ouverte
+            const cancelProjectModalEl = document.getElementById('cancel-project-modal');
+            if (cancelProjectModalEl && !cancelProjectModalEl.classList.contains('hidden')) {
+                cancelProjectModalEl.classList.add('hidden');
             }
         }
     });
@@ -24574,6 +24595,135 @@ document.addEventListener('DOMContentLoaded', () => {
         btnCheck.addEventListener('click', () => {
             const result = checkDocumentIntegrity();
             showCheckResult(result);
+        });
+    }
+
+    // ───────────────────────────────────────────────────────────────────────────────
+    // Validation (check → confirmation → envoi JSON à WebDev)
+    // ───────────────────────────────────────────────────────────────────────────────
+    const validateModal = document.getElementById('validate-modal');
+    const btnValidateCancel = document.getElementById('btn-validate-cancel');
+    const btnValidateConfirm = document.getElementById('btn-validate-confirm');
+    const cancelProjectModal = document.getElementById('cancel-project-modal');
+    const btnCancelProjectBack = document.getElementById('btn-cancel-project-back');
+    const btnCancelProjectConfirm = document.getElementById('btn-cancel-project-confirm');
+
+    /**
+     * Affiche la modale de confirmation de validation.
+     * Appelée uniquement si checkDocumentIntegrity() est OK.
+     */
+    function showValidateModal() {
+        if (validateModal) {
+            validateModal.classList.remove('hidden');
+        }
+    }
+
+    /**
+     * Ferme la modale de confirmation de validation.
+     */
+    function hideValidateModal() {
+        if (validateModal) {
+            validateModal.classList.add('hidden');
+        }
+    }
+
+    /**
+     * Affiche la modale de confirmation d'annulation du projet.
+     */
+    function showCancelProjectModal() {
+        if (cancelProjectModal) {
+            cancelProjectModal.classList.remove('hidden');
+        }
+    }
+
+    /**
+     * Ferme la modale de confirmation d'annulation du projet.
+     */
+    function hideCancelProjectModal() {
+        if (cancelProjectModal) {
+            cancelProjectModal.classList.add('hidden');
+        }
+    }
+
+    // Bouton "Valider" dans la sidebar : lance le check puis la confirmation
+    if (btnValidate) {
+        btnValidate.addEventListener('click', () => {
+            const result = checkDocumentIntegrity();
+            
+            if (result.success) {
+                showValidateModal();
+            } else {
+                showCheckErrorsModal(result.errors);
+            }
+        });
+    }
+
+    // Modale de validation : bouton "Retour à l'édition"
+    if (btnValidateCancel) {
+        btnValidateCancel.addEventListener('click', hideValidateModal);
+    }
+
+    // Modale de validation : bouton "Confirmer la validation"
+    if (btnValidateConfirm) {
+        btnValidateConfirm.addEventListener('click', () => {
+            hideValidateModal();
+            
+            try {
+                const exported = exportToWebDev();
+                sendMessageToParent({
+                    action: 'validated',
+                    success: true,
+                    data: exported
+                });
+                showUndoRedoToast('Document validé et envoyé', 'success', 'check_circle');
+            } catch (error) {
+                console.error('Erreur lors de la validation:', error);
+                sendMessageToParent({
+                    action: 'validated',
+                    success: false,
+                    error: error.message
+                });
+                showUndoRedoToast('Erreur lors de l\'envoi du document', 'error', 'error');
+            }
+        });
+    }
+
+    // Modale de validation : fermer en cliquant sur l'overlay
+    if (validateModal) {
+        validateModal.addEventListener('click', (e) => {
+            if (e.target === validateModal) {
+                hideValidateModal();
+            }
+        });
+    }
+
+    // Bouton "Annuler" dans la sidebar : demande de confirmation
+    if (btnCancelProject) {
+        btnCancelProject.addEventListener('click', showCancelProjectModal);
+    }
+
+    // Modale d'annulation : bouton "Continuer l'édition"
+    if (btnCancelProjectBack) {
+        btnCancelProjectBack.addEventListener('click', hideCancelProjectModal);
+    }
+
+    // Modale d'annulation : bouton "Annuler le projet"
+    if (btnCancelProjectConfirm) {
+        btnCancelProjectConfirm.addEventListener('click', () => {
+            hideCancelProjectModal();
+            sendMessageToParent({
+                action: 'cancelled'
+            });
+            showUndoRedoToast('Projet annulé', 'info', 'info');
+        });
+    }
+
+    // Modale d'annulation : fermer en cliquant sur l'overlay
+    if (cancelProjectModal) {
+        cancelProjectModal.addEventListener('click', (e) => {
+            if (e.target === cancelProjectModal) {
+                hideCancelProjectModal();
+            }
         });
     }
 
