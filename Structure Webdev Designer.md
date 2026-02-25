@@ -513,7 +513,6 @@ stDesignerDocument est une Structure
 	'formatDocument'		est une stDesignerFormatDocument		<sérialise = "formatDocument">
 	'champsFusion'			est un tableau							<sérialise = "champsFusion"> de stDesignerChampFusion
 	'donneesApercu'			est un tableau							<sérialise = "donneesApercu"> de stDesignerEnregistrement
-	'polices'				est un tableau							<sérialise = "polices"> de stDesignerPolice
 	'policesUtilisees'		est un tableau							<sérialise = "policesUtilisees"> de stDesignerPoliceUtilisee
 	'pages'					est un tableau							<sérialise = "pages"> de stDesignerPage
 	'zonesTexte'			est un tableau							<sérialise = "zonesTexte"> de stDesignerZoneTexte

@@ -22410,15 +22410,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Étape 2c : Charger les polices disponibles (message.policesDisponibles au même niveau que data)
-        /** @type {PoliceDisponible[]|null} */
-        const policesFromDocument = Array.isArray(effectiveDocumentJson.polices) ? effectiveDocumentJson.polices : null;
-        /** @type {PoliceDisponible[]|null} */
-        const incomingPolicesDisponibles = (messagePolicesDisponibles && messagePolicesDisponibles.length > 0)
+        policesDisponibles = (messagePolicesDisponibles && messagePolicesDisponibles.length > 0)
             ? messagePolicesDisponibles
-            : (policesFromDocument && policesFromDocument.length > 0 ? policesFromDocument : null);
-
-        policesDisponibles = (incomingPolicesDisponibles && incomingPolicesDisponibles.length > 0)
-            ? incomingPolicesDisponibles
             : DEFAULT_FONTS;
 
         loadFontsFromJson(policesDisponibles);

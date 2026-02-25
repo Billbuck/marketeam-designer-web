@@ -99,9 +99,6 @@ documentState = {
         { nom: "NOM", type: "TXT" },
         { nom: "DATE_JOUR", type: "SYS" }
     ],
-    polices: [
-        { nom: "Roboto", url: "https://..." }
-    ],
     
     // Pages et zones
     pages: [
@@ -152,10 +149,6 @@ documentState = {
         { "nom": "PRENOM", "type": "TXT" },
         { "nom": "DATE_JOUR", "type": "SYS" },
         { "nom": "LOGO", "type": "IMG" }
-    ],
-    "polices": [
-        { "nom": "Roboto", "url": "https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxP.ttf" },
-        { "nom": "Open Sans", "url": "https://fonts.gstatic.com/s/opensans/v35/..." }
     ],
     "pages": [
         {
@@ -407,9 +400,6 @@ const testDoc = {
     "champsFusion": [
         { "nom": "NOM", "type": "TXT" },
         { "nom": "VILLE", "type": "TXT" }
-    ],
-    "polices": [
-        { "nom": "Roboto", "url": "https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxP.ttf" }
     ],
     "pages": [
         { "numero": 1, "nom": "Recto", "urlFond": "a4_template_recto.jpg" }
