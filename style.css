@@ -96,6 +96,22 @@ button:last-child {
     user-select: none;
 }
 
+/* --- Fond perdu : overlay et ligne de coupe --- */
+.bleed-overlay {
+    position: absolute;
+    background-color: rgba(255, 255, 255, 0.4);
+    pointer-events: none;
+    z-index: 900;
+}
+
+.bleed-cutline {
+    position: absolute;
+    border: 1px dashed rgba(255, 0, 0, 0.5);
+    pointer-events: none;
+    z-index: 899;
+    box-sizing: border-box;
+}
+
 /* Animation de création (Pop + Flash) */
 @keyframes zone-appear {
     0% {

@@ -59,10 +59,21 @@
      */
 
     /**
+     * @typedef {Object} PsmdFondPerdu
+     * @property {boolean} actif - Fond perdu activé
+     * @property {number} [hautMm] - Fond perdu en haut en mm
+     * @property {number} [basMm] - Fond perdu en bas en mm
+     * @property {number} [gaucheMm] - Fond perdu à gauche en mm
+     * @property {number} [droiteMm] - Fond perdu à droite en mm
+     * @property {number} [valeurMm] - Ancien format : valeur unique (rétrocompatibilité)
+     */
+
+    /**
      * @typedef {Object} PsmdFormatDocument
      * @property {number} largeurMm - Largeur du document en mm
      * @property {number} hauteurMm - Hauteur du document en mm
      * @property {string} [orientation] - 'PORTRAIT' ou 'PAYSAGE'
+     * @property {PsmdFondPerdu} [fondPerdu] - Configuration du fond perdu (4 côtés indépendants)
      */
 
     /**
@@ -737,11 +748,55 @@
     }
 
     /**
+     * Génère la section XML `<bleed>` pour le PSMD à partir des données fond perdu.
+     * PrintShop Mail ne supporte qu'une valeur unique de bleed, donc on prend le minimum
+     * des 4 côtés pour garantir la couverture sur tous les côtés.
+     * Gère la rétrocompatibilité avec l'ancien format à valeur unique (valeurMm).
+     * 
+     * @param {PsmdFondPerdu|null} [fondPerdu] - Configuration fond perdu
+     * @returns {string} XML de la section bleed (mode + size en points)
+     * 
+     * @example
+     * // Actif, uniforme 3mm → 8.50 points
+     * generatePsmdBleedSection({ actif: true, hautMm: 3, basMm: 3, gaucheMm: 3, droiteMm: 3 });
+     * // → '<bleed>\n<mode>1</mode>\n<size>8.50</size>\n</bleed>'
+     * 
+     * // Inactif
+     * generatePsmdBleedSection({ actif: false });
+     * // → '<bleed>\n<mode>0</mode>\n<size>0</size>\n</bleed>'
+     */
+    function generatePsmdBleedSection(fondPerdu) {
+        if (!fondPerdu || !fondPerdu.actif) {
+            return '<bleed>\n<mode>0</mode>\n<size>0</size>\n</bleed>';
+        }
+
+        // Rétrocompatibilité : ancien format { actif, valeurMm } → 4 côtés identiques
+        var haut, bas, gauche, droite;
+        if (fondPerdu.valeurMm !== undefined && fondPerdu.hautMm === undefined) {
+            haut = bas = gauche = droite = fondPerdu.valeurMm || 0;
+        } else {
+            haut = fondPerdu.hautMm || 0;
+            bas = fondPerdu.basMm || 0;
+            gauche = fondPerdu.gaucheMm || 0;
+            droite = fondPerdu.droiteMm || 0;
+        }
+
+        var minMm = Math.min(haut, bas, gauche, droite);
+        if (minMm <= 0) {
+            return '<bleed>\n<mode>0</mode>\n<size>0</size>\n</bleed>';
+        }
+
+        var sizePoints = mmToPoints(minMm);
+        return '<bleed>\n<mode>1</mode>\n<size>' + sizePoints.toFixed(2) + '</size>\n</bleed>';
+    }
+
+    /**
      * Génère la section <preferences> du fichier PSMD.
      * 
+     * @param {PsmdFondPerdu|null} [fondPerdu] - Configuration fond perdu pour la section bleed
      * @returns {string} XML de la section preferences
      */
-    function generatePsmdPreferences() {
+    function generatePsmdPreferences(fondPerdu) {
         return `<preferences>
 <program>
 <default_tabstop_interval>36</default_tabstop_interval>
@@ -796,10 +851,7 @@
 <duplex_print>0</duplex_print>
 </repetition>
 <imposition>
-<bleed>
-<mode>0</mode>
-<size>40</size>
-</bleed>
+${generatePsmdBleedSection(fondPerdu)}
 <cropmarks>
 <mode>1</mode>
 <size>6</size>
@@ -1927,7 +1979,7 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
         xml += generatePsmdInfo() + '\n';
         xml += generatePsmdPrinter() + '\n';
         xml += '<operator_instructions></operator_instructions>\n';
-        xml += generatePsmdPreferences() + '\n';
+        xml += generatePsmdPreferences(formatDocument.fondPerdu) + '\n';
         xml += generatePsmdDatabaseSettings() + '\n';
         
         // Section layouts (pages avec zones)

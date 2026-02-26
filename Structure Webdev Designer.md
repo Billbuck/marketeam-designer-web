@@ -63,7 +63,10 @@ fin
 // -----------------------------------------------------------------------------
 stDesignerFondPerdu est une Structure
 	'actif'					est un booléen		<sérialise = "actif">				// Activer le fond perdu
-	'valeurMm'				est un réel			<sérialise = "valeurMm">			// Valeur du fond perdu en mm
+	'hautMm'				est un réel			<sérialise = "hautMm">				// Fond perdu en haut en mm
+	'basMm'					est un réel			<sérialise = "basMm">				// Fond perdu en bas en mm
+	'gaucheMm'				est un réel			<sérialise = "gaucheMm">			// Fond perdu à gauche en mm
+	'droiteMm'				est un réel			<sérialise = "droiteMm">			// Fond perdu à droite en mm
 fin
 
 // -----------------------------------------------------------------------------

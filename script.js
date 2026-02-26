@@ -291,9 +291,32 @@ document.addEventListener('DOMContentLoaded', () => {
  * @property {number|null} [largeurMaxImageMm] - Largeur max des zones image en mm (null = 1/3 document)
  * @property {number|null} [hauteurMaxImageMm] - Hauteur max des zones image en mm (null = 1/3 document)
      * @property {number} [margeSecuriteMm] - Marge de sécurité en mm
-     * @property {{actif: boolean, valeurMm: number}} [fondPerdu] - Configuration fond perdu
+     * @property {FondPerduData} [fondPerdu] - Configuration fond perdu (4 côtés indépendants)
      * @property {{actif: boolean}} [traitsCoupe] - Configuration traits de coupe
      * @description Métadonnées de format du document (depuis JSON WebDev).
+     */
+
+    /**
+     * @typedef {Object} FondPerduData
+     * @property {boolean} actif - Fond perdu activé
+     * @property {number} hautMm - Fond perdu en haut en mm
+     * @property {number} basMm - Fond perdu en bas en mm
+     * @property {number} gaucheMm - Fond perdu à gauche en mm
+     * @property {number} droiteMm - Fond perdu à droite en mm
+     * @description Configuration fond perdu avec 4 côtés indépendants (asymétrique possible).
+     */
+
+    /**
+     * @typedef {Object} FondPerduOffset
+     * @property {number} hautMm - Offset haut en mm
+     * @property {number} basMm - Offset bas en mm
+     * @property {number} gaucheMm - Offset gauche en mm
+     * @property {number} droiteMm - Offset droite en mm
+     * @property {number} hautPx - Offset haut en pixels
+     * @property {number} basPx - Offset bas en pixels
+     * @property {number} gauchePx - Offset gauche en pixels
+     * @property {number} droitePx - Offset droite en pixels
+     * @description Offsets calculés du fond perdu en mm et px, pour positionnement et affichage.
      */
 
     /**
@@ -302,6 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {PageData[]} pages - Tableau des pages du document
      * @property {number} zoneCounter - Compteur global pour générer des IDs uniques
      * @property {FormatDocumentData} [formatDocument] - Métadonnées de format (optionnel)
+     * @property {FondPerduOffset} [fondPerduOffset] - Offsets calculés du fond perdu (mm et px)
      * @description État global du document de l'éditeur VDP.
      * @example
      * // Structure de documentState :
@@ -527,7 +551,7 @@ document.addEventListener('DOMContentLoaded', () => {
  * @property {number|null} [largeurMaxImageMm] - Largeur max des zones image en mm (null = 1/3 document)
  * @property {number|null} [hauteurMaxImageMm] - Hauteur max des zones image en mm (null = 1/3 document)
      * @property {number} [margeSecuriteMm] - Marge de sécurité en mm
-     * @property {{actif: boolean, valeurMm: number}} [fondPerdu] - Fond perdu
+     * @property {FondPerduData} [fondPerdu] - Fond perdu (4 côtés indépendants)
      * @property {{actif: boolean}} [traitsCoupe] - Traits de coupe
      * @description Format du document au format JSON WebDev.
      */
@@ -4774,6 +4798,86 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
+    /**
+     * Parse et normalise la configuration fond perdu depuis le JSON WebDev.
+     * Gère la rétrocompatibilité avec l'ancien format à valeur unique (valeurMm)
+     * et le nouveau format à 4 côtés indépendants (hautMm, basMm, gaucheMm, droiteMm).
+     * 
+     * @param {Object} [fp] - Données fond perdu brutes du JSON
+     * @returns {FondPerduData} Configuration fond perdu normalisée (4 côtés)
+     * 
+     * @example
+     * // Nouveau format (4 côtés)
+     * parseFondPerdu({ actif: true, hautMm: 5, basMm: 3, gaucheMm: 3, droiteMm: 5 });
+     * // → { actif: true, hautMm: 5, basMm: 3, gaucheMm: 3, droiteMm: 5 }
+     * 
+     * // Ancien format (valeur unique) → converti en 4 côtés identiques
+     * parseFondPerdu({ actif: true, valeurMm: 3 });
+     * // → { actif: true, hautMm: 3, basMm: 3, gaucheMm: 3, droiteMm: 3 }
+     * 
+     * // Absent ou inactif
+     * parseFondPerdu(null);
+     * // → { actif: false, hautMm: 0, basMm: 0, gaucheMm: 0, droiteMm: 0 }
+     */
+    function parseFondPerdu(fp) {
+        if (!fp || !fp.actif) {
+            return { actif: false, hautMm: 0, basMm: 0, gaucheMm: 0, droiteMm: 0 };
+        }
+        // Rétrocompatibilité : ancien format { actif, valeurMm } → 4 côtés identiques
+        if (fp.valeurMm !== undefined && fp.hautMm === undefined) {
+            const v = fp.valeurMm || 0;
+            return { actif: true, hautMm: v, basMm: v, gaucheMm: v, droiteMm: v };
+        }
+        return {
+            actif: true,
+            hautMm: fp.hautMm || 0,
+            basMm: fp.basMm || 0,
+            gaucheMm: fp.gaucheMm || 0,
+            droiteMm: fp.droiteMm || 0
+        };
+    }
+
+    /**
+     * Calcule les offsets de fond perdu en mm et px depuis documentState.formatDocument.fondPerdu.
+     * Stocke le résultat dans documentState.fondPerduOffset pour réutilisation
+     * (affichage overlay, contraintes géométriques, offset visuel des zones).
+     * 
+     * @returns {FondPerduOffset} Offsets calculés (tous à 0 si fond perdu inactif)
+     * 
+     * @see parseFondPerdu - Parse la configuration brute
+     * @see createBleedOverlays - Utilise les offsets pour l'affichage
+     */
+    function computeFondPerduOffset() {
+        const fp = documentState.formatDocument?.fondPerdu;
+        if (fp && fp.actif) {
+            documentState.fondPerduOffset = {
+                hautMm: fp.hautMm, basMm: fp.basMm,
+                gaucheMm: fp.gaucheMm, droiteMm: fp.droiteMm,
+                hautPx: mmToPx(fp.hautMm), basPx: mmToPx(fp.basMm),
+                gauchePx: mmToPx(fp.gaucheMm), droitePx: mmToPx(fp.droiteMm)
+            };
+        } else {
+            documentState.fondPerduOffset = {
+                hautMm: 0, basMm: 0, gaucheMm: 0, droiteMm: 0,
+                hautPx: 0, basPx: 0, gauchePx: 0, droitePx: 0
+            };
+        }
+        return documentState.fondPerduOffset;
+    }
+
+    /**
+     * Retourne l'offset de fond perdu courant avec des valeurs par défaut sûres.
+     * Évite de répéter le fallback `|| { ... }` dans chaque fonction appelante.
+     * 
+     * @returns {FondPerduOffset} Offsets (tous à 0 si fond perdu inactif ou non initialisé)
+     */
+    function getFondPerduOffset() {
+        return documentState.fondPerduOffset || {
+            hautMm: 0, basMm: 0, gaucheMm: 0, droiteMm: 0,
+            hautPx: 0, basPx: 0, gauchePx: 0, droitePx: 0
+        };
+    }
+
     // ─────────────────────────────── FIN SECTION 6 ────────────────────────────────
 
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -8160,9 +8264,10 @@ document.addEventListener('DOMContentLoaded', () => {
         areaEl.classList.add('zone-area');
         areaEl.dataset.zoneId = zoneId;
         
-        // Positionner et dimensionner en pixels
-        areaEl.style.left = mmToPx(area.xMm) + 'px';
-        areaEl.style.top = mmToPx(area.yMm) + 'px';
+        // Positionner en page DOM px (format fini mm + offset fond perdu)
+        const fpAreaEl = getFondPerduOffset();
+        areaEl.style.left = (mmToPx(area.xMm) + fpAreaEl.gauchePx) + 'px';
+        areaEl.style.top = (mmToPx(area.yMm) + fpAreaEl.hautPx) + 'px';
         areaEl.style.width = mmToPx(area.wMm) + 'px';
         areaEl.style.height = mmToPx(area.hMm) + 'px';
         
@@ -8245,6 +8350,7 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function getAreaLimits(zoneId) {
         const limits = getGeometryLimits();
+        const fp = getFondPerduOffset();
         const zoneEl = document.getElementById(zoneId);
         
         // Position et dimensions de la zone (l'area doit toujours l'englober)
@@ -8256,11 +8362,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const zoneBottom = zoneTop + zoneHeight;
         
         return {
-            // Limites du document (marges)
-            docMinXPx: mmToPx(limits.marginMm),
-            docMinYPx: mmToPx(limits.marginMm),
-            docMaxXPx: mmToPx(limits.maxX),
-            docMaxYPx: mmToPx(limits.maxY),
+            // Limites du document (format fini + marge, en pixels page DOM)
+            docMinXPx: mmToPx(limits.marginMm) + fp.gauchePx,
+            docMinYPx: mmToPx(limits.marginMm) + fp.hautPx,
+            docMaxXPx: mmToPx(limits.maxX) + fp.gauchePx,
+            docMaxYPx: mmToPx(limits.maxY) + fp.hautPx,
             pageWidthPx: mmToPx(limits.pageWidthMm),
             pageHeightPx: mmToPx(limits.pageHeightMm),
             // Contraintes pour englober la zone
@@ -8482,17 +8588,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const zonesData = getCurrentPageZones();
         const zoneData = zonesData[zoneId];
         
-        // Récupérer les dimensions finales
+        // Récupérer les dimensions finales (page DOM px)
         const finalX = activeArea.offsetLeft;
         const finalY = activeArea.offsetTop;
         const finalW = activeArea.offsetWidth;
         const finalH = activeArea.offsetHeight;
+        const fpArea = getFondPerduOffset();
         
-        // Mettre à jour les données de contrainte
+        // Mettre à jour les données de contrainte (area en format fini mm)
         if (zoneData && zoneData.contrainte && zoneData.contrainte.geometrie) {
             zoneData.contrainte.geometrie.area = {
-                xMm: pxToMm(finalX),
-                yMm: pxToMm(finalY),
+                xMm: pxToMm(finalX - fpArea.gauchePx),
+                yMm: pxToMm(finalY - fpArea.hautPx),
                 wMm: pxToMm(finalW),
                 hMm: pxToMm(finalH)
             };
@@ -8503,8 +8610,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isAreaDragging) {
             const zoneEl = document.getElementById(zoneId);
             if (zoneEl && zoneData) {
-                zoneData.x = pxToMm(zoneEl.offsetLeft);
-                zoneData.y = pxToMm(zoneEl.offsetTop);
+                zoneData.x = zoneEl.offsetLeft;
+                zoneData.y = zoneEl.offsetTop;
+                zoneData.xMm = pxToMm(zoneEl.offsetLeft - fpArea.gauchePx);
+                zoneData.yMm = pxToMm(zoneEl.offsetTop - fpArea.hautPx);
             }
         }
         
@@ -8539,8 +8648,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const toolbar = getActiveToolbarForType(zoneData.type);
         if (!toolbar) return;
         
-        setInputInToolbar(toolbar, 'contrainte-area-x', formatMmValue(pxToMm(xPx)));
-        setInputInToolbar(toolbar, 'contrainte-area-y', formatMmValue(pxToMm(yPx)));
+        // Convertir page DOM px → format fini mm (soustraire offset fond perdu pour x/y)
+        const fpAf = getFondPerduOffset();
+        setInputInToolbar(toolbar, 'contrainte-area-x', formatMmValue(pxToMm(xPx - fpAf.gauchePx)));
+        setInputInToolbar(toolbar, 'contrainte-area-y', formatMmValue(pxToMm(yPx - fpAf.hautPx)));
         setInputInToolbar(toolbar, 'contrainte-area-w', formatMmValue(pxToMm(wPx)));
         setInputInToolbar(toolbar, 'contrainte-area-h', formatMmValue(pxToMm(hPx)));
     }
@@ -8613,14 +8724,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function getAreaBoundsInPixels(zoneId, zoneWidth, zoneHeight) {
         const zonesData = getCurrentPageZones();
         const zoneData = zonesData[zoneId];
+        const fp = getFondPerduOffset();
         
         // Vérifier si la zone a une area valide (dimensions > 0)
         if (hasValidArea(zoneData)) {
             const area = zoneData.contrainte.geometrie.area;
             
-            // Convertir l'area en pixels
-            const areaXPx = mmToPx(area.xMm);
-            const areaYPx = mmToPx(area.yMm);
+            // Convertir l'area (format fini mm) en pixels page DOM (+ offset fond perdu)
+            const areaXPx = mmToPx(area.xMm) + fp.gauchePx;
+            const areaYPx = mmToPx(area.yMm) + fp.hautPx;
             const areaWPx = mmToPx(area.wMm);
             const areaHPx = mmToPx(area.hMm);
             
@@ -8633,16 +8745,16 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         }
         
-        // Pas d'area : utiliser les limites de la page avec marge de sécurité
+        // Pas d'area : limites = format fini + marge de sécurité (en pixels page DOM)
         const margin = getSecurityMarginPx();
-        const pageWidth = getPageWidth();
-        const pageHeight = getPageHeight();
+        const formatFiniWidthPx = mmToPx(getPageWidthMm());
+        const formatFiniHeightPx = mmToPx(getPageHeightMm());
         
         return {
-            minX: margin,
-            maxX: pageWidth - margin - zoneWidth,
-            minY: margin,
-            maxY: pageHeight - margin - zoneHeight
+            minX: fp.gauchePx + margin,
+            maxX: fp.gauchePx + formatFiniWidthPx - margin - zoneWidth,
+            minY: fp.hautPx + margin,
+            maxY: fp.hautPx + formatFiniHeightPx - margin - zoneHeight
         };
     }
 
@@ -8664,14 +8776,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function getAreaMaxSizeInPixels(zoneId, zoneLeft, zoneTop) {
         const zonesData = getCurrentPageZones();
         const zoneData = zonesData[zoneId];
+        const fp = getFondPerduOffset();
         
         // Vérifier si la zone a une area valide (dimensions > 0)
         if (hasValidArea(zoneData)) {
             const area = zoneData.contrainte.geometrie.area;
             
-            // Convertir l'area en pixels
-            const areaXPx = mmToPx(area.xMm);
-            const areaYPx = mmToPx(area.yMm);
+            // Convertir l'area (format fini mm) en pixels page DOM (+ offset fond perdu)
+            const areaXPx = mmToPx(area.xMm) + fp.gauchePx;
+            const areaYPx = mmToPx(area.yMm) + fp.hautPx;
             const areaWPx = mmToPx(area.wMm);
             const areaHPx = mmToPx(area.hMm);
             
@@ -8682,14 +8795,14 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         }
         
-        // Pas d'area : utiliser les limites de la page avec marge de sécurité
+        // Pas d'area : bord droit/bas du format fini - marge - position actuelle
         const margin = getSecurityMarginPx();
-        const pageWidth = getPageWidth();
-        const pageHeight = getPageHeight();
+        const formatFiniRightPx = fp.gauchePx + mmToPx(getPageWidthMm());
+        const formatFiniBottomPx = fp.hautPx + mmToPx(getPageHeightMm());
         
         return {
-            maxWidth: pageWidth - margin - zoneLeft,
-            maxHeight: pageHeight - margin - zoneTop
+            maxWidth: formatFiniRightPx - margin - zoneLeft,
+            maxHeight: formatFiniBottomPx - margin - zoneTop
         };
     }
 
@@ -9954,19 +10067,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const maxX = limits.maxX;
         const maxY = limits.maxY;
         
-        // Position actuelle de la zone
-        const zoneXMm = pxToMm(zoneEl.offsetLeft);
-        const zoneYMm = pxToMm(zoneEl.offsetTop);
+        // Position actuelle en format fini mm (DOM px - offset fond perdu)
+        const fpVc = getFondPerduOffset();
+        const zoneXMm = pxToMm(zoneEl.offsetLeft - fpVc.gauchePx);
+        const zoneYMm = pxToMm(zoneEl.offsetTop - fpVc.hautPx);
         
         // Calculer les limites selon le contexte (area ou document)
         let maxAllowedWidth, maxAllowedHeight;
         
         if (geometrie.area) {
-            // Area active : limite = bord de l'area - position zone
             maxAllowedWidth = (geometrie.area.xMm + geometrie.area.wMm) - zoneXMm;
             maxAllowedHeight = (geometrie.area.yMm + geometrie.area.hMm) - zoneYMm;
         } else {
-            // Pas d'area : limite = bord du document - position zone
             maxAllowedWidth = maxX - zoneXMm;
             maxAllowedHeight = maxY - zoneYMm;
         }
@@ -11006,9 +11118,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 let areaToDisplay = null;
                 
                 if (!wasAreaDefined && zoneEl) {
-                    // Premier cochage : calculer les valeurs initiales
-                    const zoneXMm = pxToMm(zoneEl.offsetLeft);
-                    const zoneYMm = pxToMm(zoneEl.offsetTop);
+                    // Premier cochage : DOM px → format fini mm pour calcul area initiale
+                    const fpAreaInit = getFondPerduOffset();
+                    const zoneXMm = pxToMm(zoneEl.offsetLeft - fpAreaInit.gauchePx);
+                    const zoneYMm = pxToMm(zoneEl.offsetTop - fpAreaInit.hautPx);
                     const zoneWMm = pxToMm(zoneEl.offsetWidth);
                     const zoneHMm = pxToMm(zoneEl.offsetHeight);
                     
@@ -11123,10 +11236,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     const zoneData = zones[zoneId];
                     
                     if (zoneEl) {
+                        const fpValCtx = getFondPerduOffset();
                         validationContext = {
-                            // Position actuelle de la zone
-                            zoneXMm: pxToMm(zoneEl.offsetLeft),
-                            zoneYMm: pxToMm(zoneEl.offsetTop)
+                            zoneXMm: pxToMm(zoneEl.offsetLeft - fpValCtx.gauchePx),
+                            zoneYMm: pxToMm(zoneEl.offsetTop - fpValCtx.hautPx)
                         };
                         
                         // Ajouter les limites de l'area si active
@@ -11168,12 +11281,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     const wMm = parseMmValue(getInputInToolbar(toolbar, 'contrainte-area-w'));
                     const hMm = parseMmValue(getInputInToolbar(toolbar, 'contrainte-area-h'));
                     
-                    const newAreaX = mmToPx(xMm);
-                    const newAreaY = mmToPx(yMm);
+                    const fpAreaInput = getFondPerduOffset();
+                    const newAreaX = mmToPx(xMm) + fpAreaInput.gauchePx;
+                    const newAreaY = mmToPx(yMm) + fpAreaInput.hautPx;
                     const newAreaW = mmToPx(wMm);
                     const newAreaH = mmToPx(hMm);
                     
-                    // Appliquer les nouvelles dimensions à l'area
+                    // Appliquer les nouvelles dimensions à l'area (page DOM px)
                     areaEl.style.left = newAreaX + 'px';
                     areaEl.style.top = newAreaY + 'px';
                     areaEl.style.width = newAreaW + 'px';
@@ -12584,6 +12698,111 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * Supprime tous les éléments visuels de fond perdu (overlays et ligne de coupe)
+     * du DOM de la page. Appelé avant de recréer les overlays ou lors du nettoyage.
+     * 
+     * @returns {void}
+     * 
+     * @see createBleedOverlays - Création des overlays
+     */
+    function removeBleedOverlays() {
+        if (!a4Page) return;
+        a4Page.querySelectorAll('.bleed-overlay, .bleed-cutline').forEach(el => el.remove());
+    }
+
+    /**
+     * Crée les éléments visuels de fond perdu : 4 overlays semi-transparents
+     * (haut, bas, gauche, droite) et une ligne de coupe en pointillés rouges.
+     * Ne crée rien si le fond perdu est inactif ou absent.
+     * 
+     * Les overlays sont des divs positionnés en absolu dans #a4-page.
+     * Ils couvrent la bande de fond perdu avec un fond blanc semi-transparent
+     * pour distinguer visuellement la zone qui sera coupée après impression.
+     * 
+     * Disposition :
+     * ┌────────────────────────────────┐
+     * │          TOP OVERLAY           │  ← hauteur: hautPx
+     * ├────┬──────────────────────┬────┤
+     * │LEFT│   (format fini)      │RIGH│  ← hauteur: formatFiniHeightPx
+     * │    │                      │ T  │
+     * ├────┴──────────────────────┴────┤
+     * │         BOTTOM OVERLAY         │  ← hauteur: basPx
+     * └────────────────────────────────┘
+     * 
+     * @returns {void}
+     * 
+     * @see removeBleedOverlays - Suppression préalable
+     * @see computeFondPerduOffset - Calcul des offsets
+     */
+    function createBleedOverlays() {
+        removeBleedOverlays();
+        if (!a4Page) return;
+        
+        const fp = documentState.fondPerduOffset;
+        if (!fp || (!fp.hautPx && !fp.basPx && !fp.gauchePx && !fp.droitePx)) return;
+        
+        const pageWidth = getPageWidth();
+        const pageHeight = getPageHeight();
+        const formatFiniWidthPx = pageWidth - fp.gauchePx - fp.droitePx;
+        const formatFiniHeightPx = pageHeight - fp.hautPx - fp.basPx;
+        
+        // --- 4 overlays semi-transparents ---
+        
+        // Haut : toute la largeur, hauteur = hautPx
+        if (fp.hautPx > 0) {
+            const top = document.createElement('div');
+            top.className = 'bleed-overlay';
+            top.style.left = '0';
+            top.style.top = '0';
+            top.style.width = pageWidth + 'px';
+            top.style.height = fp.hautPx + 'px';
+            a4Page.appendChild(top);
+        }
+        
+        // Bas : toute la largeur, hauteur = basPx
+        if (fp.basPx > 0) {
+            const bottom = document.createElement('div');
+            bottom.className = 'bleed-overlay';
+            bottom.style.left = '0';
+            bottom.style.top = (fp.hautPx + formatFiniHeightPx) + 'px';
+            bottom.style.width = pageWidth + 'px';
+            bottom.style.height = fp.basPx + 'px';
+            a4Page.appendChild(bottom);
+        }
+        
+        // Gauche : entre haut et bas, largeur = gauchePx
+        if (fp.gauchePx > 0) {
+            const left = document.createElement('div');
+            left.className = 'bleed-overlay';
+            left.style.left = '0';
+            left.style.top = fp.hautPx + 'px';
+            left.style.width = fp.gauchePx + 'px';
+            left.style.height = formatFiniHeightPx + 'px';
+            a4Page.appendChild(left);
+        }
+        
+        // Droite : entre haut et bas, largeur = droitePx
+        if (fp.droitePx > 0) {
+            const right = document.createElement('div');
+            right.className = 'bleed-overlay';
+            right.style.left = (fp.gauchePx + formatFiniWidthPx) + 'px';
+            right.style.top = fp.hautPx + 'px';
+            right.style.width = fp.droitePx + 'px';
+            right.style.height = formatFiniHeightPx + 'px';
+            a4Page.appendChild(right);
+        }
+        
+        // --- Ligne de coupe (pointillés rouges autour du format fini) ---
+        const cutline = document.createElement('div');
+        cutline.className = 'bleed-cutline';
+        cutline.style.left = fp.gauchePx + 'px';
+        cutline.style.top = fp.hautPx + 'px';
+        cutline.style.width = formatFiniWidthPx + 'px';
+        cutline.style.height = formatFiniHeightPx + 'px';
+        a4Page.appendChild(cutline);
+    }
+
+    /**
      * Calcule le centre de la vue actuelle dans les coordonnées de la page.
      * Utilisé pour positionner les nouvelles zones au centre de l'écran visible.
      * Prend en compte le niveau de zoom actuel.
@@ -12984,20 +13203,21 @@ document.addEventListener('DOMContentLoaded', () => {
             defaultZoneHeight = mmToPx(30);
         }
         
-        // Obtenir la marge de sécurité et les dimensions de la page
+        // Obtenir la marge de sécurité et les limites du format fini (avec offset fond perdu)
         const margin = getSecurityMarginPx();
-        const pageWidth = getPageWidth();
-        const pageHeight = getPageHeight();
+        const fp = getFondPerduOffset();
+        const formatFiniWidthPx = mmToPx(getPageWidthMm());
+        const formatFiniHeightPx = mmToPx(getPageHeightMm());
         
         // Positionner au centre de la vue, moins la moitié de la taille de la zone
         let zoneX = centerView.x - (defaultZoneWidth / 2);
         let zoneY = centerView.y - (defaultZoneHeight / 2);
         
-        // Appliquer les contraintes de marge de sécurité pour les nouvelles zones
-        const minX = margin;
-        const maxX = pageWidth - margin - defaultZoneWidth;
-        const minY = margin;
-        const maxY = pageHeight - margin - defaultZoneHeight;
+        // Contraindre dans le format fini + marge (en pixels page DOM)
+        const minX = fp.gauchePx + margin;
+        const maxX = fp.gauchePx + formatFiniWidthPx - margin - defaultZoneWidth;
+        const minY = fp.hautPx + margin;
+        const maxY = fp.hautPx + formatFiniHeightPx - margin - defaultZoneHeight;
         zoneX = Math.max(minX, Math.min(zoneX, maxX));
         zoneY = Math.max(minY, Math.min(zoneY, maxY));
         
@@ -13021,11 +13241,11 @@ document.addEventListener('DOMContentLoaded', () => {
             zonesData[id].h = parseFloat(zone.style.height);
             zonesData[id].x = parseFloat(zone.style.left);
             zonesData[id].y = parseFloat(zone.style.top);
-            // Initialiser aussi les valeurs en mm pour cohérence avec l'export
-            zonesData[id].wMm = pxToMm(zonesData[id].w);
-            zonesData[id].hMm = pxToMm(zonesData[id].h);
-            zonesData[id].xMm = pxToMm(zonesData[id].x);
-            zonesData[id].yMm = pxToMm(zonesData[id].y);
+            // Initialiser les valeurs mm si absentes (zones créées ; les zones importées ont déjà xMm/yMm)
+            zonesData[id].wMm = zonesData[id].wMm !== undefined ? zonesData[id].wMm : pxToMm(zonesData[id].w);
+            zonesData[id].hMm = zonesData[id].hMm !== undefined ? zonesData[id].hMm : pxToMm(zonesData[id].h);
+            zonesData[id].xMm = zonesData[id].xMm !== undefined ? zonesData[id].xMm : pxToMm(zonesData[id].x - getFondPerduOffset().gauchePx);
+            zonesData[id].yMm = zonesData[id].yMm !== undefined ? zonesData[id].yMm : pxToMm(zonesData[id].y - getFondPerduOffset().hautPx);
 
             const qrWrapper = document.createElement('div');
             qrWrapper.classList.add('zone-content');
@@ -13057,11 +13277,10 @@ document.addEventListener('DOMContentLoaded', () => {
             zonesData[id].h = parseFloat(zone.style.height);
             zonesData[id].x = parseFloat(zone.style.left);
             zonesData[id].y = parseFloat(zone.style.top);
-            // Initialiser aussi les valeurs en mm pour cohérence avec l'export
-            zonesData[id].wMm = pxToMm(zonesData[id].w);
-            zonesData[id].hMm = pxToMm(zonesData[id].h);
-            zonesData[id].xMm = pxToMm(zonesData[id].x);
-            zonesData[id].yMm = pxToMm(zonesData[id].y);
+            zonesData[id].wMm = zonesData[id].wMm !== undefined ? zonesData[id].wMm : pxToMm(zonesData[id].w);
+            zonesData[id].hMm = zonesData[id].hMm !== undefined ? zonesData[id].hMm : pxToMm(zonesData[id].h);
+            zonesData[id].xMm = zonesData[id].xMm !== undefined ? zonesData[id].xMm : pxToMm(zonesData[id].x - getFondPerduOffset().gauchePx);
+            zonesData[id].yMm = zonesData[id].yMm !== undefined ? zonesData[id].yMm : pxToMm(zonesData[id].y - getFondPerduOffset().hautPx);
             
             // Bordure
             if (zoneData.border) {
@@ -13107,11 +13326,10 @@ document.addEventListener('DOMContentLoaded', () => {
             zonesData[id].h = parseFloat(zone.style.height);
             zonesData[id].x = parseFloat(zone.style.left);
             zonesData[id].y = parseFloat(zone.style.top);
-            // Initialiser aussi les valeurs en mm pour cohérence avec l'export
-            zonesData[id].wMm = pxToMm(zonesData[id].w);
-            zonesData[id].hMm = pxToMm(zonesData[id].h);
-            zonesData[id].xMm = pxToMm(zonesData[id].x);
-            zonesData[id].yMm = pxToMm(zonesData[id].y);
+            zonesData[id].wMm = zonesData[id].wMm !== undefined ? zonesData[id].wMm : pxToMm(zonesData[id].w);
+            zonesData[id].hMm = zonesData[id].hMm !== undefined ? zonesData[id].hMm : pxToMm(zonesData[id].h);
+            zonesData[id].xMm = zonesData[id].xMm !== undefined ? zonesData[id].xMm : pxToMm(zonesData[id].x - getFondPerduOffset().gauchePx);
+            zonesData[id].yMm = zonesData[id].yMm !== undefined ? zonesData[id].yMm : pxToMm(zonesData[id].y - getFondPerduOffset().hautPx);
             
             // Badge type de code-barres (en haut à gauche)
             const typeBadge = document.createElement('span');
@@ -13162,11 +13380,10 @@ document.addEventListener('DOMContentLoaded', () => {
             zonesData[id].h = parseFloat(zone.style.height);
             zonesData[id].x = parseFloat(zone.style.left);
             zonesData[id].y = parseFloat(zone.style.top);
-            // Initialiser aussi les valeurs en mm pour cohérence avec l'export
-            zonesData[id].wMm = pxToMm(zonesData[id].w);
-            zonesData[id].hMm = pxToMm(zonesData[id].h);
-            zonesData[id].xMm = pxToMm(zonesData[id].x);
-            zonesData[id].yMm = pxToMm(zonesData[id].y);
+            zonesData[id].wMm = zonesData[id].wMm !== undefined ? zonesData[id].wMm : pxToMm(zonesData[id].w);
+            zonesData[id].hMm = zonesData[id].hMm !== undefined ? zonesData[id].hMm : pxToMm(zonesData[id].h);
+            zonesData[id].xMm = zonesData[id].xMm !== undefined ? zonesData[id].xMm : pxToMm(zonesData[id].x - getFondPerduOffset().gauchePx);
+            zonesData[id].yMm = zonesData[id].yMm !== undefined ? zonesData[id].yMm : pxToMm(zonesData[id].y - getFondPerduOffset().hautPx);
             
             // Fond (ne pas forcer à transparent : respecter les données importées / sauvegardées)
             zone.style.backgroundColor = zoneData.isTransparent ? 'transparent' : (zoneData.bgColor || DEFAULT_BG_COLOR);
@@ -14307,10 +14524,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const zoneEl = document.getElementById(zoneId);
         if (!zoneEl) return;
         
-        // Lire directement depuis le DOM pour refléter les changements en temps réel
-        // (pendant le drag/resize, les valeurs zoneData.xMm ne sont pas encore mises à jour)
-        const xMm = pxToMm(parseFloat(zoneEl.style.left) || 0);
-        const yMm = pxToMm(parseFloat(zoneEl.style.top) || 0);
+        // DOM px → format fini mm (soustraire offset fond perdu pour les positions)
+        const fpTb = getFondPerduOffset();
+        const xMm = pxToMm((parseFloat(zoneEl.style.left) || 0) - fpTb.gauchePx);
+        const yMm = pxToMm((parseFloat(zoneEl.style.top) || 0) - fpTb.hautPx);
         const wMm = pxToMm(zoneEl.offsetWidth);
         const hMm = pxToMm(zoneEl.offsetHeight);
         
@@ -14926,8 +15143,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const zoneEl = document.getElementById(zoneId);
         if (!zoneEl) return;
         
-        const xMm = pxToMm(parseFloat(zoneEl.style.left) || 0);
-        const yMm = pxToMm(parseFloat(zoneEl.style.top) || 0);
+        const fpTb = getFondPerduOffset();
+        const xMm = pxToMm((parseFloat(zoneEl.style.left) || 0) - fpTb.gauchePx);
+        const yMm = pxToMm((parseFloat(zoneEl.style.top) || 0) - fpTb.hautPx);
         const wMm = pxToMm(zoneEl.offsetWidth);
         const hMm = pxToMm(zoneEl.offsetHeight);
         
@@ -15310,8 +15528,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const zoneEl = document.getElementById(zoneId);
         if (!zoneEl) return;
         
-        const xMm = pxToMm(parseFloat(zoneEl.style.left) || 0);
-        const yMm = pxToMm(parseFloat(zoneEl.style.top) || 0);
+        const fpTb = getFondPerduOffset();
+        const xMm = pxToMm((parseFloat(zoneEl.style.left) || 0) - fpTb.gauchePx);
+        const yMm = pxToMm((parseFloat(zoneEl.style.top) || 0) - fpTb.hautPx);
         const wMm = pxToMm(zoneEl.offsetWidth);
         const hMm = pxToMm(zoneEl.offsetHeight);
         
@@ -16002,8 +16221,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const zoneEl = document.getElementById(zoneId);
         if (!zoneEl) return;
         
-        const xMm = pxToMm(parseFloat(zoneEl.style.left) || 0);
-        const yMm = pxToMm(parseFloat(zoneEl.style.top) || 0);
+        const fpTb = getFondPerduOffset();
+        const xMm = pxToMm((parseFloat(zoneEl.style.left) || 0) - fpTb.gauchePx);
+        const yMm = pxToMm((parseFloat(zoneEl.style.top) || 0) - fpTb.hautPx);
         const wMm = pxToMm(zoneEl.offsetWidth);
         const hMm = pxToMm(zoneEl.offsetHeight);
         
@@ -16884,24 +17104,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
             }
             
-            // S'assurer que la zone reste dans les limites de la page avec marge de sécurité
+            // Contraindre dans le format fini + marge (en pixels page DOM)
             const margin = getSecurityMarginPx();
-            const minLeft = margin;
-            const maxLeft = a4Page.offsetWidth - margin - zone.offsetWidth;
-            const minTop = margin;
-            const maxTop = a4Page.offsetHeight - margin - zone.offsetHeight;
+            const fpAlign = getFondPerduOffset();
+            const minLeft = fpAlign.gauchePx + margin;
+            const maxLeft = fpAlign.gauchePx + mmToPx(getPageWidthMm()) - margin - zone.offsetWidth;
+            const minTop = fpAlign.hautPx + margin;
+            const maxTop = fpAlign.hautPx + mmToPx(getPageHeightMm()) - margin - zone.offsetHeight;
             zone.style.left = Math.max(minLeft, Math.min(parseFloat(zone.style.left), maxLeft)) + 'px';
             zone.style.top = Math.max(minTop, Math.min(parseFloat(zone.style.top), maxTop)) + 'px';
             
-            // Mettre à jour les données de la zone (pixels et millimètres)
             const zoneData = zonesData[zoneId];
             if (zoneData) {
                 const finalLeft = parseFloat(zone.style.left);
                 const finalTop = parseFloat(zone.style.top);
                 zoneData.x = finalLeft;
                 zoneData.y = finalTop;
-                zoneData.xMm = pxToMm(finalLeft);
-                zoneData.yMm = pxToMm(finalTop);
+                zoneData.xMm = pxToMm(finalLeft - fpAlign.gauchePx);
+                zoneData.yMm = pxToMm(finalTop - fpAlign.hautPx);
             }
         }
         
@@ -16940,21 +17160,20 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (zoneElements.length === 0) return;
         
-        // Calculer le centre du bounding box et le centre de la page
+        // Centre du format fini (pas de la page avec fond perdu)
+        const fpCenterX = getFondPerduOffset();
         const boundingWidth = maxX - minX;
         const boundingCenterX = minX + boundingWidth / 2;
-        const pageCenterX = a4Page.offsetWidth / 2;
+        const pageCenterX = fpCenterX.gauchePx + mmToPx(getPageWidthMm()) / 2;
         
-        // Calculer le décalage à appliquer
         const deltaX = pageCenterX - boundingCenterX;
         
-        // Appliquer le décalage à toutes les zones
         for (const { el, data, left } of zoneElements) {
             const newLeft = left + deltaX;
             el.style.left = newLeft + 'px';
             if (data) {
                 data.x = newLeft;
-                data.xMm = pxToMm(newLeft);
+                data.xMm = pxToMm(newLeft - fpCenterX.gauchePx);
             }
         }
         
@@ -16993,21 +17212,20 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (zoneElements.length === 0) return;
         
-        // Calculer le centre du bounding box et le centre de la page
+        // Centre du format fini (pas de la page avec fond perdu)
+        const fpCenterY = getFondPerduOffset();
         const boundingHeight = maxY - minY;
         const boundingCenterY = minY + boundingHeight / 2;
-        const pageCenterY = a4Page.offsetHeight / 2;
+        const pageCenterY = fpCenterY.hautPx + mmToPx(getPageHeightMm()) / 2;
         
-        // Calculer le décalage à appliquer
         const deltaY = pageCenterY - boundingCenterY;
         
-        // Appliquer le décalage à toutes les zones
         for (const { el, data, top } of zoneElements) {
             const newTop = top + deltaY;
             el.style.top = newTop + 'px';
             if (data) {
                 data.y = newTop;
-                data.yMm = pxToMm(newTop);
+                data.yMm = pxToMm(newTop - fpCenterY.hautPx);
             }
         }
         
@@ -17079,13 +17297,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateImageDpiBadge(zoneId);
             }
 
-            // S'assurer que la zone reste dans les limites
-            const maxLeft = a4Page.offsetWidth - zone.offsetWidth;
+            // Contraindre dans le format fini (pas de débordement dans le fond perdu)
+            const fpSize = getFondPerduOffset();
+            const maxLeft = fpSize.gauchePx + mmToPx(getPageWidthMm()) - zone.offsetWidth;
             const currentLeft = parseFloat(zone.style.left) || 0;
-            zone.style.left = Math.max(0, Math.min(currentLeft, maxLeft)) + 'px';
+            zone.style.left = Math.max(fpSize.gauchePx, Math.min(currentLeft, maxLeft)) + 'px';
             if (zoneData) {
                 zoneData.x = parseFloat(zone.style.left);
-                zoneData.xMm = pxToMm(zoneData.x);
+                zoneData.xMm = pxToMm(zoneData.x - fpSize.gauchePx);
             }
         }
 
@@ -17155,18 +17374,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateImageDpiBadge(zoneId);
             }
 
-            // S'assurer que la zone reste dans les limites
-            const maxTop = a4Page.offsetHeight - zone.offsetHeight;
+            // Contraindre dans le format fini
+            const fpSizeH = getFondPerduOffset();
+            const maxTop = fpSizeH.hautPx + mmToPx(getPageHeightMm()) - zone.offsetHeight;
             const currentTop = parseFloat(zone.style.top) || 0;
-            zone.style.top = Math.max(0, Math.min(currentTop, maxTop)) + 'px';
+            zone.style.top = Math.max(fpSizeH.hautPx, Math.min(currentTop, maxTop)) + 'px';
             if (zoneData) {
                 zoneData.y = parseFloat(zone.style.top);
-                zoneData.yMm = pxToMm(zoneData.y);
+                zoneData.yMm = pxToMm(zoneData.y - fpSizeH.hautPx);
             }
         }
 
         saveToLocalStorage();
-        saveState(); // Snapshot APRÈS le changement de taille
+        saveState();
     }
 
     /**
@@ -19305,16 +19525,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentX += zones[i - 1].width + spacing;
             }
             
-            // S'assurer que la zone reste dans les limites de la page
-            const maxLeft = a4Page.offsetWidth - zones[i].width;
-            const finalX = Math.max(0, Math.min(currentX, maxLeft));
+            // Contraindre dans le format fini
+            const fpDistX = getFondPerduOffset();
+            const maxLeft = fpDistX.gauchePx + mmToPx(getPageWidthMm()) - zones[i].width;
+            const finalX = Math.max(fpDistX.gauchePx, Math.min(currentX, maxLeft));
             zones[i].element.style.left = finalX + 'px';
             
-            // Synchroniser les données de la zone (pixels et mm)
             const zoneData = zonesData[zones[i].id];
             if (zoneData) {
                 zoneData.x = finalX;
-                zoneData.xMm = pxToMm(finalX);
+                zoneData.xMm = pxToMm(finalX - fpDistX.gauchePx);
             }
         }
         
@@ -19373,16 +19593,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentY += zones[i - 1].height + spacing;
             }
             
-            // S'assurer que la zone reste dans les limites de la page
-            const maxTop = a4Page.offsetHeight - zones[i].height;
-            const finalY = Math.max(0, Math.min(currentY, maxTop));
+            // Contraindre dans le format fini
+            const fpDistY = getFondPerduOffset();
+            const maxTop = fpDistY.hautPx + mmToPx(getPageHeightMm()) - zones[i].height;
+            const finalY = Math.max(fpDistY.hautPx, Math.min(currentY, maxTop));
             zones[i].element.style.top = finalY + 'px';
             
-            // Synchroniser les données de la zone (pixels et mm)
             const zoneData = zonesData[zones[i].id];
             if (zoneData) {
                 zoneData.y = finalY;
-                zoneData.yMm = pxToMm(finalY);
+                zoneData.yMm = pxToMm(finalY - fpDistY.hautPx);
             }
         }
         
@@ -20863,20 +21083,23 @@ document.addEventListener('DOMContentLoaded', () => {
         if (hasActuallyMoved && (isDragging || isResizing)) {
             // Mettre à jour les valeurs mm pour toutes les zones déplacées/redimensionnées
             const zonesData = getCurrentPageZones();
+            const fpMouseUp = getFondPerduOffset();
             selectedZoneIds.forEach(zoneId => {
                 const zoneEl = document.getElementById(zoneId);
                 const zoneData = zonesData[zoneId];
                 if (zoneEl && zoneData) {
-                    // Convertir les positions/dimensions pixels en mm
-                    zoneData.xMm = pxToMm(parseFloat(zoneEl.style.left) || zoneEl.offsetLeft);
-                    zoneData.yMm = pxToMm(parseFloat(zoneEl.style.top) || zoneEl.offsetTop);
+                    const domLeft = parseFloat(zoneEl.style.left) || zoneEl.offsetLeft;
+                    const domTop = parseFloat(zoneEl.style.top) || zoneEl.offsetTop;
+                    // Convertir DOM px → format fini mm (soustraire l'offset fond perdu)
+                    zoneData.xMm = pxToMm(domLeft - fpMouseUp.gauchePx);
+                    zoneData.yMm = pxToMm(domTop - fpMouseUp.hautPx);
                     zoneData.wMm = pxToMm(zoneEl.offsetWidth);
                     zoneData.hMm = pxToMm(zoneEl.offsetHeight);
                     
-                    // textQuill : stocker aussi les valeurs pixels (utiles pour recréation DOM cohérente)
+                    // textQuill : stocker aussi les valeurs pixels page DOM
                     if (zoneData.type === 'textQuill') {
-                        zoneData.x = parseFloat(zoneEl.style.left) || zoneEl.offsetLeft;
-                        zoneData.y = parseFloat(zoneEl.style.top) || zoneEl.offsetTop;
+                        zoneData.x = domLeft;
+                        zoneData.y = domTop;
                         zoneData.w = zoneEl.offsetWidth;
                         zoneData.h = zoneEl.offsetHeight;
                     }
@@ -21030,28 +21253,26 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function updateGeomDisplay(zoneDataOrEl) {
         let xMm, yMm, wMm, hMm;
+        const fpGeomDisp = getFondPerduOffset();
         
         if (zoneDataOrEl instanceof HTMLElement) {
-            // Élément DOM passé : récupérer les données de la zone
             const zoneEl = zoneDataOrEl;
             const zonesData = getCurrentPageZones();
             const zoneData = zonesData[zoneEl.id];
             
             if (zoneData && zoneData.xMm !== undefined) {
-                // Utiliser les valeurs mm stockées
                 xMm = zoneData.xMm;
                 yMm = zoneData.yMm;
                 wMm = zoneData.wMm;
                 hMm = zoneData.hMm;
             } else {
-                // Fallback : convertir depuis les pixels
-                xMm = pxToMm(zoneEl.offsetLeft);
-                yMm = pxToMm(zoneEl.offsetTop);
+                // Fallback : DOM px → format fini mm (soustraire offset fond perdu)
+                xMm = pxToMm(zoneEl.offsetLeft - fpGeomDisp.gauchePx);
+                yMm = pxToMm(zoneEl.offsetTop - fpGeomDisp.hautPx);
                 wMm = pxToMm(zoneEl.offsetWidth);
                 hMm = pxToMm(zoneEl.offsetHeight);
             }
         } else {
-            // Objet zoneData passé directement
             const zoneData = zoneDataOrEl;
             if (zoneData.xMm !== undefined) {
                 xMm = zoneData.xMm;
@@ -21059,9 +21280,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 wMm = zoneData.wMm;
                 hMm = zoneData.hMm;
             } else {
-                // Fallback : convertir depuis les pixels
-                xMm = pxToMm(zoneData.x || 0);
-                yMm = pxToMm(zoneData.y || 0);
+                // Fallback : px page DOM → format fini mm
+                xMm = pxToMm((zoneData.x || 0) - fpGeomDisp.gauchePx);
+                yMm = pxToMm((zoneData.y || 0) - fpGeomDisp.hautPx);
                 wMm = pxToMm(zoneData.w || 100);
                 hMm = pxToMm(zoneData.h || 50);
             }
@@ -21102,9 +21323,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Récupérer les limites (area si définie, sinon marge de sécurité)
         const limits = getGeometryLimitsForZone(zoneId);
         
-        // Récupérer les valeurs actuelles en mm
-        let xMm = zoneData.xMm !== undefined ? zoneData.xMm : pxToMm(zoneEl.offsetLeft);
-        let yMm = zoneData.yMm !== undefined ? zoneData.yMm : pxToMm(zoneEl.offsetTop);
+        // Récupérer les valeurs actuelles en format fini mm
+        const fpApply = getFondPerduOffset();
+        let xMm = zoneData.xMm !== undefined ? zoneData.xMm : pxToMm(zoneEl.offsetLeft - fpApply.gauchePx);
+        let yMm = zoneData.yMm !== undefined ? zoneData.yMm : pxToMm(zoneEl.offsetTop - fpApply.hautPx);
         let wMm = zoneData.wMm !== undefined ? zoneData.wMm : pxToMm(zoneEl.offsetWidth);
         let hMm = zoneData.hMm !== undefined ? zoneData.hMm : pxToMm(zoneEl.offsetHeight);
         
@@ -21215,9 +21437,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // APPLIQUER LES VALEURS
         // ============================================
         
-        // Convertir en pixels pour le CSS
-        const xPx = mmToPx(xMm);
-        const yPx = mmToPx(yMm);
+        // Convertir format fini mm → page DOM px (ajouter offset fond perdu)
+        const fpGeom = getFondPerduOffset();
+        const xPx = mmToPx(xMm) + fpGeom.gauchePx;
+        const yPx = mmToPx(yMm) + fpGeom.hautPx;
         const wPx = mmToPx(wMm);
         const hPx = mmToPx(hMm);
         
@@ -21227,7 +21450,7 @@ document.addEventListener('DOMContentLoaded', () => {
         zoneEl.style.width = wPx + 'px';
         zoneEl.style.height = hPx + 'px';
         
-        // Stocker les valeurs en pixels ET en mm
+        // Stocker les valeurs en pixels page DOM ET en mm format fini
         zoneData.x = xPx;
         zoneData.y = yPx;
         zoneData.w = wPx;
@@ -22026,6 +22249,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function convertZoneTexteFromJson(zoneJson) {
         // Conversion mm → pixels
         const mmToPixels = (mm) => mm / MM_PER_PIXEL;
+        const fp = getFondPerduOffset();
         
         // Extraction des données avec valeurs par défaut
         const geometrie = zoneJson.geometrie || {};
@@ -22059,9 +22283,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Type de zone (toujours textQuill, seul type texte supporté)
             type: 'textQuill',
             
-            // Géométrie (conversion mm → px)
-            x: geometrie.xMm !== undefined ? mmToPixels(geometrie.xMm) : 0,
-            y: geometrie.yMm !== undefined ? mmToPixels(geometrie.yMm) : 0,
+            // Géométrie (format fini mm → page DOM px, avec offset fond perdu)
+            x: (geometrie.xMm !== undefined ? mmToPixels(geometrie.xMm) : 0) + fp.gauchePx,
+            y: (geometrie.yMm !== undefined ? mmToPixels(geometrie.yMm) : 0) + fp.hautPx,
             w: geometrie.largeurMm !== undefined ? mmToPixels(geometrie.largeurMm) : 200,
             h: geometrie.hauteurMm !== undefined ? mmToPixels(geometrie.hauteurMm) : 40,
             
@@ -22134,6 +22358,7 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function convertZoneCodeBarresFromJson(zoneJson) {
         const mmToPixels = (mm) => mm / MM_PER_PIXEL;
+        const fp = getFondPerduOffset();
         
         const geometrie = zoneJson.geometrie || {};
         const jsonContrainte = zoneJson.contrainte || {};
@@ -22152,14 +22377,12 @@ document.addEventListener('DOMContentLoaded', () => {
             bgColor: cmjnWebDevToHex(zoneJson.couleurFondCmjn, DEFAULT_BG_COLOR),
             bgColorCmyk: zoneJson.couleurFondCmjn || { c: 0, m: 0, y: 0, k: 0 },
             isTransparent: zoneJson.transparent || false,
-            // QR Code intelligent : restaurer la configuration si présente
             qrConfig: zoneJson.qrConfig || null,
-            // Forme DataMatrix : 'square' (défaut) ou 'rectangle' (12x36)
             forme: zoneJson.forme || undefined,
             zIndex: zoneJson.niveau || 1,
             rotation: zoneJson.rotation || 0,
-            x: geometrie.xMm !== undefined ? mmToPixels(geometrie.xMm) : 0,
-            y: geometrie.yMm !== undefined ? mmToPixels(geometrie.yMm) : 0,
+            x: (geometrie.xMm !== undefined ? mmToPixels(geometrie.xMm) : 0) + fp.gauchePx,
+            y: (geometrie.yMm !== undefined ? mmToPixels(geometrie.yMm) : 0) + fp.hautPx,
             w: geometrie.largeurMm !== undefined ? mmToPixels(geometrie.largeurMm) : 150,
             h: geometrie.hauteurMm !== undefined ? mmToPixels(geometrie.hauteurMm) : 60,
             xMm: geometrie.xMm !== undefined ? geometrie.xMm : 0,
@@ -22179,6 +22402,7 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function convertZoneQRFromJson(zoneJson) {
         const mmToPixels = (mm) => mm / MM_PER_PIXEL;
+        const fp = getFondPerduOffset();
         
         const geometrie = zoneJson.geometrie || {};
         const couleurs = zoneJson.couleurs || {};
@@ -22196,8 +22420,8 @@ document.addEventListener('DOMContentLoaded', () => {
             name: zoneJson.nom || '',
             zIndex: zoneJson.niveau || 1,
             rotation: zoneJson.rotation || 0,
-            x: geometrie.xMm !== undefined ? mmToPixels(geometrie.xMm) : 0,
-            y: geometrie.yMm !== undefined ? mmToPixels(geometrie.yMm) : 0,
+            x: (geometrie.xMm !== undefined ? mmToPixels(geometrie.xMm) : 0) + fp.gauchePx,
+            y: (geometrie.yMm !== undefined ? mmToPixels(geometrie.yMm) : 0) + fp.hautPx,
             w: geometrie.largeurMm !== undefined ? mmToPixels(geometrie.largeurMm) : 100,
             h: geometrie.hauteurMm !== undefined ? mmToPixels(geometrie.hauteurMm) : 100,
             xMm: geometrie.xMm !== undefined ? geometrie.xMm : 0,
@@ -22374,13 +22598,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Dimensions exactes en mm (pour les calculs de géométrie précis)
                 largeurMm: effectiveDocumentJson.formatDocument.largeurMm || DOCUMENT_FORMATS_MM[DEFAULT_FORMAT].widthMm,
                 hauteurMm: effectiveDocumentJson.formatDocument.hauteurMm || DOCUMENT_FORMATS_MM[DEFAULT_FORMAT].heightMm,
-                fondPerdu: effectiveDocumentJson.formatDocument.fondPerdu || { actif: false, valeurMm: 3 },
+                fondPerdu: parseFondPerdu(effectiveDocumentJson.formatDocument.fondPerdu),
                 traitsCoupe: effectiveDocumentJson.formatDocument.traitsCoupe || { actif: false },
                 margeSecuriteMm: effectiveDocumentJson.formatDocument.margeSecurite || 0,
                 largeurMaxImageMm: effectiveDocumentJson.formatDocument?.largeurMaxImageMm || null,
                 hauteurMaxImageMm: effectiveDocumentJson.formatDocument?.hauteurMaxImageMm || null
             };
         }
+        
+        // Calculer et stocker les offsets de fond perdu (mm et px)
+        computeFondPerduOffset();
         
         // Stocker les champs de fusion disponibles et mettre à jour l'UI
         if (effectiveDocumentJson.champsFusion && Array.isArray(effectiveDocumentJson.champsFusion) && effectiveDocumentJson.champsFusion.length > 0) {
@@ -22423,13 +22650,18 @@ document.addEventListener('DOMContentLoaded', () => {
         // Conversion mm → pixels
         const mmToPixels = (mm) => mm / MM_PER_PIXEL;
         
-        // Récupérer les dimensions du document (appliquées à toutes les pages)
-        const docWidthPx = effectiveDocumentJson.formatDocument?.largeurMm 
+        // Récupérer les dimensions du document (format fini)
+        const formatFiniWidthPx = effectiveDocumentJson.formatDocument?.largeurMm 
             ? mmToPixels(effectiveDocumentJson.formatDocument.largeurMm) 
             : DOCUMENT_FORMATS[DEFAULT_FORMAT].width;
-        const docHeightPx = effectiveDocumentJson.formatDocument?.hauteurMm 
+        const formatFiniHeightPx = effectiveDocumentJson.formatDocument?.hauteurMm 
             ? mmToPixels(effectiveDocumentJson.formatDocument.hauteurMm) 
             : DOCUMENT_FORMATS[DEFAULT_FORMAT].height;
+        
+        // Ajouter le fond perdu pour les dimensions affichées (page DOM)
+        const fpOffset = documentState.fondPerduOffset || { gauchePx: 0, droitePx: 0, hautPx: 0, basPx: 0 };
+        const docWidthPx = formatFiniWidthPx + fpOffset.gauchePx + fpOffset.droitePx;
+        const docHeightPx = formatFiniHeightPx + fpOffset.hautPx + fpOffset.basPx;
         
         
         // Créer les pages depuis le JSON
@@ -22674,6 +22906,7 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function convertZoneImageFromJson(zoneJson) {
         const mmToPixels = (mm) => mm / MM_PER_PIXEL;
+        const fp = getFondPerduOffset();
         
         const geometrie = zoneJson.geometrie || {};
         const source = zoneJson.source || { type: 'url', valeur: '' };
@@ -22684,11 +22917,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         return {
             type: 'image',
-            x: geometrie.xMm !== undefined ? mmToPixels(geometrie.xMm) : 0,
-            y: geometrie.yMm !== undefined ? mmToPixels(geometrie.yMm) : 0,
+            x: (geometrie.xMm !== undefined ? mmToPixels(geometrie.xMm) : 0) + fp.gauchePx,
+            y: (geometrie.yMm !== undefined ? mmToPixels(geometrie.yMm) : 0) + fp.hautPx,
             w: geometrie.largeurMm !== undefined ? mmToPixels(geometrie.largeurMm) : 150,
             h: geometrie.hauteurMm !== undefined ? mmToPixels(geometrie.hauteurMm) : 150,
-            // Géométrie en mm (stockée pour précision)
+            // Géométrie en mm (stockée pour précision, toujours relative au format fini)
             xMm: geometrie.xMm !== undefined ? geometrie.xMm : 0,
             yMm: geometrie.yMm !== undefined ? geometrie.yMm : 0,
             wMm: geometrie.largeurMm !== undefined ? geometrie.largeurMm : pxToMm(150),
@@ -22774,8 +23007,8 @@ document.addEventListener('DOMContentLoaded', () => {
      * //   style: { police: 'Arial', taillePt: 12 } }
      */
     function convertZoneTexteToJson(id, zoneData, pageNumero) {
-        // Conversion pixels → mm
         const pixelsToMm = (px) => px * MM_PER_PIXEL;
+        const fpExp = getFondPerduOffset();
 
         // Phase 7 : si c'est une zone textQuill, convertir le Delta Quill vers (contenu + formatage WebDev)
         if (zoneData && zoneData.type === 'textQuill') {
@@ -22802,8 +23035,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 verrouille: isZoneVerrouillee(zoneData),
                 supprimerLignesVides: zoneData.emptyLines !== undefined ? zoneData.emptyLines : 0,
                 geometrie: {
-                    xMm: zoneData.xMm !== undefined ? zoneData.xMm : pixelsToMm(zoneData.x || 0),
-                    yMm: zoneData.yMm !== undefined ? zoneData.yMm : pixelsToMm(zoneData.y || 0),
+                    xMm: zoneData.xMm !== undefined ? zoneData.xMm : pixelsToMm((zoneData.x || 0) - fpExp.gauchePx),
+                    yMm: zoneData.yMm !== undefined ? zoneData.yMm : pixelsToMm((zoneData.y || 0) - fpExp.hautPx),
                     largeurMm: zoneData.wMm !== undefined ? zoneData.wMm : pixelsToMm(zoneData.w || 200),
                     hauteurMm: zoneData.hMm !== undefined ? zoneData.hMm : pixelsToMm(zoneData.h || 40)
                 },
@@ -22869,10 +23102,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Lignes vides : export entier (rétrocompatibilité avec ancien booléen)
             supprimerLignesVides: zoneData.emptyLines !== undefined ? zoneData.emptyLines : (zoneData.removeEmptyLines ? 1 : 0),
             
-            // Géométrie (utiliser les valeurs mm stockées si disponibles, sinon convertir)
+            // Géométrie (format fini mm ; fallback : soustraire offset fond perdu du pixel DOM)
             geometrie: {
-                xMm: zoneData.xMm !== undefined ? zoneData.xMm : pixelsToMm(zoneData.x || 0),
-                yMm: zoneData.yMm !== undefined ? zoneData.yMm : pixelsToMm(zoneData.y || 0),
+                xMm: zoneData.xMm !== undefined ? zoneData.xMm : pixelsToMm((zoneData.x || 0) - fpExp.gauchePx),
+                yMm: zoneData.yMm !== undefined ? zoneData.yMm : pixelsToMm((zoneData.y || 0) - fpExp.hautPx),
                 largeurMm: zoneData.wMm !== undefined ? zoneData.wMm : pixelsToMm(zoneData.w || 200),
                 hauteurMm: zoneData.hMm !== undefined ? zoneData.hMm : pixelsToMm(zoneData.h || 40)
             },
@@ -22929,6 +23162,7 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function convertZoneCodeBarresToJson(id, zoneData, pageNumero) {
         const pixelsToMm = (px) => px * MM_PER_PIXEL;
+        const fpExp = getFondPerduOffset();
         
         return {
             id: id,
@@ -22939,8 +23173,8 @@ document.addEventListener('DOMContentLoaded', () => {
             verrouille: isZoneVerrouillee(zoneData),
             contrainte: mergeWithDefaultContrainte(zoneData.contrainte, 'barcode'),
             geometrie: {
-                xMm: zoneData.xMm !== undefined ? zoneData.xMm : pixelsToMm(zoneData.x || 0),
-                yMm: zoneData.yMm !== undefined ? zoneData.yMm : pixelsToMm(zoneData.y || 0),
+                xMm: zoneData.xMm !== undefined ? zoneData.xMm : pixelsToMm((zoneData.x || 0) - fpExp.gauchePx),
+                yMm: zoneData.yMm !== undefined ? zoneData.yMm : pixelsToMm((zoneData.y || 0) - fpExp.hautPx),
                 largeurMm: zoneData.wMm !== undefined ? zoneData.wMm : pixelsToMm(zoneData.w || 150),
                 hauteurMm: zoneData.hMm !== undefined ? zoneData.hMm : pixelsToMm(zoneData.h || 60)
             },
@@ -22969,6 +23203,7 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function convertZoneQRToJson(id, zoneData, pageNumero) {
         const pixelsToMm = (px) => px * MM_PER_PIXEL;
+        const fpExp = getFondPerduOffset();
         
         return {
             id: id,
@@ -22979,8 +23214,8 @@ document.addEventListener('DOMContentLoaded', () => {
             verrouille: isZoneVerrouillee(zoneData),
             contrainte: mergeWithDefaultContrainte(zoneData.contrainte, 'qr'),
             geometrie: {
-                xMm: zoneData.xMm !== undefined ? zoneData.xMm : pixelsToMm(zoneData.x || 0),
-                yMm: zoneData.yMm !== undefined ? zoneData.yMm : pixelsToMm(zoneData.y || 0),
+                xMm: zoneData.xMm !== undefined ? zoneData.xMm : pixelsToMm((zoneData.x || 0) - fpExp.gauchePx),
+                yMm: zoneData.yMm !== undefined ? zoneData.yMm : pixelsToMm((zoneData.y || 0) - fpExp.hautPx),
                 largeurMm: zoneData.wMm !== undefined ? zoneData.wMm : pixelsToMm(zoneData.w || 100),
                 hauteurMm: zoneData.hMm !== undefined ? zoneData.hMm : pixelsToMm(zoneData.h || 100)
             },
@@ -23014,6 +23249,7 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function convertZoneImageToJson(id, zoneData, pageNumero) {
         const pixelsToMm = (px) => px * MM_PER_PIXEL;
+        const fpExp = getFondPerduOffset();
 
         return {
             id: id,
@@ -23024,8 +23260,8 @@ document.addEventListener('DOMContentLoaded', () => {
             verrouille: isZoneVerrouillee(zoneData),
             contrainte: mergeWithDefaultContrainte(zoneData.contrainte, 'image'),
             geometrie: {
-                xMm: zoneData.xMm !== undefined ? zoneData.xMm : pixelsToMm(zoneData.x || 0),
-                yMm: zoneData.yMm !== undefined ? zoneData.yMm : pixelsToMm(zoneData.y || 0),
+                xMm: zoneData.xMm !== undefined ? zoneData.xMm : pixelsToMm((zoneData.x || 0) - fpExp.gauchePx),
+                yMm: zoneData.yMm !== undefined ? zoneData.yMm : pixelsToMm((zoneData.y || 0) - fpExp.hautPx),
                 largeurMm: zoneData.wMm !== undefined ? zoneData.wMm : pixelsToMm(zoneData.w || 150),
                 hauteurMm: zoneData.hMm !== undefined ? zoneData.hMm : pixelsToMm(zoneData.h || 150)
             },
@@ -23252,6 +23488,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         let syncCount = 0;
         
+        const fpExport = getFondPerduOffset();
         for (const [id, data] of Object.entries(currentZones)) {
             const el = document.getElementById(id);
             if (el) {
@@ -23259,6 +23496,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 data.y = el.offsetTop;
                 data.w = el.offsetWidth;
                 data.h = el.offsetHeight;
+                // Recalculer les mm en format fini (DOM px - offset fond perdu)
+                data.xMm = pxToMm(el.offsetLeft - fpExport.gauchePx);
+                data.yMm = pxToMm(el.offsetTop - fpExport.hautPx);
+                data.wMm = pxToMm(el.offsetWidth);
+                data.hMm = pxToMm(el.offsetHeight);
                 syncCount++;
             }
         }
@@ -23275,7 +23517,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Priorité aux valeurs mm stockées (précises), sinon calcul depuis pixels
                 largeurMm: documentState.formatDocument?.largeurMm || (documentState.pages[0]?.width * MM_PER_PIXEL) || 210,
                 hauteurMm: documentState.formatDocument?.hauteurMm || (documentState.pages[0]?.height * MM_PER_PIXEL) || 297,
-                fondPerdu: documentState.formatDocument?.fondPerdu || { actif: false, valeurMm: 3 },
+                fondPerdu: documentState.formatDocument?.fondPerdu || { actif: false, hautMm: 0, basMm: 0, gaucheMm: 0, droiteMm: 0 },
                 traitsCoupe: documentState.formatDocument?.traitsCoupe || { actif: false },
                 margeSecurite: documentState.formatDocument?.margeSecuriteMm || 0,
                 largeurMaxImageMm: documentState.formatDocument?.largeurMaxImageMm || null,
@@ -23767,6 +24009,9 @@ document.addEventListener('DOMContentLoaded', () => {
             existingAreas.forEach(area => area.remove());
         }
         
+        // Nettoyer les overlays de fond perdu (recréés après applyPageDimensions)
+        removeBleedOverlays();
+        
         const currentPage = getCurrentPage();
         const zonesData = currentPage.zones;
         
@@ -23781,6 +24026,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Appliquer les dimensions au DOM
         applyPageDimensions();
+        
+        // Créer les overlays de fond perdu (après dimensionnement de la page)
+        createBleedOverlays();
         
         // Mettre à jour l'image de fond
         const bgImg = document.getElementById('a4-background');
