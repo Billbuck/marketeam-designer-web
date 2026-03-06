@@ -81,6 +81,11 @@
      * @property {number} numero - Numéro de la page (1-based)
      * @property {string} [nom] - Nom de la page
      * @property {string} [name] - Nom de la page (alias)
+     * @property {string} [cheminFond] - Chemin physique complet du fichier PDF de fond
+     *     (ex: "D:\\Marketeam\\Upload\\ltr-tmp-abc123.pdf").
+     *     Si présent, un objet image PrintShop Mail est généré en première position
+     *     dans le layout, avec une variable "Image N" correspondante dans <variables>.
+     *     La page N correspond à pdf_pagenumber_expression = pageIndex + 1.
      */
 
     /**
@@ -1173,6 +1178,25 @@ ${generatePsmdBleedSection(fondPerdu)}
                 }
             }
         }
+
+        // ── Variables de fond PDF ──────────────────────────────────────────────────
+        // Une variable "Image N" par page ayant un cheminFond.
+        // Conforme au format PSMD de référence :
+        //   <n>Image 1</n>  →  <expression>"chemin\vers\fichier.pdf"</expression>
+        // Le nom "Image N" est cohérent avec <object>/<n> et <image_object>/<variable_name>.
+        // ─────────────────────────────────────────────────────────────────────────
+        var pages = jsonData.pages || [];
+        for (var pi = 0; pi < pages.length; pi++) {
+            var pg = pages[pi];
+            if (pg && pg.cheminFond) {
+                var fondVarName = 'Image ' + (pi + 1);
+                imageVariables.push({
+                    varName: fondVarName,
+                    fileName: pg.cheminFond,
+                    isDynamic: false
+                });
+            }
+        }
         
         // Générer la section variables
         if (allFields.size === 0 && imageVariables.length === 0) {
@@ -1738,17 +1762,23 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
 
     /**
      * Génère une section <layout> (page) complète pour le PSMD.
-     * 
+     * Si page.cheminFond est défini, un objet image PDF de fond est injecté
+     * en première position (avant toutes les zones utilisateur).
+     *
      * @param {Object} page - Données de la page avec zones regroupées
+     * @param {number} page.name - Nom de la page
+     * @param {Array} page.zones - Zones de la page
+     * @param {string} [page.cheminFond] - Chemin physique du PDF de fond (optionnel)
      * @param {number} pageIndex - Index de la page (0-based)
      * @param {number} pageWidthPt - Largeur de la page en points
      * @param {number} pageHeightPt - Hauteur de la page en points
      * @param {string} devmodeBase64 - DEVMODE encodé en Base64
+     * @param {PsmdFondPerdu|null} fondPerdu - Configuration fond perdu (réservé, non utilisé sans bleed)
      * @returns {string} XML de la section layout
      */
-    function generatePsmdLayout(page, pageIndex, pageWidthPt, pageHeightPt, devmodeBase64) {
+    function generatePsmdLayout(page, pageIndex, pageWidthPt, pageHeightPt, devmodeBase64, fondPerdu) {
         var layoutName = page.name || ('Page ' + (pageIndex + 1));
-        
+
         var xml = `<layout>
 <dimensions>
 <size x="${pageWidthPt}" y="${pageHeightPt}"/>
@@ -1757,7 +1787,7 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
 <fit_to_objects>no</fit_to_objects>
 </dimensions>
 <attributes>
-<name>${escapeXmlPsmd(layoutName)}</name>
+<n>${escapeXmlPsmd(layoutName)}</n>
 <condition_expression>Print</condition_expression>
 <copies_expression>1</copies_expression>
 </attributes>
@@ -1766,8 +1796,66 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
 <tray_name> Sélection automatique</tray_name>
 </printer_preferences>
 `;
-        
-        // Générer les objets (zones) de la page
+
+        // ── Objet image de fond PDF ──────────────────────────────────────────────
+        // Injecté en premier si cheminFond est défini.
+        // Conforme au format PSMD de référence PrintShop Mail (Exemple_PrintShop.txt) :
+        //   - Nom : "Image N" (N = numéro de page 1-based)
+        //   - variable_name identique au nom de l'objet
+        //   - pdf_pagenumber_expression = pageIndex + 1
+        //   - bounds couvrant toute la page (sans fond perdu pour l'instant)
+        //   - scale=2, keep_aspect_ratio=no, alignements=4 (stretch)
+        // ────────────────────────────────────────────────────────────────────────
+        if (page.cheminFond) {
+            var fondObjName = 'Image ' + (pageIndex + 1);
+            var fondObjId   = generateGuid();
+
+            xml += `<object>
+<identifier>{${fondObjId}}</identifier>
+<n>${escapeXmlPsmd(fondObjName)}</n>
+<locked>no</locked>
+<knockout>no</knockout>
+<border_size>0</border_size>
+<border_style>0</border_style><fillcolor colorspace="CMYK" alpha="0" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></fillcolor><bordercolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></bordercolor>
+<rotation>0</rotation>
+<bounds left="0" top="0" right="${pageWidthPt}" bottom="${pageHeightPt}"/>
+<snap_frame_to_content>no</snap_frame_to_content>
+<show_mode>
+<editor>yes</editor>
+<jpeg_preview>yes</jpeg_preview>
+<pdf_preview>yes</pdf_preview>
+<print_preview>yes</print_preview>
+<print>yes</print>
+</show_mode>
+<anchor>
+<horizontal>0</horizontal>
+<vertical>0</vertical>
+<source></source>
+<source_bounds left="0" top="0" right="0" bottom="0"/>
+</anchor>
+<image_object>
+<scale>2</scale>
+<keep_aspect_ratio>no</keep_aspect_ratio>
+<horizontal_alignment>4</horizontal_alignment>
+<vertical_alignment>4</vertical_alignment>
+<variable_name>${escapeXmlPsmd(fondObjName)}</variable_name>
+<default_image_folder></default_image_folder>
+<default_folder></default_folder>
+<subfolders>no</subfolders>
+<file_name>${escapeXmlPsmd(page.cheminFond)}</file_name>
+<pdf_pagenumber_expression>${pageIndex + 1}</pdf_pagenumber_expression>
+<global_scope>no</global_scope>
+<filters>
+<two_color convert="no">
+<threshold>50</threshold><backgroundcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></backgroundcolor><foregroundcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></foregroundcolor>
+</two_color>
+</filters>
+</image_object>
+</object>
+`;
+        }
+
+        // ── Zones utilisateur ────────────────────────────────────────────────────
         if (page.zones && page.zones.length > 0) {
             for (var i = 0; i < page.zones.length; i++) {
                 var objectXml = generatePsmdObject(page.zones[i]);
@@ -1776,9 +1864,9 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
                 }
             }
         }
-        
+
         xml += '</layout>';
-        
+
         return xml;
     }
 
@@ -1899,9 +1987,11 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
             
             var pageData = {
                 zones: sortedZones,
-                name: (pages[pageNum - 1] && pages[pageNum - 1].name) || ('Page ' + pageNum)
+                name: (pages[pageNum - 1] && pages[pageNum - 1].name) || ('Page ' + pageNum),
+                cheminFond: (pages[pageNum - 1] && pages[pageNum - 1].cheminFond) || null
             };
-            xml += generatePsmdLayout(pageData, pageNum - 1, pageWidthPt, pageHeightPt, devmodeBase64) + '\n';
+            var fondPerdu = (jsonData.formatDocument && jsonData.formatDocument.fondPerdu) || null;
+            xml += generatePsmdLayout(pageData, pageNum - 1, pageWidthPt, pageHeightPt, devmodeBase64, fondPerdu) + '\n';
         }
         
         xml += '</layouts>';
