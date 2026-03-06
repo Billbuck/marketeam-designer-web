@@ -1987,7 +1987,7 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
             
             var pageData = {
                 zones: sortedZones,
-                name: (pages[pageNum - 1] && pages[pageNum - 1].name) || ('Page ' + pageNum),
+                name: (pages[pageNum - 1] && (pages[pageNum - 1].nom || pages[pageNum - 1].name)) || ('Page ' + pageNum),
                 cheminFond: (pages[pageNum - 1] && pages[pageNum - 1].cheminFond) || null
             };
             var fondPerdu = (jsonData.formatDocument && jsonData.formatDocument.fondPerdu) || null;
