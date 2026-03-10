@@ -95,8 +95,10 @@
      * @property {number} [page] - Numéro de page (1-based)
      * @property {number} [niveau] - Z-index
      * @property {PsmdGeometry} [geometrie] - Géométrie de la zone (V3.3)
-     * @property {string} [contenuRtf] - Contenu RTF (V3.3)
-     * @property {Object} [style] - Styles V3.3 (alignementH, alignementV, couleurCmjn)
+     * @property {string} [contenuRtf] - Contenu RTF (prioritaire si présent)
+     * @property {string} [contenu] - Contenu texte brut (utilisé si contenuRtf absent, pour génération RTF auto)
+     * @property {Array} [formatage] - Formatage partiel [{debut, fin, styles}] (utilisé si contenuRtf absent)
+     * @property {Object} [style] - Styles V3.3 (police, taillePt, couleurCmjn, alignementH, alignementV, interligne)
      * @property {Object} [copyfitting] - Options de copyfitting V3.3 (actif, tailleMinimum)
      */
 
@@ -451,6 +453,193 @@
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;');
         // Note: on ne remplace PAS " ni ' car ils font partie du format PrintShop Mail
+    }
+
+    // ─── Génération RTF depuis contenu brut (fallback quand contenuRtf absent) ───
+
+    /**
+     * Mapping des alignements horizontaux pour la génération RTF.
+     * @type {Object.<string, string>}
+     */
+    var RTF_ALIGN_MAP_GEN = {
+        'left': '',
+        'center': '\\qc',
+        'right': '\\qr',
+        'justify': '\\qj'
+    };
+
+    /**
+     * Échappe les caractères spéciaux RTF dans une chaîne.
+     * Gère : \, {, }, retours à la ligne (\n → \par) et caractères non-ASCII (Unicode).
+     *
+     * @param {string} text - Texte brut à échapper
+     * @returns {string} Texte échappé pour inclusion dans un flux RTF
+     */
+    function escapeRtfPsmd(text) {
+        if (!text) return '';
+        var result = '';
+        for (var i = 0; i < text.length; i++) {
+            var ch = text[i];
+            var code = text.charCodeAt(i);
+            if (ch === '\\') result += '\\\\';
+            else if (ch === '{') result += '\\{';
+            else if (ch === '}') result += '\\}';
+            else if (ch === '\n') result += '\\par ';
+            else if (code > 127) result += '\\u' + code + '?';
+            else result += ch;
+        }
+        return result;
+    }
+
+    /**
+     * Génère une chaîne RTF à partir d'un contenu texte brut, de ses styles et
+     * éventuellement d'un formatage partiel.
+     * Utilisé comme fallback par le générateur PSMD quand contenuRtf est absent
+     * (ex : JSON envoyé directement depuis WebDev sans passer par le Designer).
+     * Produit un RTF identique à deltaToRtf() de script.js.
+     *
+     * @param {string} contenu - Contenu texte brut (avec \n pour les retours à la ligne)
+     * @param {Object} [style] - Style typographique (format JSON WebDev)
+     * @param {string} [style.police] - Nom de la police (défaut: 'Roboto')
+     * @param {number} [style.taillePt] - Taille en points (défaut: 12)
+     * @param {Object} [style.couleurCmjn] - Couleur CMJN {c, m, y, k} en 0-100
+     * @param {string} [style.alignementH] - Alignement horizontal (left/center/right/justify)
+     * @param {number} [style.interligne] - Interligne (défaut: 1.2)
+     * @param {Array} [formatage] - Formatage partiel [{debut, fin, styles: {gras, souligne, couleur}}]
+     * @returns {string} Chaîne RTF complète compatible PrintShop Mail
+     */
+    function generateRtfFromContenu(contenu, style, formatage) {
+        var text = contenu || '';
+        style = style || {};
+        formatage = Array.isArray(formatage) ? formatage : [];
+
+        var fontName = style.police || 'Roboto';
+        var fontSize = style.taillePt || 12;
+        var align = style.alignementH || 'left';
+        var lineHeight = style.interligne || 1.2;
+
+        // Conversion couleur CMJN → hex RGB pour la table des couleurs RTF
+        var defaultColor = '#000000';
+        if (style.couleurCmjn) {
+            var cmjn = style.couleurCmjn;
+            defaultColor = cmykToHex(cmjn.c || 0, cmjn.m || 0, cmjn.y || 0, cmjn.k || 0);
+        }
+
+        var normalizedDefaultColor = defaultColor.toLowerCase();
+        var colors = [normalizedDefaultColor];
+
+        var colorIndex = function(hex) {
+            if (!hex) return 1;
+            var c = String(hex).toLowerCase();
+            var idx = colors.indexOf(c);
+            if (idx === -1) {
+                colors.push(c);
+                idx = colors.length - 1;
+            }
+            return idx + 1;
+        };
+
+        // Pré-collecter les couleurs inline du formatage
+        for (var f = 0; f < formatage.length; f++) {
+            if (formatage[f].styles && formatage[f].styles.couleur) {
+                colorIndex(formatage[f].styles.couleur);
+            }
+        }
+
+        // Table des polices
+        var fonttbl = '{\\fonttbl{\\f0\\fnil\\fcharset0 ' + fontName + ';}}';
+
+        // Table des couleurs
+        var colortbl = '{\\colortbl ;';
+        for (var ci = 0; ci < colors.length; ci++) {
+            var hex = colors[ci].charAt(0) === '#' ? colors[ci].slice(1) : colors[ci];
+            var r = parseInt(hex.slice(0, 2), 16) || 0;
+            var g = parseInt(hex.slice(2, 4), 16) || 0;
+            var b = parseInt(hex.slice(4, 6), 16) || 0;
+            colortbl += '\\red' + r + '\\green' + g + '\\blue' + b + ';';
+        }
+        colortbl += '}';
+
+        // Taille de police en demi-points (RTF utilise des demi-points)
+        var fsValue = Math.round(fontSize * 2);
+
+        // Corps du texte
+        var body = '';
+
+        if (formatage.length > 0) {
+            // Avec formatage partiel : découper le texte en segments
+            var sortedFmt = formatage.slice().sort(function(a, b) { return (a.debut || 0) - (b.debut || 0); });
+            var pos = 0;
+
+            for (var fi = 0; fi < sortedFmt.length; fi++) {
+                var fmt = sortedFmt[fi];
+                var debut = fmt.debut || 0;
+                var fin = fmt.fin || 0;
+                var styles = fmt.styles || {};
+
+                // Texte non formaté avant ce segment
+                if (pos < debut) {
+                    body += escapeRtfPsmd(text.substring(pos, debut));
+                }
+
+                var segText = text.substring(debut, fin);
+                var isBold = styles.gras === true;
+                var isUnderline = styles.souligne === true;
+                var cf = styles.couleur ? colorIndex(styles.couleur) : 1;
+
+                if (!isBold && !isUnderline && cf === 1) {
+                    body += escapeRtfPsmd(segText);
+                } else {
+                    // Segment formaté : groupe RTF
+                    var codes = '';
+                    if (isBold) codes += '\\b';
+                    if (isUnderline) codes += (codes ? ' ' : '') + '\\ul';
+                    if (cf !== 1) codes += (codes ? ' ' : '') + '\\cf' + cf;
+                    body += '{' + codes + ' ' + escapeRtfPsmd(segText) + '}';
+                }
+
+                pos = fin;
+            }
+
+            // Texte restant après le dernier segment formaté
+            if (pos < text.length) {
+                body += escapeRtfPsmd(text.substring(pos));
+            }
+        } else {
+            // Sans formatage : texte brut
+            body = escapeRtfPsmd(text);
+        }
+
+        // Code d'alignement RTF
+        var alignCode = RTF_ALIGN_MAP_GEN[align] || '';
+
+        // Code d'interligne RTF : vide si 1.2 (espace simple), sinon \sl-{twips}\slmult0
+        var lineHeightCode = (lineHeight === 1.2) ? '' : '\\sl-' + Math.round(fontSize * lineHeight * 20) + '\\slmult0';
+
+        // \par final si le body ne se termine pas déjà par \par
+        var needsFinalPar = body.length < 5 ||
+            (body.substring(body.length - 5) !== '\\par ' && body.substring(body.length - 4) !== '\\par');
+        var finalPar = needsFinalPar ? '\\par' : '';
+
+        return '{\\rtf1\\ansi\\ansicpg1252\\deff0\\deflang1036' + fonttbl + '\n' +
+            colortbl + '\n' +
+            '\\viewkind4\\uc1\\pard' + lineHeightCode + alignCode + '\\cf1\\f0\\fs' + fsValue + ' ' +
+            body + finalPar + '\n}';
+    }
+
+    /**
+     * Résout le contenu RTF d'une zone texte pour la génération PSMD.
+     * Priorité : contenuRtf existant → génération depuis contenu + style + formatage.
+     *
+     * @param {Object} zone - Zone texte au format JSON WebDev
+     * @returns {string} Contenu RTF (peut être vide si aucune donnée disponible)
+     */
+    function resolveZoneRtf(zone) {
+        if (zone.contenuRtf) return zone.contenuRtf;
+        if (zone.contenu) {
+            return generateRtfFromContenu(zone.contenu, zone.style, zone.formatage);
+        }
+        return '';
     }
 
     /**
@@ -1138,11 +1327,13 @@ ${generatePsmdBleedSection(fondPerdu)}
         const allFields = new Set();
         
         // Parcourir les zones texte V3.3 pour les champs de fusion
+        // Fallback : si contenuRtf absent, extraire depuis contenu brut
         const zonesTexte = jsonData.zonesTexte || [];
         for (let i = 0; i < zonesTexte.length; i++) {
             const zone = zonesTexte[i];
-            if (zone.contenuRtf) {
-                const fields = extractMergeFields(zone.contenuRtf);
+            var sourceText = zone.contenuRtf || zone.contenu || '';
+            if (sourceText) {
+                const fields = extractMergeFields(sourceText);
                 fields.forEach(function(field) { allFields.add(field); });
             }
         }
@@ -1433,8 +1624,8 @@ ${generatePsmdColor('bordercolor', borderColor)}
      */
     function generatePsmdTextObject(zone) {
         // Récupérer le RTF et l'encoder en Base64
-        // V3.3 strict : script.js exporte sous "contenuRtf"
-        var rtfContent = zone.contenuRtf || '';
+        // Priorité : contenuRtf existant, sinon génération auto depuis contenu + style
+        var rtfContent = resolveZoneRtf(zone);
         var rtfBase64 = rtfToBase64(rtfContent);
         
         // Alignements V3.3 strict : style.alignementH / style.alignementV
@@ -2081,8 +2272,10 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
         var zonesTexte = jsonData.zonesTexte || [];
         for (var i = 0; i < zonesTexte.length; i++) {
             var zone = zonesTexte[i];
-            if (zone.contenuRtf) {
-                var fields = extractMergeFields(zone.contenuRtf);
+            // Fallback : si contenuRtf absent, extraire depuis contenu brut
+            var sourceText = zone.contenuRtf || zone.contenu || '';
+            if (sourceText) {
+                var fields = extractMergeFields(sourceText);
                 for (var j = 0; j < fields.length; j++) {
                     if (allMergeFields.indexOf(fields[j]) === -1) {
                         allMergeFields.push(fields[j]);
