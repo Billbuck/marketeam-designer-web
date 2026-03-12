@@ -26088,6 +26088,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const zones = page.zones || {};
             
             Object.entries(zones).forEach(([zoneId, zoneData]) => {
+                if (isZoneSysteme(zoneData)) return;
+                
                 const zoneName = zoneData.nom || zoneId;
                 
                 // ═══════════════════════════════════════════════════════════════
