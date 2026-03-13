@@ -1984,7 +1984,7 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
 </attributes>
 <printer_preferences>
 <windows_devmode>${devmodeBase64}</windows_devmode>
-<tray_name> Sélection automatique</tray_name>
+<tray_name>Sélection automatique</tray_name>
 </printer_preferences>
 `;
 
