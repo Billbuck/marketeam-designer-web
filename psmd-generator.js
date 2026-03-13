@@ -420,6 +420,56 @@
     }
 
     /**
+     * Extrait les champs de fusion utilisés dans une zone code-barres ou QR.
+     * Parcourt champFusion, valeurStatique, contenu et qrConfig.fields.
+     *
+     * @param {Object} zone - Données de la zone (format JSON WebDev)
+     * @returns {string[]} Liste des noms de champs (sans les @)
+     */
+    function extractBarcodeQrMergeFields(zone) {
+        if (!zone) return [];
+        var fields = [];
+
+        // Champ de fusion explicite (zones code-barres classiques)
+        if (zone.champFusion && zone.champFusion.trim() !== '') {
+            var name = zone.champFusion.replace(/@/g, '').trim();
+            if (name && fields.indexOf(name) === -1) {
+                fields.push(name);
+            }
+        }
+
+        // Valeur statique ou contenu pouvant contenir des @CHAMP@
+        var textsToScan = [zone.valeurStatique, zone.valeur, zone.contenu];
+        for (var i = 0; i < textsToScan.length; i++) {
+            if (textsToScan[i]) {
+                var extracted = extractMergeFields(textsToScan[i]);
+                for (var j = 0; j < extracted.length; j++) {
+                    if (fields.indexOf(extracted[j]) === -1) {
+                        fields.push(extracted[j]);
+                    }
+                }
+            }
+        }
+
+        // QR Config fields (QR intelligent : url, email, tel, vcard, etc.)
+        if (zone.qrConfig && zone.qrConfig.fields) {
+            var qrFields = zone.qrConfig.fields;
+            for (var key in qrFields) {
+                if (qrFields.hasOwnProperty(key) && qrFields[key]) {
+                    var extracted = extractMergeFields(String(qrFields[key]));
+                    for (var j = 0; j < extracted.length; j++) {
+                        if (fields.indexOf(extracted[j]) === -1) {
+                            fields.push(extracted[j]);
+                        }
+                    }
+                }
+            }
+        }
+
+        return fields;
+    }
+
+    /**
      * Échappe les caractères spéciaux XML.
      * 
      * @param {string} str - Chaîne à échapper
@@ -1337,7 +1387,19 @@ ${generatePsmdBleedSection(fondPerdu)}
                 fields.forEach(function(field) { allFields.add(field); });
             }
         }
-        
+
+        // Parcourir les zones code-barres et QR pour les champs de fusion
+        var zonesCodeBarresVar = jsonData.zonesCodeBarres || [];
+        for (var bc = 0; bc < zonesCodeBarresVar.length; bc++) {
+            var bcFields = extractBarcodeQrMergeFields(zonesCodeBarresVar[bc]);
+            bcFields.forEach(function(field) { allFields.add(field); });
+        }
+        var zonesQRVar = jsonData.zonesQR || [];
+        for (var qr = 0; qr < zonesQRVar.length; qr++) {
+            var qrFields = extractBarcodeQrMergeFields(zonesQRVar[qr]);
+            qrFields.forEach(function(field) { allFields.add(field); });
+        }
+
         // Collecter les variables d'images
         const imageVariables = [];
         const zonesImage = jsonData.zonesImage || [];
@@ -2294,7 +2356,29 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
                 }
             }
         }
-        
+
+        // Extraire les champs de fusion des zones code-barres
+        var zonesCodeBarresForFields = jsonData.zonesCodeBarres || [];
+        for (var i = 0; i < zonesCodeBarresForFields.length; i++) {
+            var bcFields = extractBarcodeQrMergeFields(zonesCodeBarresForFields[i]);
+            for (var j = 0; j < bcFields.length; j++) {
+                if (allMergeFields.indexOf(bcFields[j]) === -1) {
+                    allMergeFields.push(bcFields[j]);
+                }
+            }
+        }
+
+        // Extraire les champs de fusion des zones QR
+        var zonesQRForFields = jsonData.zonesQR || [];
+        for (var i = 0; i < zonesQRForFields.length; i++) {
+            var qrFields = extractBarcodeQrMergeFields(zonesQRForFields[i]);
+            for (var j = 0; j < qrFields.length; j++) {
+                if (allMergeFields.indexOf(qrFields[j]) === -1) {
+                    allMergeFields.push(qrFields[j]);
+                }
+            }
+        }
+
         // Section variables (champs de fusion)
         xml += generatePsmdVariables(jsonData, exportPrefix) + '\n';
         
