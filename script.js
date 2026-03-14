@@ -13425,7 +13425,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const quillInstance = new Quill(editorEl, {
                     modules: { toolbar: false, clipboard: { matchers: [] } },
                     theme: 'snow',
-                    placeholder: 'Saisissez votre texte...'
+                    placeholder: isZoneSysteme(zoneData) ? '' : 'Saisissez votre texte...'
                 });
                 
                 // Appliquer styles par défaut (police, taille, couleur, interlignage)
@@ -22546,7 +22546,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 ZIP_MAX_IMAGE_SIZE = lim.zipMaxImageSize;
             }
             if (Array.isArray(lim.zipAcceptedImageExtensions) && lim.zipAcceptedImageExtensions.length > 0) {
-                ZIP_ACCEPTED_IMAGE_EXTENSIONS = lim.zipAcceptedImageExtensions.map(ext => String(ext).toLowerCase());
+                ZIP_ACCEPTED_IMAGE_EXTENSIONS = lim.zipAcceptedImageExtensions.map(ext => String(ext).toLowerCase().replace(/^\./, ''));
             }
 
             if (DEBUG) console.log('loadFromWebDev: Limites ZIP reçues -',
