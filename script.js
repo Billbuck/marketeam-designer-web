@@ -23453,6 +23453,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * Supprime récursivement toutes les propriétés à valeur null d'un objet.
+     * Rend le JSON compatible avec les systèmes ne gérant pas null (ex: structures WebDev).
+     * Les éléments null dans les tableaux sont conservés pour préserver les indices.
+     *
+     * @param {*} obj - Objet à nettoyer
+     * @returns {*} Copie nettoyée sans propriétés null
+     */
+    function stripNullValues(obj) {
+        if (obj === null || obj === undefined) return undefined;
+        if (Array.isArray(obj)) {
+            return obj.map(function(item) {
+                return (item !== null && typeof item === 'object') ? stripNullValues(item) : item;
+            });
+        }
+        if (typeof obj === 'object') {
+            var result = {};
+            for (var key in obj) {
+                if (obj.hasOwnProperty(key) && obj[key] !== null) {
+                    result[key] = (typeof obj[key] === 'object') ? stripNullValues(obj[key]) : obj[key];
+                }
+            }
+            return result;
+        }
+        return obj;
+    }
+
+    /**
      * Exporte documentState vers le format JSON WebDev (inverse de loadFromWebDev).
      * Fonction principale d'export : génère le JSON complet pour transmission à WebDev.
      *
@@ -23578,9 +23605,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- ÉTAPE 4 : Extraire les polices utilisées (avec variantes) ---
         output.policesUtilisees = extractPolicesUtilisees();
         
-        // --- Résumé final ---
-        
-        return output;
+        // --- ÉTAPE 5 : Supprimer les valeurs null pour compatibilité WebDev ---
+        return stripNullValues(output);
     }
     
     // Exposer la fonction globalement pour l'appel depuis l'iframe parent
