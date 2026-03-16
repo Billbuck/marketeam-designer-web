@@ -279,6 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {number} width - Largeur en pixels
      * @property {number} height - Hauteur en pixels
      * @property {ZonesCollection} zones - Collection des zones de cette page
+     * @property {string} [cheminFond] - Chemin physique Windows du PDF de fond (opaque, round-trip WebDev)
      * @description Structure d'une page du document.
      */
 
@@ -22671,15 +22672,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 const pageName = pageData.nom || (index === 0 ? 'Recto' : 'Verso');
                 
                 
-                return {
+                /** @type {PageData} */
+                const page = {
                     id: pageId,
                     name: pageName,
                     image: pageData.urlFond || '',
-                    format: 'Custom', // Format personnalisé depuis WebDev
+                    format: 'Custom',
                     width: Math.round(docWidthPx),
                     height: Math.round(docHeightPx),
-                    zones: {} // Zones vides pour l'instant (étape suivante)
+                    zones: {}
                 };
+                if (pageData.cheminFond) {
+                    page.cheminFond = pageData.cheminFond;
+                }
+                return page;
             });
         } else {
             // Fallback : créer 2 pages par défaut si aucune n'est fournie
@@ -23565,11 +23571,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const pageNumero = index + 1;
             
             // Ajouter la page
-            output.pages.push({
+            const pageExport = {
                 numero: pageNumero,
                 nom: page.name || `Page ${pageNumero}`,
                 urlFond: page.image || ''
-            });
+            };
+            if (page.cheminFond) {
+                pageExport.cheminFond = page.cheminFond;
+            }
+            output.pages.push(pageExport);
             
             
             // Parcourir les zones de cette page
