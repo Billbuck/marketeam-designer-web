@@ -74,6 +74,8 @@
      * @property {number} hauteurMm - Hauteur du document en mm
      * @property {string} [orientation] - 'PORTRAIT' ou 'PAYSAGE'
      * @property {PsmdFondPerdu} [fondPerdu] - Configuration du fond perdu (4 côtés indépendants)
+     * @property {number} [formatPapierLargeurMm] - Largeur format papier SRA pour DEVMODE (optionnel)
+     * @property {number} [formatPapierHauteurMm] - Hauteur format papier SRA pour DEVMODE (optionnel)
      */
 
     /**
@@ -1036,11 +1038,17 @@
 
     /**
      * Génère la section <preferences> du fichier PSMD.
+     * Calcule les marges de centrage si format papier SRA et fond perdu actifs,
+     * pour centrer la BleedBox dans la feuille SRA.
      * 
      * @param {PsmdFondPerdu|null} [fondPerdu] - Configuration fond perdu pour la section bleed
+     * @param {number} [formatPapierLargeurMm=0] - Largeur format papier SRA en mm (0 = pas de SRA)
+     * @param {number} [formatPapierHauteurMm=0] - Hauteur format papier SRA en mm (0 = pas de SRA)
+     * @param {number} [largeurMm=0] - Largeur du format fini en mm
+     * @param {number} [hauteurMm=0] - Hauteur du format fini en mm
      * @returns {string} XML de la section preferences
      */
-    function generatePsmdPreferences(fondPerdu) {
+    function generatePsmdPreferences(fondPerdu, formatPapierLargeurMm, formatPapierHauteurMm, largeurMm, hauteurMm) {
         return `<preferences>
 <program>
 <default_tabstop_interval>36</default_tabstop_interval>
@@ -1082,7 +1090,16 @@
 <pdfvt>
 <joboptions></joboptions>
 </pdfvt>
-<margins option="0" left="0" top="0" right="0" bottom="0"/>
+${(function() {
+        var mLeft = 0, mTop = 0, mRight = 0, mBottom = 0;
+        if (formatPapierLargeurMm > 0 && formatPapierHauteurMm > 0 && fondPerdu && fondPerdu.actif) {
+            var bleedLargeurMm = (largeurMm || 0) + (fondPerdu.gaucheMm || 0) + (fondPerdu.droiteMm || 0);
+            var bleedHauteurMm = (hauteurMm || 0) + (fondPerdu.hautMm || 0) + (fondPerdu.basMm || 0);
+            mLeft = mRight = mmToPoints((formatPapierLargeurMm - bleedLargeurMm) / 2);
+            mTop = mBottom = mmToPoints((formatPapierHauteurMm - bleedHauteurMm) / 2);
+        }
+        return '<margins option="0" left="' + mLeft.toFixed(2) + '" top="' + mTop.toFixed(2) + '" right="' + mRight.toFixed(2) + '" bottom="' + mBottom.toFixed(2) + '"/>';
+    })()}
 <technology>0</technology>
 </print_job>
 <repetition>
@@ -2026,7 +2043,7 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
      * @param {number} pageWidthPt - Largeur de la page en points
      * @param {number} pageHeightPt - Hauteur de la page en points
      * @param {string} devmodeBase64 - DEVMODE encodé en Base64
-     * @param {PsmdFondPerdu|null} fondPerdu - Configuration fond perdu (réservé, non utilisé sans bleed)
+     * @param {PsmdFondPerdu|null} fondPerdu - Configuration fond perdu (utilisé pour le calcul des bounds de l'image de fond PDF)
      * @returns {string} XML de la section layout
      */
     function generatePsmdLayout(page, pageIndex, pageWidthPt, pageHeightPt, devmodeBase64, fondPerdu) {
@@ -2056,12 +2073,34 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
         //   - Nom : "Image N" (N = numéro de page 1-based)
         //   - variable_name identique au nom de l'objet
         //   - pdf_pagenumber_expression = pageIndex + 1
-        //   - bounds couvrant toute la page (sans fond perdu pour l'instant)
+        //   - bounds couvrant toute la page, avec débordement négatif si fond perdu actif
         //   - scale=2, keep_aspect_ratio=no, alignements=4 (stretch)
         // ────────────────────────────────────────────────────────────────────────
         if (page.cheminFond) {
             var fondObjName = 'Image ' + (pageIndex + 1);
             var fondObjId   = generateGuid();
+
+            // Calcul des bounds avec débordement fond perdu (4 côtés indépendants)
+            var fondBoundsLeft = 0;
+            var fondBoundsTop = 0;
+            var fondBoundsRight = pageWidthPt;
+            var fondBoundsBottom = pageHeightPt;
+
+            if (fondPerdu && fondPerdu.actif) {
+                var fpHaut, fpBas, fpGauche, fpDroite;
+                if (fondPerdu.valeurMm !== undefined && fondPerdu.hautMm === undefined) {
+                    fpHaut = fpBas = fpGauche = fpDroite = fondPerdu.valeurMm || 0;
+                } else {
+                    fpHaut = fondPerdu.hautMm || 0;
+                    fpBas = fondPerdu.basMm || 0;
+                    fpGauche = fondPerdu.gaucheMm || 0;
+                    fpDroite = fondPerdu.droiteMm || 0;
+                }
+                fondBoundsLeft = -mmToPoints(fpGauche);
+                fondBoundsTop = -mmToPoints(fpHaut);
+                fondBoundsRight = pageWidthPt + mmToPoints(fpDroite);
+                fondBoundsBottom = pageHeightPt + mmToPoints(fpBas);
+            }
 
             xml += `<object>
 <identifier>{${fondObjId}}</identifier>
@@ -2071,7 +2110,7 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
 <border_size>0</border_size>
 <border_style>0</border_style><fillcolor colorspace="CMYK" alpha="0" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></fillcolor><bordercolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></bordercolor>
 <rotation>0</rotation>
-<bounds left="0" top="0" right="${pageWidthPt}" bottom="${pageHeightPt}"/>
+<bounds left="${fondBoundsLeft.toFixed(2)}" top="${fondBoundsTop.toFixed(2)}" right="${fondBoundsRight.toFixed(2)}" bottom="${fondBoundsBottom.toFixed(2)}"/>
 <snap_frame_to_content>no</snap_frame_to_content>
 <show_mode>
 <editor>yes</editor>
@@ -2126,10 +2165,12 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
     /**
      * Génère la section <layouts> complète avec toutes les pages.
      * Regroupe les zones par page depuis les tableaux séparés de exportToWebDev().
-     * 
+     * Le DEVMODE utilise formatPapierLargeurMm/formatPapierHauteurMm (format SRA) si présents,
+     * sinon le format fini (largeurMm/hauteurMm).
+     *
      * @param {PsmdInput} jsonData - Données complètes de exportToWebDev()
-     * @param {number} largeurMm - Largeur du document en mm
-     * @param {number} hauteurMm - Hauteur du document en mm
+     * @param {number} largeurMm - Largeur du document en mm (format fini / TrimBox)
+     * @param {number} hauteurMm - Hauteur du document en mm (format fini / TrimBox)
      * @param {string|null} exportPrefix - Préfixe pour les noms de fichiers exportés (optionnel)
      * @returns {string} XML de la section layouts
      */
@@ -2144,7 +2185,18 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
         var orientation = largeurMm > hauteurMm ? 'PAYSAGE' : 'PORTRAIT';
         
         // Générer le DEVMODE
-        var devmodeBase64 = generateWindowsDevmode(orientation, hauteurMm, largeurMm);
+        // Si formatPapierLargeurMm / formatPapierHauteurMm présents dans formatDocument
+        // → utiliser ces dimensions (format SRA) pour le DEVMODE
+        // → PrintShop Mail doit recevoir le format papier SRA, pas le format fini
+        // Sinon → fallback sur le format fini (comportement actuel)
+        var formatDocument = jsonData.formatDocument || {};
+        var devmodeLargeur = (formatDocument.formatPapierLargeurMm && formatDocument.formatPapierLargeurMm > 0)
+            ? formatDocument.formatPapierLargeurMm
+            : largeurMm;
+        var devmodeHauteur = (formatDocument.formatPapierHauteurMm && formatDocument.formatPapierHauteurMm > 0)
+            ? formatDocument.formatPapierHauteurMm
+            : hauteurMm;
+        var devmodeBase64 = generateWindowsDevmode(orientation, devmodeHauteur, devmodeLargeur);
         
         // Regrouper les zones par page
         var zonesByPage = {};
@@ -2322,7 +2374,13 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
         xml += generatePsmdInfo() + '\n';
         xml += generatePsmdPrinter() + '\n';
         xml += '<operator_instructions></operator_instructions>\n';
-        xml += generatePsmdPreferences(formatDocument.fondPerdu) + '\n';
+        xml += generatePsmdPreferences(
+            formatDocument.fondPerdu,
+            formatDocument.formatPapierLargeurMm || 0,
+            formatDocument.formatPapierHauteurMm || 0,
+            largeurMm,
+            hauteurMm
+        ) + '\n';
         xml += generatePsmdDatabaseSettings() + '\n';
         
         // Section layouts (pages avec zones)

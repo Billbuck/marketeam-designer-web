@@ -294,6 +294,8 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {number} [margeSecuriteMm] - Marge de sécurité en mm
      * @property {FondPerduData} [fondPerdu] - Configuration fond perdu (4 côtés indépendants)
      * @property {{actif: boolean}} [traitsCoupe] - Configuration traits de coupe
+     * @property {number} [formatPapierLargeurMm] - Largeur format papier SRA pour DEVMODE (opaque, round-trip WebDev)
+     * @property {number} [formatPapierHauteurMm] - Hauteur format papier SRA pour DEVMODE (opaque, round-trip WebDev)
      * @description Métadonnées de format du document (depuis JSON WebDev).
      */
 
@@ -22605,6 +22607,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 largeurMaxImageMm: effectiveDocumentJson.formatDocument?.largeurMaxImageMm || null,
                 hauteurMaxImageMm: effectiveDocumentJson.formatDocument?.hauteurMaxImageMm || null
             };
+            if (effectiveDocumentJson.formatDocument.formatPapierLargeurMm > 0) {
+                documentState.formatDocument.formatPapierLargeurMm = effectiveDocumentJson.formatDocument.formatPapierLargeurMm;
+            }
+            if (effectiveDocumentJson.formatDocument.formatPapierHauteurMm > 0) {
+                documentState.formatDocument.formatPapierHauteurMm = effectiveDocumentJson.formatDocument.formatPapierHauteurMm;
+            }
         }
         
         // Calculer et stocker les offsets de fond perdu (mm et px)
@@ -23554,7 +23562,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 traitsCoupe: documentState.formatDocument?.traitsCoupe || { actif: false },
                 margeSecurite: documentState.formatDocument?.margeSecuriteMm || 0,
                 largeurMaxImageMm: documentState.formatDocument?.largeurMaxImageMm || null,
-                hauteurMaxImageMm: documentState.formatDocument?.hauteurMaxImageMm || null
+                hauteurMaxImageMm: documentState.formatDocument?.hauteurMaxImageMm || null,
+                ...(documentState.formatDocument?.formatPapierLargeurMm > 0 && { formatPapierLargeurMm: documentState.formatDocument.formatPapierLargeurMm }),
+                ...(documentState.formatDocument?.formatPapierHauteurMm > 0 && { formatPapierHauteurMm: documentState.formatDocument.formatPapierHauteurMm })
             },
             champsFusion: documentState.champsFusion || [],
             pages: [],
