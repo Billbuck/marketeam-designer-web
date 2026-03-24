@@ -112,6 +112,27 @@ button:last-child {
     box-sizing: border-box;
 }
 
+/* Zone de personnalisation (WebDev ZonePersonnalisation) — sous le fond perdu */
+.personnalisation-overlay {
+    position: absolute;
+    background-color: rgba(100, 80, 180, 0.12);
+    pointer-events: none;
+    z-index: 850;
+}
+
+.personnalisation-border {
+    position: absolute;
+    border: 1.5px dashed rgba(80, 60, 160, 0.75);
+    pointer-events: none;
+    z-index: 851;
+    box-sizing: border-box;
+}
+
+.preview-mode .personnalisation-overlay,
+.preview-mode .personnalisation-border {
+    display: none !important;
+}
+
 /* Animation de création (Pop + Flash) */
 @keyframes zone-appear {
     0% {

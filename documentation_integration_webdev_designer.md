@@ -12,7 +12,7 @@
 2. [Architecture](#2-architecture)
 3. [Format JSON d'échange](#3-format-json-déchange)
 4. [Fonctions JavaScript exposées](#4-fonctions-javascript-exposées)
-5. [Communication postMessage](#5-communication-postmessage)
+5. [Communication postMessage](#5-communication-postmessage) — dont [ZonePersonnalisation](#zonepersonnalisation)
 6. [Exemples d'utilisation](#6-exemples-dutilisation)
 7. [Commits et historique](#7-commits-et-historique)
 8. [Prochaines étapes](#8-prochaines-étapes)
@@ -325,7 +325,7 @@ window.updateMergeFieldsUI(champs)
 
 | Action | Données | Description |
 |--------|---------|-------------|
-| `load` | `{ data: jsonDocument }` | Charger un document |
+| `load` | `{ data: jsonDocument }` et options (`constraints`, `ZonePersonnalisation`, …) | Charger un document |
 | `export` | - | Demander l'export |
 | `getState` | - | Obtenir l'état interne |
 | `ping` | - | Test de connexion |
@@ -340,6 +340,56 @@ window.updateMergeFieldsUI(champs)
 | `state` | `{ data: documentState }` | État interne |
 | `changed` | `{ timestamp: number }` | Document modifié |
 | `pong` | - | Réponse au ping |
+
+### ZonePersonnalisation
+
+*(Paramètre de l’enveloppe du message `load`, au même niveau que `data` et `constraints`.)*
+
+Paramètre **optionnel** au même niveau que `action`, `data`, `constraints`, etc. Il définit, **par page**, le rectangle (en mm) dans lequel l’utilisateur peut **créer et manipuler** les zones de contenu. Ce n’est pas une contrainte « area » au sein d’une zone unique : c’est une **limite globale de plan de travail** pour la page concernée.
+
+**Nom de propriété** : `ZonePersonnalisation` (casse respectée pour alignement WebDev ; une variante `zonePersonnalisation` peut être acceptée côté Designer pour robustesse).
+
+**Forme** — deux formes équivalentes (au choix) :
+
+| Forme | Règle d’indexation |
+|--------|-------------------|
+| **Tableau** | L’indice `i` correspond à la **page d’index `i`** dans le document (0 = première page / recto si le document commence par le recto, etc.). |
+| **Objet** | Clés string `"0"`, `"1"`, `"2"`, … pour les mêmes index de page. |
+
+**Objet par page** (lorsqu’une limite s’applique) :
+
+| Champ | Type | Description |
+|--------|------|-------------|
+| `xMm` | number | Origine horizontale du rectangle autorisé (mm), depuis le **bord gauche** de la page. |
+| `yMm` | number | Origine verticale (mm), depuis le **bord haut** de la page. |
+| `largeurMm` | number | Largeur du rectangle autorisé (mm). |
+| `hauteurMm` | number | Hauteur du rectangle autorisé (mm). |
+
+**« Pas de limite sur cette page »** : **absence d’entrée** pour cet index de page.
+
+- En **objet** : ne pas définir la clé `"0"`, `"1"`, etc.
+- En **tableau** : ne pas fournir d’élément à cet index (tableau plus court que le nombre de pages, ou emplacement non défini selon le moteur JSON utilisé).
+
+Dans ce cas, le comportement est identique à l’absence totale de `ZonePersonnalisation` pour cette page (personnalisation sur toute la page, dans les limites habituelles du Designer).
+
+**Exemple minimal** (recto limité, verso sans limite — document à 2 pages, index 0 et 1) :
+
+```json
+{
+    "action": "load",
+    "data": { "...": "document JSON..." },
+    "ZonePersonnalisation": {
+        "0": {
+            "xMm": 0,
+            "yMm": 0,
+            "largeurMm": 110,
+            "hauteurMm": 225
+        }
+    }
+}
+```
+
+**Remarque** : le Designer applique ce contrat (overlays, limitation drag/resize/création et champs géométrie mm).
 
 ### Exemple côté WebDev (JavaScript)
 

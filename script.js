@@ -5410,6 +5410,67 @@ document.addEventListener('DOMContentLoaded', () => {
     let basesConfig = null;
 
     /**
+     * Rectangles de personnalisation autorisés par page (index 0 = première page), en mm (repère format fini).
+     * Fourni par WebDev dans le message load (propriété ZonePersonnalisation). Non sérialisé dans localStorage.
+     * @type {null | Record<string, { xMm: number, yMm: number, largeurMm: number, hauteurMm: number }>}
+     */
+    let zonePersonnalisationPages = null;
+
+    /**
+     * Parse la charge utile ZonePersonnalisation (tableau ou objet indexé par page).
+     * @param {*} raw - Valeur brute du message load
+     * @returns {null | Record<string, { xMm: number, yMm: number, largeurMm: number, hauteurMm: number }>}
+     */
+    function parseZonePersonnalisationPayload(raw) {
+        if (raw == null || typeof raw !== 'object') {
+            return null;
+        }
+        /** @param {*} e */
+        function entryOk(e) {
+            if (!e || typeof e !== 'object') return false;
+            const nums = [e.xMm, e.yMm, e.largeurMm, e.hauteurMm];
+            if (!nums.every(v => typeof v === 'number' && Number.isFinite(v))) return false;
+            return e.largeurMm > 0 && e.hauteurMm > 0;
+        }
+        /** @param {*} e */
+        function normalize(e) {
+            return {
+                xMm: e.xMm,
+                yMm: e.yMm,
+                largeurMm: e.largeurMm,
+                hauteurMm: e.hauteurMm
+            };
+        }
+        const out = Object.create(null);
+        if (Array.isArray(raw)) {
+            raw.forEach((entry, i) => {
+                if (entryOk(entry)) {
+                    out[String(i)] = normalize(entry);
+                }
+            });
+        } else {
+            Object.keys(raw).forEach(k => {
+                const entry = raw[k];
+                if (entryOk(entry)) {
+                    out[String(k)] = normalize(entry);
+                }
+            });
+        }
+        return Object.keys(out).length ? out : null;
+    }
+
+    /**
+     * @param {number} pageIndex
+     * @returns {{ xMm: number, yMm: number, largeurMm: number, hauteurMm: number } | null}
+     */
+    function getZonePersonnalisationSpecForPageIndex(pageIndex) {
+        if (!zonePersonnalisationPages) return null;
+        const key = String(pageIndex);
+        const spec = zonePersonnalisationPages[key];
+        return spec || null;
+    }
+
+    /**
      * Vérifie si une extension de fichier est un format d'image accepté dans le ZIP.
      * @param {string} fileName - Nom du fichier (avec extension)
      * @returns {boolean} true si le format est accepté
@@ -8710,6 +8771,63 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * Limites en pixels (coin haut-gauche de la zone) pour la ZonePersonnalisation de la page courante.
+     * @param {number} zoneWidth
+     * @param {number} zoneHeight
+     * @returns {{minX: number, maxX: number, minY: number, maxY: number} | null}
+     */
+    function getZonePersonnalisationTopLeftBoundsPx(zoneWidth, zoneHeight) {
+        const spec = getZonePersonnalisationSpecForPageIndex(documentState.currentPageIndex);
+        if (!spec) return null;
+        const fp = getFondPerduOffset();
+        const left = mmToPx(spec.xMm) + fp.gauchePx;
+        const top = mmToPx(spec.yMm) + fp.hautPx;
+        const w = mmToPx(spec.largeurMm);
+        const h = mmToPx(spec.hauteurMm);
+        return {
+            minX: left,
+            maxX: left + w - zoneWidth,
+            minY: top,
+            maxY: top + h - zoneHeight
+        };
+    }
+
+    /**
+     * @param {number} zoneLeft
+     * @param {number} zoneTop
+     * @returns {{ maxWidth: number, maxHeight: number } | null}
+     */
+    function getZonePersonnalisationSizeCapPx(zoneLeft, zoneTop) {
+        const spec = getZonePersonnalisationSpecForPageIndex(documentState.currentPageIndex);
+        if (!spec) return null;
+        const fp = getFondPerduOffset();
+        const zLeft = mmToPx(spec.xMm) + fp.gauchePx;
+        const zTop = mmToPx(spec.yMm) + fp.hautPx;
+        const zW = mmToPx(spec.largeurMm);
+        const zH = mmToPx(spec.hauteurMm);
+        return {
+            maxWidth: zLeft + zW - zoneLeft,
+            maxHeight: zTop + zH - zoneTop
+        };
+    }
+
+    /**
+     * Intersecte les limites mm (minX/minY = coin haut-gauche, maxX/maxY = bords droit/bas autorisés pour la zone)
+     * avec la ZonePersonnalisation de la page courante.
+     * @param {{ minX: number, minY: number, maxX: number, maxY: number }} limitsMm
+     */
+    function intersectGeometryLimitsWithZonePersonnalisation(limitsMm) {
+        const spec = getZonePersonnalisationSpecForPageIndex(documentState.currentPageIndex);
+        if (!spec) return limitsMm;
+        return {
+            minX: Math.max(limitsMm.minX, spec.xMm),
+            minY: Math.max(limitsMm.minY, spec.yMm),
+            maxX: Math.min(limitsMm.maxX, spec.xMm + spec.largeurMm),
+            maxY: Math.min(limitsMm.maxY, spec.yMm + spec.hauteurMm)
+        };
+    }
+
+    /**
      * Calcule les limites de positionnement pour une zone en pixels.
      * Si la zone a une area définie, les limites sont celles de l'area.
      * Sinon, les limites sont celles de la page (avec marge de sécurité).
@@ -8729,6 +8847,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const zoneData = zonesData[zoneId];
         const fp = getFondPerduOffset();
         
+        /** @type {{ minX: number, maxX: number, minY: number, maxY: number }} */
+        let b;
+        
         // Vérifier si la zone a une area valide (dimensions > 0)
         if (hasValidArea(zoneData)) {
             const area = zoneData.contrainte.geometrie.area;
@@ -8740,25 +8861,37 @@ document.addEventListener('DOMContentLoaded', () => {
             const areaHPx = mmToPx(area.hMm);
             
             // La zone doit rester entièrement dans l'area
-            return {
+            b = {
                 minX: areaXPx,
                 maxX: areaXPx + areaWPx - zoneWidth,
                 minY: areaYPx,
                 maxY: areaYPx + areaHPx - zoneHeight
             };
+        } else {
+            // Pas d'area : limites = format fini + marge de sécurité (en pixels page DOM)
+            const margin = getSecurityMarginPx();
+            const formatFiniWidthPx = mmToPx(getPageWidthMm());
+            const formatFiniHeightPx = mmToPx(getPageHeightMm());
+            
+            b = {
+                minX: fp.gauchePx + margin,
+                maxX: fp.gauchePx + formatFiniWidthPx - margin - zoneWidth,
+                minY: fp.hautPx + margin,
+                maxY: fp.hautPx + formatFiniHeightPx - margin - zoneHeight
+            };
         }
         
-        // Pas d'area : limites = format fini + marge de sécurité (en pixels page DOM)
-        const margin = getSecurityMarginPx();
-        const formatFiniWidthPx = mmToPx(getPageWidthMm());
-        const formatFiniHeightPx = mmToPx(getPageHeightMm());
+        const zpb = getZonePersonnalisationTopLeftBoundsPx(zoneWidth, zoneHeight);
+        if (zpb) {
+            b.minX = Math.max(b.minX, zpb.minX);
+            b.maxX = Math.min(b.maxX, zpb.maxX);
+            b.minY = Math.max(b.minY, zpb.minY);
+            b.maxY = Math.min(b.maxY, zpb.maxY);
+            if (b.maxX < b.minX) b.maxX = b.minX;
+            if (b.maxY < b.minY) b.maxY = b.minY;
+        }
         
-        return {
-            minX: fp.gauchePx + margin,
-            maxX: fp.gauchePx + formatFiniWidthPx - margin - zoneWidth,
-            minY: fp.hautPx + margin,
-            maxY: fp.hautPx + formatFiniHeightPx - margin - zoneHeight
-        };
+        return b;
     }
 
     /**
@@ -8781,6 +8914,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const zoneData = zonesData[zoneId];
         const fp = getFondPerduOffset();
         
+        /** @type {{ maxWidth: number, maxHeight: number }} */
+        let result;
+        
         // Vérifier si la zone a une area valide (dimensions > 0)
         if (hasValidArea(zoneData)) {
             const area = zoneData.contrainte.geometrie.area;
@@ -8792,21 +8928,29 @@ document.addEventListener('DOMContentLoaded', () => {
             const areaHPx = mmToPx(area.hMm);
             
             // Taille max = bord de l'area - position actuelle
-            return {
+            result = {
                 maxWidth: areaXPx + areaWPx - zoneLeft,
                 maxHeight: areaYPx + areaHPx - zoneTop
             };
+        } else {
+            // Pas d'area : bord droit/bas du format fini - marge - position actuelle
+            const margin = getSecurityMarginPx();
+            const formatFiniRightPx = fp.gauchePx + mmToPx(getPageWidthMm());
+            const formatFiniBottomPx = fp.hautPx + mmToPx(getPageHeightMm());
+            
+            result = {
+                maxWidth: formatFiniRightPx - margin - zoneLeft,
+                maxHeight: formatFiniBottomPx - margin - zoneTop
+            };
         }
         
-        // Pas d'area : bord droit/bas du format fini - marge - position actuelle
-        const margin = getSecurityMarginPx();
-        const formatFiniRightPx = fp.gauchePx + mmToPx(getPageWidthMm());
-        const formatFiniBottomPx = fp.hautPx + mmToPx(getPageHeightMm());
+        const zpCap = getZonePersonnalisationSizeCapPx(zoneLeft, zoneTop);
+        if (zpCap) {
+            result.maxWidth = Math.min(result.maxWidth, zpCap.maxWidth);
+            result.maxHeight = Math.min(result.maxHeight, zpCap.maxHeight);
+        }
         
-        return {
-            maxWidth: formatFiniRightPx - margin - zoneLeft,
-            maxHeight: formatFiniBottomPx - margin - zoneTop
-        };
+        return result;
     }
 
     /**
@@ -8826,26 +8970,31 @@ document.addEventListener('DOMContentLoaded', () => {
         const zonesData = getCurrentPageZones();
         const zoneData = zonesData[zoneId];
         
+        /** @type {{ minX: number, minY: number, maxX: number, maxY: number }} */
+        let limits;
+        
         // Vérifier si la zone a une area valide (dimensions > 0)
         if (hasValidArea(zoneData)) {
             const area = zoneData.contrainte.geometrie.area;
             
-            return {
+            limits = {
                 minX: area.xMm,
                 minY: area.yMm,
                 maxX: area.xMm + area.wMm,
                 maxY: area.yMm + area.hMm
             };
+        } else {
+            // Pas d'area : utiliser les limites de la page avec marge de sécurité
+            const defaultLimits = getGeometryLimits();
+            limits = {
+                minX: defaultLimits.minX,
+                minY: defaultLimits.minY,
+                maxX: defaultLimits.maxX,
+                maxY: defaultLimits.maxY
+            };
         }
         
-        // Pas d'area : utiliser les limites de la page avec marge de sécurité
-        const defaultLimits = getGeometryLimits();
-        return {
-            minX: defaultLimits.minX,
-            minY: defaultLimits.minY,
-            maxX: defaultLimits.maxX,
-            maxY: defaultLimits.maxY
-        };
+        return intersectGeometryLimitsWithZonePersonnalisation(limits);
     }
 
     /**
@@ -12806,6 +12955,126 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * Supprime les overlays de la zone de personnalisation WebDev.
+     * @returns {void}
+     */
+    function removePersonnalisationOverlays() {
+        if (!a4Page) return;
+        a4Page.querySelectorAll('.personnalisation-overlay, .personnalisation-border').forEach(el => el.remove());
+    }
+
+    /**
+     * Affiche la zone autorisée (WebDev ZonePersonnalisation) : assombrissement hors zone + contour en pointillés.
+     * @returns {void}
+     */
+    function createPersonnalisationOverlays() {
+        removePersonnalisationOverlays();
+        if (!a4Page) return;
+        
+        const spec = getZonePersonnalisationSpecForPageIndex(documentState.currentPageIndex);
+        if (!spec) return;
+        
+        const fp = getFondPerduOffset();
+        const pageWidth = getPageWidth();
+        const pageHeight = getPageHeight();
+        
+        const innerLeft = mmToPx(spec.xMm) + fp.gauchePx;
+        const innerTop = mmToPx(spec.yMm) + fp.hautPx;
+        const innerW = mmToPx(spec.largeurMm);
+        const innerH = mmToPx(spec.hauteurMm);
+        
+        if (innerW <= 0 || innerH <= 0) return;
+        
+        // Bandes autour du rectangle autorisé (même principe que le fond perdu)
+        if (innerTop > 0) {
+            const top = document.createElement('div');
+            top.className = 'personnalisation-overlay';
+            top.style.left = '0';
+            top.style.top = '0';
+            top.style.width = pageWidth + 'px';
+            top.style.height = innerTop + 'px';
+            a4Page.appendChild(top);
+        }
+        
+        if (innerTop + innerH < pageHeight) {
+            const bottom = document.createElement('div');
+            bottom.className = 'personnalisation-overlay';
+            bottom.style.left = '0';
+            bottom.style.top = (innerTop + innerH) + 'px';
+            bottom.style.width = pageWidth + 'px';
+            bottom.style.height = (pageHeight - innerTop - innerH) + 'px';
+            a4Page.appendChild(bottom);
+        }
+        
+        if (innerLeft > 0) {
+            const left = document.createElement('div');
+            left.className = 'personnalisation-overlay';
+            left.style.left = '0';
+            left.style.top = innerTop + 'px';
+            left.style.width = innerLeft + 'px';
+            left.style.height = innerH + 'px';
+            a4Page.appendChild(left);
+        }
+        
+        if (innerLeft + innerW < pageWidth) {
+            const right = document.createElement('div');
+            right.className = 'personnalisation-overlay';
+            right.style.left = (innerLeft + innerW) + 'px';
+            right.style.top = innerTop + 'px';
+            right.style.width = (pageWidth - innerLeft - innerW) + 'px';
+            right.style.height = innerH + 'px';
+            a4Page.appendChild(right);
+        }
+        
+        const border = document.createElement('div');
+        border.className = 'personnalisation-border';
+        border.style.left = innerLeft + 'px';
+        border.style.top = innerTop + 'px';
+        border.style.width = innerW + 'px';
+        border.style.height = innerH + 'px';
+        a4Page.appendChild(border);
+    }
+
+    /**
+     * Ramène une zone dans les limites (area + ZonePersonnalisation + marges).
+     * @param {string} zoneId
+     * @returns {void}
+     */
+    function clampZoneToLayoutBounds(zoneId) {
+        const zoneEl = document.getElementById(zoneId);
+        if (!zoneEl) return;
+        const zonesData = getCurrentPageZones();
+        const w = zoneEl.offsetWidth;
+        const h = zoneEl.offsetHeight;
+        const bounds = getAreaBoundsInPixels(zoneId, w, h);
+        let left = zoneEl.offsetLeft;
+        let top = zoneEl.offsetTop;
+        left = Math.max(bounds.minX, Math.min(left, bounds.maxX));
+        top = Math.max(bounds.minY, Math.min(top, bounds.maxY));
+        zoneEl.style.left = left + 'px';
+        zoneEl.style.top = top + 'px';
+        
+        const maxSize = getAreaMaxSizeInPixels(zoneId, left, top);
+        let newW = Math.min(zoneEl.offsetWidth, maxSize.maxWidth);
+        let newH = Math.min(zoneEl.offsetHeight, maxSize.maxHeight);
+        if (newW >= 15) zoneEl.style.width = newW + 'px';
+        if (newH >= 15) zoneEl.style.height = newH + 'px';
+        
+        const zd = zonesData[zoneId];
+        if (zd) {
+            zd.x = zoneEl.offsetLeft;
+            zd.y = zoneEl.offsetTop;
+            zd.w = zoneEl.offsetWidth;
+            zd.h = zoneEl.offsetHeight;
+            const fpClamp = getFondPerduOffset();
+            zd.xMm = pxToMm(zd.x - fpClamp.gauchePx);
+            zd.yMm = pxToMm(zd.y - fpClamp.hautPx);
+            zd.wMm = pxToMm(zd.w);
+            zd.hMm = pxToMm(zd.h);
+        }
+    }
+
+    /**
      * Calcule le centre de la vue actuelle dans les coordonnées de la page.
      * Utilisé pour positionner les nouvelles zones au centre de l'écran visible.
      * Prend en compte le niveau de zoom actuel.
@@ -13644,6 +13913,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         a4Page.appendChild(zone);
+        
+        clampZoneToLayoutBounds(id);
         
         // Mettre à jour le badge contrainte si applicable
         updateContrainteBadge(id);
@@ -22560,6 +22831,15 @@ document.addEventListener('DOMContentLoaded', () => {
             );
         }
         
+        // Zone de personnalisation par page (WebDev → ZonePersonnalisation)
+        if (isLoadEnvelope) {
+            zonePersonnalisationPages = parseZonePersonnalisationPayload(
+                jsonData.ZonePersonnalisation !== undefined ? jsonData.ZonePersonnalisation : jsonData.zonePersonnalisation
+            );
+        } else {
+            zonePersonnalisationPages = null;
+        }
+        
         // Validation de base
         if (!documentJson || typeof documentJson !== 'object') {
             console.error('loadFromWebDev : JSON invalide ou vide');
@@ -24057,6 +24337,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Nettoyer les overlays de fond perdu (recréés après applyPageDimensions)
         removeBleedOverlays();
+        removePersonnalisationOverlays();
         
         const currentPage = getCurrentPage();
         const zonesData = currentPage.zones;
@@ -24075,6 +24356,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Créer les overlays de fond perdu (après dimensionnement de la page)
         createBleedOverlays();
+        createPersonnalisationOverlays();
         
         // Mettre à jour l'image de fond
         const bgImg = document.getElementById('a4-background');
