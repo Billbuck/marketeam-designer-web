@@ -212,6 +212,8 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {number} zIndex - Ordre d'empilement
      * @property {BorderData} border - Configuration de la bordure
      * @property {ZoneContrainte} [contrainte] - Contraintes de la zone (si zone prédéfinie)
+     * @property {number} [largeurMaxImageMm] - Plafond largeur image (mm) envoyé par WebDev ; > 0 = override, absent = hérite de formatDocument
+     * @property {number} [hauteurMaxImageMm] - Plafond hauteur image (mm), idem
      * @description Zone image (fixe ou dynamique via fusion).
      */
 
@@ -544,6 +546,8 @@ document.addEventListener('DOMContentLoaded', () => {
      * @property {RedimensionnementJsonWebDev} redimensionnement - Mode de redimensionnement
      * @property {FondJsonWebDev} fond - Configuration du fond
      * @property {BordureJsonWebDev} bordure - Configuration de la bordure
+     * @property {number} [largeurMaxImageMm] - Largeur max image (mm) ; 0 ou absent = valeurs formatDocument
+     * @property {number} [hauteurMaxImageMm] - Hauteur max image (mm) ; 0 ou absent = valeurs formatDocument
      * @description Zone image au format JSON WebDev (import/export).
      */
 
@@ -4896,9 +4900,10 @@ document.addEventListener('DOMContentLoaded', () => {
      *   - DPI_MINIMUM, DPI_RECOMMENDED : Seuils qualité (150/200 dpi)
      * 
      * Fonctions principales :
-     *   - getLargeurMaxImageMm() / getHauteurMaxImageMm() : Dimensions max en mm
-     *   - getLargeurMaxImagePx() / getHauteurMaxImagePx() : Dimensions max en pixels
-     *   - getDimensionMaxCompressionPx() : Dimension max pour compression upload
+     *   - getFormatDocumentLargeurMaxImageMm() / getFormatDocumentHauteurMaxImageMm() : Plafonds document uniquement
+     *   - getLargeurMaxImageMm(zoneData) / getHauteurMaxImageMm(zoneData) : mm effectifs (zone > 0 sinon document)
+     *   - getLargeurMaxImagePx(zoneData) / getHauteurMaxImagePx(zoneData) : pixels effectifs
+     *   - getDimensionMaxCompressionPx(zoneData) : Dimension max pour compression upload
      * 
      * Dépendances :
      *   - documentState (Section 12)
@@ -4906,9 +4911,8 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     // ───────────────────────────────────────────────────────────────────────────────
 
-    // Les dimensions max des zones image sont calculées dynamiquement :
-    // - Si fourni par WebDev : utiliser largeurMaxImageMm / hauteurMaxImageMm
-    // - Sinon : 1/3 des dimensions du document
+    // Plafonds image (mm) : par zone si zonesImage.largeurMaxImageMm / hauteurMaxImageMm > 0 (postMessage WebDev),
+    // sinon formatDocument.largeurMaxImageMm / hauteurMaxImageMm, sinon 1/3 du document.
     const IMAGE_MAX_UPLOAD_SIZE = 10 * 1024 * 1024;  // 10 Mo max à l'upload
     const IMAGE_MAX_COMPRESSED_SIZE = 2 * 1024 * 1024;  // 2 Mo max après compression
     const DPI_MINIMUM = 150;
@@ -4950,58 +4954,80 @@ document.addEventListener('DOMContentLoaded', () => {
     const DEFAULT_BORDER_STYLE = 'solid';
     
     /**
-     * Retourne la largeur maximale autorisée pour les zones image.
-     * Priorité : valeur WebDev > 1/3 du document.
-     * @returns {number} Largeur max en mm
+     * Largeur max image au niveau document (formatDocument ou 1/3 de la page).
+     * @returns {number} mm
      */
-    function getLargeurMaxImageMm() {
-        // Si fourni par WebDev, utiliser cette valeur
+    function getFormatDocumentLargeurMaxImageMm() {
         if (documentState.formatDocument?.largeurMaxImageMm) {
             return documentState.formatDocument.largeurMaxImageMm;
         }
-        // Sinon : 1/3 de la largeur du document
         const largeurDocMm = documentState.formatDocument?.largeurMm || (getPageWidth() * MM_PER_PIXEL);
         return largeurDocMm / 3;
     }
-    
+
     /**
-     * Retourne la hauteur maximale autorisée pour les zones image.
-     * Priorité : valeur WebDev > 1/3 du document.
-     * @returns {number} Hauteur max en mm
+     * Hauteur max image au niveau document (formatDocument ou 1/3 de la page).
+     * @returns {number} mm
      */
-    function getHauteurMaxImageMm() {
-        // Si fourni par WebDev, utiliser cette valeur
+    function getFormatDocumentHauteurMaxImageMm() {
         if (documentState.formatDocument?.hauteurMaxImageMm) {
             return documentState.formatDocument.hauteurMaxImageMm;
         }
-        // Sinon : 1/3 de la hauteur du document
         const hauteurDocMm = documentState.formatDocument?.hauteurMm || (getPageHeight() * MM_PER_PIXEL);
         return hauteurDocMm / 3;
     }
-    
+
     /**
-     * Retourne la largeur maximale autorisée pour les zones image en pixels.
+     * Largeur max effective pour une zone image : override zone (mm > 0) sinon document.
+     * @param {ImageZoneData|null|undefined} [zoneData]
+     * @returns {number} mm
+     */
+    function getLargeurMaxImageMm(zoneData) {
+        const z = zoneData && zoneData.type === 'image' ? zoneData : null;
+        const v = z && z.largeurMaxImageMm;
+        if (typeof v === 'number' && v > 0 && isFinite(v)) {
+            return v;
+        }
+        return getFormatDocumentLargeurMaxImageMm();
+    }
+
+    /**
+     * Hauteur max effective pour une zone image : override zone (mm > 0) sinon document.
+     * @param {ImageZoneData|null|undefined} [zoneData]
+     * @returns {number} mm
+     */
+    function getHauteurMaxImageMm(zoneData) {
+        const z = zoneData && zoneData.type === 'image' ? zoneData : null;
+        const v = z && z.hauteurMaxImageMm;
+        if (typeof v === 'number' && v > 0 && isFinite(v)) {
+            return v;
+        }
+        return getFormatDocumentHauteurMaxImageMm();
+    }
+
+    /**
+     * @param {ImageZoneData|null|undefined} [zoneData]
      * @returns {number} Largeur max en pixels
      */
-    function getLargeurMaxImagePx() {
-        return getLargeurMaxImageMm() / MM_PER_PIXEL;
+    function getLargeurMaxImagePx(zoneData) {
+        return getLargeurMaxImageMm(zoneData) / MM_PER_PIXEL;
     }
-    
+
     /**
-     * Retourne la hauteur maximale autorisée pour les zones image en pixels.
+     * @param {ImageZoneData|null|undefined} [zoneData]
      * @returns {number} Hauteur max en pixels
      */
-    function getHauteurMaxImagePx() {
-        return getHauteurMaxImageMm() / MM_PER_PIXEL;
+    function getHauteurMaxImagePx(zoneData) {
+        return getHauteurMaxImageMm(zoneData) / MM_PER_PIXEL;
     }
-    
+
     /**
-     * Calcule la dimension maximale en pixels pour la compression des images.
-     * Basé sur le plus grand côté autorisé et le DPI minimum (150).
-     * @returns {number} Dimension max en pixels pour la compression
+     * Dimension max (côté le plus long) en pixels pour la compression à l'upload.
+     * @param {ImageZoneData|null|undefined} [zoneData]
+     * @returns {number}
      */
-    function getDimensionMaxCompressionPx() {
-        const maxDimensionMm = Math.max(getLargeurMaxImageMm(), getHauteurMaxImageMm());
+    function getDimensionMaxCompressionPx(zoneData) {
+        const maxDimensionMm = Math.max(getLargeurMaxImageMm(zoneData), getHauteurMaxImageMm(zoneData));
         const maxDimensionInches = maxDimensionMm / 25.4;
         return Math.round(maxDimensionInches * DPI_MINIMUM);
     }
@@ -5018,7 +5044,7 @@ document.addEventListener('DOMContentLoaded', () => {
      *   - formatFileSize() : Formatage taille fichier
      *   - isImageFormatAccepted() : Validation format fichier
      *   - isSvgFile() : Détection fichier SVG
-     *   - compressImage() : Compression via Canvas
+     *   - compressImage(file, zoneData) : Compression via Canvas
      *   - readSvgFile() : Lecture SVG sans compression
      *   - showImageUploadError() : Affichage erreur upload
      *   - showImageLoading() : Indicateur de chargement
@@ -5026,7 +5052,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * 
      * Dépendances :
      *   - imageFileInfo, imageDpiIndicator (Section 1)
-     *   - getDimensionMaxCompressionPx() (Section 7)
+     *   - getDimensionMaxCompressionPx(zoneData) (Section 7)
      */
     // ───────────────────────────────────────────────────────────────────────────────
     
@@ -5101,9 +5127,10 @@ document.addEventListener('DOMContentLoaded', () => {
      * - JPEG (qualité 85%) pour toutes les autres images (meilleure compression)
      * 
      * @param {File} file - Fichier image original (JPG, PNG, GIF)
+     * @param {ImageZoneData|null|undefined} [zoneData] - Zone cible (plafonds mm effectifs pour la compression)
      * @returns {Promise<{base64: string, width: number, height: number, size: number}>}
      */
-    function compressImage(file) {
+    function compressImage(file, zoneData) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             
@@ -5114,8 +5141,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     let width = img.width;
                     let height = img.height;
                     
-                    // Calculer les nouvelles dimensions (basé sur les limites du document)
-                    const maxDimensionPx = getDimensionMaxCompressionPx();
+                    // Calculer les nouvelles dimensions (limites effectives document ou override zone)
+                    const maxDimensionPx = getDimensionMaxCompressionPx(zoneData);
                     if (width > maxDimensionPx || height > maxDimensionPx) {
                         if (width > height) {
                             height = Math.round(height * maxDimensionPx / width);
@@ -9227,7 +9254,7 @@ document.addEventListener('DOMContentLoaded', () => {
      *   - showResizeConstraintMessageDebounced() : Version avec debounce
      * 
      * Dépendances :
-     *   - getLargeurMaxImagePx() / getHauteurMaxImagePx() (Section 7)
+     *   - getLargeurMaxImagePx(zoneData) / getHauteurMaxImagePx(zoneData) (Section 7)
      *   - calculateImageDpi() (Section 9)
      *   - DPI_MINIMUM (Section 7)
      */
@@ -9256,8 +9283,8 @@ document.addEventListener('DOMContentLoaded', () => {
      * }
      * 
      * @see DPI_MINIMUM - Seuil DPI minimum (150)
-     * @see getLargeurMaxImagePx - Largeur maximale autorisée
-     * @see getHauteurMaxImagePx - Hauteur maximale autorisée
+     * @see getLargeurMaxImagePx(zoneData) - Largeur maximale autorisée pour cette zone
+     * @see getHauteurMaxImagePx(zoneData) - Hauteur maximale autorisée pour cette zone
      */
     function checkImageResizeAllowed(zoneId, newWidth, newHeight) {
         const zonesData = getCurrentPageZones();
@@ -9283,9 +9310,9 @@ document.addEventListener('DOMContentLoaded', () => {
         let dimensionConstraint = null;  // Contrainte dimensions max document
         let dpiConstraint = null;        // Contrainte DPI minimum
         
-        // --- Calcul contrainte 1 : Dimensions maximales ---
-        const maxWidthPx = getLargeurMaxImagePx();
-        const maxHeightPx = getHauteurMaxImagePx();
+        // --- Calcul contrainte 1 : Dimensions maximales (override zone ou document) ---
+        const maxWidthPx = getLargeurMaxImagePx(zoneData);
+        const maxHeightPx = getHauteurMaxImagePx(zoneData);
         
         if (newWidth > maxWidthPx || newHeight > maxHeightPx) {
             // Calculer les dimensions maximales en conservant le ratio
@@ -9302,8 +9329,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 constrainedWidth = maxHeightPx * currentRatio;
             }
             
-            const maxWidthMm = Math.round(getLargeurMaxImageMm());
-            const maxHeightMm = Math.round(getHauteurMaxImageMm());
+            const maxWidthMm = Math.round(getLargeurMaxImageMm(zoneData));
+            const maxHeightMm = Math.round(getHauteurMaxImageMm(zoneData));
             
             dimensionConstraint = {
                 reason: `Dimensions maximum atteintes (${maxWidthMm} × ${maxHeightMm} mm)`,
@@ -14228,7 +14255,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     x: newX,
                     y: newY,
                     w: copiedZoneData.w,
-                    h: copiedZoneData.h
+                    h: copiedZoneData.h,
+                    ...(typeof copiedZoneData.largeurMaxImageMm === 'number' && copiedZoneData.largeurMaxImageMm > 0 && isFinite(copiedZoneData.largeurMaxImageMm)
+                        ? { largeurMaxImageMm: copiedZoneData.largeurMaxImageMm } : {}),
+                    ...(typeof copiedZoneData.hauteurMaxImageMm === 'number' && copiedZoneData.hauteurMaxImageMm > 0 && isFinite(copiedZoneData.hauteurMaxImageMm)
+                        ? { hauteurMaxImageMm: copiedZoneData.hauteurMaxImageMm } : {})
                 };
                 break;
             }
@@ -19614,7 +19645,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 showImageLoading(true);
                 
                 // 3. Compression de l'image (tous les formats acceptés sont des bitmaps)
-                const result = await compressImage(file);
+                const result = await compressImage(file, zoneData);
                 
                 showImageLoading(false);
                 
@@ -23252,7 +23283,11 @@ document.addEventListener('DOMContentLoaded', () => {
             name: zoneJson.nom || '',
             zIndex: zoneJson.niveau || 1,
             // Contraintes : format 3 niveaux (geometrie, style, global)
-            contrainte: mergeWithDefaultContrainte(jsonContrainte, 'image')
+            contrainte: mergeWithDefaultContrainte(jsonContrainte, 'image'),
+            ...(typeof zoneJson.largeurMaxImageMm === 'number' && zoneJson.largeurMaxImageMm > 0 && isFinite(zoneJson.largeurMaxImageMm)
+                ? { largeurMaxImageMm: zoneJson.largeurMaxImageMm } : {}),
+            ...(typeof zoneJson.hauteurMaxImageMm === 'number' && zoneJson.hauteurMaxImageMm > 0 && isFinite(zoneJson.hauteurMaxImageMm)
+                ? { hauteurMaxImageMm: zoneJson.hauteurMaxImageMm } : {})
         };
     }
 
@@ -23593,7 +23628,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 epaisseur: zoneData.border?.width || 0,
                 couleurCmjn: zoneData.border?.colorCmyk || hexToCmjnWebDev(zoneData.border?.color || DEFAULT_BORDER_COLOR),
                 style: zoneData.border?.style || DEFAULT_BORDER_STYLE
-            }
+            },
+            largeurMaxImageMm: (typeof zoneData.largeurMaxImageMm === 'number' && zoneData.largeurMaxImageMm > 0 && isFinite(zoneData.largeurMaxImageMm))
+                ? Math.round(zoneData.largeurMaxImageMm) : 0,
+            hauteurMaxImageMm: (typeof zoneData.hauteurMaxImageMm === 'number' && zoneData.hauteurMaxImageMm > 0 && isFinite(zoneData.hauteurMaxImageMm))
+                ? Math.round(zoneData.hauteurMaxImageMm) : 0
         };
     }
     

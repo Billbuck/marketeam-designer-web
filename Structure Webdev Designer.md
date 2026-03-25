@@ -373,6 +373,9 @@ stDesignerZoneImage est une Structure
 
 	// --- Contraintes ---
 	'contrainte'			est une stDesignerZoneContrainte		<sérialise = "contrainte">
+	// Plafonds image (mm) : 0 ou absent = hériter de formatDocument.largeurMaxImageMm / hauteurMaxImageMm
+	'largeurMaxImageMm'		est un entier							<sérialise = "largeurMaxImageMm">
+	'hauteurMaxImageMm'		est un entier							<sérialise = "hauteurMaxImageMm">
 fin
 
 
