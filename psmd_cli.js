@@ -136,7 +136,13 @@ if (result.images && result.images.length > 0) {
 
         var cheminImage = path.join(repSortie, img.fileName);
         try {
-            var bufferImage = Buffer.from(img.base64, 'base64');
+            // Supprimer le préfixe data URL si présent (ex: "data:image/jpeg;base64,")
+			var base64Data = img.base64;
+			var commaIndex = base64Data.indexOf(',');
+			if (commaIndex !== -1) {
+				base64Data = base64Data.substring(commaIndex + 1);
+			}
+			var bufferImage = Buffer.from(base64Data, 'base64');
             fs.writeFileSync(cheminImage, bufferImage);
             process.stdout.write('IMAGE:' + cheminImage + '\n');
         } catch (e) {
