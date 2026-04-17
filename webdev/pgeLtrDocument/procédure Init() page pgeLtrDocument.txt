@@ -1,0 +1,158 @@
+procédure Init()
+
+nPage			est un entier
+sRepertoire	est une chaîne
+sFichier		est une chaîne
+
+grpPartage.Visible = (Partage.__vcUser.Partage _ou_ (Partage.__vcUser.IdMere <> Partage.__vcUser.IDClient and Partage.__vcUser.taaDroit[#DROIT_AJOUTER_UN_MODÈLE]))
+
+InitCboTypeSupport()
+InitCboSupport()
+
+// ─── Initialisation des limites Designer (valeurs par défaut) ────────────
+_nLimTexte		= -1
+_nLimImage		= -1
+_nLimBarcode	= -1
+_nLimQr			= 0
+
+si _pIdModele > 0 alors
+	libTitre = "Modifier un document"
+	si ltr_modele.LitRecherchePremier(IdModele, _pIdModele) _et_ ltr_support.LitRecherchePremier(IdSupport, ltr_modele.IdSupport) alors
+		// En modification on ne peut pas changer le type de support
+		cboTypeSupport.Etat			= AffichageSeulement
+		cboSupport.Etat				= AffichageSeulement
+		intEstFondPerdu.Etat			= AffichageSeulement
+		intEstRectoVerso.Etat		= AffichageSeulement
+		cboTypeSupport					= ltr_support.IdTypeSupport
+		InitCboSupport()
+		cboSupport						= ltr_support.IdSupport
+		saiLibellé						= ltr_modele.Libelle
+		sRepertoire						= CheminModele(__REP_VIGNETTE__, Faux)
+		uplDocumentUpload.Visible	= Vrai
+		si ltr_support.NbPageObligatoire = 0 alors
+			nPage = (ltr_modele.EstRectoVerso = Faux) ? 1 sinon 2
+		sinon
+			nPage = ltr_support.NbPageObligatoire
+		fin
+		grpPolyvalent.Visible	= (ltr_modele.Type = __OPERATION_COURRIER__)
+		intPolyvalent				= ltr_modele.EstPolyvalent
+		intEstPartagé				= ltr_modele.EstPartage
+		intEstRectoVerso			= ltr_modele.EstRectoVerso
+		intEstFondPerdu			= ltr_modele.EstFondPerdu
+
+		// ─── Chargement des vignettes ────────────────────────────────────
+		pour nInd = 1 _à_ nPage
+			znrAperçuUpload.AjouteLigne()
+			si _stDocument.tabImageBat..Occurrence >= nInd _et_ _stDocument.tabImageBat[nInd].CheminPhysique <> "" alors
+				znrAperçuUpload[nInd].imgUpload = _stDocument.tabImageBat[nInd].CheminRelatif
+			sinon
+				sFichier = __DOC_LTR_MODELE__ + ltr_modele.IdModele + "p" + nInd + __JPG__
+				znrAperçuUpload[nInd].imgUpload = sRepertoire + ["/"] + sFichier
+			fin
+		fin
+		dispLtrDocument[3].Visible = Vrai
+
+		// ─── Chargement JsonDesignerData ─────────────────────────────────
+		si pas ltr_modele.JsonDesignerData.Null _et_ ltr_modele.JsonDesignerData <> "" alors
+			_stDocument.JsonDesignerData = ltr_modele.JsonDesignerData
+
+			// Extraire les contraintes globales du JSON stocké pour les contrôles UI
+			jStocke est un JSON = ChaîneVersUTF8(_stDocument.JsonDesignerData)
+			si jStocke.constraints.limites.texte..Existe alors
+				_nLimTexte		= jStocke.constraints.limites.texte
+				_nLimImage		= jStocke.constraints.limites.image
+				_nLimBarcode	= jStocke.constraints.limites.barcode
+				_nLimQr			= jStocke.constraints.limites.qr
+				Trace("Init Modèle : limites chargées depuis JSON : texte=" + _nLimTexte + " image=" + _nLimImage + " barcode=" + _nLimBarcode + " qr=" + _nLimQr)
+			fin
+		fin
+
+		// ─── Initialisation structDocument pour modification ─────────────
+		_stDocument.EstRectoVerso		= ltr_modele.EstRectoVerso
+		_stDocument.EstFondPerdu		= ltr_modele.EstFondPerdu
+		_stDocument.NombrePage			= nPage
+		_stDocument.NomFichierOrigine	= ltr_modele.NomFichierOrigine
+		_stDocument.IdModele				= ltr_modele.IdModele
+		_stDocument.IdSupport			= ltr_modele.IdSupport
+		_stDocument.CodeTemp				= Partage.__vcUser.IDContact + "-" + DateHeureSys()
+		_stDocument.LargeurOuvert		= ltr_support.LargeurOuvert
+		_stDocument.HauteurOuvert		= ltr_support.HauteurOuvert
+		_stDocument.LargeurFerme		= ltr_support.LargeurFerme
+		_stDocument.HauteurFerme		= ltr_support.HauteurFerme
+
+		// ─── Répertoires du modèle ──────────────────────────────────────
+		sRepDocument est une chaîne = CheminModele(__REP_MODELE__)
+		sRepVignette est une chaîne = CheminModele(__REP_VIGNETTE__)
+		sRepVignetteRel est une chaîne = CheminModele(__REP_VIGNETTE__, Faux)
+		sRepFond est une chaîne = CheminModele(__REP_FOND__)
+		sRepFondRel est une chaîne = CheminModele(__REP_FOND__, Faux)
+
+		_stDocument.Repertoire			= sRepDocument
+		_stDocument.NomFichierTemp		= __DOC_LTR_MODELE__ + ltr_modele.IdModele + __PDF__
+		// Répertoire Temp sous Courrier, sous-répertoire par modèle
+		// ClientsDev\{IdClient}\Courrier\Temp\{IdModele}\
+		// Le répertoire Temp\ reste permanent (partagé entre utilisateurs)
+		// Le sous-répertoire {IdModele}\ est supprimé après Valider
+		_stDocument.RepertoireTravail	= CheminModele(__REP_TEMP__) + ltr_modele.IdModele + "\"
+		fRepCrée(_stDocument.RepertoireTravail)
+
+		Trace("Init Modèle : Repertoire = " + _stDocument.Repertoire)
+		Trace("Init Modèle : NomFichierTemp = " + _stDocument.NomFichierTemp)
+		Trace("Init Modèle : RepertoireTravail = " + _stDocument.RepertoireTravail)
+		Trace("Init Modèle : CodeTemp = " + _stDocument.CodeTemp)
+		Trace("Init Modèle : PDF existe = " + fFichierExiste(_stDocument.Repertoire + _stDocument.NomFichierTemp))
+
+		// ─── Analyse du PDF pour remplir tabPagePDF ─────────────────
+		si fFichierExiste(_stDocument.Repertoire + _stDocument.NomFichierTemp) alors
+			Partage.PdfAnalyseDocument(_stDocument)
+			Trace("Init Modèle : tabPagePDF rempli, " + _stDocument.tabPagePDF..Occurrence + " page(s)")
+		sinon
+			Trace("Init Modèle : ⚠ PDF introuvable : " + _stDocument.Repertoire + _stDocument.NomFichierTemp)
+		fin
+
+		// ─── Charger les images de fond depuis Fonds/ ───────────────
+		pour nInd = 1 _à_ nPage
+			sFicFond est une chaîne = __DOC_LTR_MODELE__ + "Fond" + ltr_modele.IdModele + "p" + nInd + __JPG__
+			si fFichierExiste(sRepFond + sFicFond) alors
+				stImgFond est une structDocumentImage
+				stImgFond.CheminPhysique		= sRepFond + sFicFond
+				stImgFond.CheminRelatif		= sRepFondRel + sFicFond
+				_stDocument.tabImageFond.Ajoute(stImgFond)
+				Trace("Init Modèle : Fond p" + nInd + " = " + stImgFond.CheminPhysique)
+			sinon
+				Trace("Init Modèle : ⚠ Fond p" + nInd + " introuvable : " + sRepFond + sFicFond)
+			fin
+		fin
+
+		// ─── Charger les images BAT depuis Vignettes/ ───────────────
+		pour nInd = 1 _à_ nPage
+			sFicBat est une chaîne = __DOC_LTR_MODELE__ + ltr_modele.IdModele + "p" + nInd + __JPG__
+			si fFichierExiste(sRepVignette + sFicBat) alors
+				stImgBat est une structDocumentImage
+				stImgBat.CheminPhysique		= sRepVignette + sFicBat
+				stImgBat.CheminRelatif		= sRepVignetteRel + sFicBat
+				_stDocument.tabImageBat.Ajoute(stImgBat)
+				Trace("Init Modèle : BAT p" + nInd + " = " + stImgBat.CheminPhysique)
+			sinon
+				Trace("Init Modèle : ⚠ BAT p" + nInd + " introuvable : " + sRepVignette + sFicBat)
+			fin
+		fin
+
+		// ─── Visibilité bouton Personnaliser ─────────────────────────────
+		btnModelePersonnaliser..Visible = Vrai
+
+	fin
+fin
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CheminModele — Procédure interne
+// Retourne le chemin pour un type de répertoire selon le propriétaire du modèle
+// ─────────────────────────────────────────────────────────────────────────────
+	procédure interne CheminModele(pTypeRepertoire est une chaîne, pPhysique est un booléen = Vrai)
+		selon Vrai
+			cas ltr_modele.IdMarque > 0	: renvoyer CheminMarque(ltr_modele.IdMarque, ltr_modele.Type, pTypeRepertoire, pPhysique)
+			cas ltr_modele.IdClient > 0	: renvoyer CheminClient(ltr_modele.IdClient, ltr_modele.Type, pTypeRepertoire, pPhysique)
+			autre cas								: renvoyer CheminMarketeam(ltr_modele.Type, pTypeRepertoire, pPhysique)
+		fin
+	fin

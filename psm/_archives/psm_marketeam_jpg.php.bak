@@ -1,0 +1,42 @@
+<?php
+
+include_once("psmjpeg.php");
+
+/**
+ * Nettoie les fichiers data temporaires de plus de 5 minutes
+ */
+function cleanupOldDataFiles() {
+    $psmDir = $_SERVER['DOCUMENT_ROOT'] . "\\psm\\";
+    $files = glob($psmDir . "data_*.csv");
+    $now = time();
+    
+    foreach ($files as $file) {
+        // Supprimer si plus vieux que 5 minutes (300 secondes)
+        if ($now - filemtime($file) > 300) {
+            @unlink($file);
+        }
+    }
+}
+
+// Nettoyer les vieux fichiers temporaires
+cleanupOldDataFiles();
+
+$Fichier = urldecode($_GET['p']);
+$documentFilename = $Fichier; 
+$layout = intval($_GET['l']);
+
+// Créer un fichier data temporaire unique pour cette requête
+$dataSource = $_SERVER['DOCUMENT_ROOT'] . "\\psm\\data.csv";
+$dataFilename = $_SERVER['DOCUMENT_ROOT'] . "\\psm\\data_" . uniqid() . ".csv";
+
+// Copier le fichier source vers le fichier temporaire
+copy($dataSource, $dataFilename);
+
+try {
+    echo PSM_GetJPEGDataAsBase64($documentFilename, $dataFilename, $layout);
+}
+catch (Exception $e) {
+    error_log("PSM Marketeam JPG Error: " . $e->getMessage());
+}
+
+?>

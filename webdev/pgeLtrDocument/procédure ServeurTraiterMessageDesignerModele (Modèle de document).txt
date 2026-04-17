@@ -1,0 +1,176 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// ServeurTraiterMessageDesignerModele — Page pgeLtrDocument (modèles)
+// Réception du message export du Designer
+//
+// Flux simplifié pour les modèles :
+//   1. Sauvegarder le data (zones, pages) + constraints dans JsonDesignerData
+//   2. Corriger cheminFond (peut contenir d'anciens chemins Upload)
+//   3. Générer un PSMD BAT temporaire (avec placeholders pour zones image vides)
+//   4. Générer le BAT JPG depuis le PSMD BAT
+//   5. Pas de PSMD production, pas de Printshop, pas d'images Designer
+// ─────────────────────────────────────────────────────────────────────────────
+procédure ServeurTraiterMessageDesignerModele()
+
+sJsonData est une chaîne
+
+si gsJsonRecu = "" alors renvoyer Faux
+
+vMessage est un Variant = JSONVersVariant(gsJsonRecu)
+
+si vMessage.action = Null alors renvoyer Faux
+
+selon vMessage.action
+
+	cas "validated"
+
+		si vMessage.success = Vrai alors
+
+			Trace("ServeurTraiterMessageDesignerModele : document validé reçu du Designer")
+			Trace("ServeurTraiterMessageDesignerModele : Repertoire = " + _stDocument.Repertoire)
+			Trace("ServeurTraiterMessageDesignerModele : RepertoireTravail = " + _stDocument.RepertoireTravail)
+			Trace("ServeurTraiterMessageDesignerModele : NomFichierTemp = " + _stDocument.NomFichierTemp)
+			Trace("ServeurTraiterMessageDesignerModele : CodeTemp = " + _stDocument.CodeTemp)
+
+			jDoc est un JSON = ChaîneVersUTF8(gsJsonRecu)
+			sJsonData = JSONVersChaîne(jDoc.data)
+
+			si sJsonData <> "" alors
+
+				_stDocument.EstPersonnaliseDesigner	= Vrai
+				_stDocument.DateHeureDesigner			= DateHeureSys()
+
+				// ─── 1. Sauvegarder data + constraints ───────────────────
+				jStocke est un JSON = jDoc.data
+				jStocke.constraints.limites.texte				= _nLimTexte
+				jStocke.constraints.limites.image				= _nLimImage
+				jStocke.constraints.limites.qr					= _nLimQr
+				jStocke.constraints.limites.barcode				= _nLimBarcode
+
+				// ─── 2. Corriger cheminFond ───────────────────────────────
+				si jStocke.pages..Occurrence > 0 alors
+					Trace("ServeurTraiterMessageDesignerModele : cheminFond AVANT correction = [" + jStocke.pages[1].cheminFond + "]")
+					pour nInd = 1 _à_ jStocke.pages..Occurrence
+						jStocke.pages[nInd].cheminFond = _stDocument.Repertoire + _stDocument.NomFichierTemp
+					fin
+					Trace("ServeurTraiterMessageDesignerModele : cheminFond APRÈS correction = [" + _stDocument.Repertoire + _stDocument.NomFichierTemp + "]")
+				fin
+
+				_stDocument.JsonDesignerData = JSONVersChaîne(jStocke)
+				Trace("ServeurTraiterMessageDesignerModele : data sauvegardé (" + Taille(_stDocument.JsonDesignerData) + " car.)")
+
+				// ─── 3. Préparer JSON BAT avec placeholders ──────────────
+				// Copie du data pour injection des placeholders dans les zones image vides
+				// Le JsonDesignerData stocké reste propre (sans placeholders)
+			jBat				est un JSON			= jStocke
+			sRepTravail		est une chaîne		= _stDocument.RepertoireTravail
+			sMontagne		est une chaîne		= cpProjet.__sRepRacine + "Designer\assets\montagne.png"
+			sHachure			est une chaîne		= cpProjet.__sRepRacine + "Designer\assets\hachure.png"
+
+			si jBat.zonesImage..Occurrence > 0 alors
+				pour nInd = 1 _à_ jBat.zonesImage..Occurrence
+					si jBat.zonesImage[nInd].source.nomFichier = "" _ou_ jBat.zonesImage[nInd].source.nomFichier = Null alors
+
+						rLargeurZone		est un réel		= jBat.zonesImage[nInd].geometrie.largeurMm
+						rHauteurZone		est un réel		= jBat.zonesImage[nInd].geometrie.hauteurMm
+						sCheminPlaceholder	est une chaîne	= sRepTravail + "placeholder_" + nInd + ".png"
+
+						sUrlPlaceholder est une chaîne = "http://localhost:5000/PyMuPdfExtract/generate_placeholder" +...
+						"?width_mm=" + rLargeurZone +...
+						"&height_mm=" + rHauteurZone +...
+						"&output=" + URLEncode(sCheminPlaceholder) +...
+						"&montagne=" + URLEncode(sMontagne) +...
+						"&hachure=" + URLEncode(sHachure)
+
+						hPlaceholder		est une httpRequête
+						hRepPlaceholder	est un httpRéponse
+						hPlaceholder.URL		= sUrlPlaceholder
+						hPlaceholder.Méthode	= httpGet
+						hRepPlaceholder		= hPlaceholder.Envoie()
+
+						si hRepPlaceholder.CodeEtat = 200 alors
+							jBat.zonesImage[nInd].source.nomFichier	= sCheminPlaceholder
+							jBat.zonesImage[nInd].source.type			= "fichier"
+							Trace("ServeurTraiterMessageDesignerModele : placeholder " + rLargeurZone + "x" + rHauteurZone + "mm --> " + sCheminPlaceholder)
+						sinon
+							Trace("ServeurTraiterMessageDesignerModele : ⚠ échec placeholder zone " + nInd)
+						fin
+					fin
+				fin
+			fin
+
+				// ─── 4. Générer PSMD BAT temporaire ──────────────────────
+			sNodeExe					est une chaîne		= INILit("NODE", "CHEMIN", "", NomFichierIni())
+			sNodeCli					est une chaîne		= INILit("NODE", "CLI", "", NomFichierIni())
+			sCodeTemp				est une chaîne		= _stDocument.CodeTemp
+				sCheminJsonTemp		est une chaîne		= sRepTravail + "psmd_json_" + sCodeTemp + ".tmp"
+				sCheminPsmdBat			est une chaîne		= sRepTravail + "psmd_bat_" + sCodeTemp + ".psmd"
+
+				si pas fSauveTexte(sCheminJsonTemp, ChaîneVersUTF8(JSONVersChaîne(jBat))) alors
+					Trace("ServeurTraiterMessageDesignerModele : échec écriture JSON temp")
+					renvoyer Faux
+				fin
+				sCommandeBat est une chaîne = [
+				[%sNodeExe%] [%sNodeCli%] [%sCheminJsonTemp%] [%sCheminPsmdBat%] --no-bleed
+				]
+				Trace("ServeurTraiterMessageDesignerModele : CMD BAT = " + sCommandeBat)
+				LanceAppli(sCommandeBat, exeIconise, exeBloquant)
+
+				// Nettoyage JSON temp
+				si fFichierExiste(sCheminJsonTemp) alors fSupprime(sCheminJsonTemp)
+
+				si fFichierExiste(sCheminPsmdBat) alors
+
+					_stDocument.CheminPsmdBat = sCheminPsmdBat
+					Trace("ServeurTraiterMessageDesignerModele : PSMD BAT généré : " + sCheminPsmdBat)
+
+					// ─── 5. Générer BAT JPG ──────────────────────────────
+					GenererBatDocumentDepuisPsmd(_stDocument, __tabEchantillonBaseLigne)
+					Trace("ServeurTraiterMessageDesignerModele : BAT généré")
+
+				// ─── Blanc tournant sur le BAT uniquement (pas le fond) ─
+				// Le fond a déjà son blanc tournant depuis la création (UploadFichier Phase 3)
+				// Seul le BAT (dans le Temp) doit être traité à chaque validation
+				si _stDocument.tabPagePDF..Occurrence > 0 alors
+					si _stDocument.tabPagePDF[1].EstFondPerdu = Faux alors
+						pour tout stVignette de _stDocument.tabImageBat
+							Partage.AppliqueBlancTournant(stVignette.CheminPhysique, _stDocument.LargeurOuvert, _stDocument.HauteurOuvert)
+						fin
+					fin
+				fin
+
+					// ─── Mettre à jour l'aperçu ─────────────────────────
+					znrAperçuUpload.SupprimeTout()
+					pour nPage = 1 _à_ _stDocument.NombrePage
+						znrAperçuUpload.Ajoute()
+						si _stDocument.tabImageBat..Occurrence >= nPage _et_ _stDocument.tabImageBat[nPage].CheminPhysique <> "" alors
+							znrAperçuUpload[nPage].imgUpload = _stDocument.tabImageBat[nPage].CheminRelatif + "?" + DateHeureSys()
+							Trace("ServeurTraiterMessageDesignerModele : aperçu BAT p" + nPage)
+							sinon si _stDocument.tabImageFond..Occurrence >= nPage alors
+							znrAperçuUpload[nPage].imgUpload = _stDocument.tabImageFond[nPage].CheminRelatif + "?" + DateHeureSys()
+							Trace("ServeurTraiterMessageDesignerModele : aperçu Fond p" + nPage)
+						fin
+						znrAperçuUpload[nPage].imgUpload..Visible = Vrai
+					fin
+
+				sinon
+					Trace("ServeurTraiterMessageDesignerModele : ERREUR PSMD BAT introuvable")
+					PopupAfficheMessage("Erreur lors de la génération du document" + RC + "Merci de réitérer l'opération", "Erreur", __OPERATION_COURRIER__, __TOAST_ANNULATION__)
+				fin
+
+			fin
+
+		sinon
+			Trace("ServeurTraiterMessageDesignerModele : validation échouée : " + vMessage.error)
+		fin
+
+	cas "cancelled"
+		Trace("ServeurTraiterMessageDesignerModele : annulé par l'utilisateur")
+
+	autre cas
+		Trace("ServeurTraiterMessageDesignerModele : action non gérée : " + vMessage.action)
+
+fin
+
+gsJsonRecu = ""
+
+renvoyer Vrai

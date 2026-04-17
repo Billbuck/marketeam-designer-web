@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test BAT</title>
+</head>
+<body>
+    <h1>Test génération BAT</h1>
+    <img id="bat" style="max-width: 100%; border: 1px solid black;" />
+    
+    <script>
+        fetch('psm_marketeam_jpg.php?p=C%3A%5CTest%20Designer%20Printshop%5Ctest.psmd&l=1')
+            .then(response => response.text())
+            .then(base64 => {
+                document.getElementById('bat').src = 'data:image/jpeg;base64,' + base64;
+            });
+    </script>
+</body>
+</html>

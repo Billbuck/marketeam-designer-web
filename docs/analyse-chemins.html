@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Analyse des conflits de chemins — Opération Courrier</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+
+  header { background: linear-gradient(135deg, #1e293b, #334155); padding: 24px 32px; border-bottom: 2px solid #3b82f6; }
+  header h1 { font-size: 22px; font-weight: 700; color: #93c5fd; }
+  header p { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+
+  .tabs { display: flex; gap: 0; background: #1e293b; border-bottom: 1px solid #334155; padding: 0 24px; }
+  .tab { padding: 12px 24px; cursor: pointer; font-size: 14px; font-weight: 600; color: #64748b; border-bottom: 3px solid transparent; transition: all .2s; }
+  .tab:hover { color: #cbd5e1; }
+  .tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
+
+  main { padding: 24px 32px; max-width: 1200px; }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ── Voyage du fichier ── */
+  .journey { position: relative; }
+  .journey-header { display: flex; gap: 16px; margin-bottom: 24px; }
+  .mode-btn { padding: 8px 20px; border-radius: 20px; border: 2px solid #475569; background: transparent; color: #94a3b8; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .2s; }
+  .mode-btn.active { border-color: #3b82f6; background: #1e3a5f; color: #93c5fd; }
+  .mode-btn.creation.active { border-color: #22c55e; background: #14532d; color: #86efac; }
+  .mode-btn.modification.active { border-color: #f59e0b; background: #78350f; color: #fcd34d; }
+
+  .timeline { position: relative; padding-left: 40px; }
+  .timeline::before { content: ''; position: absolute; left: 15px; top: 0; bottom: 0; width: 3px; background: #334155; border-radius: 2px; }
+
+  .step { position: relative; margin-bottom: 24px; padding: 16px 20px; background: #1e293b; border-radius: 12px; border-left: 4px solid #475569; }
+  .step .dot { position: absolute; left: -33px; top: 20px; width: 13px; height: 13px; border-radius: 50%; background: #475569; border: 2px solid #0f172a; }
+  .step.ok .dot { background: #22c55e; box-shadow: 0 0 8px #22c55e55; }
+  .step.ok { border-left-color: #22c55e; }
+  .step.conflict .dot { background: #ef4444; box-shadow: 0 0 8px #ef444455; }
+  .step.conflict { border-left-color: #ef4444; background: #1a1520; }
+  .step.warning .dot { background: #f59e0b; box-shadow: 0 0 8px #f59e0b55; }
+  .step.warning { border-left-color: #f59e0b; }
+
+  .step-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+  .step-proc { font-size: 12px; color: #64748b; font-family: 'Consolas', monospace; margin-bottom: 8px; }
+  .step-detail { font-size: 13px; color: #cbd5e1; line-height: 1.6; }
+
+  .path-box { display: inline-block; padding: 2px 8px; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 12px; margin: 2px 0; }
+  .path-upload { background: #1e3a5f; color: #93c5fd; border: 1px solid #3b82f680; }
+  .path-upload2 { background: #312e81; color: #a5b4fc; border: 1px solid #6366f180; }
+  .path-ope { background: #14532d; color: #86efac; border: 1px solid #22c55e80; }
+  .path-catalog { background: #78350f; color: #fcd34d; border: 1px solid #f59e0b80; }
+
+  .conflict-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-left: 8px; }
+  .conflict-tag.red { background: #7f1d1d; color: #fca5a5; }
+  .conflict-tag.orange { background: #78350f; color: #fcd34d; }
+
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; padding: 12px 16px; background: #1e293b; border-radius: 8px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+  .legend-swatch { width: 14px; height: 14px; border-radius: 3px; }
+
+  /* ── Bilan ── */
+  .bilan-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
+  .bilan-card { background: #1e293b; border-radius: 12px; padding: 20px; border: 1px solid #334155; }
+  .bilan-card h3 { font-size: 15px; margin-bottom: 10px; }
+  .bilan-card.red { border-color: #ef444480; }
+  .bilan-card.orange { border-color: #f59e0b80; }
+  .bilan-card ul { list-style: none; padding-left: 0; }
+  .bilan-card li { font-size: 13px; line-height: 1.7; padding-left: 18px; position: relative; color: #cbd5e1; }
+  .bilan-card li::before { content: ''; position: absolute; left: 0; top: 8px; width: 8px; height: 8px; border-radius: 50%; }
+  .bilan-card.red li::before { background: #ef4444; }
+  .bilan-card.orange li::before { background: #f59e0b; }
+
+  .section-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #93c5fd; }
+
+  .toggle-row { display: flex; gap: 12px; margin-bottom: 16px; }
+  .toggle-chip { padding: 6px 14px; border-radius: 16px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid #475569; background: transparent; color: #94a3b8; transition: all .2s; }
+  .toggle-chip.active { background: #1e3a5f; color: #93c5fd; border-color: #3b82f6; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Analyse des conflits de chemins — Opération Courrier</h1>
+  <p>Voyage d'un fichier de la creation a la modification : ou ca coince ?</p>
+</header>
+
+<div class="tabs">
+  <div class="tab active" data-tab="enveloppe">Enveloppe</div>
+  <div class="tab" data-tab="document">Document PDF client</div>
+  <div class="tab" data-tab="bilan">Bilan global</div>
+</div>
+
+<main>
+
+<!-- ╔══════════════════════════════════╗ -->
+<!-- ║         ENVELOPPE               ║ -->
+<!-- ╚══════════════════════════════════╝ -->
+<div class="panel active" id="panel-enveloppe">
+  <div class="legend">
+    <div class="legend-item"><div class="legend-swatch" style="background:#3b82f6"></div> Upload site (R1)</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#6366f1"></div> Upload Marketeam (R2)</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#22c55e"></div> Dossier operation (ROP)</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#f59e0b"></div> Catalogue</div>
+  </div>
+
+  <div class="journey-header">
+    <button class="mode-btn creation active" onclick="showMode('env','creation')">Creation</button>
+    <button class="mode-btn modification" onclick="showMode('env','modification')">Modification</button>
+  </div>
+
+  <!-- CREATION -->
+  <div class="timeline" id="env-creation">
+    <div class="step ok">
+      <div class="dot"></div>
+      <div class="step-title">1. Image de fond enveloppe</div>
+      <div class="step-proc">ComposerJsonDesignerCreation()</div>
+      <div class="step-detail">
+        Le PDF de fond de l'enveloppe est lu depuis le <b>catalogue</b> :<br>
+        <span class="path-box path-catalog">__sRepRacine + "Enveloppes\" + FichierApercu + .pdf</span><br>
+        Pas de souci : c'est un fichier fixe du catalogue, independant de l'operation.
+      </div>
+    </div>
+
+    <div class="step ok">
+      <div class="dot"></div>
+      <div class="step-title">2. Generation du PSMD enveloppe</div>
+      <div class="step-proc">GenererPsmdServeurEnveloppe()</div>
+      <div class="step-detail">
+        Le JSON temporaire et le <code>.psmd</code> sont ecrits dans :<br>
+        <span class="path-box path-upload2">__sMarketeamRepRacine + __sRepUpload + "\"</span><br>
+        Nom : <code>__DOC_ENV_PSMD__ + CodeTemp + ".psmd"</code><br>
+        En creation, <code>CodeTemp</code> = horodatage. Tout est dans <b>Upload Marketeam</b>. OK.
+      </div>
+    </div>
+
+    <div class="step ok">
+      <div class="dot"></div>
+      <div class="step-title">3. Generation du BAT enveloppe (JPG)</div>
+      <div class="step-proc">GenererBatEnveloppeDepuisPsmd()</div>
+      <div class="step-detail">
+        Le JPG est genere dans :<br>
+        <span class="path-box path-upload2">__sMarketeamRepRacine + __sRepUpload + "\" + __DOC_ENV_BAT__ + CodeTemp + .jpg</span><br>
+        Le PSMD est lu depuis le meme endroit. Coherent.
+      </div>
+    </div>
+
+    <div class="step ok">
+      <div class="dot"></div>
+      <div class="step-title">4. Sauvegarde + rangement</div>
+      <div class="step-proc">DéplaceFichierUpload()</div>
+      <div class="step-detail">
+        Le BAT enveloppe est deplace vers :<br>
+        <span class="path-box path-ope">CheminFichier(IdOperation, __REP_BAT__) + __DOC_ENV_BAT__ + IdOperation + .jpg</span><br>
+        Tout va bien : le fichier quitte Upload pour le dossier operation.
+      </div>
+    </div>
+  </div>
+
+  <!-- MODIFICATION -->
+  <div class="timeline" id="env-modification" style="display:none">
+    <div class="step ok">
+      <div class="dot"></div>
+      <div class="step-title">1. Rechargement de l'enveloppe</div>
+      <div class="step-proc">ChargeStructOperationLettre()</div>
+      <div class="step-detail">
+        Le BAT est charge depuis :<br>
+        <span class="path-box path-ope">CheminFichier(IdLettre, __REP_BAT__) + __DOC_ENV_BAT__ + IdOperation + .jpg</span><br>
+        Le fond depuis :<br>
+        <span class="path-box path-ope">CheminFichier(IdLettre, __REP_FOND__) + __DOC_ENV_FOND__ + IdOperation + .jpg</span><br>
+        Les fichiers sont bien sous le <b>dossier operation</b>. OK.
+      </div>
+    </div>
+
+    <div class="step warning">
+      <div class="dot"></div>
+      <div class="step-title">2. Test d'existence du fond enveloppe</div>
+      <div class="step-proc">ChargeStructOperationLettre() — ligne ~1628</div>
+      <div class="step-detail">
+        Le fond est teste avec le chemin <b>relatif</b> :<br>
+        <code>fFichierExiste(<b>sFondCheminRelatif</b> + __DOC_ENV_FOND__ + …)</code><br>
+        Alors que le BAT est teste avec le chemin <b>physique</b> :<br>
+        <code>fFichierExiste(<b>sBatCheminPhysique</b> + __DOC_ENV_BAT__ + …)</code><br>
+        <span class="conflict-tag orange">INCOHERENCE</span> Un chemin relatif (URL) passe dans <code>fFichierExiste</code> qui attend un chemin disque.
+      </div>
+    </div>
+
+    <div class="step conflict">
+      <div class="dot"></div>
+      <div class="step-title">3. L'utilisateur re-personnalise l'enveloppe</div>
+      <div class="step-proc">GenererPsmdServeurEnveloppe()</div>
+      <div class="step-detail">
+        Le nouveau PSMD est genere dans :<br>
+        <span class="path-box path-upload2">__sMarketeamRepRacine + __sRepUpload</span><br>
+        Mais les fichiers de l'operation vivent maintenant dans :<br>
+        <span class="path-box path-ope">CheminFichier(IdOperation, __REP_*__)</span><br>
+        <span class="conflict-tag red">CONFLIT</span> Le PSMD est ecrit dans Upload alors que tout le reste est dans le dossier operation.
+      </div>
+    </div>
+
+    <div class="step conflict">
+      <div class="dot"></div>
+      <div class="step-title">4. Generation du BAT enveloppe</div>
+      <div class="step-proc">GenererBatEnveloppeDepuisPsmd()</div>
+      <div class="step-detail">
+        Le JPG BAT est genere dans :<br>
+        <span class="path-box path-upload2">__sMarketeamRepRacine + __sRepUpload + __DOC_ENV_BAT__ + CodeTemp + .jpg</span><br>
+        Mais au rechargement le BAT est attendu dans :<br>
+        <span class="path-box path-ope">CheminFichier(…, __REP_BAT__) + __DOC_ENV_BAT__ + IdOperation + .jpg</span><br>
+        <span class="conflict-tag red">CONFLIT</span> Le BAT est genere au mauvais endroit avec potentiellement le mauvais nom.
+      </div>
+    </div>
+
+    <div class="step warning">
+      <div class="dot"></div>
+      <div class="step-title">5. Re-sauvegarde</div>
+      <div class="step-proc">DéplaceFichierUpload()</div>
+      <div class="step-detail">
+        <code>DéplaceFichierUpload</code> deplace le BAT depuis <code>EnveloppeBAT.CheminPhysique</code>.<br>
+        Si ce chemin pointe encore vers <b>Upload</b> (ecrit a l'etape 4) : <b>OK</b> — le deplacement fonctionne.<br>
+        Mais si <code>EnveloppeBAT.CheminPhysique</code> pointe deja vers <b>ROP</b> (rechargement sans re-personnalisation) et qu'on tente de le deplacer sur lui-meme...<br>
+        <span class="conflict-tag orange">RISQUE</span> Depends de l'etat memoire vs disque.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ╔══════════════════════════════════╗ -->
+<!-- ║         DOCUMENT                ║ -->
+<!-- ╚══════════════════════════════════╝ -->
+<div class="panel" id="panel-document">
+  <div class="legend">
+    <div class="legend-item"><div class="legend-swatch" style="background:#3b82f6"></div> Upload site (R1)</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#6366f1"></div> Upload Marketeam (R2)</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#22c55e"></div> Dossier operation (ROP)</div>
+  </div>
+
+  <div class="journey-header">
+    <button class="mode-btn creation active" onclick="showMode('doc','creation')">Creation</button>
+    <button class="mode-btn modification" onclick="showMode('doc','modification')">Modification</button>
+  </div>
+
+  <!-- CREATION -->
+  <div class="timeline" id="doc-creation">
+    <div class="step ok">
+      <div class="dot"></div>
+      <div class="step-title">1. Upload du PDF</div>
+      <div class="step-proc">UploadFichier()</div>
+      <div class="step-detail">
+        Le PDF est copie et renomme dans :<br>
+        <span class="path-box path-upload">__sRepRacine + __sRepUpload + "\"</span><br>
+        <code>Repertoire</code> est fixe a ce chemin. <code>NomFichierTemp</code> = <code>__DOC_LTR__ + CodeTemp + .pdf</code><br>
+        <code>CodeTemp</code> = <code>IDContact + "-" + DateHeureSys()</code>. Tout coherent.
+      </div>
+    </div>
+
+    <div class="step ok">
+      <div class="dot"></div>
+      <div class="step-title">2. Analyse PDF</div>
+      <div class="step-proc">PdfAnalyseDocument()</div>
+      <div class="step-detail">
+        Utilise <code>stDocument.Repertoire + stDocument.NomFichierTemp</code><br>
+        = <span class="path-box path-upload">R1 + __DOC_LTR__ + CodeTemp + .pdf</span><br>
+        Coherent avec l'etape 1.
+      </div>
+    </div>
+
+    <div class="step ok">
+      <div class="dot"></div>
+      <div class="step-title">3. Vignettes fond (Ghostscript)</div>
+      <div class="step-proc">GenereVignetteDocument()</div>
+      <div class="step-detail">
+        Genere les JPG fond dans :<br>
+        <span class="path-box path-upload">__sRepRacine + __sRepUpload + __DOC_LTR_FOND__ + CodeTemp + p1.jpg…</span><br>
+        Coherent.
+      </div>
+    </div>
+
+    <div class="step ok">
+      <div class="dot"></div>
+      <div class="step-title">4. Generation PSMD</div>
+      <div class="step-proc">GenererPsmdServeurDocument()</div>
+      <div class="step-detail">
+        Le PSMD est ecrit dans :<br>
+        <span class="path-box path-upload2">__sMarketeamRepRacine + __sRepUpload + __DOC_LTR_PSMD__ + CodeTemp + .psmd</span><br>
+        En creation tout est dans le meme « pot » Upload. OK si R1 = R2.
+      </div>
+    </div>
+
+    <div class="step ok">
+      <div class="dot"></div>
+      <div class="step-title">5. Generation BAT (JPG)</div>
+      <div class="step-proc">GenererBatDocumentDepuisPsmd()</div>
+      <div class="step-detail">
+        JPG BAT ecrit dans :<br>
+        <span class="path-box path-upload2">__sMarketeamRepRacine + __sRepUpload + __DOC_LTR_BAT__ + CodeTemp + p1.jpg…</span><br>
+        Coherent avec le PSMD.
+      </div>
+    </div>
+
+    <div class="step ok">
+      <div class="dot"></div>
+      <div class="step-title">6. Sauvegarde + rangement</div>
+      <div class="step-proc">DéplaceFichierUpload()</div>
+      <div class="step-detail">
+        PDF, BAT, fonds sont deplaces de <span class="path-box path-upload">Upload</span> vers<br>
+        <span class="path-box path-ope">CheminFichier(IdOperation, __REP_DOCUMENT__ / __REP_BAT__ / __REP_FOND__)</span><br>
+        Noms convertis de <code>CodeTemp</code> vers <code>IdLettreContenu</code>. OK.
+        <br><br><b>Mais le PSMD et le JSON temp Node restent dans Upload (non deplaces).</b>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODIFICATION -->
+  <div class="timeline" id="doc-modification" style="display:none">
+    <div class="step ok">
+      <div class="dot"></div>
+      <div class="step-title">1. Rechargement du document</div>
+      <div class="step-proc">ChargeTabStructLtrDocument() + ChargeDocument()</div>
+      <div class="step-detail">
+        <code>CodeTemp</code> = <code>IdLettreContenu</code><br>
+        <code>Repertoire</code> = probablement <span class="path-box path-ope">CheminFichier(IdOperation, __REP_DOCUMENT__)</span><br>
+        <code>NomFichierTemp</code> = <code>__DOC_LTR__ + IdLettreContenu + .pdf</code><br>
+        Les fichiers vivent dans le <b>dossier operation</b>. Coherent.
+      </div>
+    </div>
+
+    <div class="step conflict">
+      <div class="dot"></div>
+      <div class="step-title">2. L'utilisateur re-personnalise le document</div>
+      <div class="step-proc">GenererPsmdServeurDocument()</div>
+      <div class="step-detail">
+        Le code construit :<br>
+        <code>sRepUpload = </code><span class="path-box path-upload2">__sMarketeamRepRacine + __sRepUpload</span><br>
+        <code>sCheminPsmd = sRepUpload + __DOC_LTR_PSMD__ + CodeTemp + ".psmd"</code><br><br>
+        <b>Le PSMD est ecrit dans Upload</b>, pas dans le dossier de l'operation ou le PDF vit.<br>
+        <span class="conflict-tag red">CONFLIT MAJEUR</span> Le repertoire de travail est toujours Upload, independamment du contexte creation/modification.
+      </div>
+    </div>
+
+    <div class="step conflict">
+      <div class="dot"></div>
+      <div class="step-title">3. Generation BAT document</div>
+      <div class="step-proc">GenererBatDocumentDepuisPsmd()</div>
+      <div class="step-detail">
+        Les JPG BAT sont generes dans :<br>
+        <span class="path-box path-upload2">__sMarketeamRepRacine + __sRepUpload + __DOC_LTR_BAT__ + CodeTemp + p1.jpg…</span><br><br>
+        Le rechargement attend les BAT dans :<br>
+        <span class="path-box path-ope">CheminFichier(IdOperation, __REP_BAT__) + __DOC_LTR_BAT__ + IdLettreContenu + p1.jpg…</span><br>
+        <span class="conflict-tag red">CONFLIT MAJEUR</span> BAT genere dans Upload au lieu du dossier operation.
+      </div>
+    </div>
+
+    <div class="step conflict">
+      <div class="dot"></div>
+      <div class="step-title">4. Appel PSM PHP pour generer le BAT</div>
+      <div class="step-proc">GenerationBatDepuisPsmd() → psm_marketeam_jpg.php</div>
+      <div class="step-detail">
+        Le PHP recoit en parametre <code>p = chemin du PSMD</code><br>
+        Ce chemin pointe vers <span class="path-box path-upload2">Upload</span>.<br>
+        Le PSMD, lui, reference potentiellement des images de fond qui vivent dans <span class="path-box path-ope">ROP</span>.<br>
+        <span class="conflict-tag red">CONFLIT</span> Le PSMD dans Upload peut contenir des chemins vers des fichiers dans le dossier operation, ou inversement.
+      </div>
+    </div>
+
+    <div class="step conflict">
+      <div class="dot"></div>
+      <div class="step-title">5. Vignettes fond si re-upload</div>
+      <div class="step-proc">GenereVignetteDocument()</div>
+      <div class="step-detail">
+        Genere <b>toujours</b> dans :<br>
+        <span class="path-box path-upload">__sRepRacine + __sRepUpload</span><br>
+        <b>Code en dur</b> : pas de parametrage du repertoire de sortie.<br>
+        Si le PDF est dans <span class="path-box path-ope">ROP</span>, Ghostscript cherche dans <span class="path-box path-upload">Upload</span>...<br>
+        <span class="conflict-tag red">CONFLIT</span> Sauf si le PDF est recopie dans Upload pour la circonstance.
+      </div>
+    </div>
+
+    <div class="step warning">
+      <div class="dot"></div>
+      <div class="step-title">6. Normalisation BleedBox</div>
+      <div class="step-proc">UploadFichier() — appel PyMuPdf</div>
+      <div class="step-detail">
+        Utilise <code>stDocument.Repertoire + stDocument.NomFichierTemp</code><br>
+        Si <code>Repertoire</code> a ete mis a jour vers <span class="path-box path-ope">ROP</span> par <code>ChargeDocument</code>, c'est OK.<br>
+        Sinon c'est <span class="path-box path-upload">Upload</span> et le PDF n'est plus la.<br>
+        <span class="conflict-tag orange">DEPENDS</span> de ce que fait <code>ChargeDocument</code> (code absent).
+      </div>
+    </div>
+
+    <div class="step warning">
+      <div class="dot"></div>
+      <div class="step-title">7. ComposerJsonDesignerCreation (fonds dans le JSON)</div>
+      <div class="step-proc">ComposerJsonDesignerCreation() — ligne ~2789</div>
+      <div class="step-detail">
+        Le chemin du PDF fond dans le JSON Designer est construit avec :<br>
+        <code>stDoc.Repertoire + stDoc.NomFichierTemp</code><br>
+        Les images de fond viennent de <code>stDoc.tabImageFond</code>.<br>
+        <span class="conflict-tag orange">DEPENDS</span> Si ces membres pointent encore vers Upload alors que les fichiers sont dans ROP...
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ╔══════════════════════════════════╗ -->
+<!-- ║         BILAN                    ║ -->
+<!-- ╚══════════════════════════════════╝ -->
+<div class="panel" id="panel-bilan">
+  <h2 class="section-title">Resume : 7 conflits rouges, 4 risques oranges</h2>
+
+  <div class="bilan-grid">
+    <div class="bilan-card red">
+      <h3 style="color:#fca5a5">Conflits certains (en modification)</h3>
+      <ul>
+        <li><b>GenererPsmdServeurDocument</b> — PSMD ecrit dans Upload au lieu du dossier operation</li>
+        <li><b>GenererPsmdServeurEnveloppe</b> — Idem pour le PSMD enveloppe</li>
+        <li><b>GenererBatDocumentDepuisPsmd</b> — JPG BAT genere dans Upload au lieu de __REP_BAT__</li>
+        <li><b>GenererBatEnveloppeDepuisPsmd</b> — Idem pour le BAT enveloppe</li>
+        <li><b>GenerationBatDepuisPsmd → PHP</b> — Le PSMD passe a PSM peut referencer des fichiers dans le mauvais repertoire</li>
+        <li><b>GenereVignetteDocument</b> — Repertoire d'entree/sortie code en dur sur Upload</li>
+        <li><b>DéplaceFichierUpload</b> — Les fichiers PSMD ne sont jamais deplaces ni nettoyes</li>
+      </ul>
+    </div>
+
+    <div class="bilan-card orange">
+      <h3 style="color:#fcd34d">Risques conditionnels</h3>
+      <ul>
+        <li><b>ChargeStructOperationLettre</b> — Test fFichierExiste sur chemin relatif (URL) au lieu de physique pour le fond enveloppe</li>
+        <li><b>ComposerJsonDesignerCreation</b> — Chemins des fonds dans le JSON Designer depends de Repertoire et tabImageFond</li>
+        <li><b>Normalisation BleedBox</b> — Le chemin passe a PyMuPdf depend de stDocument.Repertoire</li>
+        <li><b>DéplaceFichierUpload (re-sauvegarde)</b> — Si les fichiers sont deja au bon endroit, le deplacement peut echouer ou etre un no-op</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="margin-top:32px;">
+    <h2 class="section-title">La cause racine en une image</h2>
+    <div style="background:#1e293b; border-radius:12px; padding:24px; font-family:'Consolas',monospace; font-size:13px; line-height:2.2; overflow-x:auto;">
+      <span style="color:#64748b;">// Toutes ces procedures font la meme chose :</span><br>
+      <span style="color:#f87171;">sRepUpload = cpProjet.__sMarketeamRepRacine + cpProjet.__sRepUpload + "\"</span><br>
+      <br>
+      <span style="color:#64748b;">// Alors qu'en modification, les fichiers vivent ici :</span><br>
+      <span style="color:#4ade80;">sRepOperation = cpProjet.CheminFichier(IdOperation, __REP_*__)</span><br>
+      <br>
+      <span style="color:#64748b;">// Il faudrait quelque chose comme :</span><br>
+      <span style="color:#93c5fd;">SI modification ALORS sRep = sRepOperation SINON sRep = sRepUpload</span>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<script>
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+function showMode(prefix, mode) {
+  const map = { env: ['env-creation','env-modification'], doc: ['doc-creation','doc-modification'] };
+  map[prefix].forEach(id => document.getElementById(id).style.display = 'none');
+  document.getElementById(prefix + '-' + mode).style.display = 'block';
+
+  const container = document.getElementById('panel-' + (prefix === 'env' ? 'enveloppe' : 'document'));
+  container.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  container.querySelector('.mode-btn.' + mode).classList.add('active');
+}
+</script>
+</body>
+</html>

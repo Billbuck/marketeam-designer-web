@@ -1,0 +1,1266 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.printshopmail.com/support/xml/schemas/win/version-7_1_0/printshopmail7.xsd">
+	<info>
+		<user_name>michel</user_name>
+		<date_time>2026-04-08T13:42:58</date_time>
+		<app_version>Version 7.2.11 (construire 9078)</app_version>
+		<published>no</published>
+	</info>
+	<printer>
+		<printer_name>PrintShop Mail Printer</printer_name>
+	</printer>
+	<operator_instructions></operator_instructions>
+	<preferences>
+		<program>
+			<default_tabstop_interval>36</default_tabstop_interval>
+			<markers begin="@" end="@"/>
+			<items_without_database>1</items_without_database>
+		</program>
+		<print_job>
+			<collate>yes</collate>
+			<use_split_job>no</use_split_job>
+			<split_job_size>1000</split_job_size>
+			<split_by>0</split_by>
+			<forms>
+				<store_on_disk>yes</store_on_disk>
+				<use_custom_cache_size>no</use_custom_cache_size>
+				<cache_size>4096</cache_size>
+				<use_opi>0</use_opi>
+			</forms>
+			<master>
+				<freeform2_master_name>Master1</freeform2_master_name>
+				<print_mode>3</print_mode>
+			</master>
+			<ppml>
+				<environment>psmail\Sans titre</environment>
+				<send_images>0</send_images>
+				<zip>yes</zip>
+				<embed_images_in_pdf>yes</embed_images_in_pdf>
+			</ppml>
+			<vipp>
+				<project_folder>projects\psmail</project_folder>
+				<do_not_spool_images>0</do_not_spool_images>
+			</vipp>
+			<vps>
+				<generate_booklets>yes</generate_booklets>
+				<use_apr>0</use_apr>
+			</vps>
+			<pdf>
+				<joboptions></joboptions>
+			</pdf>
+			<pdfvt>
+				<joboptions></joboptions>
+			</pdfvt>
+			<margins option="1" left="0" top="0" right="0" bottom="0"/>
+			<technology>0</technology>
+		</print_job>
+		<repetition>
+			<repeat_hor>1</repeat_hor>
+			<repeat_ver>1</repeat_ver>
+			<print_priority>4</print_priority>
+			<print_priority>0</print_priority>
+			<print_priority>2</print_priority>
+			<spacing_between_layouts x="0" y="0"/>
+			<duplex_print>0</duplex_print>
+		</repetition>
+		<imposition>
+			<bleed>
+				<mode>0</mode>
+				<size>0</size>
+			</bleed>
+			<cropmarks>
+				<mode>1</mode>
+				<size>6</size>
+				<double_sided>no</double_sided><color colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></color>
+			</cropmarks>
+			<folding_lines>
+				<size>40</size>
+			</folding_lines>
+		</imposition><colormanagement intent_generic="relative" colormanage="no"><colorspace id="RGB"><profile source="iccfile"><file name="srgb color space profile.icm" description="sRGB IEC61966-2.1">AA==</file></profile></colorspace><colorspace id="CMYK"><profile source="iccfile"><file name="uswebcoatedswop.icc" description="U.S. Web Coated (SWOP) v2">AA==</file></profile></colorspace><colorspace id="GRAY"><profile source="gamma"><gamma>2.2</gamma></profile></colorspace><colorspace id="defaultRGB"><profile source="iccfile"><file name="srgb color space profile.icm" description="sRGB IEC61966-2.1">AA==</file></profile></colorspace><colorspace id="defaultCMYK"><profile source="iccfile"><file name="uswebcoatedswop.icc" description="U.S. Web Coated (SWOP) v2">AA==</file></profile></colorspace><colorspace id="defaultGRAY"><profile source="gamma"><gamma>2.2</gamma></profile></colorspace></colormanagement>
+		<ppconnect>
+			<namevalue name="__#PPSuite#Connection_FaxNumber" expression="">
+			</namevalue>
+			<namevalue name="__#PPSuite#Connection_FaxDescription" expression="">
+			</namevalue>
+			<namevalue name="__#PPSuite#Connection_eMailAddress" expression="">
+			</namevalue>
+			<namevalue name="__#PPSuite#Connection_eMailSubject" expression="">
+			</namevalue>
+			<namevalue name="__#PPSuite#Connection_eMailBodyText" expression="">
+			</namevalue>
+			<namevalue name="__#PPSuite#Connection_PDFBookmark" expression="">
+			</namevalue>
+		</ppconnect>
+	</preferences>
+	<database_settings>
+		<table_name>Pas de source de données</table_name>
+		<db_type>3</db_type>
+		<db_pathsettings></db_pathsettings>
+		<extended_properties>
+			<colnameheader>yes</colnameheader>
+			<format></format>
+			<encoding></encoding>
+		</extended_properties>
+		<filter_sort_settings>
+			<filter></filter>
+			<sort></sort>
+			<db_filter_enable>no</db_filter_enable>
+			<db_sort_enable>no</db_sort_enable>
+		</filter_sort_settings>
+		<filter_array_size>4</filter_array_size>
+		<filter>
+			<field>-1</field>
+			<comp>-1</comp>
+			<edit></edit>
+			<bool>-1</bool>
+		</filter>
+		<filter>
+			<field>-1</field>
+			<comp>-1</comp>
+			<edit></edit>
+			<bool>-1</bool>
+		</filter>
+		<filter>
+			<field>-1</field>
+			<comp>-1</comp>
+			<edit></edit>
+			<bool>-1</bool>
+		</filter>
+		<filter>
+			<field>-1</field>
+			<comp>-1</comp>
+			<edit></edit>
+		</filter>
+	</database_settings>
+	<layouts>
+		<layout>
+			<dimensions>
+				<size x="595.27561" y="841.88979"/>
+				<automatic_size>yes</automatic_size>
+				<custom_size>no</custom_size>
+				<fit_to_objects>no</fit_to_objects>
+			</dimensions>
+			<attributes>
+				<name></name>
+				<condition_expression>Print</condition_expression>
+				<copies_expression>1</copies_expression>
+			</attributes>
+			<printer_preferences>
+				<windows_devmode>//7/FlAAcgBpAG4AdABTAGgAbwBwACAATQBhAGkAbAAgAFAAcgBpAG4AdABlAHIAmAQAAFAA
+cgBpAG4AdABTAGgAbwBwACAATQBhAGkAbAAgAFAAcgBpAG4AdABlAHIAAAAAAAAAAAAAAAAA
+AAAAAAAAAAABBAMG3AC8A1PvgAEBAAkAmgs0CGQAAQAPALAEAgABALAEAwABAEEANAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAQAAAAIAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AABQUklW4jAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGAAAAAAAECcQJxAnAAAQJwAA
+AAAAAAAAyAC8AwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMAAAAAAAAAAAAQAFA0AwAoiAQA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAESfa+YFAAAABAAAAP8A/wABAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AADIAAAAU01USgAAAAAQALgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==</windows_devmode>
+				<tray_name>Sélection automatique</tray_name>
+			</printer_preferences>
+			<object>
+				<identifier>{00000000-FFFE-FFFF-3CE8-1A00B78E0561}</identifier>
+				<name>Image 1</name>
+				<locked>no</locked>
+				<knockout>no</knockout>
+				<border_size>0</border_size>
+				<border_style>0</border_style><fillcolor colorspace="CMYK" alpha="0" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></fillcolor><bordercolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></bordercolor>
+				<rotation>0</rotation>
+				<bounds left="-14.17323" top="-14.17323" right="609.44884" bottom="856.06298"/>
+				<snap_frame_to_content>no</snap_frame_to_content>
+				<show_mode>
+					<editor>yes</editor>
+					<jpeg_preview>yes</jpeg_preview>
+					<pdf_preview>yes</pdf_preview>
+					<print_preview>yes</print_preview>
+					<print>yes</print>
+				</show_mode>
+				<anchor>
+					<horizontal>0</horizontal>
+					<vertical>0</vertical>
+					<source></source>
+					<source_bounds left="0" top="0" right="0" bottom="0"/>
+				</anchor>
+				<image_object>
+					<scale>2</scale>
+					<keep_aspect_ratio>no</keep_aspect_ratio>
+					<horizontal_alignment>4</horizontal_alignment>
+					<vertical_alignment>4</vertical_alignment>
+					<variable_name>Image 1</variable_name>
+					<default_image_folder></default_image_folder>
+					<default_folder></default_folder>
+					<subfolders>no</subfolders>
+					<file_name>D:\Mes Sites\Version SaaS 2026\Marketeam\MARKETEAM_WEB\Upload\Ltr1-20260408134041707.pdf</file_name>
+					<pdf_pagenumber_expression>1</pdf_pagenumber_expression>
+					<global_scope>no</global_scope>
+					<filters>
+						<two_color convert="no">
+							<threshold>50</threshold><backgroundcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></backgroundcolor><foregroundcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></foregroundcolor>
+						</two_color>
+					</filters>
+				</image_object>
+			</object>
+			<object>
+				<identifier>{54994CF3-71AB-B67B-7B18-62C707C54FDA}</identifier>
+				<name>Zone sys-adresse-contour</name>
+				<locked>yes</locked>
+				<knockout>no</knockout>
+				<border_size>1</border_size>
+				<border_style>2</border_style><fillcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></fillcolor><bordercolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></bordercolor>
+				<rotation>0</rotation>
+				<bounds left="280.62991" top="99.2126" right="564.09448" bottom="226.77165"/>
+				<snap_frame_to_content>no</snap_frame_to_content>
+				<show_mode>
+					<editor>yes</editor>
+					<jpeg_preview>yes</jpeg_preview>
+					<pdf_preview>yes</pdf_preview>
+					<print_preview>yes</print_preview>
+					<print>yes</print>
+				</show_mode>
+				<anchor>
+					<horizontal>0</horizontal>
+					<vertical>0</vertical>
+					<source></source>
+					<source_bounds left="0" top="0" right="0" bottom="0"/>
+				</anchor>
+				<text_object>
+					<backwardlink>{00000000-0000-0000-0000-000000000000}</backwardlink>
+					<forwardlink>{00000000-0000-0000-0000-000000000000}</forwardlink>
+					<rtf_data>e1xydGYxXGFuc2lcYW5zaWNwZzEyNTJcZGVmZjBcbm91aWNvbXBhdFxkZWZsYW5nMTAzNntc
+Zm9udHRibHtcZjBcZm5pbCBUaW1lcyBOZXcgUm9tYW47fX0NCntcY29sb3J0YmwgO1xyZWQw
+XGdyZWVuMFxibHVlMDt9DQp7XCpcZ2VuZXJhdG9yIFJpY2hlZDIwIDEwLjAuMjYxMDB9XHZp
+ZXdraW5kNFx1YzEgDQpccGFyZFxjZjFcZjBcZnMyNFxwYXINCn0NCgA=</rtf_data>
+					<emptylines_property>1</emptylines_property>
+					<horizontal_alignment>2</horizontal_alignment>
+					<vertical_alignment>6</vertical_alignment>
+					<vertical_text>no</vertical_text><textcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></textcolor>
+					<cmyk_output>no</cmyk_output>
+					<copy_fitting>
+						<reduce_to_fit>no</reduce_to_fit>
+						<fontsize_minimum>8</fontsize_minimum>
+						<allow_line_breaks>yes</allow_line_breaks>
+					</copy_fitting>
+				</text_object>
+			</object>
+			<object>
+				<identifier>{71AC1621-2920-EBB9-BF2F-88B3CBEE6EB7}</identifier>
+				<name>Adresse destinataire (sys-adresse-doc)</name>
+				<locked>yes</locked>
+				<knockout>no</knockout>
+				<border_size>0</border_size>
+				<border_style>0</border_style><fillcolor colorspace="CMYK" alpha="0" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></fillcolor><bordercolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></bordercolor>
+				<rotation>0</rotation>
+				<bounds left="311.81104" top="144.56693" right="558.42522" bottom="221.10236"/>
+				<snap_frame_to_content>no</snap_frame_to_content>
+				<show_mode>
+					<editor>yes</editor>
+					<jpeg_preview>yes</jpeg_preview>
+					<pdf_preview>yes</pdf_preview>
+					<print_preview>yes</print_preview>
+					<print>yes</print>
+				</show_mode>
+				<anchor>
+					<horizontal>0</horizontal>
+					<vertical>0</vertical>
+					<source></source>
+					<source_bounds left="0" top="0" right="0" bottom="0"/>
+				</anchor>
+				<text_object>
+					<backwardlink>{00000000-0000-0000-0000-000000000000}</backwardlink>
+					<forwardlink>{00000000-0000-0000-0000-000000000000}</forwardlink>
+					<rtf_data>e1xydGYxXGFuc2lcYW5zaWNwZzEyNTJcZGVmZjBcbm91aWNvbXBhdFxkZWZsYW5nMTAzNntc
+Zm9udHRibHtcZjBcZm5pbFxmY2hhcnNldDAgVmVyZGFuYTt9fQ0Ke1xjb2xvcnRibCA7XHJl
+ZDBcZ3JlZW4wXGJsdWUwO30NCntcKlxnZW5lcmF0b3IgUmljaGVkMjAgMTAuMC4yNjEwMH1c
+dmlld2tpbmQ0XHVjMSANClxwYXJkXGNmMVxmMFxmczIwIEBTb2NpZXRlQFxwYXINCkBDaXZp
+bGl0ZUAgQE5vbUAgQFByZW5vbUBccGFyDQpAQWRyZXNzZTFAXHBhcg0KQEFkcmVzc2UyQFxw
+YXINCkBBZHJlc3NlM0BccGFyDQpAQWRyZXNzZTRAXHBhcg0KQENvZGVQb3N0YWxAIEBWaWxs
+ZUBccGFyDQpAUGF5c0BccGFyDQp9DQoA</rtf_data>
+					<emptylines_property>1</emptylines_property>
+					<horizontal_alignment>2</horizontal_alignment>
+					<vertical_alignment>4</vertical_alignment>
+					<vertical_text>no</vertical_text><textcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></textcolor>
+					<cmyk_output>no</cmyk_output>
+					<copy_fitting>
+						<reduce_to_fit>no</reduce_to_fit>
+						<fontsize_minimum>8</fontsize_minimum>
+						<allow_line_breaks>yes</allow_line_breaks>
+					</copy_fitting>
+				</text_object>
+			</object>
+			<object>
+				<identifier>{FE2511A1-3519-637D-D60A-BD8C17A41671}</identifier>
+				<name>Séquentiel (sys-adresse-sequentiel)</name>
+				<locked>yes</locked>
+				<knockout>no</knockout>
+				<border_size>0</border_size>
+				<border_style>0</border_style><fillcolor colorspace="CMYK" alpha="0" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></fillcolor><bordercolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></bordercolor>
+				<rotation>0</rotation>
+				<bounds left="311.81104" top="130.39371" right="439.37009" bottom="138.89765"/>
+				<snap_frame_to_content>no</snap_frame_to_content>
+				<show_mode>
+					<editor>yes</editor>
+					<jpeg_preview>yes</jpeg_preview>
+					<pdf_preview>yes</pdf_preview>
+					<print_preview>yes</print_preview>
+					<print>yes</print>
+				</show_mode>
+				<anchor>
+					<horizontal>0</horizontal>
+					<vertical>0</vertical>
+					<source></source>
+					<source_bounds left="0" top="0" right="0" bottom="0"/>
+				</anchor>
+				<text_object>
+					<backwardlink>{00000000-0000-0000-0000-000000000000}</backwardlink>
+					<forwardlink>{00000000-0000-0000-0000-000000000000}</forwardlink>
+					<rtf_data>e1xydGYxXGFuc2lcYW5zaWNwZzEyNTJcZGVmZjBcbm91aWNvbXBhdFxkZWZsYW5nMTAzNntc
+Zm9udHRibHtcZjBcZm5pbFxmY2hhcnNldDAgVmVyZGFuYTt9fQ0Ke1xjb2xvcnRibCA7XHJl
+ZDBcZ3JlZW4wXGJsdWUwO30NCntcKlxnZW5lcmF0b3IgUmljaGVkMjAgMTAuMC4yNjEwMH1c
+dmlld2tpbmQ0XHVjMSANClxwYXJkXGNmMVxmMFxmczEyIEBTZXF1ZW50aWVsQFxwYXINCn0N
+CgA=</rtf_data>
+					<emptylines_property>1</emptylines_property>
+					<horizontal_alignment>2</horizontal_alignment>
+					<vertical_alignment>4</vertical_alignment>
+					<vertical_text>no</vertical_text><textcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></textcolor>
+					<cmyk_output>no</cmyk_output>
+					<copy_fitting>
+						<reduce_to_fit>no</reduce_to_fit>
+						<fontsize_minimum>8</fontsize_minimum>
+						<allow_line_breaks>yes</allow_line_breaks>
+					</copy_fitting>
+				</text_object>
+			</object>
+			<object>
+				<identifier>{A8514747-14FF-0297-FD3A-660EED024720}</identifier>
+				<name>Dépôt (sys-adresse-depot)</name>
+				<locked>yes</locked>
+				<knockout>no</knockout>
+				<border_size>0</border_size>
+				<border_style>0</border_style><fillcolor colorspace="CMYK" alpha="0" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></fillcolor><bordercolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></bordercolor>
+				<rotation>0</rotation>
+				<bounds left="453.5433" top="107.71654" right="538.58267" bottom="119.05512"/>
+				<snap_frame_to_content>no</snap_frame_to_content>
+				<show_mode>
+					<editor>yes</editor>
+					<jpeg_preview>yes</jpeg_preview>
+					<pdf_preview>yes</pdf_preview>
+					<print_preview>yes</print_preview>
+					<print>yes</print>
+				</show_mode>
+				<anchor>
+					<horizontal>0</horizontal>
+					<vertical>0</vertical>
+					<source></source>
+					<source_bounds left="0" top="0" right="0" bottom="0"/>
+				</anchor>
+				<text_object>
+					<backwardlink>{00000000-0000-0000-0000-000000000000}</backwardlink>
+					<forwardlink>{00000000-0000-0000-0000-000000000000}</forwardlink>
+					<rtf_data>e1xydGYxXGFuc2lcYW5zaWNwZzEyNTJcZGVmZjBcbm91aWNvbXBhdFxkZWZsYW5nMTAzNntc
+Zm9udHRibHtcZjBcZm5pbFxmY2hhcnNldDAgTW9udHNlcnJhdDt9fQ0Ke1xjb2xvcnRibCA7
+XHJlZDBcZ3JlZW4wXGJsdWUwO30NCntcKlxnZW5lcmF0b3IgUmljaGVkMjAgMTAuMC4yNjEw
+MH1cdmlld2tpbmQ0XHVjMSANClxwYXJkXGNmMVxmMFxmczE0IFNEIDogODY5MDAwMDAwMDAw
+MDFRXHBhcg0KfQ0KAA==</rtf_data>
+					<emptylines_property>1</emptylines_property>
+					<horizontal_alignment>2</horizontal_alignment>
+					<vertical_alignment>4</vertical_alignment>
+					<vertical_text>no</vertical_text><textcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></textcolor>
+					<cmyk_output>no</cmyk_output>
+					<copy_fitting>
+						<reduce_to_fit>no</reduce_to_fit>
+						<fontsize_minimum>8</fontsize_minimum>
+						<allow_line_breaks>yes</allow_line_breaks>
+					</copy_fitting>
+				</text_object>
+			</object>
+			<object>
+				<identifier>{6ECF88C5-665D-6500-B018-F3B2E5CC2315}</identifier>
+				<name>Mention (sys-adresse-mention)</name>
+				<locked>yes</locked>
+				<knockout>no</knockout>
+				<border_size>0</border_size>
+				<border_style>0</border_style><fillcolor colorspace="CMYK" alpha="0" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></fillcolor><bordercolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></bordercolor>
+				<rotation>0</rotation>
+				<bounds left="311.81104" top="107.71654" right="439.37009" bottom="121.88976"/>
+				<snap_frame_to_content>no</snap_frame_to_content>
+				<show_mode>
+					<editor>yes</editor>
+					<jpeg_preview>yes</jpeg_preview>
+					<pdf_preview>yes</pdf_preview>
+					<print_preview>yes</print_preview>
+					<print>yes</print>
+				</show_mode>
+				<anchor>
+					<horizontal>0</horizontal>
+					<vertical>0</vertical>
+					<source></source>
+					<source_bounds left="0" top="0" right="0" bottom="0"/>
+				</anchor>
+				<text_object>
+					<backwardlink>{00000000-0000-0000-0000-000000000000}</backwardlink>
+					<forwardlink>{00000000-0000-0000-0000-000000000000}</forwardlink>
+					<rtf_data>e1xydGYxXGFuc2lcYW5zaWNwZzEyNTJcZGVmZjBcbm91aWNvbXBhdFxkZWZsYW5nMTAzNntc
+Zm9udHRibHtcZjBcZm5pbFxmY2hhcnNldDAgTW9udHNlcnJhdDt9fQ0Ke1xjb2xvcnRibCA7
+XHJlZDBcZ3JlZW4wXGJsdWUwO30NCntcKlxnZW5lcmF0b3IgUmljaGVkMjAgMTAuMC4yNjEw
+MH1cdmlld2tpbmQ0XHVjMSANClxwYXJkXGNmMVxmMFxmczE4IExBIFBPU1RFXHBhcg0KfQ0K
+AA==</rtf_data>
+					<emptylines_property>1</emptylines_property>
+					<horizontal_alignment>2</horizontal_alignment>
+					<vertical_alignment>4</vertical_alignment>
+					<vertical_text>no</vertical_text><textcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></textcolor>
+					<cmyk_output>no</cmyk_output>
+					<copy_fitting>
+						<reduce_to_fit>no</reduce_to_fit>
+						<fontsize_minimum>8</fontsize_minimum>
+						<allow_line_breaks>yes</allow_line_breaks>
+					</copy_fitting>
+				</text_object>
+			</object>
+			<object>
+				<identifier>{0657813E-150B-8B28-B8C9-4B3911CB9418}</identifier>
+				<name>Affranchissement (sys-affranchissement)</name>
+				<locked>yes</locked>
+				<knockout>no</knockout>
+				<border_size>0</border_size>
+				<border_style>0</border_style><fillcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></fillcolor><bordercolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></bordercolor>
+				<rotation>0</rotation>
+				<bounds left="462.04724" top="121.88976" right="530.07874" bottom="144.56693"/>
+				<snap_frame_to_content>yes</snap_frame_to_content>
+				<show_mode>
+					<editor>yes</editor>
+					<jpeg_preview>yes</jpeg_preview>
+					<pdf_preview>yes</pdf_preview>
+					<print_preview>yes</print_preview>
+					<print>yes</print>
+				</show_mode>
+				<anchor>
+					<horizontal>0</horizontal>
+					<vertical>0</vertical>
+					<source></source>
+					<source_bounds left="0" top="0" right="0" bottom="0"/>
+				</anchor>
+				<plugin_object title="Barcode" assembly_name="Barcode.plugins.dll" assembly_version="2.2.3.9078" class_name="Barcode" url="http://www.printshopmail.com/plugins/barcode/" url_download_version="http://www.printshopmail.com/plugins/barcode/2_2/Barcode.plugins.dll">
+					<property_bag><Barcode><RotationFixed>0</RotationFixed><BoundsIsRotated>False</BoundsIsRotated><Initialized>True</Initialized><Type>DataMatrix</Type><DataMatrix_SymbolSize>Rectangle12x36</DataMatrix_SymbolSize><Data>[Timbre]</Data><Alignment>0;0</Alignment></Barcode>
+					</property_bag>
+				</plugin_object>
+			</object>
+		</layout>
+	</layouts>
+	<variables>
+		<variable>
+			<name>Sequentiel</name>
+			<global>no</global>
+			<expression>[Sequentiel]</expression>
+			<Formatting>3</Formatting>
+			<Locale_ID>1036</Locale_ID>
+			<Currency_Symbol>€</Currency_Symbol>
+			<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+			<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+			<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+			<Currency_GroupingSymbol></Currency_GroupingSymbol>
+			<Currency_NegativeFormat>8</Currency_NegativeFormat>
+			<Currency_PositiveFormat>3</Currency_PositiveFormat>
+			<Number_DecimalSymbol>,</Number_DecimalSymbol>
+			<Number_DecimalPlaces>2</Number_DecimalPlaces>
+			<Number_DigitsInGroup>3</Number_DigitsInGroup>
+			<Number_GroupingSymbol></Number_GroupingSymbol>
+			<Number_LeadingZeros>1</Number_LeadingZeros>
+			<Number_NegativeSymbol>-</Number_NegativeSymbol>
+			<Number_NegativeFormat>1</Number_NegativeFormat>
+			<Date_Style>dddd d MMMM yyyy</Date_Style>
+		</variable>
+		<variable>
+			<name>Societe</name>
+			<global>no</global>
+			<expression>[Societe]</expression>
+			<Formatting>3</Formatting>
+			<Locale_ID>1036</Locale_ID>
+			<Currency_Symbol>€</Currency_Symbol>
+			<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+			<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+			<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+			<Currency_GroupingSymbol></Currency_GroupingSymbol>
+			<Currency_NegativeFormat>8</Currency_NegativeFormat>
+			<Currency_PositiveFormat>3</Currency_PositiveFormat>
+			<Number_DecimalSymbol>,</Number_DecimalSymbol>
+			<Number_DecimalPlaces>2</Number_DecimalPlaces>
+			<Number_DigitsInGroup>3</Number_DigitsInGroup>
+			<Number_GroupingSymbol></Number_GroupingSymbol>
+			<Number_LeadingZeros>1</Number_LeadingZeros>
+			<Number_NegativeSymbol>-</Number_NegativeSymbol>
+			<Number_NegativeFormat>1</Number_NegativeFormat>
+			<Date_Style>dddd d MMMM yyyy</Date_Style>
+		</variable>
+		<variable>
+			<name>Pays</name>
+			<global>no</global>
+			<expression>[Pays]</expression>
+			<Formatting>3</Formatting>
+			<Locale_ID>1036</Locale_ID>
+			<Currency_Symbol>€</Currency_Symbol>
+			<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+			<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+			<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+			<Currency_GroupingSymbol></Currency_GroupingSymbol>
+			<Currency_NegativeFormat>8</Currency_NegativeFormat>
+			<Currency_PositiveFormat>3</Currency_PositiveFormat>
+			<Number_DecimalSymbol>,</Number_DecimalSymbol>
+			<Number_DecimalPlaces>2</Number_DecimalPlaces>
+			<Number_DigitsInGroup>3</Number_DigitsInGroup>
+			<Number_GroupingSymbol></Number_GroupingSymbol>
+			<Number_LeadingZeros>1</Number_LeadingZeros>
+			<Number_NegativeSymbol>-</Number_NegativeSymbol>
+			<Number_NegativeFormat>1</Number_NegativeFormat>
+			<Date_Style>dddd d MMMM yyyy</Date_Style>
+		</variable>
+		<variable>
+			<name>Ville</name>
+			<global>no</global>
+			<expression>[Ville]</expression>
+			<Formatting>3</Formatting>
+			<Locale_ID>1036</Locale_ID>
+			<Currency_Symbol>€</Currency_Symbol>
+			<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+			<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+			<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+			<Currency_GroupingSymbol></Currency_GroupingSymbol>
+			<Currency_NegativeFormat>8</Currency_NegativeFormat>
+			<Currency_PositiveFormat>3</Currency_PositiveFormat>
+			<Number_DecimalSymbol>,</Number_DecimalSymbol>
+			<Number_DecimalPlaces>2</Number_DecimalPlaces>
+			<Number_DigitsInGroup>3</Number_DigitsInGroup>
+			<Number_GroupingSymbol></Number_GroupingSymbol>
+			<Number_LeadingZeros>1</Number_LeadingZeros>
+			<Number_NegativeSymbol>-</Number_NegativeSymbol>
+			<Number_NegativeFormat>1</Number_NegativeFormat>
+			<Date_Style>dddd d MMMM yyyy</Date_Style>
+		</variable>
+		<variable>
+			<name>CodePostal</name>
+			<global>no</global>
+			<expression>[CodePostal]</expression>
+			<Formatting>3</Formatting>
+			<Locale_ID>1036</Locale_ID>
+			<Currency_Symbol>€</Currency_Symbol>
+			<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+			<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+			<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+			<Currency_GroupingSymbol></Currency_GroupingSymbol>
+			<Currency_NegativeFormat>8</Currency_NegativeFormat>
+			<Currency_PositiveFormat>3</Currency_PositiveFormat>
+			<Number_DecimalSymbol>,</Number_DecimalSymbol>
+			<Number_DecimalPlaces>2</Number_DecimalPlaces>
+			<Number_DigitsInGroup>3</Number_DigitsInGroup>
+			<Number_GroupingSymbol></Number_GroupingSymbol>
+			<Number_LeadingZeros>1</Number_LeadingZeros>
+			<Number_NegativeSymbol>-</Number_NegativeSymbol>
+			<Number_NegativeFormat>1</Number_NegativeFormat>
+			<Date_Style>dddd d MMMM yyyy</Date_Style>
+		</variable>
+		<variable>
+			<name>Civilite</name>
+			<global>no</global>
+			<expression>[Civilite]</expression>
+			<Formatting>3</Formatting>
+			<Locale_ID>1036</Locale_ID>
+			<Currency_Symbol>€</Currency_Symbol>
+			<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+			<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+			<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+			<Currency_GroupingSymbol></Currency_GroupingSymbol>
+			<Currency_NegativeFormat>8</Currency_NegativeFormat>
+			<Currency_PositiveFormat>3</Currency_PositiveFormat>
+			<Number_DecimalSymbol>,</Number_DecimalSymbol>
+			<Number_DecimalPlaces>2</Number_DecimalPlaces>
+			<Number_DigitsInGroup>3</Number_DigitsInGroup>
+			<Number_GroupingSymbol></Number_GroupingSymbol>
+			<Number_LeadingZeros>1</Number_LeadingZeros>
+			<Number_NegativeSymbol>-</Number_NegativeSymbol>
+			<Number_NegativeFormat>1</Number_NegativeFormat>
+			<Date_Style>dddd d MMMM yyyy</Date_Style>
+		</variable>
+		<variable>
+			<name>Adresse1</name>
+			<global>no</global>
+			<expression>[Adresse1]</expression>
+			<Formatting>3</Formatting>
+			<Locale_ID>1036</Locale_ID>
+			<Currency_Symbol>€</Currency_Symbol>
+			<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+			<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+			<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+			<Currency_GroupingSymbol></Currency_GroupingSymbol>
+			<Currency_NegativeFormat>8</Currency_NegativeFormat>
+			<Currency_PositiveFormat>3</Currency_PositiveFormat>
+			<Number_DecimalSymbol>,</Number_DecimalSymbol>
+			<Number_DecimalPlaces>2</Number_DecimalPlaces>
+			<Number_DigitsInGroup>3</Number_DigitsInGroup>
+			<Number_GroupingSymbol></Number_GroupingSymbol>
+			<Number_LeadingZeros>1</Number_LeadingZeros>
+			<Number_NegativeSymbol>-</Number_NegativeSymbol>
+			<Number_NegativeFormat>1</Number_NegativeFormat>
+			<Date_Style>dddd d MMMM yyyy</Date_Style>
+		</variable>
+		<variable>
+			<name>Adresse2</name>
+			<global>no</global>
+			<expression>[Adresse2]</expression>
+			<Formatting>3</Formatting>
+			<Locale_ID>1036</Locale_ID>
+			<Currency_Symbol>€</Currency_Symbol>
+			<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+			<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+			<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+			<Currency_GroupingSymbol></Currency_GroupingSymbol>
+			<Currency_NegativeFormat>8</Currency_NegativeFormat>
+			<Currency_PositiveFormat>3</Currency_PositiveFormat>
+			<Number_DecimalSymbol>,</Number_DecimalSymbol>
+			<Number_DecimalPlaces>2</Number_DecimalPlaces>
+			<Number_DigitsInGroup>3</Number_DigitsInGroup>
+			<Number_GroupingSymbol></Number_GroupingSymbol>
+			<Number_LeadingZeros>1</Number_LeadingZeros>
+			<Number_NegativeSymbol>-</Number_NegativeSymbol>
+			<Number_NegativeFormat>1</Number_NegativeFormat>
+			<Date_Style>dddd d MMMM yyyy</Date_Style>
+		</variable>
+		<variable>
+			<name>Adresse3</name>
+			<global>no</global>
+			<expression>[Adresse3]</expression>
+			<Formatting>3</Formatting>
+			<Locale_ID>1036</Locale_ID>
+			<Currency_Symbol>€</Currency_Symbol>
+			<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+			<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+			<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+			<Currency_GroupingSymbol></Currency_GroupingSymbol>
+			<Currency_NegativeFormat>8</Currency_NegativeFormat>
+			<Currency_PositiveFormat>3</Currency_PositiveFormat>
+			<Number_DecimalSymbol>,</Number_DecimalSymbol>
+			<Number_DecimalPlaces>2</Number_DecimalPlaces>
+			<Number_DigitsInGroup>3</Number_DigitsInGroup>
+			<Number_GroupingSymbol></Number_GroupingSymbol>
+			<Number_LeadingZeros>1</Number_LeadingZeros>
+			<Number_NegativeSymbol>-</Number_NegativeSymbol>
+			<Number_NegativeFormat>1</Number_NegativeFormat>
+			<Date_Style>dddd d MMMM yyyy</Date_Style>
+		</variable>
+		<variable>
+			<name>Adresse4</name>
+			<global>no</global>
+			<expression>[Adresse4]</expression>
+			<Formatting>3</Formatting>
+			<Locale_ID>1036</Locale_ID>
+			<Currency_Symbol>€</Currency_Symbol>
+			<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+			<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+			<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+			<Currency_GroupingSymbol></Currency_GroupingSymbol>
+			<Currency_NegativeFormat>8</Currency_NegativeFormat>
+			<Currency_PositiveFormat>3</Currency_PositiveFormat>
+			<Number_DecimalSymbol>,</Number_DecimalSymbol>
+			<Number_DecimalPlaces>2</Number_DecimalPlaces>
+			<Number_DigitsInGroup>3</Number_DigitsInGroup>
+			<Number_GroupingSymbol></Number_GroupingSymbol>
+			<Number_LeadingZeros>1</Number_LeadingZeros>
+			<Number_NegativeSymbol>-</Number_NegativeSymbol>
+			<Number_NegativeFormat>1</Number_NegativeFormat>
+			<Date_Style>dddd d MMMM yyyy</Date_Style>
+		</variable>
+		<variable>
+			<name>Image 1</name>
+			<global>no</global>
+			<expression>"D:\Mes Sites\Version SaaS 2026\Marketeam\MARKETEAM_WEB\Upload\Ltr1-20260408134041707.pdf"</expression>
+			<Formatting>3</Formatting>
+			<Locale_ID>1036</Locale_ID>
+			<Currency_Symbol>€</Currency_Symbol>
+			<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+			<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+			<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+			<Currency_GroupingSymbol></Currency_GroupingSymbol>
+			<Currency_NegativeFormat>8</Currency_NegativeFormat>
+			<Currency_PositiveFormat>3</Currency_PositiveFormat>
+			<Number_DecimalSymbol>,</Number_DecimalSymbol>
+			<Number_DecimalPlaces>2</Number_DecimalPlaces>
+			<Number_DigitsInGroup>3</Number_DigitsInGroup>
+			<Number_GroupingSymbol></Number_GroupingSymbol>
+			<Number_LeadingZeros>1</Number_LeadingZeros>
+			<Number_NegativeSymbol>-</Number_NegativeSymbol>
+			<Number_NegativeFormat>1</Number_NegativeFormat>
+			<Date_Style>dddd d MMMM yyyy</Date_Style>
+		</variable>
+		<variable>
+			<name>Prenom</name>
+			<global>no</global>
+			<expression>[Prenom]</expression>
+			<Formatting>3</Formatting>
+			<Locale_ID>1036</Locale_ID>
+			<Currency_Symbol>€</Currency_Symbol>
+			<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+			<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+			<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+			<Currency_GroupingSymbol></Currency_GroupingSymbol>
+			<Currency_NegativeFormat>8</Currency_NegativeFormat>
+			<Currency_PositiveFormat>3</Currency_PositiveFormat>
+			<Number_DecimalSymbol>,</Number_DecimalSymbol>
+			<Number_DecimalPlaces>2</Number_DecimalPlaces>
+			<Number_DigitsInGroup>3</Number_DigitsInGroup>
+			<Number_GroupingSymbol></Number_GroupingSymbol>
+			<Number_LeadingZeros>1</Number_LeadingZeros>
+			<Number_NegativeSymbol>-</Number_NegativeSymbol>
+			<Number_NegativeFormat>1</Number_NegativeFormat>
+			<Date_Style>dddd d MMMM yyyy</Date_Style>
+		</variable>
+		<variable>
+			<name>Nom</name>
+			<global>no</global>
+			<expression>[Nom]</expression>
+			<Formatting>3</Formatting>
+			<Locale_ID>1036</Locale_ID>
+			<Currency_Symbol>€</Currency_Symbol>
+			<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+			<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+			<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+			<Currency_GroupingSymbol></Currency_GroupingSymbol>
+			<Currency_NegativeFormat>8</Currency_NegativeFormat>
+			<Currency_PositiveFormat>3</Currency_PositiveFormat>
+			<Number_DecimalSymbol>,</Number_DecimalSymbol>
+			<Number_DecimalPlaces>2</Number_DecimalPlaces>
+			<Number_DigitsInGroup>3</Number_DigitsInGroup>
+			<Number_GroupingSymbol></Number_GroupingSymbol>
+			<Number_LeadingZeros>1</Number_LeadingZeros>
+			<Number_NegativeSymbol>-</Number_NegativeSymbol>
+			<Number_NegativeFormat>1</Number_NegativeFormat>
+			<Date_Style>dddd d MMMM yyyy</Date_Style>
+		</variable>
+	</variables>
+	<data_fields>
+		<data_field>
+			<in_use>yes</in_use>
+			<name>Societe</name>
+			<default_value></default_value>
+			<source>user_input</source>
+			<remarks></remarks>
+		</data_field>
+		<data_field>
+			<in_use>yes</in_use>
+			<name>Civilite</name>
+			<default_value></default_value>
+			<source>user_input</source>
+			<remarks></remarks>
+		</data_field>
+		<data_field>
+			<in_use>yes</in_use>
+			<name>Nom</name>
+			<default_value></default_value>
+			<source>user_input</source>
+			<remarks></remarks>
+		</data_field>
+		<data_field>
+			<in_use>yes</in_use>
+			<name>Prenom</name>
+			<default_value></default_value>
+			<source>user_input</source>
+			<remarks></remarks>
+		</data_field>
+		<data_field>
+			<in_use>yes</in_use>
+			<name>Adresse1</name>
+			<default_value></default_value>
+			<source>user_input</source>
+			<remarks></remarks>
+		</data_field>
+		<data_field>
+			<in_use>yes</in_use>
+			<name>Adresse2</name>
+			<default_value></default_value>
+			<source>user_input</source>
+			<remarks></remarks>
+		</data_field>
+		<data_field>
+			<in_use>yes</in_use>
+			<name>Adresse3</name>
+			<default_value></default_value>
+			<source>user_input</source>
+			<remarks></remarks>
+		</data_field>
+		<data_field>
+			<in_use>yes</in_use>
+			<name>Adresse4</name>
+			<default_value></default_value>
+			<source>user_input</source>
+			<remarks></remarks>
+		</data_field>
+		<data_field>
+			<in_use>yes</in_use>
+			<name>CodePostal</name>
+			<default_value></default_value>
+			<source>user_input</source>
+			<remarks></remarks>
+		</data_field>
+		<data_field>
+			<in_use>yes</in_use>
+			<name>Ville</name>
+			<default_value></default_value>
+			<source>user_input</source>
+			<remarks></remarks>
+		</data_field>
+		<data_field>
+			<in_use>yes</in_use>
+			<name>Pays</name>
+			<default_value></default_value>
+			<source>user_input</source>
+			<remarks></remarks>
+		</data_field>
+		<data_field>
+			<in_use>yes</in_use>
+			<name>Sequentiel</name>
+			<default_value></default_value>
+			<source>user_input</source>
+			<remarks></remarks>
+		</data_field>
+		<data_field>
+			<in_use>yes</in_use>
+			<name>Timbre</name>
+			<default_value></default_value>
+			<source>user_input</source>
+			<remarks></remarks>
+		</data_field>
+	</data_fields>
+	<template_folders>
+	</template_folders>
+	<embedded_ps>
+		<author>PrintShop Mail</author>
+		<creation_date>1992-07-01T11:00:00</creation_date>
+		<last_modification_date>1992-07-01T11:00:00</last_modification_date>
+		<name>Ne rien intégrer</name>
+		<description></description>
+		<start_of_page></start_of_page>
+		<start_of_job></start_of_job>
+		<between_sets></between_sets>
+	</embedded_ps>
+	<thumbnail>
+		<jpeg>/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQY
+GBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYa
+KCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAAR
+CAOlApQDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAA
+AgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkK
+FhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWG
+h4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl
+5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREA
+AgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYk
+NOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOE
+hYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk
+5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD0zwX4V0GbwlpEs2kWLyPaxszNCCScda2v
++EQ8Pf8AQFsP+/K0eBf+RN0X/r0j/wDQRW7X8/4zGYhYip+8l8T6vuerGKstDC/4RDw9/wBA
+Ww/78rR/wiHh7/oC2H/fla3aK5vruI/5+S+9lcq7GF/wiHh7/oC2H/flaP8AhEPD3/QFsP8A
+vytbtFH13Ef8/Jfew5V2ML/hEPD3/QFsP+/K0f8ACIeHv+gLYf8Afla3aKPruI/5+S+9hyrs
+YX/CIeHv+gLYf9+Vo/4RDw9/0BbD/vytbtFH13Ef8/Jfew5V2ML/AIRDw9/0BbD/AL8rR/wi
+Hh7/AKAth/35Wt2ij67iP+fkvvYcq7GF/wAIh4e/6Ath/wB+Vo/4RDw9/wBAWw/78rW7RR9d
+xH/PyX3sOVdjC/4RDw9/0BbD/vytH/CIeHv+gLYf9+Vrdoo+u4j/AJ+S+9hyrsYX/CIeHv8A
+oC2H/flaP+EQ8Pf9AWw/78rW7RR9dxH/AD8l97DlXYwv+EQ8Pf8AQFsP+/K0f8Ih4e/6Ath/
+35Wt2ij67iP+fkvvYcq7GF/wiHh7/oC2H/flaP8AhEPD3/QFsP8AvytbtFH13Ef8/Jfew5V2
+ML/hEPD3/QFsP+/K0f8ACIeHv+gLYf8Afla3aKPruI/5+S+9hyrsYX/CIeHv+gLYf9+Vo/4R
+Dw9/0BbD/vytbtFH13Ef8/Jfew5V2ML/AIRDw9/0BbD/AL8rR/wiHh7/AKAth/35Wt2ij67i
+P+fkvvYcq7GF/wAIh4e/6Ath/wB+Vo/4RDw9/wBAWw/78rW7RR9dxH/PyX3sOVdjC/4RDw9/
+0BbD/vytH/CIeHv+gLYf9+Vrdoo+u4j/AJ+S+9hyrsYX/CIeHv8AoC2H/flaP+EQ8Pf9AWw/
+78rW7RR9dxH/AD8l97DlXYwv+EQ8Pf8AQFsP+/K0f8Ih4e/6Ath/35Wt2ij67iP+fkvvYcq7
+GF/wiHh7/oC2H/flaP8AhEPD3/QFsP8AvytbtFH13Ef8/Jfew5V2ML/hEPD3/QFsP+/K0f8A
+CIeHv+gLYf8Afla3aKPruI/5+S+9hyrsYX/CIeHv+gLYf9+Vo/4RDw9/0BbD/vytbtFH13Ef
+8/Jfew5V2ML/AIRDw9/0BbD/AL8rR/wiHh7/AKAth/35Wt2ij67iP+fkvvYcq7GF/wAIh4e/
+6Ath/wB+Vo/4RDw9/wBAWw/78rW7RR9dxH/PyX3sOVdjC/4RDw9/0BbD/vytH/CIeHv+gLYf
+9+Vrdoo+u4j/AJ+S+9hyrsYX/CIeHv8AoC2H/flaP+EQ8Pf9AWw/78rW7RR9dxH/AD8l97Dl
+XYwv+EQ8Pf8AQFsP+/K0f8Ih4e/6Ath/35Wt2ij67iP+fkvvYcq7GF/wiHh7/oC2H/flaP8A
+hEPD3/QFsP8AvytbtFH13Ef8/Jfew5V2ML/hEPD3/QFsP+/K0f8ACIeHv+gLYf8Afla3aKPr
+uI/5+S+9hyrsYX/CIeHv+gLYf9+Vo/4RDw9/0BbD/vytbtFH13Ef8/Jfew5V2ML/AIRDw9/0
+BbD/AL8rR/wiHh7/AKAth/35Wt2ij67iP+fkvvYcq7GF/wAIh4e/6Ath/wB+Vo/4RDw9/wBA
+Ww/78rW7RR9dxH/PyX3sOVdjC/4RDw9/0BbD/vytH/CIeHv+gLYf9+Vrdoo+u4j/AJ+S+9hy
+rsYX/CIeHv8AoC2H/flaP+EQ8Pf9AWw/78rW7RR9dxH/AD8l97DlXYwv+EQ8Pf8AQFsP+/K0
+f8Ih4e/6Ath/35Wt2ij67iP+fkvvYcq7GF/wiHh7/oC2H/flaP8AhEPD3/QFsP8AvytbtFH1
+3Ef8/Jfew5V2ML/hEPD3/QFsP+/K0f8ACIeHv+gLYf8Afla3aKPruI/5+S+9hyrsYX/CIeHv
++gLYf9+Vo/4RDw9/0BbD/vytbtFH13Ef8/Jfew5V2ML/AIRDw9/0BbD/AL8rR/wiHh7/AKAt
+h/35Wt2ij67iP+fkvvYcq7GF/wAIh4e/6Ath/wB+Vo/4RDw9/wBAWw/78rW7RR9dxH/PyX3s
+OVdjC/4RDw9/0BbD/vytH/CIeHv+gLYf9+Vrdoo+u4j/AJ+S+9hyrsYX/CIeHv8AoC2H/fla
+P+EQ8Pf9AWw/78rW7RR9dxH/AD8l97DlXY8l8e+G9Fg1iFYdLs41MAOFiA53NRWt8RP+Q1B/
+17r/AOhNRX1GDxVZ0I3m9u7OeUVfY6fwL/yJui/9ekf/AKCK3awvAv8AyJui/wDXpH/6CK3a
++Xxv+8VP8T/M3jsgooormKCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACi
+iigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoooo
+AKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACi
+iigAooooAKKKKAPO/iJ/yGoP+vdf/Qmoo+In/Iag/wCvdf8A0JqK+qwX8CHoYS3On8C/8ibo
+v/XpH/6CK3awvAv/ACJui/8AXpH/AOgit2vnsb/vFT/E/wAzWOyCiiiuYoKKKKACiiigAooo
+oAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAC
+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooo
+oAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA87+In/ACGoP+vdf/Qmoo+I
+n/Iag/691/8AQmor6rBfwIehhLc6fwL/AMibov8A16R/+git2sLwL/yJui/9ekf/AKCK3a+e
+xv8AvFT/ABP8zWOyCiiiuYoKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK
+KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiii
+gAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK
+KKKACiiigAooooA87+In/Iag/wCvdf8A0JqKPiJ/yGoP+vdf/Qmor6rBfwIehhLc6fwL/wAi
+bov/AF6R/wDoIrdrC8C/8ibov/XpH/6CK3a+exv+8VP8T/M1jsgooormKCiiigAooooAKKKK
+ACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAo
+oooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKK
+ACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAPO/iJ/yGoP+vdf/AEJqKPiJ
+/wAhqD/r3X/0JqK+qwX8CHoYS3On8C/8ibov/XpH/wCgit2sLwL/AMibov8A16R/+git2vns
+b/vFT/E/zNY7IKKKK5igooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoooo
+AKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACi
+iigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoooo
+AKKKKACiiigDzv4if8hqD/r3X/0JqKPiJ/yGoP8Ar3X/ANCaivqsF/Ah6GEtzp/Av/Im6L/1
+6R/+git2sLwL/wAibov/AF6R/wDoIrdr57G/7xU/xP8AM1jsgooormKCiiigAooooAKKKKAC
+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooo
+oAKKKyIdfs7j+yjaxalcRapDFcWs8Gm3EkLRy/cLSLGVj9SHKlRycCunD4LEYq/1enKdt7Ju
+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
+AK91/wDQmor6rBfwIehhLc6fwL/yJui/9ekf/oIrdrC8C/8AIm6L/wBekf8A6CK3a+exv+8V
+P8T/ADNY7IKKKK5igooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKK
+KKACiiigAooooAKKKKACiiigAooooAKKKKACpvh7Ba23gHw1Bp959usotMtkguvKMXnxiJQr
+7Dyu4YODyM4qGpvh7Pa3PgHw1Pp9n9hspdMtngtfNMvkRmJSqbzy20YGTycZr9J8Pf8AmJ/7
+c/8AbjjxfQ6Ciiiv0k4wrnNS8MS3OvyatZa/q2mTSwxwTRWq2zRyLGzlc+bC5B+duhFdHRQH
+kclZ/D3w9ZXNte2llHDq8NwbltUSGMXc7liX8yTblg+5gR0weMYGN2w0m3sptTkQu/8AaE/2
+iZZMEBvLSPA46YQdc8k1oUUdLf1/WgdbnK2PguC2ubQzavq93YWRzZ6fcSoYbcgYUhlQSOVB
+IHmO+OvUAifSPCosdSgvLvWdV1RrVGjtEvmiYW4bAOGSNXckADMjMffJJro6KAORl8DxrcQX
+Gma5q+mXET3b+ZbC3csLibznUiWJxgMBjABx1JrptPt5LWyhgnu57yVFw1xOEDyH1YIqrn6K
+BViijpYHq7hRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUABAI
+IIyD2o6dKKKACiiigAooooA43TP7U8u6/tz/AI+/tt1s+7/qPPk8j7vH+q8v39ec1crI8MwW
+tvZXqWN59siOp37tJ5Rj2yNdzNImD/ccsmejbcjg1r1/P+c/8jHEf45/+lM9Wn8C9AooorzS
+zzv4if8AIag/691/9Caij4if8hqD/r3X/wBCaivqsF/Ah6GEtzp/Av8AyJui/wDXpH/6CK3a
+wvAv/Im6L/16R/8AoIrdr57G/wC8VP8AE/zNY7IKKKK5igooooAKKKKACiiigAooooAKKKKA
+CiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACtHwn/an
+/CK6N/wkP/Ia+xQ/bvu/6/YPM+58v3s/d49OKzqm+HsFrbeAfDUGn3n26yi0y2SC68oxefGI
+lCvsPK7hg4PIziv0nw9/5if+3P8A2448X0Ogooor9JOMKKKKACiiigAooooAKKKKACiiigAo
+oooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA4Lwz
+Pa3FlevY2f2OIanfo0fmmTdIt3Msj5P99wz46LuwOBWvVPTP7U8u6/tz/j7+23Wz7v8AqPPk
+8j7vH+q8v39ec1cr+f8AOf8AkY4j/HP/ANKZ6tP4F6BRRRXmlnnfxE/5DUH/AF7r/wChNRR8
+RP8AkNQf9e6/+hNRX1WC/gQ9DCW50/gX/kTdF/69I/8A0EVu1heBf+RN0X/r0j/9BFbtfPY3
+/eKn+J/max2QUUUVzFBRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQA
+UUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFTfD2e1ufAPhqfT7P7DZS6ZbPBa+aZfIjMS
+lU3nltowMnk4zUNaPhP+1P8AhFdG/wCEh/5DX2KH7d93/X7B5n3Pl+9n7vHpxX6T4e/8xP8A
+25/7cceL6GrRRRX6ScYUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUA
+FFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQBwXhmC1t7K9SxvPtkR1O/dpPKMe2Rr
+uZpEwf7jlkz0bbkcGtesjwzPa3FlevY2f2OIanfo0fmmTdIt3Msj5P8AfcM+Oi7sDgVr1/P+
+c/8AIxxH+Of/AKUz1afwL0CiiivNLPO/iJ/yGoP+vdf/AEJqKPiJ/wAhqD/r3X/0JqK+qwX8
+CHoYS3On8C/8ibov/XpH/wCgit2sLwL/AMibov8A16R/+git2vnsb/vFT/E/zNY7IKKKK5ig
+ooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKK
+KACiiigAooooAKKKKACpvh7Ba23gHw1Bp959usotMtkguvKMXnxiJQr7Dyu4YODyM4qGpvh7
+Pa3PgHw1Pp9n9hspdMtngtfNMvkRmJSqbzy20YGTycZr9J8Pf+Yn/tz/ANuOPF9DoKKKK/ST
+jCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAo
+oooAKKKKACiiigAooooAKKKKAON0z+1PLuv7c/4+/tt1s+7/AKjz5PI+7x/qvL9/XnNXKyPD
+MFrb2V6ljefbIjqd+7SeUY9sjXczSJg/3HLJno23I4Na9fz/AJz/AMjHEf45/wDpTPVp/AvQ
+KKKK80s87+In/Iag/wCvdf8A0JqKPiJ/yGoP+vdf/Qmor6rBfwIehhLc6fwL/wAibov/AF6R
+/wDoIrdrC8C/8ibov/XpH/6CK3a+exv+8VP8T/M1jsgooormKCiiigAooooAKKKKACiiigAo
+oooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK0fC
+f9qf8Iro3/CQ/wDIa+xQ/bvu/wCv2DzPufL97P3ePTis6pvh7Ba23gHw1Bp959usotMtkguv
+KMXnxiJQr7Dyu4YODyM4r9J8Pf8AmJ/7c/8AbjjxfQ6Ciiiv0k4wooooAKKKKACiiigAoooo
+AKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACi
+iigDgvDM9rcWV69jZ/Y4hqd+jR+aZN0i3cyyPk/33DPjou7A4Fa9U9M/tTy7r+3P+Pv7bdbP
+u/6jz5PI+7x/qvL9/XnNXK/n/Of+RjiP8c//AEpnq0/gXoFFFFeaWed/ET/kNQf9e6/+hNRR
+8RP+Q1B/17r/AOhNRX1WC/gQ9DCW50/gX/kTdF/69I//AEEVu1heBf8AkTdF/wCvSP8A9BFb
+tfPY3/eKn+J/max2QUUUVzFBRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFAB
+RRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFTfD2e1ufAPhqfT7P7DZS6ZbPBa+aZ
+fIjMSlU3nltowMnk4zUNaPhP+1P+EV0b/hIf+Q19ih+3fd/1+weZ9z5fvZ+7x6cV+k+Hv/MT
+/wBuf+3HHi+hq0UUV+knGFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFF
+FABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAcF4ZgtbeyvUsbz7ZEdTv3aTyjHt
+ka7maRMH+45ZM9G25HBrXrI8Mz2txZXr2Nn9jiGp36NH5pk3SLdzLI+T/fcM+Oi7sDgVr1/P
++c/8jHEf45/+lM9Wn8C9AooorzSzzv4if8hqD/r3X/0JqKPiJ/yGoP8Ar3X/ANCaivqsF/Ah
+6GEtzp/Av/Im6L/16R/+git2sLwL/wAibov/AF6R/wDoIrdr57G/7xU/xP8AM1jsgooormKC
+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooo
+oAKKKKACiiigAooooAKm+HsFrbeAfDUGn3n26yi0y2SC68oxefGIlCvsPK7hg4PIzioam+Hs
+9rc+AfDU+n2f2Gyl0y2eC180y+RGYlKpvPLbRgZPJxmv0nw9/wCYn/tz/wBuOPF9DoKKKK/S
+TjCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigA
+ooooAKKKKACiiigAooooAKKKKAON0z+1PLuv7c/4+/tt1s+7/qPPk8j7vH+q8v39ec1crI8M
+wWtvZXqWN59siOp37tJ5Rj2yNdzNImD/AHHLJno23I4Na9fz/nP/ACMcR/jn/wClM9Wn8C9A
+ooorzSzzv4if8hqD/r3X/wBCaij4if8AIag/691/9CaivqsF/Ah6GEtzp/Av/Im6L/16R/8A
+oIrdrC8C/wDIm6L/ANekf/oIrdr57G/7xU/xP8zWOyCiiiuYoKKKKACiiigAooooAKKKKACi
+iigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigArR8J
+/wBqf8Iro3/CQ/8AIa+xQ/bvu/6/YPM+58v3s/d49OKzqwvCtp4j0DwjBoqarpE8lla29pYz
+nTJFCJGApMqfaP3hKgfdKYOTz0r7fg3N8Hlntvrc+Xm5baN7c19k+6ObEU5Ttyo9DorjLi68
+VNYWaW2p6JHerv8AtMsmlyvHLk/JsQXAKYHByzZPI29Kt/btc/t3zftem/2L/wA+v2J/tH3c
+f67zdv3uf9X046/NX23+t+T/APP7/wAll/8AInN9XqdjqKK4y3uvFS2F4lzqeiSXrbPs0sel
+ypHFg/PvQ3BL5HAwy4PJ3dKLi68VNYWaW2p6JHerv+0yyaXK8cuT8mxBcApgcHLNk8jb0o/1
+vyf/AJ/f+Sy/+RD6vU7HZ0Vy/wBu1z+3fN+16b/Yv/Pr9if7R93H+u83b97n/V9OOvzVUt7r
+xUtheJc6nokl62z7NLHpcqRxYPz70NwS+RwMMuDyd3Sj/W/J/wDn9/5LL/5EPq9TsdnRXGXF
+14qaws0ttT0SO9Xf9plk0uV45cn5NiC4BTA4OWbJ5G3pVv7drn9u+b9r03+xf+fX7E/2j7uP
+9d5u373P+r6cdfmo/wBb8n/5/f8Aksv/AJEPq9TsdRRXGW914qWwvEudT0SS9bZ9mlj0uVI4
+sH596G4JfI4GGXB5O7pRcXXiprCzS21PRI71d/2mWTS5Xjlyfk2ILgFMDg5ZsnkbelH+t+T/
+APP7/wAll/8AIh9Xqdjs6K5f7drn9u+b9r03+xf+fX7E/wBo+7j/AF3m7fvc/wCr6cdfmqpb
+3XipbC8S51PRJL1tn2aWPS5Ujiwfn3obgl8jgYZcHk7ulH+t+T/8/v8AyWX/AMiH1ep2Ozor
+jLi68VNYWaW2p6JHerv+0yyaXK8cuT8mxBcApgcHLNk8jb0q39u1z+3fN+16b/Yv/Pr9if7R
+93H+u83b97n/AFfTjr81H+t+T/8AP7/yWX/yIfV6nY6iiuMt7rxUtheJc6nokl62z7NLHpcq
+RxYPz70NwS+RwMMuDyd3Si4uvFTWFmltqeiR3q7/ALTLJpcrxy5PybEFwCmBwcs2TyNvSj/W
+/J/+f3/ksv8A5EPq9TsdnRXL/btc/t3zftem/wBi/wDPr9if7R93H+u83b97n/V9OOvzVUt7
+rxUtheJc6nokl62z7NLHpcqRxYPz70NwS+RwMMuDyd3Sj/W/J/8An9/5LL/5EPq9TsdnRXGX
+F14qaws0ttT0SO9Xf9plk0uV45cn5NiC4BTA4OWbJ5G3pVv7drn9u+b9r03+xf8An1+xP9o+
+7j/Xebt+9z/q+nHX5qP9b8n/AOf3/ksv/kQ+r1Ox1FFcZb3XipbC8S51PRJL1tn2aWPS5Uji
+wfn3obgl8jgYZcHk7ulFxdeKmsLNLbU9EjvV3/aZZNLleOXJ+TYguAUwODlmyeRt6Uf635P/
+AM/v/JZf/Ih9Xqdjs6K5f7drn9u+b9r03+xf+fX7E/2j7uP9d5u373P+r6cdfmqpb3XipbC8
+S51PRJL1tn2aWPS5Ujiwfn3obgl8jgYZcHk7ulH+t+T/APP7/wAll/8AIh9Xqdjs6K4y4uvF
+TWFmltqeiR3q7/tMsmlyvHLk/JsQXAKYHByzZPI29Kt/btc/t3zftem/2L/z6/Yn+0fdx/rv
+N2/e5/1fTjr81H+t+T/8/v8AyWX/AMiH1ep2OoorjLe68VLYXiXOp6JJets+zSx6XKkcWD8+
+9DcEvkcDDLg8nd0ouLrxU1hZpbanokd6u/7TLJpcrxy5PybEFwCmBwcs2TyNvSj/AFvyf/n9
+/wCSy/8AkQ+r1Ox2dFcv9u1z+3fN+16b/Yv/AD6/Yn+0fdx/rvN2/e5/1fTjr81VLe68VLYX
+iXOp6JJets+zSx6XKkcWD8+9DcEvkcDDLg8nd0o/1vyf/n9/5LL/AORD6vU7HZ0VxlxdeKms
+LNLbU9EjvV3/AGmWTS5Xjlyfk2ILgFMDg5ZsnkbelW/t2uf275v2vTf7F/59fsT/AGj7uP8A
+Xebt+9z/AKvpx1+aj/W/J/8An9/5LL/5EPq9TsdRRXGW914qWwvEudT0SS9bZ9mlj0uVI4sH
+596G4JfI4GGXB5O7pRcXXiprCzS21PRI71d/2mWTS5Xjlyfk2ILgFMDg5ZsnkbelH+t+T/8A
+P7/yWX/yIfV6nY7OiuX+3a5/bvm/a9N/sX/n1+xP9o+7j/Xebt+9z/q+nHX5qqW914qWwvEu
+dT0SS9bZ9mlj0uVI4sH596G4JfI4GGXB5O7pR/rfk/8Az+/8ll/8iH1ep2OzorjLi68VNYWa
+W2p6JHerv+0yyaXK8cuT8mxBcApgcHLNk8jb0q39u1z+3fN+16b/AGL/AM+v2J/tH3cf67zd
+v3uf9X046/NR/rfk/wDz+/8AJZf/ACIfV6nYyvDM9rcWV69jZ/Y4hqd+jR+aZN0i3cyyPk/3
+3DPjou7A4Fa9VNKTUY7MDWb6K/vi7u88Vv5CEFyVVU3NgKpVRkknbkkkmrdfj+Z1oV8bWq03
+eMpSa9G20ehBWikwoooriKPO/iJ/yGoP+vdf/Qmoo+In/Iag/wCvdf8A0JqK+qwX8CHoYS3O
+n8C/8ibov/XpH/6CK3awvAv/ACJui/8AXpH/AOgit2vnsb/vFT/E/wAzWOyCiiiuYoKKKKAC
+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooo
+oAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAC
+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA87+In/ACGoP+vd
+f/Qmoo+In/Iag/691/8AQmor6rBfwIehhLc6fwL/AMibov8A16R/+git2sLwL/yJui/9ekf/
+AKCK3a+exv8AvFT/ABP8zWOyCiiiuYoKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiii
+gAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK
+KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiii
+gAooooAKKKKACiiigAooooA87+In/Iag/wCvdf8A0JqKPiJ/yGoP+vdf/Qmor6rBfwIehhLc
+6fwL/wAibov/AF6R/wDoIrdrC8C/8ibov/XpH/6CK3a+exv+8VP8T/M1jsgooormKCiiigAo
+oooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKK
+ACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAo
+oooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAPO/iJ/yGoP+vdf/
+AEJqKPiJ/wAhqD/r3X/0JqK+qwX8CHoYS3On8C/8ibov/XpH/wCgit2sLwL/AMibov8A16R/
++git2vnsb/vFT/E/zNY7IKKKK5igooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACi
+iigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoooo
+AKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACi
+iigAooooAKKKKACiiigDzv4if8hqD/r3X/0JqKPiJ/yGoP8Ar3X/ANCaivqsF/Ah6GEtzp/A
+v/Im6L/16R/+git2sLwL/wAibov/AF6R/wDoIrdr57G/7xU/xP8AM1jsgooormKCiiigAooo
+oAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAC
+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooo
+oAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAPO/iJ/wAhqD/r3X/0
+JqKPiJ/yGoP+vdf/AEJqK+qwX8CHoYS3On8C/wDIm6L/ANekf/oIrdrC8C/8ibov/XpH/wCg
+it2vnsb/ALxU/wAT/M1jsgooormKCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK
+KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiii
+gAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK
+KKKACiiigAooooAKKKKAPO/iJ/yGoP8Ar3X/ANCaij4if8hqD/r3X/0JqK+qwX8CHoYS3On8
+C/8AIm6L/wBekf8A6CK3awvAv/Im6L/16R/+git2vnsb/vFT/E/zNY7IKKKK5igooooAKKKK
+ACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAo
+oooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKK
+ACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigDzv4if8hqD/r3X/wBC
+aij4if8AIag/691/9CaivqsF/Ah6GEtzp/Av/Im6L/16R/8AoIrdrC8C/wDIm6L/ANekf/oI
+rdr57G/7xU/xP8zWOyCiiiuYoKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoooo
+AKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACi
+iigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoooo
+AKKKKACiiigAooooA87+In/Iag/691/9Caij4if8hqD/AK91/wDQmor6rBfwIehhLc6fwL/y
+Jui/9ekf/oIrdrC8C/8AIm6L/wBekf8A6CK3a+exv+8VP8T/ADNY7IKKKK5igooooAKKKKAC
+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooo
+oAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAC
+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigDzv4if8AIag/691/9Cai
+j4if8hqD/r3X/wBCaivqsF/Ah6GEtzp/Av8AyJui/wDXpH/6CK3awvAv/Im6L/16R/8AoIrd
+r57G/wC8VP8AE/zNY7IKKKK5igooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiii
+gAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK
+KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiii
+gAooooAKKKKACiiigDzv4if8hqD/AK91/wDQmoo+In/Iag/691/9CaivqsF/Ah6GEtzp/Av/
+ACJui/8AXpH/AOgit2sLwL/yJui/9ekf/oIrdr57G/7xU/xP8zWOyCiiiuYoKKKKACiiigAo
+oooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKK
+ACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAo
+oooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA87+In/Iag/691/8AQmoo
++In/ACGoP+vdf/Qmor6rBfwIehhLc6fwL/yJui/9ekf/AKCK3awvAv8AyJui/wDXpH/6CK3a
++exv+8VP8T/M1jsgooormKCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACi
+iigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoooo
+AKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACi
+iigAooooAKKKKAPO/iJ/yGoP+vdf/Qmoo+In/Iag/wCvdf8A0JqK+qwX8CHoYS3On8C/8ibo
+v/XpH/6CK3awvAv/ACJui/8AXpH/AOgit2vnsb/vFT/E/wAzWOyCiiiuYoKKKKACiiigAooo
+oAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAC
+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooo
+oAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA87+In/ACGoP+vdf/Qmoo+I
+n/Iag/691/8AQmor6rBfwIehhLc6fwL/AMibov8A16R/+git2sLwL/yJui/9ekf/AKCK3a+e
+xv8AvFT/ABP8zWOyCiiiuYoKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK
+KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiii
+gAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK
+KKKACiiigAooooA87+In/Iag/wCvdf8A0JqKPiJ/yGoP+vdf/Qmor6rBfwIehhLc6fwL/wAi
+bov/AF6R/wDoIrdrC8C/8ibov/XpH/6CK3a+exv+8VP8T/M1jsgooormKCiiigAooooAKKKK
+ACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAo
+oooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKK
+ACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAPO/iJ/yGoP+vdf/AEJqKPiJ
+/wAhqD/r3X/0JqK+qwX8CHoYS3On8C/8ibov/XpH/wCgit2sLwL/AMibov8A16R/+git2vns
+b/vFT/E/zNY7IKKKK5igooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoooo
+AKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACi
+iigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoooo
+AKKKKACiiigDzv4if8hqD/r3X/0JqKPiJ/yGoP8Ar3X/ANCaivqsF/Ah6GEtzp/Av/Im6L/1
+6R/+git2sLwL/wAibov/AF6R/wDoIrdr57G/7xU/xP8AM1jsgooormKCiiigAooooAKKKKAC
+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooo
+oAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAC
+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAPO/iJ/wAhqD/r3X/0JqKPiJ/y
+GoP+vdf/AEJqK+qwX8CHoYS3On8C/wDIm6L/ANekf/oIrdrC8C/8ibov/XpH/wCgit2vnsb/
+ALxU/wAT/M1jsgooormKCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiii
+gAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK
+KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiii
+gAooooAKKKKAPO/iJ/yGoP8Ar3X/ANCaij4if8hqD/r3X/0JqK+qwX8CHoYS3On8C/8AIm6L
+/wBekf8A6CK3awvAv/Im6L/16R/+git2vnsb/vFT/E/zNY7IKKKK5igooooAKKKKACiiigAo
+oooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKK
+ACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAo
+oooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigDzv4if8hqD/r3X/wBCaij4if8A
+Iag/691/9CaivqsF/Ah6GEtzp/Av/Im6L/16R/8AoIrdrC8C/wDIm6L/ANekf/oIrdr57G/7
+xU/xP8zWOyCiiiuYoKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACi
+iigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoooo
+AKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACi
+iigAooooA87+In/Iag/691/9Caij4if8hqD/AK91/wDQmor6rBfwIehhLc6fwL/yJui/9ekf
+/oIrdrC8C/8AIm6L/wBekf8A6CK3a+exv+8VP8T/ADNY7IKKKK5igooooAKKKKACiiigAooo
+oAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAC
+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooo
+oAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigDzv4if8AIag/691/9Caij4if8hqD
+/r3X/wBCaivqsF/Ah6GEtzp/Av8AyJui/wDXpH/6CK3awvAv/Im6L/16R/8AoIrdr57G/wC8
+VP8AE/zNY7IKKKK5igooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK
+KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiii
+gAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK
+KKKACiiigDzv4if8hqD/AK91/wDQmoo+In/Iag/691/9CaivqsF/Ah6GEtzp/Av/ACJui/8A
+XpH/AOgit2sLwL/yJui/9ekf/oIrdr57G/7xU/xP8zWOyCiiiuYoKKKKACiiigAooooAKKKK
+ACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAo
+oooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKK
+ACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA87+In/Iag/691/8AQmoo+In/ACGo
+P+vdf/Qmor6rBfwIehhLc6fwL/yJui/9ekf/AKCK3awvAv8AyJui/wDXpH/6CK3a+exv+8VP
+8T/M1jsgooormKCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoooo
+AKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACi
+iigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoooo
+AKKKKAPO/iJ/yGoP+vdf/Qmoo+In/Iag/wCvdf8A0JqK+qwX8CHoYS3On8C/8ibov/XpH/6C
+K3awvAv/ACJui/8AXpH/AOgit2vnsb/vFT/E/wAzWOyCiiiuYoKKKKACiiigAooooAKKKKAC
+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooo
+oAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAC
+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA87+In/ACGoP+vdf/Qmoo+In/Iag/69
+1/8AQmor6rBfwIehhLc6fwL/AMibov8A16R/+git2sLwL/yJui/9ekf/AKCK3a+exv8AvFT/
+ABP8zWOyCiiiuYoKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiii
+gAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK
+KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiii
+gAooooA87+In/Iag/wCvdf8A0JqKPiJ/yGoP+vdf/Qmor6rBfwIehhLc6fwL/wAibov/AF6R
+/wDoIrdrC8C/8ibov/XpH/6CK3a+exv+8VP8T/M1jsgooormKCiiigAooooAKKKKACiiigAo
+oooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKK
+ACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAo
+oooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAPO/iJ/yGoP+vdf/AEJqKPiJ/wAhqD/r
+3X/0JqK+qwX8CHoYS3On8C/8ibov/XpH/wCgit2sLwL/AMibov8A16R/+git2vnsb/vFT/E/
+zNY7IKKKK5igooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACi
+iigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoooo
+AKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACi
+iigDzv4if8hqD/r3X/0JqKPiJ/yGoP8Ar3X/ANCaivqsF/Ah6GEtzp/Av/Im6L/16R/+git2
+sLwL/wAibov/AF6R/wDoIrdr57G/7xU/xP8AM1jsgooormKCiiigAooooAKKKKACiiigAooo
+oAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAC
+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooo
+oAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAPO/iJ/wAhqD/r3X/0JqKPiJ/yGoP+vdf/
+AEJqK+qwX8CHoYS3On8C/wDIm6L/ANekf/oIrdrC8C/8ibov/XpH/wCgit2vnsb/ALxU/wAT
+/M1jsgooormKCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK
+KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiii
+gAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK
+KKKAPO/iJ/yGoP8Ar3X/ANCaij4if8hqD/r3X/0JqK+qwX8CHoYS3On8C/8AIm6L/wBekf8A
+6CK3awvAv/Im6L/16R/+git2vnsb/vFT/E/zNY7IKKKK5igooooAKKKKACiiigAooooAKKKK
+ACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAo
+oooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKK
+ACiiigAooooAKKKKACiiigAooooAKKKKACiiigDzv4if8hqD/r3X/wBCaij4if8AIag/691/
+9CaivqsF/Ah6GEtzp/Av/Im6L/16R/8AoIrdrC8C/wDIm6L/ANekf/oIrdr57G/7xU/xP8zW
+OyCiiiuYoKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoooo
+AKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACi
+iigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoooo
+A87+In/Iag/691/9Caij4if8hqD/AK91/wDQmor6rBfwIehhLc6fwL/yJui/9ekf/oIrdrC8
+C/8AIm6L/wBekf8A6CK3a+exv+8VP8T/ADNY7IKKKK5igooooAKKKKACiiigAooooAKKKKAC
+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooo
+oAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAC
+iiigAooooAKKKKACiiigAooooAKKKKACiiigDzv4if8AIag/691/9Caij4if8hqD/r3X/wBC
+aivqsF/Ah6GEtzp/Av8AyJui/wDXpH/6CK3awvAv/Im6L/16R/8AoIrdr57G/wC8VP8AE/zN
+Y7IKKKK5igooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiii
+gAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK
+KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiii
+gDzv4if8hqD/AK91/wDQmoo+In/Iag/691/9CaivqsF/Ah6GEtzp/Av/ACJui/8AXpH/AOgi
+t2sLwL/yJui/9ekf/oIrdr57G/7xU/xP8zWOyCiiiuYoKKKKACiiigAooooAKKKKACiiigAo
+oooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKK
+ACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAo
+oooAKKKKACiiigAooooAKKKKACiiigAooooA87+In/Iag/691/8AQmoo+In/ACGoP+vdf/Qm
+or6rBfwIehhLc6fwL/yJui/9ekf/AKCK3awvAv8AyJui/wDXpH/6CK3a+exv+8VP8T/M1jsg
+ooormKCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACi
+iigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoooo
+AKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAPO
+/iJ/yGoP+vdf/Qmoo+In/Iag/wCvdf8A0JqK+qwX8CHoYS3On8C/8ibov/XpH/6CK3awvAv/
+ACJui/8AXpH/AOgit2vnsb/vFT/E/wAzWOyCiiiuYoKKKKACiiigAooooAKKKKACiiigAooo
+oAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAC
+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooo
+oAKKKKACiiigAooooAKKKKACiiigAooooA87+In/ACGoP+vdf/Qmoo+In/Iag/691/8AQmor
+6rBfwIehhLc6fwL/AMibov8A16R/+git2sLwL/yJui/9ekf/AKCK3a+exv8AvFT/ABP8zWOy
+CiiiuYoKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK
+KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiii
+gAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA8
+7+In/Iag/wCvdf8A0JqKPiJ/yGoP+vdf/Qmor6rBfwIehhLc6fwL/wAibov/AF6R/wDoIrdr
+C8C/8ibov/XpH/6CK3a+exv+8VP8T/M1jsgooormKCiiigAooooAKKKKACiiigAooooAKKKK
+ACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAo
+oooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKK
+ACiiigAooooAKKKKACiiigAooooAKKKKAPO/iJ/yGoP+vdf/AEJqKPiJ/wAhqD/r3X/0JqK+
+qwX8CHoYS3On8C/8ibov/XpH/wCgit2sLwL/AMibov8A16R/+git2vnsb/vFT/E/zNY7IKKK
+K5igooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoooo
+AKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACi
+iigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigDzv4i
+f8hqD/r3X/0JqKPiJ/yGoP8Ar3X/ANCaivqsF/Ah6GEtzp/Av/Im6L/16R/+git2sLwL/wAi
+bov/AF6R/wDoIrdr57G/7xU/xP8AM1jsgooormKCiiigAooooAKKKKACiiigAooooAKKKKAC
+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooo
+oAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAC
+iiigAooooAKKKKACiiigAooooAKKKKAPO/iJ/wAhqD/r3X/0JqKPiJ/yGoP+vdf/AEJqK+qw
+X8CHoYS3On8C/wDIm6L/ANekf/oIrdrC8C/8ibov/XpH/wCgit2vnsb/ALxU/wAT/M1jsgoo
+ormKCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiii
+gAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK
+KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAPO/i
+J/yGoP8Ar3X/ANCaij4if8hqD/r3X/0JqK+qwX8CHoYS3On8C/8AIm6L/wBekf8A6CK3aKK+
+exv+8VP8T/M1jsgooormKCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACii
+igAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA
+KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACii
+igAooooAKKKKAPO/iJ/yGoP+vdf/AEJqKKK+qwX8CHoYS3P/2Q==</jpeg>
+	</thumbnail>
+</document>

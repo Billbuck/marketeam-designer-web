@@ -1,0 +1,57 @@
+structDocument est une Structure
+	NomFichierOrigine						est une chaîne									// Nom du document donné par le client
+	NomFichierTemp							est une chaîne
+	CodeTemp									est une chaîne									// Nom du fichier temporaire enregistré sur le serveur, valable pour le Document, le Psmd, le Bat etc...
+	Repertoire								est une chaîne
+	TypeFichier								est une chaîne
+	IdLettreContenu						est un entier
+	IdTypeSupport							est un entier
+	IdSupport								est un entier
+	IdSupportGrammage						est un entier
+	IdPackageContenu						est un entier
+	IdDocumentClient						est un entier
+	IdModele									est un entier
+	IdPapier									est un entier
+	PeutEtrePorteAdresse					est un booléen
+	FichierApercu							est une chaîne
+	QuantiteDocumentClient				est un entier
+	DelaiOffsetSupplementaire			est un entier
+	DelaiLaserSupplementaire			est un entier
+	EstBloquantHorsDotation				est un booléen
+	EstPersonnalisable					est un booléen
+	ModeImpression							est une chaîne
+	ModeImpressionSelectionne			est une chaîne
+	EstPdfClient							est un booléen
+	EstDocumentEnAttente					est un booléen
+	EstRectoVerso							est un booléen
+	EstFondPerdu							est un booléen
+	EstPapierCouche						est un booléen
+	NombrePage								est un entier
+	EstUploadé								est un booléen
+	A4PliableMachine						est un booléen
+	HauteurFerme							est un numérique(4,1)
+	LargeurFerme							est un numérique(4,1)
+	HauteurOuvert							est un numérique(4,1)
+	LargeurOuvert							est un numérique(4,1)
+	NbPageObligatoire						est un entier
+	Poids										est un monétaire
+	PrixAchatContenu						est un monétaire
+	DeductionContenu						est un monétaire
+	LibelleTypeSupport					est une chaîne
+	LibelleSupport							est une chaîne
+	LibelleFormat							est une chaîne
+	LibelleGrammage						est une chaîne
+	LibellePapier							est une chaîne
+	NbPageTotale							est un entier
+	Designation								est une chaîne
+	tabPagePDF								est un tableau de structPagePdf
+	tabImageFond							est un tableau de structDocumentImage	// JPG fond Ghostscript (BleedBox ou TrimBox + blanc tournant)
+	tabImageBat								est un tableau de structDocumentImage	// JPG BAT (rendu PSMD via API PSM)
+	JsonDesignerData						est une chaîne									// Bloc "data" JSON retourné par le Designer du document
+	EstPersonnaliseDesigner				est un booléen									// Vrai = l'utilisateur a personnalisé via le Designer
+	DateHeureDesigner						est une DateHeure								// Date/heure dernière sauvegarde Designer
+	CheminPsmdTemp							est une chaîne									// Chemin physique complet du fichier PSMD production (avec fond perdu + SRA)
+	CheminPsmdBat							est une chaîne									// Chemin physique complet du fichier PSMD BAT (format fini, sans fond perdu ni SRA)
+	NomFichierPsmd							est une chaîne									// Nom du fichier PSMD (sans répertoire)
+	RepertoireTravail 					est une chaîne
+fin

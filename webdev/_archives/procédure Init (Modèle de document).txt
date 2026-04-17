@@ -1,0 +1,106 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Init — Page pgeLtrDocument (modèles)
+// Initialisation de la page de création/modification de modèle
+//
+// Modifications par rapport à l'original :
+//   - Chargement de JsonDesignerData depuis ltr_modele en modification
+//   - Initialisation du RepertoireTravail
+//   - Chargement des limites globales Designer depuis le JSON stocké
+//   - Affichage du bouton Personnaliser
+// ─────────────────────────────────────────────────────────────────────────────
+procédure Init()
+
+nPage		est un entier
+sRepertoire	est une chaîne
+sFichier	est une chaîne
+
+grpPartage.Visible = (Partage.__vcUser.Partage _ou_ (Partage.__vcUser.IdMere <> Partage.__vcUser.IDClient and Partage.__vcUser.taaDroit[#DROIT_AJOUTER_UN_MODÈLE]))
+
+InitCboTypeSupport()
+InitCboSupport()
+
+// ─── Initialisation des limites Designer (valeurs par défaut) ────────────
+_nLimTexte		= -1
+_nLimImage		= -1
+_nLimBarcode	= -1
+_nLimQr			= 0
+
+si _pIdModele > 0 alors
+	libTitre = "Modifier un document"
+	si ltr_modele.LitRecherchePremier(IdModele, _pIdModele) _et_ ltr_support.LitRecherchePremier(IdSupport, ltr_modele.IdSupport) alors
+		// En modification on ne peut pas changer le type de support
+		cboTypeSupport.Etat			= AffichageSeulement
+		cboSupport.Etat				= AffichageSeulement
+		intEstFondPerdu.Etat		= AffichageSeulement
+		intEstRectoVerso.Etat		= AffichageSeulement
+		cboTypeSupport				= ltr_support.IdTypeSupport
+		InitCboSupport()
+		cboSupport 					= ltr_support.IdSupport
+		saiLibellé					= ltr_modele.Libelle
+		sRepertoire 				= CheminClient(ltr_modele.IdClient, ltr_modele.Type, __REP_VIGNETTE__, Faux)
+		uplDocumentUpload.Visible 	= Vrai
+		si ltr_support.NbPageObligatoire = 0 alors
+			nPage = (ltr_modele.EstRectoVerso = Faux) ? 1 sinon 2
+		sinon
+			nPage = ltr_support.NbPageObligatoire
+		fin
+		grpPolyvalent.Visible	= (ltr_modele.Type = __OPERATION_COURRIER__)
+		intPolyvalent			= ltr_modele.EstPolyvalent
+		intEstPartagé 			= ltr_modele.EstPartage
+		intEstRectoVerso		= ltr_modele.EstRectoVerso
+		intEstFondPerdu			= ltr_modele.EstFondPerdu
+
+		// ─── Chargement des vignettes ────────────────────────────────────
+		pour nInd = 1 _à_ nPage
+			sFichier = __DOC_LTR_MODELE__ + ltr_modele.IdModele + "p" + nInd + __JPG__
+			znrAperçuUpload.AjouteLigne()
+			znrAperçuUpload[nInd].imgUpload = sRepertoire + ["/"] + sFichier
+		fin
+		dispDocument[1].Visible = Vrai
+
+		// ─── Chargement JsonDesignerData ─────────────────────────────────
+		si pas ltr_modele.JsonDesignerData.Null _et_ ltr_modele.JsonDesignerData <> "" alors
+			_stDocument.JsonDesignerData = ltr_modele.JsonDesignerData
+
+			// Extraire les contraintes globales du JSON stocké pour les contrôles UI
+			jStocke est un JSON = ChaîneVersUTF8(_stDocument.JsonDesignerData)
+			si jStocke.constraints.limites.texte..Existe alors
+				_nLimTexte		= jStocke.constraints.limites.texte
+				_nLimImage		= jStocke.constraints.limites.image
+				_nLimBarcode	= jStocke.constraints.limites.barcode
+				_nLimQr			= jStocke.constraints.limites.qr
+				Trace("Init Modèle : limites chargées depuis JSON : texte=" + _nLimTexte + " image=" + _nLimImage + " barcode=" + _nLimBarcode + " qr=" + _nLimQr)
+			fin
+		fin
+
+		// ─── Initialisation structDocument pour modification ─────────────
+		_stDocument.EstRectoVerso		= ltr_modele.EstRectoVerso
+		_stDocument.EstFondPerdu		= ltr_modele.EstFondPerdu
+		_stDocument.NombrePage			= nPage
+		_stDocument.NomFichierOrigine	= ltr_modele.NomFichierOrigine
+		_stDocument.IdModele				= ltr_modele.IdModele
+		_stDocument.IdSupport			= ltr_modele.IdSupport
+
+		// Répertoire de travail : répertoire Documents du modèle (ou Modele client)
+		sRepModeleDoc est une chaîne = CheminClient(ltr_modele.IdClient, ltr_modele.Type, __REP_MODELE__, Vrai)
+		_stDocument.Repertoire			= sRepModeleDoc
+		_stDocument.NomFichierTemp		= __DOC_LTR_MODELE__ + ltr_modele.IdModele + __PDF__
+		_stDocument.RepertoireTravail	= sRepModeleDoc
+
+		// Charger les images de fond depuis le répertoire Fonds du modèle
+		sRepModeleFond est une chaîne = CheminRepertoireModele(ltr_modele.IdModele, ltr_modele.IdClient, ltr_modele.IdMarque, __REP_FOND__)
+		pour nInd = 1 _à_ nPage
+			sFondModele est une chaîne = sRepModeleFond + __DOC_LTR_MODELE__ + "Fond" + ltr_modele.IdModele + "p" + nInd + __JPG__
+			si fFichierExiste(sFondModele) alors
+				stImgFond est une structDocumentImage
+				stImgFond.CheminPhysique = sFondModele
+				stImgFond.CheminRelatif = CheminRepertoireModele(ltr_modele.IdModele, ltr_modele.IdClient, ltr_modele.IdMarque, __REP_FOND__, Faux) + __DOC_LTR_MODELE__ + "Fond" + ltr_modele.IdModele + "p" + nInd + __JPG__
+				_stDocument.tabImageFond.Ajoute(stImgFond)
+			fin
+		fin
+
+		// ─── Visibilité bouton Personnaliser ─────────────────────────────
+		btnModelePersonnaliser..Visible = Vrai
+
+	fin
+fin

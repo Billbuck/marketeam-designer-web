@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<data>
+  <row>
+    <CIVILITE>M.</CIVILITE>
+    <NOM>Dupont</NOM>
+    <PRENOM>Jean</PRENOM>
+    <ADRESSE_1>123 rue de Paris</ADRESSE_1>
+    <CDP_VILLE>75001 PARIS</CDP_VILLE>
+  </row>
+</data>

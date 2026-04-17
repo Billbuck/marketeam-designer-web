@@ -1,0 +1,86 @@
+// =========================================================================
+// Partage.GenererBatDocumentDepuisPsmd()
+// Rôle : Générer les BAT (aperçus JPEG) d'un document à partir du PSMD
+//        via l'API PHP PrintShop Mail (psm_marketeam_jpg.php)
+//
+//        Utilise en priorité CheminPsmdBat (format fini sans fond perdu)
+//        pour éviter un bug de décalage des codes-barres dans la preview JPEG.
+//        Si CheminPsmdBat est vide, fallback sur CheminPsmdTemp (production).
+//
+//        Après génération, le PSMD BAT temporaire est supprimé.
+//
+// PROCÉDURE PARTAGÉE (Partage) — utilisable depuis pgeLtrContenu et pgeLtrDocument
+//
+// Paramètres :
+//   stDocument          (structDocument)                : Document en cours
+//   pTabEchantillon     (tableau de StructBaseLigne)    : Données échantillon pour le publipostage
+// =========================================================================
+
+procédure GenererBatDocumentDepuisPsmd(stDocument est une structDocument, pTabEchantillon est un tableau de StructBaseLigne)
+
+sRepTravail				est une chaîne			= stDocument.RepertoireTravail
+sCheminPsmd				est une chaîne
+tabPrintshopData		est un tableau de stPrintshopData
+stPrintshopData		est un stPrintshopData
+stImageBat				est une structDocumentImage
+sCheminJpg				est une chaîne
+nPage						est un entier
+
+// ─── Choix du PSMD source pour le BAT ────────────────────────────────────
+sCheminPsmd = stDocument.CheminPsmdBat
+si sCheminPsmd = "" alors sCheminPsmd = stDocument.CheminPsmdTemp
+
+Trace("GenererBatDocumentDepuisPsmd : CheminPsmdBat = [" + stDocument.CheminPsmdBat + "]")
+Trace("GenererBatDocumentDepuisPsmd : CheminPsmdTemp = [" + stDocument.CheminPsmdTemp + "]")
+
+// ─── Validation : le PSMD doit exister sur disque ────────────────────────
+si sCheminPsmd = "" _ou_ pas fFichierExiste(sCheminPsmd) alors
+	Trace("GenererBatDocumentDepuisPsmd : PSMD introuvable : " + sCheminPsmd)
+	retour
+fin
+
+Trace("GenererBatDocumentDepuisPsmd : PSMD confirmé : " + sCheminPsmd)
+
+// ─── Construction du tableau de fusion ───────────────────────────────────
+si pTabEchantillon..Occurrence > 0 alors
+	AjoutePrintshopData("Societe",    pTabEchantillon[1].Societe)
+	AjoutePrintshopData("Civilite",   pTabEchantillon[1].Civilite)
+	AjoutePrintshopData("Nom",        pTabEchantillon[1].Nom)
+	AjoutePrintshopData("Prenom",     pTabEchantillon[1].Prenom)
+	AjoutePrintshopData("Adresse1",   pTabEchantillon[1].Adresse1)
+	AjoutePrintshopData("Adresse2",   pTabEchantillon[1].Adresse2)
+	AjoutePrintshopData("Adresse3",   pTabEchantillon[1].Adresse3)
+	AjoutePrintshopData("Adresse4",   pTabEchantillon[1].Adresse4)
+	AjoutePrintshopData("CodePostal", pTabEchantillon[1].CodePostal)
+	AjoutePrintshopData("Ville",      pTabEchantillon[1].Ville)
+	AjoutePrintshopData("Sequentiel", "000123456")
+	AjoutePrintshopData("Timbre",      "Affranchissement")
+fin
+
+// ─── Génération BAT JPG page par page ────────────────────────────────────
+SupprimeTout(stDocument.tabImageBat)
+
+pour nPage = 1 _à_ stDocument.NombrePage
+
+	sCheminJpg	= sRepTravail + __DOC_LTR_BAT__ + stDocument.CodeTemp + "p" + nPage + __JPG__
+	Trace("GenererBatDocumentDepuisPsmd : page " + nPage + " → " + sCheminJpg)
+	stImageBat	= Partage.GenerationBatDepuisPsmd(sCheminPsmd, sCheminJpg, nPage, tabPrintshopData)
+
+	si stImageBat.CheminPhysique <> "" alors
+		Ajoute(stDocument.tabImageBat, stImageBat)
+	fin
+fin
+
+// ─── Nettoyage du PSMD BAT temporaire ────────────────────────────────────
+si stDocument.CheminPsmdBat <> "" _et_ stDocument.CheminPsmdBat <> stDocument.CheminPsmdTemp alors
+	si fFichierExiste(stDocument.CheminPsmdBat) alors
+		fSupprime(stDocument.CheminPsmdBat)
+	fin
+	stDocument.CheminPsmdBat = ""
+fin
+
+	procédure interne AjoutePrintshopData(pChamp, pValeur)
+		stPrintshopData.Champ	= pChamp
+		stPrintshopData.Valeur	= pValeur
+		tabPrintshopData.Ajoute(stPrintshopData)
+	fin

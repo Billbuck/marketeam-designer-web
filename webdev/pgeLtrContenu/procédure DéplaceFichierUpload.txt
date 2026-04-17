@@ -1,0 +1,523 @@
+procédure DéplaceFichierUpload(stOperation est une structOperation)
+
+stDocument			est une structDocument
+sListeBat			est une chaîne
+sListeFond			est une chaîne
+sListeDocument		est une chaîne
+sListePrintshop		est une chaîne
+
+sRepertoireDocument, sRepertoireBat, sRepertoireFond, sRepertoirePrintshop, sRepertoireEnveloppe, sRepertoireClient, sRepertoireMarque	sont des chaînes
+
+sRepertoireDocument			= cpProjet.CheminFichier(stOperation.IdOperation, __REP_DOCUMENT__)
+sRepertoireBat					= cpProjet.CheminFichier(stOperation.IdOperation, __REP_BAT__)
+sRepertoireFond				= cpProjet.CheminFichier(stOperation.IdOperation, __REP_FOND__)
+sRepertoirePrintshop			= cpProjet.CheminFichier(stOperation.IdOperation, __REP_PRINTSHOP__)
+sRepertoireEnveloppe			= cpProjet.CheminFichier(stOperation.IdOperation, __REP_ENVELOPPE__)
+
+
+selon stOperation.TypeOperation
+
+	cas __OPERATION_COURRIER__
+
+		// Sauvegarder le répertoire source (Temp en modification, Upload en création)
+		// AVANT que le déplacement du BAT ne modifie RepertoireTravail
+		sRepertoireSourceEnveloppe est une chaîne = stOperation.stOperationLettre.stEnveloppe.RepertoireTravail
+
+		// On sauvegarde le bat Enveloppe
+		si stOperation.stOperationLettre.stEnveloppe.EnveloppeBAT.CheminPhysique <> "" alors
+			sCheminBatEnvFinal est une chaîne = sRepertoireBat + __DOC_ENV_BAT__ + stOperation.IdOperation + __JPG__
+			// Si le BAT est déjà à sa destination finale, ne rien faire
+			si stOperation.stOperationLettre.stEnveloppe.EnveloppeBAT.CheminPhysique <> sCheminBatEnvFinal alors
+				Trace("DéplaceFichierUpload : BAT enveloppe source = " + stOperation.stOperationLettre.stEnveloppe.EnveloppeBAT.CheminPhysique)
+				si fFichierExiste(stOperation.stOperationLettre.stEnveloppe.EnveloppeBAT.CheminPhysique) alors
+					si fFichierExiste(sCheminBatEnvFinal) alors
+						fSupprime(sCheminBatEnvFinal)
+					fin
+					fDéplaceFichier(stOperation.stOperationLettre.stEnveloppe.EnveloppeBAT.CheminPhysique, sCheminBatEnvFinal)
+					Trace("DéplaceFichierUpload : BAT enveloppe déplacé --> " + sCheminBatEnvFinal)
+				sinon
+					Trace("DéplaceFichierUpload : BAT enveloppe introuvable : " + stOperation.stOperationLettre.stEnveloppe.EnveloppeBAT.CheminPhysique)
+				fin
+			fin
+			stOperation.stOperationLettre.stEnveloppe.EnveloppeBAT.CheminPhysique	= sCheminBatEnvFinal
+			stOperation.stOperationLettre.stEnveloppe.RepertoireTravail					= sRepertoireBat
+		fin
+
+		// Déplacer le PSMD de l'enveloppe vers Printshop
+		si stOperation.stOperationLettre.stEnveloppe.CheminPsmdEnveloppe <> "" _et_ fFichierExiste(stOperation.stOperationLettre.stEnveloppe.CheminPsmdEnveloppe) alors
+			sNouveauCheminPsmd est une chaîne = sRepertoirePrintshop + __DOC_ENV_PSMD__ + stOperation.IdOperation + ".psmd"
+			si fFichierExiste(sNouveauCheminPsmd) alors
+				fSupprime(sNouveauCheminPsmd)
+			fin
+			si fDéplaceFichier(stOperation.stOperationLettre.stEnveloppe.CheminPsmdEnveloppe, sNouveauCheminPsmd) alors
+				stOperation.stOperationLettre.stEnveloppe.CheminPsmdEnveloppe		= sNouveauCheminPsmd
+				stOperation.stOperationLettre.stEnveloppe.NomFichierPsmdEnveloppe	= __DOC_ENV_PSMD__ + stOperation.IdOperation + ".psmd"
+				Trace("DéplaceFichierUpload : PSMD enveloppe déplacé --> " + sNouveauCheminPsmd)
+			sinon
+				Trace("DéplaceFichierUpload : échec déplacement PSMD enveloppe", ErreurInfo(errComplet))
+			fin
+		fin
+
+		// Déplacer les images Designer de l'enveloppe vers Printshop
+		// sRepertoireSourceEnveloppe = répertoire d'origine (Temp/Upload), sauvegardé AVANT le déplacement du BAT
+		cpDesigner.DeplacerImagesDesignerJson(stOperation.stOperationLettre.stEnveloppe.JsonDesignerData, sRepertoirePrintshop, sRepertoireSourceEnveloppe)
+
+		// ─── Liste Printshop : PSMD enveloppe ───────────────────────────
+		sListePrintshop += [" "] + __DOC_ENV_PSMD__ + stOperation.IdOperation + ".psmd"
+
+		// ─── Liste Printshop : images Designer enveloppe ─────────────────
+		si stOperation.stOperationLettre.stEnveloppe.JsonDesignerData <> "" alors
+			jEnvJson est un JSON = ChaîneVersUTF8(stOperation.stOperationLettre.stEnveloppe.JsonDesignerData)
+			si jEnvJson.zonesImage..Occurrence > 0 alors
+				pour nIndEnvImg = 1 _à_ jEnvJson.zonesImage..Occurrence
+					sNomFichierImg est une chaîne = jEnvJson.zonesImage[nIndEnvImg].source.nomFichier
+					si sNomFichierImg <> "" alors
+						sListePrintshop += [" "] + fExtraitChemin(sNomFichierImg, fFichier + fExtension)
+					fin
+				fin
+			fin
+		fin
+
+		sListeBat += [" "] + __DOC_ENV_BAT__ + stOperation.IdOperation + __JPG__
+
+		pour tout stDocument de stOperation.stOperationLettre.tabStDocument
+			// On mémorise la liste des documents de l'opération
+			si stDocument.IdModele > 0 _ou_ stDocument.IdDocumentClient > 0 _ou_ stDocument.NomFichierOrigine <> "" alors
+				sListeDocument += [" "] + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__
+				pour NumPage = 1 _à_ stDocument.NombrePage
+					sListeBat += [" "] + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__
+					sListeFond += [" "] + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__
+				fin
+
+				// ─── Liste Printshop : PSMD document ─────────────────────────
+				sListePrintshop += [" "] + __DOC_LTR_PSMD__ + stDocument.IdLettreContenu + ".psmd"
+
+				// ─── Liste Printshop : images Designer document ──────────────
+				si stDocument.JsonDesignerData <> "" alors
+					jDocJson est un JSON = ChaîneVersUTF8(stDocument.JsonDesignerData)
+					si jDocJson.zonesImage..Occurrence > 0 alors
+						pour nIndDocImg = 1 _à_ jDocJson.zonesImage..Occurrence
+							sNomFichierDocImg est une chaîne = jDocJson.zonesImage[nIndDocImg].source.nomFichier
+							si sNomFichierDocImg <> "" alors
+								sListePrintshop += [" "] + fExtraitChemin(sNomFichierDocImg, fFichier + fExtension)
+							fin
+						fin
+					fin
+				fin
+			fin
+
+			// [V3] Mémoriser le répertoire source AVANT qu'il soit mis à jour par AJOUT B
+			sRepertoireSourceDocument est une chaîne = stDocument.RepertoireTravail
+
+
+			si stDocument.EstUploadé = Vrai alors
+				selon Vrai
+					cas stDocument.IdModele > 0
+						si ltr_modele.LitRecherchePremier(IdModele, stDocument.IdModele) alors
+							selon Vrai
+								cas ltr_modele.IdClient > 0
+									sRepertoireClient = CheminClient(ltr_modele.IdClient, __OPERATION_COURRIER__, __REP_MODELE__, Vrai)
+									si fFichierExiste(sRepertoireClient + __DOC_LTR_MODELE__ + stDocument.IdModele + __PDF__) alors
+										si fFichierExiste(sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__) alors
+											fSupprime(sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__)
+										fin
+										fCopieFichier(sRepertoireClient + __DOC_LTR_MODELE__ + stDocument.IdModele + __PDF__, sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__)
+									fin
+
+								cas ltr_modele.IdMarque > 0
+									sRepertoireMarque = CheminMarque(ltr_modele.IdMarque, __OPERATION_COURRIER__, __REP_MODELE__, Vrai)
+									si fFichierExiste(sRepertoireMarque + __DOC_LTR_MODELE__ + stDocument.IdModele + __PDF__) alors
+										si fFichierExiste(sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__) alors
+											fSupprime(sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__)
+										fin
+										fCopieFichier(sRepertoireMarque + __DOC_LTR_MODELE__ + stDocument.IdModele + __PDF__, sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__)
+									fin
+
+								autre cas : STOP
+							fin
+
+							pour NumPage = 1 _à_ stDocument.NombrePage
+								si fFichierExiste(sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
+									fSupprime(sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__)
+								fin
+								si stDocument.tabImageBat..Occurrence >= NumPage alors
+									fCopieFichier(stDocument.tabImageBat[NumPage].CheminPhysique, sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__)
+								fin
+							fin
+
+							pour NumPage = 1 _à_ stDocument.NombrePage
+								si fFichierExiste(sRepertoireFond + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
+									fSupprime(sRepertoireFond + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__)
+								fin
+								si stDocument.tabImageFond..Occurrence >= NumPage alors
+									fCopieFichier(stDocument.tabImageFond[NumPage].CheminPhysique, sRepertoireFond + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__)
+								fin
+							fin
+
+						fin
+
+					cas stDocument.IdDocumentClient > 0
+						si ltr_document_client.LitRecherchePremier(IdDocumentClient, stDocument.IdDocumentClient) alors
+							selon Vrai
+								cas ltr_document_client.IdClient > 0
+									sRepertoireClient = CheminClient(ltr_document_client.IdClient, __OPERATION_COURRIER__, __REP_DOCUMENT__, Vrai)
+									si fFichierExiste(sRepertoireClient + __DOC_LTR_CLIENT__ + stDocument.IdDocumentClient + __PDF__) alors
+										si fFichierExiste(sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__) alors
+											fSupprime(sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__)
+										fin
+										fCopieFichier(sRepertoireClient + __DOC_LTR_CLIENT__ + stDocument.IdDocumentClient + __PDF__, sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__)
+									fin
+
+								cas ltr_document_client.IdMarque > 0
+									sRepertoireMarque = CheminMarque(ltr_document_client.IdMarque, __OPERATION_COURRIER__, __REP_DOCUMENT__, Vrai)
+									si fFichierExiste(sRepertoireMarque + __DOC_LTR_CLIENT__ + stDocument.IdDocumentClient + __PDF__) alors
+										si fFichierExiste(sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__) alors
+											fSupprime(sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__)
+										fin
+										fCopieFichier(sRepertoireMarque + __DOC_LTR_CLIENT__ + stDocument.IdDocumentClient + __PDF__, sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__)
+									fin
+
+								autre cas : STOP
+							fin
+
+							pour NumPage = 1 _à_ stDocument.NombrePage
+								si fFichierExiste(sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
+									fSupprime(sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__)
+								fin
+								si stDocument.tabImageBat..Occurrence >= NumPage alors
+									fCopieFichier(stDocument.tabImageBat[NumPage].CheminPhysique, sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__)
+								fin
+							fin
+
+							pour NumPage = 1 _à_ stDocument.NombrePage
+								si fFichierExiste(sRepertoireFond + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
+									fSupprime(sRepertoireFond + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__)
+								fin
+								si stDocument.tabImageFond..Occurrence >= NumPage alors
+									fCopieFichier(stDocument.tabImageFond[NumPage].CheminPhysique, sRepertoireFond + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__)
+								fin
+							fin
+
+						fin
+
+					autre cas
+						// On déplace les documents PDF client
+						si fFichierExiste(cpProjet.__sRepRacine + cpProjet.__sRepUpload + ["\"] + __DOC_LTR__ + stDocument.CodeTemp + __PDF__) alors
+							si fFichierExiste(sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__) alors
+								si pas fSupprime(sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__) alors
+									Trace("Erreur supprimer Document", ErreurInfo(errComplet))
+								fin
+							fin
+							si pas fDéplaceFichier(cpProjet.__sRepRacine + cpProjet.__sRepUpload + ["\"] + __DOC_LTR__ + stDocument.CodeTemp + __PDF__, sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__) alors
+								Trace("Erreur déplace Document", ErreurInfo(errComplet))
+							fin
+						fin
+
+						pour NumPage = 1 _à_ stDocument.NombrePage
+							si fFichierExiste(sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
+								si pas fSupprime(sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
+									Trace("Erreur supprimer BAT", ErreurInfo(errComplet))
+								fin
+							fin
+							si stDocument.tabImageBat..Occurrence >= NumPage alors
+								si pas fDéplaceFichier(stDocument.tabImageBat[NumPage].CheminPhysique, sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
+									Trace("Erreur déplace BAT", ErreurInfo(errComplet))
+								fin
+							fin
+						fin
+
+						pour NumPage = 1 _à_ stDocument.NombrePage
+							si fFichierExiste(sRepertoireFond + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
+								si pas fSupprime(sRepertoireFond + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
+									Trace("Erreur supprimer Fond", ErreurInfo(errComplet))
+								fin
+							fin
+							si stDocument.tabImageFond..Occurrence >= NumPage alors
+								si pas fDéplaceFichier(stDocument.tabImageFond[NumPage].CheminPhysique, sRepertoireFond + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
+									Trace("Erreur déplace Fond", ErreurInfo(errComplet))
+								fin
+							fin
+						fin
+
+					fin
+
+					// ─── AJOUT B : Mise à jour du répertoire et du CodeTemp après déplacement ─
+					stDocument.Repertoire			= sRepertoireDocument
+					stDocument.RepertoireTravail	= sRepertoireDocument
+					stDocument.CodeTemp				= stDocument.IdLettreContenu
+					stDocument.NomFichierTemp		= __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__
+					stDocument.EstUploadé			= Faux
+				fin
+
+			// ─── [V3] Déplacement BAT en modification ───────────────────────
+			pour NumPage = 1 _à_ stDocument.NombrePage
+				si stDocument.tabImageBat..Occurrence >= NumPage alors
+					sCheminBatActuel	est une chaîne		= stDocument.tabImageBat[NumPage].CheminPhysique
+					sCheminBatFinal		est une chaîne		= sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__
+					si sCheminBatActuel <> sCheminBatFinal _et_ fFichierExiste(sCheminBatActuel) alors
+						si fFichierExiste(sCheminBatFinal) alors
+							fSupprime(sCheminBatFinal)
+						fin
+						si fDéplaceFichier(sCheminBatActuel, sCheminBatFinal) alors
+							stDocument.tabImageBat[NumPage].CheminPhysique = sCheminBatFinal
+							Trace("DéplaceFichierUpload [V3] : BAT modif déplacé --> " + sCheminBatFinal)
+						sinon
+							Trace("DéplaceFichierUpload [V3] : échec déplacement BAT " + sCheminBatActuel, ErreurInfo(errComplet))
+						fin
+					fin
+				fin
+			fin
+
+			// Déplacer le PSMD du document vers Printshop
+			si stDocument.CheminPsmdTemp <> "" _et_ fFichierExiste(stDocument.CheminPsmdTemp) alors
+				sNouveauCheminPsmd est une chaîne = sRepertoirePrintshop + __DOC_LTR_PSMD__ + stDocument.IdLettreContenu + ".psmd"
+				si fFichierExiste(sNouveauCheminPsmd) alors
+					fSupprime(sNouveauCheminPsmd)
+				fin
+				si fDéplaceFichier(stDocument.CheminPsmdTemp, sNouveauCheminPsmd) alors
+					stDocument.CheminPsmdTemp	= sNouveauCheminPsmd
+					stDocument.NomFichierPsmd	= __DOC_LTR_PSMD__ + stDocument.IdLettreContenu + ".psmd"
+					Trace("DéplaceFichierUpload : PSMD document déplacé --> " + sNouveauCheminPsmd)
+				sinon
+					Trace("DéplaceFichierUpload : échec déplacement PSMD document", ErreurInfo(errComplet))
+				fin
+			fin
+
+			// [V3] Déplacer les images Designer du document vers Printshop
+			cpDesigner.DeplacerImagesDesignerJson(stDocument.JsonDesignerData, sRepertoirePrintshop, sRepertoireSourceDocument)
+		fin
+
+		SupprimeFichiersInutiles(stOperation.TypeOperation)
+
+		// [V4] Nettoyage du répertoire temporaire
+		sRepertoireTemp est une chaîne = cpProjet.CheminFichier(stOperation.IdOperation, __REP_TEMP__)
+		si fRepExiste(sRepertoireTemp) alors
+			fRepSupprime(sRepertoireTemp, frRécursif)
+			Trace("DéplaceFichierUpload [V4] : répertoire Temp supprimé --> " + sRepertoireTemp)
+		fin
+
+
+	cas __OPERATION_SMARTEVA__, __OPERATION_TRACTEVA__
+
+		TraceFin()
+
+		// On sauvegarde le bat Enveloppe Personnalisée
+		si fFichierExiste(sRepertoireBat + __DOC_ENV_BAT__ + stOperation.IdOperation + __JPG__) alors
+			si pas fSupprime(sRepertoireBat + __DOC_ENV_BAT__ + stOperation.IdOperation + __JPG__) alors
+				Trace("Erreur supprimer Enveloppe", ErreurInfo(errComplet))
+			fin
+		fin
+		si stOperation.stOperationTract.EnveloppeApercuPersonnalisée.CheminPhysique <> "" alors
+			si pas fDéplaceFichier(stOperation.stOperationTract.EnveloppeApercuPersonnalisée.CheminPhysique, sRepertoireBat + __DOC_ENV_BAT__ + stOperation.IdOperation + __JPG__) alors
+				Trace("Erreur déplace Enveloppe", ErreurInfo(errComplet))
+			fin
+		fin
+
+		// Si SmartEva on mémorise dans la liste des vignettes bat
+		si stOperation.TypeOperation = __OPERATION_SMARTEVA__ alors
+			sListeBat += [" "] + __DOC_ENV_BAT__ + stOperation.IdOperation + __JPG__
+		fin
+
+		pour tout stDocument de stOperation.stOperationTract.tabStDocument
+			// On mémorise la liste des documents de l'opération
+			si stDocument.IdModele > 0 _ou_ stDocument.IdDocumentClient > 0 _ou_ stDocument.NomFichierOrigine <> "" alors
+				sListeDocument += [" "] + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__
+				pour NumPage = 1 _à_ stDocument.NombrePage
+					sListeBat += [" "] + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__
+					sListeFond += [" "] + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__
+				fin
+			fin
+
+			si stDocument.EstUploadé = Vrai alors
+				selon Vrai
+					cas stDocument.IdModele > 0
+						si ltr_modele.LitRecherchePremier(IdModele, stDocument.IdModele) alors
+							selon Vrai
+								cas ltr_modele.IdClient > 0
+									sRepertoireClient = CheminClient(ltr_modele.IdClient, __OPERATION_COURRIER__, __REP_MODELE__, Vrai)
+									si fFichierExiste(sRepertoireClient + __DOC_LTR_MODELE__ + stDocument.IdModele + __PDF__) alors
+										si fFichierExiste(sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__) alors
+											fSupprime(sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__)
+										fin
+										fDéplaceFichier(sRepertoireClient + __DOC_LTR_MODELE__ + stDocument.IdModele + __PDF__, sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__)
+									fin
+
+								cas ltr_modele.IdMarque > 0
+									sRepertoireMarque = CheminMarque(ltr_modele.IdMarque, __OPERATION_COURRIER__, __REP_MODELE__, Vrai)
+									si fFichierExiste(sRepertoireMarque + __DOC_LTR_MODELE__ + stDocument.IdModele + __PDF__) alors
+										si fFichierExiste(sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__) alors
+											fSupprime(sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__)
+										fin
+										fDéplaceFichier(sRepertoireMarque + __DOC_LTR_MODELE__ + stDocument.IdModele + __PDF__, sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__)
+									fin
+
+								autre cas : STOP
+							fin
+
+							// On enregistre les images BAT
+							pour NumPage = 1 _à_ stDocument.NombrePage
+								si fFichierExiste(sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
+									fSupprime(sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__)
+								fin
+								si stDocument.tabImageBat..Occurrence >= NumPage alors
+									fCopieFichier(stDocument.tabImageBat[NumPage].CheminPhysique, sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__)
+								fin
+							fin
+
+							// On enregistre les images fond
+							pour NumPage = 1 _à_ stDocument.NombrePage
+								si fFichierExiste(sRepertoireFond + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
+									fSupprime(sRepertoireFond + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__)
+								fin
+								si stDocument.tabImageFond..Occurrence >= NumPage alors
+									fCopieFichier(stDocument.tabImageFond[NumPage].CheminPhysique, sRepertoireFond + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__)
+								fin
+							fin
+
+						fin
+
+					cas stDocument.IdDocumentClient > 0
+						si ltr_document_client.LitRecherchePremier(IdDocumentClient, stDocument.IdDocumentClient) alors
+							selon Vrai
+								cas ltr_document_client.IdClient > 0
+									sRepertoireClient = CheminClient(ltr_document_client.IdClient, __OPERATION_COURRIER__, __REP_DOCUMENT__, Vrai)
+									si fFichierExiste(sRepertoireClient + __DOC_LTR_CLIENT__ + stDocument.IdDocumentClient + __PDF__) alors
+										si fFichierExiste(sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__) alors
+											fSupprime(sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__)
+										fin
+										fDéplaceFichier(sRepertoireClient + __DOC_LTR_CLIENT__ + stDocument.IdDocumentClient + __PDF__, sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__)
+									fin
+
+								cas ltr_document_client.IdMarque > 0
+									sRepertoireMarque = CheminMarque(ltr_document_client.IdMarque, __OPERATION_COURRIER__, __REP_DOCUMENT__, Vrai)
+									si fFichierExiste(sRepertoireMarque + __DOC_LTR_CLIENT__ + stDocument.IdDocumentClient + __PDF__) alors
+										si fFichierExiste(sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__) alors
+											fSupprime(sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__)
+										fin
+										fDéplaceFichier(sRepertoireMarque + __DOC_LTR_CLIENT__ + stDocument.IdDocumentClient + __PDF__, sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__)
+									fin
+
+								autre cas : STOP
+							fin
+
+							// On enregistre les images BAT
+							pour NumPage = 1 _à_ stDocument.NombrePage
+								si fFichierExiste(sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
+									fSupprime(sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__)
+								fin
+								si stDocument.tabImageBat..Occurrence >= NumPage alors
+									fCopieFichier(stDocument.tabImageBat[NumPage].CheminPhysique, sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__)
+								fin
+							fin
+
+							// On enregistre les images fond
+							pour NumPage = 1 _à_ stDocument.NombrePage
+								si fFichierExiste(sRepertoireFond + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
+									fSupprime(sRepertoireFond + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__)
+								fin
+								si stDocument.tabImageFond..Occurrence >= NumPage alors
+									fCopieFichier(stDocument.tabImageFond[NumPage].CheminPhysique, sRepertoireFond + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__)
+								fin
+							fin
+
+						fin
+
+					autre cas
+						// On déplace les documents PDF client
+						si fFichierExiste(cpProjet.__sRepRacine + cpProjet.__sRepUpload + ["\"] + __DOC_LTR__ + stDocument.CodeTemp + __PDF__) alors
+							si fFichierExiste(sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__) alors
+								si pas fSupprime(sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__) alors
+									Trace("Erreur supprimer Document", ErreurInfo(errComplet))
+								fin
+							fin
+							si pas fDéplaceFichier(cpProjet.__sRepRacine + cpProjet.__sRepUpload + ["\"] + __DOC_LTR__ + stDocument.CodeTemp + __PDF__, sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__) alors
+								Trace("Erreur déplace Document", ErreurInfo(errComplet))
+							fin
+						fin
+
+						// On enregistre les images BAT
+						pour NumPage = 1 _à_ stDocument.NombrePage
+							si fFichierExiste(sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
+								si pas fSupprime(sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
+									Trace("Erreur supprimer BAT", ErreurInfo(errComplet))
+								fin
+							fin
+							si stDocument.tabImageBat..Occurrence >= NumPage alors
+								si pas fDéplaceFichier(stDocument.tabImageBat[NumPage].CheminPhysique, sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
+									Trace("Erreur déplace BAT", ErreurInfo(errComplet))
+								fin
+							fin
+						fin
+
+						// On enregistre les images fond
+						pour NumPage = 1 _à_ stDocument.NombrePage
+							si fFichierExiste(sRepertoireFond + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
+								si pas fSupprime(sRepertoireFond + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
+									Trace("Erreur supprimer Fond", ErreurInfo(errComplet))
+								fin
+							fin
+							si stDocument.tabImageFond..Occurrence >= NumPage alors
+								si pas fDéplaceFichier(stDocument.tabImageFond[NumPage].CheminPhysique, sRepertoireFond + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
+									Trace("Erreur déplace Fond", ErreurInfo(errComplet))
+								fin
+							fin
+						fin
+
+				fin
+				stDocument.EstUploadé = Faux
+			fin
+		fin
+
+		SupprimeFichiersInutiles(stOperation.TypeOperation)
+
+	autre cas
+
+fin
+
+
+	procédure interne SupprimeFichiersInutiles(pTypeOperation)
+		sListeFichier, sFichier sont des chaînes
+		selon pTypeOperation
+			cas __OPERATION_COURRIER__, __OPERATION_TRACTEVA__, __OPERATION_SMARTEVA__
+
+				// On supprime les fichiers qui ne devraient pas être présents dans le répertoire des documents
+				sListeFichier = fListeFichier(sRepertoireDocument + "*.*", frNonRécursif)
+				pour toute chaîne sFichier de sListeFichier séparée par RC
+					si pas Contient(sListeDocument, fExtraitChemin(sFichier, fFichier + fExtension), MotComplet) alors
+						fSupprime(sFichier)
+						Trace("SupprimeFichiersInutiles : Document orphelin supprimé : " + sFichier)
+					fin
+				fin
+
+				// On supprime les fichiers qui ne devraient pas être présents dans le répertoire des BAT
+				sListeFichier = fListeFichier(sRepertoireBat + "*.*", frNonRécursif)
+				pour toute chaîne sFichier de sListeFichier séparée par RC
+					si pas Contient(sListeBat, fExtraitChemin(sFichier, fFichier + fExtension), MotComplet) alors
+						fSupprime(sFichier)
+						Trace("SupprimeFichiersInutiles : BAT orphelin supprimé : " + sFichier)
+					fin
+				fin
+
+				// On supprime les fichiers qui ne devraient pas être présents dans le répertoire des fonds
+				sListeFichier = fListeFichier(sRepertoireFond + "*.*", frNonRécursif)
+				pour toute chaîne sFichier de sListeFichier séparée par RC
+					si pas Contient(sListeFond, fExtraitChemin(sFichier, fFichier + fExtension), MotComplet) alors
+						fSupprime(sFichier)
+						Trace("SupprimeFichiersInutiles : Fond orphelin supprimé : " + sFichier)
+					fin
+				fin
+
+				// On supprime les fichiers qui ne devraient pas être présents dans le répertoire Printshop
+				sListeFichier = fListeFichier(sRepertoirePrintshop + "*.*", frNonRécursif)
+				pour toute chaîne sFichier de sListeFichier séparée par RC
+					si pas Contient(sListePrintshop, fExtraitChemin(sFichier, fFichier + fExtension), MotComplet) alors
+						fSupprime(sFichier)
+						Trace("SupprimeFichiersInutiles : Printshop orphelin supprimé : " + sFichier)
+					fin
+				fin
+
+			autre cas
+
+		fin
+
+	fin

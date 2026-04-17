@@ -76,7 +76,38 @@
      * @property {PsmdFondPerdu} [fondPerdu] - Configuration du fond perdu (4 côtés indépendants)
      * @property {number} [formatPapierLargeurMm] - Largeur format papier SRA pour DEVMODE (optionnel)
      * @property {number} [formatPapierHauteurMm] - Hauteur format papier SRA pour DEVMODE (optionnel)
+     * @property {boolean} [_impositionEnabled] - Active le calcul automatique d'imposition
      */
+
+    // ─── CONSTANTES FEUILLES D'IMPRESSION ────────────────────────────────────
+    var SHEET_A3  = { largeurMm: 297, hauteurMm: 420 };
+    var SHEET_SRA3 = { largeurMm: 320, hauteurMm: 450 };
+
+    // ─── TABLE D'IMPOSITION ──────────────────────────────────────────────────
+    // Chaque règle associe des dimensions document (avec tolérance ±5mm)
+    // à un schéma d'imposition (colonnes × lignes) et une orientation feuille.
+    var IMPOSITION_RULES = [
+        // A4 Vertical 210×297 → 2 up : 1 ligne × 2 colonnes, feuille paysage
+        { wMin: 205, wMax: 215, hMin: 292, hMax: 302, repeatHor: 2, repeatVer: 1, sheetOrientation: 'PAYSAGE' },
+        // A5 Vertical 148.5×210 → 4 up : 2 lignes × 2 colonnes, feuille portrait
+        { wMin: 143, wMax: 154, hMin: 205, hMax: 215, repeatHor: 2, repeatVer: 2, sheetOrientation: 'PORTRAIT' },
+        // A5 Horizontal 210×148.5 → 4 up : 2 lignes × 2 colonnes, feuille paysage
+        { wMin: 205, wMax: 215, hMin: 143, hMax: 154, repeatHor: 2, repeatVer: 2, sheetOrientation: 'PAYSAGE' },
+        // 10x21 Vertical 100×210 → 6 up : 2 lignes × 3 colonnes, feuille portrait
+        { wMin: 95, wMax: 105, hMin: 205, hMax: 215, repeatHor: 3, repeatVer: 2, sheetOrientation: 'PORTRAIT' },
+        // 21x10 Horizontal 210×100 → 6 up : 3 lignes × 2 colonnes, feuille paysage
+        { wMin: 205, wMax: 215, hMin: 95, hMax: 105, repeatHor: 2, repeatVer: 3, sheetOrientation: 'PAYSAGE' },
+        // Dépliant 10x42 Horizontal 100×420 → 3 up : 3 lignes × 1 colonne, feuille paysage
+        { wMin: 95, wMax: 105, hMin: 415, hMax: 425, repeatHor: 1, repeatVer: 3, sheetOrientation: 'PAYSAGE' },
+        // Dépliant 20x21 Horizontal 200×210 → 2 up : 1 ligne × 2 colonnes, feuille paysage
+        { wMin: 195, wMax: 205, hMin: 205, hMax: 215, repeatHor: 2, repeatVer: 1, sheetOrientation: 'PAYSAGE' },
+        // Dépliant 21x20 Vertical 210×200 → 2 up : 1 ligne × 2 colonnes, feuille paysage
+        { wMin: 205, wMax: 215, hMin: 195, hMax: 205, repeatHor: 2, repeatVer: 1, sheetOrientation: 'PAYSAGE' },
+        // A4+ Vertical 210×397 → 1 up : 1 ligne × 1 colonne, feuille portrait
+        { wMin: 205, wMax: 215, hMin: 392, hMax: 402, repeatHor: 1, repeatVer: 1, sheetOrientation: 'PORTRAIT' },
+        // Dépliant 15x42 Horizontal 150×420 → 2 up : 2 lignes × 1 colonne, feuille paysage
+        { wMin: 145, wMax: 155, hMin: 415, hMax: 425, repeatHor: 1, repeatVer: 2, sheetOrientation: 'PAYSAGE' }
+    ];
 
     /**
      * @typedef {Object} PsmdPage
@@ -258,7 +289,7 @@
      * mmToPoints(25.4); // → 72 (1 pouce)
      */
     function mmToPoints(mm) {
-        return mm * 72 / 25.4;
+        return Math.round((mm * 72 / 25.4) * 100000) / 100000;
     }
 
     /**
@@ -994,6 +1025,81 @@
     }
 
     /**
+     * Calcule le schéma d'imposition pour un format document donné.
+     * Détermine : feuille (A3/SRA3), orientation, colonnes, lignes, marges et gouttières.
+     *
+     * Formule des marges (contrainte gouttière = 2 × marge) :
+     *   marginX = (sheetWidth / repeatHor - bleedBoxWidth) / 2
+     *   spacingX = 2 × marginX  (gouttière entre layouts)
+     *
+     * @param {number} largeurMm - Largeur du document fini en mm
+     * @param {number} hauteurMm - Hauteur du document fini en mm
+     * @param {PsmdFondPerdu|null} fondPerdu - Configuration fond perdu
+     * @returns {Object|null} Configuration d'imposition ou null si format inconnu
+     */
+    function getImpositionLayout(largeurMm, hauteurMm, fondPerdu) {
+        // Déterminer les dimensions de la BleedBox
+        var bleedLeft = 0, bleedRight = 0, bleedTop = 0, bleedBottom = 0;
+        if (fondPerdu && fondPerdu.actif) {
+            bleedLeft   = fondPerdu.gaucheMm || fondPerdu.valeurMm || 0;
+            bleedRight  = fondPerdu.droiteMm || fondPerdu.valeurMm || 0;
+            bleedTop    = fondPerdu.hautMm   || fondPerdu.valeurMm || 0;
+            bleedBottom = fondPerdu.basMm    || fondPerdu.valeurMm || 0;
+        }
+        var estFondPerdu = (bleedLeft + bleedRight + bleedTop + bleedBottom) > 0;
+        var bleedBoxWidth  = largeurMm + bleedLeft + bleedRight;
+        var bleedBoxHeight = hauteurMm + bleedTop + bleedBottom;
+
+        // Sélection de la feuille
+        var sheet = estFondPerdu ? SHEET_SRA3 : SHEET_A3;
+
+        // Recherche de la règle d'imposition correspondante
+        var rule = null;
+        for (var i = 0; i < IMPOSITION_RULES.length; i++) {
+            var r = IMPOSITION_RULES[i];
+            if (largeurMm >= r.wMin && largeurMm <= r.wMax &&
+                hauteurMm >= r.hMin && hauteurMm <= r.hMax) {
+                rule = r;
+                break;
+            }
+        }
+
+        if (!rule) {
+            console.warn('getImpositionLayout: aucune règle pour ' + largeurMm + '×' + hauteurMm + 'mm');
+            return null;
+        }
+
+        // Dimensions de la feuille dans l'orientation choisie
+        var sheetWidth, sheetHeight;
+        if (rule.sheetOrientation === 'PAYSAGE') {
+            sheetWidth  = Math.max(sheet.largeurMm, sheet.hauteurMm);
+            sheetHeight = Math.min(sheet.largeurMm, sheet.hauteurMm);
+        } else {
+            sheetWidth  = Math.min(sheet.largeurMm, sheet.hauteurMm);
+            sheetHeight = Math.max(sheet.largeurMm, sheet.hauteurMm);
+        }
+
+        // Calcul des marges et gouttières
+        var marginXMm  = (sheetWidth / rule.repeatHor - bleedBoxWidth) / 2;
+        var marginYMm  = (sheetHeight / rule.repeatVer - bleedBoxHeight) / 2;
+        var spacingXMm = (rule.repeatHor > 1) ? 2 * marginXMm : 0;
+        var spacingYMm = (rule.repeatVer > 1) ? 2 * marginYMm : 0;
+
+        return {
+            repeatHor:        rule.repeatHor,
+            repeatVer:        rule.repeatVer,
+            sheetOrientation: rule.sheetOrientation,
+            sheetLargeurMm:   sheetWidth,
+            sheetHauteurMm:   sheetHeight,
+            marginXMm:        Math.max(0, marginXMm),
+            marginYMm:        Math.max(0, marginYMm),
+            spacingXMm:       Math.max(0, spacingXMm),
+            spacingYMm:       Math.max(0, spacingYMm),
+            totalImpositions: rule.repeatHor * rule.repeatVer
+        };
+    }
+
+    /**
      * Génère la section XML `<bleed>` pour le PSMD à partir des données fond perdu.
      * PrintShop Mail ne supporte qu'une valeur unique de bleed, donc on prend le minimum
      * des 4 côtés pour garantir la couverture sur tous les côtés.
@@ -1011,8 +1117,8 @@
      * generatePsmdBleedSection({ actif: false });
      * // → '<bleed>\n<mode>0</mode>\n<size>0</size>\n</bleed>'
      */
-    function generatePsmdBleedSection(fondPerdu) {
-        if (!fondPerdu || !fondPerdu.actif) {
+    function generatePsmdBleedSection(fondPerdu, bleedModeOverride) {
+        if (bleedModeOverride === 0 || !fondPerdu || !fondPerdu.actif) {
             return '<bleed>\n<mode>0</mode>\n<size>0</size>\n</bleed>';
         }
 
@@ -1048,12 +1154,37 @@
      * @param {number} [hauteurMm=0] - Hauteur du format fini en mm
      * @returns {string} XML de la section preferences
      */
-    function generatePsmdPreferences(fondPerdu, formatPapierLargeurMm, formatPapierHauteurMm, largeurMm, hauteurMm) {
+    function generatePsmdPreferences(fondPerdu, formatPapierLargeurMm, formatPapierHauteurMm, largeurMm, hauteurMm, bleedModeOverride, impositionConfig) {
+        // Calcul des marges, répétition et gouttières
+        var mLeft = 0, mTop = 0, mRight = 0, mBottom = 0;
+        var repeatHor = 1, repeatVer = 1;
+        var spacingXPt = 0, spacingYPt = 0;
+        var duplexPrint = 0;
+        var itemsWithoutDb = 1;
+
+        if (impositionConfig) {
+            // Mode imposition : marges et gouttières calculées par getImpositionLayout
+            repeatHor  = impositionConfig.repeatHor;
+            repeatVer  = impositionConfig.repeatVer;
+            mLeft = mRight  = mmToPoints(impositionConfig.marginXMm);
+            mTop  = mBottom = mmToPoints(impositionConfig.marginYMm);
+            spacingXPt = mmToPoints(impositionConfig.spacingXMm);
+            spacingYPt = mmToPoints(impositionConfig.spacingYMm);
+            duplexPrint = 3;
+            itemsWithoutDb = 2;
+        } else if (bleedModeOverride !== 0 && formatPapierLargeurMm > 0 && formatPapierHauteurMm > 0 && fondPerdu && fondPerdu.actif) {
+            // Mode legacy : centrer un seul layout dans la feuille SRA
+            var bleedLargeurMm = (largeurMm || 0) + (fondPerdu.gaucheMm || 0) + (fondPerdu.droiteMm || 0);
+            var bleedHauteurMm = (hauteurMm || 0) + (fondPerdu.hautMm || 0) + (fondPerdu.basMm || 0);
+            mLeft = mRight  = mmToPoints((formatPapierLargeurMm - bleedLargeurMm) / 2);
+            mTop  = mBottom = mmToPoints((formatPapierHauteurMm - bleedHauteurMm) / 2);
+        }
+
         return `<preferences>
 <program>
 <default_tabstop_interval>36</default_tabstop_interval>
 <markers begin="@" end="@"/>
-<items_without_database>1</items_without_database>
+<items_without_database>${itemsWithoutDb}</items_without_database>
 </program>
 <print_job>
 <collate>yes</collate>
@@ -1090,29 +1221,20 @@
 <pdfvt>
 <joboptions></joboptions>
 </pdfvt>
-${(function() {
-        var mLeft = 0, mTop = 0, mRight = 0, mBottom = 0;
-        if (formatPapierLargeurMm > 0 && formatPapierHauteurMm > 0 && fondPerdu && fondPerdu.actif) {
-            var bleedLargeurMm = (largeurMm || 0) + (fondPerdu.gaucheMm || 0) + (fondPerdu.droiteMm || 0);
-            var bleedHauteurMm = (hauteurMm || 0) + (fondPerdu.hautMm || 0) + (fondPerdu.basMm || 0);
-            mLeft = mRight = mmToPoints((formatPapierLargeurMm - bleedLargeurMm) / 2);
-            mTop = mBottom = mmToPoints((formatPapierHauteurMm - bleedHauteurMm) / 2);
-        }
-        return '<margins option="0" left="' + mLeft.toFixed(2) + '" top="' + mTop.toFixed(2) + '" right="' + mRight.toFixed(2) + '" bottom="' + mBottom.toFixed(2) + '"/>';
-    })()}
+<margins option="0" left="${mLeft.toFixed(2)}" top="${mTop.toFixed(2)}" right="${mRight.toFixed(2)}" bottom="${mBottom.toFixed(2)}"/>
 <technology>0</technology>
 </print_job>
 <repetition>
-<repeat_hor>1</repeat_hor>
-<repeat_ver>1</repeat_ver>
+<repeat_hor>${repeatHor}</repeat_hor>
+<repeat_ver>${repeatVer}</repeat_ver>
 <print_priority>4</print_priority>
 <print_priority>0</print_priority>
 <print_priority>2</print_priority>
-<spacing_between_layouts x="0" y="0"/>
-<duplex_print>0</duplex_print>
+<spacing_between_layouts x="${spacingXPt.toFixed(5)}" y="${spacingYPt.toFixed(5)}"/>
+<duplex_print>${duplexPrint}</duplex_print>
 </repetition>
 <imposition>
-${generatePsmdBleedSection(fondPerdu)}
+${generatePsmdBleedSection(fondPerdu, bleedModeOverride)}
 <cropmarks>
 <mode>1</mode>
 <size>6</size>
@@ -1439,9 +1561,11 @@ ${generatePsmdBleedSection(fondPerdu)}
                 var fileName = exportPrefix + '_' + zone.id + '.' + ext;
                 imageVariables.push({ varName: varName, fileName: fileName, isDynamic: false });
             } else {
-                // ─── Fallback nom original ───
-                var fileName = (source.nomOriginal) || 
-                          (source.nomFichier) || 
+                // ─── Image sans base64 (déjà extraite lors d'une session précédente) ───
+                // Priorité à nomFichier (chemin physique absolu) car nomOriginal
+                // est le nom d'upload d'origine qui n'existe pas à côté du PSMD
+                var fileName = (source.nomFichier) || 
+                          (source.nomOriginal) || 
                           (source.url) || '';
                 if (fileName) {
                     imageVariables.push({ varName: varName, fileName: fileName, isDynamic: false });
@@ -1770,10 +1894,10 @@ ${generatePsmdColor('textcolor', textColor)}
             // Image dynamique : pas de file_name statique, PrintShop Mail utilise la variable
             fileName = '';
         } else {
-            // Image fixe : nom exporté ou nom original
+            // Image fixe : nom exporté, ou chemin physique (nomFichier) en priorité
             fileName = zone.exportedFileName || 
-                      source.nomOriginal || 
                       source.nomFichier || 
+                      source.nomOriginal || 
                       source.url || '';
         }
         
@@ -2185,17 +2309,22 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
         var orientation = largeurMm > hauteurMm ? 'PAYSAGE' : 'PORTRAIT';
         
         // Générer le DEVMODE
-        // Si formatPapierLargeurMm / formatPapierHauteurMm présents dans formatDocument
-        // → utiliser ces dimensions (format SRA) pour le DEVMODE
-        // → PrintShop Mail doit recevoir le format papier SRA, pas le format fini
-        // Sinon → fallback sur le format fini (comportement actuel)
+        // Priorité : imposition (feuille complète) > formatPapier SRA > format fini
         var formatDocument = jsonData.formatDocument || {};
-        var devmodeLargeur = (formatDocument.formatPapierLargeurMm && formatDocument.formatPapierLargeurMm > 0)
-            ? formatDocument.formatPapierLargeurMm
-            : largeurMm;
-        var devmodeHauteur = (formatDocument.formatPapierHauteurMm && formatDocument.formatPapierHauteurMm > 0)
-            ? formatDocument.formatPapierHauteurMm
-            : hauteurMm;
+        var impositionConfig = formatDocument._impositionConfig || null;
+        var devmodeLargeur, devmodeHauteur;
+
+        if (impositionConfig) {
+            devmodeLargeur = impositionConfig.sheetLargeurMm;
+            devmodeHauteur = impositionConfig.sheetHauteurMm;
+            orientation = impositionConfig.sheetOrientation;
+        } else if (formatDocument.formatPapierLargeurMm && formatDocument.formatPapierLargeurMm > 0) {
+            devmodeLargeur = formatDocument.formatPapierLargeurMm;
+            devmodeHauteur = formatDocument.formatPapierHauteurMm || hauteurMm;
+        } else {
+            devmodeLargeur = largeurMm;
+            devmodeHauteur = hauteurMm;
+        }
         var devmodeBase64 = generateWindowsDevmode(orientation, devmodeHauteur, devmodeLargeur);
         
         // Regrouper les zones par page
@@ -2256,10 +2385,13 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
             if (!zonesByPage[pNum]) zonesByPage[pNum] = [];
             
             // Générer le nom de fichier exporté si prefix fourni et image base64 présente
-            var exportedFileName = (zone.source && zone.source.nomOriginal) || '';
+            var exportedFileName = '';
             if (exportPrefix && zone.source && zone.source.imageBase64) {
                 var ext = getExtensionFromBase64(zone.source.imageBase64);
                 exportedFileName = exportPrefix + '_' + zone.id + '.' + ext;
+            } else if (zone.source) {
+                // Pas de base64 : utiliser nomFichier (chemin physique) en priorité
+                exportedFileName = zone.source.nomFichier || zone.source.nomOriginal || '';
             }
             
             var newZone = {};
@@ -2366,6 +2498,15 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
             }
         }
         
+        // Calcul imposition si activé
+        var impositionConfig = null;
+        if (formatDocument._impositionEnabled) {
+            impositionConfig = getImpositionLayout(largeurMm, hauteurMm, formatDocument.fondPerdu);
+            if (impositionConfig) {
+                formatDocument._impositionConfig = impositionConfig;
+            }
+        }
+
         // Construire le XML
         var xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
         xml += '<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.printshopmail.com/support/xml/schemas/win/version-7_1_0/printshopmail7.xsd">\n';
@@ -2379,7 +2520,9 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
             formatDocument.formatPapierLargeurMm || 0,
             formatDocument.formatPapierHauteurMm || 0,
             largeurMm,
-            hauteurMm
+            hauteurMm,
+            formatDocument._bleedModeOverride,
+            impositionConfig
         ) + '\n';
         xml += generatePsmdDatabaseSettings() + '\n';
         
@@ -2476,7 +2619,17 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
          * @returns {PsmdOutput} Résultat de la génération
          */
         generatePsmdFromJson: generatePsmdFromJson,
-        
+
+        /**
+         * Calcule le schéma d'imposition pour un format document
+         * @function
+         * @param {number} largeurMm - Largeur du document fini en mm
+         * @param {number} hauteurMm - Hauteur du document fini en mm
+         * @param {PsmdFondPerdu|null} fondPerdu - Configuration fond perdu
+         * @returns {Object|null} Configuration d'imposition ou null si format inconnu
+         */
+        getImpositionLayout: getImpositionLayout,
+
         // Utilitaires exposés pour usage avancé
         /**
          * Convertit mm en points

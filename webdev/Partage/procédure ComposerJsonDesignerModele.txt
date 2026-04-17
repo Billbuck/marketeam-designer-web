@@ -1,0 +1,100 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// ComposerJsonDesignerModele
+// Compose le JSON complet pour ouvrir le Designer en mode "template"
+// (création/modification de modèle)
+//
+// Paramètres :
+//   pStDocument      (structDocument)   : Document avec PDF, dimensions, fond, etc.
+//   pIdClient        (entier)           : ID client
+//   pIdContact       (entier)           : ID contact
+//   pIdModele        (entier)           : ID modèle (0 si nouveau)
+//   pLibelle         (chaîne)           : Libellé du modèle
+//   pTaaBaseChamp    (taa)              : Tableau associatif des champs de fusion standard
+//   pTabEchantillon  (tab BaseLigne)    : Échantillon d'aperçu (coordonnées client)
+//   pLimTexte        (entier)           : Limite zones texte pour l'utilisateur du tunnel
+//   pLimImage        (entier)           : Limite zones image pour l'utilisateur du tunnel
+//   pLimBarcode      (entier)           : Limite zones code-barres pour l'utilisateur du tunnel
+//   pLimQr           (entier)           : Limite zones QR pour l'utilisateur du tunnel
+//
+// Note : les limites sont celles destinées à l'UTILISATEUR FINAL dans le tunnel.
+//        En mode template, le Designer les ignore (le créateur a accès à tout).
+//        Elles sont sauvegardées dans le JSON et appliquées en mode standard.
+// ─────────────────────────────────────────────────────────────────────────────
+procédure ComposerJsonDesignerModele(pStDocument est une structDocument, pIdClient est un entier, pIdContact est un entier, pIdModele est un entier, pLibelle est une chaîne, pTaaBaseChamp, pTabEchantillon est un tableau de StructBaseLigne, pLimTexte est un entier = -1, pLimImage est un entier = -1, pLimBarcode est un entier = -1, pLimQr est un entier = 0)
+
+stLoad			est une structDesignerLoad
+sJsonDocument	est une chaîne
+
+// =========================================================================
+// BLOCS D'ENVIRONNEMENT
+// =========================================================================
+stLoad.action					= "load"
+stLoad.mode						= "template"
+stLoad.auth						= RemplirDesignerAuth(pIdClient, pIdContact)
+stLoad.constraints			= RemplirDesignerConstraints(pLimTexte, pLimImage, pLimQr, pLimBarcode)
+stLoad.limites					= RemplirDesignerLimites()
+stLoad.policesDisponibles	= RemplirDesignerPolices(pIdClient)
+stLoad.Theme					= "LTR"
+
+// =========================================================================
+// DOCUMENT (data)
+// =========================================================================
+
+// Identification
+sIdDocument est une chaîne = "modele-" + (pIdModele > 0 ? pIdModele sinon "nouveau")
+stLoad.Document.identification = RemplirDesignerIdentification(sIdDocument, "modele", 1, pLibelle)
+
+// Format : fond perdu depuis les dimensions détaillées de structPagePdf
+si pStDocument.EstFondPerdu _et_ pStDocument.tabPagePDF..Occurrence >= 1 alors
+
+	nFormatPapierLargeur	est un réel		= 0
+	nFormatPapierHauteur	est un réel		= 0
+	nIdFormatImpression		est un entier	= pStDocument.tabPagePDF[1].IdFormatImpression
+
+	si ltr_format_impression.LitRecherchePremier(IdFormatImpression, nIdFormatImpression) alors
+		si ltr_format_impression.IdFormatPapier > 0 alors
+			si ltr_format_impression.LitRecherchePremier(IdFormatImpression, ltr_format_impression.IdFormatPapier) alors
+				nFormatPapierLargeur	= ltr_format_impression.Largeur
+				nFormatPapierHauteur	= ltr_format_impression.Hauteur
+			fin
+		fin
+	fin
+
+	stLoad.Document.formatDocument = RemplirDesignerFormat(
+		pStDocument.LargeurOuvert, pStDocument.HauteurOuvert,
+		Vrai,
+		pStDocument.tabPagePDF[1].FondPerduHautMm,
+		pStDocument.tabPagePDF[1].FondPerduBasMm,
+		pStDocument.tabPagePDF[1].FondPerduGaucheMm,
+		pStDocument.tabPagePDF[1].FondPerduDroiteMm,
+		nFormatPapierLargeur,
+		nFormatPapierHauteur)
+
+sinon
+	stLoad.Document.formatDocument = RemplirDesignerFormat(pStDocument.LargeurOuvert, pStDocument.HauteurOuvert, Faux, 0, 0, 0, 0)
+fin
+
+// Pages : recto seul ou recto/verso, images de fond
+stLoad.Document.pages = RemplirDesignerPages(pStDocument.EstRectoVerso, pStDocument.tabImageFond, pStDocument.Repertoire + pStDocument.NomFichierTemp)
+
+Trace("ComposerJsonDesignerModele : cheminFond page 1 = [" + stLoad.Document.pages[1].cheminFond + "]")
+Trace("ComposerJsonDesignerModele : Nombre de pages = " + stLoad.Document.pages..Occurrence)
+
+// =========================================================================
+// BLOCS COMMUNS
+// =========================================================================
+
+// Champs de fusion disponibles
+stLoad.Document.champsFusion	= RemplirDesignerChampsFusion(pTaaBaseChamp)
+
+// Données d'aperçu
+stLoad.Document.donneesApercu	= RemplirDesignerApercu(pTabEchantillon, pTaaBaseChamp)
+
+// =========================================================================
+// SÉRIALISATION EN JSON
+// =========================================================================
+Sérialise(stLoad, sJsonDocument, psdJSON + psdMiseEnForme)
+
+sJsonDocument = sJsonDocument.Remplace("""##Null##""","null")
+
+renvoyer sJsonDocument

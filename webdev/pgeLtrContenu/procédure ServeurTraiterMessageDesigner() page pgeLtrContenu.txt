@@ -1,0 +1,89 @@
+//!
+//! @brief <indiquez ici ce que fait la procédure>
+//!
+//! @return (booléen)  <indiquez ici les valeurs possibles ainsi que leur interprétation>
+//!
+//!
+
+procédure ServeurTraiterMessageDesigner()
+
+
+sJsonData	est une chaîne
+
+
+si gsJsonRecu = "" alors renvoyer Faux
+
+vMessage est un Variant = JSONVersVariant(gsJsonRecu)
+
+si vMessage.action = Null alors renvoyer Faux
+
+selon vMessage.action
+
+	cas "validated"
+
+		// L'utilisateur a validé son document dans le Designer
+		si vMessage.success = Vrai alors
+			// vMessage.data contient le JSON complet exporté par exportToWebDev()
+			Trace("Document validé reçu du Designer")
+			jDoc est un JSON = ChaîneVersUTF8(gsJsonRecu)
+			sJsonData = JSONVersChaîne(jDoc.data)
+			si sJsonData <> "" alors
+				si _nIndDesignerEnCours = 0 alors
+					// -----------------------------------//
+					//              ENVELOPPE             //
+					// -----------------------------------//
+					__stOperation.stOperationLettre.stEnveloppe.JsonDesignerData = sJsonData
+					si Partage.GenererPsmdServeurEnveloppe(__stOperation.stOperationLettre.stEnveloppe, __stOperation.CodeTemp) alors
+						GenererBatEnveloppeDepuisPsmd(__stOperation.stOperationLettre.stEnveloppe, __stOperation.CodeTemp)
+						cpDesigner.TraiterManifestImagesDesigner(__stOperation.stOperationLettre.stEnveloppe.CheminPsmdEnveloppe, __stOperation.stOperationLettre.stEnveloppe.JsonDesignerData)
+						intAdressageExpediteur.Etat		= Grisé
+						intAdressageLogo.Etat				= Grisé
+						intAdressagePromotion.Etat			= Grisé
+						btnEnveloppeSupprimer..Visible	= Vrai
+						btnEnveloppeAperçu.Visible			= Vrai
+					fin
+
+
+				sinon
+					// -----------------------------------//
+					//               DOCUMENT             //
+					// -----------------------------------//
+					__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesignerData = sJsonData
+					si Partage.GenererPsmdServeurDocument(__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours]) alors
+						GenererBatDocumentDepuisPsmd(__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours])
+						cpDesigner.TraiterManifestImagesDesigner(__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].CheminPsmdTemp, __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesignerData)
+					si __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].tabPagePDF..Occurrence > 0 alors
+						si __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].tabPagePDF[1].EstFondPerdu = Faux alors
+							pour tout stVignette de __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].tabImageFond
+								Partage.AppliqueBlancTournant(stVignette.CheminPhysique, __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].LargeurOuvert, __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].HauteurOuvert)
+							fin
+							pour tout stVignette de __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].tabImageBat
+								Partage.AppliqueBlancTournant(stVignette.CheminPhysique, __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].LargeurOuvert, __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].HauteurOuvert)
+							fin
+						fin
+					fin
+					sinon
+						PopupAfficheMessage(
+						"Erreur lors de la génération du document" + RC + "Merci de réitérer l'opération", "Erreur", __OPERATION_COURRIER__, __TOAST_ANNULATION__)
+					fin
+				fin
+			fin
+
+		sinon
+			Trace("Validation échouée : " + vMessage.error)
+		fin
+
+	cas "cancelled"
+		// L'utilisateur a annulé le projet
+		Trace("Projet annulé par l'utilisateur")
+		// TODO : Retour à la page précédente du tunnel
+		// PageAffiche(PAGE_TunnelCommande, "")
+
+	autre cas
+		Trace("Action non gérée côté serveur : " + vMessage.action)
+
+fin
+
+gsJsonRecu = ""
+
+renvoyer Vrai

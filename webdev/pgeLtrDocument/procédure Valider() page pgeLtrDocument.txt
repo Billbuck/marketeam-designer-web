@@ -1,0 +1,185 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Valider — Page pgeLtrDocument (modèles)
+// Sauvegarde le modèle en BDD et déplace les fichiers vers les répertoires finaux
+//
+// Arborescence cible (via CheminClient/CheminMarque/CheminMarketeam) :
+//   .../Documents/    LtrMod{Id}.pdf
+//   .../Vignettes/    LtrMod{Id}p{n}.jpg
+//   .../Fonds/        LtrModFond{Id}p{n}.jpg
+//   .../Printshop/    LtrModPsmd{Id}.psmd + images Designer
+// ─────────────────────────────────────────────────────────────────────────────
+procédure Valider()
+
+cpConnexion.gcnxBaseChronodirect.TransactionDébut()
+
+retour = Vrai
+
+si _pIdModele = 0 alors
+	ltr_modele.RAZ()
+
+	ltr_modele.IdClient							= Partage.__vcUser.IDClient
+	ltr_modele.IdContact							= Partage.__vcUser.IDContact
+	ltr_modele.UserCreation						= Partage.__vcUser.NomUser
+	ltr_modele.DateHeureCreation				= DateHeureSys()
+
+	ltr_modele.Type								= __OPERATION_COURRIER__
+	ltr_modele.EstPolyvalent					= intPolyvalent
+	ltr_modele.IdSupport							= _stDocument.IdSupport
+	ltr_modele.EstFondPerdu						= _stDocument.EstFondPerdu
+	ltr_modele.EstRectoVerso					= _stDocument.EstRectoVerso
+	ltr_modele.EstPorteAdresse					= _stDocument.PeutEtrePorteAdresse
+	ltr_modele.NomFichierOrigine				= _stDocument.NomFichierOrigine
+	ltr_modele.Libelle							= SansEspace(saiLibellé)
+	ltr_modele.DateDebutUtilisation			= saiDateDebut
+	ltr_modele.DateFinUtilisation				= saiDateFin
+	ltr_modele.EstPartage						= intEstPartagé
+	ltr_modele.EstActif							= Vrai
+	ltr_modele.Designation.Null				= Vrai
+	ltr_modele.DateDebutUtilisation.Null	= Vrai
+	ltr_modele.DateFinUtilisation.Null		= pas DateValide(saiDateDebut)
+	ltr_modele.DateHeureModification.Null	= pas DateValide(saiDateFin)
+
+	// ─── Sauvegarde JsonDesignerData ─────────────────────────────────────
+	ltr_modele.EstPersonnalisable				= (_stDocument.JsonDesignerData <> "")
+	si _stDocument.JsonDesignerData <> "" alors
+		ltr_modele.JsonDesignerData				= _stDocument.JsonDesignerData
+	sinon
+		ltr_modele.JsonDesignerData.Null		= Vrai
+	fin
+
+	si pas ltr_modele.Ajoute() alors retour Faux
+
+	_pIdModele = ltr_modele.IdModele
+
+	DeplacerFichiersModele()
+
+sinon
+	si pas ltr_modele.LitRecherchePremier(IdModele, _pIdModele) alors retour Faux
+
+	ltr_modele.Libelle							= SansEspace(saiLibellé)
+	ltr_modele.DateDebutUtilisation			= saiDateDebut
+	ltr_modele.DateFinUtilisation				= saiDateFin
+	ltr_modele.EstActif							= Vrai
+	ltr_modele.EstPolyvalent					= intPolyvalent
+	ltr_modele.EstPartage						= intEstPartagé
+	ltr_modele.Designation.Null				= Vrai
+	ltr_modele.DateDebutUtilisation.Null	= Vrai
+	ltr_modele.DateFinUtilisation.Null		= pas DateValide(saiDateDebut)
+	ltr_modele.DateHeureModification.Null	= pas DateValide(saiDateFin)
+
+	si _stDocument.NomFichierOrigine = "" alors retour Faux
+
+	ltr_modele.NomFichierOrigine			= _stDocument.NomFichierOrigine
+
+	// ─── Sauvegarde JsonDesignerData ─────────────────────────────────────
+	ltr_modele.EstPersonnalisable			= (_stDocument.JsonDesignerData <> "")
+	si _stDocument.JsonDesignerData <> "" alors
+		ltr_modele.JsonDesignerData			= _stDocument.JsonDesignerData
+	sinon
+		ltr_modele.JsonDesignerData.Null	= Vrai
+	fin
+
+	si pas ltr_modele.Modifie() alors retour Faux
+
+	DeplacerFichiersModele()
+
+fin
+
+
+si retour = Faux alors
+	cpConnexion.gcnxBaseChronodirect.TransactionAnnule()
+	renvoyer Faux
+sinon
+	cpConnexion.gcnxBaseChronodirect.TransactionFin()
+	renvoyer Vrai
+fin
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CheminModele — Procédure interne
+// Retourne le chemin (physique ou relatif) pour un type de répertoire,
+// en fonction du propriétaire du modèle (client, marque ou Marketeam)
+	// ─────────────────────────────────────────────────────────────────────────────
+	procédure interne CheminModele(pTypeRepertoire est une chaîne, pPhysique est un booléen = Vrai)
+		selon Vrai
+			cas ltr_modele.IdMarque > 0	: renvoyer CheminMarque(ltr_modele.IdMarque, ltr_modele.Type, pTypeRepertoire, pPhysique)
+			cas ltr_modele.IdClient > 0	: renvoyer CheminClient(ltr_modele.IdClient, ltr_modele.Type, pTypeRepertoire, pPhysique)
+			autre cas								: renvoyer CheminMarketeam(ltr_modele.Type, pTypeRepertoire, pPhysique)
+		fin
+	fin
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DeplacerFichiersModele — Procédure interne
+// Déplace TOUS les fichiers du modèle vers les répertoires finaux
+	// ─────────────────────────────────────────────────────────────────────────────
+	procédure interne DeplacerFichiersModele()
+
+		nIdMod				est un entier		= ltr_modele.IdModele
+
+		// ─── 1. PDF → Modeles/ ──────────────────────────────────────────
+		sRepDocument		est une chaîne		= CheminModele(__REP_MODELE__)
+		sFicPdf			est une chaîne		= __DOC_LTR_MODELE__ + nIdMod + __PDF__
+		sSourcePdf		est une chaîne		= _stDocument.Repertoire + ["\"] + _stDocument.NomFichierTemp
+		sCiblePdf			est une chaîne		= sRepDocument + sFicPdf
+
+		si Minuscule(sSourcePdf) <> Minuscule(sCiblePdf) alors
+			si fFichierExiste(sCiblePdf) alors fSupprime(sCiblePdf)
+			si pas fDéplaceFichier(sSourcePdf, sCiblePdf) alors
+				Trace("DeplacerFichiersModele : échec PDF", sSourcePdf, "-->", sCiblePdf)
+				retour Faux
+			fin
+			Trace("DeplacerFichiersModele : PDF --> " + sCiblePdf)
+		fin
+
+		// ─── 2. Vignettes (BAT format fini prioritaire) → Vignettes/ ────
+		sRepVignette est une chaîne = CheminModele(__REP_VIGNETTE__)
+		pour nPage = 1 _à_ _stDocument.NombrePage
+			sFicVignette			est une chaîne		= __DOC_LTR_MODELE__ + nIdMod + "p" + nPage + __JPG__
+			sCibleVignette		est une chaîne		= sRepVignette + sFicVignette
+			sSourceVignette		est une chaîne		= ""
+
+			si _stDocument.tabImageBat..Occurrence >= nPage _et_ _stDocument.tabImageBat[nPage].CheminPhysique <> "" alors
+				sSourceVignette = _stDocument.tabImageBat[nPage].CheminPhysique
+				sinon si _stDocument.tabImageFond..Occurrence >= nPage _et_ _stDocument.tabImageFond[nPage].CheminPhysique <> "" alors
+				sSourceVignette = _stDocument.tabImageFond[nPage].CheminPhysique
+			fin
+
+			si sSourceVignette <> "" alors
+				si Minuscule(sSourceVignette) <> Minuscule(sCibleVignette) alors
+					si fFichierExiste(sCibleVignette) alors fSupprime(sCibleVignette)
+					fCopieFichier(sSourceVignette, sCibleVignette)
+					Trace("DeplacerFichiersModele : Vignette p" + nPage + " --> " + sCibleVignette)
+				sinon
+					Trace("DeplacerFichiersModele : Vignette p" + nPage + " déjà en place")
+				fin
+			fin
+		fin
+
+		// ─── 3. Images de fond → Fonds/ ─────────────────────────────────
+		sRepFond est une chaîne = CheminModele(__REP_FOND__)
+		pour nPage = 1 _à_ _stDocument.NombrePage
+			si _stDocument.tabImageFond..Occurrence >= nPage _et_ _stDocument.tabImageFond[nPage].CheminPhysique <> "" alors
+				sFicFond		est une chaîne		= __DOC_LTR_MODELE__ + "Fond" + nIdMod + "p" + nPage + __JPG__
+				sCibleFond	est une chaîne		= sRepFond + sFicFond
+
+				si Minuscule(_stDocument.tabImageFond[nPage].CheminPhysique) <> Minuscule(sCibleFond) alors
+					si fFichierExiste(sCibleFond) alors fSupprime(sCibleFond)
+					fCopieFichier(_stDocument.tabImageFond[nPage].CheminPhysique, sCibleFond)
+					Trace("DeplacerFichiersModele : Fond p" + nPage + " --> " + sCibleFond)
+				sinon
+					Trace("DeplacerFichiersModele : Fond p" + nPage + " déjà en place")
+				fin
+			fin
+		fin
+
+		// ─── 4. Nettoyage du sous-répertoire Temp\{IdModele} ─────────
+		// On supprime uniquement le sous-répertoire du modèle, pas le Temp\ racine
+		si _stDocument.RepertoireTravail <> "" _et_ Contient(_stDocument.RepertoireTravail, "\Temp\") alors
+			si fRepExiste(_stDocument.RepertoireTravail) alors
+				fRepSupprime(_stDocument.RepertoireTravail, frRécursif)
+				Trace("DeplacerFichiersModele : Temp modèle supprimé --> " + _stDocument.RepertoireTravail)
+			fin
+		fin
+
+	fin

@@ -1,0 +1,201 @@
+procédure UploadFichier()
+
+// A FAIRE : SI gIdDemandeSmartSms > 0 ALORS gbAuMoinsUnChangementDeFichierEnModification = Vrai
+nInd			est un entier
+sBat			est une chaîne
+sFond			est une chaîne
+sFichier		est une chaîne
+sMessage		est une chaîne
+
+nInd																	= znrLtrContenu
+
+__stOperation.stOperationLettre.NumeroDocumentEnCours	= nInd
+
+SupprimeTout(__stOperation.stOperationLettre.tabStDocument[nInd].tabPagePDF)
+SupprimeTout(__stOperation.stOperationLettre.tabStDocument[nInd].tabImageFond)
+SupprimeTout(__stOperation.stOperationLettre.tabStDocument[nInd].tabImageBat)
+__stOperation.stOperationLettre.tabStDocument[nInd].JsonDesignerData = ""
+
+
+si fFichierExiste(cpProjet.__sRepRacine + cpProjet.__sRepUpload + ["\"] + __stOperation.stOperationLettre.tabStDocument[nInd].NomFichierTemp) alors
+	fSupprime(cpProjet.__sRepRacine + cpProjet.__sRepUpload + ["\"] + __stOperation.stOperationLettre.tabStDocument[nInd].NomFichierTemp)
+fin
+
+pour I = 1 _à_ __stOperation.stOperationLettre.tabStDocument[nInd].NombrePage
+	// Suppression BAT
+	si fFichierExiste(cpProjet.__sRepRacine + cpProjet.__sRepUpload + ["\"] + __DOC_LTR_BAT__ + __stOperation.stOperationLettre.tabStDocument[nInd].CodeTemp + "p" + I + __JPG__) alors
+		fSupprime(cpProjet.__sRepRacine + cpProjet.__sRepUpload + ["\"] + __DOC_LTR_BAT__ + __stOperation.stOperationLettre.tabStDocument[nInd].CodeTemp + "p" + I + __JPG__)
+	fin
+	// Suppression fond Ghostscript
+	si fFichierExiste(cpProjet.__sRepRacine + cpProjet.__sRepUpload + ["\"] + __DOC_LTR_FOND__ + __stOperation.stOperationLettre.tabStDocument[nInd].CodeTemp + "p" + I + __JPG__) alors
+		fSupprime(cpProjet.__sRepRacine + cpProjet.__sRepUpload + ["\"] + __DOC_LTR_FOND__ + __stOperation.stOperationLettre.tabStDocument[nInd].CodeTemp + "p" + I + __JPG__)
+	fin
+fin
+
+ZoneRépétéeSupprimeTout(popUploadFichierDocument.znrAperçuUpload)
+
+sFichier = UploadCopieFichier(uplDocumentUpload, cpProjet.__sRepRacine + cpProjet.__sRepUpload + ["\"], "")
+
+si sFichier <> "" _et_ Minuscule(fExtraitChemin(sFichier, fExtension)) = __PDF__ alors
+
+	__stOperation.stOperationLettre.tabStDocument[nInd].EstUploadé					= Vrai
+	__stOperation.stOperationLettre.tabStDocument[nInd].EstDocumentEnAttente	= Faux
+	__stOperation.stOperationLettre.tabStDocument[nInd].EstPdfClient				= Vrai
+	__stOperation.stOperationLettre.tabStDocument[nInd].CodeTemp					= Partage.__vcUser.IDContact + "-" + DateHeureSys()
+	__stOperation.stOperationLettre.tabStDocument[nInd].NomFichierOrigine		= Majuscule(fExtraitChemin(sFichier, fFichier + fExtension))
+	__stOperation.stOperationLettre.tabStDocument[nInd].NomFichierTemp			= __DOC_LTR__ + __stOperation.stOperationLettre.tabStDocument[nInd].CodeTemp + __PDF__
+	__stOperation.stOperationLettre.tabStDocument[nInd].Repertoire					= cpProjet.__sRepRacine + cpProjet.__sRepUpload + ["\"]
+
+
+	sFond																								= __DOC_LTR_FOND__ + __stOperation.stOperationLettre.tabStDocument[nInd].CodeTemp
+	sBat																								= __DOC_LTR_BAT__  + __stOperation.stOperationLettre.tabStDocument[nInd].CodeTemp
+
+	si fRenomme(cpProjet.__sRepRacine + cpProjet.__sRepUpload + ["\"] + sFichier, cpProjet.__sRepRacine + cpProjet.__sRepUpload + ["\"] + __stOperation.stOperationLettre.tabStDocument[nInd].NomFichierTemp) alors
+
+		// ─────────────────────────────────────────────────────────
+		// Phase 1 — Analyse PDF
+		// ─────────────────────────────────────────────────────────
+		sMessage = Partage.PdfAnalyseDocument(__stOperation.stOperationLettre.tabStDocument[nInd])
+
+		si sMessage = "" alors
+
+			// ─────────────────────────────────────────────────────────
+			// Phase 1bis — Normalisation BleedBox si fond perdu
+			// Recadre le PDF à sa BleedBox si MediaBox ≠ BleedBox
+			// (PDF avec traits de coupe ou marges extérieures)
+			// ─────────────────────────────────────────────────────────
+			si __stOperation.stOperationLettre.tabStDocument[nInd].tabPagePDF[1].EstFondPerdu alors
+
+				stPage est une structPagePdf = __stOperation.stOperationLettre.tabStDocument[nInd].tabPagePDF[1]
+
+				Trace("MediaBox X, Y", stPage.MediaBoxXMm, stPage.MediaBoxYMm)
+				Trace("MediaBox Largeur, Hauteur", stPage.MediaBoxLargeurMm, stPage.MediaBoxHauteurMm)
+
+				Trace("BleedBox X, Y", stPage.BleedBoxXMm, stPage.BleedBoxYMm)
+				Trace("BleedBox Largeur, Hauteur", stPage.BleedBoxLargeurMm, stPage.BleedBoxHauteurMm)
+
+				Trace("TrimBox X, Y", stPage.TrimBoxXMm, stPage.TrimBoxYMm)
+				Trace("TrimBox Largeur, Hauteur", stPage.TrimBoxLargeurMm, stPage.TrimBoxHauteurMm)
+
+
+
+				si stPage.MediaBoxLargeurMm <> stPage.BleedBoxLargeurMm _ou_
+					stPage.MediaBoxHauteurMm <> stPage.BleedBoxHauteurMm alors
+
+					sUrlNormalize	est une chaîne	= "http://localhost:5000/PyMuPdfExtract/normalize_bleedbox?file=" + URLEncode(__stOperation.stOperationLettre.tabStDocument[nInd].Repertoire + __stOperation.stOperationLettre.tabStDocument[nInd].NomFichierTemp)
+					hNormalize		est une httpRequête
+					hRepNormalize	est un httpRéponse
+
+					hNormalize.URL			= sUrlNormalize
+					hNormalize.Méthode	= httpGet
+					hRepNormalize			= hNormalize.Envoie()
+
+					si hRepNormalize.CodeEtat = 200 alors
+						vNorm est un Variant = JSONVersVariant(hRepNormalize.Contenu)
+						si vNorm.success = Vrai alors
+							Trace("NormalizeBleedBox : normalized = " + vNorm.normalized)
+						sinon
+							Trace("NormalizeBleedBox : erreur = " + vNorm.erreur)
+						fin
+					sinon
+						Trace("NormalizeBleedBox : HTTP " + hRepNormalize.CodeEtat)
+					fin
+
+				fin
+
+			fin
+
+			// ─────────────────────────────────────────────────────
+			// Phase 2 — Conversion JPG fond
+			// ─────────────────────────────────────────────────────
+			__stOperation.stOperationLettre.tabStDocument[nInd].tabImageFond = Partage.GenereVignetteDocument(__stOperation.stOperationLettre.tabStDocument[nInd].NomFichierTemp, sFond, __stOperation.stOperationLettre.tabStDocument[nInd].tabPagePDF[1].EstFondPerdu, __stOperation.stOperationLettre.tabStDocument[nInd].tabPagePDF[1].LargeurExterne, __stOperation.stOperationLettre.tabStDocument[nInd].tabPagePDF[1].HauteurExterne)
+			// ─────────────────────────────────────────────────────
+			// Phase 3 — Blanc tournant si pas de fond perdu
+			// ─────────────────────────────────────────────────────
+			si __stOperation.stOperationLettre.tabStDocument[nInd].tabPagePDF[1].EstFondPerdu = Faux alors
+				pour tout stVignette de __stOperation.stOperationLettre.tabStDocument[nInd].tabImageFond
+					Partage.AppliqueBlancTournant(stVignette.CheminPhysique, __stOperation.stOperationLettre.tabStDocument[nInd].LargeurOuvert, __stOperation.stOperationLettre.tabStDocument[nInd].HauteurOuvert)
+				fin
+			fin
+
+			si __stOperation.stOperationLettre.EstEnveloppeFenetre = Faux alors
+				pour nPage = 1 _à_ __stOperation.stOperationLettre.tabStDocument[nInd].NombrePage
+					ZoneRépétéeAjoute(popUploadFichierDocument.znrAperçuUpload)
+					si __stOperation.stOperationLettre.tabStDocument[nInd].tabImageBat..Occurrence >= nPage alors
+						znrAperçuUpload[nPage].imgUpload = __stOperation.stOperationLettre.tabStDocument[nInd].tabImageBat[nPage].CheminPhysique
+					sinon
+						znrAperçuUpload[nPage].imgUpload = __stOperation.stOperationLettre.tabStDocument[nInd].tabImageFond[nPage].CheminPhysique
+					fin
+					znrAperçuUpload[nPage].imgUpload..Visible = Vrai
+				fin
+
+				popUploadFichierDocument.btnValiderUpload..Visible			= Vrai
+				znrLtrContenu[attNumDocument].attCboSelectionContenu		= __stOperation.stOperationLettre.tabStDocument[nInd].NomFichierOrigine
+				znrLtrContenu[attNumDocument].attCboSelectionGlien			= 1
+				znrLtrContenu[attNumDocument].attCboSelectionValeur		= ""
+
+			sinon
+				si nInd = 1 alors
+					__stOperation.stOperationLettre.tabStDocument[nInd].JsonDesignerData = cpDesigner.ComposerJsonDesignerCreation(__stOperation, __tabEchantillonBaseLigne, __OPERATION_COURRIER__, Faux, nInd, -1, -1, -1, 1)
+				sinon
+					__stOperation.stOperationLettre.tabStDocument[nInd].JsonDesignerData = cpDesigner.ComposerJsonDesignerCreation(__stOperation, __tabEchantillonBaseLigne, __OPERATION_COURRIER__, Faux, nInd, -1, -1, -1, 0)
+				fin
+
+
+				si __stOperation.stOperationLettre.tabStDocument[nInd].JsonDesignerData <> "" alors
+					si Partage.GenererPsmdServeurDocument(__stOperation.stOperationLettre.tabStDocument[nInd]) alors
+						GenererBatDocumentDepuisPsmd(__stOperation.stOperationLettre.tabStDocument[nInd])
+						si __stOperation.stOperationLettre.tabStDocument[nInd].tabPagePDF[1].EstFondPerdu = Faux alors
+							pour tout stVignette de __stOperation.stOperationLettre.tabStDocument[nInd].tabImageFond
+								Partage.AppliqueBlancTournant(stVignette.CheminPhysique, __stOperation.stOperationLettre.tabStDocument[nInd].LargeurOuvert, __stOperation.stOperationLettre.tabStDocument[nInd].HauteurOuvert)
+							fin
+						fin
+						AfficheVignettePopupUpload()
+					sinon
+						PopupAfficheMessage(
+						"Erreur lors de la génération du document" + RC + "Merci de réitérer l'opération", "Erreur", __OPERATION_COURRIER__, __TOAST_ANNULATION__)
+					fin
+				sinon
+					PopupAfficheMessage(
+					"Erreur lors de la génération du document" + RC + "Merci de réitérer l'opération", "Erreur", __OPERATION_COURRIER__, __TOAST_ANNULATION__)
+				fin
+			fin
+
+		sinon
+			PopupAfficheMessage(sMessage, "Erreur", __OPERATION_COURRIER__, __TOAST_ANNULATION__)
+		fin
+
+	sinon
+		PopupAfficheMessage("Erreur lors du renommage de votre fichier" + RC + "Merci de réitérer l'opération", "Erreur", __OPERATION_COURRIER__, __TOAST_ANNULATION__)
+	fin
+
+sinon
+	PopupAfficheMessage("Erreur lors de l'importation de votre fichier" + RC + "Merci de réitérer l'opération", "Erreur", __OPERATION_COURRIER__, __TOAST_ANNULATION__)
+fin
+
+
+	procédure interne AfficheVignettePopupUpload()
+		ZoneRépétéeSupprimeTout(popUploadFichierDocument.znrAperçuUpload)
+		pour nPage = 1 _à_ __stOperation.stOperationLettre.tabStDocument[nInd].NombrePage
+
+			ZoneRépétéeAjoute(popUploadFichierDocument.znrAperçuUpload)
+
+			si __stOperation.stOperationLettre.tabStDocument[nInd].tabImageBat[nPage].CheminPhysique <> "" alors
+				znrAperçuUpload[nPage].imgUpload = __stOperation.stOperationLettre.tabStDocument[nInd].tabImageBat[nPage].CheminPhysique
+			sinon
+				// Fallback sur le fond JPG si le BAT a échoué
+				si __stOperation.stOperationLettre.tabStDocument[nInd].tabImageFond..Occurrence >= nPage alors
+					znrAperçuUpload[nPage].imgUpload = __stOperation.stOperationLettre.tabStDocument[nInd].tabImageFond[nPage].CheminPhysique
+				fin
+			fin
+
+			znrAperçuUpload[nPage].imgUpload..Visible = Vrai
+		fin
+		
+		// ─── Mise à jour UI ───────────────────────────────────────────────────────
+		popUploadFichierDocument.btnValiderUpload..Visible						= Vrai
+		znrLtrContenu[attNumDocument].attCboSelectionContenu					= __stOperation.stOperationLettre.tabStDocument[nInd].NomFichierOrigine
+		znrLtrContenu[attNumDocument].attCboSelectionGlien						= 1
+		znrLtrContenu[attNumDocument].attCboSelectionValeur					= ""
+		znrLtrContenu[attNumDocument].btnDocumentPersonnaliser.Visible		= Vrai
+	fin

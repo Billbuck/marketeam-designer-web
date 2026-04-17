@@ -1,0 +1,22 @@
+procédure CheminMarketeam(pTypeOperation, pTypeRepertoire, pEstRepertoirePhysique  = Vrai) //, pEstRepertoireLocal = vrai)
+
+sCheminMarketeam	est une chaîne
+sRepMarketeam		est une chaîne
+
+selon cpConnexion.__sConnexion
+	cas __CNX_DEV__		: sRepMarketeam = "MarquesDev"
+	cas __CNX_TEST__	: sRepMarketeam = "MarquesTest"
+	cas __CNX_PROD__	: sRepMarketeam = "Marques"
+fin
+
+sCheminMarketeam = sRepMarketeam + "\Marketeam\" +((pTypeOperation = "") ? "" sinon RepertoireTypeOperation(pTypeOperation) + "\") + pTypeRepertoire + "\"
+
+si pEstRepertoirePhysique alors
+	si fRepCrée(ComplèteRep(__sRepRacine) + sCheminMarketeam) alors
+		renvoyer ComplèteRep(__sRepRacine) + sCheminMarketeam
+	sinon
+		renvoyer ""
+	fin
+sinon
+	renvoyer __sHttpMarketeam +["/"]+ Remplace(sCheminMarketeam,"\","/")
+fin

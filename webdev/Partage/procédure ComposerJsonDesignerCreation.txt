@@ -1,0 +1,130 @@
+procédure ComposerJsonDesignerCreation(stOperation est une structOperation, pTabEchantillon est un tableau de StructBaseLigne, pTheme est une chaîne, pEstEnveloppe est un booléen, pIndexDocument est un entier, pLimTexte est un entier = 0, pLimImage est un entier = 0, pLimBarcode est un entier = 0, pLimQr est un entier = 0)
+stLoad			est une structDesignerLoad
+sJsonDocument	est une chaîne
+
+// =========================================================================
+// BLOCS D'ENVIRONNEMENT (communs enveloppe / document)
+// =========================================================================
+stLoad.action					= "load"
+stLoad.auth						= RemplirDesignerAuth(stOperation.IdClient, stOperation.IdContact)
+stLoad.bases					= RemplirDesignerBases(stOperation.tabBase)
+stLoad.constraints			= RemplirDesignerConstraints(pLimTexte, pLimImage, pLimQr, pLimBarcode)
+stLoad.limites					= RemplirDesignerLimites()
+stLoad.policesDisponibles	= RemplirDesignerPolices(stOperation.IdClient)
+stLoad.Theme					= pTheme
+
+// =========================================================================
+// BLOCS DOCUMENT (data) - variables selon enveloppe ou document
+// =========================================================================
+si pEstEnveloppe alors
+
+	// -----------------------------------------------------------------
+	// ENVELOPPE
+	// -----------------------------------------------------------------
+
+	// Identification : libellé depuis l'enveloppe
+	stLoad.Document.identification	= RemplirDesignerIdentification(stOperation.CodeTemp, "enveloppe", 1, stOperation.stOperationLettre.stEnveloppe.Libelle)
+
+	// Format : pas de fond perdu pour l'enveloppe
+	stLoad.Document.formatDocument	= RemplirDesignerFormat(stOperation.stOperationLettre.stEnveloppe.Largeur, stOperation.stOperationLettre.stEnveloppe.Hauteur, Faux, 0, 0, 0, 0)
+
+	// Pages : recto seul, image de fond = aperçu vierge de l'enveloppe
+	tabImagesEnv est un tableau de structDocumentImage
+	tabImagesEnv.Ajoute(stOperation.stOperationLettre.stEnveloppe.EnveloppeFond)
+
+	sCheminPdfEnv est une chaîne = cpProjet.__sRepRacine + "Enveloppes\" + stOperation.stOperationLettre.stEnveloppe.FichierApercu + __PDF__
+
+	stLoad.Document.pages = RemplirDesignerPages(Faux, tabImagesEnv, sCheminPdfEnv)
+
+	// Zones système enveloppe (A.11)
+	// Adresse destinataire + séquentiel toujours
+	// Datamatrix + mention La Poste
+	RemplirDesignerZonesSystemeEnveloppe(stLoad.Document, stOperation.stOperationLettre.IdEnveloppe)
+
+	// Zones personnalisables Adressage Expéditeur, Logo, Image promotionnelle
+	si stOperation.stOperationLettre.stEnveloppe.EstAdressageExpediteur _ou_ stOperation.stOperationLettre.stEnveloppe.EstAdressageLogo _ou_ stOperation.stOperationLettre.stEnveloppe.EstAdressagePromotion alors
+		stLoad.ZonePersonnalisation = RemplirDesignerZonesPersonnalisablesEnveloppe(stLoad.Document, stOperation.stOperationLettre.stEnveloppe)
+	fin
+
+sinon
+
+	// -----------------------------------------------------------------
+	// DOCUMENT
+	// -----------------------------------------------------------------
+
+	// Variable intermédiaire pour faciliter la lecture (copie, suffisant en lecture seule)
+	stDoc est une structDocument = stOperation.stOperationLettre.tabStDocument[pIndexDocument]
+
+	// Identification : libellé depuis le document
+	stLoad.Document.identification = RemplirDesignerIdentification(stOperation.CodeTemp, "lettre", pIndexDocument, stDoc.Designation)
+
+	// Format : fond perdu depuis les dimensions détaillées de structPagePdf
+	si stDoc.EstFondPerdu _et_ stDoc.tabPagePDF..Occurrence >= 1 alors
+		// Lecture du format papier associé (SRA4, SRA3...) depuis BDD
+		nFormatPapierLargeur	est un réel		= 0
+		nFormatPapierHauteur	est un réel		= 0
+		nIdFormatImpression		est un entier	= stDoc.tabPagePDF[1].IdFormatImpression
+
+		si ltr_format_impression.LitRecherchePremier(IdFormatImpression, nIdFormatImpression) alors
+			si ltr_format_impression.IdFormatPapier > 0 alors
+				si ltr_format_impression.LitRecherchePremier(IdFormatImpression, ltr_format_impression.IdFormatPapier) alors
+					nFormatPapierLargeur	= ltr_format_impression.Largeur
+					nFormatPapierHauteur	= ltr_format_impression.Hauteur
+				fin
+			fin
+		fin
+
+		stLoad.Document.formatDocument = RemplirDesignerFormat(
+		stDoc.LargeurOuvert, stDoc.HauteurOuvert,
+		Vrai,
+		stDoc.tabPagePDF[1].FondPerduHautMm,
+		stDoc.tabPagePDF[1].FondPerduBasMm,
+		stDoc.tabPagePDF[1].FondPerduGaucheMm,
+		stDoc.tabPagePDF[1].FondPerduDroiteMm,
+		nFormatPapierLargeur,
+		nFormatPapierHauteur)
+
+	sinon
+		stLoad.Document.formatDocument = RemplirDesignerFormat(stDoc.LargeurOuvert, stDoc.HauteurOuvert, Faux, 0, 0, 0, 0)
+	fin
+
+	// Pages : recto seul ou recto/verso, images de fond depuis tabImageFond
+	stLoad.Document.pages = RemplirDesignerPages(stDoc.EstRectoVerso, stDoc.tabImageFond, stDoc.Repertoire + stDoc.NomFichierTemp)
+
+	// Zone adresse destinataire si document porte-adresse (A.12)
+	// Condition : enveloppe à fenêtre ET c'est le document 1 (porte-adresse)
+	si stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai _et_ pIndexDocument = 1
+		RemplirDesignerZonesSystemeDocument(stLoad.Document, stOperation.stOperationLettre.IdEnveloppe)
+	fin
+
+
+
+fin
+
+
+// =========================================================================
+// BLOCS COMMUNS enveloppe / document
+// =========================================================================
+
+// Champs de fusion disponibles
+stLoad.Document.champsFusion	= RemplirDesignerChampsFusion(stOperation.taaBaseChamp)
+
+// Données d'aperçu (échantillon publipostage)
+stLoad.Document.donneesApercu	= RemplirDesignerApercu(pTabEchantillon, stOperation.taaBaseChamp)
+
+
+// Polices utilisées : vide en création (aucune police encore utilisée)
+// Zones texte, image, QR, code-barres utilisateur : vides en création
+
+// =========================================================================
+// SÉRIALISATION EN JSON
+// =========================================================================
+
+Trace("cheminFond page 1 = [" + stLoad.Document.pages[1].cheminFond + "]")
+Trace("Nombre de pages = " + stLoad.Document.pages..Occurrence)
+
+Sérialise(stLoad, sJsonDocument, psdJSON + psdMiseEnForme)
+
+sJsonDocument = sJsonDocument.Remplace("""##Null##""","null")
+
+renvoyer sJsonDocument

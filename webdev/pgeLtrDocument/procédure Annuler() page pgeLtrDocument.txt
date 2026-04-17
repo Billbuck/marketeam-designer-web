@@ -1,0 +1,15 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Annuler — Page pgeLtrDocument (modèles)
+// Nettoyage du répertoire Temp si l'utilisateur annule
+//
+// Création : Courrier\Temp\nouveau-{CodeTemp}\
+// Modification : Courrier\Temp\{IdModele}\
+// ─────────────────────────────────────────────────────────────────────────────
+procédure Annuler()
+
+si _stDocument.RepertoireTravail <> "" _et_ Contient(_stDocument.RepertoireTravail, "\Temp\") alors
+	si fRepExiste(_stDocument.RepertoireTravail) alors
+		fRepSupprime(_stDocument.RepertoireTravail, frRécursif)
+		Trace("Annuler Modèle : Temp supprimé --> " + _stDocument.RepertoireTravail)
+	fin
+fin

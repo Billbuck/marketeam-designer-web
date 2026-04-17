@@ -1,0 +1,854 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.printshopmail.com/support/xml/schemas/win/version-7_1_0/printshopmail7.xsd">
+<info>
+<user_name>Marketeam Designer</user_name>
+<date_time>2026-04-08T13:45:41</date_time>
+<app_version>Version 7.2.4 (construire 7893)</app_version>
+<published>no</published>
+</info>
+<printer>
+<printer_name>PrintShop Mail Printer</printer_name>
+</printer>
+<operator_instructions></operator_instructions>
+<preferences>
+<program>
+<default_tabstop_interval>36</default_tabstop_interval>
+<markers begin="@" end="@"/>
+<items_without_database>1</items_without_database>
+</program>
+<print_job>
+<collate>yes</collate>
+<use_split_job>no</use_split_job>
+<split_job_size>1000</split_job_size>
+<split_by>0</split_by>
+<forms>
+<store_on_disk>yes</store_on_disk>
+<use_custom_cache_size>no</use_custom_cache_size>
+<cache_size>4096</cache_size>
+<use_opi>0</use_opi>
+</forms>
+<master>
+<freeform2_master_name>Master1</freeform2_master_name>
+<print_mode>3</print_mode>
+</master>
+<ppml>
+<environment>psmail\Sans titre</environment>
+<send_images>0</send_images>
+<zip>yes</zip>
+<embed_images_in_pdf>yes</embed_images_in_pdf>
+</ppml>
+<vipp>
+<project_folder>projects\psmail</project_folder>
+<do_not_spool_images>0</do_not_spool_images>
+</vipp>
+<vps>
+<generate_booklets>yes</generate_booklets>
+<use_apr>0</use_apr>
+</vps>
+<pdf>
+<joboptions></joboptions>
+</pdf>
+<pdfvt>
+<joboptions></joboptions>
+</pdfvt>
+<margins option="0" left="0.00" top="0.00" right="0.00" bottom="0.00"/>
+<technology>0</technology>
+</print_job>
+<repetition>
+<repeat_hor>1</repeat_hor>
+<repeat_ver>1</repeat_ver>
+<print_priority>4</print_priority>
+<print_priority>0</print_priority>
+<print_priority>2</print_priority>
+<spacing_between_layouts x="0" y="0"/>
+<duplex_print>0</duplex_print>
+</repetition>
+<imposition>
+<bleed>
+<mode>0</mode>
+<size>0</size>
+</bleed>
+<cropmarks>
+<mode>1</mode>
+<size>6</size>
+<double_sided>no</double_sided>
+<color colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></color>
+</cropmarks>
+<folding_lines>
+<size>40</size>
+</folding_lines>
+</imposition>
+<colormanagement intent_generic="relative" colormanage="no"><colorspace id="RGB"><profile source="iccfile"><file name="srgb color space profile.icm" description="sRGB IEC61966-2.1">AA==</file></profile></colorspace><colorspace id="CMYK"><profile source="iccfile"><file name="uswebcoatedswop.icc" description="U.S. Web Coated (SWOP) v2">AA==</file></profile></colorspace><colorspace id="GRAY"><profile source="gamma"><gamma>2.2</gamma></profile></colorspace><colorspace id="defaultRGB"><profile source="iccfile"><file name="srgb color space profile.icm" description="sRGB IEC61966-2.1">AA==</file></profile></colorspace><colorspace id="defaultCMYK"><profile source="iccfile"><file name="uswebcoatedswop.icc" description="U.S. Web Coated (SWOP) v2">AA==</file></profile></colorspace><colorspace id="defaultGRAY"><profile source="gamma"><gamma>2.2</gamma></profile></colorspace></colormanagement>
+<ppconnect>
+<namevalue name="__#PPSuite#Connection_FaxNumber" expression=""></namevalue>
+<namevalue name="__#PPSuite#Connection_FaxDescription" expression=""></namevalue>
+<namevalue name="__#PPSuite#Connection_eMailAddress" expression=""></namevalue>
+<namevalue name="__#PPSuite#Connection_eMailSubject" expression=""></namevalue>
+<namevalue name="__#PPSuite#Connection_eMailBodyText" expression=""></namevalue>
+<namevalue name="__#PPSuite#Connection_PDFBookmark" expression=""></namevalue>
+</ppconnect>
+</preferences>
+<database_settings>
+<table_name>Pas de source de données</table_name>
+<db_type>3</db_type>
+<db_pathsettings></db_pathsettings>
+<extended_properties>
+<colnameheader>yes</colnameheader>
+<format></format>
+<encoding></encoding>
+</extended_properties>
+<filter_sort_settings>
+<filter></filter>
+<sort></sort>
+<db_filter_enable>no</db_filter_enable>
+<db_sort_enable>no</db_sort_enable>
+</filter_sort_settings>
+<filter_array_size>0</filter_array_size>
+</database_settings>
+<layouts>
+<layout>
+<dimensions>
+<size x="595.27559" y="841.88976"/>
+<automatic_size>yes</automatic_size>
+<custom_size>no</custom_size>
+<fit_to_objects>no</fit_to_objects>
+</dimensions>
+<attributes>
+<n>Recto</n>
+<condition_expression>Print</condition_expression>
+<copies_expression>1</copies_expression>
+</attributes>
+<printer_preferences>
+<windows_devmode>//7/FlAAcgBpAG4AdABTAGgAbwBwACAATQBhAGkAbAAgAFAAcgBpAG4AdABlAHIAeAQAAFAAcgBpAG4AdABTAGgAbwBwACAATQBhAGkAbAAgAFAAcgBpAG4AdABlAHIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQQABtwAnANT74ABAAD/mgs0CARkAAEADwBIAAIAAQBIAAMAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAEAAAACAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUFJJVuIwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABgAAAAAABAnECcQJwAAECcAAAAAAAAAAAyACcAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMAAAAAAAAAAAAQAFC9AQCIfgMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAESfa+YFAAAAAAAlAP8A/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAMgAAABTTVRKAAAAABAAuABQAHIAaQBuAHQAUwBoAG8AcAAgAE0AYQBpAGwAIABQAHIAaQBuAHQAZQByACAARAByAGkAdgBlAHIAIAAoAFAAUwApAAAAUmVzb2x1dGlvbgA3MmRwaQBQYWdlU2l6ZQBDdXN0b21QYWdlU2l6ZQBQYWdlUmVnaW9uAABMZWFkaW5nRWRnZQAASW5wdXRTbG90ACpVc2VGb3JtVHJheVRhYmxlAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</windows_devmode>
+<tray_name>Sélection automatique</tray_name>
+</printer_preferences>
+<object>
+<identifier>{{CB81A238-D365-C301-8478-4A9664DFC198}}</identifier>
+<n>Image 1</n>
+<locked>no</locked>
+<knockout>no</knockout>
+<border_size>0</border_size>
+<border_style>0</border_style><fillcolor colorspace="CMYK" alpha="0" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></fillcolor><bordercolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></bordercolor>
+<rotation>0</rotation>
+<bounds left="0.00" top="0.00" right="595.28" bottom="841.89"/>
+<snap_frame_to_content>no</snap_frame_to_content>
+<show_mode>
+<editor>yes</editor>
+<jpeg_preview>yes</jpeg_preview>
+<pdf_preview>yes</pdf_preview>
+<print_preview>yes</print_preview>
+<print>yes</print>
+</show_mode>
+<anchor>
+<horizontal>0</horizontal>
+<vertical>0</vertical>
+<source></source>
+<source_bounds left="0" top="0" right="0" bottom="0"/>
+</anchor>
+<image_object>
+<scale>2</scale>
+<keep_aspect_ratio>no</keep_aspect_ratio>
+<horizontal_alignment>4</horizontal_alignment>
+<vertical_alignment>4</vertical_alignment>
+<variable_name>Image 1</variable_name>
+<default_image_folder></default_image_folder>
+<default_folder></default_folder>
+<subfolders>no</subfolders>
+<file_name>D:\Mes Sites\Version SaaS 2026\Marketeam\MARKETEAM_WEB\Upload\Ltr1-20260408134524060.pdf</file_name>
+<pdf_pagenumber_expression>1</pdf_pagenumber_expression>
+<global_scope>no</global_scope>
+<filters>
+<two_color convert="no">
+<threshold>50</threshold><backgroundcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></backgroundcolor><foregroundcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></foregroundcolor>
+</two_color>
+</filters>
+</image_object>
+</object>
+<object>
+<identifier>{1AD74FEC-7A26-B15C-B8EB-EF0EC70D0A30}</identifier>
+<name>Zone sys-adresse-contour</name>
+<locked>yes</locked>
+<knockout>no</knockout>
+<border_size>1</border_size>
+<border_style>2</border_style>
+<fillcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></fillcolor>
+<bordercolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></bordercolor>
+<rotation>0</rotation>
+<bounds left="280.62992" top="99.2126" right="564.09449" bottom="226.77165"/>
+<snap_frame_to_content>no</snap_frame_to_content>
+<show_mode>
+<editor>yes</editor>
+<jpeg_preview>yes</jpeg_preview>
+<pdf_preview>yes</pdf_preview>
+<print_preview>yes</print_preview>
+<print>yes</print>
+</show_mode>
+<anchor>
+<horizontal>0</horizontal>
+<vertical>0</vertical>
+<source></source>
+<source_bounds left="0" top="0" right="0" bottom="0"/>
+</anchor>
+<text_object>
+<backwardlink>{00000000-0000-0000-0000-000000000000}</backwardlink>
+<forwardlink>{00000000-0000-0000-0000-000000000000}</forwardlink>
+<rtf_data>e1xydGYxXGFuc2lcYW5zaWNwZzEyNTJcZGVmZjBcZGVmbGFuZzEwMzZ7XGZvbnR0Ymx7XGYwXGZuaWxcZmNoYXJzZXQwIFJvYm90bzt9fQp7XGNvbG9ydGJsIDtccmVkMFxncmVlbjBcYmx1ZTA7fQpcdmlld2tpbmQ0XHVjMVxwYXJkXGNmMVxmMFxmczI0IFxwYXIgCn0=</rtf_data>
+<emptylines_property>1</emptylines_property>
+<horizontal_alignment>2</horizontal_alignment>
+<vertical_alignment>0</vertical_alignment>
+<vertical_text>no</vertical_text>
+<textcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></textcolor>
+<cmyk_output>no</cmyk_output>
+<copy_fitting>
+<reduce_to_fit>no</reduce_to_fit>
+<fontsize_minimum>6</fontsize_minimum>
+<allow_line_breaks>yes</allow_line_breaks>
+</copy_fitting>
+</text_object>
+</object>
+<object>
+<identifier>{5EA90E9E-9917-0001-EC2D-BB073D224823}</identifier>
+<name>Adresse destinataire (sys-adresse-doc)</name>
+<locked>yes</locked>
+<knockout>no</knockout>
+<border_size>0</border_size>
+<border_style>0</border_style>
+<fillcolor colorspace="CMYK" alpha="0" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></fillcolor>
+<bordercolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></bordercolor>
+<rotation>0</rotation>
+<bounds left="312.09449" top="144.85039" right="558.70866" bottom="221.38583"/>
+<snap_frame_to_content>no</snap_frame_to_content>
+<show_mode>
+<editor>yes</editor>
+<jpeg_preview>yes</jpeg_preview>
+<pdf_preview>yes</pdf_preview>
+<print_preview>yes</print_preview>
+<print>yes</print>
+</show_mode>
+<anchor>
+<horizontal>0</horizontal>
+<vertical>0</vertical>
+<source></source>
+<source_bounds left="0" top="0" right="0" bottom="0"/>
+</anchor>
+<text_object>
+<backwardlink>{00000000-0000-0000-0000-000000000000}</backwardlink>
+<forwardlink>{00000000-0000-0000-0000-000000000000}</forwardlink>
+<rtf_data>e1xydGYxXGFuc2lcYW5zaWNwZzEyNTJcZGVmZjBcZGVmbGFuZzEwMzZ7XGZvbnR0Ymx7XGYwXGZuaWxcZmNoYXJzZXQwIFZlcmRhbmE7fX0Ke1xjb2xvcnRibCA7XHJlZDBcZ3JlZW4wXGJsdWUwO30KXHZpZXdraW5kNFx1YzFccGFyZFxjZjFcZjBcZnMyMCBAU29jaWV0ZUBccGFyIEBDaXZpbGl0ZUAgQE5vbUAgQFByZW5vbUBccGFyIEBBZHJlc3NlMUBccGFyIEBBZHJlc3NlMkBccGFyIEBBZHJlc3NlM0BccGFyIEBBZHJlc3NlNEBccGFyIEBDb2RlUG9zdGFsQCBAVmlsbGVAXHBhciBAUGF5c0BccGFyIAp9</rtf_data>
+<emptylines_property>1</emptylines_property>
+<horizontal_alignment>2</horizontal_alignment>
+<vertical_alignment>4</vertical_alignment>
+<vertical_text>no</vertical_text>
+<textcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></textcolor>
+<cmyk_output>no</cmyk_output>
+<copy_fitting>
+<reduce_to_fit>no</reduce_to_fit>
+<fontsize_minimum>6</fontsize_minimum>
+<allow_line_breaks>yes</allow_line_breaks>
+</copy_fitting>
+</text_object>
+</object>
+<object>
+<identifier>{F733360A-1C03-00FD-53BD-F075B8A6D48A}</identifier>
+<name>Séquentiel (sys-adresse-sequentiel)</name>
+<locked>yes</locked>
+<knockout>no</knockout>
+<border_size>0</border_size>
+<border_style>0</border_style>
+<fillcolor colorspace="CMYK" alpha="0" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></fillcolor>
+<bordercolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></bordercolor>
+<rotation>0</rotation>
+<bounds left="312.09449" top="130.67717" right="439.65354" bottom="138.89764"/>
+<snap_frame_to_content>no</snap_frame_to_content>
+<show_mode>
+<editor>yes</editor>
+<jpeg_preview>yes</jpeg_preview>
+<pdf_preview>yes</pdf_preview>
+<print_preview>yes</print_preview>
+<print>yes</print>
+</show_mode>
+<anchor>
+<horizontal>0</horizontal>
+<vertical>0</vertical>
+<source></source>
+<source_bounds left="0" top="0" right="0" bottom="0"/>
+</anchor>
+<text_object>
+<backwardlink>{00000000-0000-0000-0000-000000000000}</backwardlink>
+<forwardlink>{00000000-0000-0000-0000-000000000000}</forwardlink>
+<rtf_data>e1xydGYxXGFuc2lcYW5zaWNwZzEyNTJcZGVmZjBcZGVmbGFuZzEwMzZ7XGZvbnR0Ymx7XGYwXGZuaWxcZmNoYXJzZXQwIFZlcmRhbmE7fX0Ke1xjb2xvcnRibCA7XHJlZDBcZ3JlZW4wXGJsdWUwO30KXHZpZXdraW5kNFx1YzFccGFyZFxjZjFcZjBcZnMxMiBAU2VxdWVudGllbEBccGFyIAp9</rtf_data>
+<emptylines_property>1</emptylines_property>
+<horizontal_alignment>2</horizontal_alignment>
+<vertical_alignment>4</vertical_alignment>
+<vertical_text>no</vertical_text>
+<textcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></textcolor>
+<cmyk_output>no</cmyk_output>
+<copy_fitting>
+<reduce_to_fit>no</reduce_to_fit>
+<fontsize_minimum>6</fontsize_minimum>
+<allow_line_breaks>yes</allow_line_breaks>
+</copy_fitting>
+</text_object>
+</object>
+<object>
+<identifier>{EF0C0B16-D71B-ABB2-0519-42A63C8516D9}</identifier>
+<name>Dépôt (sys-adresse-depot)</name>
+<locked>yes</locked>
+<knockout>no</knockout>
+<border_size>0</border_size>
+<border_style>0</border_style>
+<fillcolor colorspace="CMYK" alpha="0" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></fillcolor>
+<bordercolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></bordercolor>
+<rotation>0</rotation>
+<bounds left="453.82677" top="108" right="538.58268" bottom="119.33858"/>
+<snap_frame_to_content>no</snap_frame_to_content>
+<show_mode>
+<editor>yes</editor>
+<jpeg_preview>yes</jpeg_preview>
+<pdf_preview>yes</pdf_preview>
+<print_preview>yes</print_preview>
+<print>yes</print>
+</show_mode>
+<anchor>
+<horizontal>0</horizontal>
+<vertical>0</vertical>
+<source></source>
+<source_bounds left="0" top="0" right="0" bottom="0"/>
+</anchor>
+<text_object>
+<backwardlink>{00000000-0000-0000-0000-000000000000}</backwardlink>
+<forwardlink>{00000000-0000-0000-0000-000000000000}</forwardlink>
+<rtf_data>e1xydGYxXGFuc2lcYW5zaWNwZzEyNTJcZGVmZjBcZGVmbGFuZzEwMzZ7XGZvbnR0Ymx7XGYwXGZuaWxcZmNoYXJzZXQwIE1vbnRzZXJyYXQ7fX0Ke1xjb2xvcnRibCA7XHJlZDBcZ3JlZW4wXGJsdWUwO30KXHZpZXdraW5kNFx1YzFccGFyZFxjZjFcZjBcZnMxNCBTRCA6IDg2OTAwMDAwMDAwMDAxUVxwYXIgCn0=</rtf_data>
+<emptylines_property>1</emptylines_property>
+<horizontal_alignment>2</horizontal_alignment>
+<vertical_alignment>4</vertical_alignment>
+<vertical_text>no</vertical_text>
+<textcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></textcolor>
+<cmyk_output>no</cmyk_output>
+<copy_fitting>
+<reduce_to_fit>no</reduce_to_fit>
+<fontsize_minimum>6</fontsize_minimum>
+<allow_line_breaks>yes</allow_line_breaks>
+</copy_fitting>
+</text_object>
+</object>
+<object>
+<identifier>{246127B2-89D1-C0A8-CE2D-0D35E0CE760D}</identifier>
+<name>Mention (sys-adresse-mention)</name>
+<locked>yes</locked>
+<knockout>no</knockout>
+<border_size>0</border_size>
+<border_style>0</border_style>
+<fillcolor colorspace="CMYK" alpha="0" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></fillcolor>
+<bordercolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></bordercolor>
+<rotation>0</rotation>
+<bounds left="312.09449" top="108" right="439.65354" bottom="122.17323"/>
+<snap_frame_to_content>no</snap_frame_to_content>
+<show_mode>
+<editor>yes</editor>
+<jpeg_preview>yes</jpeg_preview>
+<pdf_preview>yes</pdf_preview>
+<print_preview>yes</print_preview>
+<print>yes</print>
+</show_mode>
+<anchor>
+<horizontal>0</horizontal>
+<vertical>0</vertical>
+<source></source>
+<source_bounds left="0" top="0" right="0" bottom="0"/>
+</anchor>
+<text_object>
+<backwardlink>{00000000-0000-0000-0000-000000000000}</backwardlink>
+<forwardlink>{00000000-0000-0000-0000-000000000000}</forwardlink>
+<rtf_data>e1xydGYxXGFuc2lcYW5zaWNwZzEyNTJcZGVmZjBcZGVmbGFuZzEwMzZ7XGZvbnR0Ymx7XGYwXGZuaWxcZmNoYXJzZXQwIE1vbnRzZXJyYXQ7fX0Ke1xjb2xvcnRibCA7XHJlZDBcZ3JlZW4wXGJsdWUwO30KXHZpZXdraW5kNFx1YzFccGFyZFxjZjFcZjBcZnMxOCBMQSBQT1NURVxwYXIgCn0=</rtf_data>
+<emptylines_property>1</emptylines_property>
+<horizontal_alignment>2</horizontal_alignment>
+<vertical_alignment>4</vertical_alignment>
+<vertical_text>no</vertical_text>
+<textcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></textcolor>
+<cmyk_output>no</cmyk_output>
+<copy_fitting>
+<reduce_to_fit>no</reduce_to_fit>
+<fontsize_minimum>6</fontsize_minimum>
+<allow_line_breaks>yes</allow_line_breaks>
+</copy_fitting>
+</text_object>
+</object>
+<object>
+<identifier>{87573C79-61DD-64D7-B29D-FC720F8CBB58}</identifier>
+<name>Affranchissement (sys-affranchissement)</name>
+<locked>yes</locked>
+<knockout>no</knockout>
+<border_size>0</border_size>
+<border_style>0</border_style>
+<fillcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></fillcolor>
+<bordercolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></bordercolor>
+<rotation>0</rotation>
+<bounds left="462.04724" top="121.6063" right="530.3622" bottom="149.38583"/>
+<snap_frame_to_content>yes</snap_frame_to_content>
+<show_mode>
+<editor>yes</editor>
+<jpeg_preview>yes</jpeg_preview>
+<pdf_preview>yes</pdf_preview>
+<print_preview>yes</print_preview>
+<print>yes</print>
+</show_mode>
+<anchor>
+<horizontal>0</horizontal>
+<vertical>0</vertical>
+<source></source>
+<source_bounds left="0" top="0" right="0" bottom="0"/>
+</anchor>
+<plugin_object title="Barcode" assembly_name="Barcode.plugins.dll" assembly_version="2.2.3.9078" class_name="Barcode" url="http://www.printshopmail.com/plugins/barcode/" url_download_version="http://www.printshopmail.com/plugins/barcode/2_2/Barcode.plugins.dll">
+<property_bag><Barcode><RotationFixed>0</RotationFixed><BoundsIsRotated>False</BoundsIsRotated><Initialized>True</Initialized><Type>DataMatrix</Type><DataMatrix_SymbolSize>Rectangle12x36</DataMatrix_SymbolSize><Data>[Timbre]</Data><Alignment>0;0</Alignment></Barcode>
+</property_bag>
+</plugin_object>
+</object>
+<object>
+<identifier>{CCF5C5C3-02B6-04D5-4E7D-73C585D86A11}</identifier>
+<name>QR Code zone-1</name>
+<locked>yes</locked>
+<knockout>no</knockout>
+<border_size>0</border_size>
+<border_style>0</border_style>
+<fillcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></fillcolor>
+<bordercolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></bordercolor>
+<rotation>0</rotation>
+<bounds left="252" top="375.87402" right="327.11811" bottom="450.99213"/>
+<snap_frame_to_content>yes</snap_frame_to_content>
+<show_mode>
+<editor>yes</editor>
+<jpeg_preview>yes</jpeg_preview>
+<pdf_preview>yes</pdf_preview>
+<print_preview>yes</print_preview>
+<print>yes</print>
+</show_mode>
+<anchor>
+<horizontal>0</horizontal>
+<vertical>0</vertical>
+<source></source>
+<source_bounds left="0" top="0" right="0" bottom="0"/>
+</anchor>
+<plugin_object title="Barcode" assembly_name="Barcode.plugins.dll" assembly_version="2.2.3.9078" class_name="Barcode" url="http://www.printshopmail.com/plugins/barcode/" url_download_version="http://www.printshopmail.com/plugins/barcode/2_2/Barcode.plugins.dll">
+<property_bag><Barcode><RotationFixed>0</RotationFixed><BoundsIsRotated>False</BoundsIsRotated><Initialized>True</Initialized><Type>QRCode</Type><Data></Data><Alignment>0;0</Alignment></Barcode>
+</property_bag>
+</plugin_object>
+</object>
+</layout>
+</layouts>
+<variables>
+<variable>
+<name>Societe</name>
+<global>no</global>
+<expression>[Societe]</expression>
+<Formatting>3</Formatting>
+<Locale_ID>1036</Locale_ID>
+<Currency_Symbol>€</Currency_Symbol>
+<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+<Currency_GroupingSymbol> </Currency_GroupingSymbol>
+<Currency_NegativeFormat>8</Currency_NegativeFormat>
+<Currency_PositiveFormat>3</Currency_PositiveFormat>
+<Number_DecimalSymbol>,</Number_DecimalSymbol>
+<Number_DecimalPlaces>2</Number_DecimalPlaces>
+<Number_DigitsInGroup>3</Number_DigitsInGroup>
+<Number_GroupingSymbol> </Number_GroupingSymbol>
+<Number_LeadingZeros>1</Number_LeadingZeros>
+<Number_NegativeSymbol>-</Number_NegativeSymbol>
+<Number_NegativeFormat>1</Number_NegativeFormat>
+<Date_Style>dddd d MMMM yyyy</Date_Style>
+</variable>
+<variable>
+<name>Civilite</name>
+<global>no</global>
+<expression>[Civilite]</expression>
+<Formatting>3</Formatting>
+<Locale_ID>1036</Locale_ID>
+<Currency_Symbol>€</Currency_Symbol>
+<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+<Currency_GroupingSymbol> </Currency_GroupingSymbol>
+<Currency_NegativeFormat>8</Currency_NegativeFormat>
+<Currency_PositiveFormat>3</Currency_PositiveFormat>
+<Number_DecimalSymbol>,</Number_DecimalSymbol>
+<Number_DecimalPlaces>2</Number_DecimalPlaces>
+<Number_DigitsInGroup>3</Number_DigitsInGroup>
+<Number_GroupingSymbol> </Number_GroupingSymbol>
+<Number_LeadingZeros>1</Number_LeadingZeros>
+<Number_NegativeSymbol>-</Number_NegativeSymbol>
+<Number_NegativeFormat>1</Number_NegativeFormat>
+<Date_Style>dddd d MMMM yyyy</Date_Style>
+</variable>
+<variable>
+<name>Nom</name>
+<global>no</global>
+<expression>[Nom]</expression>
+<Formatting>3</Formatting>
+<Locale_ID>1036</Locale_ID>
+<Currency_Symbol>€</Currency_Symbol>
+<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+<Currency_GroupingSymbol> </Currency_GroupingSymbol>
+<Currency_NegativeFormat>8</Currency_NegativeFormat>
+<Currency_PositiveFormat>3</Currency_PositiveFormat>
+<Number_DecimalSymbol>,</Number_DecimalSymbol>
+<Number_DecimalPlaces>2</Number_DecimalPlaces>
+<Number_DigitsInGroup>3</Number_DigitsInGroup>
+<Number_GroupingSymbol> </Number_GroupingSymbol>
+<Number_LeadingZeros>1</Number_LeadingZeros>
+<Number_NegativeSymbol>-</Number_NegativeSymbol>
+<Number_NegativeFormat>1</Number_NegativeFormat>
+<Date_Style>dddd d MMMM yyyy</Date_Style>
+</variable>
+<variable>
+<name>Prenom</name>
+<global>no</global>
+<expression>[Prenom]</expression>
+<Formatting>3</Formatting>
+<Locale_ID>1036</Locale_ID>
+<Currency_Symbol>€</Currency_Symbol>
+<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+<Currency_GroupingSymbol> </Currency_GroupingSymbol>
+<Currency_NegativeFormat>8</Currency_NegativeFormat>
+<Currency_PositiveFormat>3</Currency_PositiveFormat>
+<Number_DecimalSymbol>,</Number_DecimalSymbol>
+<Number_DecimalPlaces>2</Number_DecimalPlaces>
+<Number_DigitsInGroup>3</Number_DigitsInGroup>
+<Number_GroupingSymbol> </Number_GroupingSymbol>
+<Number_LeadingZeros>1</Number_LeadingZeros>
+<Number_NegativeSymbol>-</Number_NegativeSymbol>
+<Number_NegativeFormat>1</Number_NegativeFormat>
+<Date_Style>dddd d MMMM yyyy</Date_Style>
+</variable>
+<variable>
+<name>Adresse1</name>
+<global>no</global>
+<expression>[Adresse1]</expression>
+<Formatting>3</Formatting>
+<Locale_ID>1036</Locale_ID>
+<Currency_Symbol>€</Currency_Symbol>
+<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+<Currency_GroupingSymbol> </Currency_GroupingSymbol>
+<Currency_NegativeFormat>8</Currency_NegativeFormat>
+<Currency_PositiveFormat>3</Currency_PositiveFormat>
+<Number_DecimalSymbol>,</Number_DecimalSymbol>
+<Number_DecimalPlaces>2</Number_DecimalPlaces>
+<Number_DigitsInGroup>3</Number_DigitsInGroup>
+<Number_GroupingSymbol> </Number_GroupingSymbol>
+<Number_LeadingZeros>1</Number_LeadingZeros>
+<Number_NegativeSymbol>-</Number_NegativeSymbol>
+<Number_NegativeFormat>1</Number_NegativeFormat>
+<Date_Style>dddd d MMMM yyyy</Date_Style>
+</variable>
+<variable>
+<name>Adresse2</name>
+<global>no</global>
+<expression>[Adresse2]</expression>
+<Formatting>3</Formatting>
+<Locale_ID>1036</Locale_ID>
+<Currency_Symbol>€</Currency_Symbol>
+<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+<Currency_GroupingSymbol> </Currency_GroupingSymbol>
+<Currency_NegativeFormat>8</Currency_NegativeFormat>
+<Currency_PositiveFormat>3</Currency_PositiveFormat>
+<Number_DecimalSymbol>,</Number_DecimalSymbol>
+<Number_DecimalPlaces>2</Number_DecimalPlaces>
+<Number_DigitsInGroup>3</Number_DigitsInGroup>
+<Number_GroupingSymbol> </Number_GroupingSymbol>
+<Number_LeadingZeros>1</Number_LeadingZeros>
+<Number_NegativeSymbol>-</Number_NegativeSymbol>
+<Number_NegativeFormat>1</Number_NegativeFormat>
+<Date_Style>dddd d MMMM yyyy</Date_Style>
+</variable>
+<variable>
+<name>Adresse3</name>
+<global>no</global>
+<expression>[Adresse3]</expression>
+<Formatting>3</Formatting>
+<Locale_ID>1036</Locale_ID>
+<Currency_Symbol>€</Currency_Symbol>
+<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+<Currency_GroupingSymbol> </Currency_GroupingSymbol>
+<Currency_NegativeFormat>8</Currency_NegativeFormat>
+<Currency_PositiveFormat>3</Currency_PositiveFormat>
+<Number_DecimalSymbol>,</Number_DecimalSymbol>
+<Number_DecimalPlaces>2</Number_DecimalPlaces>
+<Number_DigitsInGroup>3</Number_DigitsInGroup>
+<Number_GroupingSymbol> </Number_GroupingSymbol>
+<Number_LeadingZeros>1</Number_LeadingZeros>
+<Number_NegativeSymbol>-</Number_NegativeSymbol>
+<Number_NegativeFormat>1</Number_NegativeFormat>
+<Date_Style>dddd d MMMM yyyy</Date_Style>
+</variable>
+<variable>
+<name>Adresse4</name>
+<global>no</global>
+<expression>[Adresse4]</expression>
+<Formatting>3</Formatting>
+<Locale_ID>1036</Locale_ID>
+<Currency_Symbol>€</Currency_Symbol>
+<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+<Currency_GroupingSymbol> </Currency_GroupingSymbol>
+<Currency_NegativeFormat>8</Currency_NegativeFormat>
+<Currency_PositiveFormat>3</Currency_PositiveFormat>
+<Number_DecimalSymbol>,</Number_DecimalSymbol>
+<Number_DecimalPlaces>2</Number_DecimalPlaces>
+<Number_DigitsInGroup>3</Number_DigitsInGroup>
+<Number_GroupingSymbol> </Number_GroupingSymbol>
+<Number_LeadingZeros>1</Number_LeadingZeros>
+<Number_NegativeSymbol>-</Number_NegativeSymbol>
+<Number_NegativeFormat>1</Number_NegativeFormat>
+<Date_Style>dddd d MMMM yyyy</Date_Style>
+</variable>
+<variable>
+<name>CodePostal</name>
+<global>no</global>
+<expression>[CodePostal]</expression>
+<Formatting>3</Formatting>
+<Locale_ID>1036</Locale_ID>
+<Currency_Symbol>€</Currency_Symbol>
+<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+<Currency_GroupingSymbol> </Currency_GroupingSymbol>
+<Currency_NegativeFormat>8</Currency_NegativeFormat>
+<Currency_PositiveFormat>3</Currency_PositiveFormat>
+<Number_DecimalSymbol>,</Number_DecimalSymbol>
+<Number_DecimalPlaces>2</Number_DecimalPlaces>
+<Number_DigitsInGroup>3</Number_DigitsInGroup>
+<Number_GroupingSymbol> </Number_GroupingSymbol>
+<Number_LeadingZeros>1</Number_LeadingZeros>
+<Number_NegativeSymbol>-</Number_NegativeSymbol>
+<Number_NegativeFormat>1</Number_NegativeFormat>
+<Date_Style>dddd d MMMM yyyy</Date_Style>
+</variable>
+<variable>
+<name>Ville</name>
+<global>no</global>
+<expression>[Ville]</expression>
+<Formatting>3</Formatting>
+<Locale_ID>1036</Locale_ID>
+<Currency_Symbol>€</Currency_Symbol>
+<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+<Currency_GroupingSymbol> </Currency_GroupingSymbol>
+<Currency_NegativeFormat>8</Currency_NegativeFormat>
+<Currency_PositiveFormat>3</Currency_PositiveFormat>
+<Number_DecimalSymbol>,</Number_DecimalSymbol>
+<Number_DecimalPlaces>2</Number_DecimalPlaces>
+<Number_DigitsInGroup>3</Number_DigitsInGroup>
+<Number_GroupingSymbol> </Number_GroupingSymbol>
+<Number_LeadingZeros>1</Number_LeadingZeros>
+<Number_NegativeSymbol>-</Number_NegativeSymbol>
+<Number_NegativeFormat>1</Number_NegativeFormat>
+<Date_Style>dddd d MMMM yyyy</Date_Style>
+</variable>
+<variable>
+<name>Pays</name>
+<global>no</global>
+<expression>[Pays]</expression>
+<Formatting>3</Formatting>
+<Locale_ID>1036</Locale_ID>
+<Currency_Symbol>€</Currency_Symbol>
+<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+<Currency_GroupingSymbol> </Currency_GroupingSymbol>
+<Currency_NegativeFormat>8</Currency_NegativeFormat>
+<Currency_PositiveFormat>3</Currency_PositiveFormat>
+<Number_DecimalSymbol>,</Number_DecimalSymbol>
+<Number_DecimalPlaces>2</Number_DecimalPlaces>
+<Number_DigitsInGroup>3</Number_DigitsInGroup>
+<Number_GroupingSymbol> </Number_GroupingSymbol>
+<Number_LeadingZeros>1</Number_LeadingZeros>
+<Number_NegativeSymbol>-</Number_NegativeSymbol>
+<Number_NegativeFormat>1</Number_NegativeFormat>
+<Date_Style>dddd d MMMM yyyy</Date_Style>
+</variable>
+<variable>
+<name>Sequentiel</name>
+<global>no</global>
+<expression>[Sequentiel]</expression>
+<Formatting>3</Formatting>
+<Locale_ID>1036</Locale_ID>
+<Currency_Symbol>€</Currency_Symbol>
+<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+<Currency_GroupingSymbol> </Currency_GroupingSymbol>
+<Currency_NegativeFormat>8</Currency_NegativeFormat>
+<Currency_PositiveFormat>3</Currency_PositiveFormat>
+<Number_DecimalSymbol>,</Number_DecimalSymbol>
+<Number_DecimalPlaces>2</Number_DecimalPlaces>
+<Number_DigitsInGroup>3</Number_DigitsInGroup>
+<Number_GroupingSymbol> </Number_GroupingSymbol>
+<Number_LeadingZeros>1</Number_LeadingZeros>
+<Number_NegativeSymbol>-</Number_NegativeSymbol>
+<Number_NegativeFormat>1</Number_NegativeFormat>
+<Date_Style>dddd d MMMM yyyy</Date_Style>
+</variable>
+<variable>
+<name>Timbre</name>
+<global>no</global>
+<expression>[Timbre]</expression>
+<Formatting>3</Formatting>
+<Locale_ID>1036</Locale_ID>
+<Currency_Symbol>€</Currency_Symbol>
+<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+<Currency_GroupingSymbol> </Currency_GroupingSymbol>
+<Currency_NegativeFormat>8</Currency_NegativeFormat>
+<Currency_PositiveFormat>3</Currency_PositiveFormat>
+<Number_DecimalSymbol>,</Number_DecimalSymbol>
+<Number_DecimalPlaces>2</Number_DecimalPlaces>
+<Number_DigitsInGroup>3</Number_DigitsInGroup>
+<Number_GroupingSymbol> </Number_GroupingSymbol>
+<Number_LeadingZeros>1</Number_LeadingZeros>
+<Number_NegativeSymbol>-</Number_NegativeSymbol>
+<Number_NegativeFormat>1</Number_NegativeFormat>
+<Date_Style>dddd d MMMM yyyy</Date_Style>
+</variable>
+<variable>
+<name>Image 1</name>
+<global>no</global>
+<expression>"D:\Mes Sites\Version SaaS 2026\Marketeam\MARKETEAM_WEB\Upload\Ltr1-20260408134524060.pdf"</expression>
+<Formatting>3</Formatting>
+<Locale_ID>1036</Locale_ID>
+<Currency_Symbol>€</Currency_Symbol>
+<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+<Currency_GroupingSymbol> </Currency_GroupingSymbol>
+<Currency_NegativeFormat>8</Currency_NegativeFormat>
+<Currency_PositiveFormat>3</Currency_PositiveFormat>
+<Number_DecimalSymbol>,</Number_DecimalSymbol>
+<Number_DecimalPlaces>2</Number_DecimalPlaces>
+<Number_DigitsInGroup>3</Number_DigitsInGroup>
+<Number_GroupingSymbol> </Number_GroupingSymbol>
+<Number_LeadingZeros>1</Number_LeadingZeros>
+<Number_NegativeSymbol>-</Number_NegativeSymbol>
+<Number_NegativeFormat>1</Number_NegativeFormat>
+<Date_Style>dddd d MMMM yyyy</Date_Style>
+</variable>
+</variables>
+<data_fields>
+<data_field>
+<in_use>yes</in_use>
+<name>Societe</name>
+<default_value></default_value>
+<source>user_input</source>
+<remarks></remarks>
+</data_field>
+<data_field>
+<in_use>yes</in_use>
+<name>Civilite</name>
+<default_value></default_value>
+<source>user_input</source>
+<remarks></remarks>
+</data_field>
+<data_field>
+<in_use>yes</in_use>
+<name>Nom</name>
+<default_value></default_value>
+<source>user_input</source>
+<remarks></remarks>
+</data_field>
+<data_field>
+<in_use>yes</in_use>
+<name>Prenom</name>
+<default_value></default_value>
+<source>user_input</source>
+<remarks></remarks>
+</data_field>
+<data_field>
+<in_use>yes</in_use>
+<name>Adresse1</name>
+<default_value></default_value>
+<source>user_input</source>
+<remarks></remarks>
+</data_field>
+<data_field>
+<in_use>yes</in_use>
+<name>Adresse2</name>
+<default_value></default_value>
+<source>user_input</source>
+<remarks></remarks>
+</data_field>
+<data_field>
+<in_use>yes</in_use>
+<name>Adresse3</name>
+<default_value></default_value>
+<source>user_input</source>
+<remarks></remarks>
+</data_field>
+<data_field>
+<in_use>yes</in_use>
+<name>Adresse4</name>
+<default_value></default_value>
+<source>user_input</source>
+<remarks></remarks>
+</data_field>
+<data_field>
+<in_use>yes</in_use>
+<name>CodePostal</name>
+<default_value></default_value>
+<source>user_input</source>
+<remarks></remarks>
+</data_field>
+<data_field>
+<in_use>yes</in_use>
+<name>Ville</name>
+<default_value></default_value>
+<source>user_input</source>
+<remarks></remarks>
+</data_field>
+<data_field>
+<in_use>yes</in_use>
+<name>Pays</name>
+<default_value></default_value>
+<source>user_input</source>
+<remarks></remarks>
+</data_field>
+<data_field>
+<in_use>yes</in_use>
+<name>Sequentiel</name>
+<default_value></default_value>
+<source>user_input</source>
+<remarks></remarks>
+</data_field>
+<data_field>
+<in_use>yes</in_use>
+<name>Timbre</name>
+<default_value></default_value>
+<source>user_input</source>
+<remarks></remarks>
+</data_field>
+</data_fields>
+<template_folders>
+</template_folders>
+<embedded_ps>
+<author>PrintShop Mail</author>
+<creation_date>1992-07-01T11:00:00</creation_date>
+<last_modification_date>1992-07-01T11:00:00</last_modification_date>
+<name>Ne rien intégrer</name>
+<description></description>
+<start_of_page></start_of_page>
+<start_of_job></start_of_job>
+<between_sets></between_sets>
+</embedded_ps>
+</document>

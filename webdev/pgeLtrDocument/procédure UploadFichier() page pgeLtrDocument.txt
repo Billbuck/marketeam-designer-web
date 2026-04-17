@@ -1,0 +1,154 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// UploadFichier — Page pgeLtrDocument (modèles)
+// Upload et analyse du PDF pour un modèle
+//
+// Modifications par rapport à l'original :
+//   - Initialisation de RepertoireTravail
+//   - Affichage du bouton Personnaliser après upload réussi
+//   - Suppression du bloc enveloppe à fenêtre (non applicable aux modèles)
+// ─────────────────────────────────────────────────────────────────────────────
+procédure UploadFichier()
+
+sFond			est une chaîne
+sBat			est une chaîne
+sFichier		est une chaîne
+sMessage		est une chaîne
+
+ZoneRépétéeSupprimeTout(znrAperçuUpload)
+dispLtrDocument[3].Visible			= Faux
+btnModelePersonnaliser..Visible	= Faux
+
+// Créer le répertoire Temp AVANT l'upload pour y recevoir le PDF directement
+_stDocument.CodeTemp					= Partage.__vcUser.IDContact + "-" + DateHeureSys()
+sRepTemp est une chaîne = CheminClient(Partage.__vcUser.IDClient, __OPERATION_COURRIER__, __REP_TEMP__, Vrai) + "nouveau-" + _stDocument.CodeTemp + "\"
+fRepCrée(sRepTemp)
+
+sFichier = UploadCopieFichier(uplDocumentUpload, sRepTemp, "")
+
+si sFichier <> "" _et_ Minuscule(fExtraitChemin(sFichier, fExtension))[[2 à]] = "pdf" alors
+
+	_stDocument.EstUploadé				= Vrai
+	_stDocument.EstDocumentEnAttente	= Faux
+	_stDocument.EstPdfClient			= Vrai
+	_stDocument.NomFichierOrigine		= Majuscule(fExtraitChemin(sFichier, fFichier + fExtension))
+	_stDocument.NomFichierTemp			= __DOC_LTR__ + _stDocument.CodeTemp + __PDF__
+	_stDocument.Repertoire				= sRepTemp
+	_stDocument.RepertoireTravail		= sRepTemp
+	_stDocument.JsonDesignerData		= ""
+
+	sFond										= __DOC_LTR_FOND__ + _stDocument.CodeTemp
+	sBat										= __DOC_LTR_BAT__ + _stDocument.CodeTemp
+
+	Trace("UploadFichier Modèle : Temp = " + sRepTemp)
+
+	si fRenomme(sRepTemp + sFichier, sRepTemp + _stDocument.NomFichierTemp) alors
+
+		// ─────────────────────────────────────────────────────────
+		// Phase 1 — Analyse PDF
+		// ─────────────────────────────────────────────────────────
+		sMessage = Partage.PdfAnalyseDocument(_stDocument)
+
+		si sMessage = "" alors
+
+			// Si le PDF est a fond perdu on adapte le document
+			si _stDocument.EstFondPerdu = Faux _et_ _stDocument.tabPagePDF[1].EstFondPerdu = Vrai alors
+				_stDocument.EstFondPerdu		= Vrai
+				intEstFondPerdu					= Vrai
+			fin
+
+			// ─────────────────────────────────────────────────────
+			// Phase 1bis — Normalisation BleedBox si fond perdu
+			// ─────────────────────────────────────────────────────
+			si _stDocument.tabPagePDF[1].EstFondPerdu alors
+
+
+				stPage est une structPagePdf = _stDocument.tabPagePDF[1]
+
+				Trace("MediaBox X, Y", stPage.MediaBoxXMm, stPage.MediaBoxYMm)
+				Trace("MediaBox Largeur, Hauteur", stPage.MediaBoxLargeurMm, stPage.MediaBoxHauteurMm)
+				Trace("BleedBox X, Y", stPage.BleedBoxXMm, stPage.BleedBoxYMm)
+				Trace("BleedBox Largeur, Hauteur", stPage.BleedBoxLargeurMm, stPage.BleedBoxHauteurMm)
+				Trace("TrimBox X, Y", stPage.TrimBoxXMm, stPage.TrimBoxYMm)
+				Trace("TrimBox Largeur, Hauteur", stPage.TrimBoxLargeurMm, stPage.TrimBoxHauteurMm)
+
+				si stPage.MediaBoxLargeurMm <> stPage.BleedBoxLargeurMm _ou_
+					stPage.MediaBoxHauteurMm <> stPage.BleedBoxHauteurMm alors
+
+					sUrlNormalize	est une chaîne	= "http://localhost:5000/PyMuPdfExtract/normalize_bleedbox?file=" + URLEncode(_stDocument.Repertoire + _stDocument.NomFichierTemp)
+					hNormalize		est une httpRequête
+					hRepNormalize	est un httpRéponse
+
+					hNormalize.URL			= sUrlNormalize
+					hNormalize.Méthode	= httpGet
+					hRepNormalize			= hNormalize.Envoie()
+
+					si hRepNormalize.CodeEtat = 200 alors
+						vNorm est un Variant = JSONVersVariant(hRepNormalize.Contenu)
+						si vNorm.success = Vrai alors
+							Trace("NormalizeBleedBox : normalized = " + vNorm.normalized)
+						sinon
+							Trace("NormalizeBleedBox : erreur = " + vNorm.erreur)
+						fin
+					sinon
+						Trace("NormalizeBleedBox : HTTP " + hRepNormalize.CodeEtat)
+					fin
+
+				fin
+			fin
+
+		// ─────────────────────────────────────────────────────
+		// Phase 2 — Conversion JPG fond (avec BleedBox si fond perdu)
+		// ─────────────────────────────────────────────────────
+		sRepTempRel est une chaîne = CheminClient(Partage.__vcUser.IDClient, __OPERATION_COURRIER__, __REP_TEMP__, Faux) + "nouveau-" + _stDocument.CodeTemp + "/"
+		_stDocument.tabImageFond = Partage.GenereVignetteDocument(_stDocument.NomFichierTemp, sFond, _stDocument.tabPagePDF[1].EstFondPerdu, _stDocument.tabPagePDF[1].LargeurExterne, _stDocument.tabPagePDF[1].HauteurExterne, _stDocument.Repertoire, sRepTempRel)
+
+		// ─────────────────────────────────────────────────────
+		// Phase 2bis — Conversion JPG BAT (format fini, TrimBox)
+		// Uniquement si fond perdu : génère un aperçu sans bleed
+		// pour montrer à l'utilisateur le rendu après découpe
+		// ─────────────────────────────────────────────────────
+		si _stDocument.tabPagePDF[1].EstFondPerdu alors
+			_stDocument.tabImageBat = Partage.GenereVignetteDocument(_stDocument.NomFichierTemp, sBat, Faux, _stDocument.tabPagePDF[1].LargeurInterne, _stDocument.tabPagePDF[1].HauteurInterne, _stDocument.Repertoire, sRepTempRel)
+		fin
+
+		// ─────────────────────────────────────────────────────
+		// Phase 3 — Blanc tournant si pas de fond perdu
+		// ─────────────────────────────────────────────────────
+		si _stDocument.tabPagePDF[1].EstFondPerdu = Faux alors
+			pour tout stVignette de _stDocument.tabImageFond
+				Partage.AppliqueBlancTournant(stVignette.CheminPhysique, _stDocument.LargeurOuvert, _stDocument.HauteurOuvert)
+			fin
+		fin
+
+		// ─────────────────────────────────────────────────────
+		// Phase 4 — Affichage aperçu + bouton Personnaliser
+		// Si fond perdu : affiche tabImageBat (format fini)
+		// Sinon : affiche tabImageFond (avec blanc tournant)
+		// ─────────────────────────────────────────────────────
+		pour nPage = 1 _à_ _stDocument.NombrePage
+			ZoneRépétéeAjoute(znrAperçuUpload)
+			si _stDocument.tabPagePDF[1].EstFondPerdu _et_ _stDocument.tabImageBat..Occurrence >= nPage alors
+				znrAperçuUpload[nPage].imgUpload	= _stDocument.tabImageBat[nPage].CheminRelatif + "?" + DateHeureSys()
+				Trace("Bat (format fini)", _stDocument.tabImageBat[nPage].CheminPhysique)
+			sinon
+				znrAperçuUpload[nPage].imgUpload	= _stDocument.tabImageFond[nPage].CheminRelatif + "?" + DateHeureSys()
+				Trace("Fond", _stDocument.tabImageFond[nPage].CheminPhysique)
+			fin
+			znrAperçuUpload[nPage].imgUpload..Visible	= Vrai
+		fin
+
+			dispLtrDocument[3].Visible				= Vrai
+			btnModelePersonnaliser..Visible		= Vrai
+
+		sinon
+			PopupAfficheMessage(sMessage, "Erreur", __OPERATION_COURRIER__, __TOAST_ANNULATION__)
+		fin
+
+	sinon
+		PopupAfficheMessage("Erreur lors du renommage de votre fichier" + RC + "Merci de réitérer l'opération", "Erreur", __OPERATION_COURRIER__, __TOAST_ANNULATION__)
+	fin
+sinon
+	PopupAfficheMessage("Erreur lors de l'importation de votre fichier" + RC + "Merci de réitérer l'opération", "Erreur", __OPERATION_COURRIER__, __TOAST_ANNULATION__)
+fin
+
+renvoyer Vrai

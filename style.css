@@ -3968,6 +3968,17 @@ body.preview-mode-active #actions-section .btn:not(#btn-delete-zone) {
     display: block;
 }
 
+/* En mode Template : masquer uniquement les contrôles d'import image */
+/* Le créateur peut toujours choisir le type (fixe/champ), configurer  */
+/* l'affichage, le fond, la bordure et les contraintes                 */
+.template-mode #image-btn-import,
+.template-mode #image-btn-clear,
+.template-mode #image-file-info,
+.template-mode #image-btn-import-zip,
+.template-mode #image-zip-upload-section {
+    display: none !important;
+}
+
 /* Positionnement des 8 poignées */
 .area-handle-nw { top: -6px; left: -6px; cursor: nw-resize; }
 .area-handle-n  { top: -6px; left: 50%; transform: translateX(-50%); cursor: n-resize; }

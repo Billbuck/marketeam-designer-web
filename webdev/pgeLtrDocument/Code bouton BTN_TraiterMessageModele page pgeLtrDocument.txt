@@ -1,0 +1,18 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// BTN_TraiterMessageModele — Page pgeLtrDocument (modèles)
+// Bouton caché déclenché automatiquement par EcouterMessagesIframe
+// quand le Designer envoie un message (validated / cancelled)
+// ─────────────────────────────────────────────────────────────────────────────
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Code Navigateur :
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Revenir à la vue document (quitter l'iframe Designer)
+celLtrModeleDocument.Plan = 1
+
+AJAXExécuteAsynchrone(ajaxSynchroniseVariablesServeur+ajaxActualiseChamps, ServeurTraiterMessageDesignerModele, CallbackAsynchrone)
+
+	procédure interne CallbackAsynchrone(vParam1 Variant <utile>, nParam2 entier <utile>)
+	fin

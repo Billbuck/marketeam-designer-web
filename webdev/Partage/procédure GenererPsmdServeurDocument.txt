@@ -1,0 +1,109 @@
+// =========================================================================
+// Partage.GenererPsmdServeur()
+// Rôle : Générer un fichier .psmd à partir du JSON Designer
+//        en appelant psmd_cli.js via Node.js côté serveur.
+//        Écrit le JSON dans un fichier temp, appelle Node, vérifie le résultat,
+//        met à jour CheminPsmdTemp et NomFichierPsmd dans tabStDocument.
+//        Génère également un PSMD BAT (sans fond perdu) pour éviter un bug
+//        de rendu des codes-barres dans CreateJPEGPreviewOfLayout.
+//
+// Paramètres :
+//	stDocument (structDocument) : <indiquez ici le rôle de pIndexDocument>
+
+procédure GenererPsmdServeurDocument(stDocument est une structDocument)
+
+sNodeExe			est une chaîne	= INILit("NODE", "CHEMIN", "", NomFichierIni())
+sNodeCli			est une chaîne	= INILit("NODE", "CLI", "", NomFichierIni())
+sRepTravail			est une chaîne
+sCodeTemp			est une chaîne
+sCheminJsonTemp		est une chaîne
+sCheminPsmd			est une chaîne
+sCheminPsmdBat		est une chaîne
+sNomFichierPsmd		est une chaîne
+sCommande			est une chaîne
+sCommandeBat		est une chaîne
+
+// ─── Validation du JSON en entrée ────────────────────────────────────────
+si stDocument.JsonDesignerData = "" alors
+	Trace("GenererPsmdServeur : pJsonDesigner vide")
+	renvoyer Faux
+fin
+
+// ─── Validation de la configuration INI ──────────────────────────────────
+si sNodeExe = "" ou sNodeCli = "" alors
+	Trace("GenererPsmdServeur : section [NODE] manquante dans le fichier INI (CHEMIN / CLI)")
+	renvoyer Faux
+fin
+
+// ─── Construction des chemins — UTILISE LE REPERTOIRE DU DOCUMENT ────────
+sRepTravail			= stDocument.RepertoireTravail
+sCodeTemp			= stDocument.CodeTemp
+sNomFichierPsmd		= __DOC_LTR_PSMD__ + sCodeTemp + ".psmd"
+sCheminPsmd			= sRepTravail + sNomFichierPsmd
+sCheminJsonTemp		= sRepTravail + "psmd_json_" + sCodeTemp + ".tmp"
+
+// ─── Écriture du JSON dans le fichier temporaire ─────────────────────────
+si pas fSauveTexte(sCheminJsonTemp, ChaîneVersUTF8(stDocument.JsonDesignerData)) alors
+	Trace("GenererPsmdServeur : échec fSauveTexte JSON temp : " + sCheminJsonTemp)
+	renvoyer Faux
+fin
+
+si fFichierExiste(sCheminPsmd) alors
+	si pas fSupprime(sCheminPsmd) alors
+		renvoyer Faux
+	fin
+fin
+
+// ─── Construction et exécution de la commande (PSMD production + imposition) ─
+sCommande = ChaîneConstruit(
+[
+	"%1" "%2" "%3" "%4"
+],
+sNodeExe, sNodeCli, sCheminJsonTemp, sCheminPsmd) + " --imposition"
+
+Trace("GenererPsmdServeur : CMD = " + sCommande)
+
+si pas LanceAppli(sCommande, exeIconise, exeBloquant) alors
+	Trace("GenererPsmdServeur : LanceAppli a échoué — " + ErreurInfo(errComplet))
+	renvoyer Faux
+fin
+
+// ─── Génération du PSMD BAT (sans fond perdu) ───────────────────────────
+// Corrige un bug de rendu des codes-barres dans CreateJPEGPreviewOfLayout
+// quand le fond perdu est en mode "Ajouter à la tâche"
+sCheminPsmdBat = sRepTravail + "psmd_bat_" + sCodeTemp + ".psmd"
+sCommandeBat = ChaîneConstruit(
+[
+	"%1" "%2" "%3" "%4"
+],
+sNodeExe, sNodeCli, sCheminJsonTemp, sCheminPsmdBat) + " --no-bleed"
+
+Trace("GenererPsmdServeur : CMD BAT = " + sCommandeBat)
+LanceAppli(sCommandeBat, exeIconise, exeBloquant)
+
+// ─── Nettoyage du fichier JSON temporaire ────────────────────────────────
+si fFichierExiste(sCheminJsonTemp) alors
+	fSupprime(sCheminJsonTemp)
+fin
+
+// ─── Vérification de la présence du .psmd produit ────────────────────────
+si pas fFichierExiste(sCheminPsmd) alors
+	Trace("GenererPsmdServeur : .psmd introuvable après génération : " + sCheminPsmd)
+	renvoyer Faux
+fin
+
+// ─── Mise à jour de la structure document ────────────────────────────────
+stDocument.CheminPsmdTemp	= sCheminPsmd
+stDocument.NomFichierPsmd	= sNomFichierPsmd
+
+// PSMD BAT : utilisé par GenerationBatDepuisPsmd à la place du PSMD production
+si fFichierExiste(sCheminPsmdBat) alors
+	stDocument.CheminPsmdBat	= sCheminPsmdBat
+	Trace("GenererPsmdServeur : PSMD BAT généré : " + sCheminPsmdBat)
+sinon
+	stDocument.CheminPsmdBat	= sCheminPsmd
+	Trace("GenererPsmdServeur : PSMD BAT absent, fallback sur PSMD production")
+fin
+
+Trace("GenererPsmdServeur : .psmd généré avec succès : " + sCheminPsmd)
+renvoyer Vrai

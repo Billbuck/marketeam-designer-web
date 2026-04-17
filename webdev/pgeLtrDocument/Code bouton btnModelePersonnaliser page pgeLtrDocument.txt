@@ -1,0 +1,75 @@
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// btnModelePersonnaliser — Page pgeLtrDocument (modèles)
+// ─────────────────────────────────────────────────────────────────────────────
+
+Code Ajax Serveur :
+
+jsDesigner	est un JSON
+jsWrapper	est un JSON
+
+SI _stDocument.NomFichierTemp = "" ALORS
+	RETOUR
+FIN
+
+// ─── Construction de l'échantillon d'aperçu ──────────────────────────────
+tabEchantillon est un tableau de StructBaseLigne
+tabEchantillon.Ajoute(Partage.__vcUser.stCoordonnées)
+
+// ─── Construction des champs de fusion standard ──────────────────────────
+// TODO : adapter l'appel ci-dessous selon votre méthode de chargement des champs standard
+tabBase		est un tableau de StructBase
+taaChamps		est un tableau associatif de structBaseChamp		= Partage.CalculeTaaBaseChamp(tabBase, Faux, Faux)
+
+// ─── Recomposer le wrapper complet à chaque ouverture ───────────────────
+// Le wrapper (format, pages, fonds, champs, aperçu) est toujours recalculé
+// depuis _stDocument. Seule la partie data est injectée depuis le JSON stocké.
+jsWrapper = ChaîneVersUTF8(cpDesigner.ComposerJsonDesignerModele(_stDocument, Partage.__vcUser.IDClient, Partage.__vcUser.IDContact, _pIdModele, saiLibellé, taaChamps, tabEchantillon, _nLimTexte, _nLimImage, _nLimBarcode, _nLimQr))
+
+// Recherche du nom de la clé contenant les pages dans le wrapper
+sWrapper est une chaîne = JSONVersChaîne(jsWrapper)
+nPosPages est un entier = Position(sWrapper, """pages""")
+si nPosPages > 20 alors
+	Trace("btnModelePersonnaliser : contexte pages = " + sWrapper[[nPosPages - 20 À nPosPages + 30]])
+fin
+Trace("btnModelePersonnaliser : jsWrapper.pages..Occurrence = " + jsWrapper.pages..Occurrence)
+Trace("btnModelePersonnaliser : jsWrapper.data.pages..Occurrence = " + jsWrapper.data.pages..Occurrence)
+
+SI _stDocument.JsonDesignerData <> "" ALORS
+	jsDesigner = ChaîneVersUTF8(_stDocument.JsonDesignerData)
+	// Injecter la partie data stockée (zones texte, image, barcode, etc.)
+	SI jsDesigner.data..Existe ALORS
+		jsWrapper.data = jsDesigner.data
+	SINON
+		jsWrapper.data = jsDesigner
+		Trace("btnModelePersonnaliser : jsWrapper.Document.pages..Occurrence = " + jsWrapper.Document.pages..Occurrence)
+		Trace("btnModelePersonnaliser : jsWrapper.data.pages..Occurrence = " + jsWrapper.data.pages..Occurrence)
+	FIN
+
+	// Corriger cheminFond et urlFond dans les pages du data injecté
+	// On utilise directement les valeurs de _stDocument (toujours à jour)
+	SI jsWrapper.data.pages..Occurrence > 0 ALORS
+		POUR nInd = 1 _À_ jsWrapper.data.pages..Occurrence
+			jsWrapper.data.pages[nInd].cheminFond = _stDocument.Repertoire + _stDocument.NomFichierTemp
+			SI _stDocument.tabImageFond..Occurrence >= nInd ALORS
+				jsWrapper.data.pages[nInd].urlFond = _stDocument.tabImageFond[nInd].CheminRelatif
+			FIN
+			Trace("btnModelePersonnaliser : page " + nInd + " cheminFond = " + jsWrapper.data.pages[nInd].cheminFond)
+			Trace("btnModelePersonnaliser : page " + nInd + " urlFond = " + jsWrapper.data.pages[nInd].urlFond)
+		FIN
+	FIN
+FIN
+
+gsJsonDesigner = JSONVersChaîne(jsWrapper)
+
+
+
+Code Navigateur retour Ajax :
+
+// Envoyer le JSON au Designer
+SI gsJsonDesigner <> "" ALORS
+	celLtrModeleDocument.Plan	= 2
+	EnvoyerMessageIframe(gsJsonDesigner)
+	gsJsonDesigner = ""
+FIN

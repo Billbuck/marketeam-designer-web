@@ -5315,7 +5315,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {Object} source - Données source de la zone image
      */
     function updateImageFileInfoDisplay(source) {
-        if (!source || !source.imageBase64) {
+        if (!source || (!source.imageBase64 && !source.valeur)) {
             // Pas d'image : afficher le placeholder
             if (imageFileInfo) {
                 imageFileInfo.className = 'file-info-poc empty';
@@ -21937,6 +21937,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Sauvegarder l'état du document (format principal)
         try {
             const documentStateJson = JSON.stringify(documentState);
+            console.log('💾 DIAG saveToLocalStorage — taille:', documentStateJson.length,
+                ', pages:', documentState.pages.length,
+                ', identification:', documentState.identification ? documentState.identification.idDocument : 'N/A');
             localStorage.setItem('marketeam_document_state', documentStateJson);
         } catch (error) {
             console.error('❌ Impossible de sauvegarder documentState dans localStorage.', error);
@@ -22771,6 +22774,10 @@ document.addEventListener('DOMContentLoaded', () => {
      * loadFromWebDev(jsonData); // → true
      */
     function loadFromWebDev(jsonData) {
+        console.log('🔄 DIAG loadFromWebDev ENTREE — type:', typeof jsonData,
+            ', action:', jsonData && jsonData.action,
+            ', data:', !!jsonData && !!jsonData.data,
+            ', zonesImage dans data:', jsonData && jsonData.data && jsonData.data.zonesImage ? jsonData.data.zonesImage.length : 'N/A');
 
         // Support enveloppe postMessage {action:'load', policesDisponibles:[...], data:{...}}
         const isLoadEnvelope =
@@ -23122,8 +23129,15 @@ document.addEventListener('DOMContentLoaded', () => {
         
         let zonesImageCount = 0;
         
+        console.log('🖼️ DIAG ÉTAPE 7 — zonesImage:', effectiveDocumentJson.zonesImage ? effectiveDocumentJson.zonesImage.length : 'absent');
+        
         if (effectiveDocumentJson.zonesImage && Array.isArray(effectiveDocumentJson.zonesImage)) {
-            effectiveDocumentJson.zonesImage.forEach(zoneJson => {
+            effectiveDocumentJson.zonesImage.forEach((zoneJson, idx) => {
+                console.log('🖼️ DIAG zone image #' + idx, '— id:', zoneJson.id,
+                    ', page:', zoneJson.page,
+                    ', source.type:', zoneJson.source ? zoneJson.source.type : 'N/A',
+                    ', source.valeur:', zoneJson.source && zoneJson.source.valeur ? zoneJson.source.valeur.substring(0, 80) : 'N/A',
+                    ', imageBase64:', zoneJson.source && zoneJson.source.imageBase64 ? zoneJson.source.imageBase64.substring(0, 30) + '...' : 'vide');
                 const pageIndex = (zoneJson.page || 1) - 1;
                 
                 if (pageIndex < 0 || pageIndex >= documentState.pages.length) {
@@ -23131,16 +23145,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
                 
-                const zoneData = convertZoneImageFromJson(zoneJson);
-                const zoneId = zoneJson.id || `zone-${Date.now()}`;
-                
-                documentState.pages[pageIndex].zones[zoneId] = zoneData;
-                zonesImageCount++;
-                
-                const idMatch = zoneId.match(/zone-(\d+)/);
-                if (idMatch) {
-                    const idNum = parseInt(idMatch[1]);
-                    if (idNum > maxZoneId) maxZoneId = idNum;
+                try {
+                    const zoneData = convertZoneImageFromJson(zoneJson);
+                    const zoneId = zoneJson.id || `zone-${Date.now()}`;
+                    
+                    documentState.pages[pageIndex].zones[zoneId] = zoneData;
+                    zonesImageCount++;
+                    console.log('🖼️ DIAG zone image #' + idx + ' chargée OK — zoneId:', zoneId);
+                    
+                    const idMatch = zoneId.match(/zone-(\d+)/);
+                    if (idMatch) {
+                        const idNum = parseInt(idMatch[1]);
+                        if (idNum > maxZoneId) maxZoneId = idNum;
+                    }
+                } catch (errImg) {
+                    console.error('❌ DIAG zone image #' + idx + ' ERREUR:', errImg);
                 }
                 
             });
@@ -23256,6 +23275,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 valeur: source.valeur || '',
                 imageBase64: source.imageBase64 || null,
                 nomOriginal: source.nomOriginal || '',
+                nomFichier: source.nomFichier || '',
                 largeurPx: source.largeurPx || null,
                 hauteurPx: source.hauteurPx || null,
                 collectionId: source.collectionId ?? null,
@@ -23601,6 +23621,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     type: type,
                     valeur: s.valeur || '',
                     nomOriginal: s.nomOriginal || '',
+                    nomFichier: s.nomFichier || '',
                     imageBase64: s.imageBase64 || null,
                     largeurPx: s.largeurPx || null,
                     hauteurPx: s.hauteurPx || null
@@ -24081,15 +24102,29 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleParentMessage(event) {
         // Sécurité : après la première connexion, n'accepter que l'origine connue
         if (trustedParentOrigin && event.origin !== trustedParentOrigin) {
+            console.log('🚫 DIAG message rejeté — origin:', event.origin, '!= trusted:', trustedParentOrigin);
             return;
         }
         
-        const message = event.data;
+        let message = event.data;
         
         // Ignorer les messages non structurés ou d'autres sources (ex: extensions)
-        if (!message || typeof message !== 'object' || !message.action) {
+        if (!message || typeof message !== 'object') {
             return;
         }
+        
+        // Compatibilité : si le message n'a pas d'action mais contient des
+        // propriétés de document (pages, identification...), le traiter comme un 'load'
+        if (!message.action && (message.pages || message.identification || message.zonesTexte)) {
+            console.log('📨 DIAG message sans action détecté — conversion en load, props:', Object.keys(message).join(', '));
+            message = { action: 'load', data: message };
+        }
+        
+        if (!message.action) {
+            return;
+        }
+        
+        console.log('📨 DIAG handleParentMessage — action:', message.action, ', origin:', event.origin);
         
         
         switch (message.action) {
@@ -24098,13 +24133,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!trustedParentOrigin && event.origin) {
                     trustedParentOrigin = event.origin;
                 }
+                console.log('📩 DIAG postMessage load reçu — data:', !!message.data,
+                    ', zonesImage:', message.data && message.data.zonesImage ? message.data.zonesImage.length : 'N/A',
+                    ', pages:', message.data && message.data.pages ? message.data.pages.length : 'N/A');
                 // Charger un document JSON
                 if (message.data) {
                     try {
                         // Définir le mode AVANT le chargement des données
                         setDesignerMode(message.mode || 'standard');
                         
+                        console.log('📩 DIAG avant loadFromWebDev');
                         loadFromWebDev(message);
+                        console.log('📩 DIAG après loadFromWebDev — pages en mémoire:', documentState.pages.length,
+                            ', image fond:', documentState.pages.length > 0 ? documentState.pages[0].image : 'N/A');
                         
                         // Appliquer les contraintes si présentes dans le message load
                         if (message.constraints) {
@@ -24113,7 +24154,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         sendMessageToParent({ action: 'loaded', success: true });
                     } catch (error) {
-                        console.error('Erreur lors du chargement:', error);
+                        console.error('❌ DIAG Erreur lors du chargement:', error);
                         sendMessageToParent({ action: 'loaded', success: false, error: error.message });
                     }
                 }
@@ -24254,9 +24295,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // Essayer de charger le nouveau format multipage
         const savedState = localStorage.getItem('marketeam_document_state');
         
+        console.log('📦 DIAG loadFromLocalStorage — savedState:', savedState ? savedState.length + ' chars' : 'null');
+        
         if (savedState) {
             try {
                 const parsedState = JSON.parse(savedState);
+                console.log('📦 DIAG localStorage — pages:', parsedState.pages ? parsedState.pages.length : 0,
+                    ', identification:', parsedState.identification ? parsedState.identification.idDocument : 'N/A',
+                    ', fond:', parsedState.pages && parsedState.pages[0] ? parsedState.pages[0].image : 'N/A');
                 // Vérifier que c'est bien la nouvelle structure
                 if (parsedState.pages && Array.isArray(parsedState.pages)) {
                     documentState = parsedState;
@@ -24521,6 +24567,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- CHARGEMENT AU DÉMARRAGE ---
+    console.log('🚀 DIAG === DÉMARRAGE DOMContentLoaded === iframe:', window.parent !== window);
     loadFromLocalStorage();
     
     // Initialiser les données d'aperçu fictives (pour tests hors WebDev)
@@ -26439,6 +26486,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const errors = [];
         
+        // En mode Template, les zones vides sont des placeholders pour l'utilisateur final
+        const skipContentValidation = isTemplateMode();
+        
         // Récupérer les champs disponibles
         const availableFields = (documentState && documentState.champsFusion) || mergeFields || [];
         const availableFieldsUpper = availableFields.map(f => {
@@ -26462,7 +26512,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // ═══════════════════════════════════════════════════════════════
                 // VÉRIFICATION ZONE IMAGE
                 // ═══════════════════════════════════════════════════════════════
-                if (zoneData.type === 'image') {
+                if (zoneData.type === 'image' && !skipContentValidation) {
                     const source = zoneData.source || {};
                     
                     if (source.type === 'fixe' || source.type === 'url') {
@@ -26495,7 +26545,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // ═══════════════════════════════════════════════════════════════
                 // VÉRIFICATION ZONE BARCODE
                 // ═══════════════════════════════════════════════════════════════
-                if (zoneData.type === 'barcode') {
+                if (zoneData.type === 'barcode' && !skipContentValidation) {
                     const zoneErrors = []; // Erreurs pour cette zone
                     
                     // ─────────────────────────────────────────────────────────────
@@ -26726,7 +26776,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // ═══════════════════════════════════════════════════════════════
                 // VÉRIFICATION ZONE TEXTQUILL
                 // ═══════════════════════════════════════════════════════════════
-                if (zoneData.type === 'textQuill') {
+                if (zoneData.type === 'textQuill' && !skipContentValidation) {
                     const delta = zoneData.quillDelta;
                     const unknownFields = [];
                     

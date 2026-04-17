@@ -1,0 +1,39 @@
+
+
+Code Ajax serveur :
+
+jsDesigner	est un JSON
+jsWrapper 	est un JSON
+
+_nIndDesignerEnCours = znrLtrContenu
+
+si __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesignerData = "" alors
+	retour
+fin
+
+jsDesigner = __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesignerData
+
+si jsDesigner.constraints..Existe alors
+	gsJsonDesigner = __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesignerData
+sinon
+	// Recréer le wrapper complet (auth, constraints, limites, polices...) avec les mêmes limites qu'en création
+	jsWrapper 		= cpDesigner.ComposerJsonDesignerCreation(__stOperation, __tabEchantillonBaseLigne, __stOperation.TypeOperation, Faux, _nIndDesignerEnCours, -1, -1, -1, (_nIndDesignerEnCours = 1))
+	jsWrapper.data 	= ChaîneVersJSON(__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesignerData)
+	gsJsonDesigner	= JSONVersChaîne(jsWrapper, psdJSONEncodageUTF8)
+fin
+
+Code navigateur retour Ajax :
+
+// Envoyer le JSON au Designer
+si gsJsonDesigner <> "" alors
+	btnFerme.Visible					= Faux
+	grpBoutonProgression.Visible	= Faux
+	btnPrécédent.Visible				= Faux
+	btnSuivant.Visible				= Faux
+	grpTunnelNombre.Visible			= Faux
+	grpTunnelMontantHT.Visible		= Faux
+	btnAccueil.Etat					= Grisé
+	celLtrConteneur.Plan				= 2
+	EnvoyerMessageIframe(gsJsonDesigner)
+	gsJsonDesigner 					= ""
+fin

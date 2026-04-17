@@ -1,0 +1,1503 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.printshopmail.com/support/xml/schemas/win/version-7_1_0/printshopmail7.xsd">
+	<info>
+		<user_name>michel</user_name>
+		<date_time>2026-04-08T15:40:37</date_time>
+		<app_version>Version 7.2.11 (construire 9078)</app_version>
+		<published>no</published>
+	</info>
+	<printer>
+		<printer_name>PrintShop Mail Printer</printer_name>
+	</printer>
+	<operator_instructions></operator_instructions>
+	<preferences>
+		<program>
+			<default_tabstop_interval>36</default_tabstop_interval>
+			<markers begin="@" end="@"/>
+			<items_without_database>2</items_without_database>
+		</program>
+		<print_job>
+			<collate>yes</collate>
+			<use_split_job>no</use_split_job>
+			<split_job_size>1000</split_job_size>
+			<split_by>0</split_by>
+			<forms>
+				<store_on_disk>yes</store_on_disk>
+				<use_custom_cache_size>no</use_custom_cache_size>
+				<cache_size>4096</cache_size>
+				<use_opi>0</use_opi>
+			</forms>
+			<master>
+				<freeform2_master_name>Master1</freeform2_master_name>
+				<print_mode>3</print_mode>
+			</master>
+			<ppml>
+				<environment>psmail\Sans titre</environment>
+				<send_images>0</send_images>
+				<zip>yes</zip>
+				<embed_images_in_pdf>yes</embed_images_in_pdf>
+			</ppml>
+			<vipp>
+				<project_folder>projects\psmail</project_folder>
+				<do_not_spool_images>0</do_not_spool_images>
+			</vipp>
+			<vps>
+				<generate_booklets>yes</generate_booklets>
+				<use_apr>0</use_apr>
+			</vps>
+			<pdf>
+				<joboptions></joboptions>
+			</pdf>
+			<pdfvt>
+				<joboptions></joboptions>
+			</pdfvt>
+			<margins option="0" left="7.09" top="18.43" right="7.09" bottom="18.43"/>
+			<technology>0</technology>
+		</print_job>
+		<repetition>
+			<repeat_hor>2</repeat_hor>
+			<repeat_ver>1</repeat_ver>
+			<print_priority>4</print_priority>
+			<print_priority>0</print_priority>
+			<print_priority>2</print_priority>
+			<spacing_between_layouts x="14.17323" y="0"/>
+			<duplex_print>3</duplex_print>
+		</repetition>
+		<imposition>
+			<bleed>
+				<mode>1</mode>
+				<size>14.17323</size>
+			</bleed>
+			<cropmarks>
+				<mode>1</mode>
+				<size>6</size>
+				<double_sided>no</double_sided><color colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></color>
+			</cropmarks>
+			<folding_lines>
+				<size>40</size>
+			</folding_lines>
+		</imposition><colormanagement intent_generic="relative" colormanage="no"><colorspace id="RGB"><profile source="iccfile"><file name="sRGB Color Space Profile.icm" description="sRGB IEC61966-2.1">AA==</file></profile></colorspace><colorspace id="CMYK"><profile source="iccfile"><file name="USWebCoatedSWOP.icc" description="U.S. Web Coated (SWOP) v2">AA==</file></profile></colorspace><colorspace id="GRAY"><profile source="gamma"><gamma>2.2</gamma></profile></colorspace><colorspace id="defaultRGB"><profile source="iccfile"><file name="sRGB Color Space Profile.icm" description="sRGB IEC61966-2.1">AA==</file></profile></colorspace><colorspace id="defaultCMYK"><profile source="iccfile"><file name="USWebCoatedSWOP.icc" description="U.S. Web Coated (SWOP) v2">AA==</file></profile></colorspace><colorspace id="defaultGRAY"><profile source="gamma"><gamma>2.2</gamma></profile></colorspace></colormanagement>
+		<ppconnect>
+			<namevalue name="__#PPSuite#Connection_FaxNumber" expression="">
+			</namevalue>
+			<namevalue name="__#PPSuite#Connection_FaxDescription" expression="">
+			</namevalue>
+			<namevalue name="__#PPSuite#Connection_eMailAddress" expression="">
+			</namevalue>
+			<namevalue name="__#PPSuite#Connection_eMailSubject" expression="">
+			</namevalue>
+			<namevalue name="__#PPSuite#Connection_eMailBodyText" expression="">
+			</namevalue>
+			<namevalue name="__#PPSuite#Connection_PDFBookmark" expression="">
+			</namevalue>
+		</ppconnect>
+	</preferences>
+	<database_settings>
+		<table_name>Pas de source de données</table_name>
+		<db_type>3</db_type>
+		<db_pathsettings></db_pathsettings>
+		<extended_properties>
+			<colnameheader>yes</colnameheader>
+			<format></format>
+			<encoding></encoding>
+		</extended_properties>
+		<filter_sort_settings>
+			<filter></filter>
+			<sort></sort>
+			<db_filter_enable>no</db_filter_enable>
+			<db_sort_enable>no</db_sort_enable>
+		</filter_sort_settings>
+		<filter_array_size>4</filter_array_size>
+		<filter>
+			<field>-1</field>
+			<comp>-1</comp>
+			<edit></edit>
+			<bool>-1</bool>
+		</filter>
+		<filter>
+			<field>-1</field>
+			<comp>-1</comp>
+			<edit></edit>
+			<bool>-1</bool>
+		</filter>
+		<filter>
+			<field>-1</field>
+			<comp>-1</comp>
+			<edit></edit>
+			<bool>-1</bool>
+		</filter>
+		<filter>
+			<field>-1</field>
+			<comp>-1</comp>
+			<edit></edit>
+		</filter>
+	</database_settings>
+	<layouts>
+		<layout>
+			<dimensions>
+				<size x="595.27222" y="841.88018"/>
+				<automatic_size>yes</automatic_size>
+				<custom_size>no</custom_size>
+				<fit_to_objects>no</fit_to_objects>
+			</dimensions>
+			<attributes>
+				<name></name>
+				<condition_expression>Print</condition_expression>
+				<copies_expression>1</copies_expression>
+			</attributes>
+			<printer_preferences>
+				<windows_devmode>//7/FlAAcgBpAG4AdABTAGgAbwBwACAATQBhAGkAbAAgAFAAcgBpAG4AdABlAHIAmAQAAFAA
+cgBpAG4AdABTAGgAbwBwACAATQBhAGkAbAAgAFAAcgBpAG4AdABlAHIAAAAAAAAAAAAAAAAA
+AAAAAAAAAAABBAMG3AC8A1PvgAECAMcAlBGADGQAAQAPALAEAgABALAEAwABAEEANAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAQAAAAIAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AABQUklW4jAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGAAAAAAAECcQJxAnAAAQJwAA
+AAAAAAAAyAC8AwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMAAAAAAAAAAAAQAFA0AwAoiAQA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAESfa+YFAAAABAAAAP8A/wABAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AADIAAAAU01USgAAAAAQALgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==</windows_devmode>
+				<tray_name>Sélection automatique</tray_name>
+			</printer_preferences>
+			<object>
+				<identifier>{00000000-FFFE-FFFF-3CE8-1A00B78E0561}</identifier>
+				<name>Image 1</name>
+				<locked>no</locked>
+				<knockout>no</knockout>
+				<border_size>0</border_size>
+				<border_style>0</border_style><fillcolor colorspace="CMYK" alpha="0" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></fillcolor><bordercolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></bordercolor>
+				<rotation>0</rotation>
+				<bounds left="-14.17" top="-14.17" right="609.45" bottom="856.05998"/>
+				<snap_frame_to_content>no</snap_frame_to_content>
+				<show_mode>
+					<editor>yes</editor>
+					<jpeg_preview>yes</jpeg_preview>
+					<pdf_preview>yes</pdf_preview>
+					<print_preview>yes</print_preview>
+					<print>yes</print>
+				</show_mode>
+				<anchor>
+					<horizontal>0</horizontal>
+					<vertical>0</vertical>
+					<source></source>
+					<source_bounds left="0" top="0" right="0" bottom="0"/>
+				</anchor>
+				<image_object>
+					<scale>2</scale>
+					<keep_aspect_ratio>no</keep_aspect_ratio>
+					<horizontal_alignment>4</horizontal_alignment>
+					<vertical_alignment>4</vertical_alignment>
+					<variable_name>Image 1</variable_name>
+					<default_image_folder></default_image_folder>
+					<default_folder></default_folder>
+					<subfolders>no</subfolders>
+					<file_name>D:\Mes Sites\Version SaaS 2026\Marketeam\MARKETEAM_WEB\Upload\Ltr1-20260408151404101.pdf</file_name>
+					<pdf_pagenumber_expression>1</pdf_pagenumber_expression>
+					<global_scope>no</global_scope>
+					<filters>
+						<two_color convert="no">
+							<threshold>50</threshold><backgroundcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></backgroundcolor><foregroundcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></foregroundcolor>
+						</two_color>
+					</filters>
+				</image_object>
+			</object>
+			<object>
+				<identifier>{09BC52C5-3B90-129C-3717-DF9D53E7C2DE}</identifier>
+				<name>Zone sys-adresse-contour</name>
+				<locked>yes</locked>
+				<knockout>no</knockout>
+				<border_size>1</border_size>
+				<border_style>2</border_style><fillcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></fillcolor><bordercolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></bordercolor>
+				<rotation>0</rotation>
+				<bounds left="280.62991" top="99.2126" right="564.09448" bottom="226.77165"/>
+				<snap_frame_to_content>no</snap_frame_to_content>
+				<show_mode>
+					<editor>yes</editor>
+					<jpeg_preview>yes</jpeg_preview>
+					<pdf_preview>yes</pdf_preview>
+					<print_preview>yes</print_preview>
+					<print>yes</print>
+				</show_mode>
+				<anchor>
+					<horizontal>0</horizontal>
+					<vertical>0</vertical>
+					<source></source>
+					<source_bounds left="0" top="0" right="0" bottom="0"/>
+				</anchor>
+				<text_object>
+					<backwardlink>{00000000-0000-0000-0000-000000000000}</backwardlink>
+					<forwardlink>{00000000-0000-0000-0000-000000000000}</forwardlink>
+					<rtf_data>e1xydGYxXGFuc2lcYW5zaWNwZzEyNTJcZGVmZjBcbm91aWNvbXBhdFxkZWZsYW5nMTAzNntc
+Zm9udHRibHtcZjBcZm5pbFxmY2hhcnNldDAgUm9ib3RvO319DQp7XGNvbG9ydGJsIDtccmVk
+MFxncmVlbjBcYmx1ZTA7fQ0Ke1wqXGdlbmVyYXRvciBSaWNoZWQyMCAxMC4wLjI2MTAwfVx2
+aWV3a2luZDRcdWMxIA0KXHBhcmRcY2YxXGYwXGZzMjRccGFyDQp9DQoA</rtf_data>
+					<emptylines_property>1</emptylines_property>
+					<horizontal_alignment>2</horizontal_alignment>
+					<vertical_alignment>6</vertical_alignment>
+					<vertical_text>no</vertical_text><textcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></textcolor>
+					<cmyk_output>no</cmyk_output>
+					<copy_fitting>
+						<reduce_to_fit>no</reduce_to_fit>
+						<fontsize_minimum>6</fontsize_minimum>
+						<allow_line_breaks>yes</allow_line_breaks>
+					</copy_fitting>
+				</text_object>
+			</object>
+			<object>
+				<identifier>{48C4031F-58C6-A23A-EEE1-21150738EF57}</identifier>
+				<name>Adresse destinataire (sys-adresse-doc)</name>
+				<locked>yes</locked>
+				<knockout>no</knockout>
+				<border_size>0</border_size>
+				<border_style>0</border_style><fillcolor colorspace="CMYK" alpha="0" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></fillcolor><bordercolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></bordercolor>
+				<rotation>0</rotation>
+				<bounds left="312.09448" top="144.85039" right="558.70865" bottom="221.38583"/>
+				<snap_frame_to_content>no</snap_frame_to_content>
+				<show_mode>
+					<editor>yes</editor>
+					<jpeg_preview>yes</jpeg_preview>
+					<pdf_preview>yes</pdf_preview>
+					<print_preview>yes</print_preview>
+					<print>yes</print>
+				</show_mode>
+				<anchor>
+					<horizontal>0</horizontal>
+					<vertical>0</vertical>
+					<source></source>
+					<source_bounds left="0" top="0" right="0" bottom="0"/>
+				</anchor>
+				<text_object>
+					<backwardlink>{00000000-0000-0000-0000-000000000000}</backwardlink>
+					<forwardlink>{00000000-0000-0000-0000-000000000000}</forwardlink>
+					<rtf_data>e1xydGYxXGFuc2lcYW5zaWNwZzEyNTJcZGVmZjBcbm91aWNvbXBhdFxkZWZsYW5nMTAzNntc
+Zm9udHRibHtcZjBcZm5pbFxmY2hhcnNldDAgVmVyZGFuYTt9fQ0Ke1xjb2xvcnRibCA7XHJl
+ZDBcZ3JlZW4wXGJsdWUwO30NCntcKlxnZW5lcmF0b3IgUmljaGVkMjAgMTAuMC4yNjEwMH1c
+dmlld2tpbmQ0XHVjMSANClxwYXJkXGNmMVxmMFxmczIwIEBTb2NpZXRlQFxwYXINCkBDaXZp
+bGl0ZUAgQE5vbUAgQFByZW5vbUBccGFyDQpAQWRyZXNzZTFAXHBhcg0KQEFkcmVzc2UyQFxw
+YXINCkBBZHJlc3NlM0BccGFyDQpAQWRyZXNzZTRAXHBhcg0KQENvZGVQb3N0YWxAIEBWaWxs
+ZUBccGFyDQpAUGF5c0BccGFyDQp9DQoA</rtf_data>
+					<emptylines_property>1</emptylines_property>
+					<horizontal_alignment>2</horizontal_alignment>
+					<vertical_alignment>4</vertical_alignment>
+					<vertical_text>no</vertical_text><textcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></textcolor>
+					<cmyk_output>no</cmyk_output>
+					<copy_fitting>
+						<reduce_to_fit>no</reduce_to_fit>
+						<fontsize_minimum>6</fontsize_minimum>
+						<allow_line_breaks>yes</allow_line_breaks>
+					</copy_fitting>
+				</text_object>
+			</object>
+			<object>
+				<identifier>{EB9B2E28-C7A0-D28D-2E65-2493EBF94A3B}</identifier>
+				<name>SÃ©quentiel (sys-adresse-sequentiel)</name>
+				<locked>yes</locked>
+				<knockout>no</knockout>
+				<border_size>0</border_size>
+				<border_style>0</border_style><fillcolor colorspace="CMYK" alpha="0" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></fillcolor><bordercolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></bordercolor>
+				<rotation>0</rotation>
+				<bounds left="312.09448" top="130.67717" right="439.65353" bottom="138.89764"/>
+				<snap_frame_to_content>no</snap_frame_to_content>
+				<show_mode>
+					<editor>yes</editor>
+					<jpeg_preview>yes</jpeg_preview>
+					<pdf_preview>yes</pdf_preview>
+					<print_preview>yes</print_preview>
+					<print>yes</print>
+				</show_mode>
+				<anchor>
+					<horizontal>0</horizontal>
+					<vertical>0</vertical>
+					<source></source>
+					<source_bounds left="0" top="0" right="0" bottom="0"/>
+				</anchor>
+				<text_object>
+					<backwardlink>{00000000-0000-0000-0000-000000000000}</backwardlink>
+					<forwardlink>{00000000-0000-0000-0000-000000000000}</forwardlink>
+					<rtf_data>e1xydGYxXGFuc2lcYW5zaWNwZzEyNTJcZGVmZjBcbm91aWNvbXBhdFxkZWZsYW5nMTAzNntc
+Zm9udHRibHtcZjBcZm5pbFxmY2hhcnNldDAgVmVyZGFuYTt9fQ0Ke1xjb2xvcnRibCA7XHJl
+ZDBcZ3JlZW4wXGJsdWUwO30NCntcKlxnZW5lcmF0b3IgUmljaGVkMjAgMTAuMC4yNjEwMH1c
+dmlld2tpbmQ0XHVjMSANClxwYXJkXGNmMVxmMFxmczEyIEBTZXF1ZW50aWVsQFxwYXINCn0N
+CgA=</rtf_data>
+					<emptylines_property>1</emptylines_property>
+					<horizontal_alignment>2</horizontal_alignment>
+					<vertical_alignment>4</vertical_alignment>
+					<vertical_text>no</vertical_text><textcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></textcolor>
+					<cmyk_output>no</cmyk_output>
+					<copy_fitting>
+						<reduce_to_fit>no</reduce_to_fit>
+						<fontsize_minimum>6</fontsize_minimum>
+						<allow_line_breaks>yes</allow_line_breaks>
+					</copy_fitting>
+				</text_object>
+			</object>
+			<object>
+				<identifier>{116D8408-67B6-38D6-E048-96FFD99485F1}</identifier>
+				<name>DÃ©pÃ´t (sys-adresse-depot)</name>
+				<locked>yes</locked>
+				<knockout>no</knockout>
+				<border_size>0</border_size>
+				<border_style>0</border_style><fillcolor colorspace="CMYK" alpha="0" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></fillcolor><bordercolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></bordercolor>
+				<rotation>0</rotation>
+				<bounds left="453.82678" top="108" right="538.5827" bottom="119.33858"/>
+				<snap_frame_to_content>no</snap_frame_to_content>
+				<show_mode>
+					<editor>yes</editor>
+					<jpeg_preview>yes</jpeg_preview>
+					<pdf_preview>yes</pdf_preview>
+					<print_preview>yes</print_preview>
+					<print>yes</print>
+				</show_mode>
+				<anchor>
+					<horizontal>0</horizontal>
+					<vertical>0</vertical>
+					<source></source>
+					<source_bounds left="0" top="0" right="0" bottom="0"/>
+				</anchor>
+				<text_object>
+					<backwardlink>{00000000-0000-0000-0000-000000000000}</backwardlink>
+					<forwardlink>{00000000-0000-0000-0000-000000000000}</forwardlink>
+					<rtf_data>e1xydGYxXGFuc2lcYW5zaWNwZzEyNTJcZGVmZjBcbm91aWNvbXBhdFxkZWZsYW5nMTAzNntc
+Zm9udHRibHtcZjBcZm5pbFxmY2hhcnNldDAgTW9udHNlcnJhdDt9fQ0Ke1xjb2xvcnRibCA7
+XHJlZDBcZ3JlZW4wXGJsdWUwO30NCntcKlxnZW5lcmF0b3IgUmljaGVkMjAgMTAuMC4yNjEw
+MH1cdmlld2tpbmQ0XHVjMSANClxwYXJkXGNmMVxmMFxmczE0IFNEIDogODY5MDAwMDAwMDAw
+MDFRXHBhcg0KfQ0KAA==</rtf_data>
+					<emptylines_property>1</emptylines_property>
+					<horizontal_alignment>2</horizontal_alignment>
+					<vertical_alignment>4</vertical_alignment>
+					<vertical_text>no</vertical_text><textcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></textcolor>
+					<cmyk_output>no</cmyk_output>
+					<copy_fitting>
+						<reduce_to_fit>no</reduce_to_fit>
+						<fontsize_minimum>6</fontsize_minimum>
+						<allow_line_breaks>yes</allow_line_breaks>
+					</copy_fitting>
+				</text_object>
+			</object>
+			<object>
+				<identifier>{03D52BAB-3D6C-D630-9223-7A1565DA6258}</identifier>
+				<name>Mention (sys-adresse-mention)</name>
+				<locked>yes</locked>
+				<knockout>no</knockout>
+				<border_size>0</border_size>
+				<border_style>0</border_style><fillcolor colorspace="CMYK" alpha="0" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></fillcolor><bordercolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></bordercolor>
+				<rotation>0</rotation>
+				<bounds left="312.09448" top="108" right="439.65353" bottom="122.17323"/>
+				<snap_frame_to_content>no</snap_frame_to_content>
+				<show_mode>
+					<editor>yes</editor>
+					<jpeg_preview>yes</jpeg_preview>
+					<pdf_preview>yes</pdf_preview>
+					<print_preview>yes</print_preview>
+					<print>yes</print>
+				</show_mode>
+				<anchor>
+					<horizontal>0</horizontal>
+					<vertical>0</vertical>
+					<source></source>
+					<source_bounds left="0" top="0" right="0" bottom="0"/>
+				</anchor>
+				<text_object>
+					<backwardlink>{00000000-0000-0000-0000-000000000000}</backwardlink>
+					<forwardlink>{00000000-0000-0000-0000-000000000000}</forwardlink>
+					<rtf_data>e1xydGYxXGFuc2lcYW5zaWNwZzEyNTJcZGVmZjBcbm91aWNvbXBhdFxkZWZsYW5nMTAzNntc
+Zm9udHRibHtcZjBcZm5pbFxmY2hhcnNldDAgTW9udHNlcnJhdDt9fQ0Ke1xjb2xvcnRibCA7
+XHJlZDBcZ3JlZW4wXGJsdWUwO30NCntcKlxnZW5lcmF0b3IgUmljaGVkMjAgMTAuMC4yNjEw
+MH1cdmlld2tpbmQ0XHVjMSANClxwYXJkXGNmMVxmMFxmczE4IExBIFBPU1RFXHBhcg0KfQ0K
+AA==</rtf_data>
+					<emptylines_property>1</emptylines_property>
+					<horizontal_alignment>2</horizontal_alignment>
+					<vertical_alignment>4</vertical_alignment>
+					<vertical_text>no</vertical_text><textcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></textcolor>
+					<cmyk_output>no</cmyk_output>
+					<copy_fitting>
+						<reduce_to_fit>no</reduce_to_fit>
+						<fontsize_minimum>6</fontsize_minimum>
+						<allow_line_breaks>yes</allow_line_breaks>
+					</copy_fitting>
+				</text_object>
+			</object>
+			<object>
+				<identifier>{C30EB508-9F6A-439F-C29B-3DE4C9916DFE}</identifier>
+				<name>Affranchissement (sys-affranchissement)</name>
+				<locked>yes</locked>
+				<knockout>no</knockout>
+				<border_size>0</border_size>
+				<border_style>0</border_style><fillcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></fillcolor><bordercolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></bordercolor>
+				<rotation>0</rotation>
+				<bounds left="462.04724" top="121.6063" right="530.3622" bottom="149.38583"/>
+				<snap_frame_to_content>yes</snap_frame_to_content>
+				<show_mode>
+					<editor>yes</editor>
+					<jpeg_preview>yes</jpeg_preview>
+					<pdf_preview>yes</pdf_preview>
+					<print_preview>yes</print_preview>
+					<print>yes</print>
+				</show_mode>
+				<anchor>
+					<horizontal>0</horizontal>
+					<vertical>0</vertical>
+					<source></source>
+					<source_bounds left="0" top="0" right="0" bottom="0"/>
+				</anchor>
+				<plugin_object title="Barcode" assembly_name="Barcode.plugins.dll" assembly_version="2.2.3.9078" class_name="Barcode" url="http://www.printshopmail.com/plugins/barcode/" url_download_version="http://www.printshopmail.com/plugins/barcode/2_2/Barcode.plugins.dll">
+					<property_bag><Barcode><RotationFixed>0</RotationFixed><BoundsIsRotated>False</BoundsIsRotated><Initialized>True</Initialized><Type>DataMatrix</Type><DataMatrix_SymbolSize>Rectangle12x36</DataMatrix_SymbolSize><Data>[Timbre]</Data><Alignment>0;0</Alignment></Barcode>
+					</property_bag>
+				</plugin_object>
+			</object>
+			<object>
+				<identifier>{B3443D1A-7047-1EC1-B465-1268F7319318}</identifier>
+				<name>QR Code zone-1</name>
+				<locked>yes</locked>
+				<knockout>no</knockout>
+				<border_size>0</border_size>
+				<border_style>0</border_style><fillcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></fillcolor><bordercolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></bordercolor>
+				<rotation>0</rotation>
+				<bounds left="252" top="375.87402" right="327.11811" bottom="450.99213"/>
+				<snap_frame_to_content>yes</snap_frame_to_content>
+				<show_mode>
+					<editor>yes</editor>
+					<jpeg_preview>yes</jpeg_preview>
+					<pdf_preview>yes</pdf_preview>
+					<print_preview>yes</print_preview>
+					<print>yes</print>
+				</show_mode>
+				<anchor>
+					<horizontal>0</horizontal>
+					<vertical>0</vertical>
+					<source></source>
+					<source_bounds left="0" top="0" right="0" bottom="0"/>
+				</anchor>
+				<plugin_object title="Barcode" assembly_name="Barcode.plugins.dll" assembly_version="2.2.3.9078" class_name="Barcode" url="http://www.printshopmail.com/plugins/barcode/" url_download_version="http://www.printshopmail.com/plugins/barcode/2_2/Barcode.plugins.dll">
+					<property_bag><Barcode><RotationFixed>0</RotationFixed><BoundsIsRotated>False</BoundsIsRotated><Initialized>True</Initialized><Type>QRCode</Type><Data></Data><Alignment>0;0</Alignment></Barcode>
+					</property_bag>
+				</plugin_object>
+			</object>
+			<object>
+				<identifier>{7646EA1E-3375-9B18-0DE9-67CF100EC8BC}</identifier>
+				<name>Zone zone-2</name>
+				<locked>yes</locked>
+				<knockout>no</knockout>
+				<border_size>0</border_size>
+				<border_style>0</border_style><fillcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></fillcolor><bordercolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="1"><component>0</component><component>0</component><component>0</component><component>1</component></bordercolor>
+				<rotation>0</rotation>
+				<bounds left="41.95276" top="246.04724" right="268.44093" bottom="330.80315"/>
+				<snap_frame_to_content>no</snap_frame_to_content>
+				<show_mode>
+					<editor>yes</editor>
+					<jpeg_preview>yes</jpeg_preview>
+					<pdf_preview>yes</pdf_preview>
+					<print_preview>yes</print_preview>
+					<print>yes</print>
+				</show_mode>
+				<anchor>
+					<horizontal>0</horizontal>
+					<vertical>0</vertical>
+					<source></source>
+					<source_bounds left="0" top="0" right="0" bottom="0"/>
+				</anchor>
+				<text_object>
+					<backwardlink>{00000000-0000-0000-0000-000000000000}</backwardlink>
+					<forwardlink>{00000000-0000-0000-0000-000000000000}</forwardlink>
+					<rtf_data>e1xydGYxXGFuc2lcYW5zaWNwZzEyNTJcZGVmZjBcbm91aWNvbXBhdFxkZWZsYW5nMTAzNntc
+Zm9udHRibHtcZjBcZm5pbFxmY2hhcnNldDAgUm9ib3RvO319DQp7XGNvbG9ydGJsIDtccmVk
+MFxncmVlbjBcYmx1ZTA7fQ0Ke1wqXGdlbmVyYXRvciBSaWNoZWQyMCAxMC4wLjI2MTAwfVx2
+aWV3a2luZDRcdWMxIA0KXHBhcmRcY2YxXGYwXGZzMjQgcXNkZnFzZGZxc2RmcXNkZlxwYXIN
+Cn0NCgA=</rtf_data>
+					<emptylines_property>0</emptylines_property>
+					<horizontal_alignment>2</horizontal_alignment>
+					<vertical_alignment>6</vertical_alignment>
+					<vertical_text>no</vertical_text><textcolor colorspace="CMYK" downgrade_c="0" downgrade_m="0" downgrade_y="0" downgrade_k="0"><component>0</component><component>0</component><component>0</component><component>0</component></textcolor>
+					<cmyk_output>no</cmyk_output>
+					<copy_fitting>
+						<reduce_to_fit>no</reduce_to_fit>
+						<fontsize_minimum>6</fontsize_minimum>
+						<allow_line_breaks>yes</allow_line_breaks>
+					</copy_fitting>
+				</text_object>
+			</object>
+		</layout>
+	</layouts>
+	<variables>
+		<variable>
+			<name>Sequentiel</name>
+			<global>no</global>
+			<expression>[Sequentiel]</expression>
+			<Formatting>3</Formatting>
+			<Locale_ID>1036</Locale_ID>
+			<Currency_Symbol>€</Currency_Symbol>
+			<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+			<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+			<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+			<Currency_GroupingSymbol></Currency_GroupingSymbol>
+			<Currency_NegativeFormat>8</Currency_NegativeFormat>
+			<Currency_PositiveFormat>3</Currency_PositiveFormat>
+			<Number_DecimalSymbol>,</Number_DecimalSymbol>
+			<Number_DecimalPlaces>2</Number_DecimalPlaces>
+			<Number_DigitsInGroup>3</Number_DigitsInGroup>
+			<Number_GroupingSymbol></Number_GroupingSymbol>
+			<Number_LeadingZeros>1</Number_LeadingZeros>
+			<Number_NegativeSymbol>-</Number_NegativeSymbol>
+			<Number_NegativeFormat>1</Number_NegativeFormat>
+			<Date_Style>dddd d MMMM yyyy</Date_Style>
+		</variable>
+		<variable>
+			<name>Societe</name>
+			<global>no</global>
+			<expression>[Societe]</expression>
+			<Formatting>3</Formatting>
+			<Locale_ID>1036</Locale_ID>
+			<Currency_Symbol>€</Currency_Symbol>
+			<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+			<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+			<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+			<Currency_GroupingSymbol></Currency_GroupingSymbol>
+			<Currency_NegativeFormat>8</Currency_NegativeFormat>
+			<Currency_PositiveFormat>3</Currency_PositiveFormat>
+			<Number_DecimalSymbol>,</Number_DecimalSymbol>
+			<Number_DecimalPlaces>2</Number_DecimalPlaces>
+			<Number_DigitsInGroup>3</Number_DigitsInGroup>
+			<Number_GroupingSymbol></Number_GroupingSymbol>
+			<Number_LeadingZeros>1</Number_LeadingZeros>
+			<Number_NegativeSymbol>-</Number_NegativeSymbol>
+			<Number_NegativeFormat>1</Number_NegativeFormat>
+			<Date_Style>dddd d MMMM yyyy</Date_Style>
+		</variable>
+		<variable>
+			<name>CodePostal</name>
+			<global>no</global>
+			<expression>[CodePostal]</expression>
+			<Formatting>3</Formatting>
+			<Locale_ID>1036</Locale_ID>
+			<Currency_Symbol>€</Currency_Symbol>
+			<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+			<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+			<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+			<Currency_GroupingSymbol></Currency_GroupingSymbol>
+			<Currency_NegativeFormat>8</Currency_NegativeFormat>
+			<Currency_PositiveFormat>3</Currency_PositiveFormat>
+			<Number_DecimalSymbol>,</Number_DecimalSymbol>
+			<Number_DecimalPlaces>2</Number_DecimalPlaces>
+			<Number_DigitsInGroup>3</Number_DigitsInGroup>
+			<Number_GroupingSymbol></Number_GroupingSymbol>
+			<Number_LeadingZeros>1</Number_LeadingZeros>
+			<Number_NegativeSymbol>-</Number_NegativeSymbol>
+			<Number_NegativeFormat>1</Number_NegativeFormat>
+			<Date_Style>dddd d MMMM yyyy</Date_Style>
+		</variable>
+		<variable>
+			<name>Ville</name>
+			<global>no</global>
+			<expression>[Ville]</expression>
+			<Formatting>3</Formatting>
+			<Locale_ID>1036</Locale_ID>
+			<Currency_Symbol>€</Currency_Symbol>
+			<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+			<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+			<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+			<Currency_GroupingSymbol></Currency_GroupingSymbol>
+			<Currency_NegativeFormat>8</Currency_NegativeFormat>
+			<Currency_PositiveFormat>3</Currency_PositiveFormat>
+			<Number_DecimalSymbol>,</Number_DecimalSymbol>
+			<Number_DecimalPlaces>2</Number_DecimalPlaces>
+			<Number_DigitsInGroup>3</Number_DigitsInGroup>
+			<Number_GroupingSymbol></Number_GroupingSymbol>
+			<Number_LeadingZeros>1</Number_LeadingZeros>
+			<Number_NegativeSymbol>-</Number_NegativeSymbol>
+			<Number_NegativeFormat>1</Number_NegativeFormat>
+			<Date_Style>dddd d MMMM yyyy</Date_Style>
+		</variable>
+		<variable>
+			<name>Pays</name>
+			<global>no</global>
+			<expression>[Pays]</expression>
+			<Formatting>3</Formatting>
+			<Locale_ID>1036</Locale_ID>
+			<Currency_Symbol>€</Currency_Symbol>
+			<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+			<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+			<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+			<Currency_GroupingSymbol></Currency_GroupingSymbol>
+			<Currency_NegativeFormat>8</Currency_NegativeFormat>
+			<Currency_PositiveFormat>3</Currency_PositiveFormat>
+			<Number_DecimalSymbol>,</Number_DecimalSymbol>
+			<Number_DecimalPlaces>2</Number_DecimalPlaces>
+			<Number_DigitsInGroup>3</Number_DigitsInGroup>
+			<Number_GroupingSymbol></Number_GroupingSymbol>
+			<Number_LeadingZeros>1</Number_LeadingZeros>
+			<Number_NegativeSymbol>-</Number_NegativeSymbol>
+			<Number_NegativeFormat>1</Number_NegativeFormat>
+			<Date_Style>dddd d MMMM yyyy</Date_Style>
+		</variable>
+		<variable>
+			<name>Civilite</name>
+			<global>no</global>
+			<expression>[Civilite]</expression>
+			<Formatting>3</Formatting>
+			<Locale_ID>1036</Locale_ID>
+			<Currency_Symbol>€</Currency_Symbol>
+			<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+			<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+			<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+			<Currency_GroupingSymbol></Currency_GroupingSymbol>
+			<Currency_NegativeFormat>8</Currency_NegativeFormat>
+			<Currency_PositiveFormat>3</Currency_PositiveFormat>
+			<Number_DecimalSymbol>,</Number_DecimalSymbol>
+			<Number_DecimalPlaces>2</Number_DecimalPlaces>
+			<Number_DigitsInGroup>3</Number_DigitsInGroup>
+			<Number_GroupingSymbol></Number_GroupingSymbol>
+			<Number_LeadingZeros>1</Number_LeadingZeros>
+			<Number_NegativeSymbol>-</Number_NegativeSymbol>
+			<Number_NegativeFormat>1</Number_NegativeFormat>
+			<Date_Style>dddd d MMMM yyyy</Date_Style>
+		</variable>
+		<variable>
+			<name>Adresse1</name>
+			<global>no</global>
+			<expression>[Adresse1]</expression>
+			<Formatting>3</Formatting>
+			<Locale_ID>1036</Locale_ID>
+			<Currency_Symbol>€</Currency_Symbol>
+			<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+			<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+			<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+			<Currency_GroupingSymbol></Currency_GroupingSymbol>
+			<Currency_NegativeFormat>8</Currency_NegativeFormat>
+			<Currency_PositiveFormat>3</Currency_PositiveFormat>
+			<Number_DecimalSymbol>,</Number_DecimalSymbol>
+			<Number_DecimalPlaces>2</Number_DecimalPlaces>
+			<Number_DigitsInGroup>3</Number_DigitsInGroup>
+			<Number_GroupingSymbol></Number_GroupingSymbol>
+			<Number_LeadingZeros>1</Number_LeadingZeros>
+			<Number_NegativeSymbol>-</Number_NegativeSymbol>
+			<Number_NegativeFormat>1</Number_NegativeFormat>
+			<Date_Style>dddd d MMMM yyyy</Date_Style>
+		</variable>
+		<variable>
+			<name>Adresse2</name>
+			<global>no</global>
+			<expression>[Adresse2]</expression>
+			<Formatting>3</Formatting>
+			<Locale_ID>1036</Locale_ID>
+			<Currency_Symbol>€</Currency_Symbol>
+			<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+			<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+			<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+			<Currency_GroupingSymbol></Currency_GroupingSymbol>
+			<Currency_NegativeFormat>8</Currency_NegativeFormat>
+			<Currency_PositiveFormat>3</Currency_PositiveFormat>
+			<Number_DecimalSymbol>,</Number_DecimalSymbol>
+			<Number_DecimalPlaces>2</Number_DecimalPlaces>
+			<Number_DigitsInGroup>3</Number_DigitsInGroup>
+			<Number_GroupingSymbol></Number_GroupingSymbol>
+			<Number_LeadingZeros>1</Number_LeadingZeros>
+			<Number_NegativeSymbol>-</Number_NegativeSymbol>
+			<Number_NegativeFormat>1</Number_NegativeFormat>
+			<Date_Style>dddd d MMMM yyyy</Date_Style>
+		</variable>
+		<variable>
+			<name>Adresse3</name>
+			<global>no</global>
+			<expression>[Adresse3]</expression>
+			<Formatting>3</Formatting>
+			<Locale_ID>1036</Locale_ID>
+			<Currency_Symbol>€</Currency_Symbol>
+			<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+			<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+			<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+			<Currency_GroupingSymbol></Currency_GroupingSymbol>
+			<Currency_NegativeFormat>8</Currency_NegativeFormat>
+			<Currency_PositiveFormat>3</Currency_PositiveFormat>
+			<Number_DecimalSymbol>,</Number_DecimalSymbol>
+			<Number_DecimalPlaces>2</Number_DecimalPlaces>
+			<Number_DigitsInGroup>3</Number_DigitsInGroup>
+			<Number_GroupingSymbol></Number_GroupingSymbol>
+			<Number_LeadingZeros>1</Number_LeadingZeros>
+			<Number_NegativeSymbol>-</Number_NegativeSymbol>
+			<Number_NegativeFormat>1</Number_NegativeFormat>
+			<Date_Style>dddd d MMMM yyyy</Date_Style>
+		</variable>
+		<variable>
+			<name>Adresse4</name>
+			<global>no</global>
+			<expression>[Adresse4]</expression>
+			<Formatting>3</Formatting>
+			<Locale_ID>1036</Locale_ID>
+			<Currency_Symbol>€</Currency_Symbol>
+			<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+			<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+			<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+			<Currency_GroupingSymbol></Currency_GroupingSymbol>
+			<Currency_NegativeFormat>8</Currency_NegativeFormat>
+			<Currency_PositiveFormat>3</Currency_PositiveFormat>
+			<Number_DecimalSymbol>,</Number_DecimalSymbol>
+			<Number_DecimalPlaces>2</Number_DecimalPlaces>
+			<Number_DigitsInGroup>3</Number_DigitsInGroup>
+			<Number_GroupingSymbol></Number_GroupingSymbol>
+			<Number_LeadingZeros>1</Number_LeadingZeros>
+			<Number_NegativeSymbol>-</Number_NegativeSymbol>
+			<Number_NegativeFormat>1</Number_NegativeFormat>
+			<Date_Style>dddd d MMMM yyyy</Date_Style>
+		</variable>
+		<variable>
+			<name>Image 1</name>
+			<global>no</global>
+			<expression>"D:\Mes Sites\Version SaaS 2026\Marketeam\MARKETEAM_WEB\Upload\Ltr1-20260408151404101.pdf"</expression>
+			<Formatting>3</Formatting>
+			<Locale_ID>1036</Locale_ID>
+			<Currency_Symbol>€</Currency_Symbol>
+			<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+			<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+			<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+			<Currency_GroupingSymbol></Currency_GroupingSymbol>
+			<Currency_NegativeFormat>8</Currency_NegativeFormat>
+			<Currency_PositiveFormat>3</Currency_PositiveFormat>
+			<Number_DecimalSymbol>,</Number_DecimalSymbol>
+			<Number_DecimalPlaces>2</Number_DecimalPlaces>
+			<Number_DigitsInGroup>3</Number_DigitsInGroup>
+			<Number_GroupingSymbol></Number_GroupingSymbol>
+			<Number_LeadingZeros>1</Number_LeadingZeros>
+			<Number_NegativeSymbol>-</Number_NegativeSymbol>
+			<Number_NegativeFormat>1</Number_NegativeFormat>
+			<Date_Style>dddd d MMMM yyyy</Date_Style>
+		</variable>
+		<variable>
+			<name>Prenom</name>
+			<global>no</global>
+			<expression>[Prenom]</expression>
+			<Formatting>3</Formatting>
+			<Locale_ID>1036</Locale_ID>
+			<Currency_Symbol>€</Currency_Symbol>
+			<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+			<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+			<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+			<Currency_GroupingSymbol></Currency_GroupingSymbol>
+			<Currency_NegativeFormat>8</Currency_NegativeFormat>
+			<Currency_PositiveFormat>3</Currency_PositiveFormat>
+			<Number_DecimalSymbol>,</Number_DecimalSymbol>
+			<Number_DecimalPlaces>2</Number_DecimalPlaces>
+			<Number_DigitsInGroup>3</Number_DigitsInGroup>
+			<Number_GroupingSymbol></Number_GroupingSymbol>
+			<Number_LeadingZeros>1</Number_LeadingZeros>
+			<Number_NegativeSymbol>-</Number_NegativeSymbol>
+			<Number_NegativeFormat>1</Number_NegativeFormat>
+			<Date_Style>dddd d MMMM yyyy</Date_Style>
+		</variable>
+		<variable>
+			<name>Nom</name>
+			<global>no</global>
+			<expression>[Nom]</expression>
+			<Formatting>3</Formatting>
+			<Locale_ID>1036</Locale_ID>
+			<Currency_Symbol>€</Currency_Symbol>
+			<Currency_DecimalSymbol>,</Currency_DecimalSymbol>
+			<Currency_DecimalPlaces>2</Currency_DecimalPlaces>
+			<Currency_DigitsInGroup>3</Currency_DigitsInGroup>
+			<Currency_GroupingSymbol></Currency_GroupingSymbol>
+			<Currency_NegativeFormat>8</Currency_NegativeFormat>
+			<Currency_PositiveFormat>3</Currency_PositiveFormat>
+			<Number_DecimalSymbol>,</Number_DecimalSymbol>
+			<Number_DecimalPlaces>2</Number_DecimalPlaces>
+			<Number_DigitsInGroup>3</Number_DigitsInGroup>
+			<Number_GroupingSymbol></Number_GroupingSymbol>
+			<Number_LeadingZeros>1</Number_LeadingZeros>
+			<Number_NegativeSymbol>-</Number_NegativeSymbol>
+			<Number_NegativeFormat>1</Number_NegativeFormat>
+			<Date_Style>dddd d MMMM yyyy</Date_Style>
+		</variable>
+	</variables>
+	<data_fields>
+		<data_field>
+			<in_use>yes</in_use>
+			<name>Societe</name>
+			<default_value></default_value>
+			<source>user_input</source>
+			<remarks></remarks>
+		</data_field>
+		<data_field>
+			<in_use>yes</in_use>
+			<name>Civilite</name>
+			<default_value></default_value>
+			<source>user_input</source>
+			<remarks></remarks>
+		</data_field>
+		<data_field>
+			<in_use>yes</in_use>
+			<name>Nom</name>
+			<default_value></default_value>
+			<source>user_input</source>
+			<remarks></remarks>
+		</data_field>
+		<data_field>
+			<in_use>yes</in_use>
+			<name>Prenom</name>
+			<default_value></default_value>
+			<source>user_input</source>
+			<remarks></remarks>
+		</data_field>
+		<data_field>
+			<in_use>yes</in_use>
+			<name>Adresse1</name>
+			<default_value></default_value>
+			<source>user_input</source>
+			<remarks></remarks>
+		</data_field>
+		<data_field>
+			<in_use>yes</in_use>
+			<name>Adresse2</name>
+			<default_value></default_value>
+			<source>user_input</source>
+			<remarks></remarks>
+		</data_field>
+		<data_field>
+			<in_use>yes</in_use>
+			<name>Adresse3</name>
+			<default_value></default_value>
+			<source>user_input</source>
+			<remarks></remarks>
+		</data_field>
+		<data_field>
+			<in_use>yes</in_use>
+			<name>Adresse4</name>
+			<default_value></default_value>
+			<source>user_input</source>
+			<remarks></remarks>
+		</data_field>
+		<data_field>
+			<in_use>yes</in_use>
+			<name>CodePostal</name>
+			<default_value></default_value>
+			<source>user_input</source>
+			<remarks></remarks>
+		</data_field>
+		<data_field>
+			<in_use>yes</in_use>
+			<name>Ville</name>
+			<default_value></default_value>
+			<source>user_input</source>
+			<remarks></remarks>
+		</data_field>
+		<data_field>
+			<in_use>yes</in_use>
+			<name>Pays</name>
+			<default_value></default_value>
+			<source>user_input</source>
+			<remarks></remarks>
+		</data_field>
+		<data_field>
+			<in_use>yes</in_use>
+			<name>Sequentiel</name>
+			<default_value></default_value>
+			<source>user_input</source>
+			<remarks></remarks>
+		</data_field>
+		<data_field>
+			<in_use>yes</in_use>
+			<name>Timbre</name>
+			<default_value></default_value>
+			<source>user_input</source>
+			<remarks></remarks>
+		</data_field>
+	</data_fields>
+	<template_folders>
+	</template_folders>
+	<embedded_ps>
+		<author>PrintShop Mail</author>
+		<creation_date>1992-07-01T11:00:00</creation_date>
+		<last_modification_date>1992-07-01T11:00:00</last_modification_date>
+		<name>Ne rien intégrer</name>
+		<description></description>
+		<start_of_page></start_of_page>
+		<start_of_job></start_of_job>
+		<between_sets></between_sets>
+	</embedded_ps>
+	<thumbnail>
+		<jpeg>/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQY
+GBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYa
+KCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAAR
+CAKYA6UDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAA
+AgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkK
+FhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWG
+h4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl
+5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREA
+AgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYk
+NOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOE
+hYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk
+5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD3/wD4Vx4H/wChN8N/+CuD/wCJo/4Vx4H/
+AOhN8N/+CuD/AOJp/wAQ/G2meA9Di1XWYruW2knW3AtkVm3FWYcFgMYU9683l/aX8FxxO5sd
+eIUE4FvFk/8AkSvQw+VYzE0nXo024rqvLchzinZs9F/4Vx4H/wChN8N/+CuD/wCJo/4Vx4H/
+AOhN8N/+CuD/AOJrzz/hpTwZ/wA+Wu/+A8X/AMco/wCGlPBn/Plrv/gPF/8AHK6v9XM0/wCf
+EvuF7aHc9D/4Vx4H/wChN8N/+CuD/wCJo/4Vx4H/AOhN8N/+CuD/AOJrzz/hpTwZ/wA+Wu/+
+A8X/AMco/wCGlPBn/Plrv/gPF/8AHKP9XM0/58S+4PbQ7nof/CuPA/8A0Jvhv/wVwf8AxNH/
+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
+NcjWaNpDp4YKGBJAkXJx6cj8xXOftK/8lF/7dY/611H7Hn/I367/ANeI/wDRi1+xf2pVznhW
+OYuKh7SCk4q71cujv+h5/Iqdfk7H1dRRRX5edoUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUU
+UUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFA
+BRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFAHiX7XP8AyTKy/wCwpF/6Klr5
+Z8F/8jbpH/X1H/Ovqb9rn/kmVl/2FIv/AEVLXyz4L/5G3SP+vqP+dfqOQ/8AJN1/Sp/6ScVX
++MvkfdtFFFfw4fShRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUU
+UAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFAB
+RRRQAUUUUAfJ/wC0r/yUX/t1j/rXUfsef8jfrv8A14j/ANGLXL/tK/8AJRf+3WP+tdR+x5/y
+N+u/9eI/9GLX9oZD/wAkFQ/69r/0o+dq/wC9P1Pq6iiivgTqCiiigAooooAKKKKACiiigAoo
+ooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKA
+CiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA8S/a5/wCSZWX/
+AGFIv/RUtfLPgv8A5G3SP+vqP+dfU37XP/JMrL/sKRf+ipa+WfBf/I26R/19R/zr9RyH/km6
+/pU/9JOKr/GXyPu2iiiv4cPpQooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiig
+AooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKK
+KKACiiigAooooAKKKKAPk/8AaV/5KL/26x/1rqP2PP8Akb9d/wCvEf8Aoxa5f9pX/kov/brH
+/Wuo/Y8/5G/Xf+vEf+jFr+0Mh/5IKh/17X/pR87V/wB6fqfV1FFFfAnUFFFFABRRRQAUUUUA
+FFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRR
+RQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQB4l+1z
+/wAkysv+wpF/6Klr5Z8F/wDI26R/19R/zr6m/a5/5JlZf9hSL/0VLXyz4L/5G3SP+vqP+dfq
+OQ/8k3X9Kn/pJxVf4y+R920UUV/Dh9KFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRR
+QAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAF
+FFFABRRRQAUUUUAFFFFABRRRQB8n/tK/8lF/7dY/611H7Hn/ACN+u/8AXiP/AEYtcv8AtK/8
+lF/7dY/611H7Hn/I367/ANeI/wDRi1/aGQ/8kFQ/69r/ANKPnav+9P1Pq6iiivgTqCiiigAo
+oooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKK
+ACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAo
+oooA8S/a5/5JlZf9hSL/ANFS18s+C/8AkbdI/wCvqP8AnX1N+1z/AMkysv8AsKRf+ipa+WfB
+f/I26R/19R/zr9RyH/km6/pU/wDSTiq/xl8j7tooor+HD6UKKKKACiiigAooooAKKKKACiii
+gAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK
+KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD5P/aV/5KL/ANusf9a6j9jz/kb9d/68
+R/6MWuX/AGlf+Si/9usf9a6j9jz/AJG/Xf8ArxH/AKMWv7QyH/kgqH/Xtf8ApR87V/3p+p9X
+UUUV8CdQUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQA
+UUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFF
+FABRRRQAUUUUAFFFFAHiX7XP/JMrL/sKRf8AoqWvlnwX/wAjbpH/AF9R/wA6+pv2uf8AkmVl
+/wBhSL/0VLXyz4L/AORt0j/r6j/nX6jkP/JN1/Sp/wCknFV/jL5H3bRRRX8OH0oUUUUAFFFF
+ABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABWbewWsviPwq9zefZ5YdQke
+3j8ov9ok+x3KlMj7uEZ3yePkx1IrSrNvZ7WLxH4VS5s/tEs2oSJbyeaU+zyfY7li+B97KK6Y
+PHz56gV7fDf/ACNKH+IyrfAzYt/BXhW2sLyxtvDWiQ2V5s+028dhEsc+w5TeoXDbTyM9D0ou
+PBXhW5sLOxufDWiTWVnv+zW8lhE0cG85fYpXC7jycdT1roKK/dzzDK/4RzQ/7d/tv+xtN/tr
+/n/+yp9o+7s/1mN33fl69OOlVLfwV4VtrC8sbbw1okNlebPtNvHYRLHPsOU3qFw208jPQ9Kk
+1KfUrTWmltdPur62a12qsU0aosoYnkO4xkYGQDWKNI8RSaNHp091IJ1uo5Gu1uJDuQqTICVd
+HwH3YUEAAqBkA0v6/G3/AAQel/66X/4BrXHgrwrc2FnY3PhrRJrKz3/ZreSwiaODecvsUrhd
+x5OOp61b/wCEc0P+3f7b/sbTf7a/5/8A7Kn2j7uz/WY3fd+Xr046Vzt1pGtwRm3hm1G6uUWF
+be8S78uNFGN4kVnJYn5uSrkhlySRms+20HXp7RTcHVY5UeTaTqMkbMvkME3Ktw6k79vIbk5O
+1R1G7JvsCV2vM6e38FeFbawvLG28NaJDZXmz7Tbx2ESxz7DlN6hcNtPIz0PSi48FeFbmws7G
+58NaJNZWe/7NbyWETRwbzl9ilcLuPJx1PWo/AlrqdppTx6ytwLneDmZmYkbR0zPN3z3X/drp
+KpqzEndXMr/hHND/ALd/tv8AsbTf7a/5/wD7Kn2j7uz/AFmN33fl69OOlVLfwV4VtrC8sbbw
+1okNlebPtNvHYRLHPsOU3qFw208jPQ9K6CikM5+48FeFbmws7G58NaJNZWe/7NbyWETRwbzl
+9ilcLuPJx1PWrf8Awjmh/wBu/wBt/wBjab/bX/P/APZU+0fd2f6zG77vy9enHStWigDn7fwV
+4VtrC8sbbw1okNlebPtNvHYRLHPsOU3qFw208jPQ9KLjwV4VubCzsbnw1ok1lZ7/ALNbyWET
+Rwbzl9ilcLuPJx1PWugooAyv+Ec0P+3f7b/sbTf7a/5//sqfaPu7P9Zjd935evTjpWY3hjwV
+pVldWDaH4cs7O9CtcW5tII47gRnKl1wA20nIznBNdRWRrWgw6rc208lzdQPA6uPIKjcVOQGy
+pyAecHigCpN4O8JXmmWVrP4c0KfTrQO1rE9jC0UIc7mKArhQxwTjr1p/9meF/wC3Brv2HRf7
+YIVhqHlReeQy7FPmY3cr8o55HFXhpEP9mmyaSVkMUkTOdu9t/wB5s44OeeMD26ViX3gTTr2x
+u7SW71BYrkOH2ShSN67WIO3049OT6nJ1AktfDPgq30+6srXRPDkVjeiE3EEdpAsdwN2Yt6gY
+b5slc556Uk/hrwTeWNrYz6L4cns7FmW3t3tIGjtzI/zBFIwpZwc4xkj1qdvCdm0jO1zdlmeS
+Q/6vkyLtf+DuKhg8FWMLyMLu9Yuxb5jGcZhSEj7nQpGo59M9aEgLR0vwuNfTWjY6L/bbkqt/
+5MX2hiB5RAkxu6EJ19vaq1v4W8GWumXttbaF4eh066AN1FHZwrFMImyPMAGG2Nk8/dPpSSeC
+rF5IHN3e5iIOMx4bETwgH5P7kjD8vSrkXhmzihVFkm8xQoWb5N427NvO3Bx5a9Qe+c0AQv4O
+8JX+mWNtJ4c0K5062DNaRNYwvFEHO5jGNuF3HBOOvWrv/COaH/bv9t/2Npv9tf8AP/8AZU+0
+fd2f6zG77vy9enHSremWYsLJLcSyzFSzNLLt3OzMWYnaAOST0AHtVqgDn7fwV4VtrC8sbbw1
+okNlebPtNvHYRLHPsOU3qFw208jPQ9KxtR03Q9I8TeH7HTrL7DLFp9/9lt7SJIrZIjNamXKg
+DDFzGRjjl884rua5bxHJOPFekRrYRSWzWV2z3phJeFxJb7YhJ0UOC7Ff4vKB/hNeJxJ/yK6/
++E0o/Gh9FFFfhB6h8n/tK/8AJRf+3WP+tdR+x5/yN+u/9eI/9GLXL/tK/wDJRf8At1j/AK11
+H7Hn/I367/14j/0Ytf2hkP8AyQVD/r2v/Sj52r/vT9T6uooor4E6gooooAKKKKACiiigAooo
+oAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAC
+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAPEv2uf+SZ
+WX/YUi/9FS18s+C/+Rt0j/r6j/nX1N+1z/yTKy/7CkX/AKKlr5Z8F/8AI26R/wBfUf8AOv1H
+If8Akm6/pU/9JOKr/GXyPu2iiiv4cPpQooooAKKKKACiiigAooooAKKKKACiiigAooooAKKK
+KACiiigAooooAKKKKACoD/an9t6J/Zn/AB6fan/tD7v+o+zy468/63yfu8/hmp6zb2C1l8R+
+FXubz7PLDqEj28flF/tEn2O5UpkfdwjO+Tx8mOpFe3w3/wAjSh/iMq3wM7iiiiv3c8wKKKKA
+CiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigArlvEcc58V6RIt/FHbL
+ZXavZGYh5nMlvtlEfRggDqW/h80D+I11Ncj4l+w/8Jronm/af7S/s+98jbt8nyvMtfM3d927
+ytuOMb89q8TiT/kV1/8ACaUfjRYooor8IPUPk/8AaV/5KL/26x/1rqP2PP8Akb9d/wCvEf8A
+oxa5f9pX/kov/brH/Wuo/Y8/5G/Xf+vEf+jFr+0Mh/5IKh/17X/pR87V/wB6fqfV1FFFfAnU
+FFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRR
+RQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUA
+FFFFABRRRQB4l+1z/wAkysv+wpF/6Klr5Z8F/wDI26R/19R/zr6m/a5/5JlZf9hSL/0VLXyz
+4L/5G3SP+vqP+dfqOQ/8k3X9Kn/pJxVf4y+R920UUV/Dh9KFFFFABRRRQAUUUUAFFFFABRRR
+QAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAVm3s9rF4j8Kpc2f2iWbUJEt5PNKfZ5PsdyxfA+
+9lFdMHj589QK0qgP9qf23on9mf8AHp9qf+0Pu/6j7PLjrz/rfJ+7z+Ga9vhv/kaUP8RlW+Bn
+W0UUV+7nmBRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFct4
+jknHivSI1sIpLZrK7Z70wkvC4kt9sQk6KHBdiv8AF5QP8Jrqa5bxHHOfFekSLfxR2y2V2r2R
+mIeZzJb7ZRH0YIA6lv4fNA/iNeJxJ/yK6/8AhNKPxofRRRX4QeofJ/7Sv/JRf+3WP+tdR+x5
+/wAjfrv/AF4j/wBGLXL/ALSv/JRf+3WP+tdR+x5/yN+u/wDXiP8A0Ytf2hkP/JBUP+va/wDS
+j52r/vT9T6uooor4E6gooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA
+KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACii
+igAooooAKKKKACiiigAooooAKKKKAPEv2uf+SZWX/YUi/wDRUtfLPgv/AJG3SP8Ar6j/AJ19
+Tftc/wDJMrL/ALCkX/oqWvlnwX/yNukf9fUf86/Uch/5Juv6VP8A0k4qv8ZfI+7aKKK/hw+l
+CiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKzb2C1l8R+FXu
+bz7PLDqEj28flF/tEn2O5UpkfdwjO+Tx8mOpFaVZt7PaxeI/CqXNn9olm1CRLeTzSn2eT7Hc
+sXwPvZRXTB4+fPUCvb4b/wCRpQ/xGVb4GdxRRRX7ueYFFFFABRRRQAUUUUAFFFFABRRRQAUU
+UUAFFFFABRRRQAUUUUAFFFFABRRRQAVyPiX7D/wmuieb9p/tL+z73yNu3yfK8y18zd33bvK2
+44xvz2rrq5bxHJOPFekRrYRSWzWV2z3phJeFxJb7YhJ0UOC7Ff4vKB/hNeJxJ/yK6/8AhNKP
+xofRRRX4QeofJ/7Sv/JRf+3WP+tdR+x5/wAjfrv/AF4j/wBGLXL/ALSv/JRf+3WP+tdR+x5/
+yN+u/wDXiP8A0Ytf2hkP/JBUP+va/wDSj52r/vT9T6uooor4E6gooooAKKKKACiiigAooooA
+KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACii
+igAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAPEv2uf+SZWX
+/YUi/wDRUtfLPgv/AJG3SP8Ar6j/AJ19Tftc/wDJMrL/ALCkX/oqWvlnwX/yNukf9fUf86/U
+ch/5Juv6VP8A0k4qv8ZfI+7aKKK/hw+lCiiigAooooAKKKKACiiigAooooAKKKKACiiigAoo
+ooAKKKKACiiigAooooAKgP8Aan9t6J/Zn/Hp9qf+0Pu/6j7PLjrz/rfJ+7z+GanrNvYLWXxH
+4Ve5vPs8sOoSPbx+UX+0SfY7lSmR93CM75PHyY6kV7fDf/I0of4jKt8DO4ooor93PMCiiigA
+ooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK5bxHHOfFekSLfxR2y2
+V2r2RmIeZzJb7ZRH0YIA6lv4fNA/iNdTXI+JfsP/AAmuieb9p/tL+z73yNu3yfK8y18zd33b
+vK244xvz2rxOJP8AkV1/8JpR+NFiiiivwg9Q+T/2lf8Akov/AG6x/wBa6j9jz/kb9d/68R/6
+MWuX/aV/5KL/ANusf9a6j9jz/kb9d/68R/6MWv7QyH/kgqH/AF7X/pR87V/3p+p9XUUUV8Cd
+QUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFF
+FFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQ
+AUUUUAFFFFAHiX7XP/JMrL/sKRf+ipa+WfBf/I26R/19R/zr6m/a5/5JlZf9hSL/ANFS18s+
+C/8AkbdI/wCvqP8AnX6jkP8AyTdf0qf+knFV/jL5H3bRRRX8OH0oUUUUAFFFFABRRRQAUUUU
+AFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABWbez2sXiPwqlzZ/aJZtQkS3k80p9nk+x3
+LF8D72UV0wePnz1ArSrP1C71Oz1TQpNNhlmtDfbNQWPy8i3aGUbvnI4WUxMdvzYBwDyD7HD9
+WFLMqNSo0op6t6IzqpuDSO2orm4vFEr3V/E3h7V447ZJHimZ7bZdFTgLGBMWBbqN4Qf3itRf
+8Jbcf2V9r/4RfW/tHneV9i8y087btz5mfP8AL254xv3Z/hxzX7R/bOXf9BEP/A4/5nnezn2Z
+1NFc3L4olS6sIl8PavJHcpG8syvbbLUscFZAZgxK9TsDj+6Woi8USvdX8TeHtXjjtkkeKZnt
+tl0VOAsYExYFuo3hB/eK0f2zl3/QRD/wOP8AmHs59mdJRXLf8Jbcf2V9r/4RfW/tHneV9i8y
+087btz5mfP8AL254xv3Z/hxzUsviiVLqwiXw9q8kdykbyzK9tstSxwVkBmDEr1OwOP7paj+2
+cu/6CIf+Bx/zD2c+zOkorm4vFEr3V/E3h7V447ZJHimZ7bZdFTgLGBMWBbqN4Qf3itRf8Jbc
+f2V9r/4RfW/tHneV9i8y087btz5mfP8AL254xv3Z/hxzR/bOXf8AQRD/AMDj/mHs59mdTRXN
+y+KJUurCJfD2ryR3KRvLMr22y1LHBWQGYMSvU7A4/ulqIvFEr3V/E3h7V447ZJHimZ7bZdFT
+gLGBMWBbqN4Qf3itH9s5d/0EQ/8AA4/5h7OfZnSUVy3/AAltx/ZX2v8A4RfW/tHneV9i8y08
+7btz5mfP8vbnjG/dn+HHNSy+KJUurCJfD2ryR3KRvLMr22y1LHBWQGYMSvU7A4/ulqP7Zy7/
+AKCIf+Bx/wAw9nPszpKK5uLxRK91fxN4e1eOO2SR4pme22XRU4CxgTFgW6jeEH94rUX/AAlt
+x/ZX2v8A4RfW/tHneV9i8y087btz5mfP8vbnjG/dn+HHNH9s5d/0EQ/8Dj/mHs59mdTRXNy+
+KJUurCJfD2ryR3KRvLMr22y1LHBWQGYMSvU7A4/ulqIvFEr3V/E3h7V447ZJHimZ7bZdFTgL
+GBMWBbqN4Qf3itH9s5d/0EQ/8Dj/AJh7OfZnSUVy3/CW3H9lfa/+EX1v7R53lfYvMtPO27c+
+Znz/AC9ueMb92f4cc1LL4olS6sIl8PavJHcpG8syvbbLUscFZAZgxK9TsDj+6Wo/tnLv+giH
+/gcf8w9nPszpKK5uLxRK91fxN4e1eOO2SR4pme22XRU4CxgTFgW6jeEH94rUX/CW3H9lfa/+
+EX1v7R53lfYvMtPO27c+Znz/AC9ueMb92f4cc0f2zl3/AEEQ/wDA4/5h7OfZnU0VzcviiVLq
+wiXw9q8kdykbyzK9tstSxwVkBmDEr1OwOP7paiLxRK91fxN4e1eOO2SR4pme22XRU4CxgTFg
+W6jeEH94rR/bOXf9BEP/AAOP+Yezn2Z0lFct/wAJbcf2V9r/AOEX1v7R53lfYvMtPO27c+Zn
+z/L254xv3Z/hxzUsviiVLqwiXw9q8kdykbyzK9tstSxwVkBmDEr1OwOP7paj+2cu/wCgiH/g
+cf8AMPZz7M6SuW8RyTjxXpEa2EUls1lds96YSXhcSW+2ISdFDguxX+Lygf4TUsXiiV7q/ibw
+9q8cdskjxTM9tsuipwFjAmLAt1G8IP7xWsr7ZqOtaxp+otaX2k2VvBdW81heSxl5ZHa3aOUC
+J3QgBJlyWDDccDBJrx+IM1wNXLa1OnWg5NaJSTf5mlKElNNo06KKK/Fz0T5P/aV/5KL/ANus
+f9a6j9jz/kb9d/68R/6MWuX/AGlf+Si/9usf9a6j9jz/AJG/Xf8ArxH/AKMWv7QyH/kgqH/X
+tf8ApR87V/3p+p9XUUUV8CdQUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQA
+UUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFF
+FABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFAHiX7XP/JMrL/sKRf8AoqWvlnwX/wAjbpH/AF9R
+/wA6+pv2uf8AkmVl/wBhSL/0VLXyz4L/AORt0j/r6j/nX6jkP/JN1/Sp/wCknFV/jL5H3bRR
+RX8OH0oUUUya5tbOGS51CUxWsSF5HAJIAGeAAST7AEnoK1oUZYirGjDeTSXq3YTdlcfRWePF
+Phgi0ze3qG5d0VXsp1aMoQHMimPMSgsAWfaBnrWRJ430yS9toLC0vpYp7yK2WaeCeFQjRmRp
+GzCSoCrkE4Vuu4KCw+o/1JzTtH/wIx+swOnorMHi3wsbMXP2zUNhlWFU/s+481mZS4xH5e8r
+tBbcBtxznFVfEvjDRtGnu4Yo769e0gmmmMMEpUGNA2xXEZVj8wztJKZywFD4JzRbqP3gsRBm
+7RWXa+KdA8orqNxPaXUVsbi4X7POYo9qB3USNEoZlDDK4DjIBUHiobjxhoAkso7T+07iS4cB
+k+w3CNEp3feBi+V/kJEZwzDkAih8E5ot1H/wISxMGrm1RWH4b8X6Lqtnpj3purK7v0EqQ+RO
+yRqxbYHkaJVRmVS2Gx3Kllwxmn8W+G10FtVt57+eElliQWU4eUhN+Qvl7tmOfMxsA5zRLgnN
+IptqOnmNYiDdka1FUfCWqw+Ir/VYY7S5t4bEwp5kgkUyO8YdgN0aqVAZcFWbPXABUt039mQ/
+3pPzH+FN8EZqnZxj/wCBCWKpvVGPRWx/ZkP96T8x/hR/ZkP96T8x/hS/1JzTtH7x/WYGPRWx
+/ZkP96T8x/hR/ZkP96T8x/hR/qTmnaP3h9ZgY9FbH9mQ/wB6T8x/hR/ZkP8Aek/Mf4Uf6k5p
+2j94fWYGPRWx/ZkP96T8x/hR/ZkP96T8x/hR/qTmnaP3h9ZgY9FbH9mQ/wB6T8x/hR/ZkP8A
+ek/Mf4Uf6k5p2j94fWYGPRVzULVLby9hY7s5z+FU6+dx+Bq4CvLDVvija9vNJ/qaxkpK6Cii
+iuQoKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKK
+APk/9pX/AJKL/wBusf8AWuo/Y8/5G/Xf+vEf+jFrl/2lf+Si/wDbrH/Wuo/Y8/5G/Xf+vEf+
+jFr+0Mh/5IKh/wBe1/6UfO1f96fqfV1FFFfAnUFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFF
+FFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQ
+AUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQB4l+1z/yTKy/7CkX/oqWvlnw
+X/yNukf9fUf86+pv2uf+SZWX/YUi/wDRUtfLPgv/AJG3SP8Ar6j/AJ1+o5D/AMk3X9Kn/pJx
+Vf4y+R920UUV/Dh9KFMm06LVoXsbhpEjmUjfEcOhHKsp55BAIyDyKfVnTP8Aj9j/AB/ka9LJ
+tcww/wDjj/6UiKnwP0Obk+G0Op2Qttf1O8vFS8ludxEJacOQfnPlDY3HWLYQDgGtWx8DWcKg
+Xuo6lqR8zeWu2jyQIHhCHYi/LskPuSASTznrKK/f7acp5XW/U8/k+HAvLTULHU9Zv7q1nkia
+OWVbeSUqkezY6tCY8DjB27uM7s81pXHgOynuLsvqOp/ZbiKaIWnmRmOMypskdSUL7jjPzMRn
+Jxya66in1uK23kcbe+CjLrpuoNTvI7GZbjzLXcm2F5UALxfJnJIyQzFeuByRUOh/DfT9Gmtm
+s9T1MQxTC5ktgIEhmlGcOyJEoXAbGI9inAJBPNdxRSsgtf8ArucVJ4FW3uNIfS9RvI7eza3W
+a2d02TLEhRZCQm7zNuB8rKpwMjgVHB8NrG3sZYLbVtUgnlleR7qFbeORldAjoVWEIQwAy23e
+SAd2Rmu5oote9+v/AAP8h9U+3/B/zM7RdHt9IFyLZ5W+0Ojt5hBwViSIYwB/DGv4k/StGiiq
+bb3ElZWQUUUUhhRRRQAUUUUAFFFFABRRRQBma1/yx/4F/SsytPWv+WP/AAL+lZlfiPF//I4r
+f9u/+kxPSw/8NBRRRXzZsFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFF
+FABRRRQAUUUUAFFFFAHyf+0r/wAlF/7dY/611H7Hn/I367/14j/0Ytcv+0r/AMlF/wC3WP8A
+rXUfsef8jfrv/XiP/Ri1/aGQ/wDJBUP+va/9KPnav+9P1Pq6iiivgTqCiiigAooooAKKKKAC
+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooo
+oAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA8S/a5/
+5JlZf9hSL/0VLXyz4L/5G3SP+vqP+dfU37XP/JMrL/sKRf8AoqWvlnwX/wAjbpH/AF9R/wA6
+/Uch/wCSbr+lT/0k4qv8ZfI+7aKKK/hw+lCrOmf8fsf4/wAjVarOmf8AH7H+P8jXpZN/yMcP
+/jh/6UiKnwP0N2iiiv6APKCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAMz
+Wv8Alj/wL+lZlaetf8sf+Bf0rMr8R4v/AORxW/7d/wDSYnpYf+Ggooor5s2CiiigAooooAKK
+KKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD5P/AGlf+Si/9usf
+9a6j9jz/AJG/Xf8ArxH/AKMWuX/aV/5KL/26x/1rqP2PP+Rv13/rxH/oxa/tDIf+SCof9e1/
+6UfO1f8Aen6n1dRRRXwJ1BRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRR
+RQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUA
+FFFFABRRRQAUUUUAFFFFABRRRQAUUUUAeJftc/8AJMrL/sKRf+ipa+WfBf8AyNukf9fUf86+
+pv2uf+SZWX/YUi/9FS18s+C/+Rt0j/r6j/nX6jkP/JN1/Sp/6ScVX+MvkfdtFFFfw4fShVnT
+P+P2P8f5Gq1WdM/4/Y/x/ka9LJv+Rjh/8cP/AEpEVPgfobtFFFf0AeUFFFFABRRRQAUUUUAF
+FFFABRRRQAUUUUAFFFFABRRRQAUUUUAZmtf8sf8AgX9KzK09a/5Y/wDAv6VmV+I8X/8AI4rf
+9u/+kxPSw/8ADQUUUV82bBRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRR
+RQAUUUUAFFFFABRRRQB8n/tK/wDJRf8At1j/AK11H7Hn/I367/14j/0Ytcv+0r/yUX/t1j/r
+XUfsef8AI367/wBeI/8ARi1/aGQ/8kFQ/wCva/8ASj52r/vT9T6uooor4E6gooooAKKKKACi
+iigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoooo
+AKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAPE
+v2uf+SZWX/YUi/8ARUtfLPgv/kbdI/6+o/519Tftc/8AJMrL/sKRf+ipa+WfBf8AyNukf9fU
+f86/Uch/5Juv6VP/AEk4qv8AGXyPu2iiiv4cPpQqzpn/AB+x/j/I1Wp0UjROHQ4YdDXXl+Ij
+hsVSrz2jKLdt7JpkzXNFo6SisL7fc/8APT/x0f4Ufb7n/np/46P8K/UP9fcu/kn90f8A5I4v
+qs+6N2isL7fc/wDPT/x0f4Ufb7n/AJ6f+Oj/AAo/19y7+Sf3R/8Akg+qz7o3aKwvt9z/AM9P
+/HR/hR9vuf8Anp/46P8ACj/X3Lv5J/dH/wCSD6rPujdorC+33P8Az0/8dH+FH2+5/wCen/jo
+/wAKP9fcu/kn90f/AJIPqs+6N2isL7fc/wDPT/x0f4Ufb7n/AJ6f+Oj/AAo/19y7+Sf3R/8A
+kg+qz7o3aKwvt9z/AM9P/HR/hR9vuf8Anp/46P8ACj/X3Lv5J/dH/wCSD6rPujdorC+33P8A
+z0/8dH+FH2+5/wCen/jo/wAKP9fcu/kn90f/AJIPqs+6N2isL7fc/wDPT/x0f4Ufb7n/AJ6f
++Oj/AAo/19y7+Sf3R/8Akg+qz7o3aKwvt9z/AM9P/HR/hR9vuf8Anp/46P8ACj/X3Lv5J/dH
+/wCSD6rPujdorC+33P8Az0/8dH+FH2+5/wCen/jo/wAKP9fcu/kn90f/AJIPqs+6LWtf8sf+
+Bf0rMqWeeSfb5rbsdOAKir87z3H08xx9TFUk1GVt99IpdG+x10oOEVFhRRRXkGgUUUUAFFFF
+ABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAfJ/7Sv8AyUX/
+ALdY/wCtdR+x5/yN+u/9eI/9GLXL/tK/8lF/7dY/611H7Hn/ACN+u/8AXiP/AEYtf2hkP/JB
+UP8Ar2v/AEo+dq/70/U+rqKKK+BOoKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigA
+ooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKK
+KACiiigAooooAKKKKACiiigAooooAKKKKACiiigDxL9rn/kmVl/2FIv/AEVLXyz4L/5G3SP+
+vqP+dfU37XP/ACTKy/7CkX/oqWvlnwX/AMjbpH/X1H/Ov1HIf+Sbr+lT/wBJOKr/ABl8j7to
+oor+HD6UKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA
+KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACii
+igD5P/aV/wCSi/8AbrH/AFrqP2PP+Rv13/rxH/oxa5f9pX/kov8A26x/1rqP2PP+Rv13/rxH
+/oxa/tDIf+SCof8AXtf+lHztX/en6n1dRRRXwJ1BRRRQAUUUUAFFFFABRRRQAUUUUAFFFFAB
+RRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUU
+UAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAeJftc/8kysv+wpF/6Klr5Z
+8F/8jbpH/X1H/Ovqb9rn/kmVl/2FIv8A0VLXyz4L/wCRt0j/AK+o/wCdfqOQ/wDJN1/Sp/6S
+cVX+MvkfdtFFFfw4fShRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQA
+UVheO7650vwR4h1Cxk8q7tNOuJ4ZNoba6xMynByDggcHivBPD+r/ABT1fwnpXiG5+JXhHRrL
+U/N+zJqzwW8j+XIUfAMBBwR2J4IzjNe/k/DuJzeEqlCUUou2rf6JmVStGnoz6Yor53kb4tNo
+GtavpnxN8G6tbaRavd3S6bJDcOqKjNjAt8AkI2MkZxXtWi+KdLsfht4Z1bxHdRSatqGkw3SW
+yyItxqExhRmSCLK75GZgAq92UcZFex/qFmP88Pvl/wDImf1qHZm9RXkPw18f62vi7xF/wsLS
+PEGmeHLq6L6Veanpy2dtp8IMpCzzHaAWBhQZLZbAzzk63xl1HxLceIvAWkfDPWrGyk8QJeSC
+5kCTQTJHFHIjbij8bS2Co53D6g/1CzH+eH3y/wDkQ+tQ7M9Ior53u5/ibZ3U1refGL4dwXMD
+tHLFLeW6vG6nBVgbfIIIIINXPCOvfEHS/jN4Z8NeLfE+m6zp2q2EuoK2nRxNDLEYZzGRIIkP
+3og3HBGOTms6vA2YUoOo5wslfeXT/t0axMG7WPfKKKK+MOgKKKKACiiigAooooAKKKKACiii
+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
+zTrHWbl/s0UQdpAsPmxMrqPMi5UAfKhx0wAS+HPDXwr8UaZ4k8PSz6R4a1bSHhtLbxJcas0i
+akVdhJPHA8ioA4jztDMF80YPAz7h+zpqV7eeAdb0+81eLWLbRNTn0iwu4o0RJLWGKJYyuzgg
+gkgkseepryTxD8NtKtvhXr+t2EVjd674zS01PRNGhsk+02SGVZpYbbBLSBY5cMUVflTJAHA9
+b/Zu1SDUPhbNaxeH4tCudKnbTLyJVCvPcRQRB5pBtUiRicEHJG3kmubG/wC71P8AC/yKjuju
+aKKK/nY9YKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD5P8A
+2lf+Si/9usf9a6j9jz/kb9d/68R/6MWuW/aWz/wsQ4wD9lTGfxrpP2OlmHjTXC0kZj/s8ZUI
+Qc+YuDnPTrxjuPTn+zcim1wJh0ot/u1rpp73rf8AA+dq/wC9P1PrOiiivhDqCiiigAooooAK
+KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiii
+gAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA8
+S/a5/wCSZWX/AGFIv/RUtfLPgv8A5G3SP+vqP+dfU37XP/JMrL/sKRf+ipa+WfBf/I26R/19
+R/zr9RyH/km6/pU/9JOKr/GXyPu2iiiv4cPpQooooAKKKKACiiigAooooAKKKKACiiigAooo
+oAKKKKACiiigAooooA5n4nf8k18Wf9gi7/8ARL14Donifwr4C+DHgK+1X4faJ4jvdX+3+ZcX
+McSyDyrkgZZonLcOB2wFH4e/fE7/AJJr4s/7BF3/AOiXr5igm8CeKvhP4H0bXvHH/CP6lof2
+7zYf7Jnu93nT71+ZcAfKoPBP3u2K/UvD/wD3et/iX5HFit0ei+Gdf8HfEf4bfEe6s/hx4f0O
+50bSZJIpYoIZXLvDMQykRIVKmMEEevbFZPxn1vxHpfw2+C9r4V1PV7O5vtJWPytNuJI3uH8m
+1CLhCCxyxAHPXjrWf4O1b4deAvAPxB03T/Hv9t3uvaY9vBH/AGPc22JBFMqjJDD5jKOSQBj8
+tv4wWmkP8IfhXqN/4pl0HVtO0IXGmRRWksr3Uwt7dgqyIR5RDKgDH+9ntX6Ach5UvgjxjF4A
+8c+IPEM/iDR44XtJLm0vreaMas8k5G52cjcUY78kNy3bOa9q+Hnwmgg0jwf4z8e+NYtT8OWu
+nxzppetQhrS2SeAKsYaWUooUtHj5RkovA4xN8O/CFwdR8C3Hjf4ialr1v4ksmvIvDepQTXFv
+dYtxIyuWkaP92XVwWUZKDAz03/DEFqqfEmw0O8/4WF9mvYYl8KXkRtbbTlWeQCCNp90W1QDj
+aoH7hcDlcAE3xA0Dw58R9T8KWvgn4j6Roeo6MlxHZxaRPHLKUdEBWMRyoVCpGRgfwk9AKPh5
+4R1xvEf9rS32paLZaG8+l3entE6R+IZUjZTqcnzKC0pdWyVkJMQ+duoh8U+D9V0jxN8PvFfg
+b4daal7Yw3T6pptlcWtnskmgRFRpcAPtLSYIBHB6bq9R8KeJ7XxToN3PAvk3tm72Wo2uS32S
+7RAZYd5AD7S2N6/KeoNc2N/3ep/hf5FR3Q2iiiv52PWCiiigAooooAKKKKACiiigAooooAKK
+KKACiiigAooooAKKKKACiiigAooooA+T/wBpX/kov/brH/Wuo/Y8/wCRv13/AK8R/wCjFrl/
+2lf+Si/9usf9a6j9jz/kb9d/68R/6MWv7QyH/kgqH/Xtf+lHztX/AHp+p9XUUUV8CdQUUUUA
+FFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRR
+RQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUA
+FFFFAHiX7XP/ACTKy/7CkX/oqWvlnwX/AMjbpH/X1H/Ovqb9rn/kmVl/2FIv/RUtfLPgv/kb
+dI/6+o/51+o5D/yTdf0qf+knFV/jL5H3bRRRX8OH0oUUUUAFFFFABRRRQAUUUUAFFFFABRRR
+QAUUUUAFFFFABRRRQAUUUUARXVvDd201tdQxz28yGOSKRQyupGCrA8EEcEGsP/hB/CH/AEKP
+hv8A8FNv/wDEV0NFdOHxuJwqaoVJQvvZtX+4lxUt0c9/wg/hD/oUfDf/AIKbf/4itDUtC0XV
+LWytdT0TSLy2sU8u1iuLGKRLdMAbYwVIUYVRgY6D0rRorp/tnMf+gif/AIHL/MXs4dkQJZ2a
+SabIljYrJpiGOxYW0YNqhUKViOPkBUBcLjgAUabZ2el3V7daZY2Nnc3z+ZdS29tHG9w+Sd0h
+ABY5Zjk56n1qeij+2cx/6CJ/+By/zD2cOyLP2+5/56f+Oj/CqllFDYLdLY21tai7me4uPIgS
+PzpW+9I2ANzHAyx5OKdRSlnGYSVnXm0/70v8w9nDsFFFFecWFFFFABRRRQAUUUUAFFFFABRR
+RQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQB8n/tK/wDJRf8At1j/AK11H7Hn/I367/14j/0Y
+tcv+0r/yUX/t1j/rXUfsef8AI367/wBeI/8ARi1/aGQ/8kFQ/wCva/8ASj52r/vT9T6uooor
+4E6gooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoooo
+AKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACi
+iigAooooAKKKKAPEv2uf+SZWX/YUi/8ARUtfLPgv/kbdI/6+o/519Tftc/8AJMrL/sKRf+ip
+a+WfBf8AyNukf9fUf86/Uch/5Juv6VP/AEk4qv8AGXyPu2iiiv4cPpQooooAKKKKACiiigAo
+oooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKK
+ACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAPk/9pX/AJKL/wBusf8AWuo/
+Y8/5G/Xf+vEf+jFrl/2lf+Si/wDbrH/Wuo/Y8/5G/Xf+vEf+jFr+0Mh/5IKh/wBe1/6UfO1f
+96fqfV1FFFfAnUFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQ
+AUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFF
+FFABRRRQAUUUUAFFFFABRRRQB4l+1z/yTKy/7CkX/oqWvlnwX/yNukf9fUf86+pv2uf+SZWX
+/YUi/wDRUtfLPgv/AJG3SP8Ar6j/AJ1+o5D/AMk3X9Kn/pJxVf4y+R920UUV/Dh9KFFFFABR
+RRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUU
+AFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQB8n/tK/8AJRf+
+3WP+tdR+x5/yN+u/9eI/9GLXL/tK/wDJRf8At1j/AK11H7Hn/I367/14j/0Ytf2hkP8AyQVD
+/r2v/Sj52r/vT9T6uooor4E6gooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiig
+AooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKK
+KKACiiigAooooAKKKKACiiigAooooAKKKKAPEv2uf+SZWX/YUi/9FS18s+C/+Rt0j/r6j/nX
+1N+1z/yTKy/7CkX/AKKlr5Z8F/8AI26R/wBfUf8AOv1HIf8Akm6/pU/9JOKr/GXyPu2iiiv4
+cPpQooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoooo
+AKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAPk
+/wDaV/5KL/26x/1rqP2PP+Rv13/rxH/oxa5f9pX/AJKL/wBusf8AWuo/Y8/5G/Xf+vEf+jFr
++0Mh/wCSCof9e1/6UfO1f96fqfV1FFFfAnUFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFA
+BRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUU
+UUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQB4l+1z/AMkysv8AsKRf+ipa+WfB
+f/I26R/19R/zr6m/a5/5JlZf9hSL/wBFS18s+C/+Rt0j/r6j/nX6jkP/ACTdf0qf+knFV/jL
+5H3bRRRX8OH0oUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFAB
+RRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUU
+UAFFFFAHyf8AtK/8lF/7dY/611H7Hn/I367/ANeI/wDRi1y/7Sv/ACUX/t1j/rXUfsef8jfr
+v/XiP/Ri1/aGQ/8AJBUP+va/9KPnav8AvT9T6uooor4E6gooooAKKKKACiiigAooooAKKKKA
+CiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoo
+ooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAPEv2uf8AkmVl/wBh
+SL/0VLXyz4L/AORt0j/r6j/nX1N+1z/yTKy/7CkX/oqWvlnwX/yNukf9fUf86/Uch/5Juv6V
+P/STiq/xl8j7tooor+HD6UKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKK
+KKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiig
+AooooAKKKKACiiigD5P/AGlf+Si/9usf9a6j9jz/AJG/Xf8ArxH/AKMWuX/aV/5KL/26x/1r
+qP2PP+Rv13/rxH/oxa/tDIf+SCof9e1/6UfO1f8Aen6n1dRRRXwJ1BRRRQAUUUUAFFFFABRR
+RQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUA
+FFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAeJftc/8A
+JMrL/sKRf+ipa+WfBf8AyNukf9fUf86+pv2uf+SZWX/YUi/9FS18s+C/+Rt0j/r6j/nX6jkP
+/JN1/Sp/6ScVX+MvkfdtFFFfw4fShRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAF
+FFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRR
+QAUUUUAFFFFABRRRQAUUUUAfJ/7Sv/JRf+3WP+tdR+x5/wAjfrv/AF4j/wBGLXL/ALSv/JRf
++3WP+tdR+x5/yN+u/wDXiP8A0Ytf2hkP/JBUP+va/wDSj52r/vT9T6uooor4E6gooooAKKKK
+ACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAo
+oooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKK
+APEv2uf+SZWX/YUi/wDRUtfLPgv/AJG3SP8Ar6j/AJ19Tftc/wDJMrL/ALCkX/oqWvlnwX/y
+Nukf9fUf86/Uch/5Juv6VP8A0k4qv8ZfI+7aKKK/hw+lCiiigAooooAKKKKACiiigAooooAK
+KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiii
+gAooooAKKKKACiiigAooooAKKKKACiiigAooooA+T/2lf+Si/wDbrH/Wuo/Y8/5G/Xf+vEf+
+jFrl/wBpX/kov/brH/Wuo/Y8/wCRv13/AK8R/wCjFr+0Mh/5IKh/17X/AKUfO1f96fqfV1FF
+FfAnUFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFF
+FABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQA
+UUUUAFFFFABRRRQB4l+1z/yTKy/7CkX/AKKlr5Z8F/8AI26R/wBfUf8AOvqb9rn/AJJlZf8A
+YUi/9FS18s+C/wDkbdI/6+o/51+o5D/yTdf0qf8ApJxVf4y+R920UUV/Dh9KFFFFABRRRQAU
+UUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFF
+ABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQB8n/tK/wDJRf8At1j/
+AK11H7Hn/I367/14j/0Ytcv+0r/yUX/t1j/rXUfsef8AI367/wBeI/8ARi1/aGQ/8kFQ/wCv
+a/8ASj52r/vT9T6uooor4E6gooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigA
+ooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKK
+KACiiigAooooAKKKKACiiigAooooAKKKKAPEv2uf+SZWX/YUi/8ARUtfLPgv/kbdI/6+o/51
+9Tftc/8AJMrL/sKRf+ipa+WfBf8AyNukf9fUf86/Uch/5Juv6VP/AEk4qv8AGXyPu2iiiv4c
+PpQooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA
+KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAPk/
+9pX/AJKL/wBusf8AWuo/Y8/5G/Xf+vEf+jFrl/2lf+Si/wDbrH/Wuo/Y8/5G/Xf+vEf+jFr+
+0Mh/5IKh/wBe1/6UfO1f96fqfV1FFFfAnUFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFAB
+RRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUU
+UAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQB4l+1z/yTKy/7CkX/oqWvlnwX/yN
+ukf9fUf86+pv2uf+SZWX/YUi/wDRUtfLPgv/AJG3SP8Ar6j/AJ1+o5D/AMk3X9Kn/pJxVf4y
++R920UUV/Dh9KFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQA
+UUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFF
+FABRRRQB8n/tK/8AJRf+3WP+tdR+x5/yN+u/9eI/9GLXL/tK/wDJRf8At1j/AK11H7Hn/I36
+7/14j/0Ytf2hkP8AyQVD/r2v/Sj52r/vT9T6uooor4E6gooooAKKKKACiiigAooooAKKKKAC
+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooo
+oAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAPEv2uf+SZWX/YUi/9
+FS18s+C/+Rt0j/r6j/nX1N+1z/yTKy/7CkX/AKKlr5Z8F/8AI26R/wBfUf8AOv1HIf8Akm6/
+pU/9JOKr/GXyPu2iiiv4cPpQooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigA
+ooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKK
+KACiiigAooooAKKKKAPk/wDaV/5KL/26x/1rqP2PP+Rv13/rxH/oxa5f9pX/AJKL/wBusf8A
+Wuo/Y8/5G/Xf+vEf+jFr+0Mh/wCSCof9e1/6UfO1f96fqfV1FFFfAnUFFFFABRRRQAUUUUAF
+FFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRR
+QAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQB4l+1z/
+AMkysv8AsKRf+ipa+WfBf/I26R/19R/zr6m/a5/5JlZf9hSL/wBFS18s+C/+Rt0j/r6j/nX6
+jkP/ACTdf0qf+knFV/jL5H3bRRRX8OH0oUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFF
+FFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQ
+AUUUUAFFFFABRRRQAUUUUAFFFFAHyf8AtK/8lF/7dY/611H7Hn/I367/ANeI/wDRi1y/7Sv/
+ACUX/t1j/rXUfsef8jfrv/XiP/Ri1/aGQ/8AJBUP+va/9KPnav8AvT9T6uooor4E6gooooAK
+KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiii
+gAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK
+KKKAPEv2uf8AkmVl/wBhSL/0VLXyz4L/AORt0j/r6j/nX1N+1z/yTKy/7CkX/oqWvlnwX/yN
+ukf9fUf86/Uch/5Juv6VP/STiq/xl8j7tooor+HD6UKKKKACiiigAooooAKKKKACiiigAooo
+oAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAC
+iiigAooooAKKKKACiiigAooooAKKKKACiiigD5P/AGlf+Si/9usf9a6j9jz/AJG/Xf8ArxH/
+AKMWuX/aV/5KL/26x/1rqP2PP+Rv13/rxH/oxa/tDIf+SCof9e1/6UfO1f8Aen6n1dRRRXwJ
+1BRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAU
+UUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFF
+ABRRRQAUUUUAeJftc/8AJMrL/sKRf+ipa+WfBf8AyNukf9fUf86+pv2uf+SZWX/YUi/9FS18
+s+C/+Rt0j/r6j/nX6jkP/JN1/Sp/6ScVX+MvkfdtFFFfw4fShRRRQAUUUUAFFFFABRRRQAUU
+UUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFA
+BRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAfJ/7Sv/JRf+3WP+tdR+x5/wAjfrv/
+AF4j/wBGLXL/ALSv/JRf+3WP+tdR+x5/yN+u/wDXiP8A0Ytf2hkP/JBUP+va/wDSj52r/vT9
+T6uooor4E6gooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACii
+igAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA
+KKKKACiiigAooooAKKKKAPEv2uf+SZWX/YUi/wDRUtfLPgv/AJG3SP8Ar6j/AJ19Tftc/wDJ
+MrL/ALCkX/oqWvlnwX/yNukf9fUf86/Uch/5Juv6VP8A0k4qv8ZfI+7aKKK/hw+lCiiigAoo
+ooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKA
+CiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA+T/2lf+Si/wDb
+rH/Wuo/Y8/5G/Xf+vEf+jFrl/wBpX/kov/brH/Wuo/Y8/wCRv13/AK8R/wCjFr+0Mh/5IKh/
+17X/AKUfO1f96fqfV1FFFfAnUFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUU
+AFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABR
+RRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQB4l+1z/yTKy/7CkX/AKKlr5Z8F/8AI26R/wBf
+Uf8AOvqb9rn/AJJlZf8AYUi/9FS18s+C/wDkbdI/6+o/51+o5D/yTdf0qf8ApJxVf4y+R920
+UUV/Dh9KFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUA
+FFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRR
+RQB8n/tK/wDJRf8At1j/AK11H7Hn/I367/14j/0Ytcv+0r/yUX/t1j/rXUfsef8AI367/wBe
+I/8ARi1/aGQ/8kFQ/wCva/8ASj52r/vT9T6uooor4E6gooooAKKKKACiiigAooooAKKKKACi
+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
+X3Bf8+pfh/mH1WXc+D8D0owPSvvD/hT3gD/oWbP/AL6f/wCKo/4U94A/6Fmz/wC+n/8AiqP9
+fcF/z6l+H+YfVZdz4PwPSjA9K+8P+FPeAP8AoWbP/vp//iqP+FPeAP8AoWbP/vp//iqP9fcF
+/wA+pfh/mH1WXc+D8D0owPSvvD/hT3gD/oWbP/vp/wD4qj/hT3gD/oWbP/vp/wD4qj/X3Bf8
++pfh/mH1WXc+D8D0owPSvvD/AIU94A/6Fmz/AO+n/wDiqP8AhT3gD/oWbP8A76f/AOKo/wBf
+cF/z6l+H+YfVZdz4PwPSjA9K+8P+FPeAP+hZs/8Avp//AIqj/hT3gD/oWbP/AL6f/wCKo/19
+wX/PqX4f5h9Vl3Pg1G3M4xjacfXgH+tfQX7Hn/I367/14j/0Yte2p8Gfh8jSMvhm1zI25syS
+HnAHHzccAcD+tbvhfwP4b8K3U1x4f0mCxnmTy5HjLEsuc45J715eacYYfHYGphVCXNLZ6W3u
+uvbQuGHcZKVzpKKKK/PjrCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACii
+igAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA
+KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACii
+igAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA
+KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACii
+igAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA
+KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/2Q==</jpeg>
+	</thumbnail>
+</document>

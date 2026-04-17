@@ -1,0 +1,311 @@
+<?php
+/**
+ * PSM Thread - Service worker pour PrintShop Mail
+ * 
+ * VERSION CORRIGÉE - Bugs fixes:
+ * - Bug #1: $this->pipe remplacé par $this->getIOSocket()
+ * - Bug #2: $this->$stopPSM corrigé en $this->stopPSM
+ * - Bug #3: die("jjjddd") supprimé
+ * - Bug #7: Logs de debug conditionnés
+ * 
+ * @author Objectif Lune (original)
+ * @modified 2025-12-27 - Corrections bugs
+ */
+
+include_once("psmremote.php");
+include_once("psminterface.php");
+
+//
+// Start a service thread, clients should use PSM_launch(...) instead 
+//
+function PSM_start($port) {
+   	$socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+	socket_bind($socket,"localhost");
+
+	if (socket_connect($socket,"localhost",$port)) {
+		socket_close($socket);
+      return null; // already up
+    }
+    
+   	$socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+  	if (!socket_bind($socket, "localhost", $port)) {
+      return null; // race/collision
+    }
+    return new PSMThread($port, $socket);
+}
+
+//
+// Service thread that wraps a PSM com instance
+//
+class PSMThread extends PSMService implements PSMInterface {    
+	private $psm = null;
+	private $stopPSM = false;
+    private $handledCount = 0;
+
+    private $profileOpenTemplate = 0;
+    private $profileOpenData = 0;
+
+    //
+    // onBoot, 'BOOT' initialize phase before 'UP' 
+    //
+    function onBoot() {
+        $this->refreshPSM();
+		// listen to progress events
+		com_event_sink($this->psm, $this, "Progress");
+    }
+
+	//
+	// PSM COM Progress callback function
+	// @param percentage percentage completed
+	// @param result by reference boolean indicated whether to abort the job in progress
+	//
+	// CORRIGÉ: Utilisation de getIOSocket() au lieu de $this->pipe (non défini)
+	// CORRIGÉ: $this->stopPSM au lieu de $this->$stopPSM
+	//
+	function Progress($percentage, &$result) {
+		// Récupérer le socket via la méthode héritée
+		$socket = $this->getIOSocket();
+		
+		// Si pas de socket actif, retourner simplement l'état d'arrêt
+		if ($socket === null || $socket === false) {
+			$result = $this->stopPSM;
+			return;
+		}
+		
+		// check for data from the client
+		$read   = array($socket);
+		$write  = NULL;
+		$except = NULL;	
+		if (@socket_select($read, $write, $except, 0) == 1) {
+			$msg = @socket_read($socket, 100, PHP_NORMAL_READ);	
+			if ($msg !== false && strcmp($msg, "STOP") == 0) {
+				$this->stopPSM = true;  // CORRIGÉ: était $this->$stopPSM
+			}
+		}
+		
+		// write progress (ignore errors silently for progress updates)
+		@socket_write($socket, "PROGRESS: " . $percentage . "\n");
+		
+		// stop remote PSM if necessary by setting result (bCancel)
+		$result = $this->stopPSM;  // CORRIGÉ: était $this->$stopPSM
+	}
+	
+	//
+	// Generates a PDF preview to the browser
+	// @param document: file path to the .psmd file
+	// @param data: file path to the data file (in a PSM supported format)
+	// @param from: start preview at this record nr
+	// @param to: end preview at this record nr
+	//
+	public function PDFPreview($document, $data, $from, $to) {
+		$this->doOpen($document, $data);
+		// allocate a temporary file for the output
+		$pdf = tempnam(sys_get_temp_dir(), "PSM");
+		
+		// generate the PDF
+		// CORRIGÉ: Logs conditionnés par le mode debug
+		error_log_debug("PDFPreview: Begin CreatePDF");
+		$this->psm->CreatePDF($from, $to, FALSE, FALSE, $pdf);	
+		error_log_debug("PDFPreview: End CreatePDF");
+		
+		$this->sendFile($pdf, "application/pdf", TRUE);
+		return true;
+	}
+	
+	//
+	// Generates PDF output to the browser
+	// @param document: file path to the .psmd file
+	// @param data: file path to the data file (in a PSM supported format)
+	// @param from: start at this record nr
+	// @param to: end at this record nr
+	//
+	public function PDFOutput($document, $data, $from, $to) {
+		$this->doOpen($document, $data);
+		// allocate a temporary file for the output
+		$pdf = tempnam(sys_get_temp_dir(), "PSM");
+		// generate the PDF
+		$this->psm->CreatePDF($from, $to, FALSE, FALSE, $pdf);
+		$this->sendFile($pdf, "application/pdf", TRUE);
+		return true; 
+	}
+	
+	//
+	// Generates PDF output to file 
+	// @param document: file path to the .psmd file
+	// @param data: file path to the data file (in a PSM supported format)
+	// @param from: start at this record nr
+	// @param to: end at this record nr
+	//
+	public function PDFOutputToFile($document, $data, $from, $to, $file) {
+		$this->doOpen($document, $data);
+		$this->psm->CreatePDF($from, $to, FALSE, FALSE, $file);
+		return true;	
+	}
+
+	//
+	// Generates printed output for the given printer
+	// @param document: file path to the .psmd file
+	// @param data: file path to the data file (in a PSM supported format)
+	// @param from: start at this record nr
+	// @param to: end at this record nr
+	// @param printer: the system name of the printer
+	//
+	public function PrintDocument($document, $data, $from, $to, $printer) {
+		$this->doOpen($document, $data);
+		if ($printer)
+			$this->psm->selectPrinter($printer);
+		else
+			$this->psm->resetPrinter();
+		$this->psm->printRecordRange($from, $to);
+		return true;
+	}
+	
+	//
+	// Generates printed output for the given printer
+	// @param document: file path to the .psmd file
+	// @param data: file path to the data file (in a PSM supported format)
+	// @param from: start at this record nr
+	// @param to: end at this record nr
+	// @param printer: the system name of the printer
+	// @param file: the file name of the printer
+	//
+	public function PrintToFile($document, $data, $from, $to, $printer, $file) {
+		$this->doOpen($document, $data);
+		if ($printer)
+			$this->psm->SelectPrinter($printer);
+		else
+			$this->psm->ResetPrinter();
+		$tempfile = $this->psm->PrintToFile($from, $to);
+		rename($tempfile, $file);
+		return true;
+	}
+	
+	//
+	// create a JPEG preview and send the result to the browser
+	// @param document the path to the PSM document
+	// @param data the path to the database file
+	// @param layout the layout number to show(starts counting at 1)
+	//
+	public function JPEGPreview($document, $data, $layout) {
+		global $psmconfig;
+		$profileStart = microtime(true);
+		error_log_debug("Open");
+		$this->doOpen($document, $data);
+    
+		error_log_debug("Quality");
+		$this->psm->SetJPEGQuality(175, 100);
+		$profileSetQuality = microtime(true);
+    
+		if (strcmp(gettype($layout), "string") == 0)
+			$layout = intval($layout);
+		error_log_debug("Create JPeg");
+		$contents = $this->psm->CreateJPEGPreviewOfLayout($layout);	
+		$profileCreate = microtime(true);
+   
+		error_log_debug("Send data");
+		$this->sendData($contents, "image/jpeg");
+		$profileTransfer = microtime(true);
+
+		// Convert abs times to timespans
+		$profileTotal               = $profileTransfer - $profileStart;
+		$profileTransfer            = $profileTransfer - $profileCreate;  
+		$profileCreate              = $profileCreate - $profileSetQuality;
+		$profileSetQuality          = $profileSetQuality - $this->profileOpenData;       
+		$this->profileOpenData      = $this->profileOpenData - $this->profileOpenTemplate;
+		$this->profileOpenTemplate  = $this->profileOpenTemplate - $profileStart;       
+    
+		error_log_debug("Write profiling info");
+		if ($psmconfig->getProfile()) {
+			error_log("$this->port: ".
+				"OT:" . number_format($this->profileOpenTemplate, 3) . " " .
+				"OD:" . number_format($this->profileOpenData, 3) . " " .
+				"SQ:" . number_format($this->profileSetQuality, 3) . " " .
+				"CR:" . number_format($profileCreate, 3) . " " .
+				"TR:" . number_format($profileTransfer, 3) . " " .
+				"TO:" . number_format($profileTotal, 3) . " TE=" . $document . " DA=" . $data . " LA=" . $layout);
+		}
+		return true;		
+	}
+  
+	//
+	// Create JPEG previews for all layouts
+	// @param document the path to the PSM document
+	// @param data the path to the database file
+	// @param layoutcount number of layouts to generate
+	// @param user_id user identifier (optional)
+	//
+	// CORRIGÉ: Suppression du die("jjjddd") qui bloquait la fonction
+	//
+	public function JPEGPreviewAllLayouts($document, $data, $layoutcount, $user_id = 1) {
+		$this->log("JPEGPreviewAllLayouts start");
+		if (!(($openResult = $this->doOpen($document, $data)) === true))
+			return $openResult;
+
+		$this->log("Start JPG generation");
+			
+		// generate the JPEGs
+		// CORRIGÉ: die("jjjddd") SUPPRIMÉ - c'était un debug oublié
+		$this->psm->SetJPEGQuality(175, 100);	
+
+		for ($i = 1; $i <= $layoutcount; $i++) {
+			$myContents = "";
+			
+			// Temp names could overlap, causing write denied issues
+			// DOCUMENT_ROOT has issues on windows server
+			$myFile = $_SERVER['DOCUMENT_ROOT'] . "/temp/layout$i.jpg";
+			$this->log("file saved: $myFile");
+			$contents = $this->psm->CreateJPEGPreviewOfLayout($i);	
+				
+			foreach ($contents as $byte) {
+				$myContents .= chr($byte);
+			}
+			file_put_contents($myFile, $myContents);
+		}
+		return true;
+	}
+	
+	private function doOpen($document, $data) {
+		// open the document if not already open
+		if (!$this->isEqualPathAndFilename($this->psm->DocumentPath, $document)) {
+			if (!$this->psm->OpenDocument($document)) 
+				throw new Exception("FAIL Can't open document \"$document\".");
+		}
+		$this->profileOpenTemplate = microtime(true);
+				
+		// open the database
+		if (!$this->psm->OpenDatabase($data))
+			throw new Exception("FAIL Can't open database \"$data\".");
+		$this->profileOpenData = microtime(true);
+		return true;
+	}
+  
+	//
+	// Helper to cope with fact that pathname returned by PSM can have different slash choice
+	//
+	private function isEqualPathAndFilename($n1, $n2) {
+		$n1 = str_replace("/", "\\", $n1);
+		$n2 = str_replace("/", "\\", $n2);
+		return strcmp($n1, $n2) == 0;
+	}
+  
+	//
+	// Override to refresh PSM
+	//
+	protected function afterRequestHandled() {
+		$this->refreshPSM();
+	}
+  
+	//
+	// PSM refresher (required for >6000 requests per thread)
+	//
+	protected function refreshPSM() {
+		if ($this->psm == null || $this->handledCount++ > 500) {
+			$this->log("PSM instance refreshed");
+			$this->psm = new COM("PrintShopMail60.AutomatedPrinting");
+			com_event_sink($this->psm, $this, "Progress");
+			$this->handledCount = 0;      
+		} 
+	}
+}
+  
+?>

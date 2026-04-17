@@ -1,0 +1,415 @@
+// -----------------------------------------------------------------------------
+// Partage.PdfAnalyseDocument()
+// Rôle : Analyser un PDF via l'API PyMuPdfExtract et remplir tabPagePDF
+//        Remplace l'ancienne version basée sur PdfTools (module COM)
+//        Utilise TrimBox (dimensions internes) et BleedBox (dimensions externes)
+//
+//        V2.4 : détection et injection automatique du fond perdu pour les PDF
+//        exportés avec fond perdu inclus dans les dimensions de page sans
+//        TrimBox/BleedBox définies dans les métadonnées (erreur fréquente des
+//        exporteurs comme CorelDraw, certaines versions d'InDesign, etc.)
+//
+// Paramètres :
+//   stDocument (StructDocument) : structure document avec Répertoire, NomFichierTemp
+// -----------------------------------------------------------------------------
+procédure PdfAnalyseDocument(stDocument est une structDocument)
+
+sMessageErreur			est une chaîne
+stResultat				est un stPyMuPdfResultat
+stPagePdf				est une structPagePdf
+nIdFormatImpression	est un entier
+bEstNonStandard		est un booléen
+rLargeurInterne		est un réel
+rHauteurInterne		est un réel
+rLargeurExterne		est un réel
+rHauteurExterne		est un réel
+rLargeurFormat			est un réel
+rHauteurFormat			est un réel
+// Variables pour la détection et l'injection du fond perdu sans boîtes PDF
+rFondPerduDetecte		est un réel		// Valeur de fond perdu détectée (mm) — 0 si non détecté
+bInjectionTentee		est un booléen	// Vrai = injection déjà tentée (évite appels multiples)
+nIdFormatTest			est un entier	// IdFormatImpression retourné lors de la tentative
+rLargeurFormatTest	est un réel		// Largeur format retournée lors de la tentative
+rHauteurFormatTest	est un réel		// Hauteur format retournée lors de la tentative
+
+stDocument.tabPagePDF.SupprimeTout()
+
+
+// =========================================================================
+// VÉRIFICATION : Le fichier existe t'il ?
+// =========================================================================
+si pas fFichierExiste(stDocument.Repertoire + stDocument.NomFichierTemp) alors
+	sMessageErreur = "Document n'existe pas"
+	renvoyer sMessageErreur
+fin
+
+// =========================================================================
+// APPEL API PyMuPdfExtract
+// =========================================================================
+stResultat = cpPyMuPdfExtract.PyMuPdfExtract(stDocument.Repertoire + stDocument.NomFichierTemp)
+
+// =========================================================================
+// VÉRIFICATION : Succès de l'appel API
+// =========================================================================
+si stResultat.success = Faux alors
+	sMessageErreur = "Erreur lors de l'analyse du PDF"
+	si stResultat.erreurs..Occurrence > 0 alors
+		sMessageErreur += " : " + stResultat.erreurs[1]
+	fin
+	renvoyer sMessageErreur
+fin
+
+// =========================================================================
+// VÉRIFICATION : Est-ce un PDF valide ?
+// =========================================================================
+si stResultat.estUnPdf = Faux alors
+	sMessageErreur = "Le fichier sélectionné n'est pas un PDF valide"
+	renvoyer sMessageErreur
+fin
+
+// =========================================================================
+// VÉRIFICATION : Mot de passe requis ?
+// =========================================================================
+si stResultat.securite.needsPassword > 0 alors
+	sMessageErreur = "Document protégé par un mot de passe"
+	renvoyer sMessageErreur
+fin
+
+// =========================================================================
+// VÉRIFICATION : Impression autorisée ?
+// =========================================================================
+si stResultat.securite.Permissions.print = Faux alors
+	sMessageErreur = "L'impression n'est pas autorisée sur ce PDF"
+	renvoyer sMessageErreur
+fin
+
+// =========================================================================
+// VÉRIFICATION : Nombre de pages attendu
+// =========================================================================
+si stDocument.NombrePage > 0 _et_ stResultat.nombrePages <> stDocument.NombrePage alors
+	fSupprime(stDocument.Repertoire + stDocument.NomFichierTemp)
+	sMessageErreur = "Nombre de page incorrect"
+	renvoyer sMessageErreur
+fin
+
+stDocument.NombrePage = stResultat.nombrePages
+
+// =========================================================================
+// TRAITEMENT : Parcours de chaque page
+// =========================================================================
+pour tout stPage de stResultat.pages
+	VariableRAZ(stPagePdf)
+	stPagePdf.NumeroPage				= stPage.numero
+	stPagePdf.Rotation				= stPage.rotation
+
+	// -----------------------------------------------------------------
+	// Dimensions brutes depuis l'API (déjà en mm)
+	// TrimBox = format fini (interne), BleedBox = avec fond perdu (externe)
+	// -----------------------------------------------------------------
+	rLargeurInterne					= stPage.trimbox.largeurMm
+	rHauteurInterne					= stPage.trimbox.hauteurMm
+	rLargeurExterne					= stPage.bleedbox.largeurMm
+	rHauteurExterne					= stPage.bleedbox.hauteurMm
+
+	// Coordonnées exactes des boîtes PDF (pour normalize_bleedbox et inject)
+	stPagePdf.MediaBoxXMm			= stPage.mediabox.xMm
+	stPagePdf.MediaBoxYMm			= stPage.mediabox.yMm
+	stPagePdf.MediaBoxLargeurMm	= stPage.mediabox.largeurMm
+	stPagePdf.MediaBoxHauteurMm	= stPage.mediabox.hauteurMm
+
+	stPagePdf.BleedBoxXMm			= stPage.bleedbox.xMm
+	stPagePdf.BleedBoxYMm			= stPage.bleedbox.yMm
+	stPagePdf.BleedBoxLargeurMm	= stPage.bleedbox.largeurMm
+	stPagePdf.BleedBoxHauteurMm	= stPage.bleedbox.hauteurMm
+
+	stPagePdf.TrimBoxXMm				= stPage.trimbox.xMm
+	stPagePdf.TrimBoxYMm				= stPage.trimbox.yMm
+	stPagePdf.TrimBoxLargeurMm		= stPage.trimbox.largeurMm
+	stPagePdf.TrimBoxHauteurMm		= stPage.trimbox.hauteurMm
+
+	Trace("=== DIAGNOSTIC FOND PERDU ===")
+	Trace("LargeurInterne", rLargeurInterne)
+	Trace("HauteurInterne", rHauteurInterne)
+	Trace("LargeurExterne", rLargeurExterne)
+	Trace("HauteurExterne", rHauteurExterne)
+	Trace("MediaBoxLargeurMm", stPagePdf.MediaBoxLargeurMm)
+	Trace("MediaBoxHauteurMm", stPagePdf.MediaBoxHauteurMm)
+	Trace("BleedBoxLargeurMm", stPagePdf.BleedBoxLargeurMm)
+	Trace("BleedBoxHauteurMm", stPagePdf.BleedBoxHauteurMm)
+	Trace("TrimBoxLargeurMm", stPagePdf.TrimBoxLargeurMm)
+	Trace("TrimBoxHauteurMm", stPagePdf.TrimBoxHauteurMm)
+
+	// -----------------------------------------------------------------
+	// Détection du fond perdu (BleedBox > TrimBox)
+	// -----------------------------------------------------------------
+	si stPage.fondPerdu.minimum > 0 alors
+		stPagePdf.EstFondPerdu				= Vrai
+		stPagePdf.FondPerduHautMm		= stPage.fondPerdu.haut
+		stPagePdf.FondPerduBasMm		= stPage.fondPerdu.bas
+		stPagePdf.FondPerduGaucheMm	= stPage.fondPerdu.Gauche
+		stPagePdf.FondPerduDroiteMm	= stPage.fondPerdu.Droite
+		stPagePdf.FondPerduMinimumMm	= stPage.fondPerdu.minimum
+
+		// Avec fond perdu : tolérance serrée (3mm)
+		nIdFormatImpression				= PdfRechercheFormatImpression(rLargeurInterne, rHauteurInterne, 3, rLargeurFormat, rHauteurFormat)
+	sinon
+		stPagePdf.EstFondPerdu	= Faux
+		// Tolérance large (15mm)
+		nIdFormatImpression				= PdfRechercheFormatImpression(rLargeurInterne, rHauteurInterne, 15, rLargeurFormat, rHauteurFormat)
+	fin
+
+	stPagePdf.IdFormatImpression		= nIdFormatImpression
+	stPagePdf.LargeurFormat				= rLargeurFormat
+	stPagePdf.HauteurFormat				= rHauteurFormat
+
+	si nIdFormatImpression = 0 alors
+		bEstNonStandard = Vrai
+	fin
+
+	// -----------------------------------------------------------------
+	// Vérification format attendu (si renseigné)
+	// -----------------------------------------------------------------
+	si stDocument.LargeurOuvert > 0 _et_ stDocument.HauteurOuvert > 0 alors
+		si stDocument.LargeurOuvert < stDocument.HauteurOuvert alors
+			// Attendu en portrait
+			si stDocument.LargeurOuvert <> Min(stPagePdf.LargeurFormat, stPagePdf.HauteurFormat) _ou_
+				stDocument.HauteurOuvert <> Max(stPagePdf.LargeurFormat, stPagePdf.HauteurFormat) alors
+				fSupprime(stDocument.Repertoire + stDocument.NomFichierTemp)
+				sMessageErreur = "Format de document incorrect"
+				renvoyer sMessageErreur
+			fin
+		sinon
+			// Attendu en paysage
+			si stDocument.HauteurOuvert <> Min(stPagePdf.LargeurFormat, stPagePdf.HauteurFormat) _ou_
+				stDocument.LargeurOuvert <> Max(stPagePdf.LargeurFormat, stPagePdf.HauteurFormat) alors
+				fSupprime(stDocument.Repertoire + stDocument.NomFichierTemp)
+				sMessageErreur = "Format de document incorrect"
+				renvoyer sMessageErreur
+			fin
+		fin
+	fin
+
+	// -----------------------------------------------------------------
+	// Contrôle de cohérence : fond perdu attendu vs fond perdu réel
+	// -----------------------------------------------------------------
+	si stDocument.EstFondPerdu = Vrai _et_ stPagePdf.EstFondPerdu = Faux alors
+
+		// Tentative de détection : PDF exporté avec fond perdu dans les dimensions
+		// de page sans TrimBox/BleedBox définies (erreur fréquente des exporteurs).
+		// rLargeurInterne et rHauteurInterne valent ici les dimensions de la MediaBox
+		// entière (puisque TrimBox hérite de MediaBox quand aucune boîte n'est définie).
+		// On ne tente l'injection qu'une seule fois pour tout le document.
+		si bInjectionTentee = Faux alors
+			bInjectionTentee	= Vrai
+			rFondPerduDetecte	= 0
+
+			// Un seul appel avec marge 15mm
+			// La fonction cherche un format fini dont les dimensions sont
+			nIdFormatTest = PdfRechercheFormatImpression(rLargeurInterne, rHauteurInterne, 15, rLargeurFormatTest, rHauteurFormatTest)
+
+			si nIdFormatTest > 0 alors
+				// Calculer le fond perdu depuis l'écart entre PDF et format fini
+				// Le fond perdu doit être identique sur X et Y (symétrie obligatoire)
+				rFondPerduX	est un réel	= (rLargeurInterne - rLargeurFormatTest) / 2
+				rFondPerduY	est un réel	= (rHauteurInterne - rHauteurFormatTest) / 2
+
+				si Abs(rFondPerduX - rFondPerduY) <= 0.5 _et_ rFondPerduX >= 1 alors
+					rFondPerduDetecte = Arrondi(rFondPerduX, 1)
+				fin
+			fin
+
+			// Format fini identifié → injection des boîtes dans le PDF
+			si rFondPerduDetecte > 0 alors
+				sUrlInject est une chaîne = "http://localhost:5000/PyMuPdfExtract/inject_trim_bleed_boxes" +...
+				"?file=" + URLEncode(stDocument.Repertoire + stDocument.NomFichierTemp) +...
+				"&trim_x=" + rFondPerduDetecte +...
+				"&trim_y=" + rFondPerduDetecte +...
+				"&trim_w=" + rLargeurFormatTest +...
+				"&trim_h=" + rHauteurFormatTest +...
+				"&bleed=" + rFondPerduDetecte
+
+
+				hInject		est une httpRequête
+				hRepInject	est un httpRéponse
+
+				hInject.URL			= sUrlInject
+				hInject.Méthode	= httpGet
+				hRepInject			= hInject.Envoie()
+				
+				si hRepInject.CodeEtat = 200 alors
+					vInject est un Variant = JSONVersVariant(hRepInject.Contenu)
+					si vInject.success = Vrai alors
+						Trace("InjectTrimBleedBoxes : injected=" + vInject.injected + " / bleedMm=" + vInject.bleedMm)
+					sinon
+						Trace("InjectTrimBleedBoxes : erreur API = " + vInject.erreur)
+						rFondPerduDetecte = 0
+					fin
+				sinon
+					Trace("InjectTrimBleedBoxes : HTTP " + hRepInject.CodeEtat)
+					rFondPerduDetecte = 0
+				fin
+			fin
+		fin
+
+
+		// Fond perdu non détectable ou injection échouée → rejet
+		si rFondPerduDetecte = 0 alors
+			fSupprime(stDocument.Repertoire + stDocument.NomFichierTemp)
+			sMessageErreur = "Votre document a été déclaré avec fond perdu" + RC + "mais aucun fond perdu n'a été détecté dans le PDF"
+			renvoyer sMessageErreur
+		fin
+
+		// Injection réussie : mettre à jour stPagePdf pour la suite du traitement
+		stPagePdf.EstFondPerdu				= Vrai
+		stPagePdf.FondPerduHautMm			= rFondPerduDetecte
+		stPagePdf.FondPerduBasMm			= rFondPerduDetecte
+		stPagePdf.FondPerduGaucheMm		= rFondPerduDetecte
+		stPagePdf.FondPerduDroiteMm		= rFondPerduDetecte
+		stPagePdf.FondPerduMinimumMm		= rFondPerduDetecte
+
+		// TrimBox = format fini centré dans la MediaBox
+		stPagePdf.TrimBoxXMm					= rFondPerduDetecte
+		stPagePdf.TrimBoxYMm					= rFondPerduDetecte
+		stPagePdf.TrimBoxLargeurMm			= rLargeurInterne - 2 * rFondPerduDetecte
+		stPagePdf.TrimBoxHauteurMm			= rHauteurInterne - 2 * rFondPerduDetecte
+
+		// BleedBox = MediaBox (déjà stockée dans stPagePdf.MediaBox* ci-dessus)
+		stPagePdf.BleedBoxXMm				= stPagePdf.MediaBoxXMm
+		stPagePdf.BleedBoxYMm				= stPagePdf.MediaBoxYMm
+		stPagePdf.BleedBoxLargeurMm		= stPagePdf.MediaBoxLargeurMm
+		stPagePdf.BleedBoxHauteurMm		= stPagePdf.MediaBoxHauteurMm
+
+		// Mettre à jour les variables locales utilisées par le bloc rotation ci-dessous
+		// rLargeurExterne / rHauteurExterne restent inchangées (BleedBox = MediaBox = correct)
+		rLargeurInterne						= stPagePdf.TrimBoxLargeurMm
+		rHauteurInterne						= stPagePdf.TrimBoxHauteurMm
+
+		// Recalculer IdFormatImpression avec les dimensions du format fini (TrimBox)
+		nIdFormatImpression					= PdfRechercheFormatImpression(rLargeurInterne, rHauteurInterne, 3, rLargeurFormat, rHauteurFormat)
+		stPagePdf.IdFormatImpression		= nIdFormatImpression
+		stPagePdf.LargeurFormat				= rLargeurFormat
+		stPagePdf.HauteurFormat				= rHauteurFormat
+
+		// Réinitialiser bEstNonStandard si le format est maintenant reconnu
+		// (il avait pu être mis Vrai lors de la recherche initiale avec les dimensions brutes)
+		si nIdFormatImpression > 0 alors
+			bEstNonStandard = Faux
+		fin
+
+	fin
+
+	// -----------------------------------------------------------------
+	// Contrôle : fond perdu doit être symétrique (même valeur sur les 4 côtés)
+	// PrintShop Mail ne supporte qu'une valeur unique de bleed
+	// -----------------------------------------------------------------
+	si stPagePdf.EstFondPerdu alors
+		si stPagePdf.FondPerduHautMm <> stPagePdf.FondPerduBasMm _ou_
+			stPagePdf.FondPerduGaucheMm <> stPagePdf.FondPerduDroiteMm _ou_
+			stPagePdf.FondPerduHautMm <> stPagePdf.FondPerduGaucheMm alors
+			fSupprime(stDocument.Repertoire + stDocument.NomFichierTemp)
+			sMessageErreur = "Le fond perdu du document doit être identique sur les 4 côtés" + RC +
+			"Haut : " + stPagePdf.FondPerduHautMm + "mm — " +
+			"Bas : " + stPagePdf.FondPerduBasMm + "mm — " +
+			"Gauche : " + stPagePdf.FondPerduGaucheMm + "mm — " +
+			"Droite : " + stPagePdf.FondPerduDroiteMm + "mm"
+			renvoyer sMessageErreur
+		fin
+	fin
+
+	// -----------------------------------------------------------------
+	// Gestion de la rotation : ajuster les dimensions
+	// -----------------------------------------------------------------
+	selon stPage.rotation
+		cas 0
+			stPagePdf.LargeurInterne	= rLargeurInterne
+			stPagePdf.HauteurInterne	= rHauteurInterne
+			stPagePdf.LargeurExterne	= rLargeurExterne
+			stPagePdf.HauteurExterne	= rHauteurExterne
+
+		cas 90, 270
+			// Rotation : permuter largeur et hauteur
+			stPagePdf.LargeurInterne	= rHauteurInterne
+			stPagePdf.HauteurInterne	= rLargeurInterne
+			stPagePdf.LargeurExterne	= rHauteurExterne
+			stPagePdf.HauteurExterne	= rLargeurExterne
+
+		cas 180
+			// 180° : dimensions identiques
+			stPagePdf.LargeurInterne	= rLargeurInterne
+			stPagePdf.HauteurInterne	= rHauteurInterne
+			stPagePdf.LargeurExterne	= rLargeurExterne
+			stPagePdf.HauteurExterne	= rHauteurExterne
+
+		autre cas
+			bEstNonStandard = Vrai
+	fin
+
+	// -----------------------------------------------------------------
+	// Orientation
+	// -----------------------------------------------------------------
+	si stPagePdf.LargeurInterne < stPagePdf.HauteurInterne alors
+		stPagePdf.EstPortrait = Vrai
+	sinon
+		stPagePdf.EstPortrait = Faux
+	fin
+
+	// -----------------------------------------------------------------
+	// Taux d'encrage en bordure (documents sans fond perdu uniquement)
+	// Détecte si du contenu graphique est trop proche du bord (3mm)
+	// -----------------------------------------------------------------
+	si stPagePdf.EstFondPerdu = Faux alors
+		sUrlEdge est une chaîne = "http://localhost:5000/PyMuPdfExtract/check_edge_content" +...
+		"?file=" + URLEncode(stDocument.Repertoire + stDocument.NomFichierTemp) +...
+		"&margin_mm=3" +...
+		"&page=" + stPagePdf.NumeroPage
+
+		hEdge		est une httpRequête
+		hRepEdge	est un httpRéponse
+
+		hEdge.URL		= sUrlEdge
+		hEdge.Méthode	= httpGet
+		hRepEdge			= hEdge.Envoie()
+
+		si hRepEdge.CodeEtat = 200 alors
+			vEdge est un Variant = JSONVersVariant(hRepEdge.Contenu)
+			si vEdge.success = Vrai _et_ vEdge.pages..Occurrence > 0 alors
+				stPagePdf.TauxEncrageBordureHaut		= vEdge.pages[1].inkCoverage.top
+				stPagePdf.TauxEncrageBordureBas		= vEdge.pages[1].inkCoverage.bottom
+				stPagePdf.TauxEncrageBordureGauche	= vEdge.pages[1].inkCoverage.left
+				stPagePdf.TauxEncrageBordureDroite	= vEdge.pages[1].inkCoverage.right
+				Trace("Taux encrage bordure (3mm) :" +...
+				" H=" + stPagePdf.TauxEncrageBordureHaut +...
+				" B=" + stPagePdf.TauxEncrageBordureBas +...
+				" G=" + stPagePdf.TauxEncrageBordureGauche +...
+				" D=" + stPagePdf.TauxEncrageBordureDroite)
+
+				// Seuil 10% : blocage si au moins un côté dépasse
+				si stPagePdf.TauxEncrageBordureHaut > 10 _ou_
+					stPagePdf.TauxEncrageBordureBas > 10 _ou_
+					stPagePdf.TauxEncrageBordureGauche > 10 _ou_
+					stPagePdf.TauxEncrageBordureDroite > 10 alors
+					fSupprime(stDocument.Repertoire + stDocument.NomFichierTemp)
+					sMessageErreur = "Votre document contient des éléments graphiques trop près du bord de la page" + RC +...
+					"Cela peut provoquer des défauts lors de la découpe" + RC + RC +...
+					"Veuillez fournir un document avec au moins 3mm de marge blanche" + RC +...
+					"ou un document avec fond perdu"
+					renvoyer sMessageErreur
+				fin
+			fin
+		fin
+	fin
+
+	stDocument.tabPagePDF.Ajoute(stPagePdf)
+fin
+
+// =========================================================================
+// VÉRIFICATION : Format non standard détecté
+// =========================================================================
+si bEstNonStandard = Vrai alors
+	fSupprime(stDocument.Repertoire + stDocument.NomFichierTemp)
+	sMessageErreur = "Format de document non standard"
+	renvoyer sMessageErreur
+fin
+
+sMessageErreur = ""
+renvoyer sMessageErreur

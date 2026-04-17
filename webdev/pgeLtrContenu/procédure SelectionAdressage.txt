@@ -1,0 +1,26 @@
+procédure SelectionAdressage(bRegenererJson est un booléen = Vrai)
+
+__stOperation.stOperationLettre.stEnveloppe.EstAdressageExpediteur	= intAdressageExpediteur
+__stOperation.stOperationLettre.stEnveloppe.EstAdressageLogo			= intAdressageLogo
+__stOperation.stOperationLettre.stEnveloppe.EstAdressagePromotion		= intAdressagePromotion
+
+Trace("=== SelectionAdressage - Diagnostic Enveloppe ===")
+Trace("EnveloppeFond.CheminPhysique = [" + __stOperation.stOperationLettre.stEnveloppe.EnveloppeFond.CheminPhysique + "]")
+Trace("EnveloppeFond.CheminRelatif = [" + __stOperation.stOperationLettre.stEnveloppe.EnveloppeFond.CheminRelatif + "]")
+Trace("FichierApercu = [" + __stOperation.stOperationLettre.stEnveloppe.FichierApercu + "]")
+Trace("IdEnveloppe = " + __stOperation.stOperationLettre.IdEnveloppe)
+Trace("JsonDesignerData vide = " + (__stOperation.stOperationLettre.stEnveloppe.JsonDesignerData = ""))
+
+si bRegenererJson = Vrai alors
+	__stOperation.stOperationLettre.stEnveloppe.JsonDesignerData = cpDesigner.ComposerJsonDesignerCreation(__stOperation, __tabEchantillonBaseLigne, __stOperation.TypeOperation, Vrai, 0)
+fin
+
+si intAdressageExpediteur = Faux _et_ intAdressageLogo = Faux _et_ intAdressagePromotion = Faux alors
+	btnEnveloppePersonnaliser.Visible	= Faux
+	btnEnveloppeSupprimer.Visible			= Faux
+	btnEnveloppeAperçu.Visible				= Faux
+	btnEnveloppeModèle.Visible				= Faux
+	cboEnveloppeSelection.Etat				= Actif
+sinon
+	btnEnveloppePersonnaliser..Visible	= (cboEnveloppeSelection..ValeurMémorisée <= 0)
+fin

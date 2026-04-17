@@ -1,0 +1,135 @@
+[10-Mar-2026 10:48:25 Europe/Paris] PSM Marketeam JPG Error: data.csv not found and no POST data provided
+[11-Mar-2026 00:46:34 Europe/Paris] PSM AutoStart: MonitorService DOWN sur le port 8281, démarrage...
+[11-Mar-2026 00:46:37 Europe/Paris] PSM AutoStart: MonitorService UP après 0 secondes
+[11-Mar-2026 00:48:33 Europe/Paris] PSM AutoStart: MonitorService DOWN sur le port 8281, démarrage...
+[11-Mar-2026 00:48:36 Europe/Paris] PSM AutoStart: MonitorService UP après 0 secondes
+[12-Mar-2026 12:08:35 Europe/Paris] PHP Fatal error:  Uncaught Error: Call to undefined function opcache_reset() in C:\Program Files\Apache24\htdocs\psm\opcache_reset.php:1
+Stack trace:
+#0 {main}
+  thrown in C:\Program Files\Apache24\htdocs\psm\opcache_reset.php on line 1
+[12-Mar-2026 12:15:00 Europe/Paris] PHP Fatal error:  Uncaught Error: Call to undefined function opcache_reset() in C:\Program Files\Apache24\htdocs\psm\opcache_reset.php:1
+Stack trace:
+#0 {main}
+  thrown in C:\Program Files\Apache24\htdocs\psm\opcache_reset.php on line 1
+[19-Mar-2026 14:49:58 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[19-Mar-2026 14:59:27 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[19-Mar-2026 15:01:44 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[19-Mar-2026 15:45:57 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[19-Mar-2026 16:04:16 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[24-Mar-2026 11:09:02 Europe/Paris] PSM_GetJPEG failed after several retries (server down)
+[24-Mar-2026 11:09:24 Europe/Paris] PSM_GetJPEG failed after several retries (server down)
+[25-Mar-2026 15:43:42 Europe/Paris] PSM_GetJPEG failed after several retries (server down)
+[26-Mar-2026 08:57:20 Europe/Paris] PSM_GetJPEG failed after several retries (server down)
+[26-Mar-2026 09:40:29 Europe/Paris] PSM_GetJPEG failed after several retries (server down)
+[26-Mar-2026 10:55:50 Europe/Paris] PSM_GetJPEG failed after several retries (server down)
+[26-Mar-2026 11:48:49 Europe/Paris] PSM_GetJPEG failed after several retries (server down)
+[26-Mar-2026 13:43:33 Europe/Paris] PSM_GetJPEG failed after several retries (server down)
+[26-Mar-2026 13:50:50 Europe/Paris] PSM_GetJPEG failed after several retries (server down)
+[26-Mar-2026 15:08:36 Europe/Paris] PSM AutoStart: MonitorService DOWN sur le port 8281, démarrage...
+[26-Mar-2026 15:08:39 Europe/Paris] PSM AutoStart: MonitorService UP après 0 secondes
+[30-Mar-2026 17:23:00 Europe/Paris] PSM Marketeam JPG Error: 
+Service side exception during:
+'JPEGPreview ("EnvPsmd1-20260330172255848.psmd","C:/Program Files/Apache24/htdocs\\psm\\data_69ca9554339785_01490165.csv",1);'
+Message='FAIL Document file does not exist: "EnvPsmd1-20260330172255848.psmd".'
+Service side stack:
+#0 C:\Program Files\Apache24\htdocs\psm\psmthread.php(150): PSMThread->doOpen('EnvPsmd1-202603...', 'C:/Program File...')
+#1 C:\Program Files\Apache24\htdocs\psm\psmremote.php(541) : eval()'d code(1): PSMThread->JPEGPreview('EnvPsmd1-202603...', 'C:/Program File...', 1)
+#2 C:\Program Files\Apache24\htdocs\psm\psmremote.php(541): eval()
+#3 C:\Program Files\Apache24\htdocs\psm\psmremote.php(501): PSMService->runService()
+#4 C:\Program Files\Apache24\htdocs\psm\psmremote.php(49): PSMService->destructor()
+#5 [internal function]: PSMObject->__destruct()
+#6 {main}
+Proxy side stack:
+
+[30-Mar-2026 17:32:09 Europe/Paris] PSM Marketeam JPG Error: 
+Service side exception during:
+'JPEGPreview ("EnvPsmd1-20260330173205471.psmd","C:/Program Files/Apache24/htdocs\\psm\\data_69ca97798bacf4_60744019.csv",1);'
+Message='FAIL Document file does not exist: "EnvPsmd1-20260330173205471.psmd".'
+Service side stack:
+#0 C:\Program Files\Apache24\htdocs\psm\psmthread.php(150): PSMThread->doOpen('EnvPsmd1-202603...', 'C:/Program File...')
+#1 C:\Program Files\Apache24\htdocs\psm\psmremote.php(541) : eval()'d code(1): PSMThread->JPEGPreview('EnvPsmd1-202603...', 'C:/Program File...', 1)
+#2 C:\Program Files\Apache24\htdocs\psm\psmremote.php(541): eval()
+#3 C:\Program Files\Apache24\htdocs\psm\psmremote.php(501): PSMService->runService()
+#4 C:\Program Files\Apache24\htdocs\psm\psmremote.php(49): PSMService->destructor()
+#5 [internal function]: PSMObject->__destruct()
+#6 {main}
+Proxy side stack:
+
+[31-Mar-2026 09:43:49 Europe/Paris] PSM Marketeam JPG Error: 
+Service side exception during:
+'JPEGPreview ("EnvPsmd1-20260331094344228.psmd","C:/Program Files/Apache24/htdocs\\psm\\data_69cb7b3577ae52_17423830.csv",1);'
+Message='FAIL Document file does not exist: "EnvPsmd1-20260331094344228.psmd".'
+Service side stack:
+#0 C:\Program Files\Apache24\htdocs\psm\psmthread.php(150): PSMThread->doOpen('EnvPsmd1-202603...', 'C:/Program File...')
+#1 C:\Program Files\Apache24\htdocs\psm\psmremote.php(541) : eval()'d code(1): PSMThread->JPEGPreview('EnvPsmd1-202603...', 'C:/Program File...', 1)
+#2 C:\Program Files\Apache24\htdocs\psm\psmremote.php(541): eval()
+#3 C:\Program Files\Apache24\htdocs\psm\psmremote.php(501): PSMService->runService()
+#4 C:\Program Files\Apache24\htdocs\psm\psmremote.php(49): PSMService->destructor()
+#5 [internal function]: PSMObject->__destruct()
+#6 {main}
+Proxy side stack:
+
+[31-Mar-2026 09:44:30 Europe/Paris] PSM Marketeam JPG Error: 
+Service side exception during:
+'JPEGPreview ("EnvPsmd1-20260331094426534.psmd","C:/Program Files/Apache24/htdocs\\psm\\data_69cb7b5ea4cc75_06345950.csv",1);'
+Message='FAIL Document file does not exist: "EnvPsmd1-20260331094426534.psmd".'
+Service side stack:
+#0 C:\Program Files\Apache24\htdocs\psm\psmthread.php(150): PSMThread->doOpen('EnvPsmd1-202603...', 'C:/Program File...')
+#1 C:\Program Files\Apache24\htdocs\psm\psmremote.php(541) : eval()'d code(1): PSMThread->JPEGPreview('EnvPsmd1-202603...', 'C:/Program File...', 1)
+#2 C:\Program Files\Apache24\htdocs\psm\psmremote.php(541): eval()
+#3 C:\Program Files\Apache24\htdocs\psm\psmremote.php(501): PSMService->runService()
+#4 C:\Program Files\Apache24\htdocs\psm\psmremote.php(49): PSMService->destructor()
+#5 [internal function]: PSMObject->__destruct()
+#6 {main}
+Proxy side stack:
+
+[31-Mar-2026 09:45:47 Europe/Paris] PSM Marketeam JPG Error: 
+Service side exception during:
+'JPEGPreview ("EnvPsmd1-20260331094541006.psmd","C:/Program Files/Apache24/htdocs\\psm\\data_69cb7bab0529f4_74417513.csv",1);'
+Message='FAIL Document file does not exist: "EnvPsmd1-20260331094541006.psmd".'
+Service side stack:
+#0 C:\Program Files\Apache24\htdocs\psm\psmthread.php(150): PSMThread->doOpen('EnvPsmd1-202603...', 'C:/Program File...')
+#1 C:\Program Files\Apache24\htdocs\psm\psmremote.php(541) : eval()'d code(1): PSMThread->JPEGPreview('EnvPsmd1-202603...', 'C:/Program File...', 1)
+#2 C:\Program Files\Apache24\htdocs\psm\psmremote.php(541): eval()
+#3 C:\Program Files\Apache24\htdocs\psm\psmremote.php(501): PSMService->runService()
+#4 C:\Program Files\Apache24\htdocs\psm\psmremote.php(49): PSMService->destructor()
+#5 [internal function]: PSMObject->__destruct()
+#6 {main}
+Proxy side stack:
+
+[31-Mar-2026 12:38:32 Europe/Paris] PSM AutoStart: MonitorService DOWN sur le port 8281, démarrage...
+[31-Mar-2026 12:38:35 Europe/Paris] PSM AutoStart: MonitorService UP après 0 secondes
+[02-Apr-2026 16:06:33 Europe/Paris] PSM AutoStart: MonitorService DOWN sur le port 8281, démarrage...
+[02-Apr-2026 16:06:36 Europe/Paris] PSM AutoStart: MonitorService UP après 0 secondes
+[07-Apr-2026 14:09:22 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 14:11:16 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 14:13:35 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 14:16:40 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 14:52:24 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 14:56:03 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 14:58:48 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 15:05:21 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 15:06:13 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 15:14:56 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 15:19:17 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 15:20:41 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 15:48:25 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 15:52:05 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 15:52:19 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 15:53:06 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 15:55:08 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 15:55:20 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 15:55:30 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 15:55:46 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 16:19:44 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 16:20:56 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 16:22:02 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 16:22:31 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 16:22:43 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 16:50:21 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 16:50:22 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 16:58:58 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 16:59:17 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 17:00:42 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 17:00:55 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv
+[07-Apr-2026 17:01:22 Europe/Paris] PSM Marketeam JPG Warning: Failed to create CSV from POST data, falling back to data.csv

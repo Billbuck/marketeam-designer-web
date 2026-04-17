@@ -1,0 +1,27 @@
+procédure CheminClient(pIdClient, pTypeOperation, pTypeRepertoire, pEstRepertoirePhysique  = Vrai) //, pEstRepertoireLocal = Vrai)
+
+
+sCheminClient est une chaîne
+
+sRepClient est une chaîne
+
+selon cpConnexion.__sConnexion
+	cas __CNX_DEV__		: sRepClient = "ClientsDev"
+	cas __CNX_TEST__	: sRepClient = "ClientsTest"
+	cas __CNX_PROD__	: sRepClient = "Clients"
+fin
+
+
+si clt_client.LitRecherchePremier(IdClient,pIdClient)  alors
+	sCheminClient = sRepClient + "\" + NumériqueVersChaîne(clt_client.IdClient, "08d") + "\" +((pTypeOperation = "") ? "" sinon RepertoireTypeOperation(pTypeOperation) + "\" + pTypeRepertoire + "\")
+
+	si pEstRepertoirePhysique alors
+		si fRepCrée(ComplèteRep(__sRepRacine) + sCheminClient) alors
+			renvoyer ComplèteRep(__sRepRacine) + sCheminClient
+		sinon
+			renvoyer ""
+		fin
+	sinon
+		renvoyer __sHttpMarketeam +["/"]+ Remplace(sCheminClient,"\","/")
+	fin
+fin

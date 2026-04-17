@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Solution — Le Répertoire de Travail</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+
+  header { background: linear-gradient(135deg, #1e293b, #334155); padding: 24px 32px; border-bottom: 2px solid #22c55e; }
+  header h1 { font-size: 22px; font-weight: 700; color: #86efac; }
+  header p { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+
+  .tabs { display: flex; gap: 0; background: #1e293b; border-bottom: 1px solid #334155; padding: 0 24px; }
+  .tab { padding: 12px 24px; cursor: pointer; font-size: 14px; font-weight: 600; color: #64748b; border-bottom: 3px solid transparent; transition: all .2s; }
+  .tab:hover { color: #cbd5e1; }
+  .tab.active { color: #22c55e; border-bottom-color: #22c55e; }
+
+  main { padding: 24px 32px; max-width: 1100px; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .section-title { font-size: 18px; font-weight: 700; margin: 0 0 16px; color: #93c5fd; }
+  .sub-title { font-size: 15px; font-weight: 700; margin: 24px 0 12px; color: #e2e8f0; }
+
+  /* ── Principe ── */
+  .principle-box { background: linear-gradient(135deg, #14532d, #1e3a5f); border-radius: 16px; padding: 28px; margin-bottom: 32px; border: 1px solid #22c55e40; }
+  .principle-box h2 { font-size: 20px; color: #86efac; margin-bottom: 12px; }
+  .principle-box p { font-size: 14px; line-height: 1.8; color: #d1d5db; }
+  .principle-box .highlight { color: #fcd34d; font-weight: 700; }
+  .principle-box .key { color: #86efac; font-weight: 700; }
+
+  /* ── Scenario ── */
+  .scenario { background: #1e293b; border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; border: 1px solid #334155; }
+  .scenario-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .scenario-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .scenario h3 { font-size: 15px; font-weight: 700; }
+
+  .doc-row { display: flex; gap: 16px; margin: 8px 0; flex-wrap: wrap; }
+  .doc-card { flex: 1; min-width: 200px; background: #0f172a; border-radius: 8px; padding: 12px 16px; border: 1px solid #475569; }
+  .doc-card h4 { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .doc-card .field { font-size: 12px; font-family: 'Consolas', monospace; margin: 3px 0; }
+  .doc-card .field .label { color: #64748b; }
+  .doc-card .field .val { padding: 1px 6px; border-radius: 3px; }
+
+  .val-upload { background: #1e3a5f; color: #93c5fd; }
+  .val-ope { background: #14532d; color: #86efac; }
+
+  /* ── Code changes ── */
+  .change-card { background: #1e293b; border-radius: 12px; margin-bottom: 16px; overflow: hidden; border: 1px solid #334155; }
+  .change-header { padding: 14px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+  .change-header:hover { background: #334155; }
+  .change-header h3 { font-size: 14px; font-weight: 700; }
+  .change-tag { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; }
+  .change-tag.simple { background: #14532d; color: #86efac; }
+  .change-tag.medium { background: #78350f; color: #fcd34d; }
+  .change-tag.add { background: #1e3a5f; color: #93c5fd; }
+  .change-body { padding: 0 20px 16px; display: none; }
+  .change-card.open .change-body { display: block; }
+  .change-card.open .arrow { transform: rotate(90deg); }
+  .arrow { color: #64748b; transition: transform .2s; }
+
+  .code-before, .code-after { font-family: 'Consolas', monospace; font-size: 12px; padding: 12px 16px; border-radius: 6px; margin: 8px 0; line-height: 1.7; white-space: pre-wrap; overflow-x: auto; }
+  .code-before { background: #1a0f0f; border: 1px solid #7f1d1d; }
+  .code-after { background: #0f1a14; border: 1px solid #14532d; }
+  .code-label { font-size: 11px; font-weight: 700; margin-top: 12px; }
+  .code-label.before { color: #f87171; }
+  .code-label.after { color: #4ade80; }
+  .code-comment { color: #64748b; }
+  .code-red { color: #fca5a5; }
+  .code-green { color: #86efac; }
+  .code-blue { color: #93c5fd; }
+  .note { font-size: 13px; color: #94a3b8; line-height: 1.6; margin: 8px 0; padding: 10px 14px; background: #0f172a; border-radius: 6px; border-left: 3px solid #3b82f6; }
+
+  /* ── Recap ── */
+  .recap-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 16px 0; }
+  .recap-item { background: #1e293b; border-radius: 8px; padding: 14px; text-align: center; border: 1px solid #334155; }
+  .recap-number { font-size: 28px; font-weight: 800; }
+  .recap-label { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+  .recap-item.green .recap-number { color: #22c55e; }
+  .recap-item.blue .recap-number { color: #3b82f6; }
+  .recap-item.orange .recap-number { color: #f59e0b; }
+
+  .flow-box { background: #0f172a; border-radius: 8px; padding: 16px 20px; margin: 12px 0; font-family: 'Consolas', monospace; font-size: 13px; line-height: 2; border: 1px solid #334155; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Solution proposee : "Le Repertoire de Travail"</h1>
+  <p>Chaque document sait ou il habite — fini les chemins en dur vers Upload</p>
+</header>
+
+<div class="tabs">
+  <div class="tab active" data-tab="principe">Le principe</div>
+  <div class="tab" data-tab="scenarios">Cas concrets</div>
+  <div class="tab" data-tab="changes">Modifications du code</div>
+  <div class="tab" data-tab="recap">Recapitulatif</div>
+</div>
+
+<main>
+
+<!-- ╔══════════════════════════╗ -->
+<!-- ║     LE PRINCIPE          ║ -->
+<!-- ╚══════════════════════════╝ -->
+<div class="panel active" id="panel-principe">
+
+  <div class="principle-box">
+    <h2>L'idee en une phrase</h2>
+    <p>
+      Aujourd'hui, toutes les procedures de generation (PSMD, BAT, vignettes) construisent leur chemin avec <span class="highlight">Upload code en dur</span>.<br><br>
+      La solution : chaque document porte <span class="key">son propre repertoire de travail</span> dans <code>stDocument.Repertoire</code>.<br>
+      Toutes les procedures utilisent <span class="key">ce repertoire</span> au lieu de recalculer Upload a chaque fois.<br><br>
+      En <span class="highlight">creation</span> : <code>Repertoire = Upload</code> (comme aujourd'hui).<br>
+      En <span class="highlight">modification</span> : <code>Repertoire = dossier de l'operation</code> (la ou les fichiers vivent reellement).<br>
+      En <span class="highlight">cas mixte</span> (doc existant + nouveau doc) : chaque document a <b>son propre</b> <code>Repertoire</code>.
+    </p>
+  </div>
+
+  <h2 class="section-title">Pourquoi ca marche dans tous les cas ?</h2>
+
+  <div class="flow-box">
+    <span class="code-comment">// CREATION : le client uploade un PDF</span>
+    <br>stDocument.Repertoire = <span class="code-blue">Upload</span>          <span class="code-comment">// ← fixe par UploadFichier()</span>
+    <br>stDocument.EstUploade = <span class="code-green">Vrai</span>
+    <br>
+    <br><span class="code-comment">// SAUVEGARDE : les fichiers sont deplaces</span>
+    <br>DéplaceFichierUpload()                    <span class="code-comment">// ← deplace Upload → ROP</span>
+    <br>stDocument.Repertoire = <span class="code-green">ROP</span>             <span class="code-comment">// ← MIS A JOUR apres le deplacement</span>
+    <br>stDocument.EstUploade = Faux
+    <br>
+    <br><span class="code-comment">// RECHARGEMENT : ChargeDocument remet le bon chemin</span>
+    <br>stDocument.Repertoire = <span class="code-green">ROP</span>             <span class="code-comment">// ← CheminFichier(IdOpe, __REP_DOCUMENT__)</span>
+    <br>
+    <br><span class="code-comment">// MODIFICATION : le client re-personnalise</span>
+    <br>GenererPsmd...(stDocument)                <span class="code-comment">// ← utilise stDocument.Repertoire = ROP</span>
+    <br>GenererBat...(stDocument)                 <span class="code-comment">// ← utilise stDocument.Repertoire = ROP</span>
+    <br><span class="code-comment">//   → les fichiers sont generes LA OU ILS VIVENT</span>
+    <br>
+    <br><span class="code-comment">// CAS MIXTE : doc1 existant + doc2 nouveau</span>
+    <br>tabStDocument[1].Repertoire = <span class="code-green">ROP</span>       <span class="code-comment">// ← doc existant, rechargé</span>
+    <br>tabStDocument[2].Repertoire = <span class="code-blue">Upload</span>    <span class="code-comment">// ← doc fraichement uploade</span>
+    <br><span class="code-comment">//   → chaque procedure travaille avec LE BON repertoire</span>
+  </div>
+
+  <h2 class="section-title" style="margin-top:32px;">Et pour l'enveloppe ?</h2>
+  <div class="note">
+    Meme logique : ajouter un champ <code>stEnveloppe.RepertoireTravail</code> (ou utiliser un existant).<br>
+    - En creation : <code>= Upload</code><br>
+    - Apres sauvegarde / en modification : <code>= CheminFichier(IdOperation, __REP_BAT__)</code><br>
+    Les procedures <code>GenererPsmdServeurEnveloppe</code> et <code>GenererBatEnveloppeDepuisPsmd</code> utiliseront ce champ.
+  </div>
+
+</div>
+
+<!-- ╔══════════════════════════╗ -->
+<!-- ║     CAS CONCRETS         ║ -->
+<!-- ╚══════════════════════════╝ -->
+<div class="panel" id="panel-scenarios">
+
+  <div class="scenario">
+    <div class="scenario-header">
+      <div class="scenario-icon" style="background:#14532d;color:#86efac;">1</div>
+      <h3>Creation simple (1 document)</h3>
+    </div>
+    <p style="font-size:13px;color:#94a3b8;margin-bottom:12px;">Le client cree une operation, uploade un PDF, personnalise, sauvegarde.</p>
+    <div class="doc-row">
+      <div class="doc-card">
+        <h4>Document 1 — pendant la creation</h4>
+        <div class="field"><span class="label">Repertoire = </span><span class="val val-upload">Upload</span></div>
+        <div class="field"><span class="label">CodeTemp = </span> IDContact-DateHeure</div>
+        <div class="field"><span class="label">EstUploade = </span> Vrai</div>
+        <div class="field"><span class="label">PSMD, BAT, fonds → </span><span class="val val-upload">Upload</span></div>
+      </div>
+      <div class="doc-card">
+        <h4>Document 1 — apres sauvegarde</h4>
+        <div class="field"><span class="label">Repertoire = </span><span class="val val-ope">ROP</span></div>
+        <div class="field"><span class="label">CodeTemp = </span> IdLettreContenu</div>
+        <div class="field"><span class="label">EstUploade = </span> Faux</div>
+        <div class="field"><span class="label">PDF, BAT, fonds → </span><span class="val val-ope">ROP</span></div>
+      </div>
+    </div>
+    <div class="note">Rien ne change par rapport a aujourd'hui. Le flux fonctionne deja.</div>
+  </div>
+
+  <div class="scenario">
+    <div class="scenario-header">
+      <div class="scenario-icon" style="background:#78350f;color:#fcd34d;">2</div>
+      <h3>Modification — re-personnalisation d'un document existant</h3>
+    </div>
+    <p style="font-size:13px;color:#94a3b8;margin-bottom:12px;">Le client rouvre l'operation, clique "Personnaliser" sur son doc, modifie dans le Designer, valide.</p>
+    <div class="doc-row">
+      <div class="doc-card">
+        <h4>Document 1 — au rechargement</h4>
+        <div class="field"><span class="label">Repertoire = </span><span class="val val-ope">ROP/document/</span></div>
+        <div class="field"><span class="label">CodeTemp = </span> IdLettreContenu (ex: 42)</div>
+        <div class="field"><span class="label">PDF = </span><span class="val val-ope">ROP/document/ltr_42.pdf</span></div>
+      </div>
+      <div class="doc-card">
+        <h4>Document 1 — apres re-personnalisation</h4>
+        <div class="field"><span class="label">PSMD genere → </span><span class="val val-ope">ROP/document/</span> (au lieu de Upload !)</div>
+        <div class="field"><span class="label">BAT genere → </span><span class="val val-ope">ROP/bat/</span> (au lieu de Upload !)</div>
+        <div class="field"><span class="label">EstUploade = </span> Faux (pas de re-upload)</div>
+      </div>
+    </div>
+    <div class="note"><b>C'est ici que la correction agit.</b> Les procedures utilisent <code>stDocument.Repertoire</code> = ROP, donc les fichiers sont generes directement au bon endroit. Pas besoin de deplacement.</div>
+  </div>
+
+  <div class="scenario">
+    <div class="scenario-header">
+      <div class="scenario-icon" style="background:#7f1d1d;color:#fca5a5;">3</div>
+      <h3>Modification — 1 doc existant + 1 nouveau doc (cas mixte)</h3>
+    </div>
+    <p style="font-size:13px;color:#94a3b8;margin-bottom:12px;">Le client rouvre l'operation, garde le doc existant, et ajoute un second document PDF.</p>
+    <div class="doc-row">
+      <div class="doc-card">
+        <h4>Document 1 — existant (rechargé)</h4>
+        <div class="field"><span class="label">Repertoire = </span><span class="val val-ope">ROP/document/</span></div>
+        <div class="field"><span class="label">CodeTemp = </span> IdLettreContenu (42)</div>
+        <div class="field"><span class="label">EstUploade = </span> Faux</div>
+        <div class="field"><span class="label">PSMD → </span><span class="val val-ope">ROP</span></div>
+        <div class="field"><span class="label">BAT → </span><span class="val val-ope">ROP</span></div>
+      </div>
+      <div class="doc-card">
+        <h4>Document 2 — nouveau (uploade)</h4>
+        <div class="field"><span class="label">Repertoire = </span><span class="val val-upload">Upload</span></div>
+        <div class="field"><span class="label">CodeTemp = </span> IDContact-DateHeure</div>
+        <div class="field"><span class="label">EstUploade = </span> Vrai</div>
+        <div class="field"><span class="label">PSMD → </span><span class="val val-upload">Upload</span></div>
+        <div class="field"><span class="label">BAT → </span><span class="val val-upload">Upload</span></div>
+      </div>
+    </div>
+    <div class="note"><b>Chaque document porte son propre <code>Repertoire</code></b> : pas d'ambiguite. A la sauvegarde, <code>DéplaceFichierUpload</code> ne traite que le doc 2 (<code>EstUploade = Vrai</code>). Le doc 1 est deja au bon endroit.</div>
+  </div>
+
+  <div class="scenario">
+    <div class="scenario-header">
+      <div class="scenario-icon" style="background:#312e81;color:#a5b4fc;">4</div>
+      <h3>Modification — re-upload d'un document existant</h3>
+    </div>
+    <p style="font-size:13px;color:#94a3b8;margin-bottom:12px;">Le client remplace le PDF d'un document existant par un nouveau fichier.</p>
+    <div class="doc-row">
+      <div class="doc-card">
+        <h4>Document 1 — avant re-upload</h4>
+        <div class="field"><span class="label">Repertoire = </span><span class="val val-ope">ROP/document/</span></div>
+        <div class="field"><span class="label">EstUploade = </span> Faux</div>
+      </div>
+      <div class="doc-card">
+        <h4>Document 1 — apres re-upload</h4>
+        <div class="field"><span class="label">Repertoire = </span><span class="val val-upload">Upload</span> (ecrase par UploadFichier)</div>
+        <div class="field"><span class="label">CodeTemp = </span> nouveau IDContact-DateHeure</div>
+        <div class="field"><span class="label">EstUploade = </span> Vrai</div>
+      </div>
+    </div>
+    <div class="note"><code>UploadFichier()</code> remet deja <code>Repertoire = Upload</code> et <code>EstUploade = Vrai</code>. A la sauvegarde, le fichier sera deplace vers ROP normalement. Aucun conflit.</div>
+  </div>
+
+</div>
+
+<!-- ╔══════════════════════════╗ -->
+<!-- ║     MODIFICATIONS CODE   ║ -->
+<!-- ╚══════════════════════════╝ -->
+<div class="panel" id="panel-changes">
+
+  <p style="font-size:14px;color:#94a3b8;margin-bottom:20px;">Cliquez sur chaque carte pour voir le detail. Triees par ordre de priorite.</p>
+
+  <!-- 1 -->
+  <div class="change-card" onclick="this.classList.toggle('open')">
+    <div class="change-header">
+      <h3>1. GenererPsmdServeurDocument() <span style="color:#64748b;font-weight:400;">— PSMD au bon endroit</span></h3>
+      <div><span class="change-tag simple">1 ligne</span> <span class="arrow">▶</span></div>
+    </div>
+    <div class="change-body">
+      <div class="code-label before">AVANT :</div>
+      <div class="code-before"><span class="code-red">sRepUpload = cpProjet.__sMarketeamRepRacine + cpProjet.__sRepUpload + "\"</span></div>
+      <div class="code-label after">APRES :</div>
+      <div class="code-after"><span class="code-green">sRepTravail = stDocument.Repertoire</span>
+<span class="code-comment">// stDocument.Repertoire = Upload en creation, ROP en modification</span></div>
+      <div class="note">Puis remplacer <code>sRepUpload</code> par <code>sRepTravail</code> dans toute la procedure (sCheminPsmd, sCheminJsonTemp). Le reste ne change pas : <code>sCodeTemp = stDocument.CodeTemp</code> fonctionne dans les deux cas.</div>
+    </div>
+  </div>
+
+  <!-- 2 -->
+  <div class="change-card" onclick="this.classList.toggle('open')">
+    <div class="change-header">
+      <h3>2. GenererBatDocumentDepuisPsmd() <span style="color:#64748b;font-weight:400;">— BAT au bon endroit</span></h3>
+      <div><span class="change-tag simple">1 ligne</span> <span class="arrow">▶</span></div>
+    </div>
+    <div class="change-body">
+      <div class="code-label before">AVANT :</div>
+      <div class="code-before"><span class="code-red">sRepUpload = cpProjet.__sMarketeamRepRacine + cpProjet.__sRepUpload + "\"</span></div>
+      <div class="code-label after">APRES :</div>
+      <div class="code-after"><span class="code-green">sRepTravail = stDocument.Repertoire</span></div>
+      <div class="note">Puis remplacer <code>sRepUpload</code> par <code>sRepTravail</code>. Le PSMD est deja lu depuis <code>stDocument.CheminPsmdTemp</code> (chemin complet) : pas de souci. Le BAT sera ecrit dans le bon repertoire.</div>
+    </div>
+  </div>
+
+  <!-- 3 -->
+  <div class="change-card" onclick="this.classList.toggle('open')">
+    <div class="change-header">
+      <h3>3. GenererPsmdServeurEnveloppe() <span style="color:#64748b;font-weight:400;">— meme logique pour l'enveloppe</span></h3>
+      <div><span class="change-tag medium">2-3 lignes</span> <span class="arrow">▶</span></div>
+    </div>
+    <div class="change-body">
+      <div class="code-label before">AVANT :</div>
+      <div class="code-before"><span class="code-red">sRepUpload = cpProjet.__sMarketeamRepRacine + cpProjet.__sRepUpload + "\"</span></div>
+      <div class="code-label after">APRES :</div>
+      <div class="code-after"><span class="code-green">SI _nIdOperation > 0 ALORS</span>
+<span class="code-green">    sRepTravail = cpProjet.CheminFichier(_nIdOperation, __REP_BAT__)</span>
+<span class="code-green">SINON</span>
+<span class="code-green">    sRepTravail = cpProjet.__sMarketeamRepRacine + cpProjet.__sRepUpload + "\"</span>
+<span class="code-green">FIN</span></div>
+      <div class="note">
+        Alternative : ajouter <code>stEnveloppe.RepertoireTravail</code> et le remplir a l'initialisation / au rechargement, exactement comme <code>stDocument.Repertoire</code>. Plus propre si tu preferes la symetrie.
+      </div>
+    </div>
+  </div>
+
+  <!-- 4 -->
+  <div class="change-card" onclick="this.classList.toggle('open')">
+    <div class="change-header">
+      <h3>4. GenererBatEnveloppeDepuisPsmd() <span style="color:#64748b;font-weight:400;">— BAT enveloppe</span></h3>
+      <div><span class="change-tag simple">1 ligne</span> <span class="arrow">▶</span></div>
+    </div>
+    <div class="change-body">
+      <div class="code-label before">AVANT :</div>
+      <div class="code-before"><span class="code-red">sRepUpload = cpProjet.__sMarketeamRepRacine + cpProjet.__sRepUpload + "\"</span></div>
+      <div class="code-label after">APRES :</div>
+      <div class="code-after"><span class="code-comment">// Meme logique que pour GenererPsmdServeurEnveloppe :</span>
+<span class="code-green">sRepTravail = ... </span><span class="code-comment">// creation → Upload, modification → ROP bat</span></div>
+    </div>
+  </div>
+
+  <!-- 5 -->
+  <div class="change-card" onclick="this.classList.toggle('open')">
+    <div class="change-header">
+      <h3>5. GenereVignetteDocument() <span style="color:#64748b;font-weight:400;">— vignettes fond Ghostscript</span></h3>
+      <div><span class="change-tag medium">Ajout parametre</span> <span class="arrow">▶</span></div>
+    </div>
+    <div class="change-body">
+      <div class="code-label before">AVANT :</div>
+      <div class="code-before"><span class="code-red">sRepertoirePhysique = cpProjet.__sRepRacine + cpProjet.__sRepUpload + "\"</span>
+<span class="code-red">sCheminRelatif      = cpProjet.__sHttpMarketeam + cpProjet.__sRepUpload + "/"</span>
+<span class="code-comment">// Toujours Upload, en dur</span></div>
+      <div class="code-label after">APRES — option A (parametre) :</div>
+      <div class="code-after"><span class="code-green">procédure GenereVignetteDocument(pPdf, pVignettes, pEstFondPerdu, ... , pRepertoirePhysique = "", pCheminRelatif = "")</span>
+<br><span class="code-green">SI pRepertoirePhysique = "" ALORS</span>
+<span class="code-green">    pRepertoirePhysique = cpProjet.__sRepRacine + cpProjet.__sRepUpload + "\"</span>
+<span class="code-green">    pCheminRelatif      = cpProjet.__sHttpMarketeam + cpProjet.__sRepUpload + "/"</span>
+<span class="code-green">FIN</span></div>
+      <div class="note">En ajoutant des parametres <b>optionnels</b> avec valeur par defaut = Upload, le code existant (appels en creation) continue de fonctionner <b>sans modification</b>. Seuls les appels en contexte modification passent le chemin ROP.</div>
+    </div>
+  </div>
+
+  <!-- 6 -->
+  <div class="change-card" onclick="this.classList.toggle('open')">
+    <div class="change-header">
+      <h3>6. ChargeDocument() / ChargeTabStructLtrDocument() <span style="color:#64748b;font-weight:400;">— Repertoire au rechargement</span></h3>
+      <div><span class="change-tag add">A verifier</span> <span class="arrow">▶</span></div>
+    </div>
+    <div class="change-body">
+      <div class="note">
+        <b>Point cle</b> : au rechargement, <code>ChargeDocument</code> doit remplir :<br><br>
+        <code>stDocument.Repertoire = cpProjet.CheminFichier(IdLettre, __REP_DOCUMENT__, Vrai) + "\"</code><br>
+        <code>stDocument.NomFichierTemp = __DOC_LTR__ + IdLettreContenu + .pdf</code><br><br>
+        C'est probablement deja le cas (le code de <code>ChargeDocument</code> n'est pas dans ton extrait), mais c'est <b>la fondation</b> de toute la solution. A verifier en priorite.
+      </div>
+    </div>
+  </div>
+
+  <!-- 7 -->
+  <div class="change-card" onclick="this.classList.toggle('open')">
+    <div class="change-header">
+      <h3>7. DéplaceFichierUpload() <span style="color:#64748b;font-weight:400;">— mise a jour Repertoire apres deplacement</span></h3>
+      <div><span class="change-tag simple">+1 ligne</span> <span class="arrow">▶</span></div>
+    </div>
+    <div class="change-body">
+      <div class="code-label after">AJOUTER apres le deplacement reussi (dans le bloc "autre cas" PDF client) :</div>
+      <div class="code-after"><span class="code-comment">// Apres le deplacement PDF + BAT + fonds :</span>
+<span class="code-green">stDocument.Repertoire = sRepertoireDocument + "\"</span></div>
+      <div class="note">Aujourd'hui, <code>EstUploade</code> est mis a Faux mais <code>Repertoire</code> n'est pas mis a jour. Si le code continue apres la sauvegarde (pas de rechargement complet), <code>Repertoire</code> pointe encore vers Upload. Cette ligne corrige le tir.</div>
+    </div>
+  </div>
+
+  <!-- 8 -->
+  <div class="change-card" onclick="this.classList.toggle('open')">
+    <div class="change-header">
+      <h3>8. ChargeStructOperationLettre() <span style="color:#64748b;font-weight:400;">— fFichierExiste sur chemin relatif</span></h3>
+      <div><span class="change-tag simple">1 ligne</span> <span class="arrow">▶</span></div>
+    </div>
+    <div class="change-body">
+      <div class="code-label before">AVANT :</div>
+      <div class="code-before"><span class="code-red">si fFichierExiste(sFondCheminRelatif + __DOC_ENV_FOND__ + ...)</span>
+<span class="code-comment">// sFondCheminRelatif = chemin web/URL, pas un chemin disque !</span></div>
+      <div class="code-label after">APRES :</div>
+      <div class="code-after"><span class="code-green">si fFichierExiste(sFondCheminPhysique + __DOC_ENV_FOND__ + ...)</span>
+<span class="code-comment">// Comme pour le BAT 3 lignes plus bas</span></div>
+    </div>
+  </div>
+
+  <!-- 9 -->
+  <div class="change-card" onclick="this.classList.toggle('open')">
+    <div class="change-header">
+      <h3>9. ServeurTraiterMessageDesigner() <span style="color:#64748b;font-weight:400;">— regeneration BAT en modification</span></h3>
+      <div><span class="change-tag medium">Verification</span> <span class="arrow">▶</span></div>
+    </div>
+    <div class="change-body">
+      <div class="note">
+        Quand le Designer renvoie <code>validated</code>, cette procedure appelle <code>GenererPsmdServeurDocument</code> puis <code>GenererBatDocumentDepuisPsmd</code>.<br><br>
+        <b>Aucune modification directe ici</b> : les corrections des procedures en amont (points 1 a 4) corrigent automatiquement les chemins.<br><br>
+        Mais <b>verifier</b> que les vignettes fond (<code>tabImageFond</code>) pointent bien vers les bons fichiers apres rechargement. Si <code>AppliqueBlancTournant</code> est appele, il utilise <code>stVignette.CheminPhysique</code> qui doit etre correct.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ╔══════════════════════════╗ -->
+<!-- ║     RECAPITULATIF         ║ -->
+<!-- ╚══════════════════════════╝ -->
+<div class="panel" id="panel-recap">
+
+  <h2 class="section-title">En chiffres</h2>
+  <div class="recap-grid">
+    <div class="recap-item green"><div class="recap-number">6</div><div class="recap-label">Procedures a modifier</div></div>
+    <div class="recap-item blue"><div class="recap-number">1</div><div class="recap-label">Procedure a verifier<br>(ChargeDocument)</div></div>
+    <div class="recap-item orange"><div class="recap-number">~10</div><div class="recap-label">Lignes de code impactees</div></div>
+  </div>
+
+  <h2 class="section-title" style="margin-top:32px;">La regle d'or</h2>
+  <div class="principle-box" style="background:linear-gradient(135deg, #1e293b, #312e81);">
+    <p style="font-size:16px;text-align:center;">
+      <b>Ne jamais construire un chemin de repertoire "en dur".</b><br>
+      <span style="color:#f87171;">cpProjet.__sMarketeamRepRacine + cpProjet.__sRepUpload</span> → interdit<br><br>
+      <b>Toujours utiliser le repertoire qui vit dans la structure.</b><br>
+      <span style="color:#86efac;">stDocument.Repertoire</span> → la source de verite<br>
+    </p>
+  </div>
+
+  <h2 class="section-title" style="margin-top:32px;">Ordre d'implementation recommande</h2>
+  <div style="font-size:14px;line-height:2.2;padding:16px 0;">
+    <b style="color:#fcd34d;">Etape 1 —</b> Verifier que <code>ChargeDocument</code> remplit bien <code>Repertoire</code> avec le chemin ROP<br>
+    <b style="color:#fcd34d;">Etape 2 —</b> Modifier <code>GenererPsmdServeurDocument</code> + <code>GenererBatDocumentDepuisPsmd</code> (documents)<br>
+    <b style="color:#fcd34d;">Etape 3 —</b> Modifier <code>GenererPsmdServeurEnveloppe</code> + <code>GenererBatEnveloppeDepuisPsmd</code> (enveloppe)<br>
+    <b style="color:#fcd34d;">Etape 4 —</b> Adapter <code>GenereVignetteDocument</code> (parametre optionnel)<br>
+    <b style="color:#fcd34d;">Etape 5 —</b> Ajouter la mise a jour de <code>Repertoire</code> dans <code>DéplaceFichierUpload</code><br>
+    <b style="color:#fcd34d;">Etape 6 —</b> Corriger <code>fFichierExiste</code> relatif vs physique dans <code>ChargeStructOperationLettre</code><br>
+    <b style="color:#fcd34d;">Etape 7 —</b> Tester : creation, modification simple, cas mixte, re-upload
+  </div>
+
+</div>
+
+</main>
+
+<script>
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,247 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Valider — Page pgeLtrDocument (modèles)
+// Sauvegarde le modèle en BDD et déplace les fichiers vers les répertoires finaux
+//
+// Modifications par rapport à l'original :
+//   - Sauvegarde de JsonDesignerData dans ltr_modele
+//   - Déplacement des fichiers Designer (PSMD, images, BAT Designer)
+//     vers les sous-répertoires du modèle
+//   - Nettoyage du répertoire Temp
+// ─────────────────────────────────────────────────────────────────────────────
+procédure Valider()
+
+sRepPdfClient		est une chaîne
+sFicPdfClient		est une chaîne
+sRepJpgClient		est une chaîne
+sFicJpgClient		est une chaîne
+
+cpConnexion.gcnxBaseChronodirect.TransactionDébut()
+
+retour = Vrai
+
+si _pIdModele = 0 alors
+	ltr_modele.RAZ()
+
+	ltr_modele.IdClient							= Partage.__vcUser.IDClient
+	ltr_modele.IdContact							= Partage.__vcUser.IDContact
+	ltr_modele.UserCreation						= Partage.__vcUser.NomUser
+	ltr_modele.DateHeureCreation				= DateHeureSys()
+	
+	ltr_modele.Type								= __OPERATION_COURRIER__
+	ltr_modele.EstPolyvalent					= intPolyvalent
+	ltr_modele.IdSupport							= _stDocument.IdSupport
+	ltr_modele.EstFondPerdu						= _stDocument.EstFondPerdu
+	ltr_modele.EstRectoVerso					= _stDocument.EstRectoVerso
+	ltr_modele.EstPorteAdresse					= _stDocument.PeutEtrePorteAdresse
+	ltr_modele.NomFichierOrigine				= _stDocument.NomFichierOrigine
+	ltr_modele.Libelle							= SansEspace(saiLibellé)
+	ltr_modele.DateDebutUtilisation			= saiDateDebut
+	ltr_modele.DateFinUtilisation				= saiDateFin
+	ltr_modele.EstPartage						= intEstPartagé
+	ltr_modele.EstActif							= Vrai
+	ltr_modele.Designation.Null				= Vrai
+	ltr_modele.DateDebutUtilisation.Null	= Vrai
+	ltr_modele.DateFinUtilisation.Null		= pas DateValide(saiDateDebut)
+	ltr_modele.DateHeureModification.Null	= pas DateValide(saiDateFin)
+
+	// ─── Sauvegarde JsonDesignerData ─────────────────────────────────────
+	ltr_modele.EstPersonnalisable				= (_stDocument.JsonDesignerData <> "")
+	si _stDocument.JsonDesignerData <> "" alors
+		ltr_modele.JsonDesignerData				= _stDocument.JsonDesignerData
+	sinon
+		ltr_modele.JsonDesignerData.Null		= Vrai
+	fin
+
+	si pas ltr_modele.Ajoute() alors retour Faux
+
+	_pIdModele		= ltr_modele.IdModele
+
+	// ─── Répertoires cibles ──────────────────────────────────────────────
+	sRepPdfClient	= CheminClient(Partage.__vcUser.IDClient, __OPERATION_COURRIER__, __REP_MODELE__, Vrai)
+	sRepJpgClient	= CheminClient(Partage.__vcUser.IDClient, __OPERATION_COURRIER__, __REP_VIGNETTE__, Vrai)
+	sFicPdfClient	= __DOC_LTR_MODELE__ + ltr_modele.IdModele + __PDF__
+
+	// ─── Déplacement des vignettes (fond ou BAT) ────────────────────────
+	pour nPage = 1 _à_ _stDocument.NombrePage
+		sFicJpgClient = __DOC_LTR_MODELE__ + ltr_modele.IdModele + "p" + nPage + __JPG__
+		si fFichierExiste(sRepJpgClient + ["/"] + sFicJpgClient) alors
+			fSupprime(sRepJpgClient + ["/"] + sFicJpgClient)
+		fin
+		// Utiliser le BAT Designer s'il existe, sinon le fond
+		si _stDocument.tabImageBat..Occurrence >= nPage _et_ _stDocument.tabImageBat[nPage].CheminPhysique <> "" alors
+			si pas fDéplaceFichier(_stDocument.tabImageBat[nPage].CheminPhysique, sRepJpgClient + ["/"] + sFicJpgClient) alors retour Faux
+		sinonsi _stDocument.tabImageFond..Occurrence >= nPage alors
+			si pas fDéplaceFichier(cpProjet.__sRepRacine + ["/"] + cpProjet.__sRepUpload + ["/"] + __DOC_LTR_BAT__ + _stDocument.CodeTemp + "p" + nPage + __JPG__, sRepJpgClient + ["/"] + sFicJpgClient) alors retour Faux
+		fin
+	fin
+
+	// ─── Déplacement du PDF ──────────────────────────────────────────────
+	si fFichierExiste(sRepPdfClient + ["/"] + sFicPdfClient) alors
+		fSupprime(sRepPdfClient + ["/"] + sFicPdfClient)
+	fin
+	si pas fDéplaceFichier(_stDocument.Repertoire + ["/"] + _stDocument.NomFichierTemp, sRepPdfClient + ["/"] + sFicPdfClient) alors retour Faux
+
+	// ─── Déplacement des fichiers Designer ───────────────────────────────
+	si _stDocument.JsonDesignerData <> "" alors
+		DeplacerFichiersDesignerModele(ltr_modele.IdModele, Partage.__vcUser.IDClient, 0)
+	fin
+
+sinon
+	si pas ltr_modele.LitRecherchePremier(IdModele, _pIdModele) alors retour Faux
+
+	ltr_modele.Libelle						= SansEspace(saiLibellé)
+	ltr_modele.DateDebutUtilisation		= saiDateDebut
+	ltr_modele.DateFinUtilisation			= saiDateFin
+	ltr_modele.EstActif						= Vrai
+	ltr_modele.EstPolyvalent				= intPolyvalent
+	ltr_modele.EstPartage					= intEstPartagé
+	ltr_modele.Designation.Null			= Vrai
+	ltr_modele.DateDebutUtilisation.Null	= Vrai
+	ltr_modele.DateFinUtilisation.Null		= pas DateValide(saiDateDebut)
+	ltr_modele.DateHeureModification.Null	= pas DateValide(saiDateFin)
+
+	Trace("NomFichierOrigine", _stDocument.NomFichierOrigine)
+
+	si _stDocument.NomFichierOrigine = "" alors retour Faux
+
+	// Le document a été modifié
+	ltr_modele.NomFichierOrigine			= _stDocument.NomFichierOrigine
+
+	// ─── Sauvegarde JsonDesignerData ─────────────────────────────────────
+	ltr_modele.EstPersonnalisable			= (_stDocument.JsonDesignerData <> "")
+	si _stDocument.JsonDesignerData <> "" alors
+		ltr_modele.JsonDesignerData			= _stDocument.JsonDesignerData
+	sinon
+		ltr_modele.JsonDesignerData.Null	= Vrai
+	fin
+
+	si pas ltr_modele.Modifie() alors retour Faux
+
+	// ─── Répertoires cibles ──────────────────────────────────────────────
+	sRepPdfClient	= CheminClient(Partage.__vcUser.IDClient, __OPERATION_COURRIER__, __REP_MODELE__, Vrai)
+	sRepJpgClient	= CheminClient(Partage.__vcUser.IDClient, __OPERATION_COURRIER__, __REP_VIGNETTE__, Vrai)
+	sFicPdfClient	= __DOC_LTR_MODELE__ + ltr_modele.IdModele + __PDF__
+
+	// ─── Déplacement des vignettes ───────────────────────────────────────
+	pour nPage = 1 _à_ _stDocument.NombrePage
+		sFicJpgClient = __DOC_LTR_MODELE__ + ltr_modele.IdModele + "p" + nPage + __JPG__
+		si fFichierExiste(sRepJpgClient + ["/"] + sFicJpgClient) alors
+			fSupprime(sRepJpgClient + ["/"] + sFicJpgClient)
+		fin
+		si _stDocument.tabImageBat..Occurrence >= nPage _et_ _stDocument.tabImageBat[nPage].CheminPhysique <> "" alors
+			si pas fDéplaceFichier(_stDocument.tabImageBat[nPage].CheminPhysique, sRepJpgClient + ["/"] + sFicJpgClient) alors retour Faux
+		sinonsi _stDocument.tabImageFond..Occurrence >= nPage alors
+			si pas fDéplaceFichier(cpProjet.__sRepRacine + ["/"] + cpProjet.__sRepUpload + ["/"] + __DOC_LTR_BAT__ + _stDocument.CodeTemp + "p" + nPage + __JPG__, sRepJpgClient + ["/"] + sFicJpgClient) alors retour Faux
+		fin
+	fin
+
+	// ─── Déplacement du PDF ──────────────────────────────────────────────
+	si fFichierExiste(sRepPdfClient + ["/"] + sFicPdfClient) alors
+		fSupprime(sRepPdfClient + ["/"] + sFicPdfClient)
+	fin
+	si pas fDéplaceFichier(_stDocument.Repertoire + ["/"] + _stDocument.NomFichierTemp, sRepPdfClient + ["/"] + sFicPdfClient) alors retour Faux
+
+	// ─── Déplacement des fichiers Designer ───────────────────────────────
+	si _stDocument.JsonDesignerData <> "" alors
+		DeplacerFichiersDesignerModele(ltr_modele.IdModele, Partage.__vcUser.IDClient, 0)
+	fin
+
+fin
+
+
+si retour = Faux alors
+	cpConnexion.gcnxBaseChronodirect.TransactionAnnule()
+	renvoyer Faux
+sinon
+	cpConnexion.gcnxBaseChronodirect.TransactionFin()
+	renvoyer Vrai
+fin
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DeplacerFichiersDesignerModele — Procédure interne
+// Déplace les fichiers Designer (PSMD, images) vers les sous-répertoires du modèle
+// et nettoie le répertoire Temp
+// ─────────────────────────────────────────────────────────────────────────────
+	procédure interne DeplacerFichiersDesignerModele(pIdModele est un entier, pIdClient est un entier, pIdMarque est un entier)
+
+		sRepertoirePrintshop	est une chaîne = CheminRepertoireModele(pIdModele, pIdClient, pIdMarque, __REP_PRINTSHOP__)
+		sRepertoireSourceDoc	est une chaîne = _stDocument.RepertoireTravail
+
+		// ─── Déplacement du PSMD ─────────────────────────────────────────
+		si _stDocument.CheminPsmdTemp <> "" _et_ fFichierExiste(_stDocument.CheminPsmdTemp) alors
+			sNouveauCheminPsmd est une chaîne = sRepertoirePrintshop + __DOC_LTR_MODELE__ + "Psmd" + pIdModele + ".psmd"
+			si fFichierExiste(sNouveauCheminPsmd) alors
+				fSupprime(sNouveauCheminPsmd)
+			fin
+			si fDéplaceFichier(_stDocument.CheminPsmdTemp, sNouveauCheminPsmd) alors
+				_stDocument.CheminPsmdTemp	= sNouveauCheminPsmd
+				_stDocument.NomFichierPsmd	= __DOC_LTR_MODELE__ + "Psmd" + pIdModele + ".psmd"
+				Trace("DeplacerFichiersDesignerModele : PSMD déplacé --> " + sNouveauCheminPsmd)
+			sinon
+				Trace("DeplacerFichiersDesignerModele : échec déplacement PSMD", ErreurInfo(errComplet))
+			fin
+		fin
+
+		// ─── Déplacement des images Designer ─────────────────────────────
+		cpDesigner.DeplacerImagesDesignerJson(_stDocument.JsonDesignerData, sRepertoirePrintshop, sRepertoireSourceDoc)
+
+		// ─── Mise à jour des chemins dans le JSON ────────────────────────
+		// Les images pointent vers Temp ou Upload, il faut les mettre à jour vers Printshop
+		si _stDocument.JsonDesignerData <> "" alors
+			jDoc est un JSON = ChaîneVersUTF8(_stDocument.JsonDesignerData)
+
+			// Chercher les zonesImage dans data ou au premier niveau
+			jData est un JSON
+			si jDoc.data.zonesImage..Occurrence > 0 alors
+				jData = jDoc.data
+			sinonsi jDoc.zonesImage..Occurrence > 0 alors
+				jData = jDoc
+			fin
+
+			si jData.zonesImage..Occurrence > 0 alors
+				sRepPrintshopRel est une chaîne = CheminRepertoireModele(pIdModele, pIdClient, pIdMarque, __REP_PRINTSHOP__, Faux)
+				bModifie est un booléen = Faux
+
+				pour nInd = 1 _à_ jData.zonesImage..Occurrence
+					sNomFichier est une chaîne = jData.zonesImage[nInd].source.nomFichier
+					si sNomFichier <> "" alors
+						// Si pas encore dans Printshop, mettre à jour
+						si pas Contient(sNomFichier, __REP_PRINTSHOP__) alors
+							sNomSimple est une chaîne = fExtraitChemin(sNomFichier, fFichier + fExtension)
+							jData.zonesImage[nInd].source.nomFichier = sRepertoirePrintshop + sNomSimple
+
+							sUrlImage est une chaîne = sRepPrintshopRel + sNomSimple
+							sUrlImage = Remplace(sUrlImage, "\", "/")
+							jData.zonesImage[nInd].source.valeur = sUrlImage
+
+							bModifie = Vrai
+							Trace("DeplacerFichiersDesignerModele : image " + sNomSimple + " --> " + sUrlImage)
+						fin
+					fin
+				fin
+
+				si bModifie alors
+					// Remettre data dans le wrapper si c'était un wrapper
+					si jDoc.data.zonesImage..Occurrence > 0 alors
+						jDoc.data = jData
+						_stDocument.JsonDesignerData = JSONVersChaîne(jDoc)
+					sinon
+						_stDocument.JsonDesignerData = JSONVersChaîne(jData)
+					fin
+
+					// Mettre à jour en BDD
+					ltr_modele.JsonDesignerData = _stDocument.JsonDesignerData
+					ltr_modele.Modifie()
+				fin
+			fin
+		fin
+
+		// ─── Nettoyage du répertoire Temp ────────────────────────────────
+		sRepertoireTemp est une chaîne = CheminRepertoireModele(pIdModele, pIdClient, pIdMarque, __REP_TEMP__)
+		si fRepExiste(sRepertoireTemp) alors
+			fRepSupprime(sRepertoireTemp, frRécursif)
+			Trace("DeplacerFichiersDesignerModele : Temp supprimé --> " + sRepertoireTemp)
+		fin
+
+	fin

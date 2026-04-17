@@ -1,0 +1,32 @@
+procédure CheminMarque(pIdMarque, pTypeOperation, pTypeRepertoire, pEstRepertoirePhysique  = Vrai) //, pEstRepertoireLocal = vrai)
+sCheminMarque est une chaîne
+sRepMarque est une chaîne
+
+
+selon cpConnexion.__sConnexion
+	cas __CNX_DEV__	: sRepMarque = "MarquesDev"
+	cas __CNX_TEST__	: sRepMarque = "MarquesTest"
+	cas __CNX_PROD__	: sRepMarque = "Marques"
+fin
+
+
+
+si pas clt_marque.LitRecherchePremier(IdMarque, pIdMarque) alors
+	Info("Erreur Marque non trouvée !","pIdMarque = " + pIdMarque)
+	renvoyer ""
+fin
+
+sCheminMarque = sRepMarque + "\" + clt_marque.Repertoire  + "\" +((pTypeOperation = "") ? "" sinon RepertoireTypeOperation(pTypeOperation) + "\") + pTypeRepertoire + "\"
+
+//SI (pEstRepertoireLocal = Faux) _OU_ fRepCrée(ComplèteRep(__sRepRacine) + sCheminMarque) ALORS
+
+si pEstRepertoirePhysique alors
+	si fRepCrée(ComplèteRep(__sRepRacine) + sCheminMarque) alors
+		renvoyer ComplèteRep(__sRepRacine) + sCheminMarque
+	sinon
+		renvoyer ""
+	fin
+sinon
+	renvoyer __sHttpMarketeam +["/"]+ Remplace(sCheminMarque,"\","/")
+fin
+
