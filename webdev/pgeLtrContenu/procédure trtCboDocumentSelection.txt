@@ -1,0 +1,37 @@
+PROCÉDURE trtCboDocumentSelection()
+
+
+nIdModele, nIdDocumentClient sont des entiers
+
+SELON ExtraitChaîne(attCboSouceGlien,attCboSourceValeur)
+	CAS "F" // Fichier
+		znrLtrContenu[attNumDocument].btnDocumentPersonnaliser..Visible								= Faux
+		znrLtrContenu[attNumDocument].btnDocumentAperçu..Visible										= (__stOperation.stOperationLettre.tabStDocument[attNumDocument].EstDocumentEnAttente = Faux)
+		__stOperation.stOperationLettre.tabStDocument[attNumDocument].ModeImpressionSelectionne		= __MODE_AUTOMATIQUE__
+
+
+	CAS "M" // Modèle
+		nIdModele = ExtraitChaîne(attCboModeleGlien,attCboSelectionValeur)
+		znrLtrContenu[attNumDocument].btnDocumentImporter..Visible										= Faux
+		znrLtrContenu[attNumDocument].btnDocumentPersonnaliser..Visible								= (nIdModele > 0 _ET_ __stOperation.stOperationLettre.tabStDocument[attNumDocument].EstPersonnalisable)
+		znrLtrContenu[attNumDocument].btnDocumentAperçu..Visible										= (nIdModele > 0)
+		SI attNumDocument = 1 _ET_ __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai ALORS
+			__stOperation.stOperationLettre.tabStDocument[attNumDocument].ModeImpressionSelectionne		= __MODE_LASER__
+		SINON
+			__stOperation.stOperationLettre.tabStDocument[attNumDocument].ModeImpressionSelectionne		= __MODE_AUTOMATIQUE__
+		FIN
+		SI nIdModele > 0 ALORS
+			SelectionModèle(nIdModele,attNumDocument)
+		FIN
+
+	CAS "C" // Document client
+		nIdDocumentClient = ExtraitChaîne(attCboDocumentGlien,attCboSelectionValeur)
+		znrLtrContenu[attNumDocument].btnDocumentImporter..Visible										= (nIdDocumentClient = 0)
+		znrLtrContenu[attNumDocument].btnDocumentPersonnaliser..Visible								= Faux
+		znrLtrContenu[attNumDocument].btnDocumentAperçu..Visible										= (nIdDocumentClient > 0)
+		__stOperation.stOperationLettre.tabStDocument[attNumDocument].ModeImpressionSelectionne		= __MODE_FOURNI__
+		SelectionDocument(nIdDocumentClient)
+FIN
+
+TunnelCalculeTarif()
+TunnelAfficheInformationsBandeauDroit()

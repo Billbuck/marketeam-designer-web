@@ -1,0 +1,13 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//SelectionModèle (<pIdModele>)
+//
+// Paramètres :
+//	pIdModele : <indiquez ici le rôle de pIdPackage>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+PROCÉDURE SelectionModèle(pIdModele <utile>, pLigne <utile>)
