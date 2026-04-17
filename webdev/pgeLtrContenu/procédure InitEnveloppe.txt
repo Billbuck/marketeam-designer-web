@@ -1,0 +1,36 @@
+PROCÉDURE InitEnveloppe()
+
+InitTboEnveloppeClient()
+
+SI __stOperation.stOperationLettre.stEnveloppe.EstAdressageExpediteur _OU_ __stOperation.stOperationLettre.stEnveloppe.EstAdressageLogo _OU_ __stOperation.stOperationLettre.stEnveloppe.EstAdressagePromotion ALORS
+	intAdressageExpediteur.Etat	= Grisé
+	intAdressageLogo.Etat			= Grisé
+	intAdressagePromotion.Etat		= Grisé
+FIN
+
+intAdressageExpediteur			= __stOperation.stOperationLettre.stEnveloppe.EstAdressageExpediteur
+intAdressageLogo					= __stOperation.stOperationLettre.stEnveloppe.EstAdressageLogo
+intAdressagePromotion			= __stOperation.stOperationLettre.stEnveloppe.EstAdressagePromotion
+
+SI ltr_enveloppe.LitRecherchePremier(IdEnveloppe,__stOperation.stOperationLettre.IdEnveloppe) ALORS
+	imgEnveloppe..Image			= "ext/Enveloppes/ltr-" + ltr_enveloppe.FichierApercu + "-out" + __SVG__
+	libEnveloppeDesignation		= "Adressage enveloppe " + ltr_enveloppe.Libelle
+
+	// En modification, FichierApercu et EnveloppeFond ne sont pas dans ope_lettre
+	// → les renseigner depuis ltr_enveloppe (données statiques du type d'enveloppe)
+	SI __stOperation.stOperationLettre.stEnveloppe.FichierApercu = "" ALORS
+		__stOperation.stOperationLettre.stEnveloppe.FichierApercu = ltr_enveloppe.FichierApercu
+	FIN
+
+	SI __stOperation.stOperationLettre.stEnveloppe.EnveloppeFond.CheminPhysique	= "" ALORS
+		__stOperation.stOperationLettre.stEnveloppe.EnveloppeFond.CheminPhysique	= cpProjet.__sRepRacine + "Enveloppes\" + ltr_enveloppe.FichierApercu + __JPG__
+		__stOperation.stOperationLettre.stEnveloppe.EnveloppeFond.CheminRelatif		= cpProjet.__sHttpMarketeam + "Enveloppes/" + ltr_enveloppe.FichierApercu + __JPG__
+	FIN
+FIN
+
+// En modification avec JSON existant : on met à jour l'UI sans écraser le JSON
+SI __stOperation.stOperationLettre.stEnveloppe.JsonDesignerData <> "" ALORS
+	SelectionAdressage(Faux)
+SINON
+	SelectionAdressage(Vrai)
+FIN

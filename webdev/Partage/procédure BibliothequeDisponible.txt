@@ -1,0 +1,85 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] BibliothequeDisponible (<sTypeBibliothèque> est chaîne, <pTable>, <pChamp>, <pOption>, <pIdClient>)
+//
+// Paramètres :
+//	sTypeBibliothèque (chaîne ANSI) : <indiquez ici le rôle de sTypeBibliothèque>
+//	pTable : <indiquez ici le rôle de pTable>
+//	pChamp : <indiquez ici le rôle de pChamp>
+//	pOption : <indiquez ici le rôle de sOption>
+//	pIdClient : <indiquez ici le rôle de pIdClientFacturation>
+// Valeur de retour :
+// 	Type indéterminé : // 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+PROCÉDURE BibliothequeDisponible(sTypeBibliothèque est une chaîne, pTable, pChamp, pOption, pIdClient, pFiltreMarque)
+
+sTexteRequete		est une chaîne
+sdReqBibliothèque	est une Source de Données
+sWhere				est une chaîne
+
+sWhere = pOption
+
+FiltreBibliothèque(sTypeBibliothèque, pTable, sWhere, Vrai, pIdClient)
+
+SI sTypeBibliothèque = BibliothèqueMarque.Valeur _ET_ clt_client.EstChronodirect = Vrai ALORS
+	RENVOYER 1
+FIN
+
+SI sTypeBibliothèque = BibliothèqueMarketeam.Valeur _ET_ clt_client.EstChronodirect = Vrai ALORS
+	SI pFiltreMarque = Vrai ALORS
+		sTexteRequete =
+		[
+			SELECT
+			COUNT([%pTable%].[%pChamp%]) Total
+			FROM
+			[%pTable%]
+			WHERE
+			[%pTable%].IdMarque IS NULL 
+			AND [%pTable%].IdClient IS NULL
+		]
+
+		SI PAS sdReqBibliothèque.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) ALORS
+			<COMPILE SI TypeConfiguration <> Webservice>
+				Info("Erreur requête BibliothequeDisponible")
+			<FIN>
+			RENVOYER 0
+		FIN
+
+		SI sdReqBibliothèque.LitPremier(hSansRafraîchir) ALORS
+			RENVOYER sdReqBibliothèque.Total
+		FIN
+
+	SINON
+		RENVOYER 1
+	FIN
+FIN
+
+sTexteRequete =
+[
+	SELECT
+		COUNT([%pTable%].[%pChamp%]) Total
+	FROM
+		[%pTable%]
+	WHERE
+		1=1
+		[%sWhere%]
+]
+
+SI PAS sdReqBibliothèque.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) ALORS
+	<COMPILE SI TypeConfiguration <> Webservice>
+		Info("Erreur requête BibliothequeDisponible")
+	<FIN>
+	RENVOYER 0
+FIN
+
+SI sdReqBibliothèque.LitPremier(hSansRafraîchir) ALORS
+	RENVOYER sdReqBibliothèque.Total
+FIN
+
+RENVOYER 0
+
+FIN:
+sdReqBibliothèque.AnnuleDéclaration()

@@ -1,0 +1,28 @@
+PROCÉDURE InitCboBibliothèque(LOCAL pCombo est un Champ <utile>, LOCAL pTable est une chaîne <utile>, LOCAL pChamp est une chaîne <utile>, LOCAL pIdChamp est un entier <utile>, bFiltrePersonnelle est un booléen <utile>, bFiltreMarque est un booléen <utile>, LOCAL sOption est une chaîne <utile>, nIdClient est un entier <utile> = Partage.__vcUser.IDClient)
+
+<COMPILE SI TypeConfiguration <> Webservice>
+
+	pCombo.SupprimeTout()
+
+	SI bFiltrePersonnelle = Faux _OU_ BibliothequeDisponible(BibliothèquePersonnelle.Valeur, pTable, pChamp, sOption, nIdClient, bFiltreMarque) > 0 ALORS
+		pCombo.Ajoute("Personnelle" + gLien(BibliothèquePersonnelle.Valeur))
+	FIN
+
+	SI Partage.__vcUser.taaLimite[__LIMITE_NOMBRE_POINT_VENTE__].LimiteMax > 1 _ET_ BibliothequeDisponible(BibliothèquePartagée.Valeur, pTable, pChamp, sOption, nIdClient, bFiltreMarque) > 0 ALORS
+		pCombo.Ajoute("Partagée" + gLien(BibliothèquePartagée.Valeur))
+	FIN
+
+	SI BibliothequeDisponible(BibliothèqueMarque.Valeur, pTable, pChamp, sOption, nIdClient, bFiltreMarque) > 0 ALORS
+		BibliothèqueComboMarqueAjoute(pCombo, pTable, sOption, nIdClient, bFiltreMarque)
+	FIN
+
+	SI BibliothequeDisponible(BibliothèqueMarketeam.Valeur, pTable, pChamp, sOption, nIdClient, bFiltreMarque) > 0 ALORS
+		pCombo.Ajoute("Marketeam" + gLien(BibliothèqueMarketeam.Valeur))
+	FIN
+
+	SELON Vrai
+		CAS pIdChamp > 0 			: pCombo = BibliothèqueSélectionnée(pTable, pChamp, pIdChamp)  // On recherche la bibliothèque par rapport à la valeur du champ
+		CAS pCombo.Occurrence > 0	: pCombo.SelectPlus(1)
+		AUTRE CAS
+	FIN
+<FIN>

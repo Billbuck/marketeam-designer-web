@@ -1,0 +1,38 @@
+PROCÉDURE BibliothèqueSélectionnée(pTable, pChamp, pIdChamp)
+
+sTexteRequete		est une chaîne
+sdReqBibliothèque	est une Source de Données
+
+sTexteRequete =
+[
+	SELECT
+		IdMarque,
+		IdClient,
+		IdContact
+	FROM
+		[%pTable%]
+	WHERE
+		[%pChamp%] = [%pIdChamp%]
+]
+
+SI PAS sdReqBibliothèque.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) ALORS
+	<COMPILE SI TypeConfiguration <> Webservice>
+		Info("Erreur requête BibliothèqueSélectionnée")
+	<FIN>
+	RENVOYER 0
+FIN
+
+SI sdReqBibliothèque.LitPremier() ALORS
+	SELON Vrai
+		CAS sdReqBibliothèque.IdClient = Partage.__vcUser.IdClient				: RENVOYER BibliothèquePersonnelle..Valeur
+		CAS sdReqBibliothèque.IdClient = 0 _ET_ sdReqBibliothèque.IdMarque = 0	: RENVOYER BibliothèqueMarketeam..Valeur
+		CAS sdReqBibliothèque.IdMarque > 0 										: RENVOYER BibliothèqueMarque.Valeur +"|"+ sdReqBibliothèque.IdMarque
+		AUTRE CAS																: RENVOYER BibliothèquePartagée..Valeur
+	FIN
+SINON
+	RENVOYER BibliothèquePersonnelle..Valeur
+FIN
+
+
+FIN:
+sdReqBibliothèque.AnnuleDéclaration()

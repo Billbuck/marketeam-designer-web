@@ -1,0 +1,83 @@
+PROCÉDURE BibliothèqueComboMarqueAjoute(pCombo est un Champ <utile>, pTable, pOption, pIdClient, pFiltreMarque)
+
+sTexteRequete		est une chaîne
+sdReqMarque			est une Source de Données
+sWhere				est une chaîne
+
+SI clt_client.LitRecherchePremier(IdClient, pIdClient) ALORS
+	SI clt_client.EstChronodirect = Vrai ALORS
+
+		SI pFiltreMarque = Vrai ALORS
+			sWhere = pOption
+
+			FiltreBibliothèque(BibliothèqueMarque.Valeur, pTable, sWhere, Vrai, pIdClient)
+
+			sTexteRequete =
+			[
+				SELECT DISTINCT
+					clt_marque.IdMarque,
+					clt_marque.Marque
+				FROM
+					clt_marque
+					JOIN [%pTable%] ON [%pTable%].IdMarque = clt_marque.IdMarque
+				WHERE
+					1=1
+					[%sWhere%]
+				ORDER BY 
+					clt_marque.Marque
+			]
+		SINON
+			sTexteRequete =
+			[
+				SELECT
+					clt_marque.IdMarque,
+					clt_marque.Marque
+				FROM
+					clt_marque
+				ORDER BY 
+					clt_marque.Marque
+			]
+
+		FIN
+
+	SINON
+		sWhere = pOption
+
+		FiltreBibliothèque(BibliothèqueMarque.Valeur, pTable, sWhere, Vrai, pIdClient)
+
+		sTexteRequete =
+		[
+			SELECT DISTINCT
+				clt_marque.IdMarque,
+				clt_marque.Marque
+			FROM
+				clt_marque
+			JOIN clt_client_marque ON clt_client_marque.IdMarque = clt_marque.IdMarque AND clt_client_marque.IdClient = [%pIdClient%]
+			JOIN [%pTable%] ON [%pTable%].IdMarque = clt_client_marque.IdMarque
+			WHERE
+			[%pTable%].EstActif = 1 
+			AND [%pTable%].EstPartage = 1
+		]
+	FIN
+
+	SI PAS sdReqMarque.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) ALORS
+		<COMPILE SI TypeConfiguration <> Webservice>
+			Info("Erreur requête BibliothèqueComboMarqueAjoute")
+		<FIN>
+		RENVOYER 0
+	FIN
+
+	POUR TOUT sdReqMarque
+		<COMPILE SI TypeConfiguration <> Webservice>
+			pCombo.Ajoute(sdReqMarque.Marque + gLien(BibliothèqueMarque.Valeur + "|" + sdReqMarque.IdMarque))
+		<FIN>
+	FIN
+
+
+FIN
+
+
+FIN:
+sdReqMarque.AnnuleDéclaration()
+
+

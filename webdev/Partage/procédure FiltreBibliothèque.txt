@@ -1,0 +1,62 @@
+PROCÉDURE FiltreBibliothèque(sTypeBibliothèque est une chaîne, sTable est une chaîne,  sWhere est une chaîne, bEstActif est un booléen = 1, pIdClient = Partage.__vcUser.IDClient)
+
+
+
+SELON sTypeBibliothèque
+	// Votre bibliothèque
+	CAS BibliothèquePersonnelle..Valeur
+		sWhere += RC + [
+		AND [%sTable%].IdMarque IS NULL
+		AND [%sTable%].IdClient = [%Partage.__vcUser.IDClient%]
+		AND [%sTable%].EstActif = [%bEstActif%]
+		]
+
+	// Bibliothèque partagée
+	CAS BibliothèquePartagée..Valeur
+		SI pIdClient = Partage.__vcUser.IDClient ALORS
+			sWhere += RC + [
+				AND [%sTable%].IdMarque IS NULL
+				AND EXISTS(SELECT clt_mere.IdMere FROM clt_mere WHERE (clt_mere.IdClient = [%sTable%].IdClient AND clt_mere.IdMere = [%pIdClient%]) OR (clt_mere.IdMere = [%sTable%].IdClient AND clt_mere.IdClient = [%pIdClient%]))
+				AND [%sTable%].IdClient <> [%pIdClient%]
+				AND [%sTable%].EstPartage = 1
+				AND [%sTable%].EstActif = [%bEstActif%]
+					]
+
+		SINON
+			sWhere += RC + [
+				AND [%sTable%].IdMarque IS NULL
+				AND [%sTable%].IdClient = [%pIdClient%] 
+				AND [%sTable%].EstActif = [%bEstActif%] 
+				AND [%sTable%].EstPartage = 1
+					]
+		FIN
+
+	CAS BibliothèqueMarque.Valeur
+		SI Partage.__vcUser.EstChronodirect = Faux ALORS
+			sWhere += RC + [
+				AND EXISTS(SELECT clt_client_marque.IdMarque FROM clt_client_marque WHERE ([%sTable%].IdMarque = clt_client_marque.IdMarque AND clt_client_marque.IdClient = [%pIdClient%]))
+				AND [%sTable%].EstActif = [%bEstActif%] 
+				AND [%sTable%].EstPartage = 1
+			]
+		SINON
+			sWhere += RC + [
+				AND EXISTS(SELECT 1 FROM [%sTable%] WHERE [%sTable%].IdMarque IS NOT NULL)
+				AND [%sTable%].EstActif = [%bEstActif%] 
+				AND [%sTable%].EstPartage = 1
+			]
+
+		FIN
+
+	// Bibliothèque Marketeam
+	CAS BibliothèqueMarketeam..Valeur
+		sWhere += RC + [
+			AND [%sTable%].IdMarque IS NULL AND [%sTable%].IdClient IS NULL
+			AND [%sTable%].EstActif = [%bEstActif%]
+			]
+
+	AUTRES CAS
+		sWhere += RC + [
+			AND 1 = 0
+			]
+FIN
+

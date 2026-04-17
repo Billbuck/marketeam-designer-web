@@ -1,0 +1,11 @@
+PROCÉDURE cboIdPosition(pListeId,pId)
+
+nInd est un entier
+
+
+POUR TOUTE CHAÎNE sId DE pListeId
+	nInd++
+	SI sId = pId ALORS RENVOYER nInd
+FIN
+
+RENVOYER 0

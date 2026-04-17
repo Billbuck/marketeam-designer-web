@@ -1,0 +1,58 @@
+// ========================================================================
+// Déclarations globales de pgeLtrContenu (serveur)
+// Si Erreur : par programme    Quand Exception : par programme
+// ========================================================================
+PROCÉDURE pgeLtrContenu(_pIdOperation = 0)
+
+_nIdOperation = _pIdOperation
+
+// _stDocument              est une StructDocument
+_mPoidsEnveloppe            est un monétaire
+_sSourcePrintshop           est une chaîne
+_sValeurPrecedente          est une chaîne
+_nIndDesignerEnCours        est un entier          // 0 = Enveloppe, 1 = Document 1, etc
+
+
+_tabEnveloppeClient         est un tableau de structEnveloppeClient
+
+Tunnel.__taaPageVisitée[PageCourante] = Vrai
+
+gsJsonRecu                  est une chaîne  <synchronisé navigateur>
+gsJsonDesigner              est une chaîne  <synchronisé navigateur>
+gsJsonDocument              est une chaîne  <synchronisé navigateur>
+gsXmlPsmd                   est une chaîne  <synchronisé navigateur>
+
+libModeleTitrePage  = "Contenu de votre enveloppe"
+
+IFRM_Designer       = "/" + RépertoireWeb() + "/Designer/index.html"
+
+
+// ========================================================================
+// Fin d'initialisation de pgeLtrContenu (serveur)
+// ========================================================================
+
+sPsmdGeneratonJS est une chaîne = UTF8VersChaîne(fChargeTexte(fRepWeb() + "/Designer/psmd-generator.js"))
+
+MaPage..HTMLEntête += RC + "<script type=""text/javascript"">" + RC + sPsmdGeneratonJS + RC + "</script>"
+
+Init()
+
+
+// ========================================================================
+// [WL] Déclarations globales de pgeLtrContenu (navigateur)
+// ========================================================================
+// (vide)
+
+
+// ========================================================================
+// [WL] Chargement de pgeLtrContenu (onload navigateur)
+// ========================================================================
+gsJsonRecu          = gsJsonRecu
+gsJsonDocument      = gsJsonDocument
+gsXmlPsmd           = gsXmlPsmd
+
+// Activation écoute messages Designer
+EcouterMessagesIframe("gsJsonRecu", BTN_TraiterMessage.Alias)
+
+// Lance un timer toutes les 9 minutes
+Timer(NavKeepAlive, 9 min)

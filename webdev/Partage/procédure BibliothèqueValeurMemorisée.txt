@@ -1,0 +1,4 @@
+PROCÉDURE BibliothèqueValeurMemorisée(pCboBibliothèque est un Champ, pBibliotheque, pIdMarque)
+
+pBibliotheque	= ExtraitChaîne(pCboBibliothèque.ValeurMémorisée,1,"|")
+pIdMarque		= ExtraitChaîne(pCboBibliothèque.ValeurMémorisée,2,"|")
