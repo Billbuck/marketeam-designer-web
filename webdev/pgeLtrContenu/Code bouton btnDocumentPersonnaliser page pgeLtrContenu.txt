@@ -11,16 +11,55 @@ si __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesig
 	retour
 fin
 
-jsDesigner = __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesignerData
+// ─── Recomposer le wrapper du tunnel à chaque ouverture ─────────────────
+// Le wrapper apporte : auth, bases, constraints, polices, format, pages,
+// champsFusion, donneesApercu, et zones système (adresse destinataire si
+// document porte-adresse d'une enveloppe à fenêtre)
+// On y injecte ensuite la partie data du document (zones utilisateur ou modèle)
+jsWrapper = ChaîneVersUTF8(cpDesigner.ComposerJsonDesignerCreation(__stOperation, __tabEchantillonBaseLigne, __stOperation.TypeOperation, Faux, _nIndDesignerEnCours, -1, -1, -1, (_nIndDesignerEnCours = 1)))
 
-si jsDesigner.constraints..Existe alors
-	gsJsonDesigner = __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesignerData
-sinon
-	// Recréer le wrapper complet (auth, constraints, limites, polices...) avec les mêmes limites qu'en création
-	jsWrapper 		= cpDesigner.ComposerJsonDesignerCreation(__stOperation, __tabEchantillonBaseLigne, __stOperation.TypeOperation, Faux, _nIndDesignerEnCours, -1, -1, -1, (_nIndDesignerEnCours = 1))
-	jsWrapper.data 	= ChaîneVersJSON(__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesignerData)
-	gsJsonDesigner	= JSONVersChaîne(jsWrapper, psdJSONEncodageUTF8)
+si __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesignerData <> "" alors
+	jsDesigner = ChaîneVersUTF8(__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesignerData)
+
+	// Source des zones utilisateur : data.xxx si imbriqué, sinon racine
+	jsData est un JSON
+	si jsDesigner.data..Existe alors
+		jsData = jsDesigner.data
+	sinon
+		jsData = jsDesigner
+	fin
+
+	// ─── Fusion des zones utilisateur dans le wrapper ───────────────────
+	// Les zones système (sys-adresse-*) déjà présentes dans le wrapper
+	// sont préservées. On y ajoute les zones du modèle/utilisateur.
+	si jsData.zonesTexte..Occurrence > 0 alors
+		pour nInd = 1 _à_ jsData.zonesTexte..Occurrence
+			jsWrapper.data.zonesTexte[jsWrapper.data.zonesTexte..Occurrence + 1] = jsData.zonesTexte[nInd]
+		fin
+	fin
+	si jsData.zonesImage..Occurrence > 0 alors
+		pour nInd = 1 _à_ jsData.zonesImage..Occurrence
+			jsWrapper.data.zonesImage[jsWrapper.data.zonesImage..Occurrence + 1] = jsData.zonesImage[nInd]
+		fin
+	fin
+	si jsData.zonesCodeBarres..Occurrence > 0 alors
+		pour nInd = 1 _à_ jsData.zonesCodeBarres..Occurrence
+			jsWrapper.data.zonesCodeBarres[jsWrapper.data.zonesCodeBarres..Occurrence + 1] = jsData.zonesCodeBarres[nInd]
+		fin
+	fin
+	si jsData.zonesQR..Occurrence > 0 alors
+		pour nInd = 1 _à_ jsData.zonesQR..Occurrence
+			jsWrapper.data.zonesQR[jsWrapper.data.zonesQR..Occurrence + 1] = jsData.zonesQR[nInd]
+		fin
+	fin
+
+	// Récupérer les contraintes globales du modèle si présentes
+	si jsDesigner.constraints..Existe alors
+		jsWrapper.constraints = jsDesigner.constraints
+	fin
 fin
+
+gsJsonDesigner = JSONVersChaîne(jsWrapper)
 
 Code navigateur retour Ajax :
 

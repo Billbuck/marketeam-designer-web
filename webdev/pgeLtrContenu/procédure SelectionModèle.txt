@@ -1,13 +1,175 @@
-// Résumé : <indiquez ici ce que fait la procédure>
-// Syntaxe :
-//SelectionModèle (<pIdModele>)
+// ─────────────────────────────────────────────────────────────────────────────
+// SelectionModèle — Page pgeLtrContenu (tunnel)
+// Charge un modèle dans __stOperation.stOperationLettre.tabStDocument[pLigne]
+//
+// Flux :
+//   1. Lire ltr_modele + ltr_support
+//   2. Déterminer la bibliothèque source (Client / Marque / Marketeam)
+//   3. Initialiser les paramètres du document depuis le modèle
+//   4. Copier les fichiers du modèle vers Upload (PDF, fonds, vignettes)
+//   5. Analyser le PDF (PdfAnalyseDocument)
+//   6. Construire tabImageFond et tabImageBat
+//   7. Charger JsonDesignerData du modèle (data + constraints)
 //
 // Paramètres :
-//	pIdModele : <indiquez ici le rôle de pIdPackage>
-// Valeur de retour :
-// 	Aucune
-//
-// Exemple :
-// Indiquez ici un exemple d'utilisation.
-//
-PROCÉDURE SelectionModèle(pIdModele <utile>, pLigne <utile>)
+//   pIdModele : ID du modèle sélectionné
+//   pLigne    : Indice de la ligne dans tabStDocument
+// ─────────────────────────────────────────────────────────────────────────────
+PROCÉDURE SelectionModèle(pIdModele, pLigne)
+
+sRepModele			est une chaîne
+sRepFond			est une chaîne
+sRepVignette		est une chaîne
+sCodeTemp			est une chaîne
+sRepUpload			est une chaîne
+sFicPdfModele		est une chaîne
+sFicPdfTemp			est une chaîne
+sNomFond			est une chaîne
+sNomBat				est une chaîne
+sMessage			est une chaîne
+nPage				est un entier
+
+sRepUpload = cpProjet.__sRepRacine + cpProjet.__sRepUpload + ["\"]
+
+// ─── Lecture du modèle et du support ─────────────────────────────────────
+SI PAS ltr_modele.LitRecherchePremier(IdModele, pIdModele) ALORS
+	Trace("SelectionModèle : modèle introuvable IdModele=" + pIdModele)
+	RETOUR
+FIN
+
+SI PAS ltr_support.LitRecherchePremier(IdSupport, ltr_modele.IdSupport) ALORS
+	Trace("SelectionModèle : support introuvable IdSupport=" + ltr_modele.IdSupport)
+	RETOUR
+FIN
+
+// ─── Détermination de la bibliothèque source ─────────────────────────────
+SELON Vrai
+	CAS ltr_modele.IdMarque > 0
+		sRepModele		= cpProjet.CheminMarque(ltr_modele.IdMarque, __OPERATION_COURRIER__, __REP_MODELE__, Vrai)
+		sRepFond		= cpProjet.CheminMarque(ltr_modele.IdMarque, __OPERATION_COURRIER__, __REP_FOND__, Vrai)
+		sRepVignette	= cpProjet.CheminMarque(ltr_modele.IdMarque, __OPERATION_COURRIER__, __REP_VIGNETTE__, Vrai)
+	CAS ltr_modele.IdClient > 0
+		sRepModele		= cpProjet.CheminClient(ltr_modele.IdClient, __OPERATION_COURRIER__, __REP_MODELE__, Vrai)
+		sRepFond		= cpProjet.CheminClient(ltr_modele.IdClient, __OPERATION_COURRIER__, __REP_FOND__, Vrai)
+		sRepVignette	= cpProjet.CheminClient(ltr_modele.IdClient, __OPERATION_COURRIER__, __REP_VIGNETTE__, Vrai)
+	AUTRE CAS
+		sRepModele		= cpProjet.CheminMarketeam(__OPERATION_COURRIER__, __REP_MODELE__, Vrai)
+		sRepFond		= cpProjet.CheminMarketeam(__OPERATION_COURRIER__, __REP_FOND__, Vrai)
+		sRepVignette	= cpProjet.CheminMarketeam(__OPERATION_COURRIER__, __REP_VIGNETTE__, Vrai)
+FIN
+
+sFicPdfModele = sRepModele + __DOC_LTR_MODELE__ + pIdModele + __PDF__
+
+SI PAS fFichierExiste(sFicPdfModele) ALORS
+	Trace("SelectionModèle : PDF du modèle introuvable : " + sFicPdfModele)
+	RETOUR
+FIN
+
+// ─── Nettoyage des anciennes données ─────────────────────────────────────
+SupprimeTout(__stOperation.stOperationLettre.tabStDocument[pLigne].tabPagePDF)
+SupprimeTout(__stOperation.stOperationLettre.tabStDocument[pLigne].tabImageFond)
+SupprimeTout(__stOperation.stOperationLettre.tabStDocument[pLigne].tabImageBat)
+
+// Suppression de l'ancien PDF temporaire s'il existe
+SI __stOperation.stOperationLettre.tabStDocument[pLigne].NomFichierTemp <> "" ALORS
+	SI fFichierExiste(sRepUpload + __stOperation.stOperationLettre.tabStDocument[pLigne].NomFichierTemp) ALORS
+		fSupprime(sRepUpload + __stOperation.stOperationLettre.tabStDocument[pLigne].NomFichierTemp)
+	FIN
+FIN
+
+// ─── Initialisation des paramètres du document ───────────────────────────
+sCodeTemp = Partage.__vcUser.IDContact + "-" + DateHeureSys()
+
+__stOperation.stOperationLettre.tabStDocument[pLigne].EstUploadé					= Faux
+__stOperation.stOperationLettre.tabStDocument[pLigne].EstDocumentEnAttente		= Faux
+__stOperation.stOperationLettre.tabStDocument[pLigne].EstPdfClient					= Faux
+__stOperation.stOperationLettre.tabStDocument[pLigne].IdModele						= pIdModele
+__stOperation.stOperationLettre.tabStDocument[pLigne].IdDocumentClient				= 0
+__stOperation.stOperationLettre.tabStDocument[pLigne].IdSupport						= ltr_modele.IdSupport
+__stOperation.stOperationLettre.tabStDocument[pLigne].EstFondPerdu					= ltr_modele.EstFondPerdu
+__stOperation.stOperationLettre.tabStDocument[pLigne].EstRectoVerso					= ltr_modele.EstRectoVerso
+__stOperation.stOperationLettre.tabStDocument[pLigne].EstPersonnalisable			= ltr_modele.EstPersonnalisable
+__stOperation.stOperationLettre.tabStDocument[pLigne].PeutEtrePorteAdresse			= ltr_modele.EstPorteAdresse
+__stOperation.stOperationLettre.tabStDocument[pLigne].LargeurOuvert					= ltr_support.LargeurOuvert
+__stOperation.stOperationLettre.tabStDocument[pLigne].HauteurOuvert					= ltr_support.HauteurOuvert
+__stOperation.stOperationLettre.tabStDocument[pLigne].LargeurFerme					= ltr_support.LargeurFerme
+__stOperation.stOperationLettre.tabStDocument[pLigne].HauteurFerme					= ltr_support.HauteurFerme
+
+__stOperation.stOperationLettre.tabStDocument[pLigne].CodeTemp						= sCodeTemp
+__stOperation.stOperationLettre.tabStDocument[pLigne].NomFichierOrigine				= ltr_modele.NomFichierOrigine
+__stOperation.stOperationLettre.tabStDocument[pLigne].NomFichierTemp					= __DOC_LTR__ + sCodeTemp + __PDF__
+__stOperation.stOperationLettre.tabStDocument[pLigne].Repertoire						= sRepUpload
+__stOperation.stOperationLettre.tabStDocument[pLigne].RepertoireTravail				= sRepUpload
+
+// JsonDesignerData du modèle (data + constraints)
+SI PAS ltr_modele.JsonDesignerData.Null _ET_ ltr_modele.JsonDesignerData <> "" ALORS
+	__stOperation.stOperationLettre.tabStDocument[pLigne].JsonDesignerData		= ltr_modele.JsonDesignerData
+SINON
+	__stOperation.stOperationLettre.tabStDocument[pLigne].JsonDesignerData		= ""
+FIN
+
+// ─── Nombre de pages attendu ─────────────────────────────────────────────
+SI ltr_support.NbPageObligatoire = 0 ALORS
+	__stOperation.stOperationLettre.tabStDocument[pLigne].NombrePage = (ltr_modele.EstRectoVerso = Faux) ? 1 SINON 2
+SINON
+	__stOperation.stOperationLettre.tabStDocument[pLigne].NombrePage = ltr_support.NbPageObligatoire
+FIN
+
+// ─── 1. Copie du PDF source du modèle vers Upload ────────────────────────
+sFicPdfTemp = sRepUpload + __stOperation.stOperationLettre.tabStDocument[pLigne].NomFichierTemp
+SI fFichierExiste(sFicPdfTemp) ALORS fSupprime(sFicPdfTemp)
+SI PAS fCopieFichier(sFicPdfModele, sFicPdfTemp) ALORS
+	Trace("SelectionModèle : échec copie PDF " + sFicPdfModele + " --> " + sFicPdfTemp)
+	RETOUR
+FIN
+Trace("SelectionModèle : PDF copié --> " + sFicPdfTemp)
+
+// ─── 2. Analyse du PDF copié ─────────────────────────────────────────────
+sMessage = Partage.PdfAnalyseDocument(__stOperation.stOperationLettre.tabStDocument[pLigne])
+SI sMessage <> "" ALORS
+	Trace("SelectionModèle : erreur PdfAnalyseDocument : " + sMessage)
+	PopupAfficheMessage(sMessage, "Erreur", __OPERATION_COURRIER__, __TOAST_ANNULATION__)
+	RETOUR
+FIN
+
+// ─── 3. Copie des fonds JPG du modèle vers Upload (tabImageFond) ─────────
+POUR nPage = 1 _À_ __stOperation.stOperationLettre.tabStDocument[pLigne].NombrePage
+	sNomFond = __DOC_LTR_MODELE__ + "Fond" + pIdModele + "p" + nPage + __JPG__
+	sFicFondModele est une chaîne = sRepFond + sNomFond
+
+	SI fFichierExiste(sFicFondModele) ALORS
+		sFicFondTemp est une chaîne = sRepUpload + __DOC_LTR_FOND__ + sCodeTemp + "p" + nPage + __JPG__
+		SI fFichierExiste(sFicFondTemp) ALORS fSupprime(sFicFondTemp)
+		SI fCopieFichier(sFicFondModele, sFicFondTemp) ALORS
+			stImgFond est une structDocumentImage
+			stImgFond.CheminPhysique	= sFicFondTemp
+			stImgFond.CheminRelatif		= cpProjet.__sHttpMarketeam + cpProjet.__sRepUpload + ["/"] + __DOC_LTR_FOND__ + sCodeTemp + "p" + nPage + __JPG__
+			__stOperation.stOperationLettre.tabStDocument[pLigne].tabImageFond.Ajoute(stImgFond)
+			Trace("SelectionModèle : Fond p" + nPage + " copié --> " + sFicFondTemp)
+		FIN
+	SINON
+		Trace("SelectionModèle : ⚠ Fond modèle introuvable : " + sFicFondModele)
+	FIN
+FIN
+
+// ─── 4. Copie des vignettes BAT du modèle vers Upload (tabImageBat) ──────
+POUR nPage = 1 _À_ __stOperation.stOperationLettre.tabStDocument[pLigne].NombrePage
+	sNomBat = __DOC_LTR_MODELE__ + pIdModele + "p" + nPage + __JPG__
+	sFicBatModele est une chaîne = sRepVignette + sNomBat
+
+	SI fFichierExiste(sFicBatModele) ALORS
+		sFicBatTemp est une chaîne = sRepUpload + __DOC_LTR_BAT__ + sCodeTemp + "p" + nPage + __JPG__
+		SI fFichierExiste(sFicBatTemp) ALORS fSupprime(sFicBatTemp)
+		SI fCopieFichier(sFicBatModele, sFicBatTemp) ALORS
+			stImgBat est une structDocumentImage
+			stImgBat.CheminPhysique	= sFicBatTemp
+			stImgBat.CheminRelatif		= cpProjet.__sHttpMarketeam + cpProjet.__sRepUpload + ["/"] + __DOC_LTR_BAT__ + sCodeTemp + "p" + nPage + __JPG__
+			__stOperation.stOperationLettre.tabStDocument[pLigne].tabImageBat.Ajoute(stImgBat)
+			Trace("SelectionModèle : BAT p" + nPage + " copié --> " + sFicBatTemp)
+		FIN
+	SINON
+		Trace("SelectionModèle : ⚠ Vignette modèle introuvable : " + sFicBatModele)
+	FIN
+FIN
+
+Trace("SelectionModèle : modèle " + pIdModele + " chargé pour ligne " + pLigne + " (CodeTemp=" + sCodeTemp + ")")
