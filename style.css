@@ -3979,6 +3979,117 @@ body.preview-mode-active #actions-section .btn:not(#btn-delete-zone) {
     display: none !important;
 }
 
+/* Éléments visibles uniquement en mode Template (création/modification de modèle) */
+body:not(.template-mode) .template-only {
+    display: none !important;
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * SECTION OUTILS : masquée définitivement (export/import JSON, check, PSMD).
+ * Utilisée uniquement pour tests/développement — on neutralise même les
+ * affectations style.display="block" faites par updateSidebarSectionsVisibility.
+ * ─────────────────────────────────────────────────────────────────────────── */
+#tools-section {
+    display: none !important;
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * MODE APERÇU : masquer la section Validation pour éviter les clics
+ * accidentels sur "Annuler" qui déclenche la sortie du Designer.
+ * Le bouton "Fermer" dans la section Aperçu sert déjà à quitter l'aperçu.
+ * ─────────────────────────────────────────────────────────────────────────── */
+body.preview-mode-active #validation-section {
+    display: none !important;
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * MODE APERÇU : réorganiser l'ordre des sections dans la sidebar.
+ * .sidebar-content est en flex column, on utilise donc `order` pour
+ * placer Pages avant Aperçu (les autres restent à order:0 par défaut).
+ * Ordre final : zoom, history, ..., pages, preview (en bas du flux navigation).
+ * ─────────────────────────────────────────────────────────────────────────── */
+body.preview-mode-active #pages-section { order: 10; }
+body.preview-mode-active #preview-section { order: 11; }
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * AUTO-MASQUAGE des sections sidebar dont AUCUN bouton n'est visible.
+ *
+ * Règle :
+ *   - S'applique uniquement aux sections qui contiennent des .btn (donc
+ *     pas pages-section dont le btn-group est rempli dynamiquement).
+ *   - Si tous les .btn d'une section ont style="display:none" ou
+ *     style="display: none", la section entière est masquée (titre + boutons).
+ *
+ * Cela évite les titres de sections "orphelins" quand tous les boutons sont
+ * masqués (ex : section Actions sans aucun bouton d'ajout autorisé).
+ * Nécessite un navigateur supportant :has() (Chrome 105+, Firefox 121+, Safari 15.4+).
+ * ─────────────────────────────────────────────────────────────────────────── */
+.sidebar .section:has(.btn):not(:has(.btn:not([style*="display: none"]):not([style*="display:none"]))) {
+    display: none !important;
+}
+
+/* Modale "Limites du modèle" — formulaire 3 champs */
+.template-limits-modal-box {
+    min-width: 380px;
+    max-width: 480px;
+}
+.template-limits-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color, #e0e0e0);
+}
+.template-limits-modal-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+.template-limits-modal-icon {
+    color: var(--accent-color, #c70039);
+    font-size: 24px;
+}
+.template-limits-modal-body {
+    padding: 16px 20px;
+}
+.template-limits-intro {
+    margin: 0 0 16px 0;
+    font-size: 13px;
+    color: var(--text-secondary, #666);
+    line-height: 1.4;
+}
+.template-limits-row {
+    display: grid;
+    grid-template-columns: 1fr 90px;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.template-limits-row label {
+    font-size: 14px;
+    font-weight: 500;
+}
+.template-limits-row input {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--border-color, #d0d0d0);
+    border-radius: 4px;
+    font-size: 14px;
+    text-align: center;
+}
+.template-limits-row input:focus {
+    outline: none;
+    border-color: var(--accent-color, #c70039);
+}
+.template-limits-hint {
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: var(--bg-secondary, #f5f5f5);
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--text-secondary, #666);
+}
+
 /* Positionnement des 8 poignées */
 .area-handle-nw { top: -6px; left: -6px; cursor: nw-resize; }
 .area-handle-n  { top: -6px; left: 50%; transform: translateX(-50%); cursor: n-resize; }

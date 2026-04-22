@@ -1,0 +1,45 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// SupprimerDocument — Page pgeLtrDocument (modèle)
+// Supprime le contenu du document en cours pour permettre un nouvel upload.
+//
+// Création (_pIdModele = 0) : reset complet (VariableRAZ) + réactive les combos
+//   format. L'utilisateur peut tout changer avant d'uploader un nouveau PDF.
+//
+// Modification (_pIdModele > 0) : on garde IdModele, IdSupport et le format
+//   (recto/verso, fond perdu, dimensions) qui sont liés au modèle existant.
+//   Les combos format restent verrouillées.
+//
+// La confirmation utilisateur est gérée par l'appelant.
+// Les fichiers définitifs (Modeles\, Fonds\, Vignettes\) ne sont PAS touchés.
+// ─────────────────────────────────────────────────────────────────────────────
+procédure SupprimerDocument()
+
+// ─── Suppression des fichiers de travail dans Temp ──────────────────────
+si _stDocument.RepertoireTravail <> "" _et_ Contient(_stDocument.RepertoireTravail, "\Temp\") alors
+	si fRepExiste(_stDocument.RepertoireTravail) alors
+		fRepSupprime(_stDocument.RepertoireTravail, frRécursif)
+		Trace("SupprimerDocument Modèle : Temp supprimé --> " + _stDocument.RepertoireTravail)
+	fin
+fin
+
+znrAperçuUpload.SupprimeTout()
+
+_stDocument.tabImageFond.SupprimeTout()
+_stDocument.tabImageBat.SupprimeTout()
+_stDocument.tabPagePDF.SupprimeTout()
+_stDocument.EstUploadé						= Faux
+_stDocument.EstDocumentEnAttente			= Vrai
+_stDocument.EstPdfClient					= Faux
+_stDocument.EstPersonnaliseDesigner		= Faux
+_stDocument.CodeTemp							= ""
+_stDocument.NomFichierOrigine				= ""
+_stDocument.NomFichierTemp					= ""
+_stDocument.Repertoire						= ""
+_stDocument.RepertoireTravail				= ""
+_stDocument.JsonDesignerData				= ""
+_stDocument.CheminPsmdTemp					= ""
+_stDocument.CheminPsmdBat					= ""
+_stDocument.NomFichierPsmd					= ""
+
+renvoyer Vrai
+

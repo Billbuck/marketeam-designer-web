@@ -1,0 +1,126 @@
+// -----------------------------------------------------------------------------
+// GenereVignetteEnveloppe()
+// Rôle : Générer la pré-version BAT de l'enveloppe sélectionnée
+//        Lancée en tâche parallèle depuis SelectionEnveloppe()
+//        Workflow :
+//          1. Charger le JPG de fond statique depuis \Enveloppes\
+//          2. Composer le JSON Designer selon le mode (Standard / N&B / Couleur)
+//          3. Générer le PSMD via Node.js
+//          4. Générer le BAT JPG via API PSM PHP
+// -----------------------------------------------------------------------------
+procédure GenereVignetteEnveloppe()
+
+sJsonDesigner		est une chaîne
+sCheminJpgBat		est une chaîne
+stImageBat			est une structDocumentImage
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RAZ des données enveloppe précédentes
+// ─────────────────────────────────────────────────────────────────────────────
+VariableRAZ(__stOperation.stOperationLettre.stEnveloppe.EnveloppeFond)
+VariableRAZ(__stOperation.stOperationLettre.stEnveloppe.EnveloppeBAT)
+__stOperation.stOperationLettre.stEnveloppe.CheminPsmdEnveloppe			= ""
+__stOperation.stOperationLettre.stEnveloppe.NomFichierPsmdEnveloppe		= ""
+__stOperation.stOperationLettre.stEnveloppe.JsonDesignerData				= ""
+
+// Répertoire de travail dédié à l'opération en création
+// Upload\{__stOperation.CodeTemp}\ — créé à la demande
+sRepUpload est une chaîne = cpProjet.__sRepRacine + cpProjet.__sRepUpload + ["\"] + __stOperation.CodeTemp + ["\"]
+fRepCrée(sRepUpload)
+
+// L'enveloppe utilise ce sous-répertoire pour ses fichiers temporaires
+// (PSMD via GenererPsmdServeurEnveloppe + BAT JPG)
+__stOperation.stOperationLettre.stEnveloppe.RepertoireTravail = sRepUpload
+
+// Suppression BAT enveloppe précédent si existant (changement de type d'enveloppe)
+sCheminJpgBat = sRepUpload + __DOC_ENV_BAT__ + __stOperation.CodeTemp + __JPG__
+si fFichierExiste(sCheminJpgBat) alors
+	fSupprime(sCheminJpgBat)
+fin
+
+// Suppression PSMD enveloppe précédent et son manifeste
+sCheminPsmdAncien est une chaîne = sRepUpload + __DOC_ENV_PSMD__ + __stOperation.CodeTemp + ".psmd"
+si fFichierExiste(sCheminPsmdAncien) alors
+	fSupprime(sCheminPsmdAncien)
+fin
+si fFichierExiste(sCheminPsmdAncien + ".images.json") alors
+	fSupprime(sCheminPsmdAncien + ".images.json")
+fin
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 1 — Charger le JPG de fond statique
+// Préparé manuellement, stocké dans \Enveloppes\, même nom que FichierApercu
+// ─────────────────────────────────────────────────────────────────────────────
+__stOperation.stOperationLettre.stEnveloppe.EnveloppeFond.CheminPhysique		= cpProjet.__sRepRacine + "Enveloppes\" + __stOperation.stOperationLettre.stEnveloppe.FichierApercu + __JPG__
+__stOperation.stOperationLettre.stEnveloppe.EnveloppeFond.CheminRelatif			= cpProjet.__sHttpMarketeam + "Enveloppes/" + __stOperation.stOperationLettre.stEnveloppe.FichierApercu + __JPG__
+
+// Vérification que le JPG de fond existe
+si pas fFichierExiste(__stOperation.stOperationLettre.stEnveloppe.EnveloppeFond.CheminPhysique) alors
+	Trace("GenereVignetteEnveloppe : JPG fond introuvable : " + __stOperation.stOperationLettre.stEnveloppe.EnveloppeFond.CheminPhysique)
+	retour
+fin
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 2 — Composition JSON Designer
+// ─────────────────────────────────────────────────────────────────────────────
+sJsonDesigner = cpDesigner.ComposerJsonDesignerCreation(__stOperation, __tabEchantillonBaseLigne, __OPERATION_COURRIER__, Vrai, 0)
+
+si sJsonDesigner = "" alors
+	Trace("GenereVignetteEnveloppe : échec ComposerJsonDesignerCreation")
+	retour
+fin
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 4 — Génération PSMD via Node.js
+// ─────────────────────────────────────────────────────────────────────────────
+__stOperation.stOperationLettre.stEnveloppe.JsonDesignerData = sJsonDesigner
+
+si Partage.GenererPsmdServeurEnveloppe(__stOperation.stOperationLettre.stEnveloppe, __stOperation.CodeTemp) alors
+	Trace("GenereVignetteEnveloppe : PSMD = " +
+	__stOperation.stOperationLettre.stEnveloppe.CheminPsmdEnveloppe)
+sinon
+	Trace("GenereVignetteEnveloppe : échec GenererPsmdServeurEnveloppe")
+	retour
+fin
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 5 — Génération BAT JPG via API PSM PHP
+// Construction des données de fusion depuis l'échantillon (même logique que Document)
+// ─────────────────────────────────────────────────────────────────────────────
+tabPrintshopData	est un tableau de stPrintshopData
+stPrintshopData		est un stPrintshopData
+
+si __tabEchantillonBaseLigne..Occurrence > 0 alors
+	AjoutePrintshopDataEnv("Societe",    __tabEchantillonBaseLigne[1].Societe)
+	AjoutePrintshopDataEnv("Civilite",   __tabEchantillonBaseLigne[1].Civilite)
+	AjoutePrintshopDataEnv("Nom",        __tabEchantillonBaseLigne[1].Nom)
+	AjoutePrintshopDataEnv("Prenom",     __tabEchantillonBaseLigne[1].Prenom)
+	AjoutePrintshopDataEnv("Adresse1",   __tabEchantillonBaseLigne[1].Adresse1)
+	AjoutePrintshopDataEnv("Adresse2",   __tabEchantillonBaseLigne[1].Adresse2)
+	AjoutePrintshopDataEnv("Adresse3",   __tabEchantillonBaseLigne[1].Adresse3)
+	AjoutePrintshopDataEnv("Adresse4",   __tabEchantillonBaseLigne[1].Adresse4)
+	AjoutePrintshopDataEnv("CodePostal", __tabEchantillonBaseLigne[1].CodePostal)
+	AjoutePrintshopDataEnv("Ville",      __tabEchantillonBaseLigne[1].Ville)
+	AjoutePrintshopDataEnv("Sequentiel", "000123456")
+	AjoutePrintshopDataEnv("Timbre",     "Affranchissement")
+fin
+
+sCheminJpgBat	= sRepUpload + __DOC_ENV_BAT__ + __stOperation.CodeTemp + __JPG__
+stImageBat		= Partage.GenerationBatDepuisPsmd(__stOperation.stOperationLettre.stEnveloppe.CheminPsmdEnveloppe, sCheminJpgBat, 1, tabPrintshopData)
+
+
+si stImageBat.CheminPhysique <> "" alors
+	__stOperation.stOperationLettre.stEnveloppe.EnveloppeBAT = stImageBat
+	Trace("GenereVignetteEnveloppe : BAT = " + stImageBat.CheminPhysique)
+sinon
+	Trace("GenereVignetteEnveloppe : échec GenerationBatDepuisPsmd")
+fin
+
+// Nettoyage du manifeste images (supprime le .images.json même si vide)
+cpDesigner.TraiterManifestImagesDesigner(__stOperation.stOperationLettre.stEnveloppe.CheminPsmdEnveloppe, __stOperation.stOperationLettre.stEnveloppe.JsonDesignerData)
+
+	procédure interne AjoutePrintshopDataEnv(pChamp, pValeur)
+		stPrintshopData.Champ	= pChamp
+		stPrintshopData.Valeur	= pValeur
+		tabPrintshopData.Ajoute(stPrintshopData)
+	fin

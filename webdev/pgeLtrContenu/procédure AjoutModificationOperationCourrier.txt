@@ -293,28 +293,15 @@ sdReqLettreContenu.AnnuleDéclaration()
 
 				// =========================================================================
 				// CAS 2 : Modèle
-			// =========================================================================
+				// =========================================================================
+				// Le PDF et le fond du modèle sont copiés par DéplaceFichierUpload
+				// vers les répertoires de l'opération. Le JSON doit donc pointer
+				// vers le répertoire de l'opération (autonome du modèle source).
 			cas stDocument.IdModele > 0
 				si ltr_modele.LitRecherchePremier(IdModele, stDocument.IdModele) alors
-
-					selon Vrai
-						cas ltr_modele.IdMarque > 0
-							sRepertoireFinalDocument	= CheminMarque(ltr_modele.IdMarque, __OPERATION_COURRIER__, __REP_MODELE__)
-							sFondRepertoireRelatif		= cpProjet.CheminMarque(ltr_modele.IdMarque, __OPERATION_COURRIER__, __REP_FOND__, Faux)
-
-						cas ltr_modele.IdClient > 0
-							sRepertoireFinalDocument	= CheminClient(ltr_modele.IdClient, __OPERATION_COURRIER__, __REP_MODELE__)
-							sFondRepertoireRelatif		= cpProjet.CheminClient(ltr_modele.IdClient, __OPERATION_COURRIER__, __REP_FOND__, Faux)
-
-						autre cas
-							renvoyer Faux
-					fin
-
-					sNomFichierFinalPdf = __DOC_LTR_MODELE__ + stDocument.IdModele + __PDF__
-
-					si stDocument.EstDocumentEnAttente = Faux alors
-						sFondRepertoireRelatif = cpProjet.CheminFichier(pIdOperation, __REP_FOND__, Faux)
-					fin
+					sNomFichierFinalPdf			= __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__
+					sRepertoireFinalDocument	= CheminFichier(pIdOperation, __REP_DOCUMENT__)
+					sFondRepertoireRelatif		= cpProjet.CheminFichier(pIdOperation, __REP_FOND__, Faux)
 				sinon
 					renvoyer Faux
 				fin

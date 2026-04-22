@@ -1,0 +1,31 @@
+si PageAfficheDialogue(pgeOuiNon, ...
+	"Souhaitez-vous annuler votre personnalisation ?", __OPERATION_COURRIER__) = Vrai alors
+
+	si SupprimerDocument(attNumDocument) alors
+
+		// ─── Déverrouillage des combos ───────────────────────────────────────
+		znrLtrContenu[attNumDocument].cboSource.Etat						= Actif
+		znrLtrContenu[attNumDocument].cboBibliothèque.Etat				= Actif
+		znrLtrContenu[attNumDocument].cboSelection.Etat					= Actif
+
+		// ─── Bouton Supprimer masqué (plus de personnalisation) ──────────────
+		znrLtrContenu[attNumDocument].btnDocumentSupprimer..Visible		= Faux
+
+		// ─── Mise à jour UI selon le cas (Modèle ou PDF client) ──────────────
+		// Note : on n'appelle pas trtCboDocumentSelection car
+		//   - cas "F" : forcerait btnPersonnaliser=Faux (PDF toujours présent)
+		//   - cas "M" : ré-appellerait SelectionModèle (déjà fait par SupprimerDocument)
+		si __stOperation.stOperationLettre.tabStDocument[attNumDocument].IdModele > 0 alors
+			// Cas Modèle
+			znrLtrContenu[attNumDocument].btnDocumentImporter..Visible			= Faux
+			znrLtrContenu[attNumDocument].btnDocumentPersonnaliser..Visible	= (__stOperation.stOperationLettre.tabStDocument[attNumDocument].EstPersonnalisable = Vrai)
+			znrLtrContenu[attNumDocument].btnDocumentAperçu..Visible			= Vrai
+		sinon
+			// Cas PDF client (le PDF reste présent après suppression)
+			znrLtrContenu[attNumDocument].btnDocumentImporter..Visible			= Vrai
+			znrLtrContenu[attNumDocument].btnDocumentPersonnaliser..Visible	= Vrai
+			znrLtrContenu[attNumDocument].btnDocumentAperçu..Visible			= Vrai
+		fin
+
+	fin
+fin

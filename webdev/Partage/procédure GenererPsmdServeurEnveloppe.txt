@@ -1,0 +1,81 @@
+// =========================================================================
+// Partage.GenererPsmdServeurEnveloppe()
+// Rôle : Générer un fichier .psmd enveloppe à partir du JSON Designer
+//        en appelant psmd_cli.js via Node.js côté serveur.
+//        Identique à GenererPsmdServeur mais utilise les constantes enveloppe
+//        (__DOC_ENV_PSMD__) et stocke dans stEnveloppe.
+// Paramètres :
+//   stEnveloppe (StructEnveloppe) : structure enveloppe avec CodeTemp et JsonDesignerData
+// =========================================================================
+procédure GenererPsmdServeurEnveloppe(stEnveloppe est une StructEnveloppe, pCodeTemp est une chaîne)
+
+sNodeExe				est une chaîne	= INILit("NODE", "CHEMIN", "", NomFichierIni())
+sNodeCli				est une chaîne	= INILit("NODE", "CLI",    "", NomFichierIni())
+sRepTravail			est une chaîne
+sCheminJsonTemp	est une chaîne
+sCheminPsmd			est une chaîne
+sNomFichierPsmd	est une chaîne
+sCommande			est une chaîne
+
+// ─── Validation du JSON en entrée ────────────────────────────────────────
+si stEnveloppe.JsonDesignerData = "" alors
+	Trace("GenererPsmdServeurEnveloppe : JsonDesignerData vide")
+	renvoyer Faux
+fin
+
+// ─── Validation de la configuration INI ──────────────────────────────────
+si sNodeExe = "" _ou_ sNodeCli = "" alors
+	Trace("GenererPsmdServeurEnveloppe : section [NODE] manquante dans le fichier INI")
+	renvoyer Faux
+fin
+
+// ─── Construction des chemins — UTILISE LE REPERTOIRE DE L'ENVELOPPE ─────
+sRepTravail			= stEnveloppe.RepertoireTravail
+sNomFichierPsmd	= __DOC_ENV_PSMD__ + pCodeTemp + __PSMD__
+sCheminPsmd			= sRepTravail + sNomFichierPsmd
+sCheminJsonTemp	= sRepTravail + "psmd_json_env_" + pCodeTemp + __TMP__
+
+// ─── Écriture du JSON dans le fichier temporaire ─────────────────────────
+si pas fSauveTexte(sCheminJsonTemp, ChaîneVersUTF8(stEnveloppe.JsonDesignerData)) alors
+	Trace("GenererPsmdServeurEnveloppe : échec fSauveTexte : " + sCheminJsonTemp)
+	renvoyer Faux
+fin
+
+// ─── Suppression PSMD précédent si existant ───────────────────────────────
+si fFichierExiste(sCheminPsmd) alors
+	si pas fSupprime(sCheminPsmd) alors
+		renvoyer Faux
+	fin
+fin
+
+// ─── Construction et exécution de la commande ────────────────────────────
+sCommande = ChaîneConstruit(
+[
+	"%1" "%2" "%3" "%4"
+],
+sNodeExe, sNodeCli, sCheminJsonTemp, sCheminPsmd)
+
+Trace("GenererPsmdServeurEnveloppe : CMD = " + sCommande)
+
+si pas LanceAppli(sCommande, exeIconise, exeBloquant) alors
+	Trace("GenererPsmdServeurEnveloppe : LanceAppli échoué — " + ErreurInfo(errComplet))
+	renvoyer Faux
+fin
+
+// ─── Nettoyage fichier JSON temporaire ───────────────────────────────────
+si fFichierExiste(sCheminJsonTemp) alors
+	fSupprime(sCheminJsonTemp)
+fin
+
+// ─── Vérification présence du .psmd produit ──────────────────────────────
+si pas fFichierExiste(sCheminPsmd) alors
+	Trace("GenererPsmdServeurEnveloppe : .psmd introuvable après génération : " + sCheminPsmd)
+	renvoyer Faux
+fin
+
+// ─── Mise à jour de la structure enveloppe ───────────────────────────────
+stEnveloppe.CheminPsmdEnveloppe		= sCheminPsmd
+stEnveloppe.NomFichierPsmdEnveloppe	= sNomFichierPsmd
+
+Trace("GenererPsmdServeurEnveloppe : .psmd généré : " + sCheminPsmd)
+renvoyer Vrai

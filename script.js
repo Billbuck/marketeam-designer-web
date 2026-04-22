@@ -9213,6 +9213,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const mappedAutorisations = mapConstraintKeys(constraints.autorisations);
         const mappedLimites = mapConstraintKeys(constraints.limites);
         
+        // Conversion des VALEURS de limites WebDev → JS
+        //   WebDev : -1 = illimité, 0 = interdit, >0 = max
+        //   JS interne : null = illimité, 0 = interdit, >0 = max
+        if (mappedLimites) {
+            for (const key in mappedLimites) {
+                if (mappedLimites[key] === -1) {
+                    mappedLimites[key] = null;
+                }
+            }
+        }
+        
         // Fusionner avec les valeurs par défaut
         if (mappedAutorisations) {
             documentState.constraints.autorisations = {
@@ -9226,6 +9237,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 ...DEFAULT_CONSTRAINTS.limites,
                 ...mappedLimites
             };
+        }
+        
+        // ─── Override mode Template ──────────────────────────────────────
+        // En mode création/modification de modèle, le créateur DOIT pouvoir
+        // ajouter toutes les zones (textQuill, image, barcode, qr).
+        // Les LIMITES stockées concernent l'utilisateur FINAL du tunnel et ne
+        // s'appliquent pas au créateur (cf. isButtonVisible qui les bypass).
+        // On les conserve telles quelles pour pré-remplir la popup et exporter.
+        if (isTemplateMode()) {
+            documentState.constraints.autorisations = {
+                textQuill: true,
+                image: true,
+                qr: true,
+                barcode: true
+            };
+            // QR : toujours 1 max (règle métier, cohérent mode tunnel)
+            documentState.constraints.limites.qr = 1;
         }
         
         if (DEBUG) console.log('applyConstraints: Contraintes appliquées -',
@@ -10494,6 +10522,22 @@ document.addEventListener('DOMContentLoaded', () => {
             barcode: null
         }
     };
+
+    /**
+     * Snapshot du nombre de zones par type au moment du chargement du document.
+     * Sert de référence pour la sémantique "zones SUPPLÉMENTAIRES" des limites :
+     * en mode standard, l'utilisateur du tunnel peut ajouter au plus
+     *   limites[type] zones AU-DELÀ de celles déjà présentes dans le modèle.
+     *
+     * Convention valeurs limites JS :
+     *   - null      : illimité (équivalent WebDev -1)
+     *   - 0         : interdit (aucun ajout possible au-delà du modèle)
+     *   - >0        : nombre maximum d'ajouts au-delà du modèle
+     *
+     * Mis à jour dans loadFromWebDev() après chargement complet des zones.
+     * @type {{textQuill:number, image:number, qr:number, barcode:number}}
+     */
+    let initialZoneCounts = { textQuill: 0, image: 0, qr: 0, barcode: 0 };
 
     // --- STOCKAGE DES DONNÉES (Le "Cerveau") ---
     // Nouvelle structure hiérarchique multipage avec dimensions
@@ -12095,9 +12139,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 return (value === null || value === '') ? '' : String(value);
             }
             
-            // Champ non trouvé : garder le placeholder original
-            console.warn(`⚠️ Champ de fusion non trouvé: ${fieldName}`);
-            return match;
+            // Champ ABSENT de l'enregistrement (colonne non renseignée dans
+            // l'échantillon de données) : on traite comme une valeur vide.
+            // Ainsi, dans une zone d'adresse construite avec @ADRESSE1@..@ADRESSE4@,
+            // les lignes correspondant à des colonnes absentes deviennent vides
+            // et peuvent être supprimées par la logique "supprimerLignesVides".
+            return '';
         });
     }
 
@@ -13278,10 +13325,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 return false;
             }
             
-            // 2. Vérifier la limite (0 ou null = illimité)
+            // 2. En mode template, le créateur n'est pas limité par les
+            //    limites du tunnel (sauf QR : règle métier max 1).
+            //    Les limites stockées sont destinées à l'utilisateur final
+            //    et seront appliquées en mode standard uniquement.
+            if (isTemplateMode() && type !== 'qr') {
+                return true;
+            }
+            
+            // 3. Vérifier la limite
+            //    null = illimité, 0 = interdit, >0 = nb max selon le type
+            //
+            //    Sémantique selon le type :
+            //      - QR    : limite ABSOLUE (max N QR au total dans le document)
+            //                Règle métier : 1 seul QR dynamique autorisé.
+            //      - Autres: limite SUPPLÉMENTAIRE (max N ajouts au-delà du modèle)
             const limite = limites[type];
-            if (limite !== null && limite > 0 && counts[type] >= limite) {
-                return false; // Limite atteinte
+            
+            // 0 explicite = aucun ajout autorisé (interdit)
+            if (limite === 0) {
+                return false;
+            }
+            
+            if (limite > 0) {
+                if (type === 'qr') {
+                    // QR : limite absolue sur le total (pas "supplémentaire")
+                    if (counts[type] >= limite) {
+                        return false; // Quota QR total atteint
+                    }
+                } else {
+                    // Autres types : limite sur les zones AJOUTÉES au-delà du modèle
+                    const initial = (initialZoneCounts && initialZoneCounts[type]) || 0;
+                    const ajoutees = counts[type] - initial;
+                    if (ajoutees >= limite) {
+                        return false; // Limite supplémentaire atteinte
+                    }
+                }
             }
             
             return true;
@@ -22804,9 +22883,15 @@ document.addEventListener('DOMContentLoaded', () => {
             applyTheme(DEFAULT_THEME);
         }
         
-        // Appliquer le mode si fourni dans l'enveloppe
-        if (isLoadEnvelope && jsonData.mode) {
+        // Appliquer le mode si fourni — quel que soit le format du JSON
+        // (enveloppe {action,mode,data,...} OU modèle {action,mode,Document,...})
+        // ComposerJsonDesignerModele envoie mode="template" sans propriété "data"
+        // au niveau racine, il ne faut donc pas conditionner à isLoadEnvelope.
+        if (jsonData && jsonData.mode) {
             setDesignerMode(jsonData.mode);
+        } else {
+            // Aucun mode fourni → revenir au standard par défaut
+            setDesignerMode('standard');
         }
         
         // Stocker les credentials d'authentification si fournis dans l'enveloppe
@@ -23965,6 +24050,41 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- ÉTAPE 4 : Extraire les polices utilisées (avec variantes) ---
         output.policesUtilisees = extractPolicesUtilisees();
         
+        // --- ÉTAPE 4bis : Exporter les limites du modèle (mode template) ---
+        // Les limites définies par le créateur dans la popup "Limites du modèle"
+        // sont incluses dans constraints.limites pour être lues par WebDev
+        // (ServeurTraiterMessageDesignerModele) et stockées dans ltr_modele.
+        // Le mapping interne (textQuill) → WebDev (texte) est fait ici.
+        if (documentState.constraints && documentState.constraints.limites) {
+            const lim = documentState.constraints.limites;
+            output.constraints = {
+                limites: {
+                    texte:   (lim.textQuill === null || lim.textQuill === undefined) ? -1 : lim.textQuill,
+                    image:   (lim.image     === null || lim.image     === undefined) ? -1 : lim.image,
+                    qr:      (lim.qr        === null || lim.qr        === undefined) ? -1 : lim.qr,
+                    barcode: (lim.barcode   === null || lim.barcode   === undefined) ? -1 : lim.barcode
+                }
+            };
+        }
+        
+        // --- ÉTAPE 4ter : Exporter le snapshot des zones initiales du modèle ---
+        // Référence pour la sémantique "zones SUPPLÉMENTAIRES" des limites en mode tunnel.
+        //   - En mode template (création/modif modèle) : le snapshot DOIT être recalculé
+        //     car les zones actuelles SONT le nouveau modèle initial.
+        //   - En mode standard (tunnel) : on conserve le snapshot reçu au chargement
+        //     (qui représente les zones du modèle, pas les ajouts utilisateur).
+        const snapshot = isTemplateMode()
+            ? countZonesByType()      // Le créateur définit le nouveau modèle initial
+            : initialZoneCounts;      // Le tunnel conserve la référence du modèle
+        if (snapshot) {
+            output.initialZoneCounts = {
+                texte:   snapshot.textQuill || 0,
+                image:   snapshot.image     || 0,
+                qr:      snapshot.qr        || 0,
+                barcode: snapshot.barcode   || 0
+            };
+        }
+        
         // --- ÉTAPE 5 : Supprimer les valeurs null pour compatibilité WebDev ---
         return stripNullValues(output);
     }
@@ -24151,6 +24271,37 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (message.constraints) {
                             applyConstraints(message.constraints);
                         }
+                        
+                        // Snapshot des zones initiales du modèle (référence pour
+                        // la sémantique "zones SUPPLÉMENTAIRES" des limites).
+                        //
+                        //   - PRIORITÉ : utiliser le snapshot stocké dans le JSON
+                        //                (cas modification : représente les zones
+                        //                 du modèle, pas les ajouts utilisateur)
+                        //   - SINON    : recalculer depuis les zones actuelles
+                        //                (cas première ouverture sans snapshot)
+                        try {
+                            const snap = message.data && message.data.initialZoneCounts;
+                            if (snap && typeof snap === 'object') {
+                                // Mapping WebDev (texte) → interne (textQuill)
+                                initialZoneCounts = {
+                                    textQuill: snap.texte   || snap.textQuill || 0,
+                                    image:     snap.image   || 0,
+                                    qr:        snap.qr      || 0,
+                                    barcode:   snap.barcode || 0
+                                };
+                                console.log('📸 Snapshot zones initiales (récupéré du JSON):', initialZoneCounts);
+                            } else {
+                                initialZoneCounts = countZonesByType();
+                                console.log('📸 Snapshot zones initiales (calculé):', initialZoneCounts);
+                            }
+                        } catch (e) {
+                            console.warn('⚠️ Impossible de capturer initialZoneCounts:', e);
+                        }
+                        
+                        // Mettre à jour la visibilité des boutons après snapshot
+                        // (au cas où des limites seraient déjà atteintes par le modèle)
+                        updateZoneButtonsVisibility();
                         
                         sendMessageToParent({ action: 'loaded', success: true });
                     } catch (error) {
@@ -26269,7 +26420,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     return val || '';
                 }
             }
-            return match; // Garder @CHAMP@ si non trouvé
+            // Champ absent de l'échantillon : traiter comme valeur vide
+            // (cohérent avec replaceMergeFields)
+            return '';
         });
     }
 
@@ -26960,6 +27113,87 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Initialiser les listeners de l'onglet Contraintes
     initConstraintsTabListeners();
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MODALE "LIMITES DU MODÈLE" (mode template uniquement)
+    // ═══════════════════════════════════════════════════════════════════════
+    // Permet au créateur du modèle de définir le nombre maximum de zones
+    // supplémentaires que l'utilisateur du tunnel pourra ajouter.
+    // Stockage dans documentState.constraints.limites + export vers WebDev.
+    // ═══════════════════════════════════════════════════════════════════════
+    (function initTemplateLimitsModal() {
+        const btnTemplateLimits     = document.getElementById('btn-template-limits');
+        const modal                 = document.getElementById('template-limits-modal');
+        const inputTexte            = document.getElementById('template-limit-texte');
+        const inputImage            = document.getElementById('template-limit-image');
+        const inputBarcode          = document.getElementById('template-limit-barcode');
+        const btnCancel             = document.getElementById('template-limits-cancel-btn');
+        const btnConfirm            = document.getElementById('template-limits-confirm-btn');
+
+        if (!btnTemplateLimits || !modal) return;
+
+        // Convertit la valeur interne (null = illimité) en valeur input (-1 = illimité)
+        function limiteToInput(v) {
+            if (v === null || v === undefined) return -1;
+            return v;
+        }
+
+        // Convertit la valeur input (-1 = illimité, >=0 = valeur) en valeur interne
+        function inputToLimite(v) {
+            const n = parseInt(v, 10);
+            if (isNaN(n) || n < 0) return null; // -1 ou autre négatif/invalide → illimité
+            return n;
+        }
+
+        function openModal() {
+            const lim = (documentState.constraints && documentState.constraints.limites) || {};
+            inputTexte.value   = limiteToInput(lim.textQuill);
+            inputImage.value   = limiteToInput(lim.image);
+            inputBarcode.value = limiteToInput(lim.barcode);
+            modal.classList.remove('hidden');
+            setTimeout(() => inputTexte.focus(), 0);
+        }
+
+        function closeModal() {
+            modal.classList.add('hidden');
+        }
+
+        function applyLimits() {
+            if (!documentState.constraints) {
+                documentState.constraints = { ...DEFAULT_CONSTRAINTS };
+            }
+            documentState.constraints.limites = {
+                ...documentState.constraints.limites,
+                textQuill: inputToLimite(inputTexte.value),
+                image:     inputToLimite(inputImage.value),
+                barcode:   inputToLimite(inputBarcode.value)
+                // qr est géré séparément (forcé à 1 en mode template)
+            };
+            updateZoneButtonsVisibility();
+            saveToLocalStorage();
+            closeModal();
+        }
+
+        btnTemplateLimits.addEventListener('click', openModal);
+        btnCancel.addEventListener('click', closeModal);
+        btnConfirm.addEventListener('click', applyLimits);
+
+        // Fermeture par clic sur l'overlay (en dehors de la box)
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+
+        // Touches Escape (fermer) et Enter (valider)
+        modal.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                closeModal();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                applyLimits();
+            }
+        });
+    })();
 
 });
 

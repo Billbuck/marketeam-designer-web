@@ -201,15 +201,20 @@ selon stOperation.TypeOperation
 						fin
 
 					autre cas
-						// On déplace les documents PDF client
-						si fFichierExiste(cpProjet.__sRepRacine + cpProjet.__sRepUpload + ["\"] + __DOC_LTR__ + stDocument.CodeTemp + __PDF__) alors
-							si fFichierExiste(sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__) alors
-								si pas fSupprime(sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__) alors
+						// On déplace le PDF client depuis son répertoire courant (Upload\{CodeTempOp}\) vers Documents\
+						sCheminPdfSource est une chaîne = stDocument.Repertoire + stDocument.NomFichierTemp
+						sCheminPdfDest est une chaîne = sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__
+
+						si fFichierExiste(sCheminPdfSource) _et_ Minuscule(sCheminPdfSource) <> Minuscule(sCheminPdfDest) alors
+							si fFichierExiste(sCheminPdfDest) alors
+								si pas fSupprime(sCheminPdfDest) alors
 									Trace("Erreur supprimer Document", ErreurInfo(errComplet))
 								fin
 							fin
-							si pas fDéplaceFichier(cpProjet.__sRepRacine + cpProjet.__sRepUpload + ["\"] + __DOC_LTR__ + stDocument.CodeTemp + __PDF__, sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__) alors
-								Trace("Erreur déplace Document", ErreurInfo(errComplet))
+							si pas fDéplaceFichier(sCheminPdfSource, sCheminPdfDest) alors
+								Trace("Erreur déplace Document : " + sCheminPdfSource + " --> " + sCheminPdfDest, ErreurInfo(errComplet))
+							sinon
+								Trace("DéplaceFichierUpload : PDF client déplacé --> " + sCheminPdfDest)
 							fin
 						fin
 
@@ -294,6 +299,15 @@ selon stOperation.TypeOperation
 		si fRepExiste(sRepertoireTemp) alors
 			fRepSupprime(sRepertoireTemp, frRécursif)
 			Trace("DéplaceFichierUpload [V4] : répertoire Temp supprimé --> " + sRepertoireTemp)
+		fin
+
+		// [V5] Nettoyage du sous-répertoire Upload\{CodeTempOp}\ de l'opération
+		si stOperation.CodeTemp <> "" alors
+			sRepUploadOp est une chaîne = cpProjet.__sRepRacine + cpProjet.__sRepUpload + ["\"] + stOperation.CodeTemp + ["\"]
+			si fRepExiste(sRepUploadOp) alors
+				fRepSupprime(sRepUploadOp, frRécursif)
+				Trace("DéplaceFichierUpload [V5] : répertoire Upload supprimé --> " + sRepUploadOp)
+			fin
 		fin
 
 

@@ -7,7 +7,7 @@
     <!-- Quill.js (CDN) - DOIT être chargé AVANT les autres scripts -->
     <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
     <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=26">
+    <link rel="stylesheet" href="style.css?v=36">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <!-- Bibliothèque bwip-js pour génération de codes-barres -->
     <script src="https://cdn.jsdelivr.net/npm/bwip-js@4.5.1/dist/bwip-js-min.min.js"></script>
@@ -118,18 +118,6 @@
                     
                     <!-- Mode aperçu : Indicateur + Navigation (masqué par défaut) -->
                     <div id="preview-controls" class="preview-controls-container" style="display: none;">
-                        <!-- Bouton Fermer -->
-                        <div class="btn-group btn-group-single" style="margin-bottom: 8px;">
-                            <button class="btn btn-preview-close" id="btn-close-preview" data-tooltip="Fermer l'aperçu (Échap)">
-                                <span class="btn-icon">
-                                    <svg viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                                    </svg>
-                                </span>
-                                <span class="btn-label">Fermer</span>
-                            </button>
-                        </div>
-                        
                         <!-- Indicateur d'enregistrement -->
                         <div class="preview-record-indicator">
                             <span class="preview-record-label">Enregistrement</span>
@@ -137,7 +125,7 @@
                         </div>
                         
                         <!-- Boutons navigation sur 2 colonnes -->
-                        <div class="btn-group grid-2">
+                        <div class="btn-group grid-2" style="margin-bottom: 8px;">
                             <button class="btn" id="btn-prev-record" data-tooltip="Précédent (←)">
                                 <span class="btn-icon">
                                     <svg viewBox="0 0 24 24" fill="currentColor">
@@ -153,6 +141,18 @@
                                     </svg>
                                 </span>
                                 <span class="btn-label">Suivant</span>
+                            </button>
+                        </div>
+                        
+                        <!-- Bouton Fermer (déplacé en bas pour éviter clic accidentel) -->
+                        <div class="btn-group btn-group-single">
+                            <button class="btn btn-preview-close" id="btn-close-preview" data-tooltip="Fermer l'aperçu (Échap)">
+                                <span class="btn-icon">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                                    </svg>
+                                </span>
+                                <span class="btn-label">Fermer</span>
                             </button>
                         </div>
                     </div>
@@ -218,6 +218,21 @@
                                 </svg>
                             </span>
                             <span class="btn-label">QR Code interactif</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ==================== SECTION MODÈLE (mode template uniquement) ==================== -->
+                <div class="section template-only" id="template-section" data-visible-for="always">
+                    <div class="section-title">Modèle</div>
+                    <div class="btn-group btn-group-single">
+                        <button class="btn" id="btn-template-limits" data-tooltip="Limites du modèle">
+                            <span class="btn-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
+                                </svg>
+                            </span>
+                            <span class="btn-label">Limites du modèle</span>
                         </button>
                     </div>
                 </div>
@@ -455,7 +470,8 @@
                 </div>
 
                 <!-- ==================== SECTION OUTILS ==================== -->
-                <div class="section" id="tools-section" data-visible-for="no-selection">
+                <!-- Section masquée : ne sert qu'aux tests/développement (export/import JSON, check, PSMD) -->
+                <div class="section" id="tools-section" data-visible-for="no-selection" style="display: none;">
                     <div class="section-title">Outils</div>
                     <div class="btn-group grid-2">
                         <button class="btn" id="btn-export-json" data-tooltip="Exporter le document">
@@ -655,6 +671,40 @@
             <div class="modal-buttons">
                 <button id="collection-name-cancel-btn" class="btn-secondary" type="button">Annuler</button>
                 <button id="collection-name-confirm-btn" class="btn-primary-theme" type="button" disabled>Confirmer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale "Limites du modèle" (mode template) -->
+    <div id="template-limits-modal" class="modal-overlay hidden">
+        <div class="modal-box template-limits-modal-box">
+            <div class="template-limits-modal-header">
+                <span class="material-icons template-limits-modal-icon">tune</span>
+                <h3>Limites du modèle</h3>
+            </div>
+            <div class="template-limits-modal-body">
+                <p class="template-limits-intro">
+                    Définissez le nombre maximum de zones supplémentaires que l'utilisateur du tunnel pourra ajouter à ce modèle.
+                </p>
+                <div class="template-limits-row">
+                    <label for="template-limit-texte">Zones de texte</label>
+                    <input type="number" id="template-limit-texte" min="-1" step="1" value="-1">
+                </div>
+                <div class="template-limits-row">
+                    <label for="template-limit-image">Zones image</label>
+                    <input type="number" id="template-limit-image" min="-1" step="1" value="-1">
+                </div>
+                <div class="template-limits-row">
+                    <label for="template-limit-barcode">Zones code-barres</label>
+                    <input type="number" id="template-limit-barcode" min="-1" step="1" value="-1">
+                </div>
+                <div class="template-limits-hint">
+                    -1 = illimité &nbsp;·&nbsp; 0 = interdit &nbsp;·&nbsp; valeur positive = nombre maximum
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button id="template-limits-cancel-btn" class="btn-secondary" type="button">Annuler</button>
+                <button id="template-limits-confirm-btn" class="btn-primary-theme" type="button">Confirmer</button>
             </div>
         </div>
     </div>
@@ -3330,6 +3380,6 @@
 
     <!-- Générateur PSMD autonome (doit être chargé avant script.js) -->
     <script src="psmd-generator.js"></script>
-    <script src="script.js?v=26"></script>
+    <script src="script.js?v=36"></script>
 </body>
 </html>

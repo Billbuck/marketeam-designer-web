@@ -1,0 +1,185 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// SupprimerDocument — Page pgeLtrContenu (tunnel)
+// Annule la personnalisation Designer du document.
+//
+// Cas modèle (IdModele > 0) :
+//   - Recharge le modèle dans son état initial via SelectionModèle
+//   - L'utilisateur retrouve le modèle "neuf"
+//
+// Cas PDF uploadé (EstPdfClient = Vrai) :
+//   - Garde le PDF + les fonds générés
+//   - Supprime uniquement les artefacts de personnalisation :
+//     * BAT JPG personnalisés (issus de PrintShop)
+//     * PSMD + manifestes JSON
+//     * JsonDesignerData
+//
+// Dans les deux cas : EstPersonnaliseDesigner repasse à Faux.
+// La gestion UI (combos, boutons, couleur) est gérée par l'appelant.
+//
+// Paramètre :
+//   pLigne : indice du document dans tabStDocument (= attNumDocument)
+// Retour : Vrai si suppression effectuée
+// ─────────────────────────────────────────────────────────────────────────────
+procédure SupprimerDocument(pLigne)
+
+stDoc est une structDocument
+stDoc = __stOperation.stOperationLettre.tabStDocument[pLigne]
+
+sRepUpload est une chaîne = cpProjet.__sRepRacine + cpProjet.__sRepUpload + ["\"] + __stOperation.CodeTemp + ["\"]
+
+// ═══════════════════════════════════════════════════════════════════════
+// CAS 1 : Modèle → recharger l'état initial
+// ═══════════════════════════════════════════════════════════════════════
+si stDoc.IdModele > 0 alors
+	nIdModele est un entier = stDoc.IdModele
+	// SelectionModèle appelle NettoyerFichiersDocumentTemp en interne,
+	// puis recopie les fichiers du modèle et recharge JsonDesignerData
+	SelectionModèle(nIdModele, pLigne)
+	__stOperation.stOperationLettre.tabStDocument[pLigne].EstPersonnaliseDesigner	= Faux
+	Trace("SupprimerDocument : modèle " + nIdModele + " rechargé pour ligne " + pLigne)
+	renvoyer Vrai
+fin
+
+// ═══════════════════════════════════════════════════════════════════════
+// CAS 2 : PDF client → garder le PDF + fonds, supprimer la personnalisation
+// ═══════════════════════════════════════════════════════════════════════
+si stDoc.CodeTemp <> "" alors
+	sCodeTempDoc est une chaîne = stDoc.CodeTemp
+
+	// BAT personnalisés (issus de PrintShop) — on les supprime
+	pour I = 1 _à_ Max(stDoc.NombrePage, 1)
+		si fFichierExiste(sRepUpload + __DOC_LTR_BAT__ + sCodeTempDoc + "p" + I + __JPG__) alors
+			fSupprime(sRepUpload + __DOC_LTR_BAT__ + sCodeTempDoc + "p" + I + __JPG__)
+		fin
+	fin
+
+	// PSMD temporaires
+	si fFichierExiste(sRepUpload + __DOC_LTR_PSMD__ + sCodeTempDoc + ".psmd") alors
+		fSupprime(sRepUpload + __DOC_LTR_PSMD__ + sCodeTempDoc + ".psmd")
+	fin
+	si fFichierExiste(sRepUpload + "psmd_bat_" + sCodeTempDoc + ".psmd") alors
+		fSupprime(sRepUpload + "psmd_bat_" + sCodeTempDoc + ".psmd")
+	fin
+
+	// Manifestes d'images générés par psmd_cli.js
+	si fFichierExiste(sRepUpload + __DOC_LTR_PSMD__ + sCodeTempDoc + ".psmd.images.json") alors
+		fSupprime(sRepUpload + __DOC_LTR_PSMD__ + sCodeTempDoc + ".psmd.images.json")
+	fin
+	si fFichierExiste(sRepUpload + "psmd_bat_" + sCodeTempDoc + ".psmd.images.json") alors
+		fSupprime(sRepUpload + "psmd_bat_" + sCodeTempDoc + ".psmd.images.json")
+	fin
+
+	Trace("SupprimerDocument : personnalisation supprimée pour PDF (CodeTemp=" + sCodeTempDoc + ")")
+fin
+
+// Vide tabImageBat (issu du Designer) — on garde tabImageFond et tabPagePDF
+__stOperation.stOperationLettre.tabStDocument[pLigne].tabImageBat.SupprimeTout()
+
+// ─────────────────────────────────────────────────────────────────────
+// Régénération du BAT à vide pour PDF client à partir du PDF source.
+// On reproduit la logique d'UploadFichier :
+//
+//   • Document porte-adresse (EstEnveloppeFenetre = Vrai) :
+//       Régénère JsonDesignerData minimal (zones système d'adresse si
+//       pLigne=1) + PSMD + BAT via PrintShop.
+//       Conserve JsonDesignerData (état initial non personnalisé).
+//
+//   • Document NON porte-adresse (EstEnveloppeFenetre = Faux) :
+//       - Cas fond perdu  : BAT trimmed via Ghostscript (TrimBox)
+//       - Cas non bleed   : copie tabImageFond (blanc tournant déjà appliqué)
+//       JsonDesignerData reste vide.
+// ─────────────────────────────────────────────────────────────────────
+bRegenereJson	est un booléen	= Faux
+
+si stDoc.CodeTemp <> "" _et_ __stOperation.stOperationLettre.tabStDocument[pLigne].tabImageFond..Occurrence > 0 alors
+	sCodeTempBat		est une chaîne	= stDoc.CodeTemp
+	sRepUploadRel	est une chaîne	= cpProjet.__sHttpMarketeam + cpProjet.__sRepUpload + ["/"] + __stOperation.CodeTemp + ["/"]
+	sNomBat			est une chaîne	= __DOC_LTR_BAT__ + sCodeTempBat
+
+	si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
+
+		// ─── Document concerné par enveloppe à fenêtre ────────────────────
+		// pLigne = 1 → premier doc = avec zones système adresse destinataire
+		// pLigne > 1 → autres docs = sans zones adresse mais Designer/PSMD activés
+		nAvecAdresse	est un entier = (pLigne = 1) ? 1 sinon 0
+
+		__stOperation.stOperationLettre.tabStDocument[pLigne].JsonDesignerData = cpDesigner.ComposerJsonDesignerCreation(...
+			__stOperation, __tabEchantillonBaseLigne, __OPERATION_COURRIER__, Faux, pLigne, -1, -1, -1, nAvecAdresse)
+
+		si __stOperation.stOperationLettre.tabStDocument[pLigne].JsonDesignerData <> "" alors
+			si Partage.GenererPsmdServeurDocument(__stOperation.stOperationLettre.tabStDocument[pLigne]) alors
+				GenererBatDocumentDepuisPsmd(__stOperation.stOperationLettre.tabStDocument[pLigne])
+				// Blanc tournant si non fond perdu (cohérent UploadFichier)
+				si __stOperation.stOperationLettre.tabStDocument[pLigne].tabPagePDF..Occurrence > 0 _et_ ...
+					__stOperation.stOperationLettre.tabStDocument[pLigne].tabPagePDF[1].EstFondPerdu = Faux alors
+					pour tout stVignette de __stOperation.stOperationLettre.tabStDocument[pLigne].tabImageBat
+						Partage.AppliqueBlancTournant(stVignette.CheminPhysique, ...
+							__stOperation.stOperationLettre.tabStDocument[pLigne].LargeurOuvert, ...
+							__stOperation.stOperationLettre.tabStDocument[pLigne].HauteurOuvert)
+					fin
+				fin
+				bRegenereJson = Vrai
+				Trace("SupprimerDocument : BAT régénéré via Designer/PSMD (porte-adresse=" + nAvecAdresse + ") pour CodeTemp=" + sCodeTempBat)
+			sinon
+				Trace("SupprimerDocument : échec GenererPsmdServeurDocument pour CodeTemp=" + sCodeTempBat)
+			fin
+		fin
+
+	sinon
+
+		// ─── Document NON porte-adresse ───────────────────────────────────
+		si __stOperation.stOperationLettre.tabStDocument[pLigne].tabPagePDF..Occurrence > 0 _et_ ...
+			__stOperation.stOperationLettre.tabStDocument[pLigne].tabPagePDF[1].EstFondPerdu alors
+
+			// Cas fond perdu : BAT trimmed (TrimBox, sans bleed) via Ghostscript
+			__stOperation.stOperationLettre.tabStDocument[pLigne].tabImageBat = Partage.GenereVignetteDocument(...
+				__stOperation.stOperationLettre.tabStDocument[pLigne].NomFichierTemp, ...
+				sNomBat, ...
+				Faux, ...
+				__stOperation.stOperationLettre.tabStDocument[pLigne].tabPagePDF[1].LargeurInterne, ...
+				__stOperation.stOperationLettre.tabStDocument[pLigne].tabPagePDF[1].HauteurInterne, ...
+				__stOperation.stOperationLettre.tabStDocument[pLigne].Repertoire, ...
+				sRepUploadRel)
+			Trace("SupprimerDocument : BAT trimmed régénéré (fond perdu) pour CodeTemp=" + sCodeTempBat)
+
+		sinon
+
+			// Cas non fond perdu : copie fond (blanc tournant déjà appliqué) → BAT
+			pour nNumPage = 1 _à_ __stOperation.stOperationLettre.tabStDocument[pLigne].tabImageFond..Occurrence
+				sFicFond	est une chaîne = __stOperation.stOperationLettre.tabStDocument[pLigne].tabImageFond[nNumPage].CheminPhysique
+				sFicBat	est une chaîne = sRepUpload + sNomBat + "p" + nNumPage + __JPG__
+				si fFichierExiste(sFicFond) alors
+					si fFichierExiste(sFicBat) alors fSupprime(sFicBat)
+					si fCopieFichier(sFicFond, sFicBat) alors
+						stImgBat est une structDocumentImage
+						stImgBat.CheminPhysique	= sFicBat
+						stImgBat.CheminRelatif		= sRepUploadRel + sNomBat + "p" + nNumPage + __JPG__
+						__stOperation.stOperationLettre.tabStDocument[pLigne].tabImageBat.Ajoute(stImgBat)
+						Trace("SupprimerDocument : BAT à vide (non fond perdu) p" + nNumPage + " --> " + sFicBat)
+					sinon
+						Trace("SupprimerDocument : échec copie fond->BAT p" + nNumPage, ErreurInfo(errComplet))
+					fin
+				fin
+			fin
+
+		fin
+
+	fin
+fin
+
+// ─── Reset des données de personnalisation ───────────────────────────────
+__stOperation.stOperationLettre.tabStDocument[pLigne].EstPersonnaliseDesigner	= Faux
+// Si JSON régénéré (cas porte-adresse), on le conserve comme état initial.
+// Sinon on le vide pour signifier "aucune donnée Designer".
+si bRegenereJson = Faux alors
+	__stOperation.stOperationLettre.tabStDocument[pLigne].JsonDesignerData	= ""
+fin
+__stOperation.stOperationLettre.tabStDocument[pLigne].CheminPsmdBat				= ""
+__stOperation.stOperationLettre.tabStDocument[pLigne].NomFichierPsmd				= ""
+// Note : CheminPsmdTemp est mis à jour par GenererPsmdServeurDocument, on le garde
+// pour le cas porte-adresse (pour AjoutModificationOperationCourrier ensuite)
+si bRegenereJson = Faux alors
+	__stOperation.stOperationLettre.tabStDocument[pLigne].CheminPsmdTemp		= ""
+fin
+
+renvoyer Vrai

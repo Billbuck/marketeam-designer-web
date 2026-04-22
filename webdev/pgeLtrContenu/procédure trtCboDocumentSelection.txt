@@ -1,37 +1,56 @@
-PROCÉDURE trtCboDocumentSelection()
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//trtCboDocumentSelection (<pNumDocument>)
+//
+// Paramètres :
+// 	pNumDocument : <indiquez ici le rôle de pNumDocument>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure trtCboDocumentSelection(pNumDocument)
 
 
 nIdModele, nIdDocumentClient sont des entiers
 
-SELON ExtraitChaîne(attCboSouceGlien,attCboSourceValeur)
-	CAS "F" // Fichier
-		znrLtrContenu[attNumDocument].btnDocumentPersonnaliser..Visible								= Faux
-		znrLtrContenu[attNumDocument].btnDocumentAperçu..Visible										= (__stOperation.stOperationLettre.tabStDocument[attNumDocument].EstDocumentEnAttente = Faux)
-		__stOperation.stOperationLettre.tabStDocument[attNumDocument].ModeImpressionSelectionne		= __MODE_AUTOMATIQUE__
+sCboSourceGlien		est une chaîne
+nCboSourceValeur		est un entier
+
+sCboSourceGlien 	= znrLtrContenu[pNumDocument].attCboSouceGlien
+nCboSourceValeur	= znrLtrContenu[pNumDocument].attCboSourceValeur
+
+selon ExtraitChaîne(sCboSourceGlien, nCboSourceValeur)
+	cas "F" // Fichier
+		znrLtrContenu[pNumDocument].btnDocumentImporter..Visible 									= pas __stOperation.stOperationLettre.tabStDocument[attNumDocument].EstPersonnaliseDesigner
+		znrLtrContenu[pNumDocument].btnDocumentPersonnaliser..Visible								= Faux
+		znrLtrContenu[pNumDocument].btnDocumentAperçu..Visible										= (__stOperation.stOperationLettre.tabStDocument[pNumDocument].EstDocumentEnAttente = Faux)
+		__stOperation.stOperationLettre.tabStDocument[pNumDocument].ModeImpressionSelectionne		= __MODE_AUTOMATIQUE__
 
 
-	CAS "M" // Modèle
+	cas "M" // Modèle
 		nIdModele = ExtraitChaîne(attCboModeleGlien,attCboSelectionValeur)
-		znrLtrContenu[attNumDocument].btnDocumentImporter..Visible										= Faux
-		znrLtrContenu[attNumDocument].btnDocumentPersonnaliser..Visible								= (nIdModele > 0 _ET_ __stOperation.stOperationLettre.tabStDocument[attNumDocument].EstPersonnalisable)
-		znrLtrContenu[attNumDocument].btnDocumentAperçu..Visible										= (nIdModele > 0)
-		SI attNumDocument = 1 _ET_ __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai ALORS
-			__stOperation.stOperationLettre.tabStDocument[attNumDocument].ModeImpressionSelectionne		= __MODE_LASER__
-		SINON
-			__stOperation.stOperationLettre.tabStDocument[attNumDocument].ModeImpressionSelectionne		= __MODE_AUTOMATIQUE__
-		FIN
-		SI nIdModele > 0 ALORS
-			SelectionModèle(nIdModele,attNumDocument)
-		FIN
+		znrLtrContenu[pNumDocument].btnDocumentImporter..Visible 									= Faux
+		znrLtrContenu[pNumDocument].btnDocumentPersonnaliser..Visible								= (nIdModele > 0)
+		znrLtrContenu[pNumDocument].btnDocumentAperçu..Visible										= (nIdModele > 0)
+		si pNumDocument = 1 _et_ __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
+			__stOperation.stOperationLettre.tabStDocument[pNumDocument].ModeImpressionSelectionne		= __MODE_LASER__
+		sinon
+			__stOperation.stOperationLettre.tabStDocument[pNumDocument].ModeImpressionSelectionne		= __MODE_AUTOMATIQUE__
+		fin
+		si nIdModele > 0 alors
+			SelectionModèle(nIdModele,pNumDocument)
+		fin
 
-	CAS "C" // Document client
+	cas "C" // Document client
 		nIdDocumentClient = ExtraitChaîne(attCboDocumentGlien,attCboSelectionValeur)
-		znrLtrContenu[attNumDocument].btnDocumentImporter..Visible										= (nIdDocumentClient = 0)
-		znrLtrContenu[attNumDocument].btnDocumentPersonnaliser..Visible								= Faux
-		znrLtrContenu[attNumDocument].btnDocumentAperçu..Visible										= (nIdDocumentClient > 0)
-		__stOperation.stOperationLettre.tabStDocument[attNumDocument].ModeImpressionSelectionne		= __MODE_FOURNI__
+		znrLtrContenu[pNumDocument].btnDocumentImporter..Visible 									= Faux
+		znrLtrContenu[pNumDocument].btnDocumentPersonnaliser..Visible								= Faux
+		znrLtrContenu[pNumDocument].btnDocumentAperçu..Visible										= (nIdDocumentClient > 0)
+		__stOperation.stOperationLettre.tabStDocument[pNumDocument].ModeImpressionSelectionne		= __MODE_FOURNI__
 		SelectionDocument(nIdDocumentClient)
-FIN
+fin
 
 TunnelCalculeTarif()
 TunnelAfficheInformationsBandeauDroit()

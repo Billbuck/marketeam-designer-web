@@ -1,0 +1,75 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// NettoyerFichiersDocumentTemp — Page pgeLtrContenu (tunnel)
+// Supprime tous les fichiers temporaires d'un document dans Upload\{CodeTempOp}\
+// et vide les tableaux d'images / PDF en mémoire.
+//
+// À appeler à CHAQUE changement de source/bibliothèque/sélection ou avant
+// upload d'un nouveau PDF / sélection d'un nouveau modèle.
+//
+// Garantit qu'il ne reste aucun fichier orphelin du document concerné.
+// Les fichiers des AUTRES documents de l'opération restent intacts.
+//
+// Paramètre :
+//   pLigne : indice du document dans tabStDocument (= attNumDocument)
+// ─────────────────────────────────────────────────────────────────────────────
+procédure NettoyerFichiersDocumentTemp(pLigne)
+
+stDoc est une structDocument
+stDoc = __stOperation.stOperationLettre.tabStDocument[pLigne]
+
+sRepUpload est une chaîne = cpProjet.__sRepRacine + cpProjet.__sRepUpload + ["\"] + __stOperation.CodeTemp + ["\"]
+
+// ─── Suppression des fichiers du document concerné ──────────────────────
+si stDoc.CodeTemp <> "" alors
+
+	sCodeTempDoc est une chaîne = stDoc.CodeTemp
+
+	// PDF temporaire
+	si stDoc.NomFichierTemp <> "" _et_ fFichierExiste(sRepUpload + stDoc.NomFichierTemp) alors
+		fSupprime(sRepUpload + stDoc.NomFichierTemp)
+	fin
+
+	// Fonds, BAT JPG par page
+	pour I = 1 _à_ Max(stDoc.NombrePage, 1)
+		si fFichierExiste(sRepUpload + __DOC_LTR_BAT__ + sCodeTempDoc + "p" + I + __JPG__) alors
+			fSupprime(sRepUpload + __DOC_LTR_BAT__ + sCodeTempDoc + "p" + I + __JPG__)
+		fin
+		si fFichierExiste(sRepUpload + __DOC_LTR_FOND__ + sCodeTempDoc + "p" + I + __JPG__) alors
+			fSupprime(sRepUpload + __DOC_LTR_FOND__ + sCodeTempDoc + "p" + I + __JPG__)
+		fin
+	fin
+
+	// PSMD temporaires
+	si fFichierExiste(sRepUpload + __DOC_LTR_PSMD__ + sCodeTempDoc + ".psmd") alors
+		fSupprime(sRepUpload + __DOC_LTR_PSMD__ + sCodeTempDoc + ".psmd")
+	fin
+	si fFichierExiste(sRepUpload + "psmd_bat_" + sCodeTempDoc + ".psmd") alors
+		fSupprime(sRepUpload + "psmd_bat_" + sCodeTempDoc + ".psmd")
+	fin
+
+	// Manifestes d'images générés par psmd_cli.js
+	si fFichierExiste(sRepUpload + __DOC_LTR_PSMD__ + sCodeTempDoc + ".psmd.images.json") alors
+		fSupprime(sRepUpload + __DOC_LTR_PSMD__ + sCodeTempDoc + ".psmd.images.json")
+	fin
+	si fFichierExiste(sRepUpload + "psmd_bat_" + sCodeTempDoc + ".psmd.images.json") alors
+		fSupprime(sRepUpload + "psmd_bat_" + sCodeTempDoc + ".psmd.images.json")
+	fin
+
+	Trace("NettoyerFichiersDocumentTemp : ligne " + pLigne + " (CodeTemp=" + sCodeTempDoc + ") nettoyée")
+fin
+
+// ─── Vidage des tableaux en mémoire ─────────────────────────────────────
+SupprimeTout(__stOperation.stOperationLettre.tabStDocument[pLigne].tabPagePDF)
+SupprimeTout(__stOperation.stOperationLettre.tabStDocument[pLigne].tabImageFond)
+SupprimeTout(__stOperation.stOperationLettre.tabStDocument[pLigne].tabImageBat)
+
+// ─── Reset des références fichiers du document ──────────────────────────
+__stOperation.stOperationLettre.tabStDocument[pLigne].CodeTemp					= ""
+__stOperation.stOperationLettre.tabStDocument[pLigne].NomFichierTemp			= ""
+__stOperation.stOperationLettre.tabStDocument[pLigne].NomFichierOrigine		= ""
+__stOperation.stOperationLettre.tabStDocument[pLigne].Repertoire					= ""
+__stOperation.stOperationLettre.tabStDocument[pLigne].RepertoireTravail		= ""
+__stOperation.stOperationLettre.tabStDocument[pLigne].JsonDesignerData			= ""
+__stOperation.stOperationLettre.tabStDocument[pLigne].CheminPsmdTemp			= ""
+__stOperation.stOperationLettre.tabStDocument[pLigne].CheminPsmdBat			= ""
+__stOperation.stOperationLettre.tabStDocument[pLigne].NomFichierPsmd			= ""

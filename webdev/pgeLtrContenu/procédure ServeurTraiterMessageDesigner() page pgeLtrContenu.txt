@@ -62,6 +62,18 @@ selon vMessage.action
 							fin
 						fin
 					fin
+
+					// ─── Marquer le document comme personnalisé ─────────────
+					__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].EstPersonnaliseDesigner	= Vrai
+					__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].DateHeureDesigner			= DateHeureSys()
+
+					// ─── Verrouiller les combos + afficher btnSupprimer + cacher btnImporter ─
+					znrLtrContenu[_nIndDesignerEnCours].cboSource.Etat					= Inactif
+					znrLtrContenu[_nIndDesignerEnCours].cboBibliothèque.Etat			= Inactif
+					znrLtrContenu[_nIndDesignerEnCours].cboSelection.Etat				= Inactif
+					znrLtrContenu[_nIndDesignerEnCours].btnDocumentSupprimer..Visible	= Vrai
+					znrLtrContenu[_nIndDesignerEnCours].btnDocumentImporter..Visible	= Faux
+
 					sinon
 						PopupAfficheMessage(
 						"Erreur lors de la génération du document" + RC + "Merci de réitérer l'opération", "Erreur", __OPERATION_COURRIER__, __TOAST_ANNULATION__)

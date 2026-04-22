@@ -57,6 +57,19 @@ si __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesig
 	si jsDesigner.constraints..Existe alors
 		jsWrapper.constraints = jsDesigner.constraints
 	fin
+
+	// ─── Transfert du snapshot des zones initiales du modèle ───────────
+	// Ce snapshot représente les zones placées à l'origine (par le créateur
+	// du modèle ou lors de la 1ère ouverture du tunnel). Il sert de référence
+	// pour la sémantique "zones SUPPLÉMENTAIRES" des limites côté Designer
+	// (script.js : initialZoneCounts).
+	// À la 1ère ouverture, ce snapshot n'existe pas encore : le Designer le
+	// calcule depuis les zones reçues, puis le sauvegarde à la validation.
+	// Aux ouvertures suivantes, on le transfert depuis le JSON stocké pour
+	// que les limites continuent de fonctionner correctement.
+	si jsDesigner.initialZoneCounts..Existe alors
+		jsWrapper.data.initialZoneCounts = jsDesigner.initialZoneCounts
+	fin
 fin
 
 gsJsonDesigner = JSONVersChaîne(jsWrapper)
