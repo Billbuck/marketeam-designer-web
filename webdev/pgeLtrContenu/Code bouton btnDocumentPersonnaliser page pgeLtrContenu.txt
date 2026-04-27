@@ -7,9 +7,15 @@ jsWrapper 	est un JSON
 
 _nIndDesignerEnCours = znrLtrContenu
 
-si __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesignerData = "" alors
-	retour
-fin
+// Note : on N'IMPOSE PAS que JsonDesignerData soit non-vide.
+// Cas légitimes où il peut être vide :
+//   - Modèle de document créé dans pgeLtrDocument sans personnalisation
+//     (le créateur n'est pas passé par le Designer)
+//   - PDF client uploadé non porte-adresse (= sans zones système initiales)
+// Dans ces cas, on ouvre quand même le Designer avec le wrapper minimal
+// (auth, bases, constraints, polices, format, pages, champsFusion,
+// donneesApercu, zones système si porte-adresse) pour permettre à
+// l'utilisateur de personnaliser à partir de zéro.
 
 // ─── Recomposer le wrapper du tunnel à chaque ouverture ─────────────────
 // Le wrapper apporte : auth, bases, constraints, polices, format, pages,

@@ -42,19 +42,70 @@ fin
 Trace("GenererBatDocumentDepuisPsmd : PSMD confirmé : " + sCheminPsmd)
 
 // ─── Construction du tableau de fusion ───────────────────────────────────
+// On parcourt les champsFusion déclarés dans le JSON Designer (= champs réels
+// utilisés par le PSMD) et on récupère leur valeur dans le tableau
+// d'échantillon par INDIRECTION WLanguage (cf. cpDesigner.RemplirDesignerApercu).
+//
+// FALLBACK : si pTabEchantillon est vide (ex: appel pendant l'upload PDF avant
+// chargement BDD, ou pour un modèle hors contexte d'opération), on utilise
+// les coordonnées de l'utilisateur connecté comme échantillon de secours.
+// Cohérent avec ce que fait btnModelePersonnaliser pour le mode modèle.
+tabEchantillonEffectif	est un tableau de StructBaseLigne
+
 si pTabEchantillon..Occurrence > 0 alors
-	AjoutePrintshopData("Societe",    pTabEchantillon[1].Societe)
-	AjoutePrintshopData("Civilite",   pTabEchantillon[1].Civilite)
-	AjoutePrintshopData("Nom",        pTabEchantillon[1].Nom)
-	AjoutePrintshopData("Prenom",     pTabEchantillon[1].Prenom)
-	AjoutePrintshopData("Adresse1",   pTabEchantillon[1].Adresse1)
-	AjoutePrintshopData("Adresse2",   pTabEchantillon[1].Adresse2)
-	AjoutePrintshopData("Adresse3",   pTabEchantillon[1].Adresse3)
-	AjoutePrintshopData("Adresse4",   pTabEchantillon[1].Adresse4)
-	AjoutePrintshopData("CodePostal", pTabEchantillon[1].CodePostal)
-	AjoutePrintshopData("Ville",      pTabEchantillon[1].Ville)
-	AjoutePrintshopData("Sequentiel", "000123456")
-	AjoutePrintshopData("Timbre",      "Affranchissement")
+	tabEchantillonEffectif = pTabEchantillon
+sinon
+	// Fallback : injecter les coordonnées utilisateur comme 1er enregistrement
+	tabEchantillonEffectif.Ajoute(Partage.__vcUser.stCoordonnées)
+	Trace("GenererBatDocumentDepuisPsmd : fallback __vcUser.stCoordonnées (pTabEchantillon vide)")
+fin
+
+si tabEchantillonEffectif..Occurrence > 0 _et_ stDocument.JsonDesignerData <> "" alors
+	jDoc est un JSON = ChaîneVersUTF8(stDocument.JsonDesignerData)
+
+	// Le JSON peut avoir 2 formats selon le contexte d'appel :
+	//   - Wrapper complet {action, mode, auth, bases, data:{...}}
+	//     (cas BAT initial : SelectionModèle, UploadFichier porte-adresse, ...)
+	//     → champsFusion est sous jDoc.data.champsFusion
+	//   - Data only (cas après validation Designer)
+	//     → champsFusion est à la racine jDoc.champsFusion
+	jDocChamps	est un JSON
+	si jDoc.data.champsFusion..Occurrence > 0 alors
+		jDocChamps = jDoc.data
+	sinon
+		jDocChamps = jDoc
+	fin
+
+	si jDocChamps.champsFusion..Occurrence > 0 alors
+		pour nIChamp = 1 _à_ jDocChamps.champsFusion..Occurrence
+			sNomChamp	est une chaîne	= jDocChamps.champsFusion[nIChamp].nom
+			si sNomChamp <> "" alors
+				sValeur	est une chaîne
+
+				selon sNomChamp
+					cas "Sequentiel"
+						// Champ système : valeur simulée pour l'aperçu BAT
+						sValeur = "000123456"
+					cas "Timbre"
+						// Champ système : valeur simulée pour l'aperçu BAT
+						sValeur = "Affranchissement"
+					autre cas
+						// Indirection WLanguage : accès dynamique au membre
+						// correspondant de StructBaseLigne (Civilite, Nom,
+						// Champ1, Champ2, etc.)
+						quand exception dans
+							sValeur = {"tabEchantillonEffectif[1]." + sNomChamp, indVariable}
+						faire
+							// Champ déclaré dans le Designer mais absent
+							// de StructBaseLigne : valeur vide
+							sValeur = ""
+						fin
+				fin
+
+				AjoutePrintshopData(sNomChamp, sValeur)
+			fin
+		fin
+	fin
 fin
 
 // ─── Génération BAT JPG page par page ────────────────────────────────────

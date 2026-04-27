@@ -1,0 +1,41 @@
+// -----------------------------------------------------------------------------
+// cpDesigner.RemplirDesignerApercu()
+// Rôle : Transformer le tableau d'échantillons StructBaseLigne en format Designer
+//        Utilise l'indirection pour accéder dynamiquement aux membres de StructBaseLigne
+//        selon les champs de fusion définis dans taaBaseChamp
+// Paramètres :
+//	pTabEchantillon : échantillon des enregistrements
+//	taaBaseChamp (tableau associatif (structBaseChamp)) : champs communs aux bases
+
+PROCÉDURE RemplirDesignerApercu(pTabEchantillon, taaBaseChamp tableau associatif de structBaseChamp)
+
+nInd		est un entier
+tabApercu	est un tableau de structDesignerEnregistrement
+stEnreg		est une structDesignerEnregistrement
+stUnChamp	est une structDesignerChamp
+
+POUR TOUT stBaseLigne DE pTabEchantillon
+	nInd++
+	POUR TOUT stBaseChamp DE taaBaseChamp
+		// Nom de la colonne physique MariaDB (ex: "Civilite", "Champ1")
+		stUnChamp.nom		= stBaseChamp.Champ
+		// Valeur récupérée par indirection sur le membre de StructBaseLigne
+		stUnChamp.valeur	= {"stBaseLigne." + stBaseChamp.Champ, indVariable}
+		stEnreg.enregistrement.Ajoute(stUnChamp)
+	FIN
+
+	stUnChamp.nom		= "Sequentiel"
+	stUnChamp.valeur	= NumériqueVersChaîne(nInd, "06d")
+	stEnreg.enregistrement.Ajoute(stUnChamp)
+
+	stUnChamp.nom		= "Timbre"
+	stUnChamp.valeur	= "Affranchissement " + NumériqueVersChaîne(nInd, "03d")
+	stEnreg.enregistrement.Ajoute(stUnChamp)
+
+	tabApercu.Ajoute(stEnreg)
+FIN
+
+
+
+
+RENVOYER tabApercu

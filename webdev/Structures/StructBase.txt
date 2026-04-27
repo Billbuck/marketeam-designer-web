@@ -1,0 +1,20 @@
+StructBase est une Structure
+	IdBase								est un entier							// Id de dos_base
+	IdBaseClient						est un entier							// Id de clt_client
+	IdFiltre							est un entier							// Id du filtre lié à clt_base
+	IdOperation							est un entier
+//	Statut								est une chaine
+	EstSupprime							est un booléen							// En modification on a supprimé ce fichier
+	EstAjoute							est un booléen							// En modification on a ajouté ce fichier
+	EstAlliageClient					est un booléen							// Colonne Alliage du client
+	IdZecible 							est un entier							// Est une base louée Zecible
+	Nom									est une chaîne
+	NbrTotal							est un entier
+	NbrSociete							est un entier
+	NbrContact							est un entier
+	NbrAdresse							est un entier
+	NbrSms								est un entier
+	NbrTel								est un entier
+	NbrEmail							est un entier
+	taaBaseChamp						est un tableau associatif de structBaseChamp	//structBaseChamp 	// Liste des champs optionnels avec leur Type ( taaBaseChamp[591] = "VEHICULE" / "TXT"   // On pourrait mettre ici la liste des colonnes exploités dans la base (en remplacement de de la variable colonnes)
+fin

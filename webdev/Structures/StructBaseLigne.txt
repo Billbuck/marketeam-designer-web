@@ -1,0 +1,70 @@
+StructBaseLigne est une Structure
+	IdBaseLigne							est un entier
+
+	Sequentiel							est un entier		// Pour être en phase en courrier avec le traitement rnvp (IdOperation + Sequentiel = IdRnvp + Sequentiel)
+	Reference							est une chaîne
+	CodeAlliage							est une chaîne
+
+	Contact								est une chaîne
+	Civilite							est une chaîne
+	Nom									est une chaîne
+	Prenom								est une chaîne
+
+	Societe								est une chaîne
+	Enseigne							est une chaîne
+
+	Adresse1							est une chaîne
+	Adresse2							est une chaîne
+	Adresse3							est une chaîne
+	Adresse4							est une chaîne
+	CodePostal						est une chaîne
+	Ville							est une chaîne
+	Pays								est une chaîne
+
+	Tel								est une chaîne
+	Portable							est une chaîne
+	Email							est une chaîne
+
+	Code								est une chaîne
+	Champ1								est une chaîne
+	Champ2								est une chaîne
+	Champ3								est une chaîne
+	Champ4								est une chaîne
+	Champ5								est une chaîne
+	Champ6								est une chaîne
+	Champ7								est une chaîne
+	Champ8								est une chaîne
+	Champ9								est une chaîne
+	Champ10								est une chaîne
+	Champ11								est une chaîne
+	Champ12								est une chaîne
+	Champ13								est une chaîne
+	Champ14								est une chaîne
+	Champ15								est une chaîne
+	Champ16								est une chaîne
+	Champ17								est une chaîne
+	Champ18								est une chaîne
+	Champ19								est une chaîne
+	Champ20								est une chaîne
+	Champ21								est une chaîne
+	Champ22								est une chaîne
+	Champ23								est une chaîne
+	Champ24								est une chaîne
+	Champ25								est une chaîne
+	Champ26								est une chaîne
+	Champ27								est une chaîne
+	Champ28								est une chaîne
+	Champ29								est une chaîne
+	Champ30								est une chaîne
+
+	EstDoublonsTel						est un booléen
+	EstDoublonsSms						est un booléen
+	EstDoublonsLtr						est un booléen
+	EstDoublonsEml						est un booléen
+
+	Sexe								est une chaîne
+	Profil								est une chaîne
+	EstUnicode							est un booléen
+	NbrCaractereSms						est un entier
+	NbrSmsCommande						est un entier
+FIN

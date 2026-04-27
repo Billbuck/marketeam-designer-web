@@ -1,3 +1,23 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//InitCboTypeContenu (<pIdBibliothèque>, <pIdMarque>, <pIdSupport>, <pEstRectoVerso>, <pEstFondPerdu>, <pIdSupportGrammage>, <pIndice>)
+//
+// Paramètres :
+//	pIdBibliothèque : <indiquez ici le rôle de pIdBibliothèque>
+// 	pIdMarque : <indiquez ici le rôle de pIdMarque>
+//	pIdSupport : <indiquez ici le rôle de pIdSupport>
+//	pEstRectoVerso : <indiquez ici le rôle de pEstRectoVerso>
+//	pEstFondPerdu : <indiquez ici le rôle de pEstFondPerdu>
+//	pIdSupportGrammage : <indiquez ici le rôle de pIdSupportGrammage>
+//	pIndice : <indiquez ici le rôle de pEstPremierDocument>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+// 	pEstPorteAdresse : <indiquez ici le rôle de pEstPorteAdresse>
+//	pDoitEtrePorteAdresse : <indiquez ici le rôle de pEstPorteAdresse>
 PROCÉDURE InitCboTypeContenu(pIdBibliothèque, pIdMarque, pIdSupport, pEstRectoVerso, pEstFondPerdu, pIdSupportGrammage, pIndice)
 
 sTexteRequete				est une chaîne

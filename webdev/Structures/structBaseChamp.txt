@@ -1,0 +1,8 @@
+structBaseChamp est une Structure
+	Champ					est une chaîne
+	Type					est une chaîne
+	Ordre					est un entier
+	EstSupprimé				est un booléen
+	ColonnesInversées		est une chaîne
+	Pointer					est un entier		// Pour faire le dédoublonnage dans le traitement CalculTaaBaseChamp
+fin

@@ -1,0 +1,239 @@
+procédure DesignerCollectionVerifie()
+
+// ============================================================
+// WEBSERVICE : Vérification compatibilité collection ↔ projet
+// Vérifie que TOUTES les valeurs du champ en BDD ont leur image
+// dans la collection sélectionnée.
+//
+// Appelé quand l'utilisateur sélectionne une collection existante
+// dans la combo du Designer (avant que la sélection soit appliquée
+// à la zone image).
+//
+// Paramètres reçus (HTTP) :
+//   - idCollection : ID de la collection à vérifier
+//   - colonne      : nom de la colonne BDD (ex: "Champ1")
+//   - tabBase      : JSON [{"IdBase":12,"origine":"clt"}, ...]
+//
+// Réponse JSON :
+//   - compatible        : Vrai/Faux
+//   - nbValeursBDD      : nombre de valeurs distinctes en BDD
+//   - nbImagesCollection: nombre de fichiers dans la collection
+//   - valeursSansImage  : tableau des valeurs BDD sans image
+// ============================================================
+
+// DEBUG TEMPORAIRE
+fAjouteTexte(fRepDonnées() + "\DesignerCollectionVerifie_debug.txt", RC + "========== " + DateHeureSys().VersChaîne() + " ==========" + RC + ...
+"idCollection: [" + WebserviceParameter("idCollection") + "]" + RC + ...
+"colonne: [" + WebserviceParameter("colonne") + "]" + RC + ...
+"tabBase: [" + WebserviceParameter("tabBase") + "]" + RC)
+
+
+// ============================================================
+// 1. Lecture des paramètres
+// ============================================================
+sIdCollection	est une chaîne	= WebserviceParameter("idCollection")
+sColonne		est une chaîne	= WebserviceParameter("colonne")
+sTabBaseJson	est une chaîne	= WebserviceParameter("tabBase")
+
+// ============================================================
+// Capture des exceptions runtime pour éviter les erreurs 500 muettes
+// ============================================================
+quand exception dans
+
+
+// ============================================================
+// 2. Validation des paramètres
+// ============================================================
+si sIdCollection.SansEspace() = "" alors
+	GénéreJsonErreur("idCollection", "Paramètre idCollection absent")
+	renvoyer Faux
+fin
+
+nIdCollection	est un entier	= Val(sIdCollection)
+si nIdCollection <= 0 alors
+	GénéreJsonErreur("idCollection", "Identifiant de collection invalide")
+	renvoyer Faux
+fin
+
+si sColonne.SansEspace() = "" alors
+	GénéreJsonErreur("colonne", "Paramètre colonne absent")
+	renvoyer Faux
+fin
+
+si sTabBaseJson.SansEspace() = "" _ou_ sTabBaseJson.SansEspace() = "[]" alors
+	GénéreJsonErreur("tabBase", "Paramètre tabBase absent ou vide")
+	renvoyer Faux
+fin
+
+
+// ============================================================
+// 3. Lecture de la collection + vérification appartenance
+// ============================================================
+// Une collection peut appartenir :
+//   - directement au client (IdClient = X, IdMarque NULL)
+//   - à une marque associée au client (IdClient NULL, IdMarque = Y)
+//     → on vérifie que clt_client_marque(IdClient courant, IdMarque) existe
+si pas ltr_designer_collection.LitRecherchePremier(IdCollection, nIdCollection) alors
+	GénéreJsonErreur("idCollection", "Collection " + nIdCollection + " introuvable")
+	renvoyer Faux
+fin
+
+bAutorisee	est un booléen	= Faux
+nIdMarqueCollection	est un entier	= ltr_designer_collection.IdMarque
+
+si nIdMarqueCollection > 0 alors
+	// Collection liée à une marque : vérifier que le client est associé à cette marque
+	si clt_client_marque.LitRecherchePremier(IdClient, Partage.__vcUser.IDClient, nIdMarqueCollection) alors
+		bAutorisee = Vrai
+	fin
+sinon
+	// Collection liée à un client : vérifier que c'est le client courant
+	si ltr_designer_collection.IdClient = Partage.__vcUser.IDClient alors
+		bAutorisee = Vrai
+	fin
+fin
+
+si pas bAutorisee alors
+	GénéreJsonErreur("idCollection", "Collection non autorisée pour ce client")
+	renvoyer Faux
+fin
+
+
+// ============================================================
+// 4. Parser le tableau de bases
+// ============================================================
+sTabBaseJsonAnsi	est une chaîne ANSI	= sTabBaseJson
+varTabBase			est un Variant			= JSONVersVariant(sTabBaseJsonAnsi)
+nNbBases				est un entier			= varTabBase..Occurrence
+
+si nNbBases = 0 alors
+	GénéreJsonErreur("tabBase", "Aucune base de données spécifiée")
+	renvoyer Faux
+fin
+
+
+// ============================================================
+// 5. Lister les fichiers réellement présents dans la collection
+// ============================================================
+// Le dossier physique dépend de l'appartenance de la collection :
+//   - Marque : CheminMarque(IdMarque, ...)
+//   - Client : CheminClient(IdClient, ...)
+sRepCollection	est une chaîne
+si nIdMarqueCollection > 0 alors
+	sRepCollection = CheminMarque(nIdMarqueCollection, __OPERATION_COURRIER__, __REP_COLLECTION__) + NumériqueVersChaîne(nIdCollection, "08d") + "\"
+sinon
+	sRepCollection = CheminClient(Partage.__vcUser.IDClient, __OPERATION_COURRIER__, __REP_COLLECTION__) + NumériqueVersChaîne(nIdCollection, "08d") + "\"
+fin
+
+tabFichiersCollection	est un tableau de chaînes
+sListeFichiers				est une chaîne
+
+si fRepExiste(sRepCollection) alors
+	sListeFichiers = fListeFichier(sRepCollection + "*.*", frNonRécursif)
+	sListeFichiers.VersTableau(tabFichiersCollection, RC)
+fin
+
+// Garder uniquement les noms (sans le chemin) en majuscules pour comparaison
+tabNomsImages	est un tableau de chaînes
+pour tout sFichier de tabFichiersCollection
+	si sFichier.SansEspace() <> "" alors
+		sNomSeul	est une chaîne	= fExtraitChemin(sFichier, fFichier + fExtension)
+		tabNomsImages.Ajoute(sNomSeul.Majuscule())
+	fin
+fin
+
+fAjouteTexte(fRepDonnées() + "\DesignerCollectionVerifie_debug.txt", "Images dans collection: " + tabNomsImages.Occurrence + RC)
+
+
+// ============================================================
+// 6. Récupérer les valeurs distinctes du champ en BDD (multi-bases)
+// ============================================================
+sReqUnion			est une chaîne
+sdReqValeurs		est une Source de Données
+tabValeursBDD		est un tableau de chaînes
+
+pour nI = 1 _à_ nNbBases
+	nIdBase			est un entier	= varTabBase[nI].IdBase
+	sOrigine			est une chaîne	= varTabBase[nI].origine
+	sTableLigne		est une chaîne
+
+	si sOrigine = "clt" alors
+		sTableLigne = "clt_base_ligne"
+	sinon
+		sTableLigne = "dos_base_ligne"
+	fin
+
+	si sReqUnion <> "" alors
+		sReqUnion += " UNION "
+	fin
+
+	sReqUnion += "SELECT DISTINCT " + sColonne + " AS valeur FROM " + sTableLigne + " WHERE IdBase = " + nIdBase + " AND " + sColonne + " IS NOT NULL AND " + sColonne + " <> ''"
+fin
+
+sReqValeurs	est une chaîne	= "SELECT DISTINCT valeur FROM (" + sReqUnion + ") AS t"
+
+si pas sdReqValeurs.ExécuteRequêteSQL(clt_base_ligne.Connexion, hRequêteSansCorrection, sReqValeurs) alors
+	fAjouteTexte(fRepDonnées() + "\DesignerCollectionVerifie_debug.txt", "ERREUR requête: " + HErreurInfo() + RC)
+	GénéreJsonErreur("colonne", "Erreur lecture des valeurs du champ")
+	renvoyer Faux
+fin
+
+pour tout sdReqValeurs
+	tabValeursBDD.Ajoute(SansEspace(sdReqValeurs.valeur))
+fin
+
+fAjouteTexte(fRepDonnées() + "\DesignerCollectionVerifie_debug.txt", "Valeurs BDD: " + tabValeursBDD.Occurrence + RC)
+
+
+// ============================================================
+// 7. Comparer : pour chaque valeur BDD, l'image existe-t-elle ?
+// (Boucle manuelle plutôt que Cherche() qui peut planter selon
+//  la version WLanguage et nécessite parfois un tableau trié.)
+// ============================================================
+tabValeursSansImage	est un tableau de chaînes
+
+pour tout sValeur de tabValeursBDD
+	sValeurMaj	est une chaîne	= Majuscule(sValeur)
+	bTrouvee		est un booléen	= Faux
+	pour tout sNomImg de tabNomsImages
+		si sNomImg = sValeurMaj alors
+			bTrouvee = Vrai
+			sortir
+		fin
+	fin
+	si pas bTrouvee alors
+		tabValeursSansImage.Ajoute(sValeur)
+	fin
+fin
+
+bCompatible	est un booléen	= (tabValeursSansImage.Occurrence = 0)
+
+fAjouteTexte(fRepDonnées() + "\DesignerCollectionVerifie_debug.txt", ...
+	"Compatible: " + bCompatible + ...
+	" — Sans image: " + tabValeursSansImage.Occurrence + RC)
+
+
+// ============================================================
+// 8. Construction de la réponse JSON
+// ============================================================
+varReponse					est un Variant
+varReponse.compatible			= bCompatible
+varReponse.nbValeursBDD			= tabValeursBDD.Occurrence
+varReponse.nbImagesCollection	= tabNomsImages.Occurrence
+
+tabJsonValeurs	est un tableau de chaînes
+pour tout sVal de tabValeursSansImage
+	tabJsonValeurs.Ajoute(sVal)
+fin
+varReponse.valeursSansImage = tabJsonValeurs
+
+sJsonReponse	est une chaîne ANSI
+Sérialise(varReponse, sJsonReponse, psdJSON + psdMiseEnForme)
+renvoyer GénéreJsonSuccès("Vérification effectuée", sJsonReponse)
+
+
+faire
+	fAjouteTexte(fRepDonnées() + "\DesignerCollectionVerifie_debug.txt", "EXCEPTION: " + ExceptionInfo(errComplet) + RC)
+	GénéreJsonErreur("Erreur interne", ExceptionInfo(errMessage))
+	renvoyer Faux
+fin

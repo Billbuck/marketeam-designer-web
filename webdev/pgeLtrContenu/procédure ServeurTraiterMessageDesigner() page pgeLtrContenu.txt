@@ -50,7 +50,7 @@ selon vMessage.action
 					// -----------------------------------//
 					__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesignerData = sJsonData
 					si Partage.GenererPsmdServeurDocument(__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours]) alors
-						GenererBatDocumentDepuisPsmd(__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours])
+						cpDesigner.GenererBatDocumentDepuisPsmd(__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours], __tabEchantillonBaseLigne)
 						cpDesigner.TraiterManifestImagesDesigner(__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].CheminPsmdTemp, __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesignerData)
 					si __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].tabPagePDF..Occurrence > 0 alors
 						si __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].tabPagePDF[1].EstFondPerdu = Faux alors

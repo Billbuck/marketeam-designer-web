@@ -108,7 +108,7 @@ si stDoc.CodeTemp <> "" _et_ __stOperation.stOperationLettre.tabStDocument[pLign
 
 		si __stOperation.stOperationLettre.tabStDocument[pLigne].JsonDesignerData <> "" alors
 			si Partage.GenererPsmdServeurDocument(__stOperation.stOperationLettre.tabStDocument[pLigne]) alors
-				GenererBatDocumentDepuisPsmd(__stOperation.stOperationLettre.tabStDocument[pLigne])
+				cpDesigner.GenererBatDocumentDepuisPsmd(__stOperation.stOperationLettre.tabStDocument[pLigne], __tabEchantillonBaseLigne)
 				// Blanc tournant si non fond perdu (cohérent UploadFichier)
 				si __stOperation.stOperationLettre.tabStDocument[pLigne].tabPagePDF..Occurrence > 0 _et_ ...
 					__stOperation.stOperationLettre.tabStDocument[pLigne].tabPagePDF[1].EstFondPerdu = Faux alors

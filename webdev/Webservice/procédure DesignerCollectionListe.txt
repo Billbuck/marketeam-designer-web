@@ -1,0 +1,64 @@
+procédure DesignerCollectionListe()
+
+// ─── Étape 1 : Requête SQL ───
+// On liste :
+//   - Les collections directement rattachées au client (IdClient = X, IdMarque NULL)
+//   - Les collections rattachées aux marques associées au client via la table
+//     de liaison clt_client_marque (IdClient NULL, IdMarque IN (...))
+// Règle métier : IdClient et IdMarque sont mutuellement exclusifs sur une
+// même collection (si IdMarque > 0 alors IdClient IS NULL et inversement).
+nIdClient				est un entier	= Partage.__vcUser.IDClient
+sTexteRequete			est une chaîne ANSI
+sdReqCollection		est une Source de Données
+
+sTexteRequete = [
+	SELECT
+		IdCollection, Nom, NbImages, DateHeureCreation, IdClient, IdMarque
+	FROM
+		ltr_designer_collection
+	WHERE
+		IdClient = [%nIdClient%]
+		OR IdMarque IN (
+			SELECT IdMarque FROM clt_client_marque WHERE IdClient = [%nIdClient%]
+		)
+	ORDER BY
+		DateHeureCreation DESC
+]
+
+si pas sdReqCollection.ExécuteRequêteSQL(ltr_designer_collection.Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	GénéreJsonErreur("requête", "Erreur requête listing collections")
+	renvoyer Faux
+fin
+
+// ─── Étape 2 : Construction du tableau JSON ───
+// Pour chaque collection, on construit urlBase et cheminUNC en utilisant
+// le bon préfixe selon que la collection appartient au client ou à une marque.
+tabCollections est un tableau de Variants
+
+pour tout sdReqCollection
+	varItem est un Variant
+	varItem.idCollection		= sdReqCollection.IdCollection
+	varItem.nom					= sdReqCollection.Nom
+	varItem.nbImages			= sdReqCollection.NbImages
+	varItem.dateCreation		= DateHeureVersChaîne(sdReqCollection.DateHeureCreation, "AAAA-MM-JJ HH:mm:SS")
+
+	si sdReqCollection.IdMarque > 0 alors
+		// Collection associée à une marque
+		varItem.urlBase		= CheminMarque(sdReqCollection.IdMarque, __OPERATION_COURRIER__, __REP_COLLECTION__, Faux) + NumériqueVersChaîne(sdReqCollection.IdCollection, "08d") + "/"
+		varItem.cheminUNC		= CheminMarque(sdReqCollection.IdMarque, __OPERATION_COURRIER__, __REP_COLLECTION__, Vrai) + NumériqueVersChaîne(sdReqCollection.IdCollection, "08d") + "\"
+	sinon
+		// Collection associée au client
+		varItem.urlBase		= CheminClient(nIdClient, __OPERATION_COURRIER__, __REP_COLLECTION__, Faux) + NumériqueVersChaîne(sdReqCollection.IdCollection, "08d") + "/"
+		varItem.cheminUNC		= CheminClient(nIdClient, __OPERATION_COURRIER__, __REP_COLLECTION__, Vrai) + NumériqueVersChaîne(sdReqCollection.IdCollection, "08d") + "\"
+	fin
+
+	tabCollections.Ajoute(varItem)
+fin
+
+// ─── Étape 3 : Sérialisation et réponse ───
+varReponse est un Variant
+varReponse.collections = tabCollections
+
+jsonReponse est une chaîne ANSI
+Sérialise(varReponse, jsonReponse, psdJSON)
+renvoyer GénéreJsonSuccès("Collections listées", jsonReponse)

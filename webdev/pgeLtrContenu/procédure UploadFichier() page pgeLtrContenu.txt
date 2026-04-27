@@ -137,7 +137,7 @@ si sFichier <> "" _et_ Minuscule(fExtraitChemin(sFichier, fExtension)) = __PDF__
 
 				si __stOperation.stOperationLettre.tabStDocument[nInd].JsonDesignerData <> "" alors
 					si Partage.GenererPsmdServeurDocument(__stOperation.stOperationLettre.tabStDocument[nInd]) alors
-						GenererBatDocumentDepuisPsmd(__stOperation.stOperationLettre.tabStDocument[nInd])
+						cpDesigner.GenererBatDocumentDepuisPsmd(__stOperation.stOperationLettre.tabStDocument[nInd], __tabEchantillonBaseLigne)
 						si __stOperation.stOperationLettre.tabStDocument[nInd].tabPagePDF[1].EstFondPerdu = Faux alors
 							pour tout stVignette de __stOperation.stOperationLettre.tabStDocument[nInd].tabImageFond
 								Partage.AppliqueBlancTournant(stVignette.CheminPhysique, __stOperation.stOperationLettre.tabStDocument[nInd].LargeurOuvert, __stOperation.stOperationLettre.tabStDocument[nInd].HauteurOuvert)

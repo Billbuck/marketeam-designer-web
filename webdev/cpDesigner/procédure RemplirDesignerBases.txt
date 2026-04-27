@@ -1,0 +1,48 @@
+// -----------------------------------------------------------------------------
+// cpDesigner.RemplirDesignerBases()
+// Rôle : Remplir le bloc bases avec la liste des bases de données de l'opération
+// Paramètres :
+//   pTabBase (tableau de StructBase) : tableau des bases de l'opération
+// Retour : stDesignerBaseListe rempli
+//
+// IMPORTANT — Choix de l'IdBase à envoyer :
+//   StructBase contient 2 IDs distincts :
+//     - StructBase.IdBase        = ID dans dos_base (= 0 tant que l'opération
+//                                  n'a pas été sauvegardée en BDD)
+//     - StructBase.IdBaseClient  = ID dans clt_base (toujours rempli si la base
+//                                  vient des bases du client : EstAjoute=Vrai)
+//
+//   Le webservice DesignerImageUpload lit dans clt_base ou dos_base selon
+//   l'origine. On envoie donc :
+//     - EstAjoute=Vrai  → origine="clt", IdBase=stBase.IdBaseClient
+//     - EstAjoute=Faux  → origine="dos", IdBase=stBase.IdBase
+//
+//   Les bases marquées EstSupprime sont filtrées.
+// -----------------------------------------------------------------------------
+procédure RemplirDesignerBases(pTabBase)
+
+stBases est une structDesignerBaseListe
+
+pour tout stBase de pTabBase
+	// Filtrer les bases marquées comme supprimées
+	si stBase.EstSupprime alors continuer
+
+	stUneBase est une structDesignerBase
+
+	// "clt" = base ajoutée par le client (lecture dans clt_base)
+	// "dos" = base dossier existante (lecture dans dos_base)
+	si stBase.EstAjoute alors
+		stUneBase.origine	= "clt"
+		stUneBase.IdBase	= stBase.IdBaseClient
+	sinon
+		stUneBase.origine	= "dos"
+		stUneBase.IdBase	= stBase.IdBase
+	fin
+
+	// Sécurité : ne pas envoyer de base avec ID nul
+	si stUneBase.IdBase > 0 alors
+		stBases.pListe.Ajoute(stUneBase)
+	fin
+fin
+
+renvoyer stBases

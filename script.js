@@ -6120,12 +6120,29 @@ document.addEventListener('DOMContentLoaded', () => {
             extension: c.extension
         }));
 
+        // Récupérer les dimensions communes (toutes les images les partagent grâce
+        // à la phase 4 qui aurait rejeté tout mélange) à partir du seul groupe.
+        const dimEntry = dimensionGroups.entries().next().value;
+        const dimKey = dimEntry ? dimEntry[0] : '';
+        const [largeurPx, hauteurPx] = dimKey
+            ? dimKey.split('×').map(n => parseInt(n, 10) || 0)
+            : [0, 0];
+
+        // Format normalisé pour la collection : la phase 2 a vérifié l'unicité du type.
+        // On stocke le format en minuscules sans le point (ex: "jpg", "png", "gif").
+        // Note : les .jpeg sont normalisés en "jpg" pour homogénéité côté BDD.
+        const extensionPremiere = (validCandidates[0] && validCandidates[0].extension) || '';
+        const formatNormalise = (extensionPremiere.toLowerCase() === 'jpeg') ? 'jpg' : extensionPremiere.toLowerCase();
+
         zipUploadData = {
             zipFile: file,
             nomFichierZip: file.name,
             tailleZip: file.size,
             imagesValides: imagesValides,
             imagesIgnorees: imagesIgnorees,
+            largeurPx: largeurPx,
+            hauteurPx: hauteurPx,
+            format: formatNormalise,
             prete: true
         };
 
@@ -6214,7 +6231,39 @@ document.addEventListener('DOMContentLoaded', () => {
                     showUploadSummary(uploadResult.data);
                 } else {
                     console.warn('ZIP Upload: Échec upload webservice -', uploadResult.message);
-                    showNotification([{ level: 'error', text: uploadResult.message }], { title: 'Échec de l\'envoi' });
+                    
+                    // Parser le message multilignes : extraire le texte principal
+                    // et la liste à puces (lignes commençant par "  • " ou "  •")
+                    // pour les afficher proprement dans la modale notification.
+                    const rawMsg = uploadResult.message || '';
+                    const lines = rawMsg.split(/\r?\n/);
+                    const detailLines = [];
+                    const titleLines = [];
+                    let inDetails = false;
+                    for (const ln of lines) {
+                        const trimmed = ln.trim();
+                        if (trimmed.startsWith('•')) {
+                            detailLines.push(trimmed.replace(/^•\s*/, ''));
+                            inDetails = true;
+                        } else if (inDetails && trimmed === '') {
+                            // ligne vide après les détails : ignorer
+                        } else if (!inDetails && trimmed !== '') {
+                            // ligne de titre/intro (avant la liste)
+                            // on retire les ":" terminaux pour éviter "Valeurs manquantes :"
+                            titleLines.push(trimmed.replace(/\s*:\s*$/, ''));
+                        }
+                    }
+                    
+                    const errMsg = {
+                        level: 'error',
+                        text: titleLines.length > 0 ? titleLines.join(' ') : rawMsg
+                    };
+                    if (detailLines.length > 0) {
+                        errMsg.details = detailLines;
+                    }
+                    
+                    showNotification([errMsg], { title: 'Import refusé' });
+                    
                     // Nettoyer les données ZIP et restaurer l'accès au bouton Importer
                     clearZipData();
                     updateZipUploadUIState('champ_selectionne');
@@ -6360,6 +6409,12 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('idCollection', zipUploadData.idCollection || '');
         formData.append('fichierZip', zipUploadData.zipFile); // Fichier binaire directement
 
+        // Métadonnées de la collection pour stockage en BDD (ltr_designer_collection)
+        formData.append('largeur',   String(zipUploadData.largeurPx || 0));
+        formData.append('hauteur',   String(zipUploadData.hauteurPx || 0));
+        formData.append('format',    zipUploadData.format || '');
+        formData.append('tailleZip', String(zipUploadData.tailleZip || 0));
+
         // Générer l'authentification
         const timestamp = generateTimestamp();
         let signature;
@@ -6441,9 +6496,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     let errorMsg = 'Le serveur n\'est pas disponible (erreur ' + xhr.status + '). Veuillez réessayer dans quelques instants.';
                     try {
                         const errJson = JSON.parse(xhr.responseText);
-                        // Gérer les erreurs au format enveloppé WebDev
-                        if (errJson.Statut === 'error' && errJson.Message) {
-                            errorMsg = errJson.Message;
+                        // Gérer les erreurs au format enveloppé WebDev (GénéreJsonErreur)
+                        // Structure :
+                        //   { Statut: "error", Message: "<code/champ>", Details: "<message complet>" }
+                        // Le message à afficher est dans Details (le 2nd param de GénéreJsonErreur).
+                        // On retombe sur Message si Details est absent (anciens appels).
+                        if (errJson.Statut === 'error') {
+                            errorMsg = errJson.Details || errJson.Message || errorMsg;
                         } else if (errJson.message || errJson.erreur) {
                             errorMsg = errJson.message || errJson.erreur;
                         }
@@ -6626,6 +6685,25 @@ document.addEventListener('DOMContentLoaded', () => {
             messages.push(msg);
         }
 
+        // A14 — Avertissement : valeurs BDD sans image dans le ZIP
+        // Ces enregistrements existent en BDD mais pointent vers des fichiers
+        // qui ne sont PAS dans le ZIP uploadé → l'image ne s'affichera pas
+        // dans l'aperçu / le BAT pour ces enregistrements.
+        const nbValeursSansImage = resume.valeursSansImage || 0;
+        if (nbValeursSansImage > 0) {
+            const detailsValeursSansImage = Array.isArray(details.valeursSansImage)
+                ? details.valeursSansImage
+                : [];
+            const msg = {
+                level: 'warning',
+                text: nbValeursSansImage + ' valeur(s) en base de données ne correspondent à aucune image du ZIP. L\'image ne s\'affichera pas pour ces enregistrements.'
+            };
+            if (detailsValeursSansImage.length > 0) {
+                msg.details = detailsValeursSansImage;
+            }
+            messages.push(msg);
+        }
+
         // A12 — Avertissement : fichiers ignorés côté client (depuis zipUploadData)
         if (zipUploadData.imagesIgnorees && zipUploadData.imagesIgnorees.length > 0) {
             messages.push({
@@ -6703,16 +6781,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 15000);
+            // application/x-www-form-urlencoded : compatible avec WebserviceParameter() côté WebDev
+            const formBody = new URLSearchParams();
+            formBody.set('colonne', colonne);
+
             const response = await fetch(authConfig.urlCollectionListe, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/x-www-form-urlencoded',
                     'X-IdClient': authConfig.idClient,
                     'X-IdContact': authConfig.idContact,
                     'X-Timestamp': timestamp,
                     'X-Marketeam-Auth': signature
                 },
-                body: JSON.stringify({ colonne: colonne }),
+                body: formBody.toString(),
                 signal: controller.signal
             });
             clearTimeout(timeoutId);
@@ -6751,6 +6833,76 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('fetchCollections: Erreur réseau', err);
             setCollectionLoadingState(false);
             populateCollectionSelect([], '');
+        }
+    }
+
+    /**
+     * Vérifie qu'une collection est compatible avec le projet courant.
+     * Appelle le webservice DesignerCollectionVerifie qui contrôle que toutes
+     * les valeurs actuelles du champ en BDD ont leur image dans la collection.
+     *
+     * @param {string|number} idCollection - ID de la collection à vérifier
+     * @param {string} colonne - Nom de la colonne BDD (= champFusion physique)
+     * @returns {Promise<{compatible: boolean, valeursSansImage: string[], nbValeursBDD: number, nbImagesCollection: number}>}
+     */
+    async function verifyCollectionCompat(idCollection, colonne) {
+        if (!authConfig || !authConfig.urlCollectionListe) {
+            throw new Error('URL webservice non configurée');
+        }
+
+        // Déduire l'URL du webservice "verifie" en remplaçant /liste par /verifie
+        // Permet de réutiliser la configuration sans ajouter une nouvelle URL.
+        const urlVerifie = authConfig.urlCollectionVerifie ||
+            authConfig.urlCollectionListe.replace(/\/liste(\?|$)/i, '/verifie$1');
+
+        const tabBase = (basesConfig && basesConfig.liste) ? basesConfig.liste : [];
+
+        const timestamp = generateTimestamp();
+        const signature = await generateSignature(timestamp);
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+        try {
+            // application/x-www-form-urlencoded : compatible avec WebserviceParameter() côté WebDev
+            const formBody = new URLSearchParams();
+            formBody.set('idCollection', String(idCollection));
+            formBody.set('colonne', colonne);
+            formBody.set('tabBase', JSON.stringify(tabBase));
+
+            const response = await fetch(urlVerifie, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-IdClient': authConfig.idClient,
+                    'X-IdContact': authConfig.idContact,
+                    'X-Timestamp': timestamp,
+                    'X-Marketeam-Auth': signature
+                },
+                body: formBody.toString(),
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                throw new Error('Erreur HTTP ' + response.status);
+            }
+
+            const json = await response.json();
+            // Réponse GénéreJsonSuccès : {Statut, Message, Details}
+            let details = json.Details;
+            if (typeof details === 'string') {
+                details = JSON.parse(details);
+            }
+
+            return {
+                compatible: !!(details && details.compatible),
+                valeursSansImage: (details && Array.isArray(details.valeursSansImage)) ? details.valeursSansImage : [],
+                nbValeursBDD: (details && details.nbValeursBDD) || 0,
+                nbImagesCollection: (details && details.nbImagesCollection) || 0
+            };
+        } finally {
+            clearTimeout(timeoutId);
         }
     }
 
@@ -17131,11 +17283,56 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Collection d'images
         if (imageInputCollection) {
-            imageInputCollection.addEventListener('change', () => {
+            // Mémoriser la valeur précédente pour pouvoir y revenir en cas de rejet
+            let _lastValidCollectionId = imageInputCollection.value || '';
+
+            imageInputCollection.addEventListener('change', async () => {
                 const selectedOption = imageInputCollection.selectedOptions[0];
                 const collectionId = imageInputCollection.value;
                 const urlBase = selectedOption ? (selectedOption.dataset.urlBase || '') : '';
                 const cheminUNC = selectedOption ? (selectedOption.dataset.cheminUNC || '') : '';
+
+                // ─── Vérification compatibilité avec le projet (collection ↔ valeurs BDD) ──
+                // Si une collection (≠ vide) est sélectionnée, on appelle le webservice
+                // DesignerCollectionVerifie qui contrôle que TOUTES les valeurs actuelles
+                // du champ en BDD ont leur image dans la collection. Si non → refus total.
+                if (collectionId) {
+                    const champFusion = imageInputChamp ? imageInputChamp.value : '';
+                    if (champFusion) {
+                        try {
+                            imageInputCollection.disabled = true;
+                            const verifResult = await verifyCollectionCompat(collectionId, champFusion);
+                            imageInputCollection.disabled = false;
+
+                            if (!verifResult.compatible) {
+                                // Refus : revenir à la valeur précédente + popup d'erreur
+                                imageInputCollection.value = _lastValidCollectionId;
+
+                                const valeursManquantes = verifResult.valeursSansImage || [];
+                                const errMsg = {
+                                    level: 'error',
+                                    text: 'Cette collection ne peut pas être utilisée : ' +
+                                        valeursManquantes.length + ' valeur(s) en base de données ' +
+                                        'n\'ont aucune image correspondante dans la collection. ' +
+                                        'Toutes les valeurs du champ doivent avoir leur image.'
+                                };
+                                if (valeursManquantes.length > 0) {
+                                    errMsg.details = valeursManquantes;
+                                }
+                                showNotification([errMsg], { title: 'Collection incompatible' });
+                                return; // On n'applique pas la sélection
+                            }
+                        } catch (e) {
+                            imageInputCollection.disabled = false;
+                            console.warn('Vérification collection échouée:', e);
+                            // Erreur réseau/serveur : on permet quand même la sélection
+                            // (l'utilisateur sera averti à la validation finale)
+                        }
+                    }
+                }
+
+                // Sélection valide : on l'applique et on mémorise
+                _lastValidCollectionId = collectionId;
 
                 updateSelectedImageZone((zoneData) => {
                     if (!zoneData.source) zoneData.source = { type: 'champ', valeur: '' };
@@ -17148,6 +17345,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (collectionId) {
                     // Collection sélectionnée → verrouiller le champ pour éviter un changement accidentel
                     if (imageInputChamp) imageInputChamp.disabled = true;
+
+                    // Masquer le bouton Importer ZIP : inutile puisqu'une collection
+                    // existante est en cours d'utilisation.
+                    if (imageBtnImportZip) imageBtnImportZip.style.display = 'none';
 
                     // Afficher l'aperçu de la première image de la collection
                     if (selectedZoneIds.length === 1) {
@@ -22915,10 +23116,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // Stocker la configuration des bases de données si fournie dans l'enveloppe
         if (isLoadEnvelope && jsonData.bases) {
             const rawListe = Array.isArray(jsonData.bases.liste) ? jsonData.bases.liste : [];
-            const parsedListe = rawListe.map(entry => ({
-                IdBase: Number(entry.IdBase) || 0,
-                origine: String(entry.origine || 'clt')
-            }));
+            const parsedListe = rawListe
+                .map(entry => ({
+                    IdBase: Number(entry.IdBase) || 0,
+                    origine: String(entry.origine || 'clt')
+                }))
+                // Sécurité : filtrer les bases avec IdBase invalide (= 0)
+                // pour éviter d'envoyer des entrées inutiles au webservice.
+                .filter(entry => entry.IdBase > 0);
 
             basesConfig = {
                 liste: parsedListe
@@ -24290,10 +24495,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                     qr:        snap.qr      || 0,
                                     barcode:   snap.barcode || 0
                                 };
-                                console.log('📸 Snapshot zones initiales (récupéré du JSON):', initialZoneCounts);
                             } else {
                                 initialZoneCounts = countZonesByType();
-                                console.log('📸 Snapshot zones initiales (calculé):', initialZoneCounts);
                             }
                         } catch (e) {
                             console.warn('⚠️ Impossible de capturer initialZoneCounts:', e);

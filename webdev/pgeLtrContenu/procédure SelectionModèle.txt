@@ -278,7 +278,7 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 
 	// 5.6 — Générer PSMD + BAT via PrintShop
 	si Partage.GenererPsmdServeurDocument(__stOperation.stOperationLettre.tabStDocument[pLigne]) alors
-		GenererBatDocumentDepuisPsmd(__stOperation.stOperationLettre.tabStDocument[pLigne])
+		cpDesigner.GenererBatDocumentDepuisPsmd(__stOperation.stOperationLettre.tabStDocument[pLigne], __tabEchantillonBaseLigne)
 
 		// Blanc tournant si non fond perdu
 		si __stOperation.stOperationLettre.tabStDocument[pLigne].tabPagePDF..Occurrence > 0 _et_ ...
