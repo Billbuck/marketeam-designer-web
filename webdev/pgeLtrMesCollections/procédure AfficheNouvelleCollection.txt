@@ -1,0 +1,4 @@
+procédure AfficheNouvelleCollection()
+
+InitZnrCollection()
+popCollectionAjouter.Ferme()

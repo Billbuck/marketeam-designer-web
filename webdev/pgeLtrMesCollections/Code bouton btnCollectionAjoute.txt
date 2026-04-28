@@ -1,0 +1,12 @@
+// Code Navigateur :
+
+UploadSupprimeTout(popCollectionAjouter.uplFichierZip)
+
+
+// Code Serveur :
+
+popCollectionAjouter.saiIdCollection	= ""
+popCollectionAjouter.saiNomCollection	= ""
+popCollectionAjouter.btnImporter.Etat	= Grisé
+
+popCollectionAjouter.Affiche(popupHautCentre)

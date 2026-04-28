@@ -1,0 +1,14 @@
+// Code Navigateur : Clic sur btnAjouter
+
+si Val(cboCollection.ValeurMémorisée) = 0 alors
+	PopupAfficheMessage("Aucune collection sélectionnée.", *, __OPERATION_COURRIER__, __TOAST_INFORMATION__)
+	retour
+fin
+
+si uplFichiersAjout..Occurrence = 0 alors
+	PopupAfficheMessage("Veuillez sélectionner un fichier ZIP ou des images à ajouter.", *, __OPERATION_COURRIER__, __TOAST_INFORMATION__)
+	retour
+fin
+
+AffichePopupProgression("Ajout des images en cours", __OPERATION_COURRIER__)
+uplFichiersAjout.Lance()

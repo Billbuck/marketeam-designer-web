@@ -1,0 +1,179 @@
+procédure AjoutImages(pIdCollection est un entier)
+
+// ─── Procédure : Ajout d'images à une collection existante ────────────────
+// Envoie un fichier ZIP au webservice DesignerImageAjout via multipart/form-data
+// avec authentification HMAC.
+//
+// Inspirée de ImporterFichier (création de collection).
+//
+// Comportement :
+//   - Si l'utilisateur a uploadé 1 seul fichier .zip → on l'envoie tel quel.
+//   - Si l'utilisateur a uploadé N images → on les zippe d'abord (ZipperFichiersUpload)
+//     puis on envoie le ZIP produit.
+//
+// Le résultat est positionné dans saiResultatAjout (champ caché de la popup) :
+//   - "OK" si succès
+//   - "" sinon
+
+
+sCheminLocal	est une chaîne
+sNomFichier		est une chaîne
+sExtension		est une chaîne
+nIndice			est un entier
+
+saiResultatAjout = ""
+
+fRepCrée(fRepDonnées() + "\TempUploadAjout\")
+
+
+// ─── 1. Récupérer les fichiers uploadés ──────────────────────────────────
+si uplFichiersAjout..Occurrence = 0 alors
+	Erreur("Aucun fichier reçu.")
+	retour
+fin
+
+tabCheminsRecus est un tableau de chaînes
+
+pour nIndice = 1 _à_ uplFichiersAjout..Occurrence
+	sNomFichier = uplFichiersAjout.CopieFichier(fRepDonnées() + "\TempUploadAjout", "", nIndice)
+	si sNomFichier <> "" alors
+		tabCheminsRecus.Ajoute(fRepDonnées() + "\TempUploadAjout\" + sNomFichier)
+	fin
+fin
+
+si tabCheminsRecus.Occurrence = 0 alors
+	Erreur("Erreur lors de la réception des fichiers.")
+	retour
+fin
+
+
+// ─── 2. Déterminer le ZIP à envoyer ──────────────────────────────────────
+// Si un seul fichier ET extension .zip → on l'envoie tel quel.
+// Sinon → on zippe tous les fichiers reçus.
+si tabCheminsRecus.Occurrence = 1 alors
+	sExtension = Minuscule(fExtraitChemin(tabCheminsRecus[1], fExtension))
+	si sExtension = ".zip" alors
+		sCheminLocal = tabCheminsRecus[1]
+	fin
+fin
+
+si sCheminLocal = "" alors
+	sCheminLocal = ZipperFichiersUpload(tabCheminsRecus, fRepDonnées() + "\TempUploadAjout")
+	si sCheminLocal = "" alors
+		Erreur("Impossible de créer le ZIP temporaire.")
+		retour
+	fin
+fin
+
+
+// ─── 3. Configuration de l'authentification HMAC ──────────────────────────
+sUrlWebservice est une chaîne = cpFonction.ValeurParametre("WS_Designer_Add_Images", prm_parametre.ValChaine..Nom)
+
+si sUrlWebservice = "" alors
+	Erreur("URL du webservice non configurée (paramètre WS_Designer_Add_Images).")
+	retour
+fin
+
+sIdClient	est une chaîne	= NumériqueVersChaîne(Partage.__vcUser.IDClient, "01d")
+sIdContact	est une chaîne	= NumériqueVersChaîne(Partage.__vcUser.IDContact, "01d")
+sTimestamp	est une chaîne	= cpDesigner.GenerSignatureTimestamp()
+sSignature	est une chaîne	= cpDesigner.GenerSignatureHMAC("POST", sIdClient, sIdContact, sTimestamp)
+
+
+// ─── 4. Construction du formulaire multipart ─────────────────────────────
+sIdForm est une chaîne = "FORM_AJOUT_IMAGES_" + DateHeureSys().VersChaîne("AAAAMMJJHHmmSSCC")
+
+HTTPCréeFormulaire(sIdForm)
+HTTPAjouteFichier(sIdForm, "fichierZip",  sCheminLocal, "application/zip")
+HTTPAjouteParamètre(sIdForm, "idCollection", pIdCollection)
+
+
+// ─── 5. Construction de la requête HTTP ──────────────────────────────────
+hRequete est un httpRequête
+
+hRequete.URL								= sUrlWebservice
+hRequete.Méthode							= httpPost							// OBLIGATOIRE depuis WD26
+hRequete.ContentType						= typeMimeFormulaireMultiPartie		// "multipart/form-data"
+hRequete.VersionHTTP						= httpVersion1_1					// éviter HTTP/2 (parfois capricieux)
+hRequete.AgentUtilisateur				= "Marketeam-WebDev/1.0"
+
+// En-têtes HMAC personnalisés
+hRequete.Entête["X-IdClient"]			= sIdClient
+hRequete.Entête["X-IdContact"]		= sIdContact
+hRequete.Entête["X-Timestamp"]		= sTimestamp
+hRequete.Entête["X-Marketeam-Auth"]	= sSignature
+
+
+// ─── 6. Envoi via HTTPEnvoieFormulaire ───────────────────────────────────
+cRep est un httpRéponse = HTTPEnvoieFormulaire(sIdForm, hRequete)
+
+
+// ─── 7. Vérification erreur réseau ───────────────────────────────────────
+si ErreurDétectée alors
+	Erreur("Impossible de joindre le serveur." + RC + ErreurInfo(errComplet))
+	retour
+fin
+
+
+// ─── 8. Récupération et parsing de la réponse ────────────────────────────
+sContenuReponse	est une chaîne	= cRep.Contenu
+nCodeEtat			est un entier	= cRep.CodeEtat
+
+
+// Vérifier que la réponse est bien du JSON
+si Position(sContenuReponse, "{") <> 1 alors
+	Erreur("Réponse non-JSON du serveur (HTTP " + nCodeEtat + ") :" + RC + sContenuReponse)
+	retour
+fin
+
+vReponse	est un Variant	= JSONVersVariant(sContenuReponse)
+sMessage	est une chaîne
+
+
+selon nCodeEtat
+	cas 200
+		// Succès
+		si vReponse.Statut = "success" alors
+			nAjoutees	est un entier = vReponse.Details.imagesAjoutees
+			nConflits	est un entier = vReponse.Details.imagesEnConflit
+			nIgnorees	est un entier = vReponse.Details.imagesIgnorees
+			nTotal		est un entier = vReponse.Details.nbTotalImages
+
+			sMessage = nAjoutees + " image(s) ajoutée(s) à la collection." + RC
+			sMessage += "Total dans la collection : " + nTotal + " image(s)."
+			si nConflits > 0 alors
+				sMessage += RC + nConflits + " image(s) refusée(s) (nom déjà utilisé)."
+			fin
+			si nIgnorees > 0 alors
+				sMessage += RC + nIgnorees + " image(s) refusée(s) (format/dimensions/taille)."
+			fin
+
+			PopupAfficheMessage(sMessage, "Ajout d'images terminé.", __OPERATION_COURRIER__, __TOAST_INFORMATION__)
+
+			saiResultatAjout = "OK"
+
+		sinon
+			Erreur("Réponse inattendue du serveur." + RC + sContenuReponse)
+		fin
+
+	autre cas
+		// Erreur métier (400, 500...)
+		si vReponse.Statut = "error" alors
+			sMessage = vReponse.Details
+			si sMessage = "" alors
+				sMessage = vReponse.Message
+			fin
+			Erreur(sMessage)
+		sinon
+			Erreur("Erreur HTTP " + nCodeEtat + RC + sContenuReponse)
+		fin
+fin
+
+
+fin:
+// Nettoyage des fichiers temporaires reçus
+pour tout sChemin de tabCheminsRecus
+	si fFichierExiste(sChemin) alors fSupprime(sChemin) fin
+fin
+// Nettoyage du zip généré (si différent des fichiers reçus)
+si sCheminLocal <> "" _et_ fFichierExiste(sCheminLocal) alors fSupprime(sCheminLocal) fin

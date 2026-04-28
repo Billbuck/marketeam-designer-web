@@ -1,0 +1,3 @@
+procédure MémoriseNomCollection(pNomCollection)
+
+__sNomCollection = pNomCollection

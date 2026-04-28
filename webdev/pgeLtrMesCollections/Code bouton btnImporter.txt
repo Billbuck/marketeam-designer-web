@@ -1,0 +1,21 @@
+// Code Navigateur : Clic sur btnImporter
+
+si SansEspace(saiNomCollection) = "" alors
+	PopupAfficheMessage("Veuillez saisir un nom de collection.",*,__OPERATION_COURRIER__,__TOAST_INFORMATION__)
+	retour
+fin
+
+si AJAXExécute(ajaxEnvoieValeurChamps, VerifieDoublonCollection, SansEspace(saiNomCollection)) alors
+	PopupAfficheMessage("Une collection portant le nom '" + saiNomCollection + "' existe déjà.","Veuillez choisir un autre nom.",__OPERATION_COURRIER__,__TOAST_INFORMATION__)
+	retour
+fin
+
+si uplFichierZip..Occurrence = 0 alors
+	PopupAfficheMessage("Veuillez sélectionner un fichier ZIP à importer.",*,__OPERATION_COURRIER__,__TOAST_INFORMATION__)
+	retour
+fin
+
+AffichePopupProgression("Traitement en cours",__OPERATION_COURRIER__)
+uplFichierZip.Lance(saiFichier)
+
+

@@ -1,0 +1,34 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// VerifieDoublonCollection
+// Rôle : Vérifier si un nom de collection est déjà utilisé.
+//
+// Règle métier (ltr_designer_collection) :
+//   - Doublon dans les collections du client lui-même
+//   - OU doublon dans TOUTE collection marque (IdMarque > 0), même si le
+//     client n'est pas rattaché à cette marque (rejet préventif pour éviter
+//     un conflit en cas de rattachement futur).
+//
+// Paramètre :
+//   pNomCollection : nom à tester
+//
+// Retour : booléen — Vrai si doublon, Faux sinon
+// ─────────────────────────────────────────────────────────────────────────────
+procédure VerifieDoublonCollection(pNomCollection est une chaîne) : booléen
+
+nIdClient		est un entier				= Partage.__vcUser.IDClient
+sdReqDoublon	est une Source de Données
+sReqDoublon		est une chaîne ANSI
+
+
+sReqDoublon = [
+	SELECT IdCollection FROM ltr_designer_collection
+	WHERE Nom = '[%pNomCollection%]'
+	AND (IdClient = [%nIdClient%] OR IdMarque > 0)
+	LIMIT 1
+]
+
+si pas sdReqDoublon.ExécuteRequêteSQL(ltr_designer_collection.Connexion, hRequêteSansCorrection, sReqDoublon) alors
+	renvoyer Faux
+fin
+
+renvoyer sdReqDoublon.LitPremier()

@@ -1,0 +1,36 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// InitZnrCollection ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure InitZnrCollection()
+
+nInd est un entier
+
+znrcollection.SupprimeTout()
+
+si _tabCollection.Occurrence = 0 alors
+	retour
+fin
+
+pour tout sFichier de _tabCollection
+	si SansEspace(saiRecherche) = "" _ou_ sFichier.Contient(SansEspace(saiRecherche)) alors
+		nInd														= znrcollection.AjouteLigne()
+		znrcollection[nInd].attCheminPhysiqueImage	= _sCheminPhysique + sFichier
+		znrcollection[nInd].attFichierNom				= sFichier
+		znrcollection[nInd].imgImage						= _sCheminRelatif + sFichier
+		znrcollection[nInd].libNom							= sFichier
+		znrcollection[nInd].btnRenommer.Visible		= _sBibliothèque = BibliothèquePersonnelle.Valeur
+		znrcollection[nInd].btnSupprimer.Visible		= _sBibliothèque = BibliothèquePersonnelle.Valeur
+	fin
+fin
+
+fin:
+celCollections.Visible = znrcollection.Occurrence > 0

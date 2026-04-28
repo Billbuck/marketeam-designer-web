@@ -1,0 +1,60 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// ZipperFichiersUpload
+// Rôle : Créer un fichier ZIP temporaire contenant la liste de fichiers passés
+//        en paramètre. Utilisé par AjoutImages quand l'utilisateur a sélectionné
+//        des images individuelles plutôt qu'un ZIP.
+//
+// Paramètres :
+//   pTabFichiers   : tableau de chemins physiques absolus des fichiers à zipper
+//   pCheminTempRep : répertoire temporaire où créer le ZIP (sans \ final obligatoire)
+//
+// Retour : chemin physique complet du ZIP créé (ou "" si échec)
+// ─────────────────────────────────────────────────────────────────────────────
+procédure ZipperFichiersUpload(pTabFichiers est un tableau de chaînes, pCheminTempRep est une chaîne) : chaîne
+
+sRepTemp		est une chaîne	= pCheminTempRep
+sCheminZip	est une chaîne
+zip			est une zipArchive
+nResZip		est un entier
+
+
+// Garantir le séparateur final
+si sRepTemp <> "" _et_ Droite(sRepTemp, 1) <> "\" alors
+	sRepTemp += "\"
+fin
+
+si pas fRepExiste(sRepTemp) alors
+	fRepCrée(sRepTemp)
+fin
+
+sCheminZip = sRepTemp + "ajout_" + DateHeureSys().VersChaîne("AAAAMMJJHHmmSSCC") + ".zip"
+
+
+// ─── Création du ZIP ─────────────────────────────────────────────────────
+nResZip = zip.Crée(sCheminZip)
+si nResZip <> 0 alors
+	Trace("ZipperFichiersUpload : Crée ZIP code=" + nResZip + " - " + zipMsgErreur(nResZip))
+	renvoyer ""
+fin
+
+
+// ─── Ajout de chaque fichier (sans préserver le chemin) ──────────────────
+pour tout sFichier de pTabFichiers
+	si sFichier = "" _ou_ pas fFichierExiste(sFichier) alors continuer fin
+
+	nResZip = zip.AjouteFichier(sFichier, zipSansChemin)
+	si nResZip <> 0 alors
+		Trace("ZipperFichiersUpload : AjouteFichier '" + sFichier + "' code=" + nResZip + " - " + zipMsgErreur(nResZip))
+	fin
+fin
+
+zip.Ferme()
+
+
+// Vérification finale
+si pas fFichierExiste(sCheminZip) _ou_ fTaille(sCheminZip) = 0 alors
+	si fFichierExiste(sCheminZip) alors fSupprime(sCheminZip) fin
+	renvoyer ""
+fin
+
+renvoyer sCheminZip

@@ -1,0 +1,65 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//ChargeCollection ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure ChargeCollection()
+
+tabFichiersCollection		est un tableau de chaînes
+sListeFichiers					est une chaîne
+sCheminFichier					est une chaîne
+
+_sCheminPhysique	= ""
+_sCheminRelatif	= ""
+_tabCollection.SupprimeTout()
+
+si cboCollection.ValeurMémorisée = "" alors
+	libNombre	= ""
+	libLargeur	= ""
+	libHauteur	= ""
+	libFormat	= ""
+	retour
+fin
+
+si ltr_designer_collection.LitRecherchePremier(IdCollection, cboCollection.ValeurMémorisée) alors
+	libNombre	= ltr_designer_collection.NbImages
+	libLargeur	= NumériqueVersChaîne(ltr_designer_collection.Largeur, "dS") + " px"
+	libHauteur	= NumériqueVersChaîne(ltr_designer_collection.Hauteur, "dS") + " px"
+	libFormat	= ltr_designer_collection.Format
+	NumériqueVersChaîne(ltr_designer_collection.Largeur, "dS")
+
+	selon Vrai
+		cas ltr_designer_collection.IdMarque > 0
+			_sCheminPhysique	= CheminMarque(ltr_designer_collection.IdMarque, __OPERATION_COURRIER__, __REP_COLLECTION__, Vrai) + NumériqueVersChaîne(ltr_designer_collection.IdCollection, "08d") + "\"
+			_sCheminRelatif	= CheminMarque(ltr_designer_collection.IdMarque, __OPERATION_COURRIER__, __REP_COLLECTION__, Faux) + NumériqueVersChaîne(ltr_designer_collection.IdCollection, "08d") + "/"
+
+		cas ltr_designer_collection.IdClient > 0
+			_sCheminPhysique	= CheminClient(ltr_designer_collection.IdClient, __OPERATION_COURRIER__, __REP_COLLECTION__, Vrai) + NumériqueVersChaîne(ltr_designer_collection.IdCollection, "08d") + "\"
+			_sCheminRelatif	= CheminClient(ltr_designer_collection.IdClient, __OPERATION_COURRIER__, __REP_COLLECTION__, Faux) + NumériqueVersChaîne(ltr_designer_collection.IdCollection, "08d") + "/"
+
+		autres cas
+			_sCheminPhysique	= CheminMarketeam(__OPERATION_COURRIER__, __REP_COLLECTION__, Vrai) + NumériqueVersChaîne(ltr_designer_collection.IdCollection, "08d") + "\"
+			_sCheminRelatif	= CheminMarketeam(__OPERATION_COURRIER__, __REP_COLLECTION__, Faux) + NumériqueVersChaîne(ltr_designer_collection.IdCollection, "08d") + "/"
+	fin
+
+	si fRepExiste(_sCheminPhysique) alors
+		sListeFichiers = fListeFichier(_sCheminPhysique + "*.*", frNonRécursif)
+		sListeFichiers.VersTableau(tabFichiersCollection, RC)
+	fin
+
+	pour tout sCheminFichier de tabFichiersCollection
+		_tabCollection.Ajoute(fExtraitChemin(sCheminFichier,fFichier+fExtension))
+	fin
+
+fin
+
+fin:
+
+grpCollection.Visible = cboCollection.ValeurMémorisée <> ""

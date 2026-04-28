@@ -1,0 +1,5 @@
+// Code Navigateur : Sortie avec modification de saiImageNouveauNom
+
+si AJAXExécute(AjaxExtraitChemin, saiImageNouveauNom, #Extension) = "" alors
+	saiImageNouveauNom = saiImageNouveauNom + AJAXExécute(ajaxAppelSimple, AjaxExtraitChemin, saiImageNomActuel, #Extension)
+fin

@@ -1,0 +1,80 @@
+// Initialisation serveur
+uplFichiersAjout..TypeFichiers = "Fichiers" + TAB + "*.zip;*.jpg;*.jpeg;*.png;*.gif"
+uplFichiersAjout..MultiSélection = Vrai
+
+
+// ─────────────────────────────────────────────────────────────────────────
+// Code Navigateur : A chaque modification de la liste des fichiers
+//                   sélectionnés dans uplFichiersAjout
+// ─────────────────────────────────────────────────────────────────────────
+sExtension		est une chaîne
+sFichier			est une chaîne
+nIndice			est un entier
+nNbZip			est un entier
+nNbImages		est un entier
+
+btnAjouter.Etat	= Grisé
+saiFichiers		= ""
+
+si uplFichiersAjout..Occurrence = 0 alors
+	retour
+fin
+
+// Comptage par type
+pour nIndice = 1 _à_ uplFichiersAjout..Occurrence
+	sFichier = uplFichiersAjout[nIndice]
+	sExtension = Minuscule(AJAXExécute(ajaxEnvoieValeurChamps, cpFonction.AjaxExtraitChemin, sFichier, #Extension))
+
+	selon sExtension
+		cas ".zip"
+			nNbZip++
+		cas ".jpg", ".jpeg", ".png", ".gif"
+			nNbImages++
+		autre cas
+			uplFichiersAjout.Supprime(nIndice)
+			PopupAfficheMessage(sFichier + " : format non pris en charge.", *, __OPERATION_COURRIER__, __TOAST_INFORMATION__)
+			retour
+	fin
+fin
+
+// Règle : SOIT un seul ZIP, SOIT des images. Pas de mélange, pas de plusieurs ZIP.
+si nNbZip > 0 _et_ nNbImages > 0 alors
+	UploadSupprimeTout(uplFichiersAjout)
+	PopupAfficheMessage("Vous devez sélectionner soit un fichier ZIP, soit des images, mais pas les deux à la fois.", *, __OPERATION_COURRIER__, __TOAST_INFORMATION__)
+	retour
+fin
+
+si nNbZip > 1 alors
+	UploadSupprimeTout(uplFichiersAjout)
+	PopupAfficheMessage("Vous ne pouvez sélectionner qu'un seul fichier ZIP à la fois.", *, __OPERATION_COURRIER__, __TOAST_INFORMATION__)
+	retour
+fin
+
+// Résumé pour saiFichiers
+si nNbZip = 1 alors
+	saiFichiers = AJAXExécute(ajaxEnvoieValeurChamps, cpFonction.AjaxExtraitChemin, uplFichiersAjout[1], #Fichier) + ...
+					  AJAXExécute(ajaxEnvoieValeurChamps, cpFonction.AjaxExtraitChemin, uplFichiersAjout[1], #Extension)
+sinon
+	saiFichiers = nNbImages + " image(s) sélectionnée(s)"
+fin
+
+btnAjouter.Etat = Actif
+
+
+// ─────────────────────────────────────────────────────────────────────────
+// Code Serveur : Réception des fichiers uploadés de uplFichiersAjout
+// ─────────────────────────────────────────────────────────────────────────
+
+AjoutImages(Val(cboCollection.ValeurMémorisée))
+
+
+// ─────────────────────────────────────────────────────────────────────────
+// Code Navigateur : Après réception des fichiers uploadés de uplFichiersAjout
+// ─────────────────────────────────────────────────────────────────────────
+
+si saiResultatAjout = "OK" alors
+	AJAXExécuteAsynchrone(ajaxActualiseChamps + ajaxSynchroniseVariablesServeur + ajaxEnvoieValeurChamps, ...
+									ChargeCollectionApresAjout, ...
+									AfficheCollectionApresAjout)
+fin
+popJaugeProgression.Ferme()

@@ -1,0 +1,37 @@
+// Initialisation serveur
+uplFichierZip..TypeFichiers = "Fichiers" + TAB + "*.zip"
+
+// Code Navigateur : A chaque modification de la liste des fichiers sélectionnés dans uplFichierZip
+
+sFichierExtension	est une chaîne
+sFichierNom			est une chaîne
+
+sFichierUpload est une chaîne = uplFichierZip
+
+si uplFichierZip..Occurrence > 0 alors
+	sFichierNom 		= AJAXExécute(ajaxEnvoieValeurChamps, cpFonction.AjaxExtraitChemin, sFichierUpload, #Fichier)
+	sFichierExtension = AJAXExécute(ajaxEnvoieValeurChamps, cpFonction.AjaxExtraitChemin, sFichierUpload, #Extension)
+
+	si Minuscule(sFichierExtension) <> __ZIP__ alors
+		uplFichierZip.Supprime(1)
+		PopupAfficheMessage(sFichierUpload +" : seuls les fichiers ZIP sont pris en charge",*,__OPERATION_COURRIER__,__TOAST_INFORMATION__)
+	sinon
+		saiFichier 			= sFichierNom + sFichierExtension
+		saiNomCollection	= sFichierNom
+		btnImporter.Etat	= Actif
+		AJAXExécute(ajaxActualiseChamps+ajaxEnvoieValeurChamps+ajaxSynchroniseVariablesServeur, MémoriseNomCollection, sFichierNom)
+	fin
+fin
+
+
+// Code Serveur : Réception des fichiers uploadés de uplFichierZip
+
+ImporterFichier(SansEspace(saiNomCollection))
+
+// Code Navigateur : Après réception des fichiers uploadés de uplFichierZip
+
+si Val(saiIdCollection) > 0 alors
+	AJAXExécuteAsynchrone(ajaxActualiseChamps+ajaxSynchroniseVariablesServeur+ajaxEnvoieValeurChamps, ChargeNouvelleCollection, AfficheNouvelleCollection, Val(saiIdCollection))
+fin
+popJaugeProgression.Ferme()
+

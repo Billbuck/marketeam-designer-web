@@ -1,0 +1,7 @@
+// Inspirée de ChargeNouvelleCollection (création).
+// Différence : la collection est déjà sélectionnée dans cboCollection,
+// pas besoin de réinitialiser la combo. On recharge juste la liste
+// des fichiers du dossier physique.
+procédure ChargeCollectionApresAjout()
+
+ChargeCollection()

@@ -1,0 +1,176 @@
+procédure ImporterFichier(pNomCollection est une chaîne)
+
+// ─── Code du bouton "Importer" page pgeLtrMesCollections ──────────────────
+// Envoie un fichier ZIP de collection au webservice DesignerImageUploadStock
+// via un appel HTTP multipart/form-data avec authentification HMAC.
+//
+// Référence officielle PC Soft :
+// https://forum.pcsoft.fr/.../envoyer-fichier-avec-api-rest
+// Pattern avec HTTPCréeFormulaire / HTTPAjouteFichier / HTTPEnvoieFormulaire(idForm, hRequete).
+// IMPORTANT (depuis WebDev 26) : la méthode httpPost doit être positionnée
+// EXPLICITEMENT, sinon la requête part en GET (= 400 Bad Request Apache).
+
+
+sFichierUpload	est une chaîne
+sCheminLocal	est une chaîne
+
+saiIdCollection = ""
+
+fRepCrée(fRepDonnées() + "\TempUploadStock\")
+
+// ─── 3. Récupération du fichier uploadé ──────────────────────────────────
+sFichierUpload = uplFichierZip.CopieFichier(fRepDonnées() + "\TempUploadStock", "")
+
+si sFichierUpload = "" alors
+	Erreur("Erreur lors de la réception du fichier ZIP.")
+	retour
+fin
+
+sCheminLocal = fRepDonnées() + "\TempUploadStock\" + sFichierUpload
+
+
+// ─── 4. Configuration de l'authentification HMAC ──────────────────────────
+sUrlWebservice	est une chaîne	= cpFonction.ValeurParametre("WS_Designer_Upload_Stock", prm_parametre.ValChaine..Nom)
+
+si sUrlWebservice = "" alors
+	Erreur("URL du webservice non configurée (paramètre WS_Designer_Upload_Stock).")
+	fSupprime(sCheminLocal)
+	retour
+fin
+
+sIdClient	est une chaîne	= NumériqueVersChaîne(Partage.__vcUser.IDClient, "01d")
+sIdContact	est une chaîne	= NumériqueVersChaîne(Partage.__vcUser.IDContact, "01d")
+sTimestamp	est une chaîne	= cpDesigner.GenerSignatureTimestamp()
+sSignature	est une chaîne	= cpDesigner.GenerSignatureHMAC("POST", sIdClient, sIdContact, sTimestamp)
+
+
+// ─── 5. Construction du formulaire multipart ─────────────────────────────
+sIdForm		est une chaîne	= "FORM_UPLOAD_STOCK_" + DateHeureSys().VersChaîne("AAAAMMJJHHmmSSCC")
+
+HTTPCréeFormulaire(sIdForm)
+HTTPAjouteFichier(sIdForm, "fichierZip", sCheminLocal, "application/zip")
+HTTPAjouteParamètre(sIdForm, "nomCollection", pNomCollection)
+HTTPAjouteParamètre(sIdForm, "idCollection",  "")
+
+
+// ─── 6. Construction de la requête HTTP ──────────────────────────────────
+hRequete est un httpRequête
+
+hRequete.URL								= sUrlWebservice
+hRequete.Méthode							= httpPost							// OBLIGATOIRE depuis WD26
+hRequete.ContentType						= typeMimeFormulaireMultiPartie		// "multipart/form-data"
+hRequete.VersionHTTP						= httpVersion1_1					// éviter HTTP/2 (parfois capricieux)
+hRequete.AgentUtilisateur				= "Marketeam-WebDev/1.0"
+
+// En-têtes HMAC personnalisés
+hRequete.Entête["X-IdClient"]			= sIdClient
+hRequete.Entête["X-IdContact"]		= sIdContact
+hRequete.Entête["X-Timestamp"]		= sTimestamp
+hRequete.Entête["X-Marketeam-Auth"]	= sSignature
+
+// Trace pour diagnostic : log les en-têtes et données envoyés/reçus.
+// À désactiver une fois le problème résolu.
+//hRequete.ProcédureTrace					= TraceRequeteHTTP
+
+
+// ─── 7. Envoi via HTTPEnvoieFormulaire ────────────────────────────────────
+cRep est un httpRéponse = HTTPEnvoieFormulaire(sIdForm, hRequete)
+
+// Suppression du fichier temporaire local
+fSupprime(sCheminLocal)
+
+
+// ─── 8. Vérification erreur réseau ───────────────────────────────────────
+si ErreurDétectée alors
+	Erreur("Impossible de joindre le serveur." + RC + ErreurInfo(errComplet))
+	retour
+fin
+
+
+// ─── 9. Récupération et parsing de la réponse ────────────────────────────
+sContenuReponse	est une chaîne	= cRep.Contenu
+nCodeEtat			est un entier	= cRep.CodeEtat
+
+
+// Vérifier que la réponse est bien du JSON
+si Position(sContenuReponse, "{") <> 1 alors
+	Erreur("Réponse non-JSON du serveur (HTTP " + nCodeEtat + ") :" + RC + sContenuReponse)
+	retour
+fin
+
+vReponse	est un Variant	= JSONVersVariant(sContenuReponse)
+sMessage	est une chaîne
+
+
+selon nCodeEtat
+	cas 200
+		// Succès
+		si vReponse.Statut = "success" alors
+			// vReponse.Details est déjà un objet (Variant), accès direct sans re-parser.
+			saiIdCollection	= vReponse.Details.IdCollection
+			nImagesStockees	est un entier	= vReponse.Details.resume.imagesStockees
+			nFichiersIgnores	est un entier	= vReponse.Details.resume.fichiersIgnores
+
+			sMessage = "Collection '" + pNomCollection + "' (ID " + saiIdCollection + ") importée avec succès." + RC
+			sMessage += nImagesStockees + " image(s) stockée(s)."
+			si nFichiersIgnores > 0 alors
+				sMessage += RC + nFichiersIgnores + " fichier(s) ignoré(s)."
+			fin
+
+			PopupAfficheMessage(sMessage, "Collection '" + pNomCollection + "importée avec succès.",__OPERATION_COURRIER__,__TOAST_INFORMATION__)
+
+
+		sinon
+			Erreur("Réponse inattendue du serveur." + RC + sContenuReponse)
+		fin
+
+	autre cas
+		// Erreur métier (400, 500...)
+		si vReponse.Statut = "error" alors
+			sMessage = vReponse.Details
+			si sMessage = "" alors
+				sMessage = vReponse.Message
+			fin
+			Erreur(sMessage)
+		sinon
+			Erreur("Erreur HTTP " + nCodeEtat + RC + sContenuReponse)
+		fin
+fin
+
+fin:
+saiFichier			= ""
+saiNomCollection	= ""
+btnImporter.Etat	= Grisé
+
+
+// ═════════════════════════════════════════════════════════════════════════
+// PROCÉDURE INTERNE : trace de la requête HTTP (diagnostic)
+	// ═════════════════════════════════════════════════════════════════════════
+	procédure interne TraceRequeteHTTP(nTypeInfo est entier, bufData est un Buffer)
+		sLigne est une chaîne
+
+		selon nTypeInfo
+			cas httpTraceEntêteEnvoyé
+				sLigne = "===== ENTÊTES ENVOYÉS =====" + RC + UTF8VersChaîne(bufData)
+				Trace(sLigne)
+			cas httpTraceDonnéeEnvoyée
+				// On ne loggue que les 500 premiers octets pour ne pas saturer la trace.
+				// Milieu() fonctionne aussi sur les Buffer en WLanguage.
+				sLigne = "===== DONNÉES ENVOYÉES (premiers octets) =====" + RC
+				si bufData..Taille > 500 alors
+					sLigne += UTF8VersChaîne(Milieu(bufData, 1, 500))
+					sLigne += RC + "[... " + (bufData..Taille - 500) + " octets supplémentaires ...]"
+				sinon
+					sLigne += UTF8VersChaîne(bufData)
+				fin
+				Trace(sLigne)
+			cas httpTraceEntêteRecu
+				sLigne = "===== ENTÊTES REÇUS =====" + RC + UTF8VersChaîne(bufData)
+				Trace(sLigne)
+			cas httpTraceDonnéeRecue
+				sLigne = "===== DONNÉES REÇUES =====" + RC + UTF8VersChaîne(bufData)
+				Trace(sLigne)
+			cas httpTraceInfo
+				Trace("===== INFO cURL =====" + RC + UTF8VersChaîne(bufData))
+		fin
+	fin

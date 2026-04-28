@@ -1,0 +1,41 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// VerifieDoublonImage
+// Rôle : Vérifier si le nouveau nom d'une image entrerait en collision avec
+//        un fichier déjà présent dans le répertoire (hors fichier d'origine).
+//
+// Paramètres :
+//   pCheminRepertoire : chemin physique du dossier (ex: "D:\...\Collections\00000008\")
+//   pAncienNom        : nom du fichier actuel, AVEC extension (ex: "image1.jpg")
+//   pNouveauNom       : nouveau nom souhaité, AVEC extension (ex: "produit_A.jpg")
+//
+// Retour : booléen
+//   Vrai  → un autre fichier porte déjà ce nom (renommage refusé)
+//   Faux  → le nom est libre OU c'est l'ancien nom lui-même (rien à faire)
+//
+// Note Windows : le système de fichiers NTFS est insensible à la casse, donc
+// renommer "image.jpg" en "Image.jpg" n'est pas un doublon (même fichier).
+// La comparaison est donc faite en insensible à la casse.
+// ─────────────────────────────────────────────────────────────────────────────
+procédure VerifieDoublonImage(pCheminRepertoire est une chaîne, pAncienNom est une chaîne, pNouveauNom est une chaîne) : booléen
+
+sRepertoire		est une chaîne	= pCheminRepertoire
+sAncien			est une chaîne	= SansEspace(pAncienNom)
+sNouveau			est une chaîne	= SansEspace(pNouveauNom)
+sCheminCible	est une chaîne
+
+
+// Garantir que le chemin se termine par un séparateur
+si sRepertoire <> "" _et_ Droite(sRepertoire, 1) <> "\" alors
+	sRepertoire += "\"
+fin
+
+
+// Renommage neutre (même nom, casse ignorée) → pas de doublon
+si sAncien ~= sNouveau alors
+	renvoyer Faux
+fin
+
+
+// Tester si le nouveau nom existe déjà dans le dossier
+sCheminCible = sRepertoire + sNouveau
+renvoyer fFichierExiste(sCheminCible)

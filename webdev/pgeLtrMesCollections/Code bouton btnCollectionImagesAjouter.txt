@@ -1,0 +1,12 @@
+// Code Navigateur :
+
+UploadSupprimeTout(popCollectionImagesAjouter.uplFichiersAjout)
+
+
+// Code Serveur :
+
+popCollectionImagesAjouter.saiFichiers		= ""
+popCollectionImagesAjouter.saiResultatAjout	= ""
+popCollectionImagesAjouter.btnAjouter.Etat	= Grisé
+
+popCollectionImagesAjouter.Affiche(popupHautCentre)

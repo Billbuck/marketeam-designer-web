@@ -1,0 +1,39 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// cpDesigner.GenerSignatureHMAC()
+// Rôle : Générer la signature HMAC SHA-256 utilisée pour authentifier
+//        les appels HTTP vers les webservices Designer (DesignerImageUpload,
+//        DesignerImageUploadStock, DesignerCollectionListe, etc.)
+//
+// Format de la chaîne signée :
+//   secretKey + "POST|/api/endpoint|" + idClient + "|" + idContact + "|" + timestamp
+//
+// IMPORTANT : le chemin signé est TOUJOURS "/api/endpoint" (chemin FIXE,
+// pas l'URL réelle du webservice). Cohérent avec generateSignature() côté JS
+// du Designer (script.js).
+//
+// Paramètres :
+//   pMethode    : méthode HTTP (généralement "POST")
+//   pIdClient   : ID client (chaîne)
+//   pIdContact  : ID contact (chaîne)
+//   pTimestamp  : timestamp au format AAAAMMJJHHMMSS
+// Retour :
+//   Signature SHA-256 en hexadécimal MAJUSCULE (64 caractères)
+// ─────────────────────────────────────────────────────────────────────────────
+procédure GenerSignatureHMAC(pMethode est une chaîne, pIdClient est une chaîne, pIdContact est une chaîne, pTimestamp est une chaîne) : chaîne
+
+// IMPORTANT : on doit utiliser la MÊME clé secrète que la procédure
+// AccessTokenVérification côté serveur, qui utilise la CONSTANTE projet
+// __API_CLE_SECRET_KEY__. Toute autre source (ex: prm_parametre) risque
+// de diverger et produit alors un HTTP 403 "Authentification échouée".
+//
+// Référence du calcul serveur (cpDesigner.AccessTokenVérification) :
+//   sBase = __API_CLE_SECRET_KEY__ + "POST|/api/endpoint|" + nIdClient + "|" + nIdContact + "|" + sTimestamp
+//   sSignature = HashChaîne(HA_SHA_256, sBase).BufferVersHexa(SansRegroupement, SansLigne)
+sBase		est une chaîne ANSI	= __API_CLE_SECRET_KEY__ + pMethode + "|/api/endpoint|" + pIdClient + "|" + pIdContact + "|" + pTimestamp
+sSignature	est une chaîne ANSI	= HashChaîne(HA_SHA_256, sBase).BufferVersHexa(SansRegroupement, SansLigne)
+
+// Trace temporaire pour diagnostic — à retirer une fois validé
+Trace("GenerSignatureHMAC > sBase=[" + sBase + "]")
+Trace("GenerSignatureHMAC > sSignature=[" + sSignature + "]")
+
+renvoyer sSignature

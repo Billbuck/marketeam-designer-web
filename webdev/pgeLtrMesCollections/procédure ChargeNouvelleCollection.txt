@@ -1,0 +1,4 @@
+procédure ChargeNouvelleCollection(pIdCollection)
+
+InitCboCollection(pIdCollection)
+ChargeCollection()

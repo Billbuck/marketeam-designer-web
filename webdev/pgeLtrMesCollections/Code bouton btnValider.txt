@@ -1,0 +1,38 @@
+// Code Navigateur : Clic sur btnValider 
+
+sExtensionOrigine	est une chaîne	= AJAXExécute(cpFonction.AjaxExtraitChemin, saiImageNomActuel, #Extension)
+sExtensionNouveau	est une chaîne	= AJAXExécute(cpFonction.AjaxExtraitChemin, saiImageNouveauNom, #Extension)
+sFichierNouveau	est une chaîne	= AJAXExécute(cpFonction.AjaxExtraitChemin, saiImageNouveauNom, #Fichier)
+
+
+si SansEspace(saiImageNouveauNom) = ""alors
+	PopupAfficheMessage("Vous devez donner un nom de fichier.",*,__OPERATION_COURRIER__,__TOAST_INFORMATION__)
+	retour
+fin
+
+si sExtensionNouveau <> sExtensionOrigine alors
+	PopupAfficheMessage("Le nouveau nom de fichier doit avoir la même extension '" + sExtensionOrigine + "'",*,__OPERATION_COURRIER__,__TOAST_INFORMATION__)
+	retour
+fin
+
+si AJAXExécute(VerifieDoublonImage, _sCheminPhysique, saiImageNomActuel, saiImageNouveauNom) alors
+	PopupAfficheMessage("Une image portant le nom '" + saiImageNouveauNom + "' existe déjà.","Veuillez choisir un autre nom.",__OPERATION_COURRIER__,__TOAST_INFORMATION__)
+	retour
+fin
+
+// Code Serveur : Clic btnValider
+
+si _sCheminPhysique <> ""
+	si fFichierExiste(_sCheminPhysique + saiImageNomActuel) alors
+		si fRenomme(_sCheminPhysique + saiImageNomActuel, _sCheminPhysique + saiImageNouveauNom) alors
+			popCollectionImageRenommer.Ferme()
+			ChargeCollection()
+			popCollectionImageRenommer.Ferme()
+		fin
+	fin
+fin
+
+
+// Code Navigateur : Retour de traitement AJAX après le clic sur btnValider
+
+InitZnrCollection()

@@ -1,0 +1,16 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// cpDesigner.GenerSignatureTimestamp()
+// Rôle : Générer un timestamp au format AAAAMMJJHHMMSS pour l'authentification
+//        des appels webservice Designer.
+//
+// Cohérent avec generateTimestamp() côté JS du Designer (script.js).
+//
+// Retour : chaîne au format AAAAMMJJHHMMSS (14 caractères)
+//          Exemple : "20260427134530"
+// ─────────────────────────────────────────────────────────────────────────────
+procédure GenerSignatureTimestamp() : chaîne
+
+dhMaintenant est une DateHeure = DateHeureSys()
+sTimestamp est une chaîne = dhMaintenant.VersChaîne("AAAAMMJJHHmmSS")
+
+renvoyer sTimestamp

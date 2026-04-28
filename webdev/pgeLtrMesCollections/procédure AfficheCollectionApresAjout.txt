@@ -1,0 +1,6 @@
+// Inspirée de AfficheNouvelleCollection (création).
+// Rafraîchit la zone répétée et ferme la popup d'ajout d'images.
+procédure AfficheCollectionApresAjout()
+
+InitZnrCollection()
+popCollectionImagesAjouter.Ferme()
