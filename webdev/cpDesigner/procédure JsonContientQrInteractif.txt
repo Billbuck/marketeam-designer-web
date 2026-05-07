@@ -1,0 +1,51 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// cpDesigner.JsonContientQrInteractif
+// Rôle : Détecter la présence d'au moins une zone "QR Code interactif"
+//        (= bouton "QR Code interactif" du Designer = type "qr") dans le
+//        JSON Designer d'un document.
+//
+// Le critère est strictement : présence d'au moins une entrée dans le tableau
+// zonesQR. Les codes-barres de type QR (zonesCodeBarres) ne sont PAS comptés
+// car ce sont des codes-barres lus, pas des QR interactifs / cliquables.
+//
+// Le JSON accepté peut être :
+//   - le JSON "data only" stocké dans JsonDesignerData (zonesQR à la racine)
+//   - un wrapper Designer complet avec data.zonesQR
+//
+// Paramètre :
+//   pJsonData : JSON Designer (chaîne)
+//
+// Retour : booléen
+//   Vrai → contient au moins 1 QR Dynamique
+//   Faux → JSON vide, mal formé, ou aucun QR
+// ─────────────────────────────────────────────────────────────────────────────
+procédure JsonContientQrInteractif(pJsonData est une chaîne) : booléen
+
+
+si pJsonData = "" alors
+	renvoyer Faux
+fin
+
+quand exception dans
+
+	jDoc est un JSON = ChaîneVersUTF8(pJsonData)
+
+	// Source des zones : data.zonesQR si imbriqué (wrapper), sinon racine
+	jSource est un JSON
+	si jDoc.data..Existe alors
+		jSource = jDoc.data
+	sinon
+		jSource = jDoc
+	fin
+
+	si pas jSource.zonesQR..Existe alors
+		renvoyer Faux
+	fin
+
+	renvoyer (jSource.zonesQR..Occurrence > 0)
+
+faire
+	// JSON mal formé ou structure inattendue → on considère qu'il n'y a pas de QR
+	Trace("JsonContientQrInteractif : exception parsing : " + ExceptionInfo(errMessage))
+	renvoyer Faux
+fin

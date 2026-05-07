@@ -104,6 +104,21 @@ sinon
 	__stOperation.stOperationLettre.tabStDocument[pLigne].JsonDesignerData		= ""
 fin
 
+// ─── Détection QR Code Interactif (= opération "Cliquez Ici") ────────────
+// Flag par document + propagation au flag global de l'opération. Le modèle
+// peut déjà contenir un QR Dynamique défini par son créateur ; on doit le
+// détecter dès le chargement pour activer l'étape Landing Page du tunnel.
+__stOperation.stOperationLettre.tabStDocument[pLigne].EstCliquezIci	= cpDesigner.JsonContientQrInteractif(__stOperation.stOperationLettre.tabStDocument[pLigne].JsonDesignerData)
+
+// Recalcul du flag global : Vrai si AU MOINS un document est EstCliquezIci
+__stOperation.EstCliquezIci = Faux
+pour tout stDoc de __stOperation.stOperationLettre.tabStDocument
+	si stDoc.EstCliquezIci alors
+		__stOperation.EstCliquezIci = Vrai
+		sortir
+	fin
+fin
+
 // ─── Nombre de pages attendu ─────────────────────────────────────────────
 si ltr_support.NbPageObligatoire = 0 alors
 	__stOperation.stOperationLettre.tabStDocument[pLigne].NombrePage = (ltr_modele.EstRectoVerso = Faux) ? 1 sinon 2

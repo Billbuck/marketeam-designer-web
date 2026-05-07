@@ -10,6 +10,10 @@ procédure DesignerImageUploadStock()
 //   - Pas de règle "100% des valeurs BDD doivent avoir leur image"
 //   - Vérification de doublon de nom de collection (refus si existant)
 //   - Conservation du nom original des fichiers du ZIP
+//   - Détermination des dimensions/format par CONSENSUS (la combinaison
+//     Largeur x Hauteur + Format la plus représentée). Les images qui ne
+//     correspondent pas au consensus sont rejetées (listées dans
+//     fichiersIgnores) afin de garantir une collection homogène.
 //
 // Appelé depuis la page WebDev pgeLtrMesCollections (gestion de stock par client).
 //
@@ -17,10 +21,10 @@ procédure DesignerImageUploadStock()
 //   - nomCollection : nom de la collection (obligatoire, unique chez le client)
 //   - idCollection  : ID si écrasement (vide si nouvelle collection)
 //   - fichierZip    : fichier ZIP binaire
-//   - largeur       : largeur des images en pixels
-//   - hauteur       : hauteur des images en pixels
-//   - format        : format normalisé (jpg/png/gif)
-//   - tailleZip     : taille du fichier ZIP en octets
+//   - largeur       : largeur des images en pixels (optionnel, sinon consensus)
+//   - hauteur       : hauteur des images en pixels (optionnel, sinon consensus)
+//   - format        : format normalisé (jpg/png/gif) (optionnel, sinon consensus)
+//   - tailleZip     : taille du fichier ZIP en octets (optionnel, sinon fTaille)
 // ============================================================
 
 // DEBUG TEMPORAIRE - Tracer les paramètres reçus
@@ -159,12 +163,16 @@ monZipArchive.Ferme()
 
 
 // ============================================================
-// 7. Filtrer les images valides
+// 7. Pré-filtrage : extension + taille fichier
+//    On garde toutes les images qui passent le pré-filtre dans
+//    tabImagesCandidates (avec leurs dimensions et format).
+//    Le filtrage final par CONSENSUS se fait à l'étape 7bis.
 // ============================================================
 sListeFichiers			est une chaîne
 tabTousFichiers		est un tableau de chaînes
-tabImagesValides		est un tableau de chaînes
-tabFichiersIgnores	est un tableau de Variants
+tabImagesCandidates	est un tableau de Variants		// {chemin, nom, largeur, hauteur, format}
+tabImagesValides		est un tableau de chaînes		// chemins des images conformes au consensus
+tabFichiersIgnores	est un tableau de Variants		// {fichier, raison}
 nTotalFichiersZip		est un entier
 
 sListeFichiers = fListeFichier(sRepExtraction + "\*.*", frRécursif)
@@ -176,9 +184,11 @@ pour tout sFichier de tabTousFichiers
 
 	nTotalFichiersZip++
 
-	sNomSeul		est une chaîne	= fExtraitChemin(sFichier, fFichier + fExtension)
-	sExtension	est une chaîne	= Minuscule(fExtraitChemin(sFichier, fExtension))
-	nTaille		est un entier	= fTaille(sFichier)
+	sNomSeul			est une chaîne	= fExtraitChemin(sFichier, fFichier + fExtension)
+	sExtension		est une chaîne	= Minuscule(fExtraitChemin(sFichier, fExtension))
+	sFormatNorm		est une chaîne	= sExtension.Remplace(".", "")
+	si sFormatNorm = "jpeg" alors sFormatNorm = "jpg"
+	nTaille			est un entier	= fTaille(sFichier)
 
 	// Ignorer fichiers système
 	si sNomSeul = ".DS_Store" _ou_ sNomSeul = "Thumbs.db" _ou_ sNomSeul = "desktop.ini" alors
@@ -216,15 +226,108 @@ pour tout sFichier de tabTousFichiers
 		continuer
 	fin
 
-	// Image valide !
-	tabImagesValides.Ajoute(sFichier)
+	// Charger l'image pour récupérer ses dimensions réelles
+	bufImg		est un Buffer	= fChargeBuffer(sFichier)
+	imgCheck	est une Image
+	imgCheck	= bufImg
+
+	si imgCheck..Largeur <= 0 _ou_ imgCheck..Hauteur <= 0 alors
+		varIgnore5 est un Variant
+		varIgnore5.fichier	= sNomSeul
+		varIgnore5.raison		= "Image illisible"
+		tabFichiersIgnores.Ajoute(varIgnore5)
+		continuer
+	fin
+
+	// Image candidate : on enregistre ses caractéristiques pour le vote
+	varCand est un Variant
+	varCand.chemin	= sFichier
+	varCand.nom		= sNomSeul
+	varCand.largeur	= imgCheck..Largeur
+	varCand.hauteur	= imgCheck..Hauteur
+	varCand.format	= sFormatNorm
+	tabImagesCandidates.Ajoute(varCand)
 
 fin
 
-si tabImagesValides.Occurrence = 0 alors
-	fAjouteTexte(fRepDonnées() + "\DesignerImageUploadStock_debug.txt", "ERREUR: aucune image valide dans le ZIP" + RC)
+
+si tabImagesCandidates.Occurrence = 0 alors
+	fAjouteTexte(fRepDonnées() + "\DesignerImageUploadStock_debug.txt", "ERREUR: aucune image candidate dans le ZIP" + RC)
 	fRepSupprime(sRepTravail, frRécursif)
 	GénéreJsonErreur("fichierZip", "Aucune image valide trouvée dans le ZIP")
+	renvoyer Faux
+fin
+
+
+// ============================================================
+// 7bis. Détermination du CONSENSUS (Largeur x Hauteur + Format)
+//       et filtrage des minoritaires.
+//       En cas d'égalité, la 1ère combinaison rencontrée gagne.
+// ============================================================
+tabClesConsensus	est un tableau de chaînes	// liste des clés rencontrées
+tabComptes			est un tableau d'entiers	// occurrences alignées sur tabClesConsensus
+
+pour tout varCand de tabImagesCandidates
+	sCle est une chaîne = varCand.largeur + "x" + varCand.hauteur + "|" + varCand.format
+
+	bTrouve est un booléen = Faux
+	pour i = 1 _à_ tabClesConsensus.Occurrence
+		si tabClesConsensus[i] = sCle alors
+			tabComptes[i]++
+			bTrouve = Vrai
+			sortir
+		fin
+	fin
+
+	si pas bTrouve alors
+		tabClesConsensus.Ajoute(sCle)
+		tabComptes.Ajoute(1)
+	fin
+fin
+
+// Trouver la clé la plus représentée
+nIndexMax	est un entier = 1
+nMaxCompte	est un entier = tabComptes[1]
+pour i = 2 _à_ tabComptes.Occurrence
+	si tabComptes[i] > nMaxCompte alors
+		nMaxCompte = tabComptes[i]
+		nIndexMax  = i
+	fin
+fin
+
+sCleConsensus est une chaîne = tabClesConsensus[nIndexMax]
+
+// Décomposer la clé consensus en (largeur, hauteur, format)
+sDimensionsConsensus	est une chaîne	= ExtraitChaîne(sCleConsensus, 1, "|")
+sFormatConsensus		est une chaîne	= ExtraitChaîne(sCleConsensus, 2, "|")
+nLargeurConsensus		est un entier	= Val(ExtraitChaîne(sDimensionsConsensus, 1, "x"))
+nHauteurConsensus		est un entier	= Val(ExtraitChaîne(sDimensionsConsensus, 2, "x"))
+
+fAjouteTexte(fRepDonnées() + "\DesignerImageUploadStock_debug.txt", ...
+	"Consensus : " + nLargeurConsensus + "x" + nHauteurConsensus + " " + sFormatConsensus + ...
+	" (" + nMaxCompte + "/" + tabImagesCandidates.Occurrence + " images)" + RC)
+
+
+// Filtrer : conserver les images conformes au consensus, ignorer les autres
+pour tout varCand de tabImagesCandidates
+	si varCand.largeur = nLargeurConsensus ...
+			_et_ varCand.hauteur = nHauteurConsensus ...
+			_et_ varCand.format  = sFormatConsensus alors
+		tabImagesValides.Ajoute(varCand.chemin)
+	sinon
+		varIgnore7 est un Variant
+		varIgnore7.fichier	= varCand.nom
+		varIgnore7.raison		= "Dimensions/format incohérents (" + varCand.largeur + "x" + varCand.hauteur + " " + ...
+											varCand.format + ", consensus " + nLargeurConsensus + "x" + nHauteurConsensus + ...
+											" " + sFormatConsensus + ")"
+		tabFichiersIgnores.Ajoute(varIgnore7)
+	fin
+fin
+
+si tabImagesValides.Occurrence = 0 alors
+	fAjouteTexte(fRepDonnées() + "\DesignerImageUploadStock_debug.txt", "ERREUR: aucune image conforme au consensus" + RC)
+	fRepSupprime(sRepTravail, frRécursif)
+	GénéreJsonErreur("fichierZip", "Aucune image conforme dans le ZIP")
 	renvoyer Faux
 fin
 
@@ -232,176 +335,155 @@ fAjouteTexte(fRepDonnées() + "\DesignerImageUploadStock_debug.txt", "Images val
 
 
 // ============================================================
-// 7bis. Calcul automatique des métadonnées si non fournies
-// (largeur/hauteur depuis la 1ère image, format depuis l'extension,
-//  tailleZip depuis le fichier copié)
+// 7ter. Métadonnées finales de la collection (issues du consensus)
+//       Si la page a explicitement passé largeur/hauteur/format/tailleZip,
+//       on garde ses valeurs. Sinon on prend celles du consensus.
 // ============================================================
-si nLargeur = 0 _ou_ nHauteur = 0 alors
-	// Charger l'image en buffer puis l'affecter à une variable Image.
-	// Les propriétés correctes du type Image sont Largeur / Hauteur
-	// (NB : ..LargeurImage n'existe pas sur une variable Image — c'est une
-	// propriété de champ Image, qui renvoie 0 sur un type Image variable).
-	bufImage		est un Buffer	= fChargeBuffer(tabImagesValides[1])
-	imgPremiere	est une Image
-	imgPremiere	= bufImage
-	nLargeur		= imgPremiere..Largeur
-	nHauteur		= imgPremiere..Hauteur
-	fAjouteTexte(fRepDonnées() + "\DesignerImageUploadStock_debug.txt", "Dimensions calculées : " + nLargeur + "x" + nHauteur + RC)
+si nLargeur	= 0  alors nLargeur	= nLargeurConsensus
+si nHauteur	= 0  alors nHauteur	= nHauteurConsensus
+si sFormat	= "" alors sFormat	= sFormatConsensus
+si nTailleZip = 0 alors
+	nTailleZip = fTaille(sCheminZip)
+	fAjouteTexte(fRepDonnées() + "\DesignerImageUploadStock_debug.txt", "Taille ZIP calculée : " + nTailleZip + RC)
 fin
 
-si sFormat = "" alors
-	sFormat	= Minuscule(fExtraitChemin(tabImagesValides[1], fExtension))
-	// Retirer le point initial et normaliser jpeg → jpg
-	sFormat	= sFormat.Remplace(".", "")
-	si sFormat = "jpeg" alors
-		sFormat = "jpg"
-		fAjouteTexte(fRepDonnées() + "\DesignerImageUploadStock_debug.txt", "Format calculé : " + sFormat + RC)
-	fin
 
-	si nTailleZip = 0 alors
-		nTailleZip = fTaille(sCheminZip)
-		fAjouteTexte(fRepDonnées() + "\DesignerImageUploadStock_debug.txt", "Taille ZIP calculée : " + nTailleZip + RC)
-	fin
+quand exception dans
 
+	// ============================================================
+	// 8. Créer ou mettre à jour la collection en BDD
+	// ============================================================
+	nCollectionId	est un entier
+	sRepCollection	est une chaîne
 
-	quand exception dans
+	si bEcrasement alors
 
-		// ============================================================
-		// 8. Créer ou mettre à jour la collection en BDD
-		// ============================================================
-		nCollectionId	est un entier
-		sRepCollection	est une chaîne
+		// ─── Écrasement : réutiliser le même IdCollection ───
+		nCollectionId	= nIdCollectionExistante
+		sRepCollection	= CheminClient(Partage.__vcUser.IDClient, __OPERATION_COURRIER__, __REP_COLLECTION__) + NumériqueVersChaîne(nCollectionId, "08d") + "\"
 
-		si bEcrasement alors
-
-			// ─── Écrasement : réutiliser le même IdCollection ───
-			nCollectionId	= nIdCollectionExistante
-			sRepCollection	= CheminClient(Partage.__vcUser.IDClient, __OPERATION_COURRIER__, __REP_COLLECTION__) + NumériqueVersChaîne(nCollectionId, "08d") + "\"
-
-			// Vider le contenu du dossier existant (sans supprimer le dossier)
-			si fRepExiste(sRepCollection) alors
-				sListeAnciens	est une chaîne	= fListeFichier(sRepCollection + "*.*")
-				tabAnciens		est un tableau de chaînes
-				sListeAnciens.VersTableau(tabAnciens, RC)
-				pour tout sAncienFichier de tabAnciens
-					si sAncienFichier.SansEspace() <> "" alors
-						fSupprime(sAncienFichier)
-					fin
-				fin
-			sinon
-				fRepCrée(sRepCollection)
-			fin
-
-			// Mettre à jour l'enregistrement BDD existant
-			si ltr_designer_collection.LitRecherchePremier(IdCollection, nCollectionId) alors
-				ltr_designer_collection.Nom					= sNomCollection
-				ltr_designer_collection.NbImages				= tabImagesValides.Occurrence
-				ltr_designer_collection.DateHeureCreation	= DateHeureSys()
-				ltr_designer_collection.Largeur				= nLargeur
-				ltr_designer_collection.Hauteur				= nHauteur
-				ltr_designer_collection.Format				= sFormat
-				ltr_designer_collection.TailleZip			= nTailleZip
-				ltr_designer_collection.NomFichierZip		= sNomOriginal
-				si pas ltr_designer_collection.Modifie() alors
-					fAjouteTexte(fRepDonnées() + "\DesignerImageUploadStock_debug.txt", "ERREUR: modification collection - " + HErreurInfo() + RC)
-					fRepSupprime(sRepTravail, frRécursif)
-					GénéreJsonErreur("collection", "Impossible de mettre à jour la collection")
-					renvoyer Faux
+		// Vider le contenu du dossier existant (sans supprimer le dossier)
+		si fRepExiste(sRepCollection) alors
+			sListeAnciens	est une chaîne	= fListeFichier(sRepCollection + "*.*")
+			tabAnciens		est un tableau de chaînes
+			sListeAnciens.VersTableau(tabAnciens, RC)
+			pour tout sAncienFichier de tabAnciens
+				si sAncienFichier.SansEspace() <> "" alors
+					fSupprime(sAncienFichier)
 				fin
 			fin
-
 		sinon
+			fRepCrée(sRepCollection)
+		fin
 
-			// ─── Nouvelle collection ───
-			ltr_designer_collection.RAZ()
-			ltr_designer_collection.IdClient				= Partage.__vcUser.IDClient
-			ltr_designer_collection.IdContact			= Partage.__vcUser.IDContact
-			// IdMarque reste NULL (pas de création de collection marque depuis cette page)
+		// Mettre à jour l'enregistrement BDD existant
+		si ltr_designer_collection.LitRecherchePremier(IdCollection, nCollectionId) alors
 			ltr_designer_collection.Nom					= sNomCollection
 			ltr_designer_collection.NbImages				= tabImagesValides.Occurrence
-			ltr_designer_collection.UserCreation		= Partage.__vcUser.IDContact
 			ltr_designer_collection.DateHeureCreation	= DateHeureSys()
 			ltr_designer_collection.Largeur				= nLargeur
 			ltr_designer_collection.Hauteur				= nHauteur
 			ltr_designer_collection.Format				= sFormat
 			ltr_designer_collection.TailleZip			= nTailleZip
 			ltr_designer_collection.NomFichierZip		= sNomOriginal
-
-			si pas ltr_designer_collection.Ajoute() alors
-				fAjouteTexte(fRepDonnées() + "\DesignerImageUploadStock_debug.txt", "ERREUR: création collection - " + HErreurInfo() + RC)
+			si pas ltr_designer_collection.Modifie() alors
+				fAjouteTexte(fRepDonnées() + "\DesignerImageUploadStock_debug.txt", "ERREUR: modification collection - " + HErreurInfo() + RC)
 				fRepSupprime(sRepTravail, frRécursif)
-				GénéreJsonErreur("collection", "Impossible de créer la collection")
+				GénéreJsonErreur("collection", "Impossible de mettre à jour la collection")
 				renvoyer Faux
 			fin
-
-			nCollectionId	= ltr_designer_collection.IdCollection
-			sRepCollection	= CheminClient(Partage.__vcUser.IDClient, __OPERATION_COURRIER__, __REP_COLLECTION__) + NumériqueVersChaîne(nCollectionId, "08d") + "\"
-
-			si sRepCollection = "" _ou_ pas fRepCrée(sRepCollection) alors
-				fAjouteTexte(fRepDonnées() + "\DesignerImageUploadStock_debug.txt", "ERREUR: création dossier - " + sRepCollection + RC)
-				fRepSupprime(sRepTravail, frRécursif)
-				GénéreJsonErreur("collection", "Impossible de créer le dossier collection")
-				renvoyer Faux
-			fin
-
 		fin
 
+	sinon
 
-		// ============================================================
-		// 9. Copier les images dans le dossier de la collection
-		// (avec leur nom original — pas de renommage selon BDD)
-		// ============================================================
-		pour tout sFichierImage de tabImagesValides
-			sNomImage est une chaîne = fExtraitChemin(sFichierImage, fFichier + fExtension)
-			fCopieFichier(sFichierImage, sRepCollection + sNomImage)
+		// ─── Nouvelle collection ───
+		ltr_designer_collection.RAZ()
+		ltr_designer_collection.IdClient				= Partage.__vcUser.IDClient
+		ltr_designer_collection.IdContact			= Partage.__vcUser.IDContact
+		// IdMarque reste NULL (pas de création de collection marque depuis cette page)
+		ltr_designer_collection.Nom					= sNomCollection
+		ltr_designer_collection.NbImages				= tabImagesValides.Occurrence
+		ltr_designer_collection.UserCreation		= Partage.__vcUser.IDContact
+		ltr_designer_collection.DateHeureCreation	= DateHeureSys()
+		ltr_designer_collection.Largeur				= nLargeur
+		ltr_designer_collection.Hauteur				= nHauteur
+		ltr_designer_collection.Format				= sFormat
+		ltr_designer_collection.TailleZip			= nTailleZip
+		ltr_designer_collection.NomFichierZip		= sNomOriginal
+
+		si pas ltr_designer_collection.Ajoute() alors
+			fAjouteTexte(fRepDonnées() + "\DesignerImageUploadStock_debug.txt", "ERREUR: création collection - " + HErreurInfo() + RC)
+			fRepSupprime(sRepTravail, frRécursif)
+			GénéreJsonErreur("collection", "Impossible de créer la collection")
+			renvoyer Faux
 		fin
 
+		nCollectionId	= ltr_designer_collection.IdCollection
+		sRepCollection	= CheminClient(Partage.__vcUser.IDClient, __OPERATION_COURRIER__, __REP_COLLECTION__) + NumériqueVersChaîne(nCollectionId, "08d") + "\"
 
-		// ============================================================
-		// 10. Nettoyage des fichiers temporaires
-		// ============================================================
-		fRepSupprime(sRepTravail, frRécursif)
-
-
-		// ============================================================
-		// 11. Réponse JSON
-		// ============================================================
-		sUrlBase		est une chaîne	= CheminClient(Partage.__vcUser.IDClient, __OPERATION_COURRIER__, __REP_COLLECTION__, Faux) + NumériqueVersChaîne(nCollectionId, "08d") + "/"
-		sCheminUNC	est une chaîne	= CheminClient(Partage.__vcUser.IDClient, __OPERATION_COURRIER__, __REP_COLLECTION__, Vrai) + NumériqueVersChaîne(nCollectionId, "08d") + "\"
-
-		varReponse	est un Variant
-		varReponse.success						= Vrai
-		varReponse.IdCollection					= nCollectionId
-		varReponse.urlBase						= sUrlBase
-		varReponse.cheminUNC						= sCheminUNC
-		varReponse.nomCollection				= sNomCollection
-		varReponse.ecrasement					= bEcrasement
-
-		// Résumé
-		varReponse.resume.totalFichiersZip	= nTotalFichiersZip
-		varReponse.resume.imagesStockees		= tabImagesValides.Occurrence
-		varReponse.resume.fichiersIgnores	= tabFichiersIgnores.Occurrence
-
-		// Détail fichiers ignorés
-		tabJsonIgn est un tableau de Variants
-		pour tout varI de tabFichiersIgnores
-			varDetailI est un Variant
-			varDetailI.fichier	= varI.fichier
-			varDetailI.raison		= varI.raison
-			tabJsonIgn.Ajoute(varDetailI)
+		si sRepCollection = "" _ou_ pas fRepCrée(sRepCollection) alors
+			fAjouteTexte(fRepDonnées() + "\DesignerImageUploadStock_debug.txt", "ERREUR: création dossier - " + sRepCollection + RC)
+			fRepSupprime(sRepTravail, frRécursif)
+			GénéreJsonErreur("collection", "Impossible de créer le dossier collection")
+			renvoyer Faux
 		fin
-		varReponse.fichiersIgnores = tabJsonIgn
 
-		sJsonReponse est une chaîne ANSI
-		Sérialise(varReponse, sJsonReponse, psdJSON + psdMiseEnForme)
-		renvoyer GénéreJsonSuccès("Upload stock traité", sJsonReponse)
-
-
-	faire
-		fAjouteTexte(fRepDonnées() + "\DesignerImageUploadStock_debug.txt", "EXCEPTION: " + ExceptionInfo(errComplet) + RC)
-		si fRepExiste(sRepTravail) alors fRepSupprime(sRepTravail, frRécursif)
-		GénéreJsonErreur("Erreur interne", ExceptionInfo(errMessage))
-		renvoyer Faux
 	fin
-	
+
+
+	// ============================================================
+	// 9. Copier les images dans le dossier de la collection
+	// (avec leur nom original — pas de renommage selon BDD)
+	// ============================================================
+	pour tout sFichierImage de tabImagesValides
+		sNomImage est une chaîne = fExtraitChemin(sFichierImage, fFichier + fExtension)
+		fCopieFichier(sFichierImage, sRepCollection + sNomImage)
+	fin
+
+
+	// ============================================================
+	// 10. Nettoyage des fichiers temporaires
+	// ============================================================
+	fRepSupprime(sRepTravail, frRécursif)
+
+
+	// ============================================================
+	// 11. Réponse JSON
+	// ============================================================
+	sUrlBase		est une chaîne	= CheminClient(Partage.__vcUser.IDClient, __OPERATION_COURRIER__, __REP_COLLECTION__, Faux) + NumériqueVersChaîne(nCollectionId, "08d") + "/"
+	sCheminUNC	est une chaîne	= CheminClient(Partage.__vcUser.IDClient, __OPERATION_COURRIER__, __REP_COLLECTION__, Vrai) + NumériqueVersChaîne(nCollectionId, "08d") + "\"
+
+	varReponse	est un Variant
+	varReponse.success						= Vrai
+	varReponse.IdCollection					= nCollectionId
+	varReponse.urlBase						= sUrlBase
+	varReponse.cheminUNC						= sCheminUNC
+	varReponse.nomCollection				= sNomCollection
+	varReponse.ecrasement					= bEcrasement
+
+	// Résumé
+	varReponse.resume.totalFichiersZip	= nTotalFichiersZip
+	varReponse.resume.imagesStockees		= tabImagesValides.Occurrence
+	varReponse.resume.fichiersIgnores	= tabFichiersIgnores.Occurrence
+
+	// Détail fichiers ignorés
+	tabJsonIgn est un tableau de Variants
+	pour tout varI de tabFichiersIgnores
+		varDetailI est un Variant
+		varDetailI.fichier	= varI.fichier
+		varDetailI.raison		= varI.raison
+		tabJsonIgn.Ajoute(varDetailI)
+	fin
+	varReponse.fichiersIgnores = tabJsonIgn
+
+	sJsonReponse est une chaîne ANSI
+	Sérialise(varReponse, sJsonReponse, psdJSON + psdMiseEnForme)
+	renvoyer GénéreJsonSuccès("Upload stock traité", sJsonReponse)
+
+
+faire
+	fAjouteTexte(fRepDonnées() + "\DesignerImageUploadStock_debug.txt", "EXCEPTION: " + ExceptionInfo(errComplet) + RC)
+	si fRepExiste(sRepTravail) alors fRepSupprime(sRepTravail, frRécursif)
+	GénéreJsonErreur("Erreur interne", ExceptionInfo(errMessage))
+	renvoyer Faux
 fin

@@ -85,8 +85,8 @@ sFormatRef		est une chaîne	= Minuscule(ltr_designer_collection.Format)
 nMaxNombre		est un entier	= Val(cpFonction.ValeurParametre("WS_Designer_AddImages_MaxNombre", prm_parametre.ValChaine..Nom))
 nMaxTailleMo	est un entier	= Val(cpFonction.ValeurParametre("WS_Designer_AddImages_MaxTailleMo", prm_parametre.ValChaine..Nom))
 
-si nMaxNombre		<= 0 alors nMaxNombre   = 100 fin
-si nMaxTailleMo	<= 0 alors nMaxTailleMo = 100 fin
+si nMaxNombre		<= 0 alors nMaxNombre   = 100
+si nMaxTailleMo	<= 0 alors nMaxTailleMo = 100
 
 nMaxTailleOctets	est un entier sur 8 = nMaxTailleMo * 1024 * 1024
 
@@ -171,7 +171,7 @@ pour tout sFichier de tabTousFichiers
 	sNomSeul			est une chaîne	= fExtraitChemin(sFichier, fFichier + fExtension)
 	sExtension		est une chaîne	= Minuscule(fExtraitChemin(sFichier, fExtension))
 	sExtensionSansP	est une chaîne	= Remplace(sExtension, ".", "")
-	si sExtensionSansP = "jpeg" alors sExtensionSansP = "jpg" fin
+	si sExtensionSansP = "jpeg" alors sExtensionSansP = "jpg"
 	nTaille			est un entier	= fTaille(sFichier)
 
 	// Ignorer fichiers système
@@ -335,7 +335,7 @@ quand exception dans
 
 faire
 	fAjouteTexte(fRepDonnées() + "\DesignerImageAjout_debug.txt", "EXCEPTION: " + ExceptionInfo(errComplet) + RC)
-	si fRepExiste(sRepTravail) alors fRepSupprime(sRepTravail, frRécursif) fin
+	si fRepExiste(sRepTravail) alors fRepSupprime(sRepTravail, frRécursif)
 	GénéreJsonErreur("Erreur interne", ExceptionInfo(errMessage))
 	renvoyer Faux
 fin

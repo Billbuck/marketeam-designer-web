@@ -40,7 +40,7 @@ fin
 
 // ─── Ajout de chaque fichier (sans préserver le chemin) ──────────────────
 pour tout sFichier de pTabFichiers
-	si sFichier = "" _ou_ pas fFichierExiste(sFichier) alors continuer fin
+	si sFichier = "" _ou_ pas fFichierExiste(sFichier) alors continuer
 
 	nResZip = zip.AjouteFichier(sFichier, zipSansChemin)
 	si nResZip <> 0 alors
@@ -53,7 +53,7 @@ zip.Ferme()
 
 // Vérification finale
 si pas fFichierExiste(sCheminZip) _ou_ fTaille(sCheminZip) = 0 alors
-	si fFichierExiste(sCheminZip) alors fSupprime(sCheminZip) fin
+	si fFichierExiste(sCheminZip) alors fSupprime(sCheminZip)
 	renvoyer ""
 fin
 

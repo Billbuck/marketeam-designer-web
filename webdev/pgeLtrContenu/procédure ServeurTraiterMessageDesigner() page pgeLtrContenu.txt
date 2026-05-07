@@ -33,7 +33,7 @@ selon vMessage.action
 					//              ENVELOPPE             //
 					// -----------------------------------//
 					__stOperation.stOperationLettre.stEnveloppe.JsonDesignerData = sJsonData
-					si Partage.GenererPsmdServeurEnveloppe(__stOperation.stOperationLettre.stEnveloppe, __stOperation.CodeTemp) alors
+					si cpDesigner.GenererPsmdServeurEnveloppe(__stOperation.stOperationLettre.stEnveloppe, __stOperation.CodeTemp) alors
 						GenererBatEnveloppeDepuisPsmd(__stOperation.stOperationLettre.stEnveloppe, __stOperation.CodeTemp)
 						cpDesigner.TraiterManifestImagesDesigner(__stOperation.stOperationLettre.stEnveloppe.CheminPsmdEnveloppe, __stOperation.stOperationLettre.stEnveloppe.JsonDesignerData)
 						intAdressageExpediteur.Etat		= Grisé
@@ -49,30 +49,43 @@ selon vMessage.action
 					//               DOCUMENT             //
 					// -----------------------------------//
 					__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesignerData = sJsonData
-					si Partage.GenererPsmdServeurDocument(__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours]) alors
+					si cpDesigner.GenererPsmdServeurDocument(__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours]) alors
 						cpDesigner.GenererBatDocumentDepuisPsmd(__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours], __tabEchantillonBaseLigne)
 						cpDesigner.TraiterManifestImagesDesigner(__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].CheminPsmdTemp, __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesignerData)
-					si __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].tabPagePDF..Occurrence > 0 alors
-						si __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].tabPagePDF[1].EstFondPerdu = Faux alors
-							pour tout stVignette de __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].tabImageFond
-								Partage.AppliqueBlancTournant(stVignette.CheminPhysique, __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].LargeurOuvert, __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].HauteurOuvert)
-							fin
-							pour tout stVignette de __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].tabImageBat
-								Partage.AppliqueBlancTournant(stVignette.CheminPhysique, __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].LargeurOuvert, __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].HauteurOuvert)
+						si __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].tabPagePDF..Occurrence > 0 alors
+							si __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].tabPagePDF[1].EstFondPerdu = Faux alors
+								pour tout stVignette de __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].tabImageFond
+									cpDesigner.AppliqueBlancTournant(stVignette.CheminPhysique, __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].LargeurOuvert, __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].HauteurOuvert)
+								fin
+								pour tout stVignette de __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].tabImageBat
+									cpDesigner.AppliqueBlancTournant(stVignette.CheminPhysique, __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].LargeurOuvert, __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].HauteurOuvert)
+								fin
 							fin
 						fin
-					fin
 
-					// ─── Marquer le document comme personnalisé ─────────────
-					__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].EstPersonnaliseDesigner	= Vrai
-					__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].DateHeureDesigner			= DateHeureSys()
+						// ─── Marquer le document comme personnalisé ─────────────
+						__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].EstPersonnaliseDesigner	= Vrai
+						__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].DateHeureDesigner			= DateHeureSys()
 
-					// ─── Verrouiller les combos + afficher btnSupprimer + cacher btnImporter ─
-					znrLtrContenu[_nIndDesignerEnCours].cboSource.Etat					= Inactif
-					znrLtrContenu[_nIndDesignerEnCours].cboBibliothèque.Etat			= Inactif
-					znrLtrContenu[_nIndDesignerEnCours].cboSelection.Etat				= Inactif
-					znrLtrContenu[_nIndDesignerEnCours].btnDocumentSupprimer..Visible	= Vrai
-					znrLtrContenu[_nIndDesignerEnCours].btnDocumentImporter..Visible	= Faux
+						// ─── Détection QR Code Interactif (= opération "Cliquez Ici") ─
+						// Flag par document + propagation au flag global de l'opération.
+						__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].EstCliquezIci	= cpDesigner.JsonContientQrInteractif(sJsonData)
+
+						// Recalcul du flag global : Vrai si AU MOINS un document est EstCliquezIci
+						__stOperation.EstCliquezIci = Faux
+						pour tout stDoc de __stOperation.stOperationLettre.tabStDocument
+							si stDoc.EstCliquezIci alors
+								__stOperation.EstCliquezIci = Vrai
+								sortir
+							fin
+						fin
+
+						// ─── Verrouiller les combos + afficher btnSupprimer + cacher btnImporter ─
+						znrLtrContenu[_nIndDesignerEnCours].cboSource.Etat															= Inactif
+						znrLtrContenu[_nIndDesignerEnCours].cboBibliothèque.Etat													= Inactif
+						znrLtrContenu[_nIndDesignerEnCours].cboSelection.Etat														= Inactif
+						znrLtrContenu[_nIndDesignerEnCours].btnDocumentSupprimer..Visible										= Vrai
+						znrLtrContenu[_nIndDesignerEnCours].btnDocumentImporter..Visible										= Faux
 
 					sinon
 						PopupAfficheMessage(

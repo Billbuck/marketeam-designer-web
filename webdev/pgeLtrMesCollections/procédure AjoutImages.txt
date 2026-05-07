@@ -173,7 +173,7 @@ fin
 fin:
 // Nettoyage des fichiers temporaires reçus
 pour tout sChemin de tabCheminsRecus
-	si fFichierExiste(sChemin) alors fSupprime(sChemin) fin
+	si fFichierExiste(sChemin) alors fSupprime(sChemin)
 fin
 // Nettoyage du zip généré (si différent des fichiers reçus)
-si sCheminLocal <> "" _et_ fFichierExiste(sCheminLocal) alors fSupprime(sCheminLocal) fin
+si sCheminLocal <> "" _et_ fFichierExiste(sCheminLocal) alors fSupprime(sCheminLocal)
