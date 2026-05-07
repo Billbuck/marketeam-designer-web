@@ -1,0 +1,113 @@
+procédure Cotation(stEnvoiMoinsCher est une structEnvoiMoinsCher)
+
+
+sContenu est une chaîne
+
+
+
+Boxtale					est un WL.XMLDocument, description = "boxtale"
+stTransporteur			est une structTransporteur
+stRetourTransporteur	est une structRetourTransporteur
+stColis					est une structColis
+nNbreColis				est un entier
+hEMC					est une httpRequête
+
+hEMC.URL					= "https://test.envoimoinscher.com/api/v1/cotation"
+hEMC.Entête["access_key"]	= "02ovitbz"
+hEMC.Utilisateur			= "chronodirect"
+hEMC.MotDePasse				= "papillon"
+hEMC.Méthode				= httpGet
+
+
+stRetourTransporteur.Erreur = Faux
+stRetourTransporteur.Message = ""
+
+// Remplissage du formulaire
+HTTPCréeFormulaire("EMC")
+
+HTTPAjouteParamètre("EMC","formulaire",DonneUUID()) // évite le plantage lors de 2 appels successifs du même formulaire
+
+HTTPAjouteParamètre("EMC","operator",stEnvoiMoinsCher.Transporteur)
+
+HTTPAjouteParamètre("EMC","expediteur.pays",__EMC_FRANCE__)
+HTTPAjouteParamètre("EMC","expediteur.code_postal",stEnvoiMoinsCher.ExpediteurCodePostal)
+HTTPAjouteParamètre("EMC","expediteur.ville",stEnvoiMoinsCher.ExpediteurVille)
+HTTPAjouteParamètre("EMC","expediteur.type",stEnvoiMoinsCher.ExpediteurType)
+
+HTTPAjouteParamètre("EMC","destinataire.pays",__EMC_FRANCE__)
+HTTPAjouteParamètre("EMC","destinataire.code_postal",stEnvoiMoinsCher.DestinataireCodePostal)
+HTTPAjouteParamètre("EMC","destinataire.ville",stEnvoiMoinsCher.DestinataireVille)
+HTTPAjouteParamètre("EMC","destinataire.type",stEnvoiMoinsCher.DestinataireType)
+
+// Gestion des colis
+pour tout stColis de stEnvoiMoinsCher.tabColis
+	nNbreColis++
+	HTTPAjouteParamètre("EMC","colis_" + nNbreColis + ".poids",NumériqueVersChaîne(stColis.Poids))
+	HTTPAjouteParamètre("EMC","colis_" + nNbreColis + ".longueur",NumériqueVersChaîne(stColis.Longueur))
+	HTTPAjouteParamètre("EMC","colis_" + nNbreColis + ".largeur",NumériqueVersChaîne(stColis.Largeur))
+	HTTPAjouteParamètre("EMC","colis_" + nNbreColis + ".hauteur",NumériqueVersChaîne(stColis.Hauteur))
+fin
+
+
+HTTPAjouteParamètre("EMC","collecte",stEnvoiMoinsCher.DateEnlevement.VersChaîne("AAAA-MM-JJ"))
+HTTPAjouteParamètre("EMC","delai",stEnvoiMoinsCher.Délai)
+HTTPAjouteParamètre("EMC","code_contenu",__EMC_CONTENU__)
+
+
+
+cMaRéponse est un httpRéponse = HTTPEnvoieFormulaire("EMC",hEMC)
+si ErreurDétectée alors
+	stRetourTransporteur.Erreur		= Vrai
+	stRetourTransporteur.Message	= ErreurInfo()
+	renvoyer stRetourTransporteur
+sinon
+	sContenu = cMaRéponse..Contenu
+fin
+
+Boxtale = XMLOuvre(sContenu,depuisChaîne)
+si ErreurDétectée = Vrai alors
+	stRetourTransporteur.Erreur = Vrai
+	stRetourTransporteur.Message = ErreurInfo()
+	renvoyer stRetourTransporteur
+fin
+
+
+
+
+
+	pour I = 1 _à_ Boxtale.cotation.shipment.offer..Occurrence
+	//	nDocument = ExtraitChaîne(pXml.layouts.layout[I].attributes.name..Texte,1,"¤")
+	//	nPage = ExtraitChaîne(pXml.layouts.layout[I].attributes.name..Texte,2,"¤")
+		VariableRAZ(stTransporteur)
+
+		stTransporteur.Mode 					= Boxtale.cotation.shipment.offer[I].mode..Texte
+		stTransporteur.URL 						= Boxtale.cotation.shipment.offer[I].url..Texte
+		stTransporteur.TransporteurCode			= Boxtale.cotation.shipment.offer[I].operator.code..Texte
+		stTransporteur.Transporteur				= Boxtale.cotation.shipment.offer[I].operator.label..Texte
+		stTransporteur.TransporteurUrlLogo		= Boxtale.cotation.shipment.offer[I].operator.logo..Texte
+		stTransporteur.ServiceCode				= Boxtale.cotation.shipment.offer[I].service.code..Texte
+		stTransporteur.ServiceLibelle			= Boxtale.cotation.shipment.offer[I].service.label..Texte
+		stTransporteur.MontantTTC				= Boxtale.cotation.shipment.offer[I].price.'tax-inclusive'..Texte
+		stTransporteur.MontantHT				= Boxtale.cotation.shipment.offer[I].price.'tax-exclusive'..Texte
+		stTransporteur.Devise					= Boxtale.cotation.shipment.offer[I].price.currency..Texte
+		stTransporteur.CollecteTypeCode			= Boxtale.cotation.shipment.offer[I].collection.type.code..Texte
+		stTransporteur.CollecteTypeLabel		= Boxtale.cotation.shipment.offer[I].collection.type.label..Texte
+		stTransporteur.CollecteDate				= Boxtale.cotation.shipment.offer[I].collection.date..Texte
+		stTransporteur.CollecteLabel			= Boxtale.cotation.shipment.offer[I].collection.label..Texte
+		stTransporteur.LivraisonTypeCode		= Boxtale.cotation.shipment.offer[I].delivery.type.code..Texte
+		stTransporteur.LivraisonTypeLabel	 	= Boxtale.cotation.shipment.offer[I].delivery.type.label..Texte
+		stTransporteur.LivraisonDate			= Boxtale.cotation.shipment.offer[I].delivery.date..Texte
+		stTransporteur.LivraisonTime			= Boxtale.cotation.shipment.offer[I].delivery.time..Texte
+		stTransporteur.LivraisonLabel			= Boxtale.cotation.shipment.offer[I].delivery.label..Texte
+		pour J = 1 _à_ Boxtale.cotation.shipment.offer[I].characteristics.label..Occurrence
+			stTransporteur.Caracteristique		+= [RC] + Boxtale.cotation.shipment.offer[I].characteristics.Label[J]..Texte
+		fin
+		stTransporteur.Alerte					= Boxtale.cotation.shipment.offer[I].alert..Texte
+
+//		si stTransporteur.LivraisonTypeCode dans ("HOME","COMPANY") ALORS
+			stRetourTransporteur.tabTransporteur.Ajoute(stTransporteur)
+//		FIN
+	fin
+
+renvoyer stRetourTransporteur
+
