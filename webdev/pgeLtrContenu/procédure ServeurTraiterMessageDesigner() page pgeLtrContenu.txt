@@ -69,16 +69,22 @@ selon vMessage.action
 
 						// ─── Détection QR Code Interactif (= opération "Cliquez Ici") ─
 						// Flag par document + propagation au flag global de l'opération.
-						__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].EstCliquezIci	= cpDesigner.JsonContientQrInteractif(sJsonData)
+						__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].EstCliquezIci				= cpDesigner.JsonContientQrInteractif(sJsonData)
 
 						// Recalcul du flag global : Vrai si AU MOINS un document est EstCliquezIci
-						__stOperation.EstCliquezIci = Faux
+						__stOperation.EstCliquezIci	= Faux
+						__stOperation.TypeProjet		= __OPERATION_COURRIER__
 						pour tout stDoc de __stOperation.stOperationLettre.tabStDocument
 							si stDoc.EstCliquezIci alors
-								__stOperation.EstCliquezIci = Vrai
+								__stOperation.EstCliquezIci	= Vrai
+								__stOperation.TypeProjet		= __OPERATION_COURRIER_INTERACTIF__
+
 								sortir
 							fin
 						fin
+						
+						InitTitreOperation()
+						InitProgressBar()
 
 						// ─── Verrouiller les combos + afficher btnSupprimer + cacher btnImporter ─
 						znrLtrContenu[_nIndDesignerEnCours].cboSource.Etat															= Inactif

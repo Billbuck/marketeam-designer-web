@@ -3842,13 +3842,23 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     /**
+     * Document intérieur + enveloppe sans fenêtre : JSON WebDev envoie ChampsFusionInterdit.
+     * Aucune liaison aux champs BDD (liste vide, UI désactivée, nettoyage des zones au chargement).
+     */
+    let champsFusionInterdit = false;
+
+    /**
      * Met à jour l'affichage des champs de fusion dans la toolbar Data
      * Affiche le libelle, trie par ordre, et utilise nom pour la syntaxe @NOM@
      * @param {ChampFusion[]} champs - Tableau des champs de fusion
      */
     function updateMergeFieldsUI(champs) {
         if (!mergeFieldsContainer) return;
-        
+
+        if (champsFusionInterdit) {
+            champs = [];
+        }
+
         // Normaliser : si tableau de strings, convertir en objets
         const champsNormalises = champs.map((champ, index) => {
             if (typeof champ === 'string') {
@@ -3965,7 +3975,12 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function updateToolbarDataVisibility() {
         if (!toolbarData) return;
-        
+
+        if (champsFusionInterdit) {
+            toolbarData.style.display = 'none';
+            return;
+        }
+
         // Ne pas afficher en mode aperçu
         // Protection : previewState peut ne pas être encore initialisée au chargement
         try {
@@ -4375,6 +4390,15 @@ document.addEventListener('DOMContentLoaded', () => {
      * @see lastFocusedQrInput - Tracking du dernier input QR focalisé
      */
     function insertTag(fieldName) {
+        if (champsFusionInterdit) {
+            showConstraintToast(
+                'Personnalisation par champs BDD indisponible pour ce document (enveloppe sans fenêtre).',
+                'info',
+                'info'
+            );
+            return;
+        }
+
         // Remplacer les espaces par des espaces insécables dans le nom du champ
         const fieldNameNbsp = fieldName.replace(/ /g, '\u00A0');
         const tag = `@${fieldNameNbsp}@`; // Syntaxe WebDev avec espaces insécables
@@ -6382,6 +6406,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Vérifications préalables
         if (!authConfig || !authConfig.urlWebservice) {
             return { success: false, message: 'La connexion au serveur n\'est pas configurée. Contactez votre administrateur.' };
+        }
+        if (champsFusionInterdit) {
+            return { success: false, message: 'L\'import ZIP lié à un champ de fusion n\'est pas disponible pour ce document (enveloppe sans fenêtre).' };
         }
 
         if (!zipUploadData.prete || !zipUploadData.zipFile) {
@@ -10725,7 +10752,9 @@ document.addEventListener('DOMContentLoaded', () => {
          * Contraintes du document (autorisations et limites)
          * @type {DocumentConstraints}
          */
-        constraints: { ...DEFAULT_CONSTRAINTS }
+        constraints: { ...DEFAULT_CONSTRAINTS },
+        /** @type {boolean} Aligné sur WebDev ChampsFusionInterdit (enveloppe sans fenêtre, documents intérieurs) */
+        champsFusionInterdit: false
     };
 
     /**
@@ -15716,8 +15745,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // ─── SOURCE ───
         const source = zoneData.source || { type: 'fixe', valeur: '' };
-        const sourceType = source.type === 'url' ? 'fixe' : source.type;
-        
+        let sourceType = source.type === 'url' ? 'fixe' : source.type;
+        if (champsFusionInterdit && sourceType === 'champ') {
+            sourceType = 'fixe';
+        }
+
         if (imageInputSourceType) imageInputSourceType.value = sourceType;
         
         // Afficher le bon groupe selon le type
@@ -15981,7 +16013,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // ─── SOURCE ───
         const champFusion = zoneData.champFusion || '';
         const valeurStatique = zoneData.valeurStatique || '';
-        const sourceType = zoneData.sourceType || 'fixe';
+        let sourceType = zoneData.sourceType || 'fixe';
+        if (champsFusionInterdit && sourceType === 'champ') {
+            sourceType = 'fixe';
+        }
         const hasField = champFusion && champFusion.trim() !== '';
         
         // Utiliser sourceType pour la combo (pas hasField)
@@ -16375,7 +16410,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (barcodeInputSource) {
             barcodeInputSource.addEventListener('change', () => {
                 const sourceType = barcodeInputSource.value;
-                
+
+                if (champsFusionInterdit && sourceType === 'champ') {
+                    barcodeInputSource.value = 'fixe';
+                    showConstraintToast(
+                        'Source « Champ de fusion » indisponible pour ce document (enveloppe sans fenêtre).',
+                        'info',
+                        'info'
+                    );
+                    return;
+                }
+
                 if (sourceType === 'champ') {
                     if (barcodeValueRow) barcodeValueRow.style.display = 'none';
                     if (barcodeFieldRow) barcodeFieldRow.style.display = '';
@@ -16420,6 +16465,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Champ de fusion (champFusion dans le modèle)
         if (barcodeInputField) {
             barcodeInputField.addEventListener('change', () => {
+                if (champsFusionInterdit) return;
                 updateSelectedBarcodeZone((zoneData) => {
                     zoneData.champFusion = barcodeInputField.value;
                 });
@@ -17202,7 +17248,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (imageInputSourceType) {
             imageInputSourceType.addEventListener('change', () => {
                 const sourceType = imageInputSourceType.value;
-                
+
+                if (champsFusionInterdit && sourceType === 'champ') {
+                    imageInputSourceType.value = 'fixe';
+                    showConstraintToast(
+                        'Source « Champ de fusion » indisponible pour ce document (enveloppe sans fenêtre).',
+                        'info',
+                        'info'
+                    );
+                    return;
+                }
+
                 // Afficher le bon groupe (via classes CSS uniquement)
                 if (sourceType === 'champ') {
                     if (imageUploadGroup) imageUploadGroup.classList.add('hidden');
@@ -17254,6 +17310,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Champ de fusion
         if (imageInputChamp) {
             imageInputChamp.addEventListener('change', () => {
+                if (champsFusionInterdit) return;
                 updateSelectedImageZone((zoneData) => {
                     if (!zoneData.source) zoneData.source = { type: 'champ', valeur: '' };
                     zoneData.source.valeur = imageInputChamp.value;
@@ -18747,7 +18804,16 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function populateImageFieldsSelect(selectedValue = '') {
         if (!imageInputChamp) return;
-        
+
+        if (champsFusionInterdit) {
+            imageInputChamp.innerHTML = '';
+            const emptyOption = document.createElement('option');
+            emptyOption.value = '';
+            emptyOption.textContent = '-- Non disponible --';
+            imageInputChamp.appendChild(emptyOption);
+            return;
+        }
+
         imageInputChamp.innerHTML = '';
         
         // Récupérer les champs de fusion (protection si documentState pas encore initialisé)
@@ -18797,7 +18863,16 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function updateBarcodeFieldSelect() {
         if (!barcodeInputField) return;
-        
+
+        if (champsFusionInterdit) {
+            barcodeInputField.innerHTML = '';
+            const emptyOption = document.createElement('option');
+            emptyOption.value = '';
+            emptyOption.textContent = '-- Non disponible --';
+            barcodeInputField.appendChild(emptyOption);
+            return;
+        }
+
         // Vider et ajouter l'option par défaut
         barcodeInputField.innerHTML = '';
         
@@ -23053,6 +23128,99 @@ document.addEventListener('DOMContentLoaded', () => {
      * };
      * loadFromWebDev(jsonData); // → true
      */
+    function isChampsFusionInterditPayload(msg) {
+        if (!msg || typeof msg !== 'object') return false;
+        const v = msg.ChampsFusionInterdit !== undefined ? msg.ChampsFusionInterdit : msg.champsFusionInterdit;
+        return v === true || v === 1 || v === '1' || v === 'Vrai' || v === 'true' || v === 'True';
+    }
+
+    function stripMergeAtTokensFromString(str) {
+        if (typeof str !== 'string') return str;
+        return str
+            .replace(/@[A-Za-z0-9_\u00A0]+@/g, '')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+    }
+
+    function sanitizeQrConfigFieldsForNoFusion(qrConfig) {
+        if (!qrConfig || typeof qrConfig !== 'object' || !qrConfig.fields) return;
+        const fields = qrConfig.fields;
+        Object.keys(fields).forEach(k => {
+            const v = fields[k];
+            if (typeof v === 'string') fields[k] = stripMergeAtTokensFromString(v);
+        });
+    }
+
+    /**
+     * Retire les liaisons BDD des zones (enveloppe sans fenêtre).
+     * @returns {boolean} true si au moins une zone a été modifiée
+     */
+    function stripChampsFusionBindingsFromDocumentState() {
+        let touched = false;
+        documentState.pages.forEach(page => {
+            Object.keys(page.zones || {}).forEach(zid => {
+                const z = page.zones[zid];
+                if (!z) return;
+                if (z.type === 'textQuill') {
+                    const before = z.content || '';
+                    const after = stripMergeAtTokensFromString(before);
+                    if (after !== before) touched = true;
+                    z.content = after;
+                    try {
+                        z.quillDelta = textAndFormatageToQuillDelta(z.content, z.formatting || []);
+                    } catch (e) { /* ignore */ }
+                } else if (z.type === 'image' && z.source) {
+                    if (z.source.type === 'champ') {
+                        z.source.type = 'fixe';
+                        z.source.champFusion = '';
+                        z.source.valeur = '';
+                        z.source.collectionId = null;
+                        z.source.urlBase = '';
+                        touched = true;
+                    }
+                } else if (z.type === 'barcode') {
+                    if (z.sourceType === 'champ' || (z.champFusion && String(z.champFusion).trim())) {
+                        z.sourceType = 'fixe';
+                        z.champFusion = '';
+                        touched = true;
+                    }
+                    if (z.qrConfig) sanitizeQrConfigFieldsForNoFusion(z.qrConfig);
+                } else if (z.type === 'qr' && z.content !== undefined) {
+                    const after = stripMergeAtTokensFromString(String(z.content));
+                    if (after !== String(z.content)) touched = true;
+                    z.content = after;
+                }
+            });
+        });
+        return touched;
+    }
+
+    function refreshChampsFusionInterditControls() {
+        const dis = !!champsFusionInterdit;
+        if (imageInputSourceType) {
+            const optChamp = imageInputSourceType.querySelector('option[value="champ"]');
+            if (optChamp) {
+                optChamp.disabled = dis;
+                optChamp.hidden = dis;
+            }
+            if (dis && imageInputSourceType.value === 'champ') {
+                imageInputSourceType.value = 'fixe';
+                imageInputSourceType.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+        if (barcodeInputSource) {
+            const optChamp = barcodeInputSource.querySelector('option[value="champ"]');
+            if (optChamp) {
+                optChamp.disabled = dis;
+                optChamp.hidden = dis;
+            }
+            if (dis && barcodeInputSource.value === 'champ') {
+                barcodeInputSource.value = 'fixe';
+                barcodeInputSource.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+    }
+
     function loadFromWebDev(jsonData) {
         console.log('🔄 DIAG loadFromWebDev ENTREE — type:', typeof jsonData,
             ', action:', jsonData && jsonData.action,
@@ -23066,6 +23234,8 @@ document.addEventListener('DOMContentLoaded', () => {
             jsonData.action === 'load' &&
             !!jsonData.data &&
             typeof jsonData.data === 'object';
+
+        champsFusionInterdit = isLoadEnvelope && isChampsFusionInterditPayload(jsonData);
 
         /** @type {DocumentJsonWebDev} */
         const documentJson = isLoadEnvelope ? jsonData.data : jsonData;
@@ -23227,32 +23397,42 @@ document.addEventListener('DOMContentLoaded', () => {
         computeFondPerduOffset();
         
         // Stocker les champs de fusion disponibles et mettre à jour l'UI
-        if (effectiveDocumentJson.champsFusion && Array.isArray(effectiveDocumentJson.champsFusion) && effectiveDocumentJson.champsFusion.length > 0) {
+        if (champsFusionInterdit) {
+            documentState.champsFusion = [];
+            mergeFields = [];
+            updateMergeFieldsUI([]);
+            documentState.donneesApercu = [];
+            initDefaultPreviewData();
+            updatePreviewButtonState();
+        } else if (effectiveDocumentJson.champsFusion && Array.isArray(effectiveDocumentJson.champsFusion) && effectiveDocumentJson.champsFusion.length > 0) {
             documentState.champsFusion = effectiveDocumentJson.champsFusion;
             mergeFields = effectiveDocumentJson.champsFusion;
             updateMergeFieldsUI(mergeFields);
         } else {
         }
-        
+
         // Stocker les données d'aperçu (échantillons de la base de données)
-        if (effectiveDocumentJson.donneesApercu && Array.isArray(effectiveDocumentJson.donneesApercu) && effectiveDocumentJson.donneesApercu.length > 0) {
-            // Vérifier si c'est le format WebDev (avec enregistrement) ou format plat
-            if (effectiveDocumentJson.donneesApercu.length > 0 && 
-                effectiveDocumentJson.donneesApercu[0].enregistrement !== undefined) {
-                // Format WebDev : convertir en format interne
-                documentState.donneesApercu = convertDonneesApercuFromWebDev(effectiveDocumentJson.donneesApercu);
+        if (!champsFusionInterdit) {
+            if (effectiveDocumentJson.donneesApercu && Array.isArray(effectiveDocumentJson.donneesApercu) && effectiveDocumentJson.donneesApercu.length > 0) {
+                // Vérifier si c'est le format WebDev (avec enregistrement) ou format plat
+                if (effectiveDocumentJson.donneesApercu.length > 0 &&
+                    effectiveDocumentJson.donneesApercu[0].enregistrement !== undefined) {
+                    // Format WebDev : convertir en format interne
+                    documentState.donneesApercu = convertDonneesApercuFromWebDev(effectiveDocumentJson.donneesApercu);
+                } else {
+                    // Format plat (données fictives ou déjà converties)
+                    documentState.donneesApercu = effectiveDocumentJson.donneesApercu;
+                }
+
+                // Mettre à jour l'état du bouton aperçu
+                updatePreviewButtonState();
             } else {
-                // Format plat (données fictives ou déjà converties)
-                documentState.donneesApercu = effectiveDocumentJson.donneesApercu;
+                // Utiliser les données fictives par défaut si aucune donnée WebDev
+                initDefaultPreviewData();
             }
-            
-            // Mettre à jour l'état du bouton aperçu
-            updatePreviewButtonState();
-        } else {
-            // Utiliser les données fictives par défaut si aucune donnée WebDev
-            initDefaultPreviewData();
         }
-        
+
+        documentState.champsFusionInterdit = champsFusionInterdit;
         // Étape 2c : Charger les polices disponibles (message.policesDisponibles au même niveau que data)
         policesDisponibles = (messagePolicesDisponibles && messagePolicesDisponibles.length > 0)
             ? messagePolicesDisponibles
@@ -23454,8 +23634,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 
             });
         }
-        
-        
+
+        let fusionBindingsStripped = false;
+        if (champsFusionInterdit) {
+            fusionBindingsStripped = stripChampsFusionBindingsFromDocumentState();
+        }
+
         // --- ÉTAPE 8 : Mettre à jour le compteur et l'affichage ---
         
         // Mettre à jour le compteur de zones (max ID trouvé + 1 pour la prochaine zone)
@@ -23467,6 +23651,16 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Charger et afficher la page courante (crée les zones dans le DOM)
         loadCurrentPage();
+
+        refreshChampsFusionInterditControls();
+        updateToolbarDataVisibility();
+        if (champsFusionInterdit && fusionBindingsStripped) {
+            showConstraintToast(
+                'Les liaisons vers les champs BDD ont été retirées : ce document ne peut pas être personnalisé par base (enveloppe sans fenêtre).',
+                'info',
+                'info'
+            );
+        }
         
         // Mettre à jour les onglets de page si la fonction existe
         if (typeof updatePageTabs === 'function') {
@@ -24291,6 +24485,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // --- ÉTAPE 5 : Supprimer les valeurs null pour compatibilité WebDev ---
+        if (documentState.champsFusionInterdit) {
+            output.ChampsFusionInterdit = true;
+        }
         return stripNullValues(output);
     }
     

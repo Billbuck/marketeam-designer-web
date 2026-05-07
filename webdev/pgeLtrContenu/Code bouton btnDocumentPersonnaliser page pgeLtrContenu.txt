@@ -53,9 +53,30 @@ si __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesig
 			jsWrapper.data.zonesCodeBarres[jsWrapper.data.zonesCodeBarres..Occurrence + 1] = jsData.zonesCodeBarres[nInd]
 		fin
 	fin
+	// Fusion des zones QR : si une zone du JsonDesignerData a un ID préfixé
+	// "sys-qr-" (= zone QR système comme le QR Interactif obligatoire), on
+	// REMPLACE la zone système du wrapper avec le même ID au lieu d'ajouter
+	// (sinon doublon à chaque réouverture). Pour les zones QR utilisateur
+	// classiques, ajout simple.
 	si jsData.zonesQR..Occurrence > 0 alors
 		pour nInd = 1 _à_ jsData.zonesQR..Occurrence
-			jsWrapper.data.zonesQR[jsWrapper.data.zonesQR..Occurrence + 1] = jsData.zonesQR[nInd]
+			sZoneId est une chaîne = jsData.zonesQR[nInd].id
+			
+			si Gauche(sZoneId, 7) = "sys-qr-" alors
+				bRemplace est un booléen = Faux
+				pour nIndW = 1 _à_ jsWrapper.data.zonesQR..Occurrence
+					si jsWrapper.data.zonesQR[nIndW].id = sZoneId alors
+						jsWrapper.data.zonesQR[nIndW] = jsData.zonesQR[nInd]
+						bRemplace = Vrai
+						sortir
+					fin
+				fin
+				si pas bRemplace alors
+					jsWrapper.data.zonesQR[jsWrapper.data.zonesQR..Occurrence + 1] = jsData.zonesQR[nInd]
+				fin
+			sinon
+				jsWrapper.data.zonesQR[jsWrapper.data.zonesQR..Occurrence + 1] = jsData.zonesQR[nInd]
+			fin
 		fin
 	fin
 

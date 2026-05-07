@@ -97,6 +97,18 @@ sinon
 		RemplirDesignerZonesSystemeDocument(stLoad.Document, stOperation.stOperationLettre.IdEnveloppe)
 	fin
 
+	// Zone QR Code Interactif système si opération "Cliquez Ici" et 1er document.
+	// Le QR est non-supprimable (mais déplaçable/redimensionnable) pour garantir
+	// qu'il reste présent tant que le projet est de type Courrier Interactif.
+	//
+	// On n'injecte PAS la zone système si le document a déjà un QR (cas où
+	// l'opération est devenue interactive parce que l'utilisateur a ajouté
+	// son propre QR depuis le Designer — sinon doublon à la réouverture).
+	si stOperation.EstCliquezIci _et_ pIndexDocument = 1 alors
+		si pas cpDesigner.JsonContientQrInteractif(stDoc.JsonDesignerData) alors
+			RemplirDesignerZoneSystemeQrInteractif(stLoad.Document, stDoc.LargeurOuvert, stDoc.HauteurOuvert)
+		fin
+	fin
 
 
 fin
@@ -106,11 +118,19 @@ fin
 // BLOCS COMMUNS enveloppe / document
 // =========================================================================
 
-// Champs de fusion disponibles
-stLoad.Document.champsFusion	= RemplirDesignerChampsFusion(stOperation.taaBaseChamp)
-
-// Données d'aperçu (échantillon publipostage)
-stLoad.Document.donneesApercu	= RemplirDesignerApercu(pTabEchantillon, stOperation.taaBaseChamp)
+// Champs de fusion et aperçu : pour les documents d'une enveloppe SANS fenêtre,
+// l'atelier n'effectue pas de rapprochement — pas de liaison BDD (ChampsFusionInterdit).
+stLoad.ChampsFusionInterdit	= Faux
+si pEstEnveloppe _ou_ stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
+	stLoad.Document.champsFusion	= RemplirDesignerChampsFusion(stOperation.taaBaseChamp)
+	stLoad.Document.donneesApercu	= RemplirDesignerApercu(pTabEchantillon, stOperation.taaBaseChamp)
+sinon
+	stLoad.ChampsFusionInterdit		= Vrai
+	tabChampsVide est un tableau de structDesignerChampFusion
+	tabApercuVide est un tableau de structDesignerEnregistrement
+	stLoad.Document.champsFusion	= tabChampsVide
+	stLoad.Document.donneesApercu	= tabApercuVide
+fin
 
 
 // Polices utilisées : vide en création (aucune police encore utilisée)

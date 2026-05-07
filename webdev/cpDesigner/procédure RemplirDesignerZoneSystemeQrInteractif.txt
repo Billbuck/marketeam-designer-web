@@ -1,0 +1,84 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// cpDesigner.RemplirDesignerZoneSystemeQrInteractif
+// Rôle : Ajouter une zone QR Code Interactif "système" dans le wrapper Designer
+//        du document. Cette zone est NON-SUPPRIMABLE mais reste librement
+//        déplaçable, redimensionnable et configurable par l'utilisateur.
+//
+// Appelée par ComposerJsonDesignerCreation quand l'opération est de type
+// Courrier Interactif (__stOperation.EstCliquezIci = Vrai) et qu'on traite
+// le 1er document (porteur du QR Interactif unique).
+//
+// L'ID strict "sys-qr-cliquezici" permet à btnDocumentPersonnaliser
+// de la repérer pour éviter les doublons à chaque réouverture.
+//
+// Paramètres :
+//   stLoadDoc          : structure document Designer en cours de remplissage
+//   pLargeurOuvertMm   : largeur du document ouvert en mm (pour centrage)
+//   pHauteurOuvertMm   : hauteur du document ouvert en mm (pour centrage)
+// ─────────────────────────────────────────────────────────────────────────────
+procédure RemplirDesignerZoneSystemeQrInteractif(stLoadDoc est une structDesignerDocument, pLargeurOuvertMm est un réel, pHauteurOuvertMm est un réel)
+
+
+// Taille fixe par défaut du QR (l'utilisateur peut redimensionner ensuite)
+nTailleMm est un réel = 30
+
+
+// ─── Construction de la zone QR système ──────────────────────────────────
+stZoneQR est une structDesignerZoneQR
+
+stZoneQR.id				= "sys-qr-cliquezici"
+stZoneQR.page			= 1
+stZoneQR.nom			= "QR Code Interactif"
+stZoneQR.niveau		= 100
+stZoneQR.rotation		= 0
+stZoneQR.verrouille	= Faux
+
+// Position centrée sur la page
+stZoneQR.Géométrie.xMm			= (pLargeurOuvertMm - nTailleMm) / 2
+stZoneQR.Géométrie.yMm			= (pHauteurOuvertMm - nTailleMm) / 2
+stZoneQR.Géométrie.largeurMm	= nTailleMm
+stZoneQR.Géométrie.hauteurMm	= nTailleMm
+
+// Contenu : URL placeholder (sera remplacée à la génération par l'étape Landing Page)
+stZoneQR.typeCode	= "QRCode"
+stZoneQR.contenu	= "https://landing.marketeam.fr/REMPLACER"
+
+// Couleurs : noir sur blanc
+stZoneQR.Couleurs.codeCmjn.c	= 0
+stZoneQR.Couleurs.codeCmjn.M	= 0
+stZoneQR.Couleurs.codeCmjn.y	= 0
+stZoneQR.Couleurs.codeCmjn.k	= 100
+
+stZoneQR.Couleurs.fondCmjn.c	= 0
+stZoneQR.Couleurs.fondCmjn.M	= 0
+stZoneQR.Couleurs.fondCmjn.y	= 0
+stZoneQR.Couleurs.fondCmjn.k	= 0
+
+
+// ─── Contraintes : NON-SUPPRIMABLE mais MODIFIABLE ───────────────────────
+// On NE met PAS systeme=Vrai (qui rendrait la zone inerte/non-sélectionnable).
+// Seul nonSupprimable=Vrai protège contre la suppression. systemeLibelle
+// affiche un badge visuel pour l'utilisateur.
+stZoneQR.contrainte.Géométrie.positionFixe	= Faux
+stZoneQR.contrainte.Géométrie.locked			= Faux
+stZoneQR.contrainte.Géométrie.minWMm			= 0
+stZoneQR.contrainte.Géométrie.maxWMm			= 0
+stZoneQR.contrainte.Géométrie.minHMm			= 0
+stZoneQR.contrainte.Géométrie.maxHMm			= 0
+
+// Style : on autorise la modification des couleurs
+stZoneQR.contrainte.style.couleursModifiable	= Vrai
+
+// Global : la zone vit (sélectionnable, toolbar) mais ne peut être supprimée
+// ni changer de page (le QR Interactif reste sur la page 1)
+stZoneQR.contrainte.global.systeme					= Faux
+stZoneQR.contrainte.global.systemeLibelle			= "QR Code Interactif"
+stZoneQR.contrainte.global.nonSupprimable			= Vrai
+stZoneQR.contrainte.global.imprimable				= Vrai
+stZoneQR.contrainte.global.selectionnable			= Vrai
+stZoneQR.contrainte.global.toolbarAffichable		= Vrai
+stZoneQR.contrainte.global.pageModifiable			= Faux
+
+
+// ─── Ajout au document Designer ──────────────────────────────────────────
+stLoadDoc.zonesQR.Ajoute(stZoneQR)

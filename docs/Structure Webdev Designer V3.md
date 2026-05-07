@@ -563,6 +563,8 @@ structDesignerLoad est une Structure
 	'constraints'				est une structDesignerConstraints			<sérialise = "constraints">			// Contraintes globales
 	'limites'					est une structDesignerLimites					<sérialise = "limites">					// Limites sur les images acceptées
 	'policesDisponibles'		est un tableau										<sérialise = "policesDisponibles"> de structDesignerPolice
+	// Voir ComposerJsonDesignerCreation : Vrai pour document intérieur si enveloppe sans fenêtre (pas de fusion BDD)
+	'ChampsFusionInterdit'		est un booléen									<sérialise = "ChampsFusionInterdit">
 	// --- Zone de personnalisation (optionnel) : rectangle autorisé par index de page ---s
 	'ZonePersonnalisation'	est un tableau										<sérialise = "ZonePersonnalisation"> de structDesignerZonePersonnalisationPage
 	// Si tu préfères l’objet { "0": {...}, "1": {...} } : utilise une chaîne JSON + Sérialise vers JSON,
