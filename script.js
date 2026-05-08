@@ -12187,10 +12187,16 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function updatePreviewButtonState() {
         if (!btnPreview) return;
-        
+
+        if (champsFusionInterdit) {
+            btnPreview.disabled = true;
+            btnPreview.title = 'Aperçu indisponible : ce document n\'utilise pas d\'enregistrements BDD (enveloppe sans fenêtre).';
+            return;
+        }
+
         const hasData = hasPreviewData();
         btnPreview.disabled = !hasData;
-        btnPreview.title = hasData 
+        btnPreview.title = hasData
             ? `Aperçu de la fusion (${documentState.donneesApercu.length} enregistrement(s))`
             : 'Aucune donnée d\'aperçu disponible';
     }
@@ -12719,7 +12725,16 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {boolean} true si l'activation a réussi
      */
     function activatePreview() {
-        
+
+        if (champsFusionInterdit) {
+            showConstraintToast(
+                'L\'aperçu de fusion est indisponible : aucun enregistrement BDD pour ce document (enveloppe sans fenêtre).',
+                'info',
+                'info'
+            );
+            return false;
+        }
+
         // Vérifier qu'on a des données d'aperçu
         if (!hasPreviewData()) {
             console.warn('⚠️ Aucune donnée d\'aperçu disponible');
@@ -13501,6 +13516,11 @@ document.addEventListener('DOMContentLoaded', () => {
          * - Si `autorisations[type] = true` et `limites[type] > 0` → vérifie si limite atteinte
          */
         function isButtonVisible(type) {
+            // Enveloppe sans fenêtre (documents intérieurs) : pas de courrier interactif / QR type « qr »
+            if (champsFusionInterdit && type === 'qr') {
+                return false;
+            }
+
             // 1. Vérifier l'autorisation (false = type interdit)
             if (autorisations[type] === false) {
                 return false;
@@ -13568,7 +13588,16 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('⚠️ Création de zone QR bloquée en mode aperçu');
             return;
         }
-        
+
+        if (champsFusionInterdit) {
+            showConstraintToast(
+                'Le QR Code interactif n\'est pas disponible pour ce document (enveloppe sans fenêtre, pas de personnalisation BDD).',
+                'info',
+                'info'
+            );
+            return;
+        }
+
         documentState.zoneCounter++;
         zoneCounter = documentState.zoneCounter; // Synchroniser pour compatibilité
         const id = `zone-${zoneCounter}`;
@@ -17619,7 +17648,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (previewState && previewState.active) {
             return;
         }
-        
+
+        /** Section « Aperçu » : masquée si pas de fusion BDD (aucun jeu d'enregistrements réel) */
+        const showPreviewSection = !champsFusionInterdit;
+
         const count = selectedZoneIds.length;
         
         // Récupérer les sections par ID
@@ -17681,7 +17713,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // MODE AUCUNE SÉLECTION (0 zone)
         // always + no-selection visibles, single masqué
         // ═══════════════════════════════════════════════════════════════════════
-        if (previewSection) previewSection.style.display = 'block'; // no-selection
+        if (previewSection) previewSection.style.display = showPreviewSection ? 'block' : 'none'; // no-selection
         if (pagesSection) pagesSection.style.display = documentState.pages.length > 1 ? 'block' : 'none'; // conditionné au nombre de pages
         if (resetSection) resetSection.style.display = 'block';     // visible sans sélection
         if (actionsSection) actionsSection.style.display = 'block'; // visible sans sélection
@@ -23219,6 +23251,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 barcodeInputSource.dispatchEvent(new Event('change', { bubbles: true }));
             }
         }
+        updateSidebarSectionsVisibility();
     }
 
     function loadFromWebDev(jsonData) {
@@ -23346,7 +23379,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         /** @type {DocumentJsonWebDev} */
         let effectiveDocumentJson = documentJson;
-        
+
+        // Quitter l'aperçu avant de détruire les zones (chargement d'un nouveau document)
+        if (previewState && previewState.active) {
+            deactivatePreview();
+        }
+
         // --- ÉTAPE 1 : Nettoyer le DOM ---
         // Supprimer toutes les zones existantes de la page actuelle
         const existingZones = a4Page.querySelectorAll('.zone');
@@ -23402,7 +23440,6 @@ document.addEventListener('DOMContentLoaded', () => {
             mergeFields = [];
             updateMergeFieldsUI([]);
             documentState.donneesApercu = [];
-            initDefaultPreviewData();
             updatePreviewButtonState();
         } else if (effectiveDocumentJson.champsFusion && Array.isArray(effectiveDocumentJson.champsFusion) && effectiveDocumentJson.champsFusion.length > 0) {
             documentState.champsFusion = effectiveDocumentJson.champsFusion;
@@ -23654,6 +23691,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         refreshChampsFusionInterditControls();
         updateToolbarDataVisibility();
+        updateZoneButtonsVisibility();
+        updateSidebarSectionsVisibility();
         if (champsFusionInterdit && fusionBindingsStripped) {
             showConstraintToast(
                 'Les liaisons vers les champs BDD ont été retirées : ce document ne peut pas être personnalisé par base (enveloppe sans fenêtre).',
@@ -24734,7 +24773,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 
             case 'updatePreviewData':
                 // Mise à jour dynamique des données d'aperçu sans recharger le document
-                
+
+                if (champsFusionInterdit) {
+                    console.warn('⚠️ updatePreviewData ignoré : document sans fusion BDD');
+                    sendMessageToParent({
+                        action: 'previewDataUpdated',
+                        success: false,
+                        error: 'Aperçu fusion non applicable (ChampsFusionInterdit)'
+                    });
+                    break;
+                }
+
                 if (message.data && Array.isArray(message.data.donneesApercu)) {
                     documentState.donneesApercu = message.data.donneesApercu;
                     
