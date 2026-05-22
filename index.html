@@ -7,7 +7,7 @@
     <!-- Quill.js (CDN) - DOIT être chargé AVANT les autres scripts -->
     <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
     <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=48">
+    <link rel="stylesheet" href="style.css?v=63">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <!-- Bibliothèque bwip-js pour génération de codes-barres -->
     <script src="https://cdn.jsdelivr.net/npm/bwip-js@4.5.1/dist/bwip-js-min.min.js"></script>
@@ -218,6 +218,26 @@
                                 </svg>
                             </span>
                             <span class="btn-label">QR Code interactif</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ==================== SECTION CHAMPS (L7 - D11) ==================== -->
+                <!-- Bouton de toggle de la popup « Champs de fusion ».               -->
+                <!-- Déplacé hors de la section Actions (L5/D2) car sa nature est     -->
+                <!-- différente (toggle d'affichage de panneau, pas action sur le     -->
+                <!-- document). Section dédiée susceptible d'accueillir d'autres      -->
+                <!-- contrôles liés aux champs de fusion à terme.                    -->
+                <div class="section" id="fields-section" data-visible-for="always">
+                    <div class="section-title">Champs</div>
+                    <div class="btn-group btn-group-single">
+                        <button class="btn" id="btn-toggle-fields-popup" data-tooltip="Afficher / masquer la popup Champs de fusion">
+                            <span class="btn-icon">
+                                <svg viewBox="0 0 512 512" fill="currentColor">
+                                    <path d="m388.022 18.343c-35.486-11.829-82.373-18.343-132.022-18.343s-96.536 6.514-132.022 18.343c-52.052 17.351-62.978 40.387-62.978 56.657v362c0 16.27 10.926 39.306 62.978 56.657 35.486 11.829 82.373 18.343 132.022 18.343s96.536-6.514 132.022-18.343c52.052-17.351 62.978-40.387 62.978-56.657 0-105.054 0-246.705 0-362 0-16.27-10.926-39.306-62.978-56.657zm-254.558 28.461c32.509-10.836 76.026-16.804 122.536-16.804s90.027 5.968 122.536 16.804c33.589 11.196 42.464 23.339 42.464 28.196s-8.875 17-42.464 28.196c-32.509 10.836-76.026 16.804-122.536 16.804s-90.027-5.968-122.536-16.804c-33.589-11.196-42.464-23.339-42.464-28.196s8.875-17 42.464-28.196zm245.072 418.392c-32.509 10.836-76.026 16.804-122.536 16.804s-90.027-5.968-122.536-16.804c-33.589-11.196-42.464-23.339-42.464-28.196v-78.925c8.534 5.101 19.343 10.037 32.978 14.582 35.486 11.829 82.373 18.343 132.022 18.343s96.536-6.514 132.022-18.343c13.635-4.545 24.444-9.48 32.978-14.582v78.925c0 4.857-8.875 17-42.464 28.196zm42.464-149.196c0 4.857-8.875 17-42.464 28.196-32.509 10.836-76.026 16.804-122.536 16.804s-90.027-5.968-122.536-16.804c-33.589-11.196-42.464-23.339-42.464-28.196 0-7.516 0-68.768 0-77.925 8.534 5.101 19.343 10.037 32.978 14.582 35.486 11.829 82.373 18.343 132.022 18.343s96.536-6.514 132.022-18.343c13.635-4.545 24.444-9.48 32.978-14.582zm0-120c0 4.857-8.875 17-42.464 28.196-32.509 10.836-76.026 16.804-122.536 16.804s-90.027-5.968-122.536-16.804c-33.589-11.196-42.464-23.339-42.464-28.196 0-37.442 0-45.513 0-78.925 8.534 5.101 19.343 10.037 32.978 14.582 35.486 11.829 82.373 18.343 132.022 18.343s96.536-6.514 132.022-18.343c13.635-4.545 24.444-9.48 32.978-14.582z"/>
+                                </svg>
+                            </span>
+                            <span class="btn-label">Champs</span>
                         </button>
                     </div>
                 </div>
@@ -705,6 +725,83 @@
             <div class="modal-buttons">
                 <button id="template-limits-cancel-btn" class="btn-secondary" type="button">Annuler</button>
                 <button id="template-limits-confirm-btn" class="btn-primary-theme" type="button">Confirmer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- V2.3 - D1 : Le formulaire d'ajout/édition de champ est désormais  -->
+    <!-- INTÉGRÉ dans la popup "Champs de fusion" (cf. plus bas dans la    -->
+    <!-- toolbar-data). Plus de modal-overlay : la popup bascule entre la  -->
+    <!-- vue liste et la vue formulaire via #champ-fusion-form-view.       -->
+    <!-- Les modales secondaires (suppression, suggestion standard)        -->
+    <!-- restent en sur-couche modale légère (cf. plus bas).               -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Conservation d'un wrapper minimal #champ-fusion-modal pour       -->
+    <!-- compatibilité du JS qui appelle modal.classList.add/remove        -->
+    <!-- (il est utilisé comme indicateur "form-view visible" - hidden = -->
+    <!-- masqué, visible = displayed in popup).                            -->
+    <div id="champ-fusion-modal" class="champ-fusion-form-state hidden"></div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Modale de confirmation suppression de champ (V3.4 §7.5)          -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div id="champ-delete-modal" class="modal-overlay hidden">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span class="material-icons" style="color: #c62828;">warning</span>
+                <h3>Supprimer le champ ?</h3>
+            </div>
+            <div class="modal-body">
+                <p id="champ-delete-message">Le champ <strong id="champ-delete-libelle"></strong> est utilisé dans votre document :</p>
+                <ul id="champ-delete-occurrences" class="check-errors-list">
+                    <!-- généré dynamiquement -->
+                </ul>
+                <p>Confirmer la suppression ? Les occurrences seront retirées et les zones liées seront détachées.</p>
+            </div>
+            <div class="modal-buttons">
+                <button id="champ-delete-cancel-btn" class="btn-secondary" type="button">Annuler</button>
+                <button id="champ-delete-confirm-btn" class="btn-danger" type="button">Supprimer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Modale "Ajouter le standard à la place ?" (V3.4 §7.4 garde-fou)  -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div id="champ-standard-suggest-modal" class="modal-overlay hidden">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span class="material-icons" style="color: #1976d2;">lightbulb</span>
+                <h3>Champ standard disponible</h3>
+            </div>
+            <div class="modal-body">
+                <p>Le libellé <strong id="champ-standard-suggest-libelle"></strong> correspond à un champ standard. Préférez-vous l'ajouter directement (déjà associé à la base) ?</p>
+            </div>
+            <div class="modal-buttons">
+                <button id="champ-standard-suggest-cancel-btn" class="btn-secondary" type="button">Continuer en spécifique</button>
+                <button id="champ-standard-suggest-confirm-btn" class="btn-primary-theme" type="button">Ajouter le standard</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- L11 / V2.5 §3 — Popup d'alerte au désalignement (régime B)      -->
+    <!-- Affichée une seule fois par session si au moins un champ        -->
+    <!-- exploité dans le document est absent de la base sélectionnée.   -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div id="alerte-desalignement-modal" class="modal-overlay hidden">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span class="material-icons" style="color: #C62828;">warning_amber</span>
+                <h3>Champs absents de la base de données</h3>
+            </div>
+            <div class="modal-body">
+                <p>Les champs suivants sont utilisés dans le document mais absents de la base de données sélectionnée. Leur valeur sera vide lors de la fusion.</p>
+                <ul id="alerte-desalignement-list" class="alerte-desalignement-list"></ul>
+            </div>
+            <div class="modal-buttons">
+                <button id="alerte-desalignement-ok-btn" class="btn-primary-theme" type="button">OK</button>
             </div>
         </div>
     </div>
@@ -3342,11 +3439,117 @@
         
         <!-- Content -->
         <div class="toolbar-content-poc toolbar-content-data">
-            <div class="fields-count" id="fields-count">0 champ disponible</div>
-            <div class="fields-list" id="merge-fields-list">
-                <!-- Les champs seront générés par updateMergeFieldsUI() -->
-                <div class="fields-empty" id="fields-empty">
-                    Aucun champ disponible
+
+            <!-- ═══════ VUE LISTE (par défaut) ═══════ -->
+            <div id="champ-fusion-list-view" class="champ-fusion-list-view">
+                <!-- V3.4 - Bouton "Ajouter un champ" (cf. cahier §7.1).
+                      Désactivé si champsFusionInterdit ou autoriserGestionChamps=Faux. -->
+                <button type="button" id="btn-add-champ-fusion" class="btn-add-champ-fusion" title="Ajouter un champ de fusion">
+                    <span class="material-icons">add</span>
+                    <span>Ajouter un champ</span>
+                </button>
+                <div class="fields-count" id="fields-count">0 champ disponible</div>
+                <div class="fields-list" id="merge-fields-list">
+                    <!-- Les champs seront générés par updateMergeFieldsUI() -->
+                    <div class="fields-empty" id="fields-empty">
+                        Aucun champ disponible
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══════ VUE FORMULAIRE (V2.3 - D1) ═══════ -->
+            <!-- Affichée à la place de la vue liste quand on ajoute/modifie un champ. -->
+            <div id="champ-fusion-form-view" class="champ-fusion-form-view hidden">
+
+                <!-- V2.4 D6 - Header compact : flèche petite + titre sur une seule ligne -->
+                <div class="champ-fusion-form-header">
+                    <button type="button" id="champ-fusion-back-btn" class="champ-fusion-back-btn" title="Retour à la liste" aria-label="Retour à la liste">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="15 18 9 12 15 6"></polyline>
+                        </svg>
+                    </button>
+                    <h4 id="champ-fusion-modal-title">Ajouter un champ</h4>
+                </div>
+
+                <!-- Onglets Standard / Spécifique -->
+                <div class="champ-fusion-tabs" role="tablist">
+                    <button id="champ-fusion-tab-standard" type="button" class="champ-fusion-tab active" role="tab" data-tab="standard">
+                        <span class="material-icons">list_alt</span>
+                        <span>Standard</span>
+                    </button>
+                    <button id="champ-fusion-tab-specifique" type="button" class="champ-fusion-tab" role="tab" data-tab="specifique">
+                        <span class="material-icons">edit_note</span>
+                        <span>Spécifique</span>
+                    </button>
+                </div>
+
+                <div class="champ-fusion-form-body">
+
+                    <!-- ============ ONGLET STANDARD (V2.4 D7) ============ -->
+                    <!-- V2.4 D7 : suppression du texte d'aide et du filtre recherche. -->
+                    <!-- V2.4 A12 : la liste standard est masquée en mode édition.    -->
+                    <div id="champ-fusion-pane-standard" class="champ-fusion-pane active" data-pane="standard">
+                        <!-- Champ recherche conservé en HTML mais masqué visuellement par défaut.
+                             Aucun code ne s'en sert plus, mais on évite de casser les querySelector. -->
+                        <input type="text" id="champ-fusion-standard-search" class="champ-fusion-input" autocomplete="off" hidden>
+                        <div id="champ-fusion-standard-list" class="champ-fusion-standard-list" role="listbox" aria-label="Liste des champs standards">
+                            <!-- Items générés dynamiquement par renderChampStandardList() -->
+                        </div>
+                        <div id="champ-fusion-standard-empty" class="champ-fusion-empty hidden">
+                            Aucun champ standard disponible.
+                        </div>
+                    </div>
+
+                    <!-- ============ ONGLET SPÉCIFIQUE (V2.4 D8) ============ -->
+                    <!-- V2.4 D8 : suppression du texte d'aide. Lignes label+input alignées. -->
+                    <div id="champ-fusion-pane-specifique" class="champ-fusion-pane" data-pane="specifique">
+                        <div class="champ-fusion-row champ-fusion-row-inline">
+                            <label for="champ-fusion-libelle">Libellé <span class="champ-fusion-required">*</span></label>
+                            <div class="champ-fusion-row-input">
+                                <input type="text" id="champ-fusion-libelle" class="champ-fusion-input" maxlength="35" placeholder="Ex: Couleur préférée" autocomplete="off">
+                                <div id="champ-fusion-libelle-counter" class="champ-fusion-counter">0 / 35</div>
+                                <div id="champ-fusion-libelle-error" class="champ-fusion-error hidden"></div>
+                            </div>
+                        </div>
+                        <div class="champ-fusion-row champ-fusion-row-inline">
+                            <label for="champ-fusion-type">Type <span class="champ-fusion-required">*</span></label>
+                            <div class="champ-fusion-row-input">
+                                <select id="champ-fusion-type" class="champ-fusion-input">
+                                    <!-- Options générées dynamiquement par renderTypeOptions() -->
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ============ ZONE COMMUNE : ÉCHANTILLON ============ -->
+                    <!-- V2.4 D8 : également alignée label/input sur même ligne. -->
+                    <div class="champ-fusion-row champ-fusion-echantillon-row champ-fusion-row-inline">
+                        <label for="champ-fusion-echantillon">
+                            Échantillon <span class="champ-fusion-optional">(optionnel)</span>
+                        </label>
+                        <div class="champ-fusion-row-input">
+                            <input type="text" id="champ-fusion-echantillon" class="champ-fusion-input" placeholder="" autocomplete="off">
+                            <div id="champ-fusion-echantillon-hint" class="champ-fusion-hint"></div>
+                            <div id="champ-fusion-echantillon-error" class="champ-fusion-error hidden"></div>
+                        </div>
+                    </div>
+
+                    <!-- ============ INFO VERROUILLAGE GLOBAL (V2.4 D9) ============ -->
+                    <!-- V2.4 D9 : ne s'affiche QUE pour le verrouillage global -->
+                    <!-- (autoriserGestionChamps = Faux). Pour le verrouillage    -->
+                    <!-- individuel (champ d'origine "import"), le grisage suffit.-->
+                    <div id="champ-fusion-mapped-info" class="champ-fusion-mapped-info hidden">
+                        <span class="material-icons">info</span>
+                        <span></span>
+                    </div>
+                </div>
+
+                <!-- Boutons d'action en bas -->
+                <div class="champ-fusion-form-actions">
+                    <button id="champ-fusion-cancel-btn" class="btn-secondary" type="button">Annuler</button>
+                    <button id="champ-fusion-confirm-btn" class="btn-primary-theme" type="button" disabled>Confirmer</button>
+                    <!-- Bouton de compatibilité (l'ancien JS y faisait référence) -->
+                    <button id="champ-fusion-close-btn" type="button" style="display:none;" aria-hidden="true"></button>
                 </div>
             </div>
         </div>
@@ -3380,6 +3583,6 @@
 
     <!-- Générateur PSMD autonome (doit être chargé avant script.js) -->
     <script src="psmd-generator.js"></script>
-    <script src="script.js?v=51"></script>
+    <script src="script.js?v=70"></script>
 </body>
 </html>

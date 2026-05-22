@@ -7,7 +7,7 @@ sListeDocument			est une chaîne
 bEstModeCreation		est un booléen	= (stOperation.IdOperation = 0)		// On fait le test maintenant car après l'appel de AjoutModificationOperation l'IdOperation sera renseigné
 
 // On met à jour le booléen pour calculer le statut de l'opération dans le trigger HF
-stOperation.EstDocumentEnAttente		= Faux
+stOperation.EstDocumentEnAttente			= Faux
 stOperation.EstInjectionEnAttente		= Faux
 
 pour tout stDocument de stOperation.stOperationLettre.tabStDocument
@@ -46,7 +46,6 @@ ope_lettre.IdCampagne							= stOperation.stOperationLettre.IdCampagne
 ope_lettre.QuantiteEnveloppeClient			= stOperation.stOperationLettre.QuantiteEnveloppeClient
 ope_lettre.EstAlliage							= stOperation.stOperationLettre.EstAlliage
 ope_lettre.EstAlliageClient					= stOperation.stOperationLettre.EstAlliageClient
-
 ope_lettre.EstAdressageExpediteur			= stOperation.stOperationLettre.stEnveloppe.EstAdressageExpediteur
 ope_lettre.EstAdressageLogo					= stOperation.stOperationLettre.stEnveloppe.EstAdressageLogo
 ope_lettre.EstAdressagePromotion				= stOperation.stOperationLettre.stEnveloppe.EstAdressagePromotion
@@ -57,13 +56,13 @@ ope_lettre.EstAdressagePromotion				= stOperation.stOperationLettre.stEnveloppe.
 // et doivent pointer vers Printshop AVANT d'être sauvegardés en BDD.
 si stOperation.stOperationLettre.stEnveloppe.JsonDesignerData <> "" alors
 
-	jDocEnv est un JSON = ChaîneVersUTF8(stOperation.stOperationLettre.stEnveloppe.JsonDesignerData)
+	jDocEnv est un JSON = stOperation.stOperationLettre.stEnveloppe.JsonDesignerData.VersUTF8()
 
 	// Normalisation format (comme V3 pour documents)
 	si jDocEnv.pages..Occurrence = 0 _et_ jDocEnv.data.pages..Occurrence > 0 alors
 		Trace("AjoutModificationOperationCourrier : normalisation format enveloppe structDesignerLoad --> data")
 		stOperation.stOperationLettre.stEnveloppe.JsonDesignerData	= JSONVersChaîne(jDocEnv.data)
-		jDocEnv																		= ChaîneVersUTF8(stOperation.stOperationLettre.stEnveloppe.JsonDesignerData)
+		jDocEnv																		= stOperation.stOperationLettre.stEnveloppe.JsonDesignerData.VersUTF8()
 	fin
 
 	si jDocEnv.zonesImage..Occurrence > 0 alors
@@ -78,7 +77,7 @@ si stOperation.stOperationLettre.stEnveloppe.JsonDesignerData <> "" alors
 			si sNomFichierEnv <> "" alors
 
 				// Si déjà dans Printshop, ne pas toucher
-				si Gauche(sNomFichierEnv, Taille(sRepPrintshopEnv)) = sRepPrintshopEnv alors
+				si sNomFichierEnv.Gauche(sRepPrintshopEnv.Taille()) = sRepPrintshopEnv alors
 					continuer
 				fin
 
@@ -86,7 +85,7 @@ si stOperation.stOperationLettre.stEnveloppe.JsonDesignerData <> "" alors
 				jDocEnv.zonesImage[nIndEnv].source.nomFichier = sRepPrintshopEnv + sNomSimpleEnv
 
 				sUrlImageEnv est une chaîne = sRepPrintshopEnvRel + sNomSimpleEnv
-				sUrlImageEnv										= Remplace(sUrlImageEnv, "\", "/")
+				sUrlImageEnv										= sUrlImageEnv.Remplace("\", "/")
 				jDocEnv.zonesImage[nIndEnv].source.valeur	= sUrlImageEnv
 
 				bModifieEnv											= Vrai
@@ -96,7 +95,7 @@ si stOperation.stOperationLettre.stEnveloppe.JsonDesignerData <> "" alors
 		fin
 
 		si bModifieEnv alors
-			stOperation.stOperationLettre.stEnveloppe.JsonDesignerData = JSONVersChaîne(jDocEnv)
+			stOperation.stOperationLettre.stEnveloppe.JsonDesignerData = jDocEnv.VersChaîne()
 		fin
 
 	fin
@@ -156,6 +155,7 @@ pour tout stDocument de stOperation.stOperationLettre.tabStDocument
 	ope_lettre_contenu.ModeImpression				= stDocument.ModeImpression
 	ope_lettre_contenu.EstPdfClient					= stDocument.EstPdfClient
 	ope_lettre_contenu.EstDocumentEnAttente		= stDocument.EstDocumentEnAttente
+	ope_lettre_contenu.EstPersonnaliseDesigner 	= stDocument.EstPersonnaliseDesigner
 	ope_lettre_contenu.IdPackageContenu				= stDocument.IdPackageContenu
 	ope_lettre_contenu.IdPapier						= stDocument.IdPapier
 	ope_lettre_contenu.QuantiteDocumentClient		= stDocument.QuantiteDocumentClient
@@ -195,7 +195,7 @@ pour tout stDocument de stOperation.stOperationLettre.tabStDocument
 		// Régénérer le PSMD production avec les chemins finaux (Documents, Printshop)
 		// Le PSMD sera déplacé par DéplaceFichierUpload vers le répertoire Printshop
 		si stDocument.JsonDesignerData <> "" alors
-			Partage.GenererPsmdServeurDocument(stDocument)
+			cpDesigner.GenererPsmdServeurDocument(stDocument)
 		fin
 	fin
 
@@ -246,7 +246,7 @@ sdReqLettreContenu.AnnuleDéclaration()
 			renvoyer Faux
 		fin
 
-		jDoc = ChaîneVersUTF8(stDocument.JsonDesignerData)
+		jDoc = stDocument.JsonDesignerData.VersUTF8()
 
 		// ─── [V3] Normalisation du format JSON ──────────────────────────────
 		// ComposerJsonDesignerCreation produit le format complet (structDesignerLoad) :
@@ -258,7 +258,7 @@ sdReqLettreContenu.AnnuleDéclaration()
 		si jDoc.pages..Occurrence = 0 _et_ jDoc.data.pages..Occurrence > 0 alors
 			Trace("ModificationCheminDesignerJson : normalisation format structDesignerLoad --> data")
 			stDocument.JsonDesignerData	= JSONVersChaîne(jDoc.data)
-			jDoc									= ChaîneVersUTF8(stDocument.JsonDesignerData)
+			jDoc									= stDocument.JsonDesignerData.VersUTF8()
 		fin
 
 		// ─── Garde : pas de pages dans le JSON → rien à faire ────────────────
@@ -296,7 +296,7 @@ sdReqLettreContenu.AnnuleDéclaration()
 				// =========================================================================
 				// Le PDF et le fond du modèle sont copiés par DéplaceFichierUpload
 				// vers les répertoires de l'opération. Le JSON doit donc pointer
-				// vers le répertoire de l'opération (autonome du modèle source).
+			// vers le répertoire de l'opération (autonome du modèle source).
 			cas stDocument.IdModele > 0
 				si ltr_modele.LitRecherchePremier(IdModele, stDocument.IdModele) alors
 					sNomFichierFinalPdf			= __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__
@@ -346,7 +346,7 @@ sdReqLettreContenu.AnnuleDéclaration()
 				fin
 
 				// Si déjà dans Printshop, ne pas toucher
-				si Gauche(sAncienChemin, Taille(sRepertoirePrintshopFinal)) = sRepertoirePrintshopFinal alors
+				si sAncienChemin.Gauche(sRepertoirePrintshopFinal.Taille()) = sRepertoirePrintshopFinal alors
 					continuer
 				fin
 
@@ -357,7 +357,7 @@ sdReqLettreContenu.AnnuleDéclaration()
 
 				// Nouvelle URL web
 				sUrlImage est une chaîne = sRepertoirePrintshopRelatif + sNomFichierImage
-				sUrlImage												= Remplace(sUrlImage, "\", "/")
+				sUrlImage												= sUrlImage.Remplace("\", "/")
 				jDoc.zonesImage[nIndZone].source.valeur		= sUrlImage
 
 				Trace("ModificationCheminDesignerJson : image " + sNomFichierImage + " --> " + sUrlImage)
@@ -366,7 +366,7 @@ sdReqLettreContenu.AnnuleDéclaration()
 
 		fin
 
-		stDocument.JsonDesignerData = JSONVersChaîne(jDoc)
+		stDocument.JsonDesignerData = jDoc.VersChaîne()
 
 		renvoyer Vrai
 

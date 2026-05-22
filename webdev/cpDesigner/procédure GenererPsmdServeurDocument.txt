@@ -12,16 +12,16 @@
 
 procédure GenererPsmdServeurDocument(stDocument est une structDocument)
 
-sNodeExe			est une chaîne	= INILit("NODE", "CHEMIN", "", NomFichierIni())
-sNodeCli			est une chaîne	= INILit("NODE", "CLI", "", NomFichierIni())
-sRepTravail			est une chaîne
-sCodeTemp			est une chaîne
+sNodeExe					est une chaîne	= INILit("NODE", "CHEMIN", "", NomFichierIni())
+sNodeCli					est une chaîne	= INILit("NODE", "CLI", "", NomFichierIni())
+sRepTravail				est une chaîne
+sCodeTemp				est une chaîne
 sCheminJsonTemp		est une chaîne
-sCheminPsmd			est une chaîne
-sCheminPsmdBat		est une chaîne
+sCheminPsmd				est une chaîne
+sCheminPsmdBat			est une chaîne
 sNomFichierPsmd		est une chaîne
-sCommande			est une chaîne
-sCommandeBat		est une chaîne
+sCommande				est une chaîne
+sCommandeBat			est une chaîne
 
 // ─── Validation du JSON en entrée ────────────────────────────────────────
 si stDocument.JsonDesignerData = "" alors
@@ -36,10 +36,10 @@ si sNodeExe = "" ou sNodeCli = "" alors
 fin
 
 // ─── Construction des chemins — UTILISE LE REPERTOIRE DU DOCUMENT ────────
-sRepTravail			= stDocument.RepertoireTravail
-sCodeTemp			= stDocument.CodeTemp
+sRepTravail				= stDocument.RepertoireTravail
+sCodeTemp				= stDocument.CodeTemp
 sNomFichierPsmd		= __DOC_LTR_PSMD__ + sCodeTemp + ".psmd"
-sCheminPsmd			= sRepTravail + sNomFichierPsmd
+sCheminPsmd				= sRepTravail + sNomFichierPsmd
 sCheminJsonTemp		= sRepTravail + "psmd_json_" + sCodeTemp + ".tmp"
 
 // ─── Écriture du JSON dans le fichier temporaire ─────────────────────────
@@ -54,12 +54,12 @@ si fFichierExiste(sCheminPsmd) alors
 	fin
 fin
 
-// ─── Construction et exécution de la commande (PSMD production + imposition) ─
+// ─── Construction et exécution de la commande (PSMD production) ──────────
 sCommande = ChaîneConstruit(
 [
-	"%1" "%2" "%3" "%4"
+	"%1" "%2" "%3" "%4" --imposition
 ],
-sNodeExe, sNodeCli, sCheminJsonTemp, sCheminPsmd) + " --imposition"
+sNodeExe, sNodeCli, sCheminJsonTemp, sCheminPsmd)
 
 Trace("GenererPsmdServeur : CMD = " + sCommande)
 
@@ -71,8 +71,8 @@ fin
 // ─── Génération du PSMD BAT (sans fond perdu) ───────────────────────────
 // Corrige un bug de rendu des codes-barres dans CreateJPEGPreviewOfLayout
 // quand le fond perdu est en mode "Ajouter à la tâche"
-sCheminPsmdBat = sRepTravail + "psmd_bat_" + sCodeTemp + ".psmd"
-sCommandeBat = ChaîneConstruit(
+sCheminPsmdBat	= sRepTravail + "psmd_bat_" + sCodeTemp + ".psmd"
+sCommandeBat	= ChaîneConstruit(
 [
 	"%1" "%2" "%3" "%4"
 ],

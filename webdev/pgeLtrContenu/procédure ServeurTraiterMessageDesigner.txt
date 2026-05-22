@@ -26,6 +26,56 @@ selon vMessage.action
 			// vMessage.data contient le JSON complet exporté par exportToWebDev()
 			Trace("Document validé reçu du Designer")
 			jDoc est un JSON = ChaîneVersUTF8(gsJsonRecu)
+
+			// ═════════════════════════════════════════════════════════════
+			// L18/A34 — PARTIE 3 : PURGE DES COLONNES BASE AVANT STOCKAGE
+			// L18/A35 — Test rendu STRICT et ROBUSTE sur attribut JSON absent.
+			//
+			//   Les champs portant `injecteParBase = "1"` (CHAÎNE) sont des
+			//   colonnes de base injectées à l'exploitation par l'étape C
+			//   (cf. SelectionModèle.txt / btnDocumentPersonnaliser.txt
+			//   PARTIE 1). Ces colonnes sont VOLATILES — elles ne doivent
+			//   JAMAIS être persistées dans le JsonDesignerData du document
+			//   du tunnel.
+			//
+			//   Régression L18/A34 corrigée :
+			//     Le test originel `injecteParBase = Vrai` (booléen WL)
+			//     avait un comportement non fiable sur attribut JSON
+			//     dynamique ABSENT. Pour un champ du modèle qui n'a JAMAIS
+			//     reçu cet attribut, le test pouvait retourner Vrai à tort
+			//     → purge de TOUS les champs côté validation aussi.
+			//
+			//   Solution L18/A35 :
+			//     - Marqueur stocké comme CHAÎNE "1" (et non booléen Vrai)
+			//     - Lecture défensive en chaîne : un attribut JSON absent
+			//       lu en chaîne retourne "" → comparaison `= "1"` retourne
+			//       Faux → champ CONSERVÉ. Aucun faux positif possible.
+			//
+			//   Justification fonctionnelle : le document stocké doit rester
+			//   « propre » (générique), sans les colonnes base. Ainsi, quel
+			//   que soit l'état futur de la base (suppression, changement,
+			//   ajout), la prochaine ouverture du Designer repart d'une
+			//   base saine et la PARTIE 2 + étape C recalculent les
+			//   colonnes selon la base actuelle.
+			// ═════════════════════════════════════════════════════════════
+			si jDoc.data..Existe _et_ jDoc.data.champsFusion..Occurrence > 0 alors
+				jChampsFusionPurge est un JSON = "[]"
+				pour nIndPart3 = 1 _à_ jDoc.data.champsFusion..Occurrence
+					// Lecture défensive en chaîne (attribut JSON absent → "")
+					sInjectePB3 est une chaîne = jDoc.data.champsFusion[nIndPart3].injecteParBase
+					sLibelleP3 est une chaîne = jDoc.data.champsFusion[nIndPart3].libelle
+
+					si sInjectePB3 = "1" alors
+						Trace("PARTIE 3 : champ " + sLibelleP3 + " injecteParBase=[" + sInjectePB3 + "] => PURGÉ (non persisté)")
+					sinon
+						Trace("PARTIE 3 : champ " + sLibelleP3 + " injecteParBase=[" + sInjectePB3 + "] => persisté")
+						nIdxConservePart3 est un entier = jChampsFusionPurge..Occurrence + 1
+						jChampsFusionPurge[nIdxConservePart3] = jDoc.data.champsFusion[nIndPart3]
+					fin
+				fin
+				jDoc.data.champsFusion = jChampsFusionPurge
+			fin
+
 			sJsonData = JSONVersChaîne(jDoc.data)
 			si sJsonData <> "" alors
 				si _nIndDesignerEnCours = 0 alors
@@ -72,8 +122,8 @@ selon vMessage.action
 						__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].EstCliquezIci				= cpDesigner.JsonContientQrInteractif(sJsonData)
 
 						// Recalcul du flag global : Vrai si AU MOINS un document est EstCliquezIci
-						__stOperation.EstCliquezIci	= Faux
-						__stOperation.TypeProjet		= __OPERATION_COURRIER__
+						__stOperation.EstCliquezIci																						= Faux
+						__stOperation.TypeProjet																							= __OPERATION_COURRIER__
 						pour tout stDoc de __stOperation.stOperationLettre.tabStDocument
 							si stDoc.EstCliquezIci alors
 								__stOperation.EstCliquezIci	= Vrai
@@ -82,7 +132,7 @@ selon vMessage.action
 								sortir
 							fin
 						fin
-						
+
 						InitTitreOperation()
 						InitProgressBar()
 

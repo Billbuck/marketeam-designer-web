@@ -1109,7 +1109,13 @@ input:checked + .slider:before {
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.5);
-    z-index: 1000;
+    /* L10 / A20 - Z-index au-dessus de toolbar-poc (2000) et mini-toolbar
+       (3000) pour que les modales de confirmation (suppression de champ,
+       validation, suggestion standard) passent SYSTÉMATIQUEMENT au premier
+       plan, y compris quand la popup "Champs de fusion" est ouverte.
+       Avant L10 : 1000 → modales masquées par la popup (cf. bug A20).
+       Limite haute conservée pour les toasts (10000+). */
+    z-index: 9000;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -3571,8 +3577,15 @@ html[data-theme="LTR"] {
 
 /* Container spécifique */
 .toolbar-data {
-    width: 260px;
-    max-height: 400px;
+    /* V2.3 D1 — la popup contient désormais aussi la vue formulaire,        */
+    /* donc on l'élargit légèrement.                                         */
+    /* V2.4 D4 — hauteur ADAPTATIVE au contenu : on retire max-height fixe   */
+    /* pour éviter le double scroll (popup + liste interne). Un max-height   */
+    /* défensif limité à 80vh est appliqué pour éviter de dépasser l'écran   */
+    /* en cas extrême (50+ champs). Le scroll interne reste sur la liste     */
+    /* uniquement (.toolbar-content-data scrolle si trop de contenu).        */
+    width: 290px;
+    max-height: 80vh;
 }
 
 /* Header avec couleur spécifique */
@@ -3598,26 +3611,42 @@ html[data-theme="LTR"] {
 }
 
 /* Content scrollable */
+/* V2.3 D3 — densité : padding réduit */
+/* V2.3 D1 — contient désormais aussi la vue formulaire */
+/* V2.4 D4 — pas de max-height fixe (adaptation au contenu) */
 .toolbar-content-data {
-    padding: 12px;
-    max-height: 340px;
+    padding: 8px;
+    /* Pas de max-height ici : le max-height global est sur .toolbar-data    */
+    /* (80vh). overflow-y: auto pour gérer le cas extrême de débordement.   */
     overflow-y: auto;
+    /* Permet à la vue formulaire d'utiliser 100% de la hauteur */
+    display: flex;
+    flex-direction: column;
+}
+/* La vue liste prend la hauteur naturelle */
+.champ-fusion-list-view {
+    display: flex;
+    flex-direction: column;
+    /* V2.4 D5 — relative pour permettre le sticky du bouton "+ Ajouter" */
+    position: relative;
 }
 
 /* Compteur de champs */
+/* V2.3 D3 — densité : padding/margin réduits */
 .fields-count {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--text-secondary);
-    margin-bottom: 10px;
-    padding-bottom: 8px;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
     border-bottom: 1px solid var(--border-color);
 }
 
 /* Liste des champs */
+/* V2.3 D3 — densité : gap 3px au lieu de 6px */
 .fields-list {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 3px;
 }
 
 /* Message si aucun champ */
@@ -3630,15 +3659,18 @@ html[data-theme="LTR"] {
 }
 
 /* ==================== CHAMP INDIVIDUEL (merge-tag) ==================== */
+/* V2.3 D3 — densité : on réduit padding et taille pour passer de ~50px */
+/* à ~30px par ligne. Cible : 8-10 champs visibles dans la hauteur de  */
+/* popup actuelle vs 5 avant.                                            */
 .field-item,
 .merge-tag {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 10px;
+    gap: 6px;
+    padding: 4px 8px;
     background: var(--bg-input, #ffffff);
     border: 1px solid var(--border-color);
-    border-radius: 6px;
+    border-radius: 4px;
     cursor: grab;
     transition: all 0.15s ease;
     user-select: none;
@@ -3647,6 +3679,7 @@ html[data-theme="LTR"] {
     font-weight: 500;
     color: var(--text-primary);
     font-family: 'Consolas', 'Monaco', monospace;
+    min-height: 26px;
 }
 
 .field-item:hover,
@@ -3667,9 +3700,10 @@ html[data-theme="LTR"] {
 }
 
 /* Icône du champ */
+/* V2.3 D3 — densité : icône 12px au lieu de 16px */
 .field-icon {
-    width: 16px;
-    height: 16px;
+    width: 12px;
+    height: 12px;
     color: var(--theme-primary);
     flex-shrink: 0;
 }
@@ -3681,6 +3715,81 @@ html[data-theme="LTR"] {
 
 .merge-tag-img {
     border-left: 3px solid #0079BF;
+}
+
+/* ─────────────────────────────────────────────────────────────────────── */
+/* L11 / V2.5 — Statuts visuels selon la doctrine de suppressibilité      */
+/* fonctionnelle (cf. amendement V2.5 §2.1).                              */
+/*                                                                         */
+/*   - vert   : champ exploité dans le document                            */
+/*   - gris   : champ non exploité (régime A) OU non exploité présent      */
+/*              en base (régime B)                                         */
+/*   - rouge  : champ absent de la base (régime B uniquement)              */
+/*   - sys    : champs système (Sequentiel, Affranchissement) — gérés      */
+/*              par .merge-tag-sys ci-dessus, NON concernés par V2.5       */
+/*                                                                         */
+/* La classe .merge-tag-sys garde la PRIORITÉ visuelle quand elle est      */
+/* présente (border-left ci-dessus). Les classes V2.5 ne s'appliquent      */
+/* JAMAIS sur les champs SYS car getChampStatusV25 retourne 'sys' pour     */
+/* eux et le code utilise alors .merge-tag-status-sys (= jaune existant).  */
+/* ─────────────────────────────────────────────────────────────────────── */
+.merge-tag-status-vert {
+    border-left: 3px solid #2E7D32;   /* Material Green 800 */
+}
+
+.merge-tag-status-gris {
+    border-left: 3px solid #9E9E9E;   /* Material Grey 500 */
+}
+
+.merge-tag-status-rouge {
+    border-left: 3px solid #C62828;   /* Material Red 800 */
+}
+
+.merge-tag-status-sys {
+    border-left: 3px solid #EAB400;   /* Préservé : couleur historique des champs système */
+}
+
+/* L11 / V2.5 §2.3 — Distinction des champs spécifiques (categorie =      */
+/* "specifique") indépendante du statut couleur. Combinaison subtile      */
+/* via le STYLE TYPOGRAPHIQUE du libellé (italique) — ne surcharge pas    */
+/* l'interface, lisible sur n'importe quelle bordure couleur.             */
+.merge-tag-specifique .field-name {
+    font-style: italic;
+}
+
+/* L11 / V2.5 §3 — Liste des champs désalignés dans la popup d'alerte    */
+/* (modale #alerte-desalignement-modal, déclenchée à l'ouverture du      */
+/* Designer en régime B quand au moins un champ exploité est absent      */
+/* de la base sélectionnée). Style compact et lisible, libellés en       */
+/* italique pour rappeler subtilement le statut « anormal » du champ.    */
+.alerte-desalignement-list {
+    list-style: none;
+    margin: 12px 0 0 0;
+    padding: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color, #E0E0E0);
+    border-radius: 4px;
+    background: #FAFAFA;
+}
+
+.alerte-desalignement-list li {
+    padding: 8px 12px;
+    border-bottom: 1px solid #EEEEEE;
+    font-style: italic;
+    font-size: 13px;
+    color: #424242;
+}
+
+.alerte-desalignement-list li:last-child {
+    border-bottom: none;
+}
+
+.alerte-desalignement-list li::before {
+    content: '\26A0';   /* warning sign U+26A0 */
+    color: #C62828;
+    margin-right: 8px;
+    font-style: normal;
 }
 
 /* Tooltip au survol */
@@ -3720,6 +3829,486 @@ html[data-theme="LTR"] {
 .merge-tag.no-tooltip::after,
 .field-item.no-tooltip::after {
     display: none !important;
+}
+
+/* ==================== PASTILLE DE FUSION INSÉRÉE DANS QUILL ==================== */
+/* V3.4 - Cf. cahier des charges V2.2 §7.8                                          */
+/* Affiche le LIBELLÉ du champ (rendu par le MergeTagBlot custom Quill) tout en    */
+/* préservant la clé technique @KEY@ dans le contenu sous-jacent (data-key).       */
+/* Style discret pour ne pas perturber le flux du texte mais visible comme         */
+/* "objet variable" : couleur thème + fond léger + non sélectionnable.             */
+.ql-editor .merge-tag-quill,
+span.merge-tag-quill {
+    display: inline-block;
+    padding: 0 4px;
+    margin: 0 1px;
+    background: var(--theme-primary-light, #F4E6FA);
+    color: var(--theme-primary, #934BB7);
+    border: 1px solid var(--theme-primary, #934BB7);
+    border-radius: 4px;
+    font-weight: 500;
+    line-height: 1.2;
+    cursor: default;
+    user-select: none;
+    -webkit-user-select: none;
+    white-space: nowrap;
+    /* Évite que le caret se positionne à l'intérieur de la pastille — */
+    /* Quill gère naturellement le caret avant/après l'embed.          */
+    -webkit-user-modify: read-only;
+}
+
+/* Pastille fallback (libellé introuvable, affiche @KEY@ brut) :           */
+/* on garde le même style mais on pourrait imaginer une couleur d'alerte. */
+.ql-editor .merge-tag-quill[data-fallback="true"],
+span.merge-tag-quill[data-fallback="true"] {
+    background: #FFF4E0;
+    color: #B36B00;
+    border-color: #B36B00;
+}
+
+/* ===================================================================== */
+/* V3.4 - L4 : UI création/édition de champs de fusion                   */
+/* Cf. cahier des charges V2.2 §7                                        */
+/* ===================================================================== */
+
+/* ─── Bouton "+ Ajouter un champ" en haut du panneau Champs ─────────── */
+/* V2.3 - D2 : bouton sidebar "Champs" en état actif (popup visible) */
+#btn-toggle-fields-popup.active {
+    background: var(--theme-primary-light, #F4E6FA);
+    color: var(--theme-primary, #934BB7);
+    border-color: var(--theme-primary, #934BB7);
+}
+#btn-toggle-fields-popup.active .btn-icon {
+    color: var(--theme-primary, #934BB7);
+}
+
+/* V2.3 D3 — densité : bouton plus compact */
+/* V2.4 D5 — bouton STICKY en haut de la popup : reste visible quand on   */
+/* scrolle la liste des champs. position:sticky + top:0 + z-index pour    */
+/* passer devant les éléments en dessous.                                 */
+.btn-add-champ-fusion {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    width: 100%;
+    padding: 5px 8px;
+    margin-bottom: 8px;
+    background: var(--theme-primary, #934BB7);
+    color: #fff;
+    border: 1px solid var(--theme-primary, #934BB7);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 500;
+    transition: all 0.15s ease;
+    font-family: inherit;
+    /* V2.4 D5 - Sticky en haut de la liste */
+    position: sticky;
+    top: -8px;  /* Compense le padding 8px du parent .toolbar-content-data */
+    z-index: 5;
+}
+.btn-add-champ-fusion:hover:not(:disabled) {
+    background: var(--theme-primary-dark, #7a3a99);
+    border-color: var(--theme-primary-dark, #7a3a99);
+}
+.btn-add-champ-fusion:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+.btn-add-champ-fusion .material-icons {
+    font-size: 14px;
+}
+
+/* ─── Actions inline (crayon/poubelle) dans .merge-tag du panneau ────── */
+/* V2.3 (bug A6 corrigé) : on N'UTILISE PAS justify-content:space-between */
+/* qui pousserait le libellé à droite quand il n'y a pas d'actions inline */
+/* (cas des champs SYS). Le margin-left:auto sur .merge-tag-actions      */
+/* suffit à coller les boutons à droite sans toucher au libellé.        */
+.merge-tag-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: auto;
+    flex-shrink: 0;
+    /* Empêcher la propagation des événements vers la pastille */
+    /* (drag&drop / dblclick) - géré aussi via stopPropagation en JS.   */
+}
+
+.merge-tag-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    /* V2.3 D3 — densité : boutons plus compacts (18x18 au lieu de 22x22) */
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    background: transparent;
+    color: var(--text-secondary, #777);
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: inherit;
+}
+.merge-tag-action-btn:hover:not(:disabled) {
+    background: var(--theme-primary-light, #F4E6FA);
+    color: var(--theme-primary, #934BB7);
+}
+.merge-tag-action-btn .material-icons {
+    /* V2.3 D3 — densité : icônes 14px au lieu de 16px */
+    font-size: 14px;
+}
+.merge-tag-action-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+.merge-tag-action-btn:disabled:hover {
+    background: transparent;
+    color: var(--text-secondary, #777);
+}
+/* Variante danger (poubelle) - couleur au survol uniquement */
+.merge-tag-action-btn.is-danger:hover:not(:disabled) {
+    background: #FBE9E7;
+    color: #c62828;
+}
+
+/* ─── V2.3 - D1 : Vue formulaire INLINE intégrée dans la popup ─────── */
+/* Plus de modal-overlay : le formulaire s'affiche à la place de la       */
+/* liste, dans la popup .toolbar-content-data. La popup bascule entre    */
+/* .champ-fusion-list-view et .champ-fusion-form-view via la classe      */
+/* .hidden.                                                               */
+
+.champ-fusion-list-view.hidden,
+.champ-fusion-form-view.hidden {
+    display: none !important;
+}
+
+.champ-fusion-form-view {
+    display: flex;
+    flex-direction: column;
+    /* On utilise toute la hauteur de la popup */
+    height: 100%;
+}
+
+/* V2.4 D6 — en-tête formulaire COMPACT : flèche petite + titre une seule */
+/* ligne. Avant L6 le titre passait sur 3 lignes car la flèche prenait    */
+/* trop de place et il manquait le ellipsis sur le titre.                 */
+.champ-fusion-form-header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 0 6px 0;
+    border-bottom: 1px solid var(--border-color, #e0e0e0);
+    margin-bottom: 6px;
+    flex-shrink: 0;
+    min-width: 0;  /* permet l'ellipsis du titre */
+}
+.champ-fusion-form-header h4 {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary, #222);
+    flex: 1;
+    min-width: 0;
+    /* V2.4 D6 - titre sur une seule ligne avec ellipsis si trop long */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.champ-fusion-back-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--text-secondary, #777);
+    padding: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-family: inherit;
+}
+.champ-fusion-back-btn:hover {
+    background: var(--theme-primary-light, #F4E6FA);
+    color: var(--theme-primary, #934BB7);
+}
+.champ-fusion-back-btn svg {
+    /* V2.4 D6 - flèche plus petite (12x12 au lieu de 16x16) */
+    width: 12px;
+    height: 12px;
+}
+
+.champ-fusion-form-body {
+    flex: 1;
+    overflow-y: auto;
+    /* Padding interne uniquement vertical, on hérite du padding popup */
+    padding: 4px 0;
+}
+
+.champ-fusion-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-color, #e0e0e0);
+    margin-top: 4px;
+    flex-shrink: 0;
+}
+.champ-fusion-form-actions .btn-secondary,
+.champ-fusion-form-actions .btn-primary-theme {
+    padding: 5px 10px;
+    font-size: 11px;
+}
+
+.champ-fusion-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color, #e0e0e0);
+    background: #fafafa;
+    flex-shrink: 0;
+}
+.champ-fusion-tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    /* V2.3 D3 — densité : padding réduit */
+    padding: 6px 4px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary, #777);
+    transition: all 0.15s ease;
+    font-family: inherit;
+}
+.champ-fusion-tab.hidden {
+    display: none !important;
+}
+.champ-fusion-tab:hover {
+    color: var(--theme-primary, #934BB7);
+    background: var(--theme-primary-light, #F4E6FA);
+}
+.champ-fusion-tab.active {
+    color: var(--theme-primary, #934BB7);
+    border-bottom-color: var(--theme-primary, #934BB7);
+    background: #fff;
+}
+.champ-fusion-tab .material-icons {
+    font-size: 14px;
+}
+
+.champ-fusion-pane {
+    display: none;
+    padding: 8px 4px;
+}
+.champ-fusion-pane.active {
+    display: block;
+}
+
+.champ-fusion-intro {
+    margin: 0 0 8px 0;
+    font-size: 11px;
+    color: var(--text-secondary, #555);
+    line-height: 1.35;
+}
+
+.champ-fusion-row {
+    margin-bottom: 8px;
+}
+.champ-fusion-row label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-primary, #222);
+    margin-bottom: 2px;
+}
+
+/* V2.4 D8 — Lignes label+input ALIGNÉS sur la même ligne (Libellé, Type,
+   Échantillon). Le label prend une largeur fixe à gauche, l'input prend
+   le reste. Plus dense et plus lisible que label-au-dessus. */
+.champ-fusion-row-inline {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+.champ-fusion-row-inline > label {
+    /* Largeur fixe pour aligner les inputs verticalement entre les lignes */
+    flex: 0 0 80px;
+    margin-bottom: 0;
+    padding-top: 5px;  /* aligne avec le baseline de l'input */
+    font-size: 11px;
+}
+.champ-fusion-row-inline .champ-fusion-row-input {
+    flex: 1;
+    min-width: 0;
+}
+.champ-fusion-required {
+    color: #c62828;
+    font-weight: 700;
+}
+.champ-fusion-optional {
+    color: var(--text-secondary, #777);
+    font-weight: 400;
+    font-size: 11px;
+}
+
+.champ-fusion-input {
+    width: 100%;
+    /* V2.3 D3 — densité : padding réduit, font-size réduit */
+    padding: 4px 8px;
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: inherit;
+    color: var(--text-primary, #222);
+    background: #fff;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease;
+}
+.champ-fusion-input:focus {
+    outline: none;
+    border-color: var(--theme-primary, #934BB7);
+    box-shadow: 0 0 0 2px var(--theme-primary-light, #F4E6FA);
+}
+.champ-fusion-input:disabled {
+    background: #f5f5f5;
+    color: var(--text-secondary, #999);
+    cursor: not-allowed;
+}
+
+.champ-fusion-counter {
+    text-align: right;
+    font-size: 10px;
+    color: var(--text-secondary, #777);
+    margin-top: 2px;
+}
+.champ-fusion-counter.over {
+    color: #c62828;
+    font-weight: 600;
+}
+
+.champ-fusion-error {
+    display: block;
+    margin-top: 4px;
+    padding: 4px 8px;
+    background: #FBE9E7;
+    color: #c62828;
+    border-radius: 4px;
+    font-size: 11px;
+    line-height: 1.3;
+}
+.champ-fusion-error.hidden {
+    display: none;
+}
+
+.champ-fusion-hint {
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--text-secondary, #777);
+    font-style: italic;
+}
+
+/* ─── Liste cliquable des champs standard ───────────────────────────── */
+.champ-fusion-standard-list {
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: 4px;
+    /* V2.3 D3 — densité : on garde plus de place vu que la popup est plus grande */
+    max-height: 200px;
+    overflow-y: auto;
+    background: #fff;
+}
+.champ-fusion-standard-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    /* V2.3 D3 — densité : padding réduit */
+    padding: 4px 8px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-color, #f0f0f0);
+    transition: background-color 0.1s ease;
+    font-size: 11px;
+}
+.champ-fusion-standard-item:last-child {
+    border-bottom: none;
+}
+.champ-fusion-standard-item:hover {
+    background: var(--theme-primary-light, #F4E6FA);
+}
+.champ-fusion-standard-item.selected {
+    background: var(--theme-primary, #934BB7);
+    color: #fff;
+}
+.champ-fusion-standard-item.selected .champ-fusion-standard-type {
+    color: rgba(255, 255, 255, 0.85);
+}
+.champ-fusion-standard-item.disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+.champ-fusion-standard-item.disabled .champ-fusion-standard-libelle {
+    text-decoration: line-through;
+}
+.champ-fusion-standard-libelle {
+    flex: 1;
+    font-size: 12px;
+    font-weight: 500;
+}
+.champ-fusion-standard-type {
+    font-size: 10px;
+    color: var(--text-secondary, #777);
+    text-transform: uppercase;
+    background: rgba(0, 0, 0, 0.05);
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+.champ-fusion-standard-item.selected .champ-fusion-standard-type {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.champ-fusion-empty {
+    padding: 24px 12px;
+    text-align: center;
+    color: var(--text-secondary, #777);
+    font-size: 12px;
+    font-style: italic;
+}
+.champ-fusion-empty.hidden {
+    display: none;
+}
+
+/* ─── Bandeau info "champ mappé" en mode édition ────────────────────── */
+.champ-fusion-mapped-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    margin-top: 8px;
+    background: #E3F2FD;
+    color: #1565c0;
+    border-left: 3px solid #1976d2;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.4;
+}
+.champ-fusion-mapped-info.hidden {
+    display: none;
+}
+.champ-fusion-mapped-info .material-icons {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+/* ─── Surlignage de la zone Échantillon en mode édition mappé ───────── */
+.champ-fusion-modal-box.mode-mapped .champ-fusion-pane:not(.champ-fusion-echantillon-pane) input:not(#champ-fusion-echantillon),
+.champ-fusion-modal-box.mode-mapped .champ-fusion-pane:not(.champ-fusion-echantillon-pane) select {
+    /* Visuellement signalé par .champ-fusion-input:disabled */
 }
 
 /* Scrollbar personnalisée */

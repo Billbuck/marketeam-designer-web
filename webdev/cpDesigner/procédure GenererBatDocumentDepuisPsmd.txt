@@ -42,69 +42,93 @@ fin
 Trace("GenererBatDocumentDepuisPsmd : PSMD confirmé : " + sCheminPsmd)
 
 // ─── Construction du tableau de fusion ───────────────────────────────────
-// On parcourt les champsFusion déclarés dans le JSON Designer (= champs réels
-// utilisés par le PSMD) et on récupère leur valeur dans le tableau
-// d'échantillon par INDIRECTION WLanguage (cf. cpDesigner.RemplirDesignerApercu).
+// L16/A26 - REFONTE : la source des valeurs de fusion est désormais
+//   `donneesApercu[1].enregistrement[*]` du JSON Designer, et NON plus
+//   `champsFusion` + indirection WLanguage sur StructBaseLigne.
 //
-// FALLBACK : si pTabEchantillon est vide (ex: appel pendant l'upload PDF avant
-// chargement BDD, ou pour un modèle hors contexte d'opération), on utilise
-// les coordonnées de l'utilisateur connecté comme échantillon de secours.
-// Cohérent avec ce que fait btnModelePersonnaliser pour le mode modèle.
-tabEchantillonEffectif	est un tableau de StructBaseLigne
+//   Pourquoi ce changement :
+//
+//   1. champsFusion est désormais FILTRÉ par la doctrine "fidélité au
+//      modèle" (cf. SelectionModèle.txt + btnDocumentPersonnaliser.txt) :
+//      il ne contient que les champs SYS + les champs du modèle. Les
+//      champs d'adresse système (Societe, Adresse1-4, CodePostal, Ville,
+//      Pays…) utilisés par le pavé adresse système (zones sys-adresse-*)
+//      n'y figurent PLUS quand un modèle est chargé. Conséquence avec
+//      l'ancienne logique : pavé adresse incomplet dans le BAT
+//      pré-version (« Monsieur ATTALI Michel » sans CHRONODIRECT/rue/CP/
+//      Ville). Bug remonté tour précédent par le donneur d'ordre.
+//
+//   2. donneesApercu reste COMPLET (= toutes les valeurs du wrapper +
+//      écrasement par les valeurs du modèle, cf. L15/A25). C'est la
+//      source EXHAUSTIVE des paires {nom, valeur} prêtes à l'emploi
+//      pour PrintShop Mail.
+//
+//   3. Plus besoin d'indirection WLanguage sur StructBaseLigne — la
+//      SaaS (RemplirDesignerApercu) a déjà résolu les valeurs au
+//      moment de la composition du wrapper. Code plus simple, moins
+//      de cas particuliers.
+//
+//   4. Cas Sequentiel/Timbre : les valeurs simulées (« 000001 »,
+//      « Affranchissement 001 ») sont désormais transmises par la SaaS
+//      via donneesApercu, vérifié sur les traces. Ces hardcodes
+//      historiques sont retirés au profit de la source unique.
+//      Si en production une valeur Sequentiel/Timbre est manquante,
+//      corriger à la source (RemplirDesignerApercu) plutôt que de
+//      réintroduire un fallback hardcode ici.
+//
+//   5. Couvre AUTOMATIQUEMENT les 3 cas de l'ancienne logique :
+//      - Champs mappés (nom non vide)              → entrées par nom
+//      - Champs spécifiques non mappés (LOCAL_xxx)  → entrées par LOCAL_xxx
+//      - Champs SYS Sequentiel/Timbre               → entrées par nom SYS
+//      Tous présents dans donneesApercu sous le même format.
+//
+// pTabEchantillon reste en paramètre pour préserver la signature
+// publique, mais N'EST PLUS UTILISÉ dans ce flux. Le fallback historique
+// (__vcUser.stCoordonnées) est retiré : si donneesApercu est vide ou
+// absent, PrintShop Mail reçoit un tableau vide → marqueurs substitués
+// par chaîne vide (comportement sain en mode dégradé).
 
-si pTabEchantillon..Occurrence > 0 alors
-	tabEchantillonEffectif = pTabEchantillon
-sinon
-	// Fallback : injecter les coordonnées utilisateur comme 1er enregistrement
-	tabEchantillonEffectif.Ajoute(Partage.__vcUser.stCoordonnées)
-	Trace("GenererBatDocumentDepuisPsmd : fallback __vcUser.stCoordonnées (pTabEchantillon vide)")
-fin
-
-si tabEchantillonEffectif..Occurrence > 0 _et_ stDocument.JsonDesignerData <> "" alors
-	jDoc est un JSON = ChaîneVersUTF8(stDocument.JsonDesignerData)
+si stDocument.JsonDesignerData <> "" alors
+	jDoc			est un JSON	= ChaîneVersUTF8(stDocument.JsonDesignerData)
 
 	// Le JSON peut avoir 2 formats selon le contexte d'appel :
 	//   - Wrapper complet {action, mode, auth, bases, data:{...}}
 	//     (cas BAT initial : SelectionModèle, UploadFichier porte-adresse, ...)
-	//     → champsFusion est sous jDoc.data.champsFusion
+	//     → donneesApercu est sous jDoc.data.donneesApercu
 	//   - Data only (cas après validation Designer)
-	//     → champsFusion est à la racine jDoc.champsFusion
+	//     → donneesApercu est à la racine jDoc.donneesApercu
+	// On teste l'existence de jDoc.data ET de donneesApercu sous data
+	// pour décider, pour rester aligné sur l'ancienne logique.
 	jDocChamps	est un JSON
-	si jDoc.data.champsFusion..Occurrence > 0 alors
+	si jDoc.data..Existe _et_ jDoc.data.donneesApercu..Existe alors
 		jDocChamps = jDoc.data
 	sinon
 		jDocChamps = jDoc
 	fin
 
-	si jDocChamps.champsFusion..Occurrence > 0 alors
-		pour nIChamp = 1 _à_ jDocChamps.champsFusion..Occurrence
-			sNomChamp	est une chaîne	= jDocChamps.champsFusion[nIChamp].nom
-			si sNomChamp <> "" alors
-				sValeur	est une chaîne
+	si jDocChamps.donneesApercu..Occurrence > 0 _et_ ...
+	   jDocChamps.donneesApercu[1].enregistrement..Occurrence > 0 alors
 
-				selon sNomChamp
-					cas "Sequentiel"
-						// Champ système : valeur simulée pour l'aperçu BAT
-						sValeur = "000123456"
-					cas "Timbre"
-						// Champ système : valeur simulée pour l'aperçu BAT
-						sValeur = "Affranchissement"
-					autre cas
-						// Indirection WLanguage : accès dynamique au membre
-						// correspondant de StructBaseLigne (Civilite, Nom,
-						// Champ1, Champ2, etc.)
-						quand exception dans
-							sValeur = {"tabEchantillonEffectif[1]." + sNomChamp, indVariable}
-						faire
-							// Champ déclaré dans le Designer mais absent
-							// de StructBaseLigne : valeur vide
-							sValeur = ""
-						fin
-				fin
+		Trace("GenererBatDocumentDepuisPsmd : " ...
+			+ jDocChamps.donneesApercu[1].enregistrement..Occurrence ...
+			+ " paires nom/valeur depuis donneesApercu[1].enregistrement")
 
-				AjoutePrintshopData(sNomChamp, sValeur)
+		pour nIEnr = 1 _à_ jDocChamps.donneesApercu[1].enregistrement..Occurrence
+			sNomEnr	est une chaîne	= jDocChamps.donneesApercu[1].enregistrement[nIEnr].nom
+			sValEnr	est une chaîne	= jDocChamps.donneesApercu[1].enregistrement[nIEnr].valeur
+
+			// Garde-fou : un nom vide ne doit pas être transmis à PrintShop
+			// Mail (clé invalide). Ne devrait jamais arriver mais protection
+			// défensive.
+			si sNomEnr <> "" alors
+				AjoutePrintshopData(sNomEnr, sValEnr)
+			sinon
+				Trace("GenererBatDocumentDepuisPsmd : entrée donneesApercu ignorée (nom vide) à l'indice " + nIEnr)
 			fin
 		fin
+	sinon
+		Trace("GenererBatDocumentDepuisPsmd : donneesApercu vide ou absent → tabPrintshopData vide " ...
+			+ "(les marqueurs @KEY@ du RTF seront substitués par chaîne vide par PrintShop Mail)")
 	fin
 fin
 
@@ -114,8 +138,8 @@ SupprimeTout(stDocument.tabImageBat)
 pour nPage = 1 _à_ stDocument.NombrePage
 
 	sCheminJpg	= sRepTravail + __DOC_LTR_BAT__ + stDocument.CodeTemp + "p" + nPage + __JPG__
-	Trace("GenererBatDocumentDepuisPsmd : page " + nPage + " → " + sCheminJpg)
-	stImageBat	= Partage.GenerationBatDepuisPsmd(sCheminPsmd, sCheminJpg, nPage, tabPrintshopData)
+	Trace("GenererBatDocumentDepuisPsmd : page " + nPage + " --> " + sCheminJpg)
+	stImageBat	= cpDesigner.GenerationBatDepuisPsmd(sCheminPsmd, sCheminJpg, nPage, tabPrintshopData)
 
 	si stImageBat.CheminPhysique <> "" alors
 		Ajoute(stDocument.tabImageBat, stImageBat)

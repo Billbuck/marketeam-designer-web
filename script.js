@@ -1862,6 +1862,40 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     let isCopyfitRunning = false;
     
+    // ════════════════════════════════════════════════════════════════════════
+    // RÉSOLVEUR D'AFFICHAGE DES PASTILLES MERGE-TAG (V3.4)
+    // Déclaré AVANT l'enregistrement Quill pour éviter tout risque de TDZ
+    // (le MergeTagBlot référence mergeTagDisplayResolver dans son create()).
+    // ════════════════════════════════════════════════════════════════════════
+    // Le MergeTagBlot est créé AVANT que documentState soit défini (Section 12).
+    // On utilise une fonction "trampoline" qui sera réassignée plus tard pour
+    // résoudre la clé → libellé via documentState.champsFusion. Tant que le
+    // résolveur n'est pas configuré, on retombe sur "@KEY@" brut (fallback de
+    // sécurité §7.8.5 du cahier des charges).
+    //
+    // La clé technique peut contenir des espaces insécables (\u00A0) qui ont
+    // été substitués aux espaces normaux à l'insertion (cf. insertTag) — on
+    // les neutralise pour la recherche.
+    let mergeTagDisplayResolver = (key) => {
+        const cleanKey = String(key || '').replace(/\u00A0/g, ' ');
+        return `@${cleanKey}@`;
+    };
+
+    /**
+     * Configure (ou reconfigure) le résolveur d'affichage des pastilles.
+     * À appeler après la déclaration de documentState et à chaque modification
+     * significative de documentState.champsFusion (édition de libellé, ajout,
+     * substitution post-mapping...).
+     *
+     * @param {(key: string) => string} resolver - Fonction key → texte affiché
+     * @returns {void}
+     */
+    function setMergeTagDisplayResolver(resolver) {
+        if (typeof resolver === 'function') {
+            mergeTagDisplayResolver = resolver;
+        }
+    }
+
     /**
      * Module Clipboard personnalisé (PlainClipboard) pour filtrer le contenu collé.
      * Implémentation reproduite fidèlement depuis `POC QUILL/poc-quill.js`.
@@ -1969,8 +2003,99 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         Quill.register('modules/clipboard', PlainClipboard, true);
+
+        // ════════════════════════════════════════════════════════════════════
+        // MERGE TAG BLOT (V3.4 - Quill custom Embed)
+        // Cf. docs/cahier_des_charges_creation_champs_fusion.md V2.2 §7.8
+        //
+        // Rend une pastille de champ de fusion qui AFFICHE le LIBELLÉ du champ
+        // mais STOCKE la clé technique (@NOM@ ou @LOCAL_<localId>@). Le contenu
+        // sous-jacent (RTF, JSON exporté) reste basé sur la clé technique — le
+        // pipeline PSMD est inchangé.
+        //
+        // Implémentation : scénario B "déguisé" (cf. §7.8.3 du cahier) :
+        // quill.getText() renvoie '\uFFFC' pour les embeds, donc on ne peut pas
+        // se reposer naïvement dessus. Les fonctions de conversion locales
+        // (quillDeltaToTextAndFormatage, deltaToRtf, createMergedDelta) sont
+        // adaptées pour traiter explicitement les ops embed 'merge-tag' et
+        // produire @KEY@ dans le contenu plat.
+        //
+        // Format de la valeur :
+        //   value = { key: string }   où key = "PRENOM" ou "LOCAL_a1b2c3"
+        // ════════════════════════════════════════════════════════════════════
+
+        const Embed = Quill.import('blots/embed');
+
+        class MergeTagBlot extends Embed {
+            static create(value) {
+                const node = super.create(value);
+                const key = (typeof value === 'string') ? value : ((value && value.key) || '');
+                // data-key est la SOURCE DE VÉRITÉ : on persiste la clé technique
+                // (espaces déjà convertis en \u00A0 par le code appelant).
+                node.setAttribute('data-key', key);
+                node.setAttribute('contenteditable', 'false');
+                node.classList.add('merge-tag-quill');
+                // Rendu visuel : libellé résolu via le résolveur configuré
+                // (renseigné après création de documentState — cf.
+                // setMergeTagDisplayResolver). Fallback sécurité : @KEY@ brut.
+                node.textContent = mergeTagDisplayResolver(key);
+                return node;
+            }
+
+            static value(node) {
+                return { key: node.getAttribute('data-key') || '' };
+            }
+        }
+
+        MergeTagBlot.blotName = 'merge-tag';
+        MergeTagBlot.tagName = 'span';
+        MergeTagBlot.className = 'merge-tag-quill';
+
+        Quill.register(MergeTagBlot, true);
+
+        // Exposé pour debug console
+        window.__MergeTagBlot = MergeTagBlot;
     }
-    
+
+    /**
+     * Helper : détecte si une op Delta est un embed 'merge-tag'.
+     * @param {{insert?: any}} op
+     * @returns {boolean}
+     */
+    function isMergeTagOp(op) {
+        return !!(op && op.insert && typeof op.insert === 'object' && op.insert['merge-tag']);
+    }
+
+    /**
+     * Helper : extrait la clé technique (@KEY@) d'une op Delta merge-tag.
+     * @param {{insert: {'merge-tag': {key: string}}}} op
+     * @returns {string} Clé technique (ex: "PRENOM" ou "LOCAL_a1b2c3"), espaces
+     *                  insécables convertis en espaces normaux.
+     */
+    function mergeTagOpKey(op) {
+        const v = op && op.insert && op.insert['merge-tag'];
+        if (!v) return '';
+        const raw = (typeof v === 'string') ? v : (v.key || '');
+        return String(raw).replace(/\u00A0/g, ' ');
+    }
+
+    /**
+     * Helper : génère un identifiant local (UUID v4 simplifié) pour les champs
+     * créés dans le Designer non encore mappés. Utilisé comme clé de
+     * substitution dans le contenu (`@LOCAL_<localId>@`) et dans `donneesApercu`.
+     * Conservé même après attribution de `nom` (traçabilité, cf. §4 du cahier).
+     *
+     * @returns {string} ID local (ex: "a1b2c3d4e5f6")
+     */
+    function generateLocalId() {
+        // Privilégier crypto.randomUUID si disponible (navigateurs modernes),
+        // sinon fallback Math.random — l'unicité côté Designer est suffisante.
+        if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+            return crypto.randomUUID().replace(/-/g, '').substring(0, 12);
+        }
+        return Math.random().toString(36).substring(2, 8) + Date.now().toString(36).substring(-6);
+    }
+
     // Mapping des styles de bordure vers les valeurs PrintShop Mail
     const BORDER_STYLE_TO_PSMD = {
         'solid': 1,
@@ -3848,6 +3973,778 @@ document.addEventListener('DOMContentLoaded', () => {
     let champsFusionInterdit = false;
 
     /**
+     * V3.5 - Verrouillage global de la gestion des champs (cf. cahier V2.3 §3.2/§5.2).
+     * Vrai = ajout/modification/suppression des champs autorisés.
+     * Faux = mode "tunnel avec base BDD" : tout est verrouillé, y compris
+     * l'édition de la valeur d'échantillon.
+     * Valeur par défaut : Vrai (compat ascendante quand le flag est absent).
+     *
+     * IMPORTANT (fix TDZ L5) : déclarée ICI (proche de champsFusionInterdit)
+     * et NON dans la section import près de loadFromWebDev. La fonction
+     * updateMergeFieldsUI (juste en dessous) la lit, et est appelée au boot
+     * du Designer avant que loadFromWebDev ne soit exécuté. Une déclaration
+     * tardive provoquait une Temporal Dead Zone — le piège classique JS
+     * étant que même `typeof autoriserGestionChamps` jette ReferenceError
+     * sur un `let` en TDZ (contrairement aux variables non déclarées).
+     *
+     * @type {boolean}
+     */
+    let autoriserGestionChamps = true;
+
+    /**
+     * V2.4 / L8 - D12 - Doctrine consolidée du bouton « Champs » sidebar et
+     * de la popup. **Dissociation explicite intention vs état réel** :
+     *
+     *   - `fieldsPopupUserIntent` = état du BOUTON sidebar = intention
+     *     utilisateur de travailler avec les champs. Change UNIQUEMENT sur
+     *     action explicite (clic bouton, clic croix X). Préservé durant
+     *     mode Aperçu.
+     *
+     *   - `fieldsPopupShown` = état RÉEL d'affichage de la popup. Calculé
+     *     contextuellement selon : intention utilisateur ET zone de texte
+     *     sélectionnée OU déclic récent du bouton.
+     *
+     * Cycle de vie complet (cf. cahier des charges + correctifs L7 §D12) :
+     *   1. Init : intent=false, shown=false
+     *   2. Clic bouton → intent=true, shown=true (ouverture immédiate)
+     *   3. Sélection zone texte → intent inchangé, shown=true si intent
+     *   4. Clic vide / désélection → shown=false, intent inchangé
+     *   5. Re-sélection zone texte → shown=true si intent
+     *   6. Sélection zone non-texte → shown=false, intent inchangé
+     *   7. Clic croix X → intent=false, shown=false
+     *   8. Clic bouton (2e fois) → intent=false, shown=false
+     *
+     * Note pour le drag&drop : un mousedown DANS la popup → reste ouverte.
+     * Le `selectZone` qui suit le drop ne change rien à l'intent.
+     *
+     * Note pour le mode Aperçu : intent préservé, shown forcé à false
+     * temporairement. Au retour, shown recalcule selon intent + zone.
+     *
+     * Ancien nom V2.3 (avant L8) : `fieldsPopupUserVisible` — désormais
+     * scindé en deux variables pour clarifier la doctrine. ⚠️ TDZ-safe :
+     * déclarées EN TÊTE DE SCOPE (anti-TDZ L5).
+     *
+     * @type {boolean}
+     */
+    let fieldsPopupUserIntent = false;
+    /** @type {boolean} État réel d'affichage de la popup — cf. doctrine D12 */
+    let fieldsPopupShown = false;
+
+    /**
+     * Helper défensif : retourne `true` si le mode aperçu est actif. Gère le
+     * cas où `previewState` (déclarée tardivement vers la ligne 12280 sous
+     * forme de `const`) est encore en Temporal Dead Zone au moment où une
+     * fonction d'init L5 cherche à savoir si l'aperçu est en cours.
+     *
+     * IMPORTANT (fix TDZ L5) : on NE PEUT PAS écrire
+     *   `typeof previewState !== 'undefined' && previewState.active`
+     * pour se protéger : `typeof` jette ReferenceError sur un `let`/`const`
+     * en TDZ (contrairement aux variables non déclarées). Seul un try/catch
+     * autour de l'accès direct fait l'affaire.
+     *
+     * @returns {boolean}
+     */
+    function isPreviewActive() {
+        try {
+            return !!(previewState && previewState.active);
+        } catch (e) {
+            // previewState encore en TDZ (cas du boot, avant ligne ~12280)
+            return false;
+        }
+    }
+
+    /**
+     * V2.4 - Détermine si l'utilisateur peut éditer le contenu/échantillon
+     * d'un champ donné, en combinant le verrouillage global
+     * (autoriserGestionChamps) et individuel (par ORIGINE du champ, V2.4 §3.1).
+     *
+     * CHANGEMENT DE DOCTRINE V2.4 : le critère de verrouillage individuel
+     * n'est PLUS basé sur "nom rempli = verrouillé" (V2.3) mais sur
+     * "origine = 'import' = verrouillé". Un champ d'origine "ajout" (créé
+     * par l'utilisateur) est librement modifiable et supprimable, peu
+     * importe qu'il soit standard ou spécifique. Cf. cahier V2.4 §3.1 / §3.3
+     * et amendement V2.4 §1.
+     *
+     * Tableau de référence (cahier V2.4 §3.3) :
+     *   | origine    | autoriserGestionChamps=Vrai             | =Faux       |
+     *   | "import"   | libellé/type figés, échantillon OK,     | tout figé,  |
+     *   |            | pas de suppression                       | pas suppr.  |
+     *   | "ajout"    | tout modifiable, suppression OK          | tout figé,  |
+     *   |            |                                          | pas suppr.  |
+     *
+     * Champ legacy sans 'origine' : traité comme "import" par sécurité.
+     *
+     * @param {Object} champ - champ de fusion
+     * @returns {{canEditLibelleType: boolean, canEditEchantillon: boolean, canDelete: boolean, reason: string}}
+     */
+    /**
+     * V2.4 - Détecte si un champ est d'origine "import" (= verrouillé
+     * individuellement). Sécurité : un champ sans propriété `origine`
+     * (legacy ou bug) est considéré comme "import".
+     *
+     * Utiliser cette fonction pour TOUS les tests de verrouillage individuel
+     * (suppression, édition libellé/type). Ne PAS utiliser `champ.nom`
+     * rempli (ancien critère V2.3) car un champ d'origine "ajout" via
+     * onglet Standard a son `nom` rempli mais reste librement supprimable.
+     *
+     * @param {Object} champ
+     * @returns {boolean}
+     */
+    function isImportedChamp(champ) {
+        return !(champ && champ.origine === 'ajout');
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // V2.4 — Algorithme unifié de résolution de la valeur d'échantillon
+    // Cf. cahier des charges V2.4 §7.3.2 + amendement V2.4 §2.1.
+    //
+    // IMPORTANT (audit anti-TDZ L6) : ces helpers + table sont déclarés en
+    // tête de scope (proches de autoriserGestionChamps / fieldsPopupUserVisible)
+    // car potentiellement appelés par updateMergeFieldsUI et d'autres
+    // fonctions d'init.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Table des placeholders par défaut par type de champ.
+     * Utilisée par `resolveEchantillonValue` (étape 4 de l'algo §7.3.2) pour
+     * les champs spécifiques (sans entrée dans champsStandardDisponibles).
+     *
+     * Source : cahier V2.4 §7.2.3 colonne "Placeholder par défaut".
+     *
+     * @type {Object.<string, string>}
+     */
+    const PLACEHOLDERS_PAR_TYPE = {
+        'TXT': 'Texte exemple',
+        'ENT': '42',
+        'DEC': '1 234,56',
+        'MON': '1 250,00 €',
+        'DAT': '01/06/2026',
+        'TIM': '14:30',
+        'EML': 'jean.dupont@example.com',
+        'TEL': '01.02.03.04.05',
+        'SMS': '06.12.34.56.78',
+        'CDP': '75001',
+        'URL': 'https://www.example.com',
+        'IMG': '',  // pas de placeholder textuel — rendu visuel à la génération
+        'ALG': 'ALG001'
+    };
+
+    /**
+     * Helper interne : retourne la clé d'export d'un champ (nom technique si
+     * mappé, sinon LOCAL_<localId>). Utilisée pour rechercher dans donneesApercu.
+     * NB : duplique partiellement `resolveChampKey` de l'IIFE modale, mais
+     * doit être disponible ici en tête de scope (anti-TDZ).
+     *
+     * @param {Object} champ
+     * @returns {string}
+     */
+    function resolveChampKeyForLookup(champ) {
+        if (!champ) return '';
+        if (typeof champ.nom === 'string' && champ.nom.trim()) return champ.nom;
+        if (typeof champ.localId === 'string' && champ.localId.trim()) {
+            return `LOCAL_${champ.localId.trim()}`;
+        }
+        return '';
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // L11 / V2.5 — DOCTRINE DE SUPPRESSIBILITÉ FONCTIONNELLE
+    //
+    // Cf. docs/amendement-V2.5-cahier-des-charges.md.
+    //
+    // Détermine la couleur (vert/gris/rouge/sys) et la suppressibilité de
+    // chaque champ selon deux critères combinés :
+    //   1. Présence du champ dans la base de données sélectionnée
+    //      (attribut JSON `presenteEnBase` envoyé par la SaaS)
+    //   2. Usage du champ dans une zone du document (table `champsExploites`)
+    //
+    // Deux régimes :
+    //   - Régime A : pas de base associée → aucun champ ne porte
+    //     presenteEnBase → couleur vert/gris selon usage, suppressibilité
+    //     pour les champs gris uniquement.
+    //   - Régime B : base associée → presenteEnBase défini sur les champs
+    //     non-SYS → la couleur prend en compte la présence en base et la
+    //     suppressibilité change (cf. tableau V2.5 §1.4).
+    //
+    // L'ancienne logique basée sur `origine` (V2.4) est remplacée pour la
+    // suppressibilité. `origine` reste lu pour la traçabilité interne
+    // (persistance, libellé/type éditable).
+    //
+    // ⚠️ TDZ-safe : ces déclarations sont en tête de scope IIFE, avant
+    // tout caller potentiel (loadFromWebDev, updateMergeFieldsUI...).
+    // ═════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Table d'exploitation des champs. Compte le nombre d'occurrences de
+     * chaque champ dans le document (texte Quill, image, barcode, QR).
+     * Clé = nom technique pour les champs mappés, "LOCAL_<localId>" pour
+     * les spécifiques non mappés.
+     *
+     * ⚠️ L11/A21 - Refactor vers `Map` : conforme à la spec donneur d'ordre
+     *   et plus robuste (collisions de noms réservés ne peuvent pas survenir
+     *   avec un objet sans prototype, mais Map évite tout risque résiduel
+     *   pour les clés exotiques type `__proto__`).
+     *
+     * @type {Map<string, number>}
+     */
+    let champsExploites = new Map();
+
+    /**
+     * Flag de session : la popup d'alerte de désalignement (V2.5 §3) a
+     * déjà été affichée pour la session courante du Designer. Réinitialisé
+     * à chaque load (= nouvelle ouverture).
+     *
+     * @type {boolean}
+     */
+    let alerteDesalignementAffichee = false;
+
+    /**
+     * Codes hexadécimaux des statuts visuels V2.5. Exposés pour cohérence
+     * avec la CSS (qui doit utiliser les mêmes). Alignés sur la charte
+     * graphique : palette Material Design adoucie pour éviter les
+     * contrastes trop agressifs (la popup reste secondaire).
+     *
+     * @type {Object.<string, string>}
+     */
+    const COULEURS_STATUT_V25 = {
+        'vert':   '#2E7D32',  // Material Green 800 — champ exploité
+        'gris':   '#9E9E9E',  // Material Grey 500 — champ non exploité (régimes A/B)
+        'rouge':  '#C62828',  // Material Red 800 — champ absent de la base (régime B)
+        'sys':    '#EAB400'   // Jaune-orangé existant (préservé pour cohérence avec style.css)
+    };
+
+    /**
+     * L11 / V2.5 - Retourne la clé d'usage d'un champ telle qu'elle apparaît
+     * dans le contenu des zones (texte/image/barcode/QR).
+     *
+     * @param {Object} champ - structure structDesignerChampFusion
+     * @returns {string} 'NOM' (mappé) ou 'LOCAL_<localId>' (spécifique non mappé) ou ''
+     */
+    function getChampUsageKey(champ) {
+        if (!champ) return '';
+        if (typeof champ.nom === 'string' && champ.nom.trim()) {
+            return champ.nom.trim();
+        }
+        if (typeof champ.localId === 'string' && champ.localId.trim()) {
+            return `LOCAL_${champ.localId.trim()}`;
+        }
+        return '';
+    }
+
+    /**
+     * L11 / V2.5 - Détecte le régime A ou B en fonction de la présence ou
+     * non de l'attribut `presenteEnBase` sur au moins un champ non-SYS.
+     *
+     * @param {Array<Object>} champs - tableau de champsFusion
+     * @returns {'A'|'B'} régime applicable
+     */
+    function detecterRegimeChamps(champs) {
+        if (!Array.isArray(champs)) return 'A';
+        for (let i = 0; i < champs.length; i++) {
+            const c = champs[i];
+            if (!c || c.type === 'SYS') continue;
+            if (typeof c.presenteEnBase === 'boolean') {
+                return 'B';
+            }
+        }
+        return 'A';
+    }
+
+    /**
+     * L11 / V2.5 - Extrait toutes les clés de champ référencées par une zone.
+     *
+     * Sources scannées selon le type de zone :
+     *   - textQuill : ops Quill de type 'merge-tag' (via isMergeTagOp / mergeTagOpKey)
+     *   - image     : source.champFusion si source.type === 'champ'
+     *   - barcode   : champFusion + tokens @KEY@ dans qrConfig.fields[*]
+     *   - qr        : idem barcode
+     *
+     * @param {Object} zoneData
+     * @returns {string[]} liste de clés (possibles doublons → caller fait Set)
+     */
+    function scanZoneForChampReferences(zoneData) {
+        const refs = [];
+        if (!zoneData) return refs;
+
+        // Zone texte Quill
+        if (zoneData.type === 'textQuill') {
+            const delta = zoneData.quillDelta;
+            if (delta && Array.isArray(delta.ops)) {
+                for (let i = 0; i < delta.ops.length; i++) {
+                    const op = delta.ops[i];
+                    // ⚠️ L11 fix L11.A1 - Le helper réel s'appelle `mergeTagOpKey`
+                    //   et NON `extractMergeTagKey` (erreur de nommage dans L11
+                    //   initial — le `typeof === 'function'` retournait false →
+                    //   aucune référence texte n'était scannée → champsExploites
+                    //   restait vide → tous les champs apparaissaient comme
+                    //   non exploités. Cf. correctif L11/A21 du donneur d'ordre.
+                    if (typeof isMergeTagOp === 'function' && isMergeTagOp(op)) {
+                        const key = (typeof mergeTagOpKey === 'function')
+                            ? mergeTagOpKey(op) : '';
+                        if (key) refs.push(key);
+                    }
+                }
+            }
+            return refs;
+        }
+
+        // Zone image avec source liée à un champ.
+        // Robuste sur 2 conventions :
+        //   - Existante côté Designer : source.type === 'champ' + source.champFusion
+        //     (cf. lignes ~13595, ~24443 du code en place).
+        //   - Convention V2.5 proposée : source.type === 'merge-tag' + source.key.
+        // On supporte les deux pour ne casser ni l'existant ni l'éventuelle
+        // évolution future.
+        if (zoneData.type === 'image' && zoneData.source) {
+            const src = zoneData.source;
+            if (src.type === 'champ' && typeof src.champFusion === 'string' && src.champFusion.trim()) {
+                refs.push(src.champFusion.trim());
+            } else if (src.type === 'merge-tag' && typeof src.key === 'string' && src.key.trim()) {
+                refs.push(src.key.trim());
+            }
+            return refs;
+        }
+
+        // Zone barcode ou QR : 3 sources possibles à scanner
+        //   1) champFusion direct (legacy, mode 'champ' sur la zone)
+        //   2) source.key (convention V2.5 si source.type === 'merge-tag')
+        //   3) Tokens @KEY@ dans qrConfig.fields[*] (QR intelligent)
+        if (zoneData.type === 'barcode' || zoneData.type === 'qr') {
+            // 1) champFusion direct
+            if (typeof zoneData.champFusion === 'string' && zoneData.champFusion.trim()) {
+                refs.push(zoneData.champFusion.trim());
+            }
+            // 2) source.key façon V2.5 (pour symétrie avec les images)
+            if (zoneData.source && zoneData.source.type === 'merge-tag'
+                && typeof zoneData.source.key === 'string' && zoneData.source.key.trim()) {
+                refs.push(zoneData.source.key.trim());
+            }
+            // 3) tokens @KEY@ dans qrConfig.fields[*]
+            let qrConfig = zoneData.qrConfig;
+            if (typeof qrConfig === 'string') {
+                try { qrConfig = JSON.parse(qrConfig); } catch (e) { qrConfig = null; }
+            }
+            if (qrConfig && qrConfig.fields && typeof qrConfig.fields === 'object') {
+                const reTag = /@([A-Za-z0-9_]+)@/g;
+                Object.keys(qrConfig.fields).forEach(k => {
+                    const v = qrConfig.fields[k];
+                    if (typeof v !== 'string') return;
+                    let m;
+                    while ((m = reTag.exec(v)) !== null) {
+                        if (m[1]) refs.push(m[1]);
+                    }
+                });
+            }
+            return refs;
+        }
+
+        return refs;
+    }
+
+    /**
+     * L11 / V2.5 - Reconstruit la table `champsExploites` depuis zéro en
+     * scannant toutes les zones de toutes les pages du document.
+     *
+     * Coût : négligeable pour un document typique (< 100 champs, < 50 zones).
+     * Appelé à l'init et à chaque changement majeur du document via
+     * `notifyChampsExploitesMayHaveChanged()`.
+     */
+    function rebuildChampsExploites() {
+        // ⚠️ L13/A23 - GARDE TDZ ISOLÉE :
+        //
+        //   Bug L12 résiduel : `const pages = documentState?.pages;` à
+        //   l'intérieur d'un try/catch englobant. L'optional chaining
+        //   `?.` NE PROTÈGE PAS contre une TDZ — la **résolution de
+        //   l'identifiant `documentState`** lance ReferenceError AVANT
+        //   que `?.` soit appliqué. Le try englobant captait bien
+        //   l'erreur mais via `console.error` (= bruit trompeur au
+        //   démarrage suggérant un bug fonctionnel).
+        //
+        //   Solution L13/A23 : isoler le test TDZ dans un try/catch
+        //   STRICTEMENT DÉLIMITÉ + return silencieux. Si TDZ → sortie
+        //   propre sans log. Le rebuild ultérieur (déclenché par
+        //   `notifyChampsExploitesMayHaveChanged()` après
+        //   `loadFromWebDev` → `loadCurrentPage`) se fera dans un
+        //   contexte où documentState est initialisé.
+        //
+        //   ⚠️ NE PAS factoriser ce premier try/catch avec celui qui
+        //   englobe la boucle (sinon retour au comportement L12 cassé).
+        let pages;
+        try {
+            pages = documentState?.pages;
+        } catch (e) {
+            // TDZ : documentState pas encore déclaré → on abandonne
+            // CE rebuild SANS bruit. La prochaine invocation via
+            // notifyChampsExploitesMayHaveChanged (post-load) traitera
+            // le scan correctement.
+            return;
+        }
+        if (!pages) return;
+
+        // À partir d'ici, on sait que documentState est initialisé et
+        // que documentState.pages est un tableau exploitable.
+        //
+        // Filtrage des zones système (sys-adresse-*, sys-affranchissement…)
+        // — préservé de L12/A22 : ces zones contiennent légitimement des
+        // pastilles @Civilite@, @Nom@… gérées AUTOMATIQUEMENT par WebDev
+        // (pavé adresse du porte-adresse). Elles ne représentent PAS un
+        // usage utilisateur → ne doivent pas peser sur le statut couleur
+        // ni la suppressibilité des champs.
+        try {
+            champsExploites = new Map();
+            for (const page of pages) {
+                if (!page?.zones) continue;
+                const zoneEntries = Object.entries(page.zones);
+                for (const [zoneId, zone] of zoneEntries) {
+                    if (typeof zoneId === 'string' && zoneId.startsWith('sys-')) continue;
+                    const cles = scanZoneForChampReferences(zone);
+                    for (const cle of cles) {
+                        champsExploites.set(cle, (champsExploites.get(cle) || 0) + 1);
+                    }
+                }
+            }
+            // L11/A21 bonus diagnostic - Maintenu un tour supplémentaire (L13)
+            //   pour permettre au donneur d'ordre de tracer le flux suppression
+            //   pastille → rafraîchissement corbeille. À RETIRER quand le
+            //   donneur d'ordre confirme que tout fonctionne en production.
+            try { window.__champsExploites = champsExploites; } catch (e) { /* defensive */ }
+        } catch (e) {
+            // Erreur ICI = vrai bug fonctionnel (scan défaillant), pas un
+            // simple démarrage prématuré. On loggue pour diagnostic.
+            console.error('rebuildChampsExploites (scan):', e);
+        }
+    }
+
+    /**
+     * L11 / V2.5 - Indique si un champ est exploité dans au moins une zone.
+     *
+     * @param {Object} champ
+     * @returns {boolean}
+     */
+    function estChampExploite(champ) {
+        const key = getChampUsageKey(champ);
+        if (!key) return false;
+        // L11/A21 - API Map (champsExploites est désormais une Map).
+        return (champsExploites.get(key) || 0) > 0;
+    }
+
+    /**
+     * L11 / V2.5 - Calcule le statut visuel d'un champ (couleur + supprimable
+     * + tooltip de blocage) selon la doctrine V2.5 §1.4.
+     *
+     * @param {Object} champ
+     * @param {'A'|'B'} regime
+     * @returns {{couleur: string, supprimable: boolean, tooltip: string|null}}
+     */
+    function getChampStatusV25(champ, regime) {
+        if (!champ) {
+            return { couleur: 'gris', supprimable: false, tooltip: null };
+        }
+
+        // Champs système : statut couleur dédié, jamais affectés par A/B.
+        // Non supprimables.
+        if (champ.type === 'SYS') {
+            return {
+                couleur: 'sys',
+                supprimable: false,
+                tooltip: null  // pas de tooltip de blocage spécifique
+            };
+        }
+
+        const exploite = estChampExploite(champ);
+
+        // Régime A — pas de base BDD (ou mode modèle)
+        if (regime === 'A') {
+            if (exploite) {
+                return {
+                    couleur: 'vert',
+                    supprimable: false,
+                    tooltip: 'Champ exploité dans le document, non supprimable'
+                };
+            }
+            return {
+                couleur: 'gris',
+                supprimable: true,
+                tooltip: null
+            };
+        }
+
+        // Régime B — base BDD associée
+        const presenteEnBase = (champ.presenteEnBase === true);
+        if (presenteEnBase) {
+            // Présent en base : non supprimable (la base décide)
+            if (exploite) {
+                return {
+                    couleur: 'vert',
+                    supprimable: false,
+                    tooltip: 'Champ exploité dans le document, non supprimable'
+                };
+            }
+            return {
+                couleur: 'gris',
+                supprimable: false,
+                tooltip: 'Champ issu de la base de données, non supprimable'
+            };
+        }
+
+        // Absent de base (presenteEnBase === false en régime B)
+        if (exploite) {
+            return {
+                couleur: 'rouge',
+                supprimable: false,
+                tooltip: 'Champ exploité dans le document, retirez d\'abord ses occurrences pour pouvoir le supprimer'
+            };
+        }
+        return {
+            couleur: 'rouge',
+            supprimable: true,
+            tooltip: null
+        };
+    }
+
+    /**
+     * L11 / V2.5 - Reconstruit champsExploites et rafraîchit la popup
+     * (couleur + état corbeille) après tout changement du document.
+     *
+     * Debounce léger pour éviter le spam pendant la frappe rapide. 100ms
+     * suffit largement, l'œil ne perçoit pas le délai.
+     *
+     * Appelée depuis :
+     *   - `saveState()` (couvre frappe Quill debouncée, undo/redo,
+     *     suppression zone, etc.)
+     *   - `insertTag()` (insertion immédiate de pastille)
+     *   - Création/modification/suppression de champ via la modale
+     */
+    let _champsExploitesRefreshTimer = null;
+    function notifyChampsExploitesMayHaveChanged() {
+        if (_champsExploitesRefreshTimer) {
+            clearTimeout(_champsExploitesRefreshTimer);
+        }
+        _champsExploitesRefreshTimer = setTimeout(() => {
+            _champsExploitesRefreshTimer = null;
+            try {
+                rebuildChampsExploites();
+                // Refresh visuel de la popup (couleurs + état corbeille)
+                if (typeof updateMergeFieldsUI === 'function'
+                    && typeof mergeFields !== 'undefined') {
+                    updateMergeFieldsUI(mergeFields);
+                }
+            } catch (e) {
+                // defensive — ne jamais bloquer le flow utilisateur
+            }
+        }, 100);
+    }
+
+    /**
+     * L11 / V2.5 §3 - Affiche la popup d'alerte au désalignement (régime B
+     * + champs exploités absents de la base). Une seule affichage par
+     * session de Designer (flag `alerteDesalignementAffichee`).
+     *
+     * Utilise la modale `#alerte-desalignement-modal` définie dans
+     * `index.html`. Si l'élément DOM n'existe pas (cas dégradé), fallback
+     * sur `console.warn` + tooltip pas-bloquant.
+     *
+     * @param {string[]} libelles - libellés des champs concernés
+     */
+    function showAlerteDesalignement(libelles) {
+        if (!Array.isArray(libelles) || libelles.length === 0) return;
+        try {
+            const modal = document.getElementById('alerte-desalignement-modal');
+            const list  = document.getElementById('alerte-desalignement-list');
+            const btnOk = document.getElementById('alerte-desalignement-ok-btn');
+            if (!modal || !list || !btnOk) {
+                // Fallback dégradé si la modale HTML n'a pas été ajoutée
+                console.warn('[V2.5] Champs exploités absents de la base :', libelles);
+                return;
+            }
+            // Construire la liste un libellé par ligne
+            list.innerHTML = '';
+            libelles.forEach(lib => {
+                const li = document.createElement('li');
+                li.textContent = lib;
+                list.appendChild(li);
+            });
+            // Afficher la modale
+            modal.classList.remove('hidden');
+            // Hook OK : fermer + retirer le listener (one-shot)
+            const onOk = () => {
+                modal.classList.add('hidden');
+                btnOk.removeEventListener('click', onOk);
+            };
+            btnOk.addEventListener('click', onOk);
+        } catch (e) {
+            console.warn('[V2.5] showAlerteDesalignement défensive :', e);
+        }
+    }
+
+    /**
+     * L10 / A19 + D15 - Génération CENTRALISÉE du tooltip d'un tag de champ
+     * affiché dans la popup « Champs de fusion ».
+     *
+     * Doctrine D15 (cf. correctifs-L9-cursor.md §D15) :
+     *   - Tooltip = LIBELLÉ uniquement, jamais d'identifiant technique
+     *     (`@KEY@`, `@LOCAL_xxx@`) ni de code de type entre parenthèses.
+     *   - Format uniforme pour tous types (standard, spécifique, mappé,
+     *     non-mappé) sauf cas particulier des champs système.
+     *   - Champs SYS : non insérables manuellement → tooltip différent
+     *     qui reflète leur nature.
+     *
+     * Centralisée pour éviter toute régression A19 (fuite de
+     * `@LOCAL_xxx@` dans l'UI) si d'autres callers sont ajoutés à
+     * l'avenir.
+     *
+     * @param {string} libelle - libellé d'affichage du champ
+     * @param {string} type - code de type ('TXT', 'EML', 'SYS', etc.)
+     * @returns {string}
+     */
+    function buildFieldTagTooltip(libelle, type) {
+        const safeLibelle = (typeof libelle === 'string' && libelle.trim())
+            ? libelle.trim()
+            : '(sans libellé)';
+        if (type === 'SYS') {
+            return `Champ système : ${safeLibelle}`;
+        }
+        return `Double-clic ou glisser pour insérer le champ ${safeLibelle} dans une zone de texte`;
+    }
+
+    /**
+     * V2.4 §7.3.2 - Algorithme UNIFIÉ de résolution de la valeur
+     * d'échantillon pour un champ. À utiliser systématiquement dans les 4
+     * contextes : création standard, création standard via double-clic,
+     * création spécifique, ouverture en édition.
+     *
+     * Ordre de priorité (selon le contexte) :
+     * 1. Si options.userInput est non vide → utiliser cette valeur (saisie
+     *    utilisateur dans la modale). Ignoré pour les contextes
+     *    "double-click" et "open-edit" qui n'ont pas de saisie utilisateur
+     *    encore.
+     * 2. Sinon, si champ.echantillonDefaut est renseigné → utiliser.
+     * 3. Sinon, valeur de la fiche utilisateur : 1ʳᵉ ligne de
+     *    documentState.donneesApercu pour la clé du champ (nom ou
+     *    LOCAL_<localId>) si présente et non vide.
+     * 4. Sinon, placeholder par défaut :
+     *    - Si standard (présence du `nom` dans champsStandardDisponibles)
+     *      → placeholderDefaut reçu de la SaaS.
+     *    - Sinon (spécifique) → placeholder par type (PLACEHOLDERS_PAR_TYPE).
+     * 5. Sinon → chaîne vide.
+     *
+     * @param {Object} champ - champ {nom, libelle, type, localId, echantillonDefaut, ...}
+     * @param {Object} [options]
+     * @param {string} [options.userInput] - valeur saisie par l'utilisateur dans la modale
+     * @param {string} [options.context='generic'] - 'create-standard'|'create-standard-doubleclick'|'create-specific'|'open-edit'|'generic'
+     * @returns {string}
+     */
+    function resolveEchantillonValue(champ, options) {
+        const opt = options || {};
+        const context = opt.context || 'generic';
+
+        // Étape 1 : saisie utilisateur explicite (uniquement pour les contextes
+        // où l'utilisateur a eu l'opportunité de saisir).
+        if (context === 'create-standard' || context === 'create-specific') {
+            const userInput = (typeof opt.userInput === 'string') ? opt.userInput.trim() : '';
+            if (userInput) return userInput;
+        }
+
+        if (!champ) return '';
+
+        // Étape 2 : echantillonDefaut déjà attribué au champ
+        if (typeof champ.echantillonDefaut === 'string' && champ.echantillonDefaut !== '') {
+            return champ.echantillonDefaut;
+        }
+
+        // Étape 3 : fiche utilisateur (donneesApercu[0])
+        try {
+            const key = resolveChampKeyForLookup(champ);
+            if (key && documentState && Array.isArray(documentState.donneesApercu)
+                && documentState.donneesApercu.length > 0) {
+                const record = documentState.donneesApercu[0];
+                if (record && typeof record === 'object') {
+                    if (record[key] !== undefined && record[key] !== null && record[key] !== '') {
+                        return String(record[key]);
+                    }
+                    const upper = key.toUpperCase();
+                    const found = Object.keys(record).find(k => k.toUpperCase() === upper);
+                    if (found && record[found] !== undefined && record[found] !== null && record[found] !== '') {
+                        return String(record[found]);
+                    }
+                }
+            }
+        } catch (e) {
+            // documentState pas encore prêt — passer à l'étape 4
+        }
+
+        // Étape 4a : placeholder standard via champsStandardDisponibles
+        try {
+            if (champ.nom && Array.isArray(champsStandardDisponibles)) {
+                const std = champsStandardDisponibles.find(s => s && s.nom === champ.nom);
+                if (std && typeof std.placeholderDefaut === 'string' && std.placeholderDefaut !== '') {
+                    return std.placeholderDefaut;
+                }
+            }
+        } catch (e) {
+            // champsStandardDisponibles pas encore prêt
+        }
+
+        // Étape 4b : placeholder par type (champ spécifique)
+        const type = (champ.type && PLACEHOLDERS_PAR_TYPE[champ.type] !== undefined)
+            ? champ.type : 'TXT';
+        return PLACEHOLDERS_PAR_TYPE[type] || '';
+    }
+
+    function getChampEditCapabilities(champ) {
+        // L14/A24 - Le calcul `canDelete` doit TOUJOURS être délégué à
+        //   getChampStatusV25 (doctrine V2.5 §1.4), y compris en régime B
+        //   (autoriserGestionChamps=false) qui doit autoriser la suppression
+        //   des champs ORPHELINS (rouges, absents de la base). Bug L13
+        //   résiduel : l'early return `canDelete: false` quand
+        //   !autoriserGestionChamps empêchait toute suppression en régime B,
+        //   contrairement à la table V2.5 §1.4 ligne 5 (B, Faux, Non, Rouge, OUI).
+        const isAjout = !!(champ && champ.origine === 'ajout');
+
+        // Calcul V2.5 universel : régime A ou B, on délègue à la doctrine.
+        let canDelete;
+        try {
+            const regime = (typeof mergeFields !== 'undefined')
+                ? detecterRegimeChamps(mergeFields) : 'A';
+            const status = getChampStatusV25(champ, regime);
+            canDelete = !!status.supprimable;
+        } catch (e) {
+            // Filet : si une erreur survient, fallback ultra-sécurisé
+            // (= comportement V2.4) pour ne pas casser l'UI.
+            canDelete = isAjout;
+        }
+
+        // Verrouillage global : SEULES l'édition libellé/type et l'édition
+        // échantillon sont bloquées en régime B (cohérent V2.4 : ces données
+        // viennent de la base). La suppression V2.5 reste ouverte aux orphelins.
+        if (!autoriserGestionChamps) {
+            return {
+                canEditLibelleType: false,
+                canEditEchantillon: false,
+                canDelete: canDelete,                        // V2.5 préservé
+                reason: canDelete ? 'v25-orphan-globalLocked' : 'global'
+            };
+        }
+
+        // V2.4 préservée pour le libellé/type — `origine` reste valide pour
+        // distinguer ce que l'utilisateur peut éditer dans la modale :
+        //   - origine "import" → libellé et type figés (le mappage BDD ou
+        //     la définition métier du champ standard fait foi).
+        //   - origine "ajout"  → libellé et type librement modifiables.
+        // L'échantillon est toujours éditable pour tout champ non bloqué
+        // globalement (V2.4).
+
+        return {
+            canEditLibelleType: isAjout,
+            canEditEchantillon: true,
+            canDelete: canDelete,
+            reason: canDelete
+                ? (isAjout ? 'editable' : 'v25-orphan')  // V2.5 : suppressible mais origine 'import' (cas champ orphelin du modèle)
+                : (isAjout ? 'v25-usage' : 'v25-base')   // V2.5 : non supprimable (exploité OU présent en base)
+        };
+    }
+
+    /**
      * Met à jour l'affichage des champs de fusion dans la toolbar Data
      * Affiche le libelle, trie par ordre, et utilise nom pour la syntaxe @NOM@
      * @param {ChampFusion[]} champs - Tableau des champs de fusion
@@ -3869,6 +4766,14 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Trier par ordre croissant
         const champsTries = [...champsNormalises].sort((a, b) => (a.ordre || 0) - (b.ordre || 0));
+
+        // L11 / V2.5 - Détection du régime A vs B et reconstruction de la
+        //   table champsExploites AVANT la boucle de rendu (utilisées par
+        //   getChampStatusV25 pour chaque tag). Le rebuild ici est gratuit
+        //   en pratique car le coût est dominé par le scan des zones une
+        //   seule fois par mise à jour de la popup.
+        const regimeV25 = detecterRegimeChamps(champsTries);
+        rebuildChampsExploites();
         
         // Mettre à jour le compteur
         const count = champsTries.length;
@@ -3890,18 +4795,93 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Parcourir les champs triés
         champsTries.forEach(champ => {
-            const fieldName = champ.nom;           // Valeur technique pour @NOM@
-            const fieldLabel = champ.libelle || champ.nom;  // Libellé affiché
+            // V3.4 - Clé d'insertion : nom technique si mappé, LOCAL_<localId>
+            //        sinon (cf. cahier §4.1). Le drag&drop et le dblclick
+            //        utilisent cette clé pour produire `@key@` dans Quill.
+            const isMapped = !!(champ.nom && String(champ.nom).trim().length > 0);
+            const fieldKey = isMapped ? champ.nom : `LOCAL_${champ.localId || ''}`;
+            const fieldLabel = champ.libelle || champ.nom || '(sans libellé)';
             const fieldType = champ.type || 'TXT';
-            
+            // V3.4 - Type SYS = zone système (séquentiel, datamatrix...) :
+            //        actions d'édition/suppression non exposées pour ces champs.
+            const isSysField = (fieldType === 'SYS');
+
             const tag = document.createElement('div');
             tag.classList.add('merge-tag');
-            
+
             // Ajouter une classe selon le type (pour style visuel différent)
             if (fieldType === 'SYS') tag.classList.add('merge-tag-sys');
             if (fieldType === 'IMG') tag.classList.add('merge-tag-img');
-            
+
+            // L11 / V2.5 - Statut visuel V2.5 (couleur de bordure + supprimabilité).
+            //   `regimeV25` est calculé en début de boucle (cf. juste avant le forEach).
+            //   La classe `merge-tag-status-<couleur>` pilote la bordure CSS,
+            //   `merge-tag-specifique` distingue les champs spécifiques pour
+            //   un éventuel marqueur typographique additionnel.
+            const statusV25 = getChampStatusV25(champ, regimeV25);
+            tag.classList.add('merge-tag-status-' + statusV25.couleur);
+            if (champ && champ.categorie === 'specifique') {
+                tag.classList.add('merge-tag-specifique');
+            }
+
             // Ajouter icône + libellé (affiché)
+            // L11 / V2.5 + L14/A24 - Actions inline crayon/poubelle refondues :
+            //   - Crayon : toujours visible (sauf SYS), désactivé si verrouillage
+            //     global (régime B). Édition libellé/type figée si origine
+            //     "import" (gestion par la modale via
+            //     getChampEditCapabilities.canEditLibelleType).
+            //   - Poubelle : activée UNIQUEMENT si `statusV25.supprimable`
+            //     selon doctrine V2.5 §1.4 (régime A non exploité OU régime B
+            //     rouge non exploité). Sinon désactivée avec tooltip contextuel.
+            //
+            //   ⚠️ L14/A24 - LE VERROU GLOBAL (autoriserGestionChamps) NE
+            //   BLOQUE PLUS LA CORBEILLE. Bug L13 résiduel : en régime B
+            //   (autoriserGestionChamps=false), tous les champs avaient la
+            //   corbeille grisée même les rouges non exploités qui devraient
+            //   être supprimables selon V2.5 §1.4 ligne 5 (`B, Faux, Non, Rouge, OUI`).
+            //   La doctrine V2.5 dissocie : autoriserGestionChamps verrouille
+            //   l'AJOUT et l'ÉDITION (qui restent du ressort de la base) mais
+            //   PAS la suppression des champs orphelins (rouges) — ces derniers
+            //   ne viennent pas de la base, donc l'utilisateur peut les retirer.
+            //
+            //   L'ancienne logique « isImportedChamp » ne pilote plus la
+            //   corbeille (mais reste utilisée pour le libellé/type côté modale).
+            const showActions = !isSysField;
+            const globalLocked = !autoriserGestionChamps;
+            const editDisabled   = globalLocked;
+            // L14/A24 - `globalLocked` retiré du calcul : la suppressibilité
+            //   suit STRICTEMENT statusV25.supprimable (doctrine V2.5 §1.4).
+            const deleteDisabled = !statusV25.supprimable;
+            const editTooltip = globalLocked
+                ? 'Une base de données est associée à cette commande. La gestion des champs s\'effectue depuis la base.'
+                : 'Modifier ce champ';
+            // L14/A24 - Tooltip de corbeille suit STRICTEMENT le statut V2.5.
+            //   En régime B, statusV25.tooltip est déjà l'un des messages
+            //   conformes à V2.5 §2.2 (« Champ exploité dans le document,
+            //   non supprimable », « Champ issu de la base de données… »,
+            //   « Champ exploité dans le document, retirez d'abord ses
+            //   occurrences… »). Plus de tooltip générique
+            //   « Une base de données… » pour la corbeille.
+            const deleteTooltip = statusV25.supprimable
+                ? 'Supprimer ce champ'
+                : (statusV25.tooltip || 'Champ non supprimable');
+            const actionsHtml = showActions ? `
+                <span class="merge-tag-actions">
+                    <button type="button" class="merge-tag-action-btn js-merge-tag-edit"
+                            ${editDisabled ? 'disabled' : ''}
+                            title="${editTooltip}"
+                            aria-label="Modifier le champ ${escapeHtml(fieldLabel)}">
+                        <span class="material-icons">edit</span>
+                    </button>
+                    <button type="button" class="merge-tag-action-btn is-danger js-merge-tag-delete"
+                            ${deleteDisabled ? 'disabled' : ''}
+                            title="${deleteTooltip}"
+                            aria-label="Supprimer le champ ${escapeHtml(fieldLabel)}">
+                        <span class="material-icons">delete_outline</span>
+                    </button>
+                </span>
+            ` : '';
+
             tag.innerHTML = `
                 <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -3910,21 +4890,68 @@ document.addEventListener('DOMContentLoaded', () => {
                     <line x1="16" y1="17" x2="8" y2="17"></line>
                 </svg>
                 <span class="field-name">${escapeHtml(fieldLabel)}</span>
+                ${actionsHtml}
             `;
-            tag.title = `${fieldLabel} (${fieldType}) - Double-clic ou glisser pour insérer @${fieldName}@`;
-            tag.dataset.fieldName = fieldName;  // Stocker le nom technique
-            
-            // Double-clic pour insertion (utilise le nom technique)
-            tag.addEventListener('dblclick', () => insertTag(fieldName));
-            
-            // Drag & drop avec syntaxe @CHAMP@ (nom technique)
+            // L10 / A19 + D15 - Tooltip uniforme et sans plomberie technique.
+            //   Avant L10 : "Couleur (TXT) - Double-clic ou glisser pour insérer
+            //   @LOCAL_f2682de57ee8@" → l'identifiant @LOCAL_xxx@ fuyait dans
+            //   l'interface (bug A19).
+            //   Après L10 : libellé uniquement, pas de code de type, pas de
+            //   syntaxe @KEY@. Cas particulier des champs système (non
+            //   insérables manuellement) traité distinctement.
+            tag.title = buildFieldTagTooltip(fieldLabel, fieldType);
+            tag.dataset.fieldName = fieldKey;       // Clé technique d'insertion
+            if (champ.localId) tag.dataset.localId = champ.localId;
+            if (champ.nom)     tag.dataset.nom     = champ.nom;
+
+            // Double-clic pour insertion (utilise la clé : nom OU LOCAL_<id>)
+            tag.addEventListener('dblclick', (e) => {
+                // Ne pas déclencher si on a double-cliqué sur un bouton d'action
+                if (e.target.closest('.merge-tag-action-btn')) return;
+                insertTag(fieldKey);
+            });
+
+            // V3.4 - Câblage des actions inline (avec stopPropagation pour
+            //        éviter de déclencher le drag&drop / dblclick).
+            const editBtn   = tag.querySelector('.js-merge-tag-edit');
+            const deleteBtn = tag.querySelector('.js-merge-tag-delete');
+            if (editBtn) {
+                editBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (editBtn.disabled) return;  // V2.3 - garde-fou verrouillage global
+                    if (typeof window.__openChampFusionEdit === 'function') {
+                        window.__openChampFusionEdit({ localId: champ.localId, nom: champ.nom });
+                    }
+                });
+                // Empêcher le drag de démarrer depuis l'icône
+                editBtn.addEventListener('mousedown', (e) => e.stopPropagation());
+            }
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (deleteBtn.disabled) return;
+                    if (typeof window.__openChampFusionDelete === 'function') {
+                        window.__openChampFusionDelete({ localId: champ.localId, nom: champ.nom });
+                    }
+                });
+                deleteBtn.addEventListener('mousedown', (e) => e.stopPropagation());
+            }
+
+            // Drag & drop avec syntaxe @CHAMP@ (nom technique OU LOCAL_<id>)
             tag.draggable = true;
             tag.addEventListener('dragstart', (e) => {
+                // Ne pas démarrer le drag depuis un bouton d'action
+                if (e.target.closest('.merge-tag-action-btn')) {
+                    e.preventDefault();
+                    return;
+                }
                 tag.classList.add('dragging');
-                e.dataTransfer.setData('text/plain', `@${fieldName}@`);
-                e.dataTransfer.setData('application/x-merge-field', fieldName);
+                e.dataTransfer.setData('text/plain', `@${fieldKey}@`);
+                e.dataTransfer.setData('application/x-merge-field', fieldKey);
                 e.dataTransfer.effectAllowed = 'copyMove';
-                
+
                 // Créer une image de drag personnalisée
                 const dragImage = tag.cloneNode(true);
                 dragImage.classList.remove('dragging');
@@ -3942,7 +4969,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
                 document.body.appendChild(dragImage);
                 e.dataTransfer.setDragImage(dragImage, 20, -15);
-                
+
                 // Nettoyer l'élément temporaire
                 setTimeout(() => {
                     if (dragImage.parentNode) {
@@ -3953,76 +4980,294 @@ document.addEventListener('DOMContentLoaded', () => {
             tag.addEventListener('dragend', () => {
                 tag.classList.remove('dragging');
             });
-            
+
             mergeFieldsContainer.appendChild(tag);
         });
-        
-        
+
+
         // Mettre à jour la visibilité de la toolbar
         updateToolbarDataVisibility();
-        
+
         // Mettre à jour les combos des autres zones (image, barcode)
         updateAllFieldSelects();
+
+        // V3.4 - Refresh état du bouton "Ajouter un champ" (peut avoir changé
+        //        suite à un toggle ChampsFusionInterdit).
+        try {
+            if (typeof window.__refreshAddChampButtonState === 'function') {
+                window.__refreshAddChampButtonState();
+            }
+        } catch (e) { /* ignore */ }
+
+        // L11 / V2.5 - Popup d'alerte au désalignement (§3 amendement).
+        //   Affichée UNE SEULE FOIS par session (= ouverture du Designer)
+        //   si régime B + au moins un champ exploité absent de la base.
+        //   Le flag `alerteDesalignementAffichee` est réinitialisé à
+        //   chaque load (loadFromWebDev).
+        try {
+            if (!alerteDesalignementAffichee && regimeV25 === 'B' && !champsFusionInterdit) {
+                const libellesDesalignes = [];
+                for (let i = 0; i < champsTries.length; i++) {
+                    const c = champsTries[i];
+                    if (!c || c.type === 'SYS') continue;
+                    if (c.presenteEnBase === false && estChampExploite(c)) {
+                        libellesDesalignes.push(c.libelle || c.nom || '(sans libellé)');
+                    }
+                }
+                if (libellesDesalignes.length > 0) {
+                    alerteDesalignementAffichee = true;
+                    if (typeof showAlerteDesalignement === 'function') {
+                        showAlerteDesalignement(libellesDesalignes);
+                    }
+                }
+            }
+        } catch (e) { /* defensive — ne bloque jamais le flow utilisateur */ }
     }
     
     /**
-     * Met à jour la visibilité de la toolbar Data (champs de fusion)
-     * Visible si : zone textQuill sélectionnée ET champs disponibles ET pas en mode aperçu
+     * V2.4 / L9 - D14 - Doctrine définitive du bouton « Champs » et de la popup.
+     *
+     * REFONTE FONDAMENTALE par rapport à L8/D12 :
+     *
+     *   L8/D12 (obsolète) :
+     *     `updateToolbarDataVisibility()` réévaluait `shown` à chaque appel.
+     *     Conséquence : toute interaction interne (ajout champ, double-clic,
+     *     Confirmer) qui passait par `updateMergeFieldsUI()` rappelait
+     *     `updateToolbarDataVisibility()` → réévaluation → si pas de
+     *     sélection → `shown=false` → popup fermée (= bug A18).
+     *
+     *   L9/D14 :
+     *     Séparation stricte entre :
+     *       a) `updateToolbarDataVisibility()` = **synchronisation PASSIVE**
+     *          du DOM avec `fieldsPopupShown`. NE CALCULE JAMAIS `shown`.
+     *          Applique seulement les priorités absolues : ChampsFusionInterdit
+     *          (force `shown=false`) et `isPreviewActive` (display=none mais
+     *          `shown` préservé pour le retour).
+     *       b) `evaluateFieldsPopupForSelection()` = **évaluation CONTEXTUELLE**
+     *          de `shown` selon intent + zone sélectionnée. Appelée
+     *          UNIQUEMENT depuis les hooks de changement de sélection
+     *          (`updateToolbarVisibility`, `deactivatePreview`,
+     *          `showQuillToolbar`, `loadFromWebDev`).
+     *       c) Actions explicites (`toggleFieldsPopup`, `closeFieldsPopup`,
+     *          `enterFormMode`) modifient `intent` et `shown` directement
+     *          puis appellent `updateToolbarDataVisibility()` (passif).
+     *
+     *   Tableau de référence (cf. correctifs-L8-cursor.md §D14) :
+     *
+     *   | Action utilisateur                              | Bouton    | Popup     |
+     *   |-------------------------------------------------|-----------|-----------|
+     *   | Init                                            | Inactif   | Fermée    |
+     *   | Clic bouton (inactif→actif)                     | Actif     | Ouverte   |
+     *   | Clic bouton (actif→inactif)                     | Inactif   | Fermée    |
+     *   | Croix X                                         | Inactif   | Fermée    |
+     *   | Sélection zone texte, bouton actif              | Actif     | Ouverte   |
+     *   | Sélection zone texte, bouton inactif            | Inactif   | Fermée    |
+     *   | Sélection zone image/barcode/QR, bouton actif   | Actif     | Fermée    |
+     *   | Clic dans document vide, bouton actif           | Actif     | Fermée    |
+     *   | **Interaction interne popup** (double-clic,…)   | Inchangé  | **Inchangée** |
+     *   | Passage mode Aperçu                             | Préservé  | Masquée   |
+     *   | Retour Aperçu, bouton actif + zone texte        | Actif     | Ouverte   |
      */
+
     /**
-     * Met à jour la visibilité de la toolbar Data (champs de fusion)
-     * Visible si : (zone textQuill OU zone barcode QR Code) sélectionnée ET champs disponibles ET pas en mode aperçu
+     * V2.4 / L9 - D14 : détermine si la zone actuellement sélectionnée
+     * justifie l'ouverture automatique de la popup. **Zone texte = pertinente**
+     * (drag&drop possible vers le contenu). Zone image / barcode / QR = non
+     * pertinente (elles ont leurs propres combos `champFusion`).
+     *
+     * TDZ-safe : try/catch sur `selectedZoneIds` et `getCurrentPageZones`
+     * (variables déclarées tardivement) — pattern identique à `isPreviewActive`.
+     *
+     * @returns {boolean}
+     */
+    function isTextZoneSelectedForFieldsPopup() {
+        try {
+            if (typeof selectedZoneIds === 'undefined' || !selectedZoneIds
+                || selectedZoneIds.length !== 1) {
+                return false;
+            }
+            const zoneId = selectedZoneIds[0];
+            const zonesData = (typeof getCurrentPageZones === 'function')
+                ? getCurrentPageZones() : null;
+            const zoneData = zonesData ? zonesData[zoneId] : null;
+            if (!zoneData) return false;
+            return zoneData.type === 'textQuill';
+        } catch (e) {
+            return false;
+        }
+    }
+
+    /**
+     * V2.4 / L9 - D14 : **SYNCHRONISATION PASSIVE** du DOM avec
+     * `fieldsPopupShown`. Ne calcule jamais `shown`. Applique uniquement les
+     * priorités absolues (`ChampsFusionInterdit`, `isPreviewActive`).
+     *
+     * Cette fonction est appelée à chaque fois qu'un changement éventuel
+     * de visibilité doit être reflété au DOM (load, refresh d'UI, toggle
+     * d'action explicite, etc.). Elle ne ferme PAS la popup sur interaction
+     * interne — c'est précisément la garantie A18.
      */
     function updateToolbarDataVisibility() {
         if (!toolbarData) return;
 
+        // Priorité 1 absolue : ChampsFusionInterdit → toujours masquée.
+        //   On force aussi `shown=false` car en cas de transition
+        //   (toggle inverse), il faut repartir d'un état propre.
         if (champsFusionInterdit) {
+            fieldsPopupShown = false;
             toolbarData.style.display = 'none';
+            updateFieldsPopupToggleButton();
             return;
         }
 
-        // Ne pas afficher en mode aperçu
-        // Protection : previewState peut ne pas être encore initialisée au chargement
-        try {
-            if (typeof previewState !== 'undefined' && previewState.active) {
-                toolbarData.style.display = 'none';
-                return;
-            }
-        } catch (e) {
-            // previewState pas encore déclarée - cas d'initialisation
+        // Priorité 2 absolue : mode aperçu → popup masquée mais `shown`
+        //   PRÉSERVÉ (pour le retour). Le bouton lui aussi reste actif si
+        //   l'intent l'était (D14 : « Passage mode Aperçu | Préservé | Masquée »).
+        if (isPreviewActive()) {
+            toolbarData.style.display = 'none';
+            updateFieldsPopupToggleButton();
+            return;
         }
-        
-        // Protection : selectedZoneIds peut ne pas être encore initialisée au chargement
-        // (déclarée plus bas dans le script)
-        let hasTextQuillSelected = false;
-        let hasQrCodeSelected = false;
-        
-        try {
-            if (typeof selectedZoneIds !== 'undefined' && selectedZoneIds.length === 1) {
-                const zoneId = selectedZoneIds[0];
-                const zonesData = getCurrentPageZones();
-                const zoneData = zonesData ? zonesData[zoneId] : null;
-                
-                if (zoneData) {
-                    // Zone textQuill
-                    hasTextQuillSelected = zoneData.type === 'textQuill';
-                    
-                    // Zone barcode avec type QR Code
-                    hasQrCodeSelected = zoneData.type === 'barcode' && 
-                                        (zoneData.typeCodeBarres === 'qrcode' || zoneData.typeCodeBarres === 'QRCode');
-                }
-            }
-        } catch (e) {
-            // selectedZoneIds pas encore déclarée - cas d'initialisation
-            hasTextQuillSelected = false;
-            hasQrCodeSelected = false;
-        }
-        
-        const hasFields = mergeFields && mergeFields.length > 0;
-        const shouldShow = hasFields && (hasTextQuillSelected || hasQrCodeSelected);
-        toolbarData.style.display = shouldShow ? '' : 'none';
-        
+
+        // Sinon : application passive de `shown` au DOM. Pas de recalcul.
+        toolbarData.style.display = fieldsPopupShown ? '' : 'none';
+        updateFieldsPopupToggleButton();
     }
+
+    /**
+     * V2.4 / L9 - D14 : **ÉVALUATION CONTEXTUELLE** de `fieldsPopupShown`
+     * selon `fieldsPopupUserIntent` + contexte de sélection courante.
+     *
+     * Appelée UNIQUEMENT depuis les hooks de changement de sélection /
+     * changement d'état contextuel :
+     *   - `updateToolbarVisibility` (chemin commun de tout `selectZone` /
+     *     `deselectAll` / `addToSelection` / `removeFromSelection`)
+     *   - `showQuillToolbar` (sélection zone texte)
+     *   - `deactivatePreview` (retour mode édition)
+     *   - `loadFromWebDev` (chargement initial)
+     *
+     * NE DOIT JAMAIS être appelée depuis :
+     *   - `updateMergeFieldsUI` (refresh DOM des tags après ajout/load)
+     *   - Listeners de combos internes (QR code, image, barcode)
+     *   - Aucune interaction interne à la popup
+     *
+     * → Cette discipline est précisément ce qui résout A18 (asymétrie
+     *   de fermeture après double-clic / Confirmer).
+     */
+    function evaluateFieldsPopupForSelection() {
+        // Priorités absolues — pas la peine de recalculer si masquée par force.
+        if (champsFusionInterdit) {
+            fieldsPopupShown = false;
+            updateToolbarDataVisibility();
+            return;
+        }
+        if (isPreviewActive()) {
+            // shown reste à sa valeur courante (préservé pour le retour).
+            updateToolbarDataVisibility();
+            return;
+        }
+
+        // Si bouton inactif → popup fermée (D14 lignes 5/6 du tableau).
+        if (!fieldsPopupUserIntent) {
+            fieldsPopupShown = false;
+            updateToolbarDataVisibility();
+            return;
+        }
+
+        // Bouton actif : la visibilité dépend du contexte de sélection.
+        //   - Zone texte sélectionnée → ouverte (D14 ligne 5)
+        //   - Zone image/barcode/QR sélectionnée → fermée (D14 ligne 7)
+        //   - Aucune zone sélectionnée → fermée (D14 ligne 8)
+        const hasSelection = (typeof selectedZoneIds !== 'undefined'
+            && selectedZoneIds && selectedZoneIds.length > 0);
+        if (!hasSelection) {
+            fieldsPopupShown = false;
+        } else {
+            fieldsPopupShown = isTextZoneSelectedForFieldsPopup();
+        }
+        updateToolbarDataVisibility();
+    }
+
+    /**
+     * V2.4 / L9 - D14 : synchronise l'apparence du bouton sidebar « Champs ».
+     * État visuel = `fieldsPopupUserIntent` (intention utilisateur) — NON pas
+     * `fieldsPopupShown` (qui peut varier contextuellement sans intervention).
+     * C'est l'invariant D14 : le bouton reste actif tant que l'utilisateur
+     * n'a pas explicitement cliqué dessus ou sur la croix X.
+     */
+    function updateFieldsPopupToggleButton() {
+        const btn = document.getElementById('btn-toggle-fields-popup');
+        if (!btn) return;
+        const blocked = !!champsFusionInterdit;
+        const inPreview = isPreviewActive();
+        const effectivelyIntended = !blocked && fieldsPopupUserIntent;
+        btn.classList.toggle('active', effectivelyIntended);
+        btn.disabled = blocked;
+        if (blocked) {
+            btn.title = 'Personnalisation par champs BDD indisponible pour ce document';
+        } else if (inPreview) {
+            btn.title = 'Aperçu actif — sortir de l\'aperçu pour utiliser';
+        } else {
+            btn.title = effectivelyIntended
+                ? 'Désactiver la popup Champs de fusion'
+                : 'Activer la popup Champs de fusion';
+        }
+    }
+
+    /**
+     * V2.4 / L9 - D14 : bascule l'état du BOUTON (action utilisateur explicite).
+     *   - Inactif → actif : `intent=true`, `shown=true` (ouverture immédiate
+     *     peu importe la sélection — D14 ligne 2 du tableau).
+     *   - Actif → inactif : `intent=false`, `shown=false` (D14 ligne 3).
+     */
+    function toggleFieldsPopup() {
+        if (champsFusionInterdit) return;
+        fieldsPopupUserIntent = !fieldsPopupUserIntent;
+        fieldsPopupShown = fieldsPopupUserIntent;
+        if (!fieldsPopupUserIntent) {
+            resetFieldsPopupViewToList();
+        }
+        updateToolbarDataVisibility();
+    }
+
+    /**
+     * V2.4 / L9 - D14 : fermeture EXPLICITE de la popup (clic croix X).
+     * D14 ligne 4 : `intent=false`, `shown=false`. Le bouton devient inactif.
+     */
+    function closeFieldsPopup() {
+        if (!fieldsPopupUserIntent && !fieldsPopupShown) return;
+        fieldsPopupUserIntent = false;
+        fieldsPopupShown = false;
+        resetFieldsPopupViewToList();
+        updateToolbarDataVisibility();
+    }
+
+    /**
+     * L8 - Reset visuel de la popup à la vue liste (sortie du formulaire
+     * d'ajout/édition). Factorisé pour éviter la duplication.
+     */
+    function resetFieldsPopupViewToList() {
+        try {
+            const formView = document.getElementById('champ-fusion-form-view');
+            const listView = document.getElementById('champ-fusion-list-view');
+            const modal = document.getElementById('champ-fusion-modal');
+            if (formView) formView.classList.add('hidden');
+            if (listView) listView.classList.remove('hidden');
+            if (modal) modal.classList.add('hidden');
+        } catch (e) {}
+    }
+
+    // Exposés pour debug et pour les IIFE plus bas
+    window.__toggleFieldsPopup = toggleFieldsPopup;
+    window.__closeFieldsPopup = closeFieldsPopup;
+    window.__updateFieldsPopupToggleButton = updateFieldsPopupToggleButton;
+    // L9 / D14 - Renommage de l'ex-helper `syncFieldsPopupWithSelection` :
+    //   - exposition de `evaluateFieldsPopupForSelection` pour les IIFE
+    //     externes qui auraient besoin de forcer une réévaluation.
+    window.__evaluateFieldsPopupForSelection = evaluateFieldsPopupForSelection;
+    // L8 - getters debug pour observer l'état D14
+    window.__getFieldsPopupUserIntent = () => fieldsPopupUserIntent;
+    window.__getFieldsPopupShown = () => fieldsPopupShown;
     
     /**
      * Vérifie si un caractère est alphanumérique (lettre ou chiffre)
@@ -4070,14 +5315,60 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
-     * Calcule les espaces à ajouter autour d'un champ de fusion selon le contexte
+     * V3.4 - Reconstruit un texte plat DÉTERMINISTE depuis le Delta Quill, en
+     * substituant chaque blot merge-tag par un caractère sentinelle `\uFFFC`
+     * (Object Replacement Character). Sert à raisonner sur le voisinage
+     * (caractère avant/après une position) sans dépendre du comportement
+     * variable de `quill.getText()` selon la version Quill et les blots
+     * custom enregistrés.
+     *
+     * Garantie : 1 op blot merge-tag = 1 caractère `\uFFFC` (cohérent avec
+     * l'index Quill qui compte 1 par embed).
+     *
+     * @param {Object} quill - Instance Quill
+     * @returns {string}
+     */
+    function quillTextForSpacing(quill) {
+        if (!quill || typeof quill.getContents !== 'function') {
+            // Fallback : si quelque chose ne va pas, on retombe sur getText()
+            try { return quill.getText(); } catch (e) { return ''; }
+        }
+        const delta = quill.getContents();
+        const ops = delta && Array.isArray(delta.ops) ? delta.ops : [];
+        let out = '';
+        for (const op of ops) {
+            if (!op) continue;
+            if (isMergeTagOp(op)) {
+                out += '\uFFFC';
+                continue;
+            }
+            if (typeof op.insert === 'string') {
+                out += op.insert;
+                continue;
+            }
+            // Autre embed (image, etc.) : sentinelle aussi
+            out += '\uFFFC';
+        }
+        return out;
+    }
+
+    /**
+     * Calcule les espaces à ajouter autour d'un champ de fusion selon le contexte.
+     *
+     * V3.4 - Adapté pour le pipeline blots :
+     *   - Le voisinage est lu via `quillTextForSpacing()` (déterministe)
+     *     qui restitue `\uFFFC` pour chaque blot merge-tag.
+     *   - `\uFFFC` n'est NI \n NI espace NI ponctuation NI alphanumérique →
+     *     déclenche correctement l'ajout d'espace AVANT et APRÈS quand on
+     *     insère entre deux pastilles (régression A2 du audit L2/L3).
+     *
      * @param {Object} quill - Instance Quill
      * @param {number} insertIndex - Position d'insertion
      * @param {string} fieldText - Texte du champ à insérer (ex: "@NOM@")
      * @returns {{text: string, cursorOffset: number}|null} Texte avec espaces et offset, ou null si interdit
      */
     function getFieldTextWithSpaces(quill, insertIndex, fieldText) {
-        const text = quill.getText();
+        const text = quillTextForSpacing(quill);
         const length = text.length;
         
         // Caractère avant la position d'insertion
@@ -4257,7 +5548,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Vérifier si le drop est autorisé à cette position
             if (dropInsertIndex !== null) {
-                const text = quill.getText();
+                // V3.4 - Utiliser quillTextForSpacing (déterministe pour les
+                //        blots merge-tag) plutôt que quill.getText().
+                const text = quillTextForSpacing(quill);
                 const charBefore = dropInsertIndex > 0 ? text.charAt(dropInsertIndex - 1) : '';
                 const charAfter = dropInsertIndex < text.length ? text.charAt(dropInsertIndex) : '';
                 
@@ -4330,25 +5623,58 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             const { text: textWithSpaces, cursorOffset } = result;
-            
+
             // Sélectionner la zone si pas déjà fait
             if (!selectedZoneIds.includes(zoneId)) {
                 deselectAll();
                 selectZone(zoneElement);
             }
-            
+
             // Focus sur l'éditeur Quill
             quill.focus();
-            
-            quill.insertText(insertIndex, textWithSpaces, 'user');
-            
-            // Placer le curseur après le texte inséré (incluant l'espace avant)
-            quill.setSelection(insertIndex + cursorOffset, 0);
-            
-            
+
+            // V3.4 - RÉGRESSION L2/L3 CORRIGÉE : insertion via blot merge-tag
+            //        au lieu de quill.insertText (qui produisait du texte brut
+            //        @NOM@ au lieu d'une pastille). Pattern symétrique à
+            //        celui de insertTag : 3 étapes pour respecter
+            //        [espace optionnel avant] [EMBED] [espace optionnel après].
+            //        On extrait fieldName depuis le data-transfer (préféré)
+            //        ou depuis le fieldText brut "@NOM@" en fallback.
+            let fieldNameNbsp = (typeof fieldName === 'string' && fieldName) ? fieldName : '';
+            if (!fieldNameNbsp) {
+                // Fallback : extraire depuis "@NOM@"
+                const m = String(fieldText || '').match(/^@([^@]+)@$/);
+                fieldNameNbsp = m ? m[1] : '';
+            }
+            // Convertir les espaces normaux en espaces insécables (cohérence
+            // avec insertTag — les noms WebDev type "Date livraison" peuvent
+            // contenir des espaces qu'on protège du wrap CSS).
+            fieldNameNbsp = fieldNameNbsp.replace(/ /g, '\u00A0');
+
+            const tagPlain = `@${fieldNameNbsp}@`;
+            const tagPos = textWithSpaces.indexOf(tagPlain);
+            const before = (tagPos > 0) ? textWithSpaces.substring(0, tagPos) : '';
+            const after  = textWithSpaces.substring(tagPos + tagPlain.length);
+
+            let pos = insertIndex;
+            if (before) {
+                quill.insertText(pos, before, 'user');
+                pos += before.length;
+            }
+            quill.insertEmbed(pos, 'merge-tag', { key: fieldNameNbsp }, 'user');
+            pos += 1;
+            if (after) {
+                quill.insertText(pos, after, 'user');
+            }
+
+            // Placer le curseur après le contenu inséré (l'embed = 1 dans Quill)
+            const finalCursor = insertIndex + before.length + 1 + after.length;
+            quill.setSelection(finalCursor, 0);
+
+
             // Reset
             dropInsertIndex = null;
-            
+
             // Sauvegarder le contenu Quill
             try {
                 const zonesData = getCurrentPageZones();
@@ -4418,17 +5744,59 @@ document.addEventListener('DOMContentLoaded', () => {
                         : Math.max(0, (typeof quill.getLength === 'function' ? quill.getLength() : 1) - 1);
 
                     // Calculer les espaces selon le contexte (ou null si interdit)
+                    // V3.4 - getFieldTextWithSpaces continue à raisonner sur le
+                    //        TEXTE plat "@KEY@" (entouré ou non d'espaces) pour
+                    //        décider du contexte d'insertion. C'est cohérent : on
+                    //        n'insère qu'UN embed merge-tag (taille = 1 dans Quill),
+                    //        et on l'entoure des espaces calculés sous forme de
+                    //        texte plat avant/après.
                     const result = getFieldTextWithSpaces(quill, insertIndex, tag);
-                    
+
                     if (result === null) {
                         // Déterminer la raison pour le message
                         return;
                     }
-                    
+
                     const { text: textWithSpaces, cursorOffset } = result;
-                    
-                    quill.insertText(insertIndex, textWithSpaces, 'user');
-                    quill.setSelection(insertIndex + cursorOffset, 0, 'silent');
+
+                    // V3.4 - Insertion en 3 étapes pour respecter le pattern :
+                    //   [espace optionnel avant] [EMBED merge-tag] [espace optionnel après]
+                    // textWithSpaces est de la forme "@KEY@", " @KEY@", "@KEY@ " ou " @KEY@ ".
+                    // On localise la position du tag dans cette chaîne pour
+                    // découper les espaces avant/après.
+                    const tagPos = textWithSpaces.indexOf(tag);
+                    const before = (tagPos > 0) ? textWithSpaces.substring(0, tagPos) : '';
+                    const after  = textWithSpaces.substring(tagPos + tag.length);
+
+                    let pos = insertIndex;
+                    if (before) {
+                        quill.insertText(pos, before, 'user');
+                        pos += before.length;
+                    }
+                    // Insertion de l'embed (taille = 1 dans Quill)
+                    quill.insertEmbed(pos, 'merge-tag', { key: fieldNameNbsp }, 'user');
+                    pos += 1;
+                    if (after) {
+                        quill.insertText(pos, after, 'user');
+                    }
+
+                    // Calcul du curseur final : la longueur "logique" insérée est
+                    // before.length + 1 + after.length (l'embed = 1 dans Quill).
+                    // Le cursorOffset original (calculé sur du texte plat) ciblait
+                    // une position à l'intérieur OU après le tag. On le mappe :
+                    //   - si cursorOffset <= before.length : conserver tel quel
+                    //   - si cursorOffset >= before.length + tag.length : décaler
+                    //     vers après l'embed (-(tag.length - 1))
+                    //   - sinon (rare) : positionner après l'embed
+                    let finalCursor;
+                    if (cursorOffset <= before.length) {
+                        finalCursor = insertIndex + cursorOffset;
+                    } else if (cursorOffset >= before.length + tag.length) {
+                        finalCursor = insertIndex + before.length + 1 + (cursorOffset - before.length - tag.length);
+                    } else {
+                        finalCursor = insertIndex + before.length + 1;
+                    }
+                    quill.setSelection(finalCursor, 0, 'silent');
                     try { quill.focus(); } catch (e) {}
 
                     // Persister immédiatement (en plus du text-change debounce)
@@ -9884,7 +11252,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (historyManager.isRestoring || historyManager.isLoadingForm) {
             return;
         }
-        
+
+        // L11 / V2.5 - Hook de mise à jour de la table champsExploites
+        //   (et refresh des couleurs/corbeilles dans la popup). saveState
+        //   est appelé après quasiment toute modification (frappe Quill
+        //   debouncée, undo/redo, suppression/création de zone, etc.) →
+        //   point d'ancrage central et économique.
+        //   Le debounce interne à notifyChampsExploitesMayHaveChanged
+        //   évite les recalculs redondants en cas d'appels rapprochés.
+        try { notifyChampsExploitesMayHaveChanged(); } catch (e) { /* defensive */ }
+
         // Synchroniser les positions DOM vers documentState avant le snapshot
         const zonesData = getCurrentPageZones();
         for (const [id, data] of Object.entries(zonesData)) {
@@ -11862,8 +13239,28 @@ document.addEventListener('DOMContentLoaded', () => {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Données d'échantillon fictives pour tester l'aperçu hors contexte WebDev.
-     * Ces données seront remplacées par celles de WebDev lors d'un vrai chargement.
+     * Données d'échantillon fictives pour tester l'aperçu **EN MODE DÉMO
+     * STANDALONE UNIQUEMENT** (ouverture directe de `index.html` hors
+     * iframe WebDev).
+     *
+     * ⚠️ L8 / A16 - Cette table NE DOIT PLUS JAMAIS être utilisée dans le
+     * contexte WebDev. Elle l'était auparavant (chemin `loadFromWebDev`
+     * quand `donneesApercu` était absent), ce qui écrasait silencieusement
+     * les `placeholderDefaut` envoyés par la SaaS par des valeurs
+     * hardcodées (« Acme Corporation », « jean.dupont@acme.com »…).
+     *
+     * Désormais, seul l'appel d'init mode démo en fin de fichier
+     * (`initDefaultPreviewData()` final) y a recours. En contexte WebDev,
+     * si la SaaS n'envoie pas de `donneesApercu`, on laisse le tableau
+     * vide et l'algorithme `resolveEchantillonValue` retombe sur :
+     *   1. `champ.echantillonDefaut` (saisi par l'utilisateur)
+     *   2. `champsStandardDisponibles[*].placeholderDefaut` (SaaS)
+     *   3. `PLACEHOLDERS_PAR_TYPE` (placeholders par type interne)
+     *   4. `''` (chaîne vide)
+     *
+     * Source UNIQUE des placeholders pour les champs standards en WebDev =
+     * `placeholderDefaut` envoyé par la SaaS via `champsStandardDisponibles`.
+     *
      * @type {EchantillonData[]}
      */
     const DEFAULT_PREVIEW_DATA = [
@@ -11990,7 +13387,14 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     /**
-     * Initialise les données d'aperçu avec les valeurs par défaut si aucune donnée WebDev
+     * Initialise les données d'aperçu avec les valeurs par défaut.
+     *
+     * ⚠️ L8 / A16 - Ne plus appeler depuis `loadFromWebDev`. Seul usage
+     * légitime : init mode démo standalone (ouverture directe de
+     * index.html hors iframe WebDev). En contexte WebDev, laisser
+     * `documentState.donneesApercu = []` et compter sur l'algorithme
+     * `resolveEchantillonValue` pour résoudre via `placeholderDefaut`.
+     *
      * @returns {void}
      */
     function initDefaultPreviewData() {
@@ -12093,6 +13497,67 @@ document.addEventListener('DOMContentLoaded', () => {
     window.replaceMergeFields = replaceMergeFields;
     window.displayMergedContent = displayMergedContent;
     window.testConversionWebDev = testConversionWebDev;
+
+    // ════════════════════════════════════════════════════════════════════════
+    // V3.4 - API exposée pour la future UI L4 (modale "Ajouter un champ",
+    // édition / suppression de champs).
+    // Cf. cahier des charges V2.2 §7 et §8.
+    // ════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Refresh visuel de toutes les pastilles merge-tag dans toutes les zones
+     * Quill, en relisant le libellé via le résolveur (= documentState.champsFusion).
+     * À appeler après une édition de libellé pour répercuter le nouveau libellé
+     * sans modifier le contenu sous-jacent (cf. cahier §7.8.6).
+     *
+     * @param {string|null} [keyFilter=null] - Si fourni, ne rafraîchit que les
+     *        pastilles dont la clé correspond (sinon toutes).
+     * @returns {number} Nombre de pastilles rafraîchies
+     */
+    function refreshMergeTagsInAllZones(keyFilter) {
+        let count = 0;
+        const filter = (typeof keyFilter === 'string' && keyFilter.trim()) ? keyFilter.trim() : null;
+        if (typeof quillInstances === 'undefined' || !quillInstances) return 0;
+        quillInstances.forEach((quill) => {
+            if (!quill || !quill.root) return;
+            const nodes = quill.root.querySelectorAll('span.merge-tag-quill[data-key]');
+            nodes.forEach(node => {
+                const key = node.getAttribute('data-key') || '';
+                if (filter && key !== filter) return;
+                const newText = mergeTagDisplayResolver(key);
+                if (node.textContent !== newText) {
+                    node.textContent = newText;
+                    count++;
+                }
+            });
+        });
+        return count;
+    }
+
+    /**
+     * Récupère la liste des champs standard reçue de la SaaS (pour la modale
+     * d'ajout, onglet Standard).
+     * @returns {Array<{nom: string, libelle: string, type: string}>}
+     */
+    function getChampsStandardDisponibles() {
+        return Array.isArray(champsStandardDisponibles) ? champsStandardDisponibles.slice() : [];
+    }
+
+    /**
+     * Récupère la liste des types de champs reçue de la SaaS (pour la modale
+     * d'ajout, onglet Spécifique).
+     * @returns {Array<{code: string, libelle: string}>}
+     */
+    function getTypesChampsDisponibles() {
+        return Array.isArray(typesChampsDisponibles) ? typesChampsDisponibles.slice() : [];
+    }
+
+    // Exposition globale pour L4
+    window.refreshMergeTagsInAllZones = refreshMergeTagsInAllZones;
+    window.getChampsStandardDisponibles = getChampsStandardDisponibles;
+    window.getTypesChampsDisponibles = getTypesChampsDisponibles;
+    window.generateLocalId = generateLocalId;
+    window.setMergeTagDisplayResolver = setMergeTagDisplayResolver;
     // Note: window.documentState est exposé dans la section de démarrage (après loadFromLocalStorage)
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -12347,26 +13812,70 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!originalDelta || !originalDelta.ops) {
             return originalDelta;
         }
-        
+
         // Créer une copie profonde du Delta
         const newOps = originalDelta.ops.map(op => {
+            // V3.4 - Embed 'merge-tag' : substituer la pastille par la valeur
+            // fusionnée correspondant à sa clé technique.
+            //
+            // RÈGLES MÉTIER ALIGNÉES SUR replaceMergeFields (cf. règles C1/C2/C3
+            // de l'audit régressions L2/L3) :
+            //   - Lookup INSENSIBLE à la casse (la clé peut être "PRENOM" mais
+            //     le record peut avoir "Prenom").
+            //   - Si la clé est ABSENTE du record OU si la valeur est null/'' →
+            //     retourner CHAÎNE VIDE (et NON @KEY@). C'est ce qui permet
+            //     ensuite à removeEmptyVariableLines (mode emptyLines === 1)
+            //     de supprimer la ligne entière, et ce qui évite d'afficher
+            //     "@Adresse3@" littéralement dans le BAT quand la colonne
+            //     n'est pas renseignée pour le destinataire en cours.
+            if (isMergeTagOp(op)) {
+                const key = mergeTagOpKey(op);
+                let valeur = '';
+                if (record && typeof record === 'object') {
+                    const upperKey = key.toUpperCase();
+                    // Lookup direct rapide
+                    if (record[key] !== undefined) {
+                        valeur = record[key];
+                    } else {
+                        // Lookup insensible à la casse
+                        const found = Object.keys(record).find(k => k.toUpperCase() === upperKey);
+                        if (found !== undefined) {
+                            valeur = record[found];
+                        }
+                    }
+                }
+                // Normaliser : null / undefined / '' → chaîne vide
+                const valeurStr = (valeur === null || valeur === undefined || valeur === '') ? '' : String(valeur);
+                const replaced = { insert: valeurStr };
+                if (op.attributes) {
+                    replaced.attributes = { ...op.attributes };
+                }
+                return replaced;
+            }
+
             // Copier l'opération
             const newOp = { ...op };
-            
-            // Si c'est une insertion de texte, remplacer les champs
+
+            // Si c'est une insertion de texte, remplacer les champs (cas où le
+            // contenu contient encore des @KEY@ texte brut — rétrocompatibilité
+            // avec d'anciens documents pré-blot).
             if (typeof newOp.insert === 'string') {
                 newOp.insert = replaceMergeFields(newOp.insert, record);
             }
-            
+
             // Conserver les attributs (formatage) tels quels
             if (op.attributes) {
                 newOp.attributes = { ...op.attributes };
             }
-            
+
             return newOp;
         });
-        
-        return { ops: newOps };
+
+        // Filtrer les ops {insert: ''} produites par les substitutions vides
+        // (un insert chaîne vide est rejeté par Quill dans setContents).
+        const filtered = newOps.filter(op => !(typeof op.insert === 'string' && op.insert === ''));
+
+        return { ops: filtered };
     }
 
     /**
@@ -12384,8 +13893,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Reconstruire le texte complet pour analyse ligne par ligne
+        // V3.4 - Inclure aussi les embeds 'merge-tag' restitués en "@KEY@"
+        // (sinon une ligne contenant uniquement une pastille blot ne serait
+        // pas détectée comme "variable uniquement").
         let fullText = '';
         for (const op of delta.ops) {
+            if (isMergeTagOp(op)) {
+                fullText += `@${mergeTagOpKey(op)}@`;
+                continue;
+            }
             if (typeof op.insert === 'string') {
                 fullText += op.insert;
             }
@@ -12863,7 +14379,11 @@ document.addEventListener('DOMContentLoaded', () => {
         enableZoneInteractions();
         
         // 6. Réafficher la toolbar data si une zone texte est sélectionnée
-        updateToolbarDataVisibility();
+        // L9 / D14 - Sortie du mode Aperçu = changement contextuel équivalent
+        //   à un changement de sélection → réévaluer (et NON simple synchro
+        //   passive). Cela respecte la ligne 11 du tableau D14 :
+        //   « Retour Aperçu, bouton actif + zone texte | Actif | Ouverte ».
+        evaluateFieldsPopupForSelection();
         
         // 7. Restaurer la visibilité normale des sections de la sidebar
         updateSidebarSectionsVisibility();
@@ -15037,8 +16557,10 @@ document.addEventListener('DOMContentLoaded', () => {
         quillToolbar.style.display = 'flex';
         isQuillToolbarVisible = true;
         
-        // Synchroniser la toolbar Data (champs de fusion)
-        updateToolbarDataVisibility();
+        // L9 / D14 - Synchroniser la toolbar Data (champs de fusion) :
+        //   sélection d'une zone texte → réévaluer (et non simple synchro).
+        //   Si bouton actif → popup ouverte (D14 ligne 5).
+        evaluateFieldsPopupForSelection();
         
         // Positionner la toolbar de façon visible
         const pos = getInitialQuillToolbarPosition();
@@ -17131,8 +18653,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
         }
         
-        // Mettre à jour la toolbar Data (champs de fusion)
-        updateToolbarDataVisibility();
+        // L9 / D14 - Chemin commun de tout changement de sélection
+        //   (selectZone, deselectAll, addToSelection, removeFromSelection
+        //   passent tous par updateSelectionUI → updateToolbarVisibility).
+        //   On évalue la popup contextuellement.
+        evaluateFieldsPopupForSelection();
     }
 
     /**
@@ -17653,7 +19178,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const showPreviewSection = !champsFusionInterdit;
 
         const count = selectedZoneIds.length;
-        
+
         // Récupérer les sections par ID
         const pagesSection = document.getElementById('pages-section');
         const resetSection = document.getElementById('reset-section');
@@ -17661,6 +19186,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const alignmentSection = document.getElementById('alignment-section');
         const sizeSection = document.getElementById('size-section');
         const spacingSection = document.getElementById('spacing-section');
+        // L8 / A15 - Section « Champs » dédiée (ajoutée en L7/D11) qui avait
+        //   été oubliée dans le toggle visibility lors du retour de mode
+        //   Aperçu → section disparaissait définitivement.
+        const fieldsSection = document.getElementById('fields-section');
         
         // ═══════════════════════════════════════════════════════════════════════
         // MODE MULTI-SÉLECTION (2+ zones) : logique EXCLUSIVE
@@ -17677,6 +19206,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (toolsSection) toolsSection.style.display = 'none';
             if (zoomSection) zoomSection.style.display = 'none';
             if (validationSection) validationSection.style.display = 'none'; // masqué en mode alignement
+            // L9 / D13 - Section « Champs » VISIBLE EN PERMANENCE, quelle
+            //   que soit la sélection courante (y compris multi-sélection).
+            //   Cf. cahier correctifs-L8 §D13 : la gestion des champs est
+            //   une entité GLOBALE du modèle, indépendante de la sélection
+            //   courante. Nature différente de la section « Actions » qui,
+            //   elle, regroupe des opérations contextuelles ponctuelles.
+            //   Masquée seulement si ChampsFusionInterdit (cohérent avec le
+            //   bouton lui-même).
+            if (fieldsSection) fieldsSection.style.display = champsFusionInterdit ? 'none' : 'block';
             
             // Afficher les sections multi
             if (alignmentSection) alignmentSection.style.display = 'block';
@@ -17706,6 +19244,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (zoomSection) zoomSection.style.display = 'block';       // always
             if (deleteSection) deleteSection.style.display = 'block';   // visible avec sélection
             if (validationSection) validationSection.style.display = 'block'; // visible en sélection simple
+            // L8 / A15 - Section « Champs » visible en sélection simple :
+            //   utile pour glisser/déposer un champ vers la zone texte
+            //   sélectionnée (cohérent avec doctrine D12). Masquée pour
+            //   ChampsFusionInterdit (cohérent avec le bouton lui-même).
+            if (fieldsSection) fieldsSection.style.display = champsFusionInterdit ? 'none' : 'block';
             return;
         }
         
@@ -17727,6 +19270,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (zoomSection) zoomSection.style.display = 'block';       // always
         if (deleteSection) deleteSection.style.display = 'none';    // masquée sans sélection
         if (validationSection) validationSection.style.display = 'block'; // visible sans sélection
+        // L8 / A15 - Section « Champs » visible sans sélection (le bouton
+        //   permet d'activer l'intention même sans zone — l'utilisateur
+        //   sélectionnera ensuite une zone texte pour faire apparaître la popup).
+        if (fieldsSection) fieldsSection.style.display = champsFusionInterdit ? 'none' : 'block';
     }
 
     // --- FONCTIONS D'ALIGNEMENT ---
@@ -21234,9 +22781,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Bouton fermer (X) de la toolbar data
+    // L7 / A14 + L8 / D12 - Passer par closeFieldsPopup pour synchroniser
+    //   l'intention utilisateur (`fieldsPopupUserIntent`) ET l'état visuel
+    //   du bouton sidebar « Champs ». La croix X correspond à l'étape 7 du
+    //   cycle de vie D12 : intent → false, popup → fermée. Le bouton
+    //   sidebar redevient inactif.
     if (toolbarDataClose) {
         toolbarDataClose.addEventListener('click', () => {
-            if (toolbarData) toolbarData.style.display = 'none';
+            if (typeof closeFieldsPopup === 'function') {
+                closeFieldsPopup();
+            } else if (toolbarData) {
+                // Fallback défensif (ne devrait jamais s'exécuter en pratique)
+                toolbarData.style.display = 'none';
+            }
         });
     }
     
@@ -22439,6 +23996,19 @@ document.addEventListener('DOMContentLoaded', () => {
         let index = 0;
         for (const op of ops) {
             if (!op) continue;
+
+            // V3.4 - Embed 'merge-tag' : restituer "@KEY@" dans le contenu plat
+            // (cf. cahier des charges §7.8.3 - scénario B). Les attributs de
+            // formatage éventuellement portés par l'embed sont ignorés ici (le
+            // formatage partiel WebDev ne s'applique pas à une pastille).
+            if (isMergeTagOp(op)) {
+                const key = mergeTagOpKey(op);
+                const tagText = `@${key}@`;
+                contenu += tagText;
+                index += tagText.length;
+                continue;
+            }
+
             if (typeof op.insert !== 'string') continue;
 
             const text = op.insert;
@@ -22482,6 +24052,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const ops = [];
 
+        // V3.4 - Helper local : pousse un segment de texte plat dans `ops` en
+        // détectant les motifs @KEY@ et en les transformant en embeds
+        // 'merge-tag' (Quill custom blot — cf. cahier §7.8.3). Les attributs
+        // de formatage partiel sont appliqués au texte hors pastilles.
+        // Regex : @ + chaîne non vide sans @ ni \n (les espaces y compris
+        // insécables \u00A0 et les caractères spéciaux sont autorisés pour
+        // matcher les noms WebDev type "Date livraison" ou "LOCAL_a1b2c3").
+        const MERGE_TAG_RE = /@([^@\n]+)@/g;
+        function pushSegmentWithMergeTags(segText, attributes) {
+            if (!segText) return;
+            const hasAttrs = attributes && Object.keys(attributes).length > 0;
+            let lastIndex = 0;
+            let m;
+            MERGE_TAG_RE.lastIndex = 0;
+            while ((m = MERGE_TAG_RE.exec(segText)) !== null) {
+                if (m.index > lastIndex) {
+                    const before = segText.substring(lastIndex, m.index);
+                    ops.push(hasAttrs ? { insert: before, attributes } : { insert: before });
+                }
+                ops.push({ insert: { 'merge-tag': { key: m[1] } } });
+                lastIndex = m.index + m[0].length;
+            }
+            if (lastIndex < segText.length) {
+                const tail = segText.substring(lastIndex);
+                ops.push(hasAttrs ? { insert: tail, attributes } : { insert: tail });
+            }
+        }
+
         for (let i = 0; i < points.length - 1; i++) {
             const segStart = points[i];
             const segEnd = points[i + 1];
@@ -22504,11 +24102,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (merged.souligne === true) attributes.underline = true;
             if (typeof merged.couleur === 'string' && merged.couleur.length > 0) attributes.color = merged.couleur;
 
-            if (Object.keys(attributes).length > 0) {
-                ops.push({ insert: segmentText, attributes });
-            } else {
-                ops.push({ insert: segmentText });
-            }
+            pushSegmentWithMergeTags(segmentText, attributes);
         }
 
         if (needsFinalNewline) {
@@ -22616,7 +24210,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Pré-collecter les couleurs inline du Delta
         for (const op of ops) {
-            if (!op || typeof op.insert !== 'string') continue;
+            if (!op) continue;
+            if (isMergeTagOp(op)) continue; // V3.4 - Embed sans couleur inline
+            if (typeof op.insert !== 'string') continue;
             const attrs = op.attributes || {};
             if (typeof attrs.color === 'string' && attrs.color) colorIndex(attrs.color);
         }
@@ -22645,7 +24241,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // On encapsule les segments formatés dans des GROUPES RTF "{...}" pour éviter tout reset manuel.
         let body = '';
         for (const op of ops) {
-            if (!op || typeof op.insert !== 'string') continue;
+            if (!op) continue;
+
+            // V3.4 - Embed 'merge-tag' : sérialiser en "@KEY@" dans le RTF
+            // (cf. cahier §7.8.3). Le pipeline PSMD attend cette forme.
+            if (isMergeTagOp(op)) {
+                const key = mergeTagOpKey(op);
+                body += escapeRtf(`@${key}@`);
+                continue;
+            }
+
+            if (typeof op.insert !== 'string') continue;
             const text = op.insert;
             const attrs = op.attributes || {};
 
@@ -23166,6 +24772,262 @@ document.addEventListener('DOMContentLoaded', () => {
         return v === true || v === 1 || v === '1' || v === 'Vrai' || v === 'true' || v === 'True';
     }
 
+    /**
+     * V2.4 - Normalise les propriétés `origine` et `categorie` pour les
+     * champs reçus du load.
+     *
+     * RÈGLE DE DOCTRINE V2.4 (cf. cahier V2.4 §3.1 et amendement V2.4 §1.4) :
+     *   - TOUS les champs présents dans le JSON initial sont d'origine
+     *     `"import"` (= verrouillage individuel). Si une valeur autre est
+     *     reçue (legacy "standard"/"specifique" de V2.3, ou rien), elle est
+     *     écrasée par `"import"`.
+     *   - La propriété `categorie` est déduite par recherche dans
+     *     `champsStandardDisponibles` si absente : présence → `"standard"`,
+     *     sinon → `"specifique"`.
+     *
+     * @param {Array<Object>} champs
+     */
+    function normalizeOriginAndCategoryFromLoad(champs) {
+        if (!Array.isArray(champs) || champs.length === 0) return;
+        const standardNoms = new Set(
+            (champsStandardDisponibles || [])
+                .map(s => s && typeof s.nom === 'string' ? s.nom : null)
+                .filter(Boolean)
+        );
+        champs.forEach(c => {
+            if (!c || typeof c !== 'object') return;
+            // V2.4 - Tout champ reçu du load = origine "import" (doctrine).
+            //        On n'accepte que les valeurs nouvelles V2.4 ('import'
+            //        ou 'ajout'). Les anciennes valeurs V2.3 'standard'/
+            //        'specifique' sont migrées vers 'import' par sécurité.
+            if (c.origine !== 'ajout') {
+                c.origine = 'import';
+            }
+            // V2.4 - `categorie` : déduction heuristique si absente.
+            if (c.categorie !== 'standard' && c.categorie !== 'specifique') {
+                const nom = typeof c.nom === 'string' ? c.nom : '';
+                c.categorie = (nom && standardNoms.has(nom)) ? 'standard' : 'specifique';
+            }
+        });
+    }
+    // Alias pour rétrocompatibilité du nom dans le commentaire / éventuels appelants externes
+    const deduceOrigineForChamps = normalizeOriginAndCategoryFromLoad;
+
+    // ════════════════════════════════════════════════════════════════════════
+    // V3.4 - LISTES DE RÉFÉRENCE TRANSMISES PAR LA SAAS
+    // Cf. cahier des charges §5 et §8.2 + doc V3.4 structDesignerLoad.
+    // ════════════════════════════════════════════════════════════════════════
+    /**
+     * Liste des champs standards reçue dans le message 'load' (racine).
+     * Alimente l'onglet « Standard » de la modale "Ajouter un champ".
+     * @type {Array<{nom: string, libelle: string, type: string}>}
+     */
+    let champsStandardDisponibles = [];
+
+    /**
+     * Liste des types de champs disponibles reçue dans le message 'load' (racine).
+     * Alimente le combo Type de l'onglet « Spécifique ».
+     * @type {Array<{code: string, libelle: string}>}
+     */
+    let typesChampsDisponibles = [];
+
+    // NOTE V3.5 (fix TDZ L5) : la variable `autoriserGestionChamps` et la
+    // fonction `getChampEditCapabilities` étaient initialement déclarées ICI.
+    // Elles ont été DÉPLACÉES bien plus haut dans le scope IIFE (juste après
+    // `champsFusionInterdit`, vers la ligne ~3973) pour être disponibles dès
+    // l'init du Designer — updateMergeFieldsUI() les lit et est appelée AVANT
+    // que ce bloc ne soit atteint. Une déclaration tardive provoquait une
+    // Temporal Dead Zone (ReferenceError même sur `typeof`, piège classique
+    // des `let`/`const`).
+
+    // ════════════════════════════════════════════════════════════════════════
+    // V3.4 - SUBSTITUTION POST-MAPPING (cf. cahier §4.2)
+    // À la ré-ouverture après une vérification de cohérence côté SaaS, les
+    // champs précédemment créés dans le Designer (nom = "" + localId) arrivent
+    // avec un nom technique attribué. On substitue alors toutes les références
+    // @LOCAL_<localId>@ → @<nom>@ partout dans le JSON ENTRANT (avant rendu).
+    //
+    // Substitutions effectuées :
+    //   - zonesTexte[*].contenu et zonesTexte[*].quillDelta (si présent)
+    //   - zonesImage[*].source.champFusion (si valait LOCAL_<localId>)
+    //   - zonesCodeBarres[*].champFusion (si valait LOCAL_<localId>)
+    //   - zonesCodeBarres[*].qrConfig.fields[*] (recherche regex)
+    //   - donneesApercu[*].enregistrement[*].nom (si valait LOCAL_<localId>)
+    // ════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Construit la table de mapping localId → nom à partir des champsFusion
+     * reçus. Une entrée n'est créée QUE pour les champs qui ont à la fois un
+     * `nom` non vide ET un `localId` non vide (= champ Designer désormais mappé).
+     *
+     * @param {Array} champsFusion
+     * @returns {Map<string, string>} Map localId → nom
+     */
+    function buildLocalIdToNomMap(champsFusion) {
+        const map = new Map();
+        if (!Array.isArray(champsFusion)) return map;
+        champsFusion.forEach(c => {
+            if (!c || typeof c !== 'object') return;
+            const localId = (typeof c.localId === 'string') ? c.localId.trim() : '';
+            const nom = (typeof c.nom === 'string') ? c.nom.trim() : '';
+            if (localId && nom) {
+                map.set(localId, nom);
+            }
+        });
+        return map;
+    }
+
+    /**
+     * Substitue dans une chaîne quelconque les occurrences `@LOCAL_<id>@`
+     * → `@<nom>@` à partir de la table de mapping.
+     *
+     * @param {string} str
+     * @param {Map<string, string>} mapping
+     * @returns {string}
+     */
+    function substituteLocalIdsInString(str, mapping) {
+        if (typeof str !== 'string' || !str || mapping.size === 0) return str;
+        return str.replace(/@LOCAL_([A-Za-z0-9]+)@/g, (match, localId) => {
+            const nom = mapping.get(localId);
+            return nom ? `@${nom}@` : match;
+        });
+    }
+
+    /**
+     * Substitue dans un Delta Quill (ops) les blots merge-tag dont la clé est
+     * `LOCAL_<localId>` (mappé) → blot avec clé `<nom>` réelle. Conserve le
+     * texte plat éventuellement non-blot via substituteLocalIdsInString.
+     *
+     * @param {Object} delta
+     * @param {Map<string, string>} mapping
+     * @returns {Object} Delta substitué (nouvelle référence si modifié)
+     */
+    function substituteLocalIdsInDelta(delta, mapping) {
+        if (!delta || !Array.isArray(delta.ops) || mapping.size === 0) return delta;
+        const newOps = delta.ops.map(op => {
+            if (isMergeTagOp(op)) {
+                const key = mergeTagOpKey(op);
+                if (key.startsWith('LOCAL_')) {
+                    const localId = key.substring('LOCAL_'.length);
+                    const nom = mapping.get(localId);
+                    if (nom) {
+                        return { insert: { 'merge-tag': { key: nom } } };
+                    }
+                }
+                return op;
+            }
+            if (typeof op.insert === 'string') {
+                const replaced = substituteLocalIdsInString(op.insert, mapping);
+                if (replaced !== op.insert) {
+                    return { ...op, insert: replaced };
+                }
+            }
+            return op;
+        });
+        return { ops: newOps };
+    }
+
+    /**
+     * Applique la substitution post-mapping sur un JSON document complet
+     * (mutation in-place, le JSON n'a pas encore été chargé dans documentState).
+     *
+     * @param {Object} jsonDoc - Le JSON document (effectiveDocumentJson)
+     * @param {Map<string, string>} mapping - Map localId → nom
+     * @returns {number} Nombre total de substitutions effectuées (pour log)
+     */
+    function applyPostMappingSubstitutions(jsonDoc, mapping) {
+        if (!jsonDoc || mapping.size === 0) return 0;
+        let count = 0;
+
+        // 1) Zones texte : contenu (texte plat) et quillDelta (si présent)
+        if (Array.isArray(jsonDoc.zonesTexte)) {
+            jsonDoc.zonesTexte.forEach(z => {
+                if (typeof z.contenu === 'string') {
+                    const before = z.contenu;
+                    z.contenu = substituteLocalIdsInString(before, mapping);
+                    if (z.contenu !== before) count++;
+                }
+                if (z.quillDelta && Array.isArray(z.quillDelta.ops)) {
+                    const before = JSON.stringify(z.quillDelta);
+                    z.quillDelta = substituteLocalIdsInDelta(z.quillDelta, mapping);
+                    if (JSON.stringify(z.quillDelta) !== before) count++;
+                }
+            });
+        }
+
+        // 2) Zones image : source.champFusion
+        if (Array.isArray(jsonDoc.zonesImage)) {
+            jsonDoc.zonesImage.forEach(z => {
+                const cf = z.source && z.source.champFusion;
+                if (typeof cf === 'string' && cf.startsWith('LOCAL_')) {
+                    const localId = cf.substring('LOCAL_'.length);
+                    const nom = mapping.get(localId);
+                    if (nom) {
+                        z.source.champFusion = nom;
+                        count++;
+                    }
+                }
+            });
+        }
+
+        // 3) Zones code-barres : champFusion + qrConfig.fields[*]
+        if (Array.isArray(jsonDoc.zonesCodeBarres)) {
+            jsonDoc.zonesCodeBarres.forEach(z => {
+                if (typeof z.champFusion === 'string' && z.champFusion.startsWith('LOCAL_')) {
+                    const localId = z.champFusion.substring('LOCAL_'.length);
+                    const nom = mapping.get(localId);
+                    if (nom) {
+                        z.champFusion = nom;
+                        count++;
+                    }
+                }
+                // qrConfig peut être une chaîne JSON ou un objet selon le flux
+                let qrConfig = z.qrConfig;
+                if (typeof qrConfig === 'string') {
+                    try { qrConfig = JSON.parse(qrConfig); } catch (e) { qrConfig = null; }
+                }
+                if (qrConfig && qrConfig.fields && typeof qrConfig.fields === 'object') {
+                    Object.keys(qrConfig.fields).forEach(k => {
+                        const v = qrConfig.fields[k];
+                        if (typeof v === 'string') {
+                            const replaced = substituteLocalIdsInString(v, mapping);
+                            if (replaced !== v) {
+                                qrConfig.fields[k] = replaced;
+                                count++;
+                            }
+                        }
+                    });
+                    // Réécrire qrConfig dans la zone (préserver le format d'origine)
+                    if (typeof z.qrConfig === 'string') {
+                        try { z.qrConfig = JSON.stringify(qrConfig); } catch (e) {}
+                    } else {
+                        z.qrConfig = qrConfig;
+                    }
+                }
+            });
+        }
+
+        // 4) donneesApercu : enregistrement[*].nom
+        if (Array.isArray(jsonDoc.donneesApercu)) {
+            jsonDoc.donneesApercu.forEach(enreg => {
+                const arr = enreg && enreg.enregistrement;
+                if (!Array.isArray(arr)) return;
+                arr.forEach(champ => {
+                    if (champ && typeof champ.nom === 'string' && champ.nom.startsWith('LOCAL_')) {
+                        const localId = champ.nom.substring('LOCAL_'.length);
+                        const nom = mapping.get(localId);
+                        if (nom) {
+                            champ.nom = nom;
+                            count++;
+                        }
+                    }
+                });
+            });
+        }
+
+        return count;
+    }
+
     function stripMergeAtTokensFromString(str) {
         if (typeof str !== 'string') return str;
         return str
@@ -23185,6 +25047,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * Retire les liaisons BDD des zones (enveloppe sans fenêtre).
+     * V3.4 - La regex `stripMergeAtTokensFromString` (`[A-Za-z0-9_\u00A0]+`)
+     *        matche aussi les clés `@LOCAL_xxx@` (champs Designer non mappés).
+     *        Aucune adaptation nécessaire pour le mode ChampsFusionInterdit.
+     *        On part du quillDelta (à jour) plutôt que de z.content
+     *        (potentiellement en retard) pour reconstruire un contenu propre.
      * @returns {boolean} true si au moins une zone a été modifiée
      */
     function stripChampsFusionBindingsFromDocumentState() {
@@ -23194,7 +25061,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 const z = page.zones[zid];
                 if (!z) return;
                 if (z.type === 'textQuill') {
-                    const before = z.content || '';
+                    // V3.4 - Recalculer z.content depuis quillDelta si présent
+                    //        (gère les blots merge-tag introduits par insertTag).
+                    let before = z.content || '';
+                    if (z.quillDelta && Array.isArray(z.quillDelta.ops)) {
+                        try {
+                            const conv = quillDeltaToTextAndFormatage(z.quillDelta);
+                            before = conv.contenu;
+                            z.formatting = (conv.formatage || []).map(f => ({
+                                start: f.debut, end: f.fin, styles: {
+                                    fontWeight: f.styles?.gras === true ? 'bold' : undefined,
+                                    textDecoration: f.styles?.souligne === true ? 'underline' : undefined,
+                                    color: f.styles?.couleur || undefined
+                                }
+                            })).map(f => {
+                                Object.keys(f.styles).forEach(k => f.styles[k] === undefined && delete f.styles[k]);
+                                return f;
+                            });
+                        } catch (e) { /* fallback : on garde z.content */ }
+                    }
                     const after = stripMergeAtTokensFromString(before);
                     if (after !== before) touched = true;
                     z.content = after;
@@ -23252,6 +25137,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         updateSidebarSectionsVisibility();
+        // V3.4 - Refresh immédiat de l'état du bouton "Ajouter un champ"
+        //        (cf. cahier §7.1 : désactivé si champsFusionInterdit).
+        try {
+            if (typeof window.__refreshAddChampButtonState === 'function') {
+                window.__refreshAddChampButtonState();
+            }
+        } catch (e) { /* ignore */ }
     }
 
     function loadFromWebDev(jsonData) {
@@ -23259,6 +25151,12 @@ document.addEventListener('DOMContentLoaded', () => {
             ', action:', jsonData && jsonData.action,
             ', data:', !!jsonData && !!jsonData.data,
             ', zonesImage dans data:', jsonData && jsonData.data && jsonData.data.zonesImage ? jsonData.data.zonesImage.length : 'N/A');
+
+        // L11 / V2.5 - Reset du flag « popup d'alerte de désalignement déjà
+        //   affichée » à chaque nouvelle ouverture du Designer. Garantit que
+        //   l'utilisateur revoit l'alerte s'il rouvre le même document tant
+        //   que le désalignement persiste (cf. §3.3 de l'amendement V2.5).
+        alerteDesalignementAffichee = false;
 
         // Support enveloppe postMessage {action:'load', policesDisponibles:[...], data:{...}}
         const isLoadEnvelope =
@@ -23337,6 +25235,55 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // V3.4 - Lire les listes de référence transmises par la SaaS pour la
+        //        modale "Ajouter un champ" (cf. cahier §5 et §8.2).
+        //        Toujours envoyées (création tunnel ET création modèle), même
+        //        quand ChampsFusionInterdit = Vrai.
+        if (isLoadEnvelope && Array.isArray(jsonData.champsStandard)) {
+            // V2.4 / V3.6 - Lecture du placeholderDefaut transporté par la
+            //              SaaS (cf. structDesignerChampStandard étendue en
+            //              V3.6). Utilisé par l'algorithme unifié de
+            //              résolution d'échantillon (resolveEchantillonValue
+            //              étape 4a). Optionnel : vide si la SaaS n'envoie
+            //              pas cette info (compat ascendante).
+            champsStandardDisponibles = jsonData.champsStandard
+                .filter(c => c && typeof c === 'object' && c.nom && c.libelle)
+                .map(c => ({
+                    nom: String(c.nom),
+                    libelle: String(c.libelle),
+                    type: String(c.type || 'TXT'),
+                    placeholderDefaut: (typeof c.placeholderDefaut === 'string') ? c.placeholderDefaut : ''
+                }));
+            if (DEBUG) console.log('loadFromWebDev: champsStandard reçus -', champsStandardDisponibles.length, 'entrées');
+        }
+        if (isLoadEnvelope && Array.isArray(jsonData.typesDisponibles)) {
+            typesChampsDisponibles = jsonData.typesDisponibles
+                .filter(t => t && typeof t === 'object' && t.code && t.libelle)
+                .map(t => ({
+                    code: String(t.code),
+                    libelle: String(t.libelle)
+                }));
+            if (DEBUG) console.log('loadFromWebDev: typesDisponibles reçus -', typesChampsDisponibles.length, 'entrées');
+        }
+
+        // V3.5 - Lire le verrouillage global de la gestion des champs.
+        //        Valeur par défaut : Vrai (compat ascendante quand le flag est
+        //        absent — versions antérieures du contrat WebDev).
+        //        Cf. cahier des charges V2.3 §5.2.
+        if (isLoadEnvelope) {
+            const raw = jsonData.autoriserGestionChamps;
+            if (raw === undefined || raw === null) {
+                autoriserGestionChamps = true; // défaut
+            } else {
+                // Booléen, accepter aussi les chaînes "Vrai"/"Faux"/"true"/"false" pour robustesse
+                autoriserGestionChamps = (
+                    raw === true || raw === 1 || raw === '1' ||
+                    raw === 'Vrai' || raw === 'true' || raw === 'True'
+                );
+            }
+            if (DEBUG) console.log('loadFromWebDev: autoriserGestionChamps =', autoriserGestionChamps);
+        }
+
         // Appliquer les limites ZIP si fournies dans l'enveloppe
         if (isLoadEnvelope && jsonData.limites && typeof jsonData.limites === 'object') {
             const lim = jsonData.limites;
@@ -23379,6 +25326,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         /** @type {DocumentJsonWebDev} */
         let effectiveDocumentJson = documentJson;
+
+        // V3.4 - Substitution post-mapping : avant tout rendu de zones, on
+        //        détecte les champs précédemment créés dans le Designer
+        //        (localId conservé) qui ont reçu un nom technique côté SaaS,
+        //        et on substitue toutes les références @LOCAL_<localId>@
+        //        → @<nom>@ dans le JSON entrant. Cf. cahier §4.2 et §7.6.
+        try {
+            const localIdMap = buildLocalIdToNomMap(effectiveDocumentJson.champsFusion);
+            if (localIdMap.size > 0) {
+                const subCount = applyPostMappingSubstitutions(effectiveDocumentJson, localIdMap);
+                if (DEBUG && subCount > 0) {
+                    console.log(`loadFromWebDev: substitution post-mapping — ${subCount} occurrence(s) @LOCAL_xxx@ → @nom@ remplacée(s) sur ${localIdMap.size} mapping(s)`);
+                }
+            }
+        } catch (e) {
+            console.warn('⚠️ loadFromWebDev: échec substitution post-mapping', e);
+        }
 
         // Quitter l'aperçu avant de détruire les zones (chargement d'un nouveau document)
         if (previewState && previewState.active) {
@@ -23435,6 +25399,15 @@ document.addEventListener('DOMContentLoaded', () => {
         computeFondPerduOffset();
         
         // Stocker les champs de fusion disponibles et mettre à jour l'UI
+        // V3.4 - On préserve désormais les propriétés `localId` et
+        //        `echantillonDefaut` portées par les champs (assignation
+        //        directe : pas de filtrage, donc transparent).
+        // V2.4 - Normalisation des propriétés `origine` et `categorie`
+        //        (cf. cahier V2.4 §3.1 + amendement §1.4) :
+        //          - Tout champ reçu du load = origine "import" (forcé).
+        //          - `categorie` déduite par recherche dans champsStandard
+        //            si absente.
+        //        Appliqué via normalizeOriginAndCategoryFromLoad().
         if (champsFusionInterdit) {
             documentState.champsFusion = [];
             mergeFields = [];
@@ -23443,10 +25416,90 @@ document.addEventListener('DOMContentLoaded', () => {
             updatePreviewButtonState();
         } else if (effectiveDocumentJson.champsFusion && Array.isArray(effectiveDocumentJson.champsFusion) && effectiveDocumentJson.champsFusion.length > 0) {
             documentState.champsFusion = effectiveDocumentJson.champsFusion;
-            mergeFields = effectiveDocumentJson.champsFusion;
+            normalizeOriginAndCategoryFromLoad(documentState.champsFusion);
+            mergeFields = documentState.champsFusion;
             updateMergeFieldsUI(mergeFields);
         } else {
+            // V3.4 - Mode template sans base : champsFusion peut arriver vide
+            //        (option A du Q4). On reset proprement documentState pour
+            //        éviter de garder en mémoire les champs d'un document
+            //        précédent (cas reload sur un autre modèle).
+            documentState.champsFusion = [];
+            mergeFields = [];
+            updateMergeFieldsUI([]);
         }
+
+        // V3.4 - (Re)configurer le résolveur d'affichage des pastilles Quill
+        //        merge-tag pour qu'elles affichent le LIBELLÉ du champ
+        //        (cf. cahier §7.8). Source de vérité primaire :
+        //        documentState.champsFusion.
+        //        Lookup par `nom` ou par `localId` (clé "LOCAL_<localId>").
+        //
+        // L18/A38 — Piste 3 : Fallbacks pour les pastilles SYS et standards
+        //        en CRÉATION PURE (Option C).
+        //        Quand champsFusion est vide (création pure validée), les
+        //        pastilles du pavé adresse système (@Civilite@, @Nom@,
+        //        @Prenom@, @Adresse1-4@, @CodePostal@, @Ville@, @Pays@,
+        //        @Sequentiel@, @Timbre@) ne trouvent pas leur libellé dans
+        //        champsFusion. On ajoute deux fallbacks :
+        //         (1) Recherche dans champsStandardDisponibles (les 18 champs
+        //             standards envoyés par la SaaS dans jsonData.champsStandard
+        //             via RemplirDesignerChampsStandard.txt) → libellés pour
+        //             Civilite, Nom, Prenom, Adresse1-4, CodePostal, Ville,
+        //             Pays, Tel, Email, etc.
+        //         (2) Table SYS canonique hardcodée (Sequentiel, Timbre) →
+        //             valeurs identiques à RemplirDesignerChampsFusion.txt
+        //             lignes 33-43 (contrat historique).
+        //
+        //        Ces fallbacks ne sont consultés QUE si champsFusion ne
+        //        contient pas la clé. En mode modèle, champsFusion contient
+        //        tous les champs nécessaires (SYS + champs modèle) → les
+        //        fallbacks ne sont jamais atteints (non-régression).
+        //
+        //        Les clés LOCAL_xxx ne passent PAS par les fallbacks (elles
+        //        n'existent que via champsFusion — un LOCAL_xxx absent de
+        //        champsFusion est une anomalie réelle qui mérite d'afficher
+        //        la clé brute pour debug).
+        setMergeTagDisplayResolver((key) => {
+            const cleanKey = String(key || '').replace(/\u00A0/g, ' ');
+            const champs = documentState.champsFusion || [];
+            // Cas 1 : clé locale "LOCAL_<localId>" (champ non encore mappé)
+            if (cleanKey.startsWith('LOCAL_')) {
+                const localId = cleanKey.substring('LOCAL_'.length);
+                const f = champs.find(c => c && c.localId === localId);
+                if (f && f.libelle) return f.libelle;
+                // Pas de fallback pour LOCAL_xxx : absence = anomalie.
+                if (DEBUG) {
+                    console.warn(`⚠️ MergeTag: libellé LOCAL_xxx introuvable pour la clé "${cleanKey}" — fallback sur clé brute`);
+                }
+                return `@${cleanKey}@`;
+            }
+
+            // Cas 2 : clé technique normale (champ mappé)
+            const f = champs.find(c => c && c.nom === cleanKey);
+            if (f && f.libelle) return f.libelle;
+
+            // L18/A38 Fallback 1 : recherche dans champsStandardDisponibles
+            //   (variable IIFE, peuplée par loadFromWebDev depuis
+            //   jsonData.champsStandard ; 18 entrées standards SaaS).
+            if (Array.isArray(champsStandardDisponibles)) {
+                const std = champsStandardDisponibles.find(s => s && s.nom === cleanKey);
+                if (std && std.libelle) return std.libelle;
+            }
+
+            // L18/A38 Fallback 2 : table SYS canonique hardcodée
+            //   (identique à RemplirDesignerChampsFusion.txt lignes 33-43,
+            //    et aux blocs défensifs L18/A38 v2 dans
+            //    SelectionModèle.txt / btnDocumentPersonnaliser.txt).
+            if (cleanKey === 'Sequentiel') return 'Séquentiel';
+            if (cleanKey === 'Timbre') return 'Affranchissement';
+
+            // Fallback de sécurité §7.8.5 : afficher la clé brute
+            if (DEBUG) {
+                console.warn(`⚠️ MergeTag: libellé introuvable pour la clé "${cleanKey}" — fallback sur clé brute`);
+            }
+            return `@${cleanKey}@`;
+        });
 
         // Stocker les données d'aperçu (échantillons de la base de données)
         if (!champsFusionInterdit) {
@@ -23464,8 +25517,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Mettre à jour l'état du bouton aperçu
                 updatePreviewButtonState();
             } else {
-                // Utiliser les données fictives par défaut si aucune donnée WebDev
-                initDefaultPreviewData();
+                // L8 / A16 - Audit complet des sources de placeholders.
+                //   ⚠️ NE PAS injecter `DEFAULT_PREVIEW_DATA` ici : ces
+                //   valeurs « Acme Corporation », « jean.dupont@acme.com »…
+                //   sont des données de DÉMO standalone (ouverture directe
+                //   de index.html hors WebDev). Quand on est dans le contexte
+                //   WebDev (`isWebDevContext`) sans `donneesApercu` envoyé,
+                //   l'algorithme `resolveEchantillonValue` doit retomber sur
+                //   `placeholderDefaut` (envoyé par la SaaS via
+                //   `champsStandardDisponibles`) puis sur le placeholder
+                //   par type (`PLACEHOLDERS_PAR_TYPE`). Pas de pollution
+                //   par la table de démo.
+                documentState.donneesApercu = [];
             }
         }
 
@@ -23689,8 +25752,27 @@ document.addEventListener('DOMContentLoaded', () => {
         // Charger et afficher la page courante (crée les zones dans le DOM)
         loadCurrentPage();
 
+        // ⚠️ L11/A21 - Scan POST-load des champs exploités. Indispensable :
+        //   `updateMergeFieldsUI(mergeFields)` a été appelée plus haut
+        //   (~ligne 25325) AVANT que `documentState.pages` soit peuplé
+        //   (ligne ~25422) et AVANT `loadCurrentPage` ci-dessus. Le scan
+        //   embarqué dans updateMergeFieldsUI a donc trouvé un documentState
+        //   vide → champsExploites resterait vide → tous les champs verraient
+        //   leur statut « non exploité » à tort → popup d'alerte de
+        //   désalignement jamais déclenchée. On force ici un rebuild + refresh
+        //   visuel maintenant que tout est en place.
+        try {
+            if (typeof notifyChampsExploitesMayHaveChanged === 'function') {
+                notifyChampsExploitesMayHaveChanged();
+            }
+        } catch (e) { /* defensive */ }
+
         refreshChampsFusionInterditControls();
-        updateToolbarDataVisibility();
+        // L9 / D14 - Chargement initial : évaluer (et non simple synchro).
+        //   En pratique intent=false au boot → popup fermée. Mais en cas de
+        //   re-load (action utilisateur en cours), il faut respecter la
+        //   doctrine selon intent + sélection courante.
+        evaluateFieldsPopupForSelection();
         updateZoneButtonsVisibility();
         updateSidebarSectionsVisibility();
         if (champsFusionInterdit && fusionBindingsStripped) {
@@ -24379,6 +26461,162 @@ document.addEventListener('DOMContentLoaded', () => {
      * // → { formatDocument: {...}, zonesTexte: [...], zonesCodeBarres: [...], zonesImage: [...] }
      * window.parent.postMessage({ type: 'DESIGNER_EXPORT', data: jsonWebDev }, '*');
      */
+
+    /**
+     * V3.4 - Sérialise les champs de fusion pour l'export en préservant
+     * uniquement les propriétés du contrat WebDev (nom, libelle, type, ordre,
+     * localId, echantillonDefaut). Évite d'envoyer des propriétés internes
+     * Designer (ex: flags d'UI temporaires).
+     *
+     * @param {Array} champs - documentState.champsFusion
+     * @returns {Array}
+     */
+    function buildChampsFusionForExport(champs) {
+        if (!Array.isArray(champs)) return [];
+        return champs.map(c => {
+            const out = {
+                nom: typeof c.nom === 'string' ? c.nom : '',
+                libelle: typeof c.libelle === 'string' ? c.libelle : '',
+                type: typeof c.type === 'string' ? c.type : 'TXT',
+                ordre: typeof c.ordre === 'number' ? c.ordre : 0
+            };
+            // localId : présent uniquement pour les champs créés dans le Designer
+            // (mappés ou non). On l'exporte si non vide pour permettre la
+            // traçabilité côté SaaS et le rapprochement à la prochaine
+            // ré-ouverture (cf. §4.2 du cahier).
+            if (typeof c.localId === 'string' && c.localId.trim()) {
+                out.localId = c.localId.trim();
+            }
+            // echantillonDefaut : optionnel, présent si saisi par l'utilisateur
+            // dans la modale d'ajout/édition.
+            if (typeof c.echantillonDefaut === 'string' && c.echantillonDefaut.length > 0) {
+                out.echantillonDefaut = c.echantillonDefaut;
+            }
+            // V2.4 - origine : "import" ou "ajout" (cf. cahier V2.4 §3.1).
+            //        Sémantique différente de V3.5 — V3.6 propre.
+            //        Exporté si renseignée pour traçabilité côté SaaS.
+            //        Note : à la ré-ouverture, normalizeOriginAndCategoryFromLoad
+            //        force "import" pour TOUS les champs reçus (doctrine V2.4).
+            //        Donc même si on exporte "ajout", la SaaS lira "ajout"
+            //        au save mais le Designer le verra "import" à la
+            //        prochaine ouverture — c'est INTENTIONNEL : un champ
+            //        ajouté lors d'une session devient un champ importé du
+            //        modèle à la session suivante.
+            if (c.origine === 'import' || c.origine === 'ajout') {
+                out.origine = c.origine;
+            }
+            // V2.4 - categorie : "standard" ou "specifique" (cf. cahier V2.4 §4).
+            //        Sert au choix de l'onglet en édition. Exporté pour éviter
+            //        la déduction heuristique à la ré-ouverture.
+            if (c.categorie === 'standard' || c.categorie === 'specifique') {
+                out.categorie = c.categorie;
+            }
+            // L18/A37 - presenteEnBase (V3.7) : NON exportée.
+            //   Régression L18/A36 : la valeur false figée en régime B
+            //   (champ absent d'une base précédente) était persistée puis
+            //   ressortait à la réouverture en régime A → faux positif
+            //   « champ rouge » alors qu'il n'y avait plus de base.
+            //
+            //   Doctrine : `presenteEnBase` est VOLATILE, recalculée à
+            //   chaque ouverture par l'étape B côté SaaS
+            //   (SelectionModèle / btnDocumentPersonnaliser) :
+            //     - Régime B (avec base) : étape B fixe presenteEnBase
+            //       à Vrai/Faux selon présence du libellé dans
+            //       taaBaseChamp. Valeur fraîche garantie.
+            //     - Régime A (sans base) : étape B non exécutée
+            //       → presenteEnBase absente → detecterRegimeChamps
+            //       côté Designer retourne 'A' → couleur neutre.
+            //
+            //   La valeur transmise par le Designer à la validation est
+            //   donc redondante avec ce que la SaaS recalcule à la
+            //   prochaine ouverture. On l'omet pour éviter toute
+            //   persistance résiduelle.
+            //
+            //   ⚠️ Ne PAS confondre avec injecteParBase ci-dessous, qui
+            //   lui DOIT transiter pour permettre la purge des colonnes
+            //   base par la PARTIE 3 côté ServeurTraiterMessageDesigner.
+
+            // L18/A36 - injecteParBase (L18/A34) : marqueur CHAÎNE "1" posé
+            //   par l'étape C côté SaaS sur les colonnes base injectées
+            //   (volatiles). DOIT être préservé à l'export pour que la
+            //   PARTIE 3 côté ServeurTraiterMessageDesigner puisse les
+            //   purger AVANT stockage dans JsonDesignerData. Sans ce fix,
+            //   les colonnes base se retrouvent persistées dans le document
+            //   du tunnel et resurgissent à la réouverture sans base.
+            //
+            //   Critère STRICT : recopier UNIQUEMENT si valeur === "1"
+            //   (chaîne). Les champs du modèle qui n'ont JAMAIS cet
+            //   attribut ne reçoivent rien → pas de pollution → pas de
+            //   purge erronée par PARTIE 2/3 (cf. régression L18/A34
+            //   résolue par L18/A35 côté WebDev).
+            if (c.injecteParBase === '1') {
+                out.injecteParBase = '1';
+            }
+            return out;
+        });
+    }
+
+    /**
+     * V3.4 - Sérialise les données d'aperçu pour l'export au format WebDev
+     * (`{enregistrement: [{nom, valeur}, ...]}`), en injectant pour les champs
+     * non mappés (`nom = ""` + `localId` rempli) leur `echantillonDefaut` sous
+     * la clé `LOCAL_<localId>` dans chaque enregistrement. Cf. §8.3 du cahier.
+     *
+     * Format interne `donneesApercu` côté Designer (objet plat) :
+     *   [ { CIVILITE: "M.", PRENOM: "Jean", LOCAL_a1b2c3: "Bleu", ... }, ... ]
+     * Format WebDev export :
+     *   [ { enregistrement: [{nom: "CIVILITE", valeur: "M."}, ...] }, ... ]
+     *
+     * @param {Array<Object>} donneesApercu - documentState.donneesApercu
+     * @param {Array} champsFusion - documentState.champsFusion
+     * @returns {Array<{enregistrement: Array<{nom: string, valeur: string}>}>}
+     */
+    function buildDonneesApercuForExport(donneesApercu, champsFusion) {
+        const champs = Array.isArray(champsFusion) ? champsFusion : [];
+        // Pré-calculer les echantillonDefaut indexés par leur clé d'export
+        // (nom technique si mappé, sinon LOCAL_<localId>).
+        /** @type {Map<string, string>} */
+        const defaults = new Map();
+        champs.forEach(c => {
+            if (!c || typeof c !== 'object') return;
+            const ech = (typeof c.echantillonDefaut === 'string') ? c.echantillonDefaut : '';
+            if (!ech) return;
+            const cle = (typeof c.nom === 'string' && c.nom.trim())
+                ? c.nom
+                : (typeof c.localId === 'string' && c.localId.trim() ? `LOCAL_${c.localId.trim()}` : '');
+            if (cle) defaults.set(cle, ech);
+        });
+
+        const records = Array.isArray(donneesApercu) ? donneesApercu : [];
+        // S'il n'y a pas d'enregistrements et qu'on a au moins un
+        // echantillonDefaut, créer une ligne unique pour les transporter.
+        const sourceRecords = (records.length > 0)
+            ? records
+            : (defaults.size > 0 ? [{}] : []);
+
+        return sourceRecords.map(record => {
+            /** @type {Array<{nom: string, valeur: string}>} */
+            const enregistrement = [];
+            const seen = new Set();
+
+            // 1) Reprendre les valeurs existantes du record
+            if (record && typeof record === 'object') {
+                Object.entries(record).forEach(([nom, valeur]) => {
+                    enregistrement.push({ nom: String(nom), valeur: String(valeur ?? '') });
+                    seen.add(String(nom));
+                });
+            }
+            // 2) Compléter avec les echantillonDefaut absents
+            defaults.forEach((valeur, cle) => {
+                if (!seen.has(cle)) {
+                    enregistrement.push({ nom: cle, valeur: String(valeur) });
+                }
+            });
+
+            return { enregistrement };
+        });
+    }
+
     function exportToWebDev() {
         
         // --- ÉTAPE 1 : Synchroniser les positions DOM → documentState ---
@@ -24429,7 +26667,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 ...(documentState.formatDocument?.formatPapierLargeurMm > 0 && { formatPapierLargeurMm: documentState.formatDocument.formatPapierLargeurMm }),
                 ...(documentState.formatDocument?.formatPapierHauteurMm > 0 && { formatPapierHauteurMm: documentState.formatDocument.formatPapierHauteurMm })
             },
-            champsFusion: documentState.champsFusion || [],
+            // V3.4 - champsFusion exporté tel quel (préserve nom, libelle, type,
+            //        ordre, ainsi que les nouvelles propriétés localId et
+            //        echantillonDefaut pour les champs créés dans le Designer).
+            //        Les champs non mappés ont nom = "" + localId rempli — c'est
+            //        le signal pour ServeurTraiterMessageDesigner qu'un mapping
+            //        reste à faire (cf. cahier §8.3).
+            champsFusion: buildChampsFusionForExport(documentState.champsFusion),
+            // V3.4 - donneesApercu exporté avec injection des echantillonDefaut
+            //        des champs non mappés sous la clé "LOCAL_<localId>" dans
+            //        chaque enregistrement (cf. cahier §8.2/§8.3).
+            donneesApercu: buildDonneesApercuForExport(documentState.donneesApercu, documentState.champsFusion),
             pages: [],
             zonesTexte: [],
             zonesQR: [],
@@ -27642,6 +29890,1390 @@ document.addEventListener('DOMContentLoaded', () => {
                 applyLimits();
             }
         });
+    })();
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SECTION 26 : MODALE "AJOUTER / ÉDITER UN CHAMP DE FUSION" (V3.4 - L4 UI)
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // Cf. docs/cahier_des_charges_creation_champs_fusion.md V2.2 §7.
+    // Câble :
+    //   - le bouton "+ Ajouter un champ" (#btn-add-champ-fusion) au-dessus du panneau
+    //   - les actions inline crayon/poubelle dans .merge-tag (rendues par
+    //     updateMergeFieldsUI ci-dessous)
+    //   - la modale (#champ-fusion-modal) avec 2 onglets Standard / Spécifique
+    //   - la modale de confirmation suppression (#champ-delete-modal)
+    //   - la modale de garde-fou "ajouter le standard à la place" (#champ-standard-suggest-modal)
+    //
+    // Dépendances (helpers exposés par L2/L3) :
+    //   - documentState.champsFusion / .donneesApercu
+    //   - getChampsStandardDisponibles() / getTypesChampsDisponibles()
+    //   - generateLocalId()
+    //   - refreshMergeTagsInAllZones() (pour répercuter une édition de libellé
+    //     sur les pastilles déjà insérées dans Quill)
+    //   - mergeFields (variable du panneau)
+    //   - updateMergeFieldsUI() (re-render du panneau après modification)
+    //   - champsFusionInterdit (flag global)
+    //   - saveToLocalStorage(), saveState()
+    // ═══════════════════════════════════════════════════════════════════════════════
+    (function setupChampFusionModal() {
+        // ─── Références DOM ──────────────────────────────────────────────
+        const btnAdd               = document.getElementById('btn-add-champ-fusion');
+        const modal                = document.getElementById('champ-fusion-modal');
+        const modalTitle           = document.getElementById('champ-fusion-modal-title');
+        const closeBtn             = document.getElementById('champ-fusion-close-btn');
+        const cancelBtn            = document.getElementById('champ-fusion-cancel-btn');
+        const confirmBtn           = document.getElementById('champ-fusion-confirm-btn');
+        const tabStandard          = document.getElementById('champ-fusion-tab-standard');
+        const tabSpecifique        = document.getElementById('champ-fusion-tab-specifique');
+        const paneStandard         = document.getElementById('champ-fusion-pane-standard');
+        const paneSpecifique       = document.getElementById('champ-fusion-pane-specifique');
+        const standardSearch       = document.getElementById('champ-fusion-standard-search');
+        const standardList         = document.getElementById('champ-fusion-standard-list');
+        const standardEmpty        = document.getElementById('champ-fusion-standard-empty');
+        const inputLibelle         = document.getElementById('champ-fusion-libelle');
+        const counterLibelle       = document.getElementById('champ-fusion-libelle-counter');
+        const errorLibelle         = document.getElementById('champ-fusion-libelle-error');
+        const selectType           = document.getElementById('champ-fusion-type');
+        const inputEchantillon     = document.getElementById('champ-fusion-echantillon');
+        const hintEchantillon      = document.getElementById('champ-fusion-echantillon-hint');
+        const errorEchantillon     = document.getElementById('champ-fusion-echantillon-error');
+        const mappedInfo           = document.getElementById('champ-fusion-mapped-info');
+
+        // Modale de confirmation suppression
+        const deleteModal          = document.getElementById('champ-delete-modal');
+        const deleteLibelleEl      = document.getElementById('champ-delete-libelle');
+        const deleteOccurrencesEl  = document.getElementById('champ-delete-occurrences');
+        const deleteCancelBtn      = document.getElementById('champ-delete-cancel-btn');
+        const deleteConfirmBtn     = document.getElementById('champ-delete-confirm-btn');
+
+        // Modale "ajouter le standard à la place ?"
+        const suggestModal         = document.getElementById('champ-standard-suggest-modal');
+        const suggestLibelleEl     = document.getElementById('champ-standard-suggest-libelle');
+        const suggestCancelBtn     = document.getElementById('champ-standard-suggest-cancel-btn');
+        const suggestConfirmBtn    = document.getElementById('champ-standard-suggest-confirm-btn');
+
+        // Sécurité : si un élément critique est absent, abandonner silencieusement
+        // (HTML modifié de manière incompatible).
+        if (!btnAdd || !modal || !inputLibelle || !selectType) {
+            console.warn('[champ-fusion-modal] HTML incomplet, modale désactivée.');
+            return;
+        }
+
+        // ─── État local de la modale ─────────────────────────────────────
+        const LIBELLE_MAX_LENGTH = 35;
+        const LIBELLE_REGEX = /^[\p{L}\p{N} _\-]+$/u;
+
+        /** @type {{ mode: 'create'|'edit', tab: 'standard'|'specifique',
+         *           editLocalId: string|null, editNom: string|null,
+         *           selectedStandard: {nom:string,libelle:string,type:string}|null }} */
+        let state = {
+            mode: 'create',
+            tab: 'standard',
+            editLocalId: null,
+            editNom: null,
+            selectedStandard: null
+        };
+
+        /** Champ en cours de suppression (state séparé). */
+        let pendingDeleteChamp = null;
+        /** Suggestion standard en attente de réponse (state séparé). */
+        let pendingSuggest = null;
+
+        // ─── Utilitaires métier ──────────────────────────────────────────
+
+        /**
+         * Trouve un champ dans documentState.champsFusion par localId ou par nom.
+         * @returns {Object|null}
+         */
+        function findChamp({ localId, nom }) {
+            const champs = (documentState && Array.isArray(documentState.champsFusion))
+                ? documentState.champsFusion : [];
+            if (localId) {
+                const f = champs.find(c => c && c.localId === localId);
+                if (f) return f;
+            }
+            if (nom) {
+                const f = champs.find(c => c && c.nom === nom);
+                if (f) return f;
+            }
+            return null;
+        }
+
+        /**
+         * Détermine si un champ est mappé (nom technique non vide).
+         */
+        function isMapped(champ) {
+            return !!(champ && typeof champ.nom === 'string' && champ.nom.trim().length > 0);
+        }
+
+        /**
+         * Résout la "clé d'insertion" d'un champ pour rechercher des occurrences
+         * dans le contenu (quillDelta blots, source.champFusion, etc.).
+         * - Mappé → nom technique
+         * - Non mappé → "LOCAL_<localId>"
+         */
+        function resolveChampKey(champ) {
+            if (!champ) return '';
+            if (isMapped(champ)) return champ.nom;
+            if (champ.localId) return `LOCAL_${champ.localId}`;
+            return '';
+        }
+
+        /**
+         * Compte les occurrences d'un champ dans tout le document, par catégorie.
+         * Utilisé pour la modale de confirmation suppression (cf. cahier §7.5.1).
+         * @returns {{texte: number, image: number, barcode: number, qr: number, total: number}}
+         */
+        function countOccurrencesInDocument(champ) {
+            const result = { texte: 0, image: 0, barcode: 0, qr: 0, total: 0 };
+            if (!champ || !documentState || !Array.isArray(documentState.pages)) return result;
+            const key = resolveChampKey(champ);
+            if (!key) return result;
+            const cleanKey = key.replace(/\u00A0/g, ' ');
+
+            documentState.pages.forEach(page => {
+                const zones = (page && page.zones) || {};
+                Object.values(zones).forEach(z => {
+                    if (!z) return;
+                    if (z.type === 'textQuill') {
+                        // Compter les blots merge-tag avec cette clé
+                        const ops = z.quillDelta && Array.isArray(z.quillDelta.ops) ? z.quillDelta.ops : [];
+                        for (const op of ops) {
+                            if (isMergeTagOp(op)) {
+                                if (mergeTagOpKey(op) === cleanKey) result.texte++;
+                            } else if (typeof op.insert === 'string') {
+                                // Cas rétrocompat : @KEY@ texte brut dans le contenu
+                                const re = new RegExp(`@${cleanKey.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}@`, 'g');
+                                const matches = op.insert.match(re);
+                                if (matches) result.texte += matches.length;
+                            }
+                        }
+                    } else if (z.type === 'image') {
+                        if (z.source && z.source.type === 'champ' && z.source.champFusion === cleanKey) {
+                            result.image++;
+                        }
+                    } else if (z.type === 'barcode') {
+                        if (z.sourceType === 'champ' && z.champFusion === cleanKey) {
+                            result.barcode++;
+                        }
+                        // qrConfig.fields[*] : recherche regex
+                        if (z.qrConfig && z.qrConfig.fields) {
+                            const fields = (typeof z.qrConfig.fields === 'object') ? z.qrConfig.fields : {};
+                            Object.values(fields).forEach(v => {
+                                if (typeof v === 'string' && v.indexOf(`@${cleanKey}@`) !== -1) {
+                                    result.qr++;
+                                }
+                            });
+                        }
+                    } else if (z.type === 'qr' && typeof z.content === 'string') {
+                        if (z.content.indexOf(`@${cleanKey}@`) !== -1) {
+                            result.qr++;
+                        }
+                    }
+                });
+            });
+
+            result.total = result.texte + result.image + result.barcode + result.qr;
+            return result;
+        }
+
+        /**
+         * Purge toutes les références à un champ dans le document :
+         *   - retire les blots merge-tag du quillDelta de chaque zone texte
+         *   - dé-bind les zones image/barcode liées (sourceType ou source.type → 'fixe')
+         *   - supprime les @KEY@ texte brut éventuels
+         *   - nettoie les qrConfig.fields[*]
+         *   - retire les entrées correspondantes dans documentState.donneesApercu
+         */
+        function purgeChampReferences(champ) {
+            if (!champ || !documentState) return;
+            const key = resolveChampKey(champ);
+            if (!key) return;
+            const cleanKey = key.replace(/\u00A0/g, ' ');
+            const reTag = new RegExp(`@${cleanKey.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}@`, 'g');
+
+            (documentState.pages || []).forEach(page => {
+                const zones = (page && page.zones) || {};
+                Object.entries(zones).forEach(([zoneId, z]) => {
+                    if (!z) return;
+                    if (z.type === 'textQuill') {
+                        if (z.quillDelta && Array.isArray(z.quillDelta.ops)) {
+                            const newOps = z.quillDelta.ops
+                                .filter(op => !(isMergeTagOp(op) && mergeTagOpKey(op) === cleanKey))
+                                .map(op => {
+                                    if (typeof op.insert === 'string' && op.insert.indexOf(`@${cleanKey}@`) !== -1) {
+                                        return { ...op, insert: op.insert.replace(reTag, '') };
+                                    }
+                                    return op;
+                                })
+                                .filter(op => !(typeof op.insert === 'string' && op.insert === ''));
+                            z.quillDelta = { ops: newOps };
+                            // Recalculer content via quillDeltaToTextAndFormatage
+                            try {
+                                const conv = quillDeltaToTextAndFormatage(z.quillDelta);
+                                z.content = conv.contenu;
+                            } catch (e) { /* ignore */ }
+                            // Si l'instance Quill existe à l'écran, recharger son contenu
+                            const qi = (typeof quillInstances !== 'undefined' && quillInstances)
+                                ? quillInstances.get(zoneId) : null;
+                            if (qi && typeof qi.setContents === 'function') {
+                                try { qi.setContents(z.quillDelta, 'silent'); } catch (e) {}
+                            }
+                        }
+                    } else if (z.type === 'image') {
+                        if (z.source && z.source.type === 'champ' && z.source.champFusion === cleanKey) {
+                            z.source.type = 'fixe';
+                            z.source.champFusion = '';
+                            z.source.valeur = '';
+                            z.source.collectionId = null;
+                            z.source.urlBase = '';
+                        }
+                    } else if (z.type === 'barcode') {
+                        if (z.sourceType === 'champ' && z.champFusion === cleanKey) {
+                            z.sourceType = 'fixe';
+                            z.champFusion = '';
+                        }
+                        if (z.qrConfig && z.qrConfig.fields && typeof z.qrConfig.fields === 'object') {
+                            Object.keys(z.qrConfig.fields).forEach(k => {
+                                const v = z.qrConfig.fields[k];
+                                if (typeof v === 'string' && v.indexOf(`@${cleanKey}@`) !== -1) {
+                                    z.qrConfig.fields[k] = v.replace(reTag, '');
+                                }
+                            });
+                        }
+                    } else if (z.type === 'qr' && typeof z.content === 'string') {
+                        if (z.content.indexOf(`@${cleanKey}@`) !== -1) {
+                            z.content = z.content.replace(reTag, '');
+                        }
+                    }
+                });
+            });
+
+            // Nettoyer donneesApercu
+            if (Array.isArray(documentState.donneesApercu)) {
+                documentState.donneesApercu.forEach(record => {
+                    if (record && typeof record === 'object' && record[cleanKey] !== undefined) {
+                        delete record[cleanKey];
+                    }
+                });
+            }
+        }
+
+        /**
+         * Propage la valeur echantillonDefaut d'un champ dans toutes les lignes de
+         * documentState.donneesApercu (sous la clé d'export = nom OU LOCAL_<id>).
+         * Permet à l'aperçu de fusion de l'utiliser immédiatement après création.
+         */
+        function propagateEchantillonDefaut(champ) {
+            if (!champ || !documentState) return;
+            const key = resolveChampKey(champ);
+            if (!key) return;
+            const cleanKey = key.replace(/\u00A0/g, ' ');
+            const valeur = (typeof champ.echantillonDefaut === 'string') ? champ.echantillonDefaut : '';
+
+            if (!Array.isArray(documentState.donneesApercu)) {
+                documentState.donneesApercu = [];
+            }
+            // Si pas encore de records, en créer un (pour transporter l'échantillon)
+            if (documentState.donneesApercu.length === 0) {
+                documentState.donneesApercu.push({});
+            }
+            documentState.donneesApercu.forEach(record => {
+                if (!record || typeof record !== 'object') return;
+                // Mettre à jour seulement si pas déjà présent OU si la valeur est vide
+                // (on ne veut pas écraser des données réelles d'échantillon BDD).
+                if (record[cleanKey] === undefined || record[cleanKey] === '' || record[cleanKey] === null) {
+                    record[cleanKey] = valeur;
+                }
+            });
+        }
+
+        // ─── Validation libellé ──────────────────────────────────────────
+
+        /**
+         * Valide le libellé saisi (cf. cahier §7.4).
+         * @returns {{ok: true}|{ok: false, error: string, suggestStandard?: Object}}
+         */
+        function validateLibelle(rawLibelle, currentChamp) {
+            const libelle = String(rawLibelle || '').trim();
+            if (!libelle) {
+                return { ok: false, error: 'Le libellé est obligatoire.' };
+            }
+            if (libelle.length > LIBELLE_MAX_LENGTH) {
+                return { ok: false, error: `Maximum ${LIBELLE_MAX_LENGTH} caractères.` };
+            }
+            if (!LIBELLE_REGEX.test(libelle)) {
+                return { ok: false, error: 'Caractères autorisés : lettres, chiffres, espaces, tirets et underscores.' };
+            }
+            // Unicité (insensible à la casse) hors champ en cours d'édition
+            const champs = (documentState && Array.isArray(documentState.champsFusion))
+                ? documentState.champsFusion : [];
+            const lower = libelle.toLowerCase();
+            const conflict = champs.find(c => {
+                if (!c || c === currentChamp) return false;
+                return (c.libelle || '').toLowerCase() === lower;
+            });
+            if (conflict) {
+                return { ok: false, error: 'Ce libellé est déjà utilisé par un autre champ.' };
+            }
+            // Garde-fou : suggérer le standard équivalent (cf. §7.4)
+            const standards = (typeof getChampsStandardDisponibles === 'function')
+                ? getChampsStandardDisponibles() : [];
+            const standardMatch = standards.find(s => (s.libelle || '').toLowerCase() === lower);
+            if (standardMatch) {
+                // Vérifier qu'il n'est pas déjà inséré (sinon le doublon est déjà bloqué ci-dessus)
+                const alreadyInserted = champs.some(c => c && c.nom === standardMatch.nom);
+                if (!alreadyInserted) {
+                    return { ok: true, suggestStandard: standardMatch };
+                }
+            }
+            return { ok: true };
+        }
+
+        // ─── Format/validation de l'échantillon par type ─────────────────
+        const ECHANTILLON_HINTS = {
+            'TXT': '',
+            'ENT': 'Entier (ex: 42)',
+            'DEC': 'Décimal avec virgule (ex: 1 234,56)',
+            'MON': 'Monétaire avec € (ex: 1 250,00 €)',
+            'DAT': 'Date au format JJ/MM/AAAA (ex: 15/06/2026)',
+            'TIM': 'Heure au format HH:MM (ex: 14:30)',
+            'EML': 'Email (ex: jean@example.com)',
+            'TEL': 'Téléphone français (ex: 01 23 45 67 89)',
+            'SMS': 'Portable français (ex: 06 12 34 56 78)',
+            'CDP': 'Code postal sur 5 chiffres (ex: 75009)',
+            'URL': 'URL complète (ex: https://example.com)',
+            'IMG': 'Pas de saisie (placeholder visuel à la génération)',
+            'ALG': 'Code Alliage La Poste (chaîne libre)'
+        };
+        const ECHANTILLON_VALIDATORS = {
+            'ENT': v => /^-?\d+$/.test(v) || 'Entier attendu (ex: 42).',
+            'DEC': v => /^-?\d{1,3}([ \u00A0]\d{3})*(,\d+)?$|^-?\d+(,\d+)?$/.test(v) || 'Décimal attendu (ex: 1 234,56).',
+            'MON': v => /^-?\d{1,3}([ \u00A0]\d{3})*(,\d+)?\s*(€)?$|^-?\d+(,\d+)?\s*(€)?$/.test(v) || 'Monétaire attendu (ex: 1 250,00 €).',
+            'DAT': v => {
+                const m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                if (!m) return 'Date attendue au format JJ/MM/AAAA.';
+                const d = parseInt(m[1], 10), mo = parseInt(m[2], 10), y = parseInt(m[3], 10);
+                const dt = new Date(y, mo - 1, d);
+                if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) {
+                    return 'Date invalide.';
+                }
+                return true;
+            },
+            'TIM': v => /^([01]\d|2[0-3]):[0-5]\d$/.test(v) || 'Heure attendue au format HH:MM.',
+            'EML': v => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v) || 'Email invalide.',
+            'TEL': v => {
+                const digits = v.replace(/[\s.\-]/g, '');
+                return /^0\d{9}$/.test(digits) || 'Téléphone français à 10 chiffres attendu.';
+            },
+            'SMS': v => {
+                const digits = v.replace(/[\s.\-]/g, '');
+                return /^0[67]\d{8}$/.test(digits) || 'Portable français (06/07) à 10 chiffres attendu.';
+            },
+            'CDP': v => /^\d{5}$/.test(v) || 'Code postal à 5 chiffres attendu.',
+            'URL': v => {
+                try { new URL(v); return true; } catch (e) { return 'URL invalide (incluez le schéma http(s)://).'; }
+            }
+            // TXT, IMG, ALG : pas de validation à la saisie
+        };
+
+        function validateEchantillon(value, type) {
+            const v = String(value || '').trim();
+            if (!v) return { ok: true }; // optionnel
+            if (type === 'IMG') return { ok: true }; // ignoré
+            const validator = ECHANTILLON_VALIDATORS[type];
+            if (!validator) return { ok: true };
+            const result = validator(v);
+            if (result === true) return { ok: true };
+            return { ok: false, error: typeof result === 'string' ? result : 'Format invalide pour ce type.' };
+        }
+
+        // ─── Rendu UI ────────────────────────────────────────────────────
+
+        function renderTypeOptions() {
+            if (!selectType) return;
+            const types = (typeof getTypesChampsDisponibles === 'function')
+                ? getTypesChampsDisponibles() : [];
+            // Fallback minimal si liste vide (cf. cahier §8.4)
+            const list = types.length > 0 ? types : [
+                { code: 'TXT', libelle: 'Texte' },
+                { code: 'IMG', libelle: 'Image' }
+            ];
+            selectType.innerHTML = list.map(t =>
+                `<option value="${escapeHtmlSafe(t.code)}">${escapeHtmlSafe(t.libelle)}</option>`
+            ).join('');
+        }
+
+        function renderChampStandardList(filter) {
+            if (!standardList) return;
+            const standards = (typeof getChampsStandardDisponibles === 'function')
+                ? getChampsStandardDisponibles() : [];
+            const champsExist = (documentState && Array.isArray(documentState.champsFusion))
+                ? documentState.champsFusion : [];
+            const filterLower = String(filter || '').trim().toLowerCase();
+
+            // V2.3 - A5 : MASQUER (au lieu de griser) les standards déjà
+            //        insérés. Si on est en mode édition d'un champ standard,
+            //        on garde quand même son propre item visible (pour le
+            //        contexte). On le détecte via state.editNom.
+            const insertedNoms = new Set(
+                champsExist
+                    .filter(c => c && typeof c.nom === 'string' && c.nom.trim())
+                    .map(c => c.nom)
+            );
+            const editNom = (state.mode === 'edit' && state.editNom) ? state.editNom : null;
+
+            const filtered = standards.filter(s => {
+                // Filtre A5 : masquer si déjà inséré (sauf le champ en cours d'édition)
+                if (insertedNoms.has(s.nom) && s.nom !== editNom) return false;
+                if (!filterLower) return true;
+                return (s.libelle || '').toLowerCase().includes(filterLower)
+                    || (s.nom || '').toLowerCase().includes(filterLower);
+            });
+
+            if (standards.length === 0 || filtered.length === 0) {
+                standardList.innerHTML = '';
+                if (standardEmpty) {
+                    standardEmpty.classList.remove('hidden');
+                    standardEmpty.textContent = standards.length === 0
+                        ? 'Aucun champ standard disponible.'
+                        : (insertedNoms.size > 0 && filterLower === '')
+                            ? 'Tous les champs standards sont déjà insérés.'
+                            : 'Aucun champ standard ne correspond à votre recherche.';
+                }
+                return;
+            }
+            if (standardEmpty) standardEmpty.classList.add('hidden');
+
+            standardList.innerHTML = filtered.map(s => {
+                // Le champ en cours d'édition apparaît en "selected" automatiquement
+                const isCurrent = (editNom !== null && s.nom === editNom);
+                return `
+                    <div class="champ-fusion-standard-item ${isCurrent ? 'selected' : ''}"
+                         data-nom="${escapeHtmlSafe(s.nom)}"
+                         data-libelle="${escapeHtmlSafe(s.libelle)}"
+                         data-type="${escapeHtmlSafe(s.type || 'TXT')}"
+                         role="option"
+                         title="Cliquer pour sélectionner">
+                        <span class="champ-fusion-standard-libelle">${escapeHtmlSafe(s.libelle)}</span>
+                        <span class="champ-fusion-standard-type">${escapeHtmlSafe(s.type || 'TXT')}</span>
+                    </div>
+                `;
+            }).join('');
+
+            // Reselect si toujours présent (cas changement de filtre)
+            if (state.selectedStandard) {
+                const sel = standardList.querySelector(`[data-nom="${cssEscape(state.selectedStandard.nom)}"]`);
+                if (sel) {
+                    sel.classList.add('selected');
+                }
+            }
+        }
+
+        function escapeHtmlSafe(s) {
+            return String(s || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+        function cssEscape(s) {
+            return String(s || '').replace(/[^\w-]/g, '\\$&');
+        }
+
+        function updateConfirmEnabled() {
+            // V2.3 - Verrouillage global : aucune action de gestion possible
+            if (!autoriserGestionChamps) {
+                confirmBtn.disabled = true;
+                return;
+            }
+            if (state.tab === 'standard') {
+                if (state.mode === 'edit') {
+                    // V2.3 - Édition d'un champ standard : on n'a pas besoin de
+                    //        selectedStandard, le bouton est toujours actif
+                    //        (seule la valeur d'échantillon peut être modifiée).
+                    confirmBtn.disabled = false;
+                } else {
+                    confirmBtn.disabled = !state.selectedStandard;
+                }
+            } else {
+                // Spécifique : libellé valide + type sélectionné.
+                // V2.4 - Si édition d'un champ d'origine "import", le libellé
+                //        est figé : on autorise le bouton car seule la valeur
+                //        d'échantillon est modifiée (et déjà validée à la volée).
+                const currentChamp = state.mode === 'edit'
+                    ? findChamp({localId: state.editLocalId, nom: state.editNom})
+                    : null;
+                if (currentChamp && isImportedChamp(currentChamp)) {
+                    confirmBtn.disabled = false;
+                } else {
+                    const v = validateLibelle(inputLibelle.value, currentChamp);
+                    confirmBtn.disabled = !v.ok;
+                }
+            }
+        }
+
+        function updateLibelleCounter() {
+            const len = inputLibelle.value.length;
+            counterLibelle.textContent = `${len} / ${LIBELLE_MAX_LENGTH}`;
+            counterLibelle.classList.toggle('over', len > LIBELLE_MAX_LENGTH);
+        }
+
+        function updateEchantillonHint(type) {
+            hintEchantillon.textContent = ECHANTILLON_HINTS[type] || '';
+            // Désactiver l'input pour le type IMG (placeholder visuel uniquement)
+            if (type === 'IMG') {
+                inputEchantillon.value = '';
+                inputEchantillon.disabled = true;
+                inputEchantillon.placeholder = '— pas de saisie pour le type Image —';
+            } else {
+                inputEchantillon.disabled = false;
+                inputEchantillon.placeholder = '';
+            }
+        }
+
+        function setTab(tab) {
+            state.tab = tab;
+            tabStandard.classList.toggle('active', tab === 'standard');
+            tabSpecifique.classList.toggle('active', tab === 'specifique');
+            paneStandard.classList.toggle('active', tab === 'standard');
+            paneSpecifique.classList.toggle('active', tab === 'specifique');
+            // En mode édition, l'onglet Standard est masqué (cf. ouverture)
+            updateConfirmEnabled();
+        }
+
+        // ─── Ouverture / fermeture ───────────────────────────────────────
+
+        // V2.3 - D1 : références aux vues liste / formulaire intégrées dans la popup
+        const listView = document.getElementById('champ-fusion-list-view');
+        const formView = document.getElementById('champ-fusion-form-view');
+        const backBtn  = document.getElementById('champ-fusion-back-btn');
+
+        /**
+         * V2.4 - D1/A7 : bascule la popup en mode "formulaire" (masque la
+         * liste, affiche le formulaire d'ajout/édition inline). Ne force
+         * PLUS `fieldsPopupUserVisible = true` (A7 — le bouton sidebar doit
+         * être un miroir strict de l'état d'affichage de la popup ; le
+         * forçage rompait cette cohérence). L'utilisateur ne peut atteindre
+         * cette fonction qu'en cliquant sur "+ Ajouter" ou sur l'icône
+         * crayon, c'est-à-dire que la popup est déjà visible.
+         */
+        function enterFormMode() {
+            if (listView) listView.classList.add('hidden');
+            if (formView) formView.classList.remove('hidden');
+            // Marqueur de compat pour le JS qui teste modal.classList
+            modal.classList.remove('hidden');
+            // L8 / D12 + L9 / D14 - L'utilisateur a cliqué sur "+ Ajouter" ou
+            //   sur un crayon, donc il manifeste l'intention de travailler
+            //   avec les champs → on active le bouton sidebar et on force
+            //   l'ouverture (action utilisateur explicite, équivalent au
+            //   clic sur le bouton « Champs » : intent=true + shown=true).
+            try {
+                if (typeof fieldsPopupUserIntent !== 'undefined') {
+                    fieldsPopupUserIntent = true;
+                    fieldsPopupShown = true;
+                    if (typeof updateToolbarDataVisibility === 'function') {
+                        updateToolbarDataVisibility();
+                    }
+                }
+            } catch (e) { /* defensive */ }
+        }
+
+        /**
+         * V2.3 - D1 : retour à la vue liste (réaffiche la liste, masque le formulaire).
+         */
+        function exitFormMode() {
+            if (formView) formView.classList.add('hidden');
+            if (listView) listView.classList.remove('hidden');
+            modal.classList.add('hidden');
+        }
+
+        function openCreate() {
+            if (champsFusionInterdit) {
+                showConstraintToast('Personnalisation par champs BDD indisponible pour ce document.', 'info', 'info');
+                return;
+            }
+            // V2.3 - Verrouillage global (cf. cahier §3.2/§5.2)
+            if (!autoriserGestionChamps) {
+                showConstraintToast('Une base de données est associée à cette commande. La gestion des champs s\'effectue depuis la base.', 'info', 'info');
+                return;
+            }
+            state = { mode: 'create', tab: 'standard', editLocalId: null, editNom: null, selectedStandard: null };
+            modalTitle.textContent = 'Ajouter un champ';
+            // Reset du formulaire
+            inputLibelle.value = '';
+            inputEchantillon.value = '';
+            // L8 / A17 - Flag « valeur auto-remplie » : permet de distinguer
+            //   une valeur calculée par resolveEchantillonValue (= remplaçable
+            //   lors du clic sur un autre item de la liste) d'une valeur
+            //   saisie par l'utilisateur (= à préserver).
+            //   Initialisation : champ vide → flag à '1' (rien à préserver).
+            inputEchantillon.dataset.autoFilled = '1';
+            inputLibelle.disabled = false;
+            selectType.disabled = false;
+            inputEchantillon.disabled = false;
+            mappedInfo.classList.add('hidden');
+            errorLibelle.classList.add('hidden');
+            errorEchantillon.classList.add('hidden');
+            standardSearch.value = '';
+
+            renderTypeOptions();
+            renderChampStandardList('');
+            updateLibelleCounter();
+            updateEchantillonHint(selectType.value);
+
+            // Onglet par défaut : Standard
+            tabStandard.classList.remove('hidden');
+            tabSpecifique.classList.remove('hidden');
+            setTab('standard');
+
+            // V2.4 - A12 : s'assurer que la liste standard est ré-affichée
+            //        (potentiellement masquée par une ouverture en édition
+            //        précédente).
+            if (standardList) {
+                standardList.style.display = '';
+            }
+
+            // V2.4 - D1 : basculer en vue formulaire inline (pas de modal-overlay)
+            enterFormMode();
+            // V2.4 - D7 : le champ recherche a été retiré, focus sur la liste à la place
+            setTimeout(() => {
+                if (standardList && typeof standardList.focus === 'function') {
+                    standardList.focus();
+                }
+            }, 0);
+        }
+
+        function openEdit(champ) {
+            if (!champ) return;
+
+            // V2.4 - Détermination de l'onglet en édition basée sur CATEGORIE
+            //        (et non plus ORIGINE comme en V2.3). Cf. cahier V2.4 §7.3.1
+            //        et amendement V2.4 §1.5 (Approche A retenue).
+            //        Si le champ n'a pas de 'categorie' (legacy ou champ
+            //        importé sans cette info), on déduit par recherche dans
+            //        champsStandardDisponibles (présence → "standard",
+            //        sinon → "specifique"). Mémorisé pour les ouvertures
+            //        futures (mutation in-place).
+            let categorie = (champ.categorie === 'standard' || champ.categorie === 'specifique')
+                ? champ.categorie
+                : null;
+            if (!categorie) {
+                const standardNoms = new Set((champsStandardDisponibles || []).map(s => s.nom));
+                categorie = (champ.nom && standardNoms.has(champ.nom)) ? 'standard' : 'specifique';
+                champ.categorie = categorie;
+            }
+
+            // V2.4 - Capacités d'édition combinant verrouillage individuel
+            //        (par ORIGINE = "import" / "ajout") et global
+            //        (autoriserGestionChamps). Cf. §3.3.
+            const caps = getChampEditCapabilities(champ);
+
+            state = {
+                mode: 'edit',
+                tab: categorie, // V2.4 - onglet selon CATEGORIE (et non origine)
+                editLocalId: champ.localId || null,
+                editNom: champ.nom || null,
+                selectedStandard: null
+            };
+            modalTitle.textContent = `Modifier le champ « ${champ.libelle || champ.nom || ''} »`;
+
+            renderTypeOptions();
+            // Pré-remplir libellé et type
+            inputLibelle.value = champ.libelle || '';
+            selectType.value = champ.type || 'TXT';
+
+            // V2.4 - Pré-remplir l'échantillon via l'algorithme UNIFIÉ
+            //        (cf. cahier V2.4 §7.3.2). En mode édition (pas de
+            //        valeur saisie utilisateur encore), l'algo retombe sur :
+            //        echantillonDefaut → donneesApercu → placeholder.
+            inputEchantillon.value = resolveEchantillonValue(champ, { context: 'open-edit' });
+            // L8 / A17 - Valeur calculée par l'algo = auto-remplie. Flag à '1'
+            //   (mais en mode édition la liste standard est masquée, donc le
+            //   flag n'a pas d'impact pratique ; conservé pour cohérence).
+            inputEchantillon.dataset.autoFilled = '1';
+
+            updateLibelleCounter();
+            updateEchantillonHint(selectType.value);
+
+            // V2.4 - Désactivation combinée (verrouillage individuel + global)
+            inputLibelle.disabled    = !caps.canEditLibelleType;
+            selectType.disabled      = !caps.canEditLibelleType;
+            inputEchantillon.disabled= !caps.canEditEchantillon;
+            // Pour le type IMG, l'input échantillon reste désactivé même si
+            // caps.canEditEchantillon = true (cf. updateEchantillonHint).
+
+            // V2.4 - D9 : suppression du bandeau d'aide "Ce champ est associé
+            //        à votre base de données. Seule la valeur d'échantillon
+            //        est modifiable." Le verrouillage individuel est déjà
+            //        visible (champs grisés). Le bandeau n'est conservé que
+            //        pour le verrouillage GLOBAL (motif non évident).
+            const showGlobalLockInfo = (caps.reason === 'global');
+            mappedInfo.classList.toggle('hidden', !showGlobalLockInfo);
+            if (showGlobalLockInfo) {
+                const span = mappedInfo.querySelector('span:not(.material-icons)');
+                if (span) {
+                    span.textContent = 'Une base de données est associée à cette commande. La gestion des champs s\'effectue depuis la base.';
+                }
+            }
+
+            errorLibelle.classList.add('hidden');
+            errorEchantillon.classList.add('hidden');
+
+            // V2.4 - A3 : navigation entre onglets BLOQUÉE en édition.
+            //        Pour figer l'onglet selon CATEGORIE, on masque l'autre.
+            if (categorie === 'standard') {
+                tabStandard.classList.remove('hidden');
+                tabSpecifique.classList.add('hidden');
+            } else {
+                tabStandard.classList.add('hidden');
+                tabSpecifique.classList.remove('hidden');
+            }
+            setTab(categorie);
+
+            // V2.4 - A12 : en mode édition d'un champ standard, la liste de
+            //        sélection est masquée (l'édition modifie les propriétés
+            //        du champ existant, pas son identité). Le titre de la
+            //        modale affiche déjà le nom du champ.
+            if (standardList) {
+                standardList.style.display = 'none';
+            }
+            if (standardEmpty) {
+                standardEmpty.classList.add('hidden');
+            }
+
+            // V2.4 - D1 : basculer en vue formulaire inline (pas de modal-overlay)
+            enterFormMode();
+            setTimeout(() => {
+                if (caps.canEditLibelleType && categorie === 'specifique') {
+                    inputLibelle.focus();
+                } else if (caps.canEditEchantillon) {
+                    inputEchantillon.focus();
+                }
+                // Si tout est verrouillé (global), pas de focus
+            }, 0);
+        }
+
+        // V2.4 - computeInitialEchantillonValue a été supprimée.
+        //        Remplacée par l'algorithme UNIFIÉ `resolveEchantillonValue`
+        //        (cf. tête de scope) qui est utilisé partout : création
+        //        standard, double-clic, création spécifique, ouverture en
+        //        édition. Cf. cahier V2.4 §7.3.2.
+
+        function closeModal() {
+            // V2.3 - D1 : retour à la vue liste (au lieu de fermer une modale)
+            exitFormMode();
+            // Reset visibilité onglet Standard pour la prochaine ouverture
+            tabStandard.classList.remove('hidden');
+            tabSpecifique.classList.remove('hidden');
+        }
+
+        // V2.3 - D1 : bouton "← Retour à la liste" dans l'en-tête du formulaire
+        if (backBtn) {
+            backBtn.addEventListener('click', () => {
+                closeModal();
+            });
+        }
+
+        // ─── Confirmation (création / édition) ───────────────────────────
+
+        function confirmModal() {
+            // V2.3 - Sécurité : si verrouillage global, on bloque toute écriture
+            //        même si la modale a été ouverte par hasard.
+            if (!autoriserGestionChamps) {
+                closeModal();
+                return;
+            }
+
+            // ── Cas A : création d'un nouveau champ via onglet Standard ──
+            if (state.mode === 'create' && state.tab === 'standard') {
+                if (!state.selectedStandard) return;
+                addChampFromStandard(state.selectedStandard);
+                closeModal();
+                return;
+            }
+
+            // ── Cas B : édition d'un champ d'origine standard ──
+            //          (état tab='standard' + mode='edit')
+            //          Seule la valeur d'échantillon est modifiable.
+            if (state.mode === 'edit' && state.tab === 'standard') {
+                const currentChampStd = findChamp({ localId: state.editLocalId, nom: state.editNom });
+                if (!currentChampStd) { closeModal(); return; }
+                const typeStd = currentChampStd.type || 'TXT';
+                const vEchStd = validateEchantillon(inputEchantillon.value, typeStd);
+                if (!vEchStd.ok) {
+                    errorEchantillon.textContent = vEchStd.error;
+                    errorEchantillon.classList.remove('hidden');
+                    return;
+                }
+                editChamp(currentChampStd, {
+                    echantillonDefaut: inputEchantillon.value.trim()
+                });
+                closeModal();
+                return;
+            }
+
+            // ── Cas C : Spécifique (création OU édition) ──
+            const currentChamp = state.mode === 'edit'
+                ? findChamp({ localId: state.editLocalId, nom: state.editNom })
+                : null;
+            // V2.4 - "verrouillé en libellé/type" = origine "import"
+            //        (et non plus "nom rempli" comme en V2.3).
+            const libelleTypeLocked = state.mode === 'edit' && isImportedChamp(currentChamp);
+
+            // Validation libellé (sauté si verrouillé en édition : libellé non modifiable)
+            if (!libelleTypeLocked) {
+                const vLib = validateLibelle(inputLibelle.value, currentChamp);
+                if (!vLib.ok) {
+                    errorLibelle.textContent = vLib.error;
+                    errorLibelle.classList.remove('hidden');
+                    return;
+                }
+                // Garde-fou suggestion standard
+                if (vLib.suggestStandard && state.mode === 'create') {
+                    pendingSuggest = vLib.suggestStandard;
+                    suggestLibelleEl.textContent = vLib.suggestStandard.libelle;
+                    suggestModal.classList.remove('hidden');
+                    return; // L'utilisateur tranche via la modale de suggestion
+                }
+            }
+
+            // Validation échantillon (selon type)
+            const type = selectType.value;
+            const vEch = validateEchantillon(inputEchantillon.value, type);
+            if (!vEch.ok) {
+                errorEchantillon.textContent = vEch.error;
+                errorEchantillon.classList.remove('hidden');
+                return;
+            }
+
+            if (state.mode === 'create') {
+                addChampSpecifique(inputLibelle.value.trim(), type, inputEchantillon.value.trim());
+            } else {
+                editChamp(currentChamp, {
+                    libelle: libelleTypeLocked ? currentChamp.libelle : inputLibelle.value.trim(),
+                    type: libelleTypeLocked ? currentChamp.type : type,
+                    echantillonDefaut: inputEchantillon.value.trim()
+                });
+            }
+            closeModal();
+        }
+
+        /**
+         * V2.4 - Ajoute un champ d'origine "ajout" + categorie "standard".
+         * La valeur d'échantillon est calculée via l'algo unifié
+         * `resolveEchantillonValue` (cf. cahier V2.4 §7.3.2).
+         *
+         * @param {{nom: string, libelle: string, type: string, placeholderDefaut?: string}} std
+         * @param {Object} [opts]
+         * @param {boolean} [opts.fromDoubleClick=false] - si true, le double-clic a
+         *        bypassé l'input échantillon → on ne lit pas inputEchantillon.value
+         */
+        function addChampFromStandard(std, opts) {
+            const fromDoubleClick = !!(opts && opts.fromDoubleClick);
+            if (!documentState.champsFusion) documentState.champsFusion = [];
+            const champ = {
+                nom: std.nom,
+                libelle: std.libelle,
+                type: std.type || 'TXT',
+                ordre: nextOrdre(),
+                origine: 'ajout',         // V2.4 - librement supprimable/modifiable
+                categorie: 'standard'     // V2.4 - onglet figé en édition
+            };
+            // V2.4 - Algorithme unifié pour la valeur d'échantillon.
+            //   - Si l'utilisateur a saisi une valeur dans le formulaire (clic
+            //     Confirmer), on l'utilise. (Contexte 'create-standard'.)
+            //   - Si double-clic (pas d'input), on saute l'étape 1 de l'algo
+            //     pour passer directement à l'echantillonDefaut (vide ici) →
+            //     fiche utilisateur → placeholderDefaut → placeholder par type.
+            //     (Contexte 'create-standard-doubleclick'.)
+            const ctx = fromDoubleClick ? 'create-standard-doubleclick' : 'create-standard';
+            const userInput = fromDoubleClick ? '' : inputEchantillon.value;
+            const echantillon = resolveEchantillonValue(champ, {
+                context: ctx,
+                userInput: userInput
+            });
+            if (echantillon) champ.echantillonDefaut = echantillon;
+            documentState.champsFusion.push(champ);
+            mergeFields = documentState.champsFusion;
+            propagateEchantillonDefaut(champ);
+            persistAndRefresh();
+        }
+
+        /**
+         * V2.4 - Ajoute un champ d'origine "ajout" + categorie "specifique".
+         * Génère un localId. La valeur d'échantillon est calculée via l'algo
+         * unifié.
+         */
+        function addChampSpecifique(libelle, type, echantillonUserInput) {
+            if (!documentState.champsFusion) documentState.champsFusion = [];
+            const champ = {
+                nom: '', // non mappé — la SaaS attribuera un nom à la vérification
+                libelle: libelle,
+                type: type,
+                ordre: nextOrdre(),
+                localId: generateLocalId(),
+                origine: 'ajout',           // V2.4 - librement supprimable/modifiable
+                categorie: 'specifique'     // V2.4 - onglet figé en édition
+            };
+            const echantillon = resolveEchantillonValue(champ, {
+                context: 'create-specific',
+                userInput: echantillonUserInput
+            });
+            if (echantillon) champ.echantillonDefaut = echantillon;
+            documentState.champsFusion.push(champ);
+            mergeFields = documentState.champsFusion;
+            propagateEchantillonDefaut(champ);
+            persistAndRefresh();
+        }
+
+        function editChamp(champ, updates) {
+            if (!champ) return;
+            const oldKey = resolveChampKey(champ);
+            // Mise à jour des propriétés
+            if (updates.libelle !== undefined) champ.libelle = updates.libelle;
+            if (updates.type !== undefined) champ.type = updates.type;
+            if (updates.echantillonDefaut !== undefined) {
+                champ.echantillonDefaut = updates.echantillonDefaut;
+                propagateEchantillonDefaut(champ);
+            }
+            // Si le libellé a changé, il faut rafraîchir les pastilles déjà
+            // insérées dans Quill (cf. §7.8.6 du cahier)
+            persistAndRefresh();
+            // Refresh visuel des pastilles pour la clé concernée
+            try {
+                if (typeof refreshMergeTagsInAllZones === 'function') {
+                    refreshMergeTagsInAllZones(oldKey);
+                }
+            } catch (e) { /* ignore */ }
+        }
+
+        function nextOrdre() {
+            const champs = (documentState && Array.isArray(documentState.champsFusion))
+                ? documentState.champsFusion : [];
+            let max = 0;
+            champs.forEach(c => { if (c && typeof c.ordre === 'number' && c.ordre > max) max = c.ordre; });
+            return max + 1;
+        }
+
+        function persistAndRefresh() {
+            try { updateMergeFieldsUI(mergeFields); } catch (e) {}
+            try { saveToLocalStorage(); } catch (e) {}
+            try { saveState(); } catch (e) {}
+        }
+
+        // ─── Suppression ─────────────────────────────────────────────────
+
+        function openDelete(champ) {
+            if (!champ) return;
+            // L14/A24 - Garde-fou unique aligné sur la doctrine V2.5 §1.4.
+            //   Les deux anciens garde-fous V2.4 (isImportedChamp + verrouillage
+            //   global) sont remplacés par un appel à getChampEditCapabilities
+            //   qui calcule canDelete via getChampStatusV25.
+            //
+            //   Pourquoi : V2.5 §1.4 autorise la suppression d'un champ rouge
+            //   non exploité MÊME s'il a `origine="import"` (cas typique :
+            //   champ orphelin du modèle, absent de la base courante) et
+            //   MÊME en régime B (autoriserGestionChamps=false). Bug L13
+            //   résiduel : les deux anciens garde-fous bloquaient ce cas
+            //   légitime — la corbeille de la popup activait correctement
+            //   (après fix 1 ci-dessus) mais openDelete refusait l'ouverture
+            //   de la modale de confirmation → suppression effective bloquée.
+            try {
+                const caps = (typeof getChampEditCapabilities === 'function')
+                    ? getChampEditCapabilities(champ) : null;
+                if (caps && !caps.canDelete) {
+                    // Recalculer le tooltip V2.5 pour informer correctement
+                    // l'utilisateur du motif de blocage (cohérent avec la
+                    // popup, qui affiche le même message au survol corbeille).
+                    let motif = 'Champ non supprimable.';
+                    try {
+                        const regime = (typeof mergeFields !== 'undefined')
+                            ? detecterRegimeChamps(mergeFields) : 'A';
+                        const status = getChampStatusV25(champ, regime);
+                        if (status && status.tooltip) motif = status.tooltip;
+                    } catch (e) { /* fallback motif générique */ }
+                    showConstraintToast(motif, 'info', 'info');
+                    return;
+                }
+            } catch (e) {
+                // Filet ultra-sécurisé : si une erreur survient, on bloque
+                // (cohérent avec le comportement défensif historique).
+                showConstraintToast('Champ non supprimable.', 'info', 'info');
+                return;
+            }
+
+            const occ = countOccurrencesInDocument(champ);
+            pendingDeleteChamp = champ;
+            deleteLibelleEl.textContent = champ.libelle || '(sans libellé)';
+
+            // Construire la liste d'occurrences
+            deleteOccurrencesEl.innerHTML = '';
+            if (occ.total === 0) {
+                deleteOccurrencesEl.innerHTML = '<li>Champ non utilisé dans le document — suppression sans impact.</li>';
+            } else {
+                if (occ.texte > 0)   deleteOccurrencesEl.innerHTML += `<li>${occ.texte} occurrence(s) dans le texte</li>`;
+                if (occ.image > 0)   deleteOccurrencesEl.innerHTML += `<li>${occ.image} zone(s) image affectée(s)</li>`;
+                if (occ.barcode > 0) deleteOccurrencesEl.innerHTML += `<li>${occ.barcode} zone(s) code-barres affectée(s)</li>`;
+                if (occ.qr > 0)      deleteOccurrencesEl.innerHTML += `<li>${occ.qr} référence(s) dans des QR Codes</li>`;
+            }
+
+            deleteModal.classList.remove('hidden');
+        }
+
+        function closeDelete() {
+            deleteModal.classList.add('hidden');
+            pendingDeleteChamp = null;
+        }
+
+        function confirmDelete() {
+            if (!pendingDeleteChamp) { closeDelete(); return; }
+            // Purge des références
+            purgeChampReferences(pendingDeleteChamp);
+            // Retirer le champ de la liste
+            const champs = documentState.champsFusion || [];
+            const idx = champs.indexOf(pendingDeleteChamp);
+            if (idx !== -1) champs.splice(idx, 1);
+            mergeFields = documentState.champsFusion;
+            persistAndRefresh();
+            closeDelete();
+        }
+
+        // ─── Suggestion "ajouter le standard à la place" ────────────────
+
+        function closeSuggest() {
+            suggestModal.classList.add('hidden');
+            pendingSuggest = null;
+        }
+        function acceptSuggest() {
+            if (pendingSuggest) {
+                addChampFromStandard(pendingSuggest);
+            }
+            closeSuggest();
+            closeModal();
+        }
+        function rejectSuggest() {
+            // L'utilisateur préfère continuer en spécifique : on ferme la suggestion,
+            // pas la modale principale, pour qu'il finalise sa saisie.
+            pendingSuggest = null;
+            suggestModal.classList.add('hidden');
+            // Continuer la création spécifique avec validation déjà passée
+            const type = selectType.value;
+            const vEch = validateEchantillon(inputEchantillon.value, type);
+            if (!vEch.ok) {
+                errorEchantillon.textContent = vEch.error;
+                errorEchantillon.classList.remove('hidden');
+                return;
+            }
+            addChampSpecifique(inputLibelle.value.trim(), type, inputEchantillon.value.trim());
+            closeModal();
+        }
+
+        // ─── Désactivation du bouton selon ChampsFusionInterdit ─────────
+
+        function refreshAddButtonState() {
+            // V2.3 : 2 motifs de désactivation, dans l'ordre de priorité
+            //        (ChampsFusionInterdit > autoriserGestionChamps).
+            if (champsFusionInterdit) {
+                btnAdd.disabled = true;
+                btnAdd.title = 'Personnalisation par champs BDD indisponible pour ce document';
+            } else if (!autoriserGestionChamps) {
+                btnAdd.disabled = true;
+                btnAdd.title = 'Une base de données est associée à cette commande. La gestion des champs s\'effectue depuis la base.';
+            } else {
+                btnAdd.disabled = false;
+                btnAdd.title = 'Ajouter un champ de fusion';
+            }
+        }
+        // Hook : être notifié au prochain refresh des contrôles ChampsFusionInterdit.
+        // refreshChampsFusionInterditControls est appelée à chaque load → on patch.
+        if (typeof refreshChampsFusionInterditControls === 'function') {
+            const originalRefresh = refreshChampsFusionInterditControls;
+            // On ne peut pas réécrire une const ; on s'appuie sur un Observer DOM
+            // en complément. Plus simple : appel direct via setTimeout polling
+            // léger n'est pas souhaitable. On expose une API pour que la fonction
+            // L2/L3 nous prévienne.
+            // → On câble plutôt sur l'événement: à chaque ouverture du panneau ou
+            //   au chargement, on lit champsFusionInterdit.
+        }
+        // Refresh initial + à chaque clic sur le bouton (au cas où le flag aurait changé)
+        refreshAddButtonState();
+
+        // ─── Listeners ───────────────────────────────────────────────────
+
+        btnAdd.addEventListener('click', () => {
+            refreshAddButtonState();
+            if (btnAdd.disabled) return;
+            openCreate();
+        });
+
+        closeBtn.addEventListener('click', closeModal);
+        cancelBtn.addEventListener('click', closeModal);
+        confirmBtn.addEventListener('click', confirmModal);
+
+        // V2.3 - A3 : navigation entre onglets BLOQUÉE en mode édition.
+        //        En mode création, comportement actuel (navigation libre).
+        tabStandard.addEventListener('click', () => {
+            if (state.mode === 'edit') return; // bloqué (fix A3)
+            setTab('standard');
+        });
+        tabSpecifique.addEventListener('click', () => {
+            if (state.mode === 'edit') return; // bloqué (fix A3)
+            setTab('specifique');
+        });
+
+        standardSearch.addEventListener('input', () => {
+            renderChampStandardList(standardSearch.value);
+        });
+
+        // Click sur un item de la liste standard
+        standardList.addEventListener('click', (e) => {
+            const item = e.target.closest('.champ-fusion-standard-item');
+            if (!item || item.classList.contains('disabled')) return;
+            // V2.4 - En mode édition, la liste est en réalité masquée (cf. A12),
+            //        mais on garde un garde-fou : pas de re-sélection possible.
+            if (state.mode === 'edit') return;
+            standardList.querySelectorAll('.champ-fusion-standard-item.selected').forEach(el => el.classList.remove('selected'));
+            item.classList.add('selected');
+            state.selectedStandard = {
+                nom: item.dataset.nom,
+                libelle: item.dataset.libelle,
+                type: item.dataset.type
+            };
+
+            // L7 / A13 + L8 / A17 - Pré-remplir le champ « Échantillon » dès
+            //   la sélection (et le rafraîchir à CHAQUE changement de
+            //   sélection). Utilise l'algorithme UNIFIÉ `resolveEchantillonValue`
+            //   (cf. cahier V2.4 §7.3.2) avec contexte
+            //   'create-standard-doubleclick' (ignore l'input utilisateur,
+            //   résout echantillonDefaut → donneesApercu → placeholderDefaut).
+            //
+            //   L8 / A17 : distinction « valeur auto » vs « saisie utilisateur »
+            //   via le flag `dataset.autoFilled` :
+            //     - flag = '1' → valeur précédente était auto → on PEUT écraser
+            //       (cas : clic sur « Nom » (auto=Dupont) puis sur « Prénom »
+            //       → on remplace par `Jean`).
+            //     - flag = '0' → l'utilisateur a tapé manuellement → on PRÉSERVE
+            //       (cas : clic « Nom » → tape `Marteam` → clic « Prénom »
+            //       → `Marteam` reste, l'utilisateur a manifesté une intention).
+            //     - value vide → on PEUT écraser (rien à préserver).
+            try {
+                const canOverwrite = !inputEchantillon.disabled
+                    && (inputEchantillon.dataset.autoFilled === '1'
+                        || !inputEchantillon.value.trim());
+                if (canOverwrite) {
+                    const proposedChamp = {
+                        nom: item.dataset.nom,
+                        libelle: item.dataset.libelle,
+                        type: item.dataset.type || 'TXT'
+                    };
+                    inputEchantillon.value = resolveEchantillonValue(proposedChamp, {
+                        context: 'create-standard-doubleclick'
+                    });
+                    // L8 / A17 - Marquer comme auto-remplie pour permettre les
+                    //   prochaines sélections d'écraser cette valeur.
+                    inputEchantillon.dataset.autoFilled = '1';
+                    // Reset visuel de toute erreur précédente
+                    errorEchantillon.classList.add('hidden');
+                }
+            } catch (e) {
+                // resolveEchantillonValue défensive (try/catch interne) — on ne
+                // bloque pas la sélection si quelque chose tourne mal.
+            }
+
+            updateConfirmEnabled();
+        });
+
+        // V2.4 - D7 (et amendement §3) : double-clic = ajout IMMÉDIAT du
+        //        standard, sans passer par la zone d'échantillon ni nécessiter
+        //        de cliquer sur Confirmer. La valeur d'échantillon est
+        //        calculée automatiquement via l'algo unifié (contexte
+        //        'create-standard-doubleclick').
+        // L7 / D10 - On RESTE dans le formulaire après ajout (au lieu de
+        //        fermer la modale comme en L6). Permet à l'utilisateur
+        //        d'enchaîner plusieurs ajouts par double-clic (cas d'usage
+        //        réaliste : préparation d'un nouveau modèle avec Nom,
+        //        Prénom, Adresse, etc.). Le champ ajouté disparaît
+        //        automatiquement de la liste (filtrage A5 dans
+        //        renderChampStandardList). L'utilisateur sort manuellement
+        //        via la flèche « ← retour à la liste ».
+        //        Le simple clic + Confirmer et l'onglet Spécifique + Confirmer
+        //        conservent leur comportement L6 (retour à la liste après
+        //        ajout).
+        standardList.addEventListener('dblclick', (e) => {
+            if (state.mode === 'edit') return;  // pas en édition
+            const item = e.target.closest('.champ-fusion-standard-item');
+            if (!item || item.classList.contains('disabled')) return;
+            const std = {
+                nom: item.dataset.nom,
+                libelle: item.dataset.libelle,
+                type: item.dataset.type
+            };
+            addChampFromStandard(std, { fromDoubleClick: true });
+            // L7 / D10 - Rester dans le formulaire : re-render de la liste
+            //   standard (pour faire disparaître le champ qu'on vient
+            //   d'ajouter) + reset des sélections + reset du champ
+            //   échantillon. Pas de closeModal().
+            try {
+                renderChampStandardList('');
+            } catch (e) { /* ignore */ }
+            // Reset de la sélection (le champ ajouté ne doit plus apparaître
+            // comme sélectionné, et selectedStandard ne pointe plus sur rien)
+            state.selectedStandard = null;
+            inputEchantillon.value = '';
+            // L8 / A17 - Champ vide après double-clic = nouvelle phase, prêt
+            //   pour auto-remplissage à la prochaine sélection.
+            inputEchantillon.dataset.autoFilled = '1';
+            errorEchantillon.classList.add('hidden');
+            updateConfirmEnabled();
+        });
+
+        inputLibelle.addEventListener('input', () => {
+            updateLibelleCounter();
+            // Validation à la volée
+            const currentChamp = state.mode === 'edit'
+                ? findChamp({ localId: state.editLocalId, nom: state.editNom })
+                : null;
+            const v = validateLibelle(inputLibelle.value, currentChamp);
+            if (!v.ok) {
+                errorLibelle.textContent = v.error;
+                errorLibelle.classList.remove('hidden');
+            } else {
+                errorLibelle.classList.add('hidden');
+            }
+            updateConfirmEnabled();
+        });
+
+        selectType.addEventListener('change', () => {
+            updateEchantillonHint(selectType.value);
+            // Validation échantillon mise à jour
+            errorEchantillon.classList.add('hidden');
+        });
+
+        inputEchantillon.addEventListener('input', () => {
+            // L8 / A17 - Frappe utilisateur → cette valeur n'est plus
+            //   « auto-remplie ». Elle sera désormais préservée même si
+            //   l'utilisateur change de sélection dans la liste standard.
+            //   (Cas concret : « Nom » → auto-remplit `Dupont` → l'utilisateur
+            //   tape `Martin` → flag retiré → re-clic sur « Prénom » ne doit
+            //   PAS écraser `Martin`.) Réinitialisable via le bouton ←/Annuler.
+            inputEchantillon.dataset.autoFilled = '0';
+            // On valide à la volée mais on ne bloque le bouton que sur erreur libellé
+            const v = validateEchantillon(inputEchantillon.value, selectType.value);
+            if (!v.ok) {
+                errorEchantillon.textContent = v.error;
+                errorEchantillon.classList.remove('hidden');
+            } else {
+                errorEchantillon.classList.add('hidden');
+            }
+        });
+
+        // V2.3 - D1 : le formulaire est désormais inline (pas de modal-overlay).
+        //        Les listeners suivants opèrent sur formView (la vue formulaire
+        //        dans la popup). Plus de "clic sur l'overlay pour fermer" :
+        //        l'utilisateur utilise le bouton "← Retour" ou Annuler.
+        if (formView) {
+            formView.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    closeModal();
+                } else if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+                    if (!confirmBtn.disabled) {
+                        e.preventDefault();
+                        confirmModal();
+                    }
+                }
+            });
+        }
+
+        // Listeners modale suppression
+        deleteCancelBtn.addEventListener('click', closeDelete);
+        deleteConfirmBtn.addEventListener('click', confirmDelete);
+        deleteModal.addEventListener('click', (e) => { if (e.target === deleteModal) closeDelete(); });
+        deleteModal.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDelete(); });
+
+        // Listeners modale suggestion standard
+        suggestCancelBtn.addEventListener('click', rejectSuggest);
+        suggestConfirmBtn.addEventListener('click', acceptSuggest);
+        suggestModal.addEventListener('click', (e) => { if (e.target === suggestModal) rejectSuggest(); });
+
+        // ─── API exposée pour que updateMergeFieldsUI puisse câbler les   ─
+        //     icônes inline de chaque pastille (cf. patch ci-dessous).    ─
+        window.__openChampFusionEdit = (champRef) => {
+            // champRef = { localId, nom } pour retrouver le champ
+            const champ = findChamp(champRef);
+            if (champ) openEdit(champ);
+        };
+        window.__openChampFusionDelete = (champRef) => {
+            const champ = findChamp(champRef);
+            if (champ) openDelete(champ);
+        };
+        window.__refreshAddChampButtonState = refreshAddButtonState;
+
+    })();
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SECTION 27 : BOUTON SIDEBAR "Champs" (V2.3 - D2)
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // Bascule l'affichage de la popup Champs de fusion via toggleFieldsPopup().
+    // ═══════════════════════════════════════════════════════════════════════════════
+    (function setupToggleFieldsPopupButton() {
+        const btn = document.getElementById('btn-toggle-fields-popup');
+        if (!btn) return;
+        btn.addEventListener('click', () => {
+            // L7 / A14 - le stopPropagation n'est plus utile (listener
+            // click-outside retiré). Conservé en commentaire pour mémoire.
+            if (typeof window.__toggleFieldsPopup === 'function') {
+                window.__toggleFieldsPopup();
+            }
+        });
+        // État initial cohérent (au cas où updateToolbarDataVisibility n'a pas
+        // encore été appelée)
+        if (typeof window.__updateFieldsPopupToggleButton === 'function') {
+            window.__updateFieldsPopupToggleButton();
+        }
+
+        // V2.4 / L9 - D14 : doctrine DÉFINITIVE du bouton « Champs ».
+        //
+        // Séparation stricte en 3 catégories d'événements :
+        //
+        //   1. ACTIONS UTILISATEUR EXPLICITES → modifient `intent` et `shown` :
+        //      - Clic bouton sidebar       → toggle intent, shown=intent
+        //      - Clic croix X popup        → intent=false, shown=false
+        //      - Ouverture formulaire add  → intent=true, shown=true
+        //      Appellent `updateToolbarDataVisibility()` (passif).
+        //
+        //   2. CHANGEMENTS CONTEXTUELS DE SÉLECTION → réévaluent `shown` :
+        //      - selectZone (chemin updateToolbarVisibility)
+        //      - deselectAll, addToSelection, removeFromSelection (idem)
+        //      - showQuillToolbar (sélection zone texte)
+        //      - deactivatePreview (retour Aperçu)
+        //      - loadFromWebDev (chargement initial)
+        //      Appellent `evaluateFieldsPopupForSelection()`.
+        //
+        //   3. INTERACTIONS INTERNES À LA POPUP → NE TOUCHENT JAMAIS À `shown` :
+        //      - Double-clic ajout standard, simple clic Confirmer
+        //      - Édition crayon, suppression corbeille, navigation onglets
+        //      - Saisie dans les inputs, drag&drop vers une zone Quill
+        //      Tout reste dans `updateMergeFieldsUI()` qui appelle
+        //      `updateToolbarDataVisibility()` PASSIF → popup reste ouverte.
+        //      C'est précisément le fix A18 de L9.
+        //
+        // Le bouton reflète `intent`, pas `shown` : il reste actif tant
+        // que l'utilisateur n'a pas cliqué dessus ou sur la croix X.
+        //
+        // Cas drag&drop : interaction interne à la popup au départ
+        // (mousedown stop-propagé ligne 22169). Le drop dans une zone
+        // Quill déclenche `selectZone` sur cette zone → catégorie 2 → zone
+        // texte → shown reste true. Aucune fermeture parasite.
+        //
+        // Cas mode Aperçu : `isPreviewActive()` force `display=none` dans
+        // `updateToolbarDataVisibility()` mais `shown` est PRÉSERVÉ. Le
+        // bouton reste actif (intent préservé). Au retour, `deactivatePreview`
+        // appelle `evaluateFieldsPopupForSelection()` qui recalcule selon
+        // la sélection (probablement vide après deselectAll → popup fermée
+        // jusqu'à re-sélection d'une zone texte).
     })();
 
 });

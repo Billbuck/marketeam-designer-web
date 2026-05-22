@@ -93,8 +93,8 @@ bRegenereJson	est un booléen	= Faux
 
 si stDoc.CodeTemp <> "" _et_ __stOperation.stOperationLettre.tabStDocument[pLigne].tabImageFond..Occurrence > 0 alors
 	sCodeTempBat		est une chaîne	= stDoc.CodeTemp
-	sRepUploadRel	est une chaîne	= cpProjet.__sHttpMarketeam + cpProjet.__sRepUpload + ["/"] + __stOperation.CodeTemp + ["/"]
-	sNomBat			est une chaîne	= __DOC_LTR_BAT__ + sCodeTempBat
+	sRepUploadRel		est une chaîne	= cpProjet.__sHttpMarketeam + cpProjet.__sRepUpload + ["/"] + __stOperation.CodeTemp + ["/"]
+	sNomBat				est une chaîne	= __DOC_LTR_BAT__ + sCodeTempBat
 
 	si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 
@@ -104,18 +104,18 @@ si stDoc.CodeTemp <> "" _et_ __stOperation.stOperationLettre.tabStDocument[pLign
 		nAvecAdresse	est un entier = (pLigne = 1) ? 1 sinon 0
 
 		__stOperation.stOperationLettre.tabStDocument[pLigne].JsonDesignerData = cpDesigner.ComposerJsonDesignerCreation(...
-			__stOperation, __tabEchantillonBaseLigne, __OPERATION_COURRIER__, Faux, pLigne, -1, -1, -1, nAvecAdresse)
+		__stOperation, __tabEchantillonBaseLigne, __OPERATION_COURRIER__, Faux, pLigne, -1, -1, -1, nAvecAdresse)
 
 		si __stOperation.stOperationLettre.tabStDocument[pLigne].JsonDesignerData <> "" alors
-			si Partage.GenererPsmdServeurDocument(__stOperation.stOperationLettre.tabStDocument[pLigne]) alors
+			si cpDesigner.GenererPsmdServeurDocument(__stOperation.stOperationLettre.tabStDocument[pLigne]) alors
 				cpDesigner.GenererBatDocumentDepuisPsmd(__stOperation.stOperationLettre.tabStDocument[pLigne], __tabEchantillonBaseLigne)
 				// Blanc tournant si non fond perdu (cohérent UploadFichier)
 				si __stOperation.stOperationLettre.tabStDocument[pLigne].tabPagePDF..Occurrence > 0 _et_ ...
 					__stOperation.stOperationLettre.tabStDocument[pLigne].tabPagePDF[1].EstFondPerdu = Faux alors
 					pour tout stVignette de __stOperation.stOperationLettre.tabStDocument[pLigne].tabImageBat
-						Partage.AppliqueBlancTournant(stVignette.CheminPhysique, ...
-							__stOperation.stOperationLettre.tabStDocument[pLigne].LargeurOuvert, ...
-							__stOperation.stOperationLettre.tabStDocument[pLigne].HauteurOuvert)
+						cpDesigner.AppliqueBlancTournant(stVignette.CheminPhysique, ...
+						__stOperation.stOperationLettre.tabStDocument[pLigne].LargeurOuvert, ...
+						__stOperation.stOperationLettre.tabStDocument[pLigne].HauteurOuvert)
 					fin
 				fin
 				bRegenereJson = Vrai
@@ -132,27 +132,27 @@ si stDoc.CodeTemp <> "" _et_ __stOperation.stOperationLettre.tabStDocument[pLign
 			__stOperation.stOperationLettre.tabStDocument[pLigne].tabPagePDF[1].EstFondPerdu alors
 
 			// Cas fond perdu : BAT trimmed (TrimBox, sans bleed) via Ghostscript
-			__stOperation.stOperationLettre.tabStDocument[pLigne].tabImageBat = Partage.GenereVignetteDocument(...
-				__stOperation.stOperationLettre.tabStDocument[pLigne].NomFichierTemp, ...
-				sNomBat, ...
-				Faux, ...
-				__stOperation.stOperationLettre.tabStDocument[pLigne].tabPagePDF[1].LargeurInterne, ...
-				__stOperation.stOperationLettre.tabStDocument[pLigne].tabPagePDF[1].HauteurInterne, ...
-				__stOperation.stOperationLettre.tabStDocument[pLigne].Repertoire, ...
-				sRepUploadRel)
+			__stOperation.stOperationLettre.tabStDocument[pLigne].tabImageBat = cpDesigner.GenereVignetteDocument(...
+			__stOperation.stOperationLettre.tabStDocument[pLigne].NomFichierTemp, ...
+			sNomBat, ...
+			Faux, ...
+			__stOperation.stOperationLettre.tabStDocument[pLigne].tabPagePDF[1].LargeurInterne, ...
+			__stOperation.stOperationLettre.tabStDocument[pLigne].tabPagePDF[1].HauteurInterne, ...
+			__stOperation.stOperationLettre.tabStDocument[pLigne].Repertoire, ...
+			sRepUploadRel)
 			Trace("SupprimerDocument : BAT trimmed régénéré (fond perdu) pour CodeTemp=" + sCodeTempBat)
 
 		sinon
 
 			// Cas non fond perdu : copie fond (blanc tournant déjà appliqué) → BAT
 			pour nNumPage = 1 _à_ __stOperation.stOperationLettre.tabStDocument[pLigne].tabImageFond..Occurrence
-				sFicFond	est une chaîne = __stOperation.stOperationLettre.tabStDocument[pLigne].tabImageFond[nNumPage].CheminPhysique
-				sFicBat	est une chaîne = sRepUpload + sNomBat + "p" + nNumPage + __JPG__
+				sFicFond	est une chaîne	= __stOperation.stOperationLettre.tabStDocument[pLigne].tabImageFond[nNumPage].CheminPhysique
+				sFicBat	est une chaîne	= sRepUpload + sNomBat + "p" + nNumPage + __JPG__
 				si fFichierExiste(sFicFond) alors
 					si fFichierExiste(sFicBat) alors fSupprime(sFicBat)
 					si fCopieFichier(sFicFond, sFicBat) alors
 						stImgBat est une structDocumentImage
-						stImgBat.CheminPhysique	= sFicBat
+						stImgBat.CheminPhysique		= sFicBat
 						stImgBat.CheminRelatif		= sRepUploadRel + sNomBat + "p" + nNumPage + __JPG__
 						__stOperation.stOperationLettre.tabStDocument[pLigne].tabImageBat.Ajoute(stImgBat)
 						Trace("SupprimerDocument : BAT à vide (non fond perdu) p" + nNumPage + " --> " + sFicBat)

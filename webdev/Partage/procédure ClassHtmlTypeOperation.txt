@@ -1,0 +1,44 @@
+//PROCEDURE ClassHtmlTypeOperation(pTypeChamp, pTypeOperation, pNiveau = "m", pTaille = 12)
+PROCÉDURE ClassHtmlTypeOperation(pTypeChamp, pTypeOperation, pOption = "")
+
+
+sClassHtml est une chaîne
+SELON pTypeChamp
+	CAS "lnk"	: sClassHtml = "lnk-"
+	CAS "btn"	: sClassHtml = "bouton-"
+	CAS "cbo"	: sClassHtml = "combo-"
+	CAS "sai"	: sClassHtml = "saisie-"
+	CAS "lib"	: sClassHtml = "libelle-"
+	CAS "znr"	: sClassHtml = "znr-"
+	CAS "int"	: sClassHtml = "interrupteur-"
+	CAS "sel"	: sClassHtml = "selecteur-"
+	CAS "jge"	: sClassHtml = "jauge-"
+	CAS "cel"	: sClassHtml = "cellule-"
+	CAS "lgo"	: sClassHtml = "logo-"
+FIN
+
+SELON pTypeOperation
+	CAS __OPERATION_COURRIER__								: sClassHtml += "ltr"
+	CAS __OPERATION_COURRIER_INTERACTIF__				: sClassHtml += "lti"
+	CAS __OPERATION_TRACTEVA__								: sClassHtml += "ttb"
+	CAS __OPERATION_SMARTEVA__								: sClassHtml += "ttb"
+	CAS __OPERATION_COURRIER_GESTION__					: sClassHtml += "ltr"
+	CAS __OPERATION_SMS__									: sClassHtml += "sms"
+	CAS __OPERATION_SMS_INTERACTIF__						: sClassHtml += "sms"
+	CAS __OPERATION_VMS__									: sClassHtml += "vms"
+	CAS __OPERATION_SMS_NOTIFICATION__					: sClassHtml += "sms"
+	CAS __OPERATION_EMAIL__									: sClassHtml += "eml"
+	CAS __OPERATION_WEB__									: sClassHtml += "mkt"
+	CAS __OPERATION_TEL__									: sClassHtml += "tel"
+	CAS __OPERATION_BASE_DE_DONNEES__					: sClassHtml += "bdd"
+	CAS __OPERATION_RNVP__									: sClassHtml += "ltr"
+	CAS __OPERATION_BLOCTEL__								: sClassHtml += "tel"
+	CAS __OPERATION_MARKETEAM__							: sClassHtml += "mkt"
+	AUTRES CAS
+FIN
+
+SI pOption <> "" ALORS
+	sClassHtml += "-" + pOption
+FIN
+
+RENVOYER sClassHtml

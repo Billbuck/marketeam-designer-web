@@ -4,9 +4,9 @@ si PageAfficheDialogue(pgeOuiNon, ...
 	si SupprimerDocument(attNumDocument) alors
 
 		// ─── Déverrouillage des combos ───────────────────────────────────────
-		znrLtrContenu[attNumDocument].cboSource.Etat						= Actif
-		znrLtrContenu[attNumDocument].cboBibliothèque.Etat				= Actif
-		znrLtrContenu[attNumDocument].cboSelection.Etat					= Actif
+		znrLtrContenu[attNumDocument].cboSource.Etat							= Actif
+		znrLtrContenu[attNumDocument].cboBibliothèque.Etat					= Actif
+		znrLtrContenu[attNumDocument].cboSelection.Etat						= Actif
 
 		// ─── Bouton Supprimer masqué (plus de personnalisation) ──────────────
 		znrLtrContenu[attNumDocument].btnDocumentSupprimer..Visible		= Faux
@@ -19,12 +19,12 @@ si PageAfficheDialogue(pgeOuiNon, ...
 			// Cas Modèle
 			znrLtrContenu[attNumDocument].btnDocumentImporter..Visible			= Faux
 			znrLtrContenu[attNumDocument].btnDocumentPersonnaliser..Visible	= (__stOperation.stOperationLettre.tabStDocument[attNumDocument].EstPersonnalisable = Vrai)
-			znrLtrContenu[attNumDocument].btnDocumentAperçu..Visible			= Vrai
+			znrLtrContenu[attNumDocument].btnDocumentAperçu..Visible				= Vrai
 		sinon
 			// Cas PDF client (le PDF reste présent après suppression)
 			znrLtrContenu[attNumDocument].btnDocumentImporter..Visible			= Vrai
 			znrLtrContenu[attNumDocument].btnDocumentPersonnaliser..Visible	= Vrai
-			znrLtrContenu[attNumDocument].btnDocumentAperçu..Visible			= Vrai
+			znrLtrContenu[attNumDocument].btnDocumentAperçu..Visible				= Vrai
 		fin
 
 	fin

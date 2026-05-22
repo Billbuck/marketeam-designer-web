@@ -1,31 +1,31 @@
-PROCÉDURE GenereVignetteDocument(pPdf, pVignettes, pEstFondPerdu = Faux, pLargeurExterneMm = 0, pHauteurExterneMm = 0, pRepertoirePhysique = "", pCheminRelatif = "")
+procédure GenereVignetteDocument(pPdf, pVignettes, pEstFondPerdu = Faux, pLargeurExterneMm = 0, pHauteurExterneMm = 0, pRepertoirePhysique = "", pCheminRelatif = "")
 
 // ─── Si aucun répertoire passé, on prend Upload par défaut (rétrocompatibilité création) ─
-SI pRepertoirePhysique = "" ALORS
+si pRepertoirePhysique = "" alors
 	pRepertoirePhysique	= cpProjet.__sRepRacine + cpProjet.__sRepUpload + ["\"]
-FIN
-SI pCheminRelatif = "" ALORS
+fin
+si pCheminRelatif = "" alors
 	pCheminRelatif			= cpProjet.__sHttpMarketeam + cpProjet.__sRepUpload + ["/"]
-FIN
+fin
 
-tabVignette				est un tableau de structDocumentImage
-stVignette				est une structDocumentImage
-sLigneDeCommande		est une chaîne
-sTexte					est une chaîne
-sLigneCommande			est une chaîne	= INILit("GHOSTSCRIPT", "CHEMIN", "", NomFichierIni())
+tabVignette					est un tableau de structDocumentImage
+stVignette					est une structDocumentImage
+sLigneDeCommande			est une chaîne
+sTexte						est une chaîne
+sLigneCommande				est une chaîne	= INILit("GHOSTSCRIPT", "CHEMIN", "", NomFichierIni())
 nNbrPage					est un entier	= PDFNombreDePages(pRepertoirePhysique + pPdf)
-sOptionBox				est une chaîne
-nLargeurPt				est un entier
-nHauteurPt				est un entier
+sOptionBox					est une chaîne
+nLargeurPt					est un entier
+nHauteurPt					est un entier
 
 // ─── Choix de la commande selon présence ou absence de fond perdu ─────────
 // Dans les deux cas on utilise -dFIXEDMEDIA avec dimensions explicites
 // pour garantir que l'orientation du document est respectée (ex: A5 paysage)
-SI pEstFondPerdu ALORS
+si pEstFondPerdu alors
 	sOptionBox	= "-dUseBleedBox"
-SINON
+sinon
 	sOptionBox	= "-dUseTrimBox"
-FIN
+fin
 
 nLargeurPt	= Arrondi(pLargeurExterneMm * 2.834645669, 0)
 nHauteurPt	= Arrondi(pHauteurExterneMm * 2.834645669, 0)
@@ -35,26 +35,26 @@ sTexte		=
 	"%1" -sDEVICE=jpeg -dNOPAUSE -dBATCH -dNOPROMPT -r300 -dJPEGQ=100 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -dFIXEDMEDIA -dDEVICEWIDTHPOINTS=%5 -dDEVICEHEIGHTPOINTS=%6 %4 -o "%3" "%2"
 ]
 
-SI sLigneCommande <> "" ALORS
+si sLigneCommande <> "" alors
 
 	sLigneDeCommande = ChaîneConstruit(sTexte, sLigneCommande, pRepertoirePhysique + pPdf, pRepertoirePhysique + pVignettes + "p%01d.jpg", sOptionBox, nLargeurPt, nHauteurPt)
 
-	SI PAS LanceAppli(sLigneDeCommande, exeIconise, exeBloquant, pRepertoirePhysique) ALORS
-		<COMPILE SI TypeConfiguration <> Webservice>
+	si pas LanceAppli(sLigneDeCommande, exeIconise, exeBloquant, pRepertoirePhysique) alors
+		<compile si TypeConfiguration <> Webservice>
 			Info("Erreur :", ErreurInfo(errComplet))
-		<FIN>
-	FIN
+		<fin>
+	fin
 
-	POUR nPage = 1 _À_ nNbrPage
+	pour nPage = 1 _à_ nNbrPage
 		stVignette.CheminPhysique	= pRepertoirePhysique + pVignettes + "p" + nPage + __JPG__
 		stVignette.CheminRelatif	= pCheminRelatif + pVignettes + "p" + nPage + __JPG__
 		tabVignette.Ajoute(stVignette)
-	FIN
+	fin
 
-SINON
-	<COMPILE SI TypeConfiguration <> Webservice>
+sinon
+	<compile si TypeConfiguration <> Webservice>
 		Info("Erreur :", "Convertisseur non implémenté !")
-	<FIN>
-FIN
+	<fin>
+fin
 
-RENVOYER tabVignette
+renvoyer tabVignette

@@ -18,7 +18,7 @@
 //
 // 	pEstPorteAdresse : <indiquez ici le rôle de pEstPorteAdresse>
 //	pDoitEtrePorteAdresse : <indiquez ici le rôle de pEstPorteAdresse>
-PROCÉDURE InitCboTypeContenu(pIdBibliothèque, pIdMarque, pIdSupport, pEstRectoVerso, pEstFondPerdu, pIdSupportGrammage, pIndice)
+procédure InitCboTypeContenu(pIdBibliothèque, pIdMarque, pIdSupport, pEstRectoVerso, pEstFondPerdu, pIdSupportGrammage, pIndice)
 
 sTexteRequete				est une chaîne
 //sTexteRequeteDocumentClient	est une chaîne
@@ -31,21 +31,21 @@ nQteDisponible				est un entier
 sCurdate					est une chaîne
 
 
-SI cpConnexion.__sConnexion	= __CNX_PROD__ ALORS
+si cpConnexion.__sConnexion	= __CNX_PROD__ alors
 	sCurdate = "CURDATE()"
-SINON
+sinon
 	sCurdate = "'" + DateSys()	+ "'"
-FIN
+fin
 
-SI pIdBibliothèque = BibliothèqueMarque.Valeur ALORS
+si pIdBibliothèque = BibliothèqueMarque.Valeur alors
 	sWhere = "AND ltr_modele.IdMarque = " + pIdMarque
-FIN
+fin
 
 Partage.FiltreBibliothèque(pIdBibliothèque, ltr_modele..Nom, sWhere, Vrai, __stOperation.IdClient)
 
-SI pIndice = 1 _ET_ __stOperation.stOperationLettre.stEnveloppe.NbrFenetre > 0 ALORS
+si pIndice = 1 _et_ __stOperation.stOperationLettre.stEnveloppe.NbrFenetre > 0 alors
 	sWhereDocument = "AND EstPorteAdresse = 1"
-FIN
+fin
 
 sTexteRequete =
 [
@@ -66,37 +66,12 @@ sTexteRequete =
 ]
 
 
-//
-//sTexteRequeteDocumentClient = 
-//[
-//	UNION
-//	
-//	SELECT
-//	'C' Mode,
-//	IdDocumentClient Id,
-//	ltr_document_client.Libelle
-//	FROM
-//	ltr_document_client
-//	WHERE
-//	(IdMarque IS NULL OR EXISTS(SELECT clt_client_marque.IdMarque FROM clt_client_marque WHERE clt_client_marque.IdClient = IdClient AND clt_mere.IdClient = [%__stOperation.IdClient%])) 
-//	AND (IdClient IS NULL OR EXISTS(SELECT clt_mere.IdMere FROM clt_mere WHERE clt_mere.IdMere = IdClient AND clt_mere.IdClient = [%__stOperation.IdClient%]))
-//	AND IdSupportGrammage = [%pIdSupportGrammage%] 
-//	AND QuantiteStock > 0
-//	[%sWhereDocument%]
-//]
-//
-
-//SI pIndice >  1 _ou_ __stOperation.stOperationLettre.stEnveloppe.NbrFenetre = 0 ALORS
-//	sTexteRequete += RC + sTexteRequeteDocumentClient
-//FIN
-
-
 // A FAIRE : ajouter la gestion des dotations via coupons
 
-SI PAS HExécuteRequêteSQL(sdReqCbo, ltr_modele..Connexion, hRequêteSansCorrection, sTexteRequete) ALORS
+si pas HExécuteRequêteSQL(sdReqCbo, ltr_modele..Connexion, hRequêteSansCorrection, sTexteRequete) alors
 	Info("Erreur requête")
-	RETOUR	
-FIN
+	retour
+fin
 
 znrLtrContenu[pIndice].attCboModeleContenu 	= ""
 znrLtrContenu[pIndice].attCboModeleGlien 		= ""
@@ -105,52 +80,52 @@ znrLtrContenu[pIndice].attCboDocumentContenu	= ""
 znrLtrContenu[pIndice].attCboDocumentGlien 	= ""
 
 
-POUR TOUT sdReqCbo
-	SELON sdReqCbo.Mode
-		CAS "M"
-			SI VérifieAccèsFonction(TypeOperationVersCodeSupport(__stOperation.TypeOperation,0),PrintModèle) = Vrai ALORS
+pour tout sdReqCbo
+	selon sdReqCbo.Mode
+		cas "M"
+			si VérifieAccèsFonction(TypeOperationVersCodeSupport(__stOperation.TypeOperation,0),PrintModèle) = Vrai alors
 				nModele++
 				Trace(sdReqCbo.Id,sdReqCbo.Libelle)
-				znrLtrContenu[pIndice].attCboModeleContenu 		+= [RC] + sdReqCbo.Libelle + gLien(sdReqCbo.Id) 
+				znrLtrContenu[pIndice].attCboModeleContenu 		+= [RC] + sdReqCbo.Libelle + gLien(sdReqCbo.Id)
 				znrLtrContenu[pIndice].attCboModeleGlien 			+= [TAB] + sdReqCbo.Id
-			FIN
-			
-		CAS "C"
+			fin
+
+		cas "C"
 			// on fait les contrôles de quantités sur les documents clients
 			(bEstBloquant, nQteDisponible) = Partage.CalculDotationDocumentClient(__stOperation.IdOperation, __stOperation.IdClient, sdReqCbo.Id)
-			SI nQteDisponible >= __stOperation.NbrDestinataire _OU_ bEstBloquant = Faux ALORS
+			si nQteDisponible >= __stOperation.NbrDestinataire _ou_ bEstBloquant = Faux alors
 				nDocumentClient++
 				znrLtrContenu[pIndice].attCboDocumentContenu	 	+= [RC] + sdReqCbo.Libelle + gLien(sdReqCbo.Id)
 				znrLtrContenu[pIndice].attCboDocumentGlien 		+= [TAB] + sdReqCbo.Id
-			FIN
-			
-		AUTRES CAS 
-	FIN
-FIN
+			fin
+
+		autres cas
+	fin
+fin
 
 
 znrLtrContenu[pIndice].attCboSourceContenu			= "Fichier client"
 znrLtrContenu[pIndice].attCboSouceGlien 			= "F"
 
 
-SI nModele > 0 ALORS
-	SI nModele > 1 ALORS
+si nModele > 0 alors
+	si nModele > 1 alors
 		znrLtrContenu[pIndice].attCboModeleContenu 		= "< Sélection >" + gLien(0) +RC+ znrLtrContenu[pIndice].attCboModeleContenu
 		znrLtrContenu[pIndice].attCboModeleGlien 			= 0 +[TAB]+ znrLtrContenu[pIndice].attCboModeleGlien
-	FIN
+	fin
 	znrLtrContenu[pIndice].attCboSourceContenu 			+= [RC]  + "Modèle"
 	znrLtrContenu[pIndice].attCboSouceGlien 				+= [TAB] + "M"
-FIN
+fin
 
-SI nDocumentClient > 0 ALORS
-	SI nDocumentClient > 1 ALORS
+si nDocumentClient > 0 alors
+	si nDocumentClient > 1 alors
 		znrLtrContenu[pIndice].attCboDocumentContenu 		= "< Sélection >" + gLien(0) +RC+ znrLtrContenu[pIndice].attCboDocumentContenu
 		znrLtrContenu[pIndice].attCboDocumentGlien 		= 0 +[TAB]+ znrLtrContenu[pIndice].attCboDocumentGlien
-	FIN
+	fin
 	znrLtrContenu[pIndice].attCboSourceContenu 			+= [RC]  + "Document client"
 	znrLtrContenu[pIndice].attCboSouceGlien 				+= [TAB] + "C"
-FIN
+fin
 
-FIN:
+fin:
 HAnnuleDéclaration(sdReqCbo)
 

@@ -28,13 +28,24 @@ sJsonDocument	est une chaîne
 // =========================================================================
 // BLOCS D'ENVIRONNEMENT
 // =========================================================================
-stLoad.action					= "load"
-stLoad.mode						= "template"
-stLoad.auth						= RemplirDesignerAuth(pIdClient, pIdContact)
-stLoad.constraints			= RemplirDesignerConstraints(pLimTexte, pLimImage, pLimQr, pLimBarcode)
-stLoad.limites					= RemplirDesignerLimites()
-stLoad.policesDisponibles	= RemplirDesignerPolices(pIdClient)
-stLoad.Theme					= "LTR"
+stLoad.action						= "load"
+stLoad.mode							= "template"
+stLoad.auth							= RemplirDesignerAuth(pIdClient, pIdContact)
+stLoad.constraints				= RemplirDesignerConstraints(pLimTexte, pLimImage, pLimQr, pLimBarcode)
+stLoad.limites						= RemplirDesignerLimites()
+stLoad.policesDisponibles		= RemplirDesignerPolices(pIdClient)
+// V3.4 - Listes de référence pour la modale "Ajouter un champ" du Designer
+//        (cf. docs/cahier_des_charges_creation_champs_fusion.md V2.2 §5).
+//        TOUJOURS envoyées en mode template — le créateur du modèle peut
+//        ajouter des champs dans tous les cas (sur base existante OU sans base).
+stLoad.champsStandard			= RemplirDesignerChampsStandard(pIdClient)
+stLoad.typesDisponibles			= RemplirDesignerTypesDisponibles()
+// V3.5 - Verrouillage global de la gestion des champs : TOUJOURS Vrai en mode
+//        template (le créateur du modèle a toujours le droit d'ajouter,
+//        modifier, supprimer des champs).
+//        Cf. cahier des charges V2.3 §5.2.
+stLoad.autoriserGestionChamps	= Vrai
+stLoad.Theme						= "LTR"
 
 // =========================================================================
 // DOCUMENT (data)
@@ -47,8 +58,8 @@ stLoad.Document.identification = RemplirDesignerIdentification(sIdDocument, "mod
 // Format : fond perdu depuis les dimensions détaillées de structPagePdf
 si pStDocument.EstFondPerdu _et_ pStDocument.tabPagePDF..Occurrence >= 1 alors
 
-	nFormatPapierLargeur	est un réel		= 0
-	nFormatPapierHauteur	est un réel		= 0
+	nFormatPapierLargeur		est un réel		= 0
+	nFormatPapierHauteur		est un réel		= 0
 	nIdFormatImpression		est un entier	= pStDocument.tabPagePDF[1].IdFormatImpression
 
 	si ltr_format_impression.LitRecherchePremier(IdFormatImpression, nIdFormatImpression) alors
@@ -61,14 +72,14 @@ si pStDocument.EstFondPerdu _et_ pStDocument.tabPagePDF..Occurrence >= 1 alors
 	fin
 
 	stLoad.Document.formatDocument = RemplirDesignerFormat(
-		pStDocument.LargeurOuvert, pStDocument.HauteurOuvert,
-		Vrai,
-		pStDocument.tabPagePDF[1].FondPerduHautMm,
-		pStDocument.tabPagePDF[1].FondPerduBasMm,
-		pStDocument.tabPagePDF[1].FondPerduGaucheMm,
-		pStDocument.tabPagePDF[1].FondPerduDroiteMm,
-		nFormatPapierLargeur,
-		nFormatPapierHauteur)
+	pStDocument.LargeurOuvert, pStDocument.HauteurOuvert,
+	Vrai,
+	pStDocument.tabPagePDF[1].FondPerduHautMm,
+	pStDocument.tabPagePDF[1].FondPerduBasMm,
+	pStDocument.tabPagePDF[1].FondPerduGaucheMm,
+	pStDocument.tabPagePDF[1].FondPerduDroiteMm,
+	nFormatPapierLargeur,
+	nFormatPapierHauteur)
 
 sinon
 	stLoad.Document.formatDocument = RemplirDesignerFormat(pStDocument.LargeurOuvert, pStDocument.HauteurOuvert, Faux, 0, 0, 0, 0)
@@ -84,11 +95,21 @@ Trace("ComposerJsonDesignerModele : Nombre de pages = " + stLoad.Document.pages.
 // BLOCS COMMUNS
 // =========================================================================
 
-// Champs de fusion disponibles
-stLoad.Document.champsFusion	= RemplirDesignerChampsFusion(pTaaBaseChamp)
-
-// Données d'aperçu
-stLoad.Document.donneesApercu	= RemplirDesignerApercu(pTabEchantillon, pTaaBaseChamp)
+// V3.4 - Mode template : champsFusion et donneesApercu vides au load.
+//        L'utilisateur peuple lui-même la liste via la modale "Ajouter un
+//        champ" (onglet Standard puisant dans champsStandard envoyés en
+//        racine, ou onglet Spécifique pour des champs non mappés gérés via
+//        localId). Les paramètres pTaaBaseChamp et pTabEchantillon ne sont
+//        donc PAS exploités pour produire le load (mais on les conserve dans
+//        la signature pour ne pas casser les appels existants et pour pouvoir
+//        revenir à l'option B - peuplement initial depuis une base "défaut"
+//        client - si la décision Q4 venait à évoluer).
+//        Décision donneur d'ordre du 11/05/2026 (V2.1 §4 -> V2.2 §6 / §9
+//        du cahier des charges).
+tabChampsFusionVide		est un tableau de structDesignerChampFusion
+tabApercuVide				est un tableau de structDesignerEnregistrement
+stLoad.Document.champsFusion	= tabChampsFusionVide
+stLoad.Document.donneesApercu	= tabApercuVide
 
 // =========================================================================
 // SÉRIALISATION EN JSON

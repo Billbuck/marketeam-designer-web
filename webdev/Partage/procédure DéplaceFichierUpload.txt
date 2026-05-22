@@ -1,10 +1,10 @@
 procédure DéplaceFichierUpload(stOperation est une structOperation)
 
-stDocument			est une structDocument
-sListeBat			est une chaîne
-sListeFond			est une chaîne
-sListeDocument		est une chaîne
-sListePrintshop		est une chaîne
+stDocument																																										est une structDocument
+sListeBat																																										est une chaîne
+sListeFond																																										est une chaîne
+sListeDocument																																									est une chaîne
+sListePrintshop																																								est une chaîne
 
 sRepertoireDocument, sRepertoireBat, sRepertoireFond, sRepertoirePrintshop, sRepertoireEnveloppe, sRepertoireClient, sRepertoireMarque	sont des chaînes
 
@@ -202,8 +202,8 @@ selon stOperation.TypeOperation
 
 					autre cas
 						// On déplace le PDF client depuis son répertoire courant (Upload\{CodeTempOp}\) vers Documents\
-						sCheminPdfSource est une chaîne = stDocument.Repertoire + stDocument.NomFichierTemp
-						sCheminPdfDest est une chaîne = sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__
+						sCheminPdfSource	est une chaîne		= stDocument.Repertoire + stDocument.NomFichierTemp
+						sCheminPdfDest		est une chaîne		= sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__
 
 						si fFichierExiste(sCheminPdfSource) _et_ Minuscule(sCheminPdfSource) <> Minuscule(sCheminPdfDest) alors
 							si fFichierExiste(sCheminPdfDest) alors
@@ -244,20 +244,20 @@ selon stOperation.TypeOperation
 							fin
 						fin
 
-					fin
-
-					// ─── AJOUT B : Mise à jour du répertoire et du CodeTemp après déplacement ─
-					stDocument.Repertoire			= sRepertoireDocument
-					stDocument.RepertoireTravail	= sRepertoireDocument
-					stDocument.CodeTemp				= stDocument.IdLettreContenu
-					stDocument.NomFichierTemp		= __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__
-					stDocument.EstUploadé			= Faux
 				fin
+
+				// ─── AJOUT B : Mise à jour du répertoire et du CodeTemp après déplacement ─
+				stDocument.Repertoire			= sRepertoireDocument
+				stDocument.RepertoireTravail	= sRepertoireDocument
+				stDocument.CodeTemp				= stDocument.IdLettreContenu
+				stDocument.NomFichierTemp		= __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__
+				stDocument.EstUploadé			= Faux
+			fin
 
 			// ─── [V3] Déplacement BAT en modification ───────────────────────
 			pour NumPage = 1 _à_ stDocument.NombrePage
 				si stDocument.tabImageBat..Occurrence >= NumPage alors
-					sCheminBatActuel	est une chaîne		= stDocument.tabImageBat[NumPage].CheminPhysique
+					sCheminBatActuel		est une chaîne		= stDocument.tabImageBat[NumPage].CheminPhysique
 					sCheminBatFinal		est une chaîne		= sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__
 					si sCheminBatActuel <> sCheminBatFinal _et_ fFichierExiste(sCheminBatActuel) alors
 						si fFichierExiste(sCheminBatFinal) alors

@@ -64,12 +64,12 @@ SupprimeTout(__stOperation.stOperationLettre.tabStDocument[pLigne].tabImageFond)
 SupprimeTout(__stOperation.stOperationLettre.tabStDocument[pLigne].tabImageBat)
 
 // ─── Reset des références fichiers du document ──────────────────────────
-__stOperation.stOperationLettre.tabStDocument[pLigne].CodeTemp					= ""
-__stOperation.stOperationLettre.tabStDocument[pLigne].NomFichierTemp			= ""
-__stOperation.stOperationLettre.tabStDocument[pLigne].NomFichierOrigine		= ""
+__stOperation.stOperationLettre.tabStDocument[pLigne].CodeTemp						= ""
+__stOperation.stOperationLettre.tabStDocument[pLigne].NomFichierTemp				= ""
+__stOperation.stOperationLettre.tabStDocument[pLigne].NomFichierOrigine			= ""
 __stOperation.stOperationLettre.tabStDocument[pLigne].Repertoire					= ""
-__stOperation.stOperationLettre.tabStDocument[pLigne].RepertoireTravail		= ""
+__stOperation.stOperationLettre.tabStDocument[pLigne].RepertoireTravail			= ""
 __stOperation.stOperationLettre.tabStDocument[pLigne].JsonDesignerData			= ""
-__stOperation.stOperationLettre.tabStDocument[pLigne].CheminPsmdTemp			= ""
-__stOperation.stOperationLettre.tabStDocument[pLigne].CheminPsmdBat			= ""
-__stOperation.stOperationLettre.tabStDocument[pLigne].NomFichierPsmd			= ""
+__stOperation.stOperationLettre.tabStDocument[pLigne].CheminPsmdTemp				= ""
+__stOperation.stOperationLettre.tabStDocument[pLigne].CheminPsmdBat				= ""
+__stOperation.stOperationLettre.tabStDocument[pLigne].NomFichierPsmd				= ""

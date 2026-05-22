@@ -7,22 +7,22 @@
 //	pTabEchantillon : échantillon des enregistrements
 //	taaBaseChamp (tableau associatif (structBaseChamp)) : champs communs aux bases
 
-PROCÉDURE RemplirDesignerApercu(pTabEchantillon, taaBaseChamp tableau associatif de structBaseChamp)
+procédure RemplirDesignerApercu(pTabEchantillon, taaBaseChamp tableau associatif de structBaseChamp)
 
 nInd		est un entier
 tabApercu	est un tableau de structDesignerEnregistrement
 stEnreg		est une structDesignerEnregistrement
 stUnChamp	est une structDesignerChamp
 
-POUR TOUT stBaseLigne DE pTabEchantillon
+pour tout stBaseLigne de pTabEchantillon
 	nInd++
-	POUR TOUT stBaseChamp DE taaBaseChamp
+	pour tout stBaseChamp de taaBaseChamp
 		// Nom de la colonne physique MariaDB (ex: "Civilite", "Champ1")
 		stUnChamp.nom		= stBaseChamp.Champ
 		// Valeur récupérée par indirection sur le membre de StructBaseLigne
 		stUnChamp.valeur	= {"stBaseLigne." + stBaseChamp.Champ, indVariable}
 		stEnreg.enregistrement.Ajoute(stUnChamp)
-	FIN
+	fin
 
 	stUnChamp.nom		= "Sequentiel"
 	stUnChamp.valeur	= NumériqueVersChaîne(nInd, "06d")
@@ -33,9 +33,9 @@ POUR TOUT stBaseLigne DE pTabEchantillon
 	stEnreg.enregistrement.Ajoute(stUnChamp)
 
 	tabApercu.Ajoute(stEnreg)
-FIN
+fin
 
 
 
 
-RENVOYER tabApercu
+renvoyer tabApercu

@@ -235,7 +235,7 @@ pour tout stPage de stResultat.pages
 				hInject.URL			= sUrlInject
 				hInject.Méthode	= httpGet
 				hRepInject			= hInject.Envoie()
-				
+
 				si hRepInject.CodeEtat = 200 alors
 					vInject est un Variant = JSONVersVariant(hRepInject.Contenu)
 					si vInject.success = Vrai alors
@@ -353,6 +353,7 @@ pour tout stPage de stResultat.pages
 		stPagePdf.EstPortrait = Faux
 	fin
 
+
 	// -----------------------------------------------------------------
 	// Taux d'encrage en bordure (documents sans fond perdu uniquement)
 	// Détecte si du contenu graphique est trop proche du bord (3mm)
@@ -362,14 +363,11 @@ pour tout stPage de stResultat.pages
 		"?file=" + URLEncode(stDocument.Repertoire + stDocument.NomFichierTemp) +...
 		"&margin_mm=3" +...
 		"&page=" + stPagePdf.NumeroPage
-
 		hEdge		est une httpRequête
 		hRepEdge	est un httpRéponse
-
 		hEdge.URL		= sUrlEdge
 		hEdge.Méthode	= httpGet
 		hRepEdge			= hEdge.Envoie()
-
 		si hRepEdge.CodeEtat = 200 alors
 			vEdge est un Variant = JSONVersVariant(hRepEdge.Contenu)
 			si vEdge.success = Vrai _et_ vEdge.pages..Occurrence > 0 alors
@@ -398,6 +396,7 @@ pour tout stPage de stResultat.pages
 			fin
 		fin
 	fin
+
 
 	stDocument.tabPagePDF.Ajoute(stPagePdf)
 fin

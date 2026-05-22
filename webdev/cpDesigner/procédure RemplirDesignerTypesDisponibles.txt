@@ -1,0 +1,105 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// cpDesigner.RemplirDesignerTypesDisponibles
+// Rôle : Construire le tableau des types de champs de fusion disponibles
+//        pour la modale "Ajouter un champ" du Designer (onglet Spécifique :
+//        combo Type).
+//
+// Liste exhaustive V3.4 (cf. docs/Structure Webdev Designer V3.md section 3
+// et docs/cahier_des_charges_creation_champs_fusion.md §5.1) :
+//   TXT  Texte         <- __CHAMP_TYPE_TEXTE__
+//   ENT  Entier        <- __CHAMP_TYPE_ENTIER__
+//   DEC  Décimal       <- __CHAMP_TYPE_DECIMAL__
+//   MON  Monétaire     <- __CHAMP_TYPE_MONETAIRE__
+//   DAT  Date          <- __CHAMP_TYPE_DATE__
+//   TIM  Heure         <- __CHAMP_TYPE_HEURE__
+//   EML  Email         <- __CHAMP_TYPE_EMAIL__
+//   TEL  Téléphone     <- __CHAMP_TYPE_TELEPHONE__
+//   SMS  Portable      <- __CHAMP_TYPE_PORTABLE__
+//   CDP  Code postal   <- __CHAMP_TYPE_CODEPOSTAL__
+//   URL  URL           <- __CHAMP_TYPE_URL__
+//   IMG  Image         <- __CHAMP_TYPE_IMAGE__
+//   ALG  Alliage       <- __CHAMP_TYPE_ALLIAGE__
+//
+// Le code "SYS" reste réservé aux zones système injectées par WebDev
+// (adresse destinataire, séquentiel, datamatrix...) et n'est PAS exposé
+// dans typesDisponibles.
+//
+// Appelée par :
+//   - cpDesigner.ComposerJsonDesignerCreation (tunnel courrier)
+//   - cpDesigner.ComposerJsonDesignerModele (création / édition modèle)
+//
+// Retour :
+//   tableau de structDesignerTypeChamp (sérialisé sous "typesDisponibles" en
+//   racine du message load).
+// ─────────────────────────────────────────────────────────────────────────────
+PROCÉDURE RemplirDesignerTypesDisponibles() : tableau de structDesignerTypeChamp
+
+tabTypes		est un tableau de structDesignerTypeChamp
+stUnType		est une structDesignerTypeChamp
+
+// Texte
+stUnType.code		= __CHAMP_TYPE_TEXTE__
+stUnType.libelle	= "Texte"
+tabTypes.Ajoute(stUnType)
+
+// Entier
+stUnType.code		= __CHAMP_TYPE_ENTIER__
+stUnType.libelle	= "Entier"
+tabTypes.Ajoute(stUnType)
+
+// Décimal
+stUnType.code		= __CHAMP_TYPE_DECIMAL__
+stUnType.libelle	= "Décimal"
+tabTypes.Ajoute(stUnType)
+
+// Monétaire
+stUnType.code		= __CHAMP_TYPE_MONETAIRE__
+stUnType.libelle	= "Monétaire"
+tabTypes.Ajoute(stUnType)
+
+// Date
+stUnType.code		= __CHAMP_TYPE_DATE__
+stUnType.libelle	= "Date"
+tabTypes.Ajoute(stUnType)
+
+// Heure
+stUnType.code		= __CHAMP_TYPE_HEURE__
+stUnType.libelle	= "Heure"
+tabTypes.Ajoute(stUnType)
+
+// Email
+stUnType.code		= __CHAMP_TYPE_EMAIL__
+stUnType.libelle	= "Email"
+tabTypes.Ajoute(stUnType)
+
+// Téléphone
+stUnType.code		= __CHAMP_TYPE_TELEPHONE__
+stUnType.libelle	= "Téléphone"
+tabTypes.Ajoute(stUnType)
+
+// Portable
+stUnType.code		= __CHAMP_TYPE_PORTABLE__
+stUnType.libelle	= "Portable"
+tabTypes.Ajoute(stUnType)
+
+// Code postal
+stUnType.code		= __CHAMP_TYPE_CODEPOSTAL__
+stUnType.libelle	= "Code postal"
+tabTypes.Ajoute(stUnType)
+
+// URL
+stUnType.code		= __CHAMP_TYPE_URL__
+stUnType.libelle	= "URL"
+tabTypes.Ajoute(stUnType)
+
+// Image
+stUnType.code		= __CHAMP_TYPE_IMAGE__
+stUnType.libelle	= "Image"
+tabTypes.Ajoute(stUnType)
+
+// Alliage (NPAI La Poste)
+stUnType.code		= __CHAMP_TYPE_ALLIAGE__
+stUnType.libelle	= "Alliage"
+tabTypes.Ajoute(stUnType)
+
+RENVOYER tabTypes

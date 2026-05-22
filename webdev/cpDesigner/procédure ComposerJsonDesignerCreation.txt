@@ -11,6 +11,12 @@ stLoad.bases					= RemplirDesignerBases(stOperation.tabBase)
 stLoad.constraints			= RemplirDesignerConstraints(pLimTexte, pLimImage, pLimQr, pLimBarcode)
 stLoad.limites					= RemplirDesignerLimites()
 stLoad.policesDisponibles	= RemplirDesignerPolices(stOperation.IdClient)
+// V3.4 - Listes de référence pour la modale "Ajouter un champ" du Designer
+//        (cf. docs/cahier_des_charges_creation_champs_fusion.md V2.2 §5).
+//        Toujours envoyées, même quand ChampsFusionInterdit = Vrai
+//        (le bouton "Ajouter un champ" est juste désactivé côté Designer).
+stLoad.champsStandard		= RemplirDesignerChampsStandard(stOperation.IdClient)
+stLoad.typesDisponibles		= RemplirDesignerTypesDisponibles()
 stLoad.Theme					= pTheme
 
 // =========================================================================
@@ -61,8 +67,8 @@ sinon
 	// Format : fond perdu depuis les dimensions détaillées de structPagePdf
 	si stDoc.EstFondPerdu _et_ stDoc.tabPagePDF..Occurrence >= 1 alors
 		// Lecture du format papier associé (SRA4, SRA3...) depuis BDD
-		nFormatPapierLargeur	est un réel		= 0
-		nFormatPapierHauteur	est un réel		= 0
+		nFormatPapierLargeur		est un réel		= 0
+		nFormatPapierHauteur		est un réel		= 0
 		nIdFormatImpression		est un entier	= stDoc.tabPagePDF[1].IdFormatImpression
 
 		si ltr_format_impression.LitRecherchePremier(IdFormatImpression, nIdFormatImpression) alors
@@ -118,19 +124,79 @@ fin
 // BLOCS COMMUNS enveloppe / document
 // =========================================================================
 
+// V3.5 - Détection "tunnel avec base sélectionnée" : on parcourt
+//        stOperation.tabBase et on ne compte QUE les bases non supprimées
+//        (le tableau peut contenir des entrées marquées EstSupprime = Vrai
+//        qu'il faut ignorer — précision donneur d'ordre du 19/05/2026).
+//        Dès qu'on trouve une base active, on sort de la boucle.
+//        Cette détection alimente :
+//        - le booléen autoriserGestionChamps (V3.5, ci-dessous)
+//        - la décision de remplir ou non champsFusion/donneesApercu
+//          quand la fusion est autorisée (bug A1 correctifs L4)
+bAvecBase	est un booléen	= Faux
+pour tout stBase de stOperation.tabBase
+	si stBase.EstSupprime = Faux alors
+		bAvecBase = Vrai
+		sortir
+	fin
+fin
+
 // Champs de fusion et aperçu : pour les documents d'une enveloppe SANS fenêtre,
 // l'atelier n'effectue pas de rapprochement — pas de liaison BDD (ChampsFusionInterdit).
 stLoad.ChampsFusionInterdit	= Faux
+
 si pEstEnveloppe _ou_ stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
-	stLoad.Document.champsFusion	= RemplirDesignerChampsFusion(stOperation.taaBaseChamp)
-	stLoad.Document.donneesApercu	= RemplirDesignerApercu(pTabEchantillon, stOperation.taaBaseChamp)
+	// L18/A38 — Option C : champsFusion VIDE au wrapper (pas même les SYS).
+	//
+	//   Doctrine validée : en création pure (tunnel sans modèle), le
+	//   Designer doit s'ouvrir avec une popup totalement vide. L'utilisateur
+	//   ajoute ses champs via "+ Ajouter un champ" (onglets Standard /
+	//   Spécifique). Pattern identique à ComposerJsonDesignerModele.txt
+	//   (mode template, ligne ~109) qui partait déjà avec un tableau vide.
+	//
+	//   ⚠️ Asymétrie historique corrigée : auparavant le mode tunnel
+	//   peuplait champsFusion via RemplirDesignerChampsFusion(taaBaseChamp)
+	//   qui injectait ~16 colonnes standards + 2 SYS. Cela polluait la
+	//   popup en création pure. Les modes modèle s'en sortaient via le
+	//   filtrage "fidélité modèle" dans SelectionModèle.txt /
+	//   btnDocumentPersonnaliser.txt.
+	//
+	//   ⚠️ Préservation mode modèle : les SYS (Sequentiel, Timbre) sont
+	//   désormais ré-injectés dans le wrapper PAR SelectionModèle.txt et
+	//   btnDocumentPersonnaliser.txt (bloc défensif L18/A38), juste avant
+	//   le bloc "Conserver les champs SYSTÈME du wrapper". Cohérent.
+	//
+	//   ⚠️ Préservation BAT / aperçu : donneesApercu CONSERVE le vrai
+	//   taaBaseChamp (les valeurs Civilité, Nom, Adresse1, Sequentiel,
+	//   Timbre sont nécessaires au pavé adresse système et au pipeline
+	//   PSMD via GenererBatDocumentDepuisPsmd).
+	//
+	//   ⚠️ Onglet Standard de la modale : alimenté par stLoad.champsStandard
+	//   (envoyé en racine via RemplirDesignerChampsStandard ligne 18),
+	//   source DISTINCTE de champsFusion. Inchangé.
+	//
+	//   ⚠️ Affichage pastilles du pavé adresse : les marqueurs @Civilite@,
+	//   @Nom@... s'afficheront en clé brute en mode édition tant que le
+	//   fallback résolveur Designer (prompt suivant) n'est pas en place.
+	//   Aperçu navigable et BAT inchangés (valeurs résolues via donneesApercu).
+	tabChampsFusionVide est un tableau de structDesignerChampFusion
+	stLoad.Document.champsFusion		= tabChampsFusionVide
+	stLoad.Document.donneesApercu		= RemplirDesignerApercu(pTabEchantillon, stOperation.taaBaseChamp)
 sinon
-	stLoad.ChampsFusionInterdit		= Vrai
-	tabChampsVide est un tableau de structDesignerChampFusion
-	tabApercuVide est un tableau de structDesignerEnregistrement
-	stLoad.Document.champsFusion	= tabChampsVide
-	stLoad.Document.donneesApercu	= tabApercuVide
+	stLoad.ChampsFusionInterdit     = Vrai
+	tabChampsVideEnv		est un tableau de structDesignerChampFusion
+	tabApercuVideEnv		est un tableau de structDesignerEnregistrement
+	stLoad.Document.champsFusion		= tabChampsVideEnv
+	stLoad.Document.donneesApercu		= tabApercuVideEnv
 fin
+
+// V3.5 - Verrouillage global de la gestion des champs
+//        (cf. docs/cahier_des_charges_creation_champs_fusion.md V2.3 §5.2).
+//        Tunnel courrier : Faux si une base est associée (la gestion des
+//        champs se fait depuis la base), Vrai sinon. Quand
+//        ChampsFusionInterdit = Vrai, autoriserGestionChamps est sans
+//        effet côté Designer (la toolbar Data est masquée de toute façon).
+stLoad.autoriserGestionChamps	= (pas bAvecBase)
 
 
 // Polices utilisées : vide en création (aucune police encore utilisée)

@@ -1,0 +1,82 @@
+// -----------------------------------------------------------------------------
+// cpDesigner.RemplirDesignerApercu()
+// Rôle : Transformer le tableau d'échantillons StructBaseLigne en format Designer
+//        Utilise l'indirection pour accéder dynamiquement aux membres de StructBaseLigne
+//        selon les champs de fusion définis dans taaBaseChamp
+// Paramètres :
+//	pTabEchantillon : échantillon des enregistrements
+//	taaBaseChamp (tableau associatif (structBaseChamp)) : champs communs aux bases
+
+procédure RemplirDesignerApercu(pTabEchantillon, taaBaseChamp tableau associatif de structBaseChamp)
+
+// L18/A30 — BUG D'ACCUMULATION corrigé.
+//
+//   Bug observé (trace de production sur 6 lignes Opel/Peugeot/Renault/
+//   Volkswagen/Citroën/Ferrari) :
+//     enregistrement [1] contenait 1 occurrence de Champ3 : [Opel]
+//     enregistrement [2] contenait 2 occurrences           : [Opel, Peugeot]
+//     enregistrement [3] contenait 3 occurrences           : [Opel,Peugeot,Renault]
+//     ...
+//     enregistrement [N] contenait N occurrences (lignes 1..N en accumulation)
+//
+//   Cause : `stEnreg` (et son tableau interne `enregistrement`) était
+//   déclaré HORS de la boucle externe. Le tableau interne n'était jamais
+//   réinitialisé entre deux tours → chaque tour AJOUTAIT à la suite des
+//   tours précédents.
+//
+//   Pourquoi le Designer JS affichait quand même les bonnes valeurs pour
+//   les STANDARDS (Nom, Civilite…) :
+//     `convertEnregistrementToObject` côté JS itère le tableau et fait
+//     `obj[champ.nom] = champ.valeur` → la DERNIÈRE occurrence ÉCRASE les
+//     précédentes. Pour record N (= lignes 1..N accumulées), la dernière
+//     valeur ajoutée pour chaque clé = celle de la ligne N = la bonne.
+//     Cohérence accidentelle.
+//
+//   Pour les SPÉCIFIQUES (LOCAL_<localId>) : l'étape D côté SaaS qui
+//   devait les injecter dans donneesApercu ne fonctionne pas (bug
+//   séparé, traité dans SelectionModèle/btnDocumentPersonnaliser).
+//   L'absence totale de LOCAL_xxx dans le record explique le comportement
+//   « figé » côté aperçu Designer (et non pas le bug d'accumulation
+//   ci-présent).
+//
+//   Solution : déclarer `stEnreg` DANS la boucle pour garantir une
+//   nouvelle instance à chaque tour, avec son propre tableau interne
+//   vide. Plus aucun risque de partage de référence implicite via
+//   tabApercu.Ajoute(). `stUnChamp` peut rester en dehors car
+//   l'`Ajoute()` à `stEnreg.enregistrement` copie sa valeur (pattern WL
+//   standard pour les structures plates).
+
+nInd		est un entier
+tabApercu	est un tableau de structDesignerEnregistrement
+stUnChamp	est une structDesignerChamp
+
+pour tout stBaseLigne de pTabEchantillon
+	nInd++
+
+	// L18/A30 - Nouvelle instance à chaque tour : tableau interne vide,
+	// aucune accumulation possible avec les tours précédents.
+	stEnreg est une structDesignerEnregistrement
+
+	pour tout stBaseChamp de taaBaseChamp
+		// Nom de la colonne physique MariaDB (ex: "Civilite", "Champ1")
+		stUnChamp.nom		= stBaseChamp.Champ
+		// Valeur récupérée par indirection sur le membre de StructBaseLigne
+		stUnChamp.valeur	= {"stBaseLigne." + stBaseChamp.Champ, indVariable}
+		stEnreg.enregistrement.Ajoute(stUnChamp)
+	fin
+
+	stUnChamp.nom		= "Sequentiel"
+	stUnChamp.valeur	= NumériqueVersChaîne(nInd, "06d")
+	stEnreg.enregistrement.Ajoute(stUnChamp)
+
+	stUnChamp.nom		= "Timbre"
+	stUnChamp.valeur	= "Affranchissement " + NumériqueVersChaîne(nInd, "03d")
+	stEnreg.enregistrement.Ajoute(stUnChamp)
+
+	tabApercu.Ajoute(stEnreg)
+fin
+
+
+
+
+renvoyer tabApercu

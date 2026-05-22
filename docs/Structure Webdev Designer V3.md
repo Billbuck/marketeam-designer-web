@@ -1,6 +1,78 @@
 // =============================================================================
-// STRUCTURES DESIGNER VDP - VERSION 3.3
+// STRUCTURES DESIGNER VDP - VERSION 3.7
 // Architecture contraintes à 3 niveaux (geometrie, style, global)
+// V3.4 (11/05/2026) : ajout des structures et propriétés liées à la
+//                     création de champs de fusion dans le Designer
+//                     (cf. docs/cahier_des_charges_creation_champs_fusion.md V2.2)
+//   - structDesignerChampFusion : ajout de localId + echantillonDefaut
+//   - structDesignerChampStandard (NOUVEAU)
+//   - structDesignerTypeChamp (NOUVEAU)
+//   - structDesignerLoad : ajout de champsStandard + typesDisponibles
+//   - structDesignerChamp.nom : peut valoir "LOCAL_<localId>" pour les
+//     échantillons de champs créés dans le Designer non encore mappés
+// V3.5 (19/05/2026) : amendement V2.3 du cahier des charges
+//                     (cf. docs/amendement-V2.3-cahier-des-charges.md)
+//   - structDesignerChampFusion : ajout de 'origine' (chaîne :
+//     "standard" ou "specifique") — sert à figer l'onglet en édition.
+//   - structDesignerLoad : ajout de 'autoriserGestionChamps' (booléen) —
+//     verrouillage global de l'ajout/modification/suppression des champs.
+//     Vrai par défaut si absent (compatibilité ascendante).
+// V3.6 (19/05/2026 PM) : amendement V2.4 du cahier des charges
+//                        (cf. docs/amendement-V2.4-cahier-des-charges.md)
+//   - structDesignerChampFusion : 'origine' change de sémantique. Valeurs :
+//     "import" (présent dans le JSON initial du load) ou "ajout" (créé par
+//     l'utilisateur via la modale). Sert désormais au verrouillage
+//     individuel (et non plus à figer l'onglet en édition).
+//   - structDesignerChampFusion : ajout de 'categorie' (chaîne :
+//     "standard" ou "specifique"). Reprend l'usage que faisait 'origine'
+//     en V3.5 — sert à figer l'onglet en édition.
+//   - structDesignerChampStandard : ajout de 'placeholderDefaut' (chaîne)
+//     — valeur métier par défaut pour l'algorithme unifié de résolution
+//     d'échantillon côté Designer.
+// V3.7 (20/05/2026) : amendement V2.5 du cahier des charges
+//                     (cf. docs/amendement-V2.5-cahier-des-charges.md)
+//   - structDesignerChampFusion : NOUVEL ATTRIBUT JSON 'presenteEnBase'
+//     (booléen). Pilote la couleur (vert / gris / rouge) et la
+//     suppressibilité de chaque champ côté Designer.
+//
+//     ⚠️ SÉMANTIQUE PARTICULIÈRE : cet attribut est OPTIONNEL au sens
+//     JSON. Trois états distincts :
+//       - ABSENT du JSON   → régime A (« pas d'info ») : la SaaS ne
+//         transmet pas cette donnée pour ce champ. Le Designer applique
+//         son comportement par défaut V2.4 (verrouillage individuel
+//         basé sur 'origine').
+//       - Présent à Vrai   → régime B : le champ correspond à une
+//         colonne réelle de la base BDD courante (mappage actif).
+//       - Présent à Faux   → régime B : le champ ne correspond à
+//         aucune colonne de la base BDD courante (champ orphelin ou
+//         spécifique non mappé).
+//
+//     CALCUL CÔTÉ SAAS — opéré par certaines procédures spécifiques
+//     (SelectionModèle.txt et code Ajax serveur de btnDocumentPersonnaliser
+//     dans pgeLtrContenu) sur le JSON natif APRÈS la sérialisation
+//     initiale de structDesignerLoad. Critères :
+//       - Si pas de base active (toutes EstSupprime = Vrai) → attribut
+//         absent (régime A)
+//       - Si champ système (type = "SYS")                  → attribut absent
+//       - Si nom non vide ET nom dans __stOperation.taaBaseChamp.Champ
+//                                                          → Vrai
+//       - Sinon (nom vide, ou champ orphelin)              → Faux
+//
+//     ⚠️ POURQUOI L'ATTRIBUT N'EST PAS DÉCLARÉ DANS LA STRUCTURE WL :
+//     une déclaration `<sérialise = "presenteEnBase">` forcerait
+//     Sérialise() à émettre `presenteEnBase: false` sur TOUS les
+//     champs dès ComposerJsonDesignerCreation, ce qui ferait perdre
+//     la distinction régime A vs régime B (« Faux explicite »). En
+//     déclarant l'attribut UNIQUEMENT ici (documentation) et en
+//     l'ajoutant dynamiquement sur le JSON natif côté procédures
+//     SaaS, on garantit la sémantique « absent si non affecté ».
+//
+//     RÉCAPITULATIF DES ATTRIBUTS JSON POSSIBLES DE structDesignerChampFusion :
+//       nom, type, libelle, ordre, localId, echantillonDefaut,
+//       origine, categorie  → déclarés dans la structure WL
+//                              (toujours présents dans le JSON)
+//       presenteEnBase      → ajouté dynamiquement par la SaaS,
+//                              présent UNIQUEMENT si calcul fait
 // =============================================================================
 
 // =============================================================================
@@ -99,11 +171,73 @@ fin
 // -----------------------------------------------------------------------------
 // CHAMP DE FUSION
 // -----------------------------------------------------------------------------
+// V3.4 : un champ peut désormais avoir 'nom' vide ("") s'il a été créé dans
+//        le Designer et n'est pas encore mappé à une colonne BDD. Dans ce
+//        cas 'localId' est renseigné et sert de clé de substitution dans le
+//        contenu (@LOCAL_<localId>@) et dans donneesApercu (nom = "LOCAL_<localId>").
+//        À la "vérification de cohérence" côté SaaS, la plateforme attribue
+//        un 'nom' technique au champ et la substitution @LOCAL_<id>@ -> @nom@
+//        est effectuée par le Designer à la prochaine ouverture (cf. cahier
+//        des charges §4.2).
+// -----------------------------------------------------------------------------
 structDesignerChampFusion est une Structure
-	'nom'						est une chaîne		<sérialise = "nom">					// Nom du champ (ex: "NOM", "PRENOM")
-	'type'					est une chaîne		<sérialise = "type">					// Type : "TXT", "IMG", "SYS"
-	'libelle'				est une chaîne		<sérialise = "libelle">				// Libellé du champ
+	'nom'					est une chaîne		<sérialise = "nom">					// Nom technique du champ (ex: "NOM", "PRENOM", "Champ7"). Vide pour un champ non mappé.
+	'type'					est une chaîne		<sérialise = "type">					// Code du type (cf. structDesignerTypeChamp - section 5.1)
+	'libelle'				est une chaîne		<sérialise = "libelle">				// Libellé affiché du champ
 	'ordre'					est un entier		<sérialise = "ordre">				// Ordre d'affichage
+	'localId'				est une chaîne		<sérialise = "localId">				// V3.4 - UUID Designer pour les champs créés non mappés (vide pour les champs déjà mappés à la création)
+	'echantillonDefaut'		est une chaîne		<sérialise = "echantillonDefaut">	// V3.4 - Valeur d'échantillon par défaut saisie à la création (optionnel)
+	'origine'				est une chaîne		<sérialise = "origine">				// V3.6 - Origine du champ : "import" (présent dans le JSON initial reçu via postMessage 'load' — venant d'une base BDD ou pré-rempli par la SaaS) ou "ajout" (créé par l'utilisateur via la modale durant la session courante). Sert au VERROUILLAGE INDIVIDUEL (libellé/type figés + suppression interdite si "import"). Pour les champs legacy sans 'origine' : traité comme "import" par sécurité. ATTENTION : sémantique V3.6 différente de V3.5 (qui utilisait "standard"/"specifique").
+	'categorie'				est une chaîne		<sérialise = "categorie">			// V3.6 - Sous-catégorie : "standard" (champ standard du référentiel champsStandard) ou "specifique" (champ créé librement). Sert au CHOIX DE L'ONGLET EN ÉDITION (cf. cahier des charges V2.4 §7.3.1). Renseignée à la création par la modale. Pour les champs legacy sans 'categorie' : déduction par recherche dans champsStandard (présence → "standard", sinon → "specifique").
+	// V3.7 - presenteEnBase (booléen) : NON DÉCLARÉ DANS LA STRUCTURE WL,
+	//        ajouté dynamiquement sur le JSON natif par les procédures SaaS
+	//        de chargement (SelectionModèle.txt et code Ajax serveur de
+	//        btnDocumentPersonnaliser dans pgeLtrContenu). Cf. en-tête de
+	//        fichier V3.7 pour la sémantique complète. Trois états possibles
+	//        côté JSON : absent (régime A) / Vrai (mappé) / Faux (orphelin).
+	//        Pilote la couleur et la suppressibilité côté Designer V2.5.
+fin
+
+// -----------------------------------------------------------------------------
+// CHAMP STANDARD (V3.4 - NOUVEAU)
+// Référence transmise dans le message 'load' au niveau racine pour alimenter
+// la modale "Ajouter un champ" du Designer (onglet Standard).
+// -----------------------------------------------------------------------------
+structDesignerChampStandard est une Structure
+	'nom'					est une chaîne		<sérialise = "nom">					// Nom technique tel qu'il sera attribué au champ (ex: "Nom", "Prenom", "CodePostal")
+	'libelle'				est une chaîne		<sérialise = "libelle">				// Libellé affiché dans la liste standard
+	'type'					est une chaîne		<sérialise = "type">					// Code du type (cf. structDesignerTypeChamp)
+	'placeholderDefaut'	est une chaîne		<sérialise = "placeholderDefaut">	// V3.6 - Valeur par défaut métier (ex: "Dupont" pour Nom, "75001" pour Code postal). Utilisée par l'algorithme unifié de résolution d'échantillon côté Designer (cf. cahier V2.4 §7.3.2 étape 4).
+fin
+
+// -----------------------------------------------------------------------------
+// TYPE DE CHAMP DISPONIBLE (V3.4 - NOUVEAU)
+// Référence transmise dans le message 'load' au niveau racine pour alimenter
+// la modale "Ajouter un champ" du Designer (onglet Spécifique : combo Type).
+//
+// Liste exhaustive des codes V3.4 et leur correspondance avec les constantes
+// WebDev :
+//   TXT  Texte         <- __CHAMP_TYPE_TEXTE__         (chaîne libre)
+//   ENT  Entier        <- __CHAMP_TYPE_ENTIER__        (numérique)
+//   DEC  Décimal       <- __CHAMP_TYPE_DECIMAL__       (numérique)
+//   MON  Monétaire     <- __CHAMP_TYPE_MONETAIRE__     (numérique)
+//   DAT  Date          <- __CHAMP_TYPE_DATE__          (date/heure)
+//   TIM  Heure         <- __CHAMP_TYPE_HEURE__         (date/heure)
+//   EML  Email         <- __CHAMP_TYPE_EMAIL__         (chaîne contrainte)
+//   TEL  Téléphone     <- __CHAMP_TYPE_TELEPHONE__     (chaîne contrainte)
+//   SMS  Portable      <- __CHAMP_TYPE_PORTABLE__      (chaîne contrainte)
+//   CDP  Code postal   <- __CHAMP_TYPE_CODEPOSTAL__    (chaîne contrainte)
+//   URL  URL           <- __CHAMP_TYPE_URL__           (chaîne contrainte)
+//   IMG  Image         <- __CHAMP_TYPE_IMAGE__         (placeholder visuel)
+//   ALG  Alliage       <- __CHAMP_TYPE_ALLIAGE__       (chaîne libre métier - NPAI La Poste)
+//
+// Le code SYS reste réservé aux zones système injectées par WebDev (adresse
+// destinataire, séquentiel, datamatrix...) et n'est PAS exposé dans
+// typesDisponibles.
+// -----------------------------------------------------------------------------
+structDesignerTypeChamp est une Structure
+	'code'					est une chaîne		<sérialise = "code">				// Code court du type (3 lettres, ex: "TXT", "DAT", "MON")
+	'libelle'				est une chaîne		<sérialise = "libelle">				// Libellé affiché dans la combo (ex: "Texte", "Date", "Monétaire")
 fin
 
 // -----------------------------------------------------------------------------
@@ -515,9 +649,14 @@ fin
 // SECTION 11 : DONNÉES D'APERÇU
 // =============================================================================
 
+// V3.4 : 'nom' peut valoir "LOCAL_<localId>" pour les échantillons des
+//        champs créés dans le Designer non encore mappés (cf.
+//        structDesignerChampFusion.localId). Une fois le mapping effectué
+//        côté SaaS, le Designer substitue ces clés par le 'nom' technique
+//        réel à la prochaine sauvegarde.
 structDesignerChamp est une Structure
-	'nom'					est une chaîne		<sérialise = "nom">
-	'valeur'				est une chaîne		<sérialise = "valeur">
+	'nom'					est une chaîne		<sérialise = "nom">					// Nom technique du champ ; peut valoir "LOCAL_<localId>" pour les champs Designer non mappés (V3.4)
+	'valeur'				est une chaîne		<sérialise = "valeur">				// Valeur d'échantillon
 fin
 
 structDesignerEnregistrement est une Structure
@@ -563,6 +702,18 @@ structDesignerLoad est une Structure
 	'constraints'				est une structDesignerConstraints			<sérialise = "constraints">			// Contraintes globales
 	'limites'					est une structDesignerLimites					<sérialise = "limites">					// Limites sur les images acceptées
 	'policesDisponibles'		est un tableau										<sérialise = "policesDisponibles"> de structDesignerPolice
+	// V3.4 - Listes de référence pour la modale "Ajouter un champ" du Designer.
+	//        Toujours envoyées (création tunnel ET création modèle), même quand
+	//        ChampsFusionInterdit = Vrai (le bouton est juste désactivé côté Designer).
+	'champsStandard'			est un tableau										<sérialise = "champsStandard"> de structDesignerChampStandard
+	'typesDisponibles'		est un tableau										<sérialise = "typesDisponibles"> de structDesignerTypeChamp
+	// V3.5 - Verrouillage global de la gestion des champs (ajout/modif/suppression).
+	//        Vrai par défaut (compatibilité ascendante).
+	//        Faux = base BDD associée à la commande : ajout/modif/suppression bloqués.
+	//        Voir ComposerJsonDesignerCreation (tunnel) qui le passe à Faux quand
+	//        stOperation.tabBase..Occurrence > 0 (base sélectionnée).
+	//        ComposerJsonDesignerModele (template) le laisse toujours à Vrai.
+	'autoriserGestionChamps'	est un booléen									<sérialise = "autoriserGestionChamps">
 	// Voir ComposerJsonDesignerCreation : Vrai pour document intérieur si enveloppe sans fenêtre (pas de fusion BDD)
 	'ChampsFusionInterdit'		est un booléen									<sérialise = "ChampsFusionInterdit">
 	// --- Zone de personnalisation (optionnel) : rectangle autorisé par index de page ---s

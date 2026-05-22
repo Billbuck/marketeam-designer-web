@@ -1,0 +1,132 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+procédure ChargeEchantillonTabBaseLigne(stOperation est une structOperation)
+
+sTexteRequete			est une chaîne
+sdReqEchantillon		est une Source de Données
+sWhereBase				est une chaîne
+sFiltre					est une chaîne
+sListeIdBase			est une chaîne
+sConditionType			est une chaîne	// << NOUVEAU
+tabBaseEchantillon		est un tableau de StructBaseLigne
+stBaseEchantillon		est une StructBaseLigne
+
+// -------------------------------------------------------
+// Condition SQL selon le type d'opération
+// -------------------------------------------------------
+selon stOperation.TypeOperation
+	cas __OPERATION_SMS__ :		sConditionType = "Portable IS NOT NULL"
+	cas __OPERATION_VMS__ :		sConditionType = "Portable IS NOT NULL"
+	cas __OPERATION_EMAIL__ :	sConditionType = "Email IS NOT NULL"
+	cas __OPERATION_TEL__ :		sConditionType = "Tel IS NOT NULL OR Portable IS NOT NULL"
+	cas __OPERATION_COURRIER__ :
+		sConditionType = "(Adresse1 IS NOT NULL OR Adresse2 IS NOT NULL OR Adresse3 IS NOT NULL OR Adresse4 IS NOT NULL) AND (CodePostal IS NOT NULL AND Ville IS NOT NULL)"
+	autre cas
+		// Type inconnu : on renvoie un tableau vide
+		renvoyer tabBaseEchantillon
+fin
+
+// -------------------------------------------------------
+// Construction du WHERE selon les bases
+// -------------------------------------------------------
+pour tout stBase de stOperation.tabBase
+	si stBase.EstSupprime = Faux alors
+		si stBase.EstAjoute = Vrai alors
+			si stBase.IdFiltre = 0 alors
+				sWhereBase += [" OR "] + "(clt_base_ligne.IdBase = " + stBase.IdBaseClient +")"
+			sinon
+				sFiltre = GenereRequeteFiltreClientBase(stBase.IdBaseClient,stBase.IdFiltre)
+				sWhereBase += [" OR "] + "(" + sFiltre +")"
+			fin
+		sinon
+			sListeIdBase += [","] + stBase.IdBase
+		fin
+	fin
+fin
+
+// -------------------------------------------------------
+// Construction de la requête SQL
+// -------------------------------------------------------
+selon Vrai
+	cas sWhereBase <> "" _et_ sListeIdBase <> ""
+		sTexteRequete =
+		[
+			(SELECT clt_base.IdZecible, clt_base_ligne.Reference, clt_base_ligne.Societe, clt_base_ligne.Enseigne, clt_base_ligne.contact, clt_base_ligne.Civilite, clt_base_ligne.Nom, clt_base_ligne.Prenom, clt_base_ligne.Adresse1, clt_base_ligne.Adresse2, clt_base_ligne.Adresse3, clt_base_ligne.Adresse4, clt_base_ligne.CodePostal, clt_base_ligne.Ville, clt_base_ligne.Pays, clt_base_ligne.Tel, clt_base_ligne.Portable, clt_base_ligne.Email, clt_base_ligne.CodeAlliage, clt_base_ligne.Champ1, clt_base_ligne.Champ2, clt_base_ligne.Champ3, clt_base_ligne.Champ4, clt_base_ligne.Champ5, clt_base_ligne.Champ6, clt_base_ligne.Champ7, clt_base_ligne.Champ8, clt_base_ligne.Champ9, clt_base_ligne.Champ10, clt_base_ligne.Champ11, clt_base_ligne.Champ12, clt_base_ligne.Champ13, clt_base_ligne.Champ14, clt_base_ligne.Champ15, clt_base_ligne.Champ16, clt_base_ligne.Champ17, clt_base_ligne.Champ18, clt_base_ligne.Champ19, clt_base_ligne.Champ20, clt_base_ligne.Champ21, clt_base_ligne.Champ22, clt_base_ligne.Champ23, clt_base_ligne.Champ24, clt_base_ligne.Champ25, clt_base_ligne.Champ26, clt_base_ligne.Champ27, clt_base_ligne.Champ28, clt_base_ligne.Champ29, clt_base_ligne.Champ30, clt_base_ligne.Sexe, clt_base_ligne.Profil
+			FROM 
+			clt_base_ligne
+			JOIN clt_base ON clt_base.IdBase = clt_base_ligne.IdBase 
+			WHERE ([%sWhereBase%]) AND ([%sConditionType%])
+			
+			UNION
+			
+			SELECT dos_base.IdZecible, dos_base_ligne.Reference, dos_base_ligne.Societe, dos_base_ligne.Enseigne, dos_base_ligne.contact, dos_base_ligne.Civilite, dos_base_ligne.Nom, dos_base_ligne.Prenom, dos_base_ligne.Adresse1, dos_base_ligne.Adresse2, dos_base_ligne.Adresse3, dos_base_ligne.Adresse4, dos_base_ligne.CodePostal, dos_base_ligne.Ville, dos_base_ligne.Pays, dos_base_ligne.Tel, dos_base_ligne.Portable, dos_base_ligne.Email, dos_base_ligne.CodeAlliage, dos_base_ligne.Champ1, dos_base_ligne.Champ2, dos_base_ligne.Champ3, dos_base_ligne.Champ4, dos_base_ligne.Champ5, dos_base_ligne.Champ6, dos_base_ligne.Champ7, dos_base_ligne.Champ8, dos_base_ligne.Champ9, dos_base_ligne.Champ10, dos_base_ligne.Champ11, dos_base_ligne.Champ12, dos_base_ligne.Champ13, dos_base_ligne.Champ14, dos_base_ligne.Champ15, dos_base_ligne.Champ16, dos_base_ligne.Champ17, dos_base_ligne.Champ18, dos_base_ligne.Champ19, dos_base_ligne.Champ20, dos_base_ligne.Champ21, dos_base_ligne.Champ22, dos_base_ligne.Champ23, dos_base_ligne.Champ24, dos_base_ligne.Champ25, dos_base_ligne.Champ26, dos_base_ligne.Champ27, dos_base_ligne.Champ28, dos_base_ligne.Champ29, dos_base_ligne.Champ30, dos_base_ligne.Sexe, dos_base_ligne.Profil
+			FROM 
+			dos_base_ligne
+			JOIN dos_base ON dos_base.IdBase = dos_base_ligne.IdBase 
+			WHERE dos_base.IdBase IN ([%sListeIdBase%]) AND ([%sConditionType%]))
+			LIMIT 20
+		]
+
+	cas sWhereBase <> ""
+		sTexteRequete =
+		[
+			SELECT clt_base.IdZecible, clt_base_ligne.Reference, clt_base_ligne.Societe, clt_base_ligne.Enseigne, clt_base_ligne.contact, clt_base_ligne.Civilite, clt_base_ligne.Nom, clt_base_ligne.Prenom, clt_base_ligne.Adresse1, clt_base_ligne.Adresse2, clt_base_ligne.Adresse3, clt_base_ligne.Adresse4, clt_base_ligne.CodePostal, clt_base_ligne.Ville, clt_base_ligne.Pays, clt_base_ligne.Tel, clt_base_ligne.Portable, clt_base_ligne.Email, clt_base_ligne.CodeAlliage, clt_base_ligne.Champ1, clt_base_ligne.Champ2, clt_base_ligne.Champ3, clt_base_ligne.Champ4, clt_base_ligne.Champ5, clt_base_ligne.Champ6, clt_base_ligne.Champ7, clt_base_ligne.Champ8, clt_base_ligne.Champ9, clt_base_ligne.Champ10, clt_base_ligne.Champ11, clt_base_ligne.Champ12, clt_base_ligne.Champ13, clt_base_ligne.Champ14, clt_base_ligne.Champ15, clt_base_ligne.Champ16, clt_base_ligne.Champ17, clt_base_ligne.Champ18, clt_base_ligne.Champ19, clt_base_ligne.Champ20, clt_base_ligne.Champ21, clt_base_ligne.Champ22, clt_base_ligne.Champ23, clt_base_ligne.Champ24, clt_base_ligne.Champ25, clt_base_ligne.Champ26, clt_base_ligne.Champ27, clt_base_ligne.Champ28, clt_base_ligne.Champ29, clt_base_ligne.Champ30, clt_base_ligne.Sexe, clt_base_ligne.Profil
+			FROM
+			clt_base_ligne
+			JOIN clt_base ON clt_base.IdBase = clt_base_ligne.IdBase 
+			WHERE ([%sWhereBase%]) AND ([%sConditionType%])
+			LIMIT 20
+		]
+
+	cas sListeIdBase <> ""
+		sTexteRequete =
+		[
+			SELECT dos_base.IdZecible, dos_base_ligne.Reference, dos_base_ligne.Societe, dos_base_ligne.Enseigne, dos_base_ligne.contact, dos_base_ligne.Civilite, dos_base_ligne.Nom, dos_base_ligne.Prenom, dos_base_ligne.Adresse1, dos_base_ligne.Adresse2, dos_base_ligne.Adresse3, dos_base_ligne.Adresse4, dos_base_ligne.CodePostal, dos_base_ligne.Ville, dos_base_ligne.Pays, dos_base_ligne.Tel, dos_base_ligne.Portable, dos_base_ligne.Email, dos_base_ligne.CodeAlliage, dos_base_ligne.Champ1, dos_base_ligne.Champ2, dos_base_ligne.Champ3, dos_base_ligne.Champ4, dos_base_ligne.Champ5, dos_base_ligne.Champ6, dos_base_ligne.Champ7, dos_base_ligne.Champ8, dos_base_ligne.Champ9, dos_base_ligne.Champ10, dos_base_ligne.Champ11, dos_base_ligne.Champ12, dos_base_ligne.Champ13, dos_base_ligne.Champ14, dos_base_ligne.Champ15, dos_base_ligne.Champ16, dos_base_ligne.Champ17, dos_base_ligne.Champ18, dos_base_ligne.Champ19, dos_base_ligne.Champ20, dos_base_ligne.Champ21, dos_base_ligne.Champ22, dos_base_ligne.Champ23, dos_base_ligne.Champ24, dos_base_ligne.Champ25, dos_base_ligne.Champ26, dos_base_ligne.Champ27, dos_base_ligne.Champ28, dos_base_ligne.Champ29, dos_base_ligne.Champ30, dos_base_ligne.Sexe, dos_base_ligne.Profil
+			FROM
+			dos_base_ligne
+			JOIN dos_base ON dos_base.IdBase = dos_base_ligne.IdBase 
+			WHERE dos_base.IdBase IN ([%sListeIdBase%]) AND ([%sConditionType%])
+			LIMIT 20
+		]
+
+	autre cas :
+		tabBaseEchantillon.Ajoute(Partage.__vcUser.stCoordonnées) // On renvoi la fiche de l'utilisateur
+		renvoyer tabBaseEchantillon
+fin
+
+si pas sdReqEchantillon.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	<compile si TypeConfiguration <> Webservice>
+		Info("Erreur requête ChargeEchantillonTabBaseLigne")
+	<fin>
+	renvoyer tabBaseEchantillon
+fin
+
+pour tout sdReqEchantillon
+	FichierVersMémoire(stBaseEchantillon, sdReqEchantillon)
+	si sdReqEchantillon.IdZecible > 0 alors
+		stBaseEchantillon.Societe		= cpFonction.Anonymise(stBaseEchantillon.Societe)
+		stBaseEchantillon.Contact		= cpFonction.Anonymise(stBaseEchantillon.Contact)
+		stBaseEchantillon.Civilite		= cpFonction.Anonymise(stBaseEchantillon.Civilite)
+		stBaseEchantillon.Nom			= cpFonction.Anonymise(stBaseEchantillon.Nom)
+		stBaseEchantillon.Prenom		= cpFonction.Anonymise(stBaseEchantillon.Prenom)
+		stBaseEchantillon.Email			= cpFonction.Anonymise(stBaseEchantillon.Email)
+		stBaseEchantillon.Tel			= cpFonction.Anonymise(stBaseEchantillon.Tel)
+		stBaseEchantillon.Portable		= cpFonction.Anonymise(stBaseEchantillon.Portable)
+		stBaseEchantillon.Adresse1		= cpFonction.Anonymise(stBaseEchantillon.Adresse1)
+		stBaseEchantillon.Adresse2		= cpFonction.Anonymise(stBaseEchantillon.Adresse2)
+		stBaseEchantillon.Adresse3		= cpFonction.Anonymise(stBaseEchantillon.Adresse3)
+		stBaseEchantillon.Adresse4		= cpFonction.Anonymise(stBaseEchantillon.Adresse4)
+		stBaseEchantillon.CodePostal	= cpFonction.Anonymise(stBaseEchantillon.CodePostal)
+		stBaseEchantillon.Ville			= cpFonction.Anonymise(stBaseEchantillon.Ville)
+	fin
+	tabBaseEchantillon.Ajoute(stBaseEchantillon)
+fin
+
+//sdReqEchantillon.LitPremier(hSansRafraîchir)
+//si PAS sdReqEchantillon.EnDehors() ALORS
+//	FichierVersTableau(tabBaseEchantillon,sdReqEchantillon)
+//FIN
+
+renvoyer tabBaseEchantillon
+
+fin:
+sdReqEchantillon.AnnuleDéclaration()

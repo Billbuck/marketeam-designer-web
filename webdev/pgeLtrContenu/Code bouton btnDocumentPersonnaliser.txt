@@ -1,0 +1,647 @@
+
+
+Code Ajax serveur :
+
+jsDesigner	est un JSON
+jsWrapper	est un JSON
+
+_nIndDesignerEnCours	= znrLtrContenu
+
+// Note : on N'IMPOSE PAS que JsonDesignerData soit non-vide.
+// Cas légitimes où il peut être vide :
+//   - Modèle de document créé dans pgeLtrDocument sans personnalisation
+//     (le créateur n'est pas passé par le Designer)
+//   - PDF client uploadé non porte-adresse (= sans zones système initiales)
+// Dans ces cas, on ouvre quand même le Designer avec le wrapper minimal
+// (auth, bases, constraints, polices, format, pages, champsFusion,
+// donneesApercu, zones système si porte-adresse) pour permettre à
+// l'utilisateur de personnaliser à partir de zéro.
+
+// ─── Recomposer le wrapper du tunnel à chaque ouverture ─────────────────
+// Le wrapper apporte : auth, bases, constraints, polices, format, pages,
+// champsFusion, donneesApercu, et zones système (adresse destinataire si
+// document porte-adresse d'une enveloppe à fenêtre)
+// On y injecte ensuite la partie data du document (zones utilisateur ou modèle)
+jsWrapper				= ChaîneVersUTF8(cpDesigner.ComposerJsonDesignerCreation(__stOperation, __tabEchantillonBaseLigne, __stOperation.TypeOperation, Faux, _nIndDesignerEnCours, -1, -1, -1, (_nIndDesignerEnCours = 1)))
+
+si __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesignerData <> "" alors
+	jsDesigner = ChaîneVersUTF8(__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesignerData)
+
+	// Source des zones utilisateur : data.xxx si imbriqué, sinon racine
+	jsData est un JSON
+	si jsDesigner.data..Existe alors
+		jsData = jsDesigner.data
+	sinon
+		jsData = jsDesigner
+	fin
+
+	// ─── Fusion des zones utilisateur dans le wrapper ───────────────────
+	// Les zones système (sys-adresse-*) déjà présentes dans le wrapper
+	// sont préservées. On y ajoute les zones du modèle/utilisateur.
+	si jsData.zonesTexte..Occurrence > 0 alors
+		pour nInd = 1 _à_ jsData.zonesTexte..Occurrence
+			jsWrapper.data.zonesTexte[jsWrapper.data.zonesTexte..Occurrence + 1] = jsData.zonesTexte[nInd]
+		fin
+	fin
+	si jsData.zonesImage..Occurrence > 0 alors
+		pour nInd = 1 _à_ jsData.zonesImage..Occurrence
+			jsWrapper.data.zonesImage[jsWrapper.data.zonesImage..Occurrence + 1] = jsData.zonesImage[nInd]
+		fin
+	fin
+	si jsData.zonesCodeBarres..Occurrence > 0 alors
+		pour nInd = 1 _à_ jsData.zonesCodeBarres..Occurrence
+			jsWrapper.data.zonesCodeBarres[jsWrapper.data.zonesCodeBarres..Occurrence + 1] = jsData.zonesCodeBarres[nInd]
+		fin
+	fin
+	// Fusion des zones QR : si une zone du JsonDesignerData a un ID préfixé
+	// "sys-qr-" (= zone QR système comme le QR Interactif obligatoire), on
+	// REMPLACE la zone système du wrapper avec le même ID au lieu d'ajouter
+	// (sinon doublon à chaque réouverture). Pour les zones QR utilisateur
+	// classiques, ajout simple.
+	si jsData.zonesQR..Occurrence > 0 alors
+		pour nInd = 1 _à_ jsData.zonesQR..Occurrence
+			sZoneId est une chaîne = jsData.zonesQR[nInd].id
+
+			si Gauche(sZoneId, 7) = "sys-qr-" alors
+				bRemplace est un booléen = Faux
+				pour nIndW = 1 _à_ jsWrapper.data.zonesQR..Occurrence
+					si jsWrapper.data.zonesQR[nIndW].id = sZoneId alors
+						jsWrapper.data.zonesQR[nIndW]	= jsData.zonesQR[nInd]
+						bRemplace							= Vrai
+						sortir
+					fin
+				fin
+				si pas bRemplace alors
+					jsWrapper.data.zonesQR[jsWrapper.data.zonesQR..Occurrence + 1] = jsData.zonesQR[nInd]
+				fin
+			sinon
+				jsWrapper.data.zonesQR[jsWrapper.data.zonesQR..Occurrence + 1] = jsData.zonesQR[nInd]
+			fin
+		fin
+	fin
+
+	// ─── Reconstruction champsFusion : doctrine "fidélité au modèle" ───
+	// Avant ce patch : on AJOUTAIT les champs du modèle au wrapper, qui
+	// contenait déjà ~20 champs standards par défaut issus de
+	// RemplirDesignerChampsFusion(stOperation.taaBaseChamp). Résultat :
+	// 22 champs exposés dans la popup → utilisateur noyé, perte de la
+	// promesse "ce que le créateur du modèle a choisi".
+	//
+	// Doctrine retenue : la popup contient EXACTEMENT :
+	//   1. Les champs SYSTÈME du wrapper (type = "SYS") → indispensables
+	//      au pipeline PSMD (Sequentiel, Timbre/Affranchissement).
+	//   2. Les champs définis dans le modèle (jsData.champsFusion),
+	//      mappés ou non.
+	// Les champs standards par défaut du wrapper (non-SYS) sont ÉCARTÉS.
+	// L'utilisateur peut les rajouter à la demande via "+ Ajouter un
+	// champ".
+	//
+	// Critère SYS : cf. docs/Structure Webdev Designer V3.md ligne 183
+	//   « Le code SYS reste réservé aux zones système injectées par
+	//     WebDev (adresse destinataire, séquentiel, datamatrix...) »
+	jsChampsFusionFinal est un JSON = "[]"
+	sNomsSysteme est une chaîne = ","   // pseudo-set ",NomA,NomB,"
+
+	// ═════════════════════════════════════════════════════════════════
+	// L18/A38 v2 — INJECTION DÉFENSIVE DES SYS, CONDITIONNÉE AU MODE MODÈLE
+	//
+	//   Compensation Option C : ComposerJsonDesignerCreation produit
+	//   désormais un champsFusion VIDE (pas même les SYS). En mode
+	//   modèle, on doit réinjecter les SYS pour préserver la doctrine
+	//   "fidélité modèle" (champsFusion = SYS + champs modèle).
+	//
+	//   ⚠️ DOCTRINE CRÉATION PURE : la branche `si JsonDesignerData <> ""`
+	//   ci-dessus s'exécute AUSSI en création pure (sans modèle) car
+	//   JsonDesignerData contient en pratique les zones système d'adresse
+	//   pré-générées par WebDev (cas enveloppe à fenêtre porte-adresse).
+	//   Le seul critère fiable distinguant les deux régimes est la
+	//   présence de champs dans jsData.champsFusion :
+	//     - jsData.champsFusion vide   → création pure → ne PAS injecter
+	//       les SYS (popup totalement vide, Option C stricte).
+	//     - jsData.champsFusion non vide → mode modèle → INJECTER les
+	//       SYS pour que l'étape (1) ci-dessous les retrouve.
+	//
+	//   Garde-fou interne : si le wrapper venait à contenir déjà les SYS
+	//   (régression future de ComposerJsonDesignerCreation), pas de
+	//   doublon grâce à bSeqPresent / bTimbrePresent.
+	//
+	//   Valeurs hardcodées identiques à RemplirDesignerChampsFusion.txt
+	//   lignes 33-43 (source historique du contrat).
+	// ═════════════════════════════════════════════════════════════════
+	si jsData.champsFusion..Occurrence > 0 alors
+		bSeqPresent est un booléen = Faux
+		bTimbrePresent est un booléen = Faux
+		pour nIndSysCheck = 1 _à_ jsWrapper.data.champsFusion..Occurrence
+			si jsWrapper.data.champsFusion[nIndSysCheck].type = "SYS" alors
+				si jsWrapper.data.champsFusion[nIndSysCheck].nom = "Sequentiel" alors
+					bSeqPresent = Vrai
+				sinon si jsWrapper.data.champsFusion[nIndSysCheck].nom = "Timbre" alors
+					bTimbrePresent = Vrai
+				fin
+			fin
+		fin
+
+		si pas bSeqPresent alors
+			nIdxAjoutSeq est un entier = jsWrapper.data.champsFusion..Occurrence + 1
+			jsWrapper.data.champsFusion[nIdxAjoutSeq].nom     = "Sequentiel"
+			jsWrapper.data.champsFusion[nIdxAjoutSeq].type    = "SYS"
+			jsWrapper.data.champsFusion[nIdxAjoutSeq].libelle = "Séquentiel"
+			jsWrapper.data.champsFusion[nIdxAjoutSeq].ordre   = 998
+		fin
+
+		si pas bTimbrePresent alors
+			nIdxAjoutTimbre est un entier = jsWrapper.data.champsFusion..Occurrence + 1
+			jsWrapper.data.champsFusion[nIdxAjoutTimbre].nom     = "Timbre"
+			jsWrapper.data.champsFusion[nIdxAjoutTimbre].type    = "SYS"
+			jsWrapper.data.champsFusion[nIdxAjoutTimbre].libelle = "Affranchissement"
+			jsWrapper.data.champsFusion[nIdxAjoutTimbre].ordre   = 999
+		fin
+	fin
+
+	// (1) Conserver les champs SYSTÈME du wrapper
+	si jsWrapper.data.champsFusion..Occurrence > 0 alors
+		pour nIndW = 1 _à_ jsWrapper.data.champsFusion..Occurrence
+			si jsWrapper.data.champsFusion[nIndW].type = "SYS" alors
+				jsChampsFusionFinal[jsChampsFusionFinal..Occurrence + 1] = ...
+					jsWrapper.data.champsFusion[nIndW]
+				si jsWrapper.data.champsFusion[nIndW].nom <> "" alors
+					sNomsSysteme += jsWrapper.data.champsFusion[nIndW].nom + ","
+				fin
+			fin
+		fin
+	fin
+
+	// (2) Ajouter les champs du modèle (mappés ou non).
+	//     Garde-fou : si un champ du modèle a le même nom non-vide qu'un
+	//     SYS déjà retenu, on l'ignore (priorité au wrapper pour préserver
+	//     la référence système intacte). Cas théoriquement impossible —
+	//     un modèle ne devrait pas contenir Sequentiel/Timbre.
+	si jsData.champsFusion..Occurrence > 0 alors
+		pour nIndM = 1 _à_ jsData.champsFusion..Occurrence
+			bDoublonSys est un booléen = Faux
+			si jsData.champsFusion[nIndM].nom <> "" alors
+				si Position(sNomsSysteme, "," + jsData.champsFusion[nIndM].nom + ",") > 0 alors
+					bDoublonSys = Vrai
+				fin
+			fin
+
+			si pas bDoublonSys alors
+				jsChampsFusionFinal[jsChampsFusionFinal..Occurrence + 1] = ...
+					jsData.champsFusion[nIndM]
+			sinon
+				Trace("btnDocumentPersonnaliser : champ modèle ignoré (doublon SYS) : " ...
+					+ jsData.champsFusion[nIndM].nom)
+			fin
+		fin
+	fin
+
+	jsWrapper.data.champsFusion = jsChampsFusionFinal
+
+	// ═════════════════════════════════════════════════════════════════
+	// L18/A34 — PARTIE 2 : PURGE DES COLONNES BASE RÉSIDUELLES
+	// L18/A35 — Test rendu STRICT et ROBUSTE sur attribut JSON absent.
+	//
+	//   Les champs portant `injecteParBase = "1"` (CHAÎNE) sont des
+	//   colonnes de base injectées lors d'une exploitation précédente
+	//   (étape C, marquées par PARTIE 1). Elles sont VOLATILES :
+	//   recalculées à chaque ouverture du Designer selon la base
+	//   actuelle.
+	//
+	//   On les purge AVANT tout traitement (avant la purge des LOCAL_xxx
+	//   résiduels, avant le mapping étape A, et SURTOUT avant la
+	//   réinjection par l'étape C si une base est présente).
+	//
+	//   Régression L18/A34 corrigée :
+	//     Le test originel `injecteParBase = Vrai` (booléen WL) avait un
+	//     comportement non fiable sur attribut JSON dynamique ABSENT. Pour
+	//     un champ du modèle qui n'a JAMAIS reçu cet attribut, le test
+	//     pouvait retourner Vrai à tort → purge de TOUS les champs.
+	//
+	//   Solution L18/A35 :
+	//     - Marqueur stocké comme CHAÎNE "1" (et non booléen Vrai)
+	//     - Lecture défensive en chaîne : un attribut JSON absent lu
+	//       en chaîne retourne "" → comparaison `= "1"` retourne Faux
+	//       → champ CONSERVÉ. Aucun faux positif possible.
+	//
+	//   Résultat :
+	//   - Avec base : purge des anciennes colonnes + réinjection par
+	//     l'étape C des colonnes de la base actuelle.
+	//   - Sans base : purge des anciennes colonnes, l'étape C
+	//     n'injecte rien (régime A) → retour aux champs du modèle
+	//     uniquement.
+	// ═════════════════════════════════════════════════════════════════
+	si jsWrapper.data.champsFusion..Occurrence > 0 alors
+		jsChampsFusionSansBase est un JSON = "[]"
+		pour nIndPurgeBase = 1 _à_ jsWrapper.data.champsFusion..Occurrence
+			// Lecture défensive en chaîne (attribut JSON absent → "")
+			sInjectePB2 est une chaîne = jsWrapper.data.champsFusion[nIndPurgeBase].injecteParBase
+			sLibelleP2 est une chaîne = jsWrapper.data.champsFusion[nIndPurgeBase].libelle
+
+			si sInjectePB2 = "1" alors
+				// Champ injecté par la base à l'exploitation précédente — à purger
+				Trace("PARTIE 2 : champ " + sLibelleP2 + " injecteParBase=[" + sInjectePB2 + "] => PURGÉ")
+			sinon
+				// Champ du modèle (ou SYS) — préservé
+				Trace("PARTIE 2 : champ " + sLibelleP2 + " injecteParBase=[" + sInjectePB2 + "] => conservé")
+				nIdxConserve est un entier = jsChampsFusionSansBase..Occurrence + 1
+				jsChampsFusionSansBase[nIdxConserve] = jsWrapper.data.champsFusion[nIndPurgeBase]
+			fin
+		fin
+		jsWrapper.data.champsFusion = jsChampsFusionSansBase
+	fin
+
+	// L18/A29 - Le bloc `presenteEnBase` historique (V2.5 par nom
+	//   technique) est DÉPLACÉ ci-dessous (après l'application des
+	//   valeurs du modèle) et REFONDU en 4 étapes A/B/C/D qui exploitent
+	//   le matching par LIBELLÉ via taaBaseChamp. Cf. plus bas.
+
+	// ─── Application des valeurs du modèle sur donneesApercu ────────
+	// L15/A25 — Le bloc précédent de FILTRAGE de donneesApercu a été
+	//   RETIRÉ. Justification :
+	//
+	//   Le filtrage écartait des donneesApercu toutes les valeurs dont
+	//   le nom ne figurait pas dans les champsFusion retenus (SYS +
+	//   modèle). C'était cohérent du point de vue popup (l'utilisateur
+	//   ne voit que les champs du modèle), MAIS cela cassait l'affichage
+	//   du PAVÉ ADRESSE SYSTÈME du BAT pré-version : les zones
+	//   sys-adresse-* ont besoin des valeurs Adresse1, Adresse2,
+	//   Adresse3, Adresse4, CodePostal, Ville, Pays… pour s'afficher,
+	//   même si le modèle de l'utilisateur ne les utilise pas en zone
+	//   personnelle. Avec filtrage : BAT incomplet (« Monsieur ATTALI
+	//   Michel » mais sans « CHRONODIRECT, 1 RUE BLEUE, 75009 PARIS »).
+	//   Sans filtrage : BAT complet.
+	//
+	//   Doctrine V2.5 - donneesApercu est une SOURCE DE DONNÉES DE
+	//   FUSION, pas un affichage. La popup se base sur champsFusion
+	//   (filtré fidèlement au modèle, inchangé), pas sur donneesApercu.
+	//   Garder donneesApercu complète ne gêne rien et fournit au pavé
+	//   adresse système les valeurs dont il a besoin. Le surplus de
+	//   quelques paires nom/valeur est négligeable.
+	//
+	//   On CONSERVE :
+	//   - le filtrage de champsFusion (doctrine fidélité au modèle)
+	//   - le calcul de presenteEnBase (tour précédent)
+	//   - l'application des valeurs du modèle sur donneesApercu
+	//     ci-dessous (écrasement par nom + ajout si absent).
+	//
+	//   On NE FILTRE PLUS les valeurs du modèle par sNomsAutorises non
+	//   plus — toute valeur du modèle est appliquée, y compris
+	//   résiduelles. C'est cohérent avec « on ne retire rien de
+	//   donneesApercu ».
+	// L17/A27 — INVERSION DE PRIORITÉ. La valeur du wrapper (= fiche
+	//   utilisateur ou base BDD, FRAÎCHE) PRIME sur l'echantillonDefaut
+	//   du modèle (FIGÉ à la création).
+	//
+	//   Bug L15 résiduel : le modèle écrasait systématiquement le
+	//   wrapper pour toute clé commune. Exemple typique constaté :
+	//   un modèle créé par un utilisateur A avec les standards Nom/Prenom
+	//   stocke {Nom:"Dupont", Prenom:"Jean"} via placeholderDefaut V2.4.
+	//   Quand un utilisateur B (ATTALI Michel) exploite le modèle dans
+	//   le tunnel sans base, le wrapper a {Nom:"ATTALI", Prenom:"Michel"}
+	//   (fiche utilisateur fraîche). L'ancien bloc écrasait par les
+	//   placeholders figés → pavé adresse du BAT affichait "Monsieur
+	//   Dupont Jean" au lieu de "Monsieur ATTALI Michel".
+	//
+	//   Nouvelle doctrine V2.5 :
+	//     - Clé du modèle déjà présente dans wrapper → NE PAS écraser
+	//       (la valeur fraîche du wrapper est préservée)
+	//     - Clé du modèle ABSENTE du wrapper → AJOUTER (cas des champs
+	//       spécifiques non mappés : LOCAL_<localId> = "Porsche" pour
+	//       Voiture, etc. — ces champs n'ont pas d'équivalent BDD,
+	//       leur echantillonDefaut figé EST la bonne valeur)
+	// ═════════════════════════════════════════════════════════════════
+	// L18/A33 — CORRECTION C : PURGE DES LOCAL_xxx RÉSIDUELS
+	//
+	//   À chaque ouverture, on purge de jsData.donneesApercu toutes les
+	//   entrées dont le `nom` commence par "LOCAL_". Justification :
+	//   un document validé précédemment avec base peut contenir des
+	//   LOCAL_xxx figés (valeurs de l'ancienne base). On les supprime
+	//   pour reconstruire à neuf via la CORRECTION B (ci-dessous, étape 7).
+	//   Les valeurs stables sont de toute façon dans
+	//   champsFusion[*].echantillonDefaut, donc rien n'est perdu.
+	//
+	//   donneesApercu est entièrement VOLATILE — recomposé à chaque
+	//   ouverture en ignorant tout résidu stocké d'une session précédente.
+	// ═════════════════════════════════════════════════════════════════
+	si jsData.donneesApercu..Occurrence > 0 alors
+		pour nIndCpurge = 1 _à_ jsData.donneesApercu..Occurrence
+			jsEnregFiltre est un JSON = "[]"
+			pour nIndVpurge = 1 _à_ jsData.donneesApercu[nIndCpurge].enregistrement..Occurrence
+				sNomPurge est une chaîne = jsData.donneesApercu[nIndCpurge].enregistrement[nIndVpurge].nom
+				si Gauche(sNomPurge, 6) <> "LOCAL_" alors
+					// Conserver les entrées NON-LOCAL_xxx (standards, Champ*, SYS)
+					nIdxPurge est un entier = jsEnregFiltre..Occurrence + 1
+					jsEnregFiltre[nIdxPurge].nom    = sNomPurge
+					jsEnregFiltre[nIdxPurge].valeur = jsData.donneesApercu[nIndCpurge].enregistrement[nIndVpurge].valeur
+				fin
+			fin
+			jsData.donneesApercu[nIndCpurge].enregistrement = jsEnregFiltre
+		fin
+	fin
+
+	// ═════════════════════════════════════════════════════════════════
+	// L18/A33 — CORRECTION A : Filtre des valeurs modèle qui
+	//   correspondent à une colonne base courante.
+	//
+	//   Bug observé : Champ3 écrasé par "Porsche" (l'echantillonDefaut
+	//   du champ Véhicule du modèle, après mapping nom="Champ3"). Le
+	//   bloc L17/A27 tombait dans la branche « ajout en fin » → doublon
+	//   {Champ3:Opel} + {Champ3:Porsche} → côté Designer JS, dernière
+	//   occurrence écrase → "Porsche" partout.
+	//
+	//   Correction : avant la boucle, construire le set des noms
+	//   techniques de la base. Dans la boucle, sauter toute valeur
+	//   modèle dont le `nom` est une colonne base courante (= la base
+	//   fait foi, ignorer la valeur figée du modèle pour cette clé).
+	//
+	//   Régime A (sans base) : taaBaseChamp vide → sNomsTechniquesBase
+	//   = "," → aucun filtrage → comportement L17/A27 préservé pour
+	//   les LOCAL_xxx (qui sont les seuls résiduels après CORRECTION C).
+	//
+	//   Généralise proprement L17/A27 : la base/fiche prime sur
+	//   l'echantillonDefaut pour TOUTES les colonnes base (standards
+	//   Nom/Prenom/Adresse… ET Champ1-30 mappés via libellés clients).
+	// ═════════════════════════════════════════════════════════════════
+	sNomsTechniquesBase est une chaîne = ","
+	pour tout stBaseChampNom de __stOperation.taaBaseChamp
+		si stBaseChampNom.Champ <> "" alors
+			sNomsTechniquesBase += stBaseChampNom.Champ + ","
+		fin
+	fin
+
+	si jsData.donneesApercu..Occurrence > 0 _et_ jsData.donneesApercu[1].enregistrement..Occurrence > 0 alors
+		pour nIndW = 1 _à_ jsWrapper.data.donneesApercu..Occurrence
+			pour nIndM = 1 _à_ jsData.donneesApercu[1].enregistrement..Occurrence
+				jsValeurModele est un JSON = jsData.donneesApercu[1].enregistrement[nIndM]
+
+				// L18/A33 — CORRECTION A : ignorer les valeurs modèle qui
+				//   correspondent à une colonne base courante. La base
+				//   (RemplirDesignerApercu) a déjà rempli ces colonnes
+				//   avec les vraies valeurs fraîches par enregistrement.
+				si Position(sNomsTechniquesBase, "," + jsValeurModele.nom + ",") > 0 alors
+					continuer
+				fin
+
+				bRemplaceVal est un booléen = Faux
+				pour nIndE = 1 _à_ jsWrapper.data.donneesApercu[nIndW].enregistrement..Occurrence
+					si jsWrapper.data.donneesApercu[nIndW].enregistrement[nIndE].nom = jsValeurModele.nom alors
+						// L17/A27 - On NE TOUCHE PAS à la valeur du wrapper
+						// (la fiche utilisateur ou la BDD prime sur le modèle).
+						// On marque seulement bRemplaceVal = Vrai pour signaler
+						// que la clé existe déjà → empêche le branchement
+						// "ajout en fin" ci-dessous (sinon doublon).
+						bRemplaceVal = Vrai
+						sortir
+					fin
+				fin
+
+				si pas bRemplaceVal alors
+					// Clé absente du wrapper → ajout (cas LOCAL_<localId>
+					// des champs spécifiques du modèle).
+					jsWrapper.data.donneesApercu[nIndW].enregistrement[ ...
+						jsWrapper.data.donneesApercu[nIndW].enregistrement..Occurrence + 1] = jsValeurModele
+				fin
+			fin
+		fin
+	fin
+
+	// ─── L18/A29 — CORRESPONDANCE DYNAMIQUE LIBELLÉ MODÈLE ↔ BASE ───
+	//
+	// 4 étapes A/B/C/D pour matcher les champs du modèle avec les
+	// colonnes de la base courante par LIBELLÉ (pas par nom technique).
+	// Recalculée à chaque ouverture, JAMAIS persistée.
+	//
+	// Pré-requis confirmé en audit L18 : `__stOperation.taaBaseChamp`
+	// est un tableau associatif WLangage dont la CLÉ est le libellé
+	// client du champ. Vrai pour les standards (Civilité, Nom, Prénom,
+	// Adresse 1, …) ET pour les Champ1-Champ30 (Véhicule, Couleur,
+	// Image, Test, …). Donc lookup `taaBaseChamp[libelle]` uniforme.
+	//
+	// Régime A (sans base) : taaBaseChamp est vide → bAvecBaseLocal=Faux
+	//   → tout le bloc est court-circuité → comportement V2.4/V2.5
+	//   sans changement.
+	// Régime B (avec base) : les 4 étapes s'exécutent.
+
+	// Détection bAvecBaseLocal : même logique que ComposerJsonDesignerCreation.
+	bAvecBaseLocal	est un booléen	= Faux
+	pour tout stBaseDoc de __stOperation.tabBase
+		si stBaseDoc.EstSupprime = Faux alors
+			bAvecBaseLocal = Vrai
+			sortir
+		fin
+	fin
+
+	si bAvecBaseLocal _et_ jsWrapper.data.champsFusion..Occurrence > 0 alors
+
+		// ÉTAPE A — Mapping libellé → nom technique
+		pour nIndA = 1 _à_ jsWrapper.data.champsFusion..Occurrence
+			si jsWrapper.data.champsFusion[nIndA].type = "SYS" alors
+				continuer
+			fin
+			sLibA est une chaîne = jsWrapper.data.champsFusion[nIndA].libelle
+			si sLibA <> "" _et_ __stOperation.taaBaseChamp[sLibA]..Existe alors
+				jsWrapper.data.champsFusion[nIndA].nom = __stOperation.taaBaseChamp[sLibA].Champ
+			fin
+		fin
+
+		// ÉTAPE B — Calcul de presenteEnBase par LIBELLÉ
+		pour nIndB = 1 _à_ jsWrapper.data.champsFusion..Occurrence
+			si jsWrapper.data.champsFusion[nIndB].type = "SYS" alors
+				continuer
+			fin
+			sLibB est une chaîne = jsWrapper.data.champsFusion[nIndB].libelle
+			si sLibB <> "" _et_ __stOperation.taaBaseChamp[sLibB]..Existe alors
+				jsWrapper.data.champsFusion[nIndB].presenteEnBase = Vrai
+			sinon
+				jsWrapper.data.champsFusion[nIndB].presenteEnBase = Faux
+			fin
+		fin
+
+		// ÉTAPE C — Injection des colonnes base NON UTILISÉES par le modèle
+		sLibellesPresents est une chaîne = ","
+		pour nIndPres = 1 _à_ jsWrapper.data.champsFusion..Occurrence
+			sLibPres est une chaîne = jsWrapper.data.champsFusion[nIndPres].libelle
+			si sLibPres <> "" alors
+				sLibellesPresents += sLibPres + ","
+			fin
+		fin
+
+		nOrdreMax est un entier = 0
+		pour nIndOrd = 1 _à_ jsWrapper.data.champsFusion..Occurrence
+			si jsWrapper.data.champsFusion[nIndOrd].ordre..Existe _et_ ...
+			   jsWrapper.data.champsFusion[nIndOrd].ordre > nOrdreMax alors
+				nOrdreMax = jsWrapper.data.champsFusion[nIndOrd].ordre
+			fin
+		fin
+
+		pour tout stBaseChampC, sLibelleC de __stOperation.taaBaseChamp
+			si sLibelleC = "Séquentiel" _ou_ sLibelleC = "Affranchissement" alors
+				Trace("btnDocumentPersonnaliser : libellé base ignoré (collision SYS) : " + sLibelleC)
+				continuer
+			fin
+			si Position(sLibellesPresents, "," + sLibelleC + ",") > 0 alors
+				continuer
+			fin
+
+			nOrdreMax++
+			jsNouvelleEntree est un JSON = "{}"
+			jsNouvelleEntree.nom         = stBaseChampC.Champ
+			jsNouvelleEntree.libelle     = sLibelleC
+			si stBaseChampC.Type = __CHAMP_TYPE_IMAGE__ alors
+				jsNouvelleEntree.type = "IMG"
+			sinon
+				jsNouvelleEntree.type = "TXT"
+			fin
+			jsNouvelleEntree.ordre       = nOrdreMax
+			jsNouvelleEntree.origine     = "import"
+			jsNouvelleEntree.categorie   = "specifique"
+			jsNouvelleEntree.presenteEnBase = Vrai
+			// L18/A35 PARTIE 1 — MARQUEUR CHAÎNE robuste : valeur "1"
+			//   (et NON booléen Vrai). Justification : un attribut JSON
+			//   booléen ABSENT lu via `= Vrai` en WLangage a un
+			//   comportement non fiable et peut matcher à tort sur les
+			//   champs du modèle qui n'ont JAMAIS cet attribut.
+			//   Régression L18/A34 résolue : la chaîne "1" est testée
+			//   contre une lecture chaîne défensive (cf. PARTIE 2 et 3),
+			//   et un attribut JSON absent lu en chaîne retourne ""
+			//   → JAMAIS de faux positif sur les champs du modèle.
+			jsNouvelleEntree.injecteParBase = "1"
+
+			jsWrapper.data.champsFusion[jsWrapper.data.champsFusion..Occurrence + 1] = jsNouvelleEntree
+		fin
+
+	fin
+
+	// ═════════════════════════════════════════════════════════════════
+	// L18/A33 — CORRECTION B : Remplir les LOCAL_<localId> selon le
+	//   contexte (remplace l'ancienne étape D supprimée en L18/A32).
+	//
+	//   Cette étape s'exécute QUEL QUE SOIT le régime (avec ou sans
+	//   base) et garantit que chaque champ spécifique du modèle a
+	//   une entrée LOCAL_<localId> dans CHAQUE enregistrement de
+	//   donneesApercu, avec la valeur du moment :
+	//
+	//     - AVEC base + champ mappé (nom dans taaBaseChamp.Champ) :
+	//       valeur de la colonne base PAR ENREGISTREMENT
+	//       (ex Champ3 = Opel pour record 1, Peugeot pour record 2…).
+	//
+	//     - SANS base ou champ non mappé : echantillonDefaut du champ
+	//       (= valeur stable du modèle, ex "Porsche").
+	//
+	//   Critère pour traiter un champ :
+	//     - type <> "SYS"
+	//     - localId est une CHAÎNE NON VIDE ET <> "0"
+	//       (les champs standards ont localId=0, pas un vrai UUID — les
+	//       ignorer évite la création d'une clé parasite "LOCAL_0" qui
+	//       polluait l'ancienne étape D).
+	//
+	//   Pattern d'assignation DIRECTE (pas de variable JSON intermédiaire,
+	//   évite tout risque de référence partagée WLangage).
+	// ═════════════════════════════════════════════════════════════════
+	pour nIndB = 1 _à_ jsWrapper.data.champsFusion..Occurrence
+		si jsWrapper.data.champsFusion[nIndB].type = "SYS" alors
+			continuer
+		fin
+
+		// Lecture directe + tests sur la valeur (robuste sur attribut JSON dynamique)
+		sLocalIdB est une chaîne = jsWrapper.data.champsFusion[nIndB].localId
+		si sLocalIdB = "" _ou_ sLocalIdB = "0" alors
+			continuer  // pas un vrai champ spécifique (standard ou SYS)
+		fin
+
+		sNomTechB est une chaîne = jsWrapper.data.champsFusion[nIndB].nom
+		sLibB est une chaîne = jsWrapper.data.champsFusion[nIndB].libelle
+		sCleLocaleB est une chaîne = "LOCAL_" + sLocalIdB
+
+		// Déterminer si le champ a une correspondance base (= la base
+		// fait foi pour les valeurs). Le mapping nom = "Champ3" a été
+		// fait par l'étape A si correspondance libellé.
+		bAvecCorrespBase est un booléen = Faux
+		si sNomTechB <> "" _et_ Position(sNomsTechniquesBase, "," + sNomTechB + ",") > 0 alors
+			bAvecCorrespBase = Vrai
+		fin
+
+		// L18/A33 — TRACE TEMPORAIRE (à retirer après validation)
+		Trace("CorrectionB champ " + sLibB + " localId=[" + sLocalIdB + "] nomTech=[" + sNomTechB ...
+			+ "] avecBase=" + bAvecCorrespBase + " echantDefaut=[" + jsWrapper.data.champsFusion[nIndB].echantillonDefaut + "]")
+
+		si jsWrapper.data.donneesApercu..Occurrence = 0 alors
+			continuer  // pas d'enregistrement à remplir
+		fin
+
+		// Boucler sur TOUS les enregistrements
+		pour nIndEB = 1 _à_ jsWrapper.data.donneesApercu..Occurrence
+			sValeurB est une chaîne = ""
+
+			si bAvecCorrespBase alors
+				// CAS AVEC BASE : lire la valeur de sNomTechB DANS CET enregistrement
+				pour nIndVB = 1 _à_ jsWrapper.data.donneesApercu[nIndEB].enregistrement..Occurrence
+					si jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIndVB].nom = sNomTechB alors
+						sValeurB = jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIndVB].valeur
+						sortir
+					fin
+				fin
+			sinon
+				// CAS SANS BASE (ou champ non mappé) : echantillonDefaut du modèle
+				sValeurB = jsWrapper.data.champsFusion[nIndB].echantillonDefaut
+			fin
+
+			// Injecter ou mettre à jour la clé sCleLocaleB dans cet enregistrement
+			// Pattern d'assignation directe (pas de variable JSON intermédiaire)
+			bDejaB est un booléen = Faux
+			pour nIndCkB = 1 _à_ jsWrapper.data.donneesApercu[nIndEB].enregistrement..Occurrence
+				si jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIndCkB].nom = sCleLocaleB alors
+					jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIndCkB].valeur = sValeurB
+					bDejaB = Vrai
+					sortir
+				fin
+			fin
+			si pas bDejaB alors
+				nIdxNouveauB est un entier = jsWrapper.data.donneesApercu[nIndEB].enregistrement..Occurrence + 1
+				jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIdxNouveauB].nom    = sCleLocaleB
+				jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIdxNouveauB].valeur = sValeurB
+			fin
+		fin
+	fin
+
+	// Récupérer les contraintes globales du modèle si présentes
+	si jsDesigner.constraints..Existe alors
+		jsWrapper.constraints = jsDesigner.constraints
+	fin
+
+	// ─── Transfert du snapshot des zones initiales du modèle ───────────
+	// Ce snapshot représente les zones placées à l'origine (par le créateur
+	// du modèle ou lors de la 1ère ouverture du tunnel). Il sert de référence
+	// pour la sémantique "zones SUPPLÉMENTAIRES" des limites côté Designer
+	// (script.js : initialZoneCounts).
+	// À la 1ère ouverture, ce snapshot n'existe pas encore : le Designer le
+	// calcule depuis les zones reçues, puis le sauvegarde à la validation.
+	// Aux ouvertures suivantes, on le transfert depuis le JSON stocké pour
+	// que les limites continuent de fonctionner correctement.
+	si jsDesigner.initialZoneCounts..Existe alors
+		jsWrapper.data.initialZoneCounts = jsDesigner.initialZoneCounts
+	fin
+fin
+
+gsJsonDesigner = JSONVersChaîne(jsWrapper)
+
+
+
+
+
+
+Code navigateur retour Ajax :
+
+// Envoyer le JSON au Designer
+si gsJsonDesigner <> "" alors
+	btnFerme.Visible					= Faux
+	grpBoutonProgression.Visible	= Faux
+	btnPrécédent.Visible				= Faux
+	btnSuivant.Visible				= Faux
+	grpTunnelNombre.Visible			= Faux
+	grpTunnelMontantHT.Visible		= Faux
+	btnAccueil.Etat					= Grisé
+	celLtrConteneur.Plan				= 2
+	EnvoyerMessageIframe(gsJsonDesigner)
+	gsJsonDesigner 					= ""
+fin

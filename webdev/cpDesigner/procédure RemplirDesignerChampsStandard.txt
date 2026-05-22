@@ -1,0 +1,224 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// cpDesigner.RemplirDesignerChampsStandard
+// Rôle : Construire le tableau des champs de fusion "standard" disponibles
+//        pour la modale "Ajouter un champ" du Designer (onglet Standard).
+//        Permet à l'utilisateur d'ajouter en un clic (ou un double-clic
+//        depuis V2.4) un champ courant (Nom, Prénom, Code postal, etc.)
+//        avec son nom technique, son libellé, son type, et désormais
+//        sa VALEUR PAR DÉFAUT (placeholderDefaut V3.6).
+//
+// V3.6 (19/05/2026) — Refonte complète selon la liste métier réelle
+// Marketeam (cf. docs/cahier_des_charges_creation_champs_fusion.md V2.4
+// §5.1bis et amendement V2.4 §2.4). L'ancienne liste (V3.4/L1) contenait
+// des entrées inadaptées (« N° Client », « Logo entreprise », « Photo
+// contact ») qui ne correspondaient pas au métier — bug A11 corrigé.
+//
+// Champs métier Marketeam (18 entrées) :
+//   - Identité destinataire : Civilité, Nom, Prénom, Société, Enseigne,
+//     Contact, Référence
+//   - Adresse postale : Adresse 1 à 4, Code postal, Ville, Pays
+//   - Coordonnées : Téléphone, Portable, Email
+//   - Métier La Poste : Code Alliage (NPAI)
+//
+// Pour chaque champ, on transporte aussi un placeholderDefaut (V3.6) :
+// valeur d'exemple métier utilisée par l'algorithme unifié de résolution
+// d'échantillon côté Designer (cf. cahier V2.4 §7.3.2 étape 4) quand
+// l'utilisateur ne saisit pas de valeur perso et qu'aucune valeur n'est
+// disponible dans la fiche utilisateur (donneesApercu).
+//
+// IMPORTANT : pour les champs créés via cette liste, le 'nom' technique est
+// TOUJOURS renseigné. Côté Designer, le champ est considéré comme :
+//   - origine = "ajout" (V2.4) car ajouté par l'utilisateur via la modale
+//     → librement modifiable et supprimable
+//   - categorie = "standard" (V2.4) → onglet Standard figé en édition
+//
+// Codes types utilisés (cf. constantes WebDev) :
+//   __CHAMP_TYPE_TEXTE__       (TXT)
+//   __CHAMP_TYPE_CODEPOSTAL__  (CDP) pour Code postal
+//   __CHAMP_TYPE_EMAIL__       (EML) pour Email
+//   __CHAMP_TYPE_TELEPHONE__   (TEL) pour Téléphone
+//   __CHAMP_TYPE_PORTABLE__    (SMS) pour Portable
+//
+// Appelée par :
+//   - cpDesigner.ComposerJsonDesignerCreation (tunnel courrier)
+//   - cpDesigner.ComposerJsonDesignerModele (création / édition modèle)
+//
+// Paramètre :
+//   pIdClient (entier) : identifiant client (réservé usage futur — par
+//                        exemple pour aller chercher une liste différente
+//                        dans prm_designer_champs_standard si un client a
+//                        des standards spécifiques). Conservé en signature
+//                        car appelé par les deux procédures ci-dessus.
+//
+// L17/A27 (Correction 2) — placeholderDefaut personnalisé à la fiche
+//   utilisateur. La fiche `Partage.__vcUser.stCoordonnées` est une
+//   `StructBaseLigne`, symétrique aux enregistrements standards de la base.
+//   Elle expose les membres : Civilite, Nom, Prenom, Societe, Enseigne,
+//   Contact, Reference, Adresse1-4, CodePostal, Ville, Pays, Tel,
+//   Portable, Email, CodeAlliage.
+//
+//   Pour chaque champ standard, le placeholderDefaut prend désormais la
+//   valeur de la fiche utilisateur SI elle est non vide, sinon retombe sur
+//   le placeholder générique métier (ancienne valeur V3.6).
+//
+//   Bénéfices :
+//   - À la création d'un modèle, le pré-remplissage automatique de
+//     l'échantillon (algo unifié V2.4 §7.3.2 étape 4a) reprend les vraies
+//     coordonnées de l'utilisateur connecté → modèle plus réaliste.
+//   - Combiné à L17/A27 Correction 1 (inversion priorité dans
+//     SelectionModèle/btnDocumentPersonnaliser), évite les écrasements
+//     ATTALI → Dupont du pavé adresse.
+//
+//   Helper interne `PlaceholderOuDefaut` factorise le pattern
+//   « si fiche non vide → fiche, sinon → défaut » pour les 18 entrées.
+//
+// Retour :
+//   tableau de structDesignerChampStandard (sérialisé sous "champsStandard"
+//   en racine du message load).
+// ─────────────────────────────────────────────────────────────────────────────
+procédure RemplirDesignerChampsStandard(pIdClient <utile>) : tableau de structDesignerChampStandard
+
+tabStandards		est un tableau de structDesignerChampStandard
+stUnChamp			est une structDesignerChampStandard
+stFiche				est une StructBaseLigne = Partage.__vcUser.stCoordonnées
+
+// ─── Identité destinataire ───────────────────────────────────────────────
+stUnChamp.nom						= "Civilite"
+stUnChamp.libelle					= "Civilité"
+stUnChamp.type						= __CHAMP_TYPE_TEXTE__
+stUnChamp.placeholderDefaut	= PlaceholderOuDefaut(stFiche.Civilite, "Monsieur")
+tabStandards.Ajoute(stUnChamp)
+
+stUnChamp.nom						= "Nom"
+stUnChamp.libelle					= "Nom"
+stUnChamp.type						= __CHAMP_TYPE_TEXTE__
+stUnChamp.placeholderDefaut	= PlaceholderOuDefaut(stFiche.Nom, "Dupont")
+tabStandards.Ajoute(stUnChamp)
+
+stUnChamp.nom						= "Prenom"
+stUnChamp.libelle					= "Prénom"
+stUnChamp.type						= __CHAMP_TYPE_TEXTE__
+stUnChamp.placeholderDefaut	= PlaceholderOuDefaut(stFiche.Prenom, "Jean")
+tabStandards.Ajoute(stUnChamp)
+
+stUnChamp.nom						= "Societe"
+stUnChamp.libelle					= "Société"
+stUnChamp.type						= __CHAMP_TYPE_TEXTE__
+stUnChamp.placeholderDefaut	= PlaceholderOuDefaut(stFiche.Societe, "Société Exemple SAS")
+tabStandards.Ajoute(stUnChamp)
+
+stUnChamp.nom						= "Enseigne"
+stUnChamp.libelle					= "Enseigne"
+stUnChamp.type						= __CHAMP_TYPE_TEXTE__
+stUnChamp.placeholderDefaut	= PlaceholderOuDefaut(stFiche.Enseigne, "Enseigne Exemple")
+tabStandards.Ajoute(stUnChamp)
+
+stUnChamp.nom						= "Contact"
+stUnChamp.libelle					= "Contact"
+stUnChamp.type						= __CHAMP_TYPE_TEXTE__
+stUnChamp.placeholderDefaut	= PlaceholderOuDefaut(stFiche.Contact, "M. Jean Dupont")
+tabStandards.Ajoute(stUnChamp)
+
+stUnChamp.nom						= "Reference"
+stUnChamp.libelle					= "Référence"
+stUnChamp.type						= __CHAMP_TYPE_TEXTE__
+stUnChamp.placeholderDefaut	= PlaceholderOuDefaut(stFiche.Reference, "REF-12345")
+tabStandards.Ajoute(stUnChamp)
+
+// ─── Adresse postale ─────────────────────────────────────────────────────
+stUnChamp.nom						= "Adresse1"
+stUnChamp.libelle					= "Adresse 1"
+stUnChamp.type						= __CHAMP_TYPE_TEXTE__
+stUnChamp.placeholderDefaut	= PlaceholderOuDefaut(stFiche.Adresse1, "12 rue de l'Exemple")
+tabStandards.Ajoute(stUnChamp)
+
+stUnChamp.nom						= "Adresse2"
+stUnChamp.libelle					= "Adresse 2"
+stUnChamp.type						= __CHAMP_TYPE_TEXTE__
+stUnChamp.placeholderDefaut	= PlaceholderOuDefaut(stFiche.Adresse2, "Bâtiment A")
+tabStandards.Ajoute(stUnChamp)
+
+stUnChamp.nom						= "Adresse3"
+stUnChamp.libelle					= "Adresse 3"
+stUnChamp.type						= __CHAMP_TYPE_TEXTE__
+stUnChamp.placeholderDefaut	= PlaceholderOuDefaut(stFiche.Adresse3, "Résidence Les Jardins")
+tabStandards.Ajoute(stUnChamp)
+
+stUnChamp.nom						= "Adresse4"
+stUnChamp.libelle					= "Adresse 4"
+stUnChamp.type						= __CHAMP_TYPE_TEXTE__
+stUnChamp.placeholderDefaut	= PlaceholderOuDefaut(stFiche.Adresse4, "Appartement 24")
+tabStandards.Ajoute(stUnChamp)
+
+stUnChamp.nom						= "CodePostal"
+stUnChamp.libelle					= "Code postal"
+stUnChamp.type						= __CHAMP_TYPE_CODEPOSTAL__
+stUnChamp.placeholderDefaut	= PlaceholderOuDefaut(stFiche.CodePostal, "75001")
+tabStandards.Ajoute(stUnChamp)
+
+stUnChamp.nom						= "Ville"
+stUnChamp.libelle					= "Ville"
+stUnChamp.type						= __CHAMP_TYPE_TEXTE__
+stUnChamp.placeholderDefaut	= PlaceholderOuDefaut(stFiche.Ville, "Paris")
+tabStandards.Ajoute(stUnChamp)
+
+stUnChamp.nom						= "Pays"
+stUnChamp.libelle					= "Pays"
+stUnChamp.type						= __CHAMP_TYPE_TEXTE__
+stUnChamp.placeholderDefaut	= PlaceholderOuDefaut(stFiche.Pays, "France")
+tabStandards.Ajoute(stUnChamp)
+
+// ─── Coordonnées ─────────────────────────────────────────────────────────
+// L17/A28 - Le `nom` technique du champ Téléphone est "Tel" (et non
+//   "Telephone") pour s'aligner sur la référence de nommage du système :
+//     - colonne `clt_base_champ.Champ = "Tel"`
+//     - membre `StructBaseLigne.Tel`
+//     - fiche utilisateur `__vcUser.stCoordonnées.Tel`
+//   Avant ce patch, l'écart "Tel" (côté infra) ≠ "Telephone" (côté grille
+//   standard) empêchait la catégorisation côté Designer : le champ exposé
+//   par RemplirDesignerChampsFusion avec nom="Tel" n'était pas trouvé
+//   dans champsStandardDisponibles (qui contenait "Telephone") → classé
+//   "specifique" par défaut → italique + onglet Spécifique en édition.
+//   Aligner sur "Tel" est sans risque puisque AUCUN modèle existant
+//   n'utilise le marqueur @Telephone@ (projet en développement, vérifié).
+//   Le libellé "Téléphone" reste pour l'UI.
+stUnChamp.nom						= "Tel"
+stUnChamp.libelle					= "Téléphone"
+stUnChamp.type						= __CHAMP_TYPE_TELEPHONE__
+stUnChamp.placeholderDefaut	= PlaceholderOuDefaut(stFiche.Tel, "01.02.03.04.05")
+tabStandards.Ajoute(stUnChamp)
+
+stUnChamp.nom						= "Portable"
+stUnChamp.libelle					= "Portable"
+stUnChamp.type						= __CHAMP_TYPE_PORTABLE__
+stUnChamp.placeholderDefaut	= PlaceholderOuDefaut(stFiche.Portable, "06.12.34.56.78")
+tabStandards.Ajoute(stUnChamp)
+
+stUnChamp.nom						= "Email"
+stUnChamp.libelle					= "Email"
+stUnChamp.type						= __CHAMP_TYPE_EMAIL__
+stUnChamp.placeholderDefaut	= PlaceholderOuDefaut(stFiche.Email, "contact@example.com")
+tabStandards.Ajoute(stUnChamp)
+
+// ─── Métier La Poste — NPAI (Alliage) ────────────────────────────────────
+// Note : conservé en type TXT (et non ALG) car le champ standard "Code
+// Alliage" correspond à un code court côté destinataire ; le type ALG
+// est réservé aux champs spécifiques nécessitant une validation Alliage
+// dédiée. Cf. cahier V2.4 §5.1bis.
+stUnChamp.nom						= "CodeAlliage"
+stUnChamp.libelle					= "Code Alliage"
+stUnChamp.type						= __CHAMP_TYPE_TEXTE__
+stUnChamp.placeholderDefaut	= PlaceholderOuDefaut(stFiche.CodeAlliage, "ALG001")
+tabStandards.Ajoute(stUnChamp)
+
+renvoyer tabStandards
+
+	// ─── Procédure interne ───────────────────────────────────────────────
+	// L17/A27 - Helper : retourne la valeur de la fiche utilisateur si elle
+	//   est non vide, sinon le placeholder métier générique.
+	procédure interne PlaceholderOuDefaut(sFiche est une chaîne, sDefaut est une chaîne) : chaîne
+		si sFiche <> "" alors
+			renvoyer sFiche
+		fin
+		renvoyer sDefaut
+	fin

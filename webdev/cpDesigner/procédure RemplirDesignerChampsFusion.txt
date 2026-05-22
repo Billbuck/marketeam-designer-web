@@ -1,0 +1,46 @@
+// -----------------------------------------------------------------------------
+// cpDesigner.RemplirDesignerChampsFusion()
+// Rôle : Remplir la liste des champs de fusion disponibles pour le Designer
+//        Parcourt le tableau associatif des champs communs aux bases de l'opération
+//        La clé du tableau = libellé d'origine du champ client
+//        Champ = nom de la colonne MariaDB
+//        Type IMG → "IMG" dans le Designer, tous les autres → "TXT"
+// Paramètres :
+//   pTaaBaseChamp (tableau associatif de structBaseChamp) : champs communs aux bases
+// Retour : tableau de stDesignerChampFusion rempli
+// -----------------------------------------------------------------------------
+procédure RemplirDesignerChampsFusion(pTaaBaseChamp)
+
+tabChamps	est un tableau de structDesignerChampFusion
+stUnChamp	est une structDesignerChampFusion
+nOrdre		est un entier
+
+
+pour tout stChamp, sLibellé de pTaaBaseChamp
+	stUnChamp.nom = stChamp.Champ
+	// Type Designer : IMG si image, TXT pour tous les autres types
+	si stChamp.Type = __CHAMP_TYPE_IMAGE__ alors
+		stUnChamp.type = "IMG"
+	sinon
+		stUnChamp.type = "TXT"
+	fin
+	stUnChamp.libelle	= sLibellé
+	stUnChamp.ordre		= stChamp.Ordre
+	nOrdre = stUnChamp.ordre
+	tabChamps.Ajoute(stUnChamp)
+fin
+
+stUnChamp.nom 		= "Sequentiel"
+stUnChamp.type 		= "SYS"
+stUnChamp.libelle	= "Séquentiel"
+stUnChamp.ordre		= ++nOrdre
+tabChamps.Ajoute(stUnChamp)
+
+stUnChamp.nom		= "Timbre"
+stUnChamp.type		= "SYS"
+stUnChamp.libelle	= "Affranchissement"
+stUnChamp.ordre		= ++nOrdre
+tabChamps.Ajoute(stUnChamp)
+
+
+renvoyer tabChamps
