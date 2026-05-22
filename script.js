@@ -4222,11 +4222,27 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function getChampUsageKey(champ) {
         if (!champ) return '';
+        // L18/A39 — INVERSION DE PRIORITÉ (Étape 1) :
+        //   Quand un champ a un localId réel (UUID, pas "0" ni vide), on
+        //   privilégie LOCAL_<localId> sur le nom technique. Justification :
+        //   le nom technique peut être VOLATILE (réécrit en mémoire par
+        //   l'étape A de SelectionModèle.txt / btnDocumentPersonnaliser.txt :
+        //   libelle "Véhicule" → nom "Champ3" si la base contient cette
+        //   colonne). Le localId, lui, est STABLE et persisté avec le champ.
+        //   Cohérence indispensable avec l'insertion (fieldKey ligne 4802),
+        //   sinon le scan retourne LOCAL_abc mais l'indexation cherche Champ3
+        //   → estChampExploite() retourne faux pour Véhicule alors qu'il
+        //   est utilisé → V2.5 cassée (champ rouge à tort, suppression
+        //   autorisée alors qu'il est exploité).
+        //   Critère localId valide : non vide ET <> "0" (les standards ont
+        //   localId="0", ce n'est pas un vrai UUID).
+        if (typeof champ.localId === 'string'
+            && champ.localId.trim()
+            && champ.localId.trim() !== '0') {
+            return `LOCAL_${champ.localId.trim()}`;
+        }
         if (typeof champ.nom === 'string' && champ.nom.trim()) {
             return champ.nom.trim();
-        }
-        if (typeof champ.localId === 'string' && champ.localId.trim()) {
-            return `LOCAL_${champ.localId.trim()}`;
         }
         return '';
     }
@@ -4795,11 +4811,42 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Parcourir les champs triés
         champsTries.forEach(champ => {
-            // V3.4 - Clé d'insertion : nom technique si mappé, LOCAL_<localId>
-            //        sinon (cf. cahier §4.1). Le drag&drop et le dblclick
-            //        utilisent cette clé pour produire `@key@` dans Quill.
-            const isMapped = !!(champ.nom && String(champ.nom).trim().length > 0);
-            const fieldKey = isMapped ? champ.nom : `LOCAL_${champ.localId || ''}`;
+            // V3.4 - Clé d'insertion : utilisée par le drag&drop et le dblclick
+            //        pour produire `@key@` dans Quill (et stocker la value
+            //        des selects image/barcode).
+            //
+            // L18/A39 — INVERSION DE PRIORITÉ (Étape 1) :
+            //   Si le champ a un localId réel (non vide, <> "0"), on insère
+            //   @LOCAL_<localId>@ même si le nom technique est non vide.
+            //
+            //   Justification : le nom technique des champs spécifiques mappés
+            //   en base est VOLATILE (réécrit en mémoire par l'étape A :
+            //   libelle "Véhicule" → nom "Champ3"). À la suppression de la
+            //   base, "Champ3" disparaît avec la base → le marqueur @Champ3@
+            //   inséré dans le contenu devient un ORPHELIN (clé brute
+            //   affichée). Le localId, lui, est persisté avec le champ et
+            //   stable à travers les sessions.
+            //
+            //   Cas par type :
+            //   - Spécifique modèle (Véhicule, localId réel)   → LOCAL_<id>
+            //   - Spécifique non mappé (créé Designer)         → LOCAL_<id>
+            //     (comportement inchangé : nom était déjà vide)
+            //   - Standard (Nom, localId="0" ou absent)        → nom (inchangé)
+            //   - SYS (Sequentiel, pas de localId réel)        → nom (inchangé)
+            //   - Colonne base pure (Modèle, étape C, pas de localId) → nom
+            //     (= "Champ4", sera traité par l'Étape 2 promotion, prompt
+            //     ultérieur).
+            //
+            //   Corollaires : voir getChampUsageKey (ligne ~4223),
+            //   resolveChampKey (ligne ~30015), buildLocalIdToNomMap
+            //   (ligne ~24866) et selects image/barcode (lignes ~20424/20488),
+            //   tous alignés sur la même priorité (localId > nom).
+            const localIdValide = !!(champ.localId
+                && String(champ.localId).trim()
+                && String(champ.localId).trim() !== '0');
+            const fieldKey = localIdValide
+                ? `LOCAL_${String(champ.localId).trim()}`
+                : (champ.nom ? String(champ.nom).trim() : '');
             const fieldLabel = champ.libelle || champ.nom || '(sans libellé)';
             const fieldType = champ.type || 'TXT';
             // V3.4 - Type SYS = zone système (séquentiel, datamatrix...) :
@@ -20419,10 +20466,23 @@ document.addEventListener('DOMContentLoaded', () => {
         imageInputChamp.appendChild(emptyOption);
         
         // Ajouter les champs triés
+        // L18/A39 — INVERSION DE PRIORITÉ (Étape 1) — symétrique avec
+        //   fieldKey ligne ~4802. La VALUE stockée en option (puis dans
+        //   zoneData.source.champFusion à la sélection) doit privilégier
+        //   LOCAL_<localId> sur le nom technique pour la même raison :
+        //   survie à la suppression de base. Le lookup aval
+        //   (record[fieldName] || record[source.champFusion]) trouvera
+        //   la valeur via CORRECTION B (LOCAL_<id> injecté dans
+        //   donneesApercu).
         champsTries.forEach(champ => {
             const option = document.createElement('option');
-            const fieldName = champ.nom;                    // Valeur technique
-            const fieldLabel = champ.libelle || champ.nom;  // Libellé affiché
+            const localIdValideImg = !!(champ.localId
+                && String(champ.localId).trim()
+                && String(champ.localId).trim() !== '0');
+            const fieldName = localIdValideImg
+                ? `LOCAL_${String(champ.localId).trim()}`
+                : (champ.nom || '');
+            const fieldLabel = champ.libelle || champ.nom;
             option.value = fieldName;
             option.textContent = fieldLabel;
             if (fieldName === selectedValue) option.selected = true;
@@ -20483,10 +20543,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const champsTries = [...champsBarcode].sort((a, b) => (a.ordre || 0) - (b.ordre || 0));
         
         // Ajouter les champs triés
+        // L18/A39 — INVERSION DE PRIORITÉ (Étape 1) — symétrique avec
+        //   fieldKey ligne ~4802. La VALUE stockée en option (puis dans
+        //   zoneData.champFusion à la sélection) doit privilégier
+        //   LOCAL_<localId> sur le nom technique pour survivre à la
+        //   suppression de base. SYS et standards (localId="0" ou absent)
+        //   restent indexés par nom.
         champsTries.forEach(champ => {
             const option = document.createElement('option');
-            const fieldName = champ.nom;                    // Valeur technique
-            const fieldLabel = champ.libelle || champ.nom;  // Libellé affiché
+            const localIdValideBar = !!(champ.localId
+                && String(champ.localId).trim()
+                && String(champ.localId).trim() !== '0');
+            const fieldName = localIdValideBar
+                ? `LOCAL_${String(champ.localId).trim()}`
+                : (champ.nom || '');
+            const fieldLabel = champ.libelle || champ.nom;
             const fieldType = champ.type || 'TXT';
             
             option.value = fieldName;
@@ -24870,9 +24941,45 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!c || typeof c !== 'object') return;
             const localId = (typeof c.localId === 'string') ? c.localId.trim() : '';
             const nom = (typeof c.nom === 'string') ? c.nom.trim() : '';
-            if (localId && nom) {
-                map.set(localId, nom);
+            if (!localId || !nom) return;
+
+            // L18/A39 — NEUTRALISATION pour les noms VOLATILES étape A.
+            //
+            //   Bug à prévenir : sans cette restriction, à chaque réouverture
+            //   en régime B, l'étape A de SelectionModèle.txt /
+            //   btnDocumentPersonnaliser.txt réécrit champ.nom en mémoire
+            //   (libelle "Véhicule" → nom "Champ3" si la base contient
+            //   "Véhicule"). buildLocalIdToNomMap construisait alors
+            //   {abc123 → "Champ3"} et applyPostMappingSubstitutions
+            //   transformait les @LOCAL_abc123@ du contenu en @Champ3@.
+            //   À la suppression de base, @Champ3@ orphelin → bug originel
+            //   non corrigé par la simple inversion d'insertion (ligne 4802).
+            //
+            //   Doctrine : un champ ayant un localId est par construction un
+            //   champ Designer (créé/édité dans le Designer). Son marqueur
+            //   stable EST @LOCAL_<localId>@. Le `nom` technique éventuel
+            //   est soit historique (legacy), soit volatile (étape A).
+            //   Avec l'inversion de priorité d'insertion (L18/A39 ligne 4802),
+            //   le contenu nouvellement inséré utilise @LOCAL_xxx@ ; il faut
+            //   donc le PRÉSERVER, pas le substituer.
+            //
+            //   Critère d'EXCLUSION : si `presenteEnBase === true`, le nom
+            //   est volatilement issu de l'étape A → on ignore ce mapping.
+            //   Régime A (presenteEnBase absent) : aucune réécriture étape A
+            //   → mapping conservé (cas legacy = SaaS a persisté un nom
+            //   permanent pour un ancien LOCAL_<id>).
+            //
+            //   Note : cette restriction préserve le cas d'usage historique
+            //   de la substitution (cf. cahier §4.2, §7.6) tout en évitant
+            //   la régression L18/A39 sur les champs mappés en base.
+            if (c.presenteEnBase === true) {
+                if (DEBUG) {
+                    console.log(`buildLocalIdToNomMap: mapping IGNORÉ pour localId=${localId} nom=${nom} (presenteEnBase=true, nom volatile étape A)`);
+                }
+                return;
             }
+
+            map.set(localId, nom);
         });
         return map;
     }
@@ -26617,6 +26724,283 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ═════════════════════════════════════════════════════════════════════
+    // L18/A41 — PROMOTION DES COLONNES BASE INSÉRÉES EN CHAMPS SPÉCIFIQUES
+    //
+    //   Quand l'utilisateur insère dans son contenu une colonne issue de
+    //   la base (ex Véhicule = @Champ3@, Modèle = @Champ4@), le marqueur
+    //   écrit est le NOM TECHNIQUE volatile (Champ3, Champ4). À la
+    //   suppression de la base, le mécanisme PARTIE 3 côté WebDev purge
+    //   ces champs de champsFusion → marqueurs orphelins (clés brutes).
+    //
+    //   SOLUTION : juste AVANT l'export, on parcourt le contenu, on
+    //   détecte les colonnes base réellement INSÉRÉES (filtrage par
+    //   injecteParBase="1"), on les promeut en champs spécifiques
+    //   autonomes :
+    //     - nouveau localId stable (generateLocalId)
+    //     - echantillonDefaut figé depuis donneesApercu[0]
+    //     - nom vidé (sinon priorité L18/A39 reproduirait @ChampN@)
+    //     - injecteParBase + presenteEnBase retirés (devient persistant)
+    //   et on réécrit toutes les occurrences @ChampN@ → @LOCAL_<id>@
+    //   dans tous les types de zones (texte Quill, image, barcode, QR).
+    //
+    //   IDEMPOTENCE : un champ déjà promu (plus de injecteParBase) est
+    //   ignoré naturellement par le filtre. À la 2e validation, plus rien
+    //   à faire.
+    //
+    //   INSERTION MULTIPLE : une seule promotion par colonne (Map
+    //   mappingPromotion), toutes les occurrences réécrites vers le même
+    //   localId.
+    //
+    //   Cf. analyse de promotion (L18/A41 — analyse SANS code validée par
+    //   le donneur d'ordre).
+    // ═════════════════════════════════════════════════════════════════════
+
+    /**
+     * Réécrit les références à une colonne base promue dans une zone donnée.
+     * Couvre les 3 conventions actuellement utilisées dans le Designer
+     * (cf. scanZoneForChampReferences pour le périmètre).
+     *
+     * @param {Object} zoneData
+     * @param {Map<string, {newLocalId: string, libelle: string, valeurFigee: string}>} mapping
+     */
+    function rewriteZoneReferencesAfterPromotion(zoneData, mapping) {
+        if (!zoneData || mapping.size === 0) return;
+
+        // Zone texte Quill : réécrire les ops merge-tag
+        if (zoneData.type === 'textQuill' && zoneData.quillDelta
+            && Array.isArray(zoneData.quillDelta.ops)) {
+            zoneData.quillDelta.ops = zoneData.quillDelta.ops.map(op => {
+                if (typeof isMergeTagOp === 'function' && isMergeTagOp(op)) {
+                    const key = (typeof mergeTagOpKey === 'function') ? mergeTagOpKey(op) : '';
+                    if (key && mapping.has(key)) {
+                        const { newLocalId } = mapping.get(key);
+                        return { insert: { 'merge-tag': { key: `LOCAL_${newLocalId}` } } };
+                    }
+                }
+                return op;
+            });
+            return;
+        }
+
+        // Zone image : source.champFusion (legacy) ou source.key (V2.5)
+        if (zoneData.type === 'image' && zoneData.source) {
+            const src = zoneData.source;
+            if (src.type === 'champ' && typeof src.champFusion === 'string') {
+                const cle = src.champFusion.trim();
+                if (cle && mapping.has(cle)) {
+                    src.champFusion = `LOCAL_${mapping.get(cle).newLocalId}`;
+                }
+            } else if (src.type === 'merge-tag' && typeof src.key === 'string') {
+                const cle = src.key.trim();
+                if (cle && mapping.has(cle)) {
+                    src.key = `LOCAL_${mapping.get(cle).newLocalId}`;
+                }
+            }
+            return;
+        }
+
+        // Zone barcode / QR : 3 sources possibles (symétrique avec scan)
+        if (zoneData.type === 'barcode' || zoneData.type === 'qr') {
+            // 1) champFusion direct (legacy)
+            if (typeof zoneData.champFusion === 'string') {
+                const cle = zoneData.champFusion.trim();
+                if (cle && mapping.has(cle)) {
+                    zoneData.champFusion = `LOCAL_${mapping.get(cle).newLocalId}`;
+                }
+            }
+            // 2) source.key façon V2.5
+            if (zoneData.source && zoneData.source.type === 'merge-tag'
+                && typeof zoneData.source.key === 'string') {
+                const cle = zoneData.source.key.trim();
+                if (cle && mapping.has(cle)) {
+                    zoneData.source.key = `LOCAL_${mapping.get(cle).newLocalId}`;
+                }
+            }
+            // 3) tokens @KEY@ dans qrConfig.fields[*]
+            let qrConfig = zoneData.qrConfig;
+            let qrConfigEtaitString = false;
+            if (typeof qrConfig === 'string') {
+                qrConfigEtaitString = true;
+                try { qrConfig = JSON.parse(qrConfig); } catch (e) { qrConfig = null; }
+            }
+            if (qrConfig && qrConfig.fields && typeof qrConfig.fields === 'object') {
+                let modified = false;
+                Object.keys(qrConfig.fields).forEach(k => {
+                    const v = qrConfig.fields[k];
+                    if (typeof v !== 'string') return;
+                    let nv = v;
+                    mapping.forEach(({ newLocalId }, ancienNom) => {
+                        // Échapper les caractères regex spéciaux du nom (sécurité —
+                        // les noms techniques Champ1-30 sont alphanumériques mais
+                        // on garde le pattern défensif).
+                        const ancienNomEsc = ancienNom.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        const re = new RegExp(`@${ancienNomEsc}@`, 'g');
+                        if (re.test(nv)) {
+                            nv = nv.replace(re, `@LOCAL_${newLocalId}@`);
+                            modified = true;
+                        }
+                    });
+                    if (modified) qrConfig.fields[k] = nv;
+                });
+                if (modified) {
+                    zoneData.qrConfig = qrConfigEtaitString
+                        ? JSON.stringify(qrConfig)
+                        : qrConfig;
+                }
+            }
+        }
+    }
+
+    /**
+     * Promotion à la validation : transforme les colonnes base RÉELLEMENT
+     * insérées dans le contenu en champs spécifiques autonomes (avec
+     * localId stable et echantillonDefaut figé), pour qu'ils SURVIVENT
+     * à une suppression ultérieure de la base.
+     *
+     * Doit être appelée AVANT buildChampsFusionForExport dans
+     * exportToWebDev (les Deltas Quill doivent déjà être à jour via
+     * persistTextQuillContentForSave).
+     */
+    function promoteBaseFieldsBeforeExport() {
+        // 1. Collecter toutes les clés réellement présentes dans le contenu
+        //    (symétrique avec rebuildChampsExploites). On scanne TOUTES les
+        //    zones de TOUTES les pages, en excluant les zones système
+        //    (sys-adresse-*, sys-affranchissement…) — leurs pastilles
+        //    @Civilite@ etc. sont gérées par WebDev et NE doivent PAS
+        //    déclencher de promotion.
+        let pages;
+        try { pages = documentState?.pages; } catch (e) { return; }
+        if (!Array.isArray(pages)) return;
+
+        const cleInserees = new Set();
+        for (const page of pages) {
+            if (!page?.zones) continue;
+            for (const [zoneId, zone] of Object.entries(page.zones)) {
+                if (typeof zoneId === 'string' && zoneId.startsWith('sys-')) continue;
+                const cles = scanZoneForChampReferences(zone);
+                for (const cle of cles) cleInserees.add(cle);
+            }
+        }
+        if (cleInserees.size === 0) return;
+
+        // 2. Identifier les colonnes base à promouvoir : injecteParBase="1"
+        //    ET nom réellement inséré dans le contenu ET pas déjà un
+        //    spécifique (pas de localId réel — défense en profondeur,
+        //    l'étape C n'en pose jamais mais on reste robuste).
+        const champs = Array.isArray(documentState.champsFusion) ? documentState.champsFusion : [];
+        const aPromouvoir = [];
+        for (let i = 0; i < champs.length; i++) {
+            const champ = champs[i];
+            if (!champ || champ.injecteParBase !== '1') continue;
+
+            const aLocalIdReel = !!(champ.localId
+                && String(champ.localId).trim()
+                && String(champ.localId).trim() !== '0');
+            if (aLocalIdReel) continue;
+
+            const ancienNom = (typeof champ.nom === 'string') ? champ.nom.trim() : '';
+            if (!ancienNom) continue;
+
+            if (!cleInserees.has(ancienNom)) continue;
+
+            aPromouvoir.push({ champ, ancienNom });
+        }
+        if (aPromouvoir.length === 0) return;
+
+        // 3. Promouvoir chaque champ (mutation in-place) + construire
+        //    le mapping ancienNom → { newLocalId, libelle, valeurFigee }
+        //    pour la réécriture des occurrences (étape 4).
+        const mappingPromotion = new Map();
+        const recordFiche = (Array.isArray(documentState.donneesApercu)
+            && documentState.donneesApercu.length > 0)
+            ? documentState.donneesApercu[0] : null;
+
+        for (const { champ, ancienNom } of aPromouvoir) {
+            const newLocalId = generateLocalId();
+
+            // Figer l'echantillonDefaut depuis donneesApercu[0]
+            let valeurFigee = '';
+            if (recordFiche && typeof recordFiche === 'object') {
+                const v = recordFiche[ancienNom];
+                if (v !== undefined && v !== null && v !== '') {
+                    valeurFigee = String(v);
+                } else {
+                    // Fallback insensible à la casse (cohérent avec
+                    // resolveEchantillonValue ligne ~4666)
+                    const upper = ancienNom.toUpperCase();
+                    const trouve = Object.keys(recordFiche).find(k => k.toUpperCase() === upper);
+                    if (trouve && recordFiche[trouve] !== undefined
+                        && recordFiche[trouve] !== null
+                        && recordFiche[trouve] !== '') {
+                        valeurFigee = String(recordFiche[trouve]);
+                    }
+                }
+            }
+
+            // Mutation du champ : devient un spécifique autonome
+            const libelle = champ.libelle || '';
+            champ.localId = newLocalId;
+            champ.echantillonDefaut = valeurFigee;
+            champ.nom = '';
+            delete champ.injecteParBase;
+            delete champ.presenteEnBase;
+            // origine + categorie + type + ordre + libelle préservés tels quels
+
+            // L18/A41 — TRACE TEMPORAIRE (à retirer après validation production)
+            try {
+                console.log(`Promotion: ${libelle || '(sans libellé)'} Champ=${ancienNom} → LOCAL_${newLocalId} echantillon="${valeurFigee}"`);
+            } catch (e) { /* defensive */ }
+
+            mappingPromotion.set(ancienNom, { newLocalId, libelle, valeurFigee });
+        }
+
+        // 4. Réécrire toutes les occurrences dans le contenu
+        //    (symétrique avec le scan). Inclut zones système ? NON :
+        //    on n'a même pas mis leurs clés dans cleInserees, donc
+        //    pas de match dans le mapping → sans effet de toute façon.
+        for (const page of pages) {
+            if (!page?.zones) continue;
+            for (const [zoneId, zone] of Object.entries(page.zones)) {
+                if (typeof zoneId === 'string' && zoneId.startsWith('sys-')) continue;
+                rewriteZoneReferencesAfterPromotion(zone, mappingPromotion);
+            }
+        }
+
+        // 5. Synchroniser documentState.donneesApercu : injecter LOCAL_<id>
+        //    dans CHAQUE enregistrement (cohérent avec CORRECTION B côté
+        //    WebDev). Préfère la valeur fraîche de l'enregistrement
+        //    courant à la valeur figée (cas multi-enregistrements base —
+        //    par enregistrement : LOCAL_xxx = Opel / Peugeot / Renault…).
+        //    Important : ceci alimente buildDonneesApercuForExport qui
+        //    reprend les valeurs existantes du record + complète avec les
+        //    echantillonDefaut absents.
+        if (Array.isArray(documentState.donneesApercu)) {
+            documentState.donneesApercu.forEach(record => {
+                if (!record || typeof record !== 'object') return;
+                mappingPromotion.forEach(({ newLocalId, valeurFigee }, ancienNom) => {
+                    const cleLocal = `LOCAL_${newLocalId}`;
+                    if (record[cleLocal] !== undefined) return;
+                    const fraiche = record[ancienNom];
+                    record[cleLocal] = (fraiche !== undefined && fraiche !== null && fraiche !== '')
+                        ? fraiche
+                        : valeurFigee;
+                });
+            });
+        }
+
+        // 6. Rafraîchir l'UI champsExploites : les anciennes clés "Champ4"
+        //    deviennent obsolètes, les nouvelles "LOCAL_<id>" doivent
+        //    être indexées. Best-effort, non bloquant.
+        try {
+            if (typeof notifyChampsExploitesMayHaveChanged === 'function') {
+                notifyChampsExploitesMayHaveChanged();
+            } else if (typeof rebuildChampsExploites === 'function') {
+                rebuildChampsExploites();
+            }
+        } catch (e) { /* defensive */ }
+    }
+
     function exportToWebDev() {
         
         // --- ÉTAPE 1 : Synchroniser les positions DOM → documentState ---
@@ -26628,6 +27012,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!previewState || !previewState.active) {
             persistTextQuillContentForSave(currentZones);
         }
+
+        // L18/A41 — Promotion des colonnes base insérées en champs spécifiques
+        //   autonomes. DOIT s'exécuter APRÈS persistTextQuillContentForSave
+        //   (Deltas à jour) et AVANT la construction de l'output JSON
+        //   (buildChampsFusionForExport et buildDonneesApercuForExport
+        //   doivent voir les champs promus).
+        promoteBaseFieldsBeforeExport();
+
         let syncCount = 0;
         
         const fpExport = getFondPerduOffset();
@@ -30014,8 +30406,20 @@ document.addEventListener('DOMContentLoaded', () => {
          */
         function resolveChampKey(champ) {
             if (!champ) return '';
+            // L18/A39 — INVERSION DE PRIORITÉ (Étape 1) — symétrique avec
+            //   fieldKey ligne ~4802 et getChampUsageKey ligne ~4223.
+            //   Le comptage d'occurrences (modale de confirmation suppression,
+            //   cf. cahier §7.5.1) doit chercher LOCAL_<id> dans le contenu
+            //   pour les champs ayant un localId réel, sinon le décompte
+            //   tomberait à 0 pour Véhicule alors qu'il est inséré en
+            //   @LOCAL_abc@ → utilisateur informé à tort qu'il n'y a aucune
+            //   occurrence et autoriserait une suppression silencieuse.
+            if (champ.localId
+                && String(champ.localId).trim()
+                && String(champ.localId).trim() !== '0') {
+                return `LOCAL_${String(champ.localId).trim()}`;
+            }
             if (isMapped(champ)) return champ.nom;
-            if (champ.localId) return `LOCAL_${champ.localId}`;
             return '';
         }
 

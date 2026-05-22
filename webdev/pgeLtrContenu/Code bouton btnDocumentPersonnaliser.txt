@@ -405,204 +405,32 @@ si __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesig
 		fin
 	fin
 
-	// ─── L18/A29 — CORRESPONDANCE DYNAMIQUE LIBELLÉ MODÈLE ↔ BASE ───
+	// L18/A40 — Le bloc "L18/A29 — CORRESPONDANCE DYNAMIQUE LIBELLÉ
+	//   MODÈLE ↔ BASE" (détection bAvecBaseLocal + étapes A/B/C) a été
+	//   DÉPLACÉ hors de la garde "si JsonDesignerData <> ''", APRÈS le
+	//   fin de ce bloc (cf. ci-dessous).
 	//
-	// 4 étapes A/B/C/D pour matcher les champs du modèle avec les
-	// colonnes de la base courante par LIBELLÉ (pas par nom technique).
-	// Recalculée à chaque ouverture, JAMAIS persistée.
+	//   Justification : en création pure (JsonDesignerData = "" OU
+	//   champsFusion vide), l'étape C n'était jamais exécutée → la
+	//   popup "Champs de fusion" restait vide en création pure avec
+	//   base. Le déplacement permet à l'étape C d'injecter les colonnes
+	//   base dans tous les régimes où une base est présente.
 	//
-	// Pré-requis confirmé en audit L18 : `__stOperation.taaBaseChamp`
-	// est un tableau associatif WLangage dont la CLÉ est le libellé
-	// client du champ. Vrai pour les standards (Civilité, Nom, Prénom,
-	// Adresse 1, …) ET pour les Champ1-Champ30 (Véhicule, Couleur,
-	// Image, Test, …). Donc lookup `taaBaseChamp[libelle]` uniforme.
+	// L18/A42 — La CORRECTION B (remplissage LOCAL_<localId> dans
+	//   donneesApercu) a aussi été DÉPLACÉE hors de la garde modèle,
+	//   APRÈS le bloc L18/A40 (cf. ci-dessous).
 	//
-	// Régime A (sans base) : taaBaseChamp est vide → bAvecBaseLocal=Faux
-	//   → tout le bloc est court-circuité → comportement V2.4/V2.5
-	//   sans changement.
-	// Régime B (avec base) : les 4 étapes s'exécutent.
-
-	// Détection bAvecBaseLocal : même logique que ComposerJsonDesignerCreation.
-	bAvecBaseLocal	est un booléen	= Faux
-	pour tout stBaseDoc de __stOperation.tabBase
-		si stBaseDoc.EstSupprime = Faux alors
-			bAvecBaseLocal = Vrai
-			sortir
-		fin
-	fin
-
-	si bAvecBaseLocal _et_ jsWrapper.data.champsFusion..Occurrence > 0 alors
-
-		// ÉTAPE A — Mapping libellé → nom technique
-		pour nIndA = 1 _à_ jsWrapper.data.champsFusion..Occurrence
-			si jsWrapper.data.champsFusion[nIndA].type = "SYS" alors
-				continuer
-			fin
-			sLibA est une chaîne = jsWrapper.data.champsFusion[nIndA].libelle
-			si sLibA <> "" _et_ __stOperation.taaBaseChamp[sLibA]..Existe alors
-				jsWrapper.data.champsFusion[nIndA].nom = __stOperation.taaBaseChamp[sLibA].Champ
-			fin
-		fin
-
-		// ÉTAPE B — Calcul de presenteEnBase par LIBELLÉ
-		pour nIndB = 1 _à_ jsWrapper.data.champsFusion..Occurrence
-			si jsWrapper.data.champsFusion[nIndB].type = "SYS" alors
-				continuer
-			fin
-			sLibB est une chaîne = jsWrapper.data.champsFusion[nIndB].libelle
-			si sLibB <> "" _et_ __stOperation.taaBaseChamp[sLibB]..Existe alors
-				jsWrapper.data.champsFusion[nIndB].presenteEnBase = Vrai
-			sinon
-				jsWrapper.data.champsFusion[nIndB].presenteEnBase = Faux
-			fin
-		fin
-
-		// ÉTAPE C — Injection des colonnes base NON UTILISÉES par le modèle
-		sLibellesPresents est une chaîne = ","
-		pour nIndPres = 1 _à_ jsWrapper.data.champsFusion..Occurrence
-			sLibPres est une chaîne = jsWrapper.data.champsFusion[nIndPres].libelle
-			si sLibPres <> "" alors
-				sLibellesPresents += sLibPres + ","
-			fin
-		fin
-
-		nOrdreMax est un entier = 0
-		pour nIndOrd = 1 _à_ jsWrapper.data.champsFusion..Occurrence
-			si jsWrapper.data.champsFusion[nIndOrd].ordre..Existe _et_ ...
-			   jsWrapper.data.champsFusion[nIndOrd].ordre > nOrdreMax alors
-				nOrdreMax = jsWrapper.data.champsFusion[nIndOrd].ordre
-			fin
-		fin
-
-		pour tout stBaseChampC, sLibelleC de __stOperation.taaBaseChamp
-			si sLibelleC = "Séquentiel" _ou_ sLibelleC = "Affranchissement" alors
-				Trace("btnDocumentPersonnaliser : libellé base ignoré (collision SYS) : " + sLibelleC)
-				continuer
-			fin
-			si Position(sLibellesPresents, "," + sLibelleC + ",") > 0 alors
-				continuer
-			fin
-
-			nOrdreMax++
-			jsNouvelleEntree est un JSON = "{}"
-			jsNouvelleEntree.nom         = stBaseChampC.Champ
-			jsNouvelleEntree.libelle     = sLibelleC
-			si stBaseChampC.Type = __CHAMP_TYPE_IMAGE__ alors
-				jsNouvelleEntree.type = "IMG"
-			sinon
-				jsNouvelleEntree.type = "TXT"
-			fin
-			jsNouvelleEntree.ordre       = nOrdreMax
-			jsNouvelleEntree.origine     = "import"
-			jsNouvelleEntree.categorie   = "specifique"
-			jsNouvelleEntree.presenteEnBase = Vrai
-			// L18/A35 PARTIE 1 — MARQUEUR CHAÎNE robuste : valeur "1"
-			//   (et NON booléen Vrai). Justification : un attribut JSON
-			//   booléen ABSENT lu via `= Vrai` en WLangage a un
-			//   comportement non fiable et peut matcher à tort sur les
-			//   champs du modèle qui n'ont JAMAIS cet attribut.
-			//   Régression L18/A34 résolue : la chaîne "1" est testée
-			//   contre une lecture chaîne défensive (cf. PARTIE 2 et 3),
-			//   et un attribut JSON absent lu en chaîne retourne ""
-			//   → JAMAIS de faux positif sur les champs du modèle.
-			jsNouvelleEntree.injecteParBase = "1"
-
-			jsWrapper.data.champsFusion[jsWrapper.data.champsFusion..Occurrence + 1] = jsNouvelleEntree
-		fin
-
-	fin
-
-	// ═════════════════════════════════════════════════════════════════
-	// L18/A33 — CORRECTION B : Remplir les LOCAL_<localId> selon le
-	//   contexte (remplace l'ancienne étape D supprimée en L18/A32).
+	//   Régression introduite par L18/A40 : CORRECTION B utilisait
+	//   `champ.nom` (remappé "Champ3" par étape A). Le déplacement
+	//   L18/A40 a placé l'étape A APRÈS CORRECTION B → champ.nom
+	//   restait "" → CORRECTION B basculait sur le branche SANS BASE
+	//   (echantillonDefaut figé). Résultat : champ promu ET Véhicule
+	//   en mode modèle affichaient "Opel"/"Porsche" figés au lieu des
+	//   valeurs base par enregistrement (impact BAT production).
 	//
-	//   Cette étape s'exécute QUEL QUE SOIT le régime (avec ou sans
-	//   base) et garantit que chaque champ spécifique du modèle a
-	//   une entrée LOCAL_<localId> dans CHAQUE enregistrement de
-	//   donneesApercu, avec la valeur du moment :
-	//
-	//     - AVEC base + champ mappé (nom dans taaBaseChamp.Champ) :
-	//       valeur de la colonne base PAR ENREGISTREMENT
-	//       (ex Champ3 = Opel pour record 1, Peugeot pour record 2…).
-	//
-	//     - SANS base ou champ non mappé : echantillonDefaut du champ
-	//       (= valeur stable du modèle, ex "Porsche").
-	//
-	//   Critère pour traiter un champ :
-	//     - type <> "SYS"
-	//     - localId est une CHAÎNE NON VIDE ET <> "0"
-	//       (les champs standards ont localId=0, pas un vrai UUID — les
-	//       ignorer évite la création d'une clé parasite "LOCAL_0" qui
-	//       polluait l'ancienne étape D).
-	//
-	//   Pattern d'assignation DIRECTE (pas de variable JSON intermédiaire,
-	//   évite tout risque de référence partagée WLangage).
-	// ═════════════════════════════════════════════════════════════════
-	pour nIndB = 1 _à_ jsWrapper.data.champsFusion..Occurrence
-		si jsWrapper.data.champsFusion[nIndB].type = "SYS" alors
-			continuer
-		fin
-
-		// Lecture directe + tests sur la valeur (robuste sur attribut JSON dynamique)
-		sLocalIdB est une chaîne = jsWrapper.data.champsFusion[nIndB].localId
-		si sLocalIdB = "" _ou_ sLocalIdB = "0" alors
-			continuer  // pas un vrai champ spécifique (standard ou SYS)
-		fin
-
-		sNomTechB est une chaîne = jsWrapper.data.champsFusion[nIndB].nom
-		sLibB est une chaîne = jsWrapper.data.champsFusion[nIndB].libelle
-		sCleLocaleB est une chaîne = "LOCAL_" + sLocalIdB
-
-		// Déterminer si le champ a une correspondance base (= la base
-		// fait foi pour les valeurs). Le mapping nom = "Champ3" a été
-		// fait par l'étape A si correspondance libellé.
-		bAvecCorrespBase est un booléen = Faux
-		si sNomTechB <> "" _et_ Position(sNomsTechniquesBase, "," + sNomTechB + ",") > 0 alors
-			bAvecCorrespBase = Vrai
-		fin
-
-		// L18/A33 — TRACE TEMPORAIRE (à retirer après validation)
-		Trace("CorrectionB champ " + sLibB + " localId=[" + sLocalIdB + "] nomTech=[" + sNomTechB ...
-			+ "] avecBase=" + bAvecCorrespBase + " echantDefaut=[" + jsWrapper.data.champsFusion[nIndB].echantillonDefaut + "]")
-
-		si jsWrapper.data.donneesApercu..Occurrence = 0 alors
-			continuer  // pas d'enregistrement à remplir
-		fin
-
-		// Boucler sur TOUS les enregistrements
-		pour nIndEB = 1 _à_ jsWrapper.data.donneesApercu..Occurrence
-			sValeurB est une chaîne = ""
-
-			si bAvecCorrespBase alors
-				// CAS AVEC BASE : lire la valeur de sNomTechB DANS CET enregistrement
-				pour nIndVB = 1 _à_ jsWrapper.data.donneesApercu[nIndEB].enregistrement..Occurrence
-					si jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIndVB].nom = sNomTechB alors
-						sValeurB = jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIndVB].valeur
-						sortir
-					fin
-				fin
-			sinon
-				// CAS SANS BASE (ou champ non mappé) : echantillonDefaut du modèle
-				sValeurB = jsWrapper.data.champsFusion[nIndB].echantillonDefaut
-			fin
-
-			// Injecter ou mettre à jour la clé sCleLocaleB dans cet enregistrement
-			// Pattern d'assignation directe (pas de variable JSON intermédiaire)
-			bDejaB est un booléen = Faux
-			pour nIndCkB = 1 _à_ jsWrapper.data.donneesApercu[nIndEB].enregistrement..Occurrence
-				si jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIndCkB].nom = sCleLocaleB alors
-					jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIndCkB].valeur = sValeurB
-					bDejaB = Vrai
-					sortir
-				fin
-			fin
-			si pas bDejaB alors
-				nIdxNouveauB est un entier = jsWrapper.data.donneesApercu[nIndEB].enregistrement..Occurrence + 1
-				jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIdxNouveauB].nom    = sCleLocaleB
-				jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIdxNouveauB].valeur = sValeurB
-			fin
-		fin
-	fin
+	//   Solution : restauration de l'ordre canonique
+	//     étape A (remap nom) → CORRECTION B (utilise nom remappé)
+	//   en plaçant CORRECTION B APRÈS le bloc L18/A40.
 
 	// Récupérer les contraintes globales du modèle si présentes
 	si jsDesigner.constraints..Existe alors
@@ -620,6 +448,260 @@ si __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesig
 	// que les limites continuent de fonctionner correctement.
 	si jsDesigner.initialZoneCounts..Existe alors
 		jsWrapper.data.initialZoneCounts = jsDesigner.initialZoneCounts
+	fin
+fin
+
+// ═════════════════════════════════════════════════════════════════════
+// L18/A40 — CORRESPONDANCE DYNAMIQUE LIBELLÉ MODÈLE ↔ BASE
+//   (DÉPLACÉ HORS de la garde "si JsonDesignerData <> ''" pour
+//    permettre l'injection des colonnes base AUSSI en création pure
+//    avec base ; sous-garde "champsFusion > 0" SUPPRIMÉE pour la
+//    même raison.)
+//
+//   3 étapes A/B/C pour matcher les champs présents avec les colonnes
+//   de la base courante par LIBELLÉ (pas par nom technique).
+//   Recalculée à chaque ouverture, JAMAIS persistée (purgée par
+//   PARTIE 3 côté ServeurTraiterMessageDesigner avant stockage
+//   JsonDesignerData).
+//
+//   Pré-requis confirmé en audit L18 : `__stOperation.taaBaseChamp`
+//   est un tableau associatif WLangage dont la CLÉ est le libellé
+//   client du champ. Vrai pour les standards (Civilité, Nom, Prénom,
+//   Adresse 1, …) ET pour les Champ1-Champ30 (Véhicule, Couleur,
+//   Image, Test, …). Donc lookup `taaBaseChamp[libelle]` uniforme.
+//
+//   Régime A (sans base) : bAvecBaseLocal=Faux → tout le bloc est
+//     court-circuité → comportement V2.4/V2.5 sans changement
+//     (création pure sans base = popup vide ; mode modèle sans base
+//      = champs du modèle uniquement).
+//
+//   Régime B (avec base) :
+//     - Mode modèle : étape A réécrit le nom des champs modèle (en
+//       mémoire), étape B fixe presenteEnBase, étape C injecte les
+//       colonnes base NON UTILISÉES par le modèle (avec
+//       injecteParBase="1").
+//     - Création pure (champsFusion vide AVANT ce bloc) : étapes A/B
+//       sont no-op (rien à parcourir), étape C injecte TOUTES les
+//       colonnes base (avec injecteParBase="1" pour rester volatiles).
+//
+//   Variables disponibles à cette position :
+//     - __stOperation.tabBase, __stOperation.taaBaseChamp (globaux,
+//       initialisés par l'appelant)
+//     - __CHAMP_TYPE_IMAGE__ (constante globale)
+//     - jsWrapper.data.champsFusion (initialisé par
+//       ComposerJsonDesignerCreation ligne 25, toujours présent —
+//       peut être vide en création pure, peuplé en mode modèle).
+//   Aucune dépendance vers une variable initialisée dans la garde
+//   "si JsonDesignerData <> ''" → déplacement sûr.
+// ═════════════════════════════════════════════════════════════════════
+
+// Détection bAvecBaseLocal : même logique que ComposerJsonDesignerCreation.
+bAvecBaseLocal	est un booléen	= Faux
+pour tout stBaseDoc de __stOperation.tabBase
+	si stBaseDoc.EstSupprime = Faux alors
+		bAvecBaseLocal = Vrai
+		sortir
+	fin
+fin
+
+si bAvecBaseLocal alors
+
+	// ÉTAPE A — Mapping libellé → nom technique
+	pour nIndA = 1 _à_ jsWrapper.data.champsFusion..Occurrence
+		si jsWrapper.data.champsFusion[nIndA].type = "SYS" alors
+			continuer
+		fin
+		sLibA est une chaîne = jsWrapper.data.champsFusion[nIndA].libelle
+		si sLibA <> "" _et_ __stOperation.taaBaseChamp[sLibA]..Existe alors
+			jsWrapper.data.champsFusion[nIndA].nom = __stOperation.taaBaseChamp[sLibA].Champ
+		fin
+	fin
+
+	// ÉTAPE B — Calcul de presenteEnBase par LIBELLÉ
+	pour nIndB = 1 _à_ jsWrapper.data.champsFusion..Occurrence
+		si jsWrapper.data.champsFusion[nIndB].type = "SYS" alors
+			continuer
+		fin
+		sLibB est une chaîne = jsWrapper.data.champsFusion[nIndB].libelle
+		si sLibB <> "" _et_ __stOperation.taaBaseChamp[sLibB]..Existe alors
+			jsWrapper.data.champsFusion[nIndB].presenteEnBase = Vrai
+		sinon
+			jsWrapper.data.champsFusion[nIndB].presenteEnBase = Faux
+		fin
+	fin
+
+	// ÉTAPE C — Injection des colonnes base NON ENCORE PRÉSENTES
+	//   En mode modèle : injecte les colonnes base non utilisées par le modèle.
+	//   En création pure : champsFusion vide → injecte TOUTES les colonnes
+	//     base (sauf SYS Séquentiel/Affranchissement, filtrés ci-dessous).
+	sLibellesPresents est une chaîne = ","
+	pour nIndPres = 1 _à_ jsWrapper.data.champsFusion..Occurrence
+		sLibPres est une chaîne = jsWrapper.data.champsFusion[nIndPres].libelle
+		si sLibPres <> "" alors
+			sLibellesPresents += sLibPres + ","
+		fin
+	fin
+
+	nOrdreMax est un entier = 0
+	pour nIndOrd = 1 _à_ jsWrapper.data.champsFusion..Occurrence
+		si jsWrapper.data.champsFusion[nIndOrd].ordre..Existe _et_ ...
+		   jsWrapper.data.champsFusion[nIndOrd].ordre > nOrdreMax alors
+			nOrdreMax = jsWrapper.data.champsFusion[nIndOrd].ordre
+		fin
+	fin
+
+	pour tout stBaseChampC, sLibelleC de __stOperation.taaBaseChamp
+		si sLibelleC = "Séquentiel" _ou_ sLibelleC = "Affranchissement" alors
+			Trace("btnDocumentPersonnaliser : libellé base ignoré (collision SYS) : " + sLibelleC)
+			continuer
+		fin
+		si Position(sLibellesPresents, "," + sLibelleC + ",") > 0 alors
+			continuer
+		fin
+
+		nOrdreMax++
+		jsNouvelleEntree est un JSON = "{}"
+		jsNouvelleEntree.nom         = stBaseChampC.Champ
+		jsNouvelleEntree.libelle     = sLibelleC
+		si stBaseChampC.Type = __CHAMP_TYPE_IMAGE__ alors
+			jsNouvelleEntree.type = "IMG"
+		sinon
+			jsNouvelleEntree.type = "TXT"
+		fin
+		jsNouvelleEntree.ordre       = nOrdreMax
+		jsNouvelleEntree.origine     = "import"
+		jsNouvelleEntree.categorie   = "specifique"
+		jsNouvelleEntree.presenteEnBase = Vrai
+		// L18/A35 PARTIE 1 — MARQUEUR CHAÎNE robuste : valeur "1"
+		//   (et NON booléen Vrai). Justification : un attribut JSON
+		//   booléen ABSENT lu via `= Vrai` en WLangage a un
+		//   comportement non fiable et peut matcher à tort sur les
+		//   champs du modèle qui n'ont JAMAIS cet attribut.
+		//   Régression L18/A34 résolue : la chaîne "1" est testée
+		//   contre une lecture chaîne défensive (cf. PARTIE 2 et 3),
+		//   et un attribut JSON absent lu en chaîne retourne ""
+		//   → JAMAIS de faux positif sur les champs du modèle.
+		jsNouvelleEntree.injecteParBase = "1"
+
+		jsWrapper.data.champsFusion[jsWrapper.data.champsFusion..Occurrence + 1] = jsNouvelleEntree
+	fin
+
+fin
+
+// ═════════════════════════════════════════════════════════════════════
+// L18/A42 — CORRECTION B : REMPLISSAGE DES LOCAL_<localId>
+//   (DÉPLACÉE HORS de la garde "si JsonDesignerData <> ''" pour
+//    s'exécuter APRÈS le bloc L18/A40 — restauration de l'ordre
+//    canonique : étape A remap nom AVANT que CORRECTION B l'utilise.)
+//
+//   Cette étape s'exécute QUEL QUE SOIT le régime (avec ou sans base)
+//   et garantit que chaque champ spécifique du modèle (et chaque champ
+//   PROMU, cf. L18/A41) a une entrée LOCAL_<localId> dans CHAQUE
+//   enregistrement de donneesApercu, avec la valeur du moment :
+//
+//     - AVEC base + champ mappé (nom dans taaBaseChamp.Champ) :
+//       valeur de la colonne base PAR ENREGISTREMENT
+//       (ex Champ3 = Opel pour record 1, Peugeot pour record 2…).
+//       L'étape A (L18/A40) doit avoir réécrit `nom = "Champ3"` AVANT
+//       que cette étape ne s'exécute → ordre canonique restauré.
+//
+//     - SANS base ou champ sans correspondance base : echantillonDefaut
+//       du champ (= valeur stable, ex "Porsche" pour Véhicule modèle,
+//       ou "Opel" pour Véhicule promu).
+//
+//   Critère pour traiter un champ :
+//     - type <> "SYS"
+//     - localId est une CHAÎNE NON VIDE ET <> "0"
+//       (les champs standards ont localId="0", pas un vrai UUID — les
+//       ignorer évite la création d'une clé parasite "LOCAL_0" qui
+//       polluait l'ancienne étape D ; les colonnes base étape C n'ont
+//       pas de localId du tout → ignorées aussi)
+//
+//   Auto-protection : en création pure sans champ avec localId (cas
+//   typique), la boucle ne fait rien grâce au filtre interne ligne
+//   localId vide. Pas besoin de garde "si JsonDesignerData <> ''"
+//   externe.
+//
+//   sNomsTechniquesBase : RECALCULÉE ici (le scope de la variable
+//   d'origine — calculée dans le bloc CORRECTION A — est perdu après
+//   le déplacement L18/A42).
+//
+//   Pattern d'assignation DIRECTE (pas de variable JSON intermédiaire,
+//   évite tout risque de référence partagée WLangage).
+// ═════════════════════════════════════════════════════════════════════
+
+// Recalcul de sNomsTechniquesBase à la nouvelle position
+// (scope perdu après déplacement L18/A42 hors de la garde modèle).
+sNomsTechniquesBase est une chaîne = ","
+pour tout stBaseChampNom de __stOperation.taaBaseChamp
+	si stBaseChampNom.Champ <> "" alors
+		sNomsTechniquesBase += stBaseChampNom.Champ + ","
+	fin
+fin
+
+pour nIndB = 1 _à_ jsWrapper.data.champsFusion..Occurrence
+	si jsWrapper.data.champsFusion[nIndB].type = "SYS" alors
+		continuer
+	fin
+
+	// Lecture directe + tests sur la valeur (robuste sur attribut JSON dynamique)
+	sLocalIdB est une chaîne = jsWrapper.data.champsFusion[nIndB].localId
+	si sLocalIdB = "" _ou_ sLocalIdB = "0" alors
+		continuer  // pas un vrai champ spécifique (standard, SYS, ou colonne base étape C)
+	fin
+
+	sNomTechB est une chaîne = jsWrapper.data.champsFusion[nIndB].nom
+	sLibB est une chaîne = jsWrapper.data.champsFusion[nIndB].libelle
+	sCleLocaleB est une chaîne = "LOCAL_" + sLocalIdB
+
+	// Déterminer si le champ a une correspondance base (= la base
+	// fait foi pour les valeurs). Le mapping nom = "Champ3" a été
+	// fait par l'étape A (L18/A40) ci-dessus si correspondance libellé.
+	bAvecCorrespBase est un booléen = Faux
+	si sNomTechB <> "" _et_ Position(sNomsTechniquesBase, "," + sNomTechB + ",") > 0 alors
+		bAvecCorrespBase = Vrai
+	fin
+
+	// L18/A33 — TRACE TEMPORAIRE (à retirer après validation)
+	Trace("CorrectionB champ " + sLibB + " localId=[" + sLocalIdB + "] nomTech=[" + sNomTechB ...
+		+ "] avecBase=" + bAvecCorrespBase + " echantDefaut=[" + jsWrapper.data.champsFusion[nIndB].echantillonDefaut + "]")
+
+	si jsWrapper.data.donneesApercu..Occurrence = 0 alors
+		continuer  // pas d'enregistrement à remplir
+	fin
+
+	// Boucler sur TOUS les enregistrements
+	pour nIndEB = 1 _à_ jsWrapper.data.donneesApercu..Occurrence
+		sValeurB est une chaîne = ""
+
+		si bAvecCorrespBase alors
+			// CAS AVEC BASE : lire la valeur de sNomTechB DANS CET enregistrement
+			pour nIndVB = 1 _à_ jsWrapper.data.donneesApercu[nIndEB].enregistrement..Occurrence
+				si jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIndVB].nom = sNomTechB alors
+					sValeurB = jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIndVB].valeur
+					sortir
+				fin
+			fin
+		sinon
+			// CAS SANS BASE (ou champ non mappé) : echantillonDefaut du modèle
+			sValeurB = jsWrapper.data.champsFusion[nIndB].echantillonDefaut
+		fin
+
+		// Injecter ou mettre à jour la clé sCleLocaleB dans cet enregistrement
+		// Pattern d'assignation directe (pas de variable JSON intermédiaire)
+		bDejaB est un booléen = Faux
+		pour nIndCkB = 1 _à_ jsWrapper.data.donneesApercu[nIndEB].enregistrement..Occurrence
+			si jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIndCkB].nom = sCleLocaleB alors
+				jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIndCkB].valeur = sValeurB
+				bDejaB = Vrai
+				sortir
+			fin
+		fin
+		si pas bDejaB alors
+			nIdxNouveauB est un entier = jsWrapper.data.donneesApercu[nIndEB].enregistrement..Occurrence + 1
+			jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIdxNouveauB].nom    = sCleLocaleB
+			jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIdxNouveauB].valeur = sValeurB
+		fin
 	fin
 fin
 
