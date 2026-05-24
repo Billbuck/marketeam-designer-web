@@ -42,8 +42,163 @@ sNomFichierPsmd		= __DOC_LTR_PSMD__ + sCodeTemp + ".psmd"
 sCheminPsmd				= sRepTravail + sNomFichierPsmd
 sCheminJsonTemp		= sRepTravail + "psmd_json_" + sCodeTemp + ".tmp"
 
+// ═════════════════════════════════════════════════════════════════════
+// L18/A44 v5 — CONVERSION @LOCAL_<localId>@ > @<nom technique>@ POUR PSMD
+//   (approche SUBSTITUTION STRING DIRECTE)
+//
+//   Le JsonDesignerData stocké en BDD utilise des marqueurs stables
+//   @LOCAL_<localId>@ pour les champs spécifiques (doctrine "survie aux
+//   changements de base" — cf. L18/A39+A41). Mais PrintShop Mail en
+//   PRODUCTION charge une source CSV externe dont les colonnes
+//   s'appellent par leurs noms TECHNIQUES (Civilite, Champ3, Champ4…).
+//   Un marqueur @LOCAL_xxx@ dans le PSMD ne trouverait jamais de
+//   colonne correspondante > champ vide en production.
+//   (Le BAT, lui, masquait le bug via un canal parallèle qui injecte
+//   tabPrintshopData {nom:LOCAL_xxx, valeur:...}.)
+//
+//   SOLUTION v5 : on opère par SUBSTITUTION TEXTUELLE DIRECTE sur la
+//   chaîne JSON entière (stDocument.JsonDesignerData), pour éviter
+//   les problèmes d'alias/copie WLangage observés en v3-v4 (l'API
+//   structurée jDocChampsConv = jDocConverti créait une copie
+//   indépendante, les modifs ne se propageaient pas à la sérialisation
+//   finale > PSMD conservait @LOCAL_xxx@).
+//
+//   Pour construire le mapping LOCAL_<localId> > <nom technique>, on
+//   parse une COPIE en JSON pour lire champsFusion[*].libelle et le
+//   matcher avec __stOperation.taaBaseChamp[libelle].Champ. Ce mapping
+//   est utilisé ensuite uniquement pour piloter les substitutions
+//   STRING sur la chaîne JSON entière.
+//
+//   3 motifs de substitution par entrée du mapping (couverture sans
+//   risque de faux positif) :
+//     a. "@LOCAL_xxx@" > "@Champ3@"
+//        Cible : contenu/contenuRtf des zonesTexte, qrConfig.fields[*]
+//        tokens, et tout marqueur RTF/texte dans le JSON.
+//     b. "key":"LOCAL_xxx" > "key":"Champ3"
+//        Cible : quillDelta.ops[*] des embeds merge-tag.
+//     c. "champFusion":"LOCAL_xxx" > "champFusion":"Champ3"
+//        Cible : zonesImage[*].source.champFusion + zonesCodeBarres[*]
+//        .champFusion + zonesQR[*].champFusion (valeur sans @).
+//
+//   donneesApercu[*].enregistrement[*].nom = "LOCAL_xxx" n'est PAS
+//   substitué (motif "nom":"LOCAL_xxx" non ciblé) — intentionnel :
+//   le canal parallèle BAT (tabPrintshopData) doit conserver les
+//   paires LOCAL_xxx pour rétro-compatibilité.
+//
+//   Le JsonDesignerData STOCKÉ en BDD n'est PAS modifié — on travaille
+//   sur la copie chaîne locale sJsonPsmdTemp, écrite dans le fichier
+//   temp passé à psmd_cli.js et jamais ré-écrite en BDD.
+//
+//   Couverture des chemins d'appel : ServeurTraiterMessageDesigner,
+//   BTN_TraiterMessageModele, AjoutModificationOperationCourrier (CAS 1
+//   ajout base sans réouverture Designer), SelectionModèle, UploadFichier,
+//   SupprimerDocument — tous accèdent à __stOperation.taaBaseChamp.
+// ═════════════════════════════════════════════════════════════════════
+
+// 1. Parser le JsonDesignerData en JSON pour pouvoir lire champsFusion.
+//    UNIQUEMENT pour construire le mapping — les substitutions se font
+//    sur la chaîne JSON entière (étape 3 ci-dessous).
+jDocLec				est un JSON		= stDocument.JsonDesignerData
+jDocChampsLec	est un JSON
+si jDocLec.data..Existe _et_ jDocLec.data.champsFusion..Existe alors
+	jDocChampsLec = jDocLec.data
+sinon
+	jDocChampsLec = jDocLec
+fin
+
+// 2. Construire le mapping LOCAL_<localId> > <nom technique> par LIBELLÉ.
+//    Garde-fou : si __stOperation ou taaBaseChamp non accessibles
+//    (cas hors tunnel courrier), mappingPsmd reste vide > aucune
+//    substitution > PSMD écrit avec @LOCAL_xxx@ comme avant.
+taaMappingPsmd		est un tableau associatif de chaîne
+
+// Diagnostic format JSON et accessibilité taaBaseChamp (à retirer en stable)
+Trace("L18/A44 v5 DIAG : jDocLec.data..Existe=" + jDocLec.data..Existe ...
+	+ ", jDocChampsLec.champsFusion..Occurrence=" + jDocChampsLec.champsFusion..Occurrence)
+QUAND EXCEPTION DANS
+	Trace("L18/A44 v5 DIAG : __stOperation.taaBaseChamp..Occurrence=" + __stOperation.taaBaseChamp..Occurrence)
+FAIRE
+	Trace("L18/A44 v5 DIAG : __stOperation.taaBaseChamp INACCESSIBLE (probable problème de scope)")
+FIN
+
+si jDocChampsLec.champsFusion..Occurrence > 0 alors
+	pour nIndCF = 1 _à_ jDocChampsLec.champsFusion..Occurrence
+		sLocalIdCF	est une chaîne	= jDocChampsLec.champsFusion[nIndCF].localId
+		sLibelleCF	est une chaîne	= jDocChampsLec.champsFusion[nIndCF].libelle
+
+		// Critères : besoin d'un localId réel ET d'un libellé qui matche
+		// une colonne base. Les standards (Civilite/Nom) sans localId réel
+		// ne passent pas le filtre — ils sont déjà en nom technique stable
+		// dans le contenu (cf. L18/A43 Correction A).
+		si sLocalIdCF <> "" _et_ sLocalIdCF <> "0" _et_ sLibelleCF <> "" alors
+			bExisteEnBase est un booléen = Faux
+			QUAND EXCEPTION DANS
+				bExisteEnBase = __stOperation.taaBaseChamp[sLibelleCF]..Existe
+			FAIRE
+				bExisteEnBase = Faux
+			FIN
+			si bExisteEnBase alors
+				sNomTechCF est une chaîne = __stOperation.taaBaseChamp[sLibelleCF].Champ
+				si sNomTechCF <> "" alors
+					taaMappingPsmd["LOCAL_" + sLocalIdCF] = sNomTechCF
+					Trace("L18/A44 v5 MAPPING : LOCAL_" + sLocalIdCF + " > " + sNomTechCF + " (libellé : " + sLibelleCF + ")")
+				fin
+			fin
+		fin
+	fin
+fin
+
+Trace("L18/A44 v5 DIAG : taaMappingPsmd contient " + taaMappingPsmd..Occurrence + " entrée(s)")
+
+// 3. SUBSTITUTION TEXTUELLE DIRECTE sur la chaîne JSON entière.
+//    sJsonPsmdTemp est la copie chaîne destinée au fichier temp.
+//    Pour chaque entrée du mapping, 3 motifs de substitution.
+sJsonPsmdTemp	est une chaîne	= stDocument.JsonDesignerData
+nNbSubst			est un entier	= 0
+
+si taaMappingPsmd..Occurrence > 0 alors
+	pour tout sNomTechSubst, sCleMappingSubst de taaMappingPsmd
+		// sCleMappingSubst contient déjà "LOCAL_xxx" (cf. construction
+		// du mapping ligne `taaMappingPsmd["LOCAL_" + sLocalIdCF] = ...`)
+
+		// a. Marqueurs @KEY@ dans contenu / contenuRtf / qrConfig.fields tokens
+		sMarqA	est une chaîne	= "@" + sCleMappingSubst + "@"
+		sMarqB	est une chaîne	= "@" + sNomTechSubst + "@"
+		nPosA		est un entier	= Position(sJsonPsmdTemp, sMarqA)
+		si nPosA > 0 alors
+			sJsonPsmdTemp = Remplace(sJsonPsmdTemp, sMarqA, sMarqB)
+			nNbSubst++
+			Trace("L18/A44 v5 SUBST a : " + sMarqA + " > " + sMarqB + " (1re pos=" + nPosA + ")")
+		fin
+
+		// b. quillDelta ops merge-tag : "key":"LOCAL_xxx"
+		// Guillemets WLangage : "" = un guillemet littéral.
+		sKeyA	est une chaîne	= """key"":""" + sCleMappingSubst + """"
+		sKeyB	est une chaîne	= """key"":""" + sNomTechSubst + """"
+		nPosB	est un entier	= Position(sJsonPsmdTemp, sKeyA)
+		si nPosB > 0 alors
+			sJsonPsmdTemp = Remplace(sJsonPsmdTemp, sKeyA, sKeyB)
+			nNbSubst++
+			Trace("L18/A44 v5 SUBST b : " + sKeyA + " > " + sKeyB + " (1re pos=" + nPosB + ")")
+		fin
+
+		// c. source.champFusion / champFusion : "champFusion":"LOCAL_xxx"
+		sCFA	est une chaîne	= """champFusion"":""" + sCleMappingSubst + """"
+		sCFB	est une chaîne	= """champFusion"":""" + sNomTechSubst + """"
+		nPosC	est un entier	= Position(sJsonPsmdTemp, sCFA)
+		si nPosC > 0 alors
+			sJsonPsmdTemp = Remplace(sJsonPsmdTemp, sCFA, sCFB)
+			nNbSubst++
+			Trace("L18/A44 v5 SUBST c : " + sCFA + " > " + sCFB + " (1re pos=" + nPosC + ")")
+		fin
+	fin
+	Trace("L18/A44 v5 : " + nNbSubst + " substitution(s) effectuée(s) sur la chaîne JSON.")
+sinon
+	Trace("L18/A44 v5 : aucun mapping LOCAL_xxx > nom (régime A ou pas de spécifique mappable). Substitution PSMD sautée.")
+fin
+
 // ─── Écriture du JSON dans le fichier temporaire ─────────────────────────
-si pas fSauveTexte(sCheminJsonTemp, ChaîneVersUTF8(stDocument.JsonDesignerData)) alors
+si pas fSauveTexte(sCheminJsonTemp, ChaîneVersUTF8(sJsonPsmdTemp)) alors
 	Trace("GenererPsmdServeur : échec fSauveTexte JSON temp : " + sCheminJsonTemp)
 	renvoyer Faux
 fin
@@ -82,9 +237,14 @@ Trace("GenererPsmdServeur : CMD BAT = " + sCommandeBat)
 LanceAppli(sCommandeBat, exeIconise, exeBloquant)
 
 // ─── Nettoyage du fichier JSON temporaire ────────────────────────────────
-si fFichierExiste(sCheminJsonTemp) alors
-	fSupprime(sCheminJsonTemp)
-fin
+// L18/A44 v5 DIAG : commenté temporairement pour permettre l'inspection
+// du fichier temp et vérifier que les substitutions @LOCAL_xxx@ > @Champ3@
+// sont bien présentes dans le JSON envoyé à psmd_cli.js.
+// À REACTIVER après stabilisation.
+//si fFichierExiste(sCheminJsonTemp) alors
+//	fSupprime(sCheminJsonTemp)
+//fin
+Trace("L18/A44 v5 DIAG : fichier temp CONSERVÉ pour inspection : " + sCheminJsonTemp)
 
 // ─── Vérification de la présence du .psmd produit ────────────────────────
 si pas fFichierExiste(sCheminPsmd) alors

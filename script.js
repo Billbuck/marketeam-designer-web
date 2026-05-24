@@ -26888,6 +26888,48 @@ document.addEventListener('DOMContentLoaded', () => {
         //    ET nom réellement inséré dans le contenu ET pas déjà un
         //    spécifique (pas de localId réel — défense en profondeur,
         //    l'étape C n'en pose jamais mais on reste robuste).
+        //
+        // L18/A43 — EXCLUSION DES STANDARDS DE LA PROMOTION.
+        //   Bug observé (CAS 2 donneur d'ordre) : quand une base est
+        //   présente dès l'ouverture du Designer, l'étape C WebDev injecte
+        //   TOUS les champs de taaBaseChamp (standards Civilite/Nom/Adresse…
+        //   + Champ1..Champ30) avec `injecteParBase = "1"`. À la validation,
+        //   la promotion les promouvait TOUS, transformant les marqueurs
+        //   @Civilite@ / @Nom@ en @LOCAL_xxx@ dans le contenu et le PSMD.
+        //   Or les standards ont un nom technique STABLE (Civilite, Nom,
+        //   Adresse1…) qui doit rester tel quel pour que PrintShop Mail
+        //   en production trouve la colonne correspondante dans le CSV
+        //   source de données.
+        //
+        //   Critère d'exclusion : le `nom` du champ figure dans
+        //   `champsStandardDisponibles` (variable IIFE peuplée par
+        //   loadFromWebDev depuis jsonData.champsStandard, source SaaS
+        //   officielle des 18 standards — cf. RemplirDesignerChampsStandard.txt
+        //   côté WebDev). C'est la source de vérité la plus fiable :
+        //     - Plus robuste qu'une convention de nommage /^Champ\d+$/
+        //       (qui pourrait casser si la convention évolue)
+        //     - Reflète exactement ce que la SaaS considère comme standard
+        //     - Couvre tous les standards (y compris ceux ajoutés ultérieurement)
+        //
+        //   Fallback défensif : si champsStandardDisponibles est vide ou
+        //   indisponible (cas pathologique), on retombe sur la convention
+        //   "ne PROMOUVOIR QUE les noms matchant /^Champ\d+$/" — les
+        //   colonnes base custom suivent cette convention WLangage stricte
+        //   (clt_base_ligne.Champ1..Champ30).
+        const standardsSet = new Set();
+        if (Array.isArray(champsStandardDisponibles)) {
+            champsStandardDisponibles.forEach(s => {
+                if (s && typeof s.nom === 'string' && s.nom.trim()) {
+                    standardsSet.add(s.nom.trim());
+                }
+            });
+        }
+        const useFallbackConvention = standardsSet.size === 0;
+        if (useFallbackConvention && DEBUG) {
+            console.warn('promoteBaseFieldsBeforeExport: champsStandardDisponibles vide ou indisponible — fallback sur convention /^Champ\\d+$/');
+        }
+        const reColonneBaseCustom = /^Champ\d+$/;
+
         const champs = Array.isArray(documentState.champsFusion) ? documentState.champsFusion : [];
         const aPromouvoir = [];
         for (let i = 0; i < champs.length; i++) {
@@ -26903,6 +26945,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!ancienNom) continue;
 
             if (!cleInserees.has(ancienNom)) continue;
+
+            // L18/A43 — Filtre exclusion standards
+            const estStandard = useFallbackConvention
+                ? !reColonneBaseCustom.test(ancienNom)
+                : standardsSet.has(ancienNom);
+            if (estStandard) {
+                try {
+                    console.log(`Promotion: ${champ.libelle || '(sans libellé)'} nom=${ancienNom} → EXCLU (standard)`);
+                } catch (e) { /* defensive */ }
+                continue;
+            }
 
             aPromouvoir.push({ champ, ancienNom });
         }
@@ -26947,9 +27000,9 @@ document.addEventListener('DOMContentLoaded', () => {
             delete champ.presenteEnBase;
             // origine + categorie + type + ordre + libelle préservés tels quels
 
-            // L18/A41 — TRACE TEMPORAIRE (à retirer après validation production)
+            // L18/A41+A43 — TRACE TEMPORAIRE (à retirer après validation production)
             try {
-                console.log(`Promotion: ${libelle || '(sans libellé)'} Champ=${ancienNom} → LOCAL_${newLocalId} echantillon="${valeurFigee}"`);
+                console.log(`Promotion: ${libelle || '(sans libellé)'} nom=${ancienNom} → PROMU LOCAL_${newLocalId} echantillon="${valeurFigee}"`);
             } catch (e) { /* defensive */ }
 
             mappingPromotion.set(ancienNom, { newLocalId, libelle, valeurFigee });
