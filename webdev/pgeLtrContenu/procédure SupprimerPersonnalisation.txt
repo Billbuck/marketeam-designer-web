@@ -20,7 +20,7 @@
 //   pLigne : indice du document dans tabStDocument (= attNumDocument)
 // Retour : Vrai si suppression effectuée
 // ─────────────────────────────────────────────────────────────────────────────
-procédure SupprimerDocument(pLigne)
+procédure SupprimerPersonnalisation(pLigne)
 
 stDoc est une structDocument
 stDoc = __stOperation.stOperationLettre.tabStDocument[pLigne]

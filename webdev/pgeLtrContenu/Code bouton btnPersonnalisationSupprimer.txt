@@ -1,7 +1,7 @@
 si PageAfficheDialogue(pgeOuiNon, ...
 	"Souhaitez-vous annuler votre personnalisation ?", __OPERATION_COURRIER__) = Vrai alors
 
-	si SupprimerDocument(attNumDocument) alors
+	si SupprimerPersonnalisation(attNumDocument) alors
 
 		// ─── Déverrouillage des combos ───────────────────────────────────────
 		znrLtrContenu[attNumDocument].cboSource.Etat							= Actif

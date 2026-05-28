@@ -1012,9 +1012,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnSnapToContent = null; // SUPPRIMÉ
     
     // Section déplacement de zone vers une autre page (SUPPRIMÉS)
-    const zonePageSection = null; // SUPPRIMÉ
-    const inputZonePage = null; // SUPPRIMÉ
-    const zonePageLock = null; // SUPPRIMÉ
+    // ─── Section « Page » dans les toolbars POC (4 types de zones) ──
+    //   La section « Page » qui permet de déplacer une zone d'une page à
+    //   l'autre est désormais portée par les 4 toolbars de paramètres :
+    //   `quill-input-page`, `image-input-page`, `barcode-input-page`,
+    //   `qrcode-input-page`. La fonction `updateZonePageUI` (plus bas)
+    //   pilote leur visibilité et reconstruit dynamiquement leurs options
+    //   à partir de `documentState.pages`. Les anciens éléments DOM
+    //   (zonePageSection / inputZonePage / zonePageLock) ont été retirés.
     
     // Navigation pages dynamique
     const pagesSection = document.getElementById('pages-section');
@@ -1894,6 +1899,109 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof resolver === 'function') {
             mergeTagDisplayResolver = resolver;
         }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // PARTIE 2 — INSTRUMENTATION STRUCTURÉE [DIAG]
+    // Préfixe homogène pour filtrage console (`[DIAG]` dans la barre de
+    // recherche). À retirer après diagnostic des 4 problèmes identifiés sur
+    // le scénario « suppression de base après insertion de champs base ».
+    //
+    // Activée par défaut (pas de garde DEBUG) — but explicite : voir
+    // immédiatement les valeurs sans avoir à modifier de flag. Le donneur
+    // d'ordre exécute le scénario, copie les lignes [DIAG], on décide
+    // ensemble des corrections.
+    // ════════════════════════════════════════════════════════════════════════
+    function diagLog(stage, payload) {
+        try { console.log('[DIAG] ' + stage, payload); } catch (e) { /* defensive */ }
+    }
+
+    /**
+     * Snapshot compact d'un champsFusion (toutes les propriétés clés pour
+     * comprendre statut/régime/exploitabilité). Évite le bruit d'un dump
+     * brut.
+     */
+    function diagSnapshotChampsFusion(champs) {
+        if (!Array.isArray(champs)) return [];
+        return champs.map(c => ({
+            libelle: c && c.libelle,
+            nom: c && c.nom,
+            localId: c && c.localId,
+            type: c && c.type,
+            categorie: c && c.categorie,
+            origine: c && c.origine,
+            presenteEnBase: c && c.presenteEnBase,
+            injecteParBase: c && c.injecteParBase,
+            echantillonDefaut: c && c.echantillonDefaut
+        }));
+    }
+
+    /**
+     * Snapshot compact d'un record `donneesApercu` (clés + valeurs tronquées
+     * à 40 caractères pour lisibilité console).
+     */
+    function diagSnapshotRecord(record) {
+        if (!record || typeof record !== 'object') return null;
+        const out = {};
+        Object.keys(record).forEach(k => {
+            const v = record[k];
+            if (v === null || v === undefined) { out[k] = v; return; }
+            const s = String(v);
+            out[k] = s.length > 40 ? (s.substring(0, 37) + '...') : s;
+        });
+        return out;
+    }
+
+    /**
+     * Axe 1 / Affichage uniforme — Retourne le libellé à afficher pour une
+     * clé de champ de fusion (ex. "LOCAL_59ebaafb3457" → "Etiquette").
+     *
+     * Fine couche utilitaire au-dessus de `mergeTagDisplayResolver` pour
+     * uniformiser le rendu visuel des zones code-barres, image et QR
+     * intelligent. Le résolveur sous-jacent retombe sur "@KEY@" en cas
+     * d'échec — ce comportement est conservé tel quel pour signaler à
+     * l'utilisateur l'anomalie.
+     *
+     * IMPORTANT : aucune influence sur le stockage ; cette fonction sert
+     * exclusivement à construire les badges / placeholders affichés à
+     * l'écran (axes 2 et 3 inchangés).
+     *
+     * @param {string} key - Clé de champ (nom technique OU LOCAL_<localId>)
+     * @returns {string} Libellé à afficher (ex: "Etiquette") ou "@KEY@" en fallback
+     */
+    function resolveChampLabel(key) {
+        if (key === null || key === undefined || key === '') return '';
+        try {
+            return mergeTagDisplayResolver(String(key));
+        } catch (e) {
+            // Sécurité : si le résolveur n'est pas encore prêt, on rend la clé brute
+            return `@${String(key)}@`;
+        }
+    }
+
+    /**
+     * Axe 1 / Affichage uniforme — Substitue dans une chaîne quelconque
+     * tous les tokens `@KEY@` par le libellé résolu (via
+     * `mergeTagDisplayResolver`). Utilisé pour les résumés QR
+     * intelligents (`getQrDisplaySummary`) lorsque l'aperçu n'est pas
+     * actif et qu'il reste des @KEY@ littéraux dans les champs.
+     *
+     * STRICTEMENT VISUEL : le contenu réel stocké dans
+     * `qrConfig.fields[*]` n'est pas modifié (conserve les LOCAL_<id>).
+     *
+     * @param {string} text - Texte pouvant contenir des tokens @KEY@
+     * @returns {string} Texte avec les tokens substitués par leurs libellés
+     */
+    function substituteMergeTagsForDisplay(text) {
+        if (!text || typeof text !== 'string') return text;
+        // Même regex que `replaceMergeFields` (lettres, chiffres, underscore).
+        return text.replace(/@([A-Za-z0-9_]+)@/g, (match, key) => {
+            const resolved = resolveChampLabel(key);
+            // Si le résolveur retombe sur "@KEY@" (libellé introuvable),
+            // on conserve le token tel quel (debug visible).
+            if (resolved === `@${key}@`) return match;
+            return resolved;
+        });
     }
 
     /**
@@ -3161,18 +3269,39 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Récupérer le texte du champ (@FIELDNAME@)
                 let fieldText = e.dataTransfer.getData('text/plain');
+                const fieldNameDirect = e.dataTransfer.getData('application/x-merge-field');
                 
                 // Vérifier que c'est bien un champ de fusion
                 if (!fieldText || !fieldText.startsWith('@')) {
                     // Essayer le format alternatif
-                    const fieldName = e.dataTransfer.getData('application/x-merge-field');
-                    if (fieldName) {
-                        fieldText = `@${fieldName}@`;
+                    if (fieldNameDirect) {
+                        fieldText = `@${fieldNameDirect}@`;
                     } else {
                         console.warn('Drop ignoré : pas un champ de fusion');
                         return;
                     }
                 }
+
+                // Cahier des charges §3 — Bloquer le drop dans un input QR
+                //   intelligent si le champ est ABSENT de la base. Source
+                //   du nom : la clé alternative si présente, sinon on
+                //   extrait depuis @KEY@ via une regex défensive.
+                try {
+                    let cle = fieldNameDirect;
+                    if (!cle && typeof fieldText === 'string') {
+                        const m = fieldText.match(/^@([A-Za-z0-9_\u00A0]+)@$/);
+                        cle = m ? m[1] : '';
+                    }
+                    const champQrDrop = findChampByKey(cle);
+                    if (champQrDrop && isChampAbsentDeLaBase(champQrDrop)) {
+                        showConstraintToast(
+                            'Ce champ n\'est pas présent dans la base et ne peut pas être inséré.',
+                            'info',
+                            'info'
+                        );
+                        return;
+                    }
+                } catch (e2) { /* defensive */ }
                 
                 // Insérer à la position du curseur ou à la fin
                 insertTextAtCursor(input, fieldText);
@@ -3669,42 +3798,50 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const fields = qrConfig.fields || {};
         const typeLabel = QR_TYPES_CONFIG[qrConfig.type]?.label || qrConfig.type;
-        
+
+        // Axe 1 — Helper local : applique la résolution des @KEY@
+        //   restants par leur libellé. Étapes :
+        //     1) `replaceMergeFields` substitue les tokens présents dans
+        //        l'enregistrement par leur VALEUR (mode aperçu actif).
+        //     2) `substituteMergeTagsForDisplay` substitue les tokens
+        //        encore présents par leur LIBELLÉ (hors aperçu, ou champs
+        //        absents du record). Aucune modification du stockage.
+        const r = (raw) => substituteMergeTagsForDisplay(replaceMergeFields(raw || '', record) || '');
+
         switch (qrConfig.type) {
             case 'url':
                 const url = fields.url || '';
                 if (!url) return '(URL vide)';
-                // Tronquer si trop long
-                const displayUrl = replaceMergeFields(url, record);
+                const displayUrl = r(url);
                 return displayUrl.length > 30 ? displayUrl.substring(0, 27) + '...' : displayUrl;
-            
+
             case 'vcard':
-                const nom = replaceMergeFields(fields.nom || '', record);
-                const prenom = replaceMergeFields(fields.prenom || '', record);
+                const nom = r(fields.nom);
+                const prenom = r(fields.prenom);
                 if (!nom && !prenom) return '(vCard vide)';
                 return `${prenom} ${nom}`.trim();
-            
+
             case 'email':
-                const to = replaceMergeFields(fields.to || '', record);
+                const to = r(fields.to);
                 return to || '(Email vide)';
-            
+
             case 'tel':
-                const tel = replaceMergeFields(fields.tel || '', record);
+                const tel = r(fields.tel);
                 return tel || '(Tél vide)';
-            
+
             case 'sms':
-                const smsTel = replaceMergeFields(fields.tel || '', record);
+                const smsTel = r(fields.tel);
                 return smsTel ? `SMS: ${smsTel}` : '(SMS vide)';
-            
+
             case 'wifi':
-                const ssid = replaceMergeFields(fields.ssid || '', record);
+                const ssid = r(fields.ssid);
                 return ssid ? `WiFi: ${ssid}` : '(WiFi vide)';
-            
+
             case 'geo':
-                const geoPreviewLat = fields.latitude || '';
-                const geoPreviewLng = fields.longitude || '';
+                const geoPreviewLat = r(fields.latitude);
+                const geoPreviewLng = r(fields.longitude);
                 return (geoPreviewLat && geoPreviewLng) ? `📍 ${geoPreviewLat}, ${geoPreviewLng}` : '(Geo vide)';
-            
+
             default:
                 return typeLabel;
         }
@@ -4266,6 +4403,85 @@ document.addEventListener('DOMContentLoaded', () => {
         return 'A';
     }
 
+    // ════════════════════════════════════════════════════════════════════════
+    // Cahier des charges §3 (Point 3) — Helpers d'INSÉRABILITÉ des champs.
+    //
+    //   Un champ ABSENT de la base (régime B + `presenteEnBase === false`)
+    //   ne doit JAMAIS être inséré dans une zone (texte/image/code-barres/QR).
+    //   Critère STRICT, aligné sur ce qui produit la couleur ROUGE dans
+    //   `getChampStatusV25` (≈ligne 4639) — source de vérité unique.
+    //
+    //   Régime A (sans base) : aucun champ n'est « absent » → toute
+    //   insertion autorisée (comportement préservé).
+    //
+    //   Ces helpers sont placés ici (après `detecterRegimeChamps`) pour
+    //   être disponibles à TOUS les chemins d'insertion :
+    //     - popup « Champs de fusion » (double-clic, bouton)  → insertTag
+    //     - drag & drop dans une zone texte (Quill)            → drop handler
+    //     - drag & drop dans un input QR intelligent           → drop handler
+    //     - combos image / code-barres (option `disabled`)     → populateXxx
+    // ════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Cahier des charges §3 — Retrouve l'objet champ correspondant à une
+     * « clé » (telle qu'utilisée dans le contenu / les combos / les drags) :
+     *   - `"LOCAL_<localId>"` → recherche par `localId`
+     *   - autre chaîne        → recherche par `nom` technique
+     * @param {string} key
+     * @returns {Object|null} L'entrée de `documentState.champsFusion`, ou null
+     */
+    function findChampByKey(key) {
+        if (!key || typeof key !== 'string') return null;
+        const cle = key.replace(/\u00A0/g, ' ').trim();
+        if (!cle) return null;
+        let champs = [];
+        try {
+            champs = (documentState && Array.isArray(documentState.champsFusion))
+                ? documentState.champsFusion : [];
+        } catch (e) { /* TDZ-safe : champs = [] */ }
+        if (cle.startsWith('LOCAL_')) {
+            const id = cle.substring('LOCAL_'.length);
+            return champs.find(c => c && c.localId === id) || null;
+        }
+        return champs.find(c => c && c.nom === cle) || null;
+    }
+
+    /**
+     * Cahier des charges §3 — Test « ce champ est-il absent de la base ? ».
+     * Retourne `true` UNIQUEMENT en régime B avec `presenteEnBase === false`.
+     * En régime A, retourne toujours `false` (aucune notion d'absent).
+     * @param {Object} champ - Objet champ de documentState.champsFusion
+     * @param {'A'|'B'} [regimeKnown] - Régime déjà calculé (évite recalcul)
+     * @returns {boolean}
+     */
+    function isChampAbsentDeLaBase(champ, regimeKnown) {
+        if (!champ) return false;
+        let r = regimeKnown;
+        if (r !== 'A' && r !== 'B') {
+            try {
+                r = (typeof mergeFields !== 'undefined')
+                    ? detecterRegimeChamps(mergeFields) : 'A';
+            } catch (e) { r = 'A'; }
+        }
+        return r === 'B' && champ.presenteEnBase === false;
+    }
+
+    /**
+     * Cahier des charges §3 — Test « ce champ est-il insérable ? ».
+     * Insertable = non SYS, non absent de la base.
+     * Les champs SYS ne sont pas censés être insérés via les chemins
+     * utilisateur (déjà filtrés Point 1), mais on les exclut ici aussi
+     * pour la défense en profondeur.
+     * @param {Object} champ
+     * @param {'A'|'B'} [regimeKnown]
+     * @returns {boolean}
+     */
+    function isChampInsertable(champ, regimeKnown) {
+        if (!champ) return false;
+        if (champ.type === 'SYS') return false;
+        return !isChampAbsentDeLaBase(champ, regimeKnown);
+    }
+
     /**
      * L11 / V2.5 - Extrait toutes les clés de champ référencées par une zone.
      *
@@ -4424,6 +4640,28 @@ document.addEventListener('DOMContentLoaded', () => {
             //   pastille → rafraîchissement corbeille. À RETIRER quand le
             //   donneur d'ordre confirme que tout fonctionne en production.
             try { window.__champsExploites = champsExploites; } catch (e) { /* defensive */ }
+
+            // ──────────── [DIAG] EXPLOITES ────────────
+            try {
+                const exploitesObj = {};
+                champsExploites.forEach((count, key) => { exploitesObj[key] = count; });
+                const champs = Array.isArray(documentState && documentState.champsFusion)
+                    ? documentState.champsFusion : [];
+                const matchUsage = champs.map(c => {
+                    const k = (typeof getChampUsageKey === 'function') ? getChampUsageKey(c) : '';
+                    return {
+                        libelle: c && c.libelle,
+                        usageKey: k,
+                        compte: champsExploites.get(k) || 0,
+                        exploite: (champsExploites.get(k) || 0) > 0
+                    };
+                });
+                diagLog('EXPLOITES', {
+                    nbClesScannees: champsExploites.size,
+                    cles: exploitesObj,
+                    parChamp: matchUsage
+                });
+            } catch (e) { /* trace defensive */ }
         } catch (e) {
             // Erreur ICI = vrai bug fonctionnel (scan défaillant), pas un
             // simple démarrage prématuré. On loggue pour diagnostic.
@@ -4716,12 +4954,19 @@ document.addEventListener('DOMContentLoaded', () => {
         //   !autoriserGestionChamps empêchait toute suppression en régime B,
         //   contrairement à la table V2.5 §1.4 ligne 5 (B, Faux, Non, Rouge, OUI).
         const isAjout = !!(champ && champ.origine === 'ajout');
+        const isStandard = !!(champ && champ.categorie === 'standard');
+
+        // Détection du régime — partagée entre calcul canDelete et canEditLibelleType
+        let regime = 'A';
+        try {
+            if (typeof mergeFields !== 'undefined') {
+                regime = detecterRegimeChamps(mergeFields);
+            }
+        } catch (e) { /* TDZ-safe : fallback 'A' */ }
 
         // Calcul V2.5 universel : régime A ou B, on délègue à la doctrine.
         let canDelete;
         try {
-            const regime = (typeof mergeFields !== 'undefined')
-                ? detecterRegimeChamps(mergeFields) : 'A';
             const status = getChampStatusV25(champ, regime);
             canDelete = !!status.supprimable;
         } catch (e) {
@@ -4742,21 +4987,34 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         }
 
-        // V2.4 préservée pour le libellé/type — `origine` reste valide pour
-        // distinguer ce que l'utilisateur peut éditer dans la modale :
-        //   - origine "import" → libellé et type figés (le mappage BDD ou
-        //     la définition métier du champ standard fait foi).
-        //   - origine "ajout"  → libellé et type librement modifiables.
-        // L'échantillon est toujours éditable pour tout champ non bloqué
-        // globalement (V2.4).
+        // Cahier des charges §2 + §6 — Capacité d'édition libellé/type :
+        //   - STANDARD : TOUJOURS figé (Civilité, Nom, Adresse1… ne sont
+        //     pas renommables, leur nom technique stable est requis pour
+        //     PrintShop Mail et la conversion PSMD).
+        //   - SPÉCIFIQUE + régime SANS BASE (A) : MODIFIABLE (Point 6 —
+        //     l'utilisateur peut renommer un champ qu'il a créé/promu).
+        //   - SPÉCIFIQUE + régime AVEC BASE (B) : FIGÉ (Point 5 préservé —
+        //     présent ou absent, la définition vient de la base ; en
+        //     absent/rouge, on attend que l'utilisateur le retire au lieu
+        //     de le renommer).
+        //
+        //   Note : l'ancien critère `isAjout` (= `origine === 'ajout'`)
+        //   est abandonné pour cette décision. Justification :
+        //   `normalizeOriginAndCategoryFromLoad` (V2.4) force `origine =
+        //   "import"` à chaque réouverture, ce qui figeait à tort les
+        //   spécifiques sans base après une 1ʳᵉ validation (ancien
+        //   Problème 3 du cahier). La nouvelle règle s'appuie sur
+        //   `categorie` (posée de manière fiable par WebDev — option A
+        //   tour précédent) + le régime courant.
+        const canEditLibelleType = !isStandard && regime === 'A';
 
         return {
-            canEditLibelleType: isAjout,
+            canEditLibelleType,
             canEditEchantillon: true,
             canDelete: canDelete,
             reason: canDelete
-                ? (isAjout ? 'editable' : 'v25-orphan')  // V2.5 : suppressible mais origine 'import' (cas champ orphelin du modèle)
-                : (isAjout ? 'v25-usage' : 'v25-base')   // V2.5 : non supprimable (exploité OU présent en base)
+                ? (canEditLibelleType ? 'editable-A' : 'v25-orphan')
+                : (canEditLibelleType ? 'v25-usage'  : 'v25-base')
         };
     }
 
@@ -4790,9 +5048,84 @@ document.addEventListener('DOMContentLoaded', () => {
         //   seule fois par mise à jour de la popup.
         const regimeV25 = detecterRegimeChamps(champsTries);
         rebuildChampsExploites();
-        
-        // Mettre à jour le compteur
-        const count = champsTries.length;
+
+        // ──────────── [DIAG] STATUT (popup) ────────────
+        try {
+            const statuts = champsTries.map(c => {
+                let s = null;
+                try { s = getChampStatusV25(c, regimeV25); } catch (e) {}
+                const exploite = (typeof estChampExploite === 'function') ? estChampExploite(c) : null;
+                return {
+                    libelle: c && c.libelle,
+                    nom: c && c.nom,
+                    localId: c && c.localId,
+                    presenteEnBase: c && c.presenteEnBase,
+                    origine: c && c.origine,
+                    categorie: c && c.categorie,
+                    usageKey: (typeof getChampUsageKey === 'function') ? getChampUsageKey(c) : null,
+                    exploite,
+                    couleur: s && s.couleur,
+                    supprimable: s && s.supprimable,
+                    tooltip: s && s.tooltip
+                };
+            });
+            diagLog('STATUT', { regime: regimeV25, nbChamps: champsTries.length, statuts });
+        } catch (e) { /* trace defensive */ }
+
+        // Cahier des charges §1.7 — Les champs SYS (Séquentiel, Timbre)
+        //   sont retirés de la popup : ils ne sont pas exploitables par
+        //   l'utilisateur, ils existent uniquement en coulisses pour la
+        //   production (PSMD, tri postal, affranchissement).
+        //   IMPORTANT : on filtre UNIQUEMENT l'AFFICHAGE. `champsTries`
+        //   reste complet pour la trace [DIAG] STATUT et tous les calculs
+        //   internes ; `documentState.champsFusion` n'est pas modifié.
+        //
+        // Cahier des charges — Tri par ÉTAT (3 groupes, remplace l'ancien
+        //   tri en 4 groupes standard/spécifique × exploité/non) :
+        //     1. EXPLOITÉS (couleur vert)
+        //     2. EN ERREUR (couleur rouge — inséré mais absent de la base)
+        //     3. NON EXPLOITÉS (couleur gris)
+        //   Concaténation 1 → 2 → 3.
+        //
+        //   À l'intérieur de chaque groupe : ORDRE DU POSTMESSAGE
+        //   (= ordre dans `champsNormalises`, qui préserve l'ordre du
+        //   tableau d'entrée `champs`). Aucun tri alphabétique. La
+        //   distinction standard/spécifique sert encore à la modale
+        //   d'édition (onglet) mais plus au tri.
+        //
+        //   Source de vérité de la couleur : `getChampStatusV25` (déjà
+        //   utilisée pour les bordures CSS des pastilles), réutilisée ici
+        //   pour garantir la cohérence visuelle.
+        //
+        //   Groupe défensif `autres` : capte tout champ dont la couleur
+        //   ne tombe ni vert/rouge/gris (futur statut, erreur de calcul).
+        //   Sert de filet de sécurité pour qu'aucun champ ne disparaisse
+        //   silencieusement. Ajouté en queue de liste.
+        function _couleurChamp(c) {
+            try {
+                const s = getChampStatusV25(c, regimeV25);
+                return (s && s.couleur) ? s.couleur : '';
+            } catch (e) {
+                return '';
+            }
+        }
+        const champsHorsSys = champsNormalises.filter(c => c && c.type !== 'SYS');
+        const groupeVert  = champsHorsSys.filter(c => _couleurChamp(c) === 'vert');
+        const groupeRouge = champsHorsSys.filter(c => _couleurChamp(c) === 'rouge');
+        const groupeGris  = champsHorsSys.filter(c => _couleurChamp(c) === 'gris');
+        const groupeAutres = champsHorsSys.filter(c => {
+            const k = _couleurChamp(c);
+            return k !== 'vert' && k !== 'rouge' && k !== 'gris';
+        });
+        const champsAffichables = [
+            ...groupeVert,
+            ...groupeRouge,
+            ...groupeGris,
+            ...groupeAutres
+        ];
+
+        // Mettre à jour le compteur (sur les seuls champs AFFICHÉS)
+        const count = champsAffichables.length;
         if (fieldsCount) {
             fieldsCount.textContent = count === 0 ? '0 champ disponible' 
                                      : count === 1 ? '1 champ disponible' 
@@ -4807,10 +5140,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Vider le conteneur (sauf le message vide)
         mergeFieldsContainer.querySelectorAll('.merge-tag').forEach(tag => tag.remove());
         
-        if (champsTries.length === 0) return;
+        if (champsAffichables.length === 0) return;
         
-        // Parcourir les champs triés
-        champsTries.forEach(champ => {
+        // Parcourir les champs triés (HORS SYS — cf. filtre ci-dessus)
+        champsAffichables.forEach(champ => {
             // V3.4 - Clé d'insertion : utilisée par le drag&drop et le dblclick
             //        pour produire `@key@` dans Quill (et stocker la value
             //        des selects image/barcode).
@@ -5205,6 +5538,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Priorités absolues — pas la peine de recalculer si masquée par force.
         if (champsFusionInterdit) {
             fieldsPopupShown = false;
+            fieldsPopupUserIntent = false;
             updateToolbarDataVisibility();
             return;
         }
@@ -5232,30 +5566,50 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             fieldsPopupShown = isTextZoneSelectedForFieldsPopup();
         }
+        // Cahier des charges — Correction 3 : aligner l'intent sur shown
+        //   lorsque le contexte FERME la popup (désélection, sélection
+        //   d'une zone image/barcode/QR…). Conséquence : le bouton sidebar
+        //   devient inactif (puisqu'il reflète shown) → un seul clic suffit
+        //   pour rouvrir manuellement. Sans cet alignement, intent restait
+        //   à `true` après une fermeture contextuelle → bouton apparaissait
+        //   actif alors que la popup était fermée → 2 clics pour rouvrir.
+        if (!fieldsPopupShown) {
+            fieldsPopupUserIntent = false;
+        }
         updateToolbarDataVisibility();
     }
 
     /**
-     * V2.4 / L9 - D14 : synchronise l'apparence du bouton sidebar « Champs ».
-     * État visuel = `fieldsPopupUserIntent` (intention utilisateur) — NON pas
-     * `fieldsPopupShown` (qui peut varier contextuellement sans intervention).
-     * C'est l'invariant D14 : le bouton reste actif tant que l'utilisateur
-     * n'a pas explicitement cliqué dessus ou sur la croix X.
+     * Cahier des charges — Correction 3 : le bouton sidebar « Champs »
+     * reflète l'état RÉEL de la popup (`fieldsPopupShown`), pas l'intention
+     * utilisateur résiduelle.
+     *   - popup ouverte → bouton ACTIF
+     *   - popup fermée  → bouton INACTIF
+     * Quel que soit le mode de fermeture (clic sur le bouton, croix X,
+     * clic extérieur, sélection d'une zone non-texte, désélection, etc.).
+     * Source de vérité unique : l'état de la popup commande l'état du
+     * bouton, évite les désynchronisations et garantit qu'un seul clic
+     * suffit toujours pour rouvrir.
+     *
+     * NB : l'intent (`fieldsPopupUserIntent`) reste utilisé en interne par
+     * `evaluateFieldsPopupForSelection` pour décider d'ouvrir/fermer la
+     * popup selon le contexte de sélection ; il est désormais aligné par
+     * `evaluateFieldsPopupForSelection` lorsqu'elle ferme la popup.
      */
     function updateFieldsPopupToggleButton() {
         const btn = document.getElementById('btn-toggle-fields-popup');
         if (!btn) return;
         const blocked = !!champsFusionInterdit;
         const inPreview = isPreviewActive();
-        const effectivelyIntended = !blocked && fieldsPopupUserIntent;
-        btn.classList.toggle('active', effectivelyIntended);
+        const actuallyShown = !blocked && fieldsPopupShown;
+        btn.classList.toggle('active', actuallyShown);
         btn.disabled = blocked;
         if (blocked) {
             btn.title = 'Personnalisation par champs BDD indisponible pour ce document';
         } else if (inPreview) {
             btn.title = 'Aperçu actif — sortir de l\'aperçu pour utiliser';
         } else {
-            btn.title = effectivelyIntended
+            btn.title = actuallyShown
                 ? 'Désactiver la popup Champs de fusion'
                 : 'Activer la popup Champs de fusion';
         }
@@ -5646,7 +6000,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 dropInsertIndex = null;
                 return;
             }
-            
+
+            // Cahier des charges §3 — Bloquer le drop d'un champ ABSENT
+            //   de la base (rouge en régime B). Aligné sur insertTag.
+            try {
+                const champDrop = findChampByKey(fieldName);
+                if (champDrop && isChampAbsentDeLaBase(champDrop)) {
+                    showConstraintToast(
+                        'Ce champ n\'est pas présent dans la base et ne peut pas être inséré.',
+                        'info',
+                        'info'
+                    );
+                    dropInsertIndex = null;
+                    return;
+                }
+            } catch (e2) { /* defensive */ }
+
             // Récupérer l'instance Quill
             const quill = quillInstances.get(zoneId);
             if (!quill) {
@@ -5771,6 +6140,22 @@ document.addEventListener('DOMContentLoaded', () => {
             );
             return;
         }
+
+        // Cahier des charges §3 — Bloquer l'insertion d'un champ ABSENT
+        //   de la base (rouge en régime B). En régime A, aucun champ n'est
+        //   absent → pas d'effet de bord. Source de vérité unique :
+        //   `isChampAbsentDeLaBase` (basé sur `presenteEnBase === false`).
+        try {
+            const champ = findChampByKey(fieldName);
+            if (champ && isChampAbsentDeLaBase(champ)) {
+                showConstraintToast(
+                    'Ce champ n\'est pas présent dans la base et ne peut pas être inséré.',
+                    'info',
+                    'info'
+                );
+                return;
+            }
+        } catch (e) { /* defensive : si helper indisponible, on n'empêche pas l'insertion */ }
 
         // Remplacer les espaces par des espaces insécables dans le nom du champ
         const fieldNameNbsp = fieldName.replace(/ /g, '\u00A0');
@@ -13564,20 +13949,99 @@ document.addEventListener('DOMContentLoaded', () => {
     function refreshMergeTagsInAllZones(keyFilter) {
         let count = 0;
         const filter = (typeof keyFilter === 'string' && keyFilter.trim()) ? keyFilter.trim() : null;
-        if (typeof quillInstances === 'undefined' || !quillInstances) return 0;
-        quillInstances.forEach((quill) => {
-            if (!quill || !quill.root) return;
-            const nodes = quill.root.querySelectorAll('span.merge-tag-quill[data-key]');
-            nodes.forEach(node => {
-                const key = node.getAttribute('data-key') || '';
-                if (filter && key !== filter) return;
-                const newText = mergeTagDisplayResolver(key);
-                if (node.textContent !== newText) {
-                    node.textContent = newText;
-                    count++;
-                }
+
+        // ─── (1) Pastilles texte (Quill) — comportement historique ────────
+        if (typeof quillInstances !== 'undefined' && quillInstances) {
+            quillInstances.forEach((quill) => {
+                if (!quill || !quill.root) return;
+                const nodes = quill.root.querySelectorAll('span.merge-tag-quill[data-key]');
+                nodes.forEach(node => {
+                    const key = node.getAttribute('data-key') || '';
+                    if (filter && key !== filter) return;
+                    const newText = mergeTagDisplayResolver(key);
+                    if (node.textContent !== newText) {
+                        node.textContent = newText;
+                        count++;
+                    }
+                });
             });
-        });
+        }
+
+        // ─── (2) Axe 1 — Zones code-barres, image et QR intelligent ───────
+        //   Le rafraîchissement d'un libellé doit aussi se répercuter sur
+        //   les badges code-barres (formatFieldWithAt remplacé par le
+        //   résolveur), les placeholders image (getImagePlaceholderSvg
+        //   alimenté par resolveChampLabel) et les résumés QR intelligents
+        //   (substituteMergeTagsForDisplay). On parcourt UNIQUEMENT les
+        //   zones de la page courante pour les types qui rendent dans le
+        //   DOM (`updateBarcodeZoneDisplay` / `updateImageZoneDisplay`
+        //   lisent et écrivent dans `#zone-X` de la page active).
+        try {
+            if (typeof documentState === 'undefined' || !documentState || !Array.isArray(documentState.pages)) {
+                return count;
+            }
+            const currentPageIdx = documentState.currentPageIndex || 0;
+            const currentPage = documentState.pages[currentPageIdx];
+            if (!currentPage || !currentPage.zones) return count;
+
+            // Helpers de matching contre `filter` (clé concernée).
+            //   - "@KEY@" pour les tokens dans qrConfig.fields
+            //   - LOCAL_<id> ou nom technique pour champFusion / source.valeur
+            const matchesFilter = (val) => {
+                if (!filter) return true;
+                if (val === undefined || val === null) return false;
+                if (val === filter) return true;
+                // Recherche d'un token @filter@ dans une chaîne (cas qrConfig.fields[*]).
+                if (typeof val === 'string') {
+                    return val.indexOf(`@${filter}@`) !== -1;
+                }
+                return false;
+            };
+
+            Object.entries(currentPage.zones).forEach(([zoneId, zoneData]) => {
+                if (!zoneData) return;
+
+                if (zoneData.type === 'barcode') {
+                    // Barcode classique : champFusion contient la clé.
+                    // QR intelligent (qrConfig.type défini) : la clé peut
+                    //   se trouver dans plusieurs `qrConfig.fields[*]`.
+                    const hasMatch = matchesFilter(zoneData.champFusion)
+                        || (zoneData.qrConfig && zoneData.qrConfig.fields && Object.values(zoneData.qrConfig.fields).some(v => matchesFilter(v)));
+                    if (!filter || hasMatch) {
+                        try {
+                            updateBarcodeZoneDisplay(zoneId);
+                            count++;
+                        } catch (e) { /* ignore */ }
+                    }
+                    return;
+                }
+
+                if (zoneData.type === 'image') {
+                    // Image avec source = champ de fusion : la clé est dans source.valeur.
+                    const src = zoneData.source || {};
+                    if (src.type !== 'champ') return;
+                    const hasMatch = matchesFilter(src.valeur) || matchesFilter(src.champFusion);
+                    if (!filter || hasMatch) {
+                        try {
+                            updateImageZoneDisplay(zoneId);
+                            count++;
+                        } catch (e) { /* ignore */ }
+                    }
+                    return;
+                }
+
+                // Type 'qr' (QR interactif Marketeam) : son contenu (URL
+                // landing page) n'est pas une clé de champ — pas de refresh
+                // nécessaire pour Axe 1.
+            });
+        } catch (e) {
+            // Sécurité défensive : ne jamais bloquer l'éditeur si le
+            //   rafraîchissement des zones échoue.
+            if (typeof DEBUG !== 'undefined' && DEBUG) {
+                console.warn('refreshMergeTagsInAllZones — extension zones non-texte:', e);
+            }
+        }
+
         return count;
     }
 
@@ -16642,9 +17106,16 @@ document.addEventListener('DOMContentLoaded', () => {
         
         quillToolbar.style.display = 'none';
         isQuillToolbarVisible = false;
-        
-        // Masquer aussi la toolbar Data (champs de fusion)
-        if (toolbarData) toolbarData.style.display = 'none';
+
+        // Cahier des charges (synchro bouton↔popup) — Route la fermeture
+        //   par le POINT UNIQUE `closeFieldsPopup()` plutôt qu'un setter
+        //   direct `toolbarData.style.display = 'none'`. Ce dernier laissait
+        //   `fieldsPopupShown`/`fieldsPopupUserIntent` à `true` → bouton
+        //   sidebar « Champs » désynchronisé (actif alors que la popup
+        //   est fermée). `closeFieldsPopup` est idempotente.
+        if (typeof closeFieldsPopup === 'function') {
+            closeFieldsPopup();
+        }
     }
 
     /**
@@ -18654,9 +19125,23 @@ document.addEventListener('DOMContentLoaded', () => {
             hideImageToolbar();
             hideBarcodeToolbar();
             hideQrcodeToolbar();
-            // Masquer aussi la toolbar Data (aucune zone sélectionnée, zone système ou toolbar désactivée)
-            if (toolbarData) {
-                toolbarData.style.display = 'none';
+            // Cahier des charges (synchro bouton↔popup) — Au lieu d'un setter
+            //   direct `toolbarData.style.display = 'none'` (qui laissait
+            //   `fieldsPopupShown`/`fieldsPopupUserIntent` à `true` → bouton
+            //   sidebar actif alors que la popup était fermée), on route la
+            //   fermeture par le POINT UNIQUE `closeFieldsPopup()` qui :
+            //     - met `intent = false; shown = false;`
+            //     - reset la vue à la liste
+            //     - rappelle `updateToolbarDataVisibility()` (qui appelle
+            //       `updateFieldsPopupToggleButton()` → bouton inactif)
+            //   Idempotent : la garde interne de closeFieldsPopup retourne
+            //   immédiatement si déjà fermée.
+            //   Ce chemin est emprunté par le clic en dehors (deselectAll
+            //   → updateToolbarVisibility), qui sortait en `return` avant
+            //   d'atteindre `evaluateFieldsPopupForSelection()` en fin de
+            //   fonction → bouton désynchronisé.
+            if (typeof closeFieldsPopup === 'function') {
+                closeFieldsPopup();
             }
             return;
         }
@@ -20221,7 +20706,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateImageZoneForPreview(zoneId, zoneData, record);
             } else {
                 // Pas de données d'aperçu ou pas de collection → afficher le placeholder
-                contentEl.innerHTML = getImagePlaceholderSvg(source.valeur);
+                // Axe 1 : résoudre la clé en libellé (ex. "LOCAL_xxx" → "Etiquette")
+                //   pour la cohérence avec les pastilles texte. Le stockage
+                //   (source.valeur = LOCAL_<localId>) n'est PAS modifié.
+                contentEl.innerHTML = getImagePlaceholderSvg(resolveChampLabel(source.valeur));
                 contentEl.classList.remove('has-image');
                 contentEl.classList.add('no-image');
                 contentEl.style.justifyContent = 'center';
@@ -20378,7 +20866,9 @@ document.addEventListener('DOMContentLoaded', () => {
             contentEl.style.alignItems = mapAlignVToFlex(redim.alignementV);
         } else {
             // Pas d'image disponible : placeholder avec le nom du champ
-            contentEl.innerHTML = getImagePlaceholderSvg(source.valeur || 'Image');
+            // Axe 1 : libellé résolu (ex. "Etiquette") plutôt que "@LOCAL_xxx@".
+            const placeholderLabel = source.valeur ? resolveChampLabel(source.valeur) : 'Image';
+            contentEl.innerHTML = getImagePlaceholderSvg(placeholderLabel);
             contentEl.classList.remove('has-image');
             contentEl.classList.add('no-image');
         }
@@ -20388,22 +20878,29 @@ document.addEventListener('DOMContentLoaded', () => {
      * Génère le SVG placeholder pour les zones image.
      * Comprend un cadre avec bordure arrondie et une icône centrale.
      * L'icône est homothétique (conserve ses proportions) et centrée dans la zone.
-     * 
-     * @param {string|null} champName - Nom du champ de fusion (affiche @NOM@ si défini)
+     *
+     * Axe 1 — Le label reçu est désormais affiché TEL QUEL (pas d'ajout
+     * automatique de `@...@`). Les appelants qui passent une clé de champ
+     * de fusion (ex. "LOCAL_xxx") doivent la résoudre au préalable via
+     * `resolveChampLabel(key)` pour afficher le LIBELLÉ ("Etiquette")
+     * au lieu de la clé brute.
+     *
+     * @param {string|null} label - Texte à afficher sous l'icône (libellé déjà résolu, message, etc.). Aucun wrapping automatique.
      * @param {string} [color=THEME_COLOR] - Couleur de l'icône (défaut: couleur thème)
      * @param {number} [scale=IMAGE_PLACEHOLDER_SCALE] - Proportion de l'icône (0.5 = 50% de la zone)
      * @param {number} [inset=IMAGE_PLACEHOLDER_INSET] - Marge intérieure du cadre en pixels
      * @param {number} [borderRadius=IMAGE_PLACEHOLDER_BORDER_RADIUS] - Rayon des coins arrondis en pixels
      * @param {number} [borderWidth=IMAGE_PLACEHOLDER_BORDER_WIDTH] - Épaisseur de la bordure en pixels
      * @returns {string} HTML du placeholder (cadre + icône)
-     * 
+     *
      * @example
-     * getImagePlaceholderSvg(null);                    // Placeholder standard
-     * getImagePlaceholderSvg('PHOTO');                 // Affiche @PHOTO@
-     * getImagePlaceholderSvg(null, '#ff0000', 0.6);   // Rouge, 60% de la zone
+     * getImagePlaceholderSvg(null);                       // Placeholder standard
+     * getImagePlaceholderSvg('Etiquette');                // Affiche "Etiquette"
+     * getImagePlaceholderSvg(resolveChampLabel(key));     // Libellé résolu du champ
+     * getImagePlaceholderSvg(null, '#ff0000', 0.6);       // Rouge, 60% de la zone
      */
-    function getImagePlaceholderSvg(champName, color = THEME_COLOR, scale = IMAGE_PLACEHOLDER_SCALE, inset = IMAGE_PLACEHOLDER_INSET, borderRadius = IMAGE_PLACEHOLDER_BORDER_RADIUS, borderWidth = IMAGE_PLACEHOLDER_BORDER_WIDTH) {
-        const label = champName ? `@${champName}@` : '';
+    function getImagePlaceholderSvg(label, color = THEME_COLOR, scale = IMAGE_PLACEHOLDER_SCALE, inset = IMAGE_PLACEHOLDER_INSET, borderRadius = IMAGE_PLACEHOLDER_BORDER_RADIUS, borderWidth = IMAGE_PLACEHOLDER_BORDER_WIDTH) {
+        const displayLabel = label ? String(label) : '';
         const scalePercent = Math.round(scale * 100);
         
         return `
@@ -20418,7 +20915,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <path fill="${color}" d="M85.3 7.5H14.7C8 7.5 2.5 13 2.5 19.7v60.6c0 6.7 5.5 12.2 12.2 12.2h70.6c6.7 0 12.2-5.5 12.2-12.2V19.7c0-6.7-5.5-12.2-12.2-12.2zM14.7 13.9h70.6c3.2 0 5.8 2.6 5.8 5.8v29.2L79 36.9c-2.1-2.1-5.6-2.1-7.8 0l-23 23-10.3-10.4c-2.1-2.1-5.6-2.1-7.8 0L8.9 70.8V19.7c0-3.2 2.6-5.8 5.8-5.8z"/>
             <path fill="${color}" d="M50.4 30.3c0 4.9-4 9-9 9s-9-4-9-9 4-9 9-9 9 4 9 9"/>
         </svg>
-        ${label ? `<span style="font-size: 11px; color: ${color}; font-weight: 500;">${label}</span>` : ''}
+        ${displayLabel ? `<span style="font-size: 11px; color: ${color}; font-weight: 500;">${escapeHtml(displayLabel)}</span>` : ''}
     </div>
 </div>`;
     }
@@ -20474,6 +20971,15 @@ document.addEventListener('DOMContentLoaded', () => {
         //   (record[fieldName] || record[source.champFusion]) trouvera
         //   la valeur via CORRECTION B (LOCAL_<id> injecté dans
         //   donneesApercu).
+        // Cahier des charges §3 — Détecter le régime UNE fois pour toutes
+        //   les options (évite recalcul O(n) dans le forEach).
+        let regImg = 'A';
+        try {
+            if (typeof mergeFields !== 'undefined') {
+                regImg = detecterRegimeChamps(mergeFields);
+            }
+        } catch (e) { /* TDZ-safe */ }
+
         champsTries.forEach(champ => {
             const option = document.createElement('option');
             const localIdValideImg = !!(champ.localId
@@ -20484,7 +20990,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 : (champ.nom || '');
             const fieldLabel = champ.libelle || champ.nom;
             option.value = fieldName;
-            option.textContent = fieldLabel;
+            // Cahier des charges §3 — Champ ABSENT de la base : option
+            //   désactivée (non sélectionnable par clic utilisateur) +
+            //   marqueur visuel " (absent)". On la GARDE dans la liste
+            //   pour préserver l'info si une zone est déjà liée à ce
+            //   champ devenu absent (ne pas faire disparaître la
+            //   sélection courante).
+            const absent = isChampAbsentDeLaBase(champ, regImg);
+            option.textContent = absent ? (fieldLabel + ' (absent)') : fieldLabel;
+            if (absent) option.disabled = true;
             if (fieldName === selectedValue) option.selected = true;
             imageInputChamp.appendChild(option);
         });
@@ -20498,9 +21012,17 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * Remplit le select des champs de fusion pour les zones code-barres
      * Affiche le libelle, trie par ordre, utilise nom comme value
-     * Inclut tous les types de champs (TXT, SYS) sauf IMG
+     * Inclut tous les types de champs (TXT, SYS) sauf IMG.
+     *
+     * Axe 2 — Ajout du paramètre `selectedValue` (symétrique avec
+     * `populateImageFieldsSelect`). Permet à `updateAllFieldSelects()` de
+     * RE-POSITIONNER l'option sélectionnée sur le champ de la zone active
+     * après un saveState (sinon la combo retombe sur "Sélectionner un
+     * champ" après chaque sélection / resize / déplacement).
+     *
+     * @param {string} [selectedValue=''] - Valeur à pré-sélectionner (ex: "LOCAL_<id>")
      */
-    function updateBarcodeFieldSelect() {
+    function updateBarcodeFieldSelect(selectedValue = '') {
         if (!barcodeInputField) return;
 
         if (champsFusionInterdit) {
@@ -20537,11 +21059,24 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         // Filtrer : exclure les champs IMG (pas pertinent pour code-barres)
-        const champsBarcode = champsNormalises.filter(c => c.type !== 'IMG');
+        //   ET les champs SYS (cahier des charges §1.7 — système non
+        //   exploitable par l'utilisateur, donc pas proposé dans la combo).
+        //   `documentState.champsFusion` reste intact ; on filtre uniquement
+        //   ce qui est proposé dans la combo.
+        const champsBarcode = champsNormalises.filter(c => c && c.type !== 'IMG' && c.type !== 'SYS');
         
         // Trier par ordre croissant
         const champsTries = [...champsBarcode].sort((a, b) => (a.ordre || 0) - (b.ordre || 0));
-        
+
+        // Cahier des charges §3 — Détecter le régime UNE fois pour toutes
+        //   les options (cohérent avec populateImageFieldsSelect).
+        let regBar = 'A';
+        try {
+            if (typeof mergeFields !== 'undefined') {
+                regBar = detecterRegimeChamps(mergeFields);
+            }
+        } catch (e) { /* TDZ-safe */ }
+
         // Ajouter les champs triés
         // L18/A39 — INVERSION DE PRIORITÉ (Étape 1) — symétrique avec
         //   fieldKey ligne ~4802. La VALUE stockée en option (puis dans
@@ -20559,10 +21094,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 : (champ.nom || '');
             const fieldLabel = champ.libelle || champ.nom;
             const fieldType = champ.type || 'TXT';
-            
+
             option.value = fieldName;
-            // Afficher le libellé + indication du type si SYS
-            option.textContent = fieldLabel + (fieldType === 'SYS' ? ' (système)' : '');
+            // Cahier des charges §3 — Champ ABSENT de la base : option
+            //   désactivée + marqueur " (absent)". Préserve la sélection
+            //   existante si une zone est déjà liée à un champ devenu
+            //   absent (ne fait pas disparaître la donnée).
+            const absentBar = isChampAbsentDeLaBase(champ, regBar);
+            const suffixe = absentBar
+                ? ' (absent)'
+                : (fieldType === 'SYS' ? ' (système)' : '');
+            option.textContent = fieldLabel + suffixe;
+            if (absentBar) option.disabled = true;
+            // Axe 2 — Re-positionner l'option sélectionnée sur la valeur
+            //   demandée. Note : `option.selected = true` ne déclenche
+            //   PAS d'event 'change' DOM → pas de risque de boucle.
+            if (fieldName === selectedValue) option.selected = true;
             barcodeInputField.appendChild(option);
         });
         
@@ -20571,7 +21118,21 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * Met à jour tous les selects de champs de fusion (image et code-barres)
      * Appelée après chargement des champs ou modification de la liste
-     * Vérifie que documentState est initialisé avant d'exécuter
+     * Vérifie que documentState est initialisé avant d'exécuter.
+     *
+     * Axe 2 — Lit la zone actuellement sélectionnée :
+     *   - zone code-barres en source "champ"  → `zoneData.champFusion`
+     *   - zone image en source "champ"         → `zoneData.source.valeur`
+     * Ces valeurs sont passées à `updateBarcodeFieldSelect(selectedValue)`
+     * et `populateImageFieldsSelect(selectedValue)` afin que la combo
+     * conserve son option sélectionnée après chaque rebuild
+     * (notifyChampsExploitesMayHaveChanged → updateMergeFieldsUI). Sans
+     * cela, le moindre saveState (sélection combo, resize, drag) fait
+     * retomber la combo sur "Sélectionner un champ".
+     *
+     * Si aucune zone n'est sélectionnée, ou si la zone sélectionnée n'est
+     * pas en source "champ", on passe `''` → la combo reste vide
+     * (comportement normal).
      */
     function updateAllFieldSelects() {
         // Protection : documentState peut ne pas être encore initialisé au chargement
@@ -20582,8 +21143,42 @@ document.addEventListener('DOMContentLoaded', () => {
             // documentState pas encore déclaré/initialisé
             return;
         }
-        populateImageFieldsSelect('');
-        updateBarcodeFieldSelect();
+
+        // Axe 2 — Repositionner la combo sur la valeur stockée dans la
+        //   zone active pour neutraliser l'effet de bord saveState →
+        //   notifyChampsExploitesMayHaveChanged → updateMergeFieldsUI.
+        let currentImageValue = '';
+        let currentBarcodeValue = '';
+        try {
+            if (typeof selectedZoneIds !== 'undefined'
+                && Array.isArray(selectedZoneIds)
+                && selectedZoneIds.length === 1) {
+                const zoneId = selectedZoneIds[0];
+                const zonesData = (typeof getCurrentPageZones === 'function')
+                    ? getCurrentPageZones() : null;
+                const zoneData = zonesData ? zonesData[zoneId] : null;
+                if (zoneData) {
+                    if (zoneData.type === 'image'
+                        && zoneData.source
+                        && zoneData.source.type === 'champ') {
+                        // Stockage primaire image : source.valeur
+                        //   (source.champFusion peut servir de fallback ailleurs,
+                        //   mais l'option de combo est posée depuis source.valeur).
+                        currentImageValue = String(zoneData.source.valeur || zoneData.source.champFusion || '');
+                    } else if (zoneData.type === 'barcode'
+                        && zoneData.sourceType === 'champ') {
+                        currentBarcodeValue = String(zoneData.champFusion || '');
+                    }
+                }
+            }
+        } catch (e) {
+            // Sécurité défensive : ne jamais bloquer le rebuild des combos.
+            currentImageValue = '';
+            currentBarcodeValue = '';
+        }
+
+        populateImageFieldsSelect(currentImageValue);
+        updateBarcodeFieldSelect(currentBarcodeValue);
     }
     
     /**
@@ -20692,9 +21287,14 @@ document.addEventListener('DOMContentLoaded', () => {
             displayText = previewValue || '(Valeur vide)';
             valueToEncode = previewValue || null;
         } else if (sourceType === 'champ') {
-            // Source "Champ de fusion"
+            // Source "Champ de fusion" — Axe 1 : afficher le LIBELLÉ du
+            //   champ via le résolveur (cohérent avec les pastilles texte).
+            //   Avant : `formatFieldWithAt(champFusion)` emballait la clé
+            //   brute en `@LOCAL_xxx@`. Maintenant : le résolveur retourne
+            //   le libellé (ex. "Etiquette") ou retombe sur `@KEY@` en
+            //   fallback de sécurité.
             if (hasField) {
-                displayText = formatFieldWithAt(champFusion);
+                displayText = resolveChampLabel(champFusion);
             } else {
                 displayText = '(Aucun champ)';
             }
@@ -24937,50 +25537,54 @@ document.addEventListener('DOMContentLoaded', () => {
     function buildLocalIdToNomMap(champsFusion) {
         const map = new Map();
         if (!Array.isArray(champsFusion)) return map;
+
+        // TRACE TEMPORAIRE [MISMATCH-FIX] — diagnostic à retirer après validation.
+        let nbIgnoresLocalIdReel = 0;
+
         champsFusion.forEach(c => {
             if (!c || typeof c !== 'object') return;
             const localId = (typeof c.localId === 'string') ? c.localId.trim() : '';
             const nom = (typeof c.nom === 'string') ? c.nom.trim() : '';
             if (!localId || !nom) return;
 
-            // L18/A39 — NEUTRALISATION pour les noms VOLATILES étape A.
+            // Bug mismatch LOCAL_xxx ↔ Champ3 — Doctrine L18/A39 UNIVERSELLE :
+            //   un champ avec localId réel (non vide, ≠ "0") a pour marqueur
+            //   STABLE @LOCAL_<id>@, peu importe le régime (A ou B) et la
+            //   valeur de `presenteEnBase`. Le `nom` technique éventuel est
+            //   soit VOLATILE (réécrit par ÉTAPE A WebDev lors d'un cycle
+            //   avec base : libelle "Véhicule" → nom "Champ3" si la base
+            //   contient cette colonne), soit un résidu de persistance après
+            //   un cycle B→A — jamais une clé de contenu à utiliser.
             //
-            //   Bug à prévenir : sans cette restriction, à chaque réouverture
-            //   en régime B, l'étape A de SelectionModèle.txt /
-            //   btnDocumentPersonnaliser.txt réécrit champ.nom en mémoire
-            //   (libelle "Véhicule" → nom "Champ3" si la base contient
-            //   "Véhicule"). buildLocalIdToNomMap construisait alors
-            //   {abc123 → "Champ3"} et applyPostMappingSubstitutions
-            //   transformait les @LOCAL_abc123@ du contenu en @Champ3@.
-            //   À la suppression de base, @Champ3@ orphelin → bug originel
-            //   non corrigé par la simple inversion d'insertion (ligne 4802).
+            //   On NE RÉÉCRIT JAMAIS le contenu en @nom@ pour ces champs.
+            //   La conversion LOCAL_<id> → nom technique pour la production
+            //   PSMD est faite côté WebDev à la génération (L18/A44 v5 dans
+            //   GenererPsmdServeurDocument), pas ici.
             //
-            //   Doctrine : un champ ayant un localId est par construction un
-            //   champ Designer (créé/édité dans le Designer). Son marqueur
-            //   stable EST @LOCAL_<localId>@. Le `nom` technique éventuel
-            //   est soit historique (legacy), soit volatile (étape A).
-            //   Avec l'inversion de priorité d'insertion (L18/A39 ligne 4802),
-            //   le contenu nouvellement inséré utilise @LOCAL_xxx@ ; il faut
-            //   donc le PRÉSERVER, pas le substituer.
+            //   Régression précédente corrigée : la garde précédente sur
+            //   `presenteEnBase === true` protégeait uniquement le régime B
+            //   actif. En régime A après cycle B→A, `presenteEnBase` est
+            //   absent → la garde ne firait pas → réécriture du contenu en
+            //   @Champ3@ → mismatch avec getChampUsageKey qui priorise
+            //   LOCAL_<id> → champ vu comme non exploité (gris) + combo
+            //   barcode vide. Bug objectivé par console (clés blots
+            //   ['Champ3', 'Nom'] au lieu de ['LOCAL_<id>', 'Nom']).
             //
-            //   Critère d'EXCLUSION : si `presenteEnBase === true`, le nom
-            //   est volatilement issu de l'étape A → on ignore ce mapping.
-            //   Régime A (presenteEnBase absent) : aucune réécriture étape A
-            //   → mapping conservé (cas legacy = SaaS a persisté un nom
-            //   permanent pour un ancien LOCAL_<id>).
-            //
-            //   Note : cette restriction préserve le cas d'usage historique
-            //   de la substitution (cf. cahier §4.2, §7.6) tout en évitant
-            //   la régression L18/A39 sur les champs mappés en base.
-            if (c.presenteEnBase === true) {
-                if (DEBUG) {
-                    console.log(`buildLocalIdToNomMap: mapping IGNORÉ pour localId=${localId} nom=${nom} (presenteEnBase=true, nom volatile étape A)`);
-                }
-                return;
-            }
+            //   Le nouveau critère (« localId réel ») couvre le cas
+            //   `presenteEnBase===true` ET tous les cas régime A post-cycle.
+            //   L'ancienne garde devient strict sous-cas — supprimée.
+            nbIgnoresLocalIdReel++;
+            return;
 
-            map.set(localId, nom);
+            // map.set(localId, nom);  // ← LIGNE SUPPRIMÉE par la nouvelle doctrine
         });
+
+        // TRACE TEMPORAIRE [MISMATCH-FIX] — à retirer après validation
+        try {
+            console.log('[MISMATCH-FIX] mapping construit, taille =', map.size);
+            console.log('[MISMATCH-FIX] champs à localId réel détectés (ignorés) :', nbIgnoresLocalIdReel);
+        } catch (e) { /* defensive */ }
+
         return map;
     }
 
@@ -25264,6 +25868,19 @@ document.addEventListener('DOMContentLoaded', () => {
         //   l'utilisateur revoit l'alerte s'il rouvre le même document tant
         //   que le désalignement persiste (cf. §3.3 de l'amendement V2.5).
         alerteDesalignementAffichee = false;
+
+        // Cahier des charges — Correction 1 : état initial PROPRE de la
+        //   popup « Champs de fusion » à chaque (re)chargement du Designer.
+        //   Sans ce reset, les flags `fieldsPopupUserIntent` et
+        //   `fieldsPopupShown` peuvent garder une valeur résiduelle d'une
+        //   session précédente (ex. cycle activer popup → fermer Designer
+        //   → rouvrir) → bouton sidebar « Champs » affiché actif alors que
+        //   la popup est fermée.
+        //   L'évaluation contextuelle plus bas (evaluateFieldsPopupForSelection)
+        //   respectera cet état initial (`intent=false` → branche « bouton
+        //   inactif → popup fermée » de la D14).
+        fieldsPopupUserIntent = false;
+        fieldsPopupShown = false;
 
         // Support enveloppe postMessage {action:'load', policesDisponibles:[...], data:{...}}
         const isLoadEnvelope =
@@ -25938,7 +26555,26 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Ajuster le zoom pour afficher le document en entier après chargement
         fitToView();
-        
+
+        // ──────────── [DIAG] LOAD ────────────
+        try {
+            const champsAuLoad = Array.isArray(documentState.champsFusion) ? documentState.champsFusion : [];
+            const regimeAuLoad = (typeof detecterRegimeChamps === 'function')
+                ? detecterRegimeChamps(champsAuLoad) : 'A';
+            const presenceBase = champsAuLoad.some(c => c && c.presenteEnBase !== undefined);
+            const record0 = (Array.isArray(documentState.donneesApercu) && documentState.donneesApercu.length > 0)
+                ? documentState.donneesApercu[0] : null;
+            diagLog('LOAD', {
+                regime: regimeAuLoad,
+                presenceBase,
+                nbChampsFusion: champsAuLoad.length,
+                champsFusion: diagSnapshotChampsFusion(champsAuLoad),
+                nbRecordsApercu: Array.isArray(documentState.donneesApercu) ? documentState.donneesApercu.length : 0,
+                record0Keys: record0 ? Object.keys(record0) : null,
+                record0Values: diagSnapshotRecord(record0)
+            });
+        } catch (e) { /* trace defensive */ }
+
         return true;
     }
     
@@ -26694,6 +27330,22 @@ document.addEventListener('DOMContentLoaded', () => {
             if (cle) defaults.set(cle, ech);
         });
 
+        // Cahier des charges §3 (Point 2 — fuite fiche client BAT/PSMD).
+        //   Pré-calculer un index des champsFusion par clé d'export pour
+        //   savoir si chaque champ est ABSENT de la base (presenteEnBase
+        //   === false en régime B). Utilisé par le filtre du `defaults.forEach`
+        //   plus bas. Indexation O(n) une seule fois (au lieu d'un `find`
+        //   linéaire par entrée de `defaults`).
+        /** @type {Map<string, Object>} */
+        const champsByCle = new Map();
+        champs.forEach(c => {
+            if (!c || typeof c !== 'object') return;
+            const cle = (typeof c.nom === 'string' && c.nom.trim())
+                ? c.nom
+                : (typeof c.localId === 'string' && c.localId.trim() ? `LOCAL_${c.localId.trim()}` : '');
+            if (cle) champsByCle.set(cle, c);
+        });
+
         const records = Array.isArray(donneesApercu) ? donneesApercu : [];
         // S'il n'y a pas d'enregistrements et qu'on a au moins un
         // echantillonDefaut, créer une ligne unique pour les transporter.
@@ -26714,10 +27366,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
             // 2) Compléter avec les echantillonDefaut absents
+            //
+            // Cahier des charges §3 (Point 2 — fuite fiche client BAT/PSMD).
+            //   FILTRE PRESENTE_EN_BASE : si le champ correspondant à `cle`
+            //   est marqué `presenteEnBase === false` (= absent de la base
+            //   en régime B, statut rouge), NE PAS réinjecter son
+            //   `echantillonDefaut`. Pour les standards (Email, Tel, …),
+            //   l'echantillonDefaut contient la valeur de la fiche client
+            //   (posée à la création du modèle via PlaceholderOuDefaut côté
+            //   SaaS) ; sans filtre, ces valeurs polluaient le JSON exporté
+            //   → JsonDesignerData stocké pollué → BAT et PSMD prod
+            //   affichaient la fiche client au lieu de vide.
+            //
+            //   En régime A (sans base), `presenteEnBase` est absent
+            //   (`undefined`) → la condition est fausse → l'injection
+            //   continue normalement (la fiche client figée alimente les
+            //   standards, cf. cahier §2 + Point 4). Comportement préservé.
+            //
+            //   Les SPÉCIFIQUES absents en B sont déjà couverts en amont :
+            //   CORRECTION B WebDev pose explicitement `""` dans le record →
+            //   `seen.has(cle)` est `true` → cette branche n'est pas
+            //   atteinte. Le filtre ci-dessous est donc actif principalement
+            //   sur les STANDARDS absents.
             defaults.forEach((valeur, cle) => {
-                if (!seen.has(cle)) {
-                    enregistrement.push({ nom: cle, valeur: String(valeur) });
+                if (seen.has(cle)) return;
+                const champ = champsByCle.get(cle);
+                if (champ && champ.presenteEnBase === false) {
+                    // TRACE TEMPORAIRE (Point 2 — filtre BAT) — à retirer après validation
+                    try { console.log(`[BAT-FILTRE] cle=${cle} presenteEnBase=false action=skip`); }
+                    catch (e) { /* defensive */ }
+                    return;
                 }
+                // TRACE TEMPORAIRE (Point 2 — filtre BAT) — à retirer après validation
+                try { console.log(`[BAT-FILTRE] cle=${cle} presenteEnBase=${champ ? champ.presenteEnBase : 'noChamp'} action=inject`); }
+                catch (e) { /* defensive */ }
+                enregistrement.push({ nom: cle, valeur: String(valeur) });
             });
 
             return { enregistrement };
@@ -26930,6 +27613,35 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const reColonneBaseCustom = /^Champ\d+$/;
 
+        // Récupérer l'enregistrement de référence en AMONT de la boucle :
+        //   utilisé à la fois par la branche custom (promotion LOCAL_<id>)
+        //   et par la branche standard (conservation in-place). Le helper
+        //   `figerValeur` ci-dessous est partagé.
+        const recordFiche = (Array.isArray(documentState.donneesApercu)
+            && documentState.donneesApercu.length > 0)
+            ? documentState.donneesApercu[0] : null;
+
+        /**
+         * Fige une valeur d'aperçu pour un nom technique donné en lisant
+         * `recordFiche` (préfère la correspondance exacte, fallback
+         * insensible à la casse — cohérent avec resolveEchantillonValue).
+         * @param {string} ancienNom
+         * @returns {string} valeur figée (chaîne vide si rien à figer)
+         */
+        function figerValeur(ancienNom) {
+            if (!recordFiche || typeof recordFiche !== 'object') return '';
+            const v = recordFiche[ancienNom];
+            if (v !== undefined && v !== null && v !== '') return String(v);
+            const upper = ancienNom.toUpperCase();
+            const trouve = Object.keys(recordFiche).find(k => k.toUpperCase() === upper);
+            if (trouve && recordFiche[trouve] !== undefined
+                && recordFiche[trouve] !== null
+                && recordFiche[trouve] !== '') {
+                return String(recordFiche[trouve]);
+            }
+            return '';
+        }
+
         const champs = Array.isArray(documentState.champsFusion) ? documentState.champsFusion : [];
         const aPromouvoir = [];
         for (let i = 0; i < champs.length; i++) {
@@ -26944,52 +27656,77 @@ document.addEventListener('DOMContentLoaded', () => {
             const ancienNom = (typeof champ.nom === 'string') ? champ.nom.trim() : '';
             if (!ancienNom) continue;
 
-            if (!cleInserees.has(ancienNom)) continue;
-
-            // L18/A43 — Filtre exclusion standards
-            const estStandard = useFallbackConvention
-                ? !reColonneBaseCustom.test(ancienNom)
-                : standardsSet.has(ancienNom);
-            if (estStandard) {
-                try {
-                    console.log(`Promotion: ${champ.libelle || '(sans libellé)'} nom=${ancienNom} → EXCLU (standard)`);
-                } catch (e) { /* defensive */ }
+            if (!cleInserees.has(ancienNom)) {
+                // Standard / custom NON inséré dans le contenu : laisser
+                // `injecteParBase="1"` en place. La purge WebDev PARTIE 2
+                // s'occupera de le retirer à la prochaine ouverture (sans
+                // base) — comportement voulu : un champ non utilisé ne
+                // survit pas.
                 continue;
             }
 
+            // L18/A43 — Filtre standard / custom
+            const estStandard = useFallbackConvention
+                ? !reColonneBaseCustom.test(ancienNom)
+                : standardsSet.has(ancienNom);
+
+            if (estStandard) {
+                // ─── Problème 2 — BRANCHE CONSERVATION ───────────────────
+                //   Standard EXPLOITÉ (inséré dans le contenu) : on le rend
+                //   AUTONOME (échappe à la purge WebDev PARTIE 2 qui se
+                //   base sur `injecteParBase==="1"`) tout en CONSERVANT son
+                //   `nom` technique stable (Civilite, Nom, Adresse1, …).
+                //
+                //   Différence clé avec la branche custom :
+                //     - PAS de `localId` posé (un standard reste indexé par
+                //       son nom technique pour que PrintShop Mail trouve la
+                //       colonne dans le CSV source — invariant PSMD CAS 2
+                //       L18/A43).
+                //     - PAS de mapping dans `mappingPromotion` → aucune
+                //       réécriture des blots (qui ont déjà `data-key =
+                //       "Civilite"` — la clé d'usage reste stable).
+                //     - `categorie = 'standard'` posée explicitement : à la
+                //       réouverture `normalizeOriginAndCategoryFromLoad`
+                //       la déduira de toute façon (présence du nom dans
+                //       `champsStandardDisponibles`), mais l'affecter ici
+                //       garantit la cohérence en session courante (avant
+                //       réouverture) pour que la modale affiche l'onglet
+                //       Standard.
+                //     - `origine = 'ajout'` : marque le champ comme libre.
+                //       (À la prochaine ouverture, `normalizeOriginAndCategoryFromLoad`
+                //       le forcera à 'import' par doctrine V2.4 — c'est
+                //       intentionnel et hors périmètre Problème 2.)
+                const valeurFigeeStd = figerValeur(ancienNom);
+                champ.echantillonDefaut = valeurFigeeStd;
+                delete champ.injecteParBase;
+                delete champ.presenteEnBase;
+                champ.origine = 'ajout';
+                champ.categorie = 'standard';
+                // `nom`, `localId` (absent ou "0"), `libelle`, `type`,
+                // `ordre` sont TOUS préservés tels quels.
+
+                try {
+                    console.log(`Promotion: ${champ.libelle || '(sans libellé)'} nom=${ancienNom} → STANDARD CONSERVÉ echantillon="${valeurFigeeStd}"`);
+                } catch (e) { /* defensive */ }
+
+                continue;
+            }
+
+            // Branche custom : pousser dans la liste de promotion classique
             aPromouvoir.push({ champ, ancienNom });
         }
         if (aPromouvoir.length === 0) return;
 
-        // 3. Promouvoir chaque champ (mutation in-place) + construire
+        // 3. Promouvoir chaque champ custom (mutation in-place) + construire
         //    le mapping ancienNom → { newLocalId, libelle, valeurFigee }
         //    pour la réécriture des occurrences (étape 4).
         const mappingPromotion = new Map();
-        const recordFiche = (Array.isArray(documentState.donneesApercu)
-            && documentState.donneesApercu.length > 0)
-            ? documentState.donneesApercu[0] : null;
 
         for (const { champ, ancienNom } of aPromouvoir) {
             const newLocalId = generateLocalId();
 
             // Figer l'echantillonDefaut depuis donneesApercu[0]
-            let valeurFigee = '';
-            if (recordFiche && typeof recordFiche === 'object') {
-                const v = recordFiche[ancienNom];
-                if (v !== undefined && v !== null && v !== '') {
-                    valeurFigee = String(v);
-                } else {
-                    // Fallback insensible à la casse (cohérent avec
-                    // resolveEchantillonValue ligne ~4666)
-                    const upper = ancienNom.toUpperCase();
-                    const trouve = Object.keys(recordFiche).find(k => k.toUpperCase() === upper);
-                    if (trouve && recordFiche[trouve] !== undefined
-                        && recordFiche[trouve] !== null
-                        && recordFiche[trouve] !== '') {
-                        valeurFigee = String(recordFiche[trouve]);
-                    }
-                }
-            }
+            const valeurFigee = figerValeur(ancienNom);
 
             // Mutation du champ : devient un spécifique autonome
             const libelle = champ.libelle || '';
@@ -27066,12 +27803,34 @@ document.addEventListener('DOMContentLoaded', () => {
             persistTextQuillContentForSave(currentZones);
         }
 
+        // ──────────── [DIAG] EXPORT/AVANT-PROMOTION ────────────
+        try {
+            diagLog('EXPORT avant promotion', {
+                nbChampsFusion: Array.isArray(documentState.champsFusion) ? documentState.champsFusion.length : 0,
+                champsFusion: diagSnapshotChampsFusion(documentState.champsFusion),
+                nbRecordsApercu: Array.isArray(documentState.donneesApercu) ? documentState.donneesApercu.length : 0,
+                record0: (Array.isArray(documentState.donneesApercu) && documentState.donneesApercu.length > 0)
+                    ? diagSnapshotRecord(documentState.donneesApercu[0]) : null
+            });
+        } catch (e) { /* trace defensive */ }
+
         // L18/A41 — Promotion des colonnes base insérées en champs spécifiques
         //   autonomes. DOIT s'exécuter APRÈS persistTextQuillContentForSave
         //   (Deltas à jour) et AVANT la construction de l'output JSON
         //   (buildChampsFusionForExport et buildDonneesApercuForExport
         //   doivent voir les champs promus).
         promoteBaseFieldsBeforeExport();
+
+        // ──────────── [DIAG] EXPORT/APRÈS-PROMOTION ────────────
+        try {
+            diagLog('EXPORT apres promotion', {
+                nbChampsFusion: Array.isArray(documentState.champsFusion) ? documentState.champsFusion.length : 0,
+                champsFusion: diagSnapshotChampsFusion(documentState.champsFusion),
+                nbRecordsApercu: Array.isArray(documentState.donneesApercu) ? documentState.donneesApercu.length : 0,
+                record0: (Array.isArray(documentState.donneesApercu) && documentState.donneesApercu.length > 0)
+                    ? diagSnapshotRecord(documentState.donneesApercu[0]) : null
+            });
+        } catch (e) { /* trace defensive */ }
 
         let syncCount = 0;
         
@@ -27220,6 +27979,31 @@ document.addEventListener('DOMContentLoaded', () => {
         if (documentState.champsFusionInterdit) {
             output.ChampsFusionInterdit = true;
         }
+        // ──────────── [DIAG] EXPORT/PAYLOAD (alimente le BAT côté WebDev) ────────────
+        try {
+            const exportedChamps = Array.isArray(output.champsFusion) ? output.champsFusion : [];
+            const exportedRecords = Array.isArray(output.donneesApercu) ? output.donneesApercu : [];
+            // Réduire chaque enregistrement format WebDev en map nom→valeur compacte.
+            const record0Pairs = (exportedRecords.length > 0 && exportedRecords[0] && Array.isArray(exportedRecords[0].enregistrement))
+                ? exportedRecords[0].enregistrement.reduce((acc, e) => {
+                    if (!e || typeof e !== 'object') return acc;
+                    const v = (e.valeur === null || e.valeur === undefined) ? '' : String(e.valeur);
+                    acc[e.nom] = v.length > 40 ? (v.substring(0, 37) + '...') : v;
+                    return acc;
+                }, {})
+                : null;
+            diagLog('EXPORT payload (BAT)', {
+                nbChampsExportes: exportedChamps.length,
+                champsExportes: exportedChamps.map(c => ({
+                    nom: c.nom, libelle: c.libelle, localId: c.localId,
+                    echantillonDefaut: c.echantillonDefaut, origine: c.origine,
+                    categorie: c.categorie, injecteParBase: c.injecteParBase
+                })),
+                nbRecordsExportes: exportedRecords.length,
+                record0Pairs
+            });
+        } catch (e) { /* trace defensive */ }
+
         return stripNullValues(output);
     }
     
@@ -28233,77 +29017,78 @@ document.addEventListener('DOMContentLoaded', () => {
      * @see deselectAll - Désélection de toutes les zones
      */
     function updateZonePageUI() {
-        // Vérifier que les éléments DOM existent
-        if (!zonePageSection || !inputZonePage) {
-            return;
-        }
-        
-        const pageCount = documentState.pages.length;
-        
-        // Masquer si 1 seule page (pas de déplacement possible)
-        if (pageCount <= 1) {
-            zonePageSection.style.display = 'none';
-            return;
-        }
-        
-        // Masquer si pas exactement 1 zone sélectionnée
-        if (selectedZoneIds.length !== 1) {
-            zonePageSection.style.display = 'none';
-            return;
-        }
-        
-        // 1 zone sélectionnée
-        const zoneId = selectedZoneIds[0];
-        const zonesData = getCurrentPageZones();
-        const zoneData = zonesData[zoneId];
-        
-        if (!zoneData) {
-            zonePageSection.style.display = 'none';
-            return;
-        }
-        
-        // Afficher la section
-        zonePageSection.style.display = 'block';
-        
-        // Peupler la combo dynamiquement avec les noms des pages
-        inputZonePage.innerHTML = '';
-        documentState.pages.forEach((page, index) => {
-            const option = document.createElement('option');
-            option.value = index;
-            option.textContent = page.name;
-            inputZonePage.appendChild(option);
-        });
-        
-        // Sélectionner la page actuelle
-        inputZonePage.value = documentState.currentPageIndex;
-        
-        // Gérer les zones système
-        if (isZoneSysteme(zoneData)) {
-            inputZonePage.disabled = true;
-            if (zonePageLock) zonePageLock.style.display = 'inline';
-        } else {
-            inputZonePage.disabled = false;
-            if (zonePageLock) zonePageLock.style.display = 'none';
-        }
-    }
+        // Garde-fou : documentState peut ne pas être initialisé au tout
+        //   premier appel (TDZ-safe via try/catch sur la lecture).
+        let pages;
+        try { pages = documentState && documentState.pages; }
+        catch (e) { return; }
+        if (!Array.isArray(pages)) return;
 
-    // --- Listener sur la combo Page ---
-    if (inputZonePage) {
-        inputZonePage.addEventListener('change', () => {
-            if (selectedZoneIds.length !== 1) return;
-            
-            const zoneId = selectedZoneIds[0];
-            const targetPageIndex = parseInt(inputZonePage.value, 10);
-            
-            const success = moveZoneToPage(zoneId, targetPageIndex);
-            
-            if (success) {
-                // Zone déplacée : elle n'est plus sur la page courante
-                // Donc désélectionner (la zone n'est plus visible)
-                deselectAll();
+        const pageCount = pages.length;
+        const hasSelection = !!(typeof selectedZoneIds !== 'undefined'
+            && selectedZoneIds && selectedZoneIds.length === 1);
+
+        // Lookup zoneData si on a une sélection (pour gérer isZoneSysteme).
+        let zoneData = null;
+        if (hasSelection) {
+            try {
+                const zones = (typeof getCurrentPageZones === 'function')
+                    ? getCurrentPageZones() : null;
+                zoneData = zones ? zones[selectedZoneIds[0]] : null;
+            } catch (e) { zoneData = null; }
+        }
+
+        // Section affichée UNIQUEMENT si :
+        //   - document multi-pages (pageCount > 1)
+        //   - exactement 1 zone sélectionnée
+        //   - la zone existe bien dans la page courante
+        const finalShow = pageCount > 1 && hasSelection && !!zoneData;
+        const isSysteme = finalShow
+            && (typeof isZoneSysteme === 'function')
+            && isZoneSysteme(zoneData);
+
+        // Pilote les 4 sections (Quill, Image, Barcode, QR intelligent)
+        //   en remontant du <select> vers la section conteneuse via
+        //   `closest('.section-poc[data-section-id="page"]')`.
+        const selects = [
+            (typeof quillInputPage   !== 'undefined') ? quillInputPage   : null,
+            (typeof imageInputPage   !== 'undefined') ? imageInputPage   : null,
+            (typeof barcodeInputPage !== 'undefined') ? barcodeInputPage : null,
+            (typeof qrcodeInputPage  !== 'undefined') ? qrcodeInputPage  : null
+        ];
+
+        const currentIdx = String(documentState.currentPageIndex || 0);
+
+        selects.forEach(select => {
+            if (!select) return;
+            const section = select.closest('.section-poc[data-section-id="page"]');
+            if (section) {
+                section.style.display = finalShow ? '' : 'none';
+            }
+            if (finalShow) {
+                // Reconstruire les options à partir des pages réelles
+                //   (écrase le HTML statique Recto/Verso hardcodé). Le nom
+                //   affiché vient de `page.name` avec fallback `Page N`.
+                select.innerHTML = '';
+                pages.forEach((p, idx) => {
+                    const opt = document.createElement('option');
+                    opt.value = String(idx);
+                    opt.textContent = (p && p.name) ? String(p.name) : `Page ${idx + 1}`;
+                    if (String(idx) === currentIdx) opt.selected = true;
+                    select.appendChild(opt);
+                });
+                // Combo désactivée pour les zones système (déplacement interdit)
+                select.disabled = !!isSysteme;
             }
         });
     }
+
+    // Note : le listener sur l'ancienne combo unique `inputZonePage` a été
+    //   retiré (variable supprimée). Le déplacement de zone est désormais
+    //   géré par les 4 listeners dédiés des combos POC (quill-input-page,
+    //   image-input-page, barcode-input-page, qrcode-input-page) déjà en
+    //   place dans les `initXxxToolbarComponents` respectifs (cf. ≈17411,
+    //   ≈19309, ≈18540, ≈18973). Mécanique inchangée.
 
     function switchPage(pageIndex) {
         if (pageIndex < 0 || pageIndex >= documentState.pages.length) {
@@ -30620,13 +31405,63 @@ document.addEventListener('DOMContentLoaded', () => {
          * Propage la valeur echantillonDefaut d'un champ dans toutes les lignes de
          * documentState.donneesApercu (sous la clé d'export = nom OU LOCAL_<id>).
          * Permet à l'aperçu de fusion de l'utiliser immédiatement après création.
+         *
+         * Axe 3 — Paramètre `options.force` :
+         *   - `false` (défaut)   → comportement historique : n'écrit que si
+         *     la case est vide / null / undefined (protège les valeurs BDD).
+         *   - `true`             → autorise l'écrasement d'une valeur déjà
+         *     présente, MAIS UNIQUEMENT pour les champs sans correspondance
+         *     base active (`presenteEnBase !== true`). Pour les champs
+         *     mappés sur une colonne BDD (`presenteEnBase === true`), la
+         *     doctrine « base prime » reste appliquée : la valeur BDD est
+         *     conservée même en mode force.
+         *
+         *   Le mode force est utilisé exclusivement par `editChamp` lorsque
+         *   l'utilisateur modifie EXPLICITEMENT l'echantillonDefaut depuis
+         *   la modale. Création (addChampFromStandard / addChampSpecifique)
+         *   continue d'appeler la version sans force.
+         *
+         * @param {Object} champ - Champ de fusion
+         * @param {Object} [options]
+         * @param {boolean} [options.force=false] - Autoriser l'écrasement (sous garde-fou presenteEnBase)
          */
-        function propagateEchantillonDefaut(champ) {
+        function propagateEchantillonDefaut(champ, options) {
             if (!champ || !documentState) return;
-            const key = resolveChampKey(champ);
-            if (!key) return;
-            const cleanKey = key.replace(/\u00A0/g, ' ');
+
+            // Axe 3 / Fix — Calcul de la clé d'écriture ALIGNÉ sur la
+            //   logique d'insertion L18/A39 (lignes 4802 / 4283 /
+            //   getChampUsageKey). Inline ici (pas de délégation à
+            //   resolveChampKey) pour garantir l'invariant suivant :
+            //
+            //     CLÉ D'ÉCRITURE (propagation) === CLÉ DE LECTURE (aperçu)
+            //
+            //   La clé de lecture utilisée par toutes les zones est :
+            //     - LOCAL_<localId> si le champ possède un localId réel
+            //       (non vide ET différent de "0")
+            //     - sinon, le nom technique (si renseigné).
+            //
+            //   Le bug observé sur le champ "Etiquette" (nom="" + localId
+            //   réel) venait du fait qu'une fonction de lecture alternative
+            //   (`resolveChampKeyForLookup`, utilisée par
+            //   `resolveEchantillonValue`) priorise `nom` sur `localId`,
+            //   provoquant une asymétrie potentielle. On verrouille ici la
+            //   logique d'écriture de manière explicite et défensive.
+            const localIdValide = !!(champ.localId
+                && String(champ.localId).trim()
+                && String(champ.localId).trim() !== '0');
+            const rawKey = localIdValide
+                ? `LOCAL_${String(champ.localId).trim()}`
+                : (typeof champ.nom === 'string' && champ.nom.trim() ? champ.nom.trim() : '');
+            if (!rawKey) return;
+            const cleanKey = rawKey.replace(/\u00A0/g, ' ');
             const valeur = (typeof champ.echantillonDefaut === 'string') ? champ.echantillonDefaut : '';
+            const opts = options || {};
+            // Garde-fou « base prime » : un champ avec correspondance base
+            //   active (presenteEnBase === true) ne doit JAMAIS voir sa
+            //   valeur écrasée — même quand l'appelant demande force=true.
+            //   Cette règle préserve la priorité base sur echantillonDefaut
+            //   durement acquise (cf. doctrine V2.5 §1.4).
+            const forceWrite = opts.force === true && champ.presenteEnBase !== true;
 
             if (!Array.isArray(documentState.donneesApercu)) {
                 documentState.donneesApercu = [];
@@ -30635,14 +31470,45 @@ document.addEventListener('DOMContentLoaded', () => {
             if (documentState.donneesApercu.length === 0) {
                 documentState.donneesApercu.push({});
             }
+
+            // TODO Axe 3 — Trace temporaire de diagnostic (à retirer après
+            //   validation). Permet de constater clé / forceWrite / état
+            //   avant/après pour confirmer l'écriture effective dans
+            //   donneesApercu.
+            try {
+                const before = documentState.donneesApercu.map(r => (r && typeof r === 'object') ? r[cleanKey] : undefined);
+                console.log('[Axe3 propagate]', {
+                    libelle: champ.libelle,
+                    nom: champ.nom,
+                    localId: champ.localId,
+                    cleanKey,
+                    valeurEchantillon: valeur,
+                    presenteEnBase: champ.presenteEnBase,
+                    optionsForce: opts.force === true,
+                    forceWrite,
+                    nbRecords: documentState.donneesApercu.length,
+                    valeursAvant: before
+                });
+            } catch (e) { /* trace defensive */ }
+
             documentState.donneesApercu.forEach(record => {
                 if (!record || typeof record !== 'object') return;
-                // Mettre à jour seulement si pas déjà présent OU si la valeur est vide
-                // (on ne veut pas écraser des données réelles d'échantillon BDD).
-                if (record[cleanKey] === undefined || record[cleanKey] === '' || record[cleanKey] === null) {
+                // Cas 1 (force, hors base active) : on écrit toujours.
+                // Cas 2 (défaut) : on ne touche que les cases vides
+                //   (préserve les vraies données échantillon BDD).
+                const caseVide = (record[cleanKey] === undefined
+                    || record[cleanKey] === ''
+                    || record[cleanKey] === null);
+                if (forceWrite || caseVide) {
                     record[cleanKey] = valeur;
                 }
             });
+
+            // TODO Axe 3 — Trace temporaire (à retirer après validation).
+            try {
+                const after = documentState.donneesApercu.map(r => (r && typeof r === 'object') ? r[cleanKey] : undefined);
+                console.log('[Axe3 propagate] APRÈS', { cleanKey, valeursApres: after });
+            } catch (e) { /* trace defensive */ }
         }
 
         // ─── Validation libellé ──────────────────────────────────────────
@@ -31293,7 +32159,21 @@ document.addEventListener('DOMContentLoaded', () => {
             if (updates.type !== undefined) champ.type = updates.type;
             if (updates.echantillonDefaut !== undefined) {
                 champ.echantillonDefaut = updates.echantillonDefaut;
-                propagateEchantillonDefaut(champ);
+                // TODO Axe 3 — Trace temporaire (à retirer après validation).
+                try {
+                    console.log('[Axe3 editChamp] avant propagate', {
+                        libelle: champ.libelle,
+                        nouvelEchantillon: updates.echantillonDefaut,
+                        force: true
+                    });
+                } catch (e) { /* defensive */ }
+                // Axe 3 — Édition explicite par l'utilisateur : on autorise
+                //   l'écrasement de la valeur déjà propagée dans
+                //   donneesApercu. Le garde-fou presenteEnBase reste actif
+                //   à l'intérieur de propagateEchantillonDefaut → la
+                //   doctrine « base prime » est conservée pour les champs
+                //   mappés sur une colonne BDD active.
+                propagateEchantillonDefaut(champ, { force: true });
             }
             // Si le libellé a changé, il faut rafraîchir les pastilles déjà
             // insérées dans Quill (cf. §7.8.6 du cahier)
@@ -31304,6 +32184,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     refreshMergeTagsInAllZones(oldKey);
                 }
             } catch (e) { /* ignore */ }
+            // Axe 3 — Si l'aperçu est actif, rafraîchir immédiatement TOUTES
+            //   les zones (texte Quill via createMergedDelta, code-barres
+            //   classique, QR intelligent, image dynamique). Un seul appel
+            //   à displayMergedContent suffit. setContents y est en mode
+            //   'silent' → pas d'event qui re-déclencherait editChamp →
+            //   aucun risque de boucle.
+            try {
+                if (updates.echantillonDefaut !== undefined
+                    && typeof previewState !== 'undefined'
+                    && previewState
+                    && previewState.active === true
+                    && typeof displayMergedContent === 'function') {
+                    const idx = (typeof previewState.currentIndex === 'number')
+                        ? previewState.currentIndex : 0;
+                    displayMergedContent(idx);
+                }
+            } catch (e) { /* defensive */ }
         }
 
         function nextOrdre() {

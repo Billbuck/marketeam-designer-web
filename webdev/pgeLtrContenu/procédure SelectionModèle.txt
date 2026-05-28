@@ -204,7 +204,7 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 
 	// 5.2 — Fusion des zones du modèle dans le wrapper
 	si sJsonDataModele <> "" alors
-		jsDesigner	est un JSON		= ChaîneVersUTF8(sJsonDataModele)
+		jsDesigner		est un JSON		= ChaîneVersUTF8(sJsonDataModele)
 
 		// Source des zones modèle : data.xxx si imbriqué, sinon racine
 		jsData			est un JSON
@@ -239,11 +239,11 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 		// Avant ce patch : on AJOUTAIT les champs du modèle au wrapper, qui
 		// contenait déjà ~20 champs standards par défaut issus de
 		// RemplirDesignerChampsFusion(stOperation.taaBaseChamp). Résultat :
-		// 22 champs exposés dans la popup → utilisateur noyé, perte de la
+		// 22 champs exposés dans la popup -> utilisateur noyé, perte de la
 		// promesse "ce que le créateur du modèle a choisi".
 		//
 		// Doctrine retenue : la popup contient EXACTEMENT :
-		//   1. Les champs SYSTÈME du wrapper (type = "SYS") → indispensables
+		//   1. Les champs SYSTÈME du wrapper (type = "SYS") -> indispensables
 		//      au pipeline PSMD (Sequentiel, Timbre/Affranchissement).
 		//   2. Les champs définis dans le modèle (jsData.champsFusion),
 		//      mappés ou non.
@@ -254,8 +254,8 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 		// Critère SYS : cf. docs/Structure Webdev Designer V3.md ligne 183
 		//   « Le code SYS reste réservé aux zones système injectées par
 		//     WebDev (adresse destinataire, séquentiel, datamatrix...) »
-		jsChampsFusionFinal est un JSON = "[]"
-		sNomsSysteme est une chaîne = ","   // pseudo-set ",NomA,NomB,"
+		jsChampsFusionFinal	est un JSON			= "[]"
+		sNomsSysteme				est une chaîne		= ","	// pseudo-set ",NomA,NomB,"
 
 		// ═════════════════════════════════════════════════════════════════
 		// L18/A38 v2 — INJECTION DÉFENSIVE DES SYS, CONDITIONNÉE AU MODE MODÈLE
@@ -268,7 +268,7 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 		//   ⚠️ Garde-fou symétrique à btnDocumentPersonnaliser : on n'injecte
 		//   les SYS QUE si jsData.champsFusion contient au moins 1 entrée
 		//   (= modèle réel avec champs). Cas d'un modèle vraiment vide
-		//   (sJsonDataModele = "{}" ou champsFusion absent) → pas d'injection,
+		//   (sJsonDataModele = "{}" ou champsFusion absent) -> pas d'injection,
 		//   le wrapper reste vide (Option C stricte).
 		//
 		//   Garde-fou interne : si le wrapper venait à contenir déjà les SYS
@@ -279,8 +279,8 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 		//   lignes 33-43 (source historique du contrat).
 		// ═════════════════════════════════════════════════════════════════
 		si jsData.champsFusion..Occurrence > 0 alors
-			bSeqPresent est un booléen = Faux
-			bTimbrePresent est un booléen = Faux
+			bSeqPresent		est un booléen	= Faux
+			bTimbrePresent	est un booléen	= Faux
 			pour nIndSysCheck = 1 _à_ jsWrapper.data.champsFusion..Occurrence
 				si jsWrapper.data.champsFusion[nIndSysCheck].type = "SYS" alors
 					si jsWrapper.data.champsFusion[nIndSysCheck].nom = "Sequentiel" alors
@@ -293,18 +293,18 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 
 			si pas bSeqPresent alors
 				nIdxAjoutSeq est un entier = jsWrapper.data.champsFusion..Occurrence + 1
-				jsWrapper.data.champsFusion[nIdxAjoutSeq].nom     = "Sequentiel"
-				jsWrapper.data.champsFusion[nIdxAjoutSeq].type    = "SYS"
-				jsWrapper.data.champsFusion[nIdxAjoutSeq].libelle = "Séquentiel"
-				jsWrapper.data.champsFusion[nIdxAjoutSeq].ordre   = 998
+				jsWrapper.data.champsFusion[nIdxAjoutSeq].nom			= "Sequentiel"
+				jsWrapper.data.champsFusion[nIdxAjoutSeq].type		= "SYS"
+				jsWrapper.data.champsFusion[nIdxAjoutSeq].libelle	= "Séquentiel"
+				jsWrapper.data.champsFusion[nIdxAjoutSeq].ordre		= 998
 			fin
 
 			si pas bTimbrePresent alors
 				nIdxAjoutTimbre est un entier = jsWrapper.data.champsFusion..Occurrence + 1
-				jsWrapper.data.champsFusion[nIdxAjoutTimbre].nom     = "Timbre"
-				jsWrapper.data.champsFusion[nIdxAjoutTimbre].type    = "SYS"
-				jsWrapper.data.champsFusion[nIdxAjoutTimbre].libelle = "Affranchissement"
-				jsWrapper.data.champsFusion[nIdxAjoutTimbre].ordre   = 999
+				jsWrapper.data.champsFusion[nIdxAjoutTimbre].nom			= "Timbre"
+				jsWrapper.data.champsFusion[nIdxAjoutTimbre].type		= "SYS"
+				jsWrapper.data.champsFusion[nIdxAjoutTimbre].libelle	= "Affranchissement"
+				jsWrapper.data.champsFusion[nIdxAjoutTimbre].ordre		= 999
 			fin
 		fin
 
@@ -313,7 +313,7 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 			pour nIndW = 1 _à_ jsWrapper.data.champsFusion..Occurrence
 				si jsWrapper.data.champsFusion[nIndW].type = "SYS" alors
 					jsChampsFusionFinal[jsChampsFusionFinal..Occurrence + 1] = ...
-						jsWrapper.data.champsFusion[nIndW]
+					jsWrapper.data.champsFusion[nIndW]
 					si jsWrapper.data.champsFusion[nIndW].nom <> "" alors
 						sNomsSysteme += jsWrapper.data.champsFusion[nIndW].nom + ","
 					fin
@@ -337,10 +337,10 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 
 				si pas bDoublonSys alors
 					jsChampsFusionFinal[jsChampsFusionFinal..Occurrence + 1] = ...
-						jsData.champsFusion[nIndM]
+					jsData.champsFusion[nIndM]
 				sinon
 					Trace("SelectionModèle : champ modèle ignoré (doublon SYS) : " ...
-						+ jsData.champsFusion[nIndM].nom)
+					+ jsData.champsFusion[nIndM].nom)
 				fin
 			fin
 		fin
@@ -365,27 +365,27 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 		//     Le test originel `injecteParBase = Vrai` (booléen WL) avait un
 		//     comportement non fiable sur attribut JSON dynamique ABSENT. Pour
 		//     un champ du modèle qui n'a JAMAIS reçu cet attribut, le test
-		//     pouvait retourner Vrai à tort → purge de TOUS les champs.
+		//     pouvait retourner Vrai à tort -> purge de TOUS les champs.
 		//
 		//   Solution L18/A35 :
 		//     - Marqueur stocké comme CHAÎNE "1" (et non booléen Vrai)
 		//     - Lecture défensive en chaîne : un attribut JSON absent lu
-		//       en chaîne retourne "" → comparaison `= "1"` retourne Faux
-		//       → champ CONSERVÉ. Aucun faux positif possible.
+		//       en chaîne retourne "" -> comparaison `= "1"` retourne Faux
+		//       -> champ CONSERVÉ. Aucun faux positif possible.
 		//
 		//   Résultat :
 		//   - Avec base : purge des anciennes colonnes + réinjection par
 		//     l'étape C des colonnes de la base actuelle.
 		//   - Sans base : purge des anciennes colonnes, l'étape C
-		//     n'injecte rien (régime A) → retour aux champs du modèle
+		//     n'injecte rien (régime A) -> retour aux champs du modèle
 		//     uniquement.
 		// ═════════════════════════════════════════════════════════════════
 		si jsWrapper.data.champsFusion..Occurrence > 0 alors
 			jsChampsFusionSansBase est un JSON = "[]"
 			pour nIndPurgeBase = 1 _à_ jsWrapper.data.champsFusion..Occurrence
-				// Lecture défensive en chaîne (attribut JSON absent → "")
-				sInjectePB2 est une chaîne = jsWrapper.data.champsFusion[nIndPurgeBase].injecteParBase
-				sLibelleP2 est une chaîne = jsWrapper.data.champsFusion[nIndPurgeBase].libelle
+				// Lecture défensive en chaîne (attribut JSON absent -> "")
+				sInjectePB2	est une chaîne	= jsWrapper.data.champsFusion[nIndPurgeBase].injecteParBase
+				sLibelleP2	est une chaîne	= jsWrapper.data.champsFusion[nIndPurgeBase].libelle
 
 				si sInjectePB2 = "1" alors
 					// Champ injecté par la base à l'exploitation précédente — à purger
@@ -449,13 +449,13 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 		//   Quand un utilisateur B (ATTALI Michel) exploite le modèle dans
 		//   le tunnel sans base, le wrapper a {Nom:"ATTALI", Prenom:"Michel"}
 		//   (fiche utilisateur fraîche). L'ancien bloc écrasait par les
-		//   placeholders figés → pavé adresse du BAT affichait "Monsieur
+		//   placeholders figés -> pavé adresse du BAT affichait "Monsieur
 		//   Dupont Jean" au lieu de "Monsieur ATTALI Michel".
 		//
 		//   Nouvelle doctrine V2.5 :
-		//     - Clé du modèle déjà présente dans wrapper → NE PAS écraser
+		//     - Clé du modèle déjà présente dans wrapper -> NE PAS écraser
 		//       (la valeur fraîche du wrapper est préservée)
-		//     - Clé du modèle ABSENTE du wrapper → AJOUTER (cas des champs
+		//     - Clé du modèle ABSENTE du wrapper -> AJOUTER (cas des champs
 		//       spécifiques non mappés : LOCAL_<localId> = "Porsche" pour
 		//       Voiture, etc. — ces champs n'ont pas d'équivalent BDD,
 		//       leur echantillonDefaut figé EST la bonne valeur)
@@ -481,8 +481,8 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 					si Gauche(sNomPurge, 6) <> "LOCAL_" alors
 						// Conserver les entrées NON-LOCAL_xxx (standards, Champ*, SYS)
 						nIdxPurge est un entier = jsEnregFiltre..Occurrence + 1
-						jsEnregFiltre[nIdxPurge].nom    = sNomPurge
-						jsEnregFiltre[nIdxPurge].valeur = jsData.donneesApercu[nIndCpurge].enregistrement[nIndVpurge].valeur
+						jsEnregFiltre[nIdxPurge].nom		= sNomPurge
+						jsEnregFiltre[nIdxPurge].valeur	= jsData.donneesApercu[nIndCpurge].enregistrement[nIndVpurge].valeur
 					fin
 				fin
 				jsData.donneesApercu[nIndCpurge].enregistrement = jsEnregFiltre
@@ -495,17 +495,17 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 		//
 		//   Bug observé : Champ3 écrasé par "Porsche" (l'echantillonDefaut
 		//   du champ Véhicule du modèle, après mapping nom="Champ3"). Le
-		//   bloc L17/A27 tombait dans la branche « ajout en fin » → doublon
-		//   {Champ3:Opel} + {Champ3:Porsche} → côté Designer JS, dernière
-		//   occurrence écrase → "Porsche" partout.
+		//   bloc L17/A27 tombait dans la branche « ajout en fin » -> doublon
+		//   {Champ3:Opel} + {Champ3:Porsche} -> côté Designer JS, dernière
+		//   occurrence écrase -> "Porsche" partout.
 		//
 		//   Correction : avant la boucle, construire le set des noms
 		//   techniques de la base. Dans la boucle, sauter toute valeur
 		//   modèle dont le `nom` est une colonne base courante (= la base
 		//   fait foi, ignorer la valeur figée du modèle pour cette clé).
 		//
-		//   Régime A (sans base) : taaBaseChamp vide → sNomsTechniquesBase
-		//   = "," → aucun filtrage → comportement L17/A27 préservé pour
+		//   Régime A (sans base) : taaBaseChamp vide -> sNomsTechniquesBase
+		//   = "," -> aucun filtrage -> comportement L17/A27 préservé pour
 		//   les LOCAL_xxx (qui sont les seuls résiduels après CORRECTION C).
 		//
 		//   Généralise proprement L17/A27 : la base/fiche prime sur
@@ -519,16 +519,82 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 			fin
 		fin
 
+		// Cahier des charges Point 2 (Sous-étape B) — Détection PRÉLIMINAIRE
+		//   du régime AVEC base. La variable bAvecBaseLocal canonique n'est
+		//   calculée que plus bas (≈ligne 578, juste avant les étapes A/B/C).
+		//   On la duplique ici, en amont de CORRECTION A, pour pouvoir
+		//   distinguer le régime B (où un standard absent doit avoir une
+		//   valeur VIDE en aperçu) du régime A (où la réinjection modèle
+		//   reste légitime pour la fiche client figée).
+		bRegimeBPourCorrectionA est un booléen = Faux
+		pour tout stBaseDocCA de __stOperation.tabBase
+			si stBaseDocCA.EstSupprime = Faux alors
+				bRegimeBPourCorrectionA = Vrai
+				sortir
+			fin
+		fin
+
+		// Cahier des charges Point 2 (Sous-étape B, exclusion SYS) — Pseudo-set
+		//   des noms techniques des champs SYS présents dans champsFusion
+		//   (Sequentiel, Timbre). Construit UNE fois pour éviter une lecture
+		//   par champ dans la double boucle ci-dessous. Détection dynamique
+		//   via `type === "SYS"` pour rester robuste si d'autres SYS sont
+		//   ajoutés ultérieurement.
+		sNomsSys est une chaîne = ","
+		pour nIndChampSys = 1 _à_ jsWrapper.data.champsFusion..Occurrence
+			si jsWrapper.data.champsFusion[nIndChampSys].type = "SYS" alors
+				sNomSys est une chaîne = jsWrapper.data.champsFusion[nIndChampSys].nom
+				si sNomSys <> "" alors
+					sNomsSys += sNomSys + ","
+				fin
+			fin
+		fin
+
 		si jsData.donneesApercu..Occurrence > 0 _et_ jsData.donneesApercu[1].enregistrement..Occurrence > 0 alors
 			pour nIndW = 1 _à_ jsWrapper.data.donneesApercu..Occurrence
 				pour nIndM = 1 _à_ jsData.donneesApercu[1].enregistrement..Occurrence
 					jsValeurModele est un JSON = jsData.donneesApercu[1].enregistrement[nIndM]
+
+					// Cahier des charges §1.7 + Point 2 — EXCLUSION SYS en
+					//   PREMIER. Les champs système (Sequentiel, Timbre) ne
+					//   doivent jamais être affectés par la logique
+					//   "absent en régime B -> vide" (ils ne sont jamais dans
+					//   la base, leur valeur est posée par RemplirDesignerApercu).
+					//   Sans ce filtre, ils étaient à tort vidés en régime B
+					//   (trace [Point2-B] avant correctif : "Sequentiel -> ''").
+					//   Le BAT restait correct grâce à la ré-injection, on
+					//   rend ici la logique EXPLICITEMENT cohérente.
+					si Position(sNomsSys, "," + jsValeurModele.nom + ",") > 0 alors
+						continuer
+					fin
 
 					// L18/A33 — CORRECTION A : ignorer les valeurs modèle qui
 					//   correspondent à une colonne base courante. La base
 					//   (RemplirDesignerApercu) a déjà rempli ces colonnes
 					//   avec les vraies valeurs fraîches par enregistrement.
 					si Position(sNomsTechniquesBase, "," + jsValeurModele.nom + ",") > 0 alors
+						// TRACE TEMPORAIRE (Point 2, Sous-étape B) — premier record uniquement
+						si nIndW = 1 alors
+							Trace("[Point2-B] " + jsValeurModele.nom + " regimeBase=" ...
+							+ (bRegimeBPourCorrectionA ? "V" sinon "F") ...
+							+ " presentBase=V -> valeur='" + jsValeurModele.valeur + "' (base prime, modele ignoré)")
+						fin
+						continuer
+					fin
+
+					// Cahier des charges §3 (Point 2, Sous-étape B) — En régime B
+					//   (AVEC base) + clé ABSENTE de la base : NE PAS réinjecter
+					//   la valeur modèle (figée d'une session précédente). Laisser
+					//   l'aperçu VIDE — cohérent avec la matrice §3 qui exige
+					//   « valeur en aperçu : VIDE » pour les standards absents.
+					//   En régime A (SANS base) : ne PAS appliquer ce filtre -> la
+					//   réinjection alimente la fiche client figée et les LOCAL_xxx
+					//   du modèle (Point 4 préservé).
+					si bRegimeBPourCorrectionA alors
+						// TRACE TEMPORAIRE (Point 2, Sous-étape B) — premier record uniquement
+						si nIndW = 1 alors
+							Trace("[Point2-B] " + jsValeurModele.nom + " regimeBase=V presentBase=F -> valeur='' (absent en B, vide)")
+						fin
 						continuer
 					fin
 
@@ -538,7 +604,7 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 							// L17/A27 - On NE TOUCHE PAS à la valeur du wrapper
 							// (la fiche utilisateur ou la BDD prime sur le modèle).
 							// On marque seulement bRemplaceVal = Vrai pour signaler
-							// que la clé existe déjà → empêche le branchement
+							// que la clé existe déjà -> empêche le branchement
 							// "ajout en fin" ci-dessous (sinon doublon).
 							bRemplaceVal = Vrai
 							sortir
@@ -546,10 +612,15 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 					fin
 
 					si pas bRemplaceVal alors
-						// Clé absente du wrapper → ajout (cas LOCAL_<localId>
-						// des champs spécifiques du modèle).
+						// Clé absente du wrapper -> ajout (cas LOCAL_<localId>
+						// des champs spécifiques du modèle, ou standards en
+						// régime A : fiche client figée).
 						jsWrapper.data.donneesApercu[nIndW].enregistrement[ ...
-							jsWrapper.data.donneesApercu[nIndW].enregistrement..Occurrence + 1] = jsValeurModele
+						jsWrapper.data.donneesApercu[nIndW].enregistrement..Occurrence + 1] = jsValeurModele
+						// TRACE TEMPORAIRE (Point 2, Sous-étape B) — premier record uniquement
+						si nIndW = 1 alors
+							Trace("[Point2-B] " + jsValeurModele.nom + " regimeBase=F -> valeur='" + jsValeurModele.valeur + "' (ajout modele, régime A)")
+						fin
 					fin
 				fin
 			fin
@@ -567,8 +638,8 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 		// Adresse 1, …) ET pour les Champ1-Champ30 (Véhicule, Couleur,
 		// Image, Test, …). Donc lookup `taaBaseChamp[libelle]` uniforme.
 		//
-		// Régime A (sans base) : taaBaseChamp est vide → bAvecBaseLocal=Faux
-		//   → tout le bloc est court-circuité → comportement V2.4/V2.5
+		// Régime A (sans base) : taaBaseChamp est vide -> bAvecBaseLocal=Faux
+		//   -> tout le bloc est court-circuité -> comportement V2.4/V2.5
 		//   sans changement.
 		// Régime B (avec base) : les 4 étapes s'exécutent.
 
@@ -585,11 +656,11 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 
 		si bAvecBaseLocal _et_ jsWrapper.data.champsFusion..Occurrence > 0 alors
 
-			// ÉTAPE A — Mapping libellé → nom technique
+			// ÉTAPE A — Mapping libellé -> nom technique
 			//   Pour chaque champ non-SYS du modèle, si son libellé existe
-			//   comme clé de taaBaseChamp → on réécrit son `nom` technique
+			//   comme clé de taaBaseChamp -> on réécrit son `nom` technique
 			//   en mémoire avec le nom de la colonne base correspondante
-			//   (ex. libelle="Véhicule" → nom="Champ3"). Réécriture
+			//   (ex. libelle="Véhicule" -> nom="Champ3"). Réécriture
 			//   UNIQUEMENT dans jsWrapper, JAMAIS persistée en BDD.
 			pour nIndA = 1 _à_ jsWrapper.data.champsFusion..Occurrence
 				si jsWrapper.data.champsFusion[nIndA].type = "SYS" alors
@@ -600,7 +671,7 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 					jsWrapper.data.champsFusion[nIndA].nom = __stOperation.taaBaseChamp[sLibA].Champ
 				fin
 				// Sinon : on laisse `nom` à sa valeur stockée (le champ sera
-				// rouge en V2.5 → presenteEnBase=Faux à l'étape B).
+				// rouge en V2.5 -> presenteEnBase=Faux à l'étape B).
 			fin
 
 			// ÉTAPE B — Calcul de presenteEnBase par LIBELLÉ
@@ -626,7 +697,7 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 			//   dans aucun champ du modèle (et qui ne sont pas SYS) sont
 			//   ajoutées à champsFusion en GRIS (presenteEnBase=Vrai mais
 			//   non exploitées). Cohérent V2.5 §1.4 : « régime B + présent
-			//   en base + non exploité → gris non supprimable ».
+			//   en base + non exploité -> gris non supprimable ».
 			//
 			//   Construction du set des libellés déjà présents pour éviter
 			//   les doublons (pattern « pseudo-set ",NomA,NomB," »).
@@ -638,11 +709,25 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 				fin
 			fin
 
+			// Cahier des charges (Option A donneur d'ordre) — Source de vérité
+			//   unique pour distinguer Standard / Spécifique : la liste
+			//   renvoyée par RemplirDesignerChampsStandard. Construit ici en
+			//   pseudo-set ",Civilite,Nom,Adresse1,..," pour test rapide via
+			//   Position(). PAS de liste codée en dur — toute évolution
+			//   future de la procédure est prise en compte automatiquement.
+			tabStandardsRef		est un tableau de structDesignerChampStandard	= cpDesigner.RemplirDesignerChampsStandard(__stOperation.IdClient)
+			sNomsStandards		est une chaîne												= ","
+			pour tout stStdRef de tabStandardsRef
+				si stStdRef.nom <> "" alors
+					sNomsStandards += stStdRef.nom + ","
+				fin
+			fin
+
 			// Récupérer le plus grand ordre actuel pour les nouvelles entrées
 			nOrdreMax est un entier = 0
 			pour nIndOrd = 1 _à_ jsWrapper.data.champsFusion..Occurrence
 				si jsWrapper.data.champsFusion[nIndOrd].ordre..Existe _et_ ...
-				   jsWrapper.data.champsFusion[nIndOrd].ordre > nOrdreMax alors
+					jsWrapper.data.champsFusion[nIndOrd].ordre > nOrdreMax alors
 					nOrdreMax = jsWrapper.data.champsFusion[nIndOrd].ordre
 				fin
 			fin
@@ -655,7 +740,7 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 					Trace("SelectionModèle : libellé base ignoré (collision SYS) : " + sLibelleC)
 					continuer
 				fin
-				// Si déjà présent dans champsFusion → ne pas dédoublonner
+				// Si déjà présent dans champsFusion -> ne pas dédoublonner
 				si Position(sLibellesPresents, "," + sLibelleC + ",") > 0 alors
 					continuer
 				fin
@@ -663,8 +748,8 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 				// Nouvelle entrée
 				nOrdreMax++
 				jsNouvelleEntree est un JSON = "{}"
-				jsNouvelleEntree.nom         = stBaseChampC.Champ
-				jsNouvelleEntree.libelle     = sLibelleC
+				jsNouvelleEntree.nom				= stBaseChampC.Champ
+				jsNouvelleEntree.libelle			= sLibelleC
 				// Type Designer : IMG si image, TXT sinon (cohérent avec
 				// RemplirDesignerChampsFusion lignes 22-26).
 				si stBaseChampC.Type = __CHAMP_TYPE_IMAGE__ alors
@@ -672,10 +757,21 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 				sinon
 					jsNouvelleEntree.type = "TXT"
 				fin
-				jsNouvelleEntree.ordre       = nOrdreMax
-				jsNouvelleEntree.origine     = "import"      // vient de la base
-				jsNouvelleEntree.categorie   = "specifique"  // Décision 2 validée
-				jsNouvelleEntree.presenteEnBase = Vrai       // par construction
+				jsNouvelleEntree.ordre			= nOrdreMax
+				jsNouvelleEntree.origine			= "import"      // vient de la base
+				// Cahier des charges (Option A) — categorie déterminée par
+				//   croisement avec la liste officielle des standards
+				//   (RemplirDesignerChampsStandard) : si le nom technique du
+				//   champ base figure dans cette liste, c'est un standard ;
+				//   sinon (colonne Champ1..Champ30) c'est un spécifique.
+				si Position(sNomsStandards, "," + stBaseChampC.Champ + ",") > 0 alors
+					jsNouvelleEntree.categorie = "standard"
+				sinon
+					jsNouvelleEntree.categorie = "specifique"
+				fin
+				// TRACE TEMPORAIRE (Option A) — à retirer après validation
+				Trace("Etape C: " + stBaseChampC.Champ + " -> categorie=" + jsNouvelleEntree.categorie)
+				jsNouvelleEntree.presenteEnBase															= Vrai       // par construction
 				// L18/A35 PARTIE 1 — MARQUEUR CHAÎNE robuste : valeur "1"
 				//   (et NON booléen Vrai). Justification : un attribut JSON
 				//   booléen ABSENT lu via `= Vrai` en WLangage a un
@@ -684,10 +780,10 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 				//   Régression L18/A34 résolue : la chaîne "1" est testée
 				//   contre une lecture chaîne défensive (cf. PARTIE 2 et 3),
 				//   et un attribut JSON absent lu en chaîne retourne ""
-				//   → JAMAIS de faux positif sur les champs du modèle.
-				jsNouvelleEntree.injecteParBase = "1"
+				//   -> JAMAIS de faux positif sur les champs du modèle.
+				jsNouvelleEntree.injecteParBase															= "1"
 
-				jsWrapper.data.champsFusion[jsWrapper.data.champsFusion..Occurrence + 1] = jsNouvelleEntree
+				jsWrapper.data.champsFusion[jsWrapper.data.champsFusion..Occurrence + 1]		= jsNouvelleEntree
 			fin
 
 		fin
@@ -729,21 +825,21 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 				continuer  // pas un vrai champ spécifique (standard ou SYS)
 			fin
 
-			sNomTechB est une chaîne = jsWrapper.data.champsFusion[nIndB].nom
-			sLibB est une chaîne = jsWrapper.data.champsFusion[nIndB].libelle
-			sCleLocaleB est une chaîne = "LOCAL_" + sLocalIdB
+			sNomTechB				est une chaîne		= jsWrapper.data.champsFusion[nIndB].nom
+			sLibB					est une chaîne		= jsWrapper.data.champsFusion[nIndB].libelle
+			sCleLocaleB			est une chaîne		= "LOCAL_" + sLocalIdB
 
 			// Déterminer si le champ a une correspondance base (= la base
 			// fait foi pour les valeurs). Le mapping nom = "Champ3" a été
 			// fait par l'étape A si correspondance libellé.
-			bAvecCorrespBase est un booléen = Faux
+			bAvecCorrespBase	est un booléen		= Faux
 			si sNomTechB <> "" _et_ Position(sNomsTechniquesBase, "," + sNomTechB + ",") > 0 alors
 				bAvecCorrespBase = Vrai
 			fin
 
 			// L18/A33 — TRACE TEMPORAIRE (à retirer après validation)
 			Trace("CorrectionB champ " + sLibB + " localId=[" + sLocalIdB + "] nomTech=[" + sNomTechB ...
-				+ "] avecBase=" + bAvecCorrespBase + " echantDefaut=[" + jsWrapper.data.champsFusion[nIndB].echantillonDefaut + "]")
+			+ "] avecBase=" + bAvecCorrespBase + " echantDefaut=[" + jsWrapper.data.champsFusion[nIndB].echantillonDefaut + "]")
 
 			si jsWrapper.data.donneesApercu..Occurrence = 0 alors
 				continuer  // pas d'enregistrement à remplir
@@ -754,16 +850,39 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 				sValeurB est une chaîne = ""
 
 				si bAvecCorrespBase alors
-					// CAS AVEC BASE : lire la valeur de sNomTechB DANS CET enregistrement
+					// CAS AVEC BASE + CORRESPONDANCE : valeur de la colonne base
+					//   dans cet enregistrement (inchangé).
 					pour nIndVB = 1 _à_ jsWrapper.data.donneesApercu[nIndEB].enregistrement..Occurrence
 						si jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIndVB].nom = sNomTechB alors
 							sValeurB = jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIndVB].valeur
 							sortir
 						fin
 					fin
+				sinon si bAvecBaseLocal alors
+					// Cahier des charges §3 (Point 2, Sous-étape A) — CAS AVEC BASE
+					//   + champ ABSENT (pas de correspondance dans la base courante) :
+					//   valeur VIDE. La base fait foi -> un champ non mappé en
+					//   base n'a pas de valeur ; il s'affichera rouge et son
+					//   aperçu sera vide. Ne PAS retomber sur echantillonDefaut
+					//   ici (ce serait afficher une valeur figée pour un champ
+					//   que la base ne supporte pas — cf. cahier §3 « valeur
+					//   en aperçu : VIDE »).
+					sValeurB = ""
 				sinon
-					// CAS SANS BASE (ou champ non mappé) : echantillonDefaut du modèle
+					// CAS SANS BASE (régime A) : echantillonDefaut du modèle
+					//   (inchangé, cf. cahier §2 « SANS base + spécifique ->
+					//   échantillon obligatoire »).
 					sValeurB = jsWrapper.data.champsFusion[nIndB].echantillonDefaut
+				fin
+
+				// TRACE TEMPORAIRE (Point 2, Sous-étape A) — à retirer après validation.
+				//   Loggue uniquement pour le 1ᵉʳ enregistrement pour limiter le bruit
+				//   en cas de multi-records (la décision dépend du champ, pas du record).
+				si nIndEB = 1 alors
+					Trace("[Point2-A] " + sLibB + " (" + sNomTechB + ") regimeBase=" ...
+					+ (bAvecBaseLocal ? "V" sinon "F") ...
+					+ " corresp=" + (bAvecCorrespBase ? "V" sinon "F") ...
+					+ " -> valeur='" + sValeurB + "'")
 				fin
 
 				// Injecter ou mettre à jour la clé sCleLocaleB dans cet enregistrement
@@ -771,15 +890,15 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 				bDejaB est un booléen = Faux
 				pour nIndCkB = 1 _à_ jsWrapper.data.donneesApercu[nIndEB].enregistrement..Occurrence
 					si jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIndCkB].nom = sCleLocaleB alors
-						jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIndCkB].valeur = sValeurB
-						bDejaB = Vrai
+						jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIndCkB].valeur	= sValeurB
+						bDejaB																						= Vrai
 						sortir
 					fin
 				fin
 				si pas bDejaB alors
 					nIdxNouveauB est un entier = jsWrapper.data.donneesApercu[nIndEB].enregistrement..Occurrence + 1
-					jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIdxNouveauB].nom    = sCleLocaleB
-					jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIdxNouveauB].valeur = sValeurB
+					jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIdxNouveauB].nom			= sCleLocaleB
+					jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIdxNouveauB].valeur		= sValeurB
 				fin
 			fin
 		fin
