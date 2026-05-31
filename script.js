@@ -1385,7 +1385,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Déclencher la mise à jour de la zone (commun à tous les types)
             updateActiveZone();
-            saveState();
+            saveState('Changement de bordure');
         });
     });
 
@@ -1899,57 +1899,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof resolver === 'function') {
             mergeTagDisplayResolver = resolver;
         }
-    }
-
-    // ════════════════════════════════════════════════════════════════════════
-    // PARTIE 2 — INSTRUMENTATION STRUCTURÉE [DIAG]
-    // Préfixe homogène pour filtrage console (`[DIAG]` dans la barre de
-    // recherche). À retirer après diagnostic des 4 problèmes identifiés sur
-    // le scénario « suppression de base après insertion de champs base ».
-    //
-    // Activée par défaut (pas de garde DEBUG) — but explicite : voir
-    // immédiatement les valeurs sans avoir à modifier de flag. Le donneur
-    // d'ordre exécute le scénario, copie les lignes [DIAG], on décide
-    // ensemble des corrections.
-    // ════════════════════════════════════════════════════════════════════════
-    function diagLog(stage, payload) {
-        try { console.log('[DIAG] ' + stage, payload); } catch (e) { /* defensive */ }
-    }
-
-    /**
-     * Snapshot compact d'un champsFusion (toutes les propriétés clés pour
-     * comprendre statut/régime/exploitabilité). Évite le bruit d'un dump
-     * brut.
-     */
-    function diagSnapshotChampsFusion(champs) {
-        if (!Array.isArray(champs)) return [];
-        return champs.map(c => ({
-            libelle: c && c.libelle,
-            nom: c && c.nom,
-            localId: c && c.localId,
-            type: c && c.type,
-            categorie: c && c.categorie,
-            origine: c && c.origine,
-            presenteEnBase: c && c.presenteEnBase,
-            injecteParBase: c && c.injecteParBase,
-            echantillonDefaut: c && c.echantillonDefaut
-        }));
-    }
-
-    /**
-     * Snapshot compact d'un record `donneesApercu` (clés + valeurs tronquées
-     * à 40 caractères pour lisibilité console).
-     */
-    function diagSnapshotRecord(record) {
-        if (!record || typeof record !== 'object') return null;
-        const out = {};
-        Object.keys(record).forEach(k => {
-            const v = record[k];
-            if (v === null || v === undefined) { out[k] = v; return; }
-            const s = String(v);
-            out[k] = s.length > 40 ? (s.substring(0, 37) + '...') : s;
-        });
-        return out;
     }
 
     /**
@@ -3929,7 +3878,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {function(Object): void} updateCallback - Fonction recevant zoneData à modifier
      * @returns {void}
      */
-    function updateSelectedBarcodeZone(updateCallback) {
+    function updateSelectedBarcodeZone(updateCallback, label) {
         if (typeof selectedZoneIds === 'undefined' || selectedZoneIds.length !== 1) {
             return;
         }
@@ -3948,7 +3897,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Sauvegarder les changements
         saveToLocalStorage();
-        saveState();
+        saveState(label || 'Modification d\'un code-barres');
     }
 
     /**
@@ -4640,28 +4589,6 @@ document.addEventListener('DOMContentLoaded', () => {
             //   pastille → rafraîchissement corbeille. À RETIRER quand le
             //   donneur d'ordre confirme que tout fonctionne en production.
             try { window.__champsExploites = champsExploites; } catch (e) { /* defensive */ }
-
-            // ──────────── [DIAG] EXPLOITES ────────────
-            try {
-                const exploitesObj = {};
-                champsExploites.forEach((count, key) => { exploitesObj[key] = count; });
-                const champs = Array.isArray(documentState && documentState.champsFusion)
-                    ? documentState.champsFusion : [];
-                const matchUsage = champs.map(c => {
-                    const k = (typeof getChampUsageKey === 'function') ? getChampUsageKey(c) : '';
-                    return {
-                        libelle: c && c.libelle,
-                        usageKey: k,
-                        compte: champsExploites.get(k) || 0,
-                        exploite: (champsExploites.get(k) || 0) > 0
-                    };
-                });
-                diagLog('EXPLOITES', {
-                    nbClesScannees: champsExploites.size,
-                    cles: exploitesObj,
-                    parChamp: matchUsage
-                });
-            } catch (e) { /* trace defensive */ }
         } catch (e) {
             // Erreur ICI = vrai bug fonctionnel (scan défaillant), pas un
             // simple démarrage prématuré. On loggue pour diagnostic.
@@ -5049,36 +4976,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const regimeV25 = detecterRegimeChamps(champsTries);
         rebuildChampsExploites();
 
-        // ──────────── [DIAG] STATUT (popup) ────────────
-        try {
-            const statuts = champsTries.map(c => {
-                let s = null;
-                try { s = getChampStatusV25(c, regimeV25); } catch (e) {}
-                const exploite = (typeof estChampExploite === 'function') ? estChampExploite(c) : null;
-                return {
-                    libelle: c && c.libelle,
-                    nom: c && c.nom,
-                    localId: c && c.localId,
-                    presenteEnBase: c && c.presenteEnBase,
-                    origine: c && c.origine,
-                    categorie: c && c.categorie,
-                    usageKey: (typeof getChampUsageKey === 'function') ? getChampUsageKey(c) : null,
-                    exploite,
-                    couleur: s && s.couleur,
-                    supprimable: s && s.supprimable,
-                    tooltip: s && s.tooltip
-                };
-            });
-            diagLog('STATUT', { regime: regimeV25, nbChamps: champsTries.length, statuts });
-        } catch (e) { /* trace defensive */ }
-
         // Cahier des charges §1.7 — Les champs SYS (Séquentiel, Timbre)
         //   sont retirés de la popup : ils ne sont pas exploitables par
         //   l'utilisateur, ils existent uniquement en coulisses pour la
         //   production (PSMD, tri postal, affranchissement).
         //   IMPORTANT : on filtre UNIQUEMENT l'AFFICHAGE. `champsTries`
-        //   reste complet pour la trace [DIAG] STATUT et tous les calculs
-        //   internes ; `documentState.champsFusion` n'est pas modifié.
+        //   reste complet pour tous les calculs internes ;
+        //   `documentState.champsFusion` n'est pas modifié.
         //
         // Cahier des charges — Tri par ÉTAT (3 groupes, remplace l'ancien
         //   tri en 4 groupes standard/spécifique × exploité/non) :
@@ -6097,8 +6001,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (zonesData && zonesData[zoneId]) {
                     zonesData[zoneId].quillDelta = quill.getContents();
                 }
+                // Libellé historique : « Insertion du champ <libellé lisible> ».
+                const __rawKey = String(fieldNameNbsp || '').replace(/\u00A0/g, ' ').trim();
+                let __champLbl = '';
+                try { __champLbl = (typeof resolveChampLabel === 'function') ? resolveChampLabel(__rawKey) : ''; } catch (eL) {}
+                if (!__champLbl || __champLbl.charAt(0) === '@') __champLbl = __rawKey;
                 saveToLocalStorage();
-                saveState();
+                saveState(__champLbl ? ('Insertion du champ ' + __champLbl) : 'Insertion d\'un champ');
             } catch (e) {
                 console.warn('⚠️ Erreur sauvegarde après drop:', e);
             }
@@ -6233,8 +6142,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // Persister immédiatement (en plus du text-change debounce)
                     zonesData[zoneId].quillDelta = quill.getContents();
+                    // Libellé historique : « Insertion du champ <libellé lisible> ».
+                    let __champLbl = '';
+                    try { __champLbl = (typeof resolveChampLabel === 'function') ? resolveChampLabel(fieldName) : ''; } catch (eL) {}
+                    if (!__champLbl || __champLbl.charAt(0) === '@') __champLbl = String(fieldName || '').trim();
                     saveToLocalStorage();
-                    saveState();
+                    saveState(__champLbl ? ('Insertion du champ ' + __champLbl) : 'Insertion d\'un champ');
 
                     return;
                 }
@@ -7488,7 +7401,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateZipUploadUIState('initial');
         }
 
-        saveState();
+        saveState('Réinitialisation de la source image');
     }
 
     /**
@@ -8022,7 +7935,7 @@ document.addEventListener('DOMContentLoaded', () => {
             zoneData.source.zipValide = true;
             zoneData.source.nbImages = zipUploadData.imagesValides.length;
             zoneData.source.nomZip = zipUploadData.nomFichierZip;
-            saveState();
+            saveState('Import d\'images (ZIP)');
 
             // Demander le nom de la collection avant l'upload
             let collectionInfo;
@@ -8447,7 +8360,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (imageCollectionRow) imageCollectionRow.style.display = '';
         }
 
-        saveState();
+        saveState(nomCollection ? ('Source image : collection ' + nomCollection) : 'Source image : collection');
 
         // Afficher l'aperçu de la première image si des échantillons sont disponibles
         showFirstCollectionImage(selectedId, zoneData);
@@ -10689,7 +10602,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Sauvegarder
         saveToLocalStorage();
-        saveState();
+        saveState('Modification de la zone autorisée');
         
         // Valider et corriger les contraintes de taille après modification de l'area
         validateAndCorrectSizeConstraints(zoneId);
@@ -11658,6 +11571,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Variable pour le debounce du contenu texte
     let contentSaveTimeout = null;
 
+    // Timer de capture différée de l'« État initial » après un chargement
+    //   WebDev (cf. captureInitialStateAfterLoad). Mémorisé pour pouvoir
+    //   annuler une capture en attente si un nouveau 'load' arrive
+    //   (idempotence : seul le dernier load finalisé pose l'index 0).
+    let initialStateCaptureTimer = null;
+
     /**
      * Sauvegarde l'état actuel du document dans l'historique (pour Undo/Redo).
      * Crée un snapshot profond de documentState et l'ajoute à la pile d'historique.
@@ -11679,7 +11598,14 @@ document.addEventListener('DOMContentLoaded', () => {
      * @see redo - Rétablir l'action annulée
      * @see historyManager - Gestionnaire d'historique
      */
-    function saveState() {
+    function saveState(label) {
+        // Base nommée de l'historique : chaque entrée porte un libellé en
+        //   langage clair décrivant l'action. `label` est OPTIONNEL ; en son
+        //   absence on retombe sur 'Modification' (aucune entrée anonyme).
+        //   Ce libellé ne change RIEN au comportement de l'undo/redo : il
+        //   n'est utilisé que pour le diagnostic et les infobulles UI.
+        const stateLabel = (typeof label === 'string' && label.trim()) ? label.trim() : 'Modification';
+
         // Ne pas sauvegarder si on est en train de restaurer ou de charger le formulaire
         if (historyManager.isRestoring || historyManager.isLoadingForm) {
             return;
@@ -11713,17 +11639,35 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         documentState.zoneCounter = zoneCounter;
-        
+
+        // Créer le snapshot (sérialisé UNE fois, réutilisé pour la garde
+        //   anti-doublon ci-dessous afin d'éviter une double sérialisation).
+        const snapshotStr = JSON.stringify(documentState);
+        const snapshot = JSON.parse(snapshotStr);
+
+        // Garde anti-doublon générique : si le snapshot est STRICTEMENT
+        //   identique (contenu uniquement, libellé non comparé) au dernier
+        //   état déjà présent dans la pile, on n'empile RIEN (vrai no-op : on
+        //   ne touche ni à la pile, ni à la branche redo). Neutralise le
+        //   doublon exact de l'insertion de champ (« Insertion du champ X »
+        //   suivi du « Modification du texte » débouncé, contenu identique),
+        //   ainsi que tout futur PUSH redondant (cascades, re-renders).
+        //   Sans risque pour la frappe / mise en forme : celles-ci modifient
+        //   réellement le contenu → snapshot différent → empilé normalement.
+        if (historyManager.currentIndex >= 0) {
+            const topEntry = historyManager.states[historyManager.currentIndex];
+            if (topEntry && JSON.stringify(topEntry.snapshot) === snapshotStr) {
+                return;
+            }
+        }
+
         // Supprimer les états "futurs" si on a fait des undo
         if (historyManager.currentIndex < historyManager.states.length - 1) {
             historyManager.states = historyManager.states.slice(0, historyManager.currentIndex + 1);
         }
         
-        // Créer un snapshot profond de documentState
-        const snapshot = JSON.parse(JSON.stringify(documentState));
-        
-        // Ajouter à l'historique
-        historyManager.states.push(snapshot);
+        // Ajouter à l'historique — chaque entrée = { snapshot, label, ts }
+        historyManager.states.push({ snapshot, label: stateLabel, ts: Date.now() });
         historyManager.currentIndex++;
         
         // Limiter la taille de l'historique
@@ -11731,7 +11675,7 @@ document.addEventListener('DOMContentLoaded', () => {
             historyManager.states.shift();
             historyManager.currentIndex--;
         }
-        
+
         // Mettre à jour l'interface
         updateHistoryUI();
     }
@@ -11756,11 +11700,20 @@ document.addEventListener('DOMContentLoaded', () => {
             showUndoRedoToast('Rien à annuler', 'error', 'block');
             return;
         }
-        
+
+        // Libellé de l'action ANNULÉE = celui de l'état qu'on quitte.
+        const __labelAnnule = historyManager.states[historyManager.currentIndex]
+            ? historyManager.states[historyManager.currentIndex].label : '';
         historyManager.currentIndex--;
-        restoreState(historyManager.states[historyManager.currentIndex]);
+        const __entry = historyManager.states[historyManager.currentIndex];
+        restoreState(__entry.snapshot);
         updateHistoryUI();
-        showUndoRedoToast('Action annulée', 'success', 'undo');
+        // Toast explicite : nomme l'action réellement annulée. Repli sur le
+        //   message générique si le libellé est absent ou vaut 'Modification'.
+        const __toastUndo = (__labelAnnule && __labelAnnule !== 'Modification')
+            ? ('Annulé : ' + __labelAnnule)
+            : 'Action annulée';
+        showUndoRedoToast(__toastUndo, 'success', 'undo');
     }
 
     /**
@@ -11783,11 +11736,19 @@ document.addEventListener('DOMContentLoaded', () => {
             showUndoRedoToast('Rien à rétablir', 'error', 'block');
             return;
         }
-        
+
         historyManager.currentIndex++;
-        restoreState(historyManager.states[historyManager.currentIndex]);
+        const __entry = historyManager.states[historyManager.currentIndex];
+        // Libellé de l'action RÉTABLIE = celui de l'état qu'on restaure.
+        const __labelRetabli = __entry ? __entry.label : '';
+        restoreState(__entry.snapshot);
         updateHistoryUI();
-        showUndoRedoToast('Action rétablie', 'success', 'redo');
+        // Toast explicite : nomme l'action réellement rétablie. Repli sur le
+        //   message générique si le libellé est absent ou vaut 'Modification'.
+        const __toastRedo = (__labelRetabli && __labelRetabli !== 'Modification')
+            ? ('Rétabli : ' + __labelRetabli)
+            : 'Action rétablie';
+        showUndoRedoToast(__toastRedo, 'success', 'redo');
     }
 
     /**
@@ -11812,6 +11773,15 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // AJOUT Phase 6 : Sauvegarder la sélection actuelle avant restauration
         const previousSelection = [...selectedZoneIds];
+
+        // Popup « Champs de fusion » DÉCORRÉLÉE de la sélection : un undo/redo
+        //   ne doit JAMAIS la fermer ni l'ouvrir de force. Le pipeline de
+        //   sélection rejoué ci-dessous (deselectAll / updateSelectionUI →
+        //   updateToolbarVisibility → closeFieldsPopup) écraserait son état
+        //   d'ouverture. On mémorise donc les flags AVANT pour les RÉTABLIR
+        //   à l'identique APRÈS le pipeline (cf. fin de fonction).
+        const __popupIntentBefore = (typeof fieldsPopupUserIntent !== 'undefined') ? fieldsPopupUserIntent : false;
+        const __popupShownBefore = (typeof fieldsPopupShown !== 'undefined') ? fieldsPopupShown : false;
         
         // 1. Supprimer toutes les zones du DOM et leurs areas
         document.querySelectorAll('.zone').forEach(el => el.remove());
@@ -11857,7 +11827,36 @@ document.addEventListener('DOMContentLoaded', () => {
             // Mettre à jour l'UI pour refléter la sélection restaurée
             updateSelectionUI();
         }
-        
+
+        // 5b. RÉTABLIR l'état d'ouverture de la popup « Champs de fusion » tel
+        //   qu'il était AVANT l'undo/redo. Le pipeline de sélection (étape 5)
+        //   a pu appeler closeFieldsPopup() et forcer intent/shown à false :
+        //   on réimpose l'état mémorisé, puis on resynchronise l'affichage via
+        //   updateToolbarDataVisibility() (synchro PASSIVE = pas de recalcul
+        //   contextuel, donc décorrélée de la sélection) → le bouton « Champs »
+        //   reste cohérent avec l'état réel de la popup.
+        try {
+            if (typeof fieldsPopupUserIntent !== 'undefined') {
+                fieldsPopupUserIntent = __popupIntentBefore;
+            }
+            if (typeof fieldsPopupShown !== 'undefined') {
+                fieldsPopupShown = __popupShownBefore;
+            }
+            if (typeof updateToolbarDataVisibility === 'function') {
+                updateToolbarDataVisibility();
+            }
+        } catch (e) { /* defensive */ }
+
+        // 5c. RAFRAÎCHIR le contenu de la popup (liste + couleurs vert/rouge/gris)
+        //   pour refléter le nouvel état restauré. Le scan des champs exploités
+        //   dépend du contenu des zones, qui vient de changer. À faire que la
+        //   popup soit ouverte ou fermée (pour qu'elle soit à jour si rouverte).
+        try {
+            if (typeof notifyChampsExploitesMayHaveChanged === 'function') {
+                notifyChampsExploitesMayHaveChanged();
+            }
+        } catch (e) { /* defensive */ }
+
         // 6. Sauvegarder dans localStorage (sans ajouter à l'historique)
         saveToLocalStorage();
         
@@ -12422,6 +12421,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * Libellé de l'action qui serait ANNULÉE par un Undo (= libellé de
+     * l'état courant). Retourne null s'il n'y a rien à annuler.
+     * @returns {string|null}
+     */
+    function getUndoLabel() {
+        if (historyManager.currentIndex <= 0) return null;
+        const entry = historyManager.states[historyManager.currentIndex];
+        return (entry && entry.label) ? entry.label : null;
+    }
+
+    /**
+     * Libellé de l'action qui serait RÉTABLIE par un Redo (= libellé de
+     * l'état suivant). Retourne null s'il n'y a rien à rétablir.
+     * @returns {string|null}
+     */
+    function getRedoLabel() {
+        if (historyManager.currentIndex >= historyManager.states.length - 1) return null;
+        const entry = historyManager.states[historyManager.currentIndex + 1];
+        return (entry && entry.label) ? entry.label : null;
+    }
+
+    /**
      * Met à jour l'interface des boutons et compteur d'historique
      */
     function updateHistoryUI() {
@@ -12431,6 +12452,18 @@ document.addEventListener('DOMContentLoaded', () => {
         // Mettre à jour l'état des boutons
         if (btnUndo) btnUndo.disabled = !canUndo;
         if (btnRedo) btnRedo.disabled = !canRedo;
+
+        // Infobulles dynamiques : « Annuler : <libellé> » / « Rétablir : <libellé> ».
+        //   Si rien à annuler/rétablir → infobulle neutre. N'affecte pas le
+        //   comportement (l'état désactivé reste géré par .disabled ci-dessus).
+        if (btnUndo) {
+            const lbl = getUndoLabel();
+            btnUndo.title = lbl ? ('Annuler : ' + lbl) : 'Annuler';
+        }
+        if (btnRedo) {
+            const lbl = getRedoLabel();
+            btnRedo.title = lbl ? ('Rétablir : ' + lbl) : 'Rétablir';
+        }
         
         // Mettre à jour le compteur
         if (historyPositionEl) {
@@ -12439,6 +12472,50 @@ document.addEventListener('DOMContentLoaded', () => {
         if (historyTotalEl) {
             historyTotalEl.textContent = historyManager.states.length;
         }
+    }
+
+    /**
+     * Réinitialise la pile d'historique et capture le document fraîchement
+     * chargé depuis WebDev comme UNIQUE état initial (index 0).
+     *
+     * Pourquoi : `saveState('État initial')` du boot iframe est prématuré
+     * (capture l'état localStorage pré-WebDev, zones système non finalisées).
+     * Ici, on repose une base propre APRÈS le chargement WebDev stabilisé.
+     * Réutilise le motif des resets (resetCurrentPage / resetAllPages) :
+     * states=[] / currentIndex=-1 / saveState → currentIndex=0 → undo grisé.
+     *
+     * @returns {void}
+     */
+    function captureInitialStateAfterLoad() {
+        try {
+            historyManager.states = [];
+            historyManager.currentIndex = -1;
+            // Le snapshot pris ici reflète le documentState final (zones
+            //   système positionnées, datamatrix dimensionnée, images placées).
+            saveState('État initial');
+        } catch (e) { /* defensive */ }
+    }
+
+    /**
+     * Planifie la capture de l'état initial APRÈS la fin réelle des
+     * traitements asynchrones internes de `loadFromWebDev` (régénération
+     * datamatrix ~+100 ms, images dynamiques ~+150 ms). On utilise un délai
+     * de repli postérieur au plus long timeout interne (150 ms) avec marge
+     * de sécurité — voir récap pour la justification du choix « délai » vs
+     * « signal ». Idempotent : un nouvel appel annule la capture en attente.
+     *
+     * @returns {void}
+     */
+    function scheduleInitialStateCapture() {
+        try {
+            if (initialStateCaptureTimer) {
+                clearTimeout(initialStateCaptureTimer);
+            }
+        } catch (e) { /* defensive */ }
+        initialStateCaptureTimer = setTimeout(() => {
+            initialStateCaptureTimer = null;
+            captureInitialStateAfterLoad();
+        }, 250);
     }
 
     // ─────────────────────────────── FIN SECTION 11 ───────────────────────────────
@@ -15498,7 +15575,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         
         saveToLocalStorage(); // Sauvegarde auto
-        saveState(); // Snapshot APRÈS la création
+        saveState('Ajout d\'une zone texte'); // Snapshot APRÈS la création
     }
 
     if (btnAddTextQuill) {
@@ -15648,7 +15725,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         createZoneDOM(id, zoneCounter);
         saveToLocalStorage();
-        saveState(); // Snapshot APRÈS la création
+        saveState('Ajout d\'un QR Code'); // Snapshot APRÈS la création
         
         // Masquer le bouton QR interactif (un seul autorisé)
         updateZoneButtonsVisibility();
@@ -15701,7 +15778,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         createZoneDOM(id, zoneCounter);
         saveToLocalStorage();
-        saveState();
+        saveState('Ajout d\'une zone image');
         updateZoneButtonsVisibility(); // Mettre à jour la visibilité des boutons
     });
 
@@ -15741,7 +15818,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             createZoneDOM(id, zoneCounter);
             saveToLocalStorage();
-            saveState();
+            saveState('Ajout d\'un code-barres');
             updateZoneButtonsVisibility(); // Mettre à jour la visibilité des boutons
         });
     }
@@ -16199,9 +16276,55 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 // BUGFIX : persister le contenu lors de la frappe (sinon aucun save après saisie)
-                quillInstance.on('text-change', () => {
+                quillInstance.on('text-change', (delta, oldDelta, source) => {
                     // Mettre à jour les données de la zone (objet qui sera sérialisé)
                     zonesData[id].quillDelta = quillInstance.getContents();
+
+                    // ── Suppression d'un CHAMP (embed merge-tag) = entrée
+                    //    d'historique IMMÉDIATE, symétrique de l'insertion.
+                    //    On ne traite QUE les actions utilisateur ('user') :
+                    //    les restaurations undo/redo, le refresh aperçu et
+                    //    refreshMergeTagsInAllZones modifient les embeds en
+                    //    'silent'/'api' → à ignorer pour ne pas créer de
+                    //    fausses entrées « Suppression ».
+                    if (source === 'user') {
+                        try {
+                            // Multiset des clés merge-tag AVANT (oldDelta) et APRÈS.
+                            const keysOf = (d) => {
+                                const ops = (d && Array.isArray(d.ops)) ? d.ops : [];
+                                const acc = [];
+                                ops.forEach(op => { if (isMergeTagOp(op)) acc.push(mergeTagOpKey(op)); });
+                                return acc;
+                            };
+                            const before = keysOf(oldDelta);
+                            const after = keysOf(quillInstance.getContents());
+                            // removed = before \ after (en multiset)
+                            const afterCopy = after.slice();
+                            const removed = [];
+                            before.forEach(k => {
+                                const i = afterCopy.indexOf(k);
+                                if (i === -1) removed.push(k);
+                                else afterCopy.splice(i, 1);
+                            });
+                            if (removed.length >= 1) {
+                                let label;
+                                if (removed.length === 1) {
+                                    let lbl = '';
+                                    try { lbl = (typeof resolveChampLabel === 'function') ? resolveChampLabel(removed[0]) : ''; } catch (eL) {}
+                                    if (!lbl || lbl.charAt(0) === '@') lbl = String(removed[0] || '').trim();
+                                    label = lbl ? ('Suppression du champ ' + lbl) : 'Suppression d\'un champ';
+                                } else {
+                                    label = 'Suppression de ' + removed.length + ' champs';
+                                }
+                                // Entrée immédiate. Le débounce « Modification du
+                                //   texte » qui suivra (+500 ms) capturera un
+                                //   snapshot IDENTIQUE → neutralisé par la garde
+                                //   anti-doublon de saveState (pas de double entrée).
+                                saveToLocalStorage();
+                                saveState(label);
+                            }
+                        } catch (e) { /* defensive : ne jamais bloquer la frappe */ }
+                    }
                     
                     // Recalculer le copyfit si activé (après que le DOM se soit mis à jour)
                     if (zonesData[id].copyfit) {
@@ -16213,11 +16336,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                     
-                    // Debounce identique au système existant (textarea)
+                    // Debounce identique au système existant (textarea) — INCHANGÉ.
+                    //   Couvre la frappe / suppression de TEXTE normal. Pour une
+                    //   suppression de champ, l'entrée immédiate ci-dessus a déjà
+                    //   posé le bon libellé ; ce push débouncé identique sera
+                    //   ignoré par la garde anti-doublon.
                     clearTimeout(contentSaveTimeout);
                     contentSaveTimeout = setTimeout(() => {
                         saveToLocalStorage();
-                        saveState();
+                        saveState('Modification du texte');
                     }, 500);
                 });
                 
@@ -16615,7 +16742,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Sauvegarder
         saveToLocalStorage();
-        saveState();
+        saveState('Coller une zone');
         
         // Mettre à jour la visibilité des boutons (limite peut avoir changé)
         updateZoneButtonsVisibility();
@@ -16752,7 +16879,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Sauvegardes
         saveToLocalStorage();
-        saveState();
+        saveState('Mettre au premier plan');
     }
 
     /**
@@ -16792,7 +16919,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Sauvegardes
         saveToLocalStorage();
-        saveState();
+        saveState('Avancer d\'un niveau');
     }
 
     /**
@@ -16831,7 +16958,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Sauvegardes
         saveToLocalStorage();
-        saveState();
+        saveState('Reculer d\'un niveau');
     }
 
     /**
@@ -16870,7 +16997,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Sauvegardes
         saveToLocalStorage();
-        saveState();
+        saveState('Mettre en arrière-plan');
     }
 
     /**
@@ -17385,7 +17512,7 @@ document.addEventListener('DOMContentLoaded', () => {
          * @param {(zoneData: any, zoneEl: HTMLElement, zoneId: string) => void} mutator - Mutation sur les données de zone
          * @returns {void}
          */
-        const updateSelectedZone = (mutator) => {
+        const updateSelectedZone = (mutator, label) => {
             const zoneId = getSelectedTextQuillZoneId();
             if (!zoneId) return;
             
@@ -17398,7 +17525,7 @@ document.addEventListener('DOMContentLoaded', () => {
             applyQuillZoneStyles(zoneId);
             updateQuillToolbarGeometryFields(zoneId);
             saveToLocalStorage();
-            saveState();
+            saveState(label || 'Modification d\'une zone texte');
         };
         
         // ═══════════════════════════════════════════════════════════════
@@ -18208,7 +18335,7 @@ document.addEventListener('DOMContentLoaded', () => {
          * @param {boolean} [updateDisplay=true] - Si true, appelle updateBarcodeZoneDisplay
          * @returns {void}
          */
-        const updateSelectedBarcodeZone = (mutator, updateDisplay = true) => {
+        const updateSelectedBarcodeZone = (mutator, updateDisplay = true, label) => {
             const zoneId = getSelectedBarcodeZoneId();
             if (!zoneId) return;
             
@@ -18222,7 +18349,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateBarcodeZoneDisplay(zoneId);
             }
             saveToLocalStorage();
-            saveState();
+            saveState(label || 'Modification d\'un code-barres');
         };
         
         // ═══════════════════════════════════════════════════════════════
@@ -18912,7 +19039,7 @@ document.addEventListener('DOMContentLoaded', () => {
          * @param {boolean} [checkMinSize=false] - Si true, vérifie et applique la taille minimum QR
          * @returns {void}
          */
-        const updateSelectedQrcodeZone = (mutator, checkMinSize = false) => {
+        const updateSelectedQrcodeZone = (mutator, checkMinSize = false, label) => {
             const zoneId = getSelectedQrcodeZoneId();
             if (!zoneId) return;
             
@@ -18930,7 +19057,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             saveToLocalStorage();
-            saveState();
+            saveState(label || 'Modification d\'un QR Code');
         };
         
         // ═══════════════════════════════════════════════════════════════
@@ -18959,7 +19086,7 @@ document.addEventListener('DOMContentLoaded', () => {
             zoneEl.style.backgroundColor = isChecked ? 'transparent' : (zoneData.bgColor || DEFAULT_BG_COLOR);
             
             saveToLocalStorage();
-            saveState();
+            saveState('Transparence du QR Code');
         });
         
         // Verrouiller
@@ -19020,7 +19147,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 saveToLocalStorage();
-                saveState();
+                saveState('Couleur de fond du QR Code');
             });
         }
         
@@ -19045,7 +19172,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             saveToLocalStorage();
-            saveState();
+            saveState('Couleur de fond du QR Code');
         });
         
         // ═══════════════════════════════════════════════════════════════
@@ -19219,7 +19346,7 @@ document.addEventListener('DOMContentLoaded', () => {
          * @param {(zoneData: any, zoneEl: HTMLElement, zoneId: string) => void} mutator
          * @returns {void}
          */
-        const updateSelectedImageZone = (mutator) => {
+        const updateSelectedImageZone = (mutator, label) => {
             const zoneId = getSelectedImageZoneId();
             if (!zoneId) return;
             
@@ -19231,7 +19358,7 @@ document.addEventListener('DOMContentLoaded', () => {
             mutator(zoneData, zoneEl, zoneId);
             updateImageZoneDisplay(zoneId);
             saveToLocalStorage();
-            saveState();
+            saveState(label || 'Modification d\'une zone image');
         };
         
         // ═══════════════════════════════════════════════════════════════
@@ -19251,7 +19378,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Appliquer visuellement la bordure
                 applyBorderToZone(zoneEl, zoneData.border);
-            });
+            }, 'Bordure de l\'image');
         });
         
         // ═══════════════════════════════════════════════════════════════
@@ -19363,7 +19490,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateSelectedImageZone((zoneData) => {
                     if (!zoneData.source) zoneData.source = { type: 'fixe', valeur: '' };
                     zoneData.source.type = sourceType;
-                });
+                }, 'Changement du type d\'image source');
             });
         }
         
@@ -19386,7 +19513,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Mettre à jour l'indicateur DPI
                     updateDpiIndicator(zoneId);
                     updateImageDpiBadge(zoneId);
-                });
+                }, 'Mode d\'ajustement de l\'image');
                 
                 // Activer/désactiver le bouton Ajuster au contenu selon le mode
                 updateSnapToContentButton();
@@ -19879,7 +20006,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         saveToLocalStorage();
-        saveState(); // Snapshot APRÈS l'alignement
+        saveState('Alignement des zones'); // Snapshot APRÈS l'alignement
     }
 
     /**
@@ -19931,7 +20058,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         saveToLocalStorage();
-        saveState();
+        saveState('Centrage horizontal');
     }
 
     /**
@@ -19983,7 +20110,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         saveToLocalStorage();
-        saveState();
+        saveState('Centrage vertical');
     }
 
     // --- FONCTIONS DE TAILLE ---
@@ -20062,7 +20189,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         saveToLocalStorage();
-        saveState(); // Snapshot APRÈS le changement de taille
+        saveState('Largeur'); // Snapshot APRÈS le changement de taille
     }
 
     // Appliquer la même hauteur que la première zone (référence)
@@ -20139,7 +20266,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         saveToLocalStorage();
-        saveState();
+        saveState('Hauteur');
     }
 
     /**
@@ -21643,14 +21770,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             updateActiveBarcodeZoneData();
-            saveState();
+            saveState('Type de code-barres');
         });
     }
     
     if (barcodeInputField) {
         barcodeInputField.addEventListener('change', () => {
             updateActiveBarcodeZoneData();
-            saveState();
+            saveState('Source du code-barres');
         });
     }
     
@@ -21661,14 +21788,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 barcodeFontsizeGroup.style.display = inputBarcodeReadable.value === 'aucun' ? 'none' : '';
             }
             updateActiveBarcodeZoneData();
-            saveState();
+            saveState('Texte lisible du code-barres');
         });
     }
     
     if (inputBarcodeFontsize) {
         inputBarcodeFontsize.addEventListener('change', () => {
             updateActiveBarcodeZoneData();
-            saveState();
+            saveState('Texte lisible du code-barres');
         });
         inputBarcodeFontsize.addEventListener('input', () => {
             updateActiveBarcodeZoneData();
@@ -21680,7 +21807,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateActiveBarcodeZoneData();
         });
         inputBarcodeColor.addEventListener('change', () => {
-            saveState();
+            saveState('Couleur du code-barres');
         });
     }
     
@@ -22168,7 +22295,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Pour tous : change pour la sauvegarde finale
         el.addEventListener('change', () => {
             updateActiveZone();
-            saveState(); // Snapshot APRÈS le changement
+            saveState('Changement de couleur'); // Snapshot APRÈS le changement
         });
     });
     
@@ -22188,7 +22315,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (zoneData && zoneData.type === 'textQuill') {
                 zoneData.emptyLines = parseInt(inputEmptyLines.value, 10);
                 saveToLocalStorage();
-                saveState();
+                saveState('Lignes vides');
             }
         });
     }
@@ -22198,7 +22325,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!el) return;
         el.addEventListener('change', () => {
             updateActiveZone(); // Appliquer selon le type de zone
-            saveState(); // Snapshot APRÈS le changement
+            saveState('Transparence / Verrouillage'); // Snapshot APRÈS le changement
         });
     });
     
@@ -22311,7 +22438,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // 11. Sauvegarder
                 saveToLocalStorage();
-                saveState();
+                saveState('Changement d\'image');
                 
                 
             } catch (error) {
@@ -22354,7 +22481,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Sauvegarder
             saveToLocalStorage();
-            saveState();
+            saveState('Suppression de l\'image');
             
         });
     }
@@ -22449,7 +22576,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         saveToLocalStorage();
-        saveState(); // Snapshot APRÈS l'espacement
+        saveState('Répartition horizontale'); // Snapshot APRÈS l'espacement
     }
 
     // Ajuster l'écartement vertical entre les zones (uniforme)
@@ -22517,7 +22644,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         saveToLocalStorage();
-        saveState(); // Snapshot APRÈS l'espacement
+        saveState('Répartition verticale'); // Snapshot APRÈS l'espacement
     }
 
     // Références DOM - Section Alignement page
@@ -22588,7 +22715,7 @@ document.addEventListener('DOMContentLoaded', () => {
             normalizeZIndexes();
             
             saveToLocalStorage();
-            saveState(); // Snapshot APRÈS la suppression
+            saveState('Suppression de zone'); // Snapshot APRÈS la suppression
             deselectAll();
             
             // Réafficher le bouton QR interactif si celui-ci a été supprimé
@@ -22783,7 +22910,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Sauvegardes
         saveToLocalStorage();
-        saveState();
+        saveState('Ajustement au contenu');
         
     }
     
@@ -23070,7 +23197,7 @@ document.addEventListener('DOMContentLoaded', () => {
         historyManager.states = [];
         historyManager.currentIndex = -1;
         
-        saveState(); // Snapshot APRÈS la réinitialisation (nouveau point de départ)
+        saveState('Réinitialisation de la page'); // Snapshot APRÈS la réinitialisation (nouveau point de départ)
         
         // Mettre à jour la visibilité des boutons
         updateZoneButtonsVisibility();
@@ -23116,7 +23243,7 @@ document.addEventListener('DOMContentLoaded', () => {
         historyManager.states = [];
         historyManager.currentIndex = -1;
         
-        saveState(); // Snapshot APRÈS la réinitialisation (nouveau point de départ)
+        saveState('Réinitialisation du document'); // Snapshot APRÈS la réinitialisation (nouveau point de départ)
         
         // Mettre à jour la visibilité des boutons
         updateZoneButtonsVisibility();
@@ -24033,9 +24160,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateGeomDisplay(zoneEl);
                 }
             }
-            
+
             saveToLocalStorage();
-            saveState(); // Snapshot APRÈS le déplacement/redimensionnement
+            saveState(isResizing ? 'Redimensionnement de zone' : 'Déplacement de zone'); // Snapshot APRÈS le déplacement/redimensionnement
             
             // Valider et corriger les contraintes de taille après déplacement (mode Template)
             if (isDragging && isTemplateMode()) {
@@ -24407,8 +24534,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
+        // Libellé selon la propriété de géométrie saisie (x/y/w/h).
+        const __geomLabels = { x: 'Position X', y: 'Position Y', w: 'Largeur', h: 'Hauteur' };
         saveToLocalStorage();
-        saveState();
+        saveState(__geomLabels[property] || 'Modification de la géométrie');
     }
     
     // Écouteurs pour les champs de géométrie (anciens inputs supprimés, gérés par toolbar Quill)
@@ -24552,9 +24681,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Sauvegarder l'état du document (format principal)
         try {
             const documentStateJson = JSON.stringify(documentState);
-            console.log('💾 DIAG saveToLocalStorage — taille:', documentStateJson.length,
-                ', pages:', documentState.pages.length,
-                ', identification:', documentState.identification ? documentState.identification.idDocument : 'N/A');
             localStorage.setItem('marketeam_document_state', documentStateJson);
         } catch (error) {
             console.error('❌ Impossible de sauvegarder documentState dans localStorage.', error);
@@ -25538,9 +25664,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const map = new Map();
         if (!Array.isArray(champsFusion)) return map;
 
-        // TRACE TEMPORAIRE [MISMATCH-FIX] — diagnostic à retirer après validation.
-        let nbIgnoresLocalIdReel = 0;
-
         champsFusion.forEach(c => {
             if (!c || typeof c !== 'object') return;
             const localId = (typeof c.localId === 'string') ? c.localId.trim() : '';
@@ -25573,17 +25696,10 @@ document.addEventListener('DOMContentLoaded', () => {
             //   Le nouveau critère (« localId réel ») couvre le cas
             //   `presenteEnBase===true` ET tous les cas régime A post-cycle.
             //   L'ancienne garde devient strict sous-cas — supprimée.
-            nbIgnoresLocalIdReel++;
             return;
 
             // map.set(localId, nom);  // ← LIGNE SUPPRIMÉE par la nouvelle doctrine
         });
-
-        // TRACE TEMPORAIRE [MISMATCH-FIX] — à retirer après validation
-        try {
-            console.log('[MISMATCH-FIX] mapping construit, taille =', map.size);
-            console.log('[MISMATCH-FIX] champs à localId réel détectés (ignorés) :', nbIgnoresLocalIdReel);
-        } catch (e) { /* defensive */ }
 
         return map;
     }
@@ -25858,11 +25974,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function loadFromWebDev(jsonData) {
-        console.log('🔄 DIAG loadFromWebDev ENTREE — type:', typeof jsonData,
-            ', action:', jsonData && jsonData.action,
-            ', data:', !!jsonData && !!jsonData.data,
-            ', zonesImage dans data:', jsonData && jsonData.data && jsonData.data.zonesImage ? jsonData.data.zonesImage.length : 'N/A');
-
         // L11 / V2.5 - Reset du flag « popup d'alerte de désalignement déjà
         //   affichée » à chaque nouvelle ouverture du Designer. Garantit que
         //   l'utilisateur revoit l'alerte s'il rouvre le même document tant
@@ -26423,15 +26534,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         let zonesImageCount = 0;
         
-        console.log('🖼️ DIAG ÉTAPE 7 — zonesImage:', effectiveDocumentJson.zonesImage ? effectiveDocumentJson.zonesImage.length : 'absent');
-        
         if (effectiveDocumentJson.zonesImage && Array.isArray(effectiveDocumentJson.zonesImage)) {
             effectiveDocumentJson.zonesImage.forEach((zoneJson, idx) => {
-                console.log('🖼️ DIAG zone image #' + idx, '— id:', zoneJson.id,
-                    ', page:', zoneJson.page,
-                    ', source.type:', zoneJson.source ? zoneJson.source.type : 'N/A',
-                    ', source.valeur:', zoneJson.source && zoneJson.source.valeur ? zoneJson.source.valeur.substring(0, 80) : 'N/A',
-                    ', imageBase64:', zoneJson.source && zoneJson.source.imageBase64 ? zoneJson.source.imageBase64.substring(0, 30) + '...' : 'vide');
                 const pageIndex = (zoneJson.page || 1) - 1;
                 
                 if (pageIndex < 0 || pageIndex >= documentState.pages.length) {
@@ -26445,7 +26549,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     documentState.pages[pageIndex].zones[zoneId] = zoneData;
                     zonesImageCount++;
-                    console.log('🖼️ DIAG zone image #' + idx + ' chargée OK — zoneId:', zoneId);
                     
                     const idMatch = zoneId.match(/zone-(\d+)/);
                     if (idMatch) {
@@ -26453,7 +26556,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (idNum > maxZoneId) maxZoneId = idNum;
                     }
                 } catch (errImg) {
-                    console.error('❌ DIAG zone image #' + idx + ' ERREUR:', errImg);
+                    console.error('❌ Zone image #' + idx + ' ERREUR:', errImg);
                 }
                 
             });
@@ -26555,25 +26658,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Ajuster le zoom pour afficher le document en entier après chargement
         fitToView();
-
-        // ──────────── [DIAG] LOAD ────────────
-        try {
-            const champsAuLoad = Array.isArray(documentState.champsFusion) ? documentState.champsFusion : [];
-            const regimeAuLoad = (typeof detecterRegimeChamps === 'function')
-                ? detecterRegimeChamps(champsAuLoad) : 'A';
-            const presenceBase = champsAuLoad.some(c => c && c.presenteEnBase !== undefined);
-            const record0 = (Array.isArray(documentState.donneesApercu) && documentState.donneesApercu.length > 0)
-                ? documentState.donneesApercu[0] : null;
-            diagLog('LOAD', {
-                regime: regimeAuLoad,
-                presenceBase,
-                nbChampsFusion: champsAuLoad.length,
-                champsFusion: diagSnapshotChampsFusion(champsAuLoad),
-                nbRecordsApercu: Array.isArray(documentState.donneesApercu) ? documentState.donneesApercu.length : 0,
-                record0Keys: record0 ? Object.keys(record0) : null,
-                record0Values: diagSnapshotRecord(record0)
-            });
-        } catch (e) { /* trace defensive */ }
 
         return true;
     }
@@ -27392,14 +27476,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (seen.has(cle)) return;
                 const champ = champsByCle.get(cle);
                 if (champ && champ.presenteEnBase === false) {
-                    // TRACE TEMPORAIRE (Point 2 — filtre BAT) — à retirer après validation
-                    try { console.log(`[BAT-FILTRE] cle=${cle} presenteEnBase=false action=skip`); }
-                    catch (e) { /* defensive */ }
                     return;
                 }
-                // TRACE TEMPORAIRE (Point 2 — filtre BAT) — à retirer après validation
-                try { console.log(`[BAT-FILTRE] cle=${cle} presenteEnBase=${champ ? champ.presenteEnBase : 'noChamp'} action=inject`); }
-                catch (e) { /* defensive */ }
                 enregistrement.push({ nom: cle, valeur: String(valeur) });
             });
 
@@ -27705,10 +27783,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 // `nom`, `localId` (absent ou "0"), `libelle`, `type`,
                 // `ordre` sont TOUS préservés tels quels.
 
-                try {
-                    console.log(`Promotion: ${champ.libelle || '(sans libellé)'} nom=${ancienNom} → STANDARD CONSERVÉ echantillon="${valeurFigeeStd}"`);
-                } catch (e) { /* defensive */ }
-
                 continue;
             }
 
@@ -27736,11 +27810,6 @@ document.addEventListener('DOMContentLoaded', () => {
             delete champ.injecteParBase;
             delete champ.presenteEnBase;
             // origine + categorie + type + ordre + libelle préservés tels quels
-
-            // L18/A41+A43 — TRACE TEMPORAIRE (à retirer après validation production)
-            try {
-                console.log(`Promotion: ${libelle || '(sans libellé)'} nom=${ancienNom} → PROMU LOCAL_${newLocalId} echantillon="${valeurFigee}"`);
-            } catch (e) { /* defensive */ }
 
             mappingPromotion.set(ancienNom, { newLocalId, libelle, valeurFigee });
         }
@@ -27803,34 +27872,12 @@ document.addEventListener('DOMContentLoaded', () => {
             persistTextQuillContentForSave(currentZones);
         }
 
-        // ──────────── [DIAG] EXPORT/AVANT-PROMOTION ────────────
-        try {
-            diagLog('EXPORT avant promotion', {
-                nbChampsFusion: Array.isArray(documentState.champsFusion) ? documentState.champsFusion.length : 0,
-                champsFusion: diagSnapshotChampsFusion(documentState.champsFusion),
-                nbRecordsApercu: Array.isArray(documentState.donneesApercu) ? documentState.donneesApercu.length : 0,
-                record0: (Array.isArray(documentState.donneesApercu) && documentState.donneesApercu.length > 0)
-                    ? diagSnapshotRecord(documentState.donneesApercu[0]) : null
-            });
-        } catch (e) { /* trace defensive */ }
-
         // L18/A41 — Promotion des colonnes base insérées en champs spécifiques
         //   autonomes. DOIT s'exécuter APRÈS persistTextQuillContentForSave
         //   (Deltas à jour) et AVANT la construction de l'output JSON
         //   (buildChampsFusionForExport et buildDonneesApercuForExport
         //   doivent voir les champs promus).
         promoteBaseFieldsBeforeExport();
-
-        // ──────────── [DIAG] EXPORT/APRÈS-PROMOTION ────────────
-        try {
-            diagLog('EXPORT apres promotion', {
-                nbChampsFusion: Array.isArray(documentState.champsFusion) ? documentState.champsFusion.length : 0,
-                champsFusion: diagSnapshotChampsFusion(documentState.champsFusion),
-                nbRecordsApercu: Array.isArray(documentState.donneesApercu) ? documentState.donneesApercu.length : 0,
-                record0: (Array.isArray(documentState.donneesApercu) && documentState.donneesApercu.length > 0)
-                    ? diagSnapshotRecord(documentState.donneesApercu[0]) : null
-            });
-        } catch (e) { /* trace defensive */ }
 
         let syncCount = 0;
         
@@ -27979,31 +28026,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (documentState.champsFusionInterdit) {
             output.ChampsFusionInterdit = true;
         }
-        // ──────────── [DIAG] EXPORT/PAYLOAD (alimente le BAT côté WebDev) ────────────
-        try {
-            const exportedChamps = Array.isArray(output.champsFusion) ? output.champsFusion : [];
-            const exportedRecords = Array.isArray(output.donneesApercu) ? output.donneesApercu : [];
-            // Réduire chaque enregistrement format WebDev en map nom→valeur compacte.
-            const record0Pairs = (exportedRecords.length > 0 && exportedRecords[0] && Array.isArray(exportedRecords[0].enregistrement))
-                ? exportedRecords[0].enregistrement.reduce((acc, e) => {
-                    if (!e || typeof e !== 'object') return acc;
-                    const v = (e.valeur === null || e.valeur === undefined) ? '' : String(e.valeur);
-                    acc[e.nom] = v.length > 40 ? (v.substring(0, 37) + '...') : v;
-                    return acc;
-                }, {})
-                : null;
-            diagLog('EXPORT payload (BAT)', {
-                nbChampsExportes: exportedChamps.length,
-                champsExportes: exportedChamps.map(c => ({
-                    nom: c.nom, libelle: c.libelle, localId: c.localId,
-                    echantillonDefaut: c.echantillonDefaut, origine: c.origine,
-                    categorie: c.categorie, injecteParBase: c.injecteParBase
-                })),
-                nbRecordsExportes: exportedRecords.length,
-                record0Pairs
-            });
-        } catch (e) { /* trace defensive */ }
-
         return stripNullValues(output);
     }
     
@@ -28140,7 +28162,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleParentMessage(event) {
         // Sécurité : après la première connexion, n'accepter que l'origine connue
         if (trustedParentOrigin && event.origin !== trustedParentOrigin) {
-            console.log('🚫 DIAG message rejeté — origin:', event.origin, '!= trusted:', trustedParentOrigin);
             return;
         }
         
@@ -28154,7 +28175,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Compatibilité : si le message n'a pas d'action mais contient des
         // propriétés de document (pages, identification...), le traiter comme un 'load'
         if (!message.action && (message.pages || message.identification || message.zonesTexte)) {
-            console.log('📨 DIAG message sans action détecté — conversion en load, props:', Object.keys(message).join(', '));
             message = { action: 'load', data: message };
         }
         
@@ -28162,28 +28182,19 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        console.log('📨 DIAG handleParentMessage — action:', message.action, ', origin:', event.origin);
-        
-        
         switch (message.action) {
             case 'load':
                 // Mémoriser l'origine de confiance au premier 'load'
                 if (!trustedParentOrigin && event.origin) {
                     trustedParentOrigin = event.origin;
                 }
-                console.log('📩 DIAG postMessage load reçu — data:', !!message.data,
-                    ', zonesImage:', message.data && message.data.zonesImage ? message.data.zonesImage.length : 'N/A',
-                    ', pages:', message.data && message.data.pages ? message.data.pages.length : 'N/A');
                 // Charger un document JSON
                 if (message.data) {
                     try {
                         // Définir le mode AVANT le chargement des données
                         setDesignerMode(message.mode || 'standard');
                         
-                        console.log('📩 DIAG avant loadFromWebDev');
                         loadFromWebDev(message);
-                        console.log('📩 DIAG après loadFromWebDev — pages en mémoire:', documentState.pages.length,
-                            ', image fond:', documentState.pages.length > 0 ? documentState.pages[0].image : 'N/A');
                         
                         // Appliquer les contraintes si présentes dans le message load
                         if (message.constraints) {
@@ -28218,7 +28229,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Mettre à jour la visibilité des boutons après snapshot
                         // (au cas où des limites seraient déjà atteintes par le modèle)
                         updateZoneButtonsVisibility();
-                        
+
+                        // VOLET 1+2+4 — Poser l'UNIQUE base d'historique sur le
+                        //   document WebDev chargé, APRÈS stabilisation des rendus
+                        //   asynchrones internes de loadFromWebDev (datamatrix /
+                        //   images). Réinitialise la pile à CHAQUE 'load' finalisé
+                        //   (idempotent) → index 0 = document réellement affiché,
+                        //   undo grisé à l'ouverture. Remplace l'« État initial »
+                        //   prématuré posé au boot de l'iframe.
+                        scheduleInitialStateCapture();
+
                         sendMessageToParent({ action: 'loaded', success: true });
                     } catch (error) {
                         console.error('❌ DIAG Erreur lors du chargement:', error);
@@ -28372,14 +28392,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Essayer de charger le nouveau format multipage
         const savedState = localStorage.getItem('marketeam_document_state');
         
-        console.log('📦 DIAG loadFromLocalStorage — savedState:', savedState ? savedState.length + ' chars' : 'null');
-        
         if (savedState) {
             try {
                 const parsedState = JSON.parse(savedState);
-                console.log('📦 DIAG localStorage — pages:', parsedState.pages ? parsedState.pages.length : 0,
-                    ', identification:', parsedState.identification ? parsedState.identification.idDocument : 'N/A',
-                    ', fond:', parsedState.pages && parsedState.pages[0] ? parsedState.pages[0].image : 'N/A');
                 // Vérifier que c'est bien la nouvelle structure
                 if (parsedState.pages && Array.isArray(parsedState.pages)) {
                     documentState = parsedState;
@@ -28644,7 +28659,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- CHARGEMENT AU DÉMARRAGE ---
-    console.log('🚀 DIAG === DÉMARRAGE DOMContentLoaded === iframe:', window.parent !== window);
     loadFromLocalStorage();
     
     // Initialiser les données d'aperçu fictives (pour tests hors WebDev)
@@ -28780,8 +28794,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Générer la navigation des pages après chargement
     renderPageNavigation();
     
-    // Sauvegarder l'état initial dans l'historique (après le chargement)
-    saveState();
+    // Base d'historique de REPLI pour l'usage HORS-WebDev (standalone : le
+    //   Designer ouvert directement, sans iframe parent qui enverra un
+    //   message 'load'). Dans le flux WebDev normal, ce snapshot pré-load est
+    //   VOLONTAIREMENT écrasé : à la réception du 'load', scheduleInitialStateCapture()
+    //   réinitialise la pile et recapture l'« État initial » sur le document
+    //   chargé/stabilisé (cf. handleParentMessage case 'load'). On le garde
+    //   ici pour ne pas casser un éventuel mode standalone.
+    saveState('État initial');
     
     // S'assurer que l'image de fond correspond à la page courante après le chargement
     // (loadFromLocalStorage() force déjà la page 0, mais on double-vérifie)
@@ -28986,7 +29006,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 11. Sauvegarder et créer un point d'historique
         saveToLocalStorage();
-        saveState();
+        saveState('Déplacement vers une autre page');
         
         // 12. Afficher un toast de confirmation
         const zoneName = zoneId.replace('zone-', 'Zone ');
@@ -31471,26 +31491,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 documentState.donneesApercu.push({});
             }
 
-            // TODO Axe 3 — Trace temporaire de diagnostic (à retirer après
-            //   validation). Permet de constater clé / forceWrite / état
-            //   avant/après pour confirmer l'écriture effective dans
-            //   donneesApercu.
-            try {
-                const before = documentState.donneesApercu.map(r => (r && typeof r === 'object') ? r[cleanKey] : undefined);
-                console.log('[Axe3 propagate]', {
-                    libelle: champ.libelle,
-                    nom: champ.nom,
-                    localId: champ.localId,
-                    cleanKey,
-                    valeurEchantillon: valeur,
-                    presenteEnBase: champ.presenteEnBase,
-                    optionsForce: opts.force === true,
-                    forceWrite,
-                    nbRecords: documentState.donneesApercu.length,
-                    valeursAvant: before
-                });
-            } catch (e) { /* trace defensive */ }
-
             documentState.donneesApercu.forEach(record => {
                 if (!record || typeof record !== 'object') return;
                 // Cas 1 (force, hors base active) : on écrit toujours.
@@ -31503,12 +31503,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     record[cleanKey] = valeur;
                 }
             });
-
-            // TODO Axe 3 — Trace temporaire (à retirer après validation).
-            try {
-                const after = documentState.donneesApercu.map(r => (r && typeof r === 'object') ? r[cleanKey] : undefined);
-                console.log('[Axe3 propagate] APRÈS', { cleanKey, valeursApres: after });
-            } catch (e) { /* trace defensive */ }
         }
 
         // ─── Validation libellé ──────────────────────────────────────────
@@ -31757,11 +31751,43 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function setTab(tab) {
+            const previousTab = state.tab;
             state.tab = tab;
             tabStandard.classList.toggle('active', tab === 'standard');
             tabSpecifique.classList.toggle('active', tab === 'specifique');
             paneStandard.classList.toggle('active', tab === 'standard');
             paneSpecifique.classList.toggle('active', tab === 'specifique');
+
+            // Correctif — La zone « Échantillon » est COMMUNE aux deux
+            //   onglets. En CRÉATION, lors d'un changement RÉEL d'onglet, on
+            //   repart d'un échantillon vierge si la valeur courante avait été
+            //   AUTO-remplie par la sélection d'un standard (flag
+            //   autoFilled='1'). Sans ça, l'échantillon « Monsieur » d'un
+            //   standard sélectionné resterait affiché sur l'onglet Spécifique
+            //   (et inversement), alors qu'on s'apprête à créer un AUTRE champ.
+            //   Une saisie MANUELLE (autoFilled='0') est préservée — l'usager
+            //   a manifesté une intention. En ÉDITION, l'onglet est figé :
+            //   setTab n'est appelé qu'une fois à l'ouverture avec
+            //   l'échantillon déjà résolu → on ne touche à rien.
+            if (state.mode === 'create' && previousTab && previousTab !== tab) {
+                const wasAutoFilled = inputEchantillon.dataset.autoFilled === '1';
+                if (wasAutoFilled && !inputEchantillon.disabled) {
+                    inputEchantillon.value = '';
+                    inputEchantillon.dataset.autoFilled = '1';
+                    errorEchantillon.classList.add('hidden');
+                }
+                // La sélection d'un standard n'a de sens que sur l'onglet
+                //   Standard : en quittant vers Spécifique, on l'annule
+                //   (état + surbrillance visuelle).
+                if (tab === 'specifique') {
+                    state.selectedStandard = null;
+                    if (standardList) {
+                        standardList.querySelectorAll('.champ-fusion-standard-item.selected')
+                            .forEach(el => el.classList.remove('selected'));
+                    }
+                }
+            }
+
             // En mode édition, l'onglet Standard est masqué (cf. ouverture)
             updateConfirmEnabled();
         }
@@ -32024,6 +32050,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 const currentChampStd = findChamp({ localId: state.editLocalId, nom: state.editNom });
                 if (!currentChampStd) { closeModal(); return; }
                 const typeStd = currentChampStd.type || 'TXT';
+                // Cahier §1.6 — Échantillon OBLIGATOIRE (règle UNIVERSELLE :
+                //   standard ET spécifique). Le cas concret pour un standard
+                //   est la MODIFICATION : empêcher l'utilisateur de VIDER
+                //   l'échantillon posé par WebDev. « Vide » = chaîne vide ou
+                //   uniquement des espaces (trim). Exception : saisie
+                //   désactivée (type IMG / échantillon verrouillé) — rien
+                //   d'éditable à exiger.
+                if (!inputEchantillon.disabled && !inputEchantillon.value.trim()) {
+                    errorEchantillon.textContent = 'L\'échantillon est obligatoire.';
+                    errorEchantillon.classList.remove('hidden');
+                    try { inputEchantillon.focus(); } catch (e) { /* defensive */ }
+                    return;
+                }
                 const vEchStd = validateEchantillon(inputEchantillon.value, typeStd);
                 if (!vEchStd.ok) {
                     errorEchantillon.textContent = vEchStd.error;
@@ -32064,6 +32103,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Validation échantillon (selon type)
             const type = selectType.value;
+
+            // Cahier §1.6 — Échantillon OBLIGATOIRE (règle UNIVERSELLE :
+            //   standard ET spécifique). Ici (Cas C) on couvre les champs
+            //   spécifiques en CRÉATION et en ÉDITION ; les standards sont
+            //   couverts au Cas B. « Vide » = chaîne vide OU uniquement des
+            //   espaces (trim). Exception : on n'exige rien quand la saisie
+            //   est désactivée — type IMG (placeholder visuel résolu à la
+            //   génération) ou échantillon verrouillé sur un champ importé —
+            //   car la contrainte ne porterait sur rien d'éditable.
+            if (!inputEchantillon.disabled && !inputEchantillon.value.trim()) {
+                errorEchantillon.textContent = 'L\'échantillon est obligatoire.';
+                errorEchantillon.classList.remove('hidden');
+                try { inputEchantillon.focus(); } catch (e) { /* defensive */ }
+                return;
+            }
+
             const vEch = validateEchantillon(inputEchantillon.value, type);
             if (!vEch.ok) {
                 errorEchantillon.textContent = vEch.error;
@@ -32121,7 +32176,7 @@ document.addEventListener('DOMContentLoaded', () => {
             documentState.champsFusion.push(champ);
             mergeFields = documentState.champsFusion;
             propagateEchantillonDefaut(champ);
-            persistAndRefresh();
+            persistAndRefresh(champ.libelle ? ('Ajout du champ ' + champ.libelle) : 'Ajout d\'un champ');
         }
 
         /**
@@ -32148,7 +32203,7 @@ document.addEventListener('DOMContentLoaded', () => {
             documentState.champsFusion.push(champ);
             mergeFields = documentState.champsFusion;
             propagateEchantillonDefaut(champ);
-            persistAndRefresh();
+            persistAndRefresh(champ.libelle ? ('Ajout du champ ' + champ.libelle) : 'Ajout d\'un champ');
         }
 
         function editChamp(champ, updates) {
@@ -32159,14 +32214,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (updates.type !== undefined) champ.type = updates.type;
             if (updates.echantillonDefaut !== undefined) {
                 champ.echantillonDefaut = updates.echantillonDefaut;
-                // TODO Axe 3 — Trace temporaire (à retirer après validation).
-                try {
-                    console.log('[Axe3 editChamp] avant propagate', {
-                        libelle: champ.libelle,
-                        nouvelEchantillon: updates.echantillonDefaut,
-                        force: true
-                    });
-                } catch (e) { /* defensive */ }
                 // Axe 3 — Édition explicite par l'utilisateur : on autorise
                 //   l'écrasement de la valeur déjà propagée dans
                 //   donneesApercu. Le garde-fou presenteEnBase reste actif
@@ -32177,7 +32224,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             // Si le libellé a changé, il faut rafraîchir les pastilles déjà
             // insérées dans Quill (cf. §7.8.6 du cahier)
-            persistAndRefresh();
+            persistAndRefresh(champ.libelle ? ('Modification du champ ' + champ.libelle) : 'Modification d\'un champ');
             // Refresh visuel des pastilles pour la clé concernée
             try {
                 if (typeof refreshMergeTagsInAllZones === 'function') {
@@ -32211,10 +32258,19 @@ document.addEventListener('DOMContentLoaded', () => {
             return max + 1;
         }
 
-        function persistAndRefresh() {
+        function persistAndRefresh(label) {
+            // Décision métier : la GESTION DE LA LISTE des champs de fusion
+            //   (ajout / modification / suppression dans la palette) n'est
+            //   PAS annulable par Ctrl+Z. On ne crée donc AUCUNE entrée
+            //   d'historique ici. La liste est toujours mise à jour (palette)
+            //   et persistée (localStorage) normalement — seul le saveState
+            //   a été retiré. L'INSERTION d'un champ DANS une zone reste, elle,
+            //   annulable (gérée par insertTag avec son propre saveState).
+            //   Le paramètre `label` (libellé d'historique) devient sans effet
+            //   ici ; conservé pour ne pas modifier les appelants.
+            void label;
             try { updateMergeFieldsUI(mergeFields); } catch (e) {}
             try { saveToLocalStorage(); } catch (e) {}
-            try { saveState(); } catch (e) {}
         }
 
         // ─── Suppression ─────────────────────────────────────────────────
@@ -32283,6 +32339,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function confirmDelete() {
             if (!pendingDeleteChamp) { closeDelete(); return; }
+            const __lblSuppr = (pendingDeleteChamp && pendingDeleteChamp.libelle)
+                ? ('Suppression du champ ' + pendingDeleteChamp.libelle)
+                : 'Suppression d\'un champ';
             // Purge des références
             purgeChampReferences(pendingDeleteChamp);
             // Retirer le champ de la liste
@@ -32290,7 +32349,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const idx = champs.indexOf(pendingDeleteChamp);
             if (idx !== -1) champs.splice(idx, 1);
             mergeFields = documentState.champsFusion;
-            persistAndRefresh();
+            persistAndRefresh(__lblSuppr);
             closeDelete();
         }
 

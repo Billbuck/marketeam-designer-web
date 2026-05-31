@@ -1,10 +1,10 @@
 # Cahier des charges — États et comportements des champs de fusion
 ## Marketeam Designer
 
-**Statut :** Référence unique validée
-**Périmètre :** Comportement de chaque type de champ dans la popup « Champs de fusion », dans les zones du document, et en aperçu/production.
+**Statut :** Référence unique validée — conformité du code attestée par tests.
+**Périmètre :** Comportement de chaque type de champ dans la popup « Champs de fusion », dans les zones du document, en aperçu, et en production (BAT, PSMD).
 
-Ce document est la **source de vérité** pour la déclaration et l'exploitation des champs de fusion. Toute correction du code doit être confrontée à cette grille. Il remplace les décisions implicites éparpillées dans le code.
+Ce document est la **source de vérité** pour la déclaration et l'exploitation des champs de fusion. Toute évolution du code doit être confrontée à cette grille. Il remplace les décisions implicites éparpillées dans le code.
 
 ---
 
@@ -30,8 +30,8 @@ Ce document est la **source de vérité** pour la déclaration et l'exploitation
 
 3. **Règle centrale — AVEC base :**
    Seule la **base** alimente les valeurs. **La fiche client n'intervient JAMAIS** lorsqu'une base est présente.
-   **Tout champ absent de la base** (standard ou spécifique) est **ROUGE**, sa **valeur en aperçu est VIDE**, et son **insertion est bloquée**.
-   *Objectif : ne jamais imprimer une mauvaise donnée (notamment dans l'adresse destinataire) ; n'exploiter que les champs réellement présents dans la base.*
+   **Tout champ absent de la base** (standard ou spécifique) est **ROUGE**, sa **valeur en aperçu et en production est VIDE**, et son **insertion est bloquée**.
+   *Objectif : ne jamais imprimer une mauvaise donnée (notamment l'adresse de l'expéditeur à la place du destinataire) ; n'exploiter que les champs réellement présents dans la base.*
 
 4. **Sources de valeur selon le régime :**
    - **SANS base :** Standard → **fiche client** · Spécifique → **échantillon** (obligatoire)
@@ -39,13 +39,15 @@ Ce document est la **source de vérité** pour la déclaration et l'exploitation
 
 5. **La base prime toujours.** Un champ qui correspond à une colonne de la base prend les valeurs de la base, jamais l'échantillon ni la fiche client.
 
-6. **Échantillon obligatoire** pour tout champ spécifique (toujours une valeur de repli sans base).
+6. **Échantillon obligatoire** pour tout champ spécifique (valeur de repli sans base).
 
-7. **Champs système** (Séquentiel, Timbre) : **retirés de la popup** « Champs de fusion ». Ils ne sont pas exploitables par l'utilisateur ; ils existent uniquement en coulisses pour la production (PSMD, tri postal, affranchissement).
+7. **Champs système** (Séquentiel, Timbre) : **retirés de la popup** « Champs de fusion » et de toute combo utilisateur. Ils existent uniquement en coulisses pour la production (PSMD, tri postal, affranchissement). Ils ne sont **jamais vidés** par les règles de gestion des absents.
 
 8. **Marqueur dans le contenu :**
    - Standard → `@nom@` (nom technique, ex `@Civilite@`)
    - Spécifique → `@LOCAL_<identifiant>@` (identifiant stable)
+
+   Le marqueur d'un spécifique est **stable** : il reste `@LOCAL_<id>@` quel que soit le régime, et n'est **jamais réécrit** dans le contenu du document. La conversion vers un nom technique (`@Champ3@`) intervient uniquement à la génération PSMD côté production, jamais dans le contenu stocké.
 
 ---
 
@@ -91,8 +93,6 @@ Un champ figé sur un échantillon (cas du spécifique dont la base a été reti
 
 Lorsqu'on (re)charge une base contenant le **libellé** de ce champ, il se **reconnecte** automatiquement et reprend les **valeurs dynamiques** de la base (par destinataire). L'échantillon figé n'est qu'un **repli temporaire**, utilisé uniquement tant qu'aucune base correspondante n'est présente.
 
-> C'est le point qui a causé les principaux bugs : un champ ne doit **jamais** rester collé sur une ancienne valeur figée (ex « Opel ») quand une base correspondante est rechargée.
-
 ---
 
 ## 5. Synthèse des sources de valeur
@@ -103,23 +103,60 @@ Lorsqu'on (re)charge une base contenant le **libellé** de ce champ, il se **rec
 | AVEC base — présent | Base | Base |
 | AVEC base — absent | **Vide (rouge)** | **Vide (rouge)** |
 
-La **fiche client** ne sert **que** sans base. L'**échantillon** ne sert **que** sans base. **Avec base, seule la base alimente.**
+La **fiche client** ne sert **que** sans base.
+L'**échantillon** ne sert **que** sans base.
+**Avec base, seule la base alimente.**
+
+Cette règle vaut **dans tous les chemins** : aperçu Designer, BAT, PSMD de production. Aucun chemin ne doit injecter de valeur de la fiche client ou d'échantillon résiduel pour un champ absent en régime avec base.
 
 ---
 
-## 6. Points à confronter au code existant
+## 6. Présentation dans la popup « Champs de fusion »
 
-Cette grille étant la cible, voici les divergences probables à vérifier dans le code actuel (à confirmer lors de la confrontation) :
+### Tri
 
-1. **Champs système (Séquentiel, Timbre)** : actuellement affichés dans la popup → **à retirer**.
-2. **Champ absent de la base** : le code actuel le fait *disparaître* (standards purgés) ou *survivre sur l'échantillon/fiche client* → il doit désormais devenir **ROUGE + valeur vide + insertion bloquée**.
-3. **Insertion d'un champ absent de la base** : doit être **bloquée**.
-4. **Fiche client** : ne doit **jamais** alimenter un champ lorsqu'une base est présente.
-5. **Spécifique présent en base** : doit être **non renommable** et **type figé** (à vérifier dans le code).
-6. **Libellé d'un spécifique SANS base** : doit être **modifiable** (ancien « Problème 3 » — le code force `origine="import"` au chargement, ce qui fige le libellé à tort).
-7. **Retrait de base d'un spécifique présent** : doit **figer la dernière valeur base comme échantillon** et rendre le champ autonome (renommable, type modifiable).
-8. **Reconnexion dynamique** : un champ figé doit reprendre les valeurs base si une base correspondante est rechargée (par libellé pour les spécifiques, par nom technique pour les standards).
-9. **Conversion PSMD** (production) : inchangée — les marqueurs sont convertis en noms techniques (`@Champ3@`, `@Civilite@`) à la génération du PSMD.
+La liste de la popup est triée en **3 groupes**, dans cet ordre :
+
+1. **Champs exploités** (verts) — insérés dans le document, avec valeur résolvable.
+2. **Champs en erreur** (rouges) — absents de la base courante, à signaler à l'utilisateur.
+3. **Champs non exploités** (gris) — déclarés mais pas insérés.
+
+À l'intérieur de chaque groupe : l'ordre du postMessage (= l'ordre canonique d'envoi des champs par le métier). Pas de tri alphabétique, pas de distinction standard/spécifique dans le tri — c'est uniquement l'**état** du champ qui détermine sa position.
+
+### Comportement du bouton « Champs »
+
+L'état du bouton « Champs » de la sidebar reflète **toujours** l'état réel de la popup :
+- Popup ouverte → bouton actif.
+- Popup fermée → bouton inactif, **quel que soit le chemin de fermeture** (clic sur le bouton, croix, clic en dehors, ouverture du Designer).
+
+Un seul clic sur « Champs » doit toujours suffire à rouvrir la popup quand elle est fermée.
+
+---
+
+## 7. État de conformité
+
+Tous les points fondamentaux de ce cahier sont **conformes** dans le code, validés par tests fonctionnels complets (régimes sans base et avec base, cycles base, transitions, aperçu, BAT, PSMD).
+
+| Règle | Conformité |
+|---|---|
+| Champs système retirés de la popup et des combos utilisateur | ✅ |
+| Champ absent en régime avec base → rouge, vide, insertion bloquée | ✅ |
+| Insertion d'un champ absent bloquée (popup, drag & drop, combos) | ✅ |
+| Fiche client jamais utilisée comme source en régime avec base — **valable pour l'aperçu, le BAT et le PSMD** | ✅ |
+| Spécifique présent en base : libellé et type figés | ✅ |
+| Libellé et type d'un spécifique modifiables sans base | ✅ |
+| Retrait de base d'un spécifique présent → fige l'échantillon, devient autonome | ✅ |
+| Reconnexion dynamique au rechargement d'une base correspondante | ✅ |
+| Production PSMD : conversion `@LOCAL_xxx@` → nom technique inchangée | ✅ |
+| Catégorie standard / spécifique correctement attribuée à chaque champ | ✅ |
+| Marqueur `@LOCAL_xxx@` stable, jamais réécrit dans le contenu | ✅ |
+| Tri popup en 3 groupes (exploités / erreurs / non exploités) | ✅ |
+| Bouton « Champs » synchronisé avec l'état réel de la popup | ✅ |
+
+### Notes pour l'évolution
+
+- L'identification d'un champ comme **standard** repose sur sa présence dans la liste officielle des champs standards du métier. L'ajout futur d'un nouveau standard à cette liste est automatiquement pris en compte sans modification du Designer.
+- Les **champs système** (Séquentiel, Timbre) gardent leur traitement à part dans tous les mécanismes : ils ne sont jamais affichés à l'utilisateur, jamais vidés par les règles d'absence, et restent gérés par les automatismes de production.
 
 ---
 
