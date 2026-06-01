@@ -34,6 +34,20 @@ si __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesig
 		jsData = jsDesigner
 	fin
 
+	// ─── Préserver le FORMAT D'ORIGINE du document (fond perdu, marge de
+	//     sécurité, format papier) tel qu'enregistré dans JsonDesignerData ──
+	// Sans cela, jsWrapper.data.formatDocument vient de
+	// ComposerJsonDesignerCreation -> RemplirDesignerFormat, qui le recalcule
+	// à partir de stDoc.EstFondPerdu / stDoc.tabPagePDF. Ces données ne sont
+	// pas rechargées à la réouverture d'une opération -> on bascule dans la
+	// branche "sans fond perdu" -> fpOffset = 0 -> la bande de fond perdu
+	// disparaît et les zones utilisateur (coordonnées exprimées depuis le bord
+	// rogné) se retrouvent collées au bord. Le format stocké dans
+	// JsonDesignerData est la source de vérité : on l'impose au wrapper.
+	si jsData.formatDocument..Existe alors
+		jsWrapper.data.formatDocument = jsData.formatDocument
+	fin
+
 	// ─── Fusion des zones utilisateur dans le wrapper ───────────────────
 	// Les zones système (sys-adresse-*) déjà présentes dans le wrapper
 	// sont préservées. On y ajoute les zones du modèle/utilisateur.

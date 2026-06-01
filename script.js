@@ -26322,7 +26322,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Calculer et stocker les offsets de fond perdu (mm et px)
         computeFondPerduOffset();
-        
+
         // Stocker les champs de fusion disponibles et mettre à jour l'UI
         // V3.4 - On préserve désormais les propriétés `localId` et
         //        `echantillonDefaut` portées par les champs (assignation
