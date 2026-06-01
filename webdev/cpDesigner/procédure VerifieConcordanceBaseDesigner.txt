@@ -1,0 +1,410 @@
+// =============================================================================
+// cpDesigner.VerifieConcordanceBaseDesigner
+// Rôle : Vérifier la concordance entre la base de données du projet courrier
+//        et les champs RÉELLEMENT INSÉRÉS dans les documents Designer.
+//        Produit un INVENTAIRE des anomalies (structDesignerRapportConcordance),
+//        organisé PAR DOCUMENT. NE BLOQUE PAS (procédure de calcul).
+//
+// Points d'appel :
+//   - Bouton « Vérification » du tunnel (affichage du rapport détaillé).
+//   - Partage.OpérationPrêtePourValidation (cas courrier) : alimente
+//     ElementManquant -> bloque la VALIDATION (pas l'enregistrement).
+//
+// Périmètre : sens Designer -> base. Champs insérés uniquement (toutes zones :
+//   texte via embeds quillDelta, code-barres/QR via champFusion + qrConfig,
+//   image via source.champFusion). Zones système (id "sys-*") exclues, ainsi
+//   que les champs SYS (Séquentiel, Timbre, QR « Cliquez ici »).
+//
+// Comparaison STRICTE (casse + accents — significatif en production PSMD).
+//   Standard (clé @nom@) : nom technique comparé aux .Champ de taaBaseChamp.
+//   Spécifique (clé @LOCAL_xxx@) : libellé (résolu via champsFusion) comparé
+//   aux CLÉS (libellés) de taaBaseChamp.
+//   3 niveaux : exact (=) -> OK ; égal à la casse près (accents respectés) ->
+//   ECART_CASSE ; sinon -> ABSENT.
+//
+// Paramètres :
+//   stOperation     (structOperation)
+//   pIndexDocument  (entier, défaut 0) : 0 = TOUS les documents ; > 0 = ne
+//                   vérifier QUE le document à cette position dans
+//                   tabStDocument (pour un bouton « Vérification » par document).
+// Retour    : structDesignerRapportConcordance
+// =============================================================================
+PROCÉDURE VerifieConcordanceBaseDesigner(stOperation est une structOperation, pIndexDocument est un entier = 0) : structDesignerRapportConcordance
+
+stRapport			est une structDesignerRapportConcordance
+taaColonnesBase		est un tableau associatif de structBaseChamp = stOperation.taaBaseChamp
+taaStandardParNom	est un tableau associatif de booléens
+tabStandards		est un tableau de structDesignerChampStandard
+
+// Contexte par document (locals partagés avec les procédures internes)
+nIndexDoc			est un entier		= 0
+sDesignation		est une chaîne		= ""
+taaLocalLibelle		est un tableau associatif de chaînes		// "LOCAL_xxx" -> libellé
+taaLibelleCount		est un tableau associatif d'entiers			// libellé -> nb occurrences (doublon)
+tabClesCollecte		est un tableau de chaînes					// clés insérées du document courant
+taaVuCollecte		est un tableau associatif de booléens		// dédup de la collecte
+
+bAvecBase			est un booléen		= Faux
+
+
+// ─── Index des noms techniques standards (distinguer "champ inconnu") ───
+tabStandards = RemplirDesignerChampsStandard(stOperation.IdClient)
+POUR TOUT stStd DE tabStandards
+	taaStandardParNom[stStd.nom] = Vrai
+FIN
+
+// ─── Détection « base chargée » (pattern ComposerJsonDesignerCreation) ───
+POUR TOUT stBase DE stOperation.tabBase
+	SI stBase.EstSupprime = Faux ALORS
+		bAvecBase = Vrai
+		SORTIR
+	FIN
+FIN
+stRapport.BaseChargee = bAvecBase
+
+// ─── Parcours des documents du projet ───────────────────────────────────
+nIndexDoc = 0
+POUR TOUT stDocument DE stOperation.stOperationLettre.tabStDocument
+	nIndexDoc++
+	// Filtre document ciblé (pIndexDocument > 0) + documents personnalisés
+	SI (pIndexDocument = 0 _OU_ nIndexDoc = pIndexDocument) _ET_ stDocument.JsonDesignerData <> "" ALORS
+		sDesignation = stDocument.Designation
+
+		CollecteChampsInseres(stDocument.JsonDesignerData)		// remplit tabClesCollecte
+
+		SI tabClesCollecte..Occurrence > 0 ALORS
+			SI bAvecBase = Faux ALORS
+				// Cas n°2 : champs insérés sans base. (Réservé au bouton ;
+				//   à la validation l'appelant ne nous invoque que si base
+				//   chargée -> pas de doublon avec « Base de données ».)
+				AjouteAnomalie(nIndexDoc, sDesignation, "AUCUNE_BASE", "", "", "", "Des champs de fusion sont insérés alors qu'aucune base n'est chargée.")
+			SINON
+				ChargeChampsFusion(stDocument.JsonDesignerData)	// remplit taaLocalLibelle + taaLibelleCount
+				POUR TOUT sCle DE tabClesCollecte
+					AnalyseUneCle(sCle)
+				FIN
+			FIN
+		FIN
+	FIN
+FIN
+
+stRapport.NbAnomalies	= stRapport.tabAnomalies..Occurrence
+stRapport.EstConcordant	= (stRapport.NbAnomalies = 0)
+
+RENVOYER stRapport
+
+
+// ═════════════════════════════════════════════════════════════════════════
+// PROCÉDURES INTERNES
+// ═════════════════════════════════════════════════════════════════════════
+
+	// ─── Nettoyage d'une clé (retire @, convertit nbsp, trim) ───────────────
+	PROCÉDURE INTERNE NettoieCle(LOCAL pCle est une chaîne)
+		sR est une chaîne = Remplace(pCle, "@", "")
+		sR = Remplace(sR, Caract(160), " ")		// espace insécable -> espace normal
+		sR = SansEspace(sR)
+		RENVOYER sR
+	FIN
+
+	// ─── Ajout d'une clé collectée (nettoyée, non vide, dédupliquée) ────────
+	PROCÉDURE INTERNE AjouteCle(LOCAL pCleRaw est une chaîne)
+		sCle est une chaîne = NettoieCle(pCleRaw)
+		SI sCle <> "" _ET_ taaVuCollecte[sCle]..Existe = Faux ALORS
+			taaVuCollecte[sCle] = Vrai
+			tabClesCollecte.Ajoute(sCle)
+		FIN
+	FIN
+
+	// ─── Zone système ? (id commence par "sys-") ────────────────────────────
+	PROCÉDURE INTERNE EstZoneSysteme(LOCAL jZone est un JSON)
+		sId est une chaîne = ""
+		QUAND EXCEPTION DANS
+			SI jZone.id..Existe ALORS
+				sId = jZone.id
+			FIN
+		FAIRE
+		FIN
+		RENVOYER (Gauche(sId, 4) = "sys-")
+	FIN
+
+	// ─── Extraction des marqueurs @KEY@ d'un texte (qrConfig sérialisé) ─────
+	//   Filtre : un marqueur de champ ne contient pas d'espace interne.
+	PROCÉDURE INTERNE ExtraireMarqueurs(LOCAL pTexte est une chaîne)
+		sM		est une chaîne
+		sClean	est une chaîne
+		SI pTexte <> "" ALORS
+			sM = ExtraitChaîneEntre(pTexte, rangPremier, "@", "@")
+			TANTQUE sM <> EOT
+				sClean = NettoieCle(sM)
+				SI sClean <> "" _ET_ Position(sClean, " ") = 0 ALORS
+					AjouteCle(sClean)
+				FIN
+				sM = ExtraitChaîneEntre(pTexte, rangSuivant, "@", "@")
+			FIN
+		FIN
+	FIN
+
+	// ─── Extraction des clés d'embeds merge-tag d'un quillDelta sérialisé ───
+	//   Motif "key":"xxx" — identique à GenererPsmdServeurDocument (L18/A44 v5).
+	PROCÉDURE INTERNE ExtraireClesEmbed(LOCAL pTexte est une chaîne)
+		sK est une chaîne
+		SI pTexte <> "" ALORS
+			sK = ExtraitChaîneEntre(pTexte, rangPremier, """key"":""", """")
+			TANTQUE sK <> EOT
+				AjouteCle(sK)
+				sK = ExtraitChaîneEntre(pTexte, rangSuivant, """key"":""", """")
+			FIN
+		FIN
+	FIN
+
+	// ─── Collecte des champs réellement insérés dans un document ────────────
+	//   Remplit tabClesCollecte (réinitialisé à chaque appel).
+	PROCÉDURE INTERNE CollecteChampsInseres(LOCAL pJson est une chaîne)
+		jDoc	est un JSON
+		jData	est un JSON
+		bJsonOk	est un booléen	= Vrai
+
+		tabClesCollecte.SupprimeTout()
+		taaVuCollecte.SupprimeTout()
+
+		SI pJson <> "" ALORS
+			QUAND EXCEPTION DANS
+				jDoc = pJson
+			FAIRE
+				bJsonOk = Faux
+			FIN
+
+			SI bJsonOk ALORS
+				SI jDoc.data..Existe ALORS
+					jData = jDoc.data
+				SINON
+					jData = jDoc
+				FIN
+
+				// Zones texte : embeds quillDelta (motif "key":"...")
+				SI jData.zonesTexte..Existe ALORS
+					POUR nZ = 1 _À_ jData.zonesTexte..Occurrence
+						SI EstZoneSysteme(jData.zonesTexte[nZ]) = Faux ALORS
+							SI jData.zonesTexte[nZ].quillDelta..Existe ALORS
+								ExtraireClesEmbed(JSONVersChaîne(jData.zonesTexte[nZ].quillDelta))
+							FIN
+						FIN
+					FIN
+				FIN
+
+				// Zones code-barres : champFusion + tokens qrConfig
+				SI jData.zonesCodeBarres..Existe ALORS
+					POUR nZ = 1 _À_ jData.zonesCodeBarres..Occurrence
+						SI EstZoneSysteme(jData.zonesCodeBarres[nZ]) = Faux ALORS
+							SI jData.zonesCodeBarres[nZ].champFusion..Existe ALORS
+								AjouteCle(jData.zonesCodeBarres[nZ].champFusion)
+							FIN
+							SI jData.zonesCodeBarres[nZ].qrConfig..Existe ALORS
+								ExtraireMarqueurs(JSONVersChaîne(jData.zonesCodeBarres[nZ].qrConfig))
+							FIN
+						FIN
+					FIN
+				FIN
+
+				// Zones QR : champFusion + tokens qrConfig
+				SI jData.zonesQR..Existe ALORS
+					POUR nZ = 1 _À_ jData.zonesQR..Occurrence
+						SI EstZoneSysteme(jData.zonesQR[nZ]) = Faux ALORS
+							SI jData.zonesQR[nZ].champFusion..Existe ALORS
+								AjouteCle(jData.zonesQR[nZ].champFusion)
+							FIN
+							SI jData.zonesQR[nZ].qrConfig..Existe ALORS
+								ExtraireMarqueurs(JSONVersChaîne(jData.zonesQR[nZ].qrConfig))
+							FIN
+						FIN
+					FIN
+				FIN
+
+				// Zones image : source.champFusion
+				SI jData.zonesImage..Existe ALORS
+					POUR nZ = 1 _À_ jData.zonesImage..Occurrence
+						SI EstZoneSysteme(jData.zonesImage[nZ]) = Faux ALORS
+							SI jData.zonesImage[nZ].source..Existe ALORS
+								SI jData.zonesImage[nZ].source.champFusion..Existe ALORS
+									AjouteCle(jData.zonesImage[nZ].source.champFusion)
+								FIN
+							FIN
+						FIN
+					FIN
+				FIN
+			FIN
+		FIN
+	FIN
+
+	// ─── Chargement champsFusion (localId -> libellé + comptage doublons) ───
+	PROCÉDURE INTERNE ChargeChampsFusion(LOCAL pJson est une chaîne)
+		jDoc		est un JSON
+		jData		est un JSON
+		bJsonOk		est un booléen	= Vrai
+		sLocalId	est une chaîne
+		sLibelle	est une chaîne
+
+		taaLocalLibelle.SupprimeTout()
+		taaLibelleCount.SupprimeTout()
+
+		SI pJson <> "" ALORS
+			QUAND EXCEPTION DANS
+				jDoc = pJson
+			FAIRE
+				bJsonOk = Faux
+			FIN
+
+			SI bJsonOk ALORS
+				SI jDoc.data..Existe ALORS
+					jData = jDoc.data
+				SINON
+					jData = jDoc
+				FIN
+
+				SI jData.champsFusion..Existe ALORS
+					POUR nC = 1 _À_ jData.champsFusion..Occurrence
+						sLocalId = ""
+						sLibelle = ""
+						QUAND EXCEPTION DANS
+							SI jData.champsFusion[nC].localId..Existe ALORS
+								sLocalId = jData.champsFusion[nC].localId
+							FIN
+							SI jData.champsFusion[nC].libelle..Existe ALORS
+								sLibelle = jData.champsFusion[nC].libelle
+							FIN
+						FAIRE
+						FIN
+						SI sLocalId <> "" _ET_ sLocalId <> "0" ALORS
+							taaLocalLibelle["LOCAL_" + sLocalId] = sLibelle
+						FIN
+						SI sLibelle <> "" ALORS
+							SI taaLibelleCount[sLibelle]..Existe ALORS
+								taaLibelleCount[sLibelle] = taaLibelleCount[sLibelle] + 1
+							SINON
+								taaLibelleCount[sLibelle] = 1
+							FIN
+						FIN
+					FIN
+				FIN
+			FIN
+		FIN
+	FIN
+
+	// ─── Champ SYSTÈME ? (exclu de la vérification) ─────────────────────────
+	PROCÉDURE INTERNE EstChampSysteme(LOCAL pCle est une chaîne)
+		bSys	est un booléen	= Faux
+		sCleN	est une chaîne	= NettoieCle(pCle)
+		SI sCleN = "Sequentiel" _OU_ sCleN = "Timbre" ALORS
+			bSys = Vrai
+		FIN
+		QUAND EXCEPTION DANS
+			SI sCleN = __CHAMP_CLIQUEZ_ICI__ ALORS
+				bSys = Vrai
+			FIN
+		FAIRE
+		FIN
+		RENVOYER bSys
+	FIN
+
+	// ─── Comparaison stricte d'une valeur aux colonnes de la base ───────────
+	//   pCompareLibelle = Vrai -> comparer aux CLÉS (libellés) de taaColonnesBase
+	//   pCompareLibelle = Faux -> comparer aux .Champ (noms techniques)
+	//   Renvoie "OK" / "ECART_CASSE" / "ABSENT".
+	PROCÉDURE INTERNE CompareConcordanceStricte(LOCAL pValeur est une chaîne, LOCAL pCompareLibelle est un booléen)
+		sResultat	est une chaîne	= "ABSENT"
+		bEcartCasse	est un booléen	= Faux
+		bTrouveExact est un booléen	= Faux
+		sValMaj		est une chaîne	= Majuscule(pValeur)
+		sCible		est une chaîne
+
+		POUR TOUT stChamp, sLibelle DE taaColonnesBase
+			SI stChamp.EstSupprimé = Faux _ET_ bTrouveExact = Faux ALORS
+				SI pCompareLibelle ALORS
+					sCible = sLibelle
+				SINON
+					sCible = stChamp.Champ
+				FIN
+				SI sCible <> "" ALORS
+					// Comparaison stricte (casse + accents) : un seul "=" en WLangage
+					SI pValeur = sCible ALORS
+						bTrouveExact = Vrai
+					SINON
+						// Égalité à la casse près mais accents respectés
+						SI Majuscule(sCible) = sValMaj ALORS
+							bEcartCasse = Vrai
+						FIN
+					FIN
+				FIN
+			FIN
+		FIN
+
+		SI bTrouveExact ALORS
+			sResultat = "OK"
+		SINON SI bEcartCasse ALORS
+			sResultat = "ECART_CASSE"
+		FIN
+		RENVOYER sResultat
+	FIN
+
+	// ─── Ajout d'une anomalie au rapport ────────────────────────────────────
+	PROCÉDURE INTERNE AjouteAnomalie(LOCAL pIndexDoc est un entier, LOCAL pDesignation est une chaîne, LOCAL pType est une chaîne, LOCAL pCle est une chaîne, LOCAL pResolu est une chaîne, LOCAL pNature est une chaîne, LOCAL pDetail est une chaîne)
+		stA est une structDesignerAnomalieConcordance
+		stA.IndexDocument	= pIndexDoc
+		stA.Designation		= pDesignation
+		stA.TypeProbleme	= pType
+		stA.CleInseree		= pCle
+		stA.LibelleResolu	= pResolu
+		stA.Nature			= pNature
+		stA.Detail			= pDetail
+		stRapport.tabAnomalies.Ajoute(stA)
+	FIN
+
+	// ─── Analyse d'une clé insérée -> 0 ou 1 anomalie ───────────────────────
+	PROCÉDURE INTERNE AnalyseUneCle(LOCAL pCle est une chaîne)
+		sVerdict		est une chaîne
+		sLibelleResolu	est une chaîne
+		sDet			est une chaîne
+
+		SI EstChampSysteme(pCle) = Faux ALORS
+			SI Gauche(pCle, 6) = "LOCAL_" ALORS
+				// ─── SPÉCIFIQUE ───
+				SI taaLocalLibelle[pCle]..Existe = Faux ALORS
+					sDet = "Le champ inséré « " + pCle + " » n'a plus de définition (libellé non résolvable)."
+					AjouteAnomalie(nIndexDoc, sDesignation, "NON_RESOLVABLE", pCle, "", "specifique", sDet)
+				SINON
+					sLibelleResolu = taaLocalLibelle[pCle]
+					SI sLibelleResolu = "" ALORS
+						sDet = "Un champ spécifique inséré a un libellé vide (ambigu)."
+						AjouteAnomalie(nIndexDoc, sDesignation, "AMBIGU", pCle, "", "specifique", sDet)
+					SINON SI taaLibelleCount[sLibelleResolu] > 1 ALORS
+						sDet = "Le libellé « " + sLibelleResolu + " » est utilisé par plusieurs champs (ambigu)."
+						AjouteAnomalie(nIndexDoc, sDesignation, "AMBIGU", pCle, sLibelleResolu, "specifique", sDet)
+					SINON
+						sVerdict = CompareConcordanceStricte(sLibelleResolu, Vrai)
+						SI sVerdict = "ECART_CASSE" ALORS
+							sDet = "Écart de casse : « " + sLibelleResolu + " » ne correspond pas exactement à la colonne de la base (la casse est significative en production)."
+							AjouteAnomalie(nIndexDoc, sDesignation, "ECART_CASSE", pCle, sLibelleResolu, "specifique", sDet)
+						SINON SI sVerdict = "ABSENT" ALORS
+							sDet = "Le champ « " + sLibelleResolu + " » est absent de la base."
+							AjouteAnomalie(nIndexDoc, sDesignation, "ABSENT", pCle, sLibelleResolu, "specifique", sDet)
+						FIN
+					FIN
+				FIN
+			SINON
+				// ─── STANDARD ou INCONNU (clé = nom technique) ───
+				sVerdict = CompareConcordanceStricte(pCle, Faux)
+				SI sVerdict = "ABSENT" _ET_ taaStandardParNom[pCle]..Existe = Faux ALORS
+					sDet = "Le champ « " + pCle + " » est inconnu (ni champ standard, ni colonne de la base)."
+					AjouteAnomalie(nIndexDoc, sDesignation, "CHAMP_INCONNU", pCle, pCle, "", sDet)
+				SINON
+					SI sVerdict = "ECART_CASSE" ALORS
+						sDet = "Écart de casse : « " + pCle + " » ne correspond pas exactement à la colonne de la base (la casse est significative en production)."
+						AjouteAnomalie(nIndexDoc, sDesignation, "ECART_CASSE", pCle, pCle, "standard", sDet)
+					SINON SI sVerdict = "ABSENT" ALORS
+						sDet = "Le champ standard « " + pCle + " » est absent de la base."
+						AjouteAnomalie(nIndexDoc, sDesignation, "ABSENT", pCle, pCle, "standard", sDet)
+					FIN
+				FIN
+			FIN
+		FIN
+	FIN

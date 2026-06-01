@@ -31637,8 +31637,33 @@ document.addEventListener('DOMContentLoaded', () => {
          * Valide le libellé saisi (cf. cahier §7.4).
          * @returns {{ok: true}|{ok: false, error: string, suggestStandard?: Object}}
          */
+        // Normalise un libellé pour la COMPARAISON anti-doublon :
+        //   - insensible à la CASSE (minuscule)
+        //   - insensible aux ACCENTS (décomposition NFD + retrait des diacritiques)
+        //   - SENSIBLE aux ESPACES (on ne touche pas aux espaces internes ;
+        //     seul un trim de bord est appliqué côté appelant avant comparaison)
+        // « Véhicule » == « vehicule » == « VEHICULE », mais « Code Postal » != « CodePostal ».
+        // Met le libellé en « Title Case » : 1ère lettre de CHAQUE MOT en
+        //   MAJUSCULE, le reste en MINUSCULE. Séparateurs de mots (conservés) :
+        //   espace, tiret, underscore. « date de livraison » → « Date De
+        //   Livraison » ; « DATE DE LIVRAISON » → « Date De Livraison ».
+        //   La longueur est préservée (changement de casse seul).
+        function toTitleCaseLibelle(value) {
+            return String(value || '').replace(/[^\s_\-]+/g, function (mot) {
+                return mot.charAt(0).toUpperCase() + mot.slice(1).toLowerCase();
+            });
+        }
+
+        function normalizeLibelleCompare(value) {
+            let s = String(value || '').trim().toLowerCase();
+            try {
+                s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            } catch (e) { /* normalize non dispo : on garde la version lowercase */ }
+            return s;
+        }
+
         function validateLibelle(rawLibelle, currentChamp) {
-            const libelle = String(rawLibelle || '').trim();
+            let libelle = String(rawLibelle || '').trim();
             if (!libelle) {
                 return { ok: false, error: 'Le libellé est obligatoire.' };
             }
@@ -31648,29 +31673,48 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!LIBELLE_REGEX.test(libelle)) {
                 return { ok: false, error: 'Caractères autorisés : lettres, chiffres, espaces, tirets et underscores.' };
             }
-            // Unicité (insensible à la casse) hors champ en cours d'édition
+            // RÈGLE 1 — Doit COMMENCER PAR UNE LETTRE (accentuées incluses :
+            //   é, à, ç…). Chiffre ou caractère spécial en tête → REFUS.
+            let startsWithLetter;
+            try {
+                startsWithLetter = /^\p{L}/u.test(libelle);
+            } catch (e) {
+                // Repli si \p{L} non supporté par le moteur
+                startsWithLetter = /^[A-Za-zÀ-ÖØ-öø-ÿ]/.test(libelle);
+            }
+            if (!startsWithLetter) {
+                return { ok: false, error: 'Le libellé doit commencer par une lettre.' };
+            }
+            // RÈGLE 1 (suite) — CORRECTION AUTO en « Title Case » : 1ère lettre
+            //   de CHAQUE MOT en majuscule, le reste en minuscule
+            //   (« date de livraison » → « Date De Livraison »).
+            libelle = toTitleCaseLibelle(libelle);
+
+            // RÈGLE 2 — ANTI-DOUBLON (insensible casse+accents, sensible aux
+            //   espaces), sur la version corrigée du libellé. Comparaison aux
+            //   SPÉCIFIQUES déjà déclarés ET aux STANDARDS (réf. officielle).
+            const norm = normalizeLibelleCompare(libelle);
             const champs = (documentState && Array.isArray(documentState.champsFusion))
                 ? documentState.champsFusion : [];
-            const lower = libelle.toLowerCase();
+            // Doublon avec un autre champ existant (jamais avec LUI-MÊME en édition)
             const conflict = champs.find(c => {
                 if (!c || c === currentChamp) return false;
-                return (c.libelle || '').toLowerCase() === lower;
+                return normalizeLibelleCompare(c.libelle || '') === norm;
             });
             if (conflict) {
-                return { ok: false, error: 'Ce libellé est déjà utilisé par un autre champ.' };
+                return { ok: false, error: 'Un champ portant ce nom existe déjà.' };
             }
-            // Garde-fou : suggérer le standard équivalent (cf. §7.4)
+            // Doublon avec un STANDARD officiel (libellé) → REFUS également :
+            //   un spécifique ne peut pas porter le même nom qu'un standard.
             const standards = (typeof getChampsStandardDisponibles === 'function')
                 ? getChampsStandardDisponibles() : [];
-            const standardMatch = standards.find(s => (s.libelle || '').toLowerCase() === lower);
+            const standardMatch = standards.find(s => normalizeLibelleCompare(s.libelle || '') === norm);
             if (standardMatch) {
-                // Vérifier qu'il n'est pas déjà inséré (sinon le doublon est déjà bloqué ci-dessus)
-                const alreadyInserted = champs.some(c => c && c.nom === standardMatch.nom);
-                if (!alreadyInserted) {
-                    return { ok: true, suggestStandard: standardMatch };
-                }
+                return { ok: false, error: 'Un champ portant ce nom existe déjà.' };
             }
-            return { ok: true };
+            // OK — on renvoie le libellé CORRIGÉ (1ère lettre majuscule) pour
+            //   que la création/modification utilise cette version.
+            return { ok: true, libelle: libelle };
         }
 
         // ─── Format/validation de l'échantillon par type ─────────────────
@@ -32218,13 +32262,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     errorLibelle.classList.remove('hidden');
                     return;
                 }
-                // Garde-fou suggestion standard
-                if (vLib.suggestStandard && state.mode === 'create') {
-                    pendingSuggest = vLib.suggestStandard;
-                    suggestLibelleEl.textContent = vLib.suggestStandard.libelle;
-                    suggestModal.classList.remove('hidden');
-                    return; // L'utilisateur tranche via la modale de suggestion
-                }
+                // RÈGLE 1 — Reporter le libellé CORRIGÉ (1ère lettre majuscule)
+                //   dans le champ de saisie : toute la suite (addChampSpecifique
+                //   / editChamp) lit inputLibelle.value et utilisera donc la
+                //   version corrigée et dédoublonnée.
+                if (vLib.libelle) inputLibelle.value = vLib.libelle;
             }
 
             // Validation échantillon (selon type)
@@ -32669,6 +32711,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         inputLibelle.addEventListener('input', () => {
+            // RÈGLE 1 — Masque de saisie « Title Case » pendant la frappe :
+            //   1ère lettre de chaque mot en MAJUSCULE, le reste en minuscule
+            //   (« date de livraison » → « Date De Livraison »). La longueur
+            //   ne change pas → le curseur est préservé tel quel.
+            const val = inputLibelle.value;
+            const titled = toTitleCaseLibelle(val);
+            if (titled !== val) {
+                const selStart = inputLibelle.selectionStart;
+                const selEnd = inputLibelle.selectionEnd;
+                inputLibelle.value = titled;
+                try { inputLibelle.setSelectionRange(selStart, selEnd); } catch (e) { /* defensive */ }
+            }
             updateLibelleCounter();
             // Validation à la volée
             const currentChamp = state.mode === 'edit'

@@ -1,0 +1,56 @@
+stMontantDue est une structMontantDue
+bEstOperationPretePourValidation est un booléen
+
+si _bSauvegardeEnCours = Vrai alors
+	retour
+fin
+
+// En modification, on vérifie le statut de l'opération avant de valider
+si __stOperation.IdOperation > 0 alors
+	si dos_operation.LitRecherchePremier(IdOperation,__stOperation.IdOperation) alors
+		si dos_operation.Statut > __Statut_Prise_En_Charge__ alors
+			popJaugeProgression.Ferme()
+			PopupAfficheMessage("Votre opération est actuellement au statut : " + Partage.LibelleStatutOperation(dos_operation.Statut),"Modification impossible",dos_operation.TypeOperation,__TOAST_ANNULATION__)
+			PageAffiche(pgeAccueil)
+		fin
+	sinon
+		popJaugeProgression.Ferme()
+		PopupAfficheMessage("Votre opération est introuvable","Modification impossible",dos_operation.TypeOperation,__TOAST_ANNULATION__)
+		PageAffiche(pgeAccueil)
+	fin
+fin
+
+si PageMémorise() alors
+
+	si Partage.VerificationChampsPersonnalisation(__stOperation) = Vrai alors
+
+		_bSauvegardeEnCours 				= Vrai
+
+		bEstOperationPretePourValidation	= Partage.OpérationPrêtePourValidation(__stOperation,Partage.__vcUser.IDContact)
+		stMontantDue						= Partage.OpérationMontantDue(__stOperation)
+		__stOperation.ResteAPayer			= stMontantDue.ResteAPayer
+
+		si EnregistreOperation() alors
+			si bEstOperationPretePourValidation = Vrai // On est le valideur
+				si stMontantDue.MontantDuePaybox = 0 alors 	// Celui que l'on facture est en compte
+					si Partage.__vcUser.IDClient = __stOperation.IdClient _ou_ Partage.__vcUser.IDClient = __stOperation.IdClientFacturation alors // Opération pour moi même ou c'est moi qui paye
+						popValidation..Plan = 2 // On propose de payer ou de valider
+					sinon
+						popValidation..Plan = 1	// Opération pour ma fille prête à valider
+					fin
+				sinon
+					popValidation..Plan = 2 // Prépare le plan de paiement
+				fin
+				popJaugeProgression.Ferme()
+				PopupAffiche(popValidation,popupHautCentre+popupEpinglée)
+			sinon
+				popJaugeProgression.Ferme()
+				PageAffiche(pgeAccueil)
+			fin
+		fin
+	fin
+
+sinon
+	popJaugeProgression.Ferme()
+	_bSauvegardeEnCours = Faux
+fin

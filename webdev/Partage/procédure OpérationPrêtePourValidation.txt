@@ -1,0 +1,279 @@
+procédure OpérationPrêtePourValidation(stOperation est une structOperation, pIdContact)
+
+bEstDocumentOk						est un booléen
+bEstBaseOk							est un booléen
+dhSaveDateHeureValidation			est une DateHeure
+sPuceNiveau1						est une chaîne
+sPuceNiveau2						est une chaîne
+
+sLien								est une chaîne
+stIciBlocValeurTexte				est une structIciBlocValeurTexte
+stIciBlocValeurAdresse				est une structIciBlocValeurAdresse
+stIciBlocValeurTexteDefilant		est une structIciBlocValeurTexteDefilant
+stIciBlocValeurBanniere				est une structIciBlocValeurBanniere
+stIciBlocValeurFormulaire			est une structIciBlocValeurFormulaire
+stIciBlocValeurGrattage				est une structIciBlocValeurGrattage
+stIciBlocValeurImage				est une structIciBlocValeurImage
+stIciBlocValeurOffre				est une structIciBlocValeurOffre
+stIciBlocValeurHtml					est une structIciBlocValeurHtml
+stIciBlocValeurCountdown			est une structIciBlocValeurCountdown
+stIciBlocValeurSocial				est une structIciBlocValeurSocial
+stIciBlocValeurLien					est une structIciBlocValeurLien
+stIciBlocValeurCgv					est une structIciBlocValeurCgv
+
+sReseauxSociaux 					est une chaîne
+sElementManquant					est une chaîne
+sLandingManquant					est une chaîne
+
+//sPuceNiveau1 = "&#9679; "		// ●
+//sPuceNiveau2 = "&#10687; "	// ⦿
+//sPuceNiveau3 = "&#9675; "		// ○
+//sPuceNiveau3 = "&#9702; "		// ◦
+
+sPuceNiveau1 = "&#9726; "	// ◾
+sPuceNiveau2 = "&#9642; "	// ▪
+
+
+si pIdContact = 0 alors
+	renvoyer Faux
+fin
+
+// On annule la validation au cas ou l'opération à été modifié et qu'elle n'est plus valide
+si DateHeureValide(stOperation.DateHeureValidation) alors
+	dhSaveDateHeureValidation = stOperation.DateHeureValidation
+	stOperation.DateHeureValidation = ""
+fin
+
+
+selon stOperation.TypeOperation
+	cas __OPERATION_TRACTEVA__, __OPERATION_SMARTEVA__
+		si stOperation.stOperationTract.IdEtude = 0 alors
+			sElementManquant += [RC] + sPuceNiveau1 + "Étude de cible"
+		fin
+
+	autre cas
+		pour tout stBase de stOperation.tabBase
+			si stBase.EstSupprime = Faux alors
+				bEstBaseOk = Vrai
+				sortir
+			fin
+		fin
+		si bEstBaseOk = Faux alors
+			sElementManquant += [RC] + sPuceNiveau1 + "Base de données"
+		fin
+
+fin
+
+
+selon stOperation.TypeOperation
+	cas __OPERATION_COURRIER__, __OPERATION_SMARTEVA__, __OPERATION_TRACTEVA__
+		bEstDocumentOk = (stOperation.stOperationLettre.tabStDocument.Cherche(tcLinéaire,"EstDocumentEnAttente",1) < 0)
+		pour tout stDocument de stOperation.stOperationLettre.tabStDocument
+			si stDocument.EstDocumentEnAttente alors
+				sElementManquant += [RC] + sPuceNiveau1 + stDocument.LibelleTypeSupport + " " + stDocument.LibelleSupport
+			fin
+		fin
+
+	cas __OPERATION_SMS__
+		bEstDocumentOk = (stOperation.stOperationSms.Message <> "")
+		si bEstDocumentOk = Faux alors
+			sElementManquant += [RC] + sPuceNiveau1 + "Message SMS"
+		fin
+
+	cas __OPERATION_VMS__
+		bEstDocumentOk = (stOperation.stOperationVms.IdMessage > 0)
+		si bEstDocumentOk = Faux alors
+			sElementManquant += [RC] + sPuceNiveau1 + "Message VMS"
+		fin
+
+	cas __OPERATION_EMAIL__
+		bEstDocumentOk = (stOperation.stOperationEmail.Corps <> "")
+		si bEstDocumentOk = Faux alors
+			sElementManquant += [RC] + sPuceNiveau1 + "Message EMAIL"
+		fin
+
+	cas __OPERATION_TEL__
+		bEstDocumentOk = (stOperation.stOperationCallCenter.tabQuestionnaire..Occurrence > 0)
+		si bEstDocumentOk = Faux alors
+			sElementManquant += [RC] + sPuceNiveau1 + "Script"
+		fin
+
+	autres cas : bEstDocumentOk = Faux
+fin
+
+
+// ─── Concordance base <-> documents Designer (courrier) ───────────────────
+//   Toute anomalie de concordance BLOQUE la validation (en alimentant
+//   sElementManquant), MAIS pas l'enregistrement (EnregistreOperation() n'est
+//   pas conditionné par le booléen de readiness, cf. btnSauvegardeTunnel).
+//   On n'invoque la vérification que si une base est chargée (bEstBaseOk) :
+//   sinon « Base de données » couvre déjà le cas, on évite le doublon
+//   (AUCUNE_BASE reste réservé au bouton « Vérification » informatif).
+si stOperation.TypeOperation = __OPERATION_COURRIER__ _et_ bEstBaseOk alors
+	// Mode « tous les documents » (pIndexDocument = 0) — bloque la validation.
+	stRapportConcordance est une structDesignerRapportConcordance = cpDesigner.VerifieConcordanceBaseDesigner(stOperation, 0)
+	si stRapportConcordance.NbAnomalies > 0 alors
+		sElementManquant += [RC] + sPuceNiveau1 + "Concordance des champs avec la base :"
+		// pAfficheDocument = Vrai : arborescence avec le nom de chaque document.
+		sElementManquant += cpDesigner.RapportConcordanceVersTexte(stRapportConcordance, Vrai, sPuceNiveau2, sPuceNiveau2, "")
+	fin
+fin
+
+
+stOperation.EstLandingPageEnAttente = Faux
+
+
+si stOperation.EstCliquezIci = Vrai alors
+	selon stOperation.stNouveauCliquezIci.Type
+		cas __ICI_URL_FIXE__, __ICI_URL_TRACKING__
+			si stOperation.stNouveauCliquezIci.UrlClient = "" alors
+				sElementManquant += [RC] + sPuceNiveau1 + "URL Landing page"
+			fin
+
+		cas __ICI_WEB__
+			pour tout stBloc de stOperation.stNouveauCliquezIci.tabBloc
+				selon stBloc.Type
+					cas __BLOC_TEXTE__
+						Désérialise(stIciBlocValeurTexte,stBloc.Valeur,psdJSON)
+						si stIciBlocValeurTexte.Texte.SansEspace() = "" alors
+							sLandingManquant += [RC] + TAB + sPuceNiveau2 + stBloc.Nom
+						fin
+
+					cas __BLOC_ADRESSE__
+						Désérialise(stIciBlocValeurAdresse,stBloc.Valeur,psdJSON)
+						si stIciBlocValeurAdresse.TabValeur.Occurrence = 0 alors
+							sLandingManquant += [RC] + TAB + sPuceNiveau2 + stBloc.Nom
+						fin
+
+					cas __BLOC_LIEN__
+						Désérialise(stIciBlocValeurLien,stBloc.Valeur,psdJSON)
+						si stIciBlocValeurLien.Libellé.SansEspace() = "" _ou_ stIciBlocValeurLien.Lien.SansEspace() = "" alors
+							sLandingManquant += [RC] + TAB + sPuceNiveau2 + stBloc.Nom
+						fin
+
+					cas __BLOC_OFFRE__
+						Désérialise(stIciBlocValeurOffre,stBloc.Valeur,psdJSON)
+						si stIciBlocValeurOffre.tabOffre.Occurrence = 0 alors
+							sLandingManquant += [RC] + TAB + sPuceNiveau2 + stBloc.Nom
+						fin
+
+					cas __BLOC_TEXTE_DEFILANT__
+						Désérialise(stIciBlocValeurTexteDefilant,stBloc.Valeur,psdJSON)
+						si stIciBlocValeurTexteDefilant.tabTexte.Occurrence = 0 alors
+							sLandingManquant += [RC] + TAB + sPuceNiveau2 + stBloc.Nom
+						fin
+
+					cas __BLOC_COUNTDOWN__
+						Désérialise(stIciBlocValeurCountdown,stBloc.Valeur,psdJSON)
+						si pas DateHeureValide(stIciBlocValeurCountdown.DateHeureFin) alors
+							sLandingManquant += [RC] + TAB + sPuceNiveau2 + stBloc.Nom
+						fin
+
+					cas __BLOC_SOCIAL__
+						Désérialise(stIciBlocValeurSocial,stBloc.Valeur,psdJSON)
+						si stIciBlocValeurSocial.TabLien.Occurrence = 0 alors
+							sLandingManquant += [RC] + TAB + sPuceNiveau2 + stBloc.Nom
+						sinon
+							pour tout sLien, nLien de stIciBlocValeurSocial.TabLien
+								si sLien.SansEspace() = "" alors
+//									sReseauxSociaux += [RC] + TAB + TAB  + sPuceNiveau3 + LibelleReseauSocial(stIciBlocValeurSocial.TabType[nLien])
+									sLandingManquant += [RC] + TAB + sPuceNiveau2 + stBloc.Nom
+									sortir
+								fin
+							fin
+						fin
+						si sReseauxSociaux <> "" alors
+							sLandingManquant += [RC] + TAB + sPuceNiveau2 + stBloc.Nom + " :"
+							sLandingManquant += [RC] + sReseauxSociaux
+						fin
+
+					cas __BLOC_IMAGE__
+						Désérialise(stIciBlocValeurImage,stBloc.Valeur,psdJSON)
+						si stIciBlocValeurImage.IdImage = 0 alors
+							sLandingManquant += [RC] + TAB + sPuceNiveau2 + stBloc.Nom
+						fin
+
+					cas __BLOC_HTML__
+						Désérialise(stIciBlocValeurHtml,stBloc.Valeur,psdJSON)
+						si stIciBlocValeurHtml.CodeHtml.SansEspace() = "" alors
+							sLandingManquant += [RC] + TAB + sPuceNiveau2 + stBloc.Nom
+						fin
+
+					cas __BLOC_GRATTAGE__
+						Désérialise(stIciBlocValeurGrattage,stBloc.Valeur,psdJSON)
+						si stIciBlocValeurGrattage.IdImage 	= 0 alors
+							sLandingManquant += [RC] + TAB + sPuceNiveau2 + stBloc.Nom
+						fin
+
+					cas __BLOC_FORMULAIRE__
+						Désérialise(stIciBlocValeurFormulaire,stBloc.Valeur,psdJSON)
+						si stIciBlocValeurFormulaire.TabLibelle.Occurrence = 0 alors
+							sLandingManquant += [RC] + TAB + sPuceNiveau2 + stBloc.Nom
+						fin
+
+					cas __BLOC_BANNIERE__
+						Désérialise(stIciBlocValeurBanniere,stBloc.Valeur,psdJSON)
+						si stIciBlocValeurBanniere.tabIdImage..Occurrence = 0 alors
+							sLandingManquant += [RC] + TAB + sPuceNiveau2 + stBloc.Nom
+						fin
+
+					cas __BLOC_CGV__
+						Désérialise(stIciBlocValeurCgv,stBloc.Valeur,psdJSON)
+						si stIciBlocValeurCgv.TabIdCgv..Occurrence = 0 alors
+							sLandingManquant += [RC] + TAB + sPuceNiveau2 + stBloc.Nom
+						fin
+
+					autre cas
+
+				fin
+		fin
+		autres cas
+
+	fin
+
+	si sLandingManquant <> "" alors
+		sLandingManquant = sPuceNiveau1 + "Landing page : " +RC + sLandingManquant
+	fin
+
+	stOperation.EstLandingPageEnAttente = (sLandingManquant <> "")
+fin
+
+sElementManquant += [RC] + sLandingManquant
+
+sElementManquant = sElementManquant.Remplace(RC,"<br>")
+sElementManquant = sElementManquant.Remplace(TAB,"&#8195;")
+
+stOperation.ElementManquant = sElementManquant
+
+si sElementManquant <> "" alors
+	renvoyer Faux
+fin
+
+si stOperation.IdValideur <> pIdContact alors
+	renvoyer Faux
+fin
+
+
+si pas DateValide(stOperation.DateEnvoiSouhaite) alors
+	renvoyer Faux
+fin
+
+si stOperation.DateHeureLimiteValidation < DateHeureSys() alors
+	renvoyer Faux
+fin
+
+si DateHeureValide(dhSaveDateHeureValidation) alors
+	stOperation.DateHeureValidation = dhSaveDateHeureValidation
+	renvoyer Faux // Inutile de valider à nouveau
+fin
+
+renvoyer Vrai
+
+
+	procédure interne LibelleReseauSocial(pCode)
+		si ici_reseau_social.LitRecherchePremier(Code, pCode) alors
+			renvoyer ici_reseau_social.Libelle
+		fin
+		renvoyer pCode
+	fin
+

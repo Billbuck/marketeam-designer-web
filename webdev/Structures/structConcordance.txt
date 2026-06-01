@@ -1,0 +1,23 @@
+// =============================================================================
+// Structures du rapport de vérification de concordance base <-> Designer.
+// Produites par cpDesigner.VerifieConcordanceBaseDesigner(stOperation).
+//   - structDesignerAnomalieConcordance : une anomalie rattachée à un document.
+//   - structDesignerRapportConcordance  : le rapport complet (par document).
+// =============================================================================
+
+structDesignerAnomalieConcordance est une Structure
+	IndexDocument	est un entier		// Position dans tabStDocument (1..n)
+	Designation		est une chaîne		// .Designation du document (titre de section)
+	TypeProbleme	est une chaîne		// "ABSENT" / "ECART_CASSE" / "NON_RESOLVABLE" / "CHAMP_INCONNU" / "AMBIGU" / "AUCUNE_BASE"
+	CleInseree		est une chaîne		// Clé telle qu'insérée (nettoyée)
+	LibelleResolu	est une chaîne		// Libellé lisible (spécifique) ou nom technique (standard)
+	Nature			est une chaîne		// "standard" / "specifique" / ""
+	Detail			est une chaîne		// Message prêt à afficher pour cette anomalie
+fin
+
+structDesignerRapportConcordance est une Structure
+	EstConcordant	est un booléen						// Vrai si 0 anomalie
+	NbAnomalies		est un entier
+	BaseChargee		est un booléen						// Vrai si au moins une base non supprimée
+	tabAnomalies	est un tableau de structDesignerAnomalieConcordance		// déjà ordonné par document
+fin

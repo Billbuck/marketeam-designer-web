@@ -1,0 +1,50 @@
+// =============================================================================
+// Bouton « Vérification » du tunnel courrier — mode GLOBAL (tous les documents).
+// Affiche, à tout moment et indépendamment de l'enregistrement, le rapport de
+// concordance entre la base et les champs insérés dans TOUS les documents.
+// Réutilise la MÊME procédure que le contrôle de validation.
+//
+// ⚠️ À ADAPTER selon l'UI réelle du tunnel :
+//   - Bouton à créer dans la page (à côté de la sauvegarde).
+//   - Mécanisme d'affichage (PopupAfficheMessage / popup riche) et constantes
+//     de toast à aligner sur le projet.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+// EXEMPLE — bouton « Vérification » PAR DOCUMENT (le donneur d'ordre le place
+// dans la répétition / zone du document concerné) :
+//
+//   // nIndexDocCourant = position du document dans tabStDocument (1..n)
+//   stRapportDoc est une structDesignerRapportConcordance = ...
+//       cpDesigner.VerifieConcordanceBaseDesigner(__stOperation, nIndexDocCourant)
+//   // pAfficheDocument = Faux -> rubriques directement, SANS le nom du document.
+//   sMsgDoc est une chaîne = cpDesigner.RapportConcordanceVersTexte(stRapportDoc, Faux, "", sPuceNiveau1, sPuceNiveau2)
+//   // PopupAfficheMessage affiche du TEXTE BRUT : on garde RC, on remplace TAB par des espaces.
+//   sMsgDoc = sMsgDoc.Remplace(TAB, "   ")
+//   PopupAfficheMessage(sMsgDoc, "Vérification du document", __stOperation.TypeOperation, __TOAST_ANNULATION__)
+// ─────────────────────────────────────────────────────────────────────────────
+// =============================================================================
+
+stRapport		est une structDesignerRapportConcordance	= cpDesigner.VerifieConcordanceBaseDesigner(__stOperation, 1)
+
+// PopupAfficheMessage affiche du TEXTE BRUT (pas de HTML) :
+//   - RC  -> vrai saut de ligne (conservé tel quel)
+//   - TAB -> remplacé par des espaces pour l'indentation
+//   - puces = caractères ASCII (mode ANSI : pas de caractères non latins)
+sMessage			est une chaîne
+sPuceNiveau1	est une chaîne										= "- "
+sPuceNiveau2	est une chaîne										= ""
+sPuceNiveau3	est une chaîne										= "- "
+
+si stRapport.EstConcordant alors
+	sMessage = "Tous les champs insérés concordent avec la base de données."
+	PopupAfficheMessage(sMessage, "Vérification de concordance", __stOperation.TypeOperation, __TOAST_VALIDATION__, 4 s)
+sinon
+	// Mode « tous » : arborescence Document -> Rubrique -> Champs.
+	sMessage = "Anomalies de concordance détectées :"
+	sMessage += [RC] + cpDesigner.RapportConcordanceVersTexte(stRapport, Vrai, sPuceNiveau1, sPuceNiveau2, sPuceNiveau3)
+
+	// Indentation : TAB -> espaces (RC reste un vrai saut de ligne).
+	sMessage = sMessage.Remplace(TAB, ESP + ESP + ESP)
+
+	PopupAfficheMessage(sMessage, "Vérification de concordance", __stOperation.TypeOperation, __TOAST_ANNULATION__, 10 s)
+fin

@@ -1,0 +1,159 @@
+// =============================================================================
+// cpDesigner.RapportConcordanceVersTexte
+// Rôle : Rendre un structDesignerRapportConcordance sous forme de TEXTE
+//        ARBORESCENT, dans l'esprit de ElementManquant (séparateur RC,
+//        indentation TAB ; l'appelant convertit RC -> <br> et TAB -> &#8195;).
+//
+//   Mode TOUS LES DOCUMENTS (pAfficheDocument = Vrai) — 3 niveaux :
+//       Document (.Designation) -> Rubrique (type) -> Champs.
+//   Mode MONO-DOCUMENT (pAfficheDocument = Faux) — 2 niveaux, SANS le nom du
+//       document (on est déjà dans son contexte) :
+//       Rubrique (type) -> Champs.
+//
+//   Rubrique = type d'anomalie, regroupant les champs de ce type, libellé au
+//   SINGULIER ou PLURIEL selon le nombre de champs.
+//   Si AUCUNE anomalie -> message positif « Aucune anomalie détectée. ».
+//
+// Ordre stable des rubriques : Absent -> Casse -> Inconnu -> Doublon ->
+//   Non identifiable -> Aucune base. Documents et champs dans l'ordre rencontré.
+//
+// Paramètres :
+//   stRapport        (structDesignerRapportConcordance)
+//   pAfficheDocument (booléen, défaut Vrai) : Vrai = niveau document affiché
+//                    (mode « tous ») ; Faux = mono-document (sans nom).
+//   pPuceDocument    (chaîne, défaut "") : puce devant chaque document
+//   pPuceRubrique    (chaîne, défaut "") : puce devant chaque rubrique
+//   pPuceChamp       (chaîne, défaut "") : puce devant chaque champ
+//
+// Retour : chaîne (lignes séparées par RC ; indentation par TAB)
+// =============================================================================
+PROCÉDURE RapportConcordanceVersTexte(stRapport est une structDesignerRapportConcordance, pAfficheDocument est un booléen = Vrai, pPuceDocument est une chaîne = "", pPuceRubrique est une chaîne = "", pPuceChamp est une chaîne = "")
+
+sTexte			est une chaîne	= ""
+tabIndexDoc		est un tableau d'entiers			// index des documents (ordre rencontré)
+tabDesignation	est un tableau de chaînes			// désignation parallèle à tabIndexDoc
+tabTypes		est un tableau de chaînes			// ordre stable des rubriques
+tabChampsRub	est un tableau de chaînes			// champs de la rubrique courante (local partagé)
+bDejaVu			est un booléen
+
+// Ordre d'affichage des rubriques (types d'anomalies)
+tabTypes = ["ABSENT", "ECART_CASSE", "CHAMP_INCONNU", "AMBIGU", "NON_RESOLVABLE", "AUCUNE_BASE"]
+
+// ─── Aucune anomalie -> message positif ───
+SI stRapport.tabAnomalies..Occurrence = 0 ALORS
+	RENVOYER "Aucune anomalie détectée."
+FIN
+
+SI pAfficheDocument ALORS
+	// ─── Mode TOUS : Document -> Rubrique -> Champs ───
+	// 1. Liste ordonnée des documents rencontrés (index + désignation)
+	POUR TOUT stA DE stRapport.tabAnomalies
+		bDejaVu = Faux
+		POUR TOUT nI DE tabIndexDoc
+			SI nI = stA.IndexDocument ALORS
+				bDejaVu = Vrai
+				SORTIR
+			FIN
+		FIN
+		SI bDejaVu = Faux ALORS
+			tabIndexDoc.Ajoute(stA.IndexDocument)
+			tabDesignation.Ajoute(stA.Designation)
+		FIN
+	FIN
+
+	// 2. Rendu par document
+	POUR nD = 1 _À_ tabIndexDoc..Occurrence
+		sTexte += [RC] + TAB + pPuceDocument + tabDesignation[nD]
+		sTexte += EmetRubriques(tabIndexDoc[nD], TAB + TAB, TAB + TAB + TAB)
+	FIN
+SINON
+	// ─── Mode MONO-DOCUMENT : rubriques directement (sans nom) ───
+	sTexte += EmetRubriques(0, TAB, TAB + TAB)
+FIN
+
+RENVOYER sTexte
+
+
+// ═════════════════════════════════════════════════════════════════════════
+// PROCÉDURES INTERNES
+// ═════════════════════════════════════════════════════════════════════════
+
+	// ─── Émet les rubriques (et leurs champs) pour un filtre document ───────
+	//   pFiltreDoc = 0 -> toutes les anomalies du rapport (mode mono-document)
+	//   pFiltreDoc > 0 -> uniquement les anomalies de ce document
+	//   pIndentRub / pIndentChamp : préfixes d'indentation (TAB) des 2 niveaux.
+	PROCÉDURE INTERNE EmetRubriques(LOCAL pFiltreDoc est un entier, LOCAL pIndentRub est une chaîne, LOCAL pIndentChamp est une chaîne)
+		sFrag est une chaîne = ""
+		POUR TOUT sType DE tabTypes
+			tabChampsRub.SupprimeTout()
+			POUR TOUT stA DE stRapport.tabAnomalies
+				SI (pFiltreDoc = 0 _OU_ stA.IndexDocument = pFiltreDoc) _ET_ stA.TypeProbleme = sType ALORS
+					tabChampsRub.Ajoute(ValeurAffichage(stA))
+				FIN
+			FIN
+			SI tabChampsRub..Occurrence > 0 ALORS
+				sFrag += [RC] + pIndentRub + pPuceRubrique + LibelleRubrique(sType, tabChampsRub..Occurrence)
+				// AUCUNE_BASE = rubrique seule (pas de liste de champs)
+				SI sType <> "AUCUNE_BASE" ALORS
+					POUR TOUT sChamp DE tabChampsRub
+						sFrag += [RC] + pIndentChamp + pPuceChamp + sChamp
+					FIN
+				FIN
+			FIN
+		FIN
+		RENVOYER sFrag
+	FIN
+
+	// ─── Libellé d'une rubrique (singulier/pluriel selon le nombre) ─────────
+	PROCÉDURE INTERNE LibelleRubrique(LOCAL pType est une chaîne, LOCAL pNb est un entier)
+		sLib est une chaîne = ""
+		SELON pType
+			CAS "ABSENT"
+				SI pNb >= 2 ALORS
+					sLib = "Champs absents de la base :"
+				SINON
+					sLib = "Champ absent de la base :"
+				FIN
+			CAS "ECART_CASSE"
+				SI pNb >= 2 ALORS
+					sLib = "Erreurs de casse :"
+				SINON
+					sLib = "Erreur de casse :"
+				FIN
+			CAS "CHAMP_INCONNU"
+				SI pNb >= 2 ALORS
+					sLib = "Champs inconnus :"
+				SINON
+					sLib = "Champ inconnu :"
+				FIN
+			CAS "AMBIGU"
+				SI pNb >= 2 ALORS
+					sLib = "Libellés en double :"
+				SINON
+					sLib = "Libellé en double :"
+				FIN
+			CAS "NON_RESOLVABLE"
+				SI pNb >= 2 ALORS
+					sLib = "Champs non identifiables :"
+				SINON
+					sLib = "Champ non identifiable :"
+				FIN
+			CAS "AUCUNE_BASE"
+				sLib = "Aucune base de données chargée"
+		FIN
+		RENVOYER sLib
+	FIN
+
+	// ─── Valeur lisible à afficher pour une anomalie (sans jargon) ──────────
+	PROCÉDURE INTERNE ValeurAffichage(LOCAL pAnomalie est une structDesignerAnomalieConcordance)
+		sAff est une chaîne = pAnomalie.LibelleResolu
+		// CHAMP_INCONNU : montrer la clé telle qu'insérée (ex "Telephone")
+		SI pAnomalie.TypeProbleme = "CHAMP_INCONNU" ALORS
+			sAff = pAnomalie.CleInseree
+		FIN
+		// Repli lisible si rien d'exploitable (ex NON_RESOLVABLE, libellé vide)
+		SI sAff = "" ALORS
+			sAff = "(champ sans nom)"
+		FIN
+		RENVOYER sAff
+	FIN

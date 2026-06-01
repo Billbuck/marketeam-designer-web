@@ -1,0 +1,154 @@
+procédure VerificationChampsPersonnalisation(stOperation est une structOperation)
+
+stIciValeurTexte					est une structIciBlocValeurTexte
+stIciValeurFormulaire				est une structIciBlocValeurFormulaire
+stIciValeurAdresse					est une structIciBlocValeurAdresse
+taaBaseChamp 						est un tableau associatif de structBaseChamp = stOperation.taaBaseChamp
+taaChamp							est un tableau associatif d'entiers
+bEstBaseChargée 					est un booléen
+taaException						est un tableau associatif de booléens
+
+sTypeOperation						est une chaîne = stOperation.TypeOperation
+
+
+taaException[__CHAMP_CLIQUEZ_ICI__]								= Vrai
+taaException[Partage.LibelleBaseChamp(__CHAMP_KING_NOM__)]		= Vrai
+taaException[Partage.LibelleBaseChamp(__CHAMP_KING_PRENOM__)]	= Vrai
+
+pour tout stBase de stOperation.tabBase
+	si stBase.EstSupprime = Faux alors
+		bEstBaseChargée = Vrai
+		sortir
+	fin
+fin
+
+// On ne contrôle pas les champs de personnalisation tant que la base n'est pas chargée
+si bEstBaseChargée = Faux alors
+	renvoyer Vrai
+fin
+
+
+selon stOperation.TypeOperation
+	cas __OPERATION_SMS__
+		si ChampInconnu(stOperation.stOperationSms.Message) = Vrai alors
+			AffichePopupErreur("le message SMS")
+			renvoyer Faux
+		fin
+
+	cas __OPERATION_TEL__
+		pour tout stQuestionnaire de stOperation.stOperationCallCenter.tabQuestionnaire
+			si ChampInconnu(stQuestionnaire.Question) = Vrai alors
+				AffichePopupErreur("la question " + Caract(0171) + stQuestionnaire.Question + Caract(0187))
+				renvoyer Faux
+			fin
+			pour tout stReponse de stQuestionnaire.tabReponse
+				si ChampInconnu(stReponse.Reponse) = Vrai alors
+					AffichePopupErreur("la réponse " + Caract(0171) + stReponse.Reponse + Caract(0187) + " de la question " + Caract(0171) + stQuestionnaire.Question + Caract(0187))
+					renvoyer Faux
+				fin
+			fin
+		fin
+
+		si ChampInconnu(stOperation.stOperationCallCenter.NumeroAppelant) = Vrai alors
+			AffichePopupErreur("le numéro d'appelant")
+			renvoyer Faux
+		fin
+
+		si ChampInconnu(stOperation.stOperationCallCenter.TransfertNumero) = Vrai alors
+			AffichePopupErreur("le numéro d'aboutement")
+			renvoyer Faux
+		fin
+
+		si ChampInconnu(stOperation.stOperationCallCenter.SmsConfirmation) = Vrai alors
+			AffichePopupErreur("le SMS de confirmation")
+			renvoyer Faux
+		fin
+
+		si ChampInconnu(stOperation.stOperationCallCenter.SmsRappel) = Vrai alors
+			AffichePopupErreur("le SMS de rappel")
+			renvoyer Faux
+		fin
+
+fin
+
+si stOperation.EstCliquezIci alors
+	pour tout stBloc de stOperation.stNouveauCliquezIci.tabBloc
+		selon stBloc.Type
+			cas __BLOC_TEXTE__
+				Désérialise(stIciValeurTexte,stBloc.Valeur,psdJSON)
+				si ChampInconnu(stIciValeurTexte.Texte) = Vrai alors
+					AffichePopupErreur("le bloc texte " + Caract(0171) + stBloc.Nom + Caract(0187))
+					renvoyer Faux
+				fin
+
+			cas __BLOC_ADRESSE__
+				Désérialise(stIciValeurAdresse,stBloc.Valeur,psdJSON)
+				pour tout sChamp de stIciValeurAdresse.TabValeur
+					si ChampInconnu(sChamp) = Vrai alors
+						AffichePopupErreur("le bloc " + Caract(0171) + stBloc.Nom + Caract(0187))
+						renvoyer Faux
+					fin
+				fin
+
+			cas __BLOC_FORMULAIRE__
+				Désérialise(stIciValeurFormulaire,stBloc.Valeur,psdJSON)
+				pour tout sChamp de stIciValeurFormulaire.TabValeur
+					si ChampInconnu(sChamp) = Vrai alors
+						AffichePopupErreur("le bloc " + Caract(0171) + stBloc.Nom + Caract(0187))
+						renvoyer Faux
+					fin
+				fin
+
+			autre cas
+
+		fin
+	fin
+fin
+
+renvoyer Vrai
+
+	procédure interne AffichePopupErreur(pDans)
+
+		sMessage 		est une chaîne
+		sListeChamp 	est une chaîne
+
+
+		pour tout nTotal, sChamp de taaChamp
+			sListeChamp += [RC + "  "] + "[" + sChamp.Remplace(" ",ESP) + "]"
+		fin
+
+		si taaChamp.Occurrence = 1 alors
+			sMessage = [
+				Le champ [%sListeChamp%] dans [%pDans%] est inconnu dans la base de données.
+			]
+
+		sinon
+			sMessage = [
+				Les champs :
+				[%sListeChamp%]
+				dans [%pDans%] sont inconnus dans la base de données.
+			]
+
+		fin
+		<compile si TypeConfiguration= Site>
+			Exécute(PageCourante() + ".PopupAfficheMessage",sMessage,"ERREUR",sTypeOperation,__TOAST_ANNULATION__, 20 s)
+		<fin>
+	fin
+
+
+	procédure interne ChampInconnu(local pChaine)
+		sChamp est une chaîne
+
+		taaChamp.SupprimeTout()
+
+		sChamp = ExtraitChaîneEntre(pChaine, rangPremier, "[", "]")
+		tantque sChamp <> EOT
+			si taaBaseChamp[sChamp]..Existe = Faux _et_ taaException[sChamp]..Existe = Faux alors
+				taaChamp[sChamp] = Vrai
+			fin
+			sChamp = ExtraitChaîneEntre(pChaine, rangSuivant, "[", "]")
+		fin
+
+		renvoyer (taaChamp.Occurrence > 0)
+
+	fin
