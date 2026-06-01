@@ -4710,6 +4710,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     && typeof mergeFields !== 'undefined') {
                     updateMergeFieldsUI(mergeFields);
                 }
+                // Synchroniser le contour des pastilles en zone (rouge si
+                //   absent de la base) AVEC les couleurs de la popup : ce hook
+                //   est rejoué notamment au chargement et au changement de base.
+                //   Léger (classList uniquement), pas de régénération de zones.
+                if (typeof applyMergeTagErrorState === 'function') {
+                    applyMergeTagErrorState();
+                }
             } catch (e) {
                 // defensive — ne jamais bloquer le flow utilisateur
             }
@@ -14023,6 +14030,37 @@ document.addEventListener('DOMContentLoaded', () => {
      *        pastilles dont la clé correspond (sinon toutes).
      * @returns {number} Nombre de pastilles rafraîchies
      */
+    /**
+     * Met à jour le CONTOUR des pastilles de champ de fusion en zone (vue
+     * d'édition Quill) selon le statut « absent de la base » : contour ROUGE
+     * (classe `is-error`) si le champ est absent en régime B, jaune sinon.
+     * Source de vérité unique = `isChampAbsentDeLaBase` (cohérent avec les
+     * couleurs de la popup). Léger : ne touche que `classList` des pastilles,
+     * ne régénère AUCUN code-barres/image → appelable sur chaque changement
+     * de statut (base ajoutée/retirée) sans surcoût.
+     * @returns {void}
+     */
+    function applyMergeTagErrorState() {
+        if (typeof quillInstances === 'undefined' || !quillInstances) return;
+        let regime = 'A';
+        try {
+            regime = (typeof mergeFields !== 'undefined' && typeof detecterRegimeChamps === 'function')
+                ? detecterRegimeChamps(mergeFields) : 'A';
+        } catch (e) { regime = 'A'; }
+        quillInstances.forEach((quill) => {
+            if (!quill || !quill.root) return;
+            quill.root.querySelectorAll('span.merge-tag-quill[data-key]').forEach(node => {
+                try {
+                    const champ = (typeof findChampByKey === 'function')
+                        ? findChampByKey(node.getAttribute('data-key') || '') : null;
+                    const enErreur = (typeof isChampAbsentDeLaBase === 'function')
+                        && isChampAbsentDeLaBase(champ, regime);
+                    node.classList.toggle('is-error', !!enErreur);
+                } catch (e) { /* defensive : ne jamais bloquer le refresh */ }
+            });
+        });
+    }
+
     function refreshMergeTagsInAllZones(keyFilter) {
         let count = 0;
         const filter = (typeof keyFilter === 'string' && keyFilter.trim()) ? keyFilter.trim() : null;
@@ -14042,6 +14080,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
             });
+            // Contour rouge/jaune des pastilles selon le statut « absent de la
+            //   base » (source de vérité unique : isChampAbsentDeLaBase).
+            applyMergeTagErrorState();
         }
 
         // ─── (2) Axe 1 — Zones code-barres, image et QR intelligent ───────
@@ -16789,12 +16830,27 @@ document.addEventListener('DOMContentLoaded', () => {
      * 
      * @see findZoneByZIndex - Trouver une zone par son z-index
      */
+    // ─── Hiérarchie d'empilement (z-index) ─────────────────────────────────
+    //   Zones UTILISATEUR : 1 .. (SYSTEM_Z_BASE - 1)
+    //   Bloc SYSTÈME (isZoneSysteme) : SYSTEM_Z_BASE et au-dessus (réservé)
+    //   Popups / modales / menus / toasts d'INTERFACE : >= UI_Z_BASE (CSS),
+    //     toujours au-dessus de tout, y compris du bloc système.
+    //   Garantit que les zones système (pavé adresse, séquentiel, datamatrix,
+    //   LA POSTE) restent toujours au sommet du document, et que les surfaces
+    //   d'interaction restent visibles/cliquables par-dessus.
+    const SYSTEM_Z_BASE = 10000;
+    const UI_Z_BASE = 20000;
+
     function getMaxZIndex() {
+        // Plafond UTILISATEUR : on IGNORE les zones système (bande réservée
+        //   >= SYSTEM_Z_BASE) pour qu'une zone utilisateur ne puisse jamais
+        //   naître ni monter au-dessus du bloc système.
         const zonesData = getCurrentPageZones();
         let maxZ = 0; // Commence à 0 pour que la première zone ait z-index = 1
         for (const zoneData of Object.values(zonesData)) {
+            if (isZoneSysteme(zoneData)) continue;
             const z = zoneData.zIndex || 1;
-            if (z > maxZ) maxZ = z;
+            if (z < SYSTEM_Z_BASE && z > maxZ) maxZ = z;
         }
         return maxZ;
     }
@@ -16823,20 +16879,32 @@ document.addEventListener('DOMContentLoaded', () => {
         const zoneIds = Object.keys(zonesData);
         
         if (zoneIds.length === 0) return;
-        
-        // Trier les zones par z-index croissant
-        zoneIds.sort((a, b) => {
-            const zA = zonesData[a].zIndex || 1;
-            const zB = zonesData[b].zIndex || 1;
-            return zA - zB;
+
+        // Séparer zones système / utilisateur. Enforcement de la hiérarchie :
+        //   - utilisateur : 1..N (ordre relatif préservé) ;
+        //   - système : bande réservée SYSTEM_Z_BASE + offset (au-dessus de
+        //     toute zone utilisateur), ordre relatif préservé (niveau WebDev).
+        const sysIds = [];
+        const userIds = [];
+        zoneIds.forEach(id => {
+            if (isZoneSysteme(zonesData[id])) sysIds.push(id);
+            else userIds.push(id);
         });
-        
-        // Réassigner les z-index de 1 à n
-        zoneIds.forEach((id, index) => {
+
+        // Zones utilisateur : 1..N par ordre de z-index croissant
+        userIds.sort((a, b) => (zonesData[a].zIndex || 1) - (zonesData[b].zIndex || 1));
+        userIds.forEach((id, index) => {
             const newZ = index + 1;
             zonesData[id].zIndex = newZ;
-            
-            // Mettre à jour le DOM
+            const el = document.getElementById(id);
+            if (el) el.style.zIndex = newZ;
+        });
+
+        // Zones système : SYSTEM_Z_BASE + offset (ordre relatif préservé)
+        sysIds.sort((a, b) => (zonesData[a].zIndex || 1) - (zonesData[b].zIndex || 1));
+        sysIds.forEach((id, index) => {
+            const newZ = SYSTEM_Z_BASE + index;
+            zonesData[id].zIndex = newZ;
             const el = document.getElementById(id);
             if (el) el.style.zIndex = newZ;
         });
@@ -16853,26 +16921,31 @@ document.addEventListener('DOMContentLoaded', () => {
         const zonesData = getCurrentPageZones();
         const zoneData = zonesData[zoneId];
         if (!zoneData) return;
+        // Empilement utilisateur uniquement : le bloc système reste au sommet.
+        if (isZoneSysteme(zoneData)) return;
         
         const currentZ = zoneData.zIndex || 1;
-        const maxZ = getMaxZIndex();
+        const maxZ = getMaxZIndex(); // plafond UTILISATEUR (ignore le système)
         
         // Si déjà au max, ne rien faire
         if (currentZ === maxZ) {
             return;
         }
         
-        // Décaler toutes les zones qui sont au-dessus (z > currentZ) de -1
+        // Décaler de -1 les zones UTILISATEUR au-dessus (z > currentZ).
+        //   On EXCLUT les zones système (bande réservée >= SYSTEM_Z_BASE) pour
+        //   ne pas casser leur position au sommet.
         for (const [id, data] of Object.entries(zonesData)) {
+            if (isZoneSysteme(data)) continue;
             const z = data.zIndex || 1;
-            if (z > currentZ) {
+            if (z > currentZ && z < SYSTEM_Z_BASE) {
                 data.zIndex = z - 1;
                 const el = document.getElementById(id);
                 if (el) el.style.zIndex = data.zIndex;
             }
         }
         
-        // Mettre la zone sélectionnée au max
+        // Mettre la zone sélectionnée au max utilisateur
         zoneData.zIndex = maxZ;
         const el = document.getElementById(zoneId);
         if (el) el.style.zIndex = maxZ;
@@ -16892,11 +16965,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const zonesData = getCurrentPageZones();
         const zoneData = zonesData[zoneId];
         if (!zoneData) return;
+        // Empilement utilisateur uniquement : le bloc système reste au sommet.
+        if (isZoneSysteme(zoneData)) return;
         
         const currentZ = zoneData.zIndex || 1;
-        const maxZ = getMaxZIndex();
+        const maxZ = getMaxZIndex(); // plafond UTILISATEUR (ignore le système)
         
-        // Si déjà au max, ne rien faire
+        // Si déjà au max utilisateur, ne rien faire (ne dépasse pas le système)
         if (currentZ >= maxZ) {
             return;
         }
@@ -16932,6 +17007,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const zonesData = getCurrentPageZones();
         const zoneData = zonesData[zoneId];
         if (!zoneData) return;
+        // Empilement utilisateur uniquement : le bloc système reste au sommet.
+        if (isZoneSysteme(zoneData)) return;
         
         const currentZ = zoneData.zIndex || 1;
         
@@ -16972,6 +17049,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const zonesData = getCurrentPageZones();
         const zoneData = zonesData[zoneId];
         if (!zoneData) return;
+        // Empilement utilisateur uniquement : le bloc système reste au sommet.
+        if (isZoneSysteme(zoneData)) return;
         
         const currentZ = zoneData.zIndex || 1;
         
@@ -16980,8 +17059,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // Monter toutes les zones qui sont en-dessous (z < currentZ) de +1
+        // Monter de +1 les zones UTILISATEUR en-dessous (z < currentZ).
+        //   On EXCLUT les zones système (bande réservée) qui restent au sommet.
         for (const [id, data] of Object.entries(zonesData)) {
+            if (isZoneSysteme(data)) continue;
             const z = data.zIndex || 1;
             if (z < currentZ) {
                 data.zIndex = z + 1;
@@ -17004,7 +17085,16 @@ document.addEventListener('DOMContentLoaded', () => {
      * Met à jour l'état des boutons d'arrangement selon la sélection
      */
     function updateArrangementButtons() {
-        const enabled = selectedZoneIds.length === 1;
+        // Boutons actifs uniquement pour une sélection unique de zone
+        //   UTILISATEUR. Sur une zone système (bloc adresse/datamatrix/…),
+        //   l'empilement est interdit (le bloc système reste au sommet) →
+        //   les 4 boutons sont désactivés.
+        let enabled = selectedZoneIds.length === 1;
+        if (enabled) {
+            const zonesData = getCurrentPageZones();
+            const zoneData = zonesData[selectedZoneIds[0]];
+            if (isZoneSysteme(zoneData)) enabled = false;
+        }
         
         if (btnToFront) btnToFront.disabled = !enabled;
         if (btnForward) btnForward.disabled = !enabled;
@@ -28026,6 +28116,34 @@ document.addEventListener('DOMContentLoaded', () => {
         if (documentState.champsFusionInterdit) {
             output.ChampsFusionInterdit = true;
         }
+
+        // Recompactage du `niveau` (z-index) pour l'export WebDev.
+        //   En interne, les zones système portent un z-index dans la bande
+        //   réservée (>= SYSTEM_Z_BASE) afin de rester au sommet à l'écran.
+        //   On ne fait PAS fuiter ces grandes valeurs vers WebDev : on
+        //   reconvertit `niveau` en rang COMPACT 1..n PAR PAGE, en préservant
+        //   l'ordre relatif (le bloc système conserve son rang supérieur car
+        //   son z-index interne est le plus élevé). À la réouverture,
+        //   normalizeZIndexes() ré-enforce la bande système. Le format WebDev
+        //   (petits entiers de niveau) reste donc inchangé.
+        try {
+            const __zoneArrays = [output.zonesTexte, output.zonesCodeBarres, output.zonesImage, output.zonesQR];
+            const __byPage = {};
+            __zoneArrays.forEach(arr => {
+                if (!Array.isArray(arr)) return;
+                arr.forEach(z => {
+                    if (!z) return;
+                    const p = z.page || 1;
+                    (__byPage[p] = __byPage[p] || []).push(z);
+                });
+            });
+            Object.keys(__byPage).forEach(p => {
+                const list = __byPage[p];
+                list.sort((a, b) => (a.niveau || 1) - (b.niveau || 1));
+                list.forEach((z, i) => { z.niveau = i + 1; });
+            });
+        } catch (e) { /* defensive : ne jamais bloquer l'export */ }
+
         return stripNullValues(output);
     }
     
@@ -28653,6 +28771,14 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Mettre à jour la section Page (masquée car aucune zone sélectionnée après chargement)
         updateZonePageUI();
+
+        // Enforcement de la hiérarchie d'empilement : le bloc système est
+        //   replacé dans sa bande réservée (>= SYSTEM_Z_BASE) et les zones
+        //   utilisateur normalisées 1..N sous le seuil. Rejoué à CHAQUE
+        //   chargement de page (donc aussi après undo/redo via restoreState
+        //   et au switch recto/verso) → le bloc système reste toujours au
+        //   sommet, quel que soit le `niveau` stocké.
+        normalizeZIndexes();
         
         // Mettre à jour la visibilité du bouton QR interactif
         updateZoneButtonsVisibility();

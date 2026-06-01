@@ -97,18 +97,26 @@ button:last-child {
 }
 
 /* --- Fond perdu : overlay et ligne de coupe --- */
+/* NOTE z-index : ces overlays décoratifs vivent DANS #a4-page (même contexte
+   d'empilement que les zones). Depuis que le bloc système est monté dans sa
+   bande réservée (zones système z-index >= SYSTEM_Z_BASE = 10000, cf.
+   script.js), on place ces overlays AU-DESSUS de cette bande (10800+) pour
+   qu'ils continuent de teinter TOUT le document (zones utilisateur ET système)
+   comme avant. Ils restent sous les panneaux d'interface (popups/modales/toasts)
+   qui sont HORS de #a4-page et donc toujours au-dessus via l'isolation du
+   contexte d'empilement (#a4-page a un transform: scale()). */
 .bleed-overlay {
     position: absolute;
     background-color: rgba(255, 255, 255, 0.4);
     pointer-events: none;
-    z-index: 900;
+    z-index: 10900;
 }
 
 .bleed-cutline {
     position: absolute;
     border: 1px dashed rgba(255, 0, 0, 0.5);
     pointer-events: none;
-    z-index: 899;
+    z-index: 10899;
     box-sizing: border-box;
 }
 
@@ -117,14 +125,14 @@ button:last-child {
     position: absolute;
     background-color: rgba(100, 80, 180, 0.12);
     pointer-events: none;
-    z-index: 850;
+    z-index: 10850;
 }
 
 .personnalisation-border {
     position: absolute;
     border: 1.5px dashed rgba(80, 60, 160, 0.75);
     pointer-events: none;
-    z-index: 851;
+    z-index: 10851;
     box-sizing: border-box;
 }
 
@@ -3842,11 +3850,14 @@ span.merge-tag-quill {
     display: inline-block;
     padding: 0 4px;
     margin: 0 1px;
-    background: var(--theme-primary-light, #F4E6FA);
-    color: var(--theme-primary, #934BB7);
-    border: 1px solid var(--theme-primary, #934BB7);
+    /* Fond TRANSPARENT : on ne garde que le contour (lié au thème). */
+    background: transparent;
+    /* PAS de color ni de font-weight ici : la couleur et la graisse sont
+       HÉRITÉES du format Quill environnant → la mise en forme utilisateur
+       (couleur de texte, gras) s'applique à la pastille comme à du texte
+       normal. (font-family/font-size restent aussi hérités.) */
+    border: 1px solid var(--theme-primary, #934BB7);   /* contour thème (jaune en LTR) */
     border-radius: 4px;
-    font-weight: 500;
     line-height: 1.2;
     cursor: default;
     user-select: none;
@@ -3857,12 +3868,22 @@ span.merge-tag-quill {
     -webkit-user-modify: read-only;
 }
 
-/* Pastille fallback (libellé introuvable, affiche @KEY@ brut) :           */
-/* on garde le même style mais on pourrait imaginer une couleur d'alerte. */
+/* Pastille EN ERREUR (champ absent de la base en régime B) : contour ROUGE.
+   Couleur cohérente avec .merge-tag-status-rouge de la popup. La classe
+   `is-error` est posée/retirée dynamiquement par refreshMergeTagsInAllZones
+   selon le statut réel du champ (getChampStatusV25). Le contour est une
+   bordure CSS (pas un format Quill) → non personnalisable par l'utilisateur. */
+.ql-editor .merge-tag-quill.is-error,
+span.merge-tag-quill.is-error {
+    border-color: #C62828;   /* Material Red 800 — comme la popup */
+}
+
+/* Pastille fallback (libellé introuvable, affiche @KEY@ brut) : fond
+   transparent comme les autres pastilles, on conserve uniquement un contour
+   d'alerte orange pour la distinguer (sans fond opaque). */
 .ql-editor .merge-tag-quill[data-fallback="true"],
 span.merge-tag-quill[data-fallback="true"] {
-    background: #FFF4E0;
-    color: #B36B00;
+    background: transparent;
     border-color: #B36B00;
 }
 
