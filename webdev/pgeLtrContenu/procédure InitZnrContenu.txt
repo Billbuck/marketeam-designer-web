@@ -21,6 +21,12 @@ nIdMarque				est un entier
 
 znrLtrContenu.SupprimeTout()
 
+// État de rapprochement (QR) recalculé UNE SEULE FOIS pour toute la liste.
+//   Source de la visibilité du bouton « Régénérer le BAT » : un document non
+//   conforme (EstConformeQr = Faux) nécessite une action. Remplace l'ancien
+//   marqueur EstBatARegenerer (incomplet — 6 trous). tabDocuments est indexé
+//   dans le même ordre que tabStDocument -> tabDocuments[nInd] = document nInd.
+stEtatRapp est une structDesignerEtatRapprochement = cpDesigner.RecalculeEtatRapprochement(__stOperation)
 
 
 pour tout stDocument de  __stOperation.stOperationLettre.tabStDocument
@@ -59,9 +65,10 @@ pour tout stDocument de  __stOperation.stOperationLettre.tabStDocument
 			znrLtrContenu[nInd].attCboSelectionValeur								= cboIdPosition(znrLtrContenu[nInd].attCboModeleGlien,stDocument.IdModele)
 			znrLtrContenu[nInd].btnDocumentImporter..Visible					= Faux
 			znrLtrContenu[nInd].btnDocumentPersonnaliser..Visible				= (stDocument.EstPersonnalisable = Vrai)
-			znrLtrContenu[nInd].btnRegenererBAT..Visible							= (stDocument.EstBatARegenerer = Vrai)
+			znrLtrContenu[nInd].btnRegenererBAT..Visible							= (stEtatRapp.tabDocuments[nInd].EstConformeQr = Faux)
 			znrLtrContenu[nInd].btnDocumentAperçu..Visible						= Vrai
 			znrLtrContenu[nInd].btnPersonnalisationSupprimer..Visible					= (stDocument.EstPersonnaliseDesigner)
+			znrLtrContenu[nInd].btnVerifieConcordence..Visible					= (stDocument.EstDocumentEnAttente = Faux _et_ stDocument.EstPersonnaliseDesigner)
 			znrLtrContenu[nInd].attCboSourceEtat									= (__stOperation.stOperationLettre.IdCampagne = 0) ? Actif sinon Inactif
 			znrLtrContenu[nInd].attCboSelectionEtat								= (__stOperation.stOperationLettre.IdCampagne = 0) ? Actif sinon Inactif
 			znrLtrContenu[nInd].dispSupport[1].Visible							= Vrai
@@ -78,6 +85,7 @@ pour tout stDocument de  __stOperation.stOperationLettre.tabStDocument
 			znrLtrContenu[nInd].btnRegenererBAT..Visible							= Faux
 			znrLtrContenu[nInd].btnDocumentAperçu..Visible						= Vrai
 			znrLtrContenu[nInd].btnPersonnalisationSupprimer..Visible					= (stDocument.EstPersonnaliseDesigner)
+			znrLtrContenu[nInd].btnVerifieConcordence..Visible					= (stDocument.EstDocumentEnAttente = Faux _et_ stDocument.EstPersonnaliseDesigner)
 			znrLtrContenu[nInd].attCboSourceEtat									= (__stOperation.stOperationLettre.IdCampagne = 0) ? Actif sinon Inactif
 			znrLtrContenu[nInd].attCboSelectionEtat								= (__stOperation.stOperationLettre.IdCampagne = 0) ? Actif sinon Inactif
 			znrLtrContenu[nInd].dispSupport[1].Visible							= Faux
@@ -88,9 +96,10 @@ pour tout stDocument de  __stOperation.stOperationLettre.tabStDocument
 			znrLtrContenu[nInd].attCboSelectionValeur								= 1
 			znrLtrContenu[nInd].btnDocumentImporter..Visible					= (stDocument.EstPersonnaliseDesigner = Faux)
 			znrLtrContenu[nInd].btnDocumentPersonnaliser..Visible				= (stDocument.EstDocumentEnAttente = Faux _et_ stDocument.JsonDesignerData <> "")
-			znrLtrContenu[nInd].btnRegenererBAT..Visible							= (stDocument.EstBatARegenerer = Vrai)
+			znrLtrContenu[nInd].btnRegenererBAT..Visible							= (stDocument.EstDocumentEnAttente = Faux _et_ stEtatRapp.tabDocuments[nInd].EstConformeQr = Faux)
 			znrLtrContenu[nInd].btnDocumentAperçu..Visible						= (stDocument.EstDocumentEnAttente = Faux)
 			znrLtrContenu[nInd].btnPersonnalisationSupprimer..Visible		= (stDocument.EstDocumentEnAttente = Faux _et_ stDocument.EstPersonnaliseDesigner)
+			znrLtrContenu[nInd].btnVerifieConcordence..Visible				= (stDocument.EstDocumentEnAttente = Faux _et_ stDocument.EstPersonnaliseDesigner)
 			znrLtrContenu[nInd].attCboSourceEtat									= Actif
 			znrLtrContenu[nInd].attCboSelectionEtat								= Actif
 			znrLtrContenu[nInd].dispSupport[1].Visible							= Faux

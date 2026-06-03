@@ -52,11 +52,26 @@ si _nIndDoc >= 1 _et_ _nIndDoc <= __stOperation.stOperationLettre.tabStDocument.
 			fin
 		fin
 
-		// ─── Document de nouveau conforme -> retirer le marquage (cas B) ───
-		__stOperation.stOperationLettre.tabStDocument[_nIndDoc].EstBatARegenerer = Faux
+		znrLtrContenu[_nIndDoc].btnRegenererBAT.Visible = Faux
 
+		// Préparation de l'aperçu
+		_tabPrintImage.SupprimeTout()
+		// Afficher le BAT si disponible (personnalisé), sinon le fond
+		si __stOperation.stOperationLettre.tabStDocument[znrLtrContenu.attNumDocument].tabImageBat..Occurrence > 0 alors
+			pour tout stDocumentImage de __stOperation.stOperationLettre.tabStDocument[znrLtrContenu.attNumDocument].tabImageBat
+				_tabPrintImage.Ajoute(stDocumentImage.CheminRelatif)
+			fin
+		sinon
+			pour tout stDocumentImage de __stOperation.stOperationLettre.tabStDocument[znrLtrContenu.attNumDocument].tabImageFond
+				_tabPrintImage.Ajoute(stDocumentImage.CheminRelatif)
+			fin
+		fin
 	sinon
 		PopupAfficheMessage("Erreur lors de la régénération du BAT" + RC + "Merci de réitérer l'opération", "Erreur", __OPERATION_COURRIER__, __TOAST_ANNULATION__)
 	fin
 
 fin
+
+
+// Code Navigateur Retour Traitement Ajax :
+documentViewer.show();

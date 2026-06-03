@@ -62,8 +62,8 @@ selon vMessage.action
 				jChampsFusionPurge est un JSON = "[]"
 				pour nIndPart3 = 1 _à_ jDoc.data.champsFusion..Occurrence
 					// Lecture défensive en chaîne (attribut JSON absent → "")
-					sInjectePB3 est une chaîne = jDoc.data.champsFusion[nIndPart3].injecteParBase
-					sLibelleP3 est une chaîne = jDoc.data.champsFusion[nIndPart3].libelle
+					sInjectePB3	est une chaîne	= jDoc.data.champsFusion[nIndPart3].injecteParBase
+					sLibelleP3	est une chaîne	= jDoc.data.champsFusion[nIndPart3].libelle
 
 					si sInjectePB3 = "1" alors
 						Trace("PARTIE 3 : champ " + sLibelleP3 + " injecteParBase=[" + sInjectePB3 + "] => PURGÉ (non persisté)")
@@ -117,23 +117,6 @@ selon vMessage.action
 						__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].EstPersonnaliseDesigner	= Vrai
 						__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].DateHeureDesigner			= DateHeureSys()
 
-						// ─── PHASE 3b (cas B) — Marquer les AUTRES documents devenus
-						//   non conformes au QR de rapprochement « BAT à régénérer ».
-						//   Le changement de personnalisation du document courant peut
-						//   changer N et rendre d'autres documents non conformes (QR à
-						//   ajouter/retirer). On ne touche PAS leur JSON ; l'injection/
-						//   retrait effective se fait via leur bouton « Régénérer le BAT »
-						//   (btnRegenererBat). Le document courant vient d'être régénéré
-						//   (QR géré en direct par le Designer + export) -> conforme.
-						stEtatRappB est une structDesignerEtatRapprochement = cpDesigner.RecalculeEtatRapprochement(__stOperation)
-						pour tout stLigneRappB de stEtatRappB.tabDocuments
-							si stLigneRappB.IndexDocument = _nIndDesignerEnCours alors
-								__stOperation.stOperationLettre.tabStDocument[stLigneRappB.IndexDocument].EstBatARegenerer = Faux
-							sinon si stLigneRappB.EstConformeQr = Faux alors
-								__stOperation.stOperationLettre.tabStDocument[stLigneRappB.IndexDocument].EstBatARegenerer = Vrai
-							fin
-						fin
-
 						// ─── Détection QR Code Interactif (= opération "Cliquez Ici") ─
 						// Flag par document + propagation au flag global de l'opération.
 						__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].EstCliquezIci				= cpDesigner.JsonContientQrInteractif(sJsonData)
@@ -152,13 +135,14 @@ selon vMessage.action
 
 						InitTitreOperation()
 						InitProgressBar()
+						InitZnrContenu()
 
-						// ─── Verrouiller les combos + afficher btnSupprimer + cacher btnImporter ─
-						znrLtrContenu[_nIndDesignerEnCours].cboSource.Etat															= Inactif
-						znrLtrContenu[_nIndDesignerEnCours].cboBibliothèque.Etat													= Inactif
-						znrLtrContenu[_nIndDesignerEnCours].cboSelection.Etat														= Inactif
-						znrLtrContenu[_nIndDesignerEnCours].btnPersonnalisationSupprimer..Visible										= Vrai
-						znrLtrContenu[_nIndDesignerEnCours].btnDocumentImporter..Visible										= Faux
+//						// ─── Verrouiller les combos + afficher btnSupprimer + cacher btnImporter ─
+//						znrLtrContenu[_nIndDesignerEnCours].cboSource.Etat															= Inactif
+//						znrLtrContenu[_nIndDesignerEnCours].cboBibliothèque.Etat													= Inactif
+//						znrLtrContenu[_nIndDesignerEnCours].cboSelection.Etat														= Inactif
+//						znrLtrContenu[_nIndDesignerEnCours].btnPersonnalisationSupprimer..Visible							= Vrai
+//						znrLtrContenu[_nIndDesignerEnCours].btnDocumentImporter..Visible										= Faux
 
 					sinon
 						PopupAfficheMessage(
