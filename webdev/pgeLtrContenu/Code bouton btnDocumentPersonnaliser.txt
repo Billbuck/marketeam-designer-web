@@ -810,6 +810,28 @@ pour nIndB = 1 _à_ jsWrapper.data.champsFusion..Occurrence
 	fin
 fin
 
+// ═════════════════════════════════════════════════════════════════════════
+// PHASE 3b — COMMUNICATION ÉTAT GLOBAL (rapprochement) AU DESIGNER
+//   Le Designer ne connaît que le document courant. On lui transmet si AU
+//   MOINS UN AUTRE document de l'opération est personnalisé : ainsi, quand le
+//   document courant devient/cesse d'être personnalisé, le Designer décide en
+//   direct d'afficher ou non le QR de rapprochement (règle N >= 2). Une seule
+//   donnée transmise à l'ouverture suffit (pas de dialogue continu iframe<->serveur).
+// ═════════════════════════════════════════════════════════════════════════
+stEtatRappOuv			est une structDesignerEtatRapprochement = cpDesigner.RecalculeEtatRapprochement(__stOperation)
+nNbAutresPersoOuv		est un entier = 0
+pour tout stLigneRappOuv de stEtatRappOuv.tabDocuments
+	si stLigneRappOuv.IndexDocument <> _nIndDesignerEnCours _et_ stLigneRappOuv.EstPersonnalise alors
+		nNbAutresPersoOuv++
+	fin
+fin
+jsWrapper.qrRapprochementRequisSiPersonnalise = (nNbAutresPersoOuv >= 1)
+
+// Template COMPLET de la zone QR de rapprochement (SOURCE UNIQUE serveur).
+//   Le Designer s'en sert pour l'AJOUT DYNAMIQUE en direct (aucune valeur en
+//   dur côté JS). PAS de normalisation des zones déjà présentes (valeur fixe).
+jsWrapper.qrRapprochementZone = cpDesigner.ConstruireZoneQrRapprochement(__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours])
+
 gsJsonDesigner = JSONVersChaîne(jsWrapper)
 
 

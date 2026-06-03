@@ -1,0 +1,30 @@
+// =============================================================================
+// Structures de l'état de RAPPROCHEMENT (chantier QR de rapprochement).
+// Produites par cpDesigner.RecalculeEtatRapprochement(stOperation).
+// CALCULÉES À LA DEMANDE — NON persistées (recalcul dynamique).
+//
+//   - structDesignerEtatRapprochementDocument : état d'UN document.
+//   - structDesignerEtatRapprochement         : agrégat opération + tableau
+//                                               par document.
+//
+// Correspondance avec le vocabulaire du cahier des charges :
+//   EstPersonnalise  <-> bPersonnalise   QrPresent  <-> bQrPresent
+//   QrRequis         <-> bQrRequis        EstConformeQr <-> bConformeQr
+//   QrNecessaire     <-> bQrNecessaire    NbDocumentsPersonnalises <-> N
+// =============================================================================
+
+structDesignerEtatRapprochementDocument est une Structure
+	IndexDocument	est un entier		// Position 1..n dans tabStDocument
+	Designation		est une chaîne		// Libellé du document
+	EstPersonnalise	est un booléen		// (A) pavé d'adresse OU (B) >=1 champ base
+	QrPresent		est un booléen		// QR de rapprochement déjà présent (critère provisoire Phase 2)
+	QrRequis		est un booléen		// EstPersonnalise ET QrNecessaire (agrégat)
+	EstConformeQr	est un booléen		// QrRequis = QrPresent
+fin
+
+structDesignerEtatRapprochement est une Structure
+	NbDocumentsPersonnalises	est un entier		// N
+	QrNecessaire				est un booléen		// N >= 2
+	EstToutConformeQr			est un booléen		// Vrai si tous les documents EstConformeQr
+	tabDocuments				est un tableau de structDesignerEtatRapprochementDocument
+fin

@@ -294,7 +294,7 @@ RENVOYER stRapport
 	PROCÉDURE INTERNE EstChampSysteme(LOCAL pCle est une chaîne)
 		bSys	est un booléen	= Faux
 		sCleN	est une chaîne	= NettoieCle(pCle)
-		SI sCleN = "Sequentiel" _OU_ sCleN = "Timbre" ALORS
+		SI sCleN = "Sequentiel" _OU_ sCleN = "Timbre" _OU_ sCleN = "Rapprochement" ALORS
 			bSys = Vrai
 		FIN
 		QUAND EXCEPTION DANS

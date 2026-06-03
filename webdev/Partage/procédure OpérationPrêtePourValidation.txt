@@ -1,38 +1,39 @@
 procédure OpérationPrêtePourValidation(stOperation est une structOperation, pIdContact)
 
-bEstDocumentOk						est un booléen
-bEstBaseOk							est un booléen
+bEstDocumentOk							est un booléen
+bEstBaseOk								est un booléen
 dhSaveDateHeureValidation			est une DateHeure
-sPuceNiveau1						est une chaîne
-sPuceNiveau2						est une chaîne
+sPuceNiveau1							est une chaîne
+sPuceNiveau2							est une chaîne
+sPuceNiveau3							est une chaîne
 
-sLien								est une chaîne
-stIciBlocValeurTexte				est une structIciBlocValeurTexte
+sLien										est une chaîne
+stIciBlocValeurTexte					est une structIciBlocValeurTexte
 stIciBlocValeurAdresse				est une structIciBlocValeurAdresse
 stIciBlocValeurTexteDefilant		est une structIciBlocValeurTexteDefilant
 stIciBlocValeurBanniere				est une structIciBlocValeurBanniere
 stIciBlocValeurFormulaire			est une structIciBlocValeurFormulaire
 stIciBlocValeurGrattage				est une structIciBlocValeurGrattage
-stIciBlocValeurImage				est une structIciBlocValeurImage
-stIciBlocValeurOffre				est une structIciBlocValeurOffre
+stIciBlocValeurImage					est une structIciBlocValeurImage
+stIciBlocValeurOffre					est une structIciBlocValeurOffre
 stIciBlocValeurHtml					est une structIciBlocValeurHtml
 stIciBlocValeurCountdown			est une structIciBlocValeurCountdown
 stIciBlocValeurSocial				est une structIciBlocValeurSocial
 stIciBlocValeurLien					est une structIciBlocValeurLien
 stIciBlocValeurCgv					est une structIciBlocValeurCgv
 
-sReseauxSociaux 					est une chaîne
-sElementManquant					est une chaîne
-sLandingManquant					est une chaîne
+sReseauxSociaux						est une chaîne
+sElementManquant						est une chaîne
+sLandingManquant						est une chaîne
 
 //sPuceNiveau1 = "&#9679; "		// ●
 //sPuceNiveau2 = "&#10687; "	// ⦿
 //sPuceNiveau3 = "&#9675; "		// ○
 //sPuceNiveau3 = "&#9702; "		// ◦
 
-sPuceNiveau1 = "&#9726; "	// ◾
-sPuceNiveau2 = "&#9642; "	// ▪
-
+sPuceNiveau1		= "&#9726; "	// ◾
+sPuceNiveau2		= "&#9642; "	// ▪
+sPuceNiveau3		= "- "
 
 si pIdContact = 0 alors
 	renvoyer Faux
@@ -40,8 +41,8 @@ fin
 
 // On annule la validation au cas ou l'opération à été modifié et qu'elle n'est plus valide
 si DateHeureValide(stOperation.DateHeureValidation) alors
-	dhSaveDateHeureValidation = stOperation.DateHeureValidation
-	stOperation.DateHeureValidation = ""
+	dhSaveDateHeureValidation			= stOperation.DateHeureValidation
+	stOperation.DateHeureValidation	= ""
 fin
 
 
@@ -115,7 +116,46 @@ si stOperation.TypeOperation = __OPERATION_COURRIER__ _et_ bEstBaseOk alors
 	si stRapportConcordance.NbAnomalies > 0 alors
 		sElementManquant += [RC] + sPuceNiveau1 + "Concordance des champs avec la base :"
 		// pAfficheDocument = Vrai : arborescence avec le nom de chaque document.
-		sElementManquant += cpDesigner.RapportConcordanceVersTexte(stRapportConcordance, Vrai, sPuceNiveau2, sPuceNiveau2, "")
+		sElementManquant += cpDesigner.RapportConcordanceVersTexte(stRapportConcordance, Vrai, sPuceNiveau2, sPuceNiveau2, sPuceNiveau3)
+	fin
+fin
+
+
+// ─── QR de rapprochement (courrier) — BLOQUE la validation si non conforme ──
+//   Critère = EstConformeQr (état RÉEL recalculé : QrRequis vs QrPresent sur le
+//   JSON courant), PAS EstBatARegenerer (marqueur UI incomplet). Appel défensif
+//   (recalcul au moment de la validation). Section DISTINCTE de la concordance.
+//   N'empile rien si tout est conforme -> ne contribue pas au blocage.
+si stOperation.TypeOperation = __OPERATION_COURRIER__ alors
+	stEtatRapp est une structDesignerEtatRapprochement = cpDesigner.RecalculeEtatRapprochement(stOperation)
+	si stEtatRapp.EstToutConformeQr = Faux alors
+		// Compter les documents non conformes (singulier/pluriel)
+		nNbQrNonConforme est un entier = 0
+		pour tout stLigneQr de stEtatRapp.tabDocuments
+			si stLigneQr.EstConformeQr = Faux alors
+				nNbQrNonConforme++
+			fin
+		fin
+
+		si nNbQrNonConforme > 0 alors
+			si nNbQrNonConforme >= 2 alors
+				sElementManquant += [RC] + sPuceNiveau1 + "QR de rapprochement (documents à régénérer) :"
+			sinon
+				sElementManquant += [RC] + sPuceNiveau1 + "QR de rapprochement (document à régénérer) :"
+			fin
+
+			pour tout stLigneQr de stEtatRapp.tabDocuments
+				si stLigneQr.EstConformeQr = Faux alors
+					si stLigneQr.QrRequis = Vrai _et_ stLigneQr.QrPresent = Faux alors
+						// QR REQUIS MAIS ABSENT
+						sElementManquant += [RC] + sPuceNiveau2 + stLigneQr.Designation + " : QR de rapprochement manquant — cliquez « Régénérer le BAT »."
+					sinon si stLigneQr.QrRequis = Faux _et_ stLigneQr.QrPresent = Vrai alors
+						// QR EN TROP
+						sElementManquant += [RC] + sPuceNiveau2 + stLigneQr.Designation + " : QR de rapprochement présent alors qu'il n'est plus nécessaire — cliquez « Régénérer le BAT »."
+					fin
+				fin
+			fin
+		fin
 	fin
 fin
 
@@ -176,7 +216,7 @@ si stOperation.EstCliquezIci = Vrai alors
 						sinon
 							pour tout sLien, nLien de stIciBlocValeurSocial.TabLien
 								si sLien.SansEspace() = "" alors
-//									sReseauxSociaux += [RC] + TAB + TAB  + sPuceNiveau3 + LibelleReseauSocial(stIciBlocValeurSocial.TabType[nLien])
+									//									sReseauxSociaux += [RC] + TAB + TAB  + sPuceNiveau3 + LibelleReseauSocial(stIciBlocValeurSocial.TabType[nLien])
 									sLandingManquant += [RC] + TAB + sPuceNiveau2 + stBloc.Nom
 									sortir
 								fin
@@ -226,7 +266,7 @@ si stOperation.EstCliquezIci = Vrai alors
 					autre cas
 
 				fin
-		fin
+			fin
 		autres cas
 
 	fin
@@ -240,10 +280,10 @@ fin
 
 sElementManquant += [RC] + sLandingManquant
 
-sElementManquant = sElementManquant.Remplace(RC,"<br>")
-sElementManquant = sElementManquant.Remplace(TAB,"&#8195;")
+sElementManquant					= sElementManquant.Remplace(RC,"<br>")
+sElementManquant					= sElementManquant.Remplace(TAB,"&#8195;")
 
-stOperation.ElementManquant = sElementManquant
+stOperation.ElementManquant		= sElementManquant
 
 si sElementManquant <> "" alors
 	renvoyer Faux

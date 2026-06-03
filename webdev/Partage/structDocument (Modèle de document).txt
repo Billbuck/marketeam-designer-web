@@ -50,6 +50,7 @@ structDocument est une Structure
 	JsonDesignerData						est une chaîne									// Bloc "data" JSON retourné par le Designer du document
 	EstPersonnaliseDesigner				est un booléen									// Vrai = l'utilisateur a personnalisé via le Designer
 	DateHeureDesigner						est une DateHeure								// Date/heure dernière sauvegarde Designer
+	EstBatARegenerer						est un booléen									// PHASE 3b (cas B) : un changement de règle QR de rapprochement rend ce document non conforme -> BAT à régénérer (via bouton « Régénérer le BAT »). Marquage minimal ; suivi complet obsolescence/consultation = Phase 5.
 	CheminPsmdTemp							est une chaîne									// Chemin physique complet du fichier PSMD production (avec fond perdu + SRA)
 	CheminPsmdBat							est une chaîne									// Chemin physique complet du fichier PSMD BAT (format fini, sans fond perdu ni SRA)
 	NomFichierPsmd							est une chaîne									// Nom du fichier PSMD (sans répertoire)

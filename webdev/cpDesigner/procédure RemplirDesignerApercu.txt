@@ -73,6 +73,16 @@ pour tout stBaseLigne de pTabEchantillon
 	stUnChamp.valeur	= "Affranchissement " + NumériqueVersChaîne(nInd, "03d")
 	stEnreg.enregistrement.Ajoute(stUnChamp)
 
+	// Champ système « Rapprochement » — VALEUR D'APERÇU (BAT) uniquement.
+	//   Démonstration pour que le QR de rapprochement du BAT ne soit pas vide
+	//   et soit contrôlable visuellement (même modèle que Timbre/Séquentiel).
+	//   ⚠ PAS la valeur de production (calculée en production, hors périmètre).
+	//   Représentatif d'une clé d'appariement par destinataire (identique pour
+	//   tous les documents d'un même destinataire = lié au n° d'enregistrement).
+	stUnChamp.nom		= "Rapprochement"
+	stUnChamp.valeur	= "RAPP" + NumériqueVersChaîne(nInd, "06d")
+	stEnreg.enregistrement.Ajoute(stUnChamp)
+
 	tabApercu.Ajoute(stEnreg)
 fin
 

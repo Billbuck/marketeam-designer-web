@@ -1,0 +1,165 @@
+// =============================================================================
+// cpDesigner.CollecteChampsInseresDocument
+// Rôle : Collecter les CLÉS des champs RÉELLEMENT INSÉRÉS dans un document
+//        Designer, TOUTES zones confondues :
+//          - zones texte   : embeds quillDelta (motif "key":"...")
+//          - code-barres   : champFusion + marqueurs @KEY@ de qrConfig
+//          - QR            : champFusion + marqueurs @KEY@ de qrConfig
+//          - image         : source.champFusion
+//        Les zones SYSTÈME (id commençant par "sys-") sont EXCLUES.
+//        Les clés sont nettoyées (sans @, nbsp -> espace, trim) et dédupliquées.
+//
+//        CŒUR DE COLLECTE PARTAGÉ du chantier « QR de rapprochement ».
+//        Logique IDENTIQUE à la collecte interne de
+//        VerifieConcordanceBaseDesigner (qui, elle, reste inchangée : ses
+//        procédures internes ne sont pas appelables de l'extérieur). À terme,
+//        la concordance pourra être routée vers cette procédure pour un cœur
+//        réellement unique (cf. récap de phase).
+//
+// Paramètre : pJson (chaîne) — JsonDesignerData du document (wrapper .data géré).
+// Retour    : un tableau de chaînes — clés insérées (nettoyées, dédupliquées).
+//             N.B. les champs SYS (Séquentiel/Timbre/Cliquez-ici) NE sont PAS
+//             filtrés ici (ils sont collectés s'ils sont insérés) : l'exclusion
+//             des champs système relève de l'APPELANT (comme dans la concordance).
+// =============================================================================
+PROCÉDURE CollecteChampsInseresDocument(pJson est une chaîne)
+
+tabCles		est un tableau de chaînes
+taaVu		est un tableau associatif de booléens
+jDoc		est un JSON
+jData		est un JSON
+bJsonOk		est un booléen	= Vrai
+
+SI pJson <> "" ALORS
+	QUAND EXCEPTION DANS
+		jDoc = pJson
+	FAIRE
+		bJsonOk = Faux
+	FIN
+
+	SI bJsonOk ALORS
+		SI jDoc.data..Existe ALORS
+			jData = jDoc.data
+		SINON
+			jData = jDoc
+		FIN
+
+		// Zones texte : embeds quillDelta (motif "key":"...")
+		SI jData.zonesTexte..Existe ALORS
+			POUR nZ = 1 _À_ jData.zonesTexte..Occurrence
+				SI EstZoneSysteme(jData.zonesTexte[nZ]) = Faux ALORS
+					SI jData.zonesTexte[nZ].quillDelta..Existe ALORS
+						ExtraireClesEmbed(JSONVersChaîne(jData.zonesTexte[nZ].quillDelta))
+					FIN
+				FIN
+			FIN
+		FIN
+
+		// Zones code-barres : champFusion + tokens qrConfig
+		SI jData.zonesCodeBarres..Existe ALORS
+			POUR nZ = 1 _À_ jData.zonesCodeBarres..Occurrence
+				SI EstZoneSysteme(jData.zonesCodeBarres[nZ]) = Faux ALORS
+					SI jData.zonesCodeBarres[nZ].champFusion..Existe ALORS
+						AjouteCle(jData.zonesCodeBarres[nZ].champFusion)
+					FIN
+					SI jData.zonesCodeBarres[nZ].qrConfig..Existe ALORS
+						ExtraireMarqueurs(JSONVersChaîne(jData.zonesCodeBarres[nZ].qrConfig))
+					FIN
+				FIN
+			FIN
+		FIN
+
+		// Zones QR : champFusion + tokens qrConfig
+		SI jData.zonesQR..Existe ALORS
+			POUR nZ = 1 _À_ jData.zonesQR..Occurrence
+				SI EstZoneSysteme(jData.zonesQR[nZ]) = Faux ALORS
+					SI jData.zonesQR[nZ].champFusion..Existe ALORS
+						AjouteCle(jData.zonesQR[nZ].champFusion)
+					FIN
+					SI jData.zonesQR[nZ].qrConfig..Existe ALORS
+						ExtraireMarqueurs(JSONVersChaîne(jData.zonesQR[nZ].qrConfig))
+					FIN
+				FIN
+			FIN
+		FIN
+
+		// Zones image : source.champFusion
+		SI jData.zonesImage..Existe ALORS
+			POUR nZ = 1 _À_ jData.zonesImage..Occurrence
+				SI EstZoneSysteme(jData.zonesImage[nZ]) = Faux ALORS
+					SI jData.zonesImage[nZ].source..Existe ALORS
+						SI jData.zonesImage[nZ].source.champFusion..Existe ALORS
+							AjouteCle(jData.zonesImage[nZ].source.champFusion)
+						FIN
+					FIN
+				FIN
+			FIN
+		FIN
+	FIN
+FIN
+
+RENVOYER tabCles
+
+
+// ═════════════════════════════════════════════════════════════════════════
+// PROCÉDURES INTERNES (écrivent dans les locaux hôtes tabCles / taaVu)
+// ═════════════════════════════════════════════════════════════════════════
+
+	// ─── Nettoyage d'une clé (retire @, convertit nbsp, trim) ───────────────
+	PROCÉDURE INTERNE NettoieCle(LOCAL pCle est une chaîne)
+		sR est une chaîne = Remplace(pCle, "@", "")
+		sR = Remplace(sR, Caract(160), " ")		// espace insécable -> espace normal
+		sR = SansEspace(sR)
+		RENVOYER sR
+	FIN
+
+	// ─── Ajout d'une clé collectée (nettoyée, non vide, dédupliquée) ────────
+	PROCÉDURE INTERNE AjouteCle(LOCAL pCleRaw est une chaîne)
+		sCle est une chaîne = NettoieCle(pCleRaw)
+		SI sCle <> "" _ET_ taaVu[sCle]..Existe = Faux ALORS
+			taaVu[sCle] = Vrai
+			tabCles.Ajoute(sCle)
+		FIN
+	FIN
+
+	// ─── Zone système ? (id commence par "sys-") ────────────────────────────
+	PROCÉDURE INTERNE EstZoneSysteme(LOCAL jZone est un JSON)
+		sId est une chaîne = ""
+		QUAND EXCEPTION DANS
+			SI jZone.id..Existe ALORS
+				sId = jZone.id
+			FIN
+		FAIRE
+		FIN
+		RENVOYER (Gauche(sId, 4) = "sys-")
+	FIN
+
+	// ─── Extraction des marqueurs @KEY@ d'un texte (qrConfig sérialisé) ─────
+	//   Filtre : un marqueur de champ ne contient pas d'espace interne.
+	PROCÉDURE INTERNE ExtraireMarqueurs(LOCAL pTexte est une chaîne)
+		sM		est une chaîne
+		sClean	est une chaîne
+		SI pTexte <> "" ALORS
+			sM = ExtraitChaîneEntre(pTexte, rangPremier, "@", "@")
+			TANTQUE sM <> EOT
+				sClean = NettoieCle(sM)
+				SI sClean <> "" _ET_ Position(sClean, " ") = 0 ALORS
+					AjouteCle(sClean)
+				FIN
+				sM = ExtraitChaîneEntre(pTexte, rangSuivant, "@", "@")
+			FIN
+		FIN
+	FIN
+
+	// ─── Extraction des clés d'embeds merge-tag d'un quillDelta sérialisé ───
+	//   Motif "key":"xxx" — identique à GenererPsmdServeurDocument / concordance.
+	PROCÉDURE INTERNE ExtraireClesEmbed(LOCAL pTexte est une chaîne)
+		sK est une chaîne
+		SI pTexte <> "" ALORS
+			sK = ExtraitChaîneEntre(pTexte, rangPremier, """key"":""", """")
+			TANTQUE sK <> EOT
+				AjouteCle(sK)
+				sK = ExtraitChaîneEntre(pTexte, rangSuivant, """key"":""", """")
+			FIN
+		FIN
+	FIN

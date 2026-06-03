@@ -1,0 +1,227 @@
+// =============================================================================
+// cpDesigner.DocumentEstPersonnaliseBase
+// Rôle : Déterminer si UN document d'une opération courrier est PERSONNALISÉ
+//        au sens du chantier « QR de rapprochement » (PHASE 1 — fondation).
+//
+//   PERSONNALISÉ = (A) OU (B) :
+//     (A) le document porte le PAVÉ D'ADRESSE destinataire (zone système
+//         d'adresse, id commençant par "sys-adresse"). C'est le cas du
+//         document PORTE-ADRESSE en enveloppe À FENÊTRE : il est TOUJOURS
+//         personnalisé, même sans aucun autre champ ajouté.
+//     (B) il contient AU MOINS UN champ de fusion inséré, NON système,
+//         CORRESPONDANT à une colonne de la base courante (toutes bases non
+//         supprimées — union via stOperation.taaBaseChamp).
+//
+//   ⚠ Le pavé d'adresse système COMPTE comme personnalisation (condition A) :
+//     on ne l'exclut donc PAS du verdict, contrairement au collecteur (B) qui,
+//     lui, ignore les zones "sys-".
+//
+// Réutilisation :
+//   - (B) collecte via le cœur partagé cpDesigner.CollecteChampsInseresDocument
+//     (zones "sys-" exclues), puis exclusion des champs SYS (Séquentiel/Timbre/
+//     Cliquez-ici) et comparaison STRICTE (casse + accents, ou casse près)
+//     aux colonnes de la base — logique alignée sur VerifieConcordanceBaseDesigner
+//     (concordance NON modifiée).
+//
+// Conséquences métier respectées :
+//   - Enveloppe SANS fenêtre : pas de pavé d'adresse -> personnalisé seulement
+//     si (B) (au moins un champ base inséré).
+//   - Enveloppe À fenêtre, document porte-adresse : (A) -> toujours personnalisé.
+//
+// Paramètres :
+//   pDoc          (structDocument)   — le document à tester
+//   pStOperation  (structOperation)  — contexte base (taaBaseChamp)
+// Retour : booléen
+// =============================================================================
+PROCÉDURE DocumentEstPersonnaliseBase(pDoc est une structDocument, pStOperation est une structOperation)
+
+taaColonnesBase		est un tableau associatif de structBaseChamp = pStOperation.taaBaseChamp
+tabCles				est un tableau de chaînes
+taaLocalLibelle		est un tableau associatif de chaînes		// "LOCAL_xxx" -> libellé
+sLibelleResolu		est une chaîne
+
+// ─── (A) Pavé d'adresse destinataire présent ? ───────────────────────────
+SI PorteLePaveAdresse(pDoc.JsonDesignerData) ALORS
+	RENVOYER Vrai
+FIN
+
+// ─── (B) Au moins un champ inséré (non système) mappé à la base ? ─────────
+//   La collecte exclut déjà les zones "sys-" ; on exclut ici les champs SYS.
+ChargeLibellesLocaux(pDoc.JsonDesignerData)		// remplit taaLocalLibelle
+tabCles = cpDesigner.CollecteChampsInseresDocument(pDoc.JsonDesignerData)
+
+POUR TOUT sCle DE tabCles
+	SI EstChampSysteme(sCle) = Faux ALORS
+		SI Gauche(sCle, 6) = "LOCAL_" ALORS
+			// ─── SPÉCIFIQUE : résoudre le libellé, comparer aux libellés base ───
+			SI taaLocalLibelle[sCle]..Existe ALORS
+				sLibelleResolu = taaLocalLibelle[sCle]
+				SI sLibelleResolu <> "" ALORS
+					SI ChampCorrespondBase(sLibelleResolu, Vrai) ALORS
+						RENVOYER Vrai
+					FIN
+				FIN
+			FIN
+		SINON
+			// ─── STANDARD : comparer le nom technique aux .Champ base ───
+			SI ChampCorrespondBase(sCle, Faux) ALORS
+				RENVOYER Vrai
+			FIN
+		FIN
+	FIN
+FIN
+
+RENVOYER Faux
+
+
+// ═════════════════════════════════════════════════════════════════════════
+// PROCÉDURES INTERNES
+// ═════════════════════════════════════════════════════════════════════════
+
+	// ─── (A) Présence d'une zone système d'adresse (id "sys-adresse*") ──────
+	//   Critère FIABLE : reflète le contenu RÉEL du document (le pavé d'adresse
+	//   est persisté dans JsonDesignerData à la validation Designer — vérifié
+	//   sur le JsonDesignerData en base). Symétrique du préfixe "sys-" utilisé
+	//   par la concordance / EstZoneSysteme.
+	PROCÉDURE INTERNE PorteLePaveAdresse(LOCAL pJson est une chaîne)
+		jDoc	est un JSON
+		jData	est un JSON
+		bJsonOk	est un booléen	= Vrai
+		bTrouve	est un booléen	= Faux
+		sId		est une chaîne
+
+		SI pJson = "" ALORS
+			RENVOYER Faux
+		FIN
+
+		QUAND EXCEPTION DANS
+			jDoc = pJson
+		FAIRE
+			bJsonOk = Faux
+		FIN
+
+		SI bJsonOk = Faux ALORS
+			RENVOYER Faux
+		FIN
+
+		SI jDoc.data..Existe ALORS
+			jData = jDoc.data
+		SINON
+			jData = jDoc
+		FIN
+
+		SI jData.zonesTexte..Existe ALORS
+			POUR nZ = 1 _À_ jData.zonesTexte..Occurrence
+				sId = ""
+				QUAND EXCEPTION DANS
+					SI jData.zonesTexte[nZ].id..Existe ALORS
+						sId = jData.zonesTexte[nZ].id
+					FIN
+				FAIRE
+				FIN
+				// "sys-adresse" = 11 caractères ("sys-" + "adresse")
+				SI Gauche(sId, 11) = "sys-adresse" ALORS
+					bTrouve = Vrai
+					SORTIR
+				FIN
+			FIN
+		FIN
+
+		RENVOYER bTrouve
+	FIN
+
+	// ─── Champ SYSTÈME ? (exclu de (B)) — aligné sur la concordance ──────────
+	//   Les clés issues du collecteur sont déjà nettoyées.
+	PROCÉDURE INTERNE EstChampSysteme(LOCAL pCle est une chaîne)
+		bSys	est un booléen	= Faux
+		SI pCle = "Sequentiel" _OU_ pCle = "Timbre" _OU_ pCle = "Rapprochement" ALORS
+			bSys = Vrai
+		FIN
+		QUAND EXCEPTION DANS
+			SI pCle = __CHAMP_CLIQUEZ_ICI__ ALORS
+				bSys = Vrai
+			FIN
+		FAIRE
+		FIN
+		RENVOYER bSys
+	FIN
+
+	// ─── Libellés des champs spécifiques (LOCAL_<id> -> libellé) ────────────
+	//   Sous-ensemble de ChargeChampsFusion de la concordance (uniquement la
+	//   résolution localId -> libellé, nécessaire à (B) pour les spécifiques).
+	PROCÉDURE INTERNE ChargeLibellesLocaux(LOCAL pJson est une chaîne)
+		jDoc		est un JSON
+		jData		est un JSON
+		bJsonOk		est un booléen	= Vrai
+		sLocalId	est une chaîne
+		sLib		est une chaîne
+
+		taaLocalLibelle.SupprimeTout()
+
+		SI pJson <> "" ALORS
+			QUAND EXCEPTION DANS
+				jDoc = pJson
+			FAIRE
+				bJsonOk = Faux
+			FIN
+
+			SI bJsonOk ALORS
+				SI jDoc.data..Existe ALORS
+					jData = jDoc.data
+				SINON
+					jData = jDoc
+				FIN
+
+				SI jData.champsFusion..Existe ALORS
+					POUR nC = 1 _À_ jData.champsFusion..Occurrence
+						sLocalId = ""
+						sLib = ""
+						QUAND EXCEPTION DANS
+							SI jData.champsFusion[nC].localId..Existe ALORS
+								sLocalId = jData.champsFusion[nC].localId
+							FIN
+							SI jData.champsFusion[nC].libelle..Existe ALORS
+								sLib = jData.champsFusion[nC].libelle
+							FIN
+						FAIRE
+						FIN
+						SI sLocalId <> "" _ET_ sLocalId <> "0" ALORS
+							taaLocalLibelle["LOCAL_" + sLocalId] = sLib
+						FIN
+					FIN
+				FIN
+			FIN
+		FIN
+	FIN
+
+	// ─── Le champ correspond-il à une colonne de la base ? (exact OU casse) ─
+	//   pCompareLibelle = Vrai -> comparer aux CLÉS (libellés) de taaColonnesBase
+	//   pCompareLibelle = Faux -> comparer aux .Champ (noms techniques)
+	//   Multi-bases : taaColonnesBase est l'union ; on ignore les colonnes
+	//   supprimées (EstSupprimé). « Correspond » = exact (casse + accents) OU
+	//   égal à la casse près (un ECART_CASSE référence quand même une colonne
+	//   base ; la casse est traitée séparément par la concordance).
+	PROCÉDURE INTERNE ChampCorrespondBase(LOCAL pValeur est une chaîne, LOCAL pCompareLibelle est un booléen)
+		bCorrespond	est un booléen	= Faux
+		sValMaj		est une chaîne	= Majuscule(pValeur)
+		sCible		est une chaîne
+
+		POUR TOUT stChamp, sLibelle DE taaColonnesBase
+			SI stChamp.EstSupprimé = Faux _ET_ bCorrespond = Faux ALORS
+				SI pCompareLibelle ALORS
+					sCible = sLibelle
+				SINON
+					sCible = stChamp.Champ
+				FIN
+				SI sCible <> "" ALORS
+					SI pValeur = sCible ALORS
+						bCorrespond = Vrai
+					SINON SI Majuscule(sCible) = sValMaj ALORS
+						bCorrespond = Vrai
+					FIN
+				FIN
+			FIN
+		FIN
+
+		RENVOYER bCorrespond
+	FIN

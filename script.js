@@ -4077,6 +4077,20 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     let autoriserGestionChamps = true;
 
+    // ─── Chantier QR de rapprochement (Phase 3b) ─────────────────────────────
+    //   Id de la zone système « QR de rapprochement » (aligné serveur).
+    const QR_RAPPROCHEMENT_ID = 'sys-qr-rapprochement';
+    //   Transmis par WebDev à l'ouverture (cas A/C) : Vrai si AU MOINS UN AUTRE
+    //   document de l'opération est personnalisé. Combiné au statut « personnalisé »
+    //   live du document courant, il décide de l'affichage du QR (N >= 2).
+    let qrRappRequisSiAutre = false;
+    //   Garde anti-réentrance de la synchronisation de zone.
+    let __qrRappSyncing = false;
+    //   Template COMPLET de la zone QR de rapprochement, transmis par WebDev à
+    //   l'ouverture (cpDesigner.ConstruireZoneQrRapprochement) = SOURCE UNIQUE.
+    //   Le JS ne contient plus aucune géométrie/définition en dur.
+    let qrRappZoneTemplate = null;
+
     /**
      * V2.4 / L8 - D12 - Doctrine consolidée du bouton « Champs » sidebar et
      * de la popup. **Dissociation explicite intention vs état réel** :
@@ -4717,10 +4731,133 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (typeof applyMergeTagErrorState === 'function') {
                     applyMergeTagErrorState();
                 }
+                // Chantier QR de rapprochement (Phase 3b, cas A/C) : ajuster la
+                //   présence de la zone système selon le statut « personnalisé »
+                //   live du document + l'état global transmis par WebDev.
+                if (typeof syncQrRapprochementZone === 'function') {
+                    syncQrRapprochementZone();
+                }
             } catch (e) {
                 // defensive — ne jamais bloquer le flow utilisateur
             }
         }, 100);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // QR de rapprochement — synchronisation EN DIRECT côté Designer (Phase 3b)
+    //   cas A : ajout/suppression d'un champ -> apparition/disparition immédiate.
+    //   cas C : à l'ouverture -> état affiché cohérent avec la règle globale.
+    //   La persistance dans le JsonDesignerData se fait par l'export Designer à
+    //   la validation (la zone, présente dans documentState, est exportée dans
+    //   zonesCodeBarres). Le serveur garde InjecteOuRetireQrRapprochement pour
+    //   le bouton « Régénérer le BAT » (BAT serveur).
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Le document courant est-il PERSONNALISÉ (au sens du QR de rapprochement) ?
+     *   (A) il porte le pavé d'adresse (zone id "sys-adresse*"), OU
+     *   (B) il exploite au moins un champ présent en base (presenteEnBase).
+     * @returns {boolean}
+     */
+    function isDocumentPersonnaliseLive() {
+        // (A) pavé d'adresse présent dans l'état
+        try {
+            const pages = (documentState && Array.isArray(documentState.pages)) ? documentState.pages : [];
+            for (const pg of pages) {
+                const zones = (pg && pg.zones) ? pg.zones : {};
+                for (const zid in zones) {
+                    if (zid.indexOf('sys-adresse') === 0) return true;
+                }
+            }
+        } catch (e) { /* defensive */ }
+        // (B) au moins un champ base exploité
+        try {
+            const champs = (documentState && Array.isArray(documentState.champsFusion)) ? documentState.champsFusion : [];
+            for (const c of champs) {
+                if (c && c.presenteEnBase === true
+                    && typeof estChampExploite === 'function' && estChampExploite(c)) {
+                    return true;
+                }
+            }
+        } catch (e) { /* defensive */ }
+        return false;
+    }
+
+    /** Index de page (0..n) portant la zone QR de rapprochement, -1 si absente. */
+    function findQrRapprochementPageIndex() {
+        try {
+            const pages = (documentState && Array.isArray(documentState.pages)) ? documentState.pages : [];
+            for (let i = 0; i < pages.length; i++) {
+                const zones = (pages[i] && pages[i].zones) ? pages[i].zones : {};
+                if (zones[QR_RAPPROCHEMENT_ID]) return i;
+            }
+        } catch (e) { /* defensive */ }
+        return -1;
+    }
+
+    /**
+     * Renvoie le JSON de la zone système « QR de rapprochement ».
+     * SOURCE UNIQUE = template transmis par le serveur à l'ouverture
+     *   (cpDesigner.ConstruireZoneQrRapprochement, via jsWrapper.qrRapprochementZone).
+     * ⚠ Plus AUCUNE valeur géométrique/définition en dur côté JS.
+     * @returns {Object|null} clone du template, ou null si non transmis (repli
+     *   défensif : sans template, on n'injecte pas de zone hasardeuse).
+     */
+    function buildQrRapprochementZoneJson() {
+        if (qrRappZoneTemplate && typeof qrRappZoneTemplate === 'object') {
+            try {
+                return JSON.parse(JSON.stringify(qrRappZoneTemplate));
+            } catch (e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Injecte ou retire la zone QR de rapprochement selon le statut personnalisé
+     * live du document et l'état global (qrRappRequisSiAutre). Rendu immédiat si
+     * la page courante est le recto. Non annulable / sans pollution de l'historique.
+     */
+    function syncQrRapprochementZone() {
+        if (__qrRappSyncing) return;
+        __qrRappSyncing = true;
+        try {
+            const shouldHave = qrRappRequisSiAutre && isDocumentPersonnaliseLive();
+            const existingPageIdx = findQrRapprochementPageIndex();
+            const exists = (existingPageIdx >= 0);
+
+            if (shouldHave && !exists) {
+                // Injection sur le recto (page 1 / index 0)
+                if (!documentState.pages || !documentState.pages[0] || !documentState.pages[0].zones) return;
+                const zoneJson = buildQrRapprochementZoneJson();
+                if (!zoneJson) return; // template serveur absent -> pas d'injection (défensif)
+                let zoneData;
+                try {
+                    zoneData = convertZoneCodeBarresFromJson(zoneJson);
+                } catch (e) { return; }
+                documentState.pages[0].zones[QR_RAPPROCHEMENT_ID] = zoneData;
+                // Rendu DOM seulement si le recto est affiché
+                if ((documentState.currentPageIndex || 0) === 0) {
+                    try { createZoneDOM(QR_RAPPROCHEMENT_ID, 0, false); } catch (e) { /* defensive */ }
+                    try { if (typeof updateBarcodeZoneDisplay === 'function') updateBarcodeZoneDisplay(QR_RAPPROCHEMENT_ID); } catch (e) { /* defensive */ }
+                    try { if (typeof updateSystemeBadge === 'function') updateSystemeBadge(QR_RAPPROCHEMENT_ID); } catch (e) { /* defensive */ }
+                    try { if (typeof normalizeZIndexes === 'function') normalizeZIndexes(); } catch (e) { /* defensive */ }
+                }
+                try { saveToLocalStorage(); } catch (e) { /* defensive */ }
+            } else if (!shouldHave && exists) {
+                // Retrait
+                try { delete documentState.pages[existingPageIdx].zones[QR_RAPPROCHEMENT_ID]; } catch (e) { /* defensive */ }
+                const el = document.getElementById(QR_RAPPROCHEMENT_ID);
+                if (el && el.parentNode) el.parentNode.removeChild(el);
+                try { if (typeof normalizeZIndexes === 'function') normalizeZIndexes(); } catch (e) { /* defensive */ }
+                try { saveToLocalStorage(); } catch (e) { /* defensive */ }
+            }
+        } catch (e) {
+            // defensive — ne jamais bloquer l'édition
+        } finally {
+            __qrRappSyncing = false;
+        }
     }
 
     /**
@@ -26207,6 +26344,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 );
             }
             if (DEBUG) console.log('loadFromWebDev: autoriserGestionChamps =', autoriserGestionChamps);
+
+            // PHASE 3b — Drapeau global QR de rapprochement : au moins un AUTRE
+            //   document est personnalisé (=> N>=2 si le document courant l'est).
+            const rawQrRapp = jsonData.qrRapprochementRequisSiPersonnalise;
+            qrRappRequisSiAutre = (
+                rawQrRapp === true || rawQrRapp === 1 || rawQrRapp === '1' ||
+                rawQrRapp === 'Vrai' || rawQrRapp === 'true' || rawQrRapp === 'True'
+            );
+            if (DEBUG) console.log('loadFromWebDev: qrRapprochementRequisSiPersonnalise =', qrRappRequisSiAutre);
+
+            // PHASE — Template complet de la zone QR de rapprochement (source
+            //   unique serveur). Utilisé pour l'ajout dynamique en direct.
+            qrRappZoneTemplate = (jsonData.qrRapprochementZone && typeof jsonData.qrRapprochementZone === 'object')
+                ? jsonData.qrRapprochementZone
+                : null;
+            if (DEBUG) console.log('loadFromWebDev: qrRapprochementZone reçu =', (qrRappZoneTemplate !== null));
         }
 
         // Appliquer les limites ZIP si fournies dans l'enveloppe

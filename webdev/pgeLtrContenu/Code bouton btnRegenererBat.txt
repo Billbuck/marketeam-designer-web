@@ -1,0 +1,62 @@
+// =============================================================================
+// Bouton « Régénérer le BAT » — ligne document de znrLtrContenu (pgeLtrContenu)
+// PHASE 3a — déclencheur de l'injection/retrait du QR de rapprochement.
+//
+// Enchaînement (CE document uniquement) :
+//   1. InjecteOuRetireQrRapprochement : injecte/retire la zone système
+//      "sys-qr-rapprochement" dans le JsonDesignerData selon QrRequis.
+//   2. Régénère le PSMD puis le BAT (flux IDENTIQUE à la validation Designer :
+//      ServeurTraiterMessageDesigner branche DOCUMENT).
+//
+// ⚠ PAS de persistance BDD ici : comme la validation Designer
+//   (ServeurTraiterMessageDesigner), ce bouton met seulement à jour
+//   __stOperation EN MÉMOIRE (JsonDesignerData modifié) et régénère les
+//   fichiers PSMD/BAT sur disque. L'enregistrement en base reste géré par le
+//   TUNNEL (btnSauvegardeTunnel), quand toutes les étapes sont validées.
+//
+// ⚠ À CÂBLER DANS L'ÉDITEUR WebDev :
+//   - Placer ce bouton dans la zone répétée znrLtrContenu (à côté de
+//     btnDocumentPersonnaliser / btnDocumentAperçu / btnDocumentSupprimer).
+//   - Type de traitement : « Code Ajax serveur » (comme btnDocumentPersonnaliser),
+//     ou via AJAXExécuteAsynchrone si une jauge de progression est souhaitée.
+//   - Visibilité (Phase 3a, simple) : visible si le document n'est pas en
+//     attente (cohérent avec btnDocumentAperçu) :
+//       btnRegenererBat..Visible = (stDocument.EstDocumentEnAttente = Faux _ET_ stDocument.JsonDesignerData <> "")
+//     (la visibilité conditionnelle FINE — selon QrRequis/conformité — viendra
+//      en Phase 7 ; à placer dans InitZnrContenu.)
+// =============================================================================
+
+// Code Ajax serveur :
+
+_nIndDoc	est un entier	= znrLtrContenu		// index de la ligne courante (cf. btnDocumentPersonnaliser)
+
+si _nIndDoc >= 1 _et_ _nIndDoc <= __stOperation.stOperationLettre.tabStDocument..Occurrence alors
+
+	// ─── 1. Injection / retrait de la zone QR de rapprochement ───────────────
+	cpDesigner.InjecteOuRetireQrRapprochement(__stOperation, _nIndDoc)
+
+	// ─── 2. Régénération PSMD + BAT (miroir ServeurTraiterMessageDesigner) ───
+	si cpDesigner.GenererPsmdServeurDocument(__stOperation.stOperationLettre.tabStDocument[_nIndDoc]) alors
+		cpDesigner.GenererBatDocumentDepuisPsmd(__stOperation.stOperationLettre.tabStDocument[_nIndDoc], __tabEchantillonBaseLigne)
+		cpDesigner.TraiterManifestImagesDesigner(__stOperation.stOperationLettre.tabStDocument[_nIndDoc].CheminPsmdTemp, __stOperation.stOperationLettre.tabStDocument[_nIndDoc].JsonDesignerData)
+
+		// Blanc tournant si pas de fond perdu (idem branche document Designer)
+		si __stOperation.stOperationLettre.tabStDocument[_nIndDoc].tabPagePDF..Occurrence > 0 alors
+			si __stOperation.stOperationLettre.tabStDocument[_nIndDoc].tabPagePDF[1].EstFondPerdu = Faux alors
+				pour tout stVignette de __stOperation.stOperationLettre.tabStDocument[_nIndDoc].tabImageFond
+					cpDesigner.AppliqueBlancTournant(stVignette.CheminPhysique, __stOperation.stOperationLettre.tabStDocument[_nIndDoc].LargeurOuvert, __stOperation.stOperationLettre.tabStDocument[_nIndDoc].HauteurOuvert)
+				fin
+				pour tout stVignette de __stOperation.stOperationLettre.tabStDocument[_nIndDoc].tabImageBat
+					cpDesigner.AppliqueBlancTournant(stVignette.CheminPhysique, __stOperation.stOperationLettre.tabStDocument[_nIndDoc].LargeurOuvert, __stOperation.stOperationLettre.tabStDocument[_nIndDoc].HauteurOuvert)
+				fin
+			fin
+		fin
+
+		// ─── Document de nouveau conforme -> retirer le marquage (cas B) ───
+		__stOperation.stOperationLettre.tabStDocument[_nIndDoc].EstBatARegenerer = Faux
+
+	sinon
+		PopupAfficheMessage("Erreur lors de la régénération du BAT" + RC + "Merci de réitérer l'opération", "Erreur", __OPERATION_COURRIER__, __TOAST_ANNULATION__)
+	fin
+
+fin

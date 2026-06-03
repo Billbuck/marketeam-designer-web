@@ -1,7 +1,19 @@
-PROCÉDURE InitZnrContenu()
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//InitZnrContenu ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure InitZnrContenu()
 
 
-nInd					est un entier
+nInd						est un entier
 stDocument				est une structDocument
 sFiltre					est une chaîne
 sBibliothèque			est une chaîne
@@ -11,78 +23,80 @@ znrLtrContenu.SupprimeTout()
 
 
 
-POUR TOUT stDocument DE  __stOperation.stOperationLettre.tabStDocument
+pour tout stDocument de  __stOperation.stOperationLettre.tabStDocument
 
-	nInd 			= znrLtrContenu.AjouteLigne()
+	nInd											= znrLtrContenu.AjouteLigne()
 
-	znrLtrContenu[nInd].attNumDocument = nInd
+	znrLtrContenu[nInd].attNumDocument	= nInd
 
 	// Initialisation de la bibliothèque
 	cboTemp.SupprimeTout()
 	sFiltre = "AND ltr_modele.IdSupport = " + stDocument.IdSupport +RC+ "AND ltr_modele.EstRectoVerso = " + stDocument.EstRectoVerso +RC+ "AND ltr_modele.EstFondPerdu = " + stDocument.EstFondPerdu
-	SI nInd = 1 _ET_ __stOperation.stOperationLettre.stEnveloppe.NbrFenetre > 0 ALORS
+	si nInd = 1 _et_ __stOperation.stOperationLettre.stEnveloppe.NbrFenetre > 0 alors
 		sFiltre += RC + "AND ltr_modele.EstPorteAdresse = 1"
-	FIN
+	fin
 	Partage.InitCboBibliothèque(cboTemp, ltr_modele..Nom, ltr_modele.IdModele..Nom, stDocument.IdModele, Vrai, Faux, sFiltre, __stOperation.IdClient)
 
 	znrLtrContenu[nInd].attCboBibliothèqueContenu	= cboTemp..Contenu
-	POUR I = 1 _À_ cboTemp.Occurrence
+	pour I = 1 _à_ cboTemp.Occurrence
 		znrLtrContenu[nInd].attCboBibliothèqueGlien += [TAB] + cboTemp[I].ValeurMémorisée
-	FIN
+	fin
 
 	znrLtrContenu[nInd].attCboBibliothèqueValeur = cboTemp.ValeurMémorisée
 
 	BibliothèqueValeurMemorisée(cboTemp, sBibliothèque, nIdMarque)
 	InitCboTypeContenu(sBibliothèque, nIdMarque, stDocument.IdSupport, stDocument.EstRectoVerso, stDocument.EstFondPerdu, stDocument.IdSupportGrammage, nInd)
 
-	znrLtrContenu[nInd].libSupportDesignation			= stDocument.Designation 	// stDocument.LibelleTypeSupport + " " + stDocument.LibelleSupport
-	znrLtrContenu[nInd].attModeImpression				= stDocument.ModeImpression // On mémorise le mode d'impression précédent en cas de passage d'un mode doc fourni a un doc non fourni
+	znrLtrContenu[nInd].libSupportDesignation				= stDocument.Designation 	// stDocument.LibelleTypeSupport + " " + stDocument.LibelleSupport
+	znrLtrContenu[nInd].attModeImpression					= stDocument.ModeImpression // On mémorise le mode d'impression précédent en cas de passage d'un mode doc fourni a un doc non fourni
 
+	selon Vrai
+	// Il s’agit d'un modèle
 
-	SELON Vrai
-		// Il s’agit d'un modèle
-
-		CAS stDocument.IdModele > 0
-			znrLtrContenu[nInd].attCboSourceValeur 							= cboIdPosition(znrLtrContenu[nInd].attCboSouceGlien,"M")
+		cas stDocument.IdModele > 0
+			znrLtrContenu[nInd].attCboSourceValeur									= cboIdPosition(znrLtrContenu[nInd].attCboSouceGlien,"M")
 			znrLtrContenu[nInd].attCboSelectionContenu							= znrLtrContenu[nInd].attCboModeleContenu
-			znrLtrContenu[nInd].attCboSelectionValeur							= cboIdPosition(znrLtrContenu[nInd].attCboModeleGlien,stDocument.IdModele)
-			znrLtrContenu[nInd].btnDocumentImporter..Visible 					= Faux
+			znrLtrContenu[nInd].attCboSelectionValeur								= cboIdPosition(znrLtrContenu[nInd].attCboModeleGlien,stDocument.IdModele)
+			znrLtrContenu[nInd].btnDocumentImporter..Visible					= Faux
 			znrLtrContenu[nInd].btnDocumentPersonnaliser..Visible				= (stDocument.EstPersonnalisable = Vrai)
+			znrLtrContenu[nInd].btnRegenererBAT..Visible							= (stDocument.EstBatARegenerer = Vrai)
 			znrLtrContenu[nInd].btnDocumentAperçu..Visible						= Vrai
-			znrLtrContenu[nInd].btnDocumentSupprimer..Visible					= Faux
-			znrLtrContenu[nInd].attCboSourceEtat								= (__stOperation.stOperationLettre.IdCampagne = 0) ? Actif SINON Inactif
-			znrLtrContenu[nInd].attCboSelectionEtat								= (__stOperation.stOperationLettre.IdCampagne = 0) ? Actif SINON Inactif
+			znrLtrContenu[nInd].btnPersonnalisationSupprimer..Visible					= (stDocument.EstPersonnaliseDesigner)
+			znrLtrContenu[nInd].attCboSourceEtat									= (__stOperation.stOperationLettre.IdCampagne = 0) ? Actif sinon Inactif
+			znrLtrContenu[nInd].attCboSelectionEtat								= (__stOperation.stOperationLettre.IdCampagne = 0) ? Actif sinon Inactif
 			znrLtrContenu[nInd].dispSupport[1].Visible							= Vrai
 
 			//SelectionModèle(stDocument.IdModele,nInd)
 
 		// Il s’agit d'un document client
-		CAS stDocument.IdDocumentClient > 0
-			znrLtrContenu[nInd].attCboSourceValeur								= cboIdPosition(znrLtrContenu[nInd].attCboSouceGlien,"C")
+		cas stDocument.IdDocumentClient > 0
+			znrLtrContenu[nInd].attCboSourceValeur									= cboIdPosition(znrLtrContenu[nInd].attCboSouceGlien,"C")
 			znrLtrContenu[nInd].attCboSelectionContenu							= znrLtrContenu[nInd].attCboDocumentContenu
-			znrLtrContenu[nInd].attCboSelectionValeur							= cboIdPosition(znrLtrContenu[nInd].attCboDocumentGlien,stDocument.IdDocumentClient)
-			znrLtrContenu[nInd].btnDocumentImporter..Visible 					= Faux
+			znrLtrContenu[nInd].attCboSelectionValeur								= cboIdPosition(znrLtrContenu[nInd].attCboDocumentGlien,stDocument.IdDocumentClient)
+			znrLtrContenu[nInd].btnDocumentImporter..Visible					= Faux
 			znrLtrContenu[nInd].btnDocumentPersonnaliser..Visible				= Faux
+			znrLtrContenu[nInd].btnRegenererBAT..Visible							= Faux
 			znrLtrContenu[nInd].btnDocumentAperçu..Visible						= Vrai
-			znrLtrContenu[nInd].btnDocumentSupprimer..Visible					= Faux
-			znrLtrContenu[nInd].attCboSourceEtat								= (__stOperation.stOperationLettre.IdCampagne = 0) ? Actif SINON Inactif
-			znrLtrContenu[nInd].attCboSelectionEtat								= (__stOperation.stOperationLettre.IdCampagne = 0) ? Actif SINON Inactif
+			znrLtrContenu[nInd].btnPersonnalisationSupprimer..Visible					= (stDocument.EstPersonnaliseDesigner)
+			znrLtrContenu[nInd].attCboSourceEtat									= (__stOperation.stOperationLettre.IdCampagne = 0) ? Actif sinon Inactif
+			znrLtrContenu[nInd].attCboSelectionEtat								= (__stOperation.stOperationLettre.IdCampagne = 0) ? Actif sinon Inactif
 			znrLtrContenu[nInd].dispSupport[1].Visible							= Faux
 
-		AUTRE CAS
-			znrLtrContenu[nInd].attCboSourceValeur								= cboIdPosition(znrLtrContenu[nInd].attCboSouceGlien,"F")
+		autre cas
+			znrLtrContenu[nInd].attCboSourceValeur									= cboIdPosition(znrLtrContenu[nInd].attCboSouceGlien,"F")
 			znrLtrContenu[nInd].attCboSelectionContenu							= stDocument.NomFichierOrigine
-			znrLtrContenu[nInd].attCboSelectionValeur							= 1
-			znrLtrContenu[nInd].btnDocumentImporter..Visible 					= Vrai
-			znrLtrContenu[nInd].btnDocumentPersonnaliser..Visible				= (stDocument.EstDocumentEnAttente = Faux _ET_ stDocument.JsonDesignerData <> "")
+			znrLtrContenu[nInd].attCboSelectionValeur								= 1
+			znrLtrContenu[nInd].btnDocumentImporter..Visible					= (stDocument.EstPersonnaliseDesigner = Faux)
+			znrLtrContenu[nInd].btnDocumentPersonnaliser..Visible				= (stDocument.EstDocumentEnAttente = Faux _et_ stDocument.JsonDesignerData <> "")
+			znrLtrContenu[nInd].btnRegenererBAT..Visible							= (stDocument.EstBatARegenerer = Vrai)
 			znrLtrContenu[nInd].btnDocumentAperçu..Visible						= (stDocument.EstDocumentEnAttente = Faux)
-			znrLtrContenu[nInd].btnDocumentSupprimer..Visible					= (stDocument.EstDocumentEnAttente = Faux)
-			znrLtrContenu[nInd].attCboSourceEtat								= Actif
+			znrLtrContenu[nInd].btnPersonnalisationSupprimer..Visible		= (stDocument.EstDocumentEnAttente = Faux _et_ stDocument.EstPersonnaliseDesigner)
+			znrLtrContenu[nInd].attCboSourceEtat									= Actif
 			znrLtrContenu[nInd].attCboSelectionEtat								= Actif
 			znrLtrContenu[nInd].dispSupport[1].Visible							= Faux
 
-	FIN
+	fin
 
 	znrLtrContenu[nInd].attImage	= "ext/Supports/ltr-" + stDocument.FichierApercu  + "-out" + __SVG__
 
-FIN
+fin

@@ -1,0 +1,146 @@
+// =============================================================================
+// cpDesigner.RecalculeEtatRapprochement
+// Rôle : POINT CENTRAL (« cerveau ») du chantier QR de rapprochement.
+//        Calcule, PAR DOCUMENT et en AGRÉGAT, l'état de rapprochement de
+//        l'opération courrier. NE MODIFIE RIEN (ni QR, ni BAT, ni
+//        JsonDesignerData, ni validation) — PHASE 2.
+//
+//        État CALCULÉ À LA DEMANDE, NON persisté.
+//
+// Définition « personnalisé » (Phase 2) :
+//   EstPersonnalise = cpDesigner.DocumentEstPersonnaliseBase(doc, op)   [contenu]
+//                     OU porte-adresse PAR INTENTION                     [intention]
+//   où « porte-adresse par intention » = enveloppe à fenêtre
+//   (stOperationLettre.EstEnveloppeFenetre = Vrai) ET document d'index 1.
+//   Justification : ComposerJsonDesignerCreation injecte le pavé d'adresse
+//   pour « EstEnveloppeFenetre = Vrai ET pIndexDocument = 1 ». Tant que ce
+//   document n'a pas été ouvert au Designer, son JsonDesignerData est vide
+//   -> la détection par CONTENU (zone sys-adresse) renvoie Faux ; l'intention
+//   garantit qu'il est tout de même compté personnalisé.
+//
+// Agrégat :
+//   NbDocumentsPersonnalises (N) = nb de documents EstPersonnalise.
+//   QrNecessaire = (N >= 2).
+// Déductions par document :
+//   QrRequis      = EstPersonnalise ET QrNecessaire.
+//   EstConformeQr = (QrRequis = QrPresent)  -> un document non personnalisé
+//                   portant un QR (QrPresent=Vrai, QrRequis=Faux) est NON
+//                   conforme (QR en trop).
+//
+// Paramètre : pStOperation (structOperation)
+// Retour    : structDesignerEtatRapprochement
+// =============================================================================
+PROCÉDURE RecalculeEtatRapprochement(pStOperation est une structOperation) : structDesignerEtatRapprochement
+
+stEtat			est une structDesignerEtatRapprochement
+nIndexDoc		est un entier	= 0
+nNbPerso		est un entier	= 0
+bEnvFenetre		est un booléen	= pStOperation.stOperationLettre.EstEnveloppeFenetre
+bTout			est un booléen	= Vrai
+
+// ─── Passe 1 : par document — personnalisé + QR présent ───────────────────
+POUR TOUT stDocument DE pStOperation.stOperationLettre.tabStDocument
+	nIndexDoc++
+
+	stLigne est une structDesignerEtatRapprochementDocument
+	stLigne.IndexDocument	= nIndexDoc
+	stLigne.Designation		= stDocument.Designation
+
+	// Personnalisé = détection par CONTENU (Phase 1) OU porte-adresse INTENTION
+	bPorteAdresseIntention est un booléen = (bEnvFenetre = Vrai _ET_ nIndexDoc = 1)
+	stLigne.EstPersonnalise = cpDesigner.DocumentEstPersonnaliseBase(stDocument, pStOperation) _OU_ bPorteAdresseIntention
+
+	// QR de rapprochement déjà présent ? (critère PROVISOIRE Phase 2)
+	stLigne.QrPresent = DocumentContientQrRapprochement(stDocument.JsonDesignerData)
+
+	SI stLigne.EstPersonnalise ALORS
+		nNbPerso++
+	FIN
+
+	stEtat.tabDocuments.Ajoute(stLigne)
+FIN
+
+// ─── Agrégat ──────────────────────────────────────────────────────────────
+stEtat.NbDocumentsPersonnalises	= nNbPerso
+stEtat.QrNecessaire				= (nNbPerso >= 2)
+
+// ─── Passe 2 : déductions par document (sans rien modifier) ───────────────
+POUR nI = 1 _À_ stEtat.tabDocuments..Occurrence
+	stEtat.tabDocuments[nI].QrRequis		= (stEtat.tabDocuments[nI].EstPersonnalise _ET_ stEtat.QrNecessaire)
+	stEtat.tabDocuments[nI].EstConformeQr	= (stEtat.tabDocuments[nI].QrRequis = stEtat.tabDocuments[nI].QrPresent)
+	SI stEtat.tabDocuments[nI].EstConformeQr = Faux ALORS
+		bTout = Faux
+	FIN
+FIN
+stEtat.EstToutConformeQr = bTout
+
+RENVOYER stEtat
+
+
+// ═════════════════════════════════════════════════════════════════════════
+// PROCÉDURE INTERNE
+// ═════════════════════════════════════════════════════════════════════════
+
+	// ─── QR de rapprochement présent dans le document ? ─────────────────────
+	//   CRITÈRE DÉFINITIF (Phase 3a) : zone d'id "sys-qr-rapprochement"
+	//   (zone code-barres système injectée par InjecteOuRetireQrRapprochement,
+	//   sur le modèle du datamatrix d'affranchissement). On scanne aussi
+	//   zonesQR par robustesse. Si rien -> Faux.
+	PROCÉDURE INTERNE DocumentContientQrRapprochement(LOCAL pJson est une chaîne)
+		jDoc	est un JSON
+		jData	est un JSON
+		bJsonOk	est un booléen	= Vrai
+		bTrouve	est un booléen	= Faux
+
+		SI pJson = "" ALORS
+			RENVOYER Faux
+		FIN
+
+		QUAND EXCEPTION DANS
+			jDoc = pJson
+		FAIRE
+			bJsonOk = Faux
+		FIN
+
+		SI bJsonOk = Faux ALORS
+			RENVOYER Faux
+		FIN
+
+		SI jDoc.data..Existe ALORS
+			jData = jDoc.data
+		SINON
+			jData = jDoc
+		FIN
+
+		// Zones QR
+		SI jData.zonesQR..Existe ALORS
+			POUR nZ = 1 _À_ jData.zonesQR..Occurrence
+				SI EstZoneRapprochement(jData.zonesQR[nZ]) ALORS
+					bTrouve = Vrai
+				FIN
+			FIN
+		FIN
+
+		// Zones code-barres
+		SI bTrouve = Faux _ET_ jData.zonesCodeBarres..Existe ALORS
+			POUR nZ = 1 _À_ jData.zonesCodeBarres..Occurrence
+				SI EstZoneRapprochement(jData.zonesCodeBarres[nZ]) ALORS
+					bTrouve = Vrai
+				FIN
+			FIN
+		FIN
+
+		RENVOYER bTrouve
+	FIN
+
+	// ─── Une zone est-elle le QR de rapprochement ? (critère DÉFINITIF : id) ─
+	PROCÉDURE INTERNE EstZoneRapprochement(LOCAL jZone est un JSON)
+		sId est une chaîne = ""
+		QUAND EXCEPTION DANS
+			SI jZone.id..Existe ALORS
+				sId = jZone.id
+			FIN
+		FAIRE
+		FIN
+		RENVOYER (sId = "sys-qr-rapprochement")
+	FIN
