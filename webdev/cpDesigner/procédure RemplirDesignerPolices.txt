@@ -1,0 +1,134 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// cpDesigner.RemplirDesignerPolices
+// Rôle : Construire la liste des polices disponibles pour le Designer, injectée
+//        dans `policesDisponibles` (racine du message load). Remplace la liste
+//        EN DUR (`DEFAULT_FONTS` côté JS) par une lecture DYNAMIQUE de la table
+//        `dsn_police`, à 3 niveaux de portée.
+//
+//        Lot 0 (A) — FONDATION + LECTURE. L'import depuis l'API Google Fonts
+//        (alimentation initiale de dsn_police) est le Lot 0 (B), séparé.
+//
+// Source de vérité : docs/cahier-des-charges-polices-designer.md
+//   §3.1  1 graisse = 1 entrée (chaque ligne dsn_police = une entrée de combo)
+//   §3.3  Nom (libellé combo) DISTINCT de NomTechnique (nom interne réel, pour
+//         le \fonttbl du PSMD au Lot 2 ; transporté ici, ignoré par le JS web)
+//   §3.6  Portée 3 niveaux : générale (IdMarque/IdClient NULL) + marque(s) du
+//         client (dérivées via clt_client_marque) + client
+//   §3.7  Tri : Marque, puis Client, puis Générale, puis alphabétique (Nom)
+//   Filtre : EstActif = 1
+//
+// Le « tuyau » postMessage existe déjà côté Designer (loadFromWebDev →
+// loadFontsFromJson + updateQuillFontSelectUI) : NE PAS le reconstruire. Cette
+// procédure ne fait que produire le tableau attendu.
+//
+// Contrat JS consommé (NE PAS modifier le JS) :
+//   - loadFontsFromJson()       : nom, url, boldUrl, italicUrl, boldItalicUrl, weight, style
+//   - updateQuillFontSelectUI() : nom (libellé + valeur + font-family), id, présence boldUrl/italicUrl
+//   `nomTechnique` n'est pas lu par le JS web (réservé au PSMD, Lot 2).
+//
+// Appelée par :
+//   - cpDesigner.ComposerJsonDesignerCreation  (stLoad.policesDisponibles = ...)
+//   - cpDesigner.ComposerJsonDesignerModele
+//
+// Paramètre :
+//   pIdClient (entier) : client courant. Sert à la sélection portée (client +
+//                        marques du client). IdMarque n'est pas dans stOperation
+//                        -> dérivé du client via clt_client_marque.
+//
+// Retour :
+//   tableau de structDesignerPolice (sérialisé sous "policesDisponibles" à la
+//   racine du message load).
+// ─────────────────────────────────────────────────────────────────────────────
+procédure RemplirDesignerPolices(pIdClient) : tableau de structDesignerPolice
+
+tabPolices			est un tableau de structDesignerPolice
+stUnePolice			est une structDesignerPolice
+nIdClient			est un entier		= pIdClient
+sTexteRequete		est une chaîne ANSI
+sdReqPolice			est une Source de Données
+taaLibelleGraisse	est un tableau associatif de chaînes		// Weight(entier) -> libellé canonique (ici_police_weight, EstPrincipal=1)
+sReqGraisse			est une chaîne ANSI
+sdReqGraisse		est une Source de Données
+
+// ─── Préchargement des libellés de graisses « principales » (cascade famille->graisse) ──
+//   Relation : dsn_police.Weight = ici_police_weight.Code AND EstPrincipal = 1.
+//   Préchargé en tableau associatif (même pattern que l'import) pour éviter toute
+//   jointure inter-connexions (dsn_police et ici_police_weight ont chacune leur Connexion).
+sReqGraisse = "SELECT Code, Nom FROM ici_police_weight WHERE EstPrincipal = 1"
+si sdReqGraisse.ExécuteRequêteSQL(ici_police_weight.Connexion, hRequêteSansCorrection, sReqGraisse) alors
+	POUR TOUT sdReqGraisse
+		taaLibelleGraisse[sdReqGraisse.Code] = sdReqGraisse.Nom
+	FIN
+fin
+sdReqGraisse.AnnuleDéclaration()
+
+// ─── Sélection 3 niveaux (générale + marque(s) du client + client) ──────────
+//   - Générale  : IdMarque IS NULL AND IdClient IS NULL
+//   - Client    : IdClient = pIdClient
+//   - Marque(s) : IdMarque IN (marques du client via clt_client_marque)
+//   Tri à la source : rang de portée (1=Marque, 2=Client, 3=Générale) puis Nom.
+sTexteRequete = [
+	SELECT
+		IdPolice, Nom, NomTechnique, Famille, Url, Weight, Style, BoldUrl, ItalicUrl, BoldItalicUrl
+	FROM
+		dsn_police
+	WHERE
+		EstActif = 1
+		AND (
+			(IdMarque IS NULL AND IdClient IS NULL)
+			OR IdClient = [%nIdClient%]
+			OR IdMarque IN (
+				SELECT IdMarque FROM clt_client_marque WHERE IdClient = [%nIdClient%]
+			)
+		)
+	ORDER BY
+		CASE
+			WHEN IdMarque IS NOT NULL THEN 1
+			WHEN IdClient IS NOT NULL THEN 2
+			ELSE 3
+		END,
+		Nom
+]
+
+si pas sdReqPolice.ExécuteRequêteSQL(dsn_police.Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	<compile si TypeConfiguration <> Webservice>
+		Info("Erreur requête RemplirDesignerPolices")
+	<fin>
+	// En cas d'échec : tableau vide -> le Designer retombe sur DEFAULT_FONTS (repli existant)
+	renvoyer tabPolices
+fin
+
+// ─── Mapping dsn_police -> structDesignerPolice (contrat JS) ─────────────────
+pour tout sdReqPolice
+	stUnePolice.id				= sdReqPolice.IdPolice
+	stUnePolice.nom				= sdReqPolice.Nom
+	stUnePolice.nomTechnique	= sdReqPolice.NomTechnique
+	stUnePolice.url				= sdReqPolice.Url
+	stUnePolice.weight			= sdReqPolice.Weight
+	stUnePolice.style			= sdReqPolice.Style
+	stUnePolice.boldUrl			= sdReqPolice.BoldUrl
+	stUnePolice.italicUrl		= sdReqPolice.ItalicUrl
+	stUnePolice.boldItalicUrl	= sdReqPolice.BoldItalicUrl
+
+	// ─── Cascade famille -> graisse (Lot 0 amendement) ─────────────────────
+	//   famille : colonne dsn_police.Famille ; repli = nom (police manuelle non
+	//             encore renseignée = famille mono-graisse).
+	si SansEspace(sdReqPolice.Famille) <> "" alors
+		stUnePolice.famille = sdReqPolice.Famille
+	sinon
+		stUnePolice.famille = sdReqPolice.Nom
+	fin
+	//   graisse : libellé canonique ici_police_weight (repris TEL QUEL, y compris 400).
+	//             La règle d'affichage combo (cas 400) est traitée plus tard (Lot 1 JS).
+	si taaLibelleGraisse[sdReqPolice.Weight]..Existe alors
+		stUnePolice.graisse = taaLibelleGraisse[sdReqPolice.Weight]
+	sinon
+		stUnePolice.graisse = ""
+	fin
+
+	tabPolices.Ajoute(stUnePolice)
+fin
+
+sdReqPolice.AnnuleDéclaration()
+
+renvoyer tabPolices

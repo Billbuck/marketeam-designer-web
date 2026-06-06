@@ -1,0 +1,37 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// cpDesigner.RemplirDesignerPolicesSysteme
+// Rôle : Renvoyer la liste des polices « SYSTÈME » (présentes sur l'atelier /
+//        Windows, donc résolues par PSM SANS fichier dans le sous-dossier Fonts).
+//        SOURCE UNIQUE de vérité (CDC §3.10), paramétrable : prm_parametre
+//        Polices_Systeme (CSV). Réutilisable : classification de non-conformité
+//        (Lot 2D-1) ET future alerte d'ouverture du Designer (Lot 2D-2).
+//
+//        Aucune exception nominative en dur : tout vient du paramètre.
+//        La comparaison côté appelant doit être insensible à la casse + aux
+//        espaces de bord (les espaces internes comme « Times New Roman » sont
+//        significatifs et conservés).
+//
+// Valeur initiale conseillée du paramètre :
+//   Verdana,Arial,Georgia,Times New Roman,Courier New
+//
+// Retour : tableau de chaînes (noms système, espaces de bord retirés). Vide si
+//          le paramètre est absent.
+// ─────────────────────────────────────────────────────────────────────────────
+procédure RemplirDesignerPolicesSysteme() : tableau de chaîne
+
+tabSysteme	est un tableau de chaîne
+sCsv			est une chaîne
+nI				est un entier
+
+sCsv = cpFonction.ValeurParametre("Polices_Systeme", prm_parametre.ValChaine..Nom)
+si sCsv = "" alors
+	renvoyer tabSysteme		// liste vide -> aucune police considérée système
+fin
+
+// Découpage CSV + nettoyage des espaces de bord
+tabSysteme = ChaîneDécoupe(sCsv, ",")
+POUR nI = 1 _À_ tabSysteme..Occurrence
+	tabSysteme[nI] = SansEspace(tabSysteme[nI])
+FIN
+
+renvoyer tabSysteme

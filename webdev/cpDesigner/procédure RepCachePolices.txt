@@ -1,0 +1,24 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// cpDesigner.RepCachePolices
+// Rôle : Renvoyer (et créer si besoin) le dossier de CACHE GLOBAL des fichiers de
+//        police téléchargés (stratégie A — cache à l'import, cf. CDC §3.4/§4).
+//
+//        Emplacement GLOBAL (pas per-document) : <racine web>\Polices\
+//        Les portées marque/client (lots ultérieurs) pourront ajouter des
+//        sous-dossiers ; le Lot 2A ne gère que la portée générale.
+//
+// Retour : chemin physique terminé par "\" (dossier garanti existant), ou ""
+//          en cas d'échec de création.
+// ─────────────────────────────────────────────────────────────────────────────
+procédure RepCachePolices() : chaîne
+
+sRep est une chaîne = cpProjet.__sRepRacine + "Polices\"
+
+si pas fRépertoireExiste(sRep) alors
+	si pas fRepCrée(sRep) alors
+		Trace("RepCachePolices : échec création dossier " + sRep)
+		renvoyer ""
+	fin
+fin
+
+renvoyer sRep

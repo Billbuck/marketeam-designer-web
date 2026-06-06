@@ -35,8 +35,19 @@ sNomFichierPsmd	= __DOC_ENV_PSMD__ + pCodeTemp + __PSMD__
 sCheminPsmd			= sRepTravail + sNomFichierPsmd
 sCheminJsonTemp	= sRepTravail + "psmd_json_env_" + pCodeTemp + __TMP__
 
+// ─── Substitution nom d'affichage -> nom technique dans le \fonttbl (Lot 2B) ──
+//   Opère sur une copie chaîne (le JsonDesignerData de l'enveloppe reste intact).
+sJsonEnvTemp est une chaîne = stEnveloppe.JsonDesignerData
+nIdClientPolice est un entier = 0
+QUAND EXCEPTION DANS
+	nIdClientPolice = __stOperation.IdClient
+FAIRE
+	nIdClientPolice = 0
+FIN
+sJsonEnvTemp = SubstitueNomTechniquePolices(sJsonEnvTemp, nIdClientPolice)
+
 // ─── Écriture du JSON dans le fichier temporaire ─────────────────────────
-si pas fSauveTexte(sCheminJsonTemp, ChaîneVersUTF8(stEnveloppe.JsonDesignerData)) alors
+si pas fSauveTexte(sCheminJsonTemp, ChaîneVersUTF8(sJsonEnvTemp)) alors
 	Trace("GenererPsmdServeurEnveloppe : échec fSauveTexte : " + sCheminJsonTemp)
 	renvoyer Faux
 fin
@@ -76,6 +87,9 @@ fin
 // ─── Mise à jour de la structure enveloppe ───────────────────────────────
 stEnveloppe.CheminPsmdEnveloppe		= sCheminPsmd
 stEnveloppe.NomFichierPsmdEnveloppe	= sNomFichierPsmd
+
+// ─── Lot 2C : copie des polices utilisées dans Fonts (même répertoire d'opération) ──
+CopiePolicesUtiliseesVersFonts(stEnveloppe.JsonDesignerData, stEnveloppe.RepertoireTravail)
 
 Trace("GenererPsmdServeurEnveloppe : .psmd généré : " + sCheminPsmd)
 renvoyer Vrai

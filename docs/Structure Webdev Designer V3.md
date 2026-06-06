@@ -245,13 +245,16 @@ fin
 // -----------------------------------------------------------------------------
 structDesignerPolice est une Structure
 	'id'							est un entier		<sérialise = "id">					// ID en base de données (0 si non défini)
-	'nom'							est une chaîne		<sérialise = "nom">					// Nom affiché dans la combo (ex: "Roboto")
+	'nom'							est une chaîne		<sérialise = "nom">					// Nom AFFICHÉ dans la combo (libellé libre, ex: "Roboto Light")
+	'nomTechnique'				est une chaîne		<sérialise = "nomTechnique">		// Nom INTERNE réel de la police (écrit dans le \fonttbl du PSMD au Lot 2 ; correspond au nom interne du TTF). Non lu par le JS web.
 	'url'							est une chaîne		<sérialise = "url">					// URL du fichier police principal (.ttf, .woff2)
 	'weight'						est un entier		<sérialise = "weight">				// Poids CSS : 100=Thin, 300=Light, 400=Regular, 500=Medium, 700=Bold, 900=Black
 	'style'						est une chaîne		<sérialise = "style">				// Style CSS : "normal" ou "italic"
 	'boldUrl'					est une chaîne		<sérialise = "boldUrl">				// URL variante Bold (vide si non disponible)
 	'italicUrl'					est une chaîne		<sérialise = "italicUrl">			// URL variante Italic (vide si non disponible)
 	'boldItalicUrl'			est une chaîne		<sérialise = "boldItalicUrl">		// URL variante Bold+Italic (vide si non disponible)
+	'famille'					est une chaîne		<sérialise = "famille">				// Famille (cascade combo 1) = dsn_police.Famille ; repli = nom si vide
+	'graisse'					est une chaîne		<sérialise = "graisse">				// Libellé de graisse (cascade combo 2) = ici_police_weight.Nom (EstPrincipal=1) pour Weight ; TEL QUEL (y compris 400)
 fin
 
 // -----------------------------------------------------------------------------

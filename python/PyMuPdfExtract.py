@@ -859,4 +859,4 @@ if __name__ == '__main__':
     print("  http://localhost:5000/PyMuPdfExtract/validate?file=C:\\Doc\\test.pdf")
     print("=" * 60)
     
-    app.run(host='127.0.0.1', port=5000, debug=True)
+    app.run(host='127.0.0.1', port=5000, debug=False)

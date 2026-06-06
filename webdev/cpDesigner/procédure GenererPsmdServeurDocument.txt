@@ -197,6 +197,17 @@ sinon
 	Trace("L18/A44 v5 : aucun mapping LOCAL_xxx > nom (régime A ou pas de spécifique mappable). Substitution PSMD sautée.")
 fin
 
+// ─── Substitution nom d'affichage -> nom technique dans le \fonttbl (Lot 2B) ──
+//   Couvre PROD (--imposition) ET BAT (--no-bleed) : même fichier temp.
+//   Opère sur la copie chaîne sJsonPsmdTemp (le JsonDesignerData en base reste intact).
+nIdClientPolice est un entier = 0
+QUAND EXCEPTION DANS
+	nIdClientPolice = __stOperation.IdClient
+FAIRE
+	nIdClientPolice = 0
+FIN
+sJsonPsmdTemp = SubstitueNomTechniquePolices(sJsonPsmdTemp, nIdClientPolice)
+
 // ─── Écriture du JSON dans le fichier temporaire ─────────────────────────
 si pas fSauveTexte(sCheminJsonTemp, ChaîneVersUTF8(sJsonPsmdTemp)) alors
 	Trace("GenererPsmdServeur : échec fSauveTexte JSON temp : " + sCheminJsonTemp)
@@ -264,6 +275,11 @@ sinon
 	stDocument.CheminPsmdBat	= sCheminPsmd
 	Trace("GenererPsmdServeur : PSMD BAT absent, fallback sur PSMD production")
 fin
+
+// ─── Lot 2C : copie des polices utilisées dans Fonts (avant rendu BAT) ───────
+//   Garantit les TTF du document dans …\Fonts\ pour sa preview BAT et la prod ;
+//   l'union projet se construit au fil des documents (même répertoire). Non bloquant.
+CopiePolicesUtiliseesVersFonts(stDocument.JsonDesignerData, stDocument.RepertoireTravail)
 
 Trace("GenererPsmdServeur : .psmd généré avec succès : " + sCheminPsmd)
 renvoyer Vrai

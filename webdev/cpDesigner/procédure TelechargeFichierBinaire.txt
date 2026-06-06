@@ -1,0 +1,60 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// cpDesigner.TelechargeFichierBinaire
+// Rôle : Télécharger un fichier BINAIRE depuis une URL https vers le disque,
+//        en garantissant un binaire INTACT (pas une chaîne tronquée).
+//
+//        Primitive neuve du Lot 2A (inexistante dans le projet). Réutilise le
+//        pattern HTTP éprouvé du projet (ImporteGoogleFontsGenerales) :
+//        HTTPRequête(url) -> HTTPDonneRésultat(), mais le corps est récupéré
+//        dans un BUFFER (binaire intact) et écrit avec fSauveBuffer (≠ fSauveTexte,
+//        réservé au texte / JSON de l'import).
+//
+// Paramètres :
+//   pUrl         (chaîne) : URL https du fichier (ex. .ttf gstatic)
+//   pCheminDest  (chaîne) : chemin physique complet de destination
+//
+// Retour : Vrai si le fichier est écrit et de taille > 0 ; Faux sinon.
+// ─────────────────────────────────────────────────────────────────────────────
+procédure TelechargeFichierBinaire(pUrl est une chaîne, pCheminDest est une chaîne) : booléen
+
+bOk			est un booléen	= Faux
+bufResultat	est un Buffer
+
+si pUrl = "" _ou_ pCheminDest = "" alors
+	renvoyer Faux
+fin
+
+// Suppression d'un éventuel fichier existant (re-téléchargement propre)
+si fFichierExiste(pCheminDest) alors
+	fSupprime(pCheminDest)
+fin
+
+QUAND EXCEPTION DANS
+	si HTTPRequête(pUrl) alors
+		// Corps de réponse récupéré en binaire (Buffer) puis écrit sur disque
+		bufResultat = HTTPDonneRésultat()
+		si fSauveBuffer(pCheminDest, bufResultat) alors
+			bOk = Vrai
+		fin
+	fin
+FAIRE
+	Trace("TelechargeFichierBinaire : exception HTTP : " + ExceptionInfo(errMessage))
+	bOk = Faux
+FIN
+
+si pas bOk alors
+	renvoyer Faux
+fin
+
+// Vérifications post-téléchargement : fichier présent et non vide
+si pas fFichierExiste(pCheminDest) alors
+	Trace("TelechargeFichierBinaire : fichier absent après téléchargement : " + pCheminDest)
+	renvoyer Faux
+fin
+
+si fTaille(pCheminDest) <= 0 alors
+	Trace("TelechargeFichierBinaire : fichier vide (0 octet) : " + pCheminDest)
+	renvoyer Faux
+fin
+
+renvoyer Vrai

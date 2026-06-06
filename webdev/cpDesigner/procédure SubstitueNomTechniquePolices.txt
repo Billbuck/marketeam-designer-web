@@ -1,0 +1,91 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// cpDesigner.SubstitueNomTechniquePolices
+// Rôle : Remplacer, dans une chaîne JSON Designer, le NOM D'AFFICHAGE de police
+//        par son NOM TECHNIQUE réel (nameID1 du TTF), pour que le PSMD/PrintShop
+//        Mail trouve la bonne police. Substitution AU SERVEUR, sur le modèle du
+//        précédent @LOCAL_xxx@ (GenererPsmdServeurDocument). Lot 2B.
+//
+//        Le Designer continue d'écrire le nom d'AFFICHAGE (zoneData.font) ; on ne
+//        touche NI au Designer, NI à deltaToRtf, NI au JsonDesignerData stocké en
+//        base : on opère sur une COPIE chaîne (comme @LOCAL).
+//
+// Deux emplacements ANCRÉS sont traités (jamais de remplacement du libellé nu,
+// pour éviter « Roboto » ⊂ « Roboto Slab ») :
+//   a. table de police RTF (dans contenuRtf, JSON-échappé) :
+//        \\fcharset0 <nom>;  ->  \\fcharset0 <nomTechnique>;
+//   b. champ style.police (utilisé par le repli generateRtfFromContenu) :
+//        "police":"<nom>"   ->  "police":"<nomTechnique>"
+//
+// Source de la correspondance : RemplirDesignerPolices(pIdClient) (nom +
+//   nomTechnique, portée 3 niveaux). Repli sur la portée générale (IdClient=0)
+//   si le client n'est pas résoluble.
+//
+// Paramètres :
+//   pJson      (chaîne) : JSON Designer (copie de travail)
+//   pIdClient  (entier) : client courant (portée polices) ; 0 = général seulement
+//
+// Retour : la chaîne JSON modifiée (idempotente : nom = nomTechnique -> neutre).
+// ─────────────────────────────────────────────────────────────────────────────
+procédure SubstitueNomTechniquePolices(pJson est une chaîne, pIdClient est un entier) : chaîne
+
+sJson			est une chaîne	= pJson
+tabPolices		est un tableau de structDesignerPolice
+sNom			est une chaîne
+sNomTech		est une chaîne
+sFontA			est une chaîne
+sFontB			est une chaîne
+sPolA			est une chaîne
+sPolB			est une chaîne
+nNbSubst		est un entier	= 0
+
+si sJson = "" alors
+	renvoyer sJson
+fin
+
+// ─── Table nom -> nomTechnique (portée 3 niveaux), repli général ────────────
+QUAND EXCEPTION DANS
+	tabPolices = RemplirDesignerPolices(pIdClient)
+FAIRE
+	Trace("SubstitueNomTechniquePolices : RemplirDesignerPolices(" + pIdClient + ") a échoué : " + ExceptionInfo(errMessage))
+FIN
+
+si tabPolices..Occurrence = 0 _et_ pIdClient <> 0 alors
+	QUAND EXCEPTION DANS
+		tabPolices = RemplirDesignerPolices(0)
+	FAIRE
+	FIN
+fin
+
+si tabPolices..Occurrence = 0 alors
+	// Aucune police de référence -> rien à substituer (le libellé reste tel quel)
+	renvoyer sJson
+fin
+
+// ─── Substitution ciblée (2 motifs ancrés), idempotente ─────────────────────
+POUR TOUT stP DE tabPolices
+	sNom		= stP.nom
+	sNomTech	= stP.nomTechnique
+
+	// Ignorer les entrées neutres (nom = nomTechnique) ou incomplètes
+	si sNom <> "" _et_ sNomTech <> "" _et_ sNom <> sNomTech alors
+
+		// a. Table de police RTF (JSON-échappé : double backslash)
+		sFontA = "\\fcharset0 " + sNom + ";"
+		sFontB = "\\fcharset0 " + sNomTech + ";"
+		si Position(sJson, sFontA) > 0 alors
+			sJson = Remplace(sJson, sFontA, sFontB)
+			nNbSubst++
+		fin
+
+		// b. Champ style.police
+		sPolA = """police"":""" + sNom + """"
+		sPolB = """police"":""" + sNomTech + """"
+		si Position(sJson, sPolA) > 0 alors
+			sJson = Remplace(sJson, sPolA, sPolB)
+			nNbSubst++
+		fin
+	fin
+FIN
+
+Trace("SubstitueNomTechniquePolices : " + nNbSubst + " substitution(s) de nom de police.")
+renvoyer sJson

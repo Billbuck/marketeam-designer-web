@@ -2556,6 +2556,12 @@ html[data-theme="LTR"] {
     cursor: pointer;
 }
 
+/* ── Double combo de police en CASCADE famille -> graisse (Lot 1) ──
+   Deux lignes standard .form-row-poc (libellé à gauche, combo à droite) :
+   ligne d'origine = « Police » (combo famille), nouvelle ligne = « Graisse »
+   (combo graisse), injectée juste après en JS (initFontCombo). Aucun style
+   spécifique requis : on réutilise le gabarit existant du panneau. */
+
 .dropdown-arrow-poc {
     position: absolute;
     right: 10px;

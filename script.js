@@ -6553,12 +6553,226 @@ document.addEventListener('DOMContentLoaded', () => {
             quillInputFont.value = fontsToUse[0].nom;
         }
 
+        // Lot 1 : répercuter les <option> reconstruites dans la combo éditable
+        rebuildFontCombo();
     }
     
     // Exposer les fonctions globalement (pour debug et appel depuis WebDev)
     window.loadFontsFromJson = loadFontsFromJson;
     window.updateFontSelectUI = updateFontSelectUI;
     window.updateQuillFontSelectUI = updateQuillFontSelectUI;
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // DOUBLE COMBO EN CASCADE famille -> graisse (Lot 1, amendement CDC §3.1)
+    // ───────────────────────────────────────────────────────────────────────────────
+    // Remplace VISUELLEMENT le <select id="quill-input-font"> par DEUX <select> :
+    //   COMBO 1 = famille (ordre serveur, sans recherche) ; COMBO 2 = graisse (poids
+    //   croissant, toujours affichée). Le <select> natif est CONSERVÉ (masqué) comme
+    //   source de vérité ET cible d'événement : choisir une graisse fait
+    //   quillInputFont.value = nom puis dispatch 'change' -> le handler existant
+    //   applique la police EXACTEMENT comme avant (zoneData.font = nom).
+    //   L'application de police, le @font-face et policesUtilisees ne sont PAS touchés.
+    // ═══════════════════════════════════════════════════════════════════════════════
+    let fontComboFamille = null;   // <select> COMBO 1 (famille)
+    let fontComboGraisse = null;   // <select> COMBO 2 (graisse)
+    let __fontCascadeSyncing = false; // garde : positionnement programmatique != action utilisateur
+
+    // Libellés de repli par poids (mode standalone / entrée sans `graisse`).
+    const FONT_WEIGHT_LABELS = {
+        100: 'Thin', 200: 'Extra Light', 300: 'Light', 400: 'Regular', 500: 'Medium',
+        600: 'Semi Bold', 700: 'Bold', 800: 'Extra Bold', 900: 'Black', 950: 'Extra Black'
+    };
+
+    /** Liste de polices source (même logique de repli que updateQuillFontSelectUI). */
+    function getFontList() {
+        return (Array.isArray(policesDisponibles) && policesDisponibles.length > 0) ? policesDisponibles : DEFAULT_FONTS;
+    }
+
+    /** Famille d'une entrée ; repli = son nom (police sans `famille` = mono-graisse). */
+    function getFamilleOf(p) {
+        if (!p) return '';
+        const fam = (typeof p.famille === 'string') ? p.famille.trim() : '';
+        return fam !== '' ? fam : (p.nom || '');
+    }
+
+    /** Libellé de graisse d'une entrée ; repli sur le poids si `graisse` absent. */
+    function getGraisseLabel(p) {
+        if (!p) return '';
+        const g = (typeof p.graisse === 'string') ? p.graisse.trim() : '';
+        if (g !== '') return g;
+        const w = (typeof p.weight === 'number') ? p.weight : 400;
+        return FONT_WEIGHT_LABELS[w] || String(w);
+    }
+
+    /** Entrée par défaut d'une famille : poids 400, sinon le plus proche de 400. */
+    function pickDefaultWeightEntry(entries) {
+        let best = null, bestDist = Infinity;
+        entries.forEach(p => {
+            const w = (typeof p.weight === 'number') ? p.weight : 400;
+            const d = Math.abs(w - 400);
+            if (d < bestDist) { bestDist = d; best = p; }
+        });
+        return best;
+    }
+
+    /** COMBO 1 : familles distinctes, dans l'ordre serveur (PAS de re-tri). */
+    function populateFamilleCombo() {
+        if (!fontComboFamille) return;
+        fontComboFamille.innerHTML = '';
+        const seen = Object.create(null);
+        getFontList().forEach(p => {
+            if (!p || !p.nom) return;
+            const fam = getFamilleOf(p);
+            if (!fam || seen[fam]) return;
+            seen[fam] = true;
+            const o = document.createElement('option');
+            o.value = fam;
+            o.textContent = fam;
+            o.style.fontFamily = "'" + (p.nom || fam) + "', sans-serif"; // aperçu
+            fontComboFamille.appendChild(o);
+        });
+    }
+
+    /** COMBO 2 : graisses de la famille, triées par poids croissant (100->950). */
+    function populateGraisseCombo(famille, selectNom) {
+        if (!fontComboGraisse) return;
+        const entries = getFontList().filter(p => p && getFamilleOf(p) === famille);
+        entries.sort((a, b) => ((a.weight || 400) - (b.weight || 400)));
+        fontComboGraisse.innerHTML = '';
+        entries.forEach(p => {
+            const o = document.createElement('option');
+            o.value = p.nom;                                  // valeur = NOM de l'entrée (identité)
+            o.textContent = getGraisseLabel(p);
+            o.dataset.weight = String(p.weight || 400);
+            o.style.fontFamily = "'" + p.nom + "', sans-serif"; // aperçu
+            fontComboGraisse.appendChild(o);
+        });
+        // Sélection : nom demandé sinon défaut 400/plus proche
+        let target = null;
+        if (selectNom) target = entries.find(p => p.nom === selectNom) || null;
+        if (!target && entries.length > 0) target = pickDefaultWeightEntry(entries);
+        if (target) fontComboGraisse.value = target.nom;
+    }
+
+    /** Applique une police : écrit le NOM dans le <select> masqué + dispatch 'change'.
+     *  RÈGLE D'OR : zoneData.font = nom (jamais de composite). Chemin d'application inchangé. */
+    function applyFontByNom(nom) {
+        if (!nom || !quillInputFont) return;
+        quillInputFont.value = nom;
+        quillInputFont.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    /** Positionne les deux combos sur la police courante du <select> masqué.
+     *  Police inconnue -> ne touche pas aux combos, n'écrase pas zoneData.font. */
+    function refreshFontComboDisplay() {
+        if (!fontComboFamille || !fontComboGraisse || !quillInputFont) return;
+        const nom = quillInputFont.value;
+        const p = getFontList().find(x => x && x.nom === nom);
+        if (!p) return; // repli : police absente de la liste -> on laisse l'affichage courant
+        __fontCascadeSyncing = true;
+        try {
+            const fam = getFamilleOf(p);
+            fontComboFamille.value = fam;
+            populateGraisseCombo(fam, p.nom);
+        } finally {
+            __fontCascadeSyncing = false;
+        }
+    }
+
+    /** Reconstruit les combos depuis policesDisponibles + repositionne (après updateQuillFontSelectUI). */
+    function rebuildFontCombo() {
+        if (!fontComboFamille) return;
+        __fontCascadeSyncing = true;
+        try {
+            populateFamilleCombo();
+            const nom = quillInputFont ? quillInputFont.value : '';
+            const p = getFontList().find(x => x && x.nom === nom);
+            if (p) {
+                fontComboFamille.value = getFamilleOf(p);
+                populateGraisseCombo(getFamilleOf(p), p.nom);
+            } else if (fontComboFamille.options.length > 0) {
+                // repli présentation (n'applique rien) : 1re famille + sa graisse par défaut
+                fontComboFamille.selectedIndex = 0;
+                populateGraisseCombo(fontComboFamille.value, null);
+            }
+        } finally {
+            __fontCascadeSyncing = false;
+        }
+    }
+
+    /** Crée et câble les deux combos une seule fois. */
+    function initFontCombo() {
+        if (fontComboFamille) return;
+        if (!quillInputFont) return;
+        const wrap = quillInputFont.parentElement; // .dropdown-poc
+        if (!wrap) return;
+
+        // Masquer le <select> natif (conservé : source de vérité + cible d'événement) + son arrow
+        quillInputFont.style.display = 'none';
+        const origArrow = wrap.querySelector('.dropdown-arrow-poc');
+        if (origArrow) origArrow.style.display = 'none';
+
+        // Ligne d'origine = COMBO 1 (famille). On garde son gabarit standard
+        // (.form-row-poc : libellé à gauche, combo à droite), libellé « Police ».
+        const rowOrigin = wrap.closest('.form-row-poc');
+        const rowLabel = rowOrigin ? rowOrigin.querySelector('.form-label-poc') : null;
+        if (rowLabel) { rowLabel.style.display = ''; rowLabel.textContent = 'Police'; }
+
+        // COMBO 1 (famille) : <select> dans le wrap d'origine, à droite, comme les autres lignes
+        fontComboFamille = document.createElement('select');
+        fontComboFamille.className = 'dropdown-btn-poc dropdown-select-poc';
+        fontComboFamille.id = 'font-combo-famille';
+        wrap.insertBefore(fontComboFamille, wrap.firstChild);
+        if (origArrow) { const aFam = origArrow.cloneNode(true); aFam.style.display = ''; wrap.appendChild(aFam); }
+
+        // COMBO 2 (graisse) : NOUVELLE ligne .form-row-poc juste après, même structure
+        fontComboGraisse = document.createElement('select');
+        fontComboGraisse.className = 'dropdown-btn-poc dropdown-select-poc';
+        fontComboGraisse.id = 'font-combo-graisse';
+
+        if (rowOrigin && rowOrigin.parentNode) {
+            const row2 = document.createElement('div');
+            row2.className = 'form-row-poc';
+
+            const lbl2 = document.createElement('label');
+            lbl2.className = 'form-label-poc';
+            lbl2.setAttribute('for', 'font-combo-graisse');
+            lbl2.textContent = 'Graisse';
+
+            const ctrl2 = document.createElement('div');
+            ctrl2.className = 'form-control-poc';
+            const dd2 = document.createElement('div');
+            dd2.className = 'dropdown-poc';
+            dd2.appendChild(fontComboGraisse);
+            if (origArrow) { const aGra = origArrow.cloneNode(true); aGra.style.display = ''; dd2.appendChild(aGra); }
+            ctrl2.appendChild(dd2);
+
+            row2.appendChild(lbl2);
+            row2.appendChild(ctrl2);
+            rowOrigin.parentNode.insertBefore(row2, rowOrigin.nextSibling);
+        } else {
+            // Repli : pas de .form-row-poc -> on place la 2e combo dans le wrap
+            wrap.appendChild(fontComboGraisse);
+        }
+
+        // COMBO 1 (famille) -> peupler graisses, défaut 400, puis appliquer
+        fontComboFamille.addEventListener('change', () => {
+            if (__fontCascadeSyncing) return;
+            populateGraisseCombo(fontComboFamille.value, null);
+            applyFontByNom(fontComboGraisse.value);
+        });
+
+        // COMBO 2 (graisse) -> appliquer l'entrée choisie
+        fontComboGraisse.addEventListener('change', () => {
+            if (__fontCascadeSyncing) return;
+            applyFontByNom(fontComboGraisse.value);
+        });
+
+        rebuildFontCombo();
+    }
+
+    // Construire la combo immédiatement (le <select> existe déjà dans le DOM)
+    initFontCombo();
 
     // Mode standalone : initialiser les polices par défaut si WebDev n'a pas encore fourni la liste.
     if (!policesDisponibles || policesDisponibles.length === 0) {
@@ -17547,6 +17761,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Typographie
         if (quillInputFont) quillInputFont.value = zoneData.font || QUILL_DEFAULT_FONT;
+        // Lot 1 : synchroniser l'affichage de la combo éditable avec la zone sélectionnée
+        refreshFontComboDisplay();
         
         // Taille - Spinner POC
         setSpinnerPocValue('quill-input-size', zoneData.size || QUILL_DEFAULT_SIZE, 1);

@@ -52,6 +52,18 @@ si PageMémorise() alors
 		__stOperation.ResteAPayer			= stMontantDue.ResteAPayer
 
 		si EnregistreOperation() alors
+
+			// ─── Lot 2C/2D : alerte consolidée de non-conformité polices (report-only) ──
+			//   Courrier uniquement. Le transport des fichiers Fonts est assuré par
+			//   DéplaceFichierUpload (déplacement du dossier existant). Ici on ne fait
+			//   QUE classer/alerter (aucune écriture). Non bloquant.
+			si __stOperation.TypeOperation = __OPERATION_COURRIER__ alors
+				sFontsNonConf est une chaîne = cpDesigner.VerifiePolicesProjet(__stOperation)
+				si sFontsNonConf <> "" alors
+					ToastAffiche("Polices utilisées sans fichier d'impression : " + sFontsNonConf)
+				fin
+			fin
+
 			si bEstOperationPretePourValidation = Vrai // On est le valideur
 				si stMontantDue.MontantDuePaybox = 0 alors 	// Celui que l'on facture est en compte
 					si Partage.__vcUser.IDClient = __stOperation.IdClient _ou_ Partage.__vcUser.IDClient = __stOperation.IdClientFacturation alors // Opération pour moi même ou c'est moi qui paye

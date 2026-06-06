@@ -1,0 +1,252 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// cpDesigner.CopiePolicesUtiliseesVersFonts
+// Rôle : Copier, depuis le cache global Polices vers un sous-dossier Fonts voisin
+//        des PSMD, les fichiers des polices RÉELLEMENT UTILISÉES par un document
+//        (+ toutes leurs variantes EXISTANTES : régulier/gras/italique/gras-ital.).
+//        Lot 2C — concordance print (CDC §3.4/§3.5).
+//
+//        Signature générique (pJson + pRepertoireTravail) pour couvrir document,
+//        enveloppe et modèle (chacun ayant son propre répertoire de sortie).
+//        Dédup : ne recopie pas un fichier déjà présent. Idempotent.
+//
+//        PSM identifie la police par son NOM INTERNE (nameID1, écrit par le Lot 2B
+//        dans le \fonttbl) -> le NOM DE FICHIER est libre : on garde celui du cache
+//        (police_<IdPolice>_<suffixe>.ttf). 2C ne fait que garantir la PRÉSENCE.
+//
+// Périmètre : lecture/copie seulement. Ne touche NI au JsonDesignerData stocké,
+//        NI au Designer, NI au web, NI aux fichiers du cache (source).
+//
+// Paramètres :
+//   pJson              (chaîne)  : JSON Designer du document (data)
+//   pRepertoireTravail (chaîne)  : répertoire où atterrissent les PSMD (Fonts y est créé)
+//   pReportSeulement   (booléen) : Vrai = CLASSIFICATION seule (aucune copie, aucun
+//                                  dossier créé) -> sert à l'alerte consolidée à la
+//                                  sauvegarde (Voie A : on ne reconstruit plus).
+//
+// Retour : liste (chaîne) des polices utilisées SANS fichier print (non-conformité),
+//          "" si tout est conforme. NE BLOQUE jamais.
+// ─────────────────────────────────────────────────────────────────────────────
+procédure CopiePolicesUtiliseesVersFonts(pJson est une chaîne, pRepertoireTravail est une chaîne, pReportSeulement est un booléen = Faux) : chaîne
+
+sRepFonts		est une chaîne
+sRepCache		est une chaîne
+taaNoms			est un tableau associatif de booléens		// noms d'affichage des polices utilisées
+taaNomVersId	est un tableau associatif d'entiers			// nom d'affichage -> IdPolice (ACTIVES + INACTIVES)
+tabSysteme		est un tableau de chaîne						// polices système (liste paramétrable)
+taaSysteme		est un tableau associatif de booléens		// noms système normalisés (casse + bords)
+sSys			est une chaîne
+sNonConf		est une chaîne	= ""
+nIdClient		est un entier	= 0
+nId				est un entier
+nNbVar			est un entier
+
+// En mode COPIE, le répertoire cible est requis ; en report-only il est ignoré.
+si pas pReportSeulement _et_ pRepertoireTravail = "" alors
+	renvoyer ""
+fin
+
+// ─── Cache source ───────────────────────────────────────────────────────────
+sRepCache = RepCachePolices()
+si sRepCache = "" alors
+	Trace("CopiePolicesUtiliseesVersFonts : cache polices indisponible")
+	renvoyer ""
+fin
+
+// ─── Dossier Fonts (créé si absent) — UNIQUEMENT en mode copie ──────────────
+si pas pReportSeulement alors
+	sRepFonts = pRepertoireTravail + "Fonts\"
+	si pas fRépertoireExiste(sRepFonts) alors
+		si pas fRepCrée(sRepFonts) alors
+			Trace("CopiePolicesUtiliseesVersFonts : échec création " + sRepFonts)
+			renvoyer ""
+		fin
+	fin
+fin
+
+// ─── 1. Noms des polices utilisées (policesUtilisees, repli style.police) ────
+LireNomsPolicesUtilisees(pJson)
+si taaNoms..Occurrence = 0 alors
+	renvoyer ""
+fin
+
+// ─── 2. Table nom -> IdPolice (portée 3 niveaux, ACTIVES + INACTIVES) ───────
+//   « Gérée » = présente dans dsn_police, active OU inactive (soft-delete §3.10).
+//   On n'utilise PAS RemplirDesignerPolices ici (il filtre EstActif=1) : requête
+//   dédiée sans ce filtre.
+QUAND EXCEPTION DANS
+	nIdClient = __stOperation.IdClient
+FAIRE
+	nIdClient = 0
+FIN
+ChargeMapNomVersId(nIdClient)
+
+// ─── 2 bis. Liste des polices SYSTÈME (source unique paramétrable) ──────────
+tabSysteme = RemplirDesignerPolicesSysteme()
+POUR TOUT sSys DE tabSysteme
+	si SansEspace(sSys) <> "" alors
+		taaSysteme[NormaliseNomPolice(sSys)] = Vrai
+	fin
+FIN
+
+// ─── 3. Classification + copie (§3.5 copie variantes / §3.10 non-conformité) ─
+//   • gérée (dsn_police, active ou inactive) -> copier ; non-conf si aucun fichier
+//   • système (liste paramétrable)           -> ignorée
+//   • ni l'une ni l'autre                     -> INCONNUE -> non-conformité
+POUR TOUT bUtil, sNomUtil DE taaNoms
+	SI taaNomVersId[sNomUtil]..Existe ALORS
+		nId = taaNomVersId[sNomUtil]
+		nNbVar = 0
+		SI pReportSeulement ALORS
+			// Classification seule : on teste la présence des fichiers cache
+			nNbVar += ExisteVarianteCache(nId, "regular", sRepCache)
+			nNbVar += ExisteVarianteCache(nId, "bold", sRepCache)
+			nNbVar += ExisteVarianteCache(nId, "italic", sRepCache)
+			nNbVar += ExisteVarianteCache(nId, "bolditalic", sRepCache)
+		SINON
+			nNbVar += CopieUneVariante(nId, "regular", sRepCache, sRepFonts)
+			nNbVar += CopieUneVariante(nId, "bold", sRepCache, sRepFonts)
+			nNbVar += CopieUneVariante(nId, "italic", sRepCache, sRepFonts)
+			nNbVar += CopieUneVariante(nId, "bolditalic", sRepCache, sRepFonts)
+		FIN
+		SI nNbVar = 0 ALORS
+			si sNonConf <> "" alors sNonConf += ", "
+			sNonConf += sNomUtil + " (police gérée sans fichier d'impression)"
+		FIN
+	SINON SI taaSysteme[NormaliseNomPolice(sNomUtil)]..Existe ALORS
+		// Police système -> présente sur l'atelier, aucun fichier requis
+		Trace("CopiePolicesUtiliseesVersFonts : police système ignorée : " + sNomUtil)
+	SINON
+		// Ni gérée ni système -> INCONNUE (ex. police supprimée encore référencée)
+		si sNonConf <> "" alors sNonConf += ", "
+		sNonConf += sNomUtil + " (police inconnue)"
+	FIN
+FIN
+
+si sNonConf <> "" alors
+	Trace("CopiePolicesUtiliseesVersFonts : non-conformités : " + sNonConf)
+fin
+
+renvoyer sNonConf
+
+
+// ═════════════════════════════════════════════════════════════════════════
+// PROCÉDURES INTERNES
+// ═════════════════════════════════════════════════════════════════════════
+
+	// ─── Lit les noms de polices utilisées dans taaNoms (host) ──────────────
+	//   Source : policesUtilisees ; repli : zonesTexte[].style.police.
+	//   Gardes ..Existe pour éviter toute exception imbriquée.
+	PROCÉDURE INTERNE LireNomsPolicesUtilisees(LOCAL pJsonLec est une chaîne)
+		jDoc		est un JSON
+		jChamps	est un JSON
+		bOk		est un booléen	= Vrai
+		sN			est une chaîne
+		sP			est une chaîne
+
+		si pJsonLec = "" alors
+			RETOUR
+		fin
+
+		QUAND EXCEPTION DANS
+			jDoc = pJsonLec
+		FAIRE
+			bOk = Faux
+		FIN
+		si pas bOk alors
+			RETOUR
+		fin
+
+		si jDoc.data..Existe alors
+			jChamps = jDoc.data
+		sinon
+			jChamps = jDoc
+		fin
+
+		// a. policesUtilisees
+		QUAND EXCEPTION DANS
+			SI jChamps.policesUtilisees..Existe _ET_ jChamps.policesUtilisees..Occurrence > 0 ALORS
+				POUR nI = 1 _À_ jChamps.policesUtilisees..Occurrence
+					sN = ""
+					SI jChamps.policesUtilisees[nI].nom..Existe ALORS
+						sN = jChamps.policesUtilisees[nI].nom
+					FIN
+					si sN <> "" alors taaNoms[sN] = Vrai
+				FIN
+			FIN
+		FAIRE
+		FIN
+
+		// b. repli : zonesTexte[].style.police si rien collecté
+		si taaNoms..Occurrence = 0 alors
+			QUAND EXCEPTION DANS
+				SI jChamps.zonesTexte..Existe ALORS
+					POUR nZ = 1 _À_ jChamps.zonesTexte..Occurrence
+						sP = ""
+						SI jChamps.zonesTexte[nZ].style..Existe _ET_ jChamps.zonesTexte[nZ].style.police..Existe ALORS
+							sP = jChamps.zonesTexte[nZ].style.police
+						FIN
+						si sP <> "" alors taaNoms[sP] = Vrai
+					FIN
+				FIN
+			FAIRE
+			FIN
+		fin
+	FIN
+
+	// ─── Mapping nom d'affichage -> IdPolice (ACTIVES + INACTIVES) ──────────
+	//   Portée 3 niveaux (générale + marque(s) du client + client), SANS filtre
+	//   EstActif (une police inactive reste « gérée » pour la classification §3.10).
+	//   Remplit le tableau host taaNomVersId.
+	PROCÉDURE INTERNE ChargeMapNomVersId(LOCAL pIdClient est un entier)
+		sReqMap	est une chaîne ANSI
+		sdReqMap	est une Source de Données
+		sReqMap = [
+			SELECT IdPolice, Nom FROM dsn_police
+			WHERE (IdMarque IS NULL AND IdClient IS NULL)
+			   OR IdClient = [%pIdClient%]
+			   OR IdMarque IN (SELECT IdMarque FROM clt_client_marque WHERE IdClient = [%pIdClient%])
+		]
+		si sdReqMap.ExécuteRequêteSQL(dsn_police.Connexion, hRequêteSansCorrection, sReqMap) alors
+			POUR TOUT sdReqMap
+				si sdReqMap.Nom <> "" alors
+					taaNomVersId[sdReqMap.Nom] = sdReqMap.IdPolice
+				fin
+			FIN
+		fin
+		sdReqMap.AnnuleDéclaration()
+	FIN
+
+	// ─── Normalisation pour comparaison « système » : minuscules + bords ────
+	//   (espaces internes conservés : « Times New Roman »).
+	PROCÉDURE INTERNE NormaliseNomPolice(LOCAL pNom est une chaîne) : chaîne
+		RENVOYER Minuscule(SansEspace(pNom))
+	FIN
+
+	// ─── Présence d'une variante dans le cache (report-only, sans copie) ────
+	//   Renvoie 1 si le fichier cache existe, 0 sinon.
+	PROCÉDURE INTERNE ExisteVarianteCache(LOCAL pId est un entier, LOCAL pSuffixe est une chaîne, LOCAL pRepCache est une chaîne) : entier
+		si fFichierExiste(pRepCache + "police_" + pId + "_" + pSuffixe + ".ttf") alors
+			RENVOYER 1
+		fin
+		RENVOYER 0
+	FIN
+
+	// ─── Copie une variante du cache vers Fonts (dédup). Renvoie 1 si le ─────
+	//   fichier existe dans le cache (copié ou déjà présent dans Fonts), 0 sinon.
+	PROCÉDURE INTERNE CopieUneVariante(LOCAL pId est un entier, LOCAL pSuffixe est une chaîne, LOCAL pRepCache est une chaîne, LOCAL pRepFonts est une chaîne) : entier
+		sNomFic	est une chaîne	= "police_" + pId + "_" + pSuffixe + ".ttf"
+		sSrc		est une chaîne	= pRepCache + sNomFic
+		sDest		est une chaîne	= pRepFonts + sNomFic
+
+		si pas fFichierExiste(sSrc) alors
+			RENVOYER 0
+		fin
+		si fFichierExiste(sDest) alors
+			RENVOYER 1		// déjà présent (dédup union)
+		fin
+		si fCopieFichier(sSrc, sDest) alors
+			RENVOYER 1
+		fin
+		Trace("CopieUneVariante : échec copie " + sSrc + " -> " + sDest)
+		RENVOYER 0
+	FIN

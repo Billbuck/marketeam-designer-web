@@ -1,0 +1,180 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// cpDesigner.LitNomInterneTtf
+// Rôle : Lire le NOM INTERNE « Family name » (nameID 1) d'un fichier .ttf, par
+//        parse BINAIRE WLangage de la table 'name' (autonome, sans dépendance
+//        externe — pas de fonttools/Node au runtime serveur).
+//
+//        Stratégie de sélection de l'enregistrement nameID=1 :
+//          1) Windows en priorité  (platformID = 3, chaîne UTF-16 big-endian) ;
+//          2) repli Macintosh      (platformID = 1, chaîne 1 octet/caractère).
+//        C'est le nom que Windows/PSM voit (cf. CDC §4 : NomTechnique = nameID1).
+//
+// Format TTF lu :
+//   - Offset table (12 o) : sfntVersion(4) numTables(2) searchRange(2)
+//     entrySelector(2) rangeShift(2).
+//   - Table directory : numTables × 16 o { tag(4) checksum(4) offset(4) length(4) }.
+//   - Table 'name' : format(2) count(2) stringOffset(2) puis count × 12 o
+//     { platformID(2) encodingID(2) languageID(2) nameID(2) length(2) offset(2) }
+//     puis zone de stockage des chaînes (à +stringOffset depuis le début de 'name').
+//
+// NB : positions WLangage 1-based (Milieu(buffer, pos, len) commence à 1).
+//      Les offsets binaires du TTF sont 0-based → on ajoute 1 à la conversion.
+//
+// Paramètre : pCheminTtf (chaîne) : chemin physique du .ttf
+// Retour    : le nameID1 (Family name), ou "" si illisible.
+// ─────────────────────────────────────────────────────────────────────────────
+procédure LitNomInterneTtf(pCheminTtf est une chaîne) : chaîne
+
+bufTtf			est un Buffer
+nTaille			est un entier
+nNumTables		est un entier
+nPosDir			est un entier
+nOffsetName		est un entier	= 0
+nBaseName		est un entier
+nCount			est un entier
+nStringOffset	est un entier
+nPosRecords		est un entier
+nBaseStrings	est un entier
+sWin			est une chaîne	= ""
+sMac			est une chaîne	= ""
+sTag			est une chaîne
+nPosRec			est un entier
+nPR				est un entier
+nPlat			est un entier
+nNameID			est un entier
+nLen			est un entier
+nOff			est un entier
+nDeb			est un entier
+
+si pas fFichierExiste(pCheminTtf) alors
+	renvoyer ""
+fin
+
+bufTtf = fChargeBuffer(pCheminTtf)
+nTaille = Taille(bufTtf)
+si nTaille < 12 alors
+	renvoyer ""
+fin
+
+// ─── En-tête sfnt : numTables (uint16 à l'offset 4 → pos 5) ──────────────────
+nNumTables = LitU16(bufTtf, 5)
+si nNumTables <= 0 _ou_ nNumTables > 200 alors
+	renvoyer ""		// garde-fou (fichier non TTF / collection ttcf non gérée)
+fin
+
+// ─── Table directory : recherche de la table 'name' ─────────────────────────
+nPosDir = 13		// 0-based 12 → 1-based 13
+POUR i = 0 _À_ nNumTables - 1
+	nPosRec = nPosDir + i * 16
+	SI nPosRec + 15 > nTaille ALORS
+		SORTIR
+	FIN
+	sTag = LitTag(bufTtf, nPosRec)
+	SI sTag = "name" ALORS
+		nOffsetName = LitU32(bufTtf, nPosRec + 8)		// champ offset (tag4 + checksum4)
+		SORTIR
+	FIN
+FIN
+
+si nOffsetName <= 0 _ou_ nOffsetName + 6 > nTaille alors
+	renvoyer ""
+fin
+
+// ─── Table 'name' ───────────────────────────────────────────────────────────
+nBaseName		= nOffsetName + 1					// 1-based
+nCount			= LitU16(bufTtf, nBaseName + 2)
+nStringOffset	= LitU16(bufTtf, nBaseName + 4)
+nPosRecords		= nBaseName + 6
+nBaseStrings	= nBaseName + nStringOffset		// 1-based, début zone chaînes
+
+si nCount <= 0 _ou_ nCount > 1000 alors
+	renvoyer ""
+fin
+
+POUR r = 0 _À_ nCount - 1
+	nPR = nPosRecords + r * 12
+	SI nPR + 11 > nTaille ALORS
+		SORTIR
+	FIN
+
+	nPlat	= LitU16(bufTtf, nPR)
+	nNameID	= LitU16(bufTtf, nPR + 6)
+	nLen	= LitU16(bufTtf, nPR + 8)
+	nOff	= LitU16(bufTtf, nPR + 10)
+
+	SI nNameID = 1 ALORS
+		nDeb = nBaseStrings + nOff
+		SI nDeb + nLen - 1 <= nTaille _et_ nLen > 0 ALORS
+			SI nPlat = 3 ALORS
+				SI sWin = "" ALORS
+					sWin = LitChaineUtf16BE(bufTtf, nDeb, nLen)
+				FIN
+			SINON SI nPlat = 1 ALORS
+				SI sMac = "" ALORS
+					sMac = LitChaineMac(bufTtf, nDeb, nLen)
+				FIN
+			FIN
+		FIN
+	FIN
+FIN
+
+si sWin <> "" alors
+	renvoyer sWin
+fin
+renvoyer sMac
+
+
+// ═════════════════════════════════════════════════════════════════════════
+// PROCÉDURES INTERNES (lecture binaire big-endian sur Buffer, pos 1-based)
+// ═════════════════════════════════════════════════════════════════════════
+
+	// uint16 big-endian
+	PROCÉDURE INTERNE LitU16(LOCAL pBuf est un Buffer, LOCAL pPos est un entier) : entier
+		RENVOYER Asc(Milieu(pBuf, pPos, 1)) * 256 + Asc(Milieu(pBuf, pPos + 1, 1))
+	FIN
+
+	// uint32 big-endian
+	PROCÉDURE INTERNE LitU32(LOCAL pBuf est un Buffer, LOCAL pPos est un entier) : entier
+		RENVOYER Asc(Milieu(pBuf, pPos, 1)) * 16777216 ...
+			+ Asc(Milieu(pBuf, pPos + 1, 1)) * 65536 ...
+			+ Asc(Milieu(pBuf, pPos + 2, 1)) * 256 ...
+			+ Asc(Milieu(pBuf, pPos + 3, 1))
+	FIN
+
+	// Tag 4 caractères ASCII (ex. "name")
+	PROCÉDURE INTERNE LitTag(LOCAL pBuf est un Buffer, LOCAL pPos est un entier) : chaîne
+		sT est une chaîne = ""
+		POUR k = 0 _À_ 3
+			sT += Caract(Asc(Milieu(pBuf, pPos + k, 1)))
+		FIN
+		RENVOYER sT
+	FIN
+
+	// Chaîne UTF-16 big-endian (platformID=3). pLen = longueur en OCTETS.
+	//   Noms de famille = ASCII → octet de poids fort = 0 → on prend l'octet bas.
+	PROCÉDURE INTERNE LitChaineUtf16BE(LOCAL pBuf est un Buffer, LOCAL pDeb est un entier, LOCAL pLen est un entier) : chaîne
+		s est une chaîne = ""
+		k est un entier = 0
+		nHi est un entier
+		nLo est un entier
+		TANTQUE k < pLen - 1
+			nHi = Asc(Milieu(pBuf, pDeb + k, 1))
+			nLo = Asc(Milieu(pBuf, pDeb + k + 1, 1))
+			SI nHi = 0 ALORS
+				s += Caract(nLo)
+			SINON
+				s += Caract(nHi * 256 + nLo)
+			FIN
+			k += 2
+		FIN
+		RENVOYER s
+	FIN
+
+	// Chaîne 1 octet/caractère (platformID=1, Mac Roman approximé ASCII)
+	PROCÉDURE INTERNE LitChaineMac(LOCAL pBuf est un Buffer, LOCAL pDeb est un entier, LOCAL pLen est un entier) : chaîne
+		s est une chaîne = ""
+		POUR k = 0 _À_ pLen - 1
+			s += Caract(Asc(Milieu(pBuf, pDeb + k, 1)))
+		FIN
+		RENVOYER s
+	FIN

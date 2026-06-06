@@ -1,0 +1,255 @@
+procédure ActionOperationDupliquer(local pIdOperation)
+
+// =============================================================================
+// Duplication d'une opération COURRIER -> état « FIN DE TUNNEL AVANT SAUVEGARDE »
+//   - Copie de TOUS les fichiers (sauf bases) vers Upload\{nouveauCodeTemp}\.
+//   - Champs de structure pointant vers la COPIE (indépendance totale).
+//   - Réécriture JSON LÉGÈRE (pages.cheminFond/urlFond + zonesImage) vers
+//     l'upload de la copie -> ferme la fuite « Régénérer le BAT » avant 1ʳᵉ save.
+//   - PSMD : NI copié NI régénéré (la SAUVEGARDE existante le régénère via
+//     AjoutModificationOperationCourrier -> ModificationCheminDesignerJson +
+//     GenererPsmdServeurDocument, puis DéplaceFichierUpload déplace tout).
+//   - IdOperation = 0 -> la sauvegarde finalise vers les REP_* permanents
+//     (nouveaux IdLettreContenu) SANS modification du pipeline.
+// =============================================================================
+
+sRepDocSource		est une chaîne		// REP_DOCUMENT de l'opération SOURCE
+sRepFondSource		est une chaîne		// REP_FOND     de l'opération SOURCE
+sRepBatSource		est une chaîne		// REP_BAT      de l'opération SOURCE
+sBaseTemp			est une chaîne		// CodeTemp opération (1 seul DateHeureSys)
+sRepUploadPhys		est une chaîne		// Upload\{sBaseTemp}\ (physique)
+sRepUploadRel		est une chaîne		// Upload/{sBaseTemp}/ (HTTP)
+nIndexDoc			est un entier		// index document (suffixe anti-collision)
+nIdSource			est un entier		// IdLettreContenu source (avant remise à 0)
+sCodeTempDoc		est une chaîne		// CodeTemp du document copié
+
+retour = Vrai
+
+si pas HLitRecherchePremier(dos_operation,IdOperation,pIdOperation) alors retour Faux
+
+si PageAfficheDialogue(pgeOuiNon,"Souhaitez-vous dupliquer l'opération " + dos_operation.Dossier + " ?",dos_operation.TypeOperation) = Vrai alors
+
+	__stOperation								= Partage.ChargeStructOperation(pIdOperation)
+	__stOperation.IdOperation				= 0
+	__stOperation.DateHeureValidation	= ""
+	__stOperation.Dossier					= ""
+	__stOperation.DateEnvoiSouhaite		= ""
+	__stOperation.HeureEnvoiSouhaite		= ""
+	__stOperation.EstEnvoiImmediat		= 0
+	__stOperation.DateHeureCreation		= DateHeureSys()
+	__stOperation.DateHeureModification	= ""
+	__stOperation.DateHeureRefus			= ""
+	__stOperation.UserCreation				= Partage.__vcUser.NomUser
+	__stOperation.UserModification		= ""
+	__stOperation.NomOperation				= ""
+
+	// Bases : conservées telles que rechargées (gérées indépendamment).
+	pour tout stBase de __stOperation.tabBase
+		stBase.EstAjoute	= Vrai
+		stBase.IdBase 		= 0
+	fin
+
+	selon __stOperation.TypeOperation
+		cas __OPERATION_COURRIER__
+
+			// ─── Nouveau CodeTemp opération + répertoire upload dédié ─────────
+			//   (un SEUL DateHeureSys ; sous-dossier Upload\{CodeTemp}\ comme le tunnel)
+			sBaseTemp					= Partage.__vcUser.IDContact + "-" + DateHeureSys()
+			__stOperation.CodeTemp	= sBaseTemp
+			sRepUploadPhys				= cpProjet.__sRepRacine + cpProjet.__sRepUpload + ["\"] + sBaseTemp + ["\"]
+			sRepUploadRel				= cpProjet.__sHttpMarketeam + cpProjet.__sRepUpload + ["/"] + sBaseTemp + ["/"]
+			fRepCrée(sRepUploadPhys)
+
+			// ─── Répertoires SOURCE (permanents, par IdOperation) ────────────
+			//   FOND -> REP_FOND, BAT -> REP_BAT (correction de l'inversion).
+			sRepDocSource	= cpProjet.CheminFichier(pIdOperation, __REP_DOCUMENT__, Vrai)
+			sRepFondSource	= cpProjet.CheminFichier(pIdOperation, __REP_FOND__, Vrai)
+			sRepBatSource	= cpProjet.CheminFichier(pIdOperation, __REP_BAT__, Vrai)
+
+			// ─── ENVELOPPE : copie fond + BAT vers l'upload ──────────────────
+			si __stOperation.stOperationLettre.IdEnveloppe > 0 alors
+
+				__stOperation.stOperationLettre.stEnveloppe.EnveloppeFond.CheminPhysique	= sRepUploadPhys + __DOC_ENV_FOND__ + sBaseTemp + __JPG__
+				__stOperation.stOperationLettre.stEnveloppe.EnveloppeFond.CheminRelatif	= sRepUploadRel  + __DOC_ENV_FOND__ + sBaseTemp + __JPG__
+				si pas RécupérationDuFichier(sRepFondSource + __DOC_ENV_FOND__ + pIdOperation + __JPG__, __stOperation.stOperationLettre.stEnveloppe.EnveloppeFond.CheminPhysique) alors retour Faux
+
+				__stOperation.stOperationLettre.stEnveloppe.EnveloppeBAT.CheminPhysique	= sRepUploadPhys + __DOC_ENV_BAT__ + sBaseTemp + __JPG__
+				__stOperation.stOperationLettre.stEnveloppe.EnveloppeBAT.CheminRelatif	= sRepUploadRel  + __DOC_ENV_BAT__ + sBaseTemp + __JPG__
+				si pas RécupérationDuFichier(sRepBatSource + __DOC_ENV_BAT__ + pIdOperation + __JPG__, __stOperation.stOperationLettre.stEnveloppe.EnveloppeBAT.CheminPhysique) alors retour Faux
+
+				__stOperation.stOperationLettre.stEnveloppe.RepertoireTravail = sRepUploadPhys
+
+				// Réécriture légère des images du JSON enveloppe (zonesImage), pas de pages.
+				__stOperation.stOperationLettre.stEnveloppe.JsonDesignerData = ReecritCheminsUploadJson(__stOperation.stOperationLettre.stEnveloppe.JsonDesignerData, sRepUploadPhys, sRepUploadRel, sBaseTemp, 0, Faux)
+			fin
+
+			// ─── DOCUMENTS (modèle ET PDF client) ────────────────────────────
+			nIndexDoc = 0
+			pour tout stDocument de __stOperation.stOperationLettre.tabStDocument
+				nIndexDoc++
+				sCodeTempDoc = sBaseTemp + "-" + nIndexDoc		// unique (anti-collision)
+
+				// Document possédant des fichiers permanents (personnalisé / uploadé)
+				si stDocument.EstDocumentEnAttente = Faux _et_ stDocument.IdLettreContenu > 0 alors
+
+					nIdSource					= stDocument.IdLettreContenu
+					stDocument.CodeTemp		= sCodeTempDoc
+
+					// PDF document : Ltr{IdSource}.pdf -> Ltr{CodeTempDoc}.pdf
+					si pas RécupérationDuFichier(sRepDocSource + __DOC_LTR__ + nIdSource + __PDF__, sRepUploadPhys + __DOC_LTR__ + sCodeTempDoc + __PDF__) alors retour Faux
+
+					// Images fond + BAT par page
+					stDocument.tabImageFond.SupprimeTout()
+					stDocument.tabImageBat.SupprimeTout()
+					pour nPage = 1 _à_ stDocument.NombrePage
+
+						// FOND
+						stImgFond est une structDocumentImage
+						stImgFond.CheminPhysique	= sRepUploadPhys + __DOC_LTR_FOND__ + sCodeTempDoc + "p" + nPage + __JPG__
+						stImgFond.CheminRelatif		= sRepUploadRel  + __DOC_LTR_FOND__ + sCodeTempDoc + "p" + nPage + __JPG__
+						si pas RécupérationDuFichier(sRepFondSource + __DOC_LTR_FOND__ + nIdSource + "p" + nPage + __JPG__, stImgFond.CheminPhysique) alors retour Faux
+						stDocument.tabImageFond.Ajoute(stImgFond)
+
+						// BAT
+						stImgBat est une structDocumentImage
+						stImgBat.CheminPhysique		= sRepUploadPhys + __DOC_LTR_BAT__ + sCodeTempDoc + "p" + nPage + __JPG__
+						stImgBat.CheminRelatif		= sRepUploadRel  + __DOC_LTR_BAT__ + sCodeTempDoc + "p" + nPage + __JPG__
+						si pas RécupérationDuFichier(sRepBatSource + __DOC_LTR_BAT__ + nIdSource + "p" + nPage + __JPG__, stImgBat.CheminPhysique) alors retour Faux
+						stDocument.tabImageBat.Ajoute(stImgBat)
+
+					fin
+
+					// Champs de structure -> COPIE (upload)
+					stDocument.Repertoire			= sRepUploadPhys
+					stDocument.RepertoireTravail	= sRepUploadPhys
+					stDocument.NomFichierTemp		= __DOC_LTR__ + sCodeTempDoc + __PDF__
+					stDocument.EstUploadé			= Vrai
+					// PSMD : ni copié ni régénéré (la sauvegarde le régénère)
+					stDocument.CheminPsmdTemp		= ""
+					stDocument.CheminPsmdBat		= ""
+					stDocument.NomFichierPsmd		= ""
+
+					// Réécriture JSON LÉGÈRE : pages.cheminFond/urlFond + zonesImage -> upload copie
+					stDocument.JsonDesignerData	= ReecritCheminsUploadJson(stDocument.JsonDesignerData, sRepUploadPhys, sRepUploadRel, sCodeTempDoc, stDocument.NombrePage, Vrai)
+
+					// EstPersonnaliseDesigner / DateHeureDesigner : CONSERVÉS (rien à faire)
+
+					// Nouvel IdLettreContenu attribué à la sauvegarde (mode création)
+					stDocument.IdLettreContenu		= 0
+
+				sinon
+					// Document en attente (sans fichiers) : on réinitialise juste les ids
+					stDocument.CodeTemp				= sCodeTempDoc
+					stDocument.EstUploadé			= Faux
+					stDocument.IdLettreContenu		= 0
+				fin
+
+			fin
+
+			cpDeviseur.CalculMontantTimbre(__stOperation.NbrDestinataire, __stOperation.stOperationLettre)
+
+		autre cas
+
+	fin
+
+	// Pour Boris
+	// Si une opération est > '__Statut_Envoyée__' au chargement de la base les enregistrements en erreur ont été retiré (Stop Pub et Alliage NPAI)
+	// On recalcule le nombre de destinataire
+	si dos_operation.Statut >= __Statut_Envoyée__ alors
+		__stOperation.NbrDestinataire = cpProjet.CalculeNbrDestinataires(__stOperation)
+	fin
+
+fin
+
+
+fin:
+
+si retour = Vrai alors
+	PageAffiche(pgeParametre)
+fin
+
+
+
+// ═════════════════════════════════════════════════════════════════════════
+// PROCÉDURES INTERNES
+// ═════════════════════════════════════════════════════════════════════════
+
+procédure interne RécupérationDuFichier(pRepFicSource, pRepFicDestination)
+
+	si fFichierExiste(pRepFicDestination) alors
+		si pas fSupprime(pRepFicDestination) alors
+			renvoyer Faux
+		fin
+	fin
+
+	si fFichierExiste(pRepFicSource) alors
+		si pas fCopieFichier(pRepFicSource, pRepFicDestination) alors
+			renvoyer Faux
+		fin
+	fin
+
+	renvoyer Vrai
+fin
+
+
+// Réécriture LÉGÈRE des chemins d'un JsonDesignerData vers l'upload de la COPIE.
+//   - pages[].cheminFond -> {upload}\Ltr{CodeTemp}.pdf  (si pReecrirePages)
+//   - pages[].urlFond     -> {uploadRel}/LtrFond{CodeTemp}p{n}.jpg (si pReecrirePages)
+//   - zonesImage[].source.nomFichier/valeur -> upload (+ COPIE du fichier image)
+//   PAS de régénération PSMD (reporté à la sauvegarde). Renvoie le JSON réécrit.
+procédure interne ReecritCheminsUploadJson(LOCAL pJson, LOCAL pRepUploadPhys, LOCAL pRepUploadRel, LOCAL pCodeTemp, LOCAL pNbPage, LOCAL pReecrirePages est un booléen)
+
+	jDoc			est un JSON
+	bJsonOk		est un booléen	= Vrai
+	sNomFichier	est une chaîne
+	sNomSimple	est une chaîne
+	sDest			est une chaîne
+	sUrlImage	est une chaîne
+
+	si pJson = "" alors renvoyer pJson
+
+	quand exception dans
+		jDoc = pJson.VersUTF8()
+	faire
+		bJsonOk = Faux
+	fin
+	si bJsonOk = Faux alors renvoyer pJson
+
+	// Normalisation format (structDesignerLoad -> data), comme ModificationCheminDesignerJson
+	si jDoc.pages..Occurrence = 0 _et_ jDoc.data..Existe _et_ jDoc.data.pages..Occurrence > 0 alors
+		jDoc = jDoc.data
+	fin
+
+	// ─── Pages : cheminFond (PDF) + urlFond (fond JPG par page) ───────────
+	si pReecrirePages _et_ jDoc.pages..Occurrence > 0 alors
+		pour nNumPage = 1 _à_ pNbPage
+			si nNumPage <= jDoc.pages..Occurrence alors
+				jDoc.pages[nNumPage].cheminFond	= pRepUploadPhys + __DOC_LTR__ + pCodeTemp + __PDF__
+				jDoc.pages[nNumPage].urlFond		= pRepUploadRel + __DOC_LTR_FOND__ + pCodeTemp + "p" + nNumPage + __JPG__
+			fin
+		fin
+	fin
+
+	// ─── Images fixes (zonesImage) : copie du fichier + réécriture chemins ─
+	si jDoc.zonesImage..Occurrence > 0 alors
+		pour nIndZone = 1 _à_ jDoc.zonesImage..Occurrence
+			sNomFichier = jDoc.zonesImage[nIndZone].source.nomFichier
+			si sNomFichier <> "" alors
+				sNomSimple	= fExtraitChemin(sNomFichier, fFichier + fExtension)
+				sDest			= pRepUploadPhys + sNomSimple
+				// Copier l'image vers l'upload de la copie (indépendance)
+				si fFichierExiste(sNomFichier) alors
+					si fFichierExiste(sDest) alors fSupprime(sDest)
+					fCopieFichier(sNomFichier, sDest)
+				fin
+				jDoc.zonesImage[nIndZone].source.nomFichier	= sDest
+				sUrlImage												= pRepUploadRel + sNomSimple
+				sUrlImage												= sUrlImage.Remplace("\", "/")
+				jDoc.zonesImage[nIndZone].source.valeur		= sUrlImage
+			fin
+		fin
+	fin
+
+	renvoyer jDoc.VersChaîne()
+fin
+

@@ -23,6 +23,17 @@ selon stOperation.TypeOperation
 		// AVANT que le déplacement du BAT ne modifie RepertoireTravail
 		sRepertoireSourceEnveloppe est une chaîne = stOperation.stOperationLettre.stEnveloppe.RepertoireTravail
 
+		// Lot 2C : répertoire de travail source (Upload en création, Temp en modif),
+		//   où 2C a construit le sous-dossier Fonts. Capturé AVANT que la boucle ne
+		//   mette à jour RepertoireTravail (AJOUT B).
+		sRepTravailSourceProjet est une chaîne = ""
+		si stOperation.stOperationLettre.tabStDocument..Occurrence > 0 alors
+			sRepTravailSourceProjet = stOperation.stOperationLettre.tabStDocument[1].RepertoireTravail
+		fin
+		si sRepTravailSourceProjet = "" alors
+			sRepTravailSourceProjet = sRepertoireSourceEnveloppe
+		fin
+
 		// On sauvegarde le bat Enveloppe
 		si stOperation.stOperationLettre.stEnveloppe.EnveloppeBAT.CheminPhysique <> "" alors
 			sCheminBatEnvFinal est une chaîne = sRepertoireBat + __DOC_ENV_BAT__ + stOperation.IdOperation + __JPG__
@@ -293,6 +304,40 @@ selon stOperation.TypeOperation
 		fin
 
 		SupprimeFichiersInutiles(stOperation.TypeOperation)
+
+		// ─── Lot 2C (Voie A) : transport du sous-dossier Fonts -> Printshop ──────
+		//   Le Fonts (rempli par 2C dans Upload\<CodeTemp>\Fonts) accompagne les
+		//   PSMD vers le répertoire définitif Printshop. Copie fichier par fichier
+		//   (le dossier ne contient que des .ttf à plat) ; l'Upload source est
+		//   supprimé juste après par [V5] -> effet net = déplacement.
+		//   Source = répertoire de travail réel (capté plus haut) ; repli Upload
+		//   en création. Si aucun Fonts source : on ne fait rien (sans erreur).
+		sRepFontsSource est une chaîne = ""
+		si sRepTravailSourceProjet <> "" alors
+			sRepFontsSource = sRepTravailSourceProjet + "Fonts\"
+		fin
+		si (sRepFontsSource = "" _ou_ pas fRepExiste(sRepFontsSource)) _et_ stOperation.CodeTemp <> "" alors
+			sRepFontsSource = cpProjet.__sRepRacine + cpProjet.__sRepUpload + ["\"] + stOperation.CodeTemp + ["\"] + "Fonts\"
+		fin
+		si sRepFontsSource <> "" _et_ fRepExiste(sRepFontsSource) alors
+			sRepFontsDest est une chaîne = sRepertoirePrintshop + "Fonts\"
+				si pas fRepExiste(sRepFontsDest) alors
+					fRepCrée(sRepFontsDest)
+				fin
+				sListeFonts est une chaîne = fListeFichier(sRepFontsSource + "*.ttf", frNonRécursif)
+				pour toute chaîne sFontFic de sListeFonts séparée par RC
+					si sFontFic <> "" alors
+						sFontDest est une chaîne = sRepFontsDest + fExtraitChemin(sFontFic, fFichier + fExtension)
+						si fFichierExiste(sFontDest) alors
+							fSupprime(sFontDest)
+						fin
+						si pas fCopieFichier(sFontFic, sFontDest) alors
+							Trace("DéplaceFichierUpload : échec copie Fonts " + sFontFic, ErreurInfo(errComplet))
+						fin
+					fin
+				fin
+				Trace("DéplaceFichierUpload : Fonts transporté --> " + sRepFontsDest)
+		fin
 
 		// [V4] Nettoyage du répertoire temporaire
 		sRepertoireTemp est une chaîne = cpProjet.CheminFichier(stOperation.IdOperation, __REP_TEMP__)

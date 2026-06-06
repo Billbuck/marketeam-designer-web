@@ -1,0 +1,54 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Bouton : btnImporterGoogleFonts
+// Libellé conseillé : « Importer les Google Fonts (polices générales) »
+//
+// Rôle : Déclencher cpDesigner.ImporteGoogleFontsGenerales() (Lot 0 B) et
+//        AFFICHER À L'ÉCRAN le récap renvoyé (familles importées / non trouvées /
+//        entrées créées-MAJ).
+//
+// EMPLACEMENT — IMPORTANT :
+//   À placer UNIQUEMENT sur une page d'ADMINISTRATION / BACK-OFFICE INTERNE
+//   (futur « Lot 5 — Back office GÉNÉRAL » du CDC), JAMAIS sur une page
+//   accessible aux clients de la plateforme.
+//   Sécurité défense-en-profondeur : la garde Partage.__vcUser.EstChronodirect
+//   ci-dessous rend le bouton INOPÉRANT pour un utilisateur client, même en cas
+//   de placement erroné.
+//
+// Source de vérité : docs/cahier-des-charges-polices-designer.md
+// ─────────────────────────────────────────────────────────────────────────────
+
+sRecap est une chaîne
+
+// ─── 1. Garde de sécurité : réservé au personnel interne ────────────────────
+SI Partage.__vcUser.EstChronodirect = Faux ALORS
+	Erreur("Action réservée au personnel interne Marketeam.")
+	RETOUR
+FIN
+
+// ─── 2. Confirmation avant écriture en base (convention projet : pgeOuiNon) ──
+SI PageAfficheDialogue(pgeOuiNon, "Lancer l'import des Google Fonts ?", ...
+		"Cette opération met à jour les polices générales (dsn_police).") <> Vrai ALORS
+	RETOUR
+FIN
+
+// ─── 3. Anti double-clic : on grise le bouton le temps du traitement ────────
+//   Le traitement (appel API Google Fonts + UPSERT) est synchrone côté serveur :
+//   l'UI WebDev est verrouillée pendant l'aller-retour, ce qui bloque le
+//   re-déclenchement. Le grisage matérialise l'intention et est rétabli en fin.
+btnImporterGoogleFonts.Etat = Grisé
+
+// ─── 4. Exécution de l'import ───────────────────────────────────────────────
+QUAND EXCEPTION DANS
+	sRecap = cpDesigner.ImporteGoogleFontsGenerales()
+FAIRE
+	sRecap = "Échec de l'import : " + ExceptionInfo(errMessage)
+FIN
+
+// ─── 5. Réactivation du bouton ──────────────────────────────────────────────
+btnImporterGoogleFonts.Etat = Actif
+
+// ─── 6. Affichage du récap à l'écran (multi-lignes pour lisibilité) ─────────
+//   La procédure renvoie une chaîne « … ; … ; … » : on découpe sur " ; " pour
+//   présenter chaque info sur sa propre ligne (familles non trouvées visibles
+//   immédiatement = signe d'une faute d'orthographe à corriger).
+Info(Remplace(sRecap, " ; ", RC))

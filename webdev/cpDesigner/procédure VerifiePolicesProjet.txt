@@ -1,0 +1,50 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// cpDesigner.VerifiePolicesProjet
+// Rôle : À la SAUVEGARDE, calculer (report-only, SANS copie) la liste consolidée
+//        des non-conformités de polices sur TOUS les documents (+ enveloppe) :
+//        police gérée (dsn_police) sans fichier d'impression, ou police INCONNUE
+//        (ni dsn_police ni système). Les polices système sont ignorées (§3.10).
+//
+//        Voie A : le transport des fichiers Fonts est assuré par le déplacement
+//        du dossier existant (DéplaceFichierUpload) ; cette procédure ne fait
+//        donc QUE le report d'alerte (aucune écriture disque).
+//
+// Périmètre : lecture/classification seulement. Ne touche NI au Designer, NI au
+//        web, NI au cache, NI aux fichiers. NE BLOQUE jamais.
+//
+// Paramètre : pStOperation (structOperation)
+// Retour    : non-conformités consolidées (chaîne), "" si tout est conforme.
+// ─────────────────────────────────────────────────────────────────────────────
+procédure VerifiePolicesProjet(pStOperation est une structOperation) : chaîne
+
+sNonConf		est une chaîne	= ""
+sNonConfDoc		est une chaîne
+
+// ─── Documents ──────────────────────────────────────────────────────────────
+POUR TOUT stDocument DE pStOperation.stOperationLettre.tabStDocument
+	si stDocument.JsonDesignerData <> "" alors
+		sNonConfDoc = CopiePolicesUtiliseesVersFonts(stDocument.JsonDesignerData, "", Vrai)
+		si sNonConfDoc <> "" alors
+			si sNonConf <> "" alors sNonConf += ", "
+			sNonConf += sNonConfDoc
+		fin
+	fin
+FIN
+
+// ─── Enveloppe (mêmes polices possibles) ────────────────────────────────────
+QUAND EXCEPTION DANS
+	si pStOperation.stOperationLettre.stEnveloppe.JsonDesignerData <> "" alors
+		sNonConfDoc = CopiePolicesUtiliseesVersFonts(pStOperation.stOperationLettre.stEnveloppe.JsonDesignerData, "", Vrai)
+		si sNonConfDoc <> "" alors
+			si sNonConf <> "" alors sNonConf += ", "
+			sNonConf += sNonConfDoc
+		fin
+	fin
+FAIRE
+FIN
+
+si sNonConf <> "" alors
+	Trace("VerifiePolicesProjet : non-conformités projet : " + sNonConf)
+fin
+
+renvoyer sNonConf

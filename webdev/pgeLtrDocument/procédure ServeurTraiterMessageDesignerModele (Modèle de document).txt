@@ -73,56 +73,67 @@ selon vMessage.action
 				// ─── 3. Préparer JSON BAT avec placeholders ──────────────
 				// Copie du data pour injection des placeholders dans les zones image vides
 				// Le JsonDesignerData stocké reste propre (sans placeholders)
-			jBat				est un JSON			= jStocke
-			sRepTravail		est une chaîne		= _stDocument.RepertoireTravail
-			sMontagne		est une chaîne		= cpProjet.__sRepRacine + "Designer\assets\montagne.png"
-			sHachure			est une chaîne		= cpProjet.__sRepRacine + "Designer\assets\hachure.png"
+				jBat				est un JSON			= jStocke
+				sRepTravail		est une chaîne		= _stDocument.RepertoireTravail
+				sMontagne		est une chaîne		= cpProjet.__sRepRacine + "Designer\assets\montagne.png"
+				sHachure			est une chaîne		= cpProjet.__sRepRacine + "Designer\assets\hachure.png"
 
-			si jBat.zonesImage..Occurrence > 0 alors
-				pour nInd = 1 _à_ jBat.zonesImage..Occurrence
-					si jBat.zonesImage[nInd].source.nomFichier = "" _ou_ jBat.zonesImage[nInd].source.nomFichier = Null alors
+				si jBat.zonesImage..Occurrence > 0 alors
+					pour nInd = 1 _à_ jBat.zonesImage..Occurrence
+						si jBat.zonesImage[nInd].source.nomFichier = "" _ou_ jBat.zonesImage[nInd].source.nomFichier = Null alors
 
-						rLargeurZone		est un réel		= jBat.zonesImage[nInd].geometrie.largeurMm
-						rHauteurZone		est un réel		= jBat.zonesImage[nInd].geometrie.hauteurMm
-						sCheminPlaceholder	est une chaîne	= sRepTravail + "placeholder_" + nInd + ".png"
+							rLargeurZone			est un réel		= jBat.zonesImage[nInd].geometrie.largeurMm
+							rHauteurZone			est un réel		= jBat.zonesImage[nInd].geometrie.hauteurMm
+							sCheminPlaceholder	est une chaîne	= sRepTravail + "placeholder_" + nInd + ".png"
 
-						sUrlPlaceholder est une chaîne = "http://localhost:5000/PyMuPdfExtract/generate_placeholder" +...
-						"?width_mm=" + rLargeurZone +...
-						"&height_mm=" + rHauteurZone +...
-						"&output=" + URLEncode(sCheminPlaceholder) +...
-						"&montagne=" + URLEncode(sMontagne) +...
-						"&hachure=" + URLEncode(sHachure)
+							sUrlPlaceholder		est une chaîne	= "http://localhost:5000/PyMuPdfExtract/generate_placeholder" +...
+							"?width_mm=" + rLargeurZone +...
+							"&height_mm=" + rHauteurZone +...
+							"&output=" + URLEncode(sCheminPlaceholder) +...
+							"&montagne=" + URLEncode(sMontagne) +...
+							"&hachure=" + URLEncode(sHachure)
 
-						hPlaceholder		est une httpRequête
-						hRepPlaceholder	est un httpRéponse
-						hPlaceholder.URL		= sUrlPlaceholder
-						hPlaceholder.Méthode	= httpGet
-						hRepPlaceholder		= hPlaceholder.Envoie()
+							hPlaceholder		est une httpRequête
+							hRepPlaceholder	est un httpRéponse
+							hPlaceholder.URL		= sUrlPlaceholder
+							hPlaceholder.Méthode	= httpGet
+							hRepPlaceholder		= hPlaceholder.Envoie()
 
-						si hRepPlaceholder.CodeEtat = 200 alors
-							jBat.zonesImage[nInd].source.nomFichier	= sCheminPlaceholder
-							jBat.zonesImage[nInd].source.type			= "fichier"
-							Trace("ServeurTraiterMessageDesignerModele : placeholder " + rLargeurZone + "x" + rHauteurZone + "mm --> " + sCheminPlaceholder)
-						sinon
-							Trace("ServeurTraiterMessageDesignerModele : ⚠ échec placeholder zone " + nInd)
+							si hRepPlaceholder.CodeEtat = 200 alors
+								jBat.zonesImage[nInd].source.nomFichier	= sCheminPlaceholder
+								jBat.zonesImage[nInd].source.type			= "fichier"
+								Trace("ServeurTraiterMessageDesignerModele : placeholder " + rLargeurZone + "x" + rHauteurZone + "mm --> " + sCheminPlaceholder)
+							sinon
+								Trace("ServeurTraiterMessageDesignerModele : -> échec placeholder zone " + nInd)
+							fin
 						fin
 					fin
 				fin
-			fin
 
 				// ─── 4. Générer PSMD BAT temporaire ──────────────────────
-			sNodeExe					est une chaîne		= INILit("NODE", "CHEMIN", "", NomFichierIni())
-			sNodeCli					est une chaîne		= INILit("NODE", "CLI", "", NomFichierIni())
-			sCodeTemp				est une chaîne		= _stDocument.CodeTemp
+				sNodeExe					est une chaîne		= INILit("NODE", "CHEMIN", "", NomFichierIni())
+				sNodeCli					est une chaîne		= INILit("NODE", "CLI", "", NomFichierIni())
+				sCodeTemp				est une chaîne		= _stDocument.CodeTemp
 				sCheminJsonTemp		est une chaîne		= sRepTravail + "psmd_json_" + sCodeTemp + ".tmp"
 				sCheminPsmdBat			est une chaîne		= sRepTravail + "psmd_bat_" + sCodeTemp + ".psmd"
 
-				si pas fSauveTexte(sCheminJsonTemp, ChaîneVersUTF8(JSONVersChaîne(jBat))) alors
+				// Substitution nom d'affichage -> nom technique dans le \fonttbl (Lot 2B)
+				//   Opère sur une copie chaîne (jBat non modifié en base).
+				sJsonModeleTemp		est une chaîne		= JSONVersChaîne(jBat)
+				nIdClientPolice		est un entier		= 0
+				quand exception dans
+					nIdClientPolice = Partage.__vcUser.IDClient
+				faire
+					nIdClientPolice = 0
+				fin
+				sJsonModeleTemp = cpDesigner.SubstitueNomTechniquePolices(sJsonModeleTemp, nIdClientPolice)
+
+				si pas fSauveTexte(sCheminJsonTemp, ChaîneVersUTF8(sJsonModeleTemp)) alors
 					Trace("ServeurTraiterMessageDesignerModele : échec écriture JSON temp")
 					renvoyer Faux
 				fin
 				sCommandeBat est une chaîne = [
-				[%sNodeExe%] [%sNodeCli%] [%sCheminJsonTemp%] [%sCheminPsmdBat%] --no-bleed
+					[%sNodeExe%] [%sNodeCli%] [%sCheminJsonTemp%] [%sCheminPsmdBat%] --no-bleed
 				]
 				Trace("ServeurTraiterMessageDesignerModele : CMD BAT = " + sCommandeBat)
 				LanceAppli(sCommandeBat, exeIconise, exeBloquant)
@@ -135,20 +146,24 @@ selon vMessage.action
 					_stDocument.CheminPsmdBat = sCheminPsmdBat
 					Trace("ServeurTraiterMessageDesignerModele : PSMD BAT généré : " + sCheminPsmdBat)
 
+					// Lot 2C : copie des polices utilisées dans le Fonts du répertoire MODÈLE
+					//   (répertoire de sortie distinct de l'opération). Non bloquant.
+					cpDesigner.CopiePolicesUtiliseesVersFonts(sJsonModeleTemp, sRepTravail)
+
 					// ─── 5. Générer BAT JPG ──────────────────────────────
 					GenererBatDocumentDepuisPsmd(_stDocument, __tabEchantillonBaseLigne)
 					Trace("ServeurTraiterMessageDesignerModele : BAT généré")
 
-				// ─── Blanc tournant sur le BAT uniquement (pas le fond) ─
-				// Le fond a déjà son blanc tournant depuis la création (UploadFichier Phase 3)
-				// Seul le BAT (dans le Temp) doit être traité à chaque validation
-				si _stDocument.tabPagePDF..Occurrence > 0 alors
-					si _stDocument.tabPagePDF[1].EstFondPerdu = Faux alors
-						pour tout stVignette de _stDocument.tabImageBat
-							Partage.AppliqueBlancTournant(stVignette.CheminPhysique, _stDocument.LargeurOuvert, _stDocument.HauteurOuvert)
+					// ─── Blanc tournant sur le BAT uniquement (pas le fond) ─
+					// Le fond a déjà son blanc tournant depuis la création (UploadFichier Phase 3)
+					// Seul le BAT (dans le Temp) doit être traité à chaque validation
+					si _stDocument.tabPagePDF..Occurrence > 0 alors
+						si _stDocument.tabPagePDF[1].EstFondPerdu = Faux alors
+							pour tout stVignette de _stDocument.tabImageBat
+								cpDesigner.AppliqueBlancTournant(stVignette.CheminPhysique, _stDocument.LargeurOuvert, _stDocument.HauteurOuvert)
+							fin
 						fin
 					fin
-				fin
 
 					// ─── Mettre à jour l'aperçu ─────────────────────────
 					znrAperçuUpload.SupprimeTout()
@@ -157,7 +172,7 @@ selon vMessage.action
 						si _stDocument.tabImageBat..Occurrence >= nPage _et_ _stDocument.tabImageBat[nPage].CheminPhysique <> "" alors
 							znrAperçuUpload[nPage].imgUpload = _stDocument.tabImageBat[nPage].CheminRelatif + "?" + DateHeureSys()
 							Trace("ServeurTraiterMessageDesignerModele : aperçu BAT p" + nPage)
-							sinon si _stDocument.tabImageFond..Occurrence >= nPage alors
+						sinon si _stDocument.tabImageFond..Occurrence >= nPage alors
 							znrAperçuUpload[nPage].imgUpload = _stDocument.tabImageFond[nPage].CheminRelatif + "?" + DateHeureSys()
 							Trace("ServeurTraiterMessageDesignerModele : aperçu Fond p" + nPage)
 						fin
