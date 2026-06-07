@@ -7,7 +7,7 @@
     <!-- Quill.js (CDN) - DOIT être chargé AVANT les autres scripts -->
     <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
     <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=67">
+    <link rel="stylesheet" href="style.css?v=70">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <!-- Bibliothèque bwip-js pour génération de codes-barres -->
     <script src="https://cdn.jsdelivr.net/npm/bwip-js@4.5.1/dist/bwip-js-min.min.js"></script>
@@ -802,6 +802,27 @@
             </div>
             <div class="modal-buttons">
                 <button id="alerte-desalignement-ok-btn" class="btn-primary-theme" type="button">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- §3.10 - Modale d'alerte « polices inconnues » (miroir du           -->
+    <!-- désalignement). Affichée une fois par session si une police       -->
+    <!-- utilisée n'est ni gérée (dsn_police) ni système.                  -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div id="alerte-polices-inconnues-modal" class="modal-overlay hidden">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span class="material-icons" style="color: #C62828;">warning_amber</span>
+                <h3>Polices non disponibles</h3>
+            </div>
+            <div class="modal-body">
+                <p>Les polices suivantes sont utilisées dans le document mais ne sont plus disponibles. Le rendu à l'impression risque d'être incorrect. Remplacez-les par une police de la liste.</p>
+                <ul id="alerte-polices-inconnues-list" class="alerte-polices-inconnues-list"></ul>
+            </div>
+            <div class="modal-buttons">
+                <button id="alerte-polices-inconnues-ok-btn" class="btn-primary-theme" type="button">OK</button>
             </div>
         </div>
     </div>
@@ -3583,6 +3604,6 @@
 
     <!-- Générateur PSMD autonome (doit être chargé avant script.js) -->
     <script src="psmd-generator.js"></script>
-    <script src="script.js?v=121"></script>
+    <script src="script.js?v=125"></script>
 </body>
 </html>

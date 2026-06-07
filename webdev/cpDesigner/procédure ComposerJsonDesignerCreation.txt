@@ -11,6 +11,7 @@ stLoad.bases					= RemplirDesignerBases(stOperation.tabBase)
 stLoad.constraints			= RemplirDesignerConstraints(pLimTexte, pLimImage, pLimQr, pLimBarcode)
 stLoad.limites					= RemplirDesignerLimites()
 stLoad.policesDisponibles	= RemplirDesignerPolices(stOperation.IdClient)
+stLoad.policesSysteme		= RemplirDesignerPolicesSysteme()		// §3.10 : polices système (hors dsn_police)
 // V3.4 - Listes de référence pour la modale "Ajouter un champ" du Designer
 //        (cf. docs/cahier_des_charges_creation_champs_fusion.md V2.2 §5).
 //        Toujours envoyées, même quand ChampsFusionInterdit = Vrai

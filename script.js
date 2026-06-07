@@ -1786,6 +1786,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let policesDisponibles = [];
 
     /**
+     * §3.10 - Liste des polices SYSTÈME (présentes sur l'atelier, hors dsn_police),
+     * injectée par WebDev dans le wrapper de load (policesSysteme). Sert à classer
+     * une police utilisée : gérée / système / inconnue (alerte d'ouverture).
+     * @type {string[]}
+     */
+    let policesSysteme = [];
+
+    /**
      * Active les logs détaillés de debug pour la conversion RTF ↔ Delta (Phase 7).
      * @type {boolean}
      */
@@ -4299,6 +4307,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let alerteDesalignementAffichee = false;
 
     /**
+     * §3.10 - Flag de session : la popup « polices inconnues » a déjà été
+     * affichée pour la session courante. Réinitialisé à chaque load.
+     * @type {boolean}
+     */
+    let alertePolicesInconnuesAffichee = false;
+
+    /**
      * Codes hexadécimaux des statuts visuels V2.5. Exposés pour cohérence
      * avec la CSS (qui doit utiliser les mêmes). Alignés sur la charte
      * graphique : palette Material Design adoucie pour éviter les
@@ -4899,6 +4914,96 @@ document.addEventListener('DOMContentLoaded', () => {
             btnOk.addEventListener('click', onOk);
         } catch (e) {
             console.warn('[V2.5] showAlerteDesalignement défensive :', e);
+        }
+    }
+
+    /**
+     * §3.10 - Classe les polices UTILISÉES par le document et renvoie celles
+     * INCONNUES (ni gérées dans policesDisponibles, ni dans policesSysteme).
+     *
+     * Règles de comparaison :
+     *   - policesDisponibles : égalité EXACTE par `nom` (comme partout ailleurs) ;
+     *   - policesSysteme     : insensible casse + espaces de bord (espaces internes
+     *     conservés, ex. « Times New Roman »), cohérent avec le serveur.
+     *
+     * @returns {string[]} noms de polices inconnues (distincts), [] si aucune.
+     */
+    /**
+     * §3.10 - Prédicat SOURCE DE VÉRITÉ : une police est « manquante » si son nom
+     * n'est ni géré (policesDisponibles, égalité EXACTE par `nom`) ni système
+     * (policesSysteme, insensible casse + espaces de bord, espaces internes gardés).
+     * Réutilisé par classifierPolicesInconnues (alerte d'ouverture), le contour
+     * rouge de zone et l'état combo « Police manquante ».
+     *
+     * @param {string} nom - nom de police (zoneData.font)
+     * @returns {boolean} true si la police est manquante (à signaler)
+     */
+    function estPoliceManquante(nom) {
+        const n = (nom === undefined || nom === null) ? '' : String(nom);
+        if (n === '') return false; // pas de police définie -> pas un cas « manquante »
+        try {
+            const dispo = Array.isArray(policesDisponibles) ? policesDisponibles : [];
+            // Gérée : égalité exacte par nom
+            if (dispo.some(p => p && p.nom === n)) return false;
+            // Système : insensible casse + espaces de bord
+            const sys = Array.isArray(policesSysteme) ? policesSysteme : [];
+            const cible = n.trim().toLowerCase();
+            if (sys.some(s => String(s || '').trim().toLowerCase() === cible)) return false;
+            return true;
+        } catch (e) {
+            console.warn('[polices] estPoliceManquante défensive :', e);
+            return false;
+        }
+    }
+
+    function classifierPolicesInconnues() {
+        const inconnues = [];
+        try {
+            const utilisees = (typeof extractPolicesUtilisees === 'function') ? extractPolicesUtilisees() : [];
+            const seen = {};
+            utilisees.forEach(u => {
+                const nom = (u && u.nom) ? u.nom : '';
+                if (!nom || seen[nom]) return;
+                seen[nom] = true;
+                // Même prédicat que le contour rouge / la combo (source unique)
+                if (estPoliceManquante(nom)) inconnues.push(nom);
+            });
+        } catch (e) {
+            console.warn('[polices] classifierPolicesInconnues défensive :', e);
+        }
+        return inconnues;
+    }
+
+    /**
+     * §3.10 - Affiche la modale « polices inconnues » (miroir de
+     * showAlerteDesalignement), non bloquante, bouton OK one-shot.
+     *
+     * @param {string[]} noms - noms de polices inconnues
+     */
+    function showAlertePolicesInconnues(noms) {
+        if (!Array.isArray(noms) || noms.length === 0) return;
+        try {
+            const modal = document.getElementById('alerte-polices-inconnues-modal');
+            const list  = document.getElementById('alerte-polices-inconnues-list');
+            const btnOk = document.getElementById('alerte-polices-inconnues-ok-btn');
+            if (!modal || !list || !btnOk) {
+                console.warn('[polices] Polices inconnues utilisées :', noms);
+                return;
+            }
+            list.innerHTML = '';
+            noms.forEach(n => {
+                const li = document.createElement('li');
+                li.textContent = n;
+                list.appendChild(li);
+            });
+            modal.classList.remove('hidden');
+            const onOk = () => {
+                modal.classList.add('hidden');
+                btnOk.removeEventListener('click', onOk);
+            };
+            btnOk.addEventListener('click', onOk);
+        } catch (e) {
+            console.warn('[polices] showAlertePolicesInconnues défensive :', e);
         }
     }
 
@@ -6662,13 +6767,56 @@ document.addEventListener('DOMContentLoaded', () => {
         quillInputFont.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
-    /** Positionne les deux combos sur la police courante du <select> masqué.
-     *  Police inconnue -> ne touche pas aux combos, n'écrase pas zoneData.font. */
-    function refreshFontComboDisplay() {
+    // §3.10 - Valeur sentinelle de l'option informative « Police manquante ».
+    //   Non applicable : elle ne déclenche jamais applyFontByNom.
+    const FONT_COMBO_MISSING_VALUE = '__POLICE_MANQUANTE__';
+
+    /** Retire l'option/état « Police manquante » de la combo famille (s'il existe). */
+    function clearFontComboMissingState() {
+        if (!fontComboFamille) return;
+        const opt = fontComboFamille.querySelector('option[value="' + FONT_COMBO_MISSING_VALUE + '"]');
+        if (opt) opt.remove();
+        fontComboFamille.classList.remove('font-combo-missing');
+    }
+
+    /** Affiche l'état « Police manquante : <nom> » (rouge, informatif, non applicable). */
+    function showFontComboMissingState(nom) {
+        if (!fontComboFamille) return;
+        clearFontComboMissingState();
+        const opt = document.createElement('option');
+        opt.value = FONT_COMBO_MISSING_VALUE;
+        opt.textContent = nom + ' (manquante)';
+        opt.className = 'font-option-missing';
+        fontComboFamille.insertBefore(opt, fontComboFamille.firstChild);
+        __fontCascadeSyncing = true;
+        try {
+            fontComboFamille.value = FONT_COMBO_MISSING_VALUE;
+        } finally {
+            __fontCascadeSyncing = false;
+        }
+        fontComboFamille.classList.add('font-combo-missing');
+    }
+
+    /** Positionne les deux combos sur la police courante.
+     *  - police manquante (ni gérée ni système) -> état « Police manquante : <nom> »
+     *    (rouge, informatif) ; n'écrase JAMAIS zoneData.font.
+     *  - sinon, positionne famille + graisse normalement.
+     *  @param {string} [pNomZone] nom de police de la zone (préservé même s'il n'a
+     *         pas d'option dans le <select> masqué). */
+    function refreshFontComboDisplay(pNomZone) {
         if (!fontComboFamille || !fontComboGraisse || !quillInputFont) return;
-        const nom = quillInputFont.value;
+        clearFontComboMissingState();
+        // Nom courant : priorité au nom de zone fourni (préservé), sinon <select> masqué.
+        const nom = (pNomZone !== undefined && pNomZone !== null && pNomZone !== '')
+            ? pNomZone
+            : quillInputFont.value;
+        // Police manquante -> état spécial rouge, sans rien appliquer.
+        if (estPoliceManquante(nom)) {
+            showFontComboMissingState(nom);
+            return;
+        }
         const p = getFontList().find(x => x && x.nom === nom);
-        if (!p) return; // repli : police absente de la liste -> on laisse l'affichage courant
+        if (!p) return; // pas de correspondance (ex. nom vide) -> laisser l'affichage courant
         __fontCascadeSyncing = true;
         try {
             const fam = getFamilleOf(p);
@@ -6682,6 +6830,7 @@ document.addEventListener('DOMContentLoaded', () => {
     /** Reconstruit les combos depuis policesDisponibles + repositionne (après updateQuillFontSelectUI). */
     function rebuildFontCombo() {
         if (!fontComboFamille) return;
+        clearFontComboMissingState();
         __fontCascadeSyncing = true;
         try {
             populateFamilleCombo();
@@ -6758,6 +6907,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // COMBO 1 (famille) -> peupler graisses, défaut 400, puis appliquer
         fontComboFamille.addEventListener('change', () => {
             if (__fontCascadeSyncing) return;
+            // L'option informative « Police manquante » n'applique rien.
+            if (fontComboFamille.value === FONT_COMBO_MISSING_VALUE) return;
+            clearFontComboMissingState();
             populateGraisseCombo(fontComboFamille.value, null);
             applyFontByNom(fontComboGraisse.value);
         });
@@ -6765,6 +6917,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // COMBO 2 (graisse) -> appliquer l'entrée choisie
         fontComboGraisse.addEventListener('change', () => {
             if (__fontCascadeSyncing) return;
+            // Tant que l'état « Police manquante » est actif, ne rien appliquer.
+            if (fontComboFamille.value === FONT_COMBO_MISSING_VALUE) return;
             applyFontByNom(fontComboGraisse.value);
         });
 
@@ -17761,8 +17915,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Typographie
         if (quillInputFont) quillInputFont.value = zoneData.font || QUILL_DEFAULT_FONT;
-        // Lot 1 : synchroniser l'affichage de la combo éditable avec la zone sélectionnée
-        refreshFontComboDisplay();
+        // Lot 1/2D-3 : synchroniser la combo (passe le nom de zone réel, préservé
+        // même si la police est manquante -> état « Police manquante : <nom> »).
+        refreshFontComboDisplay(zoneData.font);
         
         // Taille - Spinner POC
         setSpinnerPocValue('quill-input-size', zoneData.size || QUILL_DEFAULT_SIZE, 1);
@@ -17864,6 +18019,11 @@ document.addEventListener('DOMContentLoaded', () => {
         zoneEl.style.fontFamily = `${selectedFontName}, sans-serif`;
         zoneEl.style.fontWeight = String(baseWeight);
         zoneEl.style.fontStyle = baseStyle;
+
+        // §3.10 - Contour rouge d'ÉDITION si la police de la zone est manquante
+        //   (ni gérée ni système). Purement visuel (outline) ; zoneData.font
+        //   est préservé tant que l'utilisateur n'a pas choisi de police.
+        zoneEl.classList.toggle('police-manquante', estPoliceManquante(zoneData.font));
         zoneEl.style.color = zoneData.color || QUILL_DEFAULT_COLOR;
         zoneEl.style.fontSize = `${zoneData.size || QUILL_DEFAULT_SIZE}pt`;
         
@@ -26422,6 +26582,8 @@ document.addEventListener('DOMContentLoaded', () => {
         //   l'utilisateur revoit l'alerte s'il rouvre le même document tant
         //   que le désalignement persiste (cf. §3.3 de l'amendement V2.5).
         alerteDesalignementAffichee = false;
+        // §3.10 - Reset du flag « polices inconnues » à chaque ouverture.
+        alertePolicesInconnuesAffichee = false;
 
         // Cahier des charges — Correction 1 : état initial PROPRE de la
         //   popup « Champs de fusion » à chaque (re)chargement du Designer.
@@ -26453,6 +26615,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const messagePolicesDisponibles =
             (isLoadEnvelope && Array.isArray(jsonData.policesDisponibles))
                 ? jsonData.policesDisponibles
+                : null;
+
+        // §3.10 - Liste des polices système injectée à la racine du wrapper.
+        /** @type {string[]|null} */
+        const messagePolicesSysteme =
+            (isLoadEnvelope && Array.isArray(jsonData.policesSysteme))
+                ? jsonData.policesSysteme
                 : null;
         
         // Appliquer le thème si fourni dans l'enveloppe
@@ -26832,6 +27001,11 @@ document.addEventListener('DOMContentLoaded', () => {
             ? messagePolicesDisponibles
             : DEFAULT_FONTS;
 
+        // §3.10 - Polices système (classification d'ouverture). [] si non fourni.
+        policesSysteme = (messagePolicesSysteme && messagePolicesSysteme.length > 0)
+            ? messagePolicesSysteme
+            : [];
+
         loadFontsFromJson(policesDisponibles);
         updateFontSelectUI(policesDisponibles);
         updateQuillFontSelectUI(policesDisponibles);
@@ -27052,6 +27226,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 notifyChampsExploitesMayHaveChanged();
             }
         } catch (e) { /* defensive */ }
+
+        // §3.10 - Alerte « polices inconnues » (miroir du désalignement champs).
+        //   Une fois par ouverture, maintenant que documentState.pages est peuplé.
+        try {
+            if (!alertePolicesInconnuesAffichee) {
+                const policesInconnues = classifierPolicesInconnues();
+                if (policesInconnues.length > 0) {
+                    alertePolicesInconnuesAffichee = true;
+                    showAlertePolicesInconnues(policesInconnues);
+                }
+            }
+        } catch (e) { /* defensive — ne bloque jamais le flow utilisateur */ }
 
         refreshChampsFusionInterditControls();
         // L9 / D14 - Chargement initial : évaluer (et non simple synchro).
@@ -31103,6 +31289,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (isZoneSysteme(zoneData)) return;
                 
                 const zoneName = zoneData.nom || zoneId;
+                
+                // ═══════════════════════════════════════════════════════════════
+                // VÉRIFICATION POLICE MANQUANTE (§3.10)
+                //   Zone texte dont la police n'est ni gérée (policesDisponibles)
+                //   ni système (policesSysteme) -> blocage. Même prédicat que
+                //   2D-2b/2D-3 (estPoliceManquante). Contrôle en LECTURE SEULE.
+                //   ⚠ S'exécute MÊME en mode modèle (pas de skipContentValidation) :
+                //   une police manquante est toujours un vrai problème.
+                // ═══════════════════════════════════════════════════════════════
+                if (zoneData.type === 'textQuill' && estPoliceManquante(zoneData.font)) {
+                    errors.push({
+                        page: pageName,
+                        zoneId: zoneId,
+                        zoneName: zoneName,
+                        type: 'police',
+                        message: 'Police manquante : "' + zoneData.font + '" — choisissez une police dans la liste'
+                    });
+                }
                 
                 // ═══════════════════════════════════════════════════════════════
                 // VÉRIFICATION ZONE IMAGE

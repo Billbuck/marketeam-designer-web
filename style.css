@@ -282,6 +282,15 @@ button:last-child {
     z-index: 50; /* Met la zone sélectionnée au premier plan */
 }
 
+/* §3.10 - Indication d'ÉDITION : police de la zone manquante (ni gérée ni système).
+   Utilise outline (pas border) -> n'affecte ni la bordure métier ni le print.
+   Rouge PRIORITAIRE : reste visible même quand la zone est aussi sélectionnée. */
+.zone.police-manquante,
+.zone.police-manquante.selected {
+    outline: 2px solid #C62828;
+    outline-offset: -1px;
+}
+
 /* Bordure utilisateur par défaut (aucune) */
 .zone {
     /* La bordure utilisateur sera appliquée dynamiquement via style inline */
@@ -2562,6 +2571,24 @@ html[data-theme="LTR"] {
    (combo graisse), injectée juste après en JS (initFontCombo). Aucun style
    spécifique requis : on réutilise le gabarit existant du panneau. */
 
+/* §3.10 - État « Police manquante » : rouge sur la combo REPLIÉE (valeur affichée). */
+.font-combo-missing {
+    color: #C62828;
+    font-style: italic;
+}
+
+/* Dans la liste DÉROULÉE, ne colorer QUE l'option spéciale ; les vraies polices
+   reprennent leur couleur normale (override de l'héritage rouge du <select>). */
+.font-combo-missing option {
+    color: var(--poc-text-primary);
+    font-style: normal;
+}
+
+.font-combo-missing option.font-option-missing {
+    color: #C62828;
+    font-style: italic;
+}
+
 .dropdown-arrow-poc {
     position: absolute;
     right: 10px;
@@ -3776,7 +3803,8 @@ html[data-theme="LTR"] {
 /* Designer en régime B quand au moins un champ exploité est absent      */
 /* de la base sélectionnée). Style compact et lisible, libellés en       */
 /* italique pour rappeler subtilement le statut « anormal » du champ.    */
-.alerte-desalignement-list {
+.alerte-desalignement-list,
+.alerte-polices-inconnues-list {
     list-style: none;
     margin: 12px 0 0 0;
     padding: 0;
@@ -3787,7 +3815,8 @@ html[data-theme="LTR"] {
     background: #FAFAFA;
 }
 
-.alerte-desalignement-list li {
+.alerte-desalignement-list li,
+.alerte-polices-inconnues-list li {
     padding: 8px 12px;
     border-bottom: 1px solid #EEEEEE;
     font-style: italic;
@@ -3795,11 +3824,13 @@ html[data-theme="LTR"] {
     color: #424242;
 }
 
-.alerte-desalignement-list li:last-child {
+.alerte-desalignement-list li:last-child,
+.alerte-polices-inconnues-list li:last-child {
     border-bottom: none;
 }
 
-.alerte-desalignement-list li::before {
+.alerte-desalignement-list li::before,
+.alerte-polices-inconnues-list li::before {
     content: '\26A0';   /* warning sign U+26A0 */
     color: #C62828;
     margin-right: 8px;

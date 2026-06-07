@@ -705,6 +705,10 @@ structDesignerLoad est une Structure
 	'constraints'				est une structDesignerConstraints			<sérialise = "constraints">			// Contraintes globales
 	'limites'					est une structDesignerLimites					<sérialise = "limites">					// Limites sur les images acceptées
 	'policesDisponibles'		est un tableau										<sérialise = "policesDisponibles"> de structDesignerPolice
+	// §3.10 - Polices SYSTÈME (présentes sur l'atelier, hors dsn_police) : sert au
+	//         Designer (Lot 2D-2b) pour classer une police utilisée en gérée /
+	//         système / inconnue. Alimenté par RemplirDesignerPolicesSysteme().
+	'policesSysteme'			est un tableau de chaîne						<sérialise = "policesSysteme">
 	// V3.4 - Listes de référence pour la modale "Ajouter un champ" du Designer.
 	//        Toujours envoyées (création tunnel ET création modèle), même quand
 	//        ChampsFusionInterdit = Vrai (le bouton est juste désactivé côté Designer).
