@@ -1,0 +1,64 @@
+procédure DesignerPoliceListe()
+
+// ============================================================
+// WEBSERVICE : Liste des NOMS de familles Google Fonts (~1700)
+//
+// Expose cpDesigner.ListeFamillesGoogle (B-auto-1) pour alimenter
+// l'autocomplétion côté Designer (B-auto-2). Renvoie les noms seuls,
+// triés alpha. Cache fichier serveur + TTL 7 j (géré dans la procédure).
+//
+// Appelé depuis le Designer (popup « + Ajouter une Google Font »).
+// Auth : HMAC SHA-256 héritée au niveau REST (comme les autres WS Designer).
+//
+// Paramètres reçus (HTTP, POST) :
+//   - forcer : "1" = ignore le cache et reconstruit ; "0"/absent = cache si frais
+//
+// Réponse JSON :
+//   - success  : Vrai/Faux
+//   - familles : tableau de chaînes (noms de familles, triés alpha)
+//   - error    : message d'erreur ("" si OK)
+// ============================================================
+
+// DEBUG TEMPORAIRE - Tracer les paramètres reçus
+fAjouteTexte(fRepDonnées() + "\DesignerPoliceListe_debug.txt", RC + "========== " + DateHeureSys().VersChaîne() + " ==========" + RC + ...
+"forcer: [" + WebserviceParameter("forcer") + "]" + RC)
+
+
+// ============================================================
+// 1. Lecture des paramètres
+// ============================================================
+bForcer		est un booléen	= (WebserviceParameter("forcer") = "1")
+
+
+// ============================================================
+// Capture des exceptions runtime pour éviter les erreurs 500 muettes
+// ============================================================
+quand exception dans
+
+	tabFam est un tableau de chaînes
+	tabFam = cpDesigner.ListeFamillesGoogle(bForcer)
+
+	si tabFam..Occurrence = 0 alors
+		fAjouteTexte(fRepDonnées() + "\DesignerPoliceListe_debug.txt", "ERREUR: liste vide" + RC)
+		GénéreJsonErreur("liste", "Liste des familles indisponible")
+		renvoyer Faux
+	fin
+
+	// ============================================================
+	// 2. Construction de la réponse JSON
+	// ============================================================
+	varReponse			est un Variant
+	varReponse.success	= Vrai
+	varReponse.familles	= tabFam
+	varReponse.error		= ""
+
+	sJsonReponse	est une chaîne ANSI
+	Sérialise(varReponse, sJsonReponse, psdJSON + psdMiseEnForme)
+	renvoyer GénéreJsonSuccès("Liste des familles", sJsonReponse)
+
+
+faire
+	fAjouteTexte(fRepDonnées() + "\DesignerPoliceListe_debug.txt", "EXCEPTION: " + ExceptionInfo(errComplet) + RC)
+	GénéreJsonErreur("Erreur interne", ExceptionInfo(errMessage))
+	renvoyer Faux
+fin

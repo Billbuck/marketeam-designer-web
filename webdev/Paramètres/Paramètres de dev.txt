@@ -190,6 +190,8 @@
 "WS_Designer_AddImages_MaxNombre"		"200,000"		
 "WS_Designer_AddImages_MaxTailleMo"		"300,000"		
 "WS_Designer_CollectionListe"	"http://localhost/v1/api/designer/collection/liste"			
+"WS_Designer_Police_Ajoute"	"http://localhost/v1/api/designer/police/ajout"			
+"WS_Designer_Police_Liste"	"http://localhost/v1/api/designer/police/liste"			
 "WS_Designer_SecretKey"	"JaimeMesFillesEdenNoaLeny "			
 "WS_Designer_Upload"	"http://localhost/v1/api/designer/image/upload"			
 "WS_Designer_Upload_Stock"	"http://localhost/v1/api/designer/collection/upload-stock"			

@@ -1,0 +1,76 @@
+// =========================================================================
+// Génère un JPG BAT depuis un fichier PSMD via l'API PSM PHP.
+//
+// Principe :
+//   1. Construit les données de fusion (pTabDonnees ou fallback __vcUser)
+//   2. Envoie les données en POST (paramètre "data") au format JSON [{Champ,Valeur}...]
+//      via Sérialise() -> L'API PHP crée le CSV temporaire et le supprime après
+//   3. Décode le JPG retourné en base64 et le sauve sur disque
+//
+// Paramètres :
+//	pCheminPsmd (chaîne ANSI) : Chemin physique complet du fichier .psmd
+//	pCheminJpgSortie (chaîne ANSI) : Chemin physique complet du JPG à produire
+//	pNumPage (entier - valeur par défaut=1) : Numéro de layout/page (défaut = 1)
+//	ptabPrintshopData (tableau (stPrintshopData)) : <indiquez ici le rôle de ptabPrintshopData>
+
+procédure GenerationBatDepuisPsmd(pCheminPsmd est une chaîne, pCheminJpgSortie est une chaîne, pNumPage est un entier = 1, ptabPrintshopData est un tableau de stPrintshopData = [])
+
+stImageBat			est une structDocumentImage
+sServeurPsm			est une chaîne
+sUrlPsm				est une chaîne
+sJsonData			est une chaîne ANSI
+hPsm					est une httpRequête
+hReponse				est un httpRéponse
+bufPrintshop		est un Buffer
+imgPrintshop		est une Image
+
+// ── Validation du PSMD ───────────────────────────────────────────────────
+si pCheminPsmd = "" ou pas fFichierExiste(pCheminPsmd) alors
+	// Trace("GenerationBatDepuisPsmd : PSMD introuvable : " + pCheminPsmd)
+	renvoyer stImageBat
+fin
+
+// ── Sérialisation JSON et appel API PSM PHP en POST ──────────────────────
+Sérialise(ptabPrintshopData, sJsonData, psdJSON)
+// Trace("GenerationBatDepuisPsmd : JSON data = " + sJsonData)
+
+sServeurPsm			= cpFonction.ValeurParametre("PSM_ServeurUrl", prm_parametre.ValChaine..Nom)
+sUrlPsm				= "http://" + sServeurPsm + "psm_marketeam_jpg.php?p=" + URLEncode(pCheminPsmd) + "&l=" + pNumPage
+
+// Trace("GenerationBatDepuisPsmd : URL = " + sUrlPsm)
+
+hPsm.URL					= sUrlPsm
+hPsm.Méthode			= httpPost
+hPsm.ContentType		= "application/x-www-form-urlencoded"
+hPsm.Contenu			= "data=" + sJsonData.URLEncode()
+
+hReponse					= hPsm.Envoie()
+
+si ErreurDétectée alors
+	// Trace("GenerationBatDepuisPsmd : échec Envoie : " + ErreurInfo(errComplet))
+	renvoyer stImageBat
+fin
+
+si hReponse.CodeEtat <> 200 alors
+	// Trace("GenerationBatDepuisPsmd : code HTTP " + hReponse.CodeEtat + " — " + hReponse.Contenu)
+	renvoyer stImageBat
+fin
+
+si fFichierExiste(pCheminJpgSortie) alors
+	si pas fSupprime(pCheminJpgSortie) alors
+		renvoyer stImageBat
+	fin
+fin
+
+
+bufPrintshop	= hReponse.Contenu.Décode(encodeBASE64)
+imgPrintshop	= bufPrintshop
+
+si imgPrintshop.SauveJPEG(pCheminJpgSortie, 100) alors
+	stImageBat.CheminPhysique	= pCheminJpgSortie
+	stImageBat.CheminRelatif	= pCheminJpgSortie.Remplace(cpProjet.__sMarketeamRepRacine, cpProjet.__sHttpMarketeam)
+sinon
+	// Trace("GenerationBatDepuisPsmd : échec SauveJPEG : " + pCheminJpgSortie)
+fin
+
+renvoyer stImageBat

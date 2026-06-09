@@ -25,12 +25,6 @@ selon vMessage.action
 
 		si vMessage.success = Vrai alors
 
-			Trace("ServeurTraiterMessageDesignerModele : document validé reçu du Designer")
-			Trace("ServeurTraiterMessageDesignerModele : Repertoire = " + _stDocument.Repertoire)
-			Trace("ServeurTraiterMessageDesignerModele : RepertoireTravail = " + _stDocument.RepertoireTravail)
-			Trace("ServeurTraiterMessageDesignerModele : NomFichierTemp = " + _stDocument.NomFichierTemp)
-			Trace("ServeurTraiterMessageDesignerModele : CodeTemp = " + _stDocument.CodeTemp)
-
 			jDoc est un JSON = ChaîneVersUTF8(gsJsonRecu)
 			sJsonData = JSONVersChaîne(jDoc.data)
 
@@ -50,7 +44,6 @@ selon vMessage.action
 					_nLimImage		= jDoc.data.constraints.limites.image
 					_nLimQr			= jDoc.data.constraints.limites.qr
 					_nLimBarcode	= jDoc.data.constraints.limites.barcode
-					Trace("ServeurTraiterMessageDesignerModele : limites depuis Designer T=" + _nLimTexte + " I=" + _nLimImage + " Q=" + _nLimQr + " B=" + _nLimBarcode)
 				fin
 
 				jStocke.constraints.limites.texte				= _nLimTexte
@@ -60,15 +53,12 @@ selon vMessage.action
 
 				// ─── 2. Corriger cheminFond ───────────────────────────────
 				si jStocke.pages..Occurrence > 0 alors
-					Trace("ServeurTraiterMessageDesignerModele : cheminFond AVANT correction = [" + jStocke.pages[1].cheminFond + "]")
 					pour nInd = 1 _à_ jStocke.pages..Occurrence
 						jStocke.pages[nInd].cheminFond = _stDocument.Repertoire + _stDocument.NomFichierTemp
 					fin
-					Trace("ServeurTraiterMessageDesignerModele : cheminFond APRÈS correction = [" + _stDocument.Repertoire + _stDocument.NomFichierTemp + "]")
 				fin
 
 				_stDocument.JsonDesignerData = JSONVersChaîne(jStocke)
-				Trace("ServeurTraiterMessageDesignerModele : data sauvegardé (" + Taille(_stDocument.JsonDesignerData) + " car.)")
 
 				// ─── 3. Préparer JSON BAT avec placeholders ──────────────
 				// Copie du data pour injection des placeholders dans les zones image vides
@@ -102,7 +92,6 @@ selon vMessage.action
 							si hRepPlaceholder.CodeEtat = 200 alors
 								jBat.zonesImage[nInd].source.nomFichier	= sCheminPlaceholder
 								jBat.zonesImage[nInd].source.type			= "fichier"
-								Trace("ServeurTraiterMessageDesignerModele : placeholder " + rLargeurZone + "x" + rHauteurZone + "mm --> " + sCheminPlaceholder)
 							sinon
 								Trace("ServeurTraiterMessageDesignerModele : -> échec placeholder zone " + nInd)
 							fin
@@ -132,10 +121,14 @@ selon vMessage.action
 					Trace("ServeurTraiterMessageDesignerModele : échec écriture JSON temp")
 					renvoyer Faux
 				fin
-				sCommandeBat est une chaîne = [
-					[%sNodeExe%] [%sNodeCli%] [%sCheminJsonTemp%] [%sCheminPsmdBat%] --no-bleed
-				]
-				Trace("ServeurTraiterMessageDesignerModele : CMD BAT = " + sCommandeBat)
+				// Commande Node avec chemins ENTRE GUILLEMETS (protège les espaces
+				// « C:\Program Files\… », « D:\Mes Sites\… ») — schéma identique au
+				// chemin document (GenererPsmdServeurDocument). --no-bleed hors guillemets.
+				sCommandeBat est une chaîne = ChaîneConstruit(
+				[
+					"%1" "%2" "%3" "%4"
+				],
+				sNodeExe, sNodeCli, sCheminJsonTemp, sCheminPsmdBat) + " --no-bleed"
 				LanceAppli(sCommandeBat, exeIconise, exeBloquant)
 
 				// Nettoyage JSON temp
@@ -144,7 +137,6 @@ selon vMessage.action
 				si fFichierExiste(sCheminPsmdBat) alors
 
 					_stDocument.CheminPsmdBat = sCheminPsmdBat
-					Trace("ServeurTraiterMessageDesignerModele : PSMD BAT généré : " + sCheminPsmdBat)
 
 					// Lot 2C : copie des polices utilisées dans le Fonts du répertoire MODÈLE
 					//   (répertoire de sortie distinct de l'opération). Non bloquant.
@@ -152,7 +144,6 @@ selon vMessage.action
 
 					// ─── 5. Générer BAT JPG ──────────────────────────────
 					GenererBatDocumentDepuisPsmd(_stDocument, __tabEchantillonBaseLigne)
-					Trace("ServeurTraiterMessageDesignerModele : BAT généré")
 
 					// ─── Blanc tournant sur le BAT uniquement (pas le fond) ─
 					// Le fond a déjà son blanc tournant depuis la création (UploadFichier Phase 3)
@@ -171,10 +162,8 @@ selon vMessage.action
 						znrAperçuUpload.Ajoute()
 						si _stDocument.tabImageBat..Occurrence >= nPage _et_ _stDocument.tabImageBat[nPage].CheminPhysique <> "" alors
 							znrAperçuUpload[nPage].imgUpload = _stDocument.tabImageBat[nPage].CheminRelatif + "?" + DateHeureSys()
-							Trace("ServeurTraiterMessageDesignerModele : aperçu BAT p" + nPage)
 						sinon si _stDocument.tabImageFond..Occurrence >= nPage alors
 							znrAperçuUpload[nPage].imgUpload = _stDocument.tabImageFond[nPage].CheminRelatif + "?" + DateHeureSys()
-							Trace("ServeurTraiterMessageDesignerModele : aperçu Fond p" + nPage)
 						fin
 						znrAperçuUpload[nPage].imgUpload..Visible = Vrai
 					fin

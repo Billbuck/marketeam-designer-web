@@ -1,0 +1,82 @@
+procédure DesignerPoliceAjout()
+
+// ============================================================
+// WEBSERVICE : Ajout / mise à jour d'une Google Font à la demande
+//
+// Expose cpDesigner.AjouteGooglePoliceUnitaire (Lot A2). NON destructif
+// (UPSERT, IdPolice préservés). Portée COMMUNE (Origine='google', générale).
+//
+// Appelé depuis le Designer (action « + Ajouter une Google Font »).
+// Auth : HMAC SHA-256 héritée au niveau REST (comme les autres WS Designer).
+//
+// Paramètres reçus (HTTP, POST) :
+//   - famille : nom EXACT de la famille (casse Google), ex. "Lobster"
+//   - forcer  : "1" = autorise la mise à jour si version supérieure ; "0" sinon
+//
+// Réponse JSON :
+//   - success : Vrai/Faux
+//   - statut  : added | exists | uptodate | updated   (vide si erreur)
+//   - famille : nom de la famille
+//   - polices : tableau de structDesignerPolice (lignes actives de la famille)
+//   - error   : message d'erreur ("" si OK)
+// ============================================================
+
+// DEBUG TEMPORAIRE - Tracer les paramètres reçus
+fAjouteTexte(fRepDonnées() + "\DesignerPoliceAjout_debug.txt", RC + "========== " + DateHeureSys().VersChaîne() + " ==========" + RC + ...
+"famille: [" + WebserviceParameter("famille") + "]" + RC + ...
+"forcer: [" + WebserviceParameter("forcer") + "]" + RC)
+
+
+// ============================================================
+// 1. Lecture des paramètres
+// ============================================================
+sFamille		est une chaîne ANSI = WebserviceParameter("famille")
+bForcer		est un booléen	= (WebserviceParameter("forcer") = "1")
+
+
+// ============================================================
+// 2. Validation des paramètres
+// ============================================================
+si sFamille.SansEspace() = "" alors
+	GénéreJsonErreur("famille", "Paramètre famille absent")
+	renvoyer Faux
+fin
+
+
+// ============================================================
+// Capture des exceptions runtime pour éviter les erreurs 500 muettes
+// ============================================================
+quand exception dans
+
+	sStatut	est une chaîne ANSI = ""
+	sErreur	est une chaîne	ANSI = ""
+	tabP		est un tableau de structDesignerPolice
+
+	tabP = cpDesigner.AjouteGooglePoliceUnitaire(sFamille, bForcer, sStatut, sErreur)
+
+	si sStatut = "error" alors
+		fAjouteTexte(fRepDonnées() + "\DesignerPoliceAjout_debug.txt", "ERREUR métier: " + sErreur + RC)
+		GénéreJsonErreur("famille", sErreur)
+		renvoyer Faux
+	fin
+
+	// ============================================================
+	// 3. Construction de la réponse JSON
+	// ============================================================
+	varReponse			est un Variant
+	varReponse.success	= Vrai
+	varReponse.statut		= sStatut
+	varReponse.famille	= sFamille
+	varReponse.polices	= tabP
+	varReponse.error		= ""
+
+	sJsonReponse	est une chaîne ANSI
+	Sérialise(varReponse, sJsonReponse, psdJSON + psdMiseEnForme)
+	renvoyer GénéreJsonSuccès("Police traitée", sJsonReponse)
+
+
+faire
+	fAjouteTexte(fRepDonnées() + "\DesignerPoliceAjout_debug.txt", "EXCEPTION: " + ExceptionInfo(errComplet) + RC)
+	GénéreJsonErreur("Erreur interne", ExceptionInfo(errMessage))
+	renvoyer Faux
+fin

@@ -1,0 +1,27 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// cpDesigner.RemplirLibellesGraisses
+// Rôle : Charger les libellés de graisses « principales » depuis ici_police_weight
+//        (Code -> Nom, EstPrincipal = 1) sous forme de tableau associatif indexé
+//        par le Code (poids 100..950).
+//
+//        Procédure PARTAGÉE (extraite de ImporteGoogleFontsGenerales au Lot A1)
+//        réutilisée par l'import global ET l'ajout unitaire (AjouteGooglePoliceUnitaire).
+//        Logique inchangée par rapport à l'ancienne interne ChargeLibellesGraisses.
+//
+// Retour : tableau associatif de chaînes (clé entière = Code, valeur = libellé).
+// ─────────────────────────────────────────────────────────────────────────────
+procédure RemplirLibellesGraisses() : tableau associatif de chaînes
+
+taaLibelleGraisse	est un tableau associatif de chaînes
+sReqW				est une chaîne ANSI
+sdReqW				est une Source de Données
+
+sReqW = "SELECT Code, Nom FROM ici_police_weight WHERE EstPrincipal = 1"
+si sdReqW.ExécuteRequêteSQL(ici_police_weight.Connexion, hRequêteSansCorrection, sReqW) alors
+	POUR TOUT sdReqW
+		taaLibelleGraisse[sdReqW.Code] = sdReqW.Nom
+	FIN
+fin
+sdReqW.AnnuleDéclaration()
+
+renvoyer taaLibelleGraisse

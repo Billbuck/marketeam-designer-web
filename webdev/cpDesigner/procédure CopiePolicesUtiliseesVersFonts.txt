@@ -113,8 +113,7 @@ POUR TOUT bUtil, sNomUtil DE taaNoms
 			sNonConf += sNomUtil + " (police gérée sans fichier d'impression)"
 		FIN
 	SINON SI taaSysteme[NormaliseNomPolice(sNomUtil)]..Existe ALORS
-		// Police système -> présente sur l'atelier, aucun fichier requis
-		Trace("CopiePolicesUtiliseesVersFonts : police système ignorée : " + sNomUtil)
+		// Police système -> présente sur l'atelier, aucun fichier requis (ignorée)
 	SINON
 		// Ni gérée ni système -> INCONNUE (ex. police supprimée encore référencée)
 		si sNonConf <> "" alors sNonConf += ", "

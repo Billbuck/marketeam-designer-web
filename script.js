@@ -6678,15 +6678,27 @@ document.addEventListener('DOMContentLoaded', () => {
     //   applique la police EXACTEMENT comme avant (zoneData.font = nom).
     //   L'application de police, le @font-face et policesUtilisees ne sont PAS touchés.
     // ═══════════════════════════════════════════════════════════════════════════════
-    let fontComboFamille = null;   // <select> COMBO 1 (famille)
+    // C2 : COMBO 1 (famille) = combobox CUSTOM cherchable (input + déroulant filtré),
+    //   remplace l'ancien <select> natif. COMBO 2 (graisse) reste un <select> natif.
+    let fontFamilleInput = null;   // <input> COMBO 1 (famille) — saisie + affichage
+    let fontFamilleSuggBox = null; // déroulant custom des familles (liste filtrée)
     let fontComboGraisse = null;   // <select> COMBO 2 (graisse)
     let __fontCascadeSyncing = false; // garde : positionnement programmatique != action utilisateur
+    let __fontFamilleMissing = false; // état « Police manquante » actif (bloque l'application)
+    let __familleSuggItems = [];      // familles actuellement affichées dans le déroulant
+    let __familleSuggActiveIdx = -1;  // index surligné (navigation clavier)
 
     // Libellés de repli par poids (mode standalone / entrée sans `graisse`).
     const FONT_WEIGHT_LABELS = {
         100: 'Thin', 200: 'Extra Light', 300: 'Light', 400: 'Regular', 500: 'Medium',
         600: 'Semi Bold', 700: 'Bold', 800: 'Extra Bold', 900: 'Black', 950: 'Extra Black'
     };
+
+    /** Normalisation pour recherche : minuscule + suppression des accents + trim.
+     *  Partagée par l'autocomplétion de la popup d'ajout (C1) et la combo famille (C2). */
+    function normaliseRecherche(s) {
+        return String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    }
 
     /** Liste de polices source (même logique de repli que updateQuillFontSelectUI). */
     function getFontList() {
@@ -6720,22 +6732,29 @@ document.addEventListener('DOMContentLoaded', () => {
         return best;
     }
 
-    /** COMBO 1 : familles distinctes, dans l'ordre serveur (PAS de re-tri). */
-    function populateFamilleCombo() {
-        if (!fontComboFamille) return;
-        fontComboFamille.innerHTML = '';
+    /** Nom d'entrée servant à l'APERÇU d'une famille = graisse 400/proche
+     *  (pickDefaultWeightEntry), jamais la 1re entrée arbitraire. */
+    function getApercuNomFamille(fam) {
+        const entreesFamille = getFontList().filter(x => x && getFamilleOf(x) === fam);
+        const apercu = pickDefaultWeightEntry(entreesFamille);
+        return (apercu && apercu.nom) ? apercu.nom : fam;
+    }
+
+    /** COMBO 1 : familles distinctes, dans l'ORDRE du tableau (Marque→Client→Standard,
+     *  préservé ; PAS de re-tri). Dédoublonnées par famille (1re occurrence).
+     *  @returns {{fam:string, apercuNom:string}[]} */
+    function getFamillesOrdonnees() {
+        const list = getFontList();
         const seen = Object.create(null);
-        getFontList().forEach(p => {
+        const out = [];
+        list.forEach(p => {
             if (!p || !p.nom) return;
             const fam = getFamilleOf(p);
             if (!fam || seen[fam]) return;
             seen[fam] = true;
-            const o = document.createElement('option');
-            o.value = fam;
-            o.textContent = fam;
-            o.style.fontFamily = "'" + (p.nom || fam) + "', sans-serif"; // aperçu
-            fontComboFamille.appendChild(o);
+            out.push({ fam: fam, apercuNom: getApercuNomFamille(fam) });
         });
+        return out;
     }
 
     /** COMBO 2 : graisses de la famille, triées par poids croissant (100->950). */
@@ -6771,30 +6790,19 @@ document.addEventListener('DOMContentLoaded', () => {
     //   Non applicable : elle ne déclenche jamais applyFontByNom.
     const FONT_COMBO_MISSING_VALUE = '__POLICE_MANQUANTE__';
 
-    /** Retire l'option/état « Police manquante » de la combo famille (s'il existe). */
+    /** Retire l'état « Police manquante » de l'input famille (s'il existe). */
     function clearFontComboMissingState() {
-        if (!fontComboFamille) return;
-        const opt = fontComboFamille.querySelector('option[value="' + FONT_COMBO_MISSING_VALUE + '"]');
-        if (opt) opt.remove();
-        fontComboFamille.classList.remove('font-combo-missing');
+        __fontFamilleMissing = false;
+        if (!fontFamilleInput) return;
+        fontFamilleInput.classList.remove('font-combo-missing');
     }
 
-    /** Affiche l'état « Police manquante : <nom> » (rouge, informatif, non applicable). */
+    /** Affiche l'état « <nom> (manquante) » (rouge, informatif, non applicable). */
     function showFontComboMissingState(nom) {
-        if (!fontComboFamille) return;
-        clearFontComboMissingState();
-        const opt = document.createElement('option');
-        opt.value = FONT_COMBO_MISSING_VALUE;
-        opt.textContent = nom + ' (manquante)';
-        opt.className = 'font-option-missing';
-        fontComboFamille.insertBefore(opt, fontComboFamille.firstChild);
-        __fontCascadeSyncing = true;
-        try {
-            fontComboFamille.value = FONT_COMBO_MISSING_VALUE;
-        } finally {
-            __fontCascadeSyncing = false;
-        }
-        fontComboFamille.classList.add('font-combo-missing');
+        if (!fontFamilleInput) return;
+        __fontFamilleMissing = true;
+        fontFamilleInput.value = nom + ' (manquante)';
+        fontFamilleInput.classList.add('font-combo-missing');
     }
 
     /** Positionne les deux combos sur la police courante.
@@ -6804,7 +6812,7 @@ document.addEventListener('DOMContentLoaded', () => {
      *  @param {string} [pNomZone] nom de police de la zone (préservé même s'il n'a
      *         pas d'option dans le <select> masqué). */
     function refreshFontComboDisplay(pNomZone) {
-        if (!fontComboFamille || !fontComboGraisse || !quillInputFont) return;
+        if (!fontFamilleInput || !fontComboGraisse || !quillInputFont) return;
         clearFontComboMissingState();
         // Nom courant : priorité au nom de zone fourni (préservé), sinon <select> masqué.
         const nom = (pNomZone !== undefined && pNomZone !== null && pNomZone !== '')
@@ -6820,38 +6828,122 @@ document.addEventListener('DOMContentLoaded', () => {
         __fontCascadeSyncing = true;
         try {
             const fam = getFamilleOf(p);
-            fontComboFamille.value = fam;
+            fontFamilleInput.value = fam;
             populateGraisseCombo(fam, p.nom);
         } finally {
             __fontCascadeSyncing = false;
         }
     }
 
-    /** Reconstruit les combos depuis policesDisponibles + repositionne (après updateQuillFontSelectUI). */
+    /** Reconstruit l'état des combos depuis policesDisponibles + repositionne
+     *  (après updateQuillFontSelectUI). La liste cherchable est rendue à la demande
+     *  (focus/saisie) ; ici on (re)positionne juste l'input famille + la graisse. */
     function rebuildFontCombo() {
-        if (!fontComboFamille) return;
+        if (!fontFamilleInput) return;
         clearFontComboMissingState();
         __fontCascadeSyncing = true;
         try {
-            populateFamilleCombo();
             const nom = quillInputFont ? quillInputFont.value : '';
             const p = getFontList().find(x => x && x.nom === nom);
             if (p) {
-                fontComboFamille.value = getFamilleOf(p);
+                fontFamilleInput.value = getFamilleOf(p);
                 populateGraisseCombo(getFamilleOf(p), p.nom);
-            } else if (fontComboFamille.options.length > 0) {
+            } else {
                 // repli présentation (n'applique rien) : 1re famille + sa graisse par défaut
-                fontComboFamille.selectedIndex = 0;
-                populateGraisseCombo(fontComboFamille.value, null);
+                const familles = getFamillesOrdonnees();
+                if (familles.length > 0) {
+                    fontFamilleInput.value = familles[0].fam;
+                    populateGraisseCombo(familles[0].fam, null);
+                } else {
+                    fontFamilleInput.value = '';
+                }
             }
         } finally {
             __fontCascadeSyncing = false;
         }
     }
 
-    /** Crée et câble les deux combos une seule fois. */
+    // ── C2 : combobox famille cherchable « commence par » ──────────────────────
+
+    /** Masque et vide le déroulant des familles. */
+    function hideFontFamilleSuggestions() {
+        if (fontFamilleSuggBox) { fontFamilleSuggBox.classList.add('hidden'); fontFamilleSuggBox.innerHTML = ''; }
+        __familleSuggItems = [];
+        __familleSuggActiveIdx = -1;
+    }
+
+    /** Remplit le déroulant des familles filtrées « commence par » (ordre préservé,
+     *  insensible casse/accents). Filtre vide → liste complète. Aucun résultat → état vide. */
+    function renderFontFamilleSuggestions(filtre) {
+        if (!fontFamilleSuggBox) return;
+        const qn = normaliseRecherche(filtre);
+        const familles = getFamillesOrdonnees();
+        const liste = (qn === '')
+            ? familles
+            : familles.filter(f => normaliseRecherche(f.fam).startsWith(qn));
+        __familleSuggItems = liste.map(f => f.fam);
+        __familleSuggActiveIdx = -1;
+        fontFamilleSuggBox.innerHTML = '';
+        if (liste.length === 0) {
+            const vide = document.createElement('div');
+            vide.className = 'font-famille-suggestion-empty';
+            vide.textContent = 'Aucune famille';
+            fontFamilleSuggBox.appendChild(vide);
+            fontFamilleSuggBox.classList.remove('hidden');
+            return;
+        }
+        liste.forEach((f, idx) => {
+            const item = document.createElement('div');
+            item.className = 'font-famille-suggestion-item';
+            item.textContent = f.fam;
+            item.dataset.idx = String(idx);
+            item.style.fontFamily = "'" + (f.apercuNom || f.fam) + "', sans-serif"; // aperçu 400/proche
+            // mousedown + stopPropagation : devance le blur de l'input ET empêche que le
+            //   retrait de l'item (innerHTML='') en plein événement n'atteigne le handler
+            //   global de désélection (e.target orphelin → deselectAll → panneau fermé).
+            item.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                selectFontFamille(f.fam);
+            });
+            fontFamilleSuggBox.appendChild(item);
+        });
+        fontFamilleSuggBox.classList.remove('hidden');
+    }
+
+    /** Choisit une famille : applique EXACTEMENT la chaîne existante (graisse + zone),
+     *  comme l'ancien change du <select> (populateGraisseCombo + applyFontByNom). */
+    function selectFontFamille(fam) {
+        clearFontComboMissingState();
+        if (fontFamilleInput) fontFamilleInput.value = fam;
+        hideFontFamilleSuggestions();
+        populateGraisseCombo(fam, null);
+        applyFontByNom(fontComboGraisse ? fontComboGraisse.value : '');
+    }
+
+    /** Restaure l'input sur la famille courante (annule une saisie non validée). */
+    function restoreFontFamilleInput() {
+        if (!fontFamilleInput || __fontFamilleMissing) return;
+        const nom = quillInputFont ? quillInputFont.value : '';
+        const p = getFontList().find(x => x && x.nom === nom);
+        fontFamilleInput.value = p ? getFamilleOf(p) : '';
+    }
+
+    /** Déplace l'item surligné (navigation clavier). @returns {boolean} true si géré. */
+    function moveFamilleSuggActive(delta) {
+        if (!fontFamilleSuggBox || fontFamilleSuggBox.classList.contains('hidden') || __familleSuggItems.length === 0) return false;
+        const n = __familleSuggItems.length;
+        __familleSuggActiveIdx = (__familleSuggActiveIdx + delta + n) % n;
+        const items = fontFamilleSuggBox.querySelectorAll('.font-famille-suggestion-item');
+        items.forEach((el, idx) => el.classList.toggle('is-active', idx === __familleSuggActiveIdx));
+        const activeEl = items[__familleSuggActiveIdx];
+        if (activeEl) activeEl.scrollIntoView({ block: 'nearest' });
+        return true;
+    }
+
+    /** Crée et câble le combobox famille + la combo graisse une seule fois. */
     function initFontCombo() {
-        if (fontComboFamille) return;
+        if (fontFamilleInput) return;
         if (!quillInputFont) return;
         const wrap = quillInputFont.parentElement; // .dropdown-poc
         if (!wrap) return;
@@ -6867,12 +6959,43 @@ document.addEventListener('DOMContentLoaded', () => {
         const rowLabel = rowOrigin ? rowOrigin.querySelector('.form-label-poc') : null;
         if (rowLabel) { rowLabel.style.display = ''; rowLabel.textContent = 'Police'; }
 
-        // COMBO 1 (famille) : <select> dans le wrap d'origine, à droite, comme les autres lignes
-        fontComboFamille = document.createElement('select');
-        fontComboFamille.className = 'dropdown-btn-poc dropdown-select-poc';
-        fontComboFamille.id = 'font-combo-famille';
-        wrap.insertBefore(fontComboFamille, wrap.firstChild);
+        // COMBO 1 (famille) : COMBOBOX custom cherchable (input + déroulant filtré).
+        //   Le wrap .dropdown-poc passe en position relative (CSS .font-police-control)
+        //   pour ancrer le déroulant absolu sous l'input.
+        fontFamilleInput = document.createElement('input');
+        fontFamilleInput.type = 'text';
+        fontFamilleInput.id = 'font-famille-input';
+        fontFamilleInput.className = 'dropdown-btn-poc dropdown-select-poc font-famille-input';
+        fontFamilleInput.setAttribute('autocomplete', 'off');
+        fontFamilleInput.setAttribute('placeholder', 'Rechercher une police…');
+        wrap.insertBefore(fontFamilleInput, wrap.firstChild);
         if (origArrow) { const aFam = origArrow.cloneNode(true); aFam.style.display = ''; wrap.appendChild(aFam); }
+
+        // Déroulant custom des familles (absolu sous l'input)
+        fontFamilleSuggBox = document.createElement('div');
+        fontFamilleSuggBox.id = 'font-famille-suggestions';
+        fontFamilleSuggBox.className = 'font-famille-suggestions hidden';
+        wrap.appendChild(fontFamilleSuggBox);
+
+        // Lot B2 : bouton « + » (ajout d'une Google Font) à droite de la combo famille.
+        //   Placé dans le .form-control-poc (sibling du .dropdown-poc) pour ne pas
+        //   perturber le gabarit du dropdown ; le contrôle passe en flex via une classe.
+        const ctrlPolice = wrap.parentElement; // .form-control-poc
+        if (ctrlPolice && ctrlPolice.classList.contains('form-control-poc') &&
+            !ctrlPolice.querySelector('#font-ajout-btn')) {
+            ctrlPolice.classList.add('font-police-control');
+            const btnAdd = document.createElement('button');
+            btnAdd.type = 'button';
+            btnAdd.id = 'font-ajout-btn';
+            btnAdd.className = 'font-ajout-btn';
+            btnAdd.title = 'Ajouter une Google Font';
+            const icAdd = document.createElement('span');
+            icAdd.className = 'material-icons';
+            icAdd.textContent = 'add';
+            btnAdd.appendChild(icAdd);
+            ctrlPolice.appendChild(btnAdd);
+            btnAdd.addEventListener('click', openPoliceAjoutModal);
+        }
 
         // COMBO 2 (graisse) : NOUVELLE ligne .form-row-poc juste après, même structure
         fontComboGraisse = document.createElement('select');
@@ -6904,25 +7027,360 @@ document.addEventListener('DOMContentLoaded', () => {
             wrap.appendChild(fontComboGraisse);
         }
 
-        // COMBO 1 (famille) -> peupler graisses, défaut 400, puis appliquer
-        fontComboFamille.addEventListener('change', () => {
-            if (__fontCascadeSyncing) return;
-            // L'option informative « Police manquante » n'applique rien.
-            if (fontComboFamille.value === FONT_COMBO_MISSING_VALUE) return;
-            clearFontComboMissingState();
-            populateGraisseCombo(fontComboFamille.value, null);
-            applyFontByNom(fontComboGraisse.value);
+        // COMBO 1 (famille) : combobox cherchable
+        //   clic (mousedown) -> TOGGLE du déroulant (ouvre si fermé, ferme si ouvert).
+        //   POINT D'OUVERTURE UNIQUE : on n'ouvre PLUS sur focus (sinon double
+        //   open/close au 1er clic, et pas de réouverture quand l'input garde le
+        //   focus après une sélection). mousedown précède focus → pas de clignotement.
+        fontFamilleInput.addEventListener('mousedown', () => {
+            const ferme = !fontFamilleSuggBox || fontFamilleSuggBox.classList.contains('hidden');
+            if (ferme) renderFontFamilleSuggestions('');
+            else hideFontFamilleSuggestions();
+        });
+        //   focus -> sélectionne le texte UNIQUEMENT (n'ouvre pas : géré par le toggle)
+        fontFamilleInput.addEventListener('focus', () => {
+            if (fontFamilleInput.value) fontFamilleInput.select();
+        });
+        //   saisie -> filtre « commence par »
+        fontFamilleInput.addEventListener('input', () => {
+            renderFontFamilleSuggestions(fontFamilleInput.value);
+        });
+        //   clavier -> ↑/↓ naviguer, Entrée choisir, Échap fermer + restaurer
+        fontFamilleInput.addEventListener('keydown', (e) => {
+            const visible = !!(fontFamilleSuggBox && !fontFamilleSuggBox.classList.contains('hidden') && __familleSuggItems.length > 0);
+            if (e.key === 'ArrowDown') { if (visible) { e.preventDefault(); moveFamilleSuggActive(1); } return; }
+            if (e.key === 'ArrowUp') { if (visible) { e.preventDefault(); moveFamilleSuggActive(-1); } return; }
+            if (e.key === 'Enter') {
+                if (visible && __familleSuggActiveIdx >= 0) {
+                    e.preventDefault();
+                    selectFontFamille(__familleSuggItems[__familleSuggActiveIdx]);
+                }
+                return;
+            }
+            if (e.key === 'Escape') { e.preventDefault(); hideFontFamilleSuggestions(); restoreFontFamilleInput(); }
+        });
+        //   blur -> fermer le déroulant + restaurer la famille courante (saisie non validée)
+        fontFamilleInput.addEventListener('blur', () => {
+            setTimeout(() => { hideFontFamilleSuggestions(); restoreFontFamilleInput(); }, 150);
         });
 
         // COMBO 2 (graisse) -> appliquer l'entrée choisie
         fontComboGraisse.addEventListener('change', () => {
             if (__fontCascadeSyncing) return;
             // Tant que l'état « Police manquante » est actif, ne rien appliquer.
-            if (fontComboFamille.value === FONT_COMBO_MISSING_VALUE) return;
+            if (__fontFamilleMissing) return;
             applyFontByNom(fontComboGraisse.value);
         });
 
         rebuildFontCombo();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // Lot B2 — Popup « Ajouter une Google Font » (#police-ajout-modal)
+    // ───────────────────────────────────────────────────────────────────────────────
+    //   Clonée de #collection-name-modal. Saisie d'un nom de famille → appel BRUT
+    //   window.ajouteGooglePolice(famille, false) (B1) → AFFICHAGE du statut/erreur.
+    //   AUCUNE fusion à chaud (combo/@font-face/sélection = B3) : on ne fait qu'afficher.
+    // ═══════════════════════════════════════════════════════════════════════════════
+
+    /** Affiche un message dans la zone #police-ajout-message avec un état visuel. */
+    function setPoliceAjoutMessage(texte, etat) {
+        const msg = document.getElementById('police-ajout-message');
+        if (!msg) return;
+        msg.textContent = texte || '';
+        msg.classList.remove('is-error', 'is-success', 'is-loading');
+        if (!texte) { msg.classList.add('hidden'); return; }
+        msg.classList.remove('hidden');
+        if (etat) msg.classList.add(etat);
+    }
+
+    // ── B-auto-2 : autocomplétion (filtrage 100% mémoire sur listeFamillesGoogle) ──
+    let __policeAjoutSuggItems = [];    // familles actuellement affichées dans le déroulant
+    let __policeAjoutSuggActiveIdx = -1; // index surligné (navigation clavier)
+
+    /** Masque et vide le déroulant de suggestions. */
+    function hidePoliceAjoutSuggestions() {
+        const box = document.getElementById('police-ajout-suggestions');
+        if (box) { box.classList.add('hidden'); box.innerHTML = ''; }
+        __policeAjoutSuggItems = [];
+        __policeAjoutSuggActiveIdx = -1;
+    }
+
+    /** Filtre listeFamillesGoogle (COMMENCE PAR, insensible casse/accents) et affiche le déroulant.
+     *  Inactif si la liste n'est pas chargée ou si le texte fait < 2 caractères. */
+    function renderPoliceAjoutSuggestions(texte) {
+        const box = document.getElementById('police-ajout-suggestions');
+        if (!box) return;
+        const q = String(texte || '').trim();
+        if (!Array.isArray(listeFamillesGoogle) || q.length < 2) {
+            hidePoliceAjoutSuggestions();
+            return;
+        }
+        const qn = normaliseRecherche(q);
+        const matches = [];
+        for (let i = 0; i < listeFamillesGoogle.length && matches.length < 30; i++) {
+            const fam = listeFamillesGoogle[i];
+            if (fam && normaliseRecherche(fam).startsWith(qn)) matches.push(fam);
+        }
+        __policeAjoutSuggItems = matches;
+        __policeAjoutSuggActiveIdx = -1;
+        if (matches.length === 0) { hidePoliceAjoutSuggestions(); return; }
+        box.innerHTML = '';
+        matches.forEach((fam, idx) => {
+            const item = document.createElement('div');
+            item.className = 'police-ajout-suggestion-item';
+            item.textContent = fam;
+            item.dataset.idx = String(idx);
+            // mousedown (pas click) pour devancer le blur de l'input.
+            //   stopPropagation : selectPoliceAjoutSuggestion détache l'item du DOM
+            //   (box.innerHTML=''), donc s'il remontait au handler global de
+            //   désélection (document mousedown), e.target serait orphelin →
+            //   tous les closest(...) renverraient null → deselectAll() fermerait
+            //   le panneau « Propriétés Texte ». On bloque la propagation ici.
+            item.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                selectPoliceAjoutSuggestion(fam);
+            });
+            box.appendChild(item);
+        });
+        box.classList.remove('hidden');
+    }
+
+    /** Choisit une suggestion : remplit l'input (nom EXACT), active OK, masque le déroulant. */
+    function selectPoliceAjoutSuggestion(nom) {
+        const input = document.getElementById('police-ajout-input');
+        const okBtn = document.getElementById('police-ajout-ok-btn');
+        if (input) input.value = nom;
+        if (okBtn) okBtn.disabled = (String(nom).trim().length === 0);
+        hidePoliceAjoutSuggestions();
+        if (input) input.focus();
+    }
+
+    /** Déplace l'item surligné (navigation clavier). @returns {boolean} true si géré. */
+    function movePoliceAjoutSuggActive(delta) {
+        const box = document.getElementById('police-ajout-suggestions');
+        if (!box || box.classList.contains('hidden') || __policeAjoutSuggItems.length === 0) return false;
+        const n = __policeAjoutSuggItems.length;
+        __policeAjoutSuggActiveIdx = (__policeAjoutSuggActiveIdx + delta + n) % n;
+        const items = box.querySelectorAll('.police-ajout-suggestion-item');
+        items.forEach((el, idx) => el.classList.toggle('is-active', idx === __policeAjoutSuggActiveIdx));
+        const activeEl = items[__policeAjoutSuggActiveIdx];
+        if (activeEl) activeEl.scrollIntoView({ block: 'nearest' });
+        return true;
+    }
+
+    /** Masque le déroulant à la perte de focus (léger délai pour laisser passer le clic). */
+    function onPoliceAjoutBlur() {
+        setTimeout(hidePoliceAjoutSuggestions, 150);
+    }
+
+    /** Ferme la popup d'ajout de police et retire ses listeners. */
+    function closePoliceAjoutModal() {
+        const modal = document.getElementById('police-ajout-modal');
+        if (!modal) return;
+        modal.classList.add('hidden');
+        const input = document.getElementById('police-ajout-input');
+        const okBtn = document.getElementById('police-ajout-ok-btn');
+        const cancelBtn = document.getElementById('police-ajout-cancel-btn');
+        if (input) input.removeEventListener('input', onPoliceAjoutInput);
+        if (input) input.removeEventListener('keydown', onPoliceAjoutKeyDown);
+        if (input) input.removeEventListener('blur', onPoliceAjoutBlur);
+        if (okBtn) okBtn.removeEventListener('click', onPoliceAjoutSubmit);
+        if (cancelBtn) cancelBtn.removeEventListener('click', closePoliceAjoutModal);
+        modal.removeEventListener('click', onPoliceAjoutOverlayClick);
+        hidePoliceAjoutSuggestions();
+    }
+
+    /** Active/désactive le bouton « Ajouter » selon l'input + rafraîchit l'autocomplétion. */
+    function onPoliceAjoutInput() {
+        const input = document.getElementById('police-ajout-input');
+        const okBtn = document.getElementById('police-ajout-ok-btn');
+        if (!input || !okBtn) return;
+        okBtn.disabled = input.value.trim().length === 0;
+        renderPoliceAjoutSuggestions(input.value);
+    }
+
+    /** Clavier : flèches = naviguer suggestions ; Entrée = choisir/Ajouter ; Échap = fermer déroulant puis popup. */
+    function onPoliceAjoutKeyDown(e) {
+        const box = document.getElementById('police-ajout-suggestions');
+        const suggVisible = !!(box && !box.classList.contains('hidden') && __policeAjoutSuggItems.length > 0);
+        const okBtn = document.getElementById('police-ajout-ok-btn');
+
+        if (e.key === 'ArrowDown') {
+            if (suggVisible) { e.preventDefault(); movePoliceAjoutSuggActive(1); }
+            return;
+        }
+        if (e.key === 'ArrowUp') {
+            if (suggVisible) { e.preventDefault(); movePoliceAjoutSuggActive(-1); }
+            return;
+        }
+        if (e.key === 'Enter') {
+            if (suggVisible && __policeAjoutSuggActiveIdx >= 0) {
+                e.preventDefault();
+                selectPoliceAjoutSuggestion(__policeAjoutSuggItems[__policeAjoutSuggActiveIdx]);
+                return;
+            }
+            if (okBtn && !okBtn.disabled) { e.preventDefault(); onPoliceAjoutSubmit(); }
+            return;
+        }
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            if (suggVisible) { hidePoliceAjoutSuggestions(); return; }
+            closePoliceAjoutModal();
+        }
+    }
+
+    /** Fermer en cliquant sur l'overlay. */
+    function onPoliceAjoutOverlayClick(e) {
+        const modal = document.getElementById('police-ajout-modal');
+        if (modal && e.target === modal) closePoliceAjoutModal();
+    }
+
+    /** Clé de comparaison alpha d'une entrée : famille d'abord (regroupe la famille),
+     *  puis nom d'entrée. */
+    function __cleAlphaPolice(entry) {
+        const fam = getFamilleOf(entry) || '';
+        const nom = (entry && entry.nom) || '';
+        return fam + '\u0001' + nom;
+    }
+
+    /** Comparaison alpha (insensible casse/accents, numérique) entre deux entrées. */
+    function __comparePolicesAlpha(a, b) {
+        return __cleAlphaPolice(a).localeCompare(__cleAlphaPolice(b), 'fr', { sensitivity: 'base', numeric: true });
+    }
+
+    /** B3 : fusionne les entrées reçues du serveur dans policesDisponibles, sans
+     *  doublon (identité = nom).
+     *  - Entrée existante (même nom) → remplacement SUR PLACE (position inchangée).
+     *  - Nouvelle entrée → insertion à sa place ALPHABÉTIQUE en PARTANT DU BAS :
+     *    on remonte tant que l'entrée du dessus est alphabétiquement APRÈS la
+     *    nouvelle, puis on insère. Le tableau étant trié par le serveur
+     *    (Marque → Client → Standard alpha), une police générale ajoutée trouve sa
+     *    place alpha dans le bloc Standard (bas) sans atteindre Marque/Client.
+     *    Aucune dépendance à une info de portée (on n'en a pas côté JS). */
+    function fusionnePolicesAjoutees(polices) {
+        if (!Array.isArray(polices) || polices.length === 0) return;
+        if (!Array.isArray(policesDisponibles)) policesDisponibles = [];
+        polices.forEach(p => {
+            if (!p || !p.nom) return;
+            const idx = policesDisponibles.findIndex(x => x && x.nom === p.nom);
+            if (idx >= 0) {
+                policesDisponibles[idx] = p; // remplacement sur place, pas de réinsertion
+                return;
+            }
+            // Insertion alpha en partant du bas (remontée tant que le dessus est « après »).
+            let pos = policesDisponibles.length;
+            while (pos > 0 && __comparePolicesAlpha(policesDisponibles[pos - 1], p) > 0) {
+                pos--;
+            }
+            policesDisponibles.splice(pos, 0, p);
+        });
+    }
+
+    /** Clic « Ajouter » : appel B1 + (B3) fusion à chaud + sélection + fermeture. */
+    async function onPoliceAjoutSubmit() {
+        const input = document.getElementById('police-ajout-input');
+        const okBtn = document.getElementById('police-ajout-ok-btn');
+        const cancelBtn = document.getElementById('police-ajout-cancel-btn');
+        if (!input || !okBtn) return;
+
+        const famille = input.value.trim();
+        if (famille.length === 0) return;
+
+        // État CHARGEMENT (l'appel peut durer jusqu'à 60 s : download serveur des TTF)
+        input.disabled = true;
+        okBtn.disabled = true;
+        setPoliceAjoutMessage('Ajout en cours…', 'is-loading');
+
+        let res;
+        try {
+            res = await window.ajouteGooglePolice(famille, false);
+        } catch (e) {
+            res = { success: false, statut: 'error', famille: famille, polices: [], error: 'Service indisponible, réessayez' };
+        }
+
+        const fam = (res && res.famille) ? res.famille : famille;
+
+        // Échec (erreur métier ou réseau) → message rouge, on reste dans la popup.
+        if (!res || res.success !== true || res.statut === 'error') {
+            const err = (res && res.error) ? res.error : 'Service indisponible, réessayez';
+            setPoliceAjoutMessage(err, 'is-error');
+            input.disabled = false;
+            okBtn.disabled = input.value.trim().length === 0;
+            input.focus();
+            return;
+        }
+
+        // Succès (added/exists/uptodate/updated) : message bref + FUSION À CHAUD (B3).
+        let texte;
+        switch (res.statut) {
+            case 'added':    texte = 'Police « ' + fam + ' » ajoutée';            break;
+            case 'exists':   texte = 'Famille « ' + fam + ' » déjà disponible';   break;
+            case 'uptodate': texte = 'Famille « ' + fam + ' » déjà à jour';       break;
+            case 'updated':  texte = 'Famille « ' + fam + ' » mise à jour';       break;
+            default:         texte = 'Police « ' + fam + ' » traitée';            break;
+        }
+        setPoliceAjoutMessage(texte, 'is-success');
+        input.disabled = true;
+        okBtn.disabled = true;
+
+        // ── FUSION À CHAUD — ordre imposé ────────────────────────────────────────
+        // 1) merge dans policesDisponibles (dédoublonnage par nom)
+        fusionnePolicesAjoutees(res.polices);
+        // 2) @font-face : rebuild complet de la feuille d'aperçu écran
+        loadFontsFromJson(policesDisponibles);
+        // 3) combos : la nouvelle famille apparaît (updateQuillFontSelectUI appelle rebuildFontCombo)
+        updateQuillFontSelectUI(policesDisponibles);
+        updateFontSelectUI(policesDisponibles);
+        // 4) sélection auto UNIQUEMENT si une zone TEXTE est sélectionnée et éditable
+        if (isTextZoneSelectedForFieldsPopup()) {
+            const entreesFamille = (Array.isArray(policesDisponibles) ? policesDisponibles : [])
+                .filter(p => p && getFamilleOf(p) === fam);
+            const entreeDefaut = (entreesFamille.length > 0) ? pickDefaultWeightEntry(entreesFamille) : null;
+            if (entreeDefaut && entreeDefaut.nom) {
+                applyFontByNom(entreeDefaut.nom);          // dispatch change → zoneData.font = nom
+                refreshFontComboDisplay(entreeDefaut.nom); // positionne les deux combos
+            }
+        }
+        // 5) fermeture (après un bref affichage du message de succès)
+        setTimeout(closePoliceAjoutModal, 800);
+    }
+
+    /** Ouvre la popup d'ajout de police (reset input/message, focus, listeners). */
+    function openPoliceAjoutModal() {
+        const modal = document.getElementById('police-ajout-modal');
+        const input = document.getElementById('police-ajout-input');
+        const okBtn = document.getElementById('police-ajout-ok-btn');
+        const cancelBtn = document.getElementById('police-ajout-cancel-btn');
+        if (!modal || !input || !okBtn || !cancelBtn) return;
+
+        input.value = '';
+        input.disabled = false;
+        okBtn.disabled = true;
+        cancelBtn.textContent = 'Annuler';
+        setPoliceAjoutMessage('', null);
+        hidePoliceAjoutSuggestions();
+
+        modal.classList.remove('hidden');
+        input.focus();
+
+        input.addEventListener('input', onPoliceAjoutInput);
+        input.addEventListener('keydown', onPoliceAjoutKeyDown);
+        input.addEventListener('blur', onPoliceAjoutBlur);
+        okBtn.addEventListener('click', onPoliceAjoutSubmit);
+        cancelBtn.addEventListener('click', closePoliceAjoutModal);
+        modal.addEventListener('click', onPoliceAjoutOverlayClick);
+
+        // B-auto-2 : charger la liste des familles en tâche de fond (NON bloquant).
+        //   Si l'utilisateur a déjà tapé pendant le chargement, on rafraîchit le déroulant.
+        chargeListeFamillesGoogle().then(() => {
+            const inp = document.getElementById('police-ajout-input');
+            const md = document.getElementById('police-ajout-modal');
+            if (inp && md && !md.classList.contains('hidden') && document.activeElement === inp) {
+                renderPoliceAjoutSuggestions(inp.value);
+            }
+        }).catch(() => {});
     }
 
     // Construire la combo immédiatement (le <select> existe déjà dans le DOM)
@@ -9156,6 +9614,216 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally {
             clearTimeout(timeoutId);
         }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // Lot B1 — Appel signé BRUT vers DesignerPoliceAjout (ajout d'une Google Font)
+    // ───────────────────────────────────────────────────────────────────────────────
+    //   Transport UNIQUEMENT : POST signé (même mécanique HMAC que verifyCollectionCompat),
+    //   corps form-urlencoded { famille, forcer }. NE fait AUCUNE fusion à chaud,
+    //   AUCUNE UI (combo/@font-face/popup) — c'est le périmètre des lots B2/B3.
+    //   Testable depuis la console : window.ajouteGooglePolice('Lato', false).
+    // ═══════════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Demande au serveur l'ajout (ou la mise à jour) d'une Google Font.
+     * Appelle l'endpoint REST DesignerPoliceAjout, qui télécharge les TTF côté serveur
+     * (opération qui peut durer quelques secondes → timeout 60 s).
+     *
+     * @param {string} famille - Nom EXACT de la famille (casse Google), ex. "Lato"
+     * @param {boolean} [forcer=false] - true = autorise la maj si version supérieure
+     * @returns {Promise<{success:boolean, statut:string, famille:string, polices:Array<Object>, error:string}>}
+     */
+    async function ajouteGooglePolice(famille, forcer = false) {
+        const nomFamille = String(famille || '').trim();
+        if (!nomFamille) {
+            console.warn('ajouteGooglePolice: famille vide');
+            return { success: false, statut: 'error', famille: '', polices: [], error: 'Nom de famille vide' };
+        }
+        if (!authConfig || !authConfig.urlPoliceAjout) {
+            console.warn('ajouteGooglePolice: authConfig.urlPoliceAjout non configurée');
+            return { success: false, statut: 'error', famille: nomFamille, polices: [], error: 'URL webservice non configurée' };
+        }
+
+        const timestamp = generateTimestamp();
+        let signature;
+        try {
+            signature = await generateSignature(timestamp);
+        } catch (e) {
+            console.warn('ajouteGooglePolice: échec génération signature', e);
+            return { success: false, statut: 'error', famille: nomFamille, polices: [], error: 'Échec authentification' };
+        }
+
+        const controller = new AbortController();
+        // Le serveur télécharge plusieurs TTF Google → laisser le temps (60 s).
+        const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+        try {
+            // application/x-www-form-urlencoded : compatible avec WebserviceParameter() côté WebDev
+            const formBody = new URLSearchParams();
+            formBody.set('famille', nomFamille);
+            formBody.set('forcer', forcer ? '1' : '0');
+
+            const response = await fetch(authConfig.urlPoliceAjout, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-IdClient': authConfig.idClient,
+                    'X-IdContact': authConfig.idContact,
+                    'X-Timestamp': timestamp,
+                    'X-Marketeam-Auth': signature
+                },
+                body: formBody.toString(),
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+
+            // Lire le corps quel que soit le code HTTP (les erreurs métier WebDev
+            // arrivent parfois avec un code 4xx + enveloppe JSON GénéreJsonErreur).
+            const texte = await response.text();
+            let json = null;
+            try {
+                json = texte ? JSON.parse(texte) : null;
+            } catch (e) {
+                json = null;
+            }
+
+            // Enveloppe d'erreur WebDev : { Statut:"error", Message:"<champ>", Details:"<message>" }
+            if (!json || json.Statut === 'error') {
+                const msg = (json && (json.Details || json.Message)) ||
+                    ('Erreur HTTP ' + response.status);
+                console.warn('ajouteGooglePolice: erreur serveur →', msg);
+                return { success: false, statut: 'error', famille: nomFamille, polices: [], error: msg };
+            }
+
+            // Enveloppe de succès WebDev : { Statut:"success", Message, Details:"<JSON string>" }
+            // Details = varReponse sérialisée par WLangage → { success, statut, famille, polices, error }
+            let details = json.Details;
+            if (typeof details === 'string') {
+                try {
+                    details = JSON.parse(details);
+                } catch (e) {
+                    details = null;
+                }
+            }
+            if (!details) {
+                console.warn('ajouteGooglePolice: Details illisible', json);
+                return { success: false, statut: 'error', famille: nomFamille, polices: [], error: 'Réponse serveur illisible' };
+            }
+
+            const resultat = {
+                success: details.success === true || String(details.success) === 'true',
+                statut: String(details.statut || ''),
+                famille: String(details.famille || nomFamille),
+                polices: Array.isArray(details.polices) ? details.polices : [],
+                error: String(details.error || '')
+            };
+            console.log('ajouteGooglePolice: statut =', resultat.statut,
+                '| famille =', resultat.famille,
+                '| nb polices =', resultat.polices.length,
+                (resultat.error ? '| error = ' + resultat.error : ''));
+            return resultat;
+        } catch (e) {
+            clearTimeout(timeoutId);
+            const estTimeout = (e && e.name === 'AbortError');
+            const msg = estTimeout ? 'Délai dépassé (le serveur met trop de temps)' : 'Erreur réseau';
+            console.warn('ajouteGooglePolice: ' + msg, e);
+            return { success: false, statut: 'error', famille: nomFamille, polices: [], error: msg };
+        }
+    }
+
+    // Exposé pour test console (Lot B1) ; sera consommé par l'UI au lot B2/B3.
+    window.ajouteGooglePolice = ajouteGooglePolice;
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // B-auto-2 — Chargement (signé, cache mémoire) de la liste des familles Google
+    // ───────────────────────────────────────────────────────────────────────────────
+    //   Sert l'autocomplétion de la popup #police-ajout-modal. Chargé UNE fois par
+    //   session (variable module), filtrage 100% mémoire côté JS (aucun appel réseau
+    //   par frappe). Non bloquant : si l'endpoint est KO, la saisie libre reste possible.
+    // ═══════════════════════════════════════════════════════════════════════════════
+    let listeFamillesGoogle = null;     // tableau de chaînes une fois chargé ; null sinon
+    let __chargeFamillesEnCours = null; // Promise en vol (évite les appels concurrents)
+
+    /**
+     * Charge la liste des familles Google (endpoint DesignerPoliceListe), avec cache mémoire.
+     * @returns {Promise<string[]>} familles (vide si indisponible — autocomplétion inactive)
+     */
+    async function chargeListeFamillesGoogle() {
+        // Cache mémoire déjà rempli → pas de réseau.
+        if (Array.isArray(listeFamillesGoogle)) return listeFamillesGoogle;
+        // Un chargement est déjà en vol → on s'y rattache.
+        if (__chargeFamillesEnCours) return __chargeFamillesEnCours;
+
+        if (!authConfig || !authConfig.urlPoliceListe) {
+            if (DEBUG) console.warn('chargeListeFamillesGoogle: authConfig.urlPoliceListe non configurée');
+            return [];
+        }
+
+        __chargeFamillesEnCours = (async () => {
+            const timestamp = generateTimestamp();
+            let signature;
+            try {
+                signature = await generateSignature(timestamp);
+            } catch (e) {
+                console.warn('chargeListeFamillesGoogle: échec génération signature', e);
+                return [];
+            }
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
+            try {
+                const formBody = new URLSearchParams();
+                formBody.set('forcer', '0');
+
+                const response = await fetch(authConfig.urlPoliceListe, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-IdClient': authConfig.idClient,
+                        'X-IdContact': authConfig.idContact,
+                        'X-Timestamp': timestamp,
+                        'X-Marketeam-Auth': signature
+                    },
+                    body: formBody.toString(),
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                const texte = await response.text();
+                let json = null;
+                try { json = texte ? JSON.parse(texte) : null; } catch (e) { json = null; }
+
+                if (!json || json.Statut === 'error') {
+                    console.warn('chargeListeFamillesGoogle: erreur serveur', json && (json.Details || json.Message));
+                    return [];
+                }
+
+                // Enveloppe succès : { Statut:"success", Details:"<JSON string>" }
+                // Details = { success, familles:[...], error }
+                let details = json.Details;
+                if (typeof details === 'string') {
+                    try { details = JSON.parse(details); } catch (e) { details = null; }
+                }
+                const familles = (details && Array.isArray(details.familles)) ? details.familles : [];
+                if (familles.length === 0) {
+                    console.warn('chargeListeFamillesGoogle: liste vide');
+                    return [];
+                }
+                // Succès : on mémorise pour la session (plus aucun appel réseau ensuite).
+                listeFamillesGoogle = familles;
+                if (DEBUG) console.log('chargeListeFamillesGoogle:', familles.length, 'familles chargées');
+                return listeFamillesGoogle;
+            } catch (e) {
+                clearTimeout(timeoutId);
+                console.warn('chargeListeFamillesGoogle: échec réseau/timeout', e);
+                return [];
+            } finally {
+                __chargeFamillesEnCours = null;
+            }
+        })();
+
+        return __chargeFamillesEnCours;
     }
 
     /**
@@ -23345,11 +24013,17 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // Si on clique sur une zone, une poignée, le panneau de contrôle, la modale ou la sidebar, on ne fait rien
+        // Si on clique sur une zone, une poignée, le panneau de contrôle, la modale
+        // (boîte OU fond d'overlay) ou la sidebar, on ne fait rien.
+        //   .modal-overlay : un mousedown sur le FOND d'une popup (ex. #police-ajout-modal)
+        //   ne doit pas désélectionner la zone sous-jacente (sinon le panneau
+        //   « Propriétés Texte » #quill-toolbar se ferme). La fermeture de la popup
+        //   au clic sur le fond reste gérée séparément sur l'événement 'click'.
         if (e.target.closest('.zone') || 
             e.target.closest('.handle') || 
             e.target.closest('.toolbar') ||
             e.target.closest('.modal-box') ||
+            e.target.closest('.modal-overlay') ||
             e.target.closest('.sidebar')) {
             return;
         }
@@ -26650,7 +27324,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 idContact: String(jsonData.auth.idContact || ''),
                 secretKey: String(jsonData.auth.secretKey || ''),
                 urlWebservice: String(jsonData.auth.urlWebservice || ''),
-                urlCollectionListe: String(jsonData.auth.urlCollectionListe || '')
+                urlCollectionListe: String(jsonData.auth.urlCollectionListe || ''),
+                // Lot B1 : URL de l'endpoint DesignerPoliceAjout (ajout/maj Google Font à chaud)
+                urlPoliceAjout: String(jsonData.auth.urlPoliceAjout || ''),
+                // B-auto-2 : URL de l'endpoint DesignerPoliceListe (autocomplétion familles Google)
+                urlPoliceListe: String(jsonData.auth.urlPoliceListe || '')
             };
             // Persister authConfig dans sessionStorage pour qu'il survive à un F5
             try {

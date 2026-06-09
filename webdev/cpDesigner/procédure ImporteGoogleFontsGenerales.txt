@@ -45,6 +45,7 @@ sRepCache			est une chaîne	= ""		// Lot 2A-2 : dossier cache global des polices
 taaCible				est un tableau associatif de booléens		// familles cibles (clé = family)
 taaTrouvee			est un tableau associatif de booléens		// familles cibles trouvées dans l'API
 taaLibelleGraisse	est un tableau associatif de chaînes		// Code(entier) -> libellé principal (ici_police_weight)
+tabAjoutFam			est un tableau de structDesignerPolice		// entrées créées pour une famille (retour de TraiteFamilleGooglePolice)
 
 // ─── 1. Clé API (jamais en dur) ──────────────────────────────────────────
 sCle		= cpFonction.ValeurParametre("GoogleFonts_Api_Key", prm_parametre.ValChaine..Nom)
@@ -82,7 +83,7 @@ taaCible["Roboto Mono"]			= Vrai
 taaCible["Source Code Pro"]	= Vrai
 
 // ─── 3. Libellés de graisses « principales » (ici_police_weight) ──────────
-ChargeLibellesGraisses()
+taaLibelleGraisse = RemplirLibellesGraisses()
 
 // ─── 3 bis. Cache global des fichiers de police (Lot 2A-2, stratégie A) ────
 //   Si indisponible : l'import DB continue, mais sans téléchargement ni
@@ -133,7 +134,18 @@ POUR nI = 1 _À_ jReponse.items..Occurrence
 	si sFamily <> "" _et_ taaCible[sFamily]..Existe alors
 		taaTrouvee[sFamily]	= Vrai
 		nNbFamilles++
-		TraiteFamille(jReponse.items[nI], sFamily)
+		// Version Google au niveau famille (pour la colonne dsn_police.Version)
+		sVersionFam est une chaîne = ""
+		QUAND EXCEPTION DANS
+			si jReponse.items[nI].version..Existe alors
+				sVersionFam = jReponse.items[nI].version
+			fin
+		FAIRE
+		FIN
+		// Traitement par famille délégué à la procédure partagée (Lot A1).
+		// Compteurs accumulés PAR RÉFÉRENCE ; nNbCreees = somme des entrées créées.
+		tabAjoutFam = TraiteFamilleGooglePolice(jReponse.items[nI], sFamily, taaLibelleGraisse, sRepCache, sVersionFam, nNbFichiers, nNbNomTech, sEchecsTtf)
+		nNbCreees += tabAjoutFam..Occurrence
 	fin
 FIN
 
@@ -166,20 +178,6 @@ renvoyer sRecap
 // ═════════════════════════════════════════════════════════════════════════
 // PROCÉDURES INTERNES
 // ═════════════════════════════════════════════════════════════════════════
-
-	// ─── Charge les libellés de graisses « principales » ────────────────────
-	//   ici_police_weight : Code (100,200,…,950) + Nom + EstPrincipal (TINYINT).
-	PROCÉDURE INTERNE ChargeLibellesGraisses()
-		sReqW	est une chaîne ANSI
-		sdReqW	est une Source de Données
-		sReqW = "SELECT Code, Nom FROM ici_police_weight WHERE EstPrincipal = 1"
-		si sdReqW.ExécuteRequêteSQL(ici_police_weight.Connexion, hRequêteSansCorrection, sReqW) alors
-			POUR TOUT sdReqW
-				taaLibelleGraisse[sdReqW.Code] = sdReqW.Nom
-			FIN
-		FIN
-		sdReqW.AnnuleDéclaration()
-	FIN
 
 	// ─── Purge des entrées Google GÉNÉRALES + leurs fichiers cache (Voie B) ──
 	//   Supprime TOUTES les entrées Origine='google' de portée générale
@@ -231,176 +229,7 @@ renvoyer sRecap
 		fin
 	FIN
 
-	// ─── Traite une famille : crée/maj une entrée par graisse non-italique ──
-	PROCÉDURE INTERNE TraiteFamille(LOCAL jItem est un JSON, LOCAL pFamily est une chaîne)
-		taaWeights	est un tableau associatif de booléens		// clé chaîne = poids présent ("100".."950")
-		sVar			est une chaîne
-		nW				est un entier
-		sNom			est une chaîne
-		sLibGraisse	est une chaîne
-		sUrlReg		est une chaîne
-		sUrlIta		est une chaîne
-		sUrlBold		est une chaîne
-		sUrlBoldIta	est une chaîne
-
-		// Recenser les graisses NON-italiques présentes (regular -> 400).
-		// PAIRE DE BASE (règle générale, sans exception) : Regular 400 / Italic 400
-		// / Bold 700 / Bold-Italic 700 partagent UN SEUL nom interne. Donc seul le
-		// 400 est une ENTRÉE (ancre) ; « italic », « 700 » et « 700italic » ne
-		// créent JAMAIS d'entrée — ils alimentent ItalicUrl / BoldUrl / BoldItalicUrl
-		// de l'ancre (lus plus bas).
-		// Les autres italiques (« <poids>italic ») sont aussi exclus (alimentent
-		// ItalicUrl de leur poids). Tous les autres poids (100/200/300/500/600/
-		// 800/900) = entrées autonomes.
-		QUAND EXCEPTION DANS
-			SI jItem.variants..Existe ALORS
-				POUR nV = 1 _À_ jItem.variants..Occurrence
-					sVar = jItem.variants[nV]
-					SI Position(sVar, "italic") > 0 ALORS
-						// variante italique (« italic » ou « <poids>italic ») : pas d'entrée
-					SINON SI sVar = "regular" ALORS
-						taaWeights["400"] = Vrai
-					SINON SI sVar = "700" ALORS
-						// Bold de l'ancre 400 : PAS d'entrée propre (alimente BoldUrl du 400)
-					SINON SI EstNumérique(sVar) ALORS
-						taaWeights[sVar] = Vrai		// clé chaîne (100/200/300/500/600/800/900)
-					FIN
-				FIN
-			FIN
-		FAIRE
-		FIN
-
-		// Garde-fou (non bloquant) : famille sans poids 400 (improbable parmi les 21)
-		SI taaWeights["400"]..Existe = Faux ALORS
-			Trace("ImporteGoogleFonts : famille sans poids 400 (regular) : " + pFamily)
-		FIN
-
-		// Une entrée par graisse présente
-		POUR TOUT bW, sWCle DE taaWeights
-			nW = Val(sWCle)
-
-			// URLs (test présence + https forcé)
-			SI nW = 400 ALORS
-				sUrlReg		= UrlVariante(jItem, "regular")
-				sUrlIta		= UrlVariante(jItem, "italic")
-				sUrlBold		= UrlVariante(jItem, "700")			// OPTION A : gras seulement pour Regular
-				sUrlBoldIta	= UrlVariante(jItem, "700italic")
-			SINON
-				sUrlReg		= UrlVariante(jItem, sWCle)
-				sUrlIta		= UrlVariante(jItem, sWCle + "italic")
-				sUrlBold		= ""										// OPTION A : pas de gras pour les autres graisses
-				sUrlBoldIta	= ""
-			FIN
-
-			// Libellé (Nom) : Regular -> Famille seule ; sinon Famille + libellé graisse
-			SI nW = 400 ALORS
-				sNom = pFamily
-			SINON
-				SI taaLibelleGraisse[nW]..Existe ALORS
-					sLibGraisse = taaLibelleGraisse[nW]
-				SINON
-					sLibGraisse = sWCle		// repli si graisse absente de ici_police_weight
-				FIN
-				sNom = pFamily + " " + sLibGraisse
-			FIN
-
-			// NomTechnique = même logique (Lot 2 confirmera contre les TTF réels)
-			// pFamily = famille brute Google, persistée dans dsn_police.Famille
-			AjoutePolice(sNom, sNom, pFamily, sUrlReg, sUrlIta, sUrlBold, sUrlBoldIta, nW, "normal")
-		FIN
-	FIN
-
-	// ─── URL d'une variante (clé dynamique dans files) + https forcé ────────
-	PROCÉDURE INTERNE UrlVariante(LOCAL jItem est un JSON, LOCAL pVariant est une chaîne)
-		sU est une chaîne = ""
-		QUAND EXCEPTION DANS
-			SI jItem.files[pVariant]..Existe ALORS
-				sU = jItem.files[pVariant]
-			FIN
-		FAIRE
-		FIN
-		SI sU <> "" _ET_ Gauche(sU, 7) = "http://" ALORS
-			sU = "https://" + Milieu(sU, 8)
-		FIN
-		RENVOYER sU
-	FIN
-
-	// ─── INSERT direct d'une entrée police générale (Voie B) ────────────────
-	//   La purge en tête d'import (PurgePolicesGoogleGenerales) garantit qu'aucune
-	//   entrée Google générale ne préexiste -> pas de recherche d'existant. C'est
-	//   l'INSERT seul qui assure l'idempotence (purge + recréation = un seul jeu).
-	PROCÉDURE INTERNE AjoutePolice(LOCAL pNom est une chaîne, LOCAL pNomTech est une chaîne, LOCAL pFamille est une chaîne, LOCAL pUrl est une chaîne, LOCAL pItalic est une chaîne, LOCAL pBold est une chaîne, LOCAL pBoldItalic est une chaîne, LOCAL pWeight est un entier, LOCAL pStyle est une chaîne)
-		nId			est un entier	= 0
-		sCheminReg	est une chaîne	= ""
-		sNameId1		est une chaîne	= ""
-
-		// ─── INSERT (portée générale : IdMarque/IdClient NULL) ───
-		dsn_police.RAZ()
-		dsn_police.Nom					= pNom
-		dsn_police.NomTechnique			= pNomTech
-		dsn_police.Famille				= pFamille
-		dsn_police.Url					= pUrl
-		dsn_police.BoldUrl				= pBold
-		dsn_police.ItalicUrl			= pItalic
-		dsn_police.BoldItalicUrl		= pBoldItalic
-		dsn_police.Weight				= pWeight
-		dsn_police.Style				= pStyle
-		dsn_police.IdMarque..Null		= Vrai
-		dsn_police.IdClient..Null		= Vrai
-		dsn_police.EstActif				= 1
-		dsn_police.Origine				= "google"
-		dsn_police.DateHeureCreation	= DateHeureSys()
-		si dsn_police.Ajoute() alors
-			nNbCreees++
-			nId = dsn_police.IdPolice		// ID auto-incrémenté après Ajoute
-		fin
-
-		// ─── Lot 2A-2 : téléchargement des fichiers + NomTechnique réel ───────
-		//   Re-téléchargement systématique (écrase). Nommage déterministe par
-		//   IdPolice + suffixe de variante (reconstructible au Lot 2C).
-		//   Robustesse : tout échec est tracé et n'interrompt pas l'import.
-		si nId > 0 _et_ sRepCache <> "" alors
-			sCheminReg	= TelechargeVariante(nId, "regular", pUrl)
-			TelechargeVariante(nId, "bold", pBold)
-			TelechargeVariante(nId, "italic", pItalic)
-			TelechargeVariante(nId, "bolditalic", pBoldItalic)
-
-			// NomTechnique = nameID1 du fichier RÉGULIER (cf. CDC §4)
-			si sCheminReg <> "" alors
-				sNameId1 = LitNomInterneTtf(sCheminReg)
-				si sNameId1 <> "" alors
-					si dsn_police.LitRecherchePremier(IdPolice, nId) alors
-						dsn_police.NomTechnique				= sNameId1
-						dsn_police.DateHeureModification	= DateHeureSys()
-						si dsn_police.Modifie() alors
-							nNbNomTech++
-						fin
-					fin
-				sinon
-					si sEchecsTtf <> "" alors sEchecsTtf += ", "
-					sEchecsTtf += pNom + " (nameID1 illisible)"
-				fin
-			sinon
-				si sEchecsTtf <> "" alors sEchecsTtf += ", "
-				sEchecsTtf += pNom + " (TTF régulier non téléchargé)"
-			fin
-		fin
-	FIN
-
-	// ─── Télécharge une variante dans le cache (nommage déterministe) ───────
-	//   Convention : <cache>\police_<IdPolice>_<suffixe>.ttf
-	//   suffixe ∈ { regular, bold, italic, bolditalic }.
-	//   URL vide -> rien. Renvoie le chemin local si OK, "" sinon (tracé).
-	PROCÉDURE INTERNE TelechargeVariante(LOCAL pIdPolice est un entier, LOCAL pSuffixe est une chaîne, LOCAL pUrl est une chaîne) : chaîne
-		sDest est une chaîne
-		si pUrl = "" _ou_ sRepCache = "" alors
-			RENVOYER ""
-		fin
-		sDest = sRepCache + "police_" + pIdPolice + "_" + pSuffixe + ".ttf"
-		si TelechargeFichierBinaire(pUrl, sDest) alors
-			nNbFichiers++
-			RENVOYER sDest
-		fin
-		Trace("ImporteGoogleFonts : échec téléchargement police #" + pIdPolice + " " + pSuffixe + " : " + pUrl)
-		RENVOYER ""
-	FIN
+	// ─── Traitement par famille : délégué à la procédure PARTAGÉE ───────────
+	//   cpDesigner.TraiteFamilleGooglePolice (extraite au Lot A1) — réutilisée
+	//   par l'ajout unitaire. UrlVariante / TelechargeVariante / l'INSERT y sont
+	//   désormais internes. La purge globale ci-dessus reste propre à l'import.

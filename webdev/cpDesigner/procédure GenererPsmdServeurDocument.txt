@@ -112,15 +112,6 @@ fin
 //    substitution > PSMD écrit avec @LOCAL_xxx@ comme avant.
 taaMappingPsmd		est un tableau associatif de chaîne
 
-// Diagnostic format JSON et accessibilité taaBaseChamp (à retirer en stable)
-Trace("L18/A44 v5 DIAG : jDocLec.data..Existe=" + jDocLec.data..Existe ...
-	+ ", jDocChampsLec.champsFusion..Occurrence=" + jDocChampsLec.champsFusion..Occurrence)
-QUAND EXCEPTION DANS
-	Trace("L18/A44 v5 DIAG : __stOperation.taaBaseChamp..Occurrence=" + __stOperation.taaBaseChamp..Occurrence)
-FAIRE
-	Trace("L18/A44 v5 DIAG : __stOperation.taaBaseChamp INACCESSIBLE (probable problème de scope)")
-FIN
-
 si jDocChampsLec.champsFusion..Occurrence > 0 alors
 	pour nIndCF = 1 _à_ jDocChampsLec.champsFusion..Occurrence
 		sLocalIdCF	est une chaîne	= jDocChampsLec.champsFusion[nIndCF].localId
@@ -141,14 +132,11 @@ si jDocChampsLec.champsFusion..Occurrence > 0 alors
 				sNomTechCF est une chaîne = __stOperation.taaBaseChamp[sLibelleCF].Champ
 				si sNomTechCF <> "" alors
 					taaMappingPsmd["LOCAL_" + sLocalIdCF] = sNomTechCF
-					Trace("L18/A44 v5 MAPPING : LOCAL_" + sLocalIdCF + " > " + sNomTechCF + " (libellé : " + sLibelleCF + ")")
 				fin
 			fin
 		fin
 	fin
 fin
-
-Trace("L18/A44 v5 DIAG : taaMappingPsmd contient " + taaMappingPsmd..Occurrence + " entrée(s)")
 
 // 3. SUBSTITUTION TEXTUELLE DIRECTE sur la chaîne JSON entière.
 //    sJsonPsmdTemp est la copie chaîne destinée au fichier temp.
@@ -168,7 +156,6 @@ si taaMappingPsmd..Occurrence > 0 alors
 		si nPosA > 0 alors
 			sJsonPsmdTemp = Remplace(sJsonPsmdTemp, sMarqA, sMarqB)
 			nNbSubst++
-			Trace("L18/A44 v5 SUBST a : " + sMarqA + " > " + sMarqB + " (1re pos=" + nPosA + ")")
 		fin
 
 		// b. quillDelta ops merge-tag : "key":"LOCAL_xxx"
@@ -179,7 +166,6 @@ si taaMappingPsmd..Occurrence > 0 alors
 		si nPosB > 0 alors
 			sJsonPsmdTemp = Remplace(sJsonPsmdTemp, sKeyA, sKeyB)
 			nNbSubst++
-			Trace("L18/A44 v5 SUBST b : " + sKeyA + " > " + sKeyB + " (1re pos=" + nPosB + ")")
 		fin
 
 		// c. source.champFusion / champFusion : "champFusion":"LOCAL_xxx"
@@ -189,7 +175,6 @@ si taaMappingPsmd..Occurrence > 0 alors
 		si nPosC > 0 alors
 			sJsonPsmdTemp = Remplace(sJsonPsmdTemp, sCFA, sCFB)
 			nNbSubst++
-			Trace("L18/A44 v5 SUBST c : " + sCFA + " > " + sCFB + " (1re pos=" + nPosC + ")")
 		fin
 	fin
 	Trace("L18/A44 v5 : " + nNbSubst + " substitution(s) effectuée(s) sur la chaîne JSON.")
@@ -227,8 +212,6 @@ sCommande = ChaîneConstruit(
 ],
 sNodeExe, sNodeCli, sCheminJsonTemp, sCheminPsmd)
 
-Trace("GenererPsmdServeur : CMD = " + sCommande)
-
 si pas LanceAppli(sCommande, exeIconise, exeBloquant) alors
 	Trace("GenererPsmdServeur : LanceAppli a échoué — " + ErreurInfo(errComplet))
 	renvoyer Faux
@@ -244,18 +227,12 @@ sCommandeBat	= ChaîneConstruit(
 ],
 sNodeExe, sNodeCli, sCheminJsonTemp, sCheminPsmdBat) + " --no-bleed"
 
-Trace("GenererPsmdServeur : CMD BAT = " + sCommandeBat)
 LanceAppli(sCommandeBat, exeIconise, exeBloquant)
 
 // ─── Nettoyage du fichier JSON temporaire ────────────────────────────────
-// L18/A44 v5 DIAG : commenté temporairement pour permettre l'inspection
-// du fichier temp et vérifier que les substitutions @LOCAL_xxx@ > @Champ3@
-// sont bien présentes dans le JSON envoyé à psmd_cli.js.
-// À REACTIVER après stabilisation.
-//si fFichierExiste(sCheminJsonTemp) alors
-//	fSupprime(sCheminJsonTemp)
-//fin
-Trace("L18/A44 v5 DIAG : fichier temp CONSERVÉ pour inspection : " + sCheminJsonTemp)
+si fFichierExiste(sCheminJsonTemp) alors
+	fSupprime(sCheminJsonTemp)
+fin
 
 // ─── Vérification de la présence du .psmd produit ────────────────────────
 si pas fFichierExiste(sCheminPsmd) alors
@@ -270,7 +247,6 @@ stDocument.NomFichierPsmd	= sNomFichierPsmd
 // PSMD BAT : utilisé par GenerationBatDepuisPsmd à la place du PSMD production
 si fFichierExiste(sCheminPsmdBat) alors
 	stDocument.CheminPsmdBat	= sCheminPsmdBat
-	Trace("GenererPsmdServeur : PSMD BAT généré : " + sCheminPsmdBat)
 sinon
 	stDocument.CheminPsmdBat	= sCheminPsmd
 	Trace("GenererPsmdServeur : PSMD BAT absent, fallback sur PSMD production")
@@ -281,5 +257,4 @@ fin
 //   l'union projet se construit au fil des documents (même répertoire). Non bloquant.
 CopiePolicesUtiliseesVersFonts(stDocument.JsonDesignerData, stDocument.RepertoireTravail)
 
-Trace("GenererPsmdServeur : .psmd généré avec succès : " + sCheminPsmd)
 renvoyer Vrai

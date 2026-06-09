@@ -1,0 +1,143 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// cpDesigner.ListeFamillesGoogle
+// Rôle : Renvoyer la LISTE DES NOMS de familles Google Fonts (~1700), pour
+//        alimenter l'autocomplétion côté Designer (B-auto-2). Nom seul.
+//
+//        CACHE FICHIER JSON (RepCachePolices() + "familles_google.json") avec
+//        TTL EN DUR = 7 jours (pas de paramètre prm_parametre) :
+//          - pForcer=Faux + fichier présent + âge < 7 j  -> sert le cache (rapide)
+//          - sinon (absent / périmé / pForcer=Vrai)      -> refetch API + réécrit
+//
+//        Réutilise la mécanique d'appel de AjouteGooglePoliceUnitaire :
+//          clé/URL prm_parametre, HTTPRequête + HTTPDonneRésultat() en BUFFER
+//          (encoding-safe UTF-8), parse jReponse.items[nI].family.
+//
+// Paramètres :
+//   pForcer (booléen) : Vrai = ignore le TTL et reconstruit le cache
+//
+// Retour : tableau de chaînes (noms de familles, triés alpha). Tableau VIDE en cas
+//          d'erreur (clé absente / API injoignable / parse KO) -> l'endpoint
+//          DesignerPoliceListe traduira en GénéreJsonErreur. Cas tracés.
+//
+// Source de vérité : docs/cahier-des-charges-polices-designer.md
+// ─────────────────────────────────────────────────────────────────────────────
+procédure ListeFamillesGoogle(pForcer est un booléen = Faux) : tableau de chaînes
+
+tabFamilles		est un tableau de chaînes
+sRepCache		est une chaîne
+sCheminCache	est une chaîne
+sCle				est une chaîne
+sUrlBase			est une chaîne
+sUrl				est une chaîne
+bufRes			est un Buffer				// corps HTTP brut (UTF-8) — parse JSON encoding-safe
+jReponse			est un JSON
+bJsonOk			est un booléen	= Vrai
+bCacheOk			est un booléen	= Vrai
+sFam				est une chaîne
+sContenu			est une chaîne ANSI
+vCache			est un Variant
+varCache			est un Variant
+sJsonCache		est une chaîne ANSI
+sDhModif			est une chaîne
+dModif			est une Date
+nAgeJours		est un entier	= 0
+nI					est un entier
+
+nTtlJours		est un entier	= 7		// TTL EN DUR (jours) — PAS de paramètre prm_parametre
+
+// ─── Dossier cache global ───────────────────────────────────────────────────
+sRepCache = RepCachePolices()
+si sRepCache = "" alors
+	Trace("ListeFamillesGoogle : cache indisponible")
+	renvoyer tabFamilles
+fin
+sCheminCache = sRepCache + "familles_google.json"
+
+// ─── Cache valide ? (pas de forçage + fichier présent + âge < TTL) ──────────
+si pas pForcer _et_ fFichierExiste(sCheminCache) alors
+	sDhModif		= fDateHeure(sCheminCache, "", fModification)	// "AAAAMMJJHHMMSS"
+	dModif		= sDhModif.Gauche(8)
+	nAgeJours	= DateDifférence(dModif, DateSys())
+	si nAgeJours < nTtlJours alors
+		sContenu = UTF8VersChaîne(fChargeTexte(sCheminCache))
+		quand exception dans
+			vCache = JSONVersVariant(sContenu)
+		faire
+			bCacheOk = Faux
+		fin
+		si bCacheOk _et_ vCache.familles..Existe alors
+			pour nI = 1 _à_ vCache.familles..Occurrence
+				tabFamilles.Ajoute(vCache.familles[nI])
+			fin
+			si tabFamilles..Occurrence > 0 alors
+				Trace("ListeFamillesGoogle : cache servi (" + tabFamilles..Occurrence ...
+				+ " familles, âge " + nAgeJours + "j)")
+				renvoyer tabFamilles
+			fin
+		fin
+		// Cache illisible -> on retombe sur le refetch ci-dessous.
+		Trace("ListeFamillesGoogle : cache illisible, refetch API")
+	fin
+fin
+
+// ─── Refetch API Google Fonts (clé/URL jamais en dur) ───────────────────────
+sCle		= cpFonction.ValeurParametre("GoogleFonts_Api_Key", prm_parametre.ValChaine..Nom)
+sUrlBase	= cpFonction.ValeurParametre("GoogleFonts_Api_Url", prm_parametre.ValChaine..Nom)
+si sUrlBase = "" alors
+	sUrlBase = "https://www.googleapis.com/webfonts/v1/webfonts"
+fin
+si sCle = "" alors
+	Trace("ListeFamillesGoogle : paramètre GoogleFonts_Api_Key absent")
+	renvoyer tabFamilles
+fin
+
+sUrl = sUrlBase + "?key=" + sCle + "&sort=alpha"
+si pas HTTPRequête(sUrl) alors
+	Trace("ListeFamillesGoogle : échec HTTPRequête vers l'API Google Fonts")
+	renvoyer tabFamilles
+fin
+// Corps de réponse en BUFFER (octets UTF-8 bruts) -> parse JSON encoding-safe.
+bufRes = HTTPDonneRésultat()
+
+quand exception dans
+	jReponse = bufRes
+faire
+	bJsonOk = Faux
+fin
+si bJsonOk = Faux _ou_ jReponse.items..Existe = Faux alors
+	Trace("ListeFamillesGoogle : réponse API illisible ou sans 'items'")
+	renvoyer tabFamilles
+fin
+
+// ─── Collecte des noms de familles (items[].family) ─────────────────────────
+pour nI = 1 _à_ jReponse.items..Occurrence
+	sFam = ""
+	quand exception dans
+		si jReponse.items[nI].family..Existe alors
+			sFam = jReponse.items[nI].family
+		fin
+	faire
+	fin
+	si sFam <> "" alors
+		tabFamilles.Ajoute(sFam)
+	fin
+fin
+
+si tabFamilles..Occurrence = 0 alors
+	Trace("ListeFamillesGoogle : aucune famille collectée")
+	renvoyer tabFamilles
+fin
+
+// ─── Tri alphabétique ───────────────────────────────────────────────────────
+tabFamilles.Trie()
+
+// ─── Écriture du cache (JSON UTF-8) ─────────────────────────────────────────
+varCache.familles = tabFamilles
+Sérialise(varCache, sJsonCache, psdJSON)
+si pas fSauveTexte(sCheminCache, sJsonCache.VersUTF8()) alors
+	Trace("ListeFamillesGoogle : échec écriture cache " + sCheminCache)
+sinon
+	Trace("ListeFamillesGoogle : cache reconstruit (" + tabFamilles..Occurrence + " familles)")
+fin
+
+renvoyer tabFamilles

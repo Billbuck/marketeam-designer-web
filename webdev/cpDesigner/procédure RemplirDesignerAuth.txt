@@ -1,0 +1,21 @@
+// -----------------------------------------------------------------------------
+// cpDesigner.RemplirDesignerAuth()
+// Rôle : Remplir le bloc auth (credentials et URLs webservices)
+// Paramètres :
+//   pIdClient (entier) : ID du client connecté
+//   pIdContact (entier) : ID du contact connecté
+// Retour : stDesignerAuth rempli
+// -----------------------------------------------------------------------------
+procédure RemplirDesignerAuth(pIdClient, pIdContact)
+
+stAuth est une structDesignerAuth
+
+stAuth.IdClient				= pIdClient
+stAuth.IdContact			= pIdContact
+stAuth.SecretKey			= __API_CLE_SECRET_KEY__
+stAuth.UrlWebservice		= cpFonction.ValeurParametre("WS_Designer_Upload", prm_parametre.ValChaine..Nom)
+stAuth.UrlCollectionListe	= cpFonction.ValeurParametre("WS_Designer_CollectionListe", prm_parametre.ValChaine..Nom)
+// Lot B1 : URL de l'endpoint d'ajout de Google Font (DesignerPoliceAjout)
+stAuth.urlPoliceAjout 		= cpFonction.ValeurParametre("WS_Designer_Police_Ajoute", prm_parametre.ValChaine..Nom)
+
+renvoyer stAuth

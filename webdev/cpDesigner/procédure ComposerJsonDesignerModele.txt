@@ -4,26 +4,23 @@
 // (création/modification de modèle)
 //
 // Paramètres :
-//   pStDocument      (structDocument)   : Document avec PDF, dimensions, fond, etc.
-//   pIdClient        (entier)           : ID client
-//   pIdContact       (entier)           : ID contact
-//   pIdModele        (entier)           : ID modèle (0 si nouveau)
-//   pLibelle         (chaîne)           : Libellé du modèle
-//   pTaaBaseChamp    (taa)              : Tableau associatif des champs de fusion standard
-//   pTabEchantillon  (tab BaseLigne)    : Échantillon d'aperçu (coordonnées client)
-//   pLimTexte        (entier)           : Limite zones texte pour l'utilisateur du tunnel
-//   pLimImage        (entier)           : Limite zones image pour l'utilisateur du tunnel
-//   pLimBarcode      (entier)           : Limite zones code-barres pour l'utilisateur du tunnel
-//   pLimQr           (entier)           : Limite zones QR pour l'utilisateur du tunnel
-//
+//	pStDocument (structDocument) : Document avec PDF, dimensions, fond, etc.
+//	pIdClient (entier) : ID client
+//	pIdContact (entier) : ID contact
+//	pIdModele (entier) : ID modèle (0 si nouveau)
+//	pLibelle (chaîne Unicode) : Libellé du modèle
+//	pTaaBaseChamp : Tableau associatif des champs de fusion standard
+//	pTabEchantillon (tableau (StructBaseLigne)) : Échantillon d'aperçu (coordonnées client)
+//	pLimTexte (entier - valeur par défaut=-1) : Limite zones texte pour l'utilisateur du tunnel
+//	pLimImage (entier - valeur par défaut=-1) : Limite zones image pour l'utilisateur du tunnel
+//	pLimBarcode (entier - valeur par défaut=-1) : Limite zones code-barres pour l'utilisateur du tunnel
+//	pLimQr (entier - valeur par défaut=0) : Limite zones QR pour l'utilisateur du tunnel
+
 // Note : les limites sont celles destinées à l'UTILISATEUR FINAL dans le tunnel.
-//        En mode template, le Designer les ignore (le créateur a accès à tout).
-//        Elles sont sauvegardées dans le JSON et appliquées en mode standard.
-// ─────────────────────────────────────────────────────────────────────────────
 procédure ComposerJsonDesignerModele(pStDocument est une structDocument, pIdClient est un entier, pIdContact est un entier, pIdModele est un entier, pLibelle est une chaîne, pTaaBaseChamp, pTabEchantillon est un tableau de StructBaseLigne, pLimTexte est un entier = -1, pLimImage est un entier = -1, pLimBarcode est un entier = -1, pLimQr est un entier = 0)
 
 stLoad			est une structDesignerLoad
-sJsonDocument	est une chaîne
+sJsonDocument	est une chaîne ANSI
 
 // =========================================================================
 // BLOCS D'ENVIRONNEMENT

@@ -1575,6 +1575,175 @@ input:checked + .slider:before {
     display: none;
 }
 
+/* --- Lot B2 : bouton « + » d'ajout de Google Font (combo Police) --- */
+.form-control-poc.font-police-control {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.form-control-poc.font-police-control .dropdown-poc {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.font-ajout-btn {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid var(--poc-border-color, #d1d5db);
+    border-radius: var(--poc-border-radius-sm, 6px);
+    background: #fff;
+    color: var(--poc-theme-primary, #934BB7);
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s;
+}
+
+.font-ajout-btn:hover {
+    background: rgba(147, 75, 183, 0.1);
+    border-color: var(--poc-theme-primary, #934BB7);
+}
+
+.font-ajout-btn .material-icons {
+    font-size: 18px;
+    line-height: 1;
+}
+
+/* --- Lot B2 : popup « Ajouter une Google Font » (clone de collection-name) --- */
+.police-ajout-modal-box {
+    width: 440px;
+    max-width: 90%;
+    font-family: 'Inter', sans-serif;
+}
+
+.police-ajout-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--poc-border-color, #e5e7eb);
+}
+
+.police-ajout-modal-header h3 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--poc-text-primary, #1f2937);
+    flex: 1;
+}
+
+.police-ajout-modal-icon {
+    font-size: 24px;
+    color: var(--poc-theme-primary, #934BB7);
+}
+
+.police-ajout-modal-body {
+    margin-bottom: 20px;
+}
+
+.police-ajout-label {
+    display: block;
+    font-size: 14px;
+    color: var(--poc-text-secondary, #6b7280);
+    margin-bottom: 8px;
+}
+
+.police-ajout-input {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 15px;
+    font-family: 'Inter', sans-serif;
+    border: 1px solid var(--poc-border-color, #d1d5db);
+    border-radius: var(--poc-border-radius-sm, 6px);
+    outline: none;
+    transition: border-color 0.15s;
+    box-sizing: border-box;
+}
+
+.police-ajout-input:focus {
+    border-color: var(--poc-theme-primary, #934BB7);
+    box-shadow: 0 0 0 2px rgba(147, 75, 183, 0.15);
+}
+
+.police-ajout-input:disabled {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+/* --- B-auto-2 : déroulant d'autocomplétion des familles Google --- */
+.police-ajout-input-wrap {
+    position: relative;
+}
+
+.police-ajout-suggestions {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    right: 0;
+    z-index: 10;
+    max-height: 220px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid var(--poc-border-color, #d1d5db);
+    border-radius: var(--poc-border-radius-sm, 6px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+
+.police-ajout-suggestions.hidden {
+    display: none;
+}
+
+.police-ajout-suggestion-item {
+    padding: 8px 12px;
+    font-size: 14px;
+    color: var(--poc-text-primary, #1f2937);
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.police-ajout-suggestion-item:hover,
+.police-ajout-suggestion-item.is-active {
+    background: rgba(147, 75, 183, 0.12);
+    color: var(--poc-theme-primary, #934BB7);
+}
+
+.police-ajout-message {
+    margin-top: 12px;
+    padding: 8px 10px;
+    border-radius: var(--poc-border-radius-sm, 6px);
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.police-ajout-message.hidden {
+    display: none;
+}
+
+.police-ajout-message.is-loading {
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    color: #4b5563;
+}
+
+.police-ajout-message.is-success {
+    background: #e8f5e9;
+    border: 1px solid #a5d6a7;
+    color: #2e7d32;
+}
+
+.police-ajout-message.is-error {
+    background: #fdecea;
+    border: 1px solid #f5c6c2;
+    color: #C62828;
+}
+
 /* --- Toast Notification --- */
 .undo-toast {
     position: fixed;
@@ -2586,6 +2755,63 @@ html[data-theme="LTR"] {
 
 .font-combo-missing option.font-option-missing {
     color: #C62828;
+    font-style: italic;
+}
+
+/* --- Lot C2 : combobox FAMILLE cherchable (input + déroulant filtré) --- */
+/* Ancre le déroulant absolu sous l'input (uniquement pour la ligne Police). */
+.form-control-poc.font-police-control .dropdown-poc {
+    position: relative;
+}
+
+.font-famille-input {
+    box-sizing: border-box;
+    cursor: pointer;
+}
+
+/* Curseur main au survol de la flèche (cohérence ; pointer-events:none reste). */
+.font-police-control .dropdown-arrow-poc {
+    cursor: pointer;
+}
+
+.font-famille-suggestions {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    right: 0;
+    z-index: 30;
+    max-height: 240px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid var(--poc-border-color, #d1d5db);
+    border-radius: var(--poc-border-radius-sm, 6px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+
+.font-famille-suggestions.hidden {
+    display: none;
+}
+
+.font-famille-suggestion-item {
+    padding: 7px 10px;
+    font-size: 13px;
+    color: var(--poc-text-primary, #1f2937);
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.font-famille-suggestion-item:hover,
+.font-famille-suggestion-item.is-active {
+    background: rgba(147, 75, 183, 0.12);
+    color: var(--poc-theme-primary, #934BB7);
+}
+
+.font-famille-suggestion-empty {
+    padding: 7px 10px;
+    font-size: 13px;
+    color: #9ca3af;
     font-style: italic;
 }
 

@@ -1,6 +1,6 @@
 procédure ComposerJsonDesignerCreation(stOperation est une structOperation, pTabEchantillon est un tableau de StructBaseLigne, pTheme est une chaîne, pEstEnveloppe est un booléen, pIndexDocument est un entier, pLimTexte est un entier = 0, pLimImage est un entier = 0, pLimBarcode est un entier = 0, pLimQr est un entier = 0)
 stLoad			est une structDesignerLoad
-sJsonDocument	est une chaîne
+sJsonDocument	est une chaîne ANSI
 
 // =========================================================================
 // BLOCS D'ENVIRONNEMENT (communs enveloppe / document)

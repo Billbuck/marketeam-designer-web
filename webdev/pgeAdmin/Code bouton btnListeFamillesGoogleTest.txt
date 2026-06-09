@@ -1,0 +1,55 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Bouton : btnListeFamillesGoogleTest
+// Libellé conseillé : « Tester la liste des familles Google (cache) »
+//
+// Rôle : Tester cpDesigner.ListeFamillesGoogle (B-auto-1) :
+//          - 1er clic  -> refetch API + création de familles_google.json
+//          - 2e clic   -> lecture du cache (rapide)
+//        Affiche le nombre de familles + les 5 premières (triées alpha).
+//
+// EMPLACEMENT — IMPORTANT :
+//   À placer UNIQUEMENT sur une page d'ADMINISTRATION / BACK-OFFICE INTERNE,
+//   JAMAIS sur une page accessible aux clients de la plateforme.
+//   La garde Partage.__vcUser.EstChronodirect rend le bouton inopérant pour
+//   un utilisateur client (défense en profondeur).
+//
+// Pour FORCER le refetch (ignorer le TTL), remplacer Faux par Vrai dans l'appel.
+//
+// Source de vérité : docs/cahier-des-charges-polices-designer.md
+// ─────────────────────────────────────────────────────────────────────────────
+
+sInfo	est une chaîne
+tabFam	est un tableau de chaînes
+nI		est un entier
+
+// ─── 1. Garde de sécurité : réservé au personnel interne ────────────────────
+SI Partage.__vcUser.EstChronodirect = Faux ALORS
+	Erreur("Action réservée au personnel interne Marketeam.")
+	RETOUR
+FIN
+
+// ─── 2. Anti double-clic ────────────────────────────────────────────────────
+btnListeFamillesGoogleTest.Etat = Grisé
+
+// ─── 3. Exécution (Faux = respecte le cache TTL 7j ; Vrai = force le refetch) ─
+QUAND EXCEPTION DANS
+	tabFam = cpDesigner.ListeFamillesGoogle(Faux)
+FAIRE
+	btnListeFamillesGoogleTest.Etat = Actif
+	Info("Échec : " + ExceptionInfo(errMessage))
+	RETOUR
+FIN
+
+btnListeFamillesGoogleTest.Etat = Actif
+
+// ─── 4. Affichage du récap ──────────────────────────────────────────────────
+SI tabFam..Occurrence = 0 ALORS
+	Info("Aucune famille renvoyée (voir Trace : clé API / API injoignable / parse KO).")
+	RETOUR
+FIN
+
+sInfo = "Nombre de familles : " + tabFam..Occurrence + RC + RC + "5 premières (triées alpha) :" + RC
+POUR nI = 1 _À_ Min(5, tabFam..Occurrence)
+	sInfo += " - " + tabFam[nI] + RC
+FIN
+Info(sInfo)

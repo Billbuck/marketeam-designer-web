@@ -1,0 +1,45 @@
+// -----------------------------------------------------------------------------
+// cpDesigner.ComposerJsonDesignerModification()
+// Rôle : Recomposer le stDesignerLoad à partir du JSON sauvegardé en BDD
+//        + blocs d'environnement recalculés
+//        Le JSON sauvegardé contient uniquement le bloc data (stDesignerDocument)
+// Paramètres :
+//	pStOperation : structure opération complète
+//	pTabEchantillon : échantillon pour l'aperçu
+//	pTheme : thème CSS du Designer ("LTR", "MKT", "TTB")
+//	pJsonSauvegarde : JSON du bloc data sauvegardé en BDD
+//	pLimTexte : limite zones texte (-1 = illimité, 0 = interdit)
+//	pLimImage : limite zones image
+//	pLimQr : limite QR codes
+//	pLimBarcode : limite codes-barres
+
+// Retour : chaîne JSON sérialisée
+procédure ComposerJsonDesignerModification(pStOperation, pTabEchantillon, pTheme, pJsonSauvegarde, pLimTexte, pLimImage, pLimQr, pLimBarcode)
+
+stLoad		est une structDesignerLoad
+sJsonDocument	est une chaîne ANSI
+
+// --- Blocs d'environnement (recalculés, identiques à la création) ---
+stLoad.action			= "load"
+stLoad.auth				= RemplirDesignerAuth(pStOperation.IdClient, pStOperation.IdContact)
+stLoad.bases			= RemplirDesignerBases(pStOperation.tabBase)
+stLoad.Theme			= pTheme
+stLoad.constraints		= RemplirDesignerConstraints(pLimTexte, pLimImage, pLimQr, pLimBarcode)
+stLoad.limites			= RemplirDesignerLimites()
+stLoad.policesDisponibles	= RemplirDesignerPolices(pStOperation.IdClient)
+
+// --- Bloc document : désérialiser le JSON sauvegardé en BDD ---
+Désérialise(stLoad.Document, pJsonSauvegarde, psdJSON)
+
+// --- Blocs recalculés (non persistés ou potentiellement modifiés) ---
+
+// Champs de fusion : recalculés car les bases ont pu changer entre-temps
+stLoad.Document.champsFusion	= RemplirDesignerChampsFusion(pStOperation.taaBaseChamp)
+
+// Données d'aperçu : recalculées à chaque ouverture
+stLoad.Document.donneesApercu	= RemplirDesignerApercu(pTabEchantillon, pStOperation.taaBaseChamp)
+
+// Sérialisation en JSON
+Sérialise(stLoad, sJsonDocument, psdJSON + psdMiseEnForme)
+
+renvoyer sJsonDocument

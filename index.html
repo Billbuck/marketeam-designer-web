@@ -7,7 +7,7 @@
     <!-- Quill.js (CDN) - DOIT être chargé AVANT les autres scripts -->
     <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
     <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=70">
+    <link rel="stylesheet" href="style.css?v=74">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <!-- Bibliothèque bwip-js pour génération de codes-barres -->
     <script src="https://cdn.jsdelivr.net/npm/bwip-js@4.5.1/dist/bwip-js-min.min.js"></script>
@@ -691,6 +691,28 @@
             <div class="modal-buttons">
                 <button id="collection-name-cancel-btn" class="btn-secondary" type="button">Annuler</button>
                 <button id="collection-name-confirm-btn" class="btn-primary-theme" type="button" disabled>Confirmer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale "Ajouter une Google Font" (Lot B2) — clonée de #collection-name-modal -->
+    <div id="police-ajout-modal" class="modal-overlay hidden">
+        <div class="modal-box police-ajout-modal-box">
+            <div class="police-ajout-modal-header">
+                <span class="material-icons police-ajout-modal-icon">add_circle</span>
+                <h3>Ajouter une Google Font</h3>
+            </div>
+            <div class="police-ajout-modal-body">
+                <label for="police-ajout-input" class="police-ajout-label">Nom de la famille (ex. Roboto, Open Sans) :</label>
+                <div class="police-ajout-input-wrap">
+                    <input type="text" id="police-ajout-input" class="police-ajout-input" placeholder="Nom de la famille Google" autocomplete="off" />
+                    <div id="police-ajout-suggestions" class="police-ajout-suggestions hidden"></div>
+                </div>
+                <div id="police-ajout-message" class="police-ajout-message hidden"></div>
+            </div>
+            <div class="modal-buttons">
+                <button id="police-ajout-cancel-btn" class="btn-secondary" type="button">Annuler</button>
+                <button id="police-ajout-ok-btn" class="btn-primary-theme" type="button" disabled>Ajouter</button>
             </div>
         </div>
     </div>
@@ -3604,6 +3626,6 @@
 
     <!-- Générateur PSMD autonome (doit être chargé avant script.js) -->
     <script src="psmd-generator.js"></script>
-    <script src="script.js?v=125"></script>
+    <script src="script.js?v=136"></script>
 </body>
 </html>
