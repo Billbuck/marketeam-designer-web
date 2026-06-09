@@ -6941,6 +6941,27 @@ document.addEventListener('DOMContentLoaded', () => {
         return true;
     }
 
+    /** ↑/↓ déroulant FERMÉ : passe à la famille précédente/suivante (ordre affiché)
+     *  et l'applique immédiatement (prévisualisation, comme l'ancien <select>).
+     *  Arrêt aux extrémités (pas de wrap). N'agit que si une zone texte est sélectionnée. */
+    function navigueFamille(delta) {
+        if (!isTextZoneSelectedForFieldsPopup()) return;
+        const noms = getFamillesOrdonnees().map(f => f.fam);
+        if (noms.length === 0) return;
+        const pCour = getFontList().find(p => p && p.nom === (quillInputFont ? quillInputFont.value : ''));
+        const famCour = pCour ? getFamilleOf(pCour) : null;
+        const idx = famCour ? noms.indexOf(famCour) : -1;
+        let next;
+        if (idx === -1) {
+            // Police manquante / aucune : démarrer en 1re (↓) ou dernière (↑) famille.
+            next = (delta > 0) ? 0 : noms.length - 1;
+        } else {
+            next = idx + delta;
+            if (next < 0 || next > noms.length - 1) return; // arrêt franc aux extrémités
+        }
+        selectFontFamille(noms[next]);
+    }
+
     /** Crée et câble le combobox famille + la combo graisse une seule fois. */
     function initFontCombo() {
         if (fontFamilleInput) return;
@@ -7048,8 +7069,16 @@ document.addEventListener('DOMContentLoaded', () => {
         //   clavier -> ↑/↓ naviguer, Entrée choisir, Échap fermer + restaurer
         fontFamilleInput.addEventListener('keydown', (e) => {
             const visible = !!(fontFamilleSuggBox && !fontFamilleSuggBox.classList.contains('hidden') && __familleSuggItems.length > 0);
-            if (e.key === 'ArrowDown') { if (visible) { e.preventDefault(); moveFamilleSuggActive(1); } return; }
-            if (e.key === 'ArrowUp') { if (visible) { e.preventDefault(); moveFamilleSuggActive(-1); } return; }
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (visible) moveFamilleSuggActive(1); else navigueFamille(1);
+                return;
+            }
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (visible) moveFamilleSuggActive(-1); else navigueFamille(-1);
+                return;
+            }
             if (e.key === 'Enter') {
                 if (visible && __familleSuggActiveIdx >= 0) {
                     e.preventDefault();
@@ -17340,7 +17369,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Appliquer styles par défaut (police, taille, couleur, interlignage)
                 if (quillInstance && quillInstance.root) {
-                    quillInstance.root.style.fontFamily = `${QUILL_DEFAULT_FONT}, sans-serif`;
+                    quillInstance.root.style.fontFamily = `'${QUILL_DEFAULT_FONT}', sans-serif`;
                     quillInstance.root.style.fontSize = `${QUILL_DEFAULT_SIZE}pt`;
                     quillInstance.root.style.color = QUILL_DEFAULT_COLOR;
                     quillInstance.root.style.lineHeight = String(QUILL_DEFAULT_LINE_HEIGHT);
@@ -18684,7 +18713,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const baseWeight = (police && typeof police.weight === 'number') ? police.weight : 400;
         const baseStyle = (police && police.style === 'italic') ? 'italic' : 'normal';
         
-        zoneEl.style.fontFamily = `${selectedFontName}, sans-serif`;
+        zoneEl.style.fontFamily = `'${selectedFontName}', sans-serif`;
         zoneEl.style.fontWeight = String(baseWeight);
         zoneEl.style.fontStyle = baseStyle;
 
@@ -18729,7 +18758,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Styles Quill (root) - réutilise les variables selectedFontName, baseWeight, baseStyle définies plus haut
         const quillInstance = quillInstances.get(zoneId);
         if (quillInstance && quillInstance.root) {
-            quillInstance.root.style.fontFamily = `${selectedFontName}, sans-serif`;
+            quillInstance.root.style.fontFamily = `'${selectedFontName}', sans-serif`;
             quillInstance.root.style.fontWeight = String(baseWeight);
             quillInstance.root.style.fontStyle = baseStyle;
             quillInstance.root.style.color = zoneData.color || QUILL_DEFAULT_COLOR;
