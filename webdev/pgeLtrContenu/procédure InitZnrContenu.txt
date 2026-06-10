@@ -94,7 +94,11 @@ pour tout stDocument de  __stOperation.stOperationLettre.tabStDocument
 			znrLtrContenu[nInd].attCboSourceValeur									= cboIdPosition(znrLtrContenu[nInd].attCboSouceGlien,"F")
 			znrLtrContenu[nInd].attCboSelectionContenu							= stDocument.NomFichierOrigine
 			znrLtrContenu[nInd].attCboSelectionValeur								= 1
-			znrLtrContenu[nInd].btnDocumentImporter..Visible					= (stDocument.EstPersonnaliseDesigner = Faux)
+			// Remplacement de fond : le bouton reste visible même quand le
+			// document est personnalisé (UploadFichier conserve alors la
+			// personnalisation — mode bRemplacementFond). La confirmation
+			// est demandée dans le code de clic de btnDocumentImporter.
+			znrLtrContenu[nInd].btnDocumentImporter..Visible					= Vrai
 			znrLtrContenu[nInd].btnDocumentPersonnaliser..Visible				= (stDocument.EstDocumentEnAttente = Faux _et_ stDocument.JsonDesignerData <> "")
 			znrLtrContenu[nInd].btnRegenererBAT..Visible							= (stDocument.EstDocumentEnAttente = Faux _et_ stEtatRapp.tabDocuments[nInd].EstConformeQr = Faux)
 			znrLtrContenu[nInd].btnDocumentAperçu..Visible						= (stDocument.EstDocumentEnAttente = Faux)

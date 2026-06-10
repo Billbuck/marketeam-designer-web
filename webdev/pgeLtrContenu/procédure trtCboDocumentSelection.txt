@@ -23,7 +23,9 @@ nCboSourceValeur	= znrLtrContenu[pNumDocument].attCboSourceValeur
 
 selon ExtraitChaîne(sCboSourceGlien, nCboSourceValeur)
 	cas "F" // Fichier
-		znrLtrContenu[pNumDocument].btnDocumentImporter..Visible 									= pas __stOperation.stOperationLettre.tabStDocument[attNumDocument].EstPersonnaliseDesigner
+		// Remplacement de fond : visible aussi quand EstPersonnaliseDesigner
+		// (la confirmation est gérée par le clic de btnDocumentImporter)
+		znrLtrContenu[pNumDocument].btnDocumentImporter..Visible 									= Vrai
 		znrLtrContenu[pNumDocument].btnDocumentPersonnaliser..Visible								= Faux
 		znrLtrContenu[pNumDocument].btnDocumentAperçu..Visible										= (__stOperation.stOperationLettre.tabStDocument[pNumDocument].EstDocumentEnAttente = Faux)
 		__stOperation.stOperationLettre.tabStDocument[pNumDocument].ModeImpressionSelectionne		= __MODE_AUTOMATIQUE__

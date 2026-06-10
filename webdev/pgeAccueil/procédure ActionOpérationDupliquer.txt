@@ -80,7 +80,7 @@ si PageAfficheDialogue(pgeOuiNon,"Souhaitez-vous dupliquer l'opération " + dos_
 				__stOperation.stOperationLettre.stEnveloppe.RepertoireTravail = sRepUploadPhys
 
 				// Réécriture légère des images du JSON enveloppe (zonesImage), pas de pages.
-				__stOperation.stOperationLettre.stEnveloppe.JsonDesignerData = ReecritCheminsUploadJson(__stOperation.stOperationLettre.stEnveloppe.JsonDesignerData, sRepUploadPhys, sRepUploadRel, sBaseTemp, 0, Faux)
+				__stOperation.stOperationLettre.stEnveloppe.JsonDesignerData = cpDesigner.ReecritCheminsUploadJson(__stOperation.stOperationLettre.stEnveloppe.JsonDesignerData, sRepUploadPhys, sRepUploadRel, sBaseTemp, 0, Faux)
 			fin
 
 			// ─── DOCUMENTS (modèle ET PDF client) ────────────────────────────
@@ -130,7 +130,7 @@ si PageAfficheDialogue(pgeOuiNon,"Souhaitez-vous dupliquer l'opération " + dos_
 					stDocument.NomFichierPsmd		= ""
 
 					// Réécriture JSON LÉGÈRE : pages.cheminFond/urlFond + zonesImage -> upload copie
-					stDocument.JsonDesignerData	= ReecritCheminsUploadJson(stDocument.JsonDesignerData, sRepUploadPhys, sRepUploadRel, sCodeTempDoc, stDocument.NombrePage, Vrai)
+					stDocument.JsonDesignerData	= cpDesigner.ReecritCheminsUploadJson(stDocument.JsonDesignerData, sRepUploadPhys, sRepUploadRel, sCodeTempDoc, stDocument.NombrePage, Vrai)
 
 					// EstPersonnaliseDesigner / DateHeureDesigner : CONSERVÉS (rien à faire)
 
@@ -192,64 +192,8 @@ procédure interne RécupérationDuFichier(pRepFicSource, pRepFicDestination)
 fin
 
 
-// Réécriture LÉGÈRE des chemins d'un JsonDesignerData vers l'upload de la COPIE.
-//   - pages[].cheminFond -> {upload}\Ltr{CodeTemp}.pdf  (si pReecrirePages)
-//   - pages[].urlFond     -> {uploadRel}/LtrFond{CodeTemp}p{n}.jpg (si pReecrirePages)
-//   - zonesImage[].source.nomFichier/valeur -> upload (+ COPIE du fichier image)
-//   PAS de régénération PSMD (reporté à la sauvegarde). Renvoie le JSON réécrit.
-procédure interne ReecritCheminsUploadJson(LOCAL pJson, LOCAL pRepUploadPhys, LOCAL pRepUploadRel, LOCAL pCodeTemp, LOCAL pNbPage, LOCAL pReecrirePages est un booléen)
-
-	jDoc			est un JSON
-	bJsonOk		est un booléen	= Vrai
-	sNomFichier	est une chaîne
-	sNomSimple	est une chaîne
-	sDest			est une chaîne
-	sUrlImage	est une chaîne
-
-	si pJson = "" alors renvoyer pJson
-
-	quand exception dans
-		jDoc = pJson.VersUTF8()
-	faire
-		bJsonOk = Faux
-	fin
-	si bJsonOk = Faux alors renvoyer pJson
-
-	// Normalisation format (structDesignerLoad -> data), comme ModificationCheminDesignerJson
-	si jDoc.pages..Occurrence = 0 _et_ jDoc.data..Existe _et_ jDoc.data.pages..Occurrence > 0 alors
-		jDoc = jDoc.data
-	fin
-
-	// ─── Pages : cheminFond (PDF) + urlFond (fond JPG par page) ───────────
-	si pReecrirePages _et_ jDoc.pages..Occurrence > 0 alors
-		pour nNumPage = 1 _à_ pNbPage
-			si nNumPage <= jDoc.pages..Occurrence alors
-				jDoc.pages[nNumPage].cheminFond	= pRepUploadPhys + __DOC_LTR__ + pCodeTemp + __PDF__
-				jDoc.pages[nNumPage].urlFond		= pRepUploadRel + __DOC_LTR_FOND__ + pCodeTemp + "p" + nNumPage + __JPG__
-			fin
-		fin
-	fin
-
-	// ─── Images fixes (zonesImage) : copie du fichier + réécriture chemins ─
-	si jDoc.zonesImage..Occurrence > 0 alors
-		pour nIndZone = 1 _à_ jDoc.zonesImage..Occurrence
-			sNomFichier = jDoc.zonesImage[nIndZone].source.nomFichier
-			si sNomFichier <> "" alors
-				sNomSimple	= fExtraitChemin(sNomFichier, fFichier + fExtension)
-				sDest			= pRepUploadPhys + sNomSimple
-				// Copier l'image vers l'upload de la copie (indépendance)
-				si fFichierExiste(sNomFichier) alors
-					si fFichierExiste(sDest) alors fSupprime(sDest)
-					fCopieFichier(sNomFichier, sDest)
-				fin
-				jDoc.zonesImage[nIndZone].source.nomFichier	= sDest
-				sUrlImage												= pRepUploadRel + sNomSimple
-				sUrlImage												= sUrlImage.Remplace("\", "/")
-				jDoc.zonesImage[nIndZone].source.valeur		= sUrlImage
-			fin
-		fin
-	fin
-
-	renvoyer jDoc.VersChaîne()
-fin
+// Réécriture LÉGÈRE des chemins d'un JsonDesignerData vers l'upload de la COPIE :
+//   EXTRAITE vers cpDesigner.ReecritCheminsUploadJson (procédure partagée,
+//   comportement identique) pour être réutilisée par le remplacement de fond
+//   d'un document personnalisé (pgeLtrContenu.UploadFichier).
 

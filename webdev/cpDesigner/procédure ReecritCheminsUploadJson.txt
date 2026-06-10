@@ -1,0 +1,88 @@
+// =============================================================================
+// cpDesigner.ReecritCheminsUploadJson()
+// Réécriture LÉGÈRE des chemins d'un JsonDesignerData vers un répertoire Upload.
+//   - pages[].cheminFond -> {upload}\Ltr{CodeTemp}.pdf            (si pReecrirePages)
+//   - pages[].urlFond    -> {uploadRel}/LtrFond{CodeTemp}p{n}.jpg (si pReecrirePages)
+//   - zonesImage[].source.nomFichier/valeur -> upload (+ COPIE du fichier image)
+//   PAS de régénération PSMD (à la charge de l'appelant ou de la sauvegarde via
+//   AjoutModificationOperationCourrier -> ModificationCheminDesignerJson).
+//
+// Procédure EXTRAITE de pgeAccueil.ActionOperationDupliquer (ex-procédure
+// interne) pour être partagée entre :
+//   - la duplication d'opération (pgeAccueil.ActionOperationDupliquer)
+//   - le remplacement de fond d'un document personnalisé
+//     (pgeLtrContenu.UploadFichier, mode bRemplacementFond)
+//
+// Comportement inchangé, à UNE protection près : si l'image d'une zone est
+// déjà à l'emplacement cible (cas du remplacement de fond dans le MÊME
+// répertoire Upload : sNomFichier = sDest), on ne fait pas la copie — l'ancien
+// enchaînement fSupprime(sDest) + fCopieFichier(source = dest supprimée)
+// aurait DÉTRUIT le fichier. Ce cas est impossible en duplication
+// (source et destination toujours différentes) : aucun changement de
+// comportement pour l'appel existant.
+//
+// Paramètres :
+//   pJson           : JsonDesignerData à réécrire (data only ou wrapper)
+//   pRepUploadPhys  : répertoire Upload physique cible (avec \ final)
+//   pRepUploadRel   : URL relative du répertoire Upload cible (avec / final)
+//   pCodeTemp       : CodeTemp du document cible (noms Ltr{CodeTemp}.pdf etc.)
+//   pNbPage         : nombre de pages du document
+//   pReecrirePages  : Vrai = réécrire pages[].cheminFond/urlFond
+// Retour : le JSON réécrit (ou le JSON d'origine si vide/non parsable)
+// =============================================================================
+procédure ReecritCheminsUploadJson(LOCAL pJson, LOCAL pRepUploadPhys, LOCAL pRepUploadRel, LOCAL pCodeTemp, LOCAL pNbPage, LOCAL pReecrirePages est un booléen)
+
+jDoc			est un JSON
+bJsonOk		est un booléen	= Vrai
+sNomFichier	est une chaîne
+sNomSimple	est une chaîne
+sDest			est une chaîne
+sUrlImage	est une chaîne
+
+si pJson = "" alors renvoyer pJson
+
+quand exception dans
+	jDoc = pJson.VersUTF8()
+faire
+	bJsonOk = Faux
+fin
+si bJsonOk = Faux alors renvoyer pJson
+
+// Normalisation format (structDesignerLoad -> data), comme ModificationCheminDesignerJson
+si jDoc.pages..Occurrence = 0 _et_ jDoc.data..Existe _et_ jDoc.data.pages..Occurrence > 0 alors
+	jDoc = jDoc.data
+fin
+
+// ─── Pages : cheminFond (PDF) + urlFond (fond JPG par page) ───────────
+si pReecrirePages _et_ jDoc.pages..Occurrence > 0 alors
+	pour nNumPage = 1 _à_ pNbPage
+		si nNumPage <= jDoc.pages..Occurrence alors
+			jDoc.pages[nNumPage].cheminFond	= pRepUploadPhys + __DOC_LTR__ + pCodeTemp + __PDF__
+			jDoc.pages[nNumPage].urlFond		= pRepUploadRel + __DOC_LTR_FOND__ + pCodeTemp + "p" + nNumPage + __JPG__
+		fin
+	fin
+fin
+
+// ─── Images fixes (zonesImage) : copie du fichier + réécriture chemins ─
+si jDoc.zonesImage..Occurrence > 0 alors
+	pour nIndZone = 1 _à_ jDoc.zonesImage..Occurrence
+		sNomFichier = jDoc.zonesImage[nIndZone].source.nomFichier
+		si sNomFichier <> "" alors
+			sNomSimple	= fExtraitChemin(sNomFichier, fFichier + fExtension)
+			sDest			= pRepUploadPhys + sNomSimple
+			// Copier l'image vers l'upload cible — SAUF si elle y est déjà
+			// (remplacement de fond dans le même répertoire : la séquence
+			// fSupprime + fCopieFichier détruirait le fichier)
+			si fFichierExiste(sNomFichier) _et_ Majuscule(sNomFichier) <> Majuscule(sDest) alors
+				si fFichierExiste(sDest) alors fSupprime(sDest)
+				fCopieFichier(sNomFichier, sDest)
+			fin
+			jDoc.zonesImage[nIndZone].source.nomFichier	= sDest
+			sUrlImage												= pRepUploadRel + sNomSimple
+			sUrlImage												= sUrlImage.Remplace("\", "/")
+			jDoc.zonesImage[nIndZone].source.valeur		= sUrlImage
+		fin
+	fin
+fin
+
+renvoyer jDoc.VersChaîne()

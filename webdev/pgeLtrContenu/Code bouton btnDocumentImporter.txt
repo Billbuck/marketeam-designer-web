@@ -1,0 +1,45 @@
+// =============================================================================
+// Bouton « Importer » — ligne document de znrLtrContenu (pgeLtrContenu)
+// REMPLACEMENT DE FOND — demande de confirmation quand le document est
+// déjà personnalisé (EstPersonnaliseDesigner = Vrai).
+//
+// Le code existant (inchangé) ouvre popUploadFichierDocument pour la source
+// "F" (Fichier). On y AJOUTE, en tête du cas "F", la confirmation :
+//   « Le fond de page sera remplacé. La personnalisation sera conservée.
+//     Continuer ? »
+// Si l'utilisateur refuse, on n'ouvre pas la popup d'upload.
+//
+// Le flux serveur UploadFichier() détecte ensuite lui-même le mode
+// remplacement (EstPersonnaliseDesigner + JsonDesignerData non vide) et
+// conserve la personnalisation.
+//
+// ⚠ À CÂBLER DANS L'ÉDITEUR WebDev :
+//   - Reporter ce code dans le traitement de clic existant de
+//     btnDocumentImporter (seul le bloc « confirmation » du cas "F" est
+//     nouveau ; le reste est le code actuel, conservé à l'identique).
+// =============================================================================
+
+_nIndDocImport	est un entier	= znrLtrContenu		// index de la ligne courante (cf. btnRegenererBat)
+
+selon ExtraitChaîne(attCboSouceGlien, attCboSourceValeur)
+	cas "F" // Fichier
+
+		// ─── Remplacement de fond : confirmation si document personnalisé ─
+		si _nIndDocImport >= 1 _et_ _nIndDocImport <= __stOperation.stOperationLettre.tabStDocument..Occurrence alors
+			si __stOperation.stOperationLettre.tabStDocument[_nIndDocImport].EstPersonnaliseDesigner alors
+				si PageAfficheDialogue(pgeOuiNon, "Le fond de page sera remplacé." + RC + "La personnalisation sera conservée." + RC + "Continuer ?", __stOperation.TypeOperation) = Faux alors
+					retour
+				fin
+			fin
+		fin
+
+		popUploadFichierDocument.btnValiderUpload..Visible = Faux
+		PopupAffiche(popUploadFichierDocument, popupHautCentre + popupAnnulable + popupEpinglée)
+
+	cas "M" // Modèle
+		popDocumentModele.InitZnrDocumentModele(attCboModeleGlien)
+		PopupAffiche(popDocumentModele, popupHautCentre + popupAnnulable + popupEpinglée)
+
+	cas "C" // Document client
+
+fin
