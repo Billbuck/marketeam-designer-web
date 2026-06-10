@@ -1,0 +1,76 @@
+// =========================================================================
+// Partage.SanitiseNomPsm()
+// Rôle : Sanitiser un libellé de champ client en nom de variable PSM sûr.
+//        CONTRAT : docs/nommage-variables-psm.md §3 — ce contrat s'impose
+//        à TOUS les flux émettant des noms vers PrintShop Mail :
+//          - substitutions PSMD (GenererPsmdServeurDocument)
+//          - données BAT (GenererBatDocumentDepuisPsmd)
+//          - FUTUR module d'export CSV production (en-têtes de colonnes)
+//
+//        Règle (dans l'ordre) :
+//          1. Translittération des accents (é>e, à>a, ç>c…) via SansAccent
+//          2. Tout caractère hors [A-Za-z0-9_] > "_" (espaces compris)
+//          3. Compactage des "__" en "_" (protège les suffixes de
+//             formatage __MAJ/__MIN/__PRO/__DATE1..6)
+//          4. Suppression des "_" de tête/queue ; vide > "Champ"
+//          5. Unicité vs liste réservée (comparaison INSENSIBLE à la
+//             casse) > suffixe _2, _3…
+//
+// Paramètres :
+//   pLibelle      (chaîne) : libellé d'origine du champ client
+//   pNomsReserves (chaîne) : liste TAB-séparée des noms déjà pris
+//                            (standards, SYS, libellés déjà émis…).
+//                            Vide = pas de contrôle d'unicité.
+// Retour : nom PSM sanitisé, unique vis-à-vis de pNomsReserves
+// =========================================================================
+procédure SanitiseNomPsm(pLibelle est une chaîne, pNomsReserves est une chaîne = "")
+
+sCarValides			est une chaîne	= "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_"
+sNomBrut				est une chaîne	= SansAccent(pLibelle)
+sResultat				est une chaîne	= ""
+sCar						est une chaîne
+sListeMaj				est une chaîne
+nIndCar					est un entier
+nSuffixeUnicite	est un entier
+
+// 2. Tout caractère hors [A-Za-z0-9_] devient "_" (espaces compris :
+//    en-têtes CSV avec espaces non testés dans PSM, on ne s'y aventure pas)
+pour nIndCar = 1 _à_ Taille(sNomBrut)
+	sCar = sNomBrut[[nIndCar]]
+	si Position(sCarValides, sCar) > 0 alors
+		sResultat += sCar
+	sinon
+		sResultat += "_"
+	fin
+fin
+
+// 3. Compactage des doubles underscores (un nom sanitisé ne contient
+//    JAMAIS "__" > le découpage @Nom__SUF@ des formats reste sans ambiguïté)
+TANTQUE Position(sResultat, "__") > 0
+	sResultat = Remplace(sResultat, "__", "_")
+FIN
+
+// 4. Nettoyage tête/queue + fallback
+TANTQUE Gauche(sResultat, 1) = "_"
+	sResultat = Milieu(sResultat, 2)
+FIN
+TANTQUE Droite(sResultat, 1) = "_"
+	sResultat = Gauche(sResultat, Taille(sResultat) - 1)
+FIN
+si sResultat = "" alors
+	sResultat = "Champ"
+fin
+
+// 5. Unicité vs liste réservée (insensible à la casse)
+si pNomsReserves <> "" alors
+	sListeMaj = TAB + Majuscule(pNomsReserves) + TAB
+	si Position(sListeMaj, TAB + Majuscule(sResultat) + TAB) > 0 alors
+		nSuffixeUnicite = 2
+		TANTQUE Position(sListeMaj, TAB + Majuscule(sResultat + "_" + NumériqueVersChaîne(nSuffixeUnicite)) + TAB) > 0
+			nSuffixeUnicite++
+		FIN
+		sResultat += "_" + NumériqueVersChaîne(nSuffixeUnicite)
+	fin
+fin
+
+renvoyer sResultat

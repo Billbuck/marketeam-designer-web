@@ -91,6 +91,15 @@ Trace("GenererBatDocumentDepuisPsmd : PSMD confirmé : " + sCheminPsmd)
 si stDocument.JsonDesignerData <> "" alors
 	jDoc			est un JSON	= ChaîneVersUTF8(stDocument.JsonDesignerData)
 
+	// ─── CONTRAT NOMMAGE (docs/nommage-variables-psm.md §4) ──────────────
+	// Le PSMD émet désormais les champs spécifiques sous leur LIBELLÉ
+	// SANITISÉ (@Vehicule@) — cf. GenererPsmdServeurDocument. Le BAT doit
+	// donc fournir les paires {libellé sanitisé, valeur} EN PLUS des
+	// paires existantes ChampN / LOCAL_xxx (conservées : aperçu écran et
+	// rétro-compatibilité du canal). MÊME SOURCE de mapping que le PSMD :
+	// Partage.ConstruireMappingPsmLibelle — pas deux logiques.
+	taaMappingLibelleBat est un tableau associatif de chaîne = Partage.ConstruireMappingPsmLibelle(stDocument.JsonDesignerData)
+
 	// Le JSON peut avoir 2 formats selon le contexte d'appel :
 	//   - Wrapper complet {action, mode, auth, bases, data:{...}}
 	//     (cas BAT initial : SelectionModèle, UploadFichier porte-adresse, ...)
@@ -122,6 +131,13 @@ si stDocument.JsonDesignerData <> "" alors
 			// défensive.
 			si sNomEnr <> "" alors
 				AjoutePrintshopData(sNomEnr, sValEnr)
+
+				// CONTRAT NOMMAGE : paire supplémentaire {libellé sanitisé,
+				// valeur} pour les spécifiques mappés — c'est elle que le
+				// PSMD renommé (@Vehicule@) consomme au BAT.
+				si Gauche(sNomEnr, 6) = "LOCAL_" _et_ taaMappingLibelleBat[sNomEnr]..Existe alors
+					AjoutePrintshopData(taaMappingLibelleBat[sNomEnr], sValEnr)
+				fin
 			sinon
 				Trace("GenererBatDocumentDepuisPsmd : entrée donneesApercu ignorée (nom vide) à l'indice " + nIEnr)
 			fin

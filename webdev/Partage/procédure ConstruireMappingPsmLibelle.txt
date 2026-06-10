@@ -1,0 +1,89 @@
+// =========================================================================
+// Partage.ConstruireMappingPsmLibelle()
+// Rôle : Construire le mapping "LOCAL_<localId>" > libellé sanitisé PSM.
+//        CONTRAT : docs/nommage-variables-psm.md §4 — SOURCE UNIQUE du
+//        nommage des variables PSM des champs spécifiques, partagée par :
+//          - GenererPsmdServeurDocument (substitutions PSMD motifs a/a2/b/c)
+//          - GenererBatDocumentDepuisPsmd (paires {libellé, valeur} BAT)
+//          - FUTUR module d'export CSV production (mêmes en-têtes)
+//        Aucune autre logique de nommage ne doit exister ailleurs.
+//
+//        Filtre (inchangé vs L18/A44) : champs spécifiques à localId RÉEL
+//        dont le libellé matche une colonne base
+//        (__stOperation.taaBaseChamp). Les spécifiques NON mappés restent
+//        en LOCAL_xxx (comportement historique conservé).
+//
+//        Garde-fou : si __stOperation/taaBaseChamp inaccessibles (hors
+//        tunnel courrier) ou JSON vide > mapping vide > les appelants ne
+//        font aucune substitution/ajout (comportement dégradé sain).
+//
+// Paramètres :
+//   pJsonDesignerData (chaîne) : JSON Designer (wrapper complet ou data only)
+// Retour : tableau associatif de chaîne ("LOCAL_xxx" > "Vehicule")
+// =========================================================================
+procédure ConstruireMappingPsmLibelle(pJsonDesignerData est une chaîne)
+
+taaMappingLibelle est un tableau associatif de chaîne
+
+si pJsonDesignerData = "" alors
+	renvoyer taaMappingLibelle
+fin
+
+// ─── Lecture de champsFusion (wrapper complet ou data only) ──────────────
+jDocLecMap			est un JSON	= pJsonDesignerData
+jDocChampsLecMap	est un JSON
+si jDocLecMap.data..Existe _et_ jDocLecMap.data.champsFusion..Existe alors
+	jDocChampsLecMap = jDocLecMap.data
+sinon
+	jDocChampsLecMap = jDocLecMap
+fin
+
+si jDocChampsLecMap.champsFusion..Occurrence = 0 alors
+	renvoyer taaMappingLibelle
+fin
+
+// ─── Liste réservée initiale (contrat §3.5) ──────────────────────────────
+//   Standards + colonnes physiques Champ1..30 + SYS + noms générateur.
+//   Comparaison insensible à la casse dans SanitiseNomPsm.
+sNomsReservesPsm est une chaîne = "Reference" + TAB + "Societe" + TAB + "Enseigne" + TAB + "Contact" + TAB + ...
+	"Civilite" + TAB + "Nom" + TAB + "Prenom" + TAB + ...
+	"Adresse1" + TAB + "Adresse2" + TAB + "Adresse3" + TAB + "Adresse4" + TAB + ...
+	"CodePostal" + TAB + "Ville" + TAB + "Pays" + TAB + ...
+	"Tel" + TAB + "Portable" + TAB + "Email" + TAB + ...
+	"Code" + TAB + "CodeAlliage" + TAB + "Sexe" + TAB + "Profil" + TAB + ...
+	"Sequentiel" + TAB + "Timbre" + TAB + "Rapprochement" + TAB + ...
+	"Image" + TAB + "Zone_Image"
+pour nIndChampStd = 1 _à_ 30
+	sNomsReservesPsm += TAB + "Champ" + NumériqueVersChaîne(nIndChampStd)
+fin
+
+// ─── Construction du mapping ─────────────────────────────────────────────
+pour nIndCFMap = 1 _à_ jDocChampsLecMap.champsFusion..Occurrence
+	sLocalIdCFMap	est une chaîne	= jDocChampsLecMap.champsFusion[nIndCFMap].localId
+	sLibelleCFMap	est une chaîne	= jDocChampsLecMap.champsFusion[nIndCFMap].libelle
+
+	// Critères : localId réel ET libellé qui matche une colonne base.
+	// Les standards (Civilite/Nom) sans localId réel ne passent pas le
+	// filtre — déjà en nom technique stable dans le contenu.
+	si sLocalIdCFMap <> "" _et_ sLocalIdCFMap <> "0" _et_ sLibelleCFMap <> "" alors
+		bExisteEnBaseMap est un booléen = Faux
+		QUAND EXCEPTION DANS
+			bExisteEnBaseMap = __stOperation.taaBaseChamp[sLibelleCFMap]..Existe
+		FAIRE
+			bExisteEnBaseMap = Faux
+		FIN
+		si bExisteEnBaseMap alors
+			// CONTRAT nommage : le nom PSM est le LIBELLÉ SANITISÉ
+			// (plus jamais la colonne physique ChampN — cf.
+			// docs/nommage-variables-psm.md §1).
+			sNomPsmCFMap est une chaîne = Partage.SanitiseNomPsm(sLibelleCFMap, sNomsReservesPsm)
+			si sNomPsmCFMap <> "" alors
+				taaMappingLibelle["LOCAL_" + sLocalIdCFMap] = sNomPsmCFMap
+				// Enrichir la liste réservée : unicité intra-document
+				sNomsReservesPsm += TAB + sNomPsmCFMap
+			fin
+		fin
+	fin
+fin
+
+renvoyer taaMappingLibelle
