@@ -4150,6 +4150,104 @@ span.merge-tag-quill[data-fallback="true"] {
     border-color: #B36B00;
 }
 
+/* ─── Lot 1 formatage — badge de format de casse sur la pastille ────────── */
+/* Cf. docs/cahier-des-charges-formatage-champs-fusion.md §3.5.              */
+/* Rendu en CSS pur via ::after sur [data-format] : l'attribut est posé par  */
+/* MergeTagBlot.create → le badge survit aux réécritures de textContent de   */
+/* refreshMergeTagsInAllZones (qui ne touche pas aux attributs).             */
+.ql-editor .merge-tag-quill[data-format]::after,
+span.merge-tag-quill[data-format]::after {
+    display: inline-block;
+    margin-left: 3px;
+    /* Taille FIXE en pixels (retour de recette du 10/06/2026) :
+       indépendante du corps de la zone — plus de badge géant sur un
+       texte en corps 36+. */
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    vertical-align: super;
+    letter-spacing: 0.5px;
+    color: var(--theme-primary, #934BB7);
+    pointer-events: none;
+}
+.ql-editor .merge-tag-quill[data-format="MAJ"]::after,
+span.merge-tag-quill[data-format="MAJ"]::after {
+    content: 'AB';
+}
+.ql-editor .merge-tag-quill[data-format="MIN"]::after,
+span.merge-tag-quill[data-format="MIN"]::after {
+    content: 'ab';
+}
+.ql-editor .merge-tag-quill[data-format="PRO"]::after,
+span.merge-tag-quill[data-format="PRO"]::after {
+    content: 'Ab';
+}
+
+/* ─── Lot 2 formatage — badge de masque de date ──────────────────────────── */
+/* Badge UNIQUE « JMA » (retour de recette du 10/06/2026) pour tout format    */
+/* date explicite. Le défaut JJ/MM/AAAA n'est jamais stocké (CDC §2.3.1) →    */
+/* pas d'attribut, pas de badge.                                              */
+.ql-editor .merge-tag-quill[data-format^="DATE:"]::after,
+span.merge-tag-quill[data-format^="DATE:"]::after {
+    content: 'JMA';
+}
+
+/* ─── Lot 1 formatage — popup de format de casse (clic droit / dblclick) ── */
+/* Singleton #merge-tag-format-menu créé par ensureMergeTagFormatMenu().     */
+.merge-tag-format-menu {
+    position: fixed;
+    z-index: 10000;
+    min-width: 160px;
+    padding: 4px 0;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+    font-size: 13px;
+}
+
+.merge-tag-format-menu-title {
+    padding: 6px 12px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #888;
+    border-bottom: 1px solid #f0f0f0;
+    margin-bottom: 4px;
+    user-select: none;
+}
+
+.merge-tag-format-menu-item {
+    display: block;
+    width: 100%;
+    padding: 6px 12px 6px 28px;
+    border: none;
+    background: none;
+    text-align: left;
+    font-size: 13px;
+    color: #333;
+    cursor: pointer;
+    position: relative;
+}
+
+.merge-tag-format-menu-item:hover {
+    background: rgba(147, 75, 183, 0.08);
+    background: color-mix(in srgb, var(--theme-primary, #934BB7) 10%, transparent);
+}
+
+/* Coche de l'option active (format courant de la pastille). */
+.merge-tag-format-menu-item.is-active {
+    font-weight: 600;
+    color: var(--theme-primary, #934BB7);
+}
+.merge-tag-format-menu-item.is-active::before {
+    content: '✓';
+    position: absolute;
+    left: 10px;
+    color: var(--theme-primary, #934BB7);
+}
+
 /* ===================================================================== */
 /* V3.4 - L4 : UI création/édition de champs de fusion                   */
 /* Cf. cahier des charges V2.2 §7                                        */

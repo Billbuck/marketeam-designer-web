@@ -69,7 +69,7 @@ lors du test Phase 0).
 | Minuscule | `LOWER([Champ])` |
 | Nom propre (1re lettre en majuscule) | `PROPER([Champ])` |
 
-### 2.3 Dates — RETENU avec contrainte amont
+### 2.3 Dates — RETENU (pré-requis amont SATISFAIT)
 
 Formats via `DATE([Champ], "masque")`. Masques disponibles (doc officielle
 PSM 7.2) : `d`, `dd`, `ddd`, `dddd`, `m`, `mm`, `mmm`, `mmmm`, `yy` (et
@@ -80,12 +80,51 @@ Phase 0, cf. §2.1). **Rendu français validé** : avec `Locale_ID` 1036
 (valeur déjà émise par défaut), les noms de mois et de jours sortent en
 français — ex. « vendredi 01 mai 2026 ».
 
-> **CONTRAINTE BLOQUANTE** : `DATE()` exige une valeur d'entrée au format
-> **`YYYYMMDD`** (AAAAMMJJ). La **normalisation des colonnes dates en
-> AAAAMMJJ se fait à l'import des bases** clients — c'est un **chantier
-> connexe à spécifier séparément** (module d'import des bases, hors du
-> présent document). Le Lot 2 (§5) ne démarre pas tant que cette
-> normalisation n'est pas en place.
+> **PRÉ-REQUIS AAAAMMJJ — ✅ SATISFAIT (constat du 10/06/2026)** : `DATE()`
+> exige une valeur d'entrée au format **`YYYYMMDD`** (AAAAMMJJ). Constat
+> empirique : les colonnes dates sont **déjà normalisées AAAAMMJJ à
+> l'import des bases** — un champ `DAT` inséré sans format affiche
+> « 20260501 » brut dans le Designer. Le module d'import est hors de ce
+> workspace ; le constat est acté sans vérification du code d'import.
+> Le Lot 2 peut démarrer.
+
+#### 2.3.1 Règle « défaut implicite » (décision de pilotage — Option A)
+
+Un champ de type `DAT` ne s'affiche **JAMAIS brut**. Sans format choisi par
+l'utilisateur, le masque par défaut **JJ/MM/AAAA** (`dd/mm/yyyy`) s'applique
+**d'office**, à l'écran (aperçu) **ET** à l'impression (PSMD) :
+
+- **Aucun attribut `format` n'est stocké pour le défaut** → les documents
+  existants contenant des champs date en bénéficient automatiquement,
+  **sans migration**.
+- Pour les champs `DAT`, la popup ne propose **pas** d'option « Aucun » :
+  elle propose les masques, le défaut étant JJ/MM/AAAA (coché si aucun
+  format stocké).
+- Conséquence de conception : le défaut implicite est appliqué **à la
+  sérialisation** (cf. §3.3) — `psmd-generator.js` reste agnostique.
+
+#### 2.3.2 Masques proposés dans la popup (besoin production — étendu à 6 masques en recette du 10/06/2026)
+
+| Option utilisateur | Masque PSM | Suffixe | Exemple attendu | Statut |
+|---|---|---|---|---|
+| JJ/MM/AAAA | `dd/mm/yyyy` | `__DATE1` | 10/12/2026 | **DÉFAUT** (jamais stocké sur l'embed) |
+| JJ Mois AAAA | `dd mmmm yyyy` | `__DATE2` | 10 décembre 2026 | stocké `"DATE:dd mmmm yyyy"` |
+| JJ Mois abrégé AAAA | `dd mmm yyyy` | `__DATE3` | 10 déc. 2026 | stocké `"DATE:dd mmm yyyy"` |
+| Jour JJ Mois AAAA | `dddd dd mmmm yyyy` | `__DATE4` | mardi 10 décembre 2026 | stocké `"DATE:dddd dd mmmm yyyy"` |
+| Jour abrégé JJ Mois AAAA | `ddd dd mmmm yyyy` | `__DATE5` | mar. 10 décembre 2026 | stocké `"DATE:ddd dd mmmm yyyy"` |
+| Jour abr. JJ Mois abr. AAAA | `ddd dd mmm yyyy` | `__DATE6` | mar. 10 déc. 2026 | stocké `"DATE:ddd dd mmm yyyy"` |
+
+Les suffixes ne contiennent que `[A-Za-z0-9_]` (compatibilité regex
+d'extraction du générateur). La table suffixe ↔ masque est **dupliquée**
+dans `script.js` et `psmd-generator.js` (pas de module partagé entre les
+deux fichiers — toute évolution doit être reportée des deux côtés).
+
+> **⚠️ À CONFRONTER AU BAT** : les masques abrégés `mmm` / `ddd`
+> (`__DATE3`, `__DATE5`, `__DATE6`) n'ont **pas été testés en Phase 0**
+> (seuls `dd/mm/yyyy`, `dd mmmm yyyy`, `dddd dd mmmm yyyy` l'ont été).
+> Les abréviations FR retenues pour l'aperçu JS (cf. §3.5) devront être
+> comparées au rendu réel PSM 7 au BAT, et le JS aligné si écart
+> (règle d'or §4 : PSM fait foi).
 
 ### 2.4 Entier / Monétaire — ABANDONNÉ
 
@@ -143,11 +182,13 @@ Aucune migration de données.
   (chaîne JSON sérialisée — cf. `docs/Structure Webdev Designer V3.md`,
   section zones texte) : **aucune structure WLangage à modifier**, le détail
   des ops est opaque pour WebDev.
-- **Absence d'attribut `format` = pas de format** (comportement actuel) :
-  les quillDelta existants restent valides sans migration.
-- Valeurs de `format` (proposition à figer en implémentation) :
-  `"MAJ"` | `"MIN"` | `"PRO"` pour la casse ; `"DATE:<masque>"` pour les
-  dates (ex. `"DATE:dd mmmm yyyy"`).
+- **Absence d'attribut `format` = pas de format explicite** : les
+  quillDelta existants restent valides sans migration. Pour un champ `DAT`,
+  l'absence d'attribut = **défaut implicite JJ/MM/AAAA** (§2.3.1), appliqué
+  à la sérialisation et à l'aperçu — jamais stocké.
+- Valeurs de `format` : `"MAJ"` | `"MIN"` | `"PRO"` pour la casse ;
+  `"DATE:<masque>"` pour les dates (ex. `"DATE:dd mmmm yyyy"`), stocké
+  **UNIQUEMENT si différent du défaut** JJ/MM/AAAA.
 
 ### 3.3 Pipeline PSMD : clés suffixées + variables alias
 
@@ -167,13 +208,19 @@ Rappel du fonctionnement actuel (vérifié) :
 **Cible** :
 
 1. **Clé suffixée dans le RTF** : un embed formaté est sérialisé
-   `@Nom__MAJ@` (suffixes proposés : `__MAJ`, `__MIN`, `__PRO`,
-   `__DATE<n>` pour les masques — le suffixe ne contient que `[A-Za-z0-9_]`
-   pour rester compatible avec la regex d'extraction du générateur).
-   L'embed Designer conserve la **clé propre** dans `data-key` ; le suffixe
-   n'apparaît qu'à la sérialisation RTF. Le re-parse RTF → ops
-   (`MERGE_TAG_RE = /@([^@\n]+)@/g`, `script.js` ligne 26165) doit
-   **redécouper** `Nom__MAJ` en `{ key: "Nom", format: "MAJ" }`.
+   `@Nom__MAJ@` (suffixes : `__MAJ`, `__MIN`, `__PRO`, `__DATE1`,
+   `__DATE2`, `__DATE3` — cf. table §2.3.2 ; le suffixe ne contient que
+   `[A-Za-z0-9_]` pour rester compatible avec la regex d'extraction du
+   générateur). L'embed Designer conserve la **clé propre** dans
+   `data-key` ; le suffixe n'apparaît qu'à la sérialisation RTF. Le
+   re-parse RTF → ops (`MERGE_TAG_RE = /@([^@\n]+)@/g`, `script.js` ligne
+   26165) doit **redécouper** `Nom__MAJ` en `{ key: "Nom", format: "MAJ" }`
+   (`__DATE1` re-parse SANS format stocké — c'est le défaut implicite).
+   **Défaut implicite dates (§2.3.1)** : appliqué À LA SÉRIALISATION —
+   `deltaToRtf` (et le contenu plat) émettent `__DATE1` pour tout embed
+   dont le champ résolu (`findChampByKey`) est de type `DAT` sans format
+   explicite. Le générateur PSMD reste agnostique (il ne connaît pas les
+   types : il ne lit que les marqueurs du RTF).
 2. **Variables alias** dans `generatePsmdVariables()` : pour chaque marqueur
    suffixé, émettre une variable `Nom__MAJ` dont l'expression enveloppe la
    colonne réelle :
@@ -192,6 +239,24 @@ Rappel du fonctionnement actuel (vérifié) :
    (commentaire lignes 72-81) pour couvrir les clés suffixées :
    `"@LOCAL_xxx__MAJ@" → "@Champ3__MAJ@"`. Le motif b
    (`"key":"LOCAL_xxx"`) reste inchangé puisque l'embed garde la clé propre.
+5. **Style des embeds dans le RTF** (correctif de recette du 10/06/2026 —
+   lacune historique V2.5, pas une régression des Lots 1/2) : les
+   attributs Quill portés par un embed merge-tag (`bold`, `italic`,
+   `underline`, `color`) sont traduits en RTF **comme ceux des ops
+   texte** — le marqueur est émis dans un **groupe stylé**
+   `{\b \ul \cfN @KEY__SUF@}`, conformément à la règle PSM 7 « *le style
+   d'une variable dépend du style de son premier délimiteur* » (le `@`
+   ouvrant est dans la run stylée ; le marqueur `@...@` reste intact pour
+   `extractMergeFields`). En conséquence :
+   - la pré-collecte des couleurs de `deltaToRtf` inclut les embeds
+     (leur couleur entre dans la `colortbl`) ;
+   - le canal plat (`quillDeltaToTextAndFormatage`) annote le `formatage`
+     partiel sur la plage du marqueur ;
+   - le re-parse RTF → ops (`pushSegmentWithMergeTags`) restitue les
+     `attributes` sur l'embed reconstruit (round-trip complet) ;
+   - les reconstructions d'embed lors des substitutions de clés
+     (`substituteLocalIdsInDelta`, `rewriteZoneReferencesAfterPromotion`)
+     recopient `op.attributes`.
 
 ### 3.4 UI : clic droit / double-clic sur la pastille
 
@@ -205,7 +270,9 @@ Rappel du fonctionnement actuel (vérifié) :
   cible résolue par `e.target.closest('.merge-tag-quill')`.
 - Résolution du champ et de son type : `data-key` → `findChampByKey()`
   (`script.js` ligne 4411) → `champ.type` → **popup de format** n'affichant
-  que les options du type (`TXT`/chaînes : casse ; `DAT` : masques de date).
+  que les options du type (`TXT`/chaînes : casse + « Aucun » ; `DAT` : les
+  3 masques §2.3.2 **sans** « Aucun », coche sur le masque actif — défaut
+  JJ/MM/AAAA si aucun format stocké).
 - Point d'attention : `refreshMergeTagsInAllZones()` (`script.js` ligne
   15266) réécrit le `textContent` des pastilles → l'indicateur visuel de
   format (badge, cf. §3.5) doit y être intégré pour survivre aux refresh.
@@ -218,16 +285,29 @@ Rappel du fonctionnement actuel (vérifié) :
   - casse : `toUpperCase()` / `toLowerCase()` / casse « Nom propre »
     (capitalisation de la 1re lettre de chaque mot, gestion des tirets et
     apostrophes à préciser en implémentation pour coller au `PROPER` de PSM) ;
-  - dates : entrée **AAAAMMJJ** (garantie par le chantier connexe
-    d'import, §2.3) → rendu du masque via tables de mois / jours FR
-    (`mmmm` → janvier…, `dddd` → lundi…). Si la valeur n'est pas un
-    AAAAMMJJ valide : affichage brut sans format (pas d'erreur bloquante).
+  - dates : entrée **AAAAMMJJ** (normalisée à l'import des bases, constat
+    §2.3) → rendu du masque via tables de mois / jours FR (`mmmm` →
+    janvier…, `dddd` → lundi…), aligné sur le rendu PSM constaté en
+    Phase 0 : « vendredi 01 mai 2026 » (minuscules, `dd` sur 2 chiffres).
+    Formes abrégées (`mmm` → « janv., févr., mars, avr., mai, juin,
+    juil., août, sept., oct., nov., déc. » ; `ddd` → « lun., mar., mer.,
+    jeu., ven., sam., dim. ») : **abréviations non testées en Phase 0 —
+    à confronter au rendu réel PSM au BAT et à aligner si écart**
+    (cf. §2.3.2). Le format effectif d'un embed `DAT` sans format stocké
+    est le défaut JJ/MM/AAAA (§2.3.1). Si la valeur n'est pas un AAAAMMJJ
+    valide : affichage brut sans format (pas d'erreur bloquante).
   - même logique dans `replaceMergeFields()` (rétrocompatibilité des
     contenus texte brut pré-blot).
 - **Hors aperçu** (mode placeholder) : la pastille continue d'afficher le
   libellé du champ (résolveur `setMergeTagDisplayResolver`, `script.js`
   ligne 1906, configuré ~27633) **complété d'un badge** indiquant le format
-  actif (ex. « ↑ », « ↓ », « Aa », « 📅 masque » — design à préciser).
+  actif. Design arrêté en recette du 10/06/2026 :
+  - casse : « AB » / « ab » / « Ab » ;
+  - date : badge **unique « JMA »**, affiché UNIQUEMENT quand un format
+    date explicite (≠ défaut) est posé — le défaut implicite reste sans
+    badge ;
+  - taille de police **FIXE en pixels** (indépendante du corps de la
+    zone : un texte en corps 36+ ne produit plus de badge géant).
 
 ---
 
@@ -274,10 +354,19 @@ sur ce contrat sans test PSM supplémentaire.
 
 ### Lot 2 — Dates
 
-- **Pré-requis bloquant** : chantier connexe de normalisation **AAAAMMJJ**
-  des colonnes dates à l'import des bases (spécification séparée).
-- Popup de format : masques de date pour les champs `DAT`.
-- Alias `DATE([Champ], "masque")` + rendu aperçu FR (§3.5).
+- **Pré-requis AAAAMMJJ : ✅ satisfait** (constat empirique du 10/06/2026,
+  cf. §2.3 — colonnes dates déjà normalisées à l'import des bases).
+- Règle « défaut implicite » JJ/MM/AAAA (§2.3.1) : appliquée à la
+  sérialisation et à l'aperçu, jamais stockée → rétroactive sur les
+  documents existants sans migration.
+- Popup de format : les 3 masques §2.3.2 pour les champs `DAT`, sans
+  option « Aucun », coche sur le masque actif.
+- Sérialisation : suffixes `__DATE1`/`__DATE2`/`__DATE3` (y compris le
+  défaut implicite) ; motif a2 de `GenererPsmdServeurDocument` étendu aux
+  suffixes dates.
+- Alias `DATE([Colonne], "masque")` + `<Formatting>0</Formatting>` (contrat
+  Phase 0) ; data_field sur la colonne réelle.
+- Aperçu : rendu FR AAAAMMJJ → masque (§3.5) + badge pastille.
 
 ---
 
@@ -290,8 +379,9 @@ sur ce contrat sans test PSM supplémentaire.
 - **Modèles (`pgeLtrDocument`)** : le formatage n'est pas proposé dans le
   tunnel de création/édition de modèles en V1 ; uniquement le tunnel courrier
   (`pgeLtrContenu`). L'extension aux modèles sera étudiée après recette V1.
-- Normalisation AAAAMMJJ à l'import des bases : chantier **connexe**,
-  spécifié séparément (pré-requis du Lot 2, pas un livrable de ce chantier).
+- Normalisation AAAAMMJJ à l'import des bases : **déjà en place** (constat
+  du 10/06/2026, cf. §2.3) — le module d'import reste hors de ce chantier
+  et de ce workspace.
 
 ---
 

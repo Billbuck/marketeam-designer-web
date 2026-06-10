@@ -2086,7 +2086,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // produire @KEY@ dans le contenu plat.
         //
         // Format de la valeur :
-        //   value = { key: string }   où key = "PRENOM" ou "LOCAL_a1b2c3"
+        //   value = { key: string, format?: string }
+        //   où key = "PRENOM" ou "LOCAL_a1b2c3"
+        //   et format = "MAJ" | "MIN" | "PRO" (casse, Lot 1) ou
+        //   "DATE:<masque>" (dates, Lot 2) — cf.
+        //   docs/cahier-des-charges-formatage-champs-fusion.md §3.2.
+        //   Absence de format = comportement historique inchangé (sauf
+        //   champs DAT : défaut implicite JJ/MM/AAAA, jamais stocké).
         // ════════════════════════════════════════════════════════════════════
 
         const Embed = Quill.import('blots/embed');
@@ -2096,8 +2102,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 const node = super.create(value);
                 const key = (typeof value === 'string') ? value : ((value && value.key) || '');
                 // data-key est la SOURCE DE VÉRITÉ : on persiste la clé technique
-                // (espaces déjà convertis en \u00A0 par le code appelant).
+                // PROPRE (sans suffixe de format ; espaces déjà convertis en
+                // \u00A0 par le code appelant).
                 node.setAttribute('data-key', key);
+                // Lots 1 & 2 formatage — data-format reflète le format
+                // (casse "MAJ"/"MIN"/"PRO" ou date "DATE:<masque>").
+                // Le badge visuel est rendu en CSS pur via ::after sur
+                // [data-format] → il survit aux réécritures de textContent
+                // (refreshMergeTagsInAllZones).
+                const fmt = (value && typeof value === 'object' && typeof value.format === 'string')
+                    ? value.format : '';
+                if (isValidMergeTagFormat(fmt)) {
+                    node.setAttribute('data-format', fmt);
+                }
                 node.setAttribute('contenteditable', 'false');
                 node.classList.add('merge-tag-quill');
                 // Rendu visuel : libellé résolu via le résolveur configuré
@@ -2108,7 +2125,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             static value(node) {
-                return { key: node.getAttribute('data-key') || '' };
+                const v = { key: node.getAttribute('data-key') || '' };
+                const fmt = node.getAttribute('data-format') || '';
+                if (isValidMergeTagFormat(fmt)) {
+                    v.format = fmt;
+                }
+                return v;
             }
         }
 
@@ -2142,6 +2164,234 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!v) return '';
         const raw = (typeof v === 'string') ? v : (v.key || '');
         return String(raw).replace(/\u00A0/g, ' ');
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // Lots 1 & 2 — Formatage des champs de fusion (CASSE + DATES)
+    // Cf. docs/cahier-des-charges-formatage-champs-fusion.md (§2.3, §3.2, §3.3, §3.5)
+    //   - L'embed porte { key, format } : "MAJ"|"MIN"|"PRO" (casse, Lot 1)
+    //     ou "DATE:<masque>" (dates, Lot 2 — stocké UNIQUEMENT si différent
+    //     du défaut JJ/MM/AAAA).
+    //   - La sérialisation RTF / contenu plat suffixe la clé : @Nom__MAJ@,
+    //     @DateLiv__DATE2@… Pour un champ DAT sans format explicite, le
+    //     DÉFAUT IMPLICITE __DATE1 est appliqué à la sérialisation
+    //     (effectiveMergeTagFormat) — jamais stocké sur l'embed.
+    //   - PSMD : variable alias avec expression UPPER([Nom]) / LOWER /
+    //     PROPER / DATE([X],"masque") (côté psmd-generator.js — table des
+    //     masques DUPLIQUÉE là-bas : PSMD_DATE_MASKS, à garder synchrone) ;
+    //     PSM fait foi, le JS mime le rendu.
+    // ════════════════════════════════════════════════════════════════════════
+
+    /** Formats de casse supportés (Lot 1). @type {string[]} */
+    const MERGE_TAG_FORMATS = ['MAJ', 'MIN', 'PRO'];
+
+    /**
+     * Masques de date supportés (Lot 2 — CDC §2.3.2).
+     * ⚠️ Table dupliquée dans psmd-generator.js (PSMD_DATE_MASKS) : toute
+     * évolution doit être reportée des deux côtés.
+     * @type {Array<{suffix: string, masque: string, label: string}>}
+     */
+    const MERGE_TAG_DATE_FORMATS = [
+        { suffix: 'DATE1', masque: 'dd/mm/yyyy',        label: 'JJ/MM/AAAA' },
+        { suffix: 'DATE2', masque: 'dd mmmm yyyy',      label: 'JJ Mois AAAA' },
+        { suffix: 'DATE3', masque: 'dd mmm yyyy',       label: 'JJ Mois abrégé AAAA' },
+        { suffix: 'DATE4', masque: 'dddd dd mmmm yyyy', label: 'Jour JJ Mois AAAA' },
+        { suffix: 'DATE5', masque: 'ddd dd mmmm yyyy',  label: 'Jour abrégé JJ Mois AAAA' },
+        { suffix: 'DATE6', masque: 'ddd dd mmm yyyy',   label: 'Jour abr. JJ Mois abr. AAAA' }
+    ];
+
+    /** Défaut implicite des champs DAT (Option A — jamais stocké). */
+    const MERGE_TAG_DATE_DEFAULT_FORMAT = 'DATE:dd/mm/yyyy'; // = __DATE1
+
+    /** Regex de découpe d'une clé suffixée "Nom__MAJ" / "Date__DATE2". */
+    const MERGE_TAG_SUFFIX_RE = /^(.+)__(MAJ|MIN|PRO|DATE[1-6])$/;
+
+    /**
+     * Un format d'embed est-il une valeur reconnue ?
+     * @param {string} f - "MAJ"|"MIN"|"PRO"|"DATE:<masque connu>"
+     * @returns {boolean}
+     */
+    function isValidMergeTagFormat(f) {
+        if (MERGE_TAG_FORMATS.indexOf(f) !== -1) return true;
+        return MERGE_TAG_DATE_FORMATS.some(d => ('DATE:' + d.masque) === f);
+    }
+
+    /**
+     * Extrait le format EXPLICITE d'une op Delta merge-tag (sans défaut
+     * implicite — cf. effectiveMergeTagFormat pour le défaut DAT).
+     * @param {{insert: {'merge-tag': {key: string, format?: string}}}} op
+     * @returns {string} "MAJ"|"MIN"|"PRO"|"DATE:<masque>"|"" (pas de format)
+     */
+    function mergeTagOpFormat(op) {
+        const v = op && op.insert && op.insert['merge-tag'];
+        if (!v || typeof v !== 'object') return '';
+        const f = typeof v.format === 'string' ? v.format : '';
+        return isValidMergeTagFormat(f) ? f : '';
+    }
+
+    /**
+     * Format EFFECTIF d'une op merge-tag : format explicite, sinon défaut
+     * implicite JJ/MM/AAAA si le champ résolu est de type DAT (CDC §2.3.1).
+     * Utilisé à la sérialisation (deltaToRtf / contenu plat) et à l'aperçu
+     * (createMergedDelta) — jamais pour le stockage.
+     * @param {Object} op - Op Delta merge-tag
+     * @returns {string}
+     */
+    function effectiveMergeTagFormat(op) {
+        const explicit = mergeTagOpFormat(op);
+        if (explicit) return explicit;
+        try {
+            const champ = (typeof findChampByKey === 'function')
+                ? findChampByKey(mergeTagOpKey(op)) : null;
+            if (champ && String(champ.type || '').toUpperCase() === 'DAT') {
+                return MERGE_TAG_DATE_DEFAULT_FORMAT;
+            }
+        } catch (e) { /* defensive : pas de défaut si résolution impossible */ }
+        return '';
+    }
+
+    /**
+     * Suffixe de sérialisation pour un format :
+     *   "MAJ" → "__MAJ" ; "DATE:dd mmmm yyyy" → "__DATE2" ; "" → "".
+     * @param {string} format
+     * @returns {string}
+     */
+    function mergeTagSuffixForFormat(format) {
+        if (MERGE_TAG_FORMATS.indexOf(format) !== -1) return '__' + format;
+        if (typeof format === 'string' && format.indexOf('DATE:') === 0) {
+            const masque = format.substring('DATE:'.length);
+            const entry = MERGE_TAG_DATE_FORMATS.find(d => d.masque === masque);
+            if (entry) return '__' + entry.suffix;
+        }
+        return '';
+    }
+
+    /**
+     * Découpe une clé éventuellement suffixée ("Nom__MAJ", "LOCAL_12__DATE2")
+     * en { key, format }. Sans suffixe reconnu : { key: brut, format: '' }.
+     * Suffixes dates : retourne le format canonique "DATE:<masque>".
+     * @param {string} rawKey
+     * @returns {{key: string, format: string}}
+     */
+    function splitKeyFormatSuffix(rawKey) {
+        const raw = String(rawKey || '');
+        const m = MERGE_TAG_SUFFIX_RE.exec(raw);
+        if (!m) return { key: raw, format: '' };
+        if (m[2].indexOf('DATE') === 0) {
+            const entry = MERGE_TAG_DATE_FORMATS.find(d => d.suffix === m[2]);
+            return { key: m[1], format: entry ? ('DATE:' + entry.masque) : '' };
+        }
+        return { key: m[1], format: m[2] };
+    }
+
+    /**
+     * Applique un format de casse à une valeur (aperçu écran).
+     * Aligné sur les fonctions PSM 7.2 (PSM fait foi) :
+     *   MAJ → UPPER ; MIN → LOWER ; PRO → PROPER (1re lettre de chaque mot
+     *   en majuscule, reste en minuscule — tirets et apostrophes traités
+     *   comme séparateurs de mots : "jean-pierre d'arc" → "Jean-Pierre D'Arc").
+     * @param {string} value
+     * @param {string} format - "MAJ" | "MIN" | "PRO" | ""
+     * @returns {string}
+     */
+    function applyCaseFormat(value, format) {
+        const v = (value === null || value === undefined) ? '' : String(value);
+        if (!v || !format) return v;
+        switch (format) {
+            case 'MAJ':
+                return v.toLocaleUpperCase('fr-FR');
+            case 'MIN':
+                return v.toLocaleLowerCase('fr-FR');
+            case 'PRO': {
+                const low = v.toLocaleLowerCase('fr-FR');
+                return low.replace(/(^|[\s\-'’])(\S)/g,
+                    (m, sep, ch) => sep + ch.toLocaleUpperCase('fr-FR'));
+            }
+        }
+        return v;
+    }
+
+    /** Noms de jours FR, indexés par Date.getDay() (0 = dimanche). */
+    const MERGE_TAG_JOURS_FR = ['dimanche', 'lundi', 'mardi', 'mercredi',
+        'jeudi', 'vendredi', 'samedi'];
+
+    /**
+     * Jours FR abrégés (token ddd), indexés par Date.getDay().
+     * ⚠️ Abréviations NON testées en Phase 0 (cf. CDC §2.3.2) : à
+     * confronter au rendu réel PSM au BAT et à aligner si écart.
+     */
+    const MERGE_TAG_JOURS_ABR_FR = ['dim.', 'lun.', 'mar.', 'mer.',
+        'jeu.', 'ven.', 'sam.'];
+
+    /** Noms de mois FR (1-based via index mois-1). */
+    const MERGE_TAG_MOIS_FR = ['janvier', 'février', 'mars', 'avril', 'mai',
+        'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre',
+        'décembre'];
+
+    /**
+     * Mois FR abrégés (token mmm), 1-based via index mois-1.
+     * ⚠️ Abréviations NON testées en Phase 0 (cf. CDC §2.3.2) : à
+     * confronter au rendu réel PSM au BAT et à aligner si écart.
+     */
+    const MERGE_TAG_MOIS_ABR_FR = ['janv.', 'févr.', 'mars', 'avr.', 'mai',
+        'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+
+    /**
+     * Rend une valeur AAAAMMJJ selon un masque PSM (Lot 2 — CDC §3.5).
+     * Aligné sur le rendu PSM 7 constaté en Phase 0 : minuscules, `dd` sur
+     * 2 chiffres — ex. « vendredi 01 mai 2026 ».
+     * Tokens supportés (suffisants pour les 6 masques §2.3.2) :
+     *   dddd / ddd → jour FR plein / abrégé ; mmmm / mmm → mois FR plein /
+     *   abrégé ; dd / mm / yyyy → numériques.
+     * Valeur non-AAAAMMJJ valide → retour BRUT, sans erreur bloquante.
+     * @param {string} value - Valeur attendue "AAAAMMJJ" (ex: "20260501")
+     * @param {string} masque - Un des masques de MERGE_TAG_DATE_FORMATS
+     * @returns {string}
+     */
+    function formatDateAAAAMMJJ(value, masque) {
+        const v = (value === null || value === undefined) ? '' : String(value).trim();
+        const m = /^(\d{4})(\d{2})(\d{2})$/.exec(v);
+        if (!m) return v;
+        const annee = parseInt(m[1], 10);
+        const mois = parseInt(m[2], 10);
+        const jour = parseInt(m[3], 10);
+        if (mois < 1 || mois > 12 || jour < 1 || jour > 31) return v;
+        const dt = new Date(annee, mois - 1, jour);
+        // Rejeter les dates invalides « débordantes » (ex. 20260231) que le
+        // constructeur Date normalise silencieusement.
+        if (dt.getFullYear() !== annee || dt.getMonth() !== mois - 1 || dt.getDate() !== jour) {
+            return v;
+        }
+        // Remplacement via sentinelles pour éviter les collisions de tokens
+        // (dd inclus dans ddd/dddd, mm dans mmm/mmmm) — du plus long au
+        // plus court.
+        return String(masque)
+            .replace(/dddd/g, '\u0001')
+            .replace(/ddd/g, '\u0003')
+            .replace(/mmmm/g, '\u0002')
+            .replace(/mmm/g, '\u0004')
+            .replace(/dd/g, m[3])
+            .replace(/mm/g, m[2])
+            .replace(/yyyy/g, m[1])
+            .replace(/\u0001/g, MERGE_TAG_JOURS_FR[dt.getDay()])
+            .replace(/\u0003/g, MERGE_TAG_JOURS_ABR_FR[dt.getDay()])
+            .replace(/\u0002/g, MERGE_TAG_MOIS_FR[mois - 1])
+            .replace(/\u0004/g, MERGE_TAG_MOIS_ABR_FR[mois - 1]);
+    }
+
+    /**
+     * Applique un format d'embed (casse OU date) à une valeur substituée.
+     * Point d'entrée unique pour l'aperçu (createMergedDelta,
+     * replaceMergeFields).
+     * @param {string} value
+     * @param {string} format - "MAJ"|"MIN"|"PRO"|"DATE:<masque>"|""
+     * @returns {string}
+     */
+    function applyMergeTagValueFormat(value, format) {
+        if (typeof format === 'string' && format.indexOf('DATE:') === 0) {
+            return formatDateAAAAMMJJ(value, format.substring('DATE:'.length));
+        }
+        return applyCaseFormat(value, format);
     }
 
     /**
@@ -3446,11 +3696,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!text) return '';
         if (!record) return text;
         
-        return text.replace(/@([A-Z0-9_]+)@/gi, (match, fieldName) => {
+        return text.replace(/@([A-Z0-9_]+)@/gi, (match, rawFieldName) => {
+            // Lot 1 formatage — clé éventuellement suffixée ("Nom__MAJ") :
+            // lookup sur la clé PROPRE, format appliqué à la valeur (CDC §3.5).
+            const parsedField = splitKeyFormatSuffix(rawFieldName);
+            const fieldName = parsedField.key;
             // Chercher la valeur dans l'enregistrement (insensible à la casse)
             const upperFieldName = fieldName.toUpperCase();
             const value = record[upperFieldName] ?? record[fieldName] ?? '';
-            return value;
+            // Pas de défaut implicite date ici : un @KEY@ texte brut (QR,
+            // contenu pré-blot) est résolu RAW côté PSM ([KEY] sans alias) —
+            // l'écran doit rester identique (concordance écran/print).
+            return applyMergeTagValueFormat(String(value), parsedField.format);
         });
     }
 
@@ -15391,6 +15648,242 @@ document.addEventListener('DOMContentLoaded', () => {
     window.setMergeTagDisplayResolver = setMergeTagDisplayResolver;
     // Note: window.documentState est exposé dans la section de démarrage (après loadFromLocalStorage)
 
+    // ════════════════════════════════════════════════════════════════════════
+    // Lots 1 & 2 — Popup de format sur les pastilles merge-tag
+    // Cf. docs/cahier-des-charges-formatage-champs-fusion.md §3.4
+    //   - Délégation posée sur quill.root à la création de chaque zone texte
+    //     (contextmenu privilégié + dblclick en secours).
+    //   - Cible : e.target.closest('span.merge-tag-quill[data-key]').
+    //   - Résolution data-key → findChampByKey → type :
+    //       types « chaîne » → options de casse (+ « Aucun ») ;
+    //       type DAT → les 3 masques de date, SANS « Aucun » (le défaut
+    //       JJ/MM/AAAA s'applique d'office — CDC §2.3.1) ;
+    //       IMG/SYS/numériques : jamais de popup.
+    //   - Le badge visuel est rendu en CSS pur (::after sur [data-format])
+    //     → il survit aux réécritures de textContent de
+    //     refreshMergeTagsInAllZones sans code supplémentaire.
+    // ════════════════════════════════════════════════════════════════════════
+
+    /** Options proposées dans la popup de format (Lot 1 : casse). */
+    const MERGE_TAG_FORMAT_OPTIONS = [
+        { value: '',    label: 'Aucun' },
+        { value: 'MAJ', label: 'Majuscule' },
+        { value: 'MIN', label: 'Minuscule' },
+        { value: 'PRO', label: 'Nom propre' }
+    ];
+
+    /**
+     * Options de la popup pour les champs DAT (Lot 2 — CDC §2.3.2).
+     * Le masque par défaut JJ/MM/AAAA a la valeur '' : choisir le défaut
+     * = ne RIEN stocker sur l'embed (défaut implicite, jamais persisté).
+     */
+    const MERGE_TAG_DATE_FORMAT_OPTIONS = MERGE_TAG_DATE_FORMATS.map(d => ({
+        value: (('DATE:' + d.masque) === MERGE_TAG_DATE_DEFAULT_FORMAT)
+            ? '' : ('DATE:' + d.masque),
+        label: d.label
+    }));
+
+    /** Types « chaîne » éligibles au formatage de casse (Lot 1). */
+    const MERGE_TAG_CASE_TYPES = ['TXT', 'EML', 'TEL', 'SMS', 'CDP', 'URL', 'ALG'];
+
+    /**
+     * Un champ est-il éligible au formatage de casse ?
+     * Champ introuvable (pastille orpheline) → non.
+     * @param {Object|null} champ - Entrée de documentState.champsFusion
+     * @returns {boolean}
+     */
+    function isChampFormatableCasse(champ) {
+        if (!champ) return false;
+        const t = String(champ.type || 'TXT').toUpperCase();
+        return MERGE_TAG_CASE_TYPES.indexOf(t) !== -1;
+    }
+
+    /**
+     * Options de format proposées pour un champ donné, selon son type.
+     * @param {Object|null} champ - Entrée de documentState.champsFusion
+     * @returns {Array<{value: string, label: string}>|null} null = pas de popup
+     */
+    function getMergeTagFormatOptionsForChamp(champ) {
+        if (!champ) return null;
+        if (isChampFormatableCasse(champ)) return MERGE_TAG_FORMAT_OPTIONS;
+        if (String(champ.type || '').toUpperCase() === 'DAT') {
+            return MERGE_TAG_DATE_FORMAT_OPTIONS;
+        }
+        return null; // IMG/SYS/numériques : pas de popup
+    }
+
+    /** @type {HTMLElement|null} Singleton DOM de la popup de format. */
+    let mergeTagFormatMenuEl = null;
+    /** @type {{quill: Object, node: HTMLElement}|null} Contexte de la popup ouverte. */
+    let mergeTagFormatMenuCtx = null;
+
+    /** Ferme la popup de format (no-op si fermée). */
+    function closeMergeTagFormatMenu() {
+        mergeTagFormatMenuCtx = null;
+        if (mergeTagFormatMenuEl) {
+            mergeTagFormatMenuEl.style.display = 'none';
+        }
+    }
+
+    /**
+     * Construit (une seule fois) le conteneur DOM de la popup et ses
+     * listeners globaux. Les items sont (re)peuplés à chaque ouverture
+     * selon le type du champ ciblé (casse vs dates — cf.
+     * openMergeTagFormatMenu).
+     * @returns {HTMLElement}
+     */
+    function ensureMergeTagFormatMenu() {
+        if (mergeTagFormatMenuEl) return mergeTagFormatMenuEl;
+
+        const menu = document.createElement('div');
+        menu.id = 'merge-tag-format-menu';
+        menu.className = 'merge-tag-format-menu';
+        menu.style.display = 'none';
+
+        const title = document.createElement('div');
+        title.className = 'merge-tag-format-menu-title';
+        title.textContent = 'Format du champ';
+        menu.appendChild(title);
+
+        document.body.appendChild(menu);
+
+        // Fermeture : clic hors popup, Échap, scroll/resize (la position
+        // fixe ne suivrait pas la pastille).
+        document.addEventListener('mousedown', (e) => {
+            if (mergeTagFormatMenuEl && mergeTagFormatMenuEl.style.display !== 'none'
+                && !mergeTagFormatMenuEl.contains(e.target)) {
+                closeMergeTagFormatMenu();
+            }
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeMergeTagFormatMenu();
+        });
+        window.addEventListener('scroll', closeMergeTagFormatMenu, true);
+        window.addEventListener('resize', closeMergeTagFormatMenu);
+
+        mergeTagFormatMenuEl = menu;
+        return menu;
+    }
+
+    /**
+     * Applique le format choisi à la pastille du contexte courant.
+     * Remplacement ATOMIQUE delete+insert dans un seul updateContents :
+     * un seul text-change, multiset de clés inchangé → pas de fausse entrée
+     * « Suppression » dans l'historique (cf. handler text-change).
+     * @param {string} format - "MAJ"|"MIN"|"PRO"|"DATE:<masque>"|"" (aucun /
+     *                          défaut implicite pour un champ DAT)
+     * @returns {void}
+     */
+    function applyMergeTagFormat(format) {
+        const ctx = mergeTagFormatMenuCtx;
+        closeMergeTagFormatMenu();
+        if (!ctx || !ctx.quill || !ctx.node) return;
+
+        const quill = ctx.quill;
+        const node = ctx.node;
+        let blot = null;
+        try { blot = Quill.find(node); } catch (e) { blot = null; }
+        if (!blot) return;
+        let idx = -1;
+        try { idx = quill.getIndex(blot); } catch (e) { return; }
+        if (idx < 0) return;
+
+        const key = node.getAttribute('data-key') || '';
+        const current = node.getAttribute('data-format') || '';
+        const next = isValidMergeTagFormat(format) ? format : '';
+        if (next === current) return;
+
+        const Delta = Quill.import('delta');
+        const value = next ? { key: key, format: next } : { key: key };
+        quill.updateContents(
+            new Delta().retain(idx).delete(1).insert({ 'merge-tag': value }),
+            'user'
+        );
+        try { quill.setSelection(idx + 1, 0, 'silent'); } catch (e) { /* ignore */ }
+
+        // Persistance + historique (symétrique de l'insertion de champ).
+        try {
+            const rawKey = String(key).replace(/\u00A0/g, ' ').trim();
+            let lbl = '';
+            try { lbl = (typeof resolveChampLabel === 'function') ? resolveChampLabel(rawKey) : ''; } catch (eL) { /* ignore */ }
+            if (!lbl || lbl.charAt(0) === '@') lbl = rawKey;
+            const ctxOptions = Array.isArray(ctx.options) ? ctx.options : MERGE_TAG_FORMAT_OPTIONS;
+            const optEntry = ctxOptions.find(o => o.value === next);
+            const optLbl = optEntry ? optEntry.label : 'Aucun';
+            saveToLocalStorage();
+            saveState('Format \u00AB ' + optLbl + ' \u00BB sur le champ ' + lbl);
+        } catch (e) { /* defensive : ne jamais bloquer l'éditeur */ }
+    }
+
+    /**
+     * Ouvre la popup de format pour une pastille donnée.
+     * Les items sont reconstruits à chaque ouverture selon les options du
+     * type de champ (casse vs masques de date).
+     * @param {Object} quill - Instance Quill de la zone
+     * @param {HTMLElement} node - Le span.merge-tag-quill ciblé
+     * @param {number} x - clientX du pointeur
+     * @param {number} y - clientY du pointeur
+     * @param {Array<{value: string, label: string}>} options - Options à proposer
+     * @returns {void}
+     */
+    function openMergeTagFormatMenu(quill, node, x, y, options) {
+        const menu = ensureMergeTagFormatMenu();
+        const opts = Array.isArray(options) ? options : MERGE_TAG_FORMAT_OPTIONS;
+        mergeTagFormatMenuCtx = { quill: quill, node: node, options: opts };
+
+        // (Re)peupler les items selon les options du champ ciblé, en cochant
+        // l'option correspondant au format courant de la pastille (''
+        // = « Aucun » pour la casse, masque par défaut pour les dates).
+        const current = node.getAttribute('data-format') || '';
+        menu.querySelectorAll('.merge-tag-format-menu-item').forEach(item => item.remove());
+        opts.forEach(opt => {
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'merge-tag-format-menu-item';
+            item.setAttribute('data-format-value', opt.value);
+            item.textContent = opt.label;
+            item.classList.toggle('is-active', opt.value === current);
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                applyMergeTagFormat(opt.value);
+            });
+            menu.appendChild(item);
+        });
+
+        // Positionner (fixed) en clampant dans le viewport.
+        menu.style.visibility = 'hidden';
+        menu.style.display = 'block';
+        const rect = menu.getBoundingClientRect();
+        const px = Math.max(8, Math.min(x, window.innerWidth - rect.width - 8));
+        const py = Math.max(8, Math.min(y, window.innerHeight - rect.height - 8));
+        menu.style.left = px + 'px';
+        menu.style.top = py + 'px';
+        menu.style.visibility = '';
+    }
+
+    /**
+     * Handler délégué (contextmenu / dblclick) posé sur quill.root à la
+     * création de chaque zone texte. N'intercepte l'événement QUE sur une
+     * pastille merge-tag éligible — ailleurs, comportement natif conservé.
+     * @param {Event} e
+     * @param {Object} quill - Instance Quill de la zone
+     * @returns {void}
+     */
+    function handleMergeTagFormatEvent(e, quill) {
+        const target = e.target;
+        if (!target || typeof target.closest !== 'function') return;
+        const node = target.closest('span.merge-tag-quill[data-key]');
+        if (!node) return;
+        const champ = (typeof findChampByKey === 'function')
+            ? findChampByKey(node.getAttribute('data-key') || '') : null;
+        const options = getMergeTagFormatOptionsForChamp(champ);
+        if (!options) return; // IMG/SYS/non éligible : pas de popup
+        e.preventDefault();
+        e.stopPropagation();
+        openMergeTagFormatMenu(quill, node, e.clientX, e.clientY, options);
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Aperçu de fusion - Fonctions UI
     // ─────────────────────────────────────────────────────────────────────────
@@ -15607,7 +16100,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Le ? rend la capture non-greedy pour éviter @A@...@B@ → une seule capture
         const regex = /@([A-Za-z0-9_]+)@/g;
         
-        return text.replace(regex, (match, fieldName) => {
+        return text.replace(regex, (match, rawFieldName) => {
+            // Lot 1 formatage — clé éventuellement suffixée ("Nom__MAJ") :
+            // lookup sur la clé PROPRE, format appliqué à la valeur (CDC §3.5).
+            const parsedField = splitKeyFormatSuffix(rawFieldName);
+            const fieldName = parsedField.key;
             // Chercher la valeur dans l'enregistrement (insensible à la casse)
             const upperFieldName = fieldName.toUpperCase();
             
@@ -15619,7 +16116,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (recordKey !== undefined && record[recordKey] !== undefined) {
                 const value = record[recordKey];
                 // Si la valeur est vide ou null, retourner chaîne vide
-                return (value === null || value === '') ? '' : String(value);
+                if (value === null || value === '') return '';
+                return applyMergeTagValueFormat(String(value), parsedField.format);
             }
             
             // Champ ABSENT de l'enregistrement (colonne non renseignée dans
@@ -15676,7 +16174,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
                 // Normaliser : null / undefined / '' → chaîne vide
-                const valeurStr = (valeur === null || valeur === undefined || valeur === '') ? '' : String(valeur);
+                let valeurStr = (valeur === null || valeur === undefined || valeur === '') ? '' : String(valeur);
+                // Lots 1 & 2 formatage — appliquer le format EFFECTIF de
+                // l'embed (casse ou date, y compris le défaut implicite
+                // JJ/MM/AAAA des champs DAT) à la valeur substituée
+                // (concordance écran/print : le JS mime UPPER/LOWER/PROPER/
+                // DATE de PSM — cf. CDC formatage §2.3.1, §3.5).
+                valeurStr = applyMergeTagValueFormat(valeurStr, effectiveMergeTagFormat(op));
                 const replaced = { insert: valeurStr };
                 if (op.attributes) {
                     replaced.attributes = { ...op.attributes };
@@ -17400,6 +17904,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 quillInstance.on('selection-change', (range) => {
                     handleTextQuillSelectionChange(id, range);
                 });
+
+                // Lot 1 formatage — popup de format de casse sur les pastilles
+                // merge-tag (clic droit privilégié + double-clic en secours).
+                // Zones système exclues : lecture seule, jamais de format
+                // (cf. CDC formatage §3.4 — le pavé adresse n'est pas affecté).
+                if (!isZoneSysteme(zoneData)) {
+                    quillInstance.root.addEventListener('contextmenu',
+                        (e) => handleMergeTagFormatEvent(e, quillInstance));
+                    quillInstance.root.addEventListener('dblclick',
+                        (e) => handleMergeTagFormatEvent(e, quillInstance));
+                }
                 
                 // BUGFIX : restaurer le contenu APRÈS stabilisation DOM (sans focus)
                 // Priorité : Delta natif (préserve le formatage). Fallback : HTML pour rétrocompat.
@@ -26101,13 +26616,25 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!op) continue;
 
             // V3.4 - Embed 'merge-tag' : restituer "@KEY@" dans le contenu plat
-            // (cf. cahier des charges §7.8.3 - scénario B). Les attributs de
-            // formatage éventuellement portés par l'embed sont ignorés ici (le
-            // formatage partiel WebDev ne s'applique pas à une pastille).
+            // (cf. cahier des charges §7.8.3 - scénario B).
+            // Lots 1 & 2 formatage — clé SUFFIXÉE "@Nom__MAJ@" / "@X__DATE2@"
+            // si format ; format EFFECTIF = explicite ou défaut implicite
+            // __DATE1 pour les champs DAT (cohérent avec deltaToRtf — cf.
+            // CDC formatage §2.3.1, §3.3).
+            // Correctif styles embeds (CDC §3.3 point 5) : les attributs
+            // Quill de l'embed sont annotés en formatage partiel sur la
+            // plage du marqueur (cohérence du canal plat avec le RTF).
             if (isMergeTagOp(op)) {
                 const key = mergeTagOpKey(op);
-                const tagText = `@${key}@`;
+                const suffix = mergeTagSuffixForFormat(effectiveMergeTagFormat(op));
+                const tagText = `@${key}${suffix}@`;
                 contenu += tagText;
+                const tagAttrs = op.attributes || {};
+                pushFormatage(index, index + tagText.length, {
+                    gras: tagAttrs.bold === true,
+                    souligne: tagAttrs.underline === true,
+                    couleur: typeof tagAttrs.color === 'string' ? tagAttrs.color : undefined
+                });
                 index += tagText.length;
                 continue;
             }
@@ -26174,7 +26701,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     const before = segText.substring(lastIndex, m.index);
                     ops.push(hasAttrs ? { insert: before, attributes } : { insert: before });
                 }
-                ops.push({ insert: { 'merge-tag': { key: m[1] } } });
+                // Lots 1 & 2 formatage — redécouper une clé suffixée
+                // "Nom__MAJ" / "X__DATE2" en { key, format } (CDC §3.3).
+                // Le suffixe __DATE1 (défaut implicite, CDC §2.3.1) n'est
+                // PAS re-stocké : il sera ré-appliqué à la sérialisation.
+                const parsedTag = splitKeyFormatSuffix(m[1]);
+                const tagFormat = (parsedTag.format === MERGE_TAG_DATE_DEFAULT_FORMAT)
+                    ? '' : parsedTag.format;
+                // Correctif styles embeds (CDC §3.3 point 5) : restituer
+                // les attributs du segment sur l'embed reconstruit
+                // (round-trip RTF/contenu plat → delta complet).
+                const embedOp = {
+                    insert: {
+                        'merge-tag': tagFormat
+                            ? { key: parsedTag.key, format: tagFormat }
+                            : { key: parsedTag.key }
+                    }
+                };
+                if (hasAttrs) embedOp.attributes = attributes;
+                ops.push(embedOp);
                 lastIndex = m.index + m[0].length;
             }
             if (lastIndex < segText.length) {
@@ -26311,11 +26856,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return idx + 1;
         };
 
-        // Pré-collecter les couleurs inline du Delta
+        // Pré-collecter les couleurs inline du Delta — y compris celles
+        // portées par les embeds merge-tag (correctif styles embeds,
+        // CDC formatage §3.3 point 5 : leur couleur entre dans la colortbl).
         for (const op of ops) {
             if (!op) continue;
-            if (isMergeTagOp(op)) continue; // V3.4 - Embed sans couleur inline
-            if (typeof op.insert !== 'string') continue;
+            if (typeof op.insert !== 'string' && !isMergeTagOp(op)) continue;
             const attrs = op.attributes || {};
             if (typeof attrs.color === 'string' && attrs.color) colorIndex(attrs.color);
         }
@@ -26348,9 +26894,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // V3.4 - Embed 'merge-tag' : sérialiser en "@KEY@" dans le RTF
             // (cf. cahier §7.8.3). Le pipeline PSMD attend cette forme.
+            // Lots 1 & 2 formatage — embed formaté : clé SUFFIXÉE
+            // "@Nom__MAJ@" / "@X__DATE2@" ; format EFFECTIF = explicite ou
+            // défaut implicite __DATE1 pour les champs DAT (CDC §2.3.1).
+            // psmd-generator émet la variable alias UPPER([Nom]) /
+            // DATE([X],"masque") — cf. CDC formatage §3.3.
+            // Correctif styles embeds (CDC §3.3 point 5) : les attributs
+            // Quill de l'embed (bold/italic/underline/color) sont traduits
+            // comme ceux des ops texte — marqueur émis dans un GROUPE
+            // stylé {\b \ul \cfN @KEY@}. Règle PSM 7 : le style de la
+            // variable dépend du style de son premier délimiteur (le @
+            // ouvrant est dans la run stylée) ; le marqueur @...@ reste
+            // intact pour extractMergeFields.
             if (isMergeTagOp(op)) {
                 const key = mergeTagOpKey(op);
-                body += escapeRtf(`@${key}@`);
+                const suffix = mergeTagSuffixForFormat(effectiveMergeTagFormat(op));
+                const escapedTag = escapeRtf(`@${key}${suffix}@`);
+
+                const tagAttrs = op.attributes || {};
+                const tagBold = tagAttrs.bold === true;
+                const tagItalic = tagAttrs.italic === true;
+                const tagUnderline = tagAttrs.underline === true;
+                const tagColor = typeof tagAttrs.color === 'string' ? tagAttrs.color : null;
+                const tagCf = tagColor ? colorIndex(tagColor) : 1;
+
+                // Sans attribut : marqueur nu (comportement historique)
+                if (!tagBold && !tagItalic && !tagUnderline && tagCf === 1) {
+                    body += escapedTag;
+                    continue;
+                }
+
+                let tagCodes = '';
+                if (tagBold) tagCodes += '\\b';
+                if (tagItalic) tagCodes += (tagCodes ? ' ' : '') + '\\i';
+                if (tagUnderline) tagCodes += (tagCodes ? ' ' : '') + '\\ul';
+                if (tagCf !== 1) tagCodes += (tagCodes ? ' ' : '') + `\\cf${tagCf}`;
+
+                body += `{${tagCodes} ${escapedTag}}`;
                 continue;
             }
 
@@ -27044,7 +27624,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     const localId = key.substring('LOCAL_'.length);
                     const nom = mapping.get(localId);
                     if (nom) {
-                        return { insert: { 'merge-tag': { key: nom } } };
+                        // Lots 1 & 2 formatage — préserver le format
+                        // (casse ou date) de l'embed lors de la
+                        // substitution LOCAL_xxx → nom.
+                        // Correctif styles embeds (CDC §3.3 point 5) :
+                        // recopier aussi op.attributes (gras, couleur…).
+                        const fmt = mergeTagOpFormat(op);
+                        const rebuilt = {
+                            insert: {
+                                'merge-tag': fmt ? { key: nom, format: fmt } : { key: nom }
+                            }
+                        };
+                        if (op.attributes) rebuilt.attributes = { ...op.attributes };
+                        return rebuilt;
                     }
                 }
                 return op;
@@ -28888,7 +29480,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     const key = (typeof mergeTagOpKey === 'function') ? mergeTagOpKey(op) : '';
                     if (key && mapping.has(key)) {
                         const { newLocalId } = mapping.get(key);
-                        return { insert: { 'merge-tag': { key: `LOCAL_${newLocalId}` } } };
+                        // Lots 1 & 2 formatage — préserver le format
+                        // (casse ou date) de l'embed lors de la promotion
+                        // en LOCAL_xxx.
+                        // Correctif styles embeds (CDC §3.3 point 5) :
+                        // recopier aussi op.attributes (gras, couleur…).
+                        const fmt = (typeof mergeTagOpFormat === 'function') ? mergeTagOpFormat(op) : '';
+                        const rebuilt = {
+                            insert: {
+                                'merge-tag': fmt
+                                    ? { key: `LOCAL_${newLocalId}`, format: fmt }
+                                    : { key: `LOCAL_${newLocalId}` }
+                            }
+                        };
+                        if (op.attributes) rebuilt.attributes = { ...op.attributes };
+                        return rebuilt;
                     }
                 }
                 return op;

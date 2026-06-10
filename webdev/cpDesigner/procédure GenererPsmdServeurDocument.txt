@@ -69,11 +69,14 @@ sCheminJsonTemp		= sRepTravail + "psmd_json_" + sCodeTemp + ".tmp"
 //   est utilisé ensuite uniquement pour piloter les substitutions
 //   STRING sur la chaîne JSON entière.
 //
-//   3 motifs de substitution par entrée du mapping (couverture sans
+//   Motifs de substitution par entrée du mapping (couverture sans
 //   risque de faux positif) :
 //     a. "@LOCAL_xxx@" > "@Champ3@"
 //        Cible : contenu/contenuRtf des zonesTexte, qrConfig.fields[*]
 //        tokens, et tout marqueur RTF/texte dans le JSON.
+//     a2. "@LOCAL_xxx__SUF@" > "@Champ3__SUF@" pour les suffixes de
+//        formatage __MAJ/__MIN/__PRO (casse, Lot 1) et __DATE1/__DATE2/
+//        __DATE3 (dates, Lot 2) — cf. CDC formatage §2.3.2, §3.3.
 //     b. "key":"LOCAL_xxx" > "key":"Champ3"
 //        Cible : quillDelta.ops[*] des embeds merge-tag.
 //     c. "champFusion":"LOCAL_xxx" > "champFusion":"Champ3"
@@ -156,6 +159,22 @@ si taaMappingPsmd..Occurrence > 0 alors
 		si nPosA > 0 alors
 			sJsonPsmdTemp = Remplace(sJsonPsmdTemp, sMarqA, sMarqB)
 			nNbSubst++
+		fin
+
+		// a2. Lots 1 & 2 formatage — marqueurs SUFFIXÉS @LOCAL_xxx__MAJ@ /
+		//     __MIN / __PRO (casse) et __DATE1 à __DATE6 (dates,
+		//     cf. CDC formatage §2.3.2, §3.3). Le motif a. ne les couvre
+		//     pas : le @ fermant vient APRÈS le suffixe. Le suffixe est
+		//     conservé dans le nom technique (@Champ3__MAJ@) pour que
+		//     psmd-generator émette la variable alias correspondante.
+		pour nIndSufFmt = 1 _à_ 9
+			sSufFmt		est une chaîne	= ExtraitChaîne("__MAJ" + TAB + "__MIN" + TAB + "__PRO" + TAB + "__DATE1" + TAB + "__DATE2" + TAB + "__DATE3" + TAB + "__DATE4" + TAB + "__DATE5" + TAB + "__DATE6", nIndSufFmt, TAB)
+			sMarqA2	est une chaîne	= "@" + sCleMappingSubst + sSufFmt + "@"
+			sMarqB2	est une chaîne	= "@" + sNomTechSubst + sSufFmt + "@"
+			si Position(sJsonPsmdTemp, sMarqA2) > 0 alors
+				sJsonPsmdTemp = Remplace(sJsonPsmdTemp, sMarqA2, sMarqB2)
+				nNbSubst++
+			fin
 		fin
 
 		// b. quillDelta ops merge-tag : "key":"LOCAL_xxx"

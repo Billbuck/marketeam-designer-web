@@ -438,6 +438,57 @@
      * extractMergeFields('@SOCIETE@\\par @CONTACT@'); // → ['SOCIETE', 'CONTACT']
      * extractMergeFields('@NOM@ et @NOM@'); // → ['NOM'] (dédupliqué)
      */
+    // ═══════════════════════════════════════════════════════════════════════
+    // Lot 1 — Formatage CASSE : variables alias
+    // Cf. docs/cahier-des-charges-formatage-champs-fusion.md §3.3
+    //   Un marqueur SUFFIXÉ "@Nom__MAJ@" dans le RTF produit :
+    //     - une variable alias <name>Nom__MAJ</name> dont l'expression
+    //       enveloppe la colonne réelle : UPPER([Nom]) / LOWER / PROPER ;
+    //     - un <data_field> sur la colonne RÉELLE uniquement ("Nom").
+    //   <Formatting> reste à 3 (contrat Phase 0 du 10/06/2026).
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Correspondance suffixe de format → fonction d'expression PSM 7.2.
+     * @type {Object<string, string>}
+     */
+    var PSMD_CASE_FUNCTIONS = {
+        'MAJ': 'UPPER',
+        'MIN': 'LOWER',
+        'PRO': 'PROPER'
+    };
+
+    /**
+     * Correspondance suffixe de date → masque PSM (Lot 2 — CDC §2.3.2).
+     * ⚠️ Table dupliquée dans script.js (MERGE_TAG_DATE_FORMATS) : toute
+     * évolution doit être reportée des deux côtés.
+     * DATE1 = défaut implicite JJ/MM/AAAA (émis par deltaToRtf pour tout
+     * champ DAT sans format explicite — le générateur reste agnostique).
+     * @type {Object<string, string>}
+     */
+    var PSMD_DATE_MASKS = {
+        'DATE1': 'dd/mm/yyyy',
+        'DATE2': 'dd mmmm yyyy',
+        'DATE3': 'dd mmm yyyy',
+        'DATE4': 'dddd dd mmmm yyyy',
+        'DATE5': 'ddd dd mmmm yyyy',
+        'DATE6': 'ddd dd mmm yyyy'
+    };
+
+    /** Regex de découpe d'un nom suffixé "Nom__MAJ" / "Date__DATE2". */
+    var PSMD_FORMAT_SUFFIX_RE = /^(.+)__(MAJ|MIN|PRO|DATE[1-6])$/;
+
+    /**
+     * Découpe un nom de champ éventuellement suffixé en { base, format }.
+     * Sans suffixe reconnu : { base: nom brut, format: null }.
+     * @param {string} fieldName - Nom de champ extrait du RTF (sans les @)
+     * @returns {{base: string, format: string|null}}
+     */
+    function parsePsmdFormatSuffix(fieldName) {
+        var m = PSMD_FORMAT_SUFFIX_RE.exec(String(fieldName || ''));
+        return m ? { base: m[1], format: m[2] } : { base: String(fieldName || ''), format: null };
+    }
+
     function extractMergeFields(rtfString) {
         if (!rtfString) return [];
         
@@ -1423,15 +1474,33 @@ ${generatePsmdBleedSection(fondPerdu, bleedModeOverride)}
     /**
      * Génère la section <variable> pour un champ de fusion.
      * 
-     * @param {string} fieldName - Nom du champ (sans les @)
+     * Lots 1 & 2 formatage — nom SUFFIXÉ ("Nom__MAJ", "Date__DATE2") :
+     * variable ALIAS dont l'expression enveloppe la colonne réelle :
+     *   - casse : UPPER([Nom]) / LOWER / PROPER, <Formatting> 3 (inchangé) ;
+     *   - date : DATE([X],"masque"), <Formatting> 0 (contrat Phase 0 —
+     *     CDC formatage §2.1).
+     * Tous les autres éléments restent identiques à la sortie actuelle.
+     * 
+     * @param {string} fieldName - Nom du champ (sans les @), éventuellement suffixé
      * @returns {string} XML de la variable
      */
     function generatePsmdVariable(fieldName) {
+        var parsedSuffix = parsePsmdFormatSuffix(fieldName);
+        var expression;
+        var formattingValue = 3;
+        if (parsedSuffix.format && PSMD_DATE_MASKS[parsedSuffix.format]) {
+            expression = 'DATE([' + escapeXmlPsmd(parsedSuffix.base) + '],"' + PSMD_DATE_MASKS[parsedSuffix.format] + '")';
+            formattingValue = 0;
+        } else if (parsedSuffix.format && PSMD_CASE_FUNCTIONS[parsedSuffix.format]) {
+            expression = PSMD_CASE_FUNCTIONS[parsedSuffix.format] + '([' + escapeXmlPsmd(parsedSuffix.base) + '])';
+        } else {
+            expression = '[' + escapeXmlPsmd(fieldName) + ']';
+        }
         return `<variable>
 <name>${escapeXmlPsmd(fieldName)}</name>
 <global>no</global>
-<expression>[${escapeXmlPsmd(fieldName)}]</expression>
-<Formatting>3</Formatting>
+<expression>${expression}</expression>
+<Formatting>${formattingValue}</Formatting>
 <Locale_ID>1036</Locale_ID>
 <Currency_Symbol>€</Currency_Symbol>
 <Currency_DecimalSymbol>,</Currency_DecimalSymbol>
@@ -2584,7 +2653,18 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
         xml += generatePsmdVariables(jsonData, exportPrefix) + '\n';
         
         // Sections finales (avec data_fields rempli)
-        xml += generatePsmdFooterSections(allMergeFields) + '\n';
+        // Lot 1 formatage — les marqueurs SUFFIXÉS ("Nom__MAJ") produisent une
+        // variable alias mais le <data_field> est émis sur la colonne RÉELLE
+        // uniquement ("Nom"), dédupliquée si la colonne est aussi utilisée
+        // sans format (cf. CDC formatage §3.3).
+        var dataFieldNames = [];
+        for (var dfi = 0; dfi < allMergeFields.length; dfi++) {
+            var dfBase = parsePsmdFormatSuffix(allMergeFields[dfi]).base;
+            if (dataFieldNames.indexOf(dfBase) === -1) {
+                dataFieldNames.push(dfBase);
+            }
+        }
+        xml += generatePsmdFooterSections(dataFieldNames) + '\n';
         
         xml += '</document>';
         

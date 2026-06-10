@@ -644,8 +644,10 @@ si bAvecBaseLocal alors
 		jsNouvelleEntree est un JSON = "{}"
 		jsNouvelleEntree.nom				= stBaseChampC.Champ
 		jsNouvelleEntree.libelle			= sLibelleC
-		si stBaseChampC.Type = __CHAMP_TYPE_IMAGE__ alors
-			jsNouvelleEntree.type = "IMG"
+		// Lot 1 formatage — type FIN transmis tel quel (cohérent avec
+		// RemplirDesignerChampsFusion, cf. CDC formatage §3.1).
+		si stBaseChampC.Type <> "" alors
+			jsNouvelleEntree.type = stBaseChampC.Type
 		sinon
 			jsNouvelleEntree.type = "TXT"
 		fin
