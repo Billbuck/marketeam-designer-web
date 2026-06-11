@@ -1,0 +1,57 @@
+Code serveur :
+
+jsWrapper	est un JSON
+jsDesigner	est un JSON
+_nIndDesignerEnCours = 0
+
+// Recomposition SYSTÉMATIQUE du wrapper à chaque ouverture.
+//   L'ancien aiguillage `si jsDesigner.constraints..Existe` (envoi du JSON
+//   stocké tel quel) produisait un faux positif : l'export du Designer
+//   (exportToWebDev) émet `constraints` à la racine de son data → après une
+//   validation, la réouverture envoyait un data-only SANS wrapper (pas de
+//   policesSysteme/auth/policesDisponibles...) → alerte Verdana sur les
+//   zones système, combo polices dégradée, modale champs vide.
+//   Désormais le wrapper (auth, polices, policesSysteme, champsStandard,
+//   typesDisponibles, ZonePersonnalisation) est recalculé à CHAQUE ouverture
+//   — jamais périmé. Seul le bloc data (zones, champs) est repris du JSON
+//   sauvegardé.
+//
+// Encodage — CONVENTION PROJET (alignement sur btnDocumentPersonnaliser) :
+//   - ChaîneVersUTF8() sur toute chaîne JSON avant parse en variable JSON
+//     (retour de Sérialise / JsonDesignerData stocké).
+//   - JSONVersChaîne(jsWrapper) SANS psdJSONEncodageUTF8 vers le Designer :
+//     le pont serveur→navigateur WebDev fait LUI-MÊME la conversion
+//     ANSI→UTF-8 de la page. Encoder en UTF-8 ici provoque un DOUBLE
+//     encodage (é → Ã©) — leçon recette enveloppe juin 2026.
+jsWrapper = ChaîneVersUTF8(cpDesigner.ComposerJsonDesignerCreation(__stOperation, __tabEchantillonBaseLigne, __stOperation.TypeOperation, Vrai, 0))
+
+si __stOperation.stOperationLettre.stEnveloppe.JsonDesignerData <> "" alors
+	jsDesigner = ChaîneVersUTF8(__stOperation.stOperationLettre.stEnveloppe.JsonDesignerData)
+	si jsDesigner.data..Existe alors
+		// Wrapper historique (SelectionAdressage) : on ne reprend que son bloc data
+		jsWrapper.data = jsDesigner.data
+	sinon
+		// Data-only (export du Designer après validation)
+		jsWrapper.data = jsDesigner
+	fin
+fin
+
+gsJsonDesigner = JSONVersChaîne(jsWrapper)
+
+Code Navigateur :
+
+// Envoyer le JSON au Designer
+si gsJsonDesigner <> "" alors
+	btnFerme.Visible					= Faux
+	grpBoutonProgression.Visible	= Faux
+	btnPrécédent.Visible				= Faux
+	btnSuivant.Visible				= Faux
+	btnSauvegarderTunnel.Visible	= Faux
+	btnSauvegarderTunnel.Visible	= Faux
+	grpTunnelNombre.Visible			= Faux
+	grpTunnelMontantHT.Visible		= Faux
+	btnAccueil.Etat					= Grisé
+	celLtrConteneur.Plan				= 2
+	EnvoyerMessageIframe(gsJsonDesigner)
+	gsJsonDesigner 					= ""
+fin

@@ -2679,33 +2679,37 @@ document.addEventListener('DOMContentLoaded', () => {
      * 
      * @type {Object.<string, {label: string, fields: Array<{id: string, label: string, placeholder: string, required: boolean}>}>}
      */
+    // Variante 2 QR (docs/champs-fusion-zones-qr.md §5) : les placeholders
+    // ne montrent QUE des exemples de valeurs réelles — plus aucune syntaxe
+    // @CHAMP@ (les champs de fusion s'insèrent par drag & drop / double-clic,
+    // affichés sous forme de libellés @Vehicule@).
     const QR_TYPES_CONFIG = {
         'url': {
             label: 'URL / Site web',
             fields: [
-                { id: 'url', label: 'URL', placeholder: 'https://exemple.com?client=@ID@', required: true }
+                { id: 'url', label: 'URL', placeholder: 'https://www.exemple.com', required: true }
             ]
         },
         'vcard': {
             label: 'vCard (Carte de visite)',
             fields: [
                 // Identité (mapping: LastName, FirstName)
-                { id: 'nom', label: 'Nom', placeholder: '@NOM@', required: true, psm: 'LastName' },
-                { id: 'prenom', label: 'Prénom', placeholder: '@PRENOM@', required: false, psm: 'FirstName' },
+                { id: 'nom', label: 'Nom', placeholder: 'Dupont', required: true, psm: 'LastName' },
+                { id: 'prenom', label: 'Prénom', placeholder: 'Marie', required: false, psm: 'FirstName' },
                 // Professionnel (mapping: Organization, JobTitle)
-                { id: 'societe', label: 'Société', placeholder: '@SOCIETE@', required: false, psm: 'Organization' },
+                { id: 'societe', label: 'Société', placeholder: 'Marketeam', required: false, psm: 'Organization' },
                 { id: 'fonction', label: 'Fonction', placeholder: 'Directeur Commercial', required: false, psm: 'JobTitle' },
                 // Adresse décomposée (mapping: StreetAddress, ExtendedAddress, Zip, City, Country)
-                { id: 'adresse1', label: 'Adresse 1', placeholder: '@ADRESSE1@', required: false, psm: 'StreetAddress' },
-                { id: 'adresse2', label: 'Adresse 2', placeholder: '@ADRESSE2@', required: false, psm: 'ExtendedAddress' },
-                { id: 'codePostal', label: 'Code postal', placeholder: '@CP@', required: false, psm: 'Zip' },
-                { id: 'ville', label: 'Ville', placeholder: '@VILLE@', required: false, psm: 'City' },
+                { id: 'adresse1', label: 'Adresse 1', placeholder: '12 rue de la Paix', required: false, psm: 'StreetAddress' },
+                { id: 'adresse2', label: 'Adresse 2', placeholder: 'Bâtiment B', required: false, psm: 'ExtendedAddress' },
+                { id: 'codePostal', label: 'Code postal', placeholder: '75001', required: false, psm: 'Zip' },
+                { id: 'ville', label: 'Ville', placeholder: 'Paris', required: false, psm: 'City' },
                 { id: 'pays', label: 'Pays', placeholder: 'France', required: false, psm: 'Country' },
                 // Téléphones (mapping: PhoneWork, MobileWork)
-                { id: 'tel', label: 'Téléphone', placeholder: '@TELEPHONE@', required: false, psm: 'PhoneWork' },
-                { id: 'mobile', label: 'Mobile', placeholder: '@PORTABLE@', required: false, psm: 'MobileWork' },
+                { id: 'tel', label: 'Téléphone', placeholder: '01 23 45 67 89', required: false, psm: 'PhoneWork' },
+                { id: 'mobile', label: 'Mobile', placeholder: '06 12 34 56 78', required: false, psm: 'MobileWork' },
                 // Contact (mapping: EmailWork, UrlWork)
-                { id: 'email', label: 'Email', placeholder: '@EMAIL@', required: false, psm: 'EmailWork' },
+                { id: 'email', label: 'Email', placeholder: 'contact@exemple.com', required: false, psm: 'EmailWork' },
                 { id: 'siteweb', label: 'Site web', placeholder: 'https://www.exemple.com', required: false, psm: 'UrlWork' }
             ]
         },
@@ -2713,7 +2717,7 @@ document.addEventListener('DOMContentLoaded', () => {
             label: 'Email',
             fields: [
                 { id: 'to', label: 'Destinataire', placeholder: 'contact@exemple.com', required: true },
-                { id: 'subject', label: 'Sujet', placeholder: 'Demande de @PRENOM@ @NOM@', required: false },
+                { id: 'subject', label: 'Sujet', placeholder: 'Votre commande', required: false },
                 { id: 'body', label: 'Message', placeholder: 'Bonjour...', required: false, type: 'textarea' }
             ]
         },
@@ -3315,6 +3319,176 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // Variante 2 QR (docs/champs-fusion-zones-qr.md) — LIBELLÉS LISIBLES
+    // dans les inputs du panneau QR intelligent.
+    //
+    // INVARIANT : le JSON stocké (zoneData.qrConfig.fields) contient
+    // TOUJOURS les clés techniques @LOCAL_xxx@ / @Nom@. Le libellé
+    // (@Vehicule@) n'existe QUE dans l'affichage des inputs :
+    //   - affichage  (renderQrFields)    : clés → libellés (qrKeysToDisplay)
+    //   - sauvegarde (saveQrFieldsToZone): libellés → clés (qrDisplayToKeys)
+    // Rien ne change dans la chaîne JSON → PSMD → BAT (chantier nommage
+    // docs/nommage-variables-psm.md inclus).
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Normalise un libellé pour la comparaison (NBSP → espace, trim,
+     * insensible à la casse). Pas de translittération d'accents : la
+     * comparaison reste exacte au caractère près (hors casse).
+     * @param {string} s - Libellé brut
+     * @returns {string} Libellé normalisé
+     */
+    function normaliseLibelleQr(s) {
+        return String(s || '').replace(/\u00A0/g, ' ').trim().toLowerCase();
+    }
+
+    /**
+     * Construit la table bidirectionnelle clé technique ↔ libellé pour les
+     * inputs QR. Sources : `documentState.champsFusion` (même logique de clé
+     * que les pastilles : LOCAL_<localId> si localId réel, sinon nom) puis
+     * `champsStandardDisponibles` (standards SaaS).
+     *
+     * Règles (docs/champs-fusion-zones-qr.md §3) :
+     *   - libellé contenant '@' → exclu (intraduisible, clé brute affichée) ;
+     *   - doublons après normalisation → premier rencontré gagne.
+     *
+     * @returns {{byKey: Map<string, string>, byLibelle: Map<string, string>}}
+     *          byKey : clé exacte → libellé ; byLibelle : libellé normalisé → clé
+     */
+    function getQrChampMappings() {
+        const byKey = new Map();
+        const byLibelle = new Map();
+        const add = (key, libelle) => {
+            if (!key || !libelle) return;
+            const lib = String(libelle);
+            if (lib.indexOf('@') !== -1) return; // cas limite : libellé intraduisible
+            if (!byKey.has(key)) byKey.set(key, lib);
+            const norm = normaliseLibelleQr(lib);
+            if (norm && !byLibelle.has(norm)) byLibelle.set(norm, key);
+        };
+        try {
+            const champs = (documentState && Array.isArray(documentState.champsFusion))
+                ? documentState.champsFusion : [];
+            champs.forEach((c) => {
+                if (!c) return;
+                // Même priorité que les pastilles (L18/A39) : localId > nom.
+                const localIdValide = !!(c.localId
+                    && String(c.localId).trim()
+                    && String(c.localId).trim() !== '0');
+                const key = localIdValide
+                    ? `LOCAL_${String(c.localId).trim()}`
+                    : (c.nom ? String(c.nom).trim() : '');
+                add(key, c.libelle || c.nom || '');
+                // Alias : le nom technique d'un champ mappé (ex. "Champ3")
+                // reste reconnu comme clé valide (affichage du libellé,
+                // pas de faux « champ inconnu »). byLibelle garde la
+                // priorité localId (premier rencontré gagne).
+                if (localIdValide && c.nom && String(c.nom).trim()) {
+                    add(String(c.nom).trim(), c.libelle || '');
+                }
+            });
+        } catch (e) { /* TDZ-safe */ }
+        try {
+            if (Array.isArray(champsStandardDisponibles)) {
+                champsStandardDisponibles.forEach((s) => {
+                    if (s && s.nom) add(String(s.nom), s.libelle || s.nom);
+                });
+            }
+        } catch (e) { /* TDZ-safe */ }
+        return { byKey, byLibelle };
+    }
+
+    /**
+     * Retourne le token à insérer dans un input QR pour une clé de champ :
+     * `@<libellé>@` si la clé est résoluble, sinon `@<clé>@` (fallback brut).
+     * @param {string} key - Clé technique (LOCAL_xxx ou nom), NBSP tolérés
+     * @returns {string} Token affichable
+     */
+    function qrDisplayTokenForKey(key) {
+        const cle = String(key || '').replace(/\u00A0/g, ' ').trim();
+        const { byKey } = getQrChampMappings();
+        const libelle = byKey.get(cle);
+        return `@${libelle || cle}@`;
+    }
+
+    /**
+     * Traduction ALLER (affichage) : remplace les clés techniques `@KEY@`
+     * par `@<libellé>@`. Le motif est restreint aux clés techniques
+     * ([A-Za-z0-9_] + NBSP) : un email littéral « contact@exemple.com »
+     * n'est jamais touché. Clé inconnue → laissée brute (anomalie visible).
+     * @param {string} text - Valeur stockée (clés techniques)
+     * @returns {string} Valeur affichable (libellés)
+     */
+    function qrKeysToDisplay(text) {
+        if (!text || typeof text !== 'string') return text || '';
+        const { byKey } = getQrChampMappings();
+        return text.replace(/@([A-Za-z0-9_\u00A0]+)@/g, (m, key) => {
+            const cle = key.replace(/\u00A0/g, ' ').trim();
+            const libelle = byKey.get(cle);
+            return libelle ? `@${libelle}@` : m;
+        });
+    }
+
+    /**
+     * Traduction RETOUR (sauvegarde) : remplace les `@<libellé>@` par les
+     * clés techniques. Pour chaque paire `@…@` :
+     *   1. contenu = clé connue → conservée telle quelle (priorité aux clés) ;
+     *   2. contenu = libellé connu (insensible à la casse) → traduit en clé ;
+     *   3. sinon → NON traduit + remonté dans `unknowns` (validation visuelle,
+     *      non bloquante — docs/champs-fusion-zones-qr.md §4).
+     * @param {string} text - Valeur affichée (libellés)
+     * @returns {{text: string, unknowns: string[]}} Valeur à stocker + inconnus
+     */
+    function qrDisplayToKeys(text) {
+        if (!text || typeof text !== 'string') {
+            return { text: text || '', unknowns: [] };
+        }
+        const { byKey, byLibelle } = getQrChampMappings();
+        const unknowns = [];
+        const out = text.replace(/@([^@\r\n]+)@/g, (m, inner) => {
+            const innerClean = inner.replace(/\u00A0/g, ' ').trim();
+            if (!innerClean) return m;
+            if (byKey.has(innerClean)) return `@${innerClean}@`;
+            const key = byLibelle.get(normaliseLibelleQr(innerClean));
+            if (key) return `@${key}@`;
+            unknowns.push(innerClean);
+            return m;
+        });
+        return { text: out, unknowns };
+    }
+
+    /**
+     * Applique l'état de validation « champ inconnu » sur un input QR
+     * (pattern « Police manquante » §3.10) : contour rouge + message court
+     * sous l'input. Non bloquant : la valeur brute est enregistrée telle
+     * quelle (le BAT rendra le champ vide).
+     * @param {HTMLInputElement|HTMLTextAreaElement} input - Input QR concerné
+     * @param {string[]} unknowns - Références non reconnues (vide = OK)
+     * @returns {void}
+     */
+    function applyQrFieldValidation(input, unknowns) {
+        if (!input) return;
+        const row = input.closest('.form-row-poc');
+        // Le message vit APRÈS la ligne (les .form-row-poc sont en flex
+        // horizontal : un enfant supplémentaire s'afficherait à droite).
+        const oldMsg = (row && row.nextElementSibling
+            && row.nextElementSibling.classList.contains('qr-field-error-msg'))
+            ? row.nextElementSibling : null;
+        if (oldMsg) oldMsg.remove();
+        if (unknowns && unknowns.length > 0) {
+            input.classList.add('qr-field-unknown');
+            if (row) {
+                const msg = document.createElement('div');
+                msg.className = 'qr-field-error-msg';
+                msg.textContent = 'Champ inconnu : « ' + unknowns.join(' », « ') + ' »';
+                row.insertAdjacentElement('afterend', msg);
+            }
+        } else {
+            input.classList.remove('qr-field-unknown');
+        }
+    }
+
     /**
      * Génère les champs de saisie pour un type de QR Code.
      * Les champs sont créés dynamiquement selon QR_TYPES_CONFIG.
@@ -3333,10 +3507,14 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        let html = '';
+        // Variante 2 QR — aide unique en tête du panneau (remplace les
+        // anciens placeholders @CHAMP@, supprimés de QR_TYPES_CONFIG).
+        let html = '<div class="qr-fields-hint">Glissez un champ de fusion dans un champ ci-dessous, ou double-cliquez sur sa pastille.</div>';
         
         config.fields.forEach(field => {
-            const value = (currentValues && currentValues[field.id]) || '';
+            // Variante 2 QR — l'input affiche les LIBELLÉS (@Vehicule@) ;
+            // le stockage (currentValues = qrConfig.fields) garde les clés.
+            const value = qrKeysToDisplay((currentValues && currentValues[field.id]) || '');
             const requiredMark = field.required ? ' *' : '';
             
             // Déterminer si c'est un textarea, un champ géocode ou un input standard
@@ -3394,6 +3572,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Attacher les event listeners aux nouveaux champs
         attachQrFieldListeners();
         
+        // Variante 2 QR — rejouer la validation « champ inconnu » au rendu
+        // (une référence en erreur enregistrée précédemment réapparaît rouge).
+        qrFieldsContainer.querySelectorAll('.qr-field-input').forEach((input) => {
+            applyQrFieldValidation(input, qrDisplayToKeys(input.value).unknowns);
+        });
     }
 
     /**
@@ -3509,6 +3692,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         return;
                     }
                 } catch (e2) { /* defensive */ }
+
+                // Variante 2 QR — insérer le LIBELLÉ lisible (@Vehicule@) au
+                // lieu de la clé technique. Traduction faite AU DROP (le
+                // dataTransfer reste @KEY@ pour les autres cibles). La clé
+                // sera rétablie à la sauvegarde (qrDisplayToKeys).
+                try {
+                    let cleIns = fieldNameDirect;
+                    if (!cleIns && typeof fieldText === 'string') {
+                        const m2 = fieldText.match(/^@([A-Za-z0-9_\u00A0]+)@$/);
+                        cleIns = m2 ? m2[1] : '';
+                    }
+                    if (cleIns) fieldText = qrDisplayTokenForKey(cleIns);
+                } catch (e3) { /* defensive : insertion de la clé brute */ }
                 
                 // Insérer à la position du curseur ou à la fin
                 insertTextAtCursor(input, fieldText);
@@ -3717,16 +3913,20 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {Object} qrConfig - Configuration du QR code
      * @param {string} qrConfig.type - Type de QR ('url', 'vcard', 'email', 'tel', 'sms', 'wifi', 'geo')
      * @param {Object} qrConfig.fields - Valeurs des champs
-     * @param {Object|null} [record=null] - Enregistrement pour remplacer les @CHAMP@ (mode aperçu)
+     * @param {Object|null} [record=null] - Enregistrement pour remplacer les @KEY@ (mode aperçu)
      * @returns {string} Contenu formaté à encoder dans le QR code
      * 
-     * @example
-     * // Mode normal (affiche les @CHAMP@)
-     * buildQrContent({ type: 'url', fields: { url: 'https://site.com?id=@ID@' } }, null);
-     * // → "https://site.com?id=@ID@"
+     * Les `fields` contiennent les CLÉS TECHNIQUES (@LOCAL_xxx@ / @Nom@) —
+     * jamais les libellés affichés dans les inputs du panneau (Variante 2 QR,
+     * docs/champs-fusion-zones-qr.md).
      * 
-     * // Mode aperçu (remplace les @CHAMP@)
-     * buildQrContent({ type: 'url', fields: { url: 'https://site.com?id=@ID@' } }, { ID: '12345' });
+     * @example
+     * // Mode normal (conserve les @KEY@ littéraux)
+     * buildQrContent({ type: 'url', fields: { url: 'https://site.com?id=@Reference@' } }, null);
+     * // → "https://site.com?id=@Reference@"
+     * 
+     * // Mode aperçu (remplace les @KEY@ par le record d'aperçu)
+     * buildQrContent({ type: 'url', fields: { url: 'https://site.com?id=@Reference@' } }, { REFERENCE: '12345' });
      * // → "https://site.com?id=12345"
      */
     function buildQrContent(qrConfig, record = null) {
@@ -4180,7 +4380,14 @@ document.addEventListener('DOMContentLoaded', () => {
         config.fields.forEach(field => {
             const input = document.getElementById(`qr-field-${field.id}`);
             if (input) {
-                fields[field.id] = input.value;
+                // Variante 2 QR — l'input affiche des LIBELLÉS (@Vehicule@) ;
+                // on stocke les clés techniques (@LOCAL_xxx@ / @Nom@) dans le
+                // JSON (invariant docs/champs-fusion-zones-qr.md §2). Une
+                // référence non reconnue est signalée (rouge + message) et
+                // enregistrée telle quelle (non bloquant).
+                const traduction = qrDisplayToKeys(input.value);
+                fields[field.id] = traduction.text;
+                applyQrFieldValidation(input, traduction.unknowns);
             }
         });
         
@@ -5863,7 +6070,9 @@ document.addEventListener('DOMContentLoaded', () => {
      * V2.4 / L9 - D14 : détermine si la zone actuellement sélectionnée
      * justifie l'ouverture automatique de la popup. **Zone texte = pertinente**
      * (drag&drop possible vers le contenu). Zone image / barcode / QR = non
-     * pertinente (elles ont leurs propres combos `champFusion`).
+     * pertinente (elles ont leurs propres combos `champFusion`) — SAUF le
+     * code-barres QR intelligent, traité par
+     * `isQrSmartZoneSelectedForFieldsPopup` (Variante 2 QR).
      *
      * TDZ-safe : try/catch sur `selectedZoneIds` et `getCurrentPageZones`
      * (variables déclarées tardivement) — pattern identique à `isPreviewActive`.
@@ -5882,6 +6091,36 @@ document.addEventListener('DOMContentLoaded', () => {
             const zoneData = zonesData ? zonesData[zoneId] : null;
             if (!zoneData) return false;
             return zoneData.type === 'textQuill';
+        } catch (e) {
+            return false;
+        }
+    }
+
+    /**
+     * Variante 2 QR (docs/champs-fusion-zones-qr.md §2) — assouplissement
+     * D14 : la popup « Champs de fusion » reste disponible quand la zone
+     * sélectionnée est un code-barres de type QR Code (section « QR Code
+     * Intelligent » active → ses inputs sont des cibles de drag & drop /
+     * double-clic). Les codes-barres classiques (Code128, EAN… qui passent
+     * par un select) et les zones image / QR système conservent la règle
+     * historique (popup fermée).
+     *
+     * TDZ-safe : même pattern défensif que `isTextZoneSelectedForFieldsPopup`.
+     *
+     * @returns {boolean}
+     */
+    function isQrSmartZoneSelectedForFieldsPopup() {
+        try {
+            if (typeof selectedZoneIds === 'undefined' || !selectedZoneIds
+                || selectedZoneIds.length !== 1) {
+                return false;
+            }
+            const zoneId = selectedZoneIds[0];
+            const zonesData = (typeof getCurrentPageZones === 'function')
+                ? getCurrentPageZones() : null;
+            const zoneData = zonesData ? zonesData[zoneId] : null;
+            if (!zoneData || zoneData.type !== 'barcode') return false;
+            return String(zoneData.typeCodeBarres || '').toLowerCase() === 'qrcode';
         } catch (e) {
             return false;
         }
@@ -5967,14 +6206,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Bouton actif : la visibilité dépend du contexte de sélection.
         //   - Zone texte sélectionnée → ouverte (D14 ligne 5)
-        //   - Zone image/barcode/QR sélectionnée → fermée (D14 ligne 7)
+        //   - Zone code-barres QR intelligent → ouverte (Variante 2 QR,
+        //     docs/champs-fusion-zones-qr.md : DnD vers les inputs du panneau)
+        //   - Zone image/barcode classique/QR système → fermée (D14 ligne 7)
         //   - Aucune zone sélectionnée → fermée (D14 ligne 8)
         const hasSelection = (typeof selectedZoneIds !== 'undefined'
             && selectedZoneIds && selectedZoneIds.length > 0);
         if (!hasSelection) {
             fieldsPopupShown = false;
         } else {
-            fieldsPopupShown = isTextZoneSelectedForFieldsPopup();
+            fieldsPopupShown = isTextZoneSelectedForFieldsPopup()
+                || isQrSmartZoneSelectedForFieldsPopup();
         }
         // Cahier des charges — Correction 3 : aligner l'intent sur shown
         //   lorsque le contexte FERME la popup (désélection, sélection
@@ -6672,8 +6914,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const text = input.value;
                 const insertIndex = lastFocusedQrInput.selectionStart;
                 
+                // Variante 2 QR — insérer le LIBELLÉ lisible (@Vehicule@),
+                // traduit en clé technique à la sauvegarde (qrDisplayToKeys).
+                // Espaces normaux (pas de NBSP : inutile hors Quill).
+                const qrTag = qrDisplayTokenForKey(fieldName);
+                
                 // Calculer les espaces selon le contexte
-                const result = getFieldTextWithSpacesForInput(text, insertIndex, tag);
+                const result = getFieldTextWithSpacesForInput(text, insertIndex, qrTag);
                 
                 if (result === null) {
                     return;
@@ -32484,25 +32731,38 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Valide une latitude (-90 à +90)
+     * Analyse une coordonnée géographique en acceptant la virgule décimale
+     * française ("48,8566" ≡ "48.8566"). Motif numérique STRICT : tout
+     * caractère parasite rejette la valeur (pas de troncature silencieuse
+     * type parseFloat("48,8566") → 48).
+     * @param {string|number} value - Coordonnée à analyser
+     * @returns {number|null} Nombre analysé, ou null si motif invalide
+     */
+    function parseCoordinate(value) {
+        if (value === null || value === undefined || value === '') return null;
+        const normalized = String(value).trim().replace(',', '.');
+        if (!/^[+-]?\d+(\.\d+)?$/.test(normalized)) return null;
+        return parseFloat(normalized);
+    }
+
+    /**
+     * Valide une latitude (-90 à +90). Virgule décimale française acceptée.
      * @param {string|number} lat - Latitude à valider
      * @returns {boolean} true si valide
      */
     function isValidLatitude(lat) {
-        if (lat === null || lat === undefined || lat === '') return false;
-        const num = parseFloat(lat);
-        return !isNaN(num) && num >= -90 && num <= 90;
+        const num = parseCoordinate(lat);
+        return num !== null && num >= -90 && num <= 90;
     }
 
     /**
-     * Valide une longitude (-180 à +180)
+     * Valide une longitude (-180 à +180). Virgule décimale française acceptée.
      * @param {string|number} lng - Longitude à valider
      * @returns {boolean} true si valide
      */
     function isValidLongitude(lng) {
-        if (lng === null || lng === undefined || lng === '') return false;
-        const num = parseFloat(lng);
-        return !isNaN(num) && num >= -180 && num <= 180;
+        const num = parseCoordinate(lng);
+        return num !== null && num >= -180 && num <= 180;
     }
 
     /**
@@ -32662,6 +32922,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     // ─────────────────────────────────────────────────────────────
                     // CAS 1 : QR Code intelligent (avec qrConfig.type)
+                    //
+                    // DÉCISION DE PILOTAGE (11/06/2026, docs/champs-fusion-zones-qr.md §6) :
+                    //   la complétude des DONNÉES n'est PAS jugée par le Designer
+                    //   (échantillon donneesApercu de ~20 enreg. non représentatif).
+                    //   Une valeur substituée VIDE sur un enregistrement n'est pas
+                    //   une erreur. Elle relève d'un futur contrôle serveur sur la
+                    //   totalité des données (tunnel Check + opération prête).
+                    //   Le Designer ne juge que la STRUCTURE : champ requis du
+                    //   panneau laissé entièrement vide (aucune saisie) = bloquant,
+                    //   valeur non vide mal formée = bloquant.
                     // ─────────────────────────────────────────────────────────────
                     if (zoneData.qrConfig && zoneData.qrConfig.type) {
                         const qrType = zoneData.qrConfig.type;
@@ -32681,27 +32951,35 @@ document.addEventListener('DOMContentLoaded', () => {
                         };
                         
                         /**
-                         * Valide le format d'un champ sur tous les échantillons
+                         * Valide le format d'un champ.
+                         *   - Valeur STATIQUE (aucun @KEY@) : validée UNE seule
+                         *     fois (pas de boucle échantillons → plus de N
+                         *     messages identiques).
+                         *   - Valeur avec @KEY@ : substituée sur chaque
+                         *     échantillon ; une valeur résolue VIDE est ignorée
+                         *     (décision de pilotage : les données d'échantillon
+                         *     ne sont pas jugées par le Designer).
                          */
                         const validateFieldFormat = (fieldId, validator, fieldLabel) => {
                             const rawValue = fields[fieldId] || '';
                             if (rawValue.trim() === '') return; // Vide = pas de validation format
                             
-                            // Si pas d'échantillons, valider la valeur brute si pas de @CHAMP@
-                            if (samples.length === 0) {
-                                if (!hasUnresolvedMergeFields(rawValue)) {
-                                    if (!validator(rawValue)) {
-                                        formatErrors.push(`${fieldLabel} invalide : "${rawValue}"`);
-                                    }
+                            // Valeur statique : une seule validation.
+                            if (!hasUnresolvedMergeFields(rawValue)) {
+                                if (!validator(rawValue)) {
+                                    formatErrors.push(`${fieldLabel} invalide : "${rawValue}"`);
                                 }
                                 return;
                             }
                             
-                            // Scanner tous les échantillons
+                            // Valeur avec @KEY@ : scanner les échantillons.
                             samples.forEach((sample, idx) => {
                                 const resolvedValue = resolveMergeFields(rawValue, sample);
                                 // Ignorer si encore des champs non résolus
                                 if (hasUnresolvedMergeFields(resolvedValue)) return;
+                                // Donnée d'échantillon vide → pas une erreur de
+                                // format (client sans email/téléphone plausible).
+                                if (resolvedValue.trim() === '') return;
                                 
                                 if (!validator(resolvedValue)) {
                                     formatErrors.push(`${fieldLabel} invalide (enreg. #${idx + 1}) : "${resolvedValue}"`);
@@ -32720,13 +32998,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                 break;
                                 
                             case 'vcard':
-                                // Champs obligatoires
-                                if (!isFieldFilled('nom')) missingFields.push('Nom');
-                                if (!isFieldFilled('prenom')) missingFields.push('Prénom');
-                                if (!isFieldFilled('societe')) missingFields.push('Société');
-                                if (!isFieldFilled('tel') && !isFieldFilled('mobile')) {
-                                    missingFields.push('Téléphone ou Mobile');
-                                }
+                                // Champs obligatoires : pilotés par QR_TYPES_CONFIG
+                                // (source unique, cohérente avec l'astérisque UI et
+                                // la spec vCard — seul Nom est requis).
+                                (QR_TYPES_CONFIG.vcard.fields || []).forEach((f) => {
+                                    if (f.required && !isFieldFilled(f.id)) {
+                                        missingFields.push(f.label);
+                                    }
+                                });
                                 
                                 // Validation format des champs optionnels remplis
                                 if (isFieldFilled('tel')) {

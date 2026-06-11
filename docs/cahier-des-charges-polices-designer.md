@@ -50,8 +50,9 @@ Le « tuyau » postMessage existe DÉJÀ et fonctionne côté Designer :
 
 **Pièce serveur (résolue au Lot 0)** : la procédure
 `cpDesigner.RemplirDesignerPolices(pIdClient)` est appelée
-(`ComposerJsonDesignerCreation`, `ComposerJsonDesignerModification`,
-`ComposerJsonDesignerModele`) et alimente `policesDisponibles` (filtre
+(`ComposerJsonDesignerCreation`, `ComposerJsonDesignerModele` —
+`ComposerJsonDesignerModification` supprimée en juin 2026 : code mort,
+la réouverture recompose via `Creation`) et alimente `policesDisponibles` (filtre
 `EstActif = 1`, cf. §3.10). Le Designer ne retombe sur `DEFAULT_FONTS` (en dur
 dans `script.js`) que si la liste est vide.
 

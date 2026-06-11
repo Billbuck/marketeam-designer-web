@@ -5561,3 +5561,29 @@ button:disabled {
 .zip-upload-error .material-icons {
     font-size: 14px;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Variante 2 QR (docs/champs-fusion-zones-qr.md) — Champs de fusion dans
+   les inputs du panneau QR intelligent.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Ligne d'aide en tête du panneau (remplace les placeholders @CHAMP@). */
+.qr-fields-hint {
+    font-size: 11px;
+    font-style: italic;
+    color: var(--poc-text-secondary, #888);
+    margin: 2px 0 8px;
+}
+
+/* §4 - Référence @libellé@ non reconnue : contour rouge (pattern
+   « Police manquante » §3.10) + message court sous l'input. */
+.qr-field-input.qr-field-unknown {
+    border-color: #C62828 !important;
+}
+
+.qr-field-error-msg {
+    font-size: 11px;
+    font-style: italic;
+    color: #C62828;
+    margin-top: 2px;
+}

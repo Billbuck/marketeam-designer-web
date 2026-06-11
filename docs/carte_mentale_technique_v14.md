@@ -330,8 +330,8 @@ Listener postMessage → sJsonDesigner reçu
 | `RemplirDesignerPages(pEstRectoVerso, pTabDocumentImage, pCheminPdfFond)` | Pages + urlFond (JPG) + cheminFond (PDF) | ✅ V1.1 |
 | `RemplirDesignerZonesSystemeDocument()` | Zone adresse + RTF Verdana 10pt complet | ✅ V1.1 |
 | `RemplirDesignerZonesSystemeEnveloppe()` | Zones système sur enveloppe | ✅ |
-| `ComposerJsonDesignerCreation()` | Orchestrateur JSON création — inclut formatPapierLargeurMm/HauteurMm depuis ltr_format_impression | ✅ V1.3 |
-| `ComposerJsonDesignerModification()` | Orchestrateur JSON modification | ✅ |
+| `ComposerJsonDesignerCreation()` | Orchestrateur JSON création ET réouverture (recomposition systématique du wrapper, data repris du JSON sauvegardé) — inclut formatPapierLargeurMm/HauteurMm depuis ltr_format_impression | ✅ V1.3 |
+| `ComposerJsonDesignerModification()` | ~~Orchestrateur JSON modification~~ — **supprimée juin 2026** (code mort, jamais appelée ; la réouverture passe par `Creation`) | ❌ |
 
 ### 6.2 Collection `Partage`
 
@@ -421,7 +421,7 @@ Correspondances actives : A4 → SRA4 (225×320mm), A3 → SRA3 (320×450mm)
 | Priorité | Sujet | Détail |
 |----------|-------|--------|
 | 🟡 Prochain | **Sauvegarde JSON Designer en BDD** | Post-validation → stocker `JsonDesignerData` en BDD liée à l'opération |
-| 🟡 Prochain | **`ComposerJsonDesignerModification()`** | Réouverture d'un document existant depuis JSON BDD |
+| ✅ Résolu autrement | **Réouverture d'un document existant** | Recomposition systématique du wrapper via `ComposerJsonDesignerCreation()` + injection du data sauvegardé (`ComposerJsonDesignerModification()` supprimée juin 2026, code mort) |
 | 🟡 Prochain | **Formats fond perdu A5→SRA5, A6** | Correspondances dans `ltr_format_impression` + logique WebDev/psmd-generator (mémorisé) |
 | 🟢 Plus tard | **Nettoyage obsolètes** | Supprimer `GenererPsmdNavigateur()`, `BTN_TraiterMessage`, `gsXmlPsmd`, `gsJsonDesignerPreversion` |
 
@@ -488,4 +488,4 @@ mentionne à nouveau, lui rappeler cet historique et ignorer la suggestion.
 ---
 
 *Marketeam Designer — Carte Mentale Technique V1.4 — 17 Mars 2026*
-*Prochaine mise à jour : après implémentation sauvegarde JSON BDD + ComposerJsonDesignerModification()*
+*Prochaine mise à jour : après implémentation sauvegarde JSON BDD (réouverture : recomposition via ComposerJsonDesignerCreation, juin 2026)*
