@@ -1,0 +1,44 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//Valider ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure Valider()
+
+bEstAlliagePossible est un booléen = Vrai
+bEstBaseLocation est un booléen
+bEstAlliageClient est un booléen
+bEstBaseEnAttente est un booléen = Vrai
+
+
+si __stOperation.tabBase..Occurrence > 0 alors
+	pour tout stBase de __stOperation.tabBase
+		si stBase.EstSupprime = Faux alors
+			bEstBaseEnAttente		= Faux
+			bEstAlliagePossible 	= Min((stBase.EstAlliageClient = Faux), bEstAlliagePossible)
+			bEstAlliageClient		= Max(stBase.EstAlliageClient, bEstAlliageClient)
+			bEstBaseLocation		= Max(bEstBaseLocation)
+		fin
+	fin
+fin
+
+
+__stOperation.stOperationLettre.EstAlliage 			= Min(bEstAlliagePossible,__stOperation.stOperationLettre.EstAlliage) // si on ne peut plus faire d'alliage on modifie dans la structure
+__stOperation.stOperationLettre.EstAlliageClient 	= bEstAlliageClient
+__stOperation.EstLocationBase 						= bEstBaseLocation
+__stOperation.EstBaseEnAttente 						= bEstBaseEnAttente
+
+
+// Calcule des champs commun à toutes les bases de données
+__stOperation.taaBaseChamp  = CalculeTaaBaseChamp(__stOperation.tabBase, Faux, Faux)
+
+// Calcule des champs commun à toutes les bases de données
+__tabEchantillonBaseLigne	= Partage.ChargeEchantillonTabBaseLigne(__stOperation)
+

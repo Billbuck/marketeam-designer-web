@@ -1,0 +1,15 @@
+procédure ChargeTabStructBase(pIdOperation)
+
+tabBase		est un tableau de StructBase
+stBase		est une StructBase
+
+pour tout dos_base avec IdOperation = pIdOperation
+	FichierVersMémoire(stBase, dos_base)
+	stBase.taaBaseChamp = Partage.ChargeTaaDosBaseChamp(dos_base.IdBase)
+	tabBase.Ajoute(stBase)
+fin
+
+
+renvoyer tabBase
+
+

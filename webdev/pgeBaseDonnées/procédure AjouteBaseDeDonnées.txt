@@ -1,0 +1,30 @@
+procédure AjouteBaseDeDonnées(pIdBase, pIdFiltre = 0)
+
+stBase			est une StructBase
+sBaseNom		est une chaîne
+sFiltreNom		est une chaîne
+IdZecible 	 	est un entier
+
+si clt_base.LitRecherchePremier(IdBase,pIdBase) alors
+	sBaseNom 		= clt_base.Nom
+	IdZecible		= clt_base.IdZecible
+fin
+
+si pIdFiltre > 0 _et_ clt_base_filtre.LitRecherchePremier(IdFiltre,pIdFiltre) alors
+	sFiltreNom = clt_base_filtre.Nom
+fin
+
+stBase.EstAjoute 			= Vrai
+stBase.Nom					= sBaseNom
+stBase.IdZecible			= IdZecible
+
+si pIdFiltre > 0 alors
+	stBase.Nom				+= " (" + sFiltreNom + ")"
+fin
+stBase.IdBaseClient			= pIdBase
+stBase.IdFiltre				= pIdFiltre
+stBase.taaBaseChamp			= ChargeTaaCltBaseChamp(pIdBase)
+
+__stOperation.tabBase.Ajoute(stBase)
+
+renvoyer Vrai

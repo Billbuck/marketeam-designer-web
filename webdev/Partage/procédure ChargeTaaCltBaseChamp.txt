@@ -1,0 +1,54 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] ChargeTaaCltBaseChamp (<pIdBase>)
+//
+// Paramètres :
+//	pIdBase : <indiquez ici le rôle de pIdBase>
+// Valeur de retour :
+// 	Type indéterminé : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure ChargeTaaCltBaseChamp(pIdBase)
+
+
+sTexteRequete		est une chaîne
+sdReqCltBaseChamp	est une Source de Données
+stBaseChamp			est une structBaseChamp
+taaBaseChamp		est un tableau associatif de structBaseChamp
+
+sTexteRequete =
+[
+SELECT
+	Champ,
+	Libelle,
+	Ordre,
+	Type
+FROM 
+	clt_base_champ
+WHERE 
+	IdBase = [%pIdBase%]
+ORDER BY 
+	Ordre
+]
+
+si pas sdReqCltBaseChamp.ExécuteRequêteSQL(clt_client..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	// Trace("Erreur requête ChargeTaaCltBaseChamp","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+	renvoyer Faux
+fin
+
+
+pour tout sdReqCltBaseChamp
+	VariableRAZ(stBaseChamp)
+	stBaseChamp.Champ	= sdReqCltBaseChamp.Champ
+	stBaseChamp.Ordre	= sdReqCltBaseChamp.Ordre
+	stBaseChamp.Type	= sdReqCltBaseChamp.Type
+	stBaseChamp.Pointer	= Vrai
+	taaBaseChamp[sdReqCltBaseChamp.Libelle]	= stBaseChamp
+fin
+
+renvoyer taaBaseChamp
+
+fin:
+sdReqCltBaseChamp.AnnuleDéclaration()
