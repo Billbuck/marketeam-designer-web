@@ -1,0 +1,35 @@
+// =============================================================================
+// Partage.RemplissageBaseVersTexte
+// Rôle : Dump TEXTE lisible d'un diagnostic de remplissage (chantier 2, Lot 1).
+//        Sert à TESTER le moteur via Info()/Trace avant la popup (Lot 2).
+//        Brique réutilisable (modèle : RapportConcordanceVersTexte).
+//
+// Paramètre : stRemplissage (structRemplissageBase)
+// Retour    : chaîne (une ligne par champ + en-tête nb d'enregistrements)
+// =============================================================================
+procédure RemplissageBaseVersTexte(stRemplissage est une structRemplissageBase) : chaîne
+
+sTexte est une chaîne
+
+si pas stRemplissage.BaseChargee alors
+	renvoyer "Aucune base chargée."
+fin
+
+sTexte = "Enregistrements analysés : " + stRemplissage.NbEnregistrements + RC
+
+si stRemplissage.tabChamps..Occurrence = 0 alors
+	sTexte += "(aucun champ de base utilisé dans les documents)" + RC
+	renvoyer sTexte
+fin
+
+pour tout stCh de stRemplissage.tabChamps
+	sTaux est une chaîne = Arrondi(stCh.Taux, 1)
+	sMin est une chaîne = cpFonction.FormateRemplissageValeur(stCh.Type, stCh.MinLongueur, stCh.MinValeur)
+	sMax est une chaîne = cpFonction.FormateRemplissageValeur(stCh.Type, stCh.MaxLongueur, stCh.MaxValeur)
+	sTexte += "- " + stCh.Libelle ...
+		+ " [" + stCh.Champ + " / " + stCh.Type + "] : " ...
+		+ stCh.NbRenseignes + "/" + stCh.NbTotal + " (" + sTaux + " %)" ...
+		+ "  Min=" + sMin + "  Max=" + sMax + RC
+fin
+
+renvoyer sTexte

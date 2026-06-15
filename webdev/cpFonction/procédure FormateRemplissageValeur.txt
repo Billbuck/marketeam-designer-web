@@ -1,0 +1,38 @@
+// =============================================================================
+// cpFonction.FormateRemplissageValeur
+// Rôle : Formater une valeur min/max du diagnostic de remplissage SELON LE TYPE,
+//        pour affichage (popup Lot 2 + dump texte). Couche partagée réutilisable.
+//
+//   - Numérique (ENT/DEC/MON) -> Partage.FormateValeurSortie (séparateurs, €) ;
+//   - Date (DAT)              -> AAAAMMJJ converti en JJ/MM/AAAA ;
+//   - Coordonnée (COO)        -> valeur telle quelle (point décimal) ;
+//   - Heure (TIM)             -> valeur telle quelle (HH:MM) ;
+//   - Texte / autres          -> longueur + « valeur ENTIÈRE » (jamais tronquée).
+//
+// Paramètres :
+//	pType      : code de type fin du champ (__CHAMP_TYPE_*).
+//	pLongueur  : longueur (nb caractères) — utilisée pour le TEXTE uniquement.
+//	pValeur    : valeur brute (échantillon texte, ou valeur min/max brute).
+// Retour : chaîne prête à afficher.
+// =============================================================================
+procédure FormateRemplissageValeur(pType, pLongueur est un entier, pValeur est une chaîne) : chaîne
+
+selon pType
+	cas __CHAMP_TYPE_ENTIER__, __CHAMP_TYPE_DECIMAL__, __CHAMP_TYPE_MONETAIRE__
+		// Réutilise le formatage numérique unique (pas de duplication)
+		renvoyer Partage.FormateValeurSortie(pValeur, pType)
+
+	cas __CHAMP_TYPE_DATE__
+		// AAAAMMJJ -> JJ/MM/AAAA (pass-through défensif si non conforme)
+		si Taille(pValeur) = 8 _et_ pValeur.CaractOccurrenceType(ctNumérique) = 8 alors
+			renvoyer pValeur[[7 à 8]] + "/" + pValeur[[5 à 6]] + "/" + pValeur[[1 à 4]]
+		fin
+		renvoyer pValeur
+
+	cas __CHAMP_TYPE_COORDONNEE__, __CHAMP_TYPE_HEURE__
+		renvoyer pValeur
+
+	autre cas
+		// Texte & autres : longueur + valeur ENTIÈRE (jamais tronquée)
+		renvoyer pLongueur + " «" + pValeur + "»"
+fin

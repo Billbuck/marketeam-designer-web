@@ -1,0 +1,28 @@
+// =============================================================================
+// Chantier 2 — Diagnostic de remplissage de la base.
+// Structures de retour du moteur Partage.AnalyseRemplissageBase.
+// Modèle : structConcordance.txt (rapport + tableau de lignes).
+// =============================================================================
+
+// Une ligne de diagnostic = un champ réellement utilisé dans les documents,
+// résolu à une colonne physique de la base.
+structRemplissageChamp est une Structure
+	Libelle			est une chaîne				// Libellé lisible du champ
+	Champ			est une chaîne				// Colonne physique (ex: "Champ3", "Nom")
+	Type			est une chaîne				// Type fin (__CHAMP_TYPE_*)
+	NbRenseignes	est un entier sur 8 octets	// Enregistrements où la valeur est non vide
+	NbTotal			est un entier sur 8 octets	// Total d'enregistrements analysés
+	Taux			est un réel					// % de remplissage (NbRenseignes / NbTotal * 100)
+	// Min/Max BRUTS (formatage d'affichage = Lot 2 / cpFonction.FormateRemplissageValeur) :
+	MinLongueur		est un entier				// TEXTE : nb de caractères de la valeur la plus courte (0 sinon)
+	MaxLongueur		est un entier				// TEXTE : nb de caractères de la valeur la plus longue (0 sinon)
+	MinValeur		est une chaîne				// TEXTE : valeur échantillon la plus courte ; NUM/DAT/COO : valeur min brute
+	MaxValeur		est une chaîne				// TEXTE : valeur échantillon la plus longue ; NUM/DAT/COO : valeur max brute
+fin
+
+// Rapport global du diagnostic.
+structRemplissageBase est une Structure
+	NbEnregistrements	est un entier sur 8 octets					// Total analysé (en-tête du rapport)
+	BaseChargee			est un booléen								// Vrai si au moins une base non supprimée
+	tabChamps			est un tableau de structRemplissageChamp	// Une entrée par champ utilisé
+fin
