@@ -62,6 +62,11 @@ pour tout stBaseLigne de pTabEchantillon
 		stUnChamp.nom		= stBaseChamp.Champ
 		// Valeur récupérée par indirection sur le membre de StructBaseLigne
 		stUnChamp.valeur	= {"stBaseLigne." + stBaseChamp.Champ, indVariable}
+		// Chantier 1 — formatage des valeurs en sortie SELON LE TYPE FIN du
+		// champ (ENT/DEC/MON/TEL/SMS) ; DAT/COO/TIM/TXT/… = pass-through.
+		// Seul point de passage : alimente aperçu ET BAT (donneesApercu relu
+		// par GenererBatDocumentDepuisPsmd sans re-résolution).
+		stUnChamp.valeur	= Partage.FormateValeurSortie(stUnChamp.valeur, stBaseChamp.Type)
 		stEnreg.enregistrement.Ajoute(stUnChamp)
 	fin
 

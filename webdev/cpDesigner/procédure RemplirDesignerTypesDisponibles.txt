@@ -19,6 +19,7 @@
 //   URL  URL           <- __CHAMP_TYPE_URL__
 //   IMG  Image         <- __CHAMP_TYPE_IMAGE__
 //   ALG  Alliage       <- __CHAMP_TYPE_ALLIAGE__
+//   COO  Coordonnée    <- __CHAMP_TYPE_COORDONNEE__   (latitude/longitude QR géo)
 //
 // Le code "SYS" reste réservé aux zones système injectées par WebDev
 // (adresse destinataire, séquentiel, datamatrix...) et n'est PAS exposé
@@ -100,6 +101,11 @@ tabTypes.Ajoute(stUnType)
 // Alliage (NPAI La Poste)
 stUnType.code		= __CHAMP_TYPE_ALLIAGE__
 stUnType.libelle	= "Alliage"
+tabTypes.Ajoute(stUnType)
+
+// Coordonnée (latitude/longitude pour QR géo)
+stUnType.code		= __CHAMP_TYPE_COORDONNEE__
+stUnType.libelle	= "Coordonnée"
 tabTypes.Ajoute(stUnType)
 
 RENVOYER tabTypes

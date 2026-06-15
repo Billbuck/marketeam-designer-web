@@ -31,6 +31,7 @@ sinon
 		cas __CHAMP_TYPE_ENTIER__       : sValeur = CleanNumerique(sValeur)
 		cas __CHAMP_TYPE_DECIMAL__      : sValeur = CleanNumerique(sValeur)
 		cas __CHAMP_TYPE_MONETAIRE__    : sValeur = CleanNumerique(sValeur)
+		cas __CHAMP_TYPE_COORDONNEE__   : sValeur = CleanCoordonnee(sValeur)
 		autre cas
 	fin
 fin
@@ -179,6 +180,21 @@ fin
 			sinon
 				renvoyer "0"
 			fin
+		fin
+	fin
+
+	procédure interne CleanCoordonnee(pCoord)
+		// Coordonnée (lat/long pour QR géo) : point décimal, pleine précision,
+		// aucun espace, aucun arrondi, aucun symbole. JAMAIS CleanNumerique
+		// (qui arrondit à 2 et remet une virgule -> QR cassé).
+		sCoord est une chaîne = ChaîneFormate(pCoord, ccSansEspace + ccSansEspaceIntérieur)
+		sCoord = Remplace(sCoord, ",", ".")
+		// Nombre signé décimal valide -> conservé ; sinon NULL (cohérent
+		// CleanDate / CleanHeure).
+		si sCoord.RegexVérifie("^[+-]?\d+(\.\d+)?$") <> "" alors
+			renvoyer sCoord
+		sinon
+			renvoyer ""
 		fin
 	fin
 

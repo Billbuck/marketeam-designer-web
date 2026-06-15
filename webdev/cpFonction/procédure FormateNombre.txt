@@ -1,0 +1,72 @@
+// Résumé : Met en forme un nombre en chaîne fr-FR :
+//          - séparateur de milliers = ESPACE INSÉCABLE Caract(160) ;
+//          - nombre de décimales FIXE (arrondi à pNbDecimales) ;
+//          - signe négatif conservé ;
+//          - suffixe optionnel (ex. "€") précédé d'un espace insécable.
+//          Réutilisable hors FormateValeurSortie (montants, quantités…).
+//
+// Syntaxe :
+//[ <Résultat> = ] FormateNombre (<pValeur> est une chaîne, <pNbDecimales> est un entier [, <pSuffixe> est une chaîne])
+//
+// Paramètres :
+//	pValeur (chaîne)      : nombre brut (virgule OU point décimal, sans
+//	                        séparateur de milliers). Vide -> renvoie vide.
+//	pNbDecimales (entier) : 0 (entier) ou N (arrondi + complété à N décimales).
+//	pSuffixe (chaîne)     : suffixe accolé, précédé d'un insécable (ex. "€").
+//	                        Vide (défaut) = aucun suffixe.
+//
+// Valeur de retour :
+//	chaîne : ex. "1 234" ; "1 234,20" ; "4 587,10 €" ; "-1 234,50"
+//	         (les espaces ci-dessus sont des Caract(160)).
+procédure FormateNombre(pValeur est une chaîne, pNbDecimales est un entier, pSuffixe est une chaîne = "")
+
+	// Une valeur réellement vide reste vide (on ne fabrique pas "0,00 €").
+	si pValeur = "" alors renvoyer ""
+
+	sNorm est une chaîne = Remplace(pValeur, ",", ".")
+	sNorm = ChaîneFormate(sNorm, ccSansEspace + ccSansEspaceIntérieur)
+
+	nValeur		est un réel		= Val(sNorm)
+	bNegatif		est un booléen	= (nValeur < 0)
+	nAbs			est un réel		= Abs(nValeur)
+	nArrondi		est un réel		= Arrondi(nAbs, pNbDecimales)
+
+	// Partie entière en chiffres bruts (sans séparateur)
+	nPartieEntiere	est un entier sur 8 octets	= PartieEntière(nArrondi)
+	sEntier			est une chaîne					= nPartieEntiere
+
+	// Groupement par 3 avec espace INSÉCABLE Caract(160)
+	sGroupe		est une chaîne = ""
+	sChiffres	est une chaîne = sEntier
+	tantque Taille(sChiffres) > 3
+		sGroupe		= Caract(160) + Droite(sChiffres, 3) + sGroupe
+		sChiffres	= Gauche(sChiffres, Taille(sChiffres) - 3)
+	fin
+	sGroupe = sChiffres + sGroupe
+
+	sRes est une chaîne = sGroupe
+
+	// Décimales (toujours pNbDecimales chiffres)
+	si pNbDecimales > 0 alors
+		nMult est un réel = 1
+		pour nK = 1 _à_ pNbDecimales
+			nMult = nMult * 10
+		fin
+		nFraction	est un entier sur 8 octets	= Arrondi((nArrondi - nPartieEntiere) * nMult, 0)
+		sDecimales	est une chaîne					= nFraction
+		tantque Taille(sDecimales) < pNbDecimales
+			sDecimales = "0" + sDecimales
+		fin
+		sRes += "," + sDecimales
+	fin
+
+	si bNegatif alors
+		sRes = "-" + sRes
+	fin
+
+	// Suffixe (ex. "€") précédé d'un espace INSÉCABLE
+	si pSuffixe <> "" alors
+		sRes += Caract(160) + pSuffixe
+	fin
+
+	renvoyer sRes

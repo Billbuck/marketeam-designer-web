@@ -1,0 +1,52 @@
+// Résumé : Met en forme une valeur de champ de fusion SELON SON TYPE FIN, à la
+//          sortie (échantillons Designer aperçu + BAT, et demain export prod).
+//          Procédure SYMÉTRIQUE de Webservice.TraiteValeurLoadData (import).
+//
+//          Simple AIGUILLAGE : délègue le formatage numérique à
+//          cpFonction.FormateNombre et le téléphone à cpFonction.Telephone.
+//
+// Syntaxe :
+//[ <Résultat> = ] FormateValeurSortie (<pValeur> est une chaîne, <pType>)
+//
+// Paramètres :
+//	pValeur (chaîne) : valeur brute telle que stockée en base (déjà nettoyée à
+//	                   l'import par TraiteValeurLoadData).
+//	pType            : code de type fin du champ (__CHAMP_TYPE_*).
+//
+// Valeur de retour :
+//	chaîne : valeur mise en forme pour l'affichage / l'impression.
+//
+// Contrat (cf. docs/cahier-des-charges-formatage-valeurs-sortie.md §2) :
+//	- ENT : séparateur de milliers insécable, 0 décimale         -> "1 234"
+//	- DEC : insécable + 2 décimales (arrondi)                    -> "1 234,20"
+//	- MON : insécable + 2 décimales + " €" (espace insécable)    -> "4 587,10 €"
+//	- TEL/SMS : "33XXXXXXXXX" -> "0X XX XX XX XX" (insécables)
+//	- DAT, COO, TIM, TXT, EML, URL, CDP, ALG, vide -> PASS-THROUGH (inchangé)
+//
+//	Le séparateur de milliers, l'espace avant € et les espaces du téléphone
+//	sont TOUJOURS l'espace insécable Caract(160), JAMAIS un espace normal.
+procédure FormateValeurSortie(pValeur est une chaîne, pType) : chaîne
+
+selon pType
+	cas __CHAMP_TYPE_ENTIER__       : renvoyer cpFonction.FormateNombre(pValeur, 0, "")
+	cas __CHAMP_TYPE_DECIMAL__      : renvoyer cpFonction.FormateNombre(pValeur, 2, "")
+	cas __CHAMP_TYPE_MONETAIRE__    : renvoyer cpFonction.FormateNombre(pValeur, 2, "€")
+
+	cas __CHAMP_TYPE_TELEPHONE__, __CHAMP_TYPE_PORTABLE__
+		// Défensif (CDC §2.4) : vide -> vide ; non conforme (≠ 11 car. ou ne
+		// commence pas par "33") -> renvoyé tel quel. On NE délègue à
+		// cpFonction.Telephone que les entrées conformes (elle renverrait ""
+		// sur une entrée non conforme, ce que la spec interdit).
+		si pValeur = "" alors renvoyer ""
+		si Taille(pValeur) <> 11 _ou_ Gauche(pValeur, 2) <> "33" alors
+			renvoyer pValeur
+		fin
+		// Formatage "0X XX XX XX XX" délégué à cpFonction.Telephone (séparateur
+		// = espace normal), puis insécabilisation pour respecter la spec —
+		// SANS modifier cpFonction.Telephone (protège ses appelants).
+		sTel est une chaîne = cpFonction.Telephone(pValeur, 1, " ")
+		renvoyer Remplace(sTel, " ", Caract(160))
+
+	// DAT / COO / TIM / TXT / EML / URL / CDP / ALG / type vide : pass-through
+	autre cas                       : renvoyer pValeur
+fin

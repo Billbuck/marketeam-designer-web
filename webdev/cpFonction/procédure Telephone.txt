@@ -1,0 +1,69 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] Telephone (<pNumero> [, <pFormat> [, <pSeparateur> [, <pFiltre>]]])
+//
+// Paramètres :
+//	pNumero : <indiquez ici le rôle de pNumero>
+//	pFormat (valeur par défaut=1) : "0033,33,0"
+//	pSeparateur (valeur par défaut="") : <indiquez ici le rôle de pType>
+// 	pFiltre (valeur par défaut="") : < indiquez ici le rôle de pFiltre >
+
+// Valeur de retour :
+// 	chaîne ANSI : <indiquez ici les valeurs possibles ainsi que leur interprétation>
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure Telephone(local pNumero, pFormat = 1, pSeparateur = "", pFiltre = "")
+
+
+si pNumero = "" alors renvoyer ""
+
+sTel est une chaîne = pNumero
+sTyp est une chaîne
+
+sTel = sTel.Supprime(["-"," ",".","/","\","(",")","+","_",""""])
+selon Vrai
+	cas sTel[[à 4]] = "0033"	_et_ sTel.Taille() = 13	: sTel[[à 4]] = ""
+	cas sTel[[à 2]] = "33"		_et_ sTel.Taille() = 11	: sTel[[à 2]] = ""
+	cas sTel[[1]]	= "0" 		_et_ sTel.Taille() = 10 	: sTel[[1]] = ""
+	autres cas
+fin
+
+sTyp = sTel[[1]]
+
+si sTel.Taille() = 9 _et_ sTel.CaractOccurrenceType(ctNumérique) = 9 alors
+
+	sTel = sTel[[1]] + pSeparateur + sTel[[2 sur 2]] + pSeparateur + sTel[[4 sur 2]] + pSeparateur + sTel[[6 sur 2]] + pSeparateur + sTel[[8 sur 2]]
+
+	selon pFormat
+		cas 1		: sTel = "0"+sTel
+		cas 2		: sTel = "33"+sTel
+		cas 3		: sTel = "0033"+sTel
+		cas 4		: sTel = "+33"+sTel
+		autre cas 	: sTel = "0"+sTel
+	fin
+
+	selon pFiltre
+		cas "SMS"
+			si sTyp = "6" _ou_ sTyp = "7" alors
+				renvoyer sTel
+			fin
+
+		cas "TEL"
+			si sTyp dans ("1","2","3","4","5","8","9") alors
+				renvoyer sTel
+			fin
+
+		cas "VMS"
+			si sTyp dans ("1","2","3","4","5","9") alors
+				renvoyer sTel
+			fin
+
+		autre cas
+			renvoyer sTel
+	fin
+fin
+renvoyer ""
+
+
