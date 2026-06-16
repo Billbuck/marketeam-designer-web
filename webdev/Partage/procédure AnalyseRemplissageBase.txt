@@ -63,6 +63,24 @@ pour tout stDocument de stOperation.stOperationLettre.tabStDocument
 		pour tout sCleDoc de tabClesDoc
 			ResoutCle(sCleDoc)	// résout + dédup -> tabChampsUtilises
 		fin
+
+		// Pavé adresse DESTINATAIRE (zones sys-adresse-*, champ "contenu") :
+		//   non capté par CollecteChampsInseresDocument (zones sys- exclues +
+		//   parsing par embeds). Mêmes noms standard -> résolus par ResoutCle ;
+		//   la dédup gère le recouvrement avec les champs déjà insérés.
+		tabClesPave est un tableau de chaînes = cpDesigner.CollecteChampsPaveAdresse(stDocument.JsonDesignerData)
+		pour tout sClePave de tabClesPave
+			ResoutCle(sClePave)
+		fin
+	fin
+fin
+
+// Pavé adresse DESTINATAIRE de l'ENVELOPPE (cas enveloppe sans porte-adresse
+// document) : mêmes champs standard ; la dédup gère le recouvrement.
+si stOperation.stOperationLettre.stEnveloppe.JsonDesignerData <> "" alors
+	tabClesPaveEnv est un tableau de chaînes = cpDesigner.CollecteChampsPaveAdresse(stOperation.stOperationLettre.stEnveloppe.JsonDesignerData)
+	pour tout sClePaveEnv de tabClesPaveEnv
+		ResoutCle(sClePaveEnv)
 	fin
 fin
 

@@ -1,0 +1,112 @@
+// =============================================================================
+// cpDesigner.CollecteChampsPaveAdresse
+// Rôle : Collecter les CLÉS des champs du PAVÉ ADRESSE DESTINATAIRE d'un
+//        document/enveloppe Designer (chantier 2, audit de remplissage).
+//
+//        Le pavé destinataire est une zone SYSTÈME (id préfixé "sys-adresse-")
+//        dont les champs sont en TEXTE PLAT dans le champ "contenu"
+//        (ex. "@Societe@\r\n@Civilite@ @Nom@ @Prenom@\r\n@Adresse1@...@Pays@"),
+//        avec quillDelta vide. Ces champs ne sont donc PAS captés par
+//        cpDesigner.CollecteChampsInseresDocument (qui exclut les zones sys-*
+//        et parse les embeds quillDelta, pas le "contenu").
+//
+//        Cible UNIQUEMENT le pavé DESTINATAIRE (zones "sys-adresse-*").
+//        L'EXPÉDITEUR (conteneur ZonePersonnalisation, hors zonesTexte) n'est
+//        jamais lu.
+//
+// Paramètre : pJson (chaîne) — JsonDesignerData du document/enveloppe (wrapper
+//             .data géré).
+// Retour    : tableau de chaînes — noms techniques nets (sans @), dédupliqués
+//             (ex. "Societe", "Civilite", "Nom", ...). Prêts pour ResoutCle.
+//             Les champs SYS (Sequentiel...) éventuels et les hors-base sont
+//             écartés en aval par la résolution de l'audit.
+// =============================================================================
+PROCÉDURE CollecteChampsPaveAdresse(pJson est une chaîne)
+
+tabCles		est un tableau de chaînes
+taaVu		est un tableau associatif de booléens
+jDoc		est un JSON
+jData		est un JSON
+bJsonOk		est un booléen	= Vrai
+
+SI pJson <> "" ALORS
+	QUAND EXCEPTION DANS
+		jDoc = pJson
+	FAIRE
+		bJsonOk = Faux
+	FIN
+
+	SI bJsonOk ALORS
+		SI jDoc.data..Existe ALORS
+			jData = jDoc.data
+		SINON
+			jData = jDoc
+		FIN
+
+		// Pavé destinataire : zones texte dont l'id commence par "sys-adresse-",
+		// marqueurs @...@ portés par le champ "contenu" (texte plat).
+		SI jData.zonesTexte..Existe ALORS
+			POUR nZ = 1 _À_ jData.zonesTexte..Occurrence
+				SI EstZonePaveAdresse(jData.zonesTexte[nZ]) ALORS
+					SI jData.zonesTexte[nZ].contenu..Existe ALORS
+						ExtraireMarqueurs(jData.zonesTexte[nZ].contenu)
+					FIN
+				FIN
+			FIN
+		FIN
+	FIN
+FIN
+
+RENVOYER tabCles
+
+
+// ═════════════════════════════════════════════════════════════════════════
+// PROCÉDURES INTERNES (écrivent dans les locaux hôtes tabCles / taaVu)
+// ═════════════════════════════════════════════════════════════════════════
+
+	// ─── Nettoyage d'une clé (retire @, convertit nbsp, trim) ───────────────
+	PROCÉDURE INTERNE NettoieCle(LOCAL pCle est une chaîne)
+		sR est une chaîne = Remplace(pCle, "@", "")
+		sR = Remplace(sR, Caract(160), " ")		// espace insécable -> espace normal
+		sR = SansEspace(sR)
+		RENVOYER sR
+	FIN
+
+	// ─── Ajout d'une clé collectée (nettoyée, non vide, dédupliquée) ────────
+	PROCÉDURE INTERNE AjouteCle(LOCAL pCleRaw est une chaîne)
+		sCle est une chaîne = NettoieCle(pCleRaw)
+		SI sCle <> "" _ET_ taaVu[sCle]..Existe = Faux ALORS
+			taaVu[sCle] = Vrai
+			tabCles.Ajoute(sCle)
+		FIN
+	FIN
+
+	// ─── Zone du pavé adresse DESTINATAIRE ? (id "sys-adresse-*") ────────────
+	PROCÉDURE INTERNE EstZonePaveAdresse(LOCAL jZone est un JSON)
+		sId est une chaîne = ""
+		QUAND EXCEPTION DANS
+			SI jZone.id..Existe ALORS
+				sId = jZone.id
+			FIN
+		FAIRE
+		FIN
+		RENVOYER (Gauche(sId, 12) = "sys-adresse-")
+	FIN
+
+	// ─── Extraction des marqueurs @KEY@ d'un texte ("contenu" du pavé) ──────
+	//   Filtre : un marqueur de champ ne contient pas d'espace interne.
+	//   (Identique à l'extracteur de CollecteChampsInseresDocument.)
+	PROCÉDURE INTERNE ExtraireMarqueurs(LOCAL pTexte est une chaîne)
+		sM		est une chaîne
+		sClean	est une chaîne
+		SI pTexte <> "" ALORS
+			sM = ExtraitChaîneEntre(pTexte, rangPremier, "@", "@")
+			TANTQUE sM <> EOT
+				sClean = NettoieCle(sM)
+				SI sClean <> "" _ET_ Position(sClean, " ") = 0 ALORS
+					AjouteCle(sClean)
+				FIN
+				sM = ExtraitChaîneEntre(pTexte, rangSuivant, "@", "@")
+			FIN
+		FIN
+	FIN

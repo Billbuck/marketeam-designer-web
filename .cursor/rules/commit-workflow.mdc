@@ -1,0 +1,24 @@
+---
+description: Raccourci "Commit" — enchaîner message + commit + push
+alwaysApply: true
+---
+
+# Raccourci « Commit »
+
+Quand l'utilisateur écrit simplement **« Commit »** (ou « Commiter », « fais un commit »),
+exécuter automatiquement les **3 étapes**, sans redemander confirmation :
+
+1. **Rédiger le message de commit** à partir des changements depuis le dernier commit
+   (analyser `git status` / `git diff --cached --stat`, suivre le style des commits récents :
+   `type(scope): résumé` en français, ex. `feat(chantier-2): …`).
+2. **Commiter** tous les changements pertinents (`git add -A` puis `git commit`).
+3. **Pusher** vers le remote de la branche courante (`git push origin <branche>`).
+
+## Notes
+
+- Shell = PowerShell : pas de `&&` ni de heredoc. Lancer les commandes séparément et passer
+  le message multi-paragraphes via plusieurs `-m`.
+- Les fichiers `.txt` WebDev déclenchent souvent un avertissement CRLF inoffensif et peuvent
+  apparaître « modified » sans diff réel (bruit de fin de ligne) — vérifier via
+  `git diff --cached --stat` que le contenu change vraiment.
+- Ne jamais committer de secrets ; ne pas pusher en `--force` sur `main`.
