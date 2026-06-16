@@ -49,11 +49,18 @@ si __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesig
 	fin
 
 	// ─── Fusion des zones utilisateur dans le wrapper ───────────────────
-	// Les zones système (sys-adresse-*) déjà présentes dans le wrapper
-	// sont préservées. On y ajoute les zones du modèle/utilisateur.
+	// Les zones système d'adresse (sys-adresse-*) sont REGÉNÉRÉES fraîches
+	// par ComposerJsonDesignerCreation (filtrées selon la base COURANTE).
+	// On IGNORE donc celles du JSON stocké (périmées : reflètent l'état de
+	// base au dernier enregistrement) — sinon le pavé stocké doublonnerait /
+	// masquerait le pavé frais (bug pavé périmé en modification). Le pavé
+	// FRAIS doit gagner. Les zones NON système (contenu utilisateur) sont
+	// ajoutées normalement.
 	si jsData.zonesTexte..Occurrence > 0 alors
 		pour nInd = 1 _à_ jsData.zonesTexte..Occurrence
-			jsWrapper.data.zonesTexte[jsWrapper.data.zonesTexte..Occurrence + 1] = jsData.zonesTexte[nInd]
+			si Gauche(jsData.zonesTexte[nInd].id, 12) <> "sys-adresse-" alors
+				jsWrapper.data.zonesTexte[jsWrapper.data.zonesTexte..Occurrence + 1] = jsData.zonesTexte[nInd]
+			fin
 		fin
 	fin
 	si jsData.zonesImage..Occurrence > 0 alors

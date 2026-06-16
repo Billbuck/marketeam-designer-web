@@ -214,9 +214,14 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 			jsData = jsDesigner
 		fin
 
+		// Zones système d'adresse (sys-adresse-*) régénérées fraîches par le
+		// wrapper (filtrées sur la base courante) -> on IGNORE les stockées
+		// (périmées). Le pavé FRAIS gagne. Zones non système = ajoutées.
 		si jsData.zonesTexte..Occurrence > 0 alors
 			pour nIndZone = 1 _à_ jsData.zonesTexte..Occurrence
-				jsWrapper.data.zonesTexte[jsWrapper.data.zonesTexte..Occurrence + 1]	= jsData.zonesTexte[nIndZone]
+				si Gauche(jsData.zonesTexte[nIndZone].id, 12) <> "sys-adresse-" alors
+					jsWrapper.data.zonesTexte[jsWrapper.data.zonesTexte..Occurrence + 1]	= jsData.zonesTexte[nIndZone]
+				fin
 			fin
 		fin
 		si jsData.zonesImage..Occurrence > 0 alors

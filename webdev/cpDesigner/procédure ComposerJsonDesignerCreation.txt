@@ -20,6 +20,23 @@ stLoad.champsStandard		= RemplirDesignerChampsStandard(stOperation.IdClient)
 stLoad.typesDisponibles		= RemplirDesignerTypesDisponibles()
 stLoad.Theme					= pTheme
 
+// V3.5 - Détection "tunnel avec base sélectionnée" : on parcourt
+//        stOperation.tabBase et on ne compte QUE les bases non supprimées
+//        (le tableau peut contenir des entrées marquées EstSupprime = Vrai
+//        qu'il faut ignorer — précision donneur d'ordre du 19/05/2026).
+//        Dès qu'on trouve une base active, on sort de la boucle.
+//        Calculé ICI (hissé) car nécessaire DÈS la construction du pavé
+//        adresse destinataire (RemplirDesignerZonesSystemeDocument/Enveloppe,
+//        chantier 2 Facette 1) ; alimente aussi autoriserGestionChamps + la
+//        décision de remplir champsFusion/donneesApercu (ci-dessous).
+bAvecBase	est un booléen	= Faux
+pour tout stBase de stOperation.tabBase
+	si stBase.EstSupprime = Faux alors
+		bAvecBase = Vrai
+		sortir
+	fin
+fin
+
 // =========================================================================
 // BLOCS DOCUMENT (data) - variables selon enveloppe ou document
 // =========================================================================
@@ -46,7 +63,7 @@ si pEstEnveloppe alors
 	// Zones système enveloppe (A.11)
 	// Adresse destinataire + séquentiel toujours
 	// Datamatrix + mention La Poste
-	RemplirDesignerZonesSystemeEnveloppe(stLoad.Document, stOperation.stOperationLettre.IdEnveloppe)
+	RemplirDesignerZonesSystemeEnveloppe(stLoad.Document, stOperation.stOperationLettre.IdEnveloppe, stOperation.taaBaseChamp, bAvecBase)
 
 	// Zones personnalisables Adressage Expéditeur, Logo, Image promotionnelle
 	si stOperation.stOperationLettre.stEnveloppe.EstAdressageExpediteur _ou_ stOperation.stOperationLettre.stEnveloppe.EstAdressageLogo _ou_ stOperation.stOperationLettre.stEnveloppe.EstAdressagePromotion alors
@@ -101,7 +118,7 @@ sinon
 	// Zone adresse destinataire si document porte-adresse (A.12)
 	// Condition : enveloppe à fenêtre ET c'est le document 1 (porte-adresse)
 	si stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai _et_ pIndexDocument = 1
-		RemplirDesignerZonesSystemeDocument(stLoad.Document, stOperation.stOperationLettre.IdEnveloppe)
+		RemplirDesignerZonesSystemeDocument(stLoad.Document, stOperation.stOperationLettre.IdEnveloppe, stOperation.taaBaseChamp, bAvecBase)
 	fin
 
 	// Zone QR Code Interactif système si opération "Cliquez Ici" et 1er document.
@@ -125,22 +142,9 @@ fin
 // BLOCS COMMUNS enveloppe / document
 // =========================================================================
 
-// V3.5 - Détection "tunnel avec base sélectionnée" : on parcourt
-//        stOperation.tabBase et on ne compte QUE les bases non supprimées
-//        (le tableau peut contenir des entrées marquées EstSupprime = Vrai
-//        qu'il faut ignorer — précision donneur d'ordre du 19/05/2026).
-//        Dès qu'on trouve une base active, on sort de la boucle.
-//        Cette détection alimente :
-//        - le booléen autoriserGestionChamps (V3.5, ci-dessous)
-//        - la décision de remplir ou non champsFusion/donneesApercu
-//          quand la fusion est autorisée (bug A1 correctifs L4)
-bAvecBase	est un booléen	= Faux
-pour tout stBase de stOperation.tabBase
-	si stBase.EstSupprime = Faux alors
-		bAvecBase = Vrai
-		sortir
-	fin
-fin
+// Note : bAvecBase est calculé plus haut (hissé pour la construction du pavé
+//        adresse). Il alimente ici la décision champsFusion/donneesApercu et
+//        autoriserGestionChamps (V3.5).
 
 // Champs de fusion et aperçu : pour les documents d'une enveloppe SANS fenêtre,
 // l'atelier n'effectue pas de rapprochement — pas de liaison BDD (ChampsFusionInterdit).

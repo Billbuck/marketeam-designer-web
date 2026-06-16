@@ -27,6 +27,19 @@ jsWrapper = ChaîneVersUTF8(cpDesigner.ComposerJsonDesignerCreation(__stOperatio
 
 si __stOperation.stOperationLettre.stEnveloppe.JsonDesignerData <> "" alors
 	jsDesigner = ChaîneVersUTF8(__stOperation.stOperationLettre.stEnveloppe.JsonDesignerData)
+
+	// Le pavé adresse (sys-adresse-*) est REGÉNÉRÉ frais par le wrapper
+	// (filtré sur la base COURANTE). Le remplacement wholesale ci-dessous
+	// jetterait ce pavé frais au profit du pavé STOCKÉ (périmé). On capture
+	// donc les sys-adresse-* FRAIS du wrapper AVANT remplacement, puis on les
+	// réinjecte APRÈS (le pavé frais gagne ; le stocké périmé est écarté).
+	jsPaveFrais est un JSON = "[]"
+	pour nIndW = 1 _à_ jsWrapper.data.zonesTexte..Occurrence
+		si Gauche(jsWrapper.data.zonesTexte[nIndW].id, 12) = "sys-adresse-" alors
+			jsPaveFrais[jsPaveFrais..Occurrence + 1] = jsWrapper.data.zonesTexte[nIndW]
+		fin
+	fin
+
 	si jsDesigner.data..Existe alors
 		// Wrapper historique (SelectionAdressage) : on ne reprend que son bloc data
 		jsWrapper.data = jsDesigner.data
@@ -34,6 +47,18 @@ si __stOperation.stOperationLettre.stEnveloppe.JsonDesignerData <> "" alors
 		// Data-only (export du Designer après validation)
 		jsWrapper.data = jsDesigner
 	fin
+
+	// Retirer les sys-adresse-* PÉRIMÉS du data stocké, puis réinjecter les FRAIS.
+	jsZonesTexteFusion est un JSON = "[]"
+	pour nIndZ = 1 _à_ jsWrapper.data.zonesTexte..Occurrence
+		si Gauche(jsWrapper.data.zonesTexte[nIndZ].id, 12) <> "sys-adresse-" alors
+			jsZonesTexteFusion[jsZonesTexteFusion..Occurrence + 1] = jsWrapper.data.zonesTexte[nIndZ]
+		fin
+	fin
+	pour nIndF = 1 _à_ jsPaveFrais..Occurrence
+		jsZonesTexteFusion[jsZonesTexteFusion..Occurrence + 1] = jsPaveFrais[nIndF]
+	fin
+	jsWrapper.data.zonesTexte = jsZonesTexteFusion
 fin
 
 gsJsonDesigner = JSONVersChaîne(jsWrapper)

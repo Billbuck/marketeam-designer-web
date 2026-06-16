@@ -6,7 +6,7 @@
 //	stDesignerDocument (stDesignerDocument) : document Designer à remplir
 //	pIdEnveloppe (entier) : ID de l'enveloppe dans ltr_enveloppe
 
-procédure RemplirDesignerZonesSystemeEnveloppe(stDesignerDocument est une structDesignerDocument, pIdEnveloppe est un entier)
+procédure RemplirDesignerZonesSystemeEnveloppe(stDesignerDocument est une structDesignerDocument, pIdEnveloppe est un entier, pTaaBaseChamp est un tableau associatif de structBaseChamp, pBAvecBase est un booléen)
 
 stZoneSystemeTexte		est une structDesignerZoneSystemeTexte
 stZoneSystemeDatamatrix	est une structDesignerZoneSystemeDatamatrix
@@ -58,7 +58,7 @@ stZoneSystemeTexte.AlignementV					= "middle"
 stZoneSystemeTexte.FondTransparent				= Vrai
 stZoneSystemeTexte.BordureEpaisseur				= 0
 stZoneSystemeTexte.BordureStyle					= ""
-stZoneSystemeTexte.Contenu						= "@Societe@" + RC + "@Civilite@ @Nom@ @Prenom@" + RC + "@Adresse1@" + RC + "@Adresse2@" + RC + "@Adresse3@" + RC + "@Adresse4@" + RC + "@CodePostal@ @Ville@" + RC + "@Pays@"
+stZoneSystemeTexte.Contenu						= ConstruireContenuPaveAdresse(pTaaBaseChamp, pBAvecBase)
 stZoneSystemeTexte.Imprimable					= Vrai
 stDesignerDocument.zonesTexte.Ajoute(RemplirDesignerZoneTexteSysteme(stZoneSystemeTexte))
 

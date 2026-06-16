@@ -1,8 +1,8 @@
 # Cahier des charges — Diagnostic de remplissage de la base (Check)
 
 **Chantier 2**
-Version 1.2 — 16/06/2026
-Statut : Lot 1 (moteur + popup) livré et testé ; pavé destinataire inclus à l'audit (Facette 2). Reste : verrou + branchements (Lot 3) et limitation du pavé (Facette 1).
+Version 1.3 — 16/06/2026
+Statut : Lot 1 (moteur + popup) + Facette 2 (audit du pavé) + Facette 1 (pavé limité aux champs de la base, création ET modification) livrés et testés. Reste : verrou + branchements (Lot 3).
 
 > Reformulation du chantier initial. Le besoin de départ (« contrôle des champs
 > QR/code-barres vides ») a été **élargi** par le donneur d'ordre en un
@@ -206,3 +206,16 @@ Même aiguillage par type que le reste du projet :
 - **Pavé adresse Destinataire inclus à l'audit** (Facette 2) via
   `cpDesigner.CollecteChampsPaveAdresse` ; seuls les champs d'adresse présents en
   base remontent ; Expéditeur non concerné — 16/06/2026.
+- **Pavé adresse Destinataire limité aux champs de la base** (Facette 1) via
+  `cpDesigner.ConstruireContenuPaveAdresse` (source unique du template, filtrée par
+  `taaBaseChamp`) — 16/06/2026.
+- **Correctif modification** : le pavé était STOCKÉ dans le JSON et le pavé périmé
+  écrasait/doublait le pavé frais à la réouverture. Corrigé en ignorant les zones
+  `sys-adresse-*` stockées au rechargement (document, modèle, enveloppe) → le pavé
+  FRAIS (régénéré selon la base courante) l'emporte. Création ET modification OK —
+  16/06/2026.
+
+**En attente (hors chantier) :** doublon possible du Datamatrix système
+`sys-affranchissement` (zonesCodeBarres stockées ré-ajoutées au rechargement) —
+même nature que le pavé mais indépendant de la base ; à dédupliquer séparément si
+besoin (ignorer les `sys-*` stockés côté codes-barres).

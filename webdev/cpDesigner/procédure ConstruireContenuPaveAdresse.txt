@@ -1,0 +1,69 @@
+// =============================================================================
+// cpDesigner.ConstruireContenuPaveAdresse
+// Rôle : Construire le CONTENU (texte plat à marqueurs @…@) du pavé adresse
+//        DESTINATAIRE (zone sys-adresse-doc). SOURCE UNIQUE du template
+//        (fin de la duplication entre RemplirDesignerZonesSystemeDocument et
+//        RemplirDesignerZonesSystemeEnveloppe).
+//
+//        - pBAvecBase = Faux  -> template COMPLET (comportement historique).
+//        - pBAvecBase = Vrai  -> ne garder, par ligne, que les marqueurs @X@
+//          dont la colonne standard X est DÉFINIE dans la base (présence
+//          testée par .Champ dans pTaaBaseChamp, même logique que l'audit
+//          Partage.AnalyseRemplissageBase / ResoutCle). Marqueurs présents
+//          joints par UN espace ; ligne vide supprimée ; lignes jointes par RC.
+//
+// Paramètres :
+//	pTaaBaseChamp : colonnes définies de la base (stOperation.taaBaseChamp).
+//	pBAvecBase    : Vrai si au moins une base est chargée.
+// Retour : chaîne (contenu du pavé).
+// =============================================================================
+procédure ConstruireContenuPaveAdresse(pTaaBaseChamp est un tableau associatif de structBaseChamp, pBAvecBase est un booléen) : chaîne
+
+// Sans base : template complet inchangé (source unique).
+si pas pBAvecBase alors
+	renvoyer "@Societe@" + RC + "@Civilite@ @Nom@ @Prenom@" + RC + "@Adresse1@" + RC + "@Adresse2@" + RC + "@Adresse3@" + RC + "@Adresse4@" + RC + "@CodePostal@ @Ville@" + RC + "@Pays@"
+fin
+
+// Avec base : structure lignes -> marqueurs, filtrée par présence en base.
+sContenu est une chaîne = ""
+
+AjouteLignePave(["Societe"])
+AjouteLignePave(["Civilite", "Nom", "Prenom"])
+AjouteLignePave(["Adresse1"])
+AjouteLignePave(["Adresse2"])
+AjouteLignePave(["Adresse3"])
+AjouteLignePave(["Adresse4"])
+AjouteLignePave(["CodePostal", "Ville"])
+AjouteLignePave(["Pays"])
+
+renvoyer sContenu
+
+
+// ═════════════════════════════════════════════════════════════════════════
+// PROCÉDURES INTERNES
+// ═════════════════════════════════════════════════════════════════════════
+
+	// ─── Ajoute une ligne (marqueurs présents en base, joints par 1 espace) ──
+	//   Ligne entièrement vide -> non ajoutée (pas de ligne fantôme).
+	procédure interne AjouteLignePave(LOCAL pTabNoms est un tableau de chaînes)
+		sLigne est une chaîne = ""
+		pour tout sNom de pTabNoms
+			si EstChampPresentPave(sNom) alors
+				sLigne += [" "] + "@" + sNom + "@"
+			fin
+		fin
+		si sLigne <> "" alors
+			sContenu += [RC] + sLigne
+		fin
+	fin
+
+	// ─── Colonne standard présente dans la base ? (par .Champ, EstSupprimé=Faux)
+	//   Cohérent avec ResoutCle de Partage.AnalyseRemplissageBase.
+	procédure interne EstChampPresentPave(LOCAL pNom est une chaîne) : booléen
+		pour tout stCol de pTaaBaseChamp
+			si stCol.EstSupprimé = Faux _et_ stCol.Champ = pNom alors
+				renvoyer Vrai
+			fin
+		fin
+		renvoyer Faux
+	fin

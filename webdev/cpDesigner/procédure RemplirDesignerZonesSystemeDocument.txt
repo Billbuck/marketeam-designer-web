@@ -9,7 +9,7 @@
 
 // 	pDocLargeur : <indiquez ici le rôle de pDocLargeur>
 // 	pDocHauteur : <indiquez ici le rôle de pDocHauteur>
-procédure RemplirDesignerZonesSystemeDocument(stDesignerDocument est une structDesignerDocument,  pIdEnveloppe)
+procédure RemplirDesignerZonesSystemeDocument(stDesignerDocument est une structDesignerDocument,  pIdEnveloppe, pTaaBaseChamp est un tableau associatif de structBaseChamp, pBAvecBase est un booléen)
 
 stZoneSystemeTexte		est une structDesignerZoneSystemeTexte
 stZoneSystemeDatamatrix	est une structDesignerZoneSystemeDatamatrix
@@ -63,7 +63,7 @@ stZoneSystemeTexte.AlignementH			= "left"  	// "left", "center", "right", "justi
 stZoneSystemeTexte.AlignementV			= "middle"	// "top", "middle", "bottom"
 stZoneSystemeTexte.FondTransparent		= Vrai
 stZoneSystemeTexte.BordureEpaisseur		= 0
-stZoneSystemeTexte.Contenu				= "@Societe@" +RC+ "@Civilite@ @Nom@ @Prenom@" +RC+ "@Adresse1@" +RC+ "@Adresse2@" +RC+ "@Adresse3@" +RC+ "@Adresse4@" +RC+ "@CodePostal@ @Ville@" +RC+ "@Pays@"
+stZoneSystemeTexte.Contenu				= ConstruireContenuPaveAdresse(pTaaBaseChamp, pBAvecBase)
 stZoneSystemeTexte.Imprimable			= Vrai
 
 stDesignerDocument.zonesTexte.Ajoute(RemplirDesignerZoneTexteSysteme(stZoneSystemeTexte))
