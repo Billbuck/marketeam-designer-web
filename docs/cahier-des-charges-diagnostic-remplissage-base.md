@@ -1,8 +1,8 @@
 # Cahier des charges — Diagnostic de remplissage de la base (Check)
 
 **Chantier 2**
-Version 1.0 — 15/06/2026
-Statut : fond verrouillé — points techniques à objectiver (prompt d'analyse).
+Version 1.2 — 16/06/2026
+Statut : Lot 1 (moteur + popup) livré et testé ; pavé destinataire inclus à l'audit (Facette 2). Reste : verrou + branchements (Lot 3) et limitation du pavé (Facette 1).
 
 > Reformulation du chantier initial. Le besoin de départ (« contrôle des champs
 > QR/code-barres vides ») a été **élargi** par le donneur d'ordre en un
@@ -41,12 +41,20 @@ aucune valeur et ne juge pas ce qui est essentiel.**
 ## 2. Périmètre des champs analysés
 
 **Tous les champs réellement insérés dans l'ENSEMBLE des documents de
-l'opération** (pas tous les champs de la base, pas un seul document).
+l'opération**, **ainsi que les champs du pavé adresse Destinataire** (pas tous les
+champs de la base, pas un seul document).
 
-- Source : `cpDesigner.CollecteChampsInseresDocument` (collecte déjà les champs
-  insérés, QR/code-barres compris), à **agréger sur tous les documents** (le mode
-  « tous documents » existe déjà : `VerifieConcordanceBaseDesigner(stOperation, 0)`).
-- Un champ utilisé dans plusieurs documents = compté une fois.
+- Source champs insérés : `cpDesigner.CollecteChampsInseresDocument` (collecte les
+  champs insérés, QR/code-barres compris), à **agréger sur tous les documents** (le
+  mode « tous documents » existe déjà : `VerifieConcordanceBaseDesigner(stOperation, 0)`).
+- Source pavé destinataire : `cpDesigner.CollecteChampsPaveAdresse` (extrait les
+  marqueurs `@…@` du `contenu` des zones système `sys-adresse-*`, document **et**
+  enveloppe), **fusionnée** avec les champs insérés avant déduplication. Le pavé
+  porte ses champs en texte plat et est exclu de la collecte d'embeds, d'où cette
+  extraction dédiée. L'**Expéditeur** (conteneur distinct) n'est jamais inclus.
+- Un champ utilisé dans plusieurs documents / aussi dans le pavé = compté une fois.
+- Les champs d'adresse **non définis dans la base** s'écartent d'eux-mêmes (non
+  résolvables par `ResoutCle`) → l'audit ne montre que les champs réellement présents.
 
 ---
 
@@ -68,11 +76,27 @@ Pour chaque champ utilisé, le diagnostic fournit :
 Même aiguillage par type que le reste du projet :
 
 - **Texte** (TXT, EML, URL, CDP, ALG, TEL, SMS…) → **longueur** (nb de caractères)
-  min/max. Repère une anomalie de taille (ex. un prénom à 180 caractères).
-- **Numérique** (ENT, DEC, MON) → **valeur** min/max. Repère un montant aberrant.
-- **Date** (DAT) → **valeur** min/max. Repère une date hors plage (ex. 1850).
-- **Coordonnée** (COO), **Heure** (TIM), **Image** (IMG) → à trancher au cas par
-  cas (a priori longueur ou non pertinent — à objectiver).
+  min/max **+ la VALEUR échantillon correspondante** (la valeur la plus courte et
+  la plus longue), affichée **entière** (jamais tronquée). Repère une anomalie de
+  taille en **montrant** le pavé (ex. un prénom à 180 caractères).
+  Affichage : `Min=18 «12 rue des Lilas» · Max=23 «145 avenue du Général Leclerc»`.
+- **Numérique** (ENT, DEC, MON) → **valeur** min/max, **formatée** via
+  `Partage.FormateValeurSortie` (`1 250`, `5 879,20`, `4 852,35 €`). Repère un
+  montant aberrant.
+- **Date** (DAT) → **valeur** min/max, affichée **JJ/MM/AAAA**. Repère une date
+  hors plage (ex. 1850).
+- **Coordonnée** (COO) → **valeur** min/max (coordonnée). **Heure** (TIM) →
+  **valeur** (HH:MM). **Image** (IMG) → **longueur**.
+
+### 3.1bis Séparation données / présentation
+
+- Le **moteur** (`AnalyseRemplissageBase`) renvoie les données **BRUTES** :
+  longueurs, valeurs échantillons (texte), valeurs min/max (numérique/date/COO).
+- Une **couche de formatage partagée** (réutilisée par le dump de test **ET** la
+  popup du Lot 2) produit l'**affichage par type** : `FormateValeurSortie` pour
+  les numériques, `JJ/MM/AAAA` pour les dates, `longueur «valeur»` pour le texte
+  (sans troncature). On ne réécrit pas de logique de formatage : on réutilise le
+  chantier 1.
 
 ### 3.2 Définition de « vide » (taux de remplissage)
 
@@ -175,3 +199,10 @@ Même aiguillage par type que le reste du projet :
 - **Double entrée** : tunnel (bouton Check) + dashboard — 15/06/2026.
 - **Modèle de données** (rappel) : `clt_base*` (source) **injecté dans** `dos_base*`
   (copie de travail), jamais l'inverse.
+- **Texte : valeur échantillon** affichée à côté de la longueur (la plus courte /
+  la plus longue), **non tronquée** — 15/06/2026.
+- **Formatage des résultats par type** : réutilise `FormateValeurSortie` pour les
+  numériques ; dates en `JJ/MM/AAAA` — 15/06/2026.
+- **Pavé adresse Destinataire inclus à l'audit** (Facette 2) via
+  `cpDesigner.CollecteChampsPaveAdresse` ; seuls les champs d'adresse présents en
+  base remontent ; Expéditeur non concerné — 16/06/2026.
