@@ -1,0 +1,149 @@
+// -----------------------------------------------------------------------------
+// cpDesigner.RemplirDesignerZonesSystemeEnveloppe()
+// Rôle : Générer les zones système sur l'enveloppe pour la pré-version BAT
+//        Même logique que RemplirDesignerZonesSystemeDocument
+// Paramètres :
+//	stDesignerDocument (stDesignerDocument) : document Designer à remplir
+//	pIdEnveloppe (entier) : ID de l'enveloppe dans ltr_enveloppe
+
+procédure RemplirDesignerZonesSystemeEnveloppe(stDesignerDocument est une structDesignerDocument, pIdEnveloppe est un entier)
+
+stZoneSystemeTexte		est une structDesignerZoneSystemeTexte
+stZoneSystemeDatamatrix	est une structDesignerZoneSystemeDatamatrix
+
+// =========================================================================
+// LECTURE ENVELOPPE EN BDD
+// =========================================================================
+si pas ltr_enveloppe.LitRecherchePremier(IdEnveloppe, pIdEnveloppe) alors
+	retour
+fin
+
+
+si ltr_enveloppe.NbrFenetre = 0 alors
+	// =========================================================================
+	// ZONE 1 : CONTOUR FENÊTRE (sys-adresse-contour)
+	// =========================================================================
+	VariableRAZ(stZoneSystemeTexte)
+	stZoneSystemeTexte.Id							= "sys-adresse-contour"
+	stZoneSystemeTexte.Page							= 1
+	stZoneSystemeTexte.Nom							= ""
+	stZoneSystemeTexte.PosX							= ltr_enveloppe.ZoneFenetreX
+	stZoneSystemeTexte.PosY							= ltr_enveloppe.ZoneFenetreY
+	stZoneSystemeTexte.Largeur						= ltr_enveloppe.ZoneFenetreLargeur
+	stZoneSystemeTexte.Hauteur						= ltr_enveloppe.ZoneFenetreHauteur
+	stZoneSystemeTexte.FondTransparent				= Faux
+	stZoneSystemeTexte.BordureEpaisseur				= 1
+	stZoneSystemeTexte.BordureStyle					= "dashed"
+	stZoneSystemeTexte.Imprimable					= Vrai
+	stDesignerDocument.zonesTexte.Ajoute(RemplirDesignerZoneTexteSysteme(stZoneSystemeTexte))
+fin
+
+
+
+// =========================================================================
+// ZONE 2 : ADRESSE DESTINATAIRE (sys-adresse-doc)
+// =========================================================================
+VariableRAZ(stZoneSystemeTexte)
+stZoneSystemeTexte.Id							= "sys-adresse-doc"
+stZoneSystemeTexte.Page							= 1
+stZoneSystemeTexte.Nom							= "Adresse destinataire"
+stZoneSystemeTexte.PosX							= ltr_enveloppe.ZoneAdresseX
+stZoneSystemeTexte.PosY							= ltr_enveloppe.ZoneAdresseY
+stZoneSystemeTexte.Largeur						= ltr_enveloppe.ZoneAdresseLargeur
+stZoneSystemeTexte.Hauteur						= ltr_enveloppe.ZoneAdresseHauteur
+stZoneSystemeTexte.Police						= "Verdana"
+stZoneSystemeTexte.TaillePt						= 10
+stZoneSystemeTexte.AlignementH					= "left"
+stZoneSystemeTexte.AlignementV					= "middle"
+stZoneSystemeTexte.FondTransparent				= Vrai
+stZoneSystemeTexte.BordureEpaisseur				= 0
+stZoneSystemeTexte.BordureStyle					= ""
+stZoneSystemeTexte.Contenu						= "@Societe@" + RC + "@Civilite@ @Nom@ @Prenom@" + RC + "@Adresse1@" + RC + "@Adresse2@" + RC + "@Adresse3@" + RC + "@Adresse4@" + RC + "@CodePostal@ @Ville@" + RC + "@Pays@"
+stZoneSystemeTexte.Imprimable					= Vrai
+stDesignerDocument.zonesTexte.Ajoute(RemplirDesignerZoneTexteSysteme(stZoneSystemeTexte))
+
+// =========================================================================
+// ZONE 3 : SÉQUENTIEL (sys-adresse-sequentiel)
+// =========================================================================
+VariableRAZ(stZoneSystemeTexte)
+stZoneSystemeTexte.Id								= "sys-adresse-sequentiel"
+stZoneSystemeTexte.Page								= 1
+stZoneSystemeTexte.Nom								= "Séquentiel"
+stZoneSystemeTexte.PosX								= ltr_enveloppe.ZoneSequentielX
+stZoneSystemeTexte.PosY								= ltr_enveloppe.ZoneSequentielY
+stZoneSystemeTexte.Largeur							= ltr_enveloppe.ZoneSequentielLargeur
+stZoneSystemeTexte.Hauteur							= ltr_enveloppe.ZoneSequentielHauteur
+stZoneSystemeTexte.Police							= "Verdana"
+stZoneSystemeTexte.TaillePt						= 6
+stZoneSystemeTexte.AlignementH					= "left"
+stZoneSystemeTexte.AlignementV					= "middle"
+stZoneSystemeTexte.FondTransparent				= Vrai
+stZoneSystemeTexte.BordureEpaisseur				= 0
+stZoneSystemeTexte.BordureStyle					= ""
+stZoneSystemeTexte.Contenu							= "@Sequentiel@"
+stZoneSystemeTexte.Imprimable						= Vrai
+stDesignerDocument.zonesTexte.Ajoute(RemplirDesignerZoneTexteSysteme(stZoneSystemeTexte))
+
+// =========================================================================
+// ZONE 4 : DÉPÔT (sys-adresse-depot)
+// =========================================================================
+VariableRAZ(stZoneSystemeTexte)
+stZoneSystemeTexte.Id								= "sys-adresse-depot"
+stZoneSystemeTexte.Page								= 1
+stZoneSystemeTexte.Nom								= "Dépôt"
+stZoneSystemeTexte.PosX								= ltr_enveloppe.ZoneDepotX
+stZoneSystemeTexte.PosY								= ltr_enveloppe.ZoneDepotY
+stZoneSystemeTexte.Largeur							= ltr_enveloppe.ZoneDepotLargeur
+stZoneSystemeTexte.Hauteur							= ltr_enveloppe.ZoneDepotHauteur
+stZoneSystemeTexte.Police							= "Montserrat"
+stZoneSystemeTexte.TaillePt						= 7
+stZoneSystemeTexte.AlignementH					= "left"
+stZoneSystemeTexte.AlignementV					= "middle"
+stZoneSystemeTexte.FondTransparent				= Vrai
+stZoneSystemeTexte.BordureEpaisseur				= 0
+stZoneSystemeTexte.BordureStyle					= ""
+stZoneSystemeTexte.Contenu							= "SD : 86900000000001Q"
+stZoneSystemeTexte.Imprimable						= Vrai
+stDesignerDocument.zonesTexte.Ajoute(RemplirDesignerZoneTexteSysteme(stZoneSystemeTexte))
+
+// =========================================================================
+// ZONE 5 : MENTION LA POSTE (sys-adresse-mention)
+// =========================================================================
+VariableRAZ(stZoneSystemeTexte)
+stZoneSystemeTexte.Id								= "sys-adresse-mention"
+stZoneSystemeTexte.Page								= 1
+stZoneSystemeTexte.Nom								= "Mention"
+stZoneSystemeTexte.PosX								= ltr_enveloppe.ZoneMentionX
+stZoneSystemeTexte.PosY								= ltr_enveloppe.ZoneMentionY
+stZoneSystemeTexte.Largeur							= ltr_enveloppe.ZoneMentionLargeur
+stZoneSystemeTexte.Hauteur							= ltr_enveloppe.ZoneMentionHauteur
+stZoneSystemeTexte.Police							= "Montserrat"
+stZoneSystemeTexte.TaillePt						= 9
+stZoneSystemeTexte.AlignementH					= "left"
+stZoneSystemeTexte.AlignementV					= "middle"
+stZoneSystemeTexte.FondTransparent				= Vrai
+stZoneSystemeTexte.BordureEpaisseur				= 0
+stZoneSystemeTexte.BordureStyle					= ""
+stZoneSystemeTexte.Contenu							= "LA POSTE"
+stZoneSystemeTexte.Imprimable						= Vrai
+stDesignerDocument.zonesTexte.Ajoute(RemplirDesignerZoneTexteSysteme(stZoneSystemeTexte))
+
+// =========================================================================
+// ZONE 6 : AFFRANCHISSEMENT DATAMATRIX (sys-affranchissement)
+// =========================================================================
+si ltr_enveloppe.ZoneDatamatrixLargeur > 0 _et_ ltr_enveloppe.ZoneDatamatrixHauteur > 0 alors
+	VariableRAZ(stZoneSystemeDatamatrix)
+	stZoneSystemeDatamatrix.Id						= "sys-affranchissement"
+	stZoneSystemeDatamatrix.Page					= 1
+	stZoneSystemeDatamatrix.Nom					= "Affranchissement"
+	stZoneSystemeDatamatrix.PosX					= ltr_enveloppe.ZoneDatamatrixX
+	stZoneSystemeDatamatrix.PosY					= ltr_enveloppe.ZoneDatamatrixY
+	stZoneSystemeDatamatrix.Largeur				= ltr_enveloppe.ZoneDatamatrixLargeur
+	stZoneSystemeDatamatrix.Hauteur				= ltr_enveloppe.ZoneDatamatrixHauteur
+	stZoneSystemeDatamatrix.SourceType			= "champ"
+	stZoneSystemeDatamatrix.ChampFusion			= "Timbre"
+	stZoneSystemeDatamatrix.ValeurStatique		= "Affranchissement"
+	stZoneSystemeDatamatrix.Forme					= "rectangle"
+	stZoneSystemeDatamatrix.Imprimable			= Vrai
+	stDesignerDocument.zonesCodeBarres.Ajoute(RemplirDesignerZoneDatamatrixSysteme(stZoneSystemeDatamatrix))
+fin
