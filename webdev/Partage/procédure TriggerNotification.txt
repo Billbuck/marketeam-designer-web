@@ -1,0 +1,65 @@
+
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//TriggerNotification ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+//	pIdDossier : <indiquez ici le rôle de pIdDossier>
+
+
+procédure TriggerNotification()
+
+si H.FonctionTrigger = "HAjoute" _ou_ __bChangementStatut = Vrai alors
+
+	stNotificationEnvoi	est une structNotificationEnvoi
+
+	stNotificationEnvoi.CodeNotification	= "STATUT_" + dos_operation.Statut
+	stNotificationEnvoi.IdClient			= dos_operation.IdClientFacturation
+	stNotificationEnvoi.IdOperation			= dos_operation.IdOperation
+	stNotificationEnvoi.TypeOperation		= dos_operation.TypeOperation
+
+	si dos_operation.IdContact = dos_operation.IdValideur alors
+		stNotificationEnvoi.IdContact	= dos_operation.IdValideur
+		stNotificationEnvoi.Variables	= VariablesOperation(dos_operation.IdOperation, dos_operation.IdValideur)
+		NotificationEnvoi(stNotificationEnvoi)
+	sinon
+		selon dos_operation.Statut
+
+			cas __Statut_Enregistrée__, __Statut_Element_En_Attente__, __Statut_Element_Hors_Delais__, __Statut_Validation_Refusée__
+
+				stNotificationEnvoi.IdContact	= dos_operation.IdContact
+				stNotificationEnvoi.Variables	= VariablesOperation(dos_operation.IdOperation, dos_operation.IdContact)
+				NotificationEnvoi(stNotificationEnvoi)
+
+			cas __Statut_Règlement_En_Attente__, __Statut_Règlement_En_Cours__, __Statut_Règlement_En_Cours__, __Statut_Règlement_Annulé__, __Statut_Règlement_Rejeté__,...
+				__Statut_Règlement_Erreur__, __Statut_Validation_En_Attente__, __Statut_Facturation_En_Attente__,__Statut_Solde_En_Attente__, __Statut_Solde_En_Cours__,...
+				__Statut_Solde_Annulé__, __Statut_Solde_Rejeté__, __Statut_Solde_Erreur__
+
+				stNotificationEnvoi.IdContact	= dos_operation.IdValideur
+				stNotificationEnvoi.Variables	= VariablesOperation(dos_operation.IdOperation, dos_operation.IdValideur)
+				NotificationEnvoi(stNotificationEnvoi)
+
+			cas __Statut_Règlement_Hors_Delais__, __Statut_Validation_Hors_Delais__, __Statut_Prise_En_Charge_En_Attente__, __Statut_Prise_En_Charge__, __Statut_Production_En_Cours__,...
+				__Statut_Bdd_En_Cours__, __Statut_Distribution_En_Attente__, __Statut_Distribution_En_Cours__, __Statut_Distribution_En_Erreur__, __Statut_Appel_En_Cours__,...
+				__Statut_Bdd_Pret__, __Statut_Envoyée__, __Statut_Terminée__, __Statut_Annulée__, __Statut_Référence_En_Attente__, __Statut_Référence_Hors_Delais__
+
+				stNotificationEnvoi.IdContact	= dos_operation.IdContact
+				stNotificationEnvoi.Variables	= VariablesOperation(dos_operation.IdOperation, dos_operation.IdContact)
+				NotificationEnvoi(stNotificationEnvoi)
+
+				stNotificationEnvoi.IdContact	= dos_operation.IdValideur
+				stNotificationEnvoi.Variables	= VariablesOperation(dos_operation.IdOperation, dos_operation.IdValideur)
+				NotificationEnvoi(stNotificationEnvoi)
+		fin
+	fin
+fin
+
+fin:
+__bChangementStatut = Faux

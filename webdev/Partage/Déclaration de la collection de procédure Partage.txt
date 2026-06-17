@@ -1,0 +1,197 @@
+// Pour que toutes les dates et heures par défaut soient vides
+DateHeureParDéfaut("","")
+
+__bChangementStatut 		est un booléens
+
+// Variables Temporaires
+
+__bModeDevCourrierGestion	est un booléen
+__bModeDevRnvp				est un booléen
+__sModePlanetPress			est une chaîne
+
+__taaPrenoms				est un tableau associatif de chaînes
+
+
+//Répertoires du projet
+__sRepMarketeam							est une chaîne
+__sRepEnveloppes						est une chaîne
+__sRepSupports							est une chaîne
+__sRepPrintshop							est une chaîne
+__sRepPlanetPress						est une chaîne
+__sRepEcoutes							est une chaîne	<synchronisé navigateur>
+__sRepEcoutesBackup						est une chaîne	<synchronisé navigateur>
+__sRepSvgs								est une chaîne
+__sRepBdds								est une chaîne
+
+
+//__sRepRacineWebMkt					est une chaîne 		// Répertoire web racine de Marketeam
+//__sRepRacineWebChr					est une chaîne 		// Répertoire web racine de Chronodirect
+
+__sCodeSite								est une chaîne
+
+ePackSupport est une Enumération
+	BaseDeDonnées						= "BDD"
+	Sms									= "SMS"
+	SmsInteractif						= "SMI"
+	SmsNotification						= "SMN"
+	LandingPage							= "ICI"
+	Vms								 	= "VMS"
+	Email								= "EML"
+	Posteva								= "LTR"
+	Smarteva							= "STV"
+	Tracteva							= "TRA"
+	CourrierGestion						= "GST"
+	CallCenter							= "TEL"
+	Utilisateur							= "USR"
+fin
+
+ePackFonction est une Enumération
+	AccesSupport							= "ACCES_SUPPORT"
+	BddHebergement							= "BDD_HEBERGEMENT"
+	SmsPersonnalisation						= "SMS_PERSONNALISATION"
+	SmsReponse								= "SMS_REPONSE"
+	IciExpert								= "ICI_EXPERT"
+	IciPersonnalisation						= "ICI_PERSONNALISATION"
+	PrintModèle								= "PRINT_MODELE"
+	PrintPackage							= "PRINT_PACKAGE"
+	PrintCampagne							= "PRINT_CAMPAGNE"
+	WebService								= "WEBSERVICE"
+	Cadencement								= "CADENCEMENT"
+	FacturationRegroupée					= "FACTURATION_REGROUPE"
+	EnveloppeCouleur						= "ENVELOPPE_COULEUR"
+	AlliageMarketeam						= "ALLIAGE_MARKETEAM"
+	AlliageClient							= "ALLIAGE_CLIENT"
+	DestineoDecouverte						= "DESTINEO_DECOUVERTE"
+	GstAnnexe								= "GST_ANNEXE" 			// Annexe en courrier de gestion
+	TelAboutement							= "TEL_ABOUTEMENT"
+	TelRepondeur							= "TEL_REPONDEUR"
+	TelPersonnalisation						= "TEL_PERSONNALISATION"
+	TelTrancheHoraire						= "TEL_TRANCHE_HORAIRE"	// Personnalisation de l'IA
+	Crm										= "CRM"
+	CallTracking							= "CALL_TRACKING"
+	GoogleAnalytics							= "GOOGLE_ANALYTICS"
+	GestionDesDroits						= "GESTION_DROITS"
+	CouponParticipation						= "COUPON_PARTICIPATION"
+fin
+
+structAdresseFacturation est une Structure
+	IdAdresseFacturation						est un entier
+	Siret 										est une chaîne
+	EstReferenceObligatoire						est un booléen
+	ReferenceLibelle							est une chaîne
+	ReferenceExpressionReguliere				est une chaîne
+	ReferenceExpressionReguliereAide			est une chaîne
+fin
+
+
+__vcUser est composée de
+	NomUser										est une chaîne
+	IdConnexion									est un entier
+	IdContact									est un entier
+	IdClient									est un entier
+	IdMere										est un entier
+	ApiKey 										est une chaîne
+	TokenAccess 								est une chaîne
+	TokenRefresh								est une chaîne
+	TokenExpiration								est une DateHeure
+	stAdresseFacturationEtablissement 			est une structAdresseFacturation
+	stAdresseFacturationCentralisée 			est une structAdresseFacturation
+	stAdresseFacturationPack 					est une structAdresseFacturation
+	IdPackFonction								est un entier
+	Partage										est un booléen // Mère avec fille --> peut partager
+	TypeAbonnementFonction						est une chaîne
+	IdPackPrestation							est un entier
+	TypeAbonnementPrestation					est une chaîne
+	IdClientPack								est un entier
+	EstMere										est un booléen // Pour savoir si le client est mère même si le client est fille d'une grand mère
+
+	AbonnementFonctionDateFin					est une Date
+	AbonnementPrestationDateFin					est une Date
+	AbonnementFonctionStatut					est une chaîne	// Numéro de commande en attente, Règlement en attente
+	AbonnementFonctionRenouvellementStatut		est une chaîne	// Numéro de commande en attente, Règlement en attente
+	AbonnementPrestationStatut					est une chaîne	// Numéro de commande en attente, Règlement en attente
+	AbonnementPrestationRenouvellementStatut	est une chaîne	// Numéro de commande en attente, Règlement en attente
+
+	Societe										est une chaîne
+	Enseigne									est une chaîne
+	Logo										est une chaîne
+	PageAccueil									est une chaîne
+	EstFacturationDetaille						est un booléen
+	EstFacturationRegroupe						est un booléen
+	EstEnCompte									est un booléen
+	EstEnPrelevement							est un booléen
+	EstVirement									est un booléen
+	EstCheque									est un booléen
+	EstAdministrateur							est un booléen
+	EstValidé									est un booléen					// Le compte a été validé
+	EstChronodirect								est un booléen					// Pour identifier les sociétés de Chronodirect afin par exemple de créer des opérations CallCenter permanentes pour nous
+	EstEligibleDestineoDecouverte				est un booléen
+	stCoordonnées								est une StructBaseLigne
+	taaDroit									est un tableau associatif de booléens
+	taaService									est un tableau associatif de booléens
+	taaLimite									est un tableau associatif de structLimite
+	taaPrestation								est un tableau associatif de structPrestation
+	taaFrais									est un tableau associatif de structFrais
+fin
+
+
+__Utilisateur est composée de
+	IdUtilisateur								est un entier
+	Login										est une chaîne
+	Civilite									est une chaîne
+	Nom											est une chaîne
+	Prenom										est une chaîne
+	NomUser										est une chaîne
+	EstAdministrateur							est un booléen
+fin
+
+// A Voir avec Franck selon lui pour amélioration !!!
+
+__rPostscript							est un réel					= 2.83464569	// 1 mm  = 2.83464569 mul
+
+// Répertoires de fonctionnement du site
+
+
+__tabEnveloppe	est un tableau de StructEnveloppe	// Tableau des enveloppes compatibles aves les documents choisis
+
+
+__tabPeriodeDistribution est un tableau de structDateDistribution
+
+
+__taaRnvpQualite	est un tableau associatif de structRnvpQualite
+
+// Variables pour la tache parallèle de traitement des bases sms
+__taaErreurSms		est un tableau associatif de booléens	// 0 pour une erreur, 1 pour un stop sms
+
+
+__tabTrancheHoraire est tableau de Enregistrements de tel_tranche_horaire
+
+// A FAIRE : Terminer le traitement
+enumTypeAdresse est une Enumération
+	AdressePointDeVente		= "PDV"
+	AdresseFacturation		= "FAC"
+	AdresseLivraison		= "LIV"
+fin
+
+// TRIGGER DE STATUT
+
+si pas HDécritTrigger("dos_operation","HAjoute,HModifie","TriggerStatut",hTriggerAvant) alors
+	<compile si TypeConfiguration <> Webservice>
+		Info("Erreur Trigger Statut Opération")
+	<fin>
+	retour
+fin
+
+// TRIGGER DE NOTIFICATION
+
+si pas HDécritTrigger("dos_operation","HAjoute,HModifie","TriggerNotification",hTriggerAprès) alors
+	<compile si TypeConfiguration <> Webservice>
+		Info("Erreur Trigger Statut Notification")
+	<fin>
+	retour
+fin
+
+// ******************************************************************************************************************************************************************
+// ****  NE PAS OUBLIER D'APPELER LA PROCEDURE INIT DE LA COLLECTION DANS LE CODE D'INIT DU PROJET ******************************************************************
+// ******************************************************************************************************************************************************************
+
