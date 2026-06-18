@@ -32,7 +32,8 @@ si H.FonctionTrigger = "HAjoute" _ou_ __bChangementStatut = Vrai alors
 	sinon
 		selon dos_operation.Statut
 
-			cas __Statut_Enregistrée__, __Statut_Element_En_Attente__, __Statut_Element_Hors_Delais__, __Statut_Validation_Refusée__
+			cas __Statut_Enregistrée__, __Statut_Element_En_Attente__, __Statut_Element_Hors_Delais__, __Statut_Validation_Refusée__,...
+				__Statut_Audit_Remplissage_En_Attente__, __Statut_Audit_Remplissage_Hors_Delais__
 
 				stNotificationEnvoi.IdContact	= dos_operation.IdContact
 				stNotificationEnvoi.Variables	= VariablesOperation(dos_operation.IdOperation, dos_operation.IdContact)

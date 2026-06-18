@@ -1,0 +1,70 @@
+BEGIN
+    -- Déclarations de variables
+    DECLARE sCanauxActifs SET('Email','Sms','Push');
+    DECLARE sCanauxParDefaut SET('Email','Sms','Push');
+    DECLARE sCanauxToUse SET('Email','Sms','Push');
+    DECLARE sEmailDestinataire VARCHAR(255);
+    DECLARE sPortable CHAR(20);
+
+    -- Récupérer les canaux actifs
+    SELECT CanauxActives INTO sCanauxActifs
+    FROM clt_contact_notification 
+    WHERE IdContact = pIdContact 
+      AND CodeNotification = pCodeNotification 
+    LIMIT 1;
+
+    -- Si aucune exception, utiliser les canaux par défaut
+    IF sCanauxActifs IS NULL THEN
+        SELECT CanauxParDefaut INTO sCanauxParDefaut 
+        FROM prm_notification_canal 
+        WHERE CodeNotification = pCodeNotification 
+        LIMIT 1;
+        SET sCanauxToUse = sCanauxParDefaut;
+    ELSE
+        SET sCanauxToUse = sCanauxActifs;
+    END IF;
+
+    -- Récupérer l'email principal ou utiliser celui passé en paramètre
+    IF pEmailFacturation IS NOT NULL THEN
+        SET sEmailDestinataire = pEmailFacturation;
+    ELSE
+        SELECT Email INTO sEmailDestinataire 
+        FROM clt_contact 
+        WHERE IdContact = pIdContact 
+        LIMIT 1;
+    END IF;
+
+    -- Récupérer le portable
+    SELECT Portable INTO sPortable 
+    FROM clt_contact 
+    WHERE IdContact = pIdContact 
+    LIMIT 1;
+
+    -- Gestion des emails
+    IF FIND_IN_SET('Email', sCanauxToUse) > 0 AND sEmailDestinataire IS NOT NULL THEN
+        CALL SupprimePrecedentEmailEnvoi(pIdOperation, pIdContact);
+        INSERT INTO email_envoi (IdClient, IdContact, IdOperation, TypeOperation, IdFacture, TypeFacture, IdAbonnement, TypeAbonnement, CodeSite, CodeEmailType, DateHeureDemande, EmailDestinataire, EmailEnCopie, Variable) 
+        VALUES (pIdClient, pIdContact, pIdOperation, pTypeOperation, pIdFacture, pTypeFacture, pIdAbonnement, pTypeAbonnement, 'MKT', pCodeNotification, NOW(), sEmailDestinataire, NULL, pVariables);
+    END IF;
+
+    -- Gestion des SMS
+    IF FIND_IN_SET('Sms', sCanauxToUse) > 0 AND sPortable IS NOT NULL THEN
+        CALL SupprimePrecedentSmsEnvoi(pIdOperation, pIdContact);
+        INSERT INTO sms_envoi (IdClient, IdContact, IdOperation, TypeOperation, IdFacture, TypeFacture, IdAbonnement, TypeAbonnement, CodeSmsType, DateHeureDemande, Portable, Variable) 
+        VALUES (pIdClient, pIdContact, pIdOperation, pTypeOperation, pIdFacture, pTypeFacture, pIdAbonnement, pTypeAbonnement, pCodeNotification, NOW(), sPortable, pVariables);
+    END IF;
+
+    -- Gestion des notifications push
+    IF FIND_IN_SET('Push', sCanauxToUse) > 0 THEN
+        CALL SupprimePrecedentPushEnvoi(pIdOperation, pIdContact);
+        INSERT INTO push_envoi (IdClient, IdContact, IdOperation, TypeOperation, IdFacture, TypeFacture, IdAbonnement, TypeAbonnement, CodePushType, DateHeureDemande, Variable)  
+        VALUES (pIdClient, pIdContact, pIdOperation, pTypeOperation, pIdFacture, pTypeFacture, pIdAbonnement, pTypeAbonnement, pCodeNotification, NOW(), pVariables);
+    END IF;
+
+    -- Nettoyage des exceptions
+    IF (sCanauxToUse = sCanauxParDefaut) THEN
+        DELETE FROM clt_contact_notification 
+        WHERE IdContact = pIdContact 
+          AND CodeNotification = pCodeNotification;
+    END IF;
+END
