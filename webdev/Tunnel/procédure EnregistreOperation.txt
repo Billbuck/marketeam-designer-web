@@ -1,0 +1,31 @@
+procédure EnregistreOperation()
+
+bEstOperationEnregistre est un booléen
+
+
+selon __stOperation.TypeOperation
+
+	cas __OPERATION_SMS__		: bEstOperationEnregistre = AjoutModificationOperationSms(__stOperation)
+	cas __OPERATION_VMS__		: bEstOperationEnregistre = AjoutModificationOperationVms(__stOperation)
+	cas __OPERATION_EMAIL__		: bEstOperationEnregistre = AjoutModificationOperationEmail(__stOperation)
+		
+	cas __OPERATION_COURRIER__ 
+		bEstOperationEnregistre = AjoutModificationOperationCourrier(__stOperation)
+		DéplaceFichierUpload(__stOperation)
+		
+	cas __OPERATION_SMARTEVA__, __OPERATION_TRACTEVA__
+		
+//		SI HLitRecherchePremier(ttb_adrexo_etude,IdEtude,__stOperation.stAdrexoEtude.IdEtude) ALORS
+//			SI ttb_adrexo_etude.DateEtude <> .DateEtude _OU_ ttb_adrexo_etude.Poids <> .Poids _OU_ ttb_adrexo_etude.QteTotale <> .QteTotale ALORS
+//				TâcheParallèleExécute(Tunnel.ModificationEtudeAdrexo,(.IdAdrexoEtude,.IdAdrexoPdv,.RefInterne ,.Poids,.NomEtude, .DateEtude)) 		
+//			FIN
+//		FIN
+		
+		bEstOperationEnregistre = AjoutModificationOperationTract(__stOperation)
+		DéplaceFichierUpload(__stOperation)
+		
+	cas __OPERATION_TEL__ 		: bEstOperationEnregistre = AjoutModificationOperationCallCenter(__stOperation)
+		
+fin
+
+renvoyer bEstOperationEnregistre
