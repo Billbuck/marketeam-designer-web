@@ -1,0 +1,52 @@
+procédure GestionAffichage()
+
+sListeIdBase		est une chaîne
+sWhere				est une chaîne
+nTotalPersonnelle	est un entier
+nTotalPartagée		est un entier
+nTotalMarketeam		est un entier
+
+_sEffetAnimation	= ""
+
+InitZnrBaseSélectionnée()
+InitZnrBasesCommunes()
+
+__stOperation.NbrDestinataire = cpProjet.CalculeNbrDestinataires(__stOperation)
+
+
+// On regarde si il reste des bases de données disponibles
+// On liste les bases de données exploitées
+pour tout stBase de __stOperation.tabBase
+	si stBase.EstSupprime = Faux alors
+		sListeIdBase += [","] + stBase.IdBaseClient
+	fin
+fin
+
+
+si sListeIdBase <> "" alors sWhere	= "AND IdBase NOT IN (" + sListeIdBase + ")"
+
+selon __stOperation.TypeOperation
+	cas __OPERATION_COURRIER__ 		: sWhere += [RC] + "AND NbrAdresse > 0"
+	cas __OPERATION_SMS__				: sWhere += [RC] + "AND NbrSms > 0"
+	cas __OPERATION_EMAIL__				: sWhere += [RC] + "AND NbrEmail > 0"
+	cas __OPERATION_TEL__				: sWhere += [RC] + "AND NbrTel > 0"
+	cas __OPERATION_VMS__				: sWhere += [RC] + "AND NbrSms > 0"
+fin
+
+si znrBaseSélectionnée.Occurrence = 1 alors
+	libTitreBddSélectionnées = "Base de données sélectionnée :"
+sinon
+	libTitreBddSélectionnées = "Bases de données sélectionnées :"
+fin
+
+
+nTotalPersonnelle					= Partage.BibliothequeDisponible(BibliothèquePersonnelle.Valeur,clt_base..Nom,clt_base.IdBase..Nom,sWhere,__stOperation.IdClient, Vrai)
+nTotalPartagée						= Partage.BibliothequeDisponible(BibliothèquePartagée.Valeur,clt_base..Nom,clt_base.IdBase..Nom,sWhere,__stOperation.IdClient, Vrai)
+nTotalMarketeam					= Partage.BibliothequeDisponible(BibliothèqueMarketeam.Valeur,clt_base..Nom,clt_base.IdBase..Nom,sWhere,__stOperation.IdClient, Vrai)
+
+dispBaseDonnées[1].Visible		= ((nTotalPersonnelle + nTotalPartagée + nTotalMarketeam) > 0)
+
+dispBaseDonnées[2]..Visible	= (znrBaseSélectionnée.Occurrence > 0)
+
+TunnelCalculeTarif()
+TunnelAfficheInformationsBandeauDroit()

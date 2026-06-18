@@ -1,0 +1,36 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// InitZnrBasesCommunes ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure InitZnrBasesCommunes()
+
+taaBaseChamp est un tableau associatif de structBaseChamp
+
+taaBaseChamp = CalculeTaaBaseChamp(__stOperation.tabBase, Vrai, Faux)
+
+
+znrChampsConservés.SupprimeTout()
+znrChampsEcartés.SupprimeTout()
+
+pour tout stBaseChamp, sLibelle de taaBaseChamp
+	si stBaseChamp.EstSupprimé = Faux alors
+		znrChampsConservés.AjouteLigne(sLibelle)
+	sinon
+		si stBaseChamp.ColonnesInversées = "" alors
+			znrChampsEcartés.AjouteLigne(sLibelle)
+		sinon
+			znrChampsEcartés.AjouteLigne(sLibelle + " <-> " + stBaseChamp.ColonnesInversées)
+		fin
+	fin
+fin
+
+dispBaseDonnées[3].Visible	= (znrChampsEcartés.Occurrence > 0)
+dispBaseDonnées[4].Visible	= (znrChampsEcartés.Occurrence > 0)

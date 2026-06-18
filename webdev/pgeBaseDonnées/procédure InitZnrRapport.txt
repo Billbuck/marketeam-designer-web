@@ -1,0 +1,106 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// InitZnrRapport ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure InitZnrRapport()
+
+nInd			est un entier
+nNbr			est un entier
+nPos			est un entier
+bContact		est un booléen
+bCivPreNom		est un booléen
+bObligatoire	est un booléen
+taaBaseChamp	est un tableau associatif de structBaseChamp
+
+znrRapport.SupprimeTout()
+
+si __stOperation.TypeOperation dans (__OPERATION_SMS__,__OPERATION_TEL__,__OPERATION_VMS__,__OPERATION_EMAIL__) alors
+	pour tout stBase de __stOperation.tabBase
+		si stBase.EstSupprime = Faux alors
+			nNbr++
+		fin
+	fin
+
+	si nNbr = 0 alors
+		// On supprime tous les champs dans la table tabRapport sauf les colonnes obligatoires (Ordre = 99)
+		pour tout stRapport, nPos de __stOperation.tabRapport DepuisFin
+			si stRapport.EstObligatoire = Faux alors
+				__stOperation.tabRapport.Supprime(nPos)
+			fin
+		fin
+
+		// Ne devrait jamais arriver mais c'est au cas ou !
+		si __stOperation.tabRapport.Occurrence = 0 alors
+			selon __stOperation.TypeOperation
+				cas __OPERATION_SMS__	: __stOperation.tabRapport.Ajoute([__CHAMP_PORTABLE__,"SMS",__CHAMP_TYPE_PORTABLE__,99,Vrai])
+				cas __OPERATION_EMAIL__ : __stOperation.tabRapport.Ajoute([[__CHAMP_EMAIL__,"EMAIL",__CHAMP_TYPE_EMAIL__,99,Vrai]])
+				cas __OPERATION_VMS__ 	: __stOperation.tabRapport.Ajoute([__CHAMP_PORTABLE__,"VMS",__CHAMP_TYPE_PORTABLE__,99,Vrai])
+				cas __OPERATION_TEL__
+					__stOperation.tabRapport.Ajoute([__CHAMP_TEL__,"TÉLÉPHONE",__CHAMP_TYPE_TELEPHONE__,99,Vrai])
+					__stOperation.tabRapport.Ajoute([__CHAMP_PORTABLE__,"SMS",__CHAMP_TYPE_PORTABLE__,99,Vrai])
+				autre cas
+			fin
+		fin
+
+	sinon
+		taaBaseChamp = CalculeTaaBaseChamp(__stOperation.tabBase, Faux, Faux)
+
+		pour tout stRapport de __stOperation.tabRapport
+			selon stRapport.Champ
+				cas __CHAMP_CIVILITE__, __CHAMP_PRENOM__, __CHAMP_NOM__ : bCivPreNom 	= Vrai ; sortir
+				cas __CHAMP_CONTACT__									: bContact		= Vrai ; sortir
+				autre cas
+			fin
+		fin
+
+
+		si taaBaseChamp.Occurrence > 0 alors
+			pour tout stBaseChamp, sLibelle de taaBaseChamp
+				si stBaseChamp.Pointer = nNbr alors
+					bObligatoire							= ChampObligatoire(stBaseChamp.Champ)
+					nInd									= znrRapport.AjouteLigne()
+					znrRapport[nInd].attChamp				= stBaseChamp.Champ
+					znrRapport[nInd].attLibelle				= sLibelle
+					znrRapport[nInd].attType				= stBaseChamp.Type
+					znrRapport[nInd].intRapport[1].Libellé	= sLibelle
+					selon stBaseChamp.Champ
+						cas __CHAMP_CIVILITE__	: znrRapport[nInd].attEtat = (bContact = Vrai) 		? Grisé sinon Actif
+						cas __CHAMP_PRENOM__	: znrRapport[nInd].attEtat = (bContact = Vrai) 		? Grisé sinon Actif
+						cas __CHAMP_NOM__		: znrRapport[nInd].attEtat = (bContact = Vrai) 		? Grisé sinon Actif
+						cas __CHAMP_CONTACT__	: znrRapport[nInd].attEtat = (bCivPreNom = Vrai) 	? Grisé sinon Actif
+						autre cas				: znrRapport[nInd].attEtat = (bObligatoire = Vrai)	? Grisé sinon Actif
+					fin
+					znrRapport[nInd].attValeur				= (bObligatoire = Vrai) _ou_ (__stOperation.tabRapport.Cherche(tcLinéaire,"Champ",stBaseChamp.Champ) > 0)
+				fin
+			fin
+
+			// On supprime les champs dans la table tabRapport qui ne sont plus présents
+			pour tout stRapport, nPos de __stOperation.tabRapport DepuisFin
+				si stRapport.EstObligatoire = Faux _et_ ZoneRépétéeCherche(attChamp,stRapport.Champ,rechercheIdentique) = -1 alors
+					__stOperation.tabRapport.Supprime(nPos)
+				fin
+			fin
+		fin
+	fin
+fin
+
+dispBaseDonnées[5].Visible = (znrRapport.Occurrence > 0)
+
+
+procédure interne ChampObligatoire(pChamp)
+	selon __stOperation.TypeOperation
+		cas __OPERATION_SMS__ 		: renvoyer (pChamp = __CHAMP_PORTABLE__)
+		cas __OPERATION_EMAIL__		: renvoyer (pChamp = __CHAMP_EMAIL__)
+		cas __OPERATION_TEL__		: renvoyer (pChamp dans (__CHAMP_PORTABLE__, __CHAMP_TEL__))
+		cas __OPERATION_VMS__		: renvoyer (pChamp = __CHAMP_PORTABLE__)
+		autre cas 					: renvoyer Faux
+	fin
+fin

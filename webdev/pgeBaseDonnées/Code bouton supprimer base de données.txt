@@ -1,0 +1,16 @@
+// A FAIRE : si gIdDemandeSmartSms > 0 alors gbAuMoinsUnChangementDeFichierEnModification = vrai
+_sEffetAnimation 		= ""
+nInd est un entier
+
+nInd = __stOperation.tabBase.Cherche(tcLinéaire,"IdBaseClient;IdBase;IdFiltre",attIdBaseClient, attIdBase, attIdFiltre)
+
+si nInd > 0 alors
+	si __stOperation.tabBase[nInd].IdBase > 0	alors
+		 __stOperation.tabBase[nInd].EstSupprime = Vrai 	// En modification on marque la base comme supprimée
+	sinon
+		__stOperation.tabBase.Supprime(nInd)
+	fin
+	
+	InitZnrRapport()
+	GestionAffichage()
+fin
