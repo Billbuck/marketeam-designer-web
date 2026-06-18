@@ -1,9 +1,30 @@
+// ─── Pré-requis : concordance base <-> documents ─────────────────────────
+// Si la concordance est mauvaise, inutile de lancer l'audit : on affiche les
+// anomalies et on s'arrête (mêmes vérif/rendu que btnVerificationConcordance).
+stRapport est une structDesignerRapportConcordance = cpDesigner.VerifieConcordanceBaseDesigner(__stOperation, 0)
+
+si pas stRapport.EstConcordant alors
+	sPuceNiveau1	est une chaîne	= "- "
+	sPuceNiveau2	est une chaîne	= ""
+	sPuceNiveau3	est une chaîne	= "- "
+
+	sMessageConcordance est une chaîne = "Corrigez d'abord la concordance des champs avec la base avant de lancer l'audit :"
+	sMessageConcordance += [RC] + cpDesigner.RapportConcordanceVersTexte(stRapport, Vrai, sPuceNiveau1, sPuceNiveau2, sPuceNiveau3)
+	sMessageConcordance = sMessageConcordance.Remplace(TAB, ESP + ESP + ESP)
+
+	PopupAfficheMessage(sMessageConcordance, "Vérification de concordance", __stOperation.TypeOperation, __TOAST_ANNULATION__, 10 s)
+	RETOUR
+fin
+
+
 stRemplissage est une structRemplissageBase
 
 stRemplissage = Partage.AnalyseRemplissageBase(__stOperation)
 
 si stRemplissage.BaseChargee _et_ stRemplissage.tabChamps..Occurrence > 0 alors
-	si PageAfficheDialogue(popupLtrControleBase,stRemplissage) alors
-		btnAuditRemplissageChamps.Visible = Faux
-	fin
+	// Dialogue modal bloquant : Valider pose le marqueur, Annuler non.
+	PageAfficheDialogue(popupLtrControleBase,stRemplissage)
+	// Source UNIQUE de la règle de visibilité (sur Valider -> marqueur posé ->
+	// Visible=Faux ; sur Annuler -> marqueur vide -> Visible=Vrai).
+	RafraichitVisibiliteAudit()
 fin

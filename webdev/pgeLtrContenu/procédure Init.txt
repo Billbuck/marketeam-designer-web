@@ -5,4 +5,5 @@ celLtrConteneur.Plan = 1
 
 InitEnveloppe()
 InitZnrContenu()
+RafraichitVisibiliteAudit()
 

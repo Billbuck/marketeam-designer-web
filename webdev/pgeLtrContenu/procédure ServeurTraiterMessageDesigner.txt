@@ -83,9 +83,6 @@ selon vMessage.action
 					//              ENVELOPPE             //
 					// -----------------------------------//
 					__stOperation.stOperationLettre.stEnveloppe.JsonDesignerData		= sJsonData
-					// Validation Designer (enveloppe) -> l'audit de remplissage devient
-					// périmé : on vide le marqueur (mémoire seule, persisté au prochain
-					// EnregistreOperation -> recalcul statut TriggerStatut).
 					si cpDesigner.GenererPsmdServeurEnveloppe(__stOperation.stOperationLettre.stEnveloppe, __stOperation.CodeTemp) alors
 						GenererBatEnveloppeDepuisPsmd(__stOperation.stOperationLettre.stEnveloppe, __stOperation.CodeTemp)
 						cpDesigner.TraiterManifestImagesDesigner(__stOperation.stOperationLettre.stEnveloppe.CheminPsmdEnveloppe, __stOperation.stOperationLettre.stEnveloppe.JsonDesignerData)
@@ -144,6 +141,7 @@ selon vMessage.action
 						InitTitreOperation()
 						InitProgressBar()
 						InitZnrContenu()
+						RafraichitVisibiliteAudit()
 
 						//						// ─── Verrouiller les combos + afficher btnSupprimer + cacher btnImporter ─
 						//						znrLtrContenu[_nIndDesignerEnCours].cboSource.Etat															= Inactif

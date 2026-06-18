@@ -1,0 +1,31 @@
+// Résumé : Pose la visibilité du bouton global btnAuditRemplissageChamps.
+//          LÉGER (parcours tabBase + tabStDocument + test du marqueur) — NE
+//          PAS appeler AnalyseRemplissageBase.
+//
+// Visible si : base présente ET au moins un document personnalisé ET enveloppe
+//              à fenêtre ET audit non fait (marqueur DateHeureCheckRemplissage
+//              vide). Enveloppe à fenêtre = même périmètre/source que le verrou
+//              de validation (stOperation.stOperationLettre.EstEnveloppeFenetre).
+//
+// À rejouer partout où l'une de ces 3 conditions peut changer (Init, validation
+// Designer document/enveloppe, suppression de personnalisation, retour audit).
+procédure RafraichitVisibiliteAudit()
+
+bBasePresente	est un booléen	= Faux
+bDocPerso		est un booléen	= Faux
+
+pour tout stBase de __stOperation.tabBase
+	si stBase.EstSupprime = Faux alors
+		bBasePresente = Vrai
+		sortir
+	fin
+fin
+
+pour tout stDocument de __stOperation.stOperationLettre.tabStDocument
+	si stDocument.EstPersonnaliseDesigner = Vrai alors
+		bDocPerso = Vrai
+		sortir
+	fin
+fin
+
+btnAuditRemplissageChamps..Visible = (bBasePresente _et_ bDocPerso _et_ __stOperation.stOperationLettre.EstEnveloppeFenetre _et_ pas DateHeureValide(__stOperation.DateHeureCheckRemplissage))

@@ -4,6 +4,7 @@ si PageAfficheDialogue(pgeOuiNon, ...
 	si SupprimerPersonnalisation(attNumDocument) alors
 
 		InitZnrContenu()
+		RafraichitVisibiliteAudit()
 
 	fin
 fin

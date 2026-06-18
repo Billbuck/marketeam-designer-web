@@ -118,6 +118,16 @@ si stOperation.TypeOperation = __OPERATION_COURRIER__ _et_ bEstBaseOk alors
 		// pAfficheDocument = Vrai : arborescence avec le nom de chaque document.
 		sElementManquant += cpDesigner.RapportConcordanceVersTexte(stRapportConcordance, Vrai, sPuceNiveau2, sPuceNiveau2, sPuceNiveau3)
 	fin
+
+	// ─── Verrou « audit de remplissage » (courrier + enveloppe à fenêtre) ──
+	//   Lecture seule du marqueur (vide = audit non fait) : bloque la
+	//   VALIDATION, pas l'enregistrement. Périmètre = même que le palier de
+	//   statut TriggerStatut (Courrier + base présente + enveloppe à fenêtre).
+	//   Source EstEnveloppeFenetre : flag mémoire de la structure (posé par
+	//   SelectionEnveloppe et rechargé par ChargeStructOperationLettre).
+	si stOperation.stOperationLettre.EstEnveloppeFenetre _et_ pas DateHeureValide(stOperation.DateHeureCheckRemplissage) alors
+		sElementManquant += [RC] + sPuceNiveau1 + "Audit de remplissage non effectué"
+	fin
 fin
 
 
