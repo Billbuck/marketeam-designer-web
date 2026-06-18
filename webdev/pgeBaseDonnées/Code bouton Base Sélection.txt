@@ -1,0 +1,24 @@
+sOption est une chaîne
+
+selon __stOperation.TypeOperation
+	cas __OPERATION_COURRIER__	: sOption = "AND clt_base.NbrAdresse > 0"
+	cas __OPERATION_SMS__ 		: sOption = "AND clt_base.NbrSms > 0"
+	cas __OPERATION_VMS__ 		: sOption = "AND clt_base.NbrSms > 0"
+	cas __OPERATION_TEL__ 		: sOption = "AND clt_base.NbrTel > 0"
+	cas __OPERATION_EMAIL__ 	: sOption = "AND clt_base.NbrEmail > 0"
+	autre cas					: STOP
+fin
+
+popBasesDeDonnées._nIdBaseDonnées	= 0
+popBasesDeDonnées._nIdFiltre		= 0
+popBasesDeDonnées._nTotalFiltre		= 0
+popBasesDeDonnées.saiBaseDonnées	= ""
+popBasesDeDonnées.saiBaseFiltre		= ""
+
+Partage.InitCboBibliothèque(popBasesDeDonnées.cboBibliothèque, clt_base..Nom, clt_base.IdBase..Nom,0,Vrai, Vrai,sOption,__stOperation.IdClient)
+BibliothèqueValeurMemorisée(cboBibliothèque, _sBibliothèque, _nIdMarque)
+dispBase[1].Visible = cboBibliothèque.Occurrence >= 1
+dispBase[3].Visible = Faux
+dispBase[4].Visible = Faux
+InitSaisieAssitéeBaseDeDonnées()
+PopupAffiche(popBasesDeDonnées,popupEpinglée+popupHautCentre+popupAnnulable)

@@ -10,7 +10,7 @@ si nInd > 0 alors
 	sinon
 		__stOperation.tabBase.Supprime(nInd)
 	fin
-	
+	__stOperation.DateHeureCheckRemplissage = ""
 	InitZnrRapport()
 	GestionAffichage()
 fin

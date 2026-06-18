@@ -82,7 +82,10 @@ selon vMessage.action
 					// -----------------------------------//
 					//              ENVELOPPE             //
 					// -----------------------------------//
-					__stOperation.stOperationLettre.stEnveloppe.JsonDesignerData = sJsonData
+					__stOperation.stOperationLettre.stEnveloppe.JsonDesignerData		= sJsonData
+					// Validation Designer (enveloppe) -> l'audit de remplissage devient
+					// périmé : on vide le marqueur (mémoire seule, persisté au prochain
+					// EnregistreOperation -> recalcul statut TriggerStatut).
 					si cpDesigner.GenererPsmdServeurEnveloppe(__stOperation.stOperationLettre.stEnveloppe, __stOperation.CodeTemp) alors
 						GenererBatEnveloppeDepuisPsmd(__stOperation.stOperationLettre.stEnveloppe, __stOperation.CodeTemp)
 						cpDesigner.TraiterManifestImagesDesigner(__stOperation.stOperationLettre.stEnveloppe.CheminPsmdEnveloppe, __stOperation.stOperationLettre.stEnveloppe.JsonDesignerData)
@@ -117,6 +120,11 @@ selon vMessage.action
 						__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].EstPersonnaliseDesigner	= Vrai
 						__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].DateHeureDesigner			= DateHeureSys()
 
+						// Validation Designer (document) -> l'audit de remplissage devient
+						// périmé : on vide le marqueur (mémoire seule, persisté au prochain
+						// EnregistreOperation -> recalcul statut TriggerStatut).
+						__stOperation.DateHeureCheckRemplissage = ""
+
 						// ─── Détection QR Code Interactif (= opération "Cliquez Ici") ─
 						// Flag par document + propagation au flag global de l'opération.
 						__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].EstCliquezIci				= cpDesigner.JsonContientQrInteractif(sJsonData)
@@ -137,12 +145,12 @@ selon vMessage.action
 						InitProgressBar()
 						InitZnrContenu()
 
-//						// ─── Verrouiller les combos + afficher btnSupprimer + cacher btnImporter ─
-//						znrLtrContenu[_nIndDesignerEnCours].cboSource.Etat															= Inactif
-//						znrLtrContenu[_nIndDesignerEnCours].cboBibliothèque.Etat													= Inactif
-//						znrLtrContenu[_nIndDesignerEnCours].cboSelection.Etat														= Inactif
-//						znrLtrContenu[_nIndDesignerEnCours].btnPersonnalisationSupprimer..Visible							= Vrai
-//						znrLtrContenu[_nIndDesignerEnCours].btnDocumentImporter..Visible										= Faux
+						//						// ─── Verrouiller les combos + afficher btnSupprimer + cacher btnImporter ─
+						//						znrLtrContenu[_nIndDesignerEnCours].cboSource.Etat															= Inactif
+						//						znrLtrContenu[_nIndDesignerEnCours].cboBibliothèque.Etat													= Inactif
+						//						znrLtrContenu[_nIndDesignerEnCours].cboSelection.Etat														= Inactif
+						//						znrLtrContenu[_nIndDesignerEnCours].btnPersonnalisationSupprimer..Visible							= Vrai
+						//						znrLtrContenu[_nIndDesignerEnCours].btnDocumentImporter..Visible										= Faux
 
 					sinon
 						PopupAfficheMessage(

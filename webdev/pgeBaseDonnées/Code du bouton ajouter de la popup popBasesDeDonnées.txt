@@ -1,0 +1,7 @@
+//SI AjouteBaseDeDonnées(cboBaseDeDonnées.ValeurMémorisée, cboBaseFiltre.ValeurMémorisée) ALORS
+si AjouteBaseDeDonnées(_nIdBaseDonnées, _nIdFiltre) alors
+	__stOperation.DateHeureCheckRemplissage = ""
+	PointageStopPub(_nIdBaseDonnées)
+	InitZnrRapport()
+	GestionAffichage()
+fin

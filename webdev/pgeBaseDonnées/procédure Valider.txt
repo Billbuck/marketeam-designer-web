@@ -39,6 +39,7 @@ __stOperation.EstBaseEnAttente 						= bEstBaseEnAttente
 // Calcule des champs commun à toutes les bases de données
 __stOperation.taaBaseChamp  = CalculeTaaBaseChamp(__stOperation.tabBase, Faux, Faux)
 
+
 // Calcule des champs commun à toutes les bases de données
 __tabEchantillonBaseLigne	= Partage.ChargeEchantillonTabBaseLigne(__stOperation)
 
