@@ -1,0 +1,1625 @@
+
+constante
+
+// WEBSERVICE
+	__API_CLE_SECRET_KEY__		= "JaimeMesFillesEdenNoaLeny"
+
+	__API_ETAT_ACTIF__			= "actif"
+	__API_ETAT_REVOQUE__		= "révoqué"
+	__API_ETAT_EXPIRE__			= "expiré"
+
+	__TOKEN_ETAT_ACTIF__ 		= "actif"
+	__TOKEN_ETAT_RENOUVELABLE__ = "renouvelable"
+	__TOKEN_ETAT_EXPIRÉ__ 		= "expiré"
+	__TOKEN_ETAT_SUPPRIMÉ__ 	= "supprimé"
+	__TOKEN_ETAT_RÉVOQUÉ__ 		= "révoqué"
+	__TOKEN_ETAT_INEXISTANT__ 	= "inexistant"
+
+//	__DROIT_BDD_CREATION__										= "BDD_CREATION"
+//	__DROIT_BDD_CREATION_TIERS__								= "BDD_CREATION_TIERS"
+//	__DROIT_OPE_CREATION__										= "OPE_CREATION"
+//	__DROIT_OPE_CREATION_TIERS__								= "OPE_CREATION_TIERS"
+//	__DROIT_OPE_MODIF__											= "OPE_MODIF"
+//	__DROIT_OPE_VALIDE__										= "OPE_VALIDE"
+//	__DROIT_OPE_VALIDE_TIERS__									= "OPE_VALIDE_TIERS"
+//	__DROIT_OPE_PAYER__											= "OPE_PAYER"
+//	__DROIT_OPE_PAYER_TIERS__									= "OPE_PAYER_TIERS"
+//	__DROIT_OPE_VISU__											= "OPE_VISU"
+//	__DROIT_PRM_COUPON__										= "PRM_COUPON"
+
+	__CHAMP_CODE_REFERENCE__			= "REF"
+	__CHAMP_CODE_SOCIETE__				= "SOC"
+	__CHAMP_CODE_ENSEIGNE__				= "ENS"
+	__CHAMP_CODE_CONTACT__				= "CTC"
+	__CHAMP_CODE_CIVILITE__				= "CIV"
+	__CHAMP_CODE_NOM__					= "NOM"
+	__CHAMP_CODE_PRENOM__				= "PRN"
+	__CHAMP_CODE_ADRESSE1__				= "AD1"
+	__CHAMP_CODE_ADRESSE2__				= "AD2"
+	__CHAMP_CODE_ADRESSE3__				= "AD3"
+	__CHAMP_CODE_ADRESSE4__				= "AD4"
+	__CHAMP_CODE_CDP_VILLE__			= "CDV"
+	__CHAMP_CODE_CODE_POSTAL__			= "CDP"
+	__CHAMP_CODE_VILLE__				= "VIL"
+	__CHAMP_CODE_PAYS__					= "PYS"
+	__CHAMP_CODE_TEL__					= "TEL"
+	__CHAMP_CODE_PORTABLE__				= "PTB"
+	__CHAMP_CODE_EMAIL__				= "EML"
+	__CHAMP_CODE_ALLIAGE__				= "ALG"
+
+	__CHAMP_CODE_NUMERO_VOIE__			= "VNU"
+	__CHAMP_CODE_COMPLEMENT_NUMERO__	= "VCN"
+	__CHAMP_CODE_TYPE_VOIE__			= "VTP"
+	__CHAMP_CODE_NOM_VOIE__				= "VNM"
+
+	__WBS_BDD_STATUT_PRET__				= "10"
+	__WBS_BDD_STATUT_EN_COURS__			= "30"
+	__WBS_BDD_STATUT_TERMINE__			= "90"
+
+	__WBS_BDD_TYPE_IMPORT__				= "IMP" // Importation d'une base de données
+	__WBS_BDD_TYPE_FILTRE__				= "FTR" // Création d'un filtre
+
+	#DROIT_AFFECTER_RÉSERVE_ARGENT								= "RSV_AFFECTER"
+	#DROIT_CREDITER_RÉSERVE_ARGENT								= "RSV_CREDITER"
+	#DROIT_AJOUTER_UN_MEDIA										= "BIB_MEDIA"
+	#DROIT_AJOUTER_UN_MODÈLE									= "BIB_MODELE"
+	#DROIT_AJOUTER_UN_PACKAGE									= "PCG_CREATION"
+	#DROIT_AJOUTER_UNE_BASE_DE_DONNÉES							= "BDD_IMPORTER"
+	#DROIT_AJOUTER_UNE_CAMPAGNE									= "CMP_CREATION"
+	#DROIT_CHANGER_DE_PACK										= "PCK_MODIF"
+	#DROIT_CRÉDITER_LA_RÉSERVE_ARGENT							= "RSV_CREDITER"
+	#DROIT_CRÉER_UNE_OPÉRATION									= "OPE_CREATION"
+	#DROIT_CRÉER_UNE_OPÉRATION_POUR_COMPTE_TIERS				= "OPE_CREATION_TIERS"
+	#DROIT_ACCÈS_SMS_DE_NOTIFICATION							= "SMN_DROIT"
+	#DROIT_ACCÈS_CALL_CENTER									= "TEL_DROIT"
+	#DROIT_ACCÈS_COURRIER										= "LTR_DROIT"
+	#DROIT_ACCÈS_COURRIER_DE_GESTION							= "GST_DROIT"
+	#DROIT_ACCÈS_EMAIL											= "EML_DROIT"
+	#DROIT_ACCÈS_SMS											= "SMS_DROIT"
+	#DROIT_ACCÈS_TRACT											= "TTB_DROIT"
+	#DROIT_ACCÈS_VMS											= "VMS_DROIT"
+	#DROIT_GESTION_DES_COUPONS									= "PRM_COUPON"
+	#DROIT_PAYER_UNE_OPÉRATION									= "OPE_PAYER"
+	#DROIT_PAYER_UNE_OPÉRATION_POUR_COMPTE_TIERS				= "OPE_PAYER_TIERS"
+	#DROIT_VALIDER_UNE_OPÉRATION								= "OPE_VALIDE"
+	#DROIT_VALIDER_UNE_OPÉRATION_POUR_COMPTE_TIERS				= "OPE_VALIDE_TIERS"
+
+
+	__CATEGORIE_APPELER__										= "CALL"
+	__CATEGORIE_FAIRE__											= "TODO"
+	__CATEGORIE_ATTENDRE__										= "WAIT"
+	__CATEGORIE_RENDEZVOUS__									= "MEET"
+	__CATEGORIE_PROGRAMMER__									= "SKDL"
+
+	__PERIODE_URGENT__											= "2"
+	__PERIODE_JOURNEE__											= "4"
+	__PERIODE_SEMAINE__											= "6"
+	__PERIODE_MOIS__											= "8"
+
+	__TOAST_INFORMATION__										= "INF"
+	__TOAST_VALIDATION__										= "VAL"
+	__TOAST_ANNULATION__										= "ANN"
+
+
+	__Statut_Enregistrée__										= "00"
+	__Statut_Element_En_Attente__								= "05"
+	__Statut_Element_Hors_Delais__								= "07"
+	__Statut_Référence_En_Attente__								= "09"
+	__Statut_Référence_Hors_Delais__							= "11"
+	__Statut_Audit_Remplissage_En_Attente__ 				= "12"
+	__Statut_Audit_Remplissage_Hors_Delais__ 				= "13"
+	__Statut_Règlement_En_Attente__								= "15"
+	__Statut_Règlement_En_Cours__								= "17" // Exemple prélèvement en cours
+	__Statut_Règlement_Annulé__									= "19"
+	__Statut_Règlement_Rejeté__									= "21" // Exemple prélèvement rejeté
+	__Statut_Règlement_Erreur__									= "22" // Exemple prélèvement rejeté
+
+	__Statut_Règlement_Hors_Delais__							= "23"
+
+	__Statut_Validation_En_Attente__							= "25"
+	__Statut_Validation_Hors_Delais__							= "27"
+	__Statut_Validation_Refusée__								= "29"
+	__Statut_Prise_En_Charge_En_Attente__						= "35"
+	__Statut_Prise_En_Charge__									= "40"
+
+	__Statut_Production_En_Cours__								= "45" //(Impression et mise sous enveloppe)
+
+	__Statut_Bdd_En_Cours__										= "48"	// Pour les bases de données (RNVP et BLOCTEL)
+	__Statut_Bdd_Pret__											= "49" // Pour les bases de données RNVP -> Prêt pour analyse
+
+	__Statut_Zecible_Token_Demande__							= "54"	// Demande du Token Zecible
+	__Statut_Zecible_Token_Reçu__								= "55"	// Récupération du Token Zecible
+	__Statut_Zecible_Token_Erreur__								= "56"	// Erreur de récupération du Token Zecible
+
+	__Statut_Zecible_Export_En_Cours__							= "57"	// Récupération de la base de données Zecible
+	__Statut_Zecible_Export_Erreur__							= "58"	// Erreur de récupération de la base de données Zecible
+
+
+	__Statut_Distribution_En_Attente__							= "59"
+	__Statut_Distribution_En_Cours__							= "60" //(diffusion en cours)
+	__Statut_Distribution_En_Erreur__							= "61" //(Erreur de diffusion)
+
+	__Statut_Appel_En_Cours__									= "62"
+
+	__Statut_Envoyée__											= "70"  // diffusion partielle pour le SMS
+	__Statut_Facturation_En_Attente__							= "75"
+
+	__Statut_Solde_En_Attente__									= "85"
+	__Statut_Solde_En_Cours__										= "86" // Exemple prélèvement en cours
+	__Statut_Solde_Annulé__										= "87"
+	__Statut_Solde_Rejeté__										= "88" // Exemple prélèvement rejeté
+	__Statut_Solde_Erreur__										= "89" // Exemple prélèvement rejeté
+
+	__Statut_Terminée__											= "90"
+	__Statut_Annulée__											= "99"
+
+	__STATUT_RNVP_EN_PREPARATION__								= "00"
+	__STATUT_RNVP_EN_ATTENTE__									= "10"
+	__STATUT_RNVP_PRISE_EN_CHARGE__							= "20"
+	__STATUT_RNVP_EN_COURS__									= "50"
+	__STATUT_RNVP_EN_ERREUR__									= "60"
+	__STATUT_RNVP_PRET__										= "70"
+	__STATUT_RNVP_TRAITE__									= "80"
+	__STATUT_RNVP_FACTURE__									= "90"
+
+	__STATUT_ZECIBLE_ENREGISTRE__								= "10"
+	__STATUT_ZECIBLE_REGLEMENT_EN_ATTENTE__						= "20"
+	__STATUT_ZECIBLE_TOKEN_EN_ATTENTE__							= "30"
+	__STATUT_ZECIBLE_PRISE_EN_CHARGE_EN_ATTENTE__				= "40"
+	__STATUT_ZECIBLE_EN_COURS_DE_TRAITEMENT__					= "50"
+	__STATUT_ZECIBLE_TRAITE__									= "60"
+	__STATUT_ZECIBLE_EN_ERREUR__								= "70"
+	__STATUT_ZECIBLE_TERMINE__									= "80"
+	__STATUT_ZECIBLE_FACTURE__									= "90"
+
+
+	__STATUT_BLOCTEL_EN_PREPARATION__							= "00"
+	__STATUT_BLOCTEL_EN_ATTENTE__								= "10"
+	__STATUT_BLOCTEL_PRISE_EN_CHARGE__							= "20"
+	__STATUT_BLOCTEL_FICHIER_CREE__							= "30"
+	__STATUT_BLOCTEL_FICHIER_DEPOSE__							= "40"
+	__STATUT_BLOCTEL_EN_COURS_DE_TRAITEMENT__					= "50"
+	__STATUT_BLOCTEL_TRAITE__									= "60"
+	__STATUT_BLOCTEL_EN_ERREUR__								= "70"
+	__STATUT_BLOCTEL_TERMINE__								= "80"
+	__STATUT_BLOCTEL_FACTURE__								= "90"
+
+	__GPT_MKT_CHATGPT__										= "GMC"
+	__GPT_SMS_MESSAGE__										= "GSM"
+	__GPT_TEL_RESUME__										= "GTR"
+	__GPT_TEL_QUESTION__									= "GTQ"
+	__GPT_TEL_SCRIPT__										= "GTS"
+
+
+	__RNVP_TYPE_GOOD__										= "10"
+	__RNVP_TYPE_FAIBLE__										= "20"
+	__RNVP_TYPE_MODERE__										= "30"
+	__RNVP_TYPE_ELEVE__										= "40"
+	__RNVP_TYPE_BAD__											= "50"
+	__RNVP_DEDUPLICATION_B2B__									= 1
+	__RNVP_DEDUPLICATION_B2C__									= 2
+	__RNVP_DEDUPLICATION_MIXTE__								= 3
+	__RNVP_DEDOUBLONNAGE_INDIVIDU__							= 0
+	__RNVP_DEDOUBLONNAGE_FOYER__								= 1
+	__RNVP_DEDOUBLONNAGE_AUCUN__								= 2
+
+	__RNVP_CQADRS_10__											= 10
+	__RNVP_CQADRS_20__											= 20
+	__RNVP_CQADRS_21__											= 21
+	__RNVP_CQADRS_22__											= 22
+	__RNVP_CQADRS_23__											= 23
+	__RNVP_CQADRS_24__											= 24
+	__RNVP_CQADRS_25__											= 25
+	__RNVP_CQADRS_30__											= 30
+	__RNVP_CQADRS_31__											= 31
+	__RNVP_CQADRS_40__											= 40
+	__RNVP_CQADRS_41__											= 41
+	__RNVP_CQADRS_50__											= 50
+	__RNVP_CQADRS_51__											= 51
+	__RNVP_CQADRS_60__											= 60
+	__RNVP_CQADRS_61__											= 61
+	__RNVP_CQADRS_70__											= 70
+	__RNVP_CQADRS_71__											= 71
+	__RNVP_CQADRS_72__											= 72
+	__RNVP_CQADRS_80__											= 80
+	__RNVP_CQADRS_81__											= 81
+	__RNVP_CQADRS_90__											= 90
+
+
+	// Flash javascript effet changement de tarif
+	__FLASH_BOUCLE__											= 1
+	__FLASH_DELAY__ 											= 200
+	__FLASH_DUREE1__											= 200
+	__FLASH_DUREE2__											= 800
+	__FLASH_EFFET1__											= "linear"
+	__FLASH_EFFET2__											= "linear"
+	__FLASH_COULEUR2__											= "#FFFFFF"
+
+
+	__JPG__														= ".jpg"
+	__JPEG__														= ".jpeg"
+	__PDF__														= ".pdf"
+	__GIF__														= ".gif"
+	__PNG__														= ".png"
+	__TIFF__													= ".tiff"
+	__SVG__														= ".svg"
+	__CDR__														= ".cdr"
+	__TXT__														= ".txt"
+	__CSV__														= ".csv"
+	__XLS__														= ".xls"
+	__XLSX__													= ".xlsx"
+	__PSMD__													= ".psmd"
+	__TTF__														= ".ttf"
+	__EOT__														= ".eot"
+	__OTF__														= ".otf"
+	__WOFF__													= ".woff"
+	__WOFF2__													= ".woff2"
+	__HTM__														= ".htm"
+	__HTML__													= ".html"
+	__JSON__													= ".json"
+	__WAV__														= ".wav"
+	__LOG__														= ".log"
+	__MP3__														= ".mp3"
+	__M4A__														= ".m4a"
+	__OPUS__													= ".opus"
+	__ZIP__														= ".zip"
+	__XML__														= ".xml"
+	__TMP__														= ".tmp"
+
+	__CODE_SITE_MARKETEAM__										= "MKT"
+//	__CODE_SITE_CHRONODIRECT__									= "CHR"
+//	__CODE_SITE_DATA__											= "DTA"
+	__CODE_SITE_KINGCALL__										= "TEL"
+
+	__TEL_MODE_AUTOMATIQUE__									= "A"
+	__TEL_MODE_MANUEL__											= "M"
+	__TEL_OPERATEUR_SALARIE__									= "S"
+	__TEL_OPERATEUR_RECURRENT__									= "R"
+	__TEL_OPERATEUR_OCCASIONNEL__								= "O"
+	__TEL_PROFIL_ACTIF__										= "A"
+	__TEL_PROFIL_INACTIF__										= "I"
+	__TEL_PROFIL_NON_DETERMINE__								= "N"
+	__TEL_PROFIL_HOMME__										= "H"
+	__TEL_PROFIL_FEMME__										= "F"
+	__TEL_QUESTION_SELECTEUR__									= "S"
+	__TEL_QUESTION_INTERRUPTEUR__								= "I"
+	__TEL_QUESTION_CLASSEMENT__									= "C"
+	__TEL_QUESTION_FORMULAIRE__									= "F"
+	__TEL_QUESTION_NOTATION__									= "N"
+	__TEL_QUESTION_TEXTE__										= "T"
+	__TEL_QUESTION_AGENDA__										= "A"
+	__TEL_PORTABLE__											= "P"
+	__TEL_FIXE__												= "F"
+	__TEL_MOTIF_TRANSFERT_QUESTION__							= "Q"
+	__TEL_MOTIF_TRANSFERT_PROJET__								= "P"
+
+	__TEL_CRENEAU_MATIN__										= "M"
+	__TEL_CRENEAU_SOIR__										= "S"
+	__TEL_CRENEAU_JOURNÉE__										= "J"
+
+    __TEL_RDV_DATE__											= "RdvDate"
+    __TEL_RDV_HEURE__											= "RdvHeure"
+    __TEL_RDV_CONFIRMATION__									= "RDVC"
+    __TEL_RDV_RAPPEL_2J__										= "RV2J"
+    __TEL_RDV_RAPPEL_1J__										= "RV1J"
+    __TEL_RDV_RAPPEL_2H__										= "RV2H"
+    __TEL_RDV_RAPPEL_1H__										= "RV1H"
+
+	__PBX_TRUNK_1__ 											= "Trunk1"
+	__PBX_TRUNK_2__ 											= "Trunk2"
+	__PBX_TRUNK_3__ 											= "Trunk3"
+
+	__OPERATION_COURRIER__										= "LTR"
+	__OPERATION_COURRIER_INTERACTIF__						= "LTI"
+	__OPERATION_COURRIER_GESTION__								= "LTG"
+	__OPERATION_SMARTEVA__										= "STV"
+	__OPERATION_TRACTEVA__										= "TRA"
+	__OPERATION_SMS__											= "SMS"
+	__OPERATION_SMS_NOTIFICATION__								= "SMN"
+	__OPERATION_SMS_WEBSERVICE__								= "SWS"
+	__OPERATION_SMS_INTERACTIF__								= "SMI"
+	__OPERATION_VMS__											= "VMS"
+	__OPERATION_VMS_UNITAIRE__									= "VMU"
+	__OPERATION_EMAIL__											= "EML"
+	__OPERATION_EMAIL_NOTIFICATION__							= "EMN"
+	__OPERATION_EMAIL_INTERACTIF__								= "EMI"
+	__OPERATION_TEL__											= "TEL"
+	__OPERATION_MARKETEAM__										= "MKT"
+	__OPERATION_BASE_DE_DONNEES__								= "BDD"
+	__OPERATION_RNVP__											= "RNV"
+	__OPERATION_BLOCTEL__										= "BLT"
+	__OPERATION_ABONNEMENT__									= "ABO"
+
+
+
+
+	__FACTURE_OPERATION__										= "FOP"
+	__FACTURE_ABONNEMENT_FONCTION__								= "FAF"
+	__FACTURE_ABONNEMENT_PRESTATION__							= "FAP"
+	__FACTURE_RESERVE_ARGENT__									= "FRA"
+	__FACTURE_NOTIFICATION__									= "FNO"
+	__FACTURE_WEBSERVICE__										= "FWS"
+	__FACTURE_MIXE__											= "FMX"
+
+// A SUPPRIMER
+	__OPERATION_CLIQUEZICI__									= "ICI"
+	__OPERATION_DIVERS__										= "DIV"
+	__OPERATION_KING_CALL__										= "KCL"
+	__OPERATION_IMPRESSION__									= "IMP"
+	__OPERATION_WEB__											= "WEB"
+
+//	__OPERATEUR_ETAPE_VALIDATION_EN_ATTENTE__					= "10"
+//	__OPERATEUR_ETAPE_INSCRIPTION_EN_ATTENTE__					= "20"
+//	__OPERATEUR_ETAPE_INSCRIPTION_EN_COURS__					= "30"
+//	__OPERATEUR_ETAPE_EVALUATION_EN_ATTENTE__					= "40"
+//	__OPERATEUR_ETAPE_SIRET_IBAN_EN_ATTENTE__					= "50"
+//	__OPERATEUR_ETAPE_SIRET_EN_ATTENTE__						= "55"
+//	__OPERATEUR_ETAPE_IBAN_EN_ATTENTE__							= "60"
+//	__OPERATEUR_ETAPE_TEST_CASQUE_EN_ATTENTE__					= "65" // Auto évaluation en s'appelant sur son portable
+//	__OPERATEUR_ETAPE_INSCRIPTION_ACCEPTEE__					= "70" // Contrat à envoyer
+//	__OPERATEUR_ETAPE_CONTRAT_EN_ATTENTE__						= "80"
+//	__OPERATEUR_ETAPE_INSCRIPTION_TERMINEE__					= "90"
+//	__OPERATEUR_ETAPE_INSCRIPTION_REFUSEE__						= "99"
+
+	__OPERATEUR_PROFIL_POSTULANT__								= "PKC"
+	__OPERATEUR_PROFIL_BABYCALLER__								= "BKC"
+	__OPERATEUR_PROFIL_KINGCALLER__								= "NKC"
+	__OPERATEUR_PROFIL_SUPERKINGCALLER__						= "SKC"
+	__OPERATEUR_PROFIL_ADMINISTRATEUR__							= "AKC"
+
+	__ZECIBLE_PARTICULIERS_B2C__								= "b2c"
+	__ZECIBLE_PROFESSIONNELS_B2B__							= "b2b"
+
+	__ZECIBLE_CANAL_MOBILE__									= "mobile"
+	__ZECIBLE_CANAL_EMAIL__										= "email"
+	__ZECIBLE_CANAL_COURRIER__									= "geo"
+	__ZECIBLE_CANAL_TEL__										= "tmkmobile"
+
+	__MODE_STANDARD__											= "S"
+	__MODE_LENT__												= "L"
+	__MODE_EXPRESS__											= "E"
+
+	__MODE_AUTOMATIQUE__										= "A"
+	__MODE_LASER__												= "L"
+	__MODE_OFFSET__												= "O"
+	__MODE_FOURNI__												= "F"
+
+
+	__DOC_PSM__													= "Psm"		// Document lié à une opération
+	__DOC_PSM_TMP__												= "PsmTmp"		// Image Temporaire
+	__DOC_PSM_MODELE__											= "PsmMod"
+	__DOC_LTR_MODELE__											= "LtrMod"
+	__DOC_LTR_CLIENT__											= "LtrCli"		// Document Client
+
+	__DOC_LTR__													= "Ltr"
+	__DOC_LTR_PDF__												= "LtrPdf"
+	__DOC_LTR_BAT__												= "LtrBat"		// Bat de la lettre
+	__DOC_LTR_FOND__												= "LtrFond"
+	__DOC_LTR_PSMD__												= "LtrPsmd"
+	__DOC_LTR_VIGNETTE__										= "LtrVig"			// vignette de la creation
+	__DOC_LTR_IMAGE__											= "LtrImg"		// Image type logo en upload
+	__DOC_LTR_GESTION__											= "LtrGst"		// Lettre de gestion
+	__DOC_VMS_MESSAGE__											= "VmsMsg"		// Message VMS
+	__DOC_VMS_LOG__												= "VmsLog"
+	__DOC_VMS_BDD__												= "VmsBdd"		// Bdd VMS
+	__DOC_MSG_TMP__												= "TmpMsg"		// Message VMS Temporaire
+	__DOC_MSG_UPL__												= "UplVmsMsg"	// Fichier Uploadé
+	__DOC_TEL_MESSAGE__											= "TelMsg"		// Message répondeur
+	__DOC_TEL_UPL__												= "UplTelMsg"		// Fichier Uploadé
+	__DOC_PBX_MESSAGE__											= "message_"		// Message répondeur
+	__DOC_ENV_IMAGE__											= "EnvImg"		// Logo sur enveloppe du client
+	__DOC_ENV_FOND__												= "EnvFond"
+	__DOC_ENV_BAT__												= "EnvBat"
+	__DOC_ENV_PSMD__												= "EnvPsmd"
+
+	__DOC_ENV_VIGNETTE__										= "EnvVig"		// Vignette de l'enveloppe
+	__DOC_ENV_MODELE__											= "EnvMod"		// Modele Logo sur enveloppe
+	__DOC_ENV_CLIENT__											= "EnvCli"		// Vignette de l'aperçu de l'enveloppe du client
+	__DOC_OPE_CASTING_VOCAL__									= "OpeCstVcl"	// Enregistrement du casting vocal de l'opérateur
+
+	__DOC_BDD__													= "Bdd"			// Base de données from dos_base_ligne
+	__DOC_BDD_CLIENT__											= "BddClient"	// Base de données du client
+	__DOC_BDD_LOCATION__										= "BddLocation" // Base de données de location
+	__DOC_CDR__													= "CorelDraw"	// Base de données du client
+
+//	__DOC_ICI_BANNIERE__										= "IciBan"
+	__DOC_ICI_IMAGE__											= "IciImg"
+	__DOC_ICI_VIDEO__											= "IciVid"
+	__DOC_ICI_FOND__											= "IciFon"
+	__DOC_ICI_GRATTAGE__										= "IciGra"
+	__DOC_ICI_BOUTON__											= "IciBtn"
+
+	__DOC_DEVIS_OPERATION__										= "DevOpe"		// Devis
+	__DOC_DEVIS_DOSSIER__										= "DevDos"		// Devis
+
+	__DOC_FACTURE__												= "Fac"		// Facture
+	//
+	__DOC_FACTURE_OPERATEUR__									= "FacOpe"	// Facture des operateurs du call center
+
+
+	__BALISE_CHAMP__											= "CHP"
+	__BALISE_TEXTE__											= "TXT"
+	__BALISE_FOND_DE_PAGE__										= "FDP"
+	__BALISE_REPIQUAGE__										= "RPQ"
+	__BALISE_DATE__												= "DTE"
+	__BALISE_IMAGE__											= "IMG"
+	__BALISE_MONETAIRE__										= "EUR"
+	__BALISE_TECHNIQUE__										= "TEC"
+
+
+	// COULEUR DE POLICE D'ADRESSAGE SMARTEVA
+
+	__POLICE_NOIR__												= "#000000"
+	__POLICE_BLEU__												= "#013ADF"
+	__POLICE_VERT__												= "#04B404"
+	__POLICE_ROUGE__											= "FF0000"
+
+
+	// REPERTOIRES LIES A L'OPERATION
+	__REP_BAT__													= "Bat"
+	__REP_MODELE__												= "Modeles"
+	__REP_PAGE__												= "Pages" // Pages cliquezici
+	__REP_BASE__												= "Bases"
+	__REP_RAPPORT__												= "Rapports"
+	__REP_DOCUMENT__											= "Documents"
+	__REP_ENVELOPPE__											= "Enveloppes"
+	__REP_MESSAGE__												= "Messages"
+	__REP_ECOUTE__												= "Ecoutes"
+	__REP_POLICE__												= "Polices"
+//	__REP_BANNIERE__											= "Bannieres"
+	__REP_IMAGE__												= "Images"
+	__REP_COLLECTION__											= "Collections"
+	__REP_VIDEO__												= "Vidéos"
+	__REP_FOND__												= "Fonds"
+	__REP_GRATTAGE__											= "Grattages"
+	__REP_BOUTON__												= "Boutons"
+	__REP_PRINTSHOP__											= "Printshop"
+	__REP_VIGNETTE__											= "Vignettes"
+	__REP_TEMP__ 												= "Temp"
+
+	// REPERTOIRES LIES AU DOSSIER
+	__REP_GESTION__												= "Gestion"
+	__REP_ELEMENT__												= "Elements" // Elements graphiques pour la réalisation des documents
+	__REP_DEPOT__													= "Depot"
+
+	// REPERTOIRE LIES A LA MARQUE
+	__REP_LOGO__												= "Logo"
+
+
+	__MAX_NB_FEUILLE_GESTION__									= 24
+	__MARGE_FOND_PERDU__										= 38 // Taille de la marge en mm pour le filtrage des documents en fonction du fichier uploadé
+
+//	__ICI_BANNIERE__											= "BAN"
+	__ICI_GRILLE__												= "GRL" // Uniquement pour les prototypes
+	__ICI_LOGO__												= "LGO" // Uniquement pour les prototypes
+	__ICI_IMAGE__												= "IMG"
+	__ICI_BANNIERE__											= "BAN"
+	__ICI_FOND__												= "FON"
+	__ICI_YOUTUBE__												= "YTB"
+	__ICI_VIDEO__												= "VID"
+	__ICI_BOUTON__												= "BTN"
+	__ICI_GRATTAGE__											= "GRT"
+	__ICI_OFFRE__												= "OFF"
+	__ICI_CGV__													= "CGV"
+	__ICI_URL_FIXE__											= "F"
+	__ICI_URL_TRACKING__										= "T"
+	__ICI_WEB__													= "W"
+
+	__SOCIAL_SKYPE__											= "SKP"
+	__SOCIAL_FACEBOOK__											= "FCB"
+	__SOCIAL_LINKEDIN__											= "LKD"
+	__SOCIAL_YOUTUBE__											= "YTB"
+	__SOCIAL_VIADEO__											= "VIA"
+	__SOCIAL_VIMEO__											= "VIM"
+	__SOCIAL_TIKTOK__											= "TIK"
+	__SOCIAL_SITE_WEB__											= "WWW"
+	__SOCIAL_TWITTER__ 											= "TWX"
+	__SOCIAL_INSTAGRAM__										= "IST"
+	__SOCIAL_PINTEREST__										= "PIN"
+
+
+	__URL_PARAM__  														="?PARAM="
+
+	__NOTIFICATION_STATUT__												= "STATUT_" 		// + Code Statut Dossier
+	__NOTIFICATION_DEPOT__												= "DEPOT_" 			// + Code Dêpot du courrier de gestion
+	__NOTIFICATION_FACTURE__											= "FACTURE"
+	__NOTIFICATION_MOT_DE_PASSE_OUBLIE__								= "USER_MDP"
+	__NOTIFICATION_VALIDATION_COMPTE__									= "CPT_VALIDATION"
+	__NOTIFICATION_VALIDATION_OPERATION__								= "OPE_VALIDATION"
+	__NOTIFICATION_PAYEMENT_OPERATION__									= "OPE_PAYEMENT"
+	__NOTIFICATION_PAYEMENT_FACTURE__									= "FAC_PAYEMENT"
+	__NOTIFICATION_VALIDATION_OPERATEUR__								= "TEL_VALIDATION"
+	__NOTIFICATION_VALIDATION_DEPOT__									= "DPT_VALIDATION"
+	__NOTIFICATION_CREATION_UTILISATEUR__								= "USER_CREATION"
+	__NOTIFICATION_RAPPORT_AUDIENCE__									= "RAPPORT_AUDIENCE" // 24 Heures après la fin de l'opération
+
+	__NOTIFICATION_CLIQUEZICI_TRACKING__								= "ICI_TRACKING"
+	__NOTIFICATION_LEAD_CLIQUEZICI_CLIC__ 								= "LEAD_ICI_CLIC"
+	__NOTIFICATION_LEAD_CLIQUEZICI_LIEN__ 								= "LEAD_ICI_LIEN"
+
+	__NOTIFICATION_CLIQUEZICI_TRACKING_UNIQUE__							= "UN_ICI_TRACKING"		// Dans le cadre d’émail destinataire en copie d'après une variable exemple EmailEnCopie = [%Champ1%]
+	__NOTIFICATION_LEAD_CLIQUEZICI_CLIC_UNIQUE__						= "UN_LEAD_ICI_CLIC"	// Dans le cadre d’émail destinataire en copie d'après une variable exemple EmailEnCopie = [%Champ1%]
+	__NOTIFICATION_LEAD_CLIQUEZICI_LIEN_UNIQUE__						= "UN_LEAD_ICI_LIEN"	// Dans le cadre d’émail destinataire en copie d'après une variable exemple EmailEnCopie = [%Champ1%]
+
+	__NOTIFICATION_LEAD_CALLCENTER__ 									= "LEAD_CALLCENTER"
+	__NOTIFICATION_SMS_REPONSE__										= "SMS_REPONSE"
+	__NOTIFICATION_NOTIFICATION_REPONSE__								= "NOT_REPONSE"
+	__NOTIFICATION_ALLIAGE__											= "ALLIAGE"
+	__NOTIFICATION_NPAI__												= "ALLIAGE_GESTION"
+	__NOTIFICATION_MOT_DE_PASSE_OPERATEUR__								= "TEL_MDP"
+
+	__NOTIFICATION_ECHEANCE_ABONNEMENT__								= "ABO_ECHEANCE" 		//	Alerte échéance d'abonnement (clients hors compte)
+//	Alerte pour informer les clients hors compte (paiement à la commande) que leur abonnement arrive à échéance et doit être renouvelé par paiement.
+
+	__NOTIFICATION_ENCAISSEMENT_ABONNEMENT__								= "ABO_ENCAISSEMENT"			// 	Notification prélèvement abonnement à venir
+//	Notification destinée aux clients hors compte (paiement à la commande) ayant configuré un paiement par carte bancaire ou prélèvement, pour les informer qu'une transaction d'abonnement sera prochainement réalisée.
+
+	__NOTIFICATION_ECHEC_PAIEMENT__										= "ECHEC_PAIEMENT"		// 	Notification échec de paiement
+//	Notification pour avertir un client que le paiement par carte bancaire mémorisée a échoué.
+
+	__NOTIFICATION_ECHEC_PRELEVEMENT__									= "ECHEC_PRELEVE"		// 	Notification échec de prélèvement
+//	Notification pour avertir un client que le prélèvement automatique a échoué.
+
+	__NOTIFICATION_FACTURATION_CLIENT_COMPTE__							= "FAC_CLIENTCOMPTE"	//	Notification facturation client en compte
+//	Notification destinée aux clients en compte (paiement à réception de facture), pour les relancer avant l'échéance d'une facture en attente de règlement.
+
+	__NOTIFICATION_RENOUVELLEMENT_ABONNEMENT__							= "ABO_RENOUVELLE"		//	Notification renouvellement abonnement à venir
+//	Notification pour informer les clients en compte (paiement à réception de facture) que le renouvellement automatique de leur abonnement approche.
+
+	__NOTIFICATION_RELANCE_FACTURE_1__									= "FAC_RELANCE_1"		//	Relance facturation n°1
+//	Première relance pour un client en compte (paiement à réception de facture), indiquant qu'une facture reste impayée et qu'un règlement est attendu.
+
+	__NOTIFICATION_RELANCE_FACTURE_2__									= "FAC_RELANCE_2"		//	Relance facturation n°2
+//	Deuxième relance pour un client en compte (paiement à réception de facture), rappelant qu'une facture reste impayée malgré une première relance.
+
+	__NOTIFICATION_RELANCE_FACTURE_3__									= "FAC_RELANCE_3"		//	Relance facturation n°3
+//	Troisième relance pour un client en compte (paiement à réception de facture), signalant l'absence de règlement après deux relances précédentes pour une facture impayée.
+
+
+	__FACTURE_VALIDATION__												= "FAC_VALIDATION"
+
+	__PARAM_KINGCALL_ADHESION__									= "ADHESION"
+
+	__LIMITE_SMS_STOP_PUB__									= "SMS_STOP_PUB"
+	__LIMITE_NOMBRE_UTLISATEUR__								= "MKT_UTILISATEUR"		//	"Maximum utilisateurs"	"5"	"Utilisateur"
+	__LIMITE_NOMBRE_POINT_VENTE__								= "MKT_POINT_VENTE"		//	"Maximum de point de vente"	"10"	"Pdv"
+	__LIMITE_NOMBRE_SMS__										= "SMS_NOMBRE"			//	"SMS"	"Nombre maximum de SMS"	"15"	"Sms"
+	__LIMITE_NOMBRE_SMI__										= "SMI_NOMBRE"			//	"SMI"	"Nombre maximum de SMS"	"20"	"Sms"
+	__LIMITE_VITESSE_SMS__									= "SMS_VITESSE"			//	"SMS"	"Vitesse d'envoi des SMS"	"25"	"/ Heure"
+	__LIMITE_VITESSE_SMI__									= "SMI_VITESSE"			//	"SMI"	"Vitesse d'envoi des SMS"	"30"	"/ Heure"
+	__LIMITE_VITESSE_EML__									= "EML_VITESSE"			//	"EML"	"Vitesse d'envoi des emails"	"35"	"/ Heure"
+	__LIMITE_VITESSE_VMS__									= "VMS_VITESSE"			//	"VMS"	"Vitesse d'envoi des VMS"	"40"	"/ Heure"
+	__LIMITE_DELAI_LASER_POSTEVA__								= "LTR_DELAI_LASER"		//	"LTR"	"Nombre de jours dépôt Poste"	"45"	"Jour"
+	__LIMITE_DELAI_OFFSET_POSTEVA__							= "LTR_DELAI_OFFSET"		//	"LTR"	"Nombre de jours dépôt Poste"	"45"	"Jour"
+	__LIMITE_DELAI_LASER_TRACTEVA__							= "TRV_DELAI_LASER"	//	"TRA"	"Nombre de jours début de distribution"	"50"	"Jour"
+	__LIMITE_DELAI_OFFSET_TRACTEVA__							= "TRV_DELAI_OFFSET"	//	"TRA"	"Nombre de jours début de distribution"	"50"	"Jour"
+	__LIMITE_DELAI_LASER_SMARTEVA__							= "STV_DELAI_LASER"	//	"STV"	"Nombre de jours début de distribution"	"55"	"Jour"
+	__LIMITE_DELAI_OFFSET_SMARTEVA__							= "STV_DELAI_OFFSET"	//	"STV"	"Nombre de jours début de distribution"	"55"	"Jour"
+	__LIMITE_NOMBRE_DOCUMENT_POSTEVA__							= "LTR_DOCUMENT"		//	"LTR"	"Nombre maximum de documents dans enveloppe"	"60"	"Document"
+	__LIMITE_NOMBRE_DOCUMENT_SMARTEVA__							= "STV_DOCUMENT"		//	"STV"	"Nombre maximum de document dans l'enveloppe"	"65"	"Document"
+
+
+	__PRESTATION_ADRESSAGE_NOIR__								= "ADRESSAGE_NOIR"
+	__PRESTATION_ADRESSAGE_COULEUR__							= "ADRESSAGE_COULEUR"
+	__PRESTATION_AFFRANCHISSEMENT__								= "AFFRANCHISSEMENT"
+	__PRESTATION_ALLIAGE__										= "ALLIAGE"
+	__PRESTATION_ATELIER__										= "ATELIER"
+	__PRESTATION_CLIQUEZICI_TRACKING__							= "CLIQUEZICI_TRACKING"
+	__PRESTATION_CLIQUEZICI_WEB__								= "CLIQUEZICI_WEB"
+	__PRESTATION_COLISAGE__										= "COLISAGE"
+	__PRESTATION_DOCUMENT_CLIENT__								= "DOCUMENT_CLIENT"
+	__PRESTATION_ENVELOPPE__									= "ENVELOPPE"
+	__PRESTATION_IMPRESSION__									= "IMPRESSION"
+	__PRESTATION_MASSICOT__										= "MASSICOT"
+	__PRESTATION_IMPRESSION_LASER__								= "IMPRESSION_LASER"
+	__PRESTATION_IMPRESSION_OFFSET__							= "IMPRESSION_OFFSET"
+	__PRESTATION_INSERTION__									= "INSERTION"
+	__PRESTATION_LOCATION_B2B_SMS__ 							= "LOC_B2B_SMS"
+	__PRESTATION_LOCATION_B2B_EMAIL__ 							= "LOC_B2B_EMAIL"
+	__PRESTATION_LOCATION_B2B_COURRIER__ 						= "LOC_B2B_COURRIER"
+	__PRESTATION_LOCATION_B2B_TEL__ 							= "LOC_B2B_CALLCENTER"
+	__PRESTATION_LOCATION_B2C_SMS__								= "LOC_B2C_SMS"
+	__PRESTATION_LOCATION_B2C_EMAIL__							= "LOC_B2C_EMAIL"
+	__PRESTATION_LOCATION_B2C_COURRIER__						= "LOC_B2C_COURRIER"
+	__PRESTATION_LOCATION_B2C_TEL__								= "LOC_B2C_TEL"
+	__PRESTATION_PAPIER__										= "PAPIER"
+	__PRESTATION_RNVP__											= "RNVP"
+	__PRESTATION_BLOCTEL__										= "BLOCTEL"
+	__PRESTATION_ROUTAGE_CALLCENTER__							= "ROUTAGE_CALLCENTER"
+	__PRESTATION_ROUTAGE_COURRIER__								= "ROUTAGE_COURRIER"
+	__PRESTATION_ROUTAGE_EMAIL__								= "ROUTAGE_EMAIL"
+	__PRESTATION_ROUTAGE_SMARTEVA__								= "ROUTAGE_SMARTEVA"
+	__PRESTATION_ROUTAGE_SMS__									= "ROUTAGE_SMS"
+	__PRESTATION_ROUTAGE_TRACTEVA__								= "ROUTAGE_TRACTEVA"
+	__PRESTATION_ROUTAGE_VMS__									= "ROUTAGE_VMS"
+	__PRESTATION_TEL_FIXE__										= "TEL_FIXE"
+	__PRESTATION_TEL_PORTABLE__									= "TEL_PORTABLE"
+	__PRESTATION_TEL_MESSAGE__									= "TEL_MESSAGE"
+	__PRESTATION_TEL_AGENDA__									= "TEL_AGENDA"
+	__PRESTATION_TEL_ABOUTEMENT__								= "TEL_ABOUTEMENT"
+	__PRESTATION_FRAIS_FIXES__									= "FRAIS_FIXES"
+	__PRESTATION_MINIMUM_FACTURATION__							= "MIN_FACTURATION"
+	__PRESTATION_REMISE_COUPON__								= "REMISE_COUPON"
+	__PRESTATION_ADREXO__										= "ADREXO"
+	__PRESTATION_PACKAGE_COURRIER__								= "PACKAGE_COURRIER"
+	__PRESTATION_PACKAGE_TRACTEVA__								= "PACKAGE_TRACTEVA"
+	__PRESTATION_PACKAGE_SMARTEVA__								= "PACKAGE_SMARTEVA"
+	__PRESTATION_TRANSPORT__									= "TRANSPORT"
+
+	// POUR COMPATIBILITE AVEC CHRONOX
+	__PRESTATION_FACONNAGE__									= "FACONNAGE"
+	__PRESTATION_BDD_ALLIAGE__									= "BDD_ALLIAGE"
+	__PRESTATION_BDD_DEDOUBLONNAGE__							= "BDD_DEDOUBLONNAGE"
+	__PRESTATION_BDD_ENTREPRISE__                               = "BDD_ENTREPRISE"
+	__PRESTATION_BDD_PARTICULIER__                              = "BDD_PARTICULIER"
+	__PRESTATION_DATA_LTR_ENTREPRISE__	                        = "DATA_LTR_ENTREPRISE"
+	__PRESTATION_DATA_LTR_PARTICULIER__	                        = "DATA_LTR_PARTICULIER"
+	__PRESTATION_DATA_SMS_ENTREPRISE__	                        = "DATA_SMS_ENTREPRISE"
+	__PRESTATION_DATA_SMS_PARTICULIER__	                        = "DATA_SMS_PARTICULIER"
+	__PRESTATION_WEDATA_SMS_SIMPLE__	                        = "WEDATA_SMS_SIMPLE"
+	__PRESTATION_WEDATA_SMS_CRITERE__	                        = "WEDATA_SMS_CRITERE"
+	__PRESTATION_BDD_RNVP__                                     = "BDD_RNVP"
+	__PRESTATION_CREATION_COURRIER__	                        = "CREATION_COURRIER"
+	__PRESTATION_CREATION_EMAIL__		                        = "CREATION_EMAIL"
+	__PRESTATION_CREATION_SMARTSMS__	                        = "CREATION_SMARTSMS"
+	__PRESTATION_ROUTAGE_FAX__									= "ROUTAGE_FAX"
+	__PRESTATION_DEPOT_COURRIER_GESTION__						= "DEPOT_COURRIER_GESTION"
+
+
+
+//	__PRESTATION_DOCUMENT_CLIENT__								= "DOCUMENT_CLIENT"
+//	__PRESTATION_COURRIER__										= "PRESTATION_" + __OPERATION_COURRIER__
+//	__PRESTATION_SMARTEVA__										= "PRESTATION_" + __OPERATION_SMARTEVA__
+//	__PRESTATION_TRACTEVA__										= "PRESTATION_" + __OPERATION_TRACTEVA__
+//	__PRESTATION_SMS__											= "PRESTATION_" + __OPERATION_SMS__
+//	__PRESTATION_EMAIL__										= "PRESTATION_" + __OPERATION_EMAIL__
+//	__PRESTATION_WEB__											= "PRESTATION_" + __OPERATION_WEB__
+//	__PRESTATION_COURRIER_GESTION__								= "PRESTATION_" + __OPERATION_COURRIER_GESTION__
+
+
+	__RAPPORT_SMS__												= "RSS"
+	__RAPPORT_VMS__												= "RVS"
+	__RAPPORT_ICI_VISITE__										= "RSV"
+	__RAPPORT_ICI_LIEN__										= "RIL"
+	__RAPPORT_ICI_CLIC__										= "RIC"
+	__RAPPORT_SMS_INTERACTIF__									= "RSI"
+	__RAPPORT_TEL__												= "RTE"
+	__RAPPORT_TEL_LEAD__										= "RTL"
+	__RAPPORT_EMAIL__											= "REL"
+	__RAPPORT_EMAIL_INTERACTIF__								= "REI"
+	__RAPPORT_COURRIER_INTERACTIF__								= "RCI"
+
+
+	__TYPEPRESTATION_BDD__										= 10
+
+	__ERREUR_STOP_PUB__											= "STP"
+	__ERREUR_STOP_PUB_OPERATEUR__								= "STO"
+	__ERREUR_STOP_PUB_CLIENT__									= "STC"
+	__ERREUR_STOP_TEL__											= "STT"
+	__ERREUR_ALLIAGE__											= "ALI"
+	__ERREUR_STOP_EMAIL__										= "STE"
+
+//	ORANGE
+	__COULEUR_BDD_XXS__											= "#FFFDFA"
+	__COULEUR_BDD_XS__											= "#FFF9F2"
+	__COULEUR_BDD_S__											= "#FFE6CF"
+	__COULEUR_BDD_M__											= "#FF7F00"
+	__COULEUR_BDD_L__											= "#E86811"
+	__COULEUR_BDD_XL__											= "#D15022"
+	__COULEUR_BDD_XXL__											= "#4D2400"
+
+//	BLEU CLAIR
+	__COULEUR_MARKETEAM_XXS__									= "#FAFDFF"
+	__COULEUR_MARKETEAM_XS__									= "#F1F8FF"
+	__COULEUR_MARKETEAM_S__										= "#D4F0FF"
+	__COULEUR_MARKETEAM_M__										= "#00B6FE"
+	__COULEUR_MARKETEAM_L__										= "#0079BF"
+	__COULEUR_MARKETEAM_XL__									= "#004D80"
+	__COULEUR_MARKETEAM_XXL__									= "#002B41"
+
+	//	BLEU CLAIR
+	__COULEUR_WEB_XXS__											= "#FAFDFF"
+	__COULEUR_WEB_XS__											= "#F1F8FF"
+	__COULEUR_WEB_S__											= "#D4F0FF"
+	__COULEUR_WEB_M__											= "#00B6FE"
+	__COULEUR_WEB_L__											= "#0079BF"
+	__COULEUR_WEB_XL__											= "#004D80"
+	__COULEUR_WEB_XXL__											= "#002B41"
+
+
+//	JAUNE
+	__COULEUR_COURRIER_XXS__									= "#FFFEF7"
+	__COULEUR_COURRIER_XS__										= "#FFFCEB"
+	__COULEUR_COURRIER_S__										= "#FCF4C2"
+	__COULEUR_COURRIER_M__										= "#F1CA2D"
+	__COULEUR_COURRIER_L__										= "#EAB400"
+	__COULEUR_COURRIER_XL__										= "#DA9900"
+	__COULEUR_COURRIER_XXL__									= "#3E3300"
+
+//	VIOLET
+	__COULEUR_TRACT_XXS__										= "#FEFCFF"
+	__COULEUR_TRACT_XS__										= "#FCF7FF"
+	__COULEUR_TRACT_S__											= "#F4ECFA"
+	__COULEUR_TRACT_M__											= "#C366F2"
+	__COULEUR_TRACT_L__											= "#934BB7"
+	__COULEUR_TRACT_XL__										= "#62307B"
+	__COULEUR_TRACT_XXL__										= "#32183E"
+
+//	VERT
+	__COULEUR_SMS_XXS__											= "#FBFEFB"
+	__COULEUR_SMS_XS__											= "#F4FCF4"
+	__COULEUR_SMS_S__											= "#DFF2DF"
+	__COULEUR_SMS_M__											= "#3FAB3C"
+	__COULEUR_SMS_L__											= "#039600"
+	__COULEUR_SMS_XL__											= "#055704"
+	__COULEUR_SMS_XXL__											= "#022C02"
+
+//	BLEU VERT
+	__COULEUR_VMS_XXS__											= "#FCFFFF"
+	__COULEUR_VMS_XS__											= "#F7FFFF"
+	__COULEUR_VMS_S__											= "#E1FAF8"
+	__COULEUR_VMS_M__											= "#00BEAE"
+	__COULEUR_VMS_L__											= "#089589"
+	__COULEUR_VMS_XL__											= "#106A62"
+	__COULEUR_VMS_XXL__											= "#083632"
+
+//	ROUGE
+	__COULEUR_EMAIL_XXS__										= "#FFFCFD"
+	__COULEUR_EMAIL_XS__										= "#FFF7FA"
+	__COULEUR_EMAIL_S__											= "#FCECEF"
+	__COULEUR_EMAIL_M__											= "#F41C1C"
+	__COULEUR_EMAIL_L__											= "#B80F0F"
+	__COULEUR_EMAIL_XL__										= "#7C0101"
+	__COULEUR_EMAIL_XXL__										= "#47050D"
+
+//	BLEU
+	__COULEUR_TEL_XXS__											= "#F9FCFF"
+	__COULEUR_TEL_XS__											= "#F3F9FF"
+	__COULEUR_TEL_S__											= "#DFEBF7"
+	__COULEUR_TEL_M__											= "#005AB3"
+	__COULEUR_TEL_L__											= "#094880"
+	__COULEUR_TEL_XL__											= "#063056"
+	__COULEUR_TEL_XXL__											= "#03182C"
+
+//	GRIS BLEU
+	__COULEUR_GRIS_XXS__										= "#FBFBFB"
+	__COULEUR_GRIS_XS__											= "#E9ECEC"
+	__COULEUR_GRIS_S__											= "#C9D0D4"
+	__COULEUR_GRIS_M__											= "#ABB6BA"
+	__COULEUR_GRIS_L__											= "#848F94"
+	__COULEUR_GRIS_XL__											= "#435059"
+	__COULEUR_GRIS_XXL__										= "#24333E"
+
+	__COULEUR_NOIR__											= "#000000"
+	__COULEUR_TRANSPARENT__										= "TRANSPARENT"
+	__COULEUR_BLANC__											= "#FFFFFF"
+
+	__COULEUR_DEFAUT__											= "D"
+	__COULEUR_CLIENT__											= "C"
+	__COULEUR_THEME__											= "T"
+
+	__COULEUR_KINGCALL__										= "#00A0E3"
+
+	__COUPON_REMISE__											= "REM"
+	__COUPON_PARTICIPATION__									= "PAR"
+
+	__ABONNEMENT_MENSUEL__										= "M"
+	__ABONNEMENT_ANNUEL__										= "A"
+
+	__CLIENT_EN_COMPTE__										= "E"
+	__CLIENT_A_LA_COMMANDE__									= "C" // Statut par defaut
+
+	__ADRESSE_PRINCIPALE__										= "P"
+	__ADRESSE_FACTURATION__										= "F"
+	__ADRESSE_LIVRAISON__										= "L"
+
+	__ETUDE_FOYER__ 											= "FOY"
+	__ETUDE_SOCIETE__											= "SOC"
+	__ETUDE_PARTENAIRE__										= "PRT"
+	__ETUDE_TOUTE_BOITE__										= "TTB"
+
+	__RECHERCHE_COURRIER__										= "LTR"
+	__RECHERCHE_TEL__											= "TEL"
+	__RECHERCHE_SMS__											= "SMS"
+	__RECHERCHE_EMAIL__											= "EML"
+	__RECHERCHE_TOUTES_BOITES__									= "TTB"
+	__RECHERCHE_FAX__											= "FAX"
+
+	__BASE_CLIENT__												= "01"
+	__BASE_LOCATION__											= "02"
+	__BASE_PARTENAIRE__											= "03"
+	__BASE_GESTION__											= "04"
+
+	__REGLEMENT_INDETERMINE__ 								 	= "IND"
+	__REGLEMENT_PAYPAL__										= "PAL"
+	__REGLEMENT_PAYPAL_ABONNEMENT__								= "PPA"
+	__REGLEMENT_CARTE_BANCAIRE__								= "CBL"
+	__REGLEMENT_CARTE_BANCAIRE_ENREGISTREE__					= "CBE"
+	__REGLEMENT_CHEQUE__										= "CHQ"
+	__REGLEMENT_VIREMENT__										= "VIR"
+	__REGLEMENT_ESPECES__										= "ESP"
+	__REGLEMENT_PRELEVEMENT__									= "PRL"
+	__REGLEMENT_RESERVE__										= "RSV"
+	__REGLEMENT_RECEPTION_FACTURE__								= "RRF"
+
+	__REGLEMENT_STATUT_INEXISTANT__								= "NUL"
+	__REGLEMENT_STATUT_EN_ATTENTE__								= "ATT"
+	__REGLEMENT_STATUT_EN_COURS__								= "ENC"
+	__REGLEMENT_STATUT_REFUSE__									= "RFU"
+	__REGLEMENT_STATUT_VALIDE__									= "VAL"
+	__REGLEMENT_STATUT_ANNULE__									= "ANL"
+	__REGLEMENT_STATUT_ERREUR__									= "ERR"
+	__REGLEMENT_STATUT_FALSIFIE__								= "FAL"
+	__REGLEMENT_STATUT_ACCORD__									= "ACC"
+
+	__TRANSACTION_FACTURE__										= "FAC"
+	__TRANSACTION_RESERVE_ARGENT__								= "RES"
+	__TRANSACTION_OPERATION__									= "OPE"
+	__TRANSACTION_RNVP__										= "BDD"
+	__TRANSACTION_BDD__											= "BDD"
+	__TRANSACTION_BLOCTEL__										= "TEL"
+	__TRANSACTION_ABONNEMENT_FONCTION__							= "ABF"
+	__TRANSACTION_ABONNEMENT_FONCTION_RENOUVELLEMENT__			= "AFR"
+	__TRANSACTION_ABONNEMENT_PRESTATION__						= "ABP"
+	__TRANSACTION_ABONNEMENT_PRESTATION_RENOUVELLEMENT__		= "APR"
+
+	__PAIEMENT_DEBIT__											= "D"
+	__PAIEMENT_CREDIT__											= "C"
+
+	#Bleu		= 1
+	#Vert		= 2
+	#Jaune		= 3
+	#Orange		= 4
+	#Rouge		= 5
+	#Noir		= 6
+
+
+	__ABONNEMENT_FONCTION__										= "FON"
+	__ABONNEMENT_FONCTION_RENOUVELLEMENT__						= "FNR"
+	__ABONNEMENT_FONCTION_HISTORIQUE__							= "FHT"
+	__ABONNEMENT_FONCTION_RENOUVELLEMENT_HISTORIQUE__			= "FRH"
+	__ABONNEMENT_PRESTATION__									= "PRE"
+	__ABONNEMENT_PRESTATION_RENOUVELLEMENT__					= "PRR"
+	__ABONNEMENT_PRESTATION_HISTORIQUE__						= "PHT"
+	__ABONNEMENT_PRESTATION_RENOUVELLEMENT_HISTORIQUE__			= "PRH"
+
+	__ABONNEMENT_STATUT_GRATUIT__								= "GRA"
+	__ABONNEMENT_STATUT_REGLEMENT_EN_ERREUR__					= "REE"
+	__ABONNEMENT_STATUT_SUSPENDU_REGLEMENT__					= "SPR"
+	__ABONNEMENT_STATUT_EXPIRE_REGLEMENT__						= "EXR"
+	__ABONNEMENT_STATUT_URGENT_REGLEMENT__						= "URR"
+	__ABONNEMENT_STATUT_ALERTE_REGLEMENT__						= "ALR"
+	__ABONNEMENT_STATUT_SUSPENDU_NUMERO_COMMANDE__				= "SPN"
+	__ABONNEMENT_STATUT_EXPIRE_NUMERO_COMMANDE__				= "EXN"
+	__ABONNEMENT_STATUT_URGENT_NUMERO_COMMANDE__				= "URN"
+	__ABONNEMENT_STATUT_ALERTE_NUMERO_COMMANDE__				= "ALN"
+	__ABONNEMENT_STATUT_REGLEMENT_EN_ATTENTE__					= "REA"
+	__ABONNEMENT_STATUT_INTERROMPU__							= "INT"
+	__ABONNEMENT_STATUT_PRELEVEMENT_EN_COURS__					= "PEC"
+	__ABONNEMENT_STATUT_PRELEVEMENT_EN_ERREUR__					= "PEE"
+	__ABONNEMENT_STATUT_REGLEMENT_PROGRAMME__					= "RPG"
+	__ABONNEMENT_STATUT_REGLEMENT_VALIDE__						= "VAL"
+	__ABONNEMENT_STATUT_CARTE_BANCAIRE_EN_ERREUR__				= "CBE"
+	__ABONNEMENT_STATUT_PAYPAL_EN_ERREUR__						= "PPE"
+	__ABONNEMENT_STATUT_NUMERO_COMMANDE_EN_ATTENTE__			= "NCE"
+	__ABONNEMENT_STATUT_FACTURATION_EN_ATTENTE__				= "FEA"
+	__ABONNEMENT_STATUT_A_DEFINIR__								= "SAD"
+
+
+	__RESERVE_ARGENT__											= "RES"
+	__RESERVE_CADEAU__											= "KDO"
+	__RESERVE_AUGMENTATION__									= "REA"
+	__RESERVE_SUPPRESSION_OPERATION__							= "RSO"
+	__RESERVE_AFFECTATION__										= "AFF"
+	__RESERVE_RETRAIT__											= "RTR"
+
+
+	// STATUTS POUR clt_prelevement : Compte prélèvement des clients
+	__PRELEVEMENT_STATUT_ENREGISTRE__							= "ENR"  // Le contrat est enregistré par le client
+	__PRELEVEMENT_STATUT_ATTENTE_SIGNATURE__					= "ATS"  // Le contrat est en attente de signature par le client
+	__PRELEVEMENT_STATUT_SIGNE__								= "SIG"  // Le contrat est signé par le client
+	__PRELEVEMENT_STATUT_BANQUE__								= "BNQ"  // Le contrat est présenté à la banque
+	__PRELEVEMENT_STATUT_REFUSE__								= "RFU"  // Le contrat est refusé par la banque
+	__PRELEVEMENT_STATUT_VALIDE__								= "VAL"  // Le contrat est validé par la banque
+	__PRELEVEMENT_STATUT_ERREUR__								= "ERR"  // Le contrat est en erreur auprès de la banque
+	__PRELEVEMENT_STATUT_SUPPRIME__								= "SUP"  // Le contrat est supprimé par le client
+
+	__BNK_VIREMENT_TYPE_FOURNISSEUR__							= "FOU"
+	__BNK_VIREMENT_TYPE_SALARIE__								= "SAL"
+	__BNK_VIREMENT_TYPE_OPERATEUR__								= "OPE"
+	__BNK_VIREMENT_TYPE_DIVERS__								= "DIV"
+
+
+	//	__SHORT_CODE__ 												= "36173"
+
+	__Cout_Fixe_Base__ 											= 2
+	__Cout_Fixe_Impression__									= 5
+	__Cout_Fixe_Decoupe__										= 5
+	__Cout_Fixe_Rainage__										= 10
+	__Cout_Fixe_Insertion__										= 15
+	__Cout_Fixe_Adressage__										= 5
+	__Cout_Horaire_MainOeuvre__									= 24
+	__Cout_Horaire_Impression__									= 10
+	__Cout_LaserA3__											= 0.029
+
+	__TACHE_GRAPHIQUE_MODIFICATION__							= "M" // Modification
+	__TACHE_GRAPHIQUE_ADAPTATION__								= "A" // Document à
+	__TACHE_GRAPHIQUE_CREATION__								= "C" // Document à
+	__TACHE_GRAPHIQUE_REALISATION__								= "R" // Document à
+
+	__OFFRE_PERSONNALISEE__										= "P" // Offre libre
+	__OFFRE_COMBO__												= "C" // Combo
+	__OFFRE_LIEN__												= "L"
+	__OFFRE_INTERRUPTEUR__										= "I" // Offre pre-enregistre
+	__OFFRE_FORMULAIRE__										= "F" // Offre pre-enregistre
+	__OFFRE_OPTIN__												= "O" // Offre pre-enregistre
+
+	__CNX_TEST__												= "TEST"
+	__CNX_DEV__													= "DEV"
+	__CNX_PROD__												= "PROD"
+
+	__STOP_SMS__												= "STOP 36XXX"
+
+	__CHAMP_TYPE_TEXTE__										= "TXT"
+	__CHAMP_TYPE_ENTIER__										= "ENT"
+	__CHAMP_TYPE_DECIMAL__										= "DEC"
+	__CHAMP_TYPE_MONETAIRE__									= "MON"
+	__CHAMP_TYPE_DATE__											= "DAT"
+	__CHAMP_TYPE_HEURE__										= "TIM"
+	__CHAMP_TYPE_EMAIL__										= "EML"
+	__CHAMP_TYPE_TELEPHONE__									= "TEL"
+	__CHAMP_TYPE_PORTABLE__										= "SMS"
+	__CHAMP_TYPE_CODEPOSTAL__									= "CDP"
+	__CHAMP_TYPE_IMAGE__										= "IMG"
+	__CHAMP_TYPE_URL__											= "URL"
+	__CHAMP_TYPE_ALLIAGE__										= "ALG"
+	__CHAMP_TYPE_COORDONNEE__									= "COO"
+
+	__CHAMP_TYPE_DATE_HEURE__									= "DTH"
+	__CHAMP_TYPE_SMS_STATUT__									= "SST"
+	__CHAMP_TYPE_SMS_OPERATEUR__								= "SOP"
+
+	__CHAMP_KING_PRENOM__										= "KingPrenom"
+	__CHAMP_KING_NOM__											= "KingNom"
+	__CHAMP_CLIQUEZ_ICI__										= "Code"
+	__CHAMP_REFERENCE__											= "Reference"
+	__CHAMP_SOCIETE__											= "Societe"
+	__CHAMP_ENSEIGNE__											= "Enseigne"
+	__CHAMP_CONTACT__											= "Contact"
+	__CHAMP_CIVILITE__											= "Civilite"
+	__CHAMP_NOM__												= "Nom"
+	__CHAMP_PRENOM__											= "Prenom"
+	__CHAMP_ADRESSE1__											= "Adresse1"
+	__CHAMP_ADRESSE2__											= "Adresse2"
+	__CHAMP_ADRESSE3__											= "Adresse3"
+	__CHAMP_ADRESSE4__											= "Adresse4"
+	__CHAMP_CODE_POSTAL__										= "CodePostal"
+	__CHAMP_VILLE__												= "Ville"
+	__CHAMP_PAYS__												= "Pays"
+	__CHAMP_TEL__												= "Tel"
+	__CHAMP_PORTABLE__											= "Portable"
+	__CHAMP_EMAIL__												= "Email"
+	__CHAMP_ALLIAGE__											= "CodeAlliage"
+
+	__CHAMP_NUMERO_VOIE__										= "Numéro de voie"
+	__CHAMP_COMPLEMENT_NUMERO__									= "Complément de voie"
+	__CHAMP_TYPE_VOIE__											= "Type de voie"
+	__CHAMP_NOM_VOIE__											= "Nom de voie"
+	__CHAMP_CDP_VILLE__											= "CODEPOSTALVILLE" // Code pour les colonnes avec le code postal et la ville
+
+	__FILTRE_COMMENCE__											= "S"
+	__FILTRE_CONTIENT__											= "C"
+	__FILTRE_DIFFERENT__										= "D"
+	__FILTRE_EGALE__											= "E"
+	__FILTRE_INFERIEUR__										= "I"
+	__FILTRE_SUPERIEUR__	 									= "S"
+	__FILTRE_COMPRIS__											= "B"
+	__FILTRE_NOT_NULL__											= "R"
+	__FILTRE_EST_NULL__											= "N"
+
+
+	__REGION__													= 1
+	__DEPARTEMENT__												= 2
+	__VILLE__ 													= 3
+	__CDP__ 													= 4
+	__QUARTIER__												= 5
+	__RUE__ 													= 6
+	__NUMERO__													= 7
+
+	// cliquez ici
+
+
+	__TYPE_TEXTE__												= "TXT"
+	__TYPE_NUMERIQUE__											= "NUM"
+	__TYPE_EMAIL__												= "EMA"
+	__TYPE_TELEPHONE__											= "TEL"
+
+
+	__BLOC_BANNIERE__											= "BAN"
+	__BLOC_GRILLE__												= "GRL"
+	__BLOC_IMAGE__												= "IMG"
+	__BLOC_GRATTAGE__											= "GTG"
+	__BLOC_TEXTE__												= "TXT"
+	__BLOC_TEXTE_DEFILANT__										= "TDT"
+	__BLOC_COUNTDOWN__											= "CDN"
+	__BLOC_HTML__												= "HTM"
+	__BLOC_OFFRE__												= "OFF"
+	__BLOC_COMBO__												= "CBO"
+	__BLOC_INTERRUPTEUR__										= "INT"
+	__BLOC_LIEN__												= "LNK"
+	__BLOC_SEPARATEUR__											= "SEP"
+	__BLOC_BOUTON__												= "BTN"
+	__BLOC_ADRESSE__											= "ADR"
+	__BLOC_SOCIAL__												= "SOC" // Icones (Web, Facebook, Linkedin, Viadeo, Vimeo, Etc...)
+	__BLOC_FORMULAIRE__											= "FOR"
+	__BLOC_DESTINEO__											= "DNO"
+	__BLOC_VIDEO__												= "VID"
+	__BLOC_YOUTUBE__											= "YTB"
+	__BLOC_CGV__												= "CGV"
+	__BLOC_SCRIPT__												= "SCR"
+	__BLOC_CARTE__												= "MAP"
+
+//	__IMAGE_BANNIERE__											= "BAN"
+	__IMAGE_LOGO__												= "IMG"
+	__IMAGE_FOND__												= "FON"
+	__IMAGE_BOUTON__											= "BTN"
+
+
+	__ALIGNEMENT_INDEFINI__										= "I" 	// Inherit
+	__ALIGNEMENT_GAUCHE__										= "L" 	// Left
+	__ALIGNEMENT_DROITE__										= "R" 	// Right
+	__ALIGNEMENT_CENTRE__										= "C"	// Center
+	__ALIGNEMENT_JUSTIFIE__										= "J"	// Justify
+	__ALIGNEMENT_HAUT__											= "T"	// Top
+	__ALIGNEMENT_BAS__											= "B"	// Bottom
+	__ALIGNEMENT_MILIEU__										= "M"	// Middle
+
+	__ALIGNEMENT_20_libelle_80_champ__							= 1
+	__ALIGNEMENT_25_libelle_75_champ__							= 2
+	__ALIGNEMENT_30_libelle_70_champ__							= 3
+	__ALIGNEMENT_35_libelle_65_champ__							= 4
+
+	__POSITION_DESSUS__											= "T"
+	__POSITION_INTERIEUR__										= "I"
+	__POSITION_EXTERIEUR__										= "E"
+
+	__POLICE_WEB__												= "W"
+	__POLICE_CLIENT__											= "C"
+	__POLICE_GOOGLE__											= "G"
+
+	__DESKTOP__													= "L"
+	__TABLETTE__												= "M"
+	__MOBILE__													= "S"
+
+	__STYLE_THIN__												= "100"
+	__STYLE_EXTRA_LIGHT__										= "200" // "Extra-Light"
+	__STYLE_LIGHT__												= "300" // "Light"
+	__STYLE_REGULAR__											= "400" // "Regular"
+	__STYLE_MEDIUM__											= "500" // "Medium"
+	__STYLE_SEMI_BOLD__											= "600" // "Semi-Bold"
+	__STYLE_BOLD__												= "700" // "Bold"
+	__STYLE_EXTRA_BOLD__										= "800" //  "Extra-Bold"
+	__STYLE_BLACK__												= "900" //"Black"
+
+
+	__FONT_WEIGHT_NORMAL__										= "normal"
+	__FONT_WEIGHT_BOLD__										= "bold"
+	__FONT_WEIGHT_BOLDER__										= "bolder"
+	__FONT_WEIGHT_LIGHTER__										= "lighter"
+	__FONT_WEIGHT_100__											= "100"
+	__FONT_WEIGHT_200__											= "200"
+	__FONT_WEIGHT_300__											= "300"
+	__FONT_WEIGHT_400__											= "400"
+	__FONT_WEIGHT_500__											= "500"
+	__FONT_WEIGHT_600__											= "600"
+	__FONT_WEIGHT_700__											= "700"
+	__FONT_WEIGHT_800__											= "800"
+	__FONT_WEIGHT_900__											= "900"
+
+	__FONT_STYLE_NORMAL__										= "normal"
+	__FONT_STYLE_ITALIC__										= "italic"
+
+
+	// envoi moins cher
+
+	__EMC_CONTENU__												= "10220"					// Livres et documents/Documents publicitaires
+	__EMC_TYPE__												= "colis"
+	__EMC_FRANCE__												= "FR"
+	__EMC_UPS_													= "UPSE"
+
+	// Printshop mail
+
+//	__PSM_ALIGNEMEMENT_HORIZONTAL_GAUCHE__						= 2
+//	__PSM_ALIGNEMEMENT_HORIZONTAL_DROITE__ 						= 3
+//	__PSM_ALIGNEMEMENT_HORIZONTAL_CENTRE__						= 4
+//	__PSM_ALIGNEMEMENT_HORIZONTAL_JUSTIF__						= 5
+//	__PSM_ALIGNEMEMENT_VERTICAL_HAUT__ 							= 6
+//	__PSM_ALIGNEMEMENT_VERTICAL_CENTRE__ 						= 4
+//	__PSM_ALIGNEMEMENT_VERTICAL_BAS__							= 7
+//
+//	__PSM_ECHELLE_TAILLE_INITIALE__								= 1
+//	__PSM_ECHELLE_AJUSTE_DANS_LE_CADRE__						= 2
+//	__PSM_ECHELLE_COUPE_DANS_LE_CADRE__							= 3
+//
+//	__PSM_BORDURE_LIGNE__ 										= 0
+//	__PSM_BORDURE_POINT_CARRE__									= 1
+//	__PSM_BORDURE_TIRET__										= 2
+//	__PSM_BORDURE_TRAIT_MIXTE__									= 3
+//	__PSM_BORDURE_TIRET_LONG__									= 4
+//	__PSM_BORDURE_TRAIT_MIXTE__LONG__							= 5
+//	__PSM_BORDURE_POINT_TRAIT_MIXTE__LONG__						= 6
+//	__PSM_FOND_TRANSPARENT__									= 0
+//	__PSM_FOND_PLEIN__											= 1
+
+	__ENVELOPPE_C6AF__											= "C6AF"
+	__ENVELOPPE_C6SF__											= "C6SF"
+	__ENVELOPPE_C6DF__											= "C6DF"
+	__ENVELOPPE_C5AF__											= "C5AF"
+	__ENVELOPPE_C5SF__											= "C5SF"
+	__ENVELOPPE_C4AF__											= "C4AF"
+	__ENVELOPPE_C4SF__											= "C4SF"
+
+	__POIDS_LETTRE_A4_90G__										= "5.6"
+	__POIDS_C6AF__												= "4.8"
+	__POIDS_C6DF__												= "5.0"
+	__POIDS_C5AF__												= "6.7"
+	__POIDS_C4AF__												= "15"
+
+	// constantes SMS
+ 	// Routeurs
+	__ROUTEUR_INFOBIP__ 										= "IB"
+	__ROUTEUR_CMTELECOM__ 										= "CM"
+
+	__IB_SHORTCODE_38691_NOTIFICATION__							= "38691"
+
+	__IB_SHORTCODE_36199_MARKETING__							= "36199"
+	__IB_SHORTCODE_36173_MARKETING__							= "36173"
+
+	__CM_SHORTCODE_36047_MARKETING__							= "36047"
+	__CM_SHORTCODE_36955_MARKETING__							= "36955"
+	__CM_SHORTCODE_36027_MARKETING__							= "36027"
+	__CM_SHORTCODE_36064_MARKETING__							= "36064"
+	__CM_SHORTCODE_36065_MARKETING__							= "36065"
+	__CM_SHORTCODE_36067_MARKETING__							= "36067"
+	__CM_SHORTCODE_36068_MARKETING__							= "36068"
+	__CM_SHORTCODE_36070_MARKETING__							= "36070"
+	__CM_SHORTCODE_36979_MARKETING__							= "36979"
+
+	__CM_SHORTCODE_38082_NOTIFICATION__							= "38082"
+	__CM_SHORTCODE_38093_NOTIFICATION__							= "38093"
+	__CM_SHORTCODE_38094_NOTIFICATION__							= "38094"
+	__CM_SHORTCODE_38095_NOTIFICATION__							= "38095"
+	__CM_SHORTCODE_38034_NOTIFICATION__							= "38034"
+	__CM_SHORTCODE_38035_NOTIFICATION__							= "38035"
+	__CM_SHORTCODE_38141_NOTIFICATION__							= "38141"
+	__CM_SHORTCODE_38051_NOTIFICATION__							= "38051"
+	__CM_SHORTCODE_38959_NOTIFICATION__							= "38959"
+
+
+	__SMS_ORIGINE_TEST__										= "TST"
+	__SMS_ORIGINE_NOTIFICATION__								= "NOT"
+	__SMS_ORIGINE_PUSH__										= "PSH"
+	__SMS_ORIGINE_API__											= "API"
+	__SMS_ORIGINE_MKT__											= "MKT"
+	__SMS_ORIGINE_WEB__											= "WEB"
+	__SMS_ORIGINE_KINGCALL__									= "KCL"
+
+	// STATUTS CHRONODIRECT
+	__SMS_STATUT_ENREGISTREE__									= "10" // en attente
+	__SMS_STATUT_PRISE_EN_CHARGE__								= "12"
+	__SMS_STATUT_ERREUR_ENVOI__									= "15" // pb lors de l'envoi à Infobip, pas de réponse
+	__SMS_STATUT_ENVOYE__										= "20" // Pris en charge par Infobip
+	__SMS_STATUT_MESSAGE_BUFFERED__								= "25" // code erreur 4 de Kannel
+	__SMS_STATUT_SENT_ERROR__									= "30" //
+	__SMS_STATUT_KL_UNKNOWN_ERROR__								= "35" // Erreur Inconnu Kannel
+	__SMS_STATUT_CM_UNKNOWN_ERROR__								= "36" // Erreur Inconnu CM Telecom
+	__SMS_STATUT_IB_UNKNOWN_ERROR__								= "37" // Erreur Inconnu Infobip
+	__SMS_STATUT_INVALID_NUMBER__								= "40"
+	__SMS_STATUT_STOP_PUB__										= "42"
+	__SMS_STATUT_NOT_SENT__										= "50" //
+	__SMS_STATUT_REJECTED__										= "60" //
+	__SMS_STATUT_AUTRE_ERREUR__ 								= "70"
+	__SMS_STATUT_NOT_DELIVERED__								= "80"
+	__SMS_STATUT_REQUETE_XML__									= "85"
+	__SMS_STATUT_DELIVERED__									= "90"
+
+	__VMS_STATUT_CREE__											= "10"
+	__VMS_STATUT_DEMANDE__										= "20"
+	__VMS_STATUT_REJETE__										= "25"
+	__VMS_STATUT_ENREGISTRE__									= "30"
+	__VMS_STATUT_VALIDE__										= "40"
+	__VMS_STATUT_EN_COURS__										= "50"
+	__VMS_STATUT_TERMINE__										= "60"
+	__VMS_STATUT_ERREUR__										= "70"
+	__VMS_STATUT_STOP_VMS__										= "75"
+	__VMS_STATUT_NOT_DELIVERED__								= "80"
+	__VMS_STATUT_DELIVERED__									= "90"
+	// STATUTS CHRONODIRECT
+	//
+	__EMAIL_STATUT_ENREGISTREE__								= "10" // en attente
+	__EMAIL_STATUT_ERREUR_ENVOI__								= "15" // pb lors de l'envoi à Infobip, pas de réponse
+	__EMAIL_STATUT_ENVOYE__										= "20" // Pris en charge par Infobip
+	__EMAIL_STATUT_EN_ATTENTE_RECEPTION__						= "25"
+	__EMAIL_STATUT_EN_ATTENTE_LIVRAISON__						= "30"
+	__EMAIL_STATUT_EN_ATTENTE_CONFIRMATION__                    = "35"
+	__EMAIL_STATUT_STOP_PUB__									= "42"
+	__EMAIL_STATUT_NOT_DELIVERED__                              = "45"
+	__EMAIL_STATUT_EXPIRED__                                    = "50"
+	__EMAIL_STATUT_EXPIRED_DLR_UNKNOWN__                        = "55"
+	__EMAIL_STATUT_REJECTED__                                   = "60"
+	__EMAIL_STATUT_REJECTED_PREFIX_MISSING__		            = "61"
+	__EMAIL_STATUT_REJECTED_DND__				                = "62"
+	__EMAIL_STATUT_REJECTED_SOURCE__				            = "63"
+	__EMAIL_STATUT_REJECTED_NOT_ENOUGH_CREDITS__	            = "64"
+	__EMAIL_STATUT_REJECTED_SENDER__				            = "65"
+	__EMAIL_STATUT_REJECTED_DESTINATION__		                = "66"
+	__EMAIL_STATUT_REJECTED_INVALID_DESTINATION__               = "67"
+	__EMAIL_STATUT_REJECTED_NETWORK__			                = "68"
+	__EMAIL_STATUT_AUTRE_ERREUR__ 								= "70"
+	__EMAIL_STATUT_NO_ERROR__									= "75"
+	__EMAIL_STATUT_DELIVERED_TO_OPERATOR__                      = "80"
+	__EMAIL_STATUT_DELIVERED_TO_HANDSET__                       = "90"
+
+
+	__TEL_STATUT_ENREGISTREE__									= "10"
+	__TEL_STATUT_EN_COURS__										= "20"
+	__TEL_STATUT_COMMUNICATION_BROUILLEE__						= "25"
+	__TEL_STATUT_COMMUNICATION_INTERROMPUE__ 					= "27"
+	__TEL_STATUT_INTERRUPTION_OPERATEUR__						= "30" // Fenêtre fermé par l'opérateur
+	__TEL_STATUT_NON_QUALIFIE_OPERATEUR__						= "35" // L'opérateur n'a pas qualifié la fiche dans les temps
+	__TEL_STATUT_FAUX_NUMERO__									= "40" // N° non attribué
+	__TEL_STATUT_INJOIGNABLE__									= "45" // pas de réponse
+	__TEL_STATUT_REPLANIFIE__									= "47" // replanifié à une date ultérieur
+	__TEL_STATUT_REPONDEUR__									= "50"
+	__TEL_STATUT_FAX__											= "52" // Fax
+	__TEL_STATUT_INDESIRABLE__									= "55" // Client Mécontent
+	__TEL_STATUT_RGPD__											= "57" // Message audio RGPD
+	__TEL_STATUT_ERREUR_NUMERO__								= "60" // Mauvais contact dans la fiche
+	__TEL_STATUT_INDISPONIBLE__									= "63" // Impossible de planifier un nouveau rappel
+	__TEL_STATUT_REFRACTAIRE__									= "65" // Ne souhaite pas répondre
+	__TEL_STATUT_A_RAPPELER__									= "70" //
+	__TEL_STATUT_TRANSFERT_APPEL__								= "75" //
+	__TEL_STATUT_QUALIFICATION_PARTIELLE__						= "80" // ou La durée de communication trop longue sur une question ou sur la durée totale de l'appel
+	__TEL_STATUT_ERREUR__										= "85" //
+	__TEL_STATUT_TERMINE__										= "90" // Ok
+
+
+
+	__LTR_STATUT_CREATION__										= "00"
+	__LTR_STATUT_ENREGISTRE__									= "10"
+	__LTR_STATUT_ANNULE__										= "20"
+	__LTR_STATUT_PRISE_EN_CHARGE__								= "30"
+	__LTR_STATUT_PREPARATION__									= "35"
+	__LTR_STATUT_IMPRESSION__									= "40"
+	__LTR_STATUT_MISE_SOUS_PLI__								= "50"
+	__LTR_STATUT_DEPOT_POSTE__									= "60"
+	__LTR_STATUT_ALLIAGE__										= "80"
+
+	__TTB_STATUT_CREATION__										= "10"
+	__TTB_STATUT_EN_COURS__										= "20"
+	__TTB_STATUT_ATTRIBUE__										= "30" // associée / attribuée à un projet de tract
+	__TTB_STATUT_CONFIRME__										= "40" // confirmée par Adrexo
+	__TTB_STATUT_PRISE_EN_CHARGE__								= "50"
+	__TTB_STATUT_COMMANDE__										= "60"
+
+
+	__DEPOT_STATUT_TRAITEMENT_EN_COURS__						= "10"
+	__DEPOT_STATUT_ENREGISTRE__									= "20"
+	__DEPOT_STATUT_VALIDATION_EN_ATTENTE__						= "30"
+	__DEPOT_STATUT_EN_PAUSE__									= "40"
+	__DEPOT_STATUT_PRISE_EN_CHARGE_EN_ATTENTE__					= "50"
+	__DEPOT_STATUT_PRISE_EN_CHARGE__							= "60"
+	__DEPOT_STATUT_PRODUCTION_EN_COURS__						= "70"
+	__DEPOT_STATUT_FACTURATION_EN_ATTENTE__						= "80"
+	__DEPOT_STATUT_TERMINE__									= "90"
+	__DEPOT_STATUT_ANNULE__										= "99"
+
+
+
+	__BDD_STATUT_CREATION__										= "00"
+	__BDD_STATUT_COMPTAGE_EN_ATTENTE__							= "10"
+	__BDD_STATUT_REGLEMENT_EN_ATTENTE__							= "15"
+	__BDD_STATUT_REGLEMENT_HORS_DELAIS__						= "17"
+	__BDD_STATUT_VALIDATION_EN_ATTENTE__						= "25"
+	__BDD_STATUT_VALIDATION_HORS_DELAIS__						= "27"
+	__BDD_STATUT_VALIDATION_REFUSEE__							= "29"
+	__BDD_STATUT_IMPORT_EN_ATTENTE__							= "40"
+	__BDD_STATUT_IMPORT_EN_COURS__								= "50"
+	__BDD_STATUT_DISPONIBLE__									= "60"
+	__BDD_STATUT_EXPLOITE__										= "70"
+	__BDD_STATUT_FACTURATION_EN_ATTENTE__						= "80"
+	__BDD_STATUT_SOLDE_EN_ATTENTE__								= "85"
+	__BDD_STATUT_TERMINE__										= "90"
+	__BDD_STATUT_ANNULE__										= "99"
+
+
+	// STATUT KANNEL
+	__KL_STATUT_DELIVERY_SUCCESS__								= "1"
+	__KL_STATUT_DELIVERY_FAILURE__								= "2"
+	__KL_STATUT_MESSAGE_BUFFERED__								= "4"
+	__KL_STATUT_SMSC_SUBMIT__									= "8"
+	__KL_STATUT_SMSC_REJECT__									= "16"
+
+
+	// STATUTS CM TELECOM
+	__CM_STATUT_CONFIRMED_UNDELIVERED__							= "5"
+	__CM_STATUT_INSUFFICIENT_CREDIT__							= "7"
+	__CM_STATUT_MESSAGE_EXPIRED__								= "8"
+	__CM_STATUT_MESSAGE_FORM_UNDELIVERABLE__					= "20"
+	__CM_STATUT_TEMPORARY_WAITING_INSUFFICIENT_CREDIT__			= "21"
+	__CM_STATUT_TEMPORARY_REJECT_INSUFFICIENT_CREDIT__			= "22"
+	__CM_STATUT_BLACKLISTED_PERMANENTLY__						= "23"
+	__CM_STATUT_SUBSCRIBER_TEMPORAILY_ABSENT__					= "24"
+	__CM_STATUT_TEMPORARY_OPERATOR_NETWORK_PROBLEM__			= "25"
+	__CM_STATUT_TEMPORARY_PHONE__ERROR__						= "26"
+	__CM_STATUT_PERMANENTLY_PHONE__ERROR__						= "27"
+	__CM_STATUT_SPAM_SUSPICION__								= "28"
+	__CM_STATUT_NOT_PERMITTED_CONTENT__							= "29"
+	__CM_STATUT_MONTHLY_CREDIT_LIMIT_REACHED__					= "30"
+	__CM_STATUT_SUBSCIBER_ACCOUNT_SUSPENDED__					= "31"
+	__CM_STATUT_PARENTAL_LOCK__									= "33"
+	__CM_STATUT_PERMANENTLY_PARENTAL_LOCK__						= "34"
+	__CM_STATUT_TEMPORARY_PARENTAL_LOCK__						= "35"
+	__CM_STATUT_TEMPORARY_PREVENT_PARENTAL_LOCK__				= "36"
+	__CM_STATUT_MSISDN_BLACKLIST__								= "37"
+	__CM_STATUT_MAXIMUM_CONCATENATED_MESSAGE__					= "38"
+
+
+	// STATUTS INFOBIP GROUPE 0
+	__IB_STATUT_NO_ERROR__										= "0"
+
+
+	// STATUTS INFOBIP GROUPE 1
+	__IB_STATUT_UNKNOWN_SUBSCRIBER__							= "1"
+	__IB_STATUT_PENDING_WAITING_DELIVERY__						= "3" // EMAIL
+	__IB_STATUT_UNIDENTIFIED_SUBSCRIBER__						= "5"
+	__IB_STATUT_ABSENT_SUBSCRIBER_SM__							= "6"
+	__IB_STATUT_PENDING_ENROUTE__								= "7" // EMAIL
+	__IB_STATUT_ROAMING_NOT_ALLOWED__							= "8"
+	__IB_STATUT_ILLEGAL_SUBSCRIBER__							= "9"
+	__IB_STATUT_TELESERVICE_NOT_PROVISIONED__					= "11"
+	__IB_STATUT_ILLEGAL_EQUIPMENT__								= "12"
+	__IB_STATUT_CALL_BARRED__									= "13"
+	__IB_STATUT_FACILITY_NOT_SUPPORTED__						= "21"
+	__IB_STATUT_PENDING_ACCEPTED__								= "26" // EMAIL
+	__IB_STATUT_ABSENT_SUBSCRIBER__								= "27"
+	__IB_STATUT_SUBSCRIBER_BUSY_FOR_MT_SMS__					= "31"
+	__IB_STATUT_SM_DELIVERY_FAILURE__							= "32"
+	__IB_STATUT_MESSAGE_WAITING_LIST_FULL__						= "33"
+	__IB_STATUT_SYSTEM_FAILURE__								= "34"
+	__IB_STATUT_DATA_MISSING__									= "35"
+	__IB_STATUT_UNEXPECTED_DATA_VALUE__							= "36"
+	__IB_STATUT_UNKNOWN_ERROR__									= "255"
+	__IB_STATUT_SM_DF_MEMORYCAPACITYEXCEEDED__					= "256"
+	__IB_STATUT_SM_DF_EQUIPMENTPROTOCOLERROR__					= "257"
+	__IB_STATUT_SM_DF_EQUIPMENTNOTSM_EQUIPPED__					= "258"
+	__IB_STATUT_SM_DF_UNKNOWNSERVICECENTRE__					= "259"
+	__IB_STATUT_SM_DF_SC_CONGESTION__							= "260"
+	__IB_STATUT_SM_DF_INVALIDSME_ADDRESS__						= "261"
+	__IB_STATUT_SM_DF_SUBSCRIBERNOTSC_SUBSCRIBER__				= "262"
+	__IB_STATUT_PROVIDER_GENERAL_ERROR__						= "500"
+	__IB_STATUT_NO_RESPONSE__									= "502"
+	__IB_STATUT_SERVICE_COMPLETION_FAILURE__					= "503"
+	__IB_STATUT_UNEXPECTED_RESPONSE_FROM_PEER__					= "504"
+	__IB_STATUT_MISTYPED_PARAMETER__							= "507"
+	__IB_STATUT_NOT_SUPPORTED_SERVICE__							= "508"
+	__IB_STATUT_DUPLICATED_INVOKE_ID__							= "509"
+	__IB_STATUT_OR_APPCONTEXTNOTSUPPORTED__						= "1024"
+	__IB_STATUT_OR_INVALIDDESTINATIONREFERENCE__				= "1025"
+	__IB_STATUT_OR_INVALIDORIGINATINGREFERENCE__				= "1026"
+	__IB_STATUT_OR_ENCAPSULATEDAC_NOTSUPPORTED__				= "1027"
+	__IB_STATUT_OR_TRANSPORTPROTECTIONNOTADEQUATE__				= "1028"
+	__IB_STATUT_OR_NOREASONGIVEN__								= "1029"
+	__IB_STATUT_OR_POTENTIALVERSIONINCOMPATIBILITY__			= "1030"
+	__IB_STATUT_OR_REMOTENODENOTREACHABLE__						= "1031"
+	__IB_STATUT_NNR_NOTRANSLATIONFORANADDRESSOFSUCHNATURE__		= "1152"
+	__IB_STATUT_NNR_NOTRANSLATIONFORTHISSPECIFICADDRESS__		= "1153"
+	__IB_STATUT_NNR_SUBSYSTEMCONGESTION__						= "1154"
+	__IB_STATUT_NNR_SUBSYSTEMFAILURE__							= "1155"
+	__IB_STATUT_NNR_UNEQUIPPEDUSER__							= "1156"
+	__IB_STATUT_NNR_MTPFAILURE__								= "1157"
+	__IB_STATUT_NNR_NETWORKCONGESTION__							= "1158"
+	__IB_STATUT_NNR_UNQUALIFIED__								= "1159"
+	__IB_STATUT_NNR_ERRORINMESSAGETRANSPORTXUDT__				= "1160"
+	__IB_STATUT_NNR_ERRORINLOCALPROCESSINGXUDT__				= "1161"
+	__IB_STATUT_NNR_DESTINATIONCANNOTPERFORMREASSEMBLYXUDT__	= "1162"
+	__IB_STATUT_NNR_SCCPFAILURE__								= "1163"
+	__IB_STATUT_NNR_HOPCOUNTERVIOLATION__						= "1164"
+	__IB_STATUT_NNR_SEGMENTATIONNOTSUPPORTED__					= "1165"
+	__IB_STATUT_NNR_SEGMENTATIONFAILURE__						= "1166"
+	__IB_STATUT_UA_USERSPECIFICREASON__							= "1281"
+	__IB_STATUT_UA_USERRESOURCELIMITATION__						= "1282"
+	__IB_STATUT_UA_RESOURCEUNAVAILABLE__						= "1283"
+	__IB_STATUT_UA_APPLICATIONPROCEDURECANCELLATION__			= "1284"
+	__IB_STATUT_PA_PROVIDERMALFUNCTION__						= "1536"
+	__IB_STATUT_PA_SUPPORTINGDIALOGORTRANSACTIONREALEASED__		= "1537"
+	__IB_STATUT_PA_RESSOURCELIMITATION__						= "1538"
+	__IB_STATUT_PA_MAINTENANCEACTIVITY__						= "1539"
+	__IB_STATUT_PA_VERSIONINCOMPATIBILITY__						= "1540"
+	__IB_STATUT_PA_ABNORMALMAPDIALOG__							= "1541"
+	__IB_STATUT_NC_ABNORMALEVENTDETECTEDBYPEER__				= "1792"
+	__IB_STATUT_NC_RESPONSEREJECTEDBYPEER__						= "1793"
+	__IB_STATUT_NC_ABNORMALEVENTRECEIVEDFROMPEER__				= "1794"
+	__IB_STATUT_NC_MESSAGECANNOTBEDELIVEREDTOPEER__				= "1795"
+	__IB_STATUT_NC_PROVIDEROUTOFINVOKE__						= "1796"
+
+	// STATUTS INFOBIP GROUPE 2
+	__IB_STATUT_UNDELIVERABLE_REJECTED_OPERATOR__				= "4"		// EMAIL
+	__IB_STATUT_UNDELIVERABLE_NOT_DELIVERED__					= "9"		// EMAIL
+	__IB_STATUT_IMSI_BLACKLISTED__ 								= "2049"
+	__IB_STATUT_BLACKLISTED_DESTINATIONADDRESS__				= "2052"
+	__IB_STATUT_SOURCE_ADDRESS_BLACKLISTED__					= "2053"
+	__IB_STATUT_INVALID_PDU_FORMAT__							= "4096"
+	__IB_STATUT_MESSAGE_CANCELED__								= "4100"
+	__IB_STATUT_VALIDITYEXPIRED__								= "4101"
+
+	// STATUTS INFOBIP GROUPE 3
+	__IB_STATUT_DELIVERED_TO_OPERATOR__							= "2"		// EMAIL
+	__IB_STATUT_DELIVERED_TO_HANDSET__							= "5"       // EMAIL
+	__IB_STATUT_BEARER_SERVICE_NOT_PROVISIONED__				= "10"
+	__IB_STATUT_SS_INCOMPATIBILITY__							= "20"
+	__IB_STATUT_RESOURCE_LIMITATION__							= "51"
+	__IB_STATUT_UNKNOWN_ALPHABET__								= "71"
+	__IB_STATUT_INVALID_RESPONSE_RECEIVED__						= "501"
+	__IB_STATUT_TIME_OUT__										= "2048"
+	__IB_STATUT_DEST_ADDRESS_BLACKLISTED__						= "2050"
+	__IB_STATUT_INVALIDMSCADDRESS__								= "2051"
+	__IB_STATUT_NOTSUBMITTEDTOGMSC__							= "4097"
+	__IB_STATUT_NOTSUBMITTEDTOSMPPCHANNEL__						= "4102"
+
+	// STATUTS INFOBIP GROUPE 4
+	__IB_STATUT_EXPIRED_EXPIRED__								= "15"		// EMAIL
+	__IB_STATUT_EXPIRED_DLR_UNKNOWN__							= "29"      // EMAIL
+
+	// STATUTS INFOBIP GROUPE 5
+	__IB_STATUT_REJECTED_NETWORK__								= "6"		// EMAIL
+	__IB_STATUT_REJECTED_PREFIX_MISSING__						= "8"    	// EMAIL
+	__IB_STATUT_REJECTED_DND__									= "10"    	// EMAIL
+	__IB_STATUT_REJECTED_SOURCE__								= "11"    	// EMAIL
+	__IB_STATUT_REJECTED_NOT_ENOUGH_CREDITS__					= "12"    	// EMAIL
+	__IB_STATUT_REJECTED_SENDER__								= "13"    	// EMAIL
+	__IB_STATUT_REJECTED_DESTINATION__							= "14"    	// EMAIL
+	__IB_STATUT_REJECTED_PREPAID_PACKAGE_EXPIRED__				= "17"    	// EMAIL
+	__IB_STATUT_REJECTED_DESTINATION_NOT_REGISTERED__			= "18"    	// EMAIL
+	__IB_STATUT_REJECTED_ROUTE_NOT_AVAILABLE__					= "19"    	// EMAIL
+	__IB_STATUT_REJECTED_FLOODING_FILTER__						= "20"    	// EMAIL
+	__IB_STATUT_REJECTED_SYSTEM_ERROR__							= "21"    	// EMAIL
+	__IB_STATUT_REJECTED_DUPLICATE_MESSAGE_ID__					= "23"    	// EMAIL
+	__IB_STATUT_REJECTED_INVALID_UDH__							= "24"    	// EMAIL
+	__IB_STATUT_REJECTED_MESSAGE_TOO_LONG__						= "25"    	// EMAIL
+	__IB_STATUT_MISSING_TO__									= "51"    	// EMAIL
+	__IB_STATUT_REJECTED_INVALID_DESTINATION__					= "52"    	// EMAIL
+
+	// Asterisk
+
+	__AST_CAUSE_UNALLOCATED__									= 1
+	__AST_CAUSE_NO_ROUTE_TRANSIT_NET__							= 2
+	__AST_CAUSE_NO_ROUTE_DESTINATION__							= 3
+	__AST_CAUSE_CHANNEL_UNACCEPTABLE__							= 6
+	__AST_CAUSE_CALL_AWARDED_DELIVERED__						= 7
+	__AST_CAUSE_NORMAL_CLEARING__								= 16
+	__AST_CAUSE_USER_BUSY__										= 17
+	__AST_CAUSE_NO_USER_RESPONSE__								= 18
+	__AST_CAUSE_NO_ANSWER__										= 19
+	__AST_CAUSE_CALL_REJECTED__									= 21
+	__AST_CAUSE_NUMBER_CHANGED__								= 22
+	__AST_CAUSE_DESTINATION_OUT_OF_ORDER__						= 27
+	__AST_CAUSE_INVALID_NUMBER_FORMAT__							= 28
+	__AST_CAUSE_FACILITY_REJECTED__								= 29
+	__AST_CAUSE_RESPONSE_TO_STATUS_ENQUIRY__					= 30
+	__AST_CAUSE_NORMAL_UNSPECIFIED__							= 31
+	__AST_CAUSE_NORMAL_CIRCUIT_CONGESTION__						= 34
+	__AST_CAUSE_NETWORK_OUT_OF_ORDER__							= 38
+	__AST_CAUSE_NORMAL_TEMPORARY_FAILURE__						= 41
+	__AST_CAUSE_SWITCH_CONGESTION__								= 42
+	__AST_CAUSE_ACCESS_INFO_DISCARDED__							= 43
+	__AST_CAUSE_REQUESTED_CHAN_UNAVAIL__						= 44
+	__AST_CAUSE_PRE_EMPTED__									= 45
+	__AST_CAUSE_FACILITY_NOT_SUBSCRIBED__						= 50
+	__AST_CAUSE_OUTGOING_CALL_BARRED__							= 52
+	__AST_CAUSE_INCOMING_CALL_BARRED__							= 54
+	__AST_CAUSE_BEARERCAPABILITY_NOTAUTH__						= 57
+	__AST_CAUSE_BEARERCAPABILITY_NOTAVAIL__						= 58
+	__AST_CAUSE_BEARERCAPABILITY_NOTIMPL__						= 65
+	__AST_CAUSE_CHAN_NOT_IMPLEMENTED__							= 66
+	__AST_CAUSE_FACILITY_NOT_IMPLEMENTED__						= 69
+	__AST_CAUSE_INVALID_CALL_REFERENCE__						= 81
+	__AST_CAUSE_INCOMPATIBLE_DESTINATION__						= 88
+	__AST_CAUSE_INVALID_MSG_UNSPECIFIED__						= 95
+	__AST_CAUSE_MANDATORY_IE_MISSING__							= 96
+	__AST_CAUSE_MESSAGE_TYPE_NONEXIST__							= 97
+	__AST_CAUSE_WRONG_MESSAGE__									= 98
+	__AST_CAUSE_IE_NONEXIST__									= 99
+	__AST_CAUSE_INVALID_IE_CONTENTS__							= 100
+	__AST_CAUSE_WRONG_CALL_STATE__								= 101
+	__AST_CAUSE_RECOVERY_ON_TIMER_EXPIRE__						= 102
+	__AST_CAUSE_MANDATORY_IE_LENGTH_ERROR__						= 103
+	__AST_CAUSE_PROTOCOL_ERROR__								= 111
+	__AST_CAUSE_INTERWORKING__									= 127
+
+	__AST_CAUSE_RACCROCHAGE_TIMEOUT__							= 120 // Raccrochage par timeout
+	__AST_CAUSE_REPONDEUR__										= 121 // Raccrochage par répondeur
+
+
+
+
+	__MRDF_STATUT_GOOD__										= "Good"
+
+	__MRDF_EXTENSION_SORTIE__									= ".out"
+
+	__MRDF_POSITION_IDJOB__										= 2
+	__MRDF_TAILLE_IDJOB__										= 12
+	__MRDF_POSITION_IDLETTREGESTION__							= 472
+	__MRDF_TAILLE_IDLETTREGESTION__								= 20
+	__MRDF_POSITION_STATUT__									= 184
+	__MRDF_TAILLE_STATUT__										= 8
+
+
+	__TIMBRE_ID_RECOMMANDE__									= 13
+	__TIMBRE_LIBELLE_RECOMMANDE__								= "Lettre Recommandée"
+
+	__PARAMETRE_MINIMUM_FACTURATION__							= "Minimum_Facturation"
+	__PARAMETRE_POURCENTAGE_AFFECTATION__						= "Callcenter_PourcentageAffectation"
+
+	// ADREXO
+	__CRM_INDIANA__ 											= "0001066317"	// Grille tarifaire à appliquer
+
+	// Constantes d'inscription opérateur
+	adhesion_validé												= 1 	// l’adhésion a été validé par email
+	tunnel_terminé												= 2 	// l'opérateur a terminé le tunnel d'inscription
+	operateur_refusé											= 3 	// l'opérateur a été refusé
+	operateur_admis												= 4 	// l'opérateur a été admis
+	iban_validé													= 5		// l'opérateur a enregistré son iban
+	siret_uploadé												= 6 	// l'opérateur a uploadé son siret (KBIS ou ATTESTATION de VIGILANCE)
+	siret_refusé												= 7 	// le siret est refusé
+	siret_validé												= 8 	// le siret est validé
+	identité_uploadé											= 9 	// l'opérateur a uploadé sa pièce d'identité
+	identité_refusé												= 10 	// la pièce d'identité est refusé
+	identité_validé												= 11 	// la pièce d'identité est validé
+	equipement_validé											= 12	// l'opérateur a testé son équipement
+	operateur_actif												= 13	// l'opérateur est actif
+	notification_validé											= 14	// l'opérateur à enregistré ses préférences de notifications
+
+	// Constantes Notifications
+	assurée														= 1
+	assurée_email												= 2
+	assurée_sms													= 3
+	optionnelle													= 4
+	optionnelle_sms												= 5
+	optionnelle_email											= 6
+	hors_planning												= 7
+	hors_planning_email											= 8
+	hors_planning_sms											= 9
+	urgente														= 10
+	urgente_email												= 11
+	urgente_sms													= 12
+
+
+	// Paramètres de la landing Page
+
+	__FORMULAIRE_INTERRUPTEUR__									= "INT"
+	__FORMULAIRE_OPTIN__										= "OPT"
+	__FORMULAIRE_COMBO__										= "CBO"
+	__FORMULAIRE_SAISIE__										= "SAI"
+	__FORMULAIRE_VIDE__											= "VID"
+
+	__TRACKING__												= "TRA"
+	__FORMULAIRE__												= "FOR"
+	__TRACKING_LIEN__											= "LNK"
+	__TRACKING_IMAGE__											= "IMG"
+	__TRACKING_BANNIERE__										= "BAN"
+	__TRACKING_GRILLE__											= "GRl"
+	__TRACKING_SCRIPT__											= "SCR"
+	__TRACKING_GRATTAGE__										= "GRA"
+	__TRACKING_SOCIAL__											= "RSC"
+	__TRACKING_CGV__											= "CGV"
+
+fin
+
+enumBibliothèque est une Enumération
+	BibliothèquePersonnelle	= 1
+	BibliothèquePartagée	= 2
+	BibliothèqueMarque		= 3
+	BibliothèqueMarketeam	= 4
+fin
+
