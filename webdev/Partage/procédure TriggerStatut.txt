@@ -66,6 +66,21 @@ si dos_operation.EstBrouillon = Vrai alors
 	retour
 fin
 
+// Statut Audit Remplissage
+si dos_operation.TypeOperation = __OPERATION_COURRIER__ alors
+	si pas DateHeureValide(dos_operation.DateHeureCheckRemplissage) alors
+		si Partage.EstEnveloppeAFenetre(dos_operation.IdOperation) alors
+			sNouveauStatut = __Statut_Audit_Remplissage_En_Attente__
+			si dos_operation.DateHeureLimiteValidation < DateHeureSys() alors
+				sNouveauStatut = __Statut_Audit_Remplissage_Hors_Delais__
+			fin
+			retour
+		fin
+	fin
+fin
+
+
+
 bEstPaiementSurReserve			= clt_paiement.LitRecherchePremier(IdOperation, dos_operation.IdOperation) _et_ clt_paiement.EstReserve = Vrai
 bEstPaiementReceptionFacture 	= bEstPaiementSurReserve = Faux _et_ EstClientEnCompte(dos_operation.IdClientFacturation)
 bEstPlafondEncoursDepasse 		= (bEstPaiementSurReserve = Faux _et_ bEstPaiementReceptionFacture = Vrai _et_ PlafondEncoursDepassé(dos_operation.IdClientFacturation, dos_operation.ResteAPayer, dos_operation.IdOperation))

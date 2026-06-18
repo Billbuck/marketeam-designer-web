@@ -1,0 +1,31 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> est booléen = ] EstEnveloppeAFenetre (<pIdOperation>)
+//
+// Paramètres :
+// 	pIdOperation : <indiquez ici le rôle de pIdOperation>
+// Valeur de retour :
+// 	booléen : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure EstEnveloppeAFenetre(pIdOperation)
+
+sTexteRequete	est une chaîne
+sdReqEnveloppe	est une Source de Données
+
+sTexteRequete = [
+	SELECT ltr_enveloppe.NbrFenetre
+	FROM ope_lettre
+	JOIN ltr_enveloppe ON ltr_enveloppe.IdEnveloppe = ope_lettre.IdEnveloppe
+	WHERE ope_lettre.IdLettre = %1
+]
+sTexteRequete = Remplace(sTexteRequete, "%1", NumériqueVersChaîne(pIdOperation))
+
+sdReqEnveloppe.ExécuteRequêteSQL(ope_lettre..Connexion, hRequêteSansCorrection, sTexteRequete)
+si sdReqEnveloppe.LitPremier() alors
+	renvoyer (sdReqEnveloppe.NbrFenetre > 0)
+fin
+
+renvoyer Faux
