@@ -1,0 +1,59 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] LibelleStatutOperation (<pCode>)
+procédure LibelleStatutOperation(pCode) : chaîne ANSI
+
+sValeurRenvoyée est une chaîne ANSI
+
+
+selon pCode
+	cas __Statut_Enregistrée__							: sValeurRenvoyée =  "Enregistrée"
+	cas __Statut_Element_En_Attente__					: sValeurRenvoyée =  "En attente d'éléments"
+	cas __Statut_Element_Hors_Delais__					: sValeurRenvoyée =  "Hors délais réception d'éléments"
+	cas __Statut_Règlement_En_Attente__					: sValeurRenvoyée =  "Règlement en attente"
+	cas __Statut_Règlement_En_Cours__					: sValeurRenvoyée =  "Règlement en cours"
+	cas __Statut_Règlement_Annulé__						: sValeurRenvoyée =  "Règlement annulé"
+	cas __Statut_Règlement_Rejeté__						: sValeurRenvoyée =  "Règlement rejeté"
+	cas __Statut_Règlement_Erreur__						: sValeurRenvoyée =  "Règlement en erreur"
+	cas __Statut_Règlement_Hors_Delais__				: sValeurRenvoyée =  "Réception du règlement hors délais"
+	cas __Statut_Référence_En_Attente__					: sValeurRenvoyée =  "Référence en attente"
+	cas __Statut_Référence_Hors_Delais__				: sValeurRenvoyée =  "Référence hors délais"
+	cas __Statut_Audit_Remplissage_En_Attente__		: sValeurRenvoyée =  "Audit de remplissage en attente"
+	cas __Statut_Audit_Remplissage_Hors_Delais__		: sValeurRenvoyée =  "Audit de remplissage hors délais"
+	cas __Statut_Validation_En_Attente__				: sValeurRenvoyée =  "En attente de validation"
+	cas __Statut_Validation_Hors_Delais__				: sValeurRenvoyée =  "Hors délais de validation"
+	cas __Statut_Validation_Refusée__					: sValeurRenvoyée =  "Refusé"
+	cas __Statut_Prise_En_Charge_En_Attente__			: sValeurRenvoyée =  "En attente de prise en charge"
+	cas __Statut_Prise_En_Charge__						: sValeurRenvoyée =  "Pris en charge"
+	cas __Statut_Production_En_Cours__					: sValeurRenvoyée =  "Production en cours"
+	cas __Statut_Bdd_En_Cours__							: sValeurRenvoyée =  "Traitement en cours"
+	cas __Statut_Bdd_Pret__								: sValeurRenvoyée =  "Prêt pour analyse"
+	cas __Statut_Zecible_Token_Demande__				: sValeurRenvoyée =  "Préparation en cours"
+	cas __Statut_Zecible_Token_Reçu__					: sValeurRenvoyée =  "Préparation en cours"
+	cas __Statut_Zecible_Token_Erreur__					: sValeurRenvoyée =  "Préparation en erreur"
+	cas __Statut_Zecible_Export_En_Cours__				: sValeurRenvoyée =  "Traitement en cours"
+	cas __Statut_Zecible_Export_Erreur__				: sValeurRenvoyée =  "Traitement en erreur"
+	cas __Statut_Distribution_En_Attente__				: sValeurRenvoyée =  "En attente de distribution"
+	cas __Statut_Distribution_En_Cours__				: sValeurRenvoyée =  "Distribution en cours"
+	cas __Statut_Distribution_En_Erreur__				: sValeurRenvoyée =  "Distribution en erreur"
+	cas __Statut_Appel_En_Cours__						: sValeurRenvoyée =  "Appel en cours"
+	cas __Statut_Envoyée__								: sValeurRenvoyée =  "Envoyée"
+	cas __Statut_Facturation_En_Attente__				: sValeurRenvoyée =  "En attente de facturation"
+	cas __Statut_Solde_En_Attente__						: sValeurRenvoyée =  "Solde en attente"
+	cas __Statut_Solde_En_Cours__						: sValeurRenvoyée =  "Règlement du solde en cours"
+	cas __Statut_Solde_Annulé__							: sValeurRenvoyée =  "Règlement du solde annulé"
+	cas __Statut_Solde_Rejeté__							: sValeurRenvoyée =  "Règlement du solde rejeté"
+	cas __Statut_Solde_Erreur__							: sValeurRenvoyée =  "Règlement du solde en erreur"
+	cas __Statut_Terminée__								: sValeurRenvoyée =  "Clôturée"
+	cas __Statut_Annulée__								: sValeurRenvoyée =  "Annulée"
+
+	autres cas 											: sValeurRenvoyée =  "A Définir : " + pCode
+fin
+
+
+renvoyer sValeurRenvoyée
+
+
+
+
+
