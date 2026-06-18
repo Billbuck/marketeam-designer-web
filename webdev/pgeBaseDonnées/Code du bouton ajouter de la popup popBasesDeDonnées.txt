@@ -1,6 +1,12 @@
 //SI AjouteBaseDeDonnées(cboBaseDeDonnées.ValeurMémorisée, cboBaseFiltre.ValeurMémorisée) ALORS
 si AjouteBaseDeDonnées(_nIdBaseDonnées, _nIdFiltre) alors
-	__stOperation.DateHeureCheckRemplissage = ""
+	// Invalider l'audit de remplissage uniquement pour un courrier à enveloppe
+	// à fenêtre (seul périmètre concerné). En création, si l'enveloppe n'est pas
+	// encore choisie, EstEnveloppeFenetre = Faux -> pas de vidage (le marqueur
+	// reste à son défaut valide).
+	si __stOperation.stOperationLettre.EstEnveloppeFenetre alors
+		__stOperation.DateHeureCheckRemplissage = ""
+	fin
 	PointageStopPub(_nIdBaseDonnées)
 	InitZnrRapport()
 	GestionAffichage()

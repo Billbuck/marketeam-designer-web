@@ -10,7 +10,12 @@ si nInd > 0 alors
 	sinon
 		__stOperation.tabBase.Supprime(nInd)
 	fin
-	__stOperation.DateHeureCheckRemplissage = ""
+	// Invalider l'audit de remplissage uniquement pour un courrier à enveloppe
+	// à fenêtre (cf. bouton ajouter). En création sans enveloppe choisie,
+	// EstEnveloppeFenetre = Faux -> pas de vidage.
+	si __stOperation.stOperationLettre.EstEnveloppeFenetre alors
+		__stOperation.DateHeureCheckRemplissage = ""
+	fin
 	InitZnrRapport()
 	GestionAffichage()
 fin

@@ -120,7 +120,11 @@ selon vMessage.action
 						// Validation Designer (document) -> l'audit de remplissage devient
 						// périmé : on vide le marqueur (mémoire seule, persisté au prochain
 						// EnregistreOperation -> recalcul statut TriggerStatut).
-						__stOperation.DateHeureCheckRemplissage = ""
+						// Uniquement pour un courrier à enveloppe à fenêtre (seul périmètre
+						// de l'audit) : les courriers sans fenêtre gardent le marqueur valide.
+						si __stOperation.stOperationLettre.EstEnveloppeFenetre alors
+							__stOperation.DateHeureCheckRemplissage = ""
+						fin
 
 						// ─── Détection QR Code Interactif (= opération "Cliquez Ici") ─
 						// Flag par document + propagation au flag global de l'opération.
