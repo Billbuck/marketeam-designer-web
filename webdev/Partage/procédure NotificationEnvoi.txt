@@ -1,0 +1,65 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] NotificationEnvoi (<pIdClient> est entier, <pIdContact> est entier, <pCodeNotification> est chaîne, <pIdOperation> est entier, <pIdFacture> est entier, <pIdAbonnement> est entier [, <pIdValideur> est entier [, <pTexteLibre> est chaîne [, <pCodeSite> est chaîne [, <pEmailFacturation>]]]])
+//
+// Paramètres :
+//	pIdClient (entier) : <indiquez ici le rôle de pIdReference>
+//	pIdContact (entier) : <indiquez ici le rôle de pIdContact>
+//	pCodeNotification (chaîne ANSI) : <indiquez ici le rôle de pCodeNotification>
+//	pIdOperation (entier) : <indiquez ici le rôle de pIdOperation>
+//	pIdFacture (entier) : <indiquez ici le rôle de pIdReference>
+//	pIdAbonnement (entier) : <indiquez ici le rôle de pIdReference>
+//	pIdValideur (entier - valeur par défaut=0) : <indiquez ici le rôle de pIdValideur>
+//	pTexteLibre (chaîne ANSI - valeur par défaut="") : <indiquez ici le rôle de pTexteLibre>
+//	pCodeSite (chaîne ANSI - valeur par défaut="MKT") : <indiquez ici le rôle de pCodeSite>
+// 	pEmailFacturation (valeur par défaut="") : < indiquez ici le rôle de pEmailFacturation >
+// Valeur de retour :
+// 	booléen : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure NotificationEnvoi(local stNotificationEnvoi est une structNotificationEnvoi)
+
+// pIdClient est un entier, pIdContact est un entier, pCodeNotification est une chaine, pIdOperation est un entier, pIdFacture est un entier, pIdAbonnement est un entier, pTypeAbonnement est une chaine, pIdValideur est un entier, pTexteLibre est une chaine, pEmailFacturation, pCodeSite est une chaîne = __CODE_SITE_MARKETEAM__)
+
+sTexteRequete				est une chaîne
+sdReqNotificationEnvoi		est une Source de Données
+sIdClient					est une chaîne	= stNotificationEnvoi.IdClient
+sIdOperation				est une chaîne	= stNotificationEnvoi.IdOperation
+sIdFacture					est une chaîne	= stNotificationEnvoi.IdFacture
+sTypeFacture				est une chaîne  = stNotificationEnvoi.TypeFacture
+sIdAbonnement				est une chaîne	= stNotificationEnvoi.IdAbonnement
+sTypeAbonnement				est une chaîne  = stNotificationEnvoi.TypeAbonnement
+sTypeOperation 				est une chaîne  = stNotificationEnvoi.TypeOperation
+sEmailDestinataire 			est une chaîne  = stNotificationEnvoi.EmailFacturation
+sVariables 					est une chaîne  = stNotificationEnvoi.Variables
+
+si stNotificationEnvoi.IdClient = 0				alors sIdClient				= "NULL"
+si stNotificationEnvoi.IdOperation = 0			alors sIdOperation			= "NULL"
+si stNotificationEnvoi.IdFacture = 0			alors sIdFacture 			= "NULL"
+si stNotificationEnvoi.IdAbonnement = 0			alors sIdAbonnement 		= "NULL"
+si stNotificationEnvoi.TypeFacture  = ""		alors sTypeFacture			= "NULL" sinon sTypeFacture 		= cpFonction.Quotes(stNotificationEnvoi.TypeFacture)
+si stNotificationEnvoi.TypeAbonnement  = ""		alors sTypeAbonnement		= "NULL" sinon sTypeAbonnement 		= cpFonction.Quotes(stNotificationEnvoi.TypeAbonnement)
+si stNotificationEnvoi.TypeOperation  = ""		alors sTypeOperation		= "NULL" sinon sTypeOperation 		= cpFonction.Quotes(stNotificationEnvoi.TypeOperation)
+si stNotificationEnvoi.EmailFacturation = ""	alors sEmailDestinataire	= "NULL" sinon sEmailDestinataire	= cpFonction.Quotes(stNotificationEnvoi.EmailFacturation)
+si stNotificationEnvoi.Variables = ""			alors sVariables			= "NULL" sinon sVariables			= cpFonction.Quotes(stNotificationEnvoi.Variables)
+
+
+sTexteRequete = [
+	CALL NotificationEnvoi([%sIdClient%], [%stNotificationEnvoi.IdContact%], '[%stNotificationEnvoi.CodeNotification%]', [%sIdOperation%], [%sTypeOperation%], [%sIdFacture%], [%sTypeFacture%], [%sIdAbonnement%], [%sTypeAbonnement%], [%sEmailDestinataire%], [%sVariables%]);
+]
+
+
+si pas sdReqNotificationEnvoi.ExécuteRequêteSQL(clt_contact.Connexion,hRequêteSansCorrection,sTexteRequete) alors
+	<compile si TypeConfiguration <> Webservice>
+		Info("Erreur Requête")
+		STOP
+	<fin>
+	renvoyer Faux
+fin
+
+renvoyer Vrai
+
+fin:
+sdReqNotificationEnvoi.AnnuleDéclaration()
