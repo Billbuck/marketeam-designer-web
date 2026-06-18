@@ -10,12 +10,12 @@
 //   - Texte / autres          -> longueur + « valeur ENTIÈRE » (jamais tronquée).
 //
 // Paramètres :
-//	pType      : code de type fin du champ (__CHAMP_TYPE_*).
+//	pType : code de type fin du champ (__CHAMP_TYPE_*).
+//	pValeur (chaîne ANSI) : valeur brute (échantillon texte, ou valeur min/max brute).
+
 //	pLongueur  : longueur (nb caractères) — utilisée pour le TEXTE uniquement.
-//	pValeur    : valeur brute (échantillon texte, ou valeur min/max brute).
 // Retour : chaîne prête à afficher.
-// =============================================================================
-procédure FormateRemplissageValeur(pType, pLongueur est un entier, pValeur est une chaîne) : chaîne
+procédure FormateRemplissageValeur(pType, pValeur est une chaîne) : chaîne
 
 selon pType
 	cas __CHAMP_TYPE_ENTIER__, __CHAMP_TYPE_DECIMAL__, __CHAMP_TYPE_MONETAIRE__
@@ -32,7 +32,10 @@ selon pType
 	cas __CHAMP_TYPE_COORDONNEE__, __CHAMP_TYPE_HEURE__
 		renvoyer pValeur
 
+	cas __CHAMP_TYPE_TELEPHONE__, __CHAMP_TYPE_PORTABLE__
+		renvoyer cpFonction.Telephone(pValeur,1," ")
+
 	autre cas
 		// Texte & autres : longueur + valeur ENTIÈRE (jamais tronquée)
-		renvoyer pLongueur + " «" + pValeur + "»"
+		renvoyer pValeur
 fin
