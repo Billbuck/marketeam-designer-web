@@ -1,5 +1,3 @@
-// Code Serveur Bouton Valider :
-
 __stOperation.DateHeureCheckRemplissage = DateHeureSys()
 
-popupLtrControleBase.FermePopup()
+PageFermeDialogue(Vrai)

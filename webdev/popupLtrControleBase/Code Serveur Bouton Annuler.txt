@@ -1,0 +1,3 @@
+// Code Serveur Bouton Annuler :
+
+PageFermeDialogue(Faux)

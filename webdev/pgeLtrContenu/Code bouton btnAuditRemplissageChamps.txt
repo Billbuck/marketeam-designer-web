@@ -3,5 +3,7 @@ stRemplissage est une structRemplissageBase
 stRemplissage = Partage.AnalyseRemplissageBase(__stOperation)
 
 si stRemplissage.BaseChargee _et_ stRemplissage.tabChamps..Occurrence > 0 alors
-	PopupAffichePage(popupLtrControleBase,stRemplissage,popupHautCentre)
+	si PageAfficheDialogue(popupLtrControleBase,stRemplissage) alors
+		btnAuditRemplissageChamps.Visible = Faux
+	fin
 fin
