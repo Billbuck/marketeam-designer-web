@@ -14,7 +14,7 @@
 //	pIdDossier : <indiquez ici le rôle de pIdDossier>
 
 
-procédure TriggerStatut()
+PROCÉDURE TriggerStatut()
 
 bEstPaiementReceptionFacture	est un booléen
 bEstPaiementSurReserve 			est un booléen
@@ -30,167 +30,165 @@ sTexteRequete = [
 	SELECT Statut FROM dos_operation where IdOperation = [%dos_operation.IdOperation%]
 ]
 
-si H.FonctionTrigger = "HModifie" alors
+SI H.FonctionTrigger = "HModifie" ALORS
 	sdReqTriggerStatut.ExécuteRequêteSQL(dos_operation..Connexion,hRequêteSansCorrection,sTexteRequete)
 	sdReqTriggerStatut.LitPremier()
 	sStatutPrecedent = sdReqTriggerStatut.Statut
-fin
+FIN
 
 __bChangementStatut = (dos_operation.Statut <> sStatutPrecedent)
 
-si dos_operation.Statut dans (__Statut_Annulée__,__Statut_Terminée__) alors
-	retour
-fin
+SI dos_operation.Statut DANS (__Statut_Annulée__,__Statut_Terminée__) ALORS
+	RETOUR
+FIN
 
-si dos_operation.EstTerminee = Faux _et_ dos_operation.Statut dans (__Statut_Prise_En_Charge__,__Statut_Production_En_Cours__,__Statut_Distribution_En_Attente__,__Statut_Distribution_En_Cours__,__Statut_Envoyée__) alors
-	retour
-fin
+SI dos_operation.EstTerminee = Faux _ET_ dos_operation.Statut DANS (__Statut_Prise_En_Charge__,__Statut_Production_En_Cours__,__Statut_Distribution_En_Attente__,__Statut_Distribution_En_Cours__,__Statut_Envoyée__) ALORS
+	RETOUR
+FIN
 
 
-si DateHeureValide(dos_operation.DateHeureRefus) alors
+SI DateHeureValide(dos_operation.DateHeureRefus) ALORS
 	sNouveauStatut = __Statut_Validation_Refusée__
-	retour
-fin
+	RETOUR
+FIN
 
-si dos_operation.EstBaseEnAttente = Vrai _ou_ dos_operation.EstDocumentEnAttente = Vrai _ou_ dos_operation.EstInjectionEnAttente = Vrai _ou_ dos_operation.EstLandingPageEnAttente = Vrai _ou_ dos_operation.EstMessageEnAttente = Vrai alors
+SI dos_operation.EstBaseEnAttente = Vrai _OU_ dos_operation.EstDocumentEnAttente = Vrai _OU_ dos_operation.EstInjectionEnAttente = Vrai _OU_ dos_operation.EstLandingPageEnAttente = Vrai _OU_ dos_operation.EstMessageEnAttente = Vrai ALORS
 	sNouveauStatut = __Statut_Element_En_Attente__
-	si dos_operation.DateHeureLimiteValidation < DateHeureSys() alors
+	SI dos_operation.DateHeureLimiteValidation < DateHeureSys() ALORS
 		sNouveauStatut = __Statut_Element_Hors_Delais__
-	fin
-	retour
-fin
+	FIN
+	RETOUR
+FIN
 
 // En brouillon si l'opération est complète
-si dos_operation.EstBrouillon = Vrai alors
+SI dos_operation.EstBrouillon = Vrai ALORS
 	sNouveauStatut = __Statut_Enregistrée__
-	retour
-fin
+	RETOUR
+FIN
 
 // Statut Audit Remplissage
-si dos_operation.TypeOperation = __OPERATION_COURRIER__ alors
-	si pas DateHeureValide(dos_operation.DateHeureCheckRemplissage) alors
-		si Partage.EstEnveloppeAFenetre(dos_operation.IdOperation) alors
-			sNouveauStatut = __Statut_Audit_Remplissage_En_Attente__
-			si dos_operation.DateHeureLimiteValidation < DateHeureSys() alors
-				sNouveauStatut = __Statut_Audit_Remplissage_Hors_Delais__
-			fin
-			retour
-		fin
-	fin
-fin
+SI dos_operation.TypeOperation = __OPERATION_COURRIER__ ALORS
+	SI PAS DateHeureValide(dos_operation.DateHeureCheckRemplissage) ALORS
+		sNouveauStatut = __Statut_Audit_Remplissage_En_Attente__
+		SI dos_operation.DateHeureLimiteValidation < DateHeureSys() ALORS
+			sNouveauStatut = __Statut_Audit_Remplissage_Hors_Delais__
+		FIN
+		RETOUR
+	FIN
+FIN
 
 
 
-bEstPaiementSurReserve			= clt_paiement.LitRecherchePremier(IdOperation, dos_operation.IdOperation) _et_ clt_paiement.EstReserve = Vrai
-bEstPaiementReceptionFacture 	= bEstPaiementSurReserve = Faux _et_ EstClientEnCompte(dos_operation.IdClientFacturation)
-bEstPlafondEncoursDepasse 		= (bEstPaiementSurReserve = Faux _et_ bEstPaiementReceptionFacture = Vrai _et_ PlafondEncoursDepassé(dos_operation.IdClientFacturation, dos_operation.ResteAPayer, dos_operation.IdOperation))
-bEstRéférenceObligatoire 		= (bEstPaiementSurReserve = Faux _et_ bEstPaiementReceptionFacture = Vrai _et_ RéférenceObligatoire(dos_operation.IdAdresseFacturation))
+bEstPaiementSurReserve			= clt_paiement.LitRecherchePremier(IdOperation, dos_operation.IdOperation) _ET_ clt_paiement.EstReserve = Vrai
+bEstPaiementReceptionFacture 	= bEstPaiementSurReserve = Faux _ET_ EstClientEnCompte(dos_operation.IdClientFacturation)
+bEstPlafondEncoursDepasse 		= (bEstPaiementSurReserve = Faux _ET_ bEstPaiementReceptionFacture = Vrai _ET_ PlafondEncoursDepassé(dos_operation.IdClientFacturation, dos_operation.ResteAPayer, dos_operation.IdOperation))
+bEstRéférenceObligatoire 		= (bEstPaiementSurReserve = Faux _ET_ bEstPaiementReceptionFacture = Vrai _ET_ RéférenceObligatoire(dos_operation.IdAdresseFacturation))
 
-si bEstRéférenceObligatoire = Vrai _et_ dos_operation.NumCommandeClient = "" alors
+SI bEstRéférenceObligatoire = Vrai _ET_ dos_operation.NumCommandeClient = "" ALORS
 	sNouveauStatut = __Statut_Référence_En_Attente__
-	si dos_operation.DateHeureLimiteValidation < DateHeureSys() alors
+	SI dos_operation.DateHeureLimiteValidation < DateHeureSys() ALORS
 		sNouveauStatut = __Statut_Référence_Hors_Delais__
-	fin
-	retour
-fin
+	FIN
+	RETOUR
+FIN
 
-si dos_operation.Statut < __Statut_Prise_En_Charge_En_Attente__ _et_ dos_operation.ResteAPayer > 0 _et_ (bEstPaiementReceptionFacture = Faux _ou_ bEstPlafondEncoursDepasse = Vrai) alors
+SI dos_operation.Statut < __Statut_Prise_En_Charge_En_Attente__ _ET_ dos_operation.ResteAPayer > 0 _ET_ (bEstPaiementReceptionFacture = Faux _OU_ bEstPlafondEncoursDepasse = Vrai) ALORS
 	// On attend le règlement
-	selon StatutRéglementOpération(dos_operation.IdOperation)
-		cas __REGLEMENT_STATUT_INEXISTANT__		: sNouveauStatut = __Statut_Règlement_En_Attente__ // Pas de règlement
-		cas __REGLEMENT_STATUT_EN_ATTENTE__		: sNouveauStatut = __Statut_Règlement_En_Attente__
-		cas __REGLEMENT_STATUT_EN_COURS__		: sNouveauStatut = __Statut_Règlement_En_Cours__
-		cas __REGLEMENT_STATUT_ANNULE__			: sNouveauStatut = __Statut_Règlement_Annulé__
-		cas __REGLEMENT_STATUT_REFUSE__			: sNouveauStatut = __Statut_Règlement_Rejeté__
+	SELON StatutRéglementOpération(dos_operation.IdOperation)
+		CAS __REGLEMENT_STATUT_INEXISTANT__		: sNouveauStatut = __Statut_Règlement_En_Attente__ // Pas de règlement
+		CAS __REGLEMENT_STATUT_EN_ATTENTE__		: sNouveauStatut = __Statut_Règlement_En_Attente__
+		CAS __REGLEMENT_STATUT_EN_COURS__		: sNouveauStatut = __Statut_Règlement_En_Cours__
+		CAS __REGLEMENT_STATUT_ANNULE__			: sNouveauStatut = __Statut_Règlement_Annulé__
+		CAS __REGLEMENT_STATUT_REFUSE__			: sNouveauStatut = __Statut_Règlement_Rejeté__
 
-		cas __REGLEMENT_STATUT_VALIDE__			: sNouveauStatut = __Statut_Règlement_Erreur__ 		; Erreur("Le statut de règlement est validé alors que Reste à payer > 0") ; STOP // Impossible
-		cas __REGLEMENT_STATUT_ERREUR__ 			: sNouveauStatut = __Statut_Règlement_Erreur__ 		; Erreur("Erreur lecture Statut Règlement  Opération") ; STOP //  Erreur
-		autre cas								: sNouveauStatut = __Statut_Règlement_Erreur__ 		; Erreur("Statut de règlement non défini :'" + StatutRéglementOpération(dos_operation.IdOperation) +"'"); STOP // A définir
-	fin
+		CAS __REGLEMENT_STATUT_VALIDE__			: sNouveauStatut = __Statut_Règlement_Erreur__ 		; Erreur("Le statut de règlement est validé alors que Reste à payer > 0") ; STOP // Impossible
+		CAS __REGLEMENT_STATUT_ERREUR__ 			: sNouveauStatut = __Statut_Règlement_Erreur__ 		; Erreur("Erreur lecture Statut Règlement  Opération") ; STOP //  Erreur
+		AUTRE CAS								: sNouveauStatut = __Statut_Règlement_Erreur__ 		; Erreur("Statut de règlement non défini :'" + StatutRéglementOpération(dos_operation.IdOperation) +"'"); STOP // A définir
+	FIN
 
 	dos_operation.DateHeureValidation.Null	= Vrai // Si le client a validé en ligne mais qu'il doit payer alors on validera l’opération après le règlement
-	si dos_operation.DateHeureLimiteValidation < DateHeureSys() alors
+	SI dos_operation.DateHeureLimiteValidation < DateHeureSys() ALORS
 		sNouveauStatut = __Statut_Règlement_Hors_Delais__
-	fin
-	retour
-fin
+	FIN
+	RETOUR
+FIN
 
 
 // Statut de la commande
-si pas DateHeureValide(dos_operation.DateHeureValidation) alors
+SI PAS DateHeureValide(dos_operation.DateHeureValidation) ALORS
 	sNouveauStatut = __Statut_Validation_En_Attente__
-	si dos_operation.DateHeureLimiteValidation < DateHeureSys() alors
+	SI dos_operation.DateHeureLimiteValidation < DateHeureSys() ALORS
 		sNouveauStatut = __Statut_Validation_Hors_Delais__
-	fin
-	retour
-fin
+	FIN
+	RETOUR
+FIN
 
 
 
 // Statut de la prise en charge
-si pas DateHeureValide(dos_operation.DateHeurePriseEnCharge) alors
+SI PAS DateHeureValide(dos_operation.DateHeurePriseEnCharge) ALORS
 
-	si DateHeureSys() < dos_operation.DateHeureLimitePriseEnCharge alors
+	SI DateHeureSys() < dos_operation.DateHeureLimitePriseEnCharge ALORS
 		sNouveauStatut = __Statut_Prise_En_Charge_En_Attente__
-	sinon
+	SINON
 		dos_operation.DateHeureValidation..Null = Vrai
 		sNouveauStatut = __Statut_Validation_Hors_Delais__
-	fin
+	FIN
 
-fin
+FIN
 
 
 // Statut de la facturation
-si dos_operation.EstTerminee = Vrai alors
+SI dos_operation.EstTerminee = Vrai ALORS
 
-	si bEstPaiementSurReserve = Vrai alors
+	SI bEstPaiementSurReserve = Vrai ALORS
 		// Si l'opération a été payé sur la réserve c'est terminé
 		sNouveauStatut = __Statut_Terminée__
-		retour
-	sinon
+		RETOUR
+	SINON
 		sNouveauStatut = __Statut_Facturation_En_Attente__
 		// Si la facture n'a pas été créé on s’arrête là
-		si dos_operation.IdFactureLigne = 0 alors
-			retour
-		fin
-	fin
-sinon
-	retour
-fin
+		SI dos_operation.IdFactureLigne = 0 ALORS
+			RETOUR
+		FIN
+	FIN
+SINON
+	RETOUR
+FIN
 
 
-si dos_operation.ResteAPayer > 0 alors
+SI dos_operation.ResteAPayer > 0 ALORS
 
-	selon StatutRéglementOpération(dos_operation.IdOperation)
-		cas __REGLEMENT_STATUT_INEXISTANT__	: sNouveauStatut = __Statut_Solde_En_Attente__ // Pas de règlement
-		cas __REGLEMENT_STATUT_EN_ATTENTE__	: sNouveauStatut = __Statut_Solde_En_Attente__
-		cas __REGLEMENT_STATUT_EN_COURS__	: sNouveauStatut = __Statut_Solde_En_Cours__
-		cas __REGLEMENT_STATUT_ANNULE__		: sNouveauStatut = __Statut_Solde_Annulé__
-		cas __REGLEMENT_STATUT_REFUSE__		: sNouveauStatut = __Statut_Solde_Rejeté__
-		cas __REGLEMENT_STATUT_VALIDE__		: sNouveauStatut = __Statut_Solde_Erreur__ ; Erreur("Le statut de règlement est validé alors que Reste à payer > 0") ; STOP // Impossible
-		cas __REGLEMENT_STATUT_ERREUR__ 		: sNouveauStatut = __Statut_Solde_Erreur__ ; Erreur("Erreur lecture Statut Règlement  Opération") ; STOP //  Erreur
-		autre cas							: sNouveauStatut = __Statut_Solde_Erreur__ ; Erreur("Statut de règlement non défini :'" + StatutRéglementOpération(dos_operation.IdOperation) +"'"); STOP // A définir
-	fin
-sinon
+	SELON StatutRéglementOpération(dos_operation.IdOperation)
+		CAS __REGLEMENT_STATUT_INEXISTANT__	: sNouveauStatut = __Statut_Solde_En_Attente__ // Pas de règlement
+		CAS __REGLEMENT_STATUT_EN_ATTENTE__	: sNouveauStatut = __Statut_Solde_En_Attente__
+		CAS __REGLEMENT_STATUT_EN_COURS__	: sNouveauStatut = __Statut_Solde_En_Cours__
+		CAS __REGLEMENT_STATUT_ANNULE__		: sNouveauStatut = __Statut_Solde_Annulé__
+		CAS __REGLEMENT_STATUT_REFUSE__		: sNouveauStatut = __Statut_Solde_Rejeté__
+		CAS __REGLEMENT_STATUT_VALIDE__		: sNouveauStatut = __Statut_Solde_Erreur__ ; Erreur("Le statut de règlement est validé alors que Reste à payer > 0") ; STOP // Impossible
+		CAS __REGLEMENT_STATUT_ERREUR__ 		: sNouveauStatut = __Statut_Solde_Erreur__ ; Erreur("Erreur lecture Statut Règlement  Opération") ; STOP //  Erreur
+		AUTRE CAS							: sNouveauStatut = __Statut_Solde_Erreur__ ; Erreur("Statut de règlement non défini :'" + StatutRéglementOpération(dos_operation.IdOperation) +"'"); STOP // A définir
+	FIN
+SINON
 	sNouveauStatut = __Statut_Terminée__
-fin
+FIN
 
 
-fin:
+FIN:
 
-si sNouveauStatut <> "" _et_ dos_operation.Statut <> sNouveauStatut alors
+SI sNouveauStatut <> "" _ET_ dos_operation.Statut <> sNouveauStatut ALORS
 
 	__bChangementStatut = Vrai
 
-	si H.FonctionTrigger = "HModifie" alors
+	SI H.FonctionTrigger = "HModifie" ALORS
 		dos_operation.DateHeureModification		= DateHeureSys()
 		dos_operation.UserModification 			= "TriggerStatut : " + Partage.LibelleStatutOperation(sNouveauStatut)
-	fin
+	FIN
 
 	dos_operation.Statut = sNouveauStatut
 
-	si DateHeureValide(dhLimitePriseEnCharge) alors
-		dos_operation.DateHeureLimitePriseEnCharge = dhLimitePriseEnCharge[[à 14]]
-	fin
+	SI DateHeureValide(dhLimitePriseEnCharge) ALORS
+		dos_operation.DateHeureLimitePriseEnCharge = dhLimitePriseEnCharge[[À 14]]
+	FIN
 
-fin
+FIN
