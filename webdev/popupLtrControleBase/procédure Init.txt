@@ -1,0 +1,42 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// Init ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure Init()
+
+nInd	est un entier
+
+libEnregistrementsAnalysés = "Enregistrements analysés : " + NumériqueVersChaîne(_stRemplissageBase.NbEnregistrements, "dS")
+
+pour tout stRemplissageChamp de _stRemplissageBase.tabChamps
+	nInd																	= znrTauxRemplissage.AjouteLigne()
+	znrTauxRemplissage[nInd].libTauxRemplissage				= Arrondi(stRemplissageChamp.Taux, 0) + " %"
+	znrTauxRemplissage[nInd].libTypeChamp						= stRemplissageChamp.Type
+	znrTauxRemplissage[nInd].libChamp							= stRemplissageChamp.Libelle
+	znrTauxRemplissage[nInd].libRatio							= stRemplissageChamp.NbRenseignes + "/" + stRemplissageChamp.NbTotal
+	znrTauxRemplissage[nInd].celJaugeValeur.Largeur			= Arrondi(stRemplissageChamp.Taux / 100 * 90, 0)
+	znrTauxRemplissage[nInd].celJaugeValeur.CouleurFond	= stRemplissageChamp.Taux = 100 ? HTMLVersRVB(__COULEUR_SMS_M__) sinon HTMLVersRVB(__COULEUR_COURRIER_M__)
+
+	selon stRemplissageChamp.Type
+		// Types à VALEUR → ligne = valeur formatée, bulle « i » masquée (redondante)
+		cas __CHAMP_TYPE_ENTIER__, __CHAMP_TYPE_DECIMAL__, __CHAMP_TYPE_MONETAIRE__, __CHAMP_TYPE_DATE__, __CHAMP_TYPE_COORDONNEE__, __CHAMP_TYPE_HEURE__
+			znrTauxRemplissage[nInd].libMinLongueur			= cpFonction.FormateRemplissageValeur(stRemplissageChamp.Type, stRemplissageChamp.MinValeur)
+			znrTauxRemplissage[nInd].libMaxLongueur			= cpFonction.FormateRemplissageValeur(stRemplissageChamp.Type, stRemplissageChamp.MaxValeur)
+			znrTauxRemplissage[nInd].imgInfo.Visible			= Faux
+			znrTauxRemplissage[nInd].imgInfo.Bulle				= ""
+		// Types TEXTE → ligne = longueur, bulle « i » = valeur min/max
+		autre cas
+			znrTauxRemplissage[nInd].libMinLongueur			= stRemplissageChamp.MinLongueur
+			znrTauxRemplissage[nInd].libMaxLongueur			= stRemplissageChamp.MaxLongueur
+			znrTauxRemplissage[nInd].imgInfo.Visible			= Vrai
+			znrTauxRemplissage[nInd].imgInfo.Bulle				= "min : " + cpFonction.FormateRemplissageValeur(stRemplissageChamp.Type, stRemplissageChamp.MinValeur) + RC + "max : " + cpFonction.FormateRemplissageValeur(stRemplissageChamp.Type, stRemplissageChamp.MaxValeur)
+	fin
+fin
