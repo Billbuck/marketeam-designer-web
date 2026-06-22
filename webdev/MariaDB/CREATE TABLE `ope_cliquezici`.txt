@@ -1,0 +1,32 @@
+CREATE TABLE `ope_cliquezici` (
+	`IdCliquezIci` INT(11) NOT NULL,
+	`IdStructure` INT(11) NULL DEFAULT NULL,
+	`IdModele` INT(11) NULL DEFAULT NULL,
+	`Type` CHAR(1) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`UrlClient` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`LargeurL` SMALLINT(6) NULL DEFAULT NULL,
+	`LargeurM` SMALLINT(6) NULL DEFAULT NULL,
+	`LargeurS` SMALLINT(6) NULL DEFAULT NULL,
+	`ProprieteDefaut` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`ProprieteTexte` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`ProprieteCombo` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`ProprieteInterrupteur` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`ProprieteLien` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`ProprieteBouton` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`ProprieteFormulaire` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`EmailLeadType` SET('lead','lien','visite') NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`EmailLeadEnCopie` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`DateHeureCreation` DATETIME NOT NULL,
+	`DateHeureModification` DATETIME NULL DEFAULT NULL,
+	`UserCreation` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`UserModification` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	PRIMARY KEY (`IdCliquezIci`) USING BTREE,
+	INDEX `IdModele` (`IdModele`) USING BTREE,
+	INDEX `IdStructure` (`IdStructure`) USING BTREE,
+	CONSTRAINT `FK_ope_cliquezici_dos_operation` FOREIGN KEY (`IdCliquezIci`) REFERENCES `dos_operation` (`IdOperation`) ON UPDATE RESTRICT ON DELETE CASCADE,
+	CONSTRAINT `FK_ope_cliquezici_ici_modele` FOREIGN KEY (`IdModele`) REFERENCES `ici_modele` (`IdModele`) ON UPDATE RESTRICT ON DELETE SET NULL,
+	CONSTRAINT `FK_ope_cliquezici_ici_structure` FOREIGN KEY (`IdStructure`) REFERENCES `ici_structure` (`IdStructure`) ON UPDATE RESTRICT ON DELETE SET NULL
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+;

@@ -1,0 +1,25 @@
+CREATE TABLE `tmp_structure` (
+	`IdStructure` INT(10) NOT NULL AUTO_INCREMENT,
+	`IdOperation` INT(10) NULL DEFAULT NULL,
+	`IdClient` INT(10) NULL DEFAULT NULL,
+	`IdMarque` INT(10) NULL DEFAULT NULL,
+	`UrlClient` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Code` VARCHAR(4) NULL DEFAULT NULL COLLATE 'utf8mb4_bin',
+	`DateCreation` TIMESTAMP NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+	`LargeurL` SMALLINT(6) NULL DEFAULT NULL,
+	`LargeurM` SMALLINT(6) NULL DEFAULT NULL,
+	`LargeurS` SMALLINT(6) NULL DEFAULT NULL,
+	`ProprieteDefaut` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`ProprieteTexte` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`ProprieteCombo` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`ProprieteInterrupteur` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`ProprieteLien` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`ProprieteBouton` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`ProprieteFormulaire` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	PRIMARY KEY (`IdStructure`) USING BTREE,
+	INDEX `Code` (`Code`) USING BTREE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+AUTO_INCREMENT=699
+;

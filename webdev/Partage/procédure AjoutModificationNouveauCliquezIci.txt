@@ -1,0 +1,177 @@
+procédure AjoutModificationNouveauCliquezIci(stOperation est un structOperation)
+
+nInd				est un entier
+bEstModeCreation	est un booléen
+sListeValeurOffre	est une chaîne
+
+bEstModeCreation = pas ope_cliquezici.LitRecherchePremier(IdCliquezIci, stOperation.IdOperation)
+
+si bEstModeCreation alors
+	ope_cliquezici.RAZ()
+	ope_cliquezici.IdCliquezIci 		= stOperation.IdOperation
+	ope_cliquezici.DateHeureCreation 	= DateHeureSys()
+	ope_cliquezici.UserCreation 		= Partage.__vcUser.NomUser
+
+sinon
+	ope_cliquezici.DateHeureModification	= DateHeureSys()
+	ope_cliquezici.UserModification			= Partage.__vcUser.NomUser
+
+	// Suppression des données précédentes
+	si pas cpFonction.SupprimeEnregistrement(ope_cliquezici_bloc..Nom, "IdCliquezIci = " + stOperation.IdOperation) alors
+		Erreur("Erreur suppression")
+	fin
+
+fin
+
+MémoireVersFichier(stOperation.stNouveauCliquezIci, ope_cliquezici)
+MémoireVersFichier(stOperation.stNouveauCliquezIci.stTheme, ope_cliquezici)
+
+si stOperation.stNouveauCliquezIci.IdStructure = 0 alors
+	ope_cliquezici.IdStructure..Null = Vrai
+fin
+
+
+si stOperation.stNouveauCliquezIci.IdModele = 0 alors
+	ope_cliquezici.IdModele..Null = Vrai
+fin
+
+si stOperation.stNouveauCliquezIci.UrlClient = "" alors
+	ope_cliquezici.UrlClient..Null = Vrai
+fin
+
+si stOperation.stNouveauCliquezIci.EmailLeadEnCopie = "" alors
+	ope_cliquezici.EmailLeadEnCopie..Null = Vrai
+fin
+
+si stOperation.stNouveauCliquezIci.EmailLeadType = "" alors
+	ope_cliquezici.EmailLeadType..Null = Vrai
+fin
+
+
+stValeurBanniere	est une structIciBlocValeurBanniere
+stValeurImage		est une structIciBlocValeurImage
+stValeurGrille		est une structIciBlocValeurGrille
+stValeurGrattage	est une structIciBlocValeurGrattage
+stValeurOffre		est une structIciBlocValeurOffre
+stValeurFormulaire	est une structIciBlocValeurFormulaire
+stValeurBouton		est une structIciBlocValeurBouton
+
+
+si ope_cliquezici.Enregistre() alors
+	nInd = 0
+	pour tout stBloc de  stOperation.stNouveauCliquezIci.tabBloc
+		nInd++
+
+		ope_cliquezici_bloc.RAZ()
+		MémoireVersFichier(stBloc,ope_cliquezici_bloc)
+		ope_cliquezici_bloc.Position		= nInd
+		ope_cliquezici_bloc.IdCliquezIci	= stOperation.IdOperation
+		ope_cliquezici_bloc.Ajoute()
+
+		// On mémorise les images utilisées pour l'opération
+		selon stBloc.Type
+			cas __BLOC_BANNIERE__
+				Désérialise(stValeurBanniere,stBloc.Valeur,psdJSON)
+				pour tout nIdImage de stValeurBanniere.tabIdImage
+					si nIdImage > 0 alors
+						ope_cliquezici_image.RAZ()
+						ope_cliquezici_image.IdCliquezIciBloc	= ope_cliquezici_bloc.IdCliquezIciBloc
+						ope_cliquezici_image.IdImage			= nIdImage
+						ope_cliquezici_image.Ajoute()
+					fin
+				fin
+
+			cas __BLOC_IMAGE__
+				Désérialise(stValeurImage,stBloc.Valeur,psdJSON)
+				si stValeurImage.IdImage > 0 alors
+					ope_cliquezici_image.RAZ()
+					ope_cliquezici_image.IdCliquezIciBloc		= ope_cliquezici_bloc.IdCliquezIciBloc
+					ope_cliquezici_image.IdImage				= stValeurImage.IdImage
+					ope_cliquezici_image.Ajoute()
+				fin
+
+			cas __BLOC_GRILLE__
+				Désérialise(stValeurGrille,stBloc.Valeur,psdJSON)
+				pour tout nIdImage de stValeurGrille.tabIdImage
+					si nIdImage > 0 alors
+						ope_cliquezici_image.RAZ()
+						ope_cliquezici_image.IdCliquezIciBloc	= ope_cliquezici_bloc.IdCliquezIciBloc
+						ope_cliquezici_image.IdImage			= nIdImage
+						ope_cliquezici_image.Ajoute()
+					fin
+				fin
+
+			cas __BLOC_GRATTAGE__
+				Désérialise(stValeurGrattage,stBloc.Valeur,psdJSON)
+				si stValeurGrattage.IdImage > 0 alors
+					ope_cliquezici_image.RAZ()
+					ope_cliquezici_image.IdCliquezIciBloc	= ope_cliquezici_bloc.IdCliquezIciBloc
+					ope_cliquezici_image.IdImage			= stValeurGrattage.IdImage
+					ope_cliquezici_image.Ajoute()
+				fin
+
+			cas __BLOC_OFFRE__
+				Désérialise(stValeurOffre,stBloc.Valeur,psdJSON)
+				pour tout stOffre de stValeurOffre.tabOffre
+					sListeValeurOffre = ""
+					pour tout sValeurOffre de stOffre.TabValeur
+						sListeValeurOffre += [","] + sValeurOffre
+					fin
+					ope_cliquezici_offre.RAZ()
+					ope_cliquezici_offre.IdOffre 				= stOffre.IdOffre
+					ope_cliquezici_offre.IdCliquezIciBloc		= ope_cliquezici_bloc.IdCliquezIciBloc
+					ope_cliquezici_offre.Libelle				= stOffre.Libelle
+					ope_cliquezici_offre.TypeOffre				= stOffre.TypeOffre
+					ope_cliquezici_offre.Offre					= sListeValeurOffre
+					ope_cliquezici_offre.IdOffre.Null			= (stOffre.IdOffre = 0)
+					ope_cliquezici_offre.Libelle.Null			= (stOffre.Libelle = "")
+					ope_cliquezici_offre.Ajoute()
+				fin
+
+			cas __BLOC_FORMULAIRE__
+				Désérialise(stValeurFormulaire,stBloc.Valeur,psdJSON)
+				pour nVal = 1 _à_ stValeurFormulaire.TabLibelle.Occurrence
+					ope_cliquezici_offre.RAZ()
+					ope_cliquezici_offre.IdCliquezIciBloc		= ope_cliquezici_bloc.IdCliquezIciBloc
+					ope_cliquezici_offre.Libelle				= stValeurFormulaire.TabLibelle[nVal]
+					ope_cliquezici_offre.TypeOffre				= __OFFRE_FORMULAIRE__
+					ope_cliquezici_offre.Offre					= stValeurFormulaire.TabValeur[nVal]
+					ope_cliquezici_offre.Offre.Null				= (stValeurFormulaire.TabValeur[nVal] = "")
+					ope_cliquezici_offre.IdOffre.Null			= Vrai
+					ope_cliquezici_offre.Ajoute()
+				fin
+
+			cas __BLOC_BOUTON__
+				Désérialise(stValeurBouton,stBloc.Valeur,psdJSON)
+				selon stValeurBouton.TypeOptin
+					cas 1 // Pas d'optin
+
+					cas 2 // Optin simple
+						ope_cliquezici_offre.RAZ()
+						ope_cliquezici_offre.IdCliquezIciBloc		= ope_cliquezici_bloc.IdCliquezIciBloc
+						ope_cliquezici_offre.Libelle				= "Optin"
+						ope_cliquezici_offre.TypeOffre				= __OFFRE_OPTIN__
+						ope_cliquezici_offre.Offre.Null				= Vrai
+						ope_cliquezici_offre.IdOffre.Null			= Vrai
+						ope_cliquezici_offre.Ajoute()
+
+
+					cas 3 // Optin multiple
+						pour tout sOption de stValeurBouton.tabOption
+							ope_cliquezici_offre.RAZ()
+							ope_cliquezici_offre.IdCliquezIciBloc		= ope_cliquezici_bloc.IdCliquezIciBloc
+							ope_cliquezici_offre.Libelle				= sOption
+							ope_cliquezici_offre.TypeOffre				= __OFFRE_OPTIN__
+							ope_cliquezici_offre.Offre.Null				= Vrai
+							ope_cliquezici_offre.IdOffre.Null			= Vrai
+							ope_cliquezici_offre.Ajoute()
+						fin
+
+					autre cas
+
+				fin
+
+			autres cas
+		fin
+	fin
+fin

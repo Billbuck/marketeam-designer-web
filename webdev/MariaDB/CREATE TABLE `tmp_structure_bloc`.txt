@@ -1,0 +1,19 @@
+CREATE TABLE `tmp_structure_bloc` (
+	`IdStructureBloc` INT(10) NOT NULL AUTO_INCREMENT,
+	`IdStructure` INT(10) NOT NULL,
+	`Nom` VARCHAR(20) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Libelle` VARCHAR(100) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Position` TINYINT(3) UNSIGNED NOT NULL,
+	`Type` CHAR(4) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Actif` TINYINT(1) NOT NULL DEFAULT '1',
+	`Propriete` LONGTEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Valeur` LONGTEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	PRIMARY KEY (`IdStructureBloc`) USING BTREE,
+	INDEX `FK_tmp_structure_bloc_tmp_structure` (`IdStructure`) USING BTREE,
+	CONSTRAINT `FK_tmp_structure_bloc_tmp_structure` FOREIGN KEY (`IdStructure`) REFERENCES `tmp_structure` (`IdStructure`) ON UPDATE RESTRICT ON DELETE CASCADE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+ROW_FORMAT=COMPACT
+AUTO_INCREMENT=5140
+;

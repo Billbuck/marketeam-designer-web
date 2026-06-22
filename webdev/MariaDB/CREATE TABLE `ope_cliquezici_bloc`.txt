@@ -1,0 +1,19 @@
+CREATE TABLE `ope_cliquezici_bloc` (
+	`IdCliquezIciBloc` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdCliquezIci` INT(11) NOT NULL,
+	`Nom` VARCHAR(20) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Libelle` VARCHAR(100) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Position` TINYINT(3) UNSIGNED NOT NULL,
+	`Type` CHAR(4) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Actif` TINYINT(1) NOT NULL DEFAULT '1',
+	`Propriete` LONGTEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Valeur` LONGTEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	PRIMARY KEY (`IdCliquezIciBloc`) USING BTREE,
+	INDEX `Index 3` (`IdCliquezIci`) USING BTREE,
+	INDEX `IdCliquezIci_Type` (`IdCliquezIci`, `Type`) USING BTREE,
+	CONSTRAINT `FK_ope_cliquezici_bloc_ope_cliquezici` FOREIGN KEY (`IdCliquezIci`) REFERENCES `ope_cliquezici` (`IdCliquezIci`) ON UPDATE RESTRICT ON DELETE CASCADE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+AUTO_INCREMENT=26
+;
