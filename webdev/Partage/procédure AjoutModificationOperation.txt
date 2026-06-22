@@ -1,0 +1,186 @@
+procédure AjoutModificationOperation(stOperation est un structOperation)
+
+bCreation est un booléen	= (stOperation.IdOperation = 0)
+
+
+
+si bCreation = Vrai alors
+	dos_operation.RAZ()
+	stOperation.DateHeureCreation		= DateHeureSys()
+	stOperation.UserCreation			= Partage.__vcUser.NomUser
+	stOperation.Statut					= __Statut_Enregistrée__
+sinon
+	stOperation.DateHeureModification	= DateHeureSys()
+	stOperation.UserModification		= Partage.__vcUser.NomUser
+
+	si pas dos_operation.LitRecherchePremier(IdOperation, stOperation.IdOperation) alors
+		<compile si TypeConfiguration <> Webservice>
+			Info("Erreur positionnement dos_operation")
+		<fin>
+		retour
+	fin
+fin
+
+// **************************************************** Données communes à la création et à la modification
+// On met à jour le booléen pour calculer le statut de l'opération dans le trigger HF
+
+
+selon stOperation.TypeOperation
+	cas __OPERATION_TRACTEVA__, __OPERATION_SMARTEVA__
+		stOperation.EstBaseEnAttente = (stOperation.stOperationTract.IdEtude = 0)
+
+	cas __OPERATION_RNVP__, __OPERATION_BLOCTEL__, __OPERATION_BASE_DE_DONNEES__
+		stOperation.EstBaseEnAttente = Faux
+
+	autre cas
+		stOperation.EstBaseEnAttente = Vrai
+		pour tout stBase de stOperation.tabBase
+			si stBase.EstSupprime = Faux alors
+				stOperation.EstBaseEnAttente = Faux
+				sortir
+			fin
+		fin
+
+fin
+
+MémoireVersFichier(stOperation,dos_operation)
+
+si stOperation.ElementManquant = ""								alors dos_operation.ElementManquant..Null = Vrai
+si stOperation.EstEnvoiImmediat = Vrai							alors dos_operation.HeureEnvoiSouhaite..Null = Vrai // pas d'heure d'envoi en immediat l'envoi immédiatement après validation.
+si pas HeureValide(stOperation.HeureEnvoiSouhaite ) 			alors dos_operation.HeureEnvoiSouhaite..Null = Vrai // Pas d'heure d'envoi pour le courrier
+si pas DateHeureValide(stOperation.DateHeureValidation) 		alors dos_operation.DateHeureValidation..Null = Vrai
+si pas DateHeureValide(stOperation.DateHeureRefus) 				alors dos_operation.DateHeureRefus..Null = Vrai
+si pas DateHeureValide(stOperation.DateHeureLimiteValidation)	alors dos_operation.DateHeureLimiteValidation..Null = Vrai
+si pas DateHeureValide(stOperation.DateHeureCheckRemplissage) alors dos_operation.DateHeureCheckRemplissage..Null = Vrai
+si stOperation.IdClientFacturation <= 0 						alors dos_operation.IdClientFacturation..Null = Vrai
+si stOperation.NumCommandeClient = "" 							alors dos_operation.NumCommandeClient..Null = Vrai
+si stOperation.IdCoupon = 0 									alors dos_operation.IdCoupon..Null = Vrai
+si pas DateHeureValide(stOperation.DateHeureModification)		alors dos_operation.DateHeureModification..Null = Vrai
+si stOperation.UserModification = ""							alors dos_operation.UserModification..Null = Vrai
+
+//si clt_client.LitRecherchePremier(IdClient,stOperation.IdClientFacturation) ALORS
+//	dos_operation.EstFacturationMensuelle = clt_client.EstFacturationMensuelle
+//	si dos_operation.EstFacturationMensuelle ALORS
+//		dos_operation.EstPlafondEncoursDepasse = PlafondEncoursDépassé(stOperation.IdClientFacturation, clt_client.PlafondEncours, stOperation.MontantTTC, stOperation.IdOperation)
+//	sinon
+//		dos_operation.EstPlafondEncoursDepasse = faux
+//	FIN
+//	stOperation.EstPlafondEncoursDepasse = dos_operation.EstPlafondEncoursDepasse
+//FIN
+
+si bCreation alors
+	dos_operation.CodeSite = Partage.__sCodeSite
+	si pas dos_operation.Ajoute() alors
+		<compile si TypeConfiguration <> Webservice>
+			Info("Erreur :",ErreurInfo(errComplet))
+		<fin>
+		retour
+	fin
+
+	stOperation.IdOperation = dos_operation.IdOperation
+
+	Multitâche(-1)
+	si dos_operation.LitRecherchePremier(IdOperation,stOperation.IdOperation) alors
+		dos_operation.Dossier = EntierVersBase26(stOperation.IdOperation,5)
+		si pas dos_operation.Modifie() alors
+			<compile si TypeConfiguration <> Webservice>
+				Info("Erreur :",ErreurInfo(errComplet))
+			<fin>
+			retour
+		fin
+	fin
+	stOperation.Dossier = dos_operation.Dossier
+sinon
+	si pas dos_operation.Modifie() alors
+		<compile si TypeConfiguration <> Webservice>
+			Info("Erreur :",ErreurInfo(errComplet))
+		<fin>
+		retour
+	fin
+fin
+
+// on récupère le statut mis à jour par le Trigger
+stOperation.Statut = dos_operation.Statut
+
+// On enregistre le tableau des colonnes de rapport
+si stOperation.IdOperation > 0 alors
+	cpFonction.SupprimeEnregistrement(dos_operation_rapport..Nom, dos_operation_rapport.IdOperation..Nom + " = " + stOperation.IdOperation)
+	pour tout stRapport de stOperation.tabRapport sur Ordre
+		dos_operation_rapport.IdOperation		= stOperation.IdOperation
+		dos_operation_rapport.Libelle			= stRapport.Libelle
+		dos_operation_rapport.Champ				= stRapport.Champ
+		dos_operation_rapport.Type				= stRapport.Type
+		dos_operation_rapport.Ordre				= stRapport.Ordre
+		dos_operation_rapport.EstObligatoire	= stRapport.EstObligatoire
+		dos_operation_rapport.Ajoute()
+	fin
+fin
+
+si stOperation.tabBase..Occurrence > 0 alors
+
+	// Gestion des bases de données louées Zecible
+	// On ne peux pas ré-exploiter une base de données louée
+	pour tout stBase de stOperation.tabBase
+		si stBase.IdZecible > 0 alors
+			selon Vrai
+				cas stBase.EstAjoute
+					si clt_base.LitRecherchePremier(IdBase, stBase.IdBaseClient) alors
+						si clt_base.EstActif = Vrai alors
+							clt_base.EstActif = Faux
+							clt_base.Modifie()
+						fin
+					fin
+
+				cas stBase.EstSupprime
+					si clt_base.LitRecherchePremier(IdBase, stBase.IdBaseClient) alors
+						si clt_base.EstActif = Faux alors
+							clt_base.EstActif = Vrai
+							clt_base.Modifie()
+						fin
+					fin
+
+				autre cas
+
+			fin
+		fin
+	fin
+
+	si EnregistrementBase(stOperation) alors
+		selon stOperation.TypeOperation
+			cas __OPERATION_SMS__		: EnregistrementProgrammationSms(stOperation)
+			cas __OPERATION_VMS__		: EnregistrementProgrammationVms(stOperation)
+			cas __OPERATION_EMAIL__ 	: EnregistrementProgrammationEmail(stOperation)
+			cas __OPERATION_TEL__		: EnregistrementProgrammationTel(stOperation)
+			autres cas
+		fin
+
+
+		// Dans le cas ou l'on repasse dans se code en cas d'un F5 on ne rajoute pas une deuxième fois la base...
+		pour tout stBase de stOperation.tabBase
+			si stBase.EstAjoute = Vrai alors
+				stBase.EstAjoute = Faux
+			fin
+		fin
+	sinon
+		retour
+	fin
+fin
+
+
+
+
+// Opération Tract
+si stOperation.TypeOperation dans (__OPERATION_TRACTEVA__,  __OPERATION_SMARTEVA__) alors
+	EnregistementProgrammationTract(stOperation)
+fin
+
+si stOperation.EstCliquezIci alors
+	AjoutModificationNouveauCliquezIci(stOperation)
+sinon
+	// On supprime les précédentes lignes du devis et on recommence
+	si bCreation = Faux alors
+		cpFonction.SupprimeEnregistrement(ope_cliquezici..Nom, ope_cliquezici.IdCliquezIci..Nom + " = " + stOperation.IdOperation)
+	fin
+fin
+
+AjoutModificationOperationLigne(stOperation)
