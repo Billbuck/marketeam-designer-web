@@ -1,0 +1,50 @@
+procédure AperçuSms()
+
+nIdTmpStructure est un entier
+sUrlCliquezIci est une chaîne
+sLienSms		est une chaîne
+sMessage		est une chaîne
+
+
+
+si _bEstApercuSms
+	// On affiche le sms
+	libLeFrom = _stOperationSms.LeFrom
+	sLienSms = [
+	<a class="sms-12px-Gauche-Milieu" style="vertical-align: initial; cursor: pointer;" onclick="[%btnClicSms..Alias%].click(); return false;">
+		[%Remplace(cpSms.__sUrlCliquezIci,"[Code]","Test",MotComplet+SansCasse)%]
+	</a>
+	]
+	sMessage = Remplace(_stOperationSms.Message,Caract(10),"<br>")
+	sMessage = Remplace(sMessage,cpSms.__sUrlCliquezIci,sLienSms)
+
+	ztrAperçuMessage..LibelléHTML					= [
+	<p style="text-align: left;">
+		<span class="sms-12px-Gauche-Milieu" style="vertical-align:initial;">
+			[%sMessage%]
+		</span>	
+	</p>
+	]
+
+fin
+
+// On peut cliquer sur le passage du web au sms uniquement si l'on voit le sms
+ceBoutonHome..Visible = _bEstApercuSms
+
+libHeure = HeureVersChaîne(HeureSys(),"HH:MM")
+
+
+si _bEstApercuWeb = Vrai alors
+	// On affiche le lien cliquez-ici
+	si _stCliquezIci.Type = __ICI_WEB__ alors
+		sUrlCliquezIci	= cpFonction.ValeurParametre("Url_ICI",prm_parametre.ValChaine..Nom)
+		nIdTmpStructure	= GenereTmpStructure(_stCliquezIci,_pIdOperation)
+		__sSmartLien 	= sUrlCliquezIci + "FR/index.awp?P1=0&P2=" + nIdTmpStructure
+	sinon
+		__sSmartLien 	= ["https://"] + _stCliquezIci.UrlClient
+	fin
+
+	ifrSmartsms..Visible 	= (_bEstApercuSms = Faux)
+
+fin
+

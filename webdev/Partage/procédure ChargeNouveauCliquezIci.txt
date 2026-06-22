@@ -1,0 +1,66 @@
+procédure ChargeNouveauCliquezIci(pType est un eIciCliquezIci, pIdUnique, pIdClient <utile> = 0)
+
+
+stNouveauCliquezIci	est une structNouveauCliquezIci
+stBloc				est une structIciBloc
+
+selon pType
+
+	// Une opération
+	cas Operation
+		si ope_cliquezici.LitRecherchePremier(IdCliquezIci,pIdUnique) alors
+			FichierVersMémoire(stNouveauCliquezIci, ope_cliquezici)
+			FichierVersMémoire(stNouveauCliquezIci.stTheme, ope_cliquezici)
+			pour tout ope_cliquezici_bloc avec IdCliquezIci = pIdUnique
+				FichierVersMémoire(stBloc,ope_cliquezici_bloc)
+				stNouveauCliquezIci.tabBloc.Ajoute(stBloc)
+			fin
+		fin
+
+	// Un modèle
+	cas Modele
+		si ici_modele.LitRecherchePremier(IdModele,pIdUnique) _et_ ici_structure.LitRecherchePremier(IdStructure, ici_modele.IdStructure) alors
+			FichierVersMémoire(stNouveauCliquezIci, ici_modele)
+			FichierVersMémoire(stNouveauCliquezIci.stTheme, ici_modele)
+			stNouveauCliquezIci.Type					= __ICI_WEB__
+			stNouveauCliquezIci.IdModele				= pIdUnique
+			stNouveauCliquezIci.IdStructure				= ici_modele.IdStructure
+			stNouveauCliquezIci.IdTheme					= ici_structure.IdTheme
+			pour tout ici_modele_bloc  avec IdModele = pIdUnique
+				FichierVersMémoire(stBloc,ici_modele_bloc)
+				stNouveauCliquezIci.tabBloc.Ajoute(stBloc)
+			fin
+		fin
+
+	// Une structure
+	cas Gabarit
+		si ici_structure.LitRecherchePremier(IdStructure,pIdUnique) alors
+			FichierVersMémoire(stNouveauCliquezIci, ici_structure)
+			FichierVersMémoire(stNouveauCliquezIci.stTheme, ici_structure)
+			stNouveauCliquezIci.Type 					= __ICI_WEB__
+			stNouveauCliquezIci.IdStructure				= pIdUnique
+			stNouveauCliquezIci.IdTheme					= ici_structure.IdTheme
+			pour tout ici_structure_bloc  avec IdStructure = pIdUnique
+				FichierVersMémoire(stBloc,ici_structure_bloc)
+				stNouveauCliquezIci.tabBloc.Ajoute(stBloc)
+			fin
+		fin
+
+	cas Theme
+		si ici_theme.LitRecherchePremier(IdTheme,pIdUnique) alors
+			FichierVersMémoire(stNouveauCliquezIci, ici_theme)
+			FichierVersMémoire(stNouveauCliquezIci.stTheme,ici_theme)
+			stNouveauCliquezIci.Type 		= __ICI_WEB__
+			stNouveauCliquezIci.IdTheme		= pIdUnique
+		fin
+
+	cas Standard
+		stNouveauCliquezIci.Type	= __ICI_WEB__
+		<compile si TypeConfiguration <> Webservice>
+			stNouveauCliquezIci.stTheme	= cpCliquezici.InitThemeParDefaut("MonTheme", pIdClient)
+		<fin>
+
+	autres cas
+fin
+
+renvoyer stNouveauCliquezIci

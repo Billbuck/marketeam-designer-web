@@ -1,0 +1,12 @@
+procédure ActionSmsApercu(pIdOperation,pEstCliquezIci)
+
+stOperationSms est une structOperationSms
+stCliquezIci est une structNouveauCliquezIci
+
+stOperationSms = ChargeStructOperationSms(pIdOperation)
+
+si pEstCliquezIci alors
+	stCliquezIci = ChargeNouveauCliquezIci(Operation, pIdOperation)			
+fin
+
+PopupAffichePage(popupApercuSms,(Vrai,pEstCliquezIci,stOperationSms,stCliquezIci,pIdOperation),popupAnnulable+popupEpinglée+popupCentre)
