@@ -1,0 +1,135 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] EnregistrementBase (<stOperation> est structOperation)
+//
+// Paramètres :
+//	stOperation (structOperation) : <indiquez ici le rôle de pIdOperation>
+// Valeur de retour :
+// 	booléen : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+//	pIdDocumentFourni : <indiquez ici le rôle de pIdDocumentSmsFourni>
+// 	EE : <indiquez ici le rôle de EE>
+//	pIdd : <indiquez ici le rôle de pIdd>
+//	pIdBase : <indiquez ici le rôle de pIdCliquezIci>
+//	pType : <indiquez ici le rôle de pType>
+//	pIdDossier : <indiquez ici le rôle de pIdDossier>
+//	pNomJauge : <indiquez ici le rôle de pNomJauge>
+procédure EnregistrementBase(stOperation est une structOperation)
+
+sTexteRequete						est une chaîne
+sdReqEnregistrement					est une Source de Données
+sFiltre								est une chaîne
+stBase								est une StructBase
+sWhere								est une chaîne
+sListeInsert						est une chaîne
+sListeSelect						est une chaîne
+
+selon stOperation.TypeOperation
+	cas __OPERATION_SMS__			: sWhere = "AND Portable IS NOT NULL AND StopPub = 0"
+	cas __OPERATION_VMS__			: sWhere = "AND Portable IS NOT NULL"
+	cas __OPERATION_COURRIER__		: sWhere = "AND (Adresse1 IS NOT NULL OR Adresse2 IS NOT NULL) AND CodePostal IS NOT NULL AND Ville IS NOT NULL"
+	cas __OPERATION_EMAIL__			: sWhere = "AND Email IS NOT NULL"
+	cas __OPERATION_TEL__			: sWhere = "AND (Portable IS NOT NULL OR Tel IS NOT NULL)"
+fin
+
+
+
+pour tout stBase de stOperation.tabBase
+
+	selon Vrai
+		cas stBase.EstAjoute = Vrai // Création
+
+		 	dos_base.RAZ()
+		 	MémoireVersFichier(stBase,dos_base)
+			dos_base.IdOperation			= stOperation.IdOperation
+			dos_base.IdBaseClient..Null		= (stBase.IdBaseClient = 0)
+			dos_base.IdFiltre..Null			= (stBase.IdFiltre = 0)
+			dos_base.DateHeureCreation		= DateHeureSys()
+			dos_base.UserCreation			= Partage.__vcUser.NomUser
+		 	si dos_base.Ajoute() alors
+				stBase.IdBase = dos_base.IdBase
+		 	sinon
+				<compile si TypeConfiguration <> Webservice>
+					Info("Erreur ajout base")
+				<fin>
+		 		renvoyer Faux
+		 	fin
+
+			pour tout stBaseChamp, sLibelle de stBase.taaBaseChamp
+				dos_base_champ.RAZ()
+				dos_base_champ.IdBase	= stBase.IdBase
+				dos_base_champ.Libelle	= sLibelle
+				dos_base_champ.Champ	= stBaseChamp.Champ
+				dos_base_champ.Type		= stBaseChamp.Type
+				dos_base_champ.Ordre	= stBaseChamp.Ordre
+				si pas dos_base_champ.Ajoute() alors
+					<compile si TypeConfiguration <> Webservice>
+						Info("Erreur ajout dos_base_champ")
+					<fin>
+					renvoyer Faux
+				fin
+			fin
+
+			si stBase.IdFiltre > 0 alors
+				sFiltre = " AND (" + GenereRequeteFiltreClientBase(stBase.IdBaseClient,stBase.IdFiltre) +")"
+			fin
+
+		 	sListeInsert = ""
+		 	sListeSelect = ""
+		 	pour tout stBaseChamp, sLibelle de stOperation.taaBaseChamp
+		 		si stBase.taaBaseChamp[sLibelle]..Existe alors
+					sListeInsert += [","] + stBaseChamp.Champ
+					sListeSelect += [","] + stBase.taaBaseChamp[sLibelle].Champ
+		 		fin
+		 	fin
+		 	sListeInsert += [","] + "Sexe,Profil"
+		 	sListeSelect += [","] + "Sexe,Profil"
+
+			sTexteRequete =
+			[
+				INSERT INTO dos_base_ligne (IdBase,[%sListeInsert%])
+				SELECT [%stBase.IdBase%], [%sListeSelect%] 
+				FROM clt_base_ligne
+				WHERE IdBase = [%stBase.IdBaseClient%]
+				[%sFiltre%]
+				[%sWhere%]
+			]
+
+			si pas sdReqEnregistrement.ExécuteRequêteSQL(dos_base_ligne..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+				<compile si TypeConfiguration <> Webservice>
+					Info("Erreur requête EnregistrementBase 1 : " + HErreurInfo(hErrComplet))
+				<fin>
+				renvoyer Faux
+			fin
+
+			// On enregistre le code cliquez-ici même si ce n'est pas une opération intéractive
+
+			sTexteRequete = "UPDATE dos_base_ligne SET code=base62(IdBaseLigne) WHERE IdBase=" + stBase.IdBase
+
+			si pas sdReqEnregistrement.ExécuteRequêteSQL(dos_base_ligne..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+				<compile si TypeConfiguration <> Webservice>
+					Info("Erreur requête EnregistrementBase 2 : " + HErreurInfo(hErrComplet))
+				<fin>
+				renvoyer Faux
+			fin
+
+		cas stBase.IdBase > 0 _et_ stBase.EstSupprime = Vrai
+
+			cpFonction.SupprimeEnregistrement(dos_base..Nom, dos_base.IdBase..Nom + " = " + stBase.IdBase)
+
+		autre cas // La base n'a pas changé
+
+	fin
+fin
+
+renvoyer Vrai
+
+
+
+fin:
+sdReqEnregistrement.AnnuleDéclaration()
+
+
