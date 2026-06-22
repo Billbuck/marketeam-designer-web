@@ -39,9 +39,20 @@ stZoneQR.Géométrie.yMm			= (pHauteurOuvertMm - nTailleMm) / 2
 stZoneQR.Géométrie.largeurMm	= nTailleMm
 stZoneQR.Géométrie.hauteurMm	= nTailleMm
 
-// Contenu : URL placeholder (sera remplacée à la génération par l'étape Landing Page)
+// Contenu : URL générique du Courrier interactif, LUE EN BASE (prm_parametre).
+// Plus de placeholder figé : la valeur — provisoire tant que la page définitive
+// n'existe pas — est administrée en base via Url_Courrier_Interactif_Generique.
+// Identique pour tous (l'URL variable par destinataire sera traitée plus tard,
+// au module d'export). Repli si paramètre vide/introuvable : page publique
+// Marketeam, pour que le QR ne soit jamais vide/illisible.
 stZoneQR.typeCode	= "QRCode"
-stZoneQR.contenu	= "https://landing.marketeam.fr/REMPLACER"
+
+sUrlGenerique est une chaîne = cpFonction.ValeurParametre("Url_Courrier_Interactif_Generique", prm_parametre.ValChaine..Nom)
+si sUrlGenerique = "" alors
+	sUrlGenerique = "https://www.marketeam.com"
+	Trace("RemplirDesignerZoneSystemeQrInteractif : paramètre Url_Courrier_Interactif_Generique vide/introuvable — repli sur " + sUrlGenerique)
+fin
+stZoneQR.contenu	= sUrlGenerique
 
 // Couleurs : noir sur blanc
 stZoneQR.Couleurs.codeCmjn.c	= 0

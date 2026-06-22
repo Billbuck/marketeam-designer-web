@@ -178,6 +178,57 @@ FAIRE
 FIN
 sJsonPsmdTemp = SubstitueNomTechniquePolices(sJsonPsmdTemp, nIdClientPolice)
 
+// ─── Injection de l'URL générique dans les QR interactifs (zonesQR) ──────────
+//   Couvre PROD (--imposition) ET BAT (--no-bleed) : même fichier temp.
+//   Tout QR interactif = toute entrée de zonesQR (zone système sys-qr-cliquezici
+//   OU QR ajouté manuellement "zone-N", créé sans contenu). Sans contenu, le
+//   générateur encode une valeur par défaut (scan -> recherche web) : on impose
+//   donc l'URL générique ICI, à la génération. Ciblage par la COLLECTION zonesQR
+//   (pas par id), parsing JSON (jamais de substitution textuelle aveugle). Le
+//   JsonDesignerData stocké en base reste intact : on n'opère que sur la copie
+//   chaîne sJsonPsmdTemp. L'URL variable par destinataire relève du module d'export.
+sUrlQrInteractif est une chaîne = cpFonction.ValeurParametre("Url_Courrier_Interactif_Generique", prm_parametre.ValChaine..Nom)
+si sUrlQrInteractif = "" alors
+	sUrlQrInteractif = "https://www.marketeam.com"
+fin
+
+QUAND EXCEPTION DANS
+	jPsmdQr		est un JSON			= ChaîneVersUTF8(sJsonPsmdTemp)
+	bModifieQr	est un booléen		= Faux
+
+	// Deux formes possibles, comme JsonContientQrInteractif : data.zonesQR ou racine zonesQR
+	si jPsmdQr.data..Existe alors
+		si jPsmdQr.data.zonesQR..Existe alors
+			pour nIndQrInj = 1 _à_ jPsmdQr.data.zonesQR..Occurrence
+				jPsmdQr.data.zonesQR[nIndQrInj].contenu = sUrlQrInteractif
+				// Sécurité : si un qrConfig typé existait (anormal pour un QR Marketeam),
+				// le générateur le lit en priorité -> y écrire aussi l'URL.
+				si jPsmdQr.data.zonesQR[nIndQrInj].qrConfig..Existe _et_ jPsmdQr.data.zonesQR[nIndQrInj].qrConfig.type..Existe alors
+					jPsmdQr.data.zonesQR[nIndQrInj].qrConfig.fields.url = sUrlQrInteractif
+				fin
+				bModifieQr = Vrai
+			fin
+		fin
+	sinon
+		si jPsmdQr.zonesQR..Existe alors
+			pour nIndQrInj = 1 _à_ jPsmdQr.zonesQR..Occurrence
+				jPsmdQr.zonesQR[nIndQrInj].contenu = sUrlQrInteractif
+				si jPsmdQr.zonesQR[nIndQrInj].qrConfig..Existe _et_ jPsmdQr.zonesQR[nIndQrInj].qrConfig.type..Existe alors
+					jPsmdQr.zonesQR[nIndQrInj].qrConfig.fields.url = sUrlQrInteractif
+				fin
+				bModifieQr = Vrai
+			fin
+		fin
+	fin
+
+	si bModifieQr alors
+		sJsonPsmdTemp = JSONVersChaîne(jPsmdQr)
+		Trace("GenererPsmdServeur : URL générique injectée dans zonesQR — " + sUrlQrInteractif)
+	fin
+FAIRE
+	Trace("GenererPsmdServeur : injection QR interactif ignorée (JSON non parsable / structure inattendue) : " + ExceptionInfo(errMessage))
+FIN
+
 // ─── Écriture du JSON dans le fichier temporaire ─────────────────────────
 si pas fSauveTexte(sCheminJsonTemp, ChaîneVersUTF8(sJsonPsmdTemp)) alors
 	Trace("GenererPsmdServeur : échec fSauveTexte JSON temp : " + sCheminJsonTemp)
