@@ -1,0 +1,111 @@
+// =========================================================================
+// Partage.FinalisePsmdOperation()
+// Rôle : Finaliser TOUS les .psmd du répertoire Printshop d'une opération
+//        pour qu'ils lisent le CSV de production. Pour chaque fichier, la
+//        section <database_settings>…</database_settings> (bornes incluses)
+//        est remplacée EN ENTIER par la version remplie pointant sur pNomCsv.
+//
+//        Encodage : le .psmd est un XML UTF-8 (≠ projet ANSI). On le traite
+//        en FLUX D'OCTETS (Buffer) via fChargeBuffer / fSauveBuffer pour
+//        préserver l'UTF-8 du reste du fichier ; la section remplacée est de
+//        l'ASCII pur (le nom CSV est supposé ASCII).
+//
+//        db_pathsettings = nom SEUL (sans chemin ni crochets, volontaire) ;
+//        table_name = nom ENTRE CROCHETS.
+//
+// Paramètres :
+//	pIdOperation : identifiant de l'opération.
+//	pNomCsv (chaîne ANSI) : nom du fichier CSV (ex. "AAABB.csv").
+
+procédure FinalisePsmdOperation(pIdOperation, pNomCsv est une chaîne) : booléen
+
+sRepPrintshop		est une chaîne	= cpProjet.CheminFichier(pIdOperation, __REP_PRINTSHOP__)
+sListePsmd			est une chaîne	= fListeFichier(sRepPrintshop + "*.psmd", frNonRécursif)
+sMarqueurDebut		est une chaîne	= "<database_settings>"
+sMarqueurFin		est une chaîne	= "</database_settings>"
+sLF					est une chaîne	= Caract(10)
+sNouvelleSection	est une chaîne
+sCheminPsmd			est une chaîne
+bufPsmd				est un Buffer
+bufResultat			est un Buffer
+nPosDebut			est un entier
+nPosFin				est un entier
+nFinBloc				est un entier
+nNbPsmd				est un entier	= 0
+nNbOk					est un entier	= 0
+
+si pNomCsv = "" alors
+	Trace("FinalisePsmdOperation : nom CSV vide")
+	renvoyer Faux
+fin
+
+// ─── Section <database_settings> remplie (LF, comme le générateur PSMD) ───
+sNouvelleSection  = sMarqueurDebut + sLF
+sNouvelleSection += "<table_name>[" + pNomCsv + "]</table_name>" + sLF
+sNouvelleSection += "<db_type>1</db_type>" + sLF
+sNouvelleSection += "<db_pathsettings>" + pNomCsv + "</db_pathsettings>" + sLF
+sNouvelleSection += "<extended_properties>" + sLF
+sNouvelleSection += "<colnameheader>yes</colnameheader>" + sLF
+sNouvelleSection += "<format>CSVDelimited</format>" + sLF
+sNouvelleSection += "<encoding>1252</encoding>" + sLF
+sNouvelleSection += "</extended_properties>" + sLF
+sNouvelleSection += "<filter_sort_settings>" + sLF
+sNouvelleSection += "<filter></filter>" + sLF
+sNouvelleSection += "<sort></sort>" + sLF
+sNouvelleSection += "<db_filter_enable>no</db_filter_enable>" + sLF
+sNouvelleSection += "<db_sort_enable>no</db_sort_enable>" + sLF
+sNouvelleSection += "</filter_sort_settings>" + sLF
+sNouvelleSection += "<filter_array_size>4</filter_array_size>" + sLF
+sNouvelleSection += "<filter>" + sLF
+sNouvelleSection += "<field>-1</field>" + sLF
+sNouvelleSection += "<comp>-1</comp>" + sLF
+sNouvelleSection += "<edit></edit>" + sLF
+sNouvelleSection += "<bool>-1</bool>" + sLF
+sNouvelleSection += "</filter>" + sLF
+sNouvelleSection += "<filter>" + sLF
+sNouvelleSection += "<field>-1</field>" + sLF
+sNouvelleSection += "<comp>-1</comp>" + sLF
+sNouvelleSection += "<edit></edit>" + sLF
+sNouvelleSection += "<bool>-1</bool>" + sLF
+sNouvelleSection += "</filter>" + sLF
+sNouvelleSection += "<filter>" + sLF
+sNouvelleSection += "<field>-1</field>" + sLF
+sNouvelleSection += "<comp>-1</comp>" + sLF
+sNouvelleSection += "<edit></edit>" + sLF
+sNouvelleSection += "<bool>-1</bool>" + sLF
+sNouvelleSection += "</filter>" + sLF
+sNouvelleSection += "<filter>" + sLF
+sNouvelleSection += "<field>-1</field>" + sLF
+sNouvelleSection += "<comp>-1</comp>" + sLF
+sNouvelleSection += "<edit></edit>" + sLF
+sNouvelleSection += "</filter>" + sLF
+sNouvelleSection += sMarqueurFin
+
+// ─── Remplacement sur place dans chaque PSMD ──────────────────────────────
+pour toute chaîne sCheminPsmd de sListePsmd séparée par RC
+	si sCheminPsmd = "" alors continuer
+		nNbPsmd++
+
+		bufPsmd = fChargeBuffer(sCheminPsmd)
+		si Taille(bufPsmd) = 0 alors
+			Trace("FinalisePsmdOperation : échec lecture (vide) : " + sCheminPsmd)
+			continuer
+		fin
+
+		nPosDebut	= Position(bufPsmd, sMarqueurDebut)
+		nPosFin		= Position(bufPsmd, sMarqueurFin)
+		si nPosDebut > 0 _et_ nPosFin > nPosDebut alors
+			// nFinBloc = 1ère position d'octet APRÈS la borne fermante
+			nFinBloc		= nPosFin + Taille(sMarqueurFin)
+			bufResultat	= Gauche(bufPsmd, nPosDebut - 1) + sNouvelleSection + Milieu(bufPsmd, nFinBloc)
+			si fSauveBuffer(sCheminPsmd, bufResultat) alors
+				nNbOk++
+			sinon
+				Trace("FinalisePsmdOperation : échec écriture : " + sCheminPsmd)
+			fin
+		sinon
+			Trace("FinalisePsmdOperation : <database_settings> introuvable dans " + sCheminPsmd)
+		fin
+fin
+
+renvoyer (nNbPsmd > 0 _et_ nNbOk = nNbPsmd)

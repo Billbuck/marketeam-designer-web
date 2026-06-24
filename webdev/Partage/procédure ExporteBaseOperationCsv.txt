@@ -4,9 +4,10 @@
 //        PrintShop Mail (première brique du module de production).
 //        CONTRAT : docs/cahier-des-charges-export-csv-production.md.
 //
-//        ÉTAPE DE TEST : le fichier est écrit SUR LE BUREAU de l'opérateur
-//        (SysRep(srBureau)). L'emplacement final (CheminFichier/__REP_BASE__)
-//        et le branchement dans le PSMD sont des chantiers séparés.
+//        Le fichier est écrit dans le répertoire Printshop de l'opération
+//        (cpProjet.CheminFichier(pIdOperation, __REP_PRINTSHOP__)), sous le
+//        nom <Dossier>.csv. La procédure renvoie le NOM SEUL du fichier
+//        (ex. "AAABB.csv") — c'est lui qui sera inscrit dans les PSMD.
 //
 //        Concordance stricte des en-têtes avec le PSMD :
 //          - standards : nom standard inchangé (Civilite, Nom, Adresse1…) ;
@@ -23,7 +24,7 @@
 // Paramètres :
 //   pIdOperation : identifiant de l'opération à exporter.
 // Retour :
-//   chaîne : chemin complet du CSV produit, ou "" en cas d'échec.
+//   chaîne : nom du fichier CSV produit (ex. "AAABB.csv"), ou "" en cas d'échec.
 // =========================================================================
 procédure ExporteBaseOperationCsv(pIdOperation)
 
@@ -36,6 +37,7 @@ sEntetes							est une chaîne
 sContenuCsv						est une chaîne
 sLigne							est une chaîne
 sCheminCsv						est une chaîne
+sNomCsv							est une chaîne
 sLibelle							est une chaîne
 sEntete							est une chaîne
 sValeur							est une chaîne
@@ -104,17 +106,18 @@ pour tout stBase de stOperation.tabBase
 	fin
 fin
 
-// ─── 6. Écriture sur le Bureau ───────────────────────────────────────────
-//   Projet en mode ANSI (chaînes natives = Windows-1252 ; le projet ne
-//   convertit en UTF-8 qu'aux frontières JSON/web via ChaîneVersUTF8).
-//   On écrit donc le CSV directement : pas de conversion supplémentaire.
-sCheminCsv = ComplèteRep(SysRep(srBureau)) + stOperation.Dossier + ".csv"
+// ─── 6. Écriture dans le répertoire Printshop de l'opération ──────────────
+//   Projet en mode ANSI (chaînes natives = Windows-1252) : on écrit le CSV
+//   directement, sans conversion. On renvoie le NOM SEUL (sans chemin), car
+//   c'est lui qui sera inscrit dans les PSMD (db_pathsettings = nom seul).
+sNomCsv		= stOperation.Dossier + ".csv"
+sCheminCsv	= cpProjet.CheminFichier(pIdOperation, __REP_PRINTSHOP__) + sNomCsv
 si pas fSauveTexte(sCheminCsv, sContenuCsv) alors
 	Trace("ExporteBaseOperationCsv : échec fSauveTexte : " + sCheminCsv)
 	renvoyer ""
 fin
 
-renvoyer sCheminCsv
+renvoyer sNomCsv
 
 
 // ═════════════════════════════════════════════════════════════════════════
