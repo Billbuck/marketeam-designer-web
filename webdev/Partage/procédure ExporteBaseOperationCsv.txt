@@ -1,0 +1,141 @@
+// =========================================================================
+// Partage.ExporteBaseOperationCsv()
+// Rôle : Exporter la base d'une opération Courrier en CSV lisible par
+//        PrintShop Mail (première brique du module de production).
+//        CONTRAT : docs/cahier-des-charges-export-csv-production.md.
+//
+//        ÉTAPE DE TEST : le fichier est écrit SUR LE BUREAU de l'opérateur
+//        (SysRep(srBureau)). L'emplacement final (CheminFichier/__REP_BASE__)
+//        et le branchement dans le PSMD sont des chantiers séparés.
+//
+//        Concordance stricte des en-têtes avec le PSMD :
+//          - standards : nom standard inchangé (Civilite, Nom, Adresse1…) ;
+//          - spécifiques (Champ1..30) : libellé sanitisé via
+//            Partage.SanitiseNomPsm, avec la MÊME liste réservée et le même
+//            enrichissement au fil que Partage.ConstruireMappingPsmLibelle
+//            (suffixes _2/_3 identiques).
+//        Valeurs formatées par type via Partage.FormateValeurSortie.
+//        + colonnes systématiques Code et Sequentiel.
+//
+//        Format physique aligné sur le BAT : Windows-1252 (ANSI), séparateur
+//        virgule, TOUS les champs entre guillemets doubles (" -> ""), CRLF.
+//
+// Paramètres :
+//   pIdOperation : identifiant de l'opération à exporter.
+// Retour :
+//   chaîne : chemin complet du CSV produit, ou "" en cas d'échec.
+// =========================================================================
+procédure ExporteBaseOperationCsv(pIdOperation)
+
+stOperation						est une structOperation	= Partage.ChargeStructOperation(pIdOperation)
+stBase							est une StructBase
+stBaseChamp						est une structBaseChamp
+sCRLF								est une chaîne				= Caract(13) + Caract(10)
+sNomsReserves					est une chaîne
+sEntetes							est une chaîne
+sContenuCsv						est une chaîne
+sLigne							est une chaîne
+sCheminCsv						est une chaîne
+sLibelle							est une chaîne
+sEntete							est une chaîne
+sValeur							est une chaîne
+nSequentiel						est un entier
+nIndStd							est un entier
+nIndCol							est un entier
+
+// Ordre des colonnes figé (tri par .Ordre) + métadonnées parallèles
+tabChampPhysique				est un tableau de chaînes
+tabChampEntete					est un tableau de chaînes
+tabChampType					est un tableau de chaînes
+
+// ─── Garde-fou : opération introuvable ───────────────────────────────────
+si pIdOperation = 0 _ou_ stOperation.IdOperation = 0 alors
+	Trace("ExporteBaseOperationCsv : opération introuvable (IdOperation=" + pIdOperation + ")")
+	renvoyer ""
+fin
+
+// ─── 1. Liste réservée initiale — IDENTIQUE à ConstruireMappingPsmLibelle ─
+//   (standards + SYS + Code/CodeAlliage/Sexe/Profil + Image/Zone_Image),
+//   puis colonnes physiques Champ1..30. Enrichie au fil (unicité intra-doc).
+sNomsReserves = "Reference" + TAB + "Societe" + TAB + "Enseigne" + TAB + "Contact" + TAB + "Civilite" + TAB + "Nom" + TAB + "Prenom" + TAB + "Adresse1" + TAB + "Adresse2" + TAB + "Adresse3" + TAB + "Adresse4" + TAB + "CodePostal" + TAB + "Ville" + TAB + "Pays" + TAB + "Tel" + TAB + "Portable" + TAB + "Email" + TAB + "Code" + TAB + "CodeAlliage" + TAB + "Sexe" + TAB + "Profil" + TAB + "Sequentiel" + TAB + "Timbre" + TAB + "Rapprochement" + TAB + "Zone_Image"
+
+pour nIndStd = 1 _à_ 30
+	sNomsReserves += TAB + "Champ" + NumériqueVersChaîne(nIndStd)
+fin
+
+
+sEntetes = EncadreCsv("Sequentiel")
+sEntetes += "," + EncadreCsv("Code")
+
+pour tout stBaseChamp, sLibelle de stOperation.taaBaseChamp
+	si EstChampSpecifique(stBaseChamp.Champ) alors
+		// Spécifique : libellé sanitisé, identique au PSMD (suffixes compris)
+		sEntete = Partage.SanitiseNomPsm(sLibelle, sNomsReserves)
+		sNomsReserves += TAB + sEntete	// enrichissement (unicité intra-document)
+	sinon
+		// Standard : nom standard inchangé
+		sEntete = stBaseChamp.Champ
+	fin
+
+	tabChampPhysique.Ajoute(stBaseChamp.Champ)
+	tabChampEntete.Ajoute(sEntete)
+	tabChampType.Ajoute(stBaseChamp.Type)
+	sEntetes += "," + EncadreCsv(sEntete)
+fin
+
+
+// ─── 5. Construction du contenu : en-têtes puis 1 ligne / destinataire ────
+sContenuCsv = sEntetes
+
+
+pour tout stBase de stOperation.tabBase
+	pour tout dos_base_ligne avec IdBase = stBase.IdBase
+		nSequentiel++
+
+		// Code : pass-through
+		sLigne = EncadreCsv(NumériqueVersChaîne(nSequentiel, "06d"))
+		sLigne += "," + EncadreCsv(UnicodeVersAnsi(dos_base_ligne.Code))
+
+		pour nIndCol = 1 _à_ tabChampPhysique..Occurrence
+			// Lecture dynamique de la colonne physique (indirection)
+			sValeur	= {"dos_base_ligne." + tabChampPhysique[nIndCol]}
+			sValeur	= Partage.FormateValeurSortie(sValeur, tabChampType[nIndCol])
+			sLigne += "," + EncadreCsv(sValeur)
+		fin
+
+		sContenuCsv += sCRLF + sLigne
+	fin
+fin
+
+// ─── 6. Écriture sur le Bureau ───────────────────────────────────────────
+//   Projet en mode ANSI (chaînes natives = Windows-1252 ; le projet ne
+//   convertit en UTF-8 qu'aux frontières JSON/web via ChaîneVersUTF8).
+//   On écrit donc le CSV directement : pas de conversion supplémentaire.
+sCheminCsv = ComplèteRep(SysRep(srBureau)) + stOperation.Dossier + ".csv"
+si pas fSauveTexte(sCheminCsv, sContenuCsv) alors
+	Trace("ExporteBaseOperationCsv : échec fSauveTexte : " + sCheminCsv)
+	renvoyer ""
+fin
+
+renvoyer sCheminCsv
+
+
+// ═════════════════════════════════════════════════════════════════════════
+// PROCÉDURES INTERNES
+// ═════════════════════════════════════════════════════════════════════════
+
+// Vrai si la colonne physique est un spécifique "ChampN" (N de 1 à 30),
+	// Faux pour les standards (Civilite, Nom, Adresse1…).
+	procédure interne EstChampSpecifique(pChamp est une chaîne) : booléen
+		si Gauche(pChamp, 5) <> "Champ" alors
+			renvoyer Faux
+		fin
+		nNumChamp est un entier = Val(Milieu(pChamp, 6))
+		renvoyer (nNumChamp >= 1 _et_ nNumChamp <= 30 _et_ "Champ" + NumériqueVersChaîne(nNumChamp) = pChamp)
+	fin
+
+// Encadre une valeur de guillemets doubles, en doublant les guillemets
+	// internes (" -> ""). Format CSV de tous les champs (en-têtes + valeurs).
+	procédure interne EncadreCsv(pVal est une chaîne ANSI) : chaîne
+		renvoyer """" + Remplace(pVal, """", """""") + """"
+	fin
