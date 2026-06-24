@@ -1,0 +1,65 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] ChargeStructOperation (<pIdOperation>)
+//
+// Paramètres :
+//	pIdOperation : <indiquez ici le rôle de pIdOperation>
+// Valeur de retour :
+// 	structOperation : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+// 	pType : <indiquez ici le rôle de pType>
+//	pIdDossier : <indiquez ici le rôle de pIdDossier>
+procédure ChargeStructOperation(pIdOperation)
+
+stOperation est une structOperation
+
+
+si dos_operation.LitRecherchePremier(IdOperation, pIdOperation) alors
+
+	FichierVersMémoire(stOperation,dos_operation)
+	stOperation.CodeTemp = pIdOperation
+
+	si stOperation.IdCoupon <> 0 alors
+		clt_coupon.LitRecherchePremier(IdCoupon, stOperation.IdCoupon)
+		si clt_coupon.Trouve() alors
+			stOperation.TypeCoupon = clt_coupon.TypeCoupon
+		fin
+	fin
+
+	// stOperation.IdAdresseFacturation = AdresseDeFacturation(stOperation.IdClientFacturation)
+
+	// A conserver au dessus du chargement des structures des opérations
+	// Chargement des bases de données
+	si stOperation.TypeOperation pas dans (__OPERATION_TRACTEVA__, __OPERATION_SMARTEVA__) alors
+		stOperation.tabRapport		= Partage.ChargeTabRapport(pIdOperation)
+		stOperation.tabBase			= Partage.ChargeTabStructBase(pIdOperation)
+		stOperation.taaBaseChamp	= Partage.CalculeTaaBaseChamp(stOperation.tabBase, Faux, Faux)
+	fin
+
+	selon stOperation.TypeOperation
+		cas __OPERATION_COURRIER__ 	: stOperation.stOperationLettre 	= ChargeStructOperationLettre(pIdOperation)
+		cas __OPERATION_TRACTEVA__	: stOperation.stOperationTract		= ChargeStructOperationTract(pIdOperation)
+		cas __OPERATION_SMARTEVA__	: stOperation.stOperationTract		= ChargeStructOperationTract(pIdOperation)
+		cas __OPERATION_SMS__		: stOperation.stOperationSms 		= ChargeStructOperationSms(pIdOperation)
+		cas __OPERATION_VMS__		: stOperation.stOperationVms 		= ChargeStructOperationVms(pIdOperation)
+		cas __OPERATION_TEL__		: stOperation.stOperationCallCenter	= ChargeStructOperationCallCenter(pIdOperation)
+		cas __OPERATION_EMAIL__		: //stOperation.stOperationEmail = ChargeTabStructOperationEmail(pIdDossier,pIdOperation)
+		autre cas
+	fin
+
+
+	si stOperation.EstCliquezIci = Vrai alors
+		stOperation.stNouveauCliquezIci = ChargeStructNouveauCliquezIci(0,0,pIdOperation)
+	fin
+
+	// Chargement des dossier ligne
+	stOperation.tabOperationLigne = ChargeTabStructOperationLigne(pIdOperation)
+
+
+fin
+
+renvoyer stOperation
+
