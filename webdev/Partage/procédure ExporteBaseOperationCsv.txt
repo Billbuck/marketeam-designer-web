@@ -45,7 +45,6 @@ nIndCol							est un entier
 
 // Ordre des colonnes figé (tri par .Ordre) + métadonnées parallèles
 tabChampPhysique				est un tableau de chaînes
-tabChampEntete					est un tableau de chaînes
 tabChampType					est un tableau de chaînes
 
 // ─── Garde-fou : opération introuvable ───────────────────────────────────
@@ -78,7 +77,6 @@ pour tout stBaseChamp, sLibelle de stOperation.taaBaseChamp
 	fin
 
 	tabChampPhysique.Ajoute(stBaseChamp.Champ)
-	tabChampEntete.Ajoute(sEntete)
 	tabChampType.Ajoute(stBaseChamp.Type)
 	sEntetes += "," + EncadreCsv(sEntete)
 fin
@@ -86,7 +84,6 @@ fin
 
 // ─── 5. Construction du contenu : en-têtes puis 1 ligne / destinataire ────
 sContenuCsv = sEntetes
-
 
 pour tout stBase de stOperation.tabBase
 	pour tout dos_base_ligne avec IdBase = stBase.IdBase
