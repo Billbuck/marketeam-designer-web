@@ -1,0 +1,43 @@
+---
+description: Conventions WLangage (WinDev/WebDev) pour écrire du code valide dans ce projet
+alwaysApply: true
+---
+
+# Conventions WLangage — projet Marketeam
+
+## 1. Type des chaînes = mode du projet (ANSI ici)
+
+La déclaration d'une chaîne **suit automatiquement le mode du projet**. Ce projet
+est déclaré en **ANSI** : une variable `chaîne` est donc **ANSI d'office**.
+
+- ✅ `sMot est une chaîne` → ANSI automatiquement.
+- ❌ Ne jamais écrire `sMot est une chaîne ANSI` (qualificatif redondant).
+- On ne qualifie explicitement **que** pour forcer l'autre mode :
+  `sMot est une chaîne Unicode`.
+
+Conséquences :
+- Pas de conversion à l'écriture d'un fichier texte « natif » : en mode ANSI,
+  `fSauveTexte(sChemin, sContenu)` produit déjà du **Windows-1252**.
+- On ne convertit (`ChaîneVersUTF8` / `UTF8VersChaîne`) qu'aux **frontières**
+  (JSON, web). Une rubrique fichier déclarée Unicode peut nécessiter
+  `UnicodeVersAnsi` avant concaténation ANSI — mais une `chaîne` native, non.
+
+## 2. Ne jamais inventer de fonction, paramètre, structure ou constante
+
+De NOMBREUSES procédures/structures/constantes existent hors du périmètre visible.
+Avant d'écrire :
+
+1. S'appuyer sur les **procédures réelles du projet** (chercher un usage existant) ;
+2. sinon vérifier dans la **documentation Pc Soft WinDev/WebDev** (noms et syntaxe exacts) ;
+3. sinon **demander** plutôt que supposer ou réécrire.
+
+Ne jamais supposer qu'une procédure n'existe pas. Signaler tout maillon manquant.
+
+## 3. Rappels de syntaxe vérifiés
+
+- `TableauTrie(tab, ttCroissant)` (constante `ttCroissant`, pas `taCroissant`).
+- Propriétés en **double-point** : `tab..Occurrence`, `j..Existe`, `r..Null`.
+  Méthodes en point simple : `tab.Ajoute(x)`.
+- `si … alors … fin` sur **une seule ligne** est interdit avec `fin` :
+  soit tout sur une ligne **sans** `fin`, soit en bloc multiligne avec `fin`.
+- Complétion de chemin : `ComplèteRep(...)`.

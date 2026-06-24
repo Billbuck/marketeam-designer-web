@@ -133,6 +133,6 @@ renvoyer sCheminCsv
 
 // Encadre une valeur de guillemets doubles, en doublant les guillemets
 	// internes (" -> ""). Format CSV de tous les champs (en-têtes + valeurs).
-	procédure interne EncadreCsv(pVal est une chaîne ANSI) : chaîne
+	procédure interne EncadreCsv(pVal est une chaîne) : chaîne
 		renvoyer """" + Remplace(pVal, """", """""") + """"
 	fin
