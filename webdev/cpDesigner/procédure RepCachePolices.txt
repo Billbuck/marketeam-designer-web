@@ -12,7 +12,10 @@
 // ─────────────────────────────────────────────────────────────────────────────
 procédure RepCachePolices() : chaîne
 
-sRep est une chaîne = cpProjet.__sRepRacine + "Polices\"
+// Racine UNC (marketeam_rep_web) et non __sRepRacine (chemin local) : le
+// webservice tourne sur une AUTRE machine que le serveur web ; seul l'UNC
+// atteint le dossier Polices servi par le web depuis n'importe quel serveur.
+sRep est une chaîne = cpProjet.__sMarketeamRepRacine + "Polices\"
 
 si pas fRépertoireExiste(sRep) alors
 	si pas fRepCrée(sRep) alors

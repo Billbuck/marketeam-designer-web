@@ -68,7 +68,12 @@ imgPrintshop	= bufPrintshop
 
 si imgPrintshop.SauveJPEG(pCheminJpgSortie, 100) alors
 	stImageBat.CheminPhysique	= pCheminJpgSortie
-	stImageBat.CheminRelatif	= pCheminJpgSortie.Remplace(cpProjet.__sMarketeamRepRacine, cpProjet.__sHttpMarketeam)
+	// URL web : on retire la MÊME racine physique que celle ayant construit le
+	// fichier (__sRepRacine), puis on normalise les \ en /. Retirer une autre
+	// racine (__sMarketeamRepRacine) échouait en prod (racine physique locale
+	// ≠ racine réseau), laissant fuir le chemin physique vers le navigateur.
+	stImageBat.CheminRelatif	= pCheminJpgSortie.Remplace(cpProjet.__sRepRacine, cpProjet.__sHttpMarketeam)
+	stImageBat.CheminRelatif	= stImageBat.CheminRelatif.Remplace("\", "/")
 sinon
 	// Trace("GenerationBatDepuisPsmd : échec SauveJPEG : " + pCheminJpgSortie)
 fin

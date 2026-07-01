@@ -84,8 +84,10 @@ pour nIndZone = 1 _à_ jDoc.zonesImage..Occurrence
 			// Chemin physique
 			jDoc.zonesImage[nIndZone].source.nomFichier = sFullPath
 
-			// URL web : racine physique -> racine HTTP, puis \ -> /
-			sUrlImage est une chaîne = sFullPath.Remplace(cpProjet.__sMarketeamRepRacine, cpProjet.__sHttpMarketeam)
+			// URL web : on retire la MÊME racine physique que celle ayant construit
+			// le fichier (__sRepRacine), puis \ -> /. (Retirer __sMarketeamRepRacine
+			// échouait en prod : racine physique locale ≠ racine réseau.)
+			sUrlImage est une chaîne = sFullPath.Remplace(cpProjet.__sRepRacine, cpProjet.__sHttpMarketeam)
 			sUrlImage												= sUrlImage.Remplace("\", "/")
 			jDoc.zonesImage[nIndZone].source.valeur		= sUrlImage
 

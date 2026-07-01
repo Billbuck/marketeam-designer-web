@@ -1,0 +1,13 @@
+procédure InitProjet()
+
+
+__sRepRacine				= cpFonction.ValeurParametre("rep_racine_marketeam",prm_parametre.ValChaine..Nom)
+__sMarketeamRepRacine	= cpFonction.ValeurParametre("marketeam_rep_web",prm_parametre.ValChaine..Nom)
+
+__sHttpMarketeam			= cpFonction.ValeurParametre("http_marketeam",prm_parametre.ValChaine..Nom)
+__sRepImages				= cpFonction.ValeurParametre("repweb_images",prm_parametre.ValChaine..Nom)
+__sRepUpload				= cpFonction.ValeurParametre("repweb_uploads",prm_parametre.ValChaine..Nom)
+__sRepPictos				= cpFonction.ValeurParametre("repweb_pictos",prm_parametre.ValChaine..Nom)
+__sRepMessages				= cpFonction.ValeurParametre("repweb_messages",prm_parametre.ValChaine..Nom)
+__sRepEcoutes				= cpFonction.ValeurParametre("repweb_ecoutes",prm_parametre.ValChaine..Nom)
+__moTauxTva					= cpFonction.ValeurParametre("Taux_TVA", prm_parametre.ValNumerique..Nom)
