@@ -2179,7 +2179,15 @@ ${generatePsmdColorNoAlpha('foregroundcolor', { c: 0, m: 0, y: 0, k: 1 })}
                 var symbolSize = (zone.forme === 'rectangle') ? 'Rectangle12x36' : '';
                 symbolSizeTag = '<DataMatrix_SymbolSize>' + symbolSize + '</DataMatrix_SymbolSize>';
             }
-            propertyBagContent = '<property_bag><Barcode><RotationFixed>0</RotationFixed><BoundsIsRotated>False</BoundsIsRotated><Initialized>True</Initialized><Type>' + psType + '</Type>' + symbolSizeTag + '<Data>' + escapePropertyBag(data) + '</Data><Alignment>0;0</Alignment></Barcode>\n</property_bag>';
+            // Zone de tranquillité (QuietZoneAll, en largeurs de module).
+            // Référence : Printshop/Exemple.psmd — tag juste après <Type>,
+            // ABSENT quand la valeur est 0 (comportement natif PrintShop Mail).
+            var quietZoneTag = '';
+            var quietZoneVal = parseInt(zone.zoneTranquillite, 10) || 0;
+            if (quietZoneVal > 0) {
+                quietZoneTag = '<QuietZoneAll>' + quietZoneVal + '</QuietZoneAll>';
+            }
+            propertyBagContent = '<property_bag><Barcode><RotationFixed>0</RotationFixed><BoundsIsRotated>False</BoundsIsRotated><Initialized>True</Initialized><Type>' + psType + '</Type>' + quietZoneTag + symbolSizeTag + '<Data>' + escapePropertyBag(data) + '</Data><Alignment>0;0</Alignment></Barcode>\n</property_bag>';
         }
         
         var xml = generatePsmdObjectCommon(zone);

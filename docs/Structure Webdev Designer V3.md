@@ -602,6 +602,7 @@ structDesignerZoneCodeBarres est une Structure
 	'valeurStatique'		est une chaîne									<sérialise = "valeurStatique">		// Valeur si pas de champ fusion
 	'texteLisible'			est une chaîne									<sérialise = "texteLisible">			// "aucun" ou "dessous"
 	'taillePolice'			est un entier									<sérialise = "taillePolice">			// Taille du texte lisible en points
+	'zoneTranquillite'	est un entier									<sérialise = "zoneTranquillite">		// Zone de tranquillité 0-9 (largeurs de module) — codes-barres/datamatrix, PAS les QR. 0 = aucune (tag QuietZoneAll absent du PSMD)
 	'qrConfig'				est une chaîne									<sérialise = "qrConfig">				// Configuration QR intelligent (null si non applicable)
 
 	// --- Apparence ---

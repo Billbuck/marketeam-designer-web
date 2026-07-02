@@ -16,12 +16,15 @@
 //
 // Modèle : datamatrix d'affranchissement « sys-affranchissement » (zone
 //   code-barres système — seul canal portant champFusion jusqu'au PSMD :
-//   [Rapprochement]). Symbologie QR (typeCodeBarres = "qrcode").
+//   [Rapprochement]). Symbologie DATAMATRIX (typeCodeBarres = "datamatrix",
+//   correction du 02/07/2026 — précédemment "qrcode" par erreur), avec zone
+//   de tranquillité par défaut de 2 modules (zoneTranquillite = 2).
+//   L'id historique "sys-qr-rapprochement" est CONSERVÉ (référencé partout).
 //
-// Position : bord DROIT (X basé sur pDoc.LargeurOuvert), hauteur PAR TYPE DE
-//   DOCUMENT — mécanisme dans LitPositionQrRapprochement (valeurs par défaut
-//   provisoires ; à terme lues en base par type de document : le donneur
-//   d'ordre règle la valeur ICI, source unique).
+// Position FIXE (spec du 02/07/2026, source unique LitPositionQrRapprochement) :
+//   - 198 mm du bord GAUCHE de la page ;
+//   - 90 mm du HAUT du document ;
+//   - taille HORS TOUT 8×8 mm (zone de tranquillité de 2 modules comprise).
 //
 // Paramètre : pDoc (structDocument)
 // Retour    : un JSON — la zone complète (à insérer telle quelle dans
@@ -54,13 +57,14 @@ jZone.geometrie.largeurMm	= nWMm
 jZone.geometrie.hauteurMm	= nHMm
 
 // ─── Code-barres / champ ──────────────────────────────────────────────────
-jZone.typeCodeBarres	= "qrcode"
+jZone.typeCodeBarres	= "datamatrix"
 jZone.forme				= "carre"
 jZone.sourceType		= "champ"
 jZone.champFusion		= "Rapprochement"
 jZone.valeurStatique	= ""
 jZone.texteLisible		= "0"
 jZone.taillePolice		= 8
+jZone.zoneTranquillite	= 2		// zone de tranquillité (largeurs de module) — QuietZoneAll PSM
 
 // ─── Couleurs ─────────────────────────────────────────────────────────────
 jZone.couleurCmjn.c		= 0
@@ -109,22 +113,25 @@ RENVOYER jZone
 // PROCÉDURE INTERNE
 // ═════════════════════════════════════════════════════════════════════════
 
-	// ─── Position/taille du QR (PAR TYPE DE DOCUMENT) ───────────────────────
-	//   ⚠ MÉCANISME EN PLACE, VALEURS PROVISOIRES — SOURCE UNIQUE.
-	//   À CÂBLER sur une donnée BDD par type de document (colonnes à ajouter :
-	//   bord droit / hauteur / taille). Le donneur d'ordre règle la valeur ICI.
-	//   X basé sur pDoc.LargeurOuvert (référence unique pour tous les chemins).
-	//   Écrit les locaux hôtes nXMm / nYMm / nWMm / nHMm.
+	// ─── Position/taille du datamatrix de rapprochement (SPEC FIXE) ─────────
+	//   Spec du 02/07/2026 (source unique — le donneur d'ordre règle ICI) :
+	//   198 mm du bord gauche, 90 mm du haut, 8×8 mm HORS TOUT (la zone de
+	//   tranquillité de 2 modules est prise DANS ce cadre, comportement PSM).
+	//   Garde-fou : si la page est plus étroite que 198+8 mm, on recale au
+	//   bord droit. Écrit les locaux hôtes nXMm / nYMm / nWMm / nHMm.
 	PROCÉDURE INTERNE LitPositionQrRapprochement(LOCAL pDocLoc est une structDocument)
-		nTailleMm			est un réel	= 25	// taille QR (défaut provisoire)
-		nMargeDroiteMm		est un réel	= 5		// retrait depuis le bord droit
-		nHauteurDefautMm	est un réel	= 130	// 13 cm du haut (A4) — défaut provisoire
+		nTailleMm	est un réel	= 8		// taille hors tout (8×8 mm)
+		nGaucheMm	est un réel	= 198	// retrait depuis le bord gauche
+		nHautMm		est un réel	= 90	// retrait depuis le haut
 
 		nWMm = nTailleMm
 		nHMm = nTailleMm
-		nYMm = nHauteurDefautMm
-		nXMm = pDocLoc.LargeurOuvert - nTailleMm - nMargeDroiteMm
-		SI nXMm < 0 ALORS
-			nXMm = 0
+		nYMm = nHautMm
+		nXMm = nGaucheMm
+		SI pDocLoc.LargeurOuvert > 0 _ET_ nXMm + nTailleMm > pDocLoc.LargeurOuvert ALORS
+			nXMm = pDocLoc.LargeurOuvert - nTailleMm
+			SI nXMm < 0 ALORS
+				nXMm = 0
+			FIN
 		FIN
 	FIN

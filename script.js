@@ -1207,6 +1207,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const barcodeShapeRow = document.getElementById('barcode-shape-row');
     /** @type {HTMLSelectElement|null} Combo forme DataMatrix (square/rectangle) */
     const barcodeInputShape = document.getElementById('barcode-input-shape');
+    /** @type {HTMLElement|null} Row zone de tranquillité (codes-barres + datamatrix, PAS les QR) */
+    const barcodeQuietZoneRow = document.getElementById('barcode-quietzone-row');
+    /** @type {HTMLInputElement|null} Input zone de tranquillité (0-9, en largeurs de module) */
+    const barcodeInputQuietZone = document.getElementById('barcode-input-quietzone');
     
     // Contrôles Section Données
     /** @type {HTMLSelectElement|null} Dropdown source (fixe/champ) */
@@ -3252,7 +3256,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @see BARCODE_BWIPJS_CONFIG - Configuration bwip-js par type
      * @see getFallbackBarcodeSvg - SVG de secours si bwip-js échoue
      */
-    function generateBarcodeImage(typeCode, color = DEFAULT_TEXT_COLOR, customValue = null, forme = 'square') {
+    function generateBarcodeImage(typeCode, color = DEFAULT_TEXT_COLOR, customValue = null, forme = 'square', quietZone = 0) {
         // Vérifier que bwip-js est chargé
         if (typeof bwipjs === 'undefined') {
             console.warn('bwip-js non chargé, utilisation du fallback');
@@ -3311,12 +3315,75 @@ document.addEventListener('DOMContentLoaded', () => {
             // Générer le code-barres sur le canvas
             bwipjs.toCanvas(canvas, options);
             
+            // Zone de tranquillité (codes-barres + datamatrix, PAS les QR) :
+            // marge = N × taille RÉELLE du module, MESURÉE sur l'image générée
+            // (même sémantique que le QuietZoneAll de PrintShop Mail — les
+            // unités de padding bwip-js varient selon la symbologie, on ne s'y
+            // fie pas). Marge transparente : le fond de la zone fournit le blanc.
+            const isQrType = (typeCode === 'qrcode' || typeCode === 'QRCode');
+            if (!isQrType && quietZone > 0) {
+                const paddedCanvas = addQuietZoneToCanvas(canvas, config.is2D, quietZone);
+                return paddedCanvas.toDataURL('image/png');
+            }
+            
             // Retourner le data URL
             return canvas.toDataURL('image/png');
         } catch (e) {
             console.warn(`Erreur génération code-barres ${typeCode}:`, e.message);
             return getFallbackBarcodeSvg(typeCode);
         }
+    }
+
+    /**
+     * Mesure la taille d'un module (en px) sur un canvas de code-barres généré :
+     * plus petite série de pixels consécutifs de même état (opaque/transparent).
+     * - 1D / PDF417 : ligne du milieu (barre étroite = 1 module) ;
+     * - DataMatrix : ligne du haut (piste d'horloge alternée = 1 module par case).
+     * 
+     * @param {HTMLCanvasElement} canvas - Canvas généré par bwip-js (fond transparent)
+     * @param {boolean} is2D - true pour DataMatrix (mesure sur la piste d'horloge)
+     * @returns {number} Taille d'un module en pixels (>= 1)
+     */
+    function measureBarcodeModulePx(canvas, is2D) {
+        const ctx = canvas.getContext('2d');
+        const y = is2D ? 0 : Math.floor(canvas.height / 2);
+        const data = ctx.getImageData(0, y, canvas.width, 1).data;
+        let minRun = Infinity;
+        let run = 0;
+        let prev = null;
+        for (let x = 0; x < canvas.width; x++) {
+            const opaque = data[x * 4 + 3] > 127;
+            if (opaque === prev) {
+                run++;
+            } else {
+                if (prev !== null && run > 0 && run < minRun) minRun = run;
+                run = 1;
+                prev = opaque;
+            }
+        }
+        if (run > 0 && run < minRun) minRun = run;
+        // Repli défensif si la mesure échoue (image vide/uniforme)
+        return (isFinite(minRun) && minRun > 0) ? minRun : Math.max(1, Math.round(canvas.width / 30));
+    }
+
+    /**
+     * Ajoute une zone de tranquillité (marge transparente) autour d'un canvas
+     * de code-barres : N largeurs de module de chaque côté, comme le
+     * QuietZoneAll de PrintShop Mail.
+     * 
+     * @param {HTMLCanvasElement} srcCanvas - Canvas source (sans marge)
+     * @param {boolean} is2D - true pour DataMatrix
+     * @param {number} quietZone - Nombre de modules de marge (1-9)
+     * @returns {HTMLCanvasElement} Nouveau canvas avec marges
+     */
+    function addQuietZoneToCanvas(srcCanvas, is2D, quietZone) {
+        const modulePx = measureBarcodeModulePx(srcCanvas, is2D);
+        const pad = Math.round(quietZone * modulePx);
+        const out = document.createElement('canvas');
+        out.width = srcCanvas.width + 2 * pad;
+        out.height = srcCanvas.height + 2 * pad;
+        out.getContext('2d').drawImage(srcCanvas, pad, pad);
+        return out;
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -20260,6 +20327,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const isQrCode = (zoneData.typeCodeBarres === 'qrcode' || zoneData.typeCodeBarres === 'QRCode');
         toggleQrCodeSection(isQrCode);
         
+        // ─── ZONE DE TRANQUILLITÉ (codes-barres + datamatrix, PAS les QR) ───
+        if (barcodeQuietZoneRow) {
+            barcodeQuietZoneRow.style.display = isQrCode ? 'none' : '';
+        }
+        if (barcodeInputQuietZone) {
+            barcodeInputQuietZone.value = zoneData.quietZone || 0;
+        }
+        
         if (isQrCode && zoneData.qrConfig) {
             if (qrTypeSelect) qrTypeSelect.value = zoneData.qrConfig.type || 'url';
             renderQrFields(zoneData.qrConfig.type || 'url', zoneData.qrConfig.fields);
@@ -20496,6 +20571,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     barcodeShapeRow.style.display = isDataMatrix ? '' : 'none';
                 }
                 
+                // Zone de tranquillité : visible pour tous les types SAUF QR Code
+                const isQrCodeType = (newType === 'qrcode' || newType === 'QRCode');
+                if (barcodeQuietZoneRow) {
+                    barcodeQuietZoneRow.style.display = isQrCodeType ? 'none' : '';
+                }
+                
                 updateSelectedBarcodeZone((zoneData, zoneEl) => {
                     // Récupérer l'ancien type pour détecter les changements de "famille"
                     const oldType = zoneData.typeCodeBarres || 'code128';
@@ -20531,6 +20612,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     const isQrCode = (newType === 'qrcode' || newType === 'QRCode');
                     if (!isQrCode && zoneData.qrConfig) {
                         delete zoneData.qrConfig;
+                    }
+                    
+                    // Zone de tranquillité : non applicable aux QR (interface PSM)
+                    if (isQrCode && zoneData.quietZone) {
+                        delete zoneData.quietZone;
                     }
                     
                     // ═══ RÉAJUSTER LES DIMENSIONS SELON LE NOUVEAU TYPE ═══
@@ -20617,6 +20703,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 const newForme = barcodeInputShape.value;
                 updateSelectedBarcodeZone((zoneData) => {
                     zoneData.forme = newForme;
+                });
+            });
+        }
+        
+        // Zone de tranquillité (0-9, en largeurs de module — codes-barres + datamatrix)
+        if (barcodeInputQuietZone) {
+            barcodeInputQuietZone.addEventListener('change', () => {
+                // Clamp 0-9 (saisie un seul chiffre)
+                let newQuietZone = parseInt(barcodeInputQuietZone.value, 10);
+                if (isNaN(newQuietZone) || newQuietZone < 0) newQuietZone = 0;
+                if (newQuietZone > 9) newQuietZone = 9;
+                barcodeInputQuietZone.value = newQuietZone;
+                updateSelectedBarcodeZone((zoneData) => {
+                    if (newQuietZone > 0) {
+                        zoneData.quietZone = newQuietZone;
+                    } else {
+                        delete zoneData.quietZone;
+                    }
                 });
             });
         }
@@ -23581,7 +23685,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const fallbackSvg = config && config.is2D ? SVG_BARCODE_2D_FALLBACK : SVG_BARCODE_FALLBACK;
             barcodeImage = 'data:image/svg+xml;base64,' + btoa(fallbackSvg);
         } else {
-            barcodeImage = generateBarcodeImage(typeCode, color, valueToEncode, zoneData.forme);
+            barcodeImage = generateBarcodeImage(typeCode, color, valueToEncode, zoneData.forme, zoneData.quietZone || 0);
         }
         
         // Vérifier si c'est un code 2D (jamais de texte pour les codes 2D)
@@ -27610,6 +27714,7 @@ document.addEventListener('DOMContentLoaded', () => {
             isTransparent: zoneJson.transparent || false,
             qrConfig: zoneJson.qrConfig || null,
             forme: zoneJson.forme || undefined,
+            quietZone: zoneJson.zoneTranquillite || 0,
             zIndex: zoneJson.niveau || 1,
             rotation: zoneJson.rotation || 0,
             x: (geometrie.xMm !== undefined ? mmToPixels(geometrie.xMm) : 0) + fp.gauchePx,
@@ -29160,6 +29265,8 @@ document.addEventListener('DOMContentLoaded', () => {
             couleurCmjn: zoneData.couleurCmyk || hexToCmjnWebDev(zoneData.couleur || DEFAULT_TEXT_COLOR),
             couleurFondCmjn: zoneData.bgColorCmyk || hexToCmjnWebDev(zoneData.bgColor || DEFAULT_BG_COLOR),
             transparent: zoneData.isTransparent || false,
+            // Zone de tranquillité (0-9, largeurs de module) — codes-barres + datamatrix
+            zoneTranquillite: zoneData.quietZone || 0,
             // QR Code intelligent : configuration type + champs
             qrConfig: zoneData.qrConfig || null
         };
