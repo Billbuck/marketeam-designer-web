@@ -1,5 +1,5 @@
 // =============================================================================
-// cpDesigner.ConstruireZoneQrRapprochement
+// cpDesigner.ConstruireDatamatrixRapprochement
 // Rôle : SOURCE UNIQUE de la zone système « QR de rapprochement ».
 //        Assemble et renvoie le JSON COMPLET de la zone (géométrie + définition
 //        entière) pour un document donné. Utilisée par TOUS les chemins :
@@ -30,7 +30,7 @@
 // Retour    : un JSON — la zone complète (à insérer telle quelle dans
 //             zonesCodeBarres, ou à transmettre au Designer).
 // =============================================================================
-PROCÉDURE ConstruireZoneQrRapprochement(pDoc est une structDocument)
+PROCÉDURE ConstruireDatamatrixRapprochement(pDoc est une structDocument)
 
 // Géométrie (remplie par LitPositionQrRapprochement)
 nXMm	est un réel	= 0
