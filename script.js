@@ -5391,6 +5391,38 @@ document.addEventListener('DOMContentLoaded', () => {
                     try { if (typeof normalizeZIndexes === 'function') normalizeZIndexes(); } catch (e) { /* defensive */ }
                 }
                 try { saveToLocalStorage(); } catch (e) { /* defensive */ }
+            } else if (shouldHave && exists) {
+                // RENORMALISATION : la géométrie/définition de la zone système
+                // doit TOUJOURS provenir du template serveur (source unique,
+                // cf. ConstruireDatamatrixRapprochement), jamais d'un JSON
+                // stocké — répare notamment les mm dégradés par les anciens
+                // arrondis px entiers (ex. 197,1/7,9 au lieu de 198/8).
+                const zoneJsonNorm = buildQrRapprochementZoneJson();
+                if (zoneJsonNorm) {
+                    try {
+                        const zoneDataNorm = convertZoneCodeBarresFromJson(zoneJsonNorm);
+                        const zoneCourante = documentState.pages[existingPageIdx].zones[QR_RAPPROCHEMENT_ID];
+                        const bDiffere = !zoneCourante
+                            || zoneCourante.xMm !== zoneDataNorm.xMm
+                            || zoneCourante.yMm !== zoneDataNorm.yMm
+                            || zoneCourante.wMm !== zoneDataNorm.wMm
+                            || zoneCourante.hMm !== zoneDataNorm.hMm
+                            || zoneCourante.typeCodeBarres !== zoneDataNorm.typeCodeBarres
+                            || (zoneCourante.quietZone || 0) !== (zoneDataNorm.quietZone || 0);
+                        if (bDiffere) {
+                            documentState.pages[existingPageIdx].zones[QR_RAPPROCHEMENT_ID] = zoneDataNorm;
+                            if ((documentState.currentPageIndex || 0) === existingPageIdx) {
+                                const elNorm = document.getElementById(QR_RAPPROCHEMENT_ID);
+                                if (elNorm && elNorm.parentNode) elNorm.parentNode.removeChild(elNorm);
+                                try { createZoneDOM(QR_RAPPROCHEMENT_ID, existingPageIdx, false); } catch (e) { /* defensive */ }
+                                try { if (typeof updateBarcodeZoneDisplay === 'function') updateBarcodeZoneDisplay(QR_RAPPROCHEMENT_ID); } catch (e) { /* defensive */ }
+                                try { if (typeof updateSystemeBadge === 'function') updateSystemeBadge(QR_RAPPROCHEMENT_ID); } catch (e) { /* defensive */ }
+                                try { if (typeof normalizeZIndexes === 'function') normalizeZIndexes(); } catch (e) { /* defensive */ }
+                            }
+                            try { saveToLocalStorage(); } catch (e) { /* defensive */ }
+                        }
+                    } catch (e) { /* defensive */ }
+                }
             } else if (!shouldHave && exists) {
                 // Retrait
                 try { delete documentState.pages[existingPageIdx].zones[QR_RAPPROCHEMENT_ID]; } catch (e) { /* defensive */ }
@@ -12372,11 +12404,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // Si c'était un drag, mettre à jour aussi la position de la zone
         if (isAreaDragging) {
             const zoneEl = document.getElementById(zoneId);
-            if (zoneEl && zoneData) {
-                zoneData.x = zoneEl.offsetLeft;
-                zoneData.y = zoneEl.offsetTop;
-                zoneData.xMm = pxToMm(zoneEl.offsetLeft - fpArea.gauchePx);
-                zoneData.yMm = pxToMm(zoneEl.offsetTop - fpArea.hautPx);
+            if (zoneEl && zoneData && !isZoneGeometrieFigee(zoneData)) {
+                // Lecture en px DÉCIMAUX (style.*) — offset* arrondit à l'entier
+                const pxArea = readZonePxDecimal(zoneEl);
+                zoneData.x = pxArea.left;
+                zoneData.y = pxArea.top;
+                zoneData.xMm = pxToMm(pxArea.left - fpArea.gauchePx);
+                zoneData.yMm = pxToMm(pxArea.top - fpArea.hautPx);
             }
         }
         
@@ -13401,14 +13435,16 @@ document.addEventListener('DOMContentLoaded', () => {
         try { notifyChampsExploitesMayHaveChanged(); } catch (e) { /* defensive */ }
 
         // Synchroniser les positions DOM vers documentState avant le snapshot
+        // (px DÉCIMAUX via style.* — offset* arrondit à l'entier)
         const zonesData = getCurrentPageZones();
         for (const [id, data] of Object.entries(zonesData)) {
             const el = document.getElementById(id);
             if (el) {
-                data.x = el.offsetLeft;
-                data.y = el.offsetTop;
-                data.w = el.offsetWidth;
-                data.h = el.offsetHeight;
+                const pxSnap = readZonePxDecimal(el);
+                data.x = pxSnap.left;
+                data.y = pxSnap.top;
+                data.w = pxSnap.width;
+                data.h = pxSnap.height;
             }
         }
         
@@ -17475,6 +17511,38 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * Lit la géométrie d'une zone en PIXELS DÉCIMAUX (subpixel).
+     * offsetLeft/offsetTop/offsetWidth/offsetHeight sont ARRONDIS À L'ENTIER
+     * par le navigateur (spec DOM) : les relire puis réécrire les mm dégrade
+     * la précision (ex. 8mm -> 30px -> 7,94mm sur le datamatrix de
+     * rapprochement). On lit donc style.* (décimal), repli sur offset*.
+     * 
+     * @param {HTMLElement} zoneEl - Élément DOM de la zone
+     * @returns {{left: number, top: number, width: number, height: number}} px décimaux
+     */
+    function readZonePxDecimal(zoneEl) {
+        return {
+            left: parseFloat(zoneEl.style.left) || zoneEl.offsetLeft,
+            top: parseFloat(zoneEl.style.top) || zoneEl.offsetTop,
+            width: parseFloat(zoneEl.style.width) || zoneEl.offsetWidth,
+            height: parseFloat(zoneEl.style.height) || zoneEl.offsetHeight
+        };
+    }
+
+    /**
+     * Zone à géométrie FIGÉE (système : positionFixe + locked, ex. datamatrix
+     * de rapprochement) ? Sa géométrie canonique vient du serveur : ses mm ne
+     * doivent JAMAIS être recalculés depuis le DOM.
+     * 
+     * @param {Object} zoneData - Données de la zone
+     * @returns {boolean}
+     */
+    function isZoneGeometrieFigee(zoneData) {
+        const g = zoneData && zoneData.contrainte && zoneData.contrainte.geometrie;
+        return !!(g && g.positionFixe && g.locked);
+    }
+
+    /**
      * Ramène une zone dans les limites (area + ZonePersonnalisation + marges).
      * @param {string} zoneId
      * @returns {void}
@@ -17483,28 +17551,31 @@ document.addEventListener('DOMContentLoaded', () => {
         const zoneEl = document.getElementById(zoneId);
         if (!zoneEl) return;
         const zonesData = getCurrentPageZones();
-        const w = zoneEl.offsetWidth;
-        const h = zoneEl.offsetHeight;
+        const zd = zonesData[zoneId];
+        // Zone à géométrie figée : rien à recadrer, mm canoniques préservés
+        if (zd && isZoneGeometrieFigee(zd)) return;
+        const px = readZonePxDecimal(zoneEl);
+        const w = px.width;
+        const h = px.height;
         const bounds = getAreaBoundsInPixels(zoneId, w, h);
-        let left = zoneEl.offsetLeft;
-        let top = zoneEl.offsetTop;
+        let left = px.left;
+        let top = px.top;
         left = Math.max(bounds.minX, Math.min(left, bounds.maxX));
         top = Math.max(bounds.minY, Math.min(top, bounds.maxY));
         zoneEl.style.left = left + 'px';
         zoneEl.style.top = top + 'px';
         
         const maxSize = getAreaMaxSizeInPixels(zoneId, left, top);
-        let newW = Math.min(zoneEl.offsetWidth, maxSize.maxWidth);
-        let newH = Math.min(zoneEl.offsetHeight, maxSize.maxHeight);
+        let newW = Math.min(w, maxSize.maxWidth);
+        let newH = Math.min(h, maxSize.maxHeight);
         if (newW >= 15) zoneEl.style.width = newW + 'px';
         if (newH >= 15) zoneEl.style.height = newH + 'px';
         
-        const zd = zonesData[zoneId];
         if (zd) {
-            zd.x = zoneEl.offsetLeft;
-            zd.y = zoneEl.offsetTop;
-            zd.w = zoneEl.offsetWidth;
-            zd.h = zoneEl.offsetHeight;
+            zd.x = left;
+            zd.y = top;
+            zd.w = (newW >= 15) ? newW : w;
+            zd.h = (newH >= 15) ? newH : h;
             const fpClamp = getFondPerduOffset();
             zd.xMm = pxToMm(zd.x - fpClamp.gauchePx);
             zd.yMm = pxToMm(zd.y - fpClamp.hautPx);
@@ -24582,9 +24653,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         zoneEl.style.width = optimal.newWidth + 'px';
                         zoneEl.style.height = optimal.newHeight + 'px';
                         
-                        // Mettre à jour les valeurs mm
-                        zoneData.xMm = zoneEl.offsetLeft * MM_PER_PIXEL;
-                        zoneData.yMm = zoneEl.offsetTop * MM_PER_PIXEL;
+                        // Mettre à jour les valeurs mm (position lue en px décimaux)
+                        const pxImg = readZonePxDecimal(zoneEl);
+                        zoneData.xMm = pxImg.left * MM_PER_PIXEL;
+                        zoneData.yMm = pxImg.top * MM_PER_PIXEL;
                         zoneData.wMm = optimal.newWidth * MM_PER_PIXEL;
                         zoneData.hMm = optimal.newHeight * MM_PER_PIXEL;
                     }
@@ -26307,20 +26379,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 const zoneEl = document.getElementById(zoneId);
                 const zoneData = zonesData[zoneId];
                 if (zoneEl && zoneData) {
-                    const domLeft = parseFloat(zoneEl.style.left) || zoneEl.offsetLeft;
-                    const domTop = parseFloat(zoneEl.style.top) || zoneEl.offsetTop;
+                    // Zone à géométrie figée (système) : mm canoniques intouchés
+                    if (isZoneGeometrieFigee(zoneData)) return;
+                    // Lecture en px DÉCIMAUX (style.*) — offset* arrondit à l'entier
+                    const px = readZonePxDecimal(zoneEl);
+                    const domLeft = px.left;
+                    const domTop = px.top;
                     // Convertir DOM px → format fini mm (soustraire l'offset fond perdu)
                     zoneData.xMm = pxToMm(domLeft - fpMouseUp.gauchePx);
                     zoneData.yMm = pxToMm(domTop - fpMouseUp.hautPx);
-                    zoneData.wMm = pxToMm(zoneEl.offsetWidth);
-                    zoneData.hMm = pxToMm(zoneEl.offsetHeight);
+                    zoneData.wMm = pxToMm(px.width);
+                    zoneData.hMm = pxToMm(px.height);
                     
                     // textQuill : stocker aussi les valeurs pixels page DOM
                     if (zoneData.type === 'textQuill') {
                         zoneData.x = domLeft;
                         zoneData.y = domTop;
-                        zoneData.w = zoneEl.offsetWidth;
-                        zoneData.h = zoneEl.offsetHeight;
+                        zoneData.w = px.width;
+                        zoneData.h = px.height;
                     }
                 }
             });
@@ -26830,14 +26906,16 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function saveToLocalStorage() {
         // On ajoute la position/taille actuelle du DOM dans les données avant de sauver
+        // (px DÉCIMAUX via style.* — offset* arrondit à l'entier)
         const zonesData = getCurrentPageZones();
         for (const [id, data] of Object.entries(zonesData)) {
             const el = document.getElementById(id);
             if (el) {
-                data.x = el.offsetLeft;
-                data.y = el.offsetTop;
-                data.w = el.offsetWidth;
-                data.h = el.offsetHeight;
+                const pxLs = readZonePxDecimal(el);
+                data.x = pxLs.left;
+                data.y = pxLs.top;
+                data.w = pxLs.width;
+                data.h = pxLs.height;
             }
         }
 
@@ -30197,15 +30275,25 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const [id, data] of Object.entries(currentZones)) {
             const el = document.getElementById(id);
             if (el) {
-                data.x = el.offsetLeft;
-                data.y = el.offsetTop;
-                data.w = el.offsetWidth;
-                data.h = el.offsetHeight;
+                // Zone à géométrie figée (système, ex. datamatrix de
+                // rapprochement) : mm canoniques du serveur JAMAIS réécrits.
+                if (isZoneGeometrieFigee(data)) {
+                    syncCount++;
+                    continue;
+                }
+                // Lecture en px DÉCIMAUX (style.*) — offsetLeft/offsetWidth
+                // sont arrondis à l'entier par le DOM et dégradaient les mm
+                // à CHAQUE export (ex. 8mm -> 30px -> 7,94mm).
+                const pxExp = readZonePxDecimal(el);
+                data.x = pxExp.left;
+                data.y = pxExp.top;
+                data.w = pxExp.width;
+                data.h = pxExp.height;
                 // Recalculer les mm en format fini (DOM px - offset fond perdu)
-                data.xMm = pxToMm(el.offsetLeft - fpExport.gauchePx);
-                data.yMm = pxToMm(el.offsetTop - fpExport.hautPx);
-                data.wMm = pxToMm(el.offsetWidth);
-                data.hMm = pxToMm(el.offsetHeight);
+                data.xMm = pxToMm(pxExp.left - fpExport.gauchePx);
+                data.yMm = pxToMm(pxExp.top - fpExport.hautPx);
+                data.wMm = pxToMm(pxExp.width);
+                data.hMm = pxToMm(pxExp.height);
                 syncCount++;
             }
         }
