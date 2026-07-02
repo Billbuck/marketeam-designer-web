@@ -30,7 +30,7 @@
 // Retour    : un JSON — la zone complète (à insérer telle quelle dans
 //             zonesCodeBarres, ou à transmettre au Designer).
 // =============================================================================
-PROCÉDURE ConstruireDatamatrixRapprochement(pDoc est une structDocument)
+procédure ConstruireDatamatrixRapprochement(pDoc est une structDocument)
 
 // Géométrie (remplie par LitPositionQrRapprochement)
 nXMm	est un réel	= 0
@@ -43,95 +43,95 @@ jZone	est un JSON
 LitPositionQrRapprochement(pDoc)
 
 // ─── Identité ─────────────────────────────────────────────────────────────
-jZone.id				= "sys-qr-rapprochement"
-jZone.page				= 1
-jZone.nom				= "QR de rapprochement"
-jZone.niveau			= 100		// bande système (le Designer recompacte)
-jZone.rotation			= 0
-jZone.verrouille		= Faux
+jZone.id														= "sys-datamatrix-rapprochement"
+jZone.page													= 1
+jZone.nom													= "Datamatrix de rapprochement"
+jZone.niveau												= 100		// bande système (le Designer recompacte)
+jZone.rotation												= 0
+jZone.verrouille											= Faux
 
 // ─── Géométrie ────────────────────────────────────────────────────────────
-jZone.geometrie.xMm			= nXMm
-jZone.geometrie.yMm			= nYMm
-jZone.geometrie.largeurMm	= nWMm
-jZone.geometrie.hauteurMm	= nHMm
+jZone.geometrie.xMm										= nXMm
+jZone.geometrie.yMm										= nYMm
+jZone.geometrie.largeurMm								= nWMm
+jZone.geometrie.hauteurMm								= nHMm
 
 // ─── Code-barres / champ ──────────────────────────────────────────────────
-jZone.typeCodeBarres	= "datamatrix"
-jZone.forme				= "carre"
-jZone.sourceType		= "champ"
-jZone.champFusion		= "Rapprochement"
-jZone.valeurStatique	= ""
-jZone.texteLisible		= "0"
-jZone.taillePolice		= 8
-jZone.zoneTranquillite	= 2		// zone de tranquillité (largeurs de module) — QuietZoneAll PSM
+jZone.typeCodeBarres										= "datamatrix"
+jZone.forme													= "carre"
+jZone.sourceType											= "champ"
+jZone.champFusion											= "Rapprochement"
+jZone.valeurStatique										= ""
+jZone.texteLisible										= "0"
+jZone.taillePolice										= 8
+jZone.zoneTranquillite									= 2		// zone de tranquillité (largeurs de module) — QuietZoneAll PSM
 
 // ─── Couleurs ─────────────────────────────────────────────────────────────
-jZone.couleurCmjn.c		= 0
-jZone.couleurCmjn.m		= 0
-jZone.couleurCmjn.y		= 0
-jZone.couleurCmjn.k		= 100
-jZone.couleurFondCmjn.c	= 0
-jZone.couleurFondCmjn.m	= 0
-jZone.couleurFondCmjn.y	= 0
-jZone.couleurFondCmjn.k	= 0
-jZone.transparent		= Faux
+jZone.couleurCmjn.c										= 0
+jZone.couleurCmjn.m										= 0
+jZone.couleurCmjn.y										= 0
+jZone.couleurCmjn.k										= 100
+jZone.couleurFondCmjn.c									= 0
+jZone.couleurFondCmjn.m									= 0
+jZone.couleurFondCmjn.y									= 0
+jZone.couleurFondCmjn.k									= 0
+jZone.transparent											= Faux
 
 // ─── Contraintes : SYSTÈME, FIXE, NON SUPPRIMABLE ─────────────────────────
-jZone.contrainte.geometrie.positionFixe	= Vrai
-jZone.contrainte.geometrie.locked		= Vrai
-jZone.contrainte.geometrie.minWMm		= 0
-jZone.contrainte.geometrie.maxWMm		= 0
-jZone.contrainte.geometrie.minHMm		= 0
-jZone.contrainte.geometrie.maxHMm		= 0
+jZone.contrainte.geometrie.positionFixe			= Vrai
+jZone.contrainte.geometrie.locked					= Vrai
+jZone.contrainte.geometrie.minWMm					= 0
+jZone.contrainte.geometrie.maxWMm					= 0
+jZone.contrainte.geometrie.minHMm					= 0
+jZone.contrainte.geometrie.maxHMm					= 0
 
-jZone.contrainte.style.typeCodeModifiable		= Faux
+jZone.contrainte.style.typeCodeModifiable			= Faux
 jZone.contrainte.style.typeSourceModifiable		= Faux
-jZone.contrainte.style.donneesModifiable		= Faux
+jZone.contrainte.style.donneesModifiable			= Faux
 jZone.contrainte.style.apparenceModifiable		= Faux
-jZone.contrainte.style.fondModifiable			= Faux
-jZone.contrainte.style.contenuModifiable		= Faux
-jZone.contrainte.style.typographieModifiable	= Faux
-jZone.contrainte.style.alignementsModifiable	= Faux
-jZone.contrainte.style.bordureModifiable		= Faux
-jZone.contrainte.style.imageModifiable			= Faux
+jZone.contrainte.style.fondModifiable				= Faux
+jZone.contrainte.style.contenuModifiable			= Faux
+jZone.contrainte.style.typographieModifiable		= Faux
+jZone.contrainte.style.alignementsModifiable		= Faux
+jZone.contrainte.style.bordureModifiable			= Faux
+jZone.contrainte.style.imageModifiable				= Faux
 jZone.contrainte.style.affichageModifiable		= Faux
-jZone.contrainte.style.couleursModifiable		= Faux
+jZone.contrainte.style.couleursModifiable			= Faux
 
-jZone.contrainte.global.systeme				= Vrai
-jZone.contrainte.global.systemeLibelle		= "QR de rapprochement"
-jZone.contrainte.global.nonSupprimable		= Vrai
-jZone.contrainte.global.imprimable			= Vrai
-jZone.contrainte.global.selectionnable		= Faux
-jZone.contrainte.global.toolbarAffichable	= Faux
-jZone.contrainte.global.pageModifiable		= Faux
+jZone.contrainte.global.systeme						= Vrai
+jZone.contrainte.global.systemeLibelle				= "QR de rapprochement"
+jZone.contrainte.global.nonSupprimable				= Vrai
+jZone.contrainte.global.imprimable					= Vrai
+jZone.contrainte.global.selectionnable				= Faux
+jZone.contrainte.global.toolbarAffichable			= Faux
+jZone.contrainte.global.pageModifiable				= Faux
 
-RENVOYER jZone
+renvoyer jZone
 
 
 // ═════════════════════════════════════════════════════════════════════════
 // PROCÉDURE INTERNE
 // ═════════════════════════════════════════════════════════════════════════
 
-	// ─── Position/taille du datamatrix de rapprochement (SPEC FIXE) ─────────
-	//   Spec du 02/07/2026 (source unique — le donneur d'ordre règle ICI) :
-	//   198 mm du bord gauche, 90 mm du haut, 8×8 mm HORS TOUT (la zone de
-	//   tranquillité de 2 modules est prise DANS ce cadre, comportement PSM).
-	//   Garde-fou : si la page est plus étroite que 198+8 mm, on recale au
+// ─── Position/taille du datamatrix de rapprochement (SPEC FIXE) ─────────
+//   Spec du 02/07/2026 (source unique — le donneur d'ordre règle ICI) :
+//   198 mm du bord gauche, 90 mm du haut, 8×8 mm HORS TOUT (la zone de
+//   tranquillité de 2 modules est prise DANS ce cadre, comportement PSM).
+//   Garde-fou : si la page est plus étroite que 198+8 mm, on recale au
 	//   bord droit. Écrit les locaux hôtes nXMm / nYMm / nWMm / nHMm.
-	PROCÉDURE INTERNE LitPositionQrRapprochement(LOCAL pDocLoc est une structDocument)
+	procédure interne LitPositionQrRapprochement(local pDocLoc est une structDocument)
 		nTailleMm	est un réel	= 8		// taille hors tout (8×8 mm)
-		nGaucheMm	est un réel	= 198	// retrait depuis le bord gauche
-		nHautMm		est un réel	= 90	// retrait depuis le haut
+		nGaucheMm	est un réel	= 198		// retrait depuis le bord gauche
+		nHautMm		est un réel	= 90		// retrait depuis le haut
 
-		nWMm = nTailleMm
-		nHMm = nTailleMm
-		nYMm = nHautMm
-		nXMm = nGaucheMm
-		SI pDocLoc.LargeurOuvert > 0 _ET_ nXMm + nTailleMm > pDocLoc.LargeurOuvert ALORS
+		nWMm	= nTailleMm
+		nHMm	= nTailleMm
+		nYMm	= nHautMm
+		nXMm	= nGaucheMm
+		si pDocLoc.LargeurOuvert > 0 _et_ nXMm + nTailleMm > pDocLoc.LargeurOuvert alors
 			nXMm = pDocLoc.LargeurOuvert - nTailleMm
-			SI nXMm < 0 ALORS
+			si nXMm < 0 alors
 				nXMm = 0
-			FIN
-		FIN
-	FIN
+			fin
+		fin
+	fin

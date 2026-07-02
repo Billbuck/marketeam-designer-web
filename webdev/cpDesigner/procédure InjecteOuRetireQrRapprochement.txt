@@ -52,7 +52,7 @@ sJson		est une chaîne	= pStOperation.stOperationLettre.tabStDocument[pIndexDocu
 bPresent	est un booléen	= ZoneRapprochementPresente(sJson)
 
 // ─── 3. Synchronisation (injection / retrait / rien) — logique INCHANGÉE ──
-//   La zone créée utilise le constructeur UNIQUE ConstruireZoneQrRapprochement.
+//   La zone créée utilise le constructeur UNIQUE ConstruireDatamatrixRapprochement.
 //   PAS de réapplication sur une zone déjà présente (valeur de position fixe).
 SI bQrRequis _ET_ bPresent = Faux ALORS
 	pStOperation.stOperationLettre.tabStDocument[pIndexDocument].JsonDesignerData = AjouteZoneRapprochement(sJson, pStOperation.stOperationLettre.tabStDocument[pIndexDocument])
@@ -128,7 +128,7 @@ FIN
 	// ─── Construit la zone (constructeur UNIQUE) et l'ajoute au JSON ────────
 	//   Renvoie le JSON (chaîne) modifié. Appelée uniquement si la zone est
 	//   absente (cf. garde dans le corps principal) → anti-doublon préservé.
-	//   La définition/géométrie vient de cpDesigner.ConstruireZoneQrRapprochement
+	//   La définition/géométrie vient de cpDesigner.ConstruireDatamatrixRapprochement
 	//   (SOURCE UNIQUE, partagée avec le Designer JS).
 	PROCÉDURE INTERNE AjouteZoneRapprochement(LOCAL pJson est une chaîne, LOCAL pDocLoc est une structDocument)
 		jDoc	est un JSON
@@ -148,7 +148,7 @@ FIN
 		FIN
 
 		// Source unique
-		jZone = cpDesigner.ConstruireZoneQrRapprochement(pDocLoc)
+		jZone = cpDesigner.ConstruireDatamatrixRapprochement(pDocLoc)
 
 		// ─── Ajout dans zonesCodeBarres (gère le wrapper .data) ───
 		jArrVide est un JSON = "[]"		// tableau JSON vide (parse du littéral)
