@@ -21,12 +21,12 @@ selon stOperation.TypeOperation
 
 		// Sauvegarder le répertoire source (Temp en modification, Upload en création)
 		// AVANT que le déplacement du BAT ne modifie RepertoireTravail
-		sRepertoireSourceEnveloppe est une chaîne = stOperation.stOperationLettre.stEnveloppe.RepertoireTravail
+		sRepertoireSourceEnveloppe	est une chaîne	= stOperation.stOperationLettre.stEnveloppe.RepertoireTravail
 
 		// Lot 2C : répertoire de travail source (Upload en création, Temp en modif),
 		//   où 2C a construit le sous-dossier Fonts. Capturé AVANT que la boucle ne
 		//   mette à jour RepertoireTravail (AJOUT B).
-		sRepTravailSourceProjet est une chaîne = ""
+		sRepTravailSourceProjet		est une chaîne	= ""
 		si stOperation.stOperationLettre.tabStDocument..Occurrence > 0 alors
 			sRepTravailSourceProjet = stOperation.stOperationLettre.tabStDocument[1].RepertoireTravail
 		fin
@@ -39,15 +39,11 @@ selon stOperation.TypeOperation
 			sCheminBatEnvFinal est une chaîne = sRepertoireBat + __DOC_ENV_BAT__ + stOperation.IdOperation + __JPG__
 			// Si le BAT est déjà à sa destination finale, ne rien faire
 			si stOperation.stOperationLettre.stEnveloppe.EnveloppeBAT.CheminPhysique <> sCheminBatEnvFinal alors
-				Trace("DéplaceFichierUpload : BAT enveloppe source = " + stOperation.stOperationLettre.stEnveloppe.EnveloppeBAT.CheminPhysique)
 				si fFichierExiste(stOperation.stOperationLettre.stEnveloppe.EnveloppeBAT.CheminPhysique) alors
 					si fFichierExiste(sCheminBatEnvFinal) alors
 						fSupprime(sCheminBatEnvFinal)
 					fin
 					fDéplaceFichier(stOperation.stOperationLettre.stEnveloppe.EnveloppeBAT.CheminPhysique, sCheminBatEnvFinal)
-					Trace("DéplaceFichierUpload : BAT enveloppe déplacé --> " + sCheminBatEnvFinal)
-				sinon
-					Trace("DéplaceFichierUpload : BAT enveloppe introuvable : " + stOperation.stOperationLettre.stEnveloppe.EnveloppeBAT.CheminPhysique)
 				fin
 			fin
 			stOperation.stOperationLettre.stEnveloppe.EnveloppeBAT.CheminPhysique	= sCheminBatEnvFinal
@@ -63,9 +59,6 @@ selon stOperation.TypeOperation
 			si fDéplaceFichier(stOperation.stOperationLettre.stEnveloppe.CheminPsmdEnveloppe, sNouveauCheminPsmd) alors
 				stOperation.stOperationLettre.stEnveloppe.CheminPsmdEnveloppe		= sNouveauCheminPsmd
 				stOperation.stOperationLettre.stEnveloppe.NomFichierPsmdEnveloppe	= __DOC_ENV_PSMD__ + stOperation.IdOperation + ".psmd"
-				Trace("DéplaceFichierUpload : PSMD enveloppe déplacé --> " + sNouveauCheminPsmd)
-			sinon
-				Trace("DéplaceFichierUpload : échec déplacement PSMD enveloppe", ErreurInfo(errComplet))
 			fin
 		fin
 
@@ -78,7 +71,7 @@ selon stOperation.TypeOperation
 
 		// ─── Liste Printshop : images Designer enveloppe ─────────────────
 		si stOperation.stOperationLettre.stEnveloppe.JsonDesignerData <> "" alors
-			jEnvJson est un JSON = ChaîneVersUTF8(stOperation.stOperationLettre.stEnveloppe.JsonDesignerData)
+			jEnvJson est un JSON = stOperation.stOperationLettre.stEnveloppe.JsonDesignerData.VersUTF8()
 			si jEnvJson.zonesImage..Occurrence > 0 alors
 				pour nIndEnvImg = 1 _à_ jEnvJson.zonesImage..Occurrence
 					sNomFichierImg est une chaîne = jEnvJson.zonesImage[nIndEnvImg].source.nomFichier
@@ -105,7 +98,7 @@ selon stOperation.TypeOperation
 
 				// ─── Liste Printshop : images Designer document ──────────────
 				si stDocument.JsonDesignerData <> "" alors
-					jDocJson est un JSON = ChaîneVersUTF8(stDocument.JsonDesignerData)
+					jDocJson est un JSON = stDocument.JsonDesignerData.VersUTF8()
 					si jDocJson.zonesImage..Occurrence > 0 alors
 						pour nIndDocImg = 1 _à_ jDocJson.zonesImage..Occurrence
 							sNomFichierDocImg est une chaîne = jDocJson.zonesImage[nIndDocImg].source.nomFichier
@@ -216,42 +209,28 @@ selon stOperation.TypeOperation
 						sCheminPdfSource	est une chaîne		= stDocument.Repertoire + stDocument.NomFichierTemp
 						sCheminPdfDest		est une chaîne		= sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__
 
-						si fFichierExiste(sCheminPdfSource) _et_ Minuscule(sCheminPdfSource) <> Minuscule(sCheminPdfDest) alors
+						si fFichierExiste(sCheminPdfSource) _et_ sCheminPdfSource.Minuscule() <> sCheminPdfDest.Minuscule() alors
 							si fFichierExiste(sCheminPdfDest) alors
-								si pas fSupprime(sCheminPdfDest) alors
-									Trace("Erreur supprimer Document", ErreurInfo(errComplet))
-								fin
+								fSupprime(sCheminPdfDest)
 							fin
-							si pas fDéplaceFichier(sCheminPdfSource, sCheminPdfDest) alors
-								Trace("Erreur déplace Document : " + sCheminPdfSource + " --> " + sCheminPdfDest, ErreurInfo(errComplet))
-							sinon
-								Trace("DéplaceFichierUpload : PDF client déplacé --> " + sCheminPdfDest)
-							fin
+							fDéplaceFichier(sCheminPdfSource, sCheminPdfDest)
 						fin
 
 						pour NumPage = 1 _à_ stDocument.NombrePage
 							si fFichierExiste(sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
-								si pas fSupprime(sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
-									Trace("Erreur supprimer BAT", ErreurInfo(errComplet))
-								fin
+								fSupprime(sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__)
 							fin
 							si stDocument.tabImageBat..Occurrence >= NumPage alors
-								si pas fDéplaceFichier(stDocument.tabImageBat[NumPage].CheminPhysique, sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
-									Trace("Erreur déplace BAT", ErreurInfo(errComplet))
-								fin
+								fDéplaceFichier(stDocument.tabImageBat[NumPage].CheminPhysique, sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__)
 							fin
 						fin
 
 						pour NumPage = 1 _à_ stDocument.NombrePage
 							si fFichierExiste(sRepertoireFond + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
-								si pas fSupprime(sRepertoireFond + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
-									Trace("Erreur supprimer Fond", ErreurInfo(errComplet))
-								fin
+								fSupprime(sRepertoireFond + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__)
 							fin
 							si stDocument.tabImageFond..Occurrence >= NumPage alors
-								si pas fDéplaceFichier(stDocument.tabImageFond[NumPage].CheminPhysique, sRepertoireFond + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
-									Trace("Erreur déplace Fond", ErreurInfo(errComplet))
-								fin
+								fDéplaceFichier(stDocument.tabImageFond[NumPage].CheminPhysique, sRepertoireFond + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__)
 							fin
 						fin
 
@@ -276,9 +255,6 @@ selon stOperation.TypeOperation
 						fin
 						si fDéplaceFichier(sCheminBatActuel, sCheminBatFinal) alors
 							stDocument.tabImageBat[NumPage].CheminPhysique = sCheminBatFinal
-							Trace("DéplaceFichierUpload [V3] : BAT modif déplacé --> " + sCheminBatFinal)
-						sinon
-							Trace("DéplaceFichierUpload [V3] : échec déplacement BAT " + sCheminBatActuel, ErreurInfo(errComplet))
 						fin
 					fin
 				fin
@@ -293,9 +269,6 @@ selon stOperation.TypeOperation
 				si fDéplaceFichier(stDocument.CheminPsmdTemp, sNouveauCheminPsmd) alors
 					stDocument.CheminPsmdTemp	= sNouveauCheminPsmd
 					stDocument.NomFichierPsmd	= __DOC_LTR_PSMD__ + stDocument.IdLettreContenu + ".psmd"
-					Trace("DéplaceFichierUpload : PSMD document déplacé --> " + sNouveauCheminPsmd)
-				sinon
-					Trace("DéplaceFichierUpload : échec déplacement PSMD document", ErreurInfo(errComplet))
 				fin
 			fin
 
@@ -321,29 +294,25 @@ selon stOperation.TypeOperation
 		fin
 		si sRepFontsSource <> "" _et_ fRepExiste(sRepFontsSource) alors
 			sRepFontsDest est une chaîne = sRepertoirePrintshop + "Fonts\"
-				si pas fRepExiste(sRepFontsDest) alors
-					fRepCrée(sRepFontsDest)
-				fin
-				sListeFonts est une chaîne = fListeFichier(sRepFontsSource + "*.ttf", frNonRécursif)
-				pour toute chaîne sFontFic de sListeFonts séparée par RC
-					si sFontFic <> "" alors
-						sFontDest est une chaîne = sRepFontsDest + fExtraitChemin(sFontFic, fFichier + fExtension)
-						si fFichierExiste(sFontDest) alors
-							fSupprime(sFontDest)
-						fin
-						si pas fCopieFichier(sFontFic, sFontDest) alors
-							Trace("DéplaceFichierUpload : échec copie Fonts " + sFontFic, ErreurInfo(errComplet))
-						fin
+			si pas fRepExiste(sRepFontsDest) alors
+				fRepCrée(sRepFontsDest)
+			fin
+			sListeFonts est une chaîne = fListeFichier(sRepFontsSource + "*.ttf", frNonRécursif)
+			pour toute chaîne sFontFic de sListeFonts séparée par RC
+				si sFontFic <> "" alors
+					sFontDest est une chaîne = sRepFontsDest + fExtraitChemin(sFontFic, fFichier + fExtension)
+					si fFichierExiste(sFontDest) alors
+						fSupprime(sFontDest)
 					fin
+					fCopieFichier(sFontFic, sFontDest)
 				fin
-				Trace("DéplaceFichierUpload : Fonts transporté --> " + sRepFontsDest)
+			fin
 		fin
 
 		// [V4] Nettoyage du répertoire temporaire
 		sRepertoireTemp est une chaîne = cpProjet.CheminFichier(stOperation.IdOperation, __REP_TEMP__)
 		si fRepExiste(sRepertoireTemp) alors
 			fRepSupprime(sRepertoireTemp, frRécursif)
-			Trace("DéplaceFichierUpload [V4] : répertoire Temp supprimé --> " + sRepertoireTemp)
 		fin
 
 		// [V5] Nettoyage du sous-répertoire Upload\{CodeTempOp}\ de l'opération
@@ -351,25 +320,19 @@ selon stOperation.TypeOperation
 			sRepUploadOp est une chaîne = cpProjet.__sRepRacine + cpProjet.__sRepUpload + ["\"] + stOperation.CodeTemp + ["\"]
 			si fRepExiste(sRepUploadOp) alors
 				fRepSupprime(sRepUploadOp, frRécursif)
-				Trace("DéplaceFichierUpload [V5] : répertoire Upload supprimé --> " + sRepUploadOp)
 			fin
 		fin
 
 
 	cas __OPERATION_SMARTEVA__, __OPERATION_TRACTEVA__
 
-		TraceFin()
 
 		// On sauvegarde le bat Enveloppe Personnalisée
 		si fFichierExiste(sRepertoireBat + __DOC_ENV_BAT__ + stOperation.IdOperation + __JPG__) alors
-			si pas fSupprime(sRepertoireBat + __DOC_ENV_BAT__ + stOperation.IdOperation + __JPG__) alors
-				Trace("Erreur supprimer Enveloppe", ErreurInfo(errComplet))
-			fin
+			fSupprime(sRepertoireBat + __DOC_ENV_BAT__ + stOperation.IdOperation + __JPG__)
 		fin
 		si stOperation.stOperationTract.EnveloppeApercuPersonnalisée.CheminPhysique <> "" alors
-			si pas fDéplaceFichier(stOperation.stOperationTract.EnveloppeApercuPersonnalisée.CheminPhysique, sRepertoireBat + __DOC_ENV_BAT__ + stOperation.IdOperation + __JPG__) alors
-				Trace("Erreur déplace Enveloppe", ErreurInfo(errComplet))
-			fin
+			fDéplaceFichier(stOperation.stOperationTract.EnveloppeApercuPersonnalisée.CheminPhysique, sRepertoireBat + __DOC_ENV_BAT__ + stOperation.IdOperation + __JPG__)
 		fin
 
 		// Si SmartEva on mémorise dans la liste des vignettes bat
@@ -485,40 +448,28 @@ selon stOperation.TypeOperation
 						// On déplace les documents PDF client
 						si fFichierExiste(cpProjet.__sRepRacine + cpProjet.__sRepUpload + ["\"] + __DOC_LTR__ + stDocument.CodeTemp + __PDF__) alors
 							si fFichierExiste(sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__) alors
-								si pas fSupprime(sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__) alors
-									Trace("Erreur supprimer Document", ErreurInfo(errComplet))
-								fin
+								fSupprime(sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__)
 							fin
-							si pas fDéplaceFichier(cpProjet.__sRepRacine + cpProjet.__sRepUpload + ["\"] + __DOC_LTR__ + stDocument.CodeTemp + __PDF__, sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__) alors
-								Trace("Erreur déplace Document", ErreurInfo(errComplet))
-							fin
+							fDéplaceFichier(cpProjet.__sRepRacine + cpProjet.__sRepUpload + ["\"] + __DOC_LTR__ + stDocument.CodeTemp + __PDF__, sRepertoireDocument + __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__)
 						fin
 
 						// On enregistre les images BAT
 						pour NumPage = 1 _à_ stDocument.NombrePage
 							si fFichierExiste(sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
-								si pas fSupprime(sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
-									Trace("Erreur supprimer BAT", ErreurInfo(errComplet))
-								fin
+								fSupprime(sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__)
 							fin
 							si stDocument.tabImageBat..Occurrence >= NumPage alors
-								si pas fDéplaceFichier(stDocument.tabImageBat[NumPage].CheminPhysique, sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
-									Trace("Erreur déplace BAT", ErreurInfo(errComplet))
-								fin
+								fDéplaceFichier(stDocument.tabImageBat[NumPage].CheminPhysique, sRepertoireBat + __DOC_LTR_BAT__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__)
 							fin
 						fin
 
 						// On enregistre les images fond
 						pour NumPage = 1 _à_ stDocument.NombrePage
 							si fFichierExiste(sRepertoireFond + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
-								si pas fSupprime(sRepertoireFond + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
-									Trace("Erreur supprimer Fond", ErreurInfo(errComplet))
-								fin
+								fSupprime(sRepertoireFond + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__)
 							fin
 							si stDocument.tabImageFond..Occurrence >= NumPage alors
-								si pas fDéplaceFichier(stDocument.tabImageFond[NumPage].CheminPhysique, sRepertoireFond + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__) alors
-									Trace("Erreur déplace Fond", ErreurInfo(errComplet))
-								fin
+								fDéplaceFichier(stDocument.tabImageFond[NumPage].CheminPhysique, sRepertoireFond + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + NumPage + __JPG__)
 							fin
 						fin
 
@@ -542,36 +493,32 @@ fin
 				// On supprime les fichiers qui ne devraient pas être présents dans le répertoire des documents
 				sListeFichier = fListeFichier(sRepertoireDocument + "*.*", frNonRécursif)
 				pour toute chaîne sFichier de sListeFichier séparée par RC
-					si pas Contient(sListeDocument, fExtraitChemin(sFichier, fFichier + fExtension), MotComplet) alors
+					si pas sListeDocument.Contient(fExtraitChemin(sFichier, fFichier + fExtension), MotComplet) alors
 						fSupprime(sFichier)
-						Trace("SupprimeFichiersInutiles : Document orphelin supprimé : " + sFichier)
 					fin
 				fin
 
 				// On supprime les fichiers qui ne devraient pas être présents dans le répertoire des BAT
 				sListeFichier = fListeFichier(sRepertoireBat + "*.*", frNonRécursif)
 				pour toute chaîne sFichier de sListeFichier séparée par RC
-					si pas Contient(sListeBat, fExtraitChemin(sFichier, fFichier + fExtension), MotComplet) alors
+					si pas sListeBat.Contient(fExtraitChemin(sFichier, fFichier + fExtension), MotComplet) alors
 						fSupprime(sFichier)
-						Trace("SupprimeFichiersInutiles : BAT orphelin supprimé : " + sFichier)
 					fin
 				fin
 
 				// On supprime les fichiers qui ne devraient pas être présents dans le répertoire des fonds
 				sListeFichier = fListeFichier(sRepertoireFond + "*.*", frNonRécursif)
 				pour toute chaîne sFichier de sListeFichier séparée par RC
-					si pas Contient(sListeFond, fExtraitChemin(sFichier, fFichier + fExtension), MotComplet) alors
+					si pas sListeFond.Contient(fExtraitChemin(sFichier, fFichier + fExtension), MotComplet) alors
 						fSupprime(sFichier)
-						Trace("SupprimeFichiersInutiles : Fond orphelin supprimé : " + sFichier)
 					fin
 				fin
 
 				// On supprime les fichiers qui ne devraient pas être présents dans le répertoire Printshop
 				sListeFichier = fListeFichier(sRepertoirePrintshop + "*.*", frNonRécursif)
 				pour toute chaîne sFichier de sListeFichier séparée par RC
-					si pas Contient(sListePrintshop, fExtraitChemin(sFichier, fFichier + fExtension), MotComplet) alors
+					si pas sListePrintshop.Contient(fExtraitChemin(sFichier, fFichier + fExtension), MotComplet) alors
 						fSupprime(sFichier)
-						Trace("SupprimeFichiersInutiles : Printshop orphelin supprimé : " + sFichier)
 					fin
 				fin
 

@@ -30,16 +30,12 @@ nPage						est un entier
 sCheminPsmd = stDocument.CheminPsmdBat
 si sCheminPsmd = "" alors sCheminPsmd = stDocument.CheminPsmdTemp
 
-Trace("GenererBatDocumentDepuisPsmd : CheminPsmdBat = [" + stDocument.CheminPsmdBat + "]")
-Trace("GenererBatDocumentDepuisPsmd : CheminPsmdTemp = [" + stDocument.CheminPsmdTemp + "]")
 
 // ─── Validation : le PSMD doit exister sur disque ────────────────────────
 si sCheminPsmd = "" _ou_ pas fFichierExiste(sCheminPsmd) alors
-	Trace("GenererBatDocumentDepuisPsmd : PSMD introuvable : " + sCheminPsmd)
 	retour
 fin
 
-Trace("GenererBatDocumentDepuisPsmd : PSMD confirmé : " + sCheminPsmd)
 
 // ─── Construction du tableau de fusion ───────────────────────────────────
 // L16/A26 - REFONTE : la source des valeurs de fusion est désormais
@@ -89,7 +85,7 @@ Trace("GenererBatDocumentDepuisPsmd : PSMD confirmé : " + sCheminPsmd)
 // par chaîne vide (comportement sain en mode dégradé).
 
 si stDocument.JsonDesignerData <> "" alors
-	jDoc			est un JSON	= ChaîneVersUTF8(stDocument.JsonDesignerData)
+	jDoc						est un JSON									= stDocument.JsonDesignerData.VersUTF8()
 
 	// ─── CONTRAT NOMMAGE (docs/nommage-variables-psm.md §4) ──────────────
 	// Le PSMD émet désormais les champs spécifiques sous leur LIBELLÉ
@@ -98,7 +94,7 @@ si stDocument.JsonDesignerData <> "" alors
 	// paires existantes ChampN / LOCAL_xxx (conservées : aperçu écran et
 	// rétro-compatibilité du canal). MÊME SOURCE de mapping que le PSMD :
 	// Partage.ConstruireMappingPsmLibelle — pas deux logiques.
-	taaMappingLibelleBat est un tableau associatif de chaîne = Partage.ConstruireMappingPsmLibelle(stDocument.JsonDesignerData)
+	taaMappingLibelleBat	est un tableau associatif de chaîne	= Partage.ConstruireMappingPsmLibelle(stDocument.JsonDesignerData)
 
 	// Le JSON peut avoir 2 formats selon le contexte d'appel :
 	//   - Wrapper complet {action, mode, auth, bases, data:{...}}
@@ -108,7 +104,7 @@ si stDocument.JsonDesignerData <> "" alors
 	//     → donneesApercu est à la racine jDoc.donneesApercu
 	// On teste l'existence de jDoc.data ET de donneesApercu sous data
 	// pour décider, pour rester aligné sur l'ancienne logique.
-	jDocChamps	est un JSON
+	jDocChamps				est un JSON
 	si jDoc.data..Existe _et_ jDoc.data.donneesApercu..Existe alors
 		jDocChamps = jDoc.data
 	sinon
@@ -116,11 +112,7 @@ si stDocument.JsonDesignerData <> "" alors
 	fin
 
 	si jDocChamps.donneesApercu..Occurrence > 0 _et_ ...
-	   jDocChamps.donneesApercu[1].enregistrement..Occurrence > 0 alors
-
-		Trace("GenererBatDocumentDepuisPsmd : " ...
-			+ jDocChamps.donneesApercu[1].enregistrement..Occurrence ...
-			+ " paires nom/valeur depuis donneesApercu[1].enregistrement")
+		jDocChamps.donneesApercu[1].enregistrement..Occurrence > 0 alors
 
 		pour nIEnr = 1 _à_ jDocChamps.donneesApercu[1].enregistrement..Occurrence
 			sNomEnr	est une chaîne	= jDocChamps.donneesApercu[1].enregistrement[nIEnr].nom
@@ -135,30 +127,24 @@ si stDocument.JsonDesignerData <> "" alors
 				// CONTRAT NOMMAGE : paire supplémentaire {libellé sanitisé,
 				// valeur} pour les spécifiques mappés — c'est elle que le
 				// PSMD renommé (@Vehicule@) consomme au BAT.
-				si Gauche(sNomEnr, 6) = "LOCAL_" _et_ taaMappingLibelleBat[sNomEnr]..Existe alors
+				si sNomEnr.Gauche(6) = "LOCAL_" _et_ taaMappingLibelleBat[sNomEnr]..Existe alors
 					AjoutePrintshopData(taaMappingLibelleBat[sNomEnr], sValEnr)
 				fin
-			sinon
-				Trace("GenererBatDocumentDepuisPsmd : entrée donneesApercu ignorée (nom vide) à l'indice " + nIEnr)
 			fin
 		fin
-	sinon
-		Trace("GenererBatDocumentDepuisPsmd : donneesApercu vide ou absent → tabPrintshopData vide " ...
-			+ "(les marqueurs @KEY@ du RTF seront substitués par chaîne vide par PrintShop Mail)")
 	fin
 fin
 
 // ─── Génération BAT JPG page par page ────────────────────────────────────
-SupprimeTout(stDocument.tabImageBat)
+stDocument.tabImageBat.SupprimeTout()
 
 pour nPage = 1 _à_ stDocument.NombrePage
 
 	sCheminJpg	= sRepTravail + __DOC_LTR_BAT__ + stDocument.CodeTemp + "p" + nPage + __JPG__
-	Trace("GenererBatDocumentDepuisPsmd : page " + nPage + " --> " + sCheminJpg)
 	stImageBat	= cpDesigner.GenerationBatDepuisPsmd(sCheminPsmd, sCheminJpg, nPage, tabPrintshopData)
 
 	si stImageBat.CheminPhysique <> "" alors
-		Ajoute(stDocument.tabImageBat, stImageBat)
+		stDocument.tabImageBat.Ajoute(stImageBat)
 	fin
 fin
 

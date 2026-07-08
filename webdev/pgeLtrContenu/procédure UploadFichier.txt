@@ -1,12 +1,12 @@
 procédure UploadFichier()
 
 // A FAIRE : SI gIdDemandeSmartSms > 0 ALORS gbAuMoinsUnChangementDeFichierEnModification = Vrai
-nInd				est un entier
-sBat				est une chaîne
-sFond				est une chaîne
-sFichier			est une chaîne
-sMessage			est une chaîne
-sRepUpload			est une chaîne
+nInd							est un entier
+sBat							est une chaîne
+sFond							est une chaîne
+sFichier						est une chaîne
+sMessage						est une chaîne
+sRepUpload					est une chaîne
 
 // ─── REMPLACEMENT DE FOND (document déjà personnalisé) ───────────────────
 // Quand le document a été personnalisé via le Designer, l'import d'un nouveau
@@ -30,7 +30,7 @@ dhDesignerSauvegarde		est une DateHeure
 
 retour = Vrai
 
-nInd = znrLtrContenu
+nInd																	= znrLtrContenu
 
 __stOperation.stOperationLettre.NumeroDocumentEnCours	= nInd
 
@@ -111,16 +111,6 @@ si sFichier <> "" _et_ Minuscule(fExtraitChemin(sFichier, fExtension)) = __PDF__
 
 				stPage est une structPagePdf = __stOperation.stOperationLettre.tabStDocument[nInd].tabPagePDF[1]
 
-				Trace("MediaBox X, Y", stPage.MediaBoxXMm, stPage.MediaBoxYMm)
-				Trace("MediaBox Largeur, Hauteur", stPage.MediaBoxLargeurMm, stPage.MediaBoxHauteurMm)
-
-				Trace("BleedBox X, Y", stPage.BleedBoxXMm, stPage.BleedBoxYMm)
-				Trace("BleedBox Largeur, Hauteur", stPage.BleedBoxLargeurMm, stPage.BleedBoxHauteurMm)
-
-				Trace("TrimBox X, Y", stPage.TrimBoxXMm, stPage.TrimBoxYMm)
-				Trace("TrimBox Largeur, Hauteur", stPage.TrimBoxLargeurMm, stPage.TrimBoxHauteurMm)
-
-
 
 				si stPage.MediaBoxLargeurMm <> stPage.BleedBoxLargeurMm _ou_
 					stPage.MediaBoxHauteurMm <> stPage.BleedBoxHauteurMm alors
@@ -135,13 +125,6 @@ si sFichier <> "" _et_ Minuscule(fExtraitChemin(sFichier, fExtension)) = __PDF__
 
 					si hRepNormalize.CodeEtat = 200 alors
 						vNorm est un Variant = JSONVersVariant(hRepNormalize.Contenu)
-						si vNorm.success = Vrai alors
-							Trace("NormalizeBleedBox : normalized = " + vNorm.normalized)
-						sinon
-							Trace("NormalizeBleedBox : erreur = " + vNorm.erreur)
-						fin
-					sinon
-						Trace("NormalizeBleedBox : HTTP " + hRepNormalize.CodeEtat)
 					fin
 
 				fin
@@ -197,8 +180,9 @@ si sFichier <> "" _et_ Minuscule(fExtraitChemin(sFichier, fExtension)) = __PDF__
 							cpDesigner.AppliqueBlancTournant(stVignette.CheminPhysique, __stOperation.stOperationLettre.tabStDocument[nInd].LargeurOuvert, __stOperation.stOperationLettre.tabStDocument[nInd].HauteurOuvert)
 						fin
 					fin
+					// Marqueur d'état du BAT généré (rapprochement)
+					__stOperation.stOperationLettre.tabStDocument[nInd].EstBatGenereAvecRapprochement = cpDesigner.JsonContientQrRapprochement(__stOperation.stOperationLettre.tabStDocument[nInd].JsonDesignerData)
 					AfficheVignettePopupUpload()
-					Trace("UploadFichier : fond remplacé, personnalisation conservée (CodeTemp=" + __stOperation.stOperationLettre.tabStDocument[nInd].CodeTemp + ")")
 				sinon
 					// La personnalisation est déjà restaurée dans la structure :
 					// pas de retour Faux (qui effacerait le document), le BAT
@@ -242,6 +226,8 @@ si sFichier <> "" _et_ Minuscule(fExtraitChemin(sFichier, fExtension)) = __PDF__
 								cpDesigner.AppliqueBlancTournant(stVignette.CheminPhysique, __stOperation.stOperationLettre.tabStDocument[nInd].LargeurOuvert, __stOperation.stOperationLettre.tabStDocument[nInd].HauteurOuvert)
 							fin
 						fin
+						// Marqueur d'état du BAT généré (rapprochement)
+						__stOperation.stOperationLettre.tabStDocument[nInd].EstBatGenereAvecRapprochement = cpDesigner.JsonContientQrRapprochement(__stOperation.stOperationLettre.tabStDocument[nInd].JsonDesignerData)
 						AfficheVignettePopupUpload()
 					sinon
 						PopupAfficheMessage(
@@ -287,25 +273,25 @@ si retour = Faux alors
 			fSupprime(sRepUpload + sFichier)
 		fin
 		si __stOperation.stOperationLettre.tabStDocument[nInd].JsonDesignerData = "" alors
-			__stOperation.stOperationLettre.tabStDocument[nInd].JsonDesignerData				= sJsonSauvegarde
+			__stOperation.stOperationLettre.tabStDocument[nInd].JsonDesignerData					= sJsonSauvegarde
 			__stOperation.stOperationLettre.tabStDocument[nInd].EstPersonnaliseDesigner		= Vrai
 			__stOperation.stOperationLettre.tabStDocument[nInd].DateHeureDesigner				= dhDesignerSauvegarde
 		fin
 	sinon
-		__stOperation.stOperationLettre.tabStDocument[nInd].EstUploadé						= Faux
+		__stOperation.stOperationLettre.tabStDocument[nInd].EstUploadé							= Faux
 		__stOperation.stOperationLettre.tabStDocument[nInd].EstDocumentEnAttente			= Vrai
-		__stOperation.stOperationLettre.tabStDocument[nInd].EstPdfClient					= Vrai
-		__stOperation.stOperationLettre.tabStDocument[nInd].CodeTemp						= ""
+		__stOperation.stOperationLettre.tabStDocument[nInd].EstPdfClient						= Vrai
+		__stOperation.stOperationLettre.tabStDocument[nInd].CodeTemp							= ""
 		__stOperation.stOperationLettre.tabStDocument[nInd].NomFichierOrigine				= ""
 		__stOperation.stOperationLettre.tabStDocument[nInd].NomFichierTemp					= ""
-		__stOperation.stOperationLettre.tabStDocument[nInd].Repertoire						= ""
+		__stOperation.stOperationLettre.tabStDocument[nInd].Repertoire							= ""
 		__stOperation.stOperationLettre.tabStDocument[nInd].RepertoireTravail				= ""
-		__stOperation.stOperationLettre.tabStDocument[nInd].JsonDesignerData				= ""
-		__stOperation.stOperationLettre.tabStDocument[nInd].CheminPsmdBat					= ""
+		__stOperation.stOperationLettre.tabStDocument[nInd].JsonDesignerData					= ""
+		__stOperation.stOperationLettre.tabStDocument[nInd].CheminPsmdBat						= ""
 		__stOperation.stOperationLettre.tabStDocument[nInd].CheminPsmdTemp					= ""
 		__stOperation.stOperationLettre.tabStDocument[nInd].NomFichierPsmd					= ""
-		__stOperation.stOperationLettre.tabStDocument[nInd].FichierApercu					= ""
-		__stOperation.stOperationLettre.tabStDocument[nInd].Repertoire						= ""
+		__stOperation.stOperationLettre.tabStDocument[nInd].FichierApercu						= ""
+		__stOperation.stOperationLettre.tabStDocument[nInd].Repertoire							= ""
 		__stOperation.stOperationLettre.tabStDocument[nInd].RepertoireTravail				= ""
 		__stOperation.stOperationLettre.tabStDocument[nInd].TypeFichier						= ""
 		__stOperation.stOperationLettre.tabStDocument[nInd].tabImageBat.SupprimeTout()
@@ -323,7 +309,7 @@ fin
 
 			si __stOperation.stOperationLettre.tabStDocument[nInd].tabImageBat..Occurrence >= nPage _et_ __stOperation.stOperationLettre.tabStDocument[nInd].tabImageBat[nPage].CheminPhysique <> "" alors
 				znrAperçuUpload[nPage].imgUpload = __stOperation.stOperationLettre.tabStDocument[nInd].tabImageBat[nPage].CheminPhysique
-				sinon si __stOperation.stOperationLettre.tabStDocument[nInd].tabImageFond..Occurrence >= nPage alors
+			sinon si __stOperation.stOperationLettre.tabStDocument[nInd].tabImageFond..Occurrence >= nPage alors
 				znrAperçuUpload[nPage].imgUpload = __stOperation.stOperationLettre.tabStDocument[nInd].tabImageFond[nPage].CheminPhysique
 			fin
 
@@ -339,31 +325,31 @@ fin
 	fin
 
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// ControleConformiteRemplacement — Mode remplacement de fond (3b/3c)
-	// Analyse le nouveau PDF (sRepUpload + sFichier) sur une COPIE de la
-	// structure document : PdfAnalyseDocument vide tabPagePDF en entrée et
-	// supprime le fichier analysé en cas de rejet — le document courant et
-	// ses fichiers ne sont donc JAMAIS touchés ici.
-	//
-	// La copie hérite de NombrePage / LargeurOuvert / HauteurOuvert /
-	// EstFondPerdu du document courant -> active les rejets existants de
-	// PdfAnalyseDocument (nombre de pages, format attendu, fond perdu
-	// attendu/symétrique, format standard, encrage bordure...).
-	//
-	// Contrôles supplémentaires spécifiques au remplacement :
-	//   1. même nombre de pages que pages..Occurrence du JSON sauvegardé
-	//   2. même orientation que le document (LargeurOuvert/HauteurOuvert)
-	//   3. égalité du fond perdu réel vs formatDocument.fondPerdu figé dans
-	//      le JSON (tolérance 0.5 mm — arrondis d'extraction PDF)
-	//
-	// Retour : "" si conforme, sinon message d'erreur (fichier uploadé
-	// supprimé avant chaque retour en erreur).
+// ─────────────────────────────────────────────────────────────────────────
+// ControleConformiteRemplacement — Mode remplacement de fond (3b/3c)
+// Analyse le nouveau PDF (sRepUpload + sFichier) sur une COPIE de la
+// structure document : PdfAnalyseDocument vide tabPagePDF en entrée et
+// supprime le fichier analysé en cas de rejet — le document courant et
+// ses fichiers ne sont donc JAMAIS touchés ici.
+//
+// La copie hérite de NombrePage / LargeurOuvert / HauteurOuvert /
+// EstFondPerdu du document courant -> active les rejets existants de
+// PdfAnalyseDocument (nombre de pages, format attendu, fond perdu
+// attendu/symétrique, format standard, encrage bordure...).
+//
+// Contrôles supplémentaires spécifiques au remplacement :
+//   1. même nombre de pages que pages..Occurrence du JSON sauvegardé
+//   2. même orientation que le document (LargeurOuvert/HauteurOuvert)
+//   3. égalité du fond perdu réel vs formatDocument.fondPerdu figé dans
+//      le JSON (tolérance 0.5 mm — arrondis d'extraction PDF)
+//
+// Retour : "" si conforme, sinon message d'erreur (fichier uploadé
+// supprimé avant chaque retour en erreur).
 	// ─────────────────────────────────────────────────────────────────────────
 	procédure interne ControleConformiteRemplacement()
 
 		stDocTest est une structDocument = __stOperation.stOperationLettre.tabStDocument[nInd]
-		stDocTest.Repertoire		= sRepUpload
+		stDocTest.Repertoire			= sRepUpload
 		stDocTest.NomFichierTemp	= sFichier
 
 		// ─── Rejets existants de PdfAnalyseDocument ──────────────────────
@@ -401,10 +387,10 @@ fin
 		// (source de vérité du Designer à la réouverture — cf.
 		// btnDocumentPersonnaliser). Gère l'ancien format à valeur unique
 		// (valeurMm) comme psmd-generator.js.
-		rFpHautAttendu		est un réel = 0
-		rFpBasAttendu		est un réel = 0
-		rFpGaucheAttendu	est un réel = 0
-		rFpDroiteAttendu	est un réel = 0
+		rFpHautAttendu		est un réel	= 0
+		rFpBasAttendu		est un réel	= 0
+		rFpGaucheAttendu	est un réel	= 0
+		rFpDroiteAttendu	est un réel	= 0
 
 		si jCtrl.formatDocument..Existe _et_ jCtrl.formatDocument.fondPerdu..Existe _et_ jCtrl.formatDocument.fondPerdu.actif = Vrai alors
 			si jCtrl.formatDocument.fondPerdu.hautMm..Existe alors
@@ -420,10 +406,10 @@ fin
 			fin
 		fin
 
-		rFpHautNouveau		est un réel = 0
-		rFpBasNouveau		est un réel = 0
-		rFpGaucheNouveau	est un réel = 0
-		rFpDroiteNouveau	est un réel = 0
+		rFpHautNouveau		est un réel	= 0
+		rFpBasNouveau		est un réel	= 0
+		rFpGaucheNouveau	est un réel	= 0
+		rFpDroiteNouveau	est un réel	= 0
 		si stDocTest.tabPagePDF..Occurrence > 0 _et_ stDocTest.tabPagePDF[1].EstFondPerdu alors
 			rFpHautNouveau		= stDocTest.tabPagePDF[1].FondPerduHautMm
 			rFpBasNouveau		= stDocTest.tabPagePDF[1].FondPerduBasMm

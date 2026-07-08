@@ -54,8 +54,6 @@ si stDoc.CodeTemp <> "" alors
 	si fFichierExiste(sRepUpload + "psmd_bat_" + sCodeTempDoc + ".psmd.images.json") alors
 		fSupprime(sRepUpload + "psmd_bat_" + sCodeTempDoc + ".psmd.images.json")
 	fin
-
-	Trace("NettoyerFichiersDocumentTemp : ligne " + pLigne + " (CodeTemp=" + sCodeTempDoc + ") nettoyée")
 fin
 
 // ─── Vidage des tableaux en mémoire ─────────────────────────────────────

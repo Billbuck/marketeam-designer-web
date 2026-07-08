@@ -38,12 +38,10 @@ fRepCrée(sRepUpload)
 
 // ─── Lecture du modèle et du support ─────────────────────────────────────
 si pas ltr_modele.LitRecherchePremier(IdModele, pIdModele) alors
-	Trace("SelectionModèle : modèle introuvable IdModele=" + pIdModele)
 	retour
 fin
 
 si pas ltr_support.LitRecherchePremier(IdSupport, ltr_modele.IdSupport) alors
-	Trace("SelectionModèle : support introuvable IdSupport=" + ltr_modele.IdSupport)
 	retour
 fin
 
@@ -66,7 +64,6 @@ fin
 sFicPdfModele = sRepModele + __DOC_LTR_MODELE__ + pIdModele + __PDF__
 
 si pas fFichierExiste(sFicPdfModele) alors
-	Trace("SelectionModèle : PDF du modèle introuvable : " + sFicPdfModele)
 	retour
 fin
 
@@ -130,15 +127,12 @@ fin
 sFicPdfTemp = sRepUpload + __stOperation.stOperationLettre.tabStDocument[pLigne].NomFichierTemp
 si fFichierExiste(sFicPdfTemp) alors fSupprime(sFicPdfTemp)
 si pas fCopieFichier(sFicPdfModele, sFicPdfTemp) alors
-	Trace("SelectionModèle : échec copie PDF " + sFicPdfModele + " --> " + sFicPdfTemp)
 	retour
 fin
-Trace("SelectionModèle : PDF copié --> " + sFicPdfTemp)
 
 // ─── 2. Analyse du PDF copié ─────────────────────────────────────────────
 sMessage = cpDesigner.PdfAnalyseDocument(__stOperation.stOperationLettre.tabStDocument[pLigne])
 si sMessage <> "" alors
-	Trace("SelectionModèle : erreur PdfAnalyseDocument : " + sMessage)
 	PopupAfficheMessage(sMessage, "Erreur", __OPERATION_COURRIER__, __TOAST_ANNULATION__)
 	retour
 fin
@@ -159,10 +153,7 @@ pour nPage = 1 _à_ __stOperation.stOperationLettre.tabStDocument[pLigne].Nombre
 			stImgFond.CheminPhysique	= sFicFondTemp
 			stImgFond.CheminRelatif		= sRepUploadRel + __DOC_LTR_FOND__ + sCodeTemp + "p" + nPage + __JPG__
 			__stOperation.stOperationLettre.tabStDocument[pLigne].tabImageFond.Ajoute(stImgFond)
-			Trace("SelectionModèle : Fond p" + nPage + " copié --> " + sFicFondTemp)
 		fin
-	sinon
-		Trace("SelectionModèle : Fond modèle introuvable : " + sFicFondModele)
 	fin
 fin
 
@@ -179,10 +170,7 @@ pour nPage = 1 _à_ __stOperation.stOperationLettre.tabStDocument[pLigne].Nombre
 			stImgBat.CheminPhysique		= sFicBatTemp
 			stImgBat.CheminRelatif		= sRepUploadRel + __DOC_LTR_BAT__ + sCodeTemp + "p" + nPage + __JPG__
 			__stOperation.stOperationLettre.tabStDocument[pLigne].tabImageBat.Ajoute(stImgBat)
-			Trace("SelectionModèle : BAT p" + nPage + " copié --> " + sFicBatTemp)
 		fin
-	sinon
-		Trace("SelectionModèle : Vignette modèle introuvable : " + sFicBatModele)
 	fin
 fin
 
@@ -259,7 +247,7 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 		// Critère SYS : cf. docs/Structure Webdev Designer V3.md ligne 183
 		//   « Le code SYS reste réservé aux zones système injectées par
 		//     WebDev (adresse destinataire, séquentiel, datamatrix...) »
-		jsChampsFusionFinal	est un JSON			= "[]"
+		jsChampsFusionFinal		est un JSON			= "[]"
 		sNomsSysteme				est une chaîne		= ","	// pseudo-set ",NomA,NomB,"
 
 		// ═════════════════════════════════════════════════════════════════
@@ -299,17 +287,17 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 			si pas bSeqPresent alors
 				nIdxAjoutSeq est un entier = jsWrapper.data.champsFusion..Occurrence + 1
 				jsWrapper.data.champsFusion[nIdxAjoutSeq].nom			= "Sequentiel"
-				jsWrapper.data.champsFusion[nIdxAjoutSeq].type		= "SYS"
-				jsWrapper.data.champsFusion[nIdxAjoutSeq].libelle	= "Séquentiel"
-				jsWrapper.data.champsFusion[nIdxAjoutSeq].ordre		= 998
+				jsWrapper.data.champsFusion[nIdxAjoutSeq].type			= "SYS"
+				jsWrapper.data.champsFusion[nIdxAjoutSeq].libelle		= "Séquentiel"
+				jsWrapper.data.champsFusion[nIdxAjoutSeq].ordre			= 998
 			fin
 
 			si pas bTimbrePresent alors
 				nIdxAjoutTimbre est un entier = jsWrapper.data.champsFusion..Occurrence + 1
 				jsWrapper.data.champsFusion[nIdxAjoutTimbre].nom			= "Timbre"
-				jsWrapper.data.champsFusion[nIdxAjoutTimbre].type		= "SYS"
-				jsWrapper.data.champsFusion[nIdxAjoutTimbre].libelle	= "Affranchissement"
-				jsWrapper.data.champsFusion[nIdxAjoutTimbre].ordre		= 999
+				jsWrapper.data.champsFusion[nIdxAjoutTimbre].type			= "SYS"
+				jsWrapper.data.champsFusion[nIdxAjoutTimbre].libelle		= "Affranchissement"
+				jsWrapper.data.champsFusion[nIdxAjoutTimbre].ordre			= 999
 			fin
 		fin
 
@@ -343,9 +331,6 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 				si pas bDoublonSys alors
 					jsChampsFusionFinal[jsChampsFusionFinal..Occurrence + 1] = ...
 					jsData.champsFusion[nIndM]
-				sinon
-					Trace("SelectionModèle : champ modèle ignoré (doublon SYS) : " ...
-					+ jsData.champsFusion[nIndM].nom)
 				fin
 			fin
 		fin
@@ -392,12 +377,7 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 				sInjectePB2	est une chaîne	= jsWrapper.data.champsFusion[nIndPurgeBase].injecteParBase
 				sLibelleP2	est une chaîne	= jsWrapper.data.champsFusion[nIndPurgeBase].libelle
 
-				si sInjectePB2 = "1" alors
-					// Champ injecté par la base à l'exploitation précédente — à purger
-					Trace("PARTIE 2 : champ " + sLibelleP2 + " injecteParBase=[" + sInjectePB2 + "] => PURGÉ")
-				sinon
-					// Champ du modèle (ou SYS) — préservé
-					Trace("PARTIE 2 : champ " + sLibelleP2 + " injecteParBase=[" + sInjectePB2 + "] => conservé")
+				si sInjectePB2 <> "1" alors
 					nIdxConserve est un entier = jsChampsFusionSansBase..Occurrence + 1
 					jsChampsFusionSansBase[nIdxConserve] = jsWrapper.data.champsFusion[nIndPurgeBase]
 				fin
@@ -578,12 +558,6 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 					//   (RemplirDesignerApercu) a déjà rempli ces colonnes
 					//   avec les vraies valeurs fraîches par enregistrement.
 					si Position(sNomsTechniquesBase, "," + jsValeurModele.nom + ",") > 0 alors
-						// TRACE TEMPORAIRE (Point 2, Sous-étape B) — premier record uniquement
-						si nIndW = 1 alors
-							Trace("[Point2-B] " + jsValeurModele.nom + " regimeBase=" ...
-							+ (bRegimeBPourCorrectionA ? "V" sinon "F") ...
-							+ " presentBase=V -> valeur='" + jsValeurModele.valeur + "' (base prime, modele ignoré)")
-						fin
 						continuer
 					fin
 
@@ -596,10 +570,6 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 					//   réinjection alimente la fiche client figée et les LOCAL_xxx
 					//   du modèle (Point 4 préservé).
 					si bRegimeBPourCorrectionA alors
-						// TRACE TEMPORAIRE (Point 2, Sous-étape B) — premier record uniquement
-						si nIndW = 1 alors
-							Trace("[Point2-B] " + jsValeurModele.nom + " regimeBase=V presentBase=F -> valeur='' (absent en B, vide)")
-						fin
 						continuer
 					fin
 
@@ -622,10 +592,6 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 						// régime A : fiche client figée).
 						jsWrapper.data.donneesApercu[nIndW].enregistrement[ ...
 						jsWrapper.data.donneesApercu[nIndW].enregistrement..Occurrence + 1] = jsValeurModele
-						// TRACE TEMPORAIRE (Point 2, Sous-étape B) — premier record uniquement
-						si nIndW = 1 alors
-							Trace("[Point2-B] " + jsValeurModele.nom + " regimeBase=F -> valeur='" + jsValeurModele.valeur + "' (ajout modele, régime A)")
-						fin
 					fin
 				fin
 			fin
@@ -721,7 +687,7 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 			//   Position(). PAS de liste codée en dur — toute évolution
 			//   future de la procédure est prise en compte automatiquement.
 			tabStandardsRef		est un tableau de structDesignerChampStandard	= cpDesigner.RemplirDesignerChampsStandard(__stOperation.IdClient)
-			sNomsStandards		est une chaîne												= ","
+			sNomsStandards			est une chaîne												= ","
 			pour tout stStdRef de tabStandardsRef
 				si stStdRef.nom <> "" alors
 					sNomsStandards += stStdRef.nom + ","
@@ -742,7 +708,6 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 				// Filtre garde-fou : exclure les libellés SYS canoniques
 				// (cas tordu où un client renomme un Champ7 en "Séquentiel")
 				si sLibelleC = "Séquentiel" _ou_ sLibelleC = "Affranchissement" alors
-					Trace("SelectionModèle : libellé base ignoré (collision SYS) : " + sLibelleC)
 					continuer
 				fin
 				// Si déjà présent dans champsFusion -> ne pas dédoublonner
@@ -753,7 +718,7 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 				// Nouvelle entrée
 				nOrdreMax++
 				jsNouvelleEntree est un JSON = "{}"
-				jsNouvelleEntree.nom				= stBaseChampC.Champ
+				jsNouvelleEntree.nom					= stBaseChampC.Champ
 				jsNouvelleEntree.libelle			= sLibelleC
 				// Lot 1 formatage — type FIN transmis tel quel (cohérent avec
 				// RemplirDesignerChampsFusion, cf. CDC formatage §3.1).
@@ -762,7 +727,7 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 				sinon
 					jsNouvelleEntree.type = "TXT"
 				fin
-				jsNouvelleEntree.ordre			= nOrdreMax
+				jsNouvelleEntree.ordre				= nOrdreMax
 				jsNouvelleEntree.origine			= "import"      // vient de la base
 				// Cahier des charges (Option A) — categorie déterminée par
 				//   croisement avec la liste officielle des standards
@@ -774,9 +739,7 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 				sinon
 					jsNouvelleEntree.categorie = "specifique"
 				fin
-				// TRACE TEMPORAIRE (Option A) — à retirer après validation
-				Trace("Etape C: " + stBaseChampC.Champ + " -> categorie=" + jsNouvelleEntree.categorie)
-				jsNouvelleEntree.presenteEnBase															= Vrai       // par construction
+				jsNouvelleEntree.presenteEnBase																= Vrai       // par construction
 				// L18/A35 PARTIE 1 — MARQUEUR CHAÎNE robuste : valeur "1"
 				//   (et NON booléen Vrai). Justification : un attribut JSON
 				//   booléen ABSENT lu via `= Vrai` en WLangage a un
@@ -786,7 +749,7 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 				//   contre une lecture chaîne défensive (cf. PARTIE 2 et 3),
 				//   et un attribut JSON absent lu en chaîne retourne ""
 				//   -> JAMAIS de faux positif sur les champs du modèle.
-				jsNouvelleEntree.injecteParBase															= "1"
+				jsNouvelleEntree.injecteParBase																= "1"
 
 				jsWrapper.data.champsFusion[jsWrapper.data.champsFusion..Occurrence + 1]		= jsNouvelleEntree
 			fin
@@ -831,20 +794,16 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 			fin
 
 			sNomTechB				est une chaîne		= jsWrapper.data.champsFusion[nIndB].nom
-			sLibB					est une chaîne		= jsWrapper.data.champsFusion[nIndB].libelle
-			sCleLocaleB			est une chaîne		= "LOCAL_" + sLocalIdB
+			sLibB						est une chaîne		= jsWrapper.data.champsFusion[nIndB].libelle
+			sCleLocaleB				est une chaîne		= "LOCAL_" + sLocalIdB
 
 			// Déterminer si le champ a une correspondance base (= la base
 			// fait foi pour les valeurs). Le mapping nom = "Champ3" a été
 			// fait par l'étape A si correspondance libellé.
-			bAvecCorrespBase	est un booléen		= Faux
+			bAvecCorrespBase		est un booléen		= Faux
 			si sNomTechB <> "" _et_ Position(sNomsTechniquesBase, "," + sNomTechB + ",") > 0 alors
 				bAvecCorrespBase = Vrai
 			fin
-
-			// L18/A33 — TRACE TEMPORAIRE (à retirer après validation)
-			Trace("CorrectionB champ " + sLibB + " localId=[" + sLocalIdB + "] nomTech=[" + sNomTechB ...
-			+ "] avecBase=" + bAvecCorrespBase + " echantDefaut=[" + jsWrapper.data.champsFusion[nIndB].echantillonDefaut + "]")
 
 			si jsWrapper.data.donneesApercu..Occurrence = 0 alors
 				continuer  // pas d'enregistrement à remplir
@@ -880,22 +839,12 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 					sValeurB = jsWrapper.data.champsFusion[nIndB].echantillonDefaut
 				fin
 
-				// TRACE TEMPORAIRE (Point 2, Sous-étape A) — à retirer après validation.
-				//   Loggue uniquement pour le 1ᵉʳ enregistrement pour limiter le bruit
-				//   en cas de multi-records (la décision dépend du champ, pas du record).
-				si nIndEB = 1 alors
-					Trace("[Point2-A] " + sLibB + " (" + sNomTechB + ") regimeBase=" ...
-					+ (bAvecBaseLocal ? "V" sinon "F") ...
-					+ " corresp=" + (bAvecCorrespBase ? "V" sinon "F") ...
-					+ " -> valeur='" + sValeurB + "'")
-				fin
-
 				// Injecter ou mettre à jour la clé sCleLocaleB dans cet enregistrement
 				// Pattern d'assignation directe (pas de variable JSON intermédiaire)
 				bDejaB est un booléen = Faux
 				pour nIndCkB = 1 _à_ jsWrapper.data.donneesApercu[nIndEB].enregistrement..Occurrence
 					si jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIndCkB].nom = sCleLocaleB alors
-						jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIndCkB].valeur	= sValeurB
+						jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIndCkB].valeur		= sValeurB
 						bDejaB																						= Vrai
 						sortir
 					fin
@@ -946,9 +895,6 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 				si hRepPlaceholder.CodeEtat = 200 alors
 					jsWrapper.data.zonesImage[nIndImg].source.nomFichier	= sCheminPlaceholder
 					jsWrapper.data.zonesImage[nIndImg].source.type			= "fichier"
-					Trace("SelectionModèle : placeholder zone image " + nIndImg + " " + rLargeurZone + "x" + rHauteurZone + "mm --> " + sCheminPlaceholder)
-				sinon
-					Trace("SelectionModèle : échec placeholder zone image " + nIndImg)
 				fin
 			fin
 		fin
@@ -977,9 +923,9 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 				__stOperation.stOperationLettre.tabStDocument[pLigne].HauteurOuvert)
 			fin
 		fin
-		Trace("SelectionModèle : BAT régénéré via Designer/PSMD (porte-adresse=" + nAvecAdresse + ") pour CodeTemp=" + sCodeTemp)
-	sinon
-		Trace("SelectionModèle : échec GenererPsmdServeurDocument (porte-adresse) pour CodeTemp=" + sCodeTemp)
+		// Marqueur d'état du BAT généré (rapprochement) : calculé sur le JSON
+		// (wrapper) réellement utilisé pour cette génération.
+		__stOperation.stOperationLettre.tabStDocument[pLigne].EstBatGenereAvecRapprochement = cpDesigner.JsonContientQrRapprochement(__stOperation.stOperationLettre.tabStDocument[pLigne].JsonDesignerData)
 	fin
 
 	// 5.7 — Restaurer JsonDesignerData en data only original (sans placeholders)
@@ -988,5 +934,3 @@ si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai alors
 	__stOperation.stOperationLettre.tabStDocument[pLigne].JsonDesignerData = sJsonDataModele
 
 fin
-
-Trace("SelectionModèle : modèle " + pIdModele + " chargé pour ligne " + pLigne + " (CodeTemp=" + sCodeTemp + ")")

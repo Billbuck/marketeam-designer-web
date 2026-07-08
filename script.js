@@ -4618,7 +4618,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ─── Chantier QR de rapprochement (Phase 3b) ─────────────────────────────
     //   Id de la zone système « QR de rapprochement » (aligné serveur).
-    const QR_RAPPROCHEMENT_ID = 'sys-qr-rapprochement';
+    // Id de la zone système datamatrix de rapprochement — DOIT être identique
+    // à l'id émis par cpDesigner.ConstruireDatamatrixRapprochement (renommage
+    // sys-qr-rapprochement -> sys-datamatrix-rapprochement du 06/07/2026).
+    const QR_RAPPROCHEMENT_ID = 'sys-datamatrix-rapprochement';
     //   Transmis par WebDev à l'ouverture (cas A/C) : Vrai si AU MOINS UN AUTRE
     //   document de l'opération est personnalisé. Combiné au statut « personnalisé »
     //   live du document courant, il décide de l'affichage du QR (N >= 2).
@@ -23422,12 +23425,21 @@ document.addEventListener('DOMContentLoaded', () => {
             return champ;
         });
         
-        // Filtrer : exclure les champs IMG (pas pertinent pour code-barres)
-        //   ET les champs SYS (cahier des charges §1.7 — système non
-        //   exploitable par l'utilisateur, donc pas proposé dans la combo).
+        // FILTRE STRICT (décision 06/07/2026) : seuls les champs de type
+        //   "Code barres" (CDB) sont proposés — valeur ASCII garantie
+        //   encodable (les autres types peuvent porter des insécables de
+        //   formatage, ex. "1 234", invalides ou faussés dans un code-barres).
         //   `documentState.champsFusion` reste intact ; on filtre uniquement
-        //   ce qui est proposé dans la combo.
-        const champsBarcode = champsNormalises.filter(c => c && c.type !== 'IMG' && c.type !== 'SYS');
+        //   ce qui est proposé dans la combo. Un champ NON-CDB déjà lié à la
+        //   zone reste visible (option désactivée) pour ne pas masquer la
+        //   donnée existante.
+        const champsBarcode = champsNormalises.filter(c => c && (
+            c.type === 'CDB'
+            || (selectedValue && selectedValue !== '' && (
+                (c.localId && `LOCAL_${String(c.localId).trim()}` === selectedValue)
+                || c.nom === selectedValue
+            ))
+        ));
         
         // Trier par ordre croissant
         const champsTries = [...champsBarcode].sort((a, b) => (a.ordre || 0) - (b.ordre || 0));
@@ -23465,11 +23477,14 @@ document.addEventListener('DOMContentLoaded', () => {
             //   existante si une zone est déjà liée à un champ devenu
             //   absent (ne fait pas disparaître la donnée).
             const absentBar = isChampAbsentDeLaBase(champ, regBar);
+            // Champ NON-CDB conservé uniquement car déjà lié à la zone :
+            // visible mais non re-sélectionnable (filtre strict CDB).
+            const nonCdb = (fieldType !== 'CDB');
             const suffixe = absentBar
                 ? ' (absent)'
-                : (fieldType === 'SYS' ? ' (système)' : '');
+                : (nonCdb ? ' (type non Code barres)' : '');
             option.textContent = fieldLabel + suffixe;
-            if (absentBar) option.disabled = true;
+            if (absentBar || nonCdb) option.disabled = true;
             // Axe 2 — Re-positionner l'option sélectionnée sur la valeur
             //   demandée. Note : `option.selected = true` ne déclenche
             //   PAS d'event 'change' DOM → pas de risque de boucle.
@@ -23605,11 +23620,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 contentForQr = buildQrContent(zoneData.qrConfig, previewValue);
                 recordForDisplay = previewValue;
             } else {
-                contentForQr = buildQrContent(zoneData.qrConfig, null);
+                // MODE CRÉATION : résoudre les @CHAMP@ avec le 1er enregistrement
+                // de la base échantillon (comme l'aperçu) — jamais de marqueur
+                // brut ni de placeholder à l'écran.
+                let creationRecord = null;
+                try {
+                    if (documentState && Array.isArray(documentState.donneesApercu)
+                        && documentState.donneesApercu.length > 0) {
+                        creationRecord = documentState.donneesApercu[0];
+                    }
+                } catch (e) { /* defensive */ }
+                contentForQr = buildQrContent(zoneData.qrConfig, creationRecord);
+                recordForDisplay = creationRecord;
             }
             
             // Valider le contenu
-            const qrValidation = validateQrContent(contentForQr, zoneData.qrConfig.type);
+            let qrValidation = validateQrContent(contentForQr, zoneData.qrConfig.type);
+            
+            // MODE CRÉATION : JAMAIS de placeholder. Si le contenu résolu est
+            // invalide/incomplet (champ non associé, échantillon vide…), on
+            // dessine quand même un vrai QR avec la valeur d'exemple du type.
+            const isCreationMode = !(previewValue && typeof previewValue === 'object');
+            if (isCreationMode && !qrValidation.valid) {
+                contentForQr = (config && config.sampleValue) ? config.sampleValue : 'https://exemple.com';
+                qrValidation = { valid: true, errorMessage: '' };
+            }
             
             // Déterminer le texte d'affichage (résumé)
             let qrDisplayText;
@@ -23624,7 +23659,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (qrValidation.valid) {
                 barcodeImage = generateBarcodeImage(typeCode, color, contentForQr, zoneData.forme);
             } else {
-                // Placeholder si invalide
+                // Placeholder si invalide (aperçu uniquement)
                 barcodeImage = 'data:image/svg+xml,' + encodeURIComponent(SVG_BARCODE_2D_FALLBACK);
             }
             
@@ -23653,16 +23688,29 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (sourceType === 'champ') {
             // Source "Champ de fusion" — Axe 1 : afficher le LIBELLÉ du
             //   champ via le résolveur (cohérent avec les pastilles texte).
-            //   Avant : `formatFieldWithAt(champFusion)` emballait la clé
-            //   brute en `@LOCAL_xxx@`. Maintenant : le résolveur retourne
-            //   le libellé (ex. "Etiquette") ou retombe sur `@KEY@` en
-            //   fallback de sécurité.
             if (hasField) {
                 displayText = resolveChampLabel(champFusion);
+                // MODE CRÉATION (06/07/2026) : résoudre la valeur du 1er
+                // enregistrement échantillon et la soumettre à la MÊME
+                // validation que l'aperçu — un contenu invalide (insécables,
+                // caractères hors symbologie...) est signalé dès la création
+                // (badge rouge + placeholder), pas seulement en aperçu.
+                let creationVal = null;
+                try {
+                    if (documentState && Array.isArray(documentState.donneesApercu)
+                        && documentState.donneesApercu.length > 0) {
+                        creationVal = replaceMergeFields('@' + champFusion + '@', documentState.donneesApercu[0]);
+                    }
+                } catch (e) { /* defensive */ }
+                if (creationVal && creationVal.trim() !== '' && creationVal.indexOf('@') === -1) {
+                    valueToEncode = creationVal;    // valeur réelle : encodée ET validée
+                } else {
+                    valueToEncode = null;           // pas de donnée : sampleValue
+                }
             } else {
                 displayText = '(Aucun champ)';
+                valueToEncode = null;
             }
-            valueToEncode = null; // Utilisera sampleValue
         } else {
             // Source "Valeur fixe"
             if (hasStaticValue) {

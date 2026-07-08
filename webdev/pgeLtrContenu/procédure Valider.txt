@@ -1,0 +1,35 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//Valider ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure Valider()
+
+nInd				est un entier
+nIdModele			est un entier
+nIdDocumentClient	est un entier
+
+pour toute ligne de znrLtrContenu
+	nInd++
+	selon ExtraitChaîne(attCboSouceGlien,attCboSourceValeur)
+		cas "F" // Fichier
+
+		cas "M" // Modèle
+			nIdModele = ExtraitChaîne(attCboModeleGlien,attCboSelectionValeur)
+			__stOperation.stOperationLettre.tabStDocument[nInd].IdModele			= nIdModele
+			__stOperation.stOperationLettre.tabStDocument[nInd].IdDocumentClient	= 0
+
+		cas "C" // Document client
+			nIdDocumentClient = ExtraitChaîne(attCboDocumentGlien,attCboSelectionValeur)
+			__stOperation.stOperationLettre.tabStDocument[nInd].IdModele 			= 0
+			__stOperation.stOperationLettre.tabStDocument[nInd].IdDocumentClient	= nIdDocumentClient
+	fin
+fin
+

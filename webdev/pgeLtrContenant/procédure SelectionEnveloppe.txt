@@ -18,7 +18,7 @@ si ltr_enveloppe.LitRecherchePremier(IdEnveloppe, pIdEnveloppe) alors
 	_rPoidsTotal = ltr_enveloppe.Poids
 	ZoneRépétéeSupprimeTout(znrContenu)
 	btnNouveau..Visible = Vrai
-	TâcheParallèleExécute(Partage.GenereVignetteEnveloppe)
+	TâcheParallèleExécute(cpDesigner.GenereVignetteEnveloppe)
 	popTypeSupport.InitZnrTypeSupport()
 	PopupAffiche(popTypeSupport)
 fin

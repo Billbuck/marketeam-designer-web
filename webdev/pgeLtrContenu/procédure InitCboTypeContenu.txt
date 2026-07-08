@@ -85,7 +85,6 @@ pour tout sdReqCbo
 		cas "M"
 			si VérifieAccèsFonction(TypeOperationVersCodeSupport(__stOperation.TypeOperation,0),PrintModèle) = Vrai alors
 				nModele++
-				Trace(sdReqCbo.Id,sdReqCbo.Libelle)
 				znrLtrContenu[pIndice].attCboModeleContenu 		+= [RC] + sdReqCbo.Libelle + gLien(sdReqCbo.Id)
 				znrLtrContenu[pIndice].attCboModeleGlien 			+= [TAB] + sdReqCbo.Id
 			fin
@@ -128,4 +127,3 @@ fin
 
 fin:
 HAnnuleDéclaration(sdReqCbo)
-

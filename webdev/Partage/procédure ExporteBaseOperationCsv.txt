@@ -51,7 +51,6 @@ tabChampType					est un tableau de chaînes
 
 // ─── Garde-fou : opération introuvable ───────────────────────────────────
 si pIdOperation = 0 _ou_ stOperation.IdOperation = 0 alors
-	Trace("ExporteBaseOperationCsv : opération introuvable (IdOperation=" + pIdOperation + ")")
 	renvoyer ""
 fin
 
@@ -113,7 +112,6 @@ fin
 sNomCsv		= stOperation.Dossier + ".csv"
 sCheminCsv	= cpProjet.CheminFichier(pIdOperation, __REP_PRINTSHOP__) + sNomCsv
 si pas fSauveTexte(sCheminCsv, sContenuCsv) alors
-	Trace("ExporteBaseOperationCsv : échec fSauveTexte : " + sCheminCsv)
 	renvoyer ""
 fin
 

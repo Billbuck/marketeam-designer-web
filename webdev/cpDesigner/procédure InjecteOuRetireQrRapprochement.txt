@@ -1,7 +1,7 @@
 // =============================================================================
 // cpDesigner.InjecteOuRetireQrRapprochement
 // Rôle : Synchroniser la présence de la zone système « QR de rapprochement »
-//        (id "sys-qr-rapprochement") dans le JsonDesignerData d'UN document,
+//        (id "sys-datamatrix-rapprochement") dans le JsonDesignerData d'UN document,
 //        selon QrRequis calculé par RecalculeEtatRapprochement :
 //          - QrRequis ET zone ABSENTE  -> INJECTER (zone système, fixe).
 //          - NON QrRequis ET zone PRÉSENTE -> RETIRER.
@@ -17,7 +17,8 @@
 //   « sys-affranchissement ») :
 //   - zone CODE-BARRES système (zonesCodeBarres) : seul canal portant
 //     champFusion jusqu'au PSMD -> [Rapprochement].
-//   - typeCodeBarres = "qrcode" (symbologie QR ; supportée JS + PSMD).
+//   - typeCodeBarres = "datamatrix" (correction du 02/07/2026 — précédemment
+//     "qrcode" par erreur ; cf. ConstruireDatamatrixRapprochement).
 //   - sourceType = "champ", champFusion = "Rapprochement".
 //   - contrainte.global.systeme = Vrai -> NON déplaçable / NON redimensionnable
 //     / NON supprimable ; positionFixe + locked = Vrai.
@@ -30,199 +31,155 @@
 //                                        du document concerné).
 //   pIndexDocument  (entier)           — position 1..n dans tabStDocument.
 // =============================================================================
-PROCÉDURE InjecteOuRetireQrRapprochement(pStOperation est une structOperation, pIndexDocument est un entier)
+procédure InjecteOuRetireQrRapprochement(pStOperation est une structOperation, pIndexDocument est un entier)
 
 // Garde-fou : index valide
-SI pIndexDocument < 1 _OU_ pIndexDocument > pStOperation.stOperationLettre.tabStDocument..Occurrence ALORS
-	RETOUR
-FIN
+si pIndexDocument < 1 _ou_ pIndexDocument > pStOperation.stOperationLettre.tabStDocument..Occurrence alors
+	retour
+fin
 
 // ─── 1. QrRequis de CE document (via le « cerveau » Phase 2) ──────────────
-stEtat		est une structDesignerEtatRapprochement = cpDesigner.RecalculeEtatRapprochement(pStOperation)
-bQrRequis	est un booléen	= Faux
-POUR TOUT stLigne DE stEtat.tabDocuments
-	SI stLigne.IndexDocument = pIndexDocument ALORS
+stEtat		est une structDesignerEtatRapprochement		= cpDesigner.RecalculeEtatRapprochement(pStOperation)
+bQrRequis	est un booléen										= Faux
+pour tout stLigne de stEtat.tabDocuments
+	si stLigne.IndexDocument = pIndexDocument alors
 		bQrRequis = stLigne.QrRequis
-		SORTIR
-	FIN
-FIN
+		sortir
+	fin
+fin
 
 // ─── 2. Présence actuelle de la zone dans le JSON ─────────────────────────
+//   SOURCE UNIQUE de détection : cpDesigner.JsonContientQrRapprochement
+//   (remplace l'ancienne interne ZoneRapprochementPresente, supprimée).
 sJson		est une chaîne	= pStOperation.stOperationLettre.tabStDocument[pIndexDocument].JsonDesignerData
-bPresent	est un booléen	= ZoneRapprochementPresente(sJson)
+bPresent	est un booléen	= cpDesigner.JsonContientQrRapprochement(sJson)
+
 
 // ─── 3. Synchronisation (injection / retrait / rien) — logique INCHANGÉE ──
 //   La zone créée utilise le constructeur UNIQUE ConstruireDatamatrixRapprochement.
 //   PAS de réapplication sur une zone déjà présente (valeur de position fixe).
-SI bQrRequis _ET_ bPresent = Faux ALORS
+si bQrRequis _et_ bPresent = Faux alors
 	pStOperation.stOperationLettre.tabStDocument[pIndexDocument].JsonDesignerData = AjouteZoneRapprochement(sJson, pStOperation.stOperationLettre.tabStDocument[pIndexDocument])
-SINON SI bQrRequis = Faux _ET_ bPresent ALORS
+sinon si bQrRequis = Faux _et_ bPresent alors
 	pStOperation.stOperationLettre.tabStDocument[pIndexDocument].JsonDesignerData = RetireZoneRapprochement(sJson)
-FIN
+fin
 
 
 // ═════════════════════════════════════════════════════════════════════════
 // PROCÉDURES INTERNES
 // ═════════════════════════════════════════════════════════════════════════
 
-	// ─── La zone "sys-qr-rapprochement" est-elle présente ? ─────────────────
-	PROCÉDURE INTERNE ZoneRapprochementPresente(LOCAL pJson est une chaîne)
-		jDoc	est un JSON
-		jData	est un JSON
-		bJsonOk	est un booléen	= Vrai
-		bTrouve	est un booléen	= Faux
-		sId		est une chaîne
-
-		SI pJson = "" ALORS
-			RENVOYER Faux
-		FIN
-		QUAND EXCEPTION DANS
-			jDoc = pJson
-		FAIRE
-			bJsonOk = Faux
-		FIN
-		SI bJsonOk = Faux ALORS
-			RENVOYER Faux
-		FIN
-
-		SI jDoc.data..Existe ALORS
-			jData = jDoc.data
-		SINON
-			jData = jDoc
-		FIN
-
-		// Code-barres (canal d'injection)
-		SI jData.zonesCodeBarres..Existe ALORS
-			POUR nZ = 1 _À_ jData.zonesCodeBarres..Occurrence
-				sId = ""
-				QUAND EXCEPTION DANS
-					SI jData.zonesCodeBarres[nZ].id..Existe ALORS
-						sId = jData.zonesCodeBarres[nZ].id
-					FIN
-				FAIRE
-				FIN
-				SI sId = "sys-qr-rapprochement" ALORS
-					bTrouve = Vrai
-				FIN
-			FIN
-		FIN
-		// QR (robustesse — au cas où une version antérieure l'aurait posé là)
-		SI bTrouve = Faux _ET_ jData.zonesQR..Existe ALORS
-			POUR nZ = 1 _À_ jData.zonesQR..Occurrence
-				sId = ""
-				QUAND EXCEPTION DANS
-					SI jData.zonesQR[nZ].id..Existe ALORS
-						sId = jData.zonesQR[nZ].id
-					FIN
-				FAIRE
-				FIN
-				SI sId = "sys-qr-rapprochement" ALORS
-					bTrouve = Vrai
-				FIN
-			FIN
-		FIN
-
-		RENVOYER bTrouve
-	FIN
-
-	// ─── Construit la zone (constructeur UNIQUE) et l'ajoute au JSON ────────
-	//   Renvoie le JSON (chaîne) modifié. Appelée uniquement si la zone est
-	//   absente (cf. garde dans le corps principal) → anti-doublon préservé.
-	//   La définition/géométrie vient de cpDesigner.ConstruireDatamatrixRapprochement
+// ─── Construit la zone (constructeur UNIQUE) et l'ajoute au JSON ────────
+//   Renvoie le JSON (chaîne) modifié. Appelée uniquement si la zone est
+//   absente (cf. garde dans le corps principal) → anti-doublon préservé.
+//   La définition/géométrie vient de cpDesigner.ConstruireDatamatrixRapprochement
 	//   (SOURCE UNIQUE, partagée avec le Designer JS).
-	PROCÉDURE INTERNE AjouteZoneRapprochement(LOCAL pJson est une chaîne, LOCAL pDocLoc est une structDocument)
-		jDoc	est un JSON
+	procédure interne AjouteZoneRapprochement(local pJson est une chaîne, local pDocLoc est une structDocument)
+		jDoc		est un JSON
 		bJsonOk	est un booléen	= Vrai
-		jZone	est un JSON
+		jZone		est un JSON
 
-		SI pJson = "" ALORS
-			RENVOYER pJson		// pas de structure document -> on ne crée rien
-		FIN
-		QUAND EXCEPTION DANS
-			jDoc = pJson
-		FAIRE
+		si pJson = "" alors
+			renvoyer pJson		// pas de structure document -> on ne crée rien
+		fin
+		// Parse UTF-8 (règle projet : ChaîneVersUTF8 sur toute chaîne JSON
+		// avant parse — le parse brut levait une exception silencieuse sur
+		// les JSON accentués -> injection sautée sans erreur)
+		quand exception dans
+			jDoc = ChaîneVersUTF8(pJson)
+		faire
 			bJsonOk = Faux
-		FIN
-		SI bJsonOk = Faux ALORS
-			RENVOYER pJson
-		FIN
+		fin
+		si bJsonOk = Faux alors
+			renvoyer pJson
+		fin
 
 		// Source unique
 		jZone = cpDesigner.ConstruireDatamatrixRapprochement(pDocLoc)
 
 		// ─── Ajout dans zonesCodeBarres (gère le wrapper .data) ───
-		jArrVide est un JSON = "[]"		// tableau JSON vide (parse du littéral)
-		SI jDoc.data..Existe ALORS
-			SI jDoc.data.zonesCodeBarres..Existe = Faux ALORS
+		jArrVide		est un JSON	= "[]"		// tableau JSON vide (parse du littéral)
+		nOccAvant		est un entier	= -1
+		nOccApres		est un entier	= -1
+		si jDoc.data..Existe alors
+			si jDoc.data.zonesCodeBarres..Existe = Faux alors
 				jDoc.data.zonesCodeBarres = jArrVide
-			FIN
-			jDoc.data.zonesCodeBarres[jDoc.data.zonesCodeBarres..Occurrence + 1] = jZone
-		SINON
-			SI jDoc.zonesCodeBarres..Existe = Faux ALORS
+			fin
+			nOccAvant												= jDoc.data.zonesCodeBarres..Occurrence
+			jDoc.data.zonesCodeBarres[nOccAvant + 1]	= jZone
+			nOccApres												= jDoc.data.zonesCodeBarres..Occurrence
+		sinon
+			si jDoc.zonesCodeBarres..Existe = Faux alors
 				jDoc.zonesCodeBarres = jArrVide
-			FIN
-			jDoc.zonesCodeBarres[jDoc.zonesCodeBarres..Occurrence + 1] = jZone
-		FIN
+			fin
+			nOccAvant									= jDoc.zonesCodeBarres..Occurrence
+			jDoc.zonesCodeBarres[nOccAvant + 1]	= jZone
+			nOccApres									= jDoc.zonesCodeBarres..Occurrence
+		fin
 
-		RENVOYER JSONVersChaîne(jDoc)
-	FIN
+		// Contrôle sur la CHAÎNE sérialisée (Position = recherche brute,
+		// indépendante de tout parse/encodage)
+		sJsonResultat est une chaîne = JSONVersChaîne(jDoc)
+		renvoyer sJsonResultat
+	fin
 
-	// ─── Retire toute zone "sys-qr-rapprochement" du JSON ───────────────────
-	PROCÉDURE INTERNE RetireZoneRapprochement(LOCAL pJson est une chaîne)
-		jDoc	est un JSON
+	// ─── Retire toute zone "sys-datamatrix-rapprochement" du JSON ───────────────────
+	procédure interne RetireZoneRapprochement(local pJson est une chaîne)
+		jDoc		est un JSON
 		bJsonOk	est un booléen	= Vrai
 
-		SI pJson = "" ALORS
-			RENVOYER pJson
-		FIN
-		QUAND EXCEPTION DANS
-			jDoc = pJson
-		FAIRE
+		si pJson = "" alors
+			renvoyer pJson
+		fin
+		// Parse UTF-8 (même règle que AjouteZoneRapprochement)
+		quand exception dans
+			jDoc = ChaîneVersUTF8(pJson)
+		faire
 			bJsonOk = Faux
-		FIN
-		SI bJsonOk = Faux ALORS
-			RENVOYER pJson
-		FIN
+		fin
+		si bJsonOk = Faux alors
+			renvoyer pJson
+		fin
 
-		SI jDoc.data..Existe ALORS
-			SI jDoc.data.zonesCodeBarres..Existe ALORS
+		si jDoc.data..Existe alors
+			si jDoc.data.zonesCodeBarres..Existe alors
 				jDoc.data.zonesCodeBarres = FiltreSansRapprochement(jDoc.data.zonesCodeBarres)
-			FIN
-			SI jDoc.data.zonesQR..Existe ALORS
+			fin
+			si jDoc.data.zonesQR..Existe alors
 				jDoc.data.zonesQR = FiltreSansRapprochement(jDoc.data.zonesQR)
-			FIN
-		SINON
-			SI jDoc.zonesCodeBarres..Existe ALORS
+			fin
+		sinon
+			si jDoc.zonesCodeBarres..Existe alors
 				jDoc.zonesCodeBarres = FiltreSansRapprochement(jDoc.zonesCodeBarres)
-			FIN
-			SI jDoc.zonesQR..Existe ALORS
+			fin
+			si jDoc.zonesQR..Existe alors
 				jDoc.zonesQR = FiltreSansRapprochement(jDoc.zonesQR)
-			FIN
-		FIN
+			fin
+		fin
 
-		RENVOYER JSONVersChaîne(jDoc)
-	FIN
+		renvoyer JSONVersChaîne(jDoc)
+	fin
 
-	// ─── Renvoie un tableau JSON sans la zone "sys-qr-rapprochement" ────────
-	//   jTableau est garanti existant par l'appelant (test ..Existe en amont).
-	//   Un seul niveau de QUAND EXCEPTION (lecture .id) — WLangage interdit
+// ─── Renvoie un tableau JSON sans la zone "sys-datamatrix-rapprochement" ────────
+//   jTableau est garanti existant par l'appelant (test ..Existe en amont).
+//   Un seul niveau de QUAND EXCEPTION (lecture .id) — WLangage interdit
 	//   l'imbrication des traitements d'exception.
-	PROCÉDURE INTERNE FiltreSansRapprochement(LOCAL jTableau est un JSON)
-		jNew	est un JSON	= "[]"
+	procédure interne FiltreSansRapprochement(local jTableau est un JSON)
+		jNew		est un JSON	= "[]"
 		sId		est une chaîne
 
-		POUR nZ = 1 _À_ jTableau..Occurrence
+		pour nZ = 1 _à_ jTableau..Occurrence
 			sId = ""
-			QUAND EXCEPTION DANS
-				SI jTableau[nZ].id..Existe ALORS
+			quand exception dans
+				si jTableau[nZ].id..Existe alors
 					sId = jTableau[nZ].id
-				FIN
-			FAIRE
-			FIN
-			SI sId <> "sys-qr-rapprochement" ALORS
+				fin
+			faire
+			fin
+			si sId <> "sys-datamatrix-rapprochement" alors
 				jNew[jNew..Occurrence + 1] = jTableau[nZ]
-			FIN
-		FIN
+			fin
+		fin
 
-		RENVOYER jNew
-	FIN
+		renvoyer jNew
+	fin

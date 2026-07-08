@@ -29,7 +29,7 @@ si fFichierExiste(pCheminDest) alors
 	fSupprime(pCheminDest)
 fin
 
-QUAND EXCEPTION DANS
+quand exception dans
 	si HTTPRequête(pUrl) alors
 		// Corps de réponse récupéré en binaire (Buffer) puis écrit sur disque
 		bufResultat = HTTPDonneRésultat()
@@ -37,10 +37,9 @@ QUAND EXCEPTION DANS
 			bOk = Vrai
 		fin
 	fin
-FAIRE
-	Trace("TelechargeFichierBinaire : exception HTTP : " + ExceptionInfo(errMessage))
+faire
 	bOk = Faux
-FIN
+fin
 
 si pas bOk alors
 	renvoyer Faux
@@ -48,12 +47,10 @@ fin
 
 // Vérifications post-téléchargement : fichier présent et non vide
 si pas fFichierExiste(pCheminDest) alors
-	Trace("TelechargeFichierBinaire : fichier absent après téléchargement : " + pCheminDest)
 	renvoyer Faux
 fin
 
 si fTaille(pCheminDest) <= 0 alors
-	Trace("TelechargeFichierBinaire : fichier vide (0 octet) : " + pCheminDest)
 	renvoyer Faux
 fin
 

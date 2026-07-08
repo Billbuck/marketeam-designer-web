@@ -1,10 +1,8 @@
 
-
-Code Ajax serveur :
 jsDesigner	est un JSON
 jsWrapper	est un JSON
 
-_nIndDesignerEnCours	= znrLtrContenu
+_nIndDesignerEnCours = znrLtrContenu
 
 // Note : on N'IMPOSE PAS que JsonDesignerData soit non-vide.
 // Cas légitimes où il peut être vide :
@@ -21,7 +19,7 @@ _nIndDesignerEnCours	= znrLtrContenu
 // champsFusion, donneesApercu, et zones système (adresse destinataire si
 // document porte-adresse d'une enveloppe à fenêtre)
 // On y injecte ensuite la partie data du document (zones utilisateur ou modèle)
-jsWrapper				= ChaîneVersUTF8(cpDesigner.ComposerJsonDesignerCreation(__stOperation, __tabEchantillonBaseLigne, __stOperation.TypeOperation, Faux, _nIndDesignerEnCours, -1, -1, -1, (_nIndDesignerEnCours = 1)))
+jsWrapper = ChaîneVersUTF8(cpDesigner.ComposerJsonDesignerCreation(__stOperation, __tabEchantillonBaseLigne, __stOperation.TypeOperation, Faux, _nIndDesignerEnCours, -1, -1, -1, (_nIndDesignerEnCours = 1)))
 
 si __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesignerData <> "" alors
 	jsDesigner = ChaîneVersUTF8(__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesignerData)
@@ -119,7 +117,7 @@ si __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesig
 	// Critère SYS : cf. docs/Structure Webdev Designer V3.md ligne 183
 	//   « Le code SYS reste réservé aux zones système injectées par
 	//     WebDev (adresse destinataire, séquentiel, datamatrix...) »
-	jsChampsFusionFinal	est un JSON			= "[]"
+	jsChampsFusionFinal		est un JSON			= "[]"
 	sNomsSysteme				est une chaîne		= ","	// pseudo-set ",NomA,NomB,"
 
 	// ═════════════════════════════════════════════════════════════════
@@ -164,17 +162,17 @@ si __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesig
 		si pas bSeqPresent alors
 			nIdxAjoutSeq est un entier = jsWrapper.data.champsFusion..Occurrence + 1
 			jsWrapper.data.champsFusion[nIdxAjoutSeq].nom			= "Sequentiel"
-			jsWrapper.data.champsFusion[nIdxAjoutSeq].type		= "SYS"
-			jsWrapper.data.champsFusion[nIdxAjoutSeq].libelle	= "Séquentiel"
-			jsWrapper.data.champsFusion[nIdxAjoutSeq].ordre		= 998
+			jsWrapper.data.champsFusion[nIdxAjoutSeq].type			= "SYS"
+			jsWrapper.data.champsFusion[nIdxAjoutSeq].libelle		= "Séquentiel"
+			jsWrapper.data.champsFusion[nIdxAjoutSeq].ordre			= 998
 		fin
 
 		si pas bTimbrePresent alors
 			nIdxAjoutTimbre est un entier = jsWrapper.data.champsFusion..Occurrence + 1
 			jsWrapper.data.champsFusion[nIdxAjoutTimbre].nom			= "Timbre"
-			jsWrapper.data.champsFusion[nIdxAjoutTimbre].type		= "SYS"
-			jsWrapper.data.champsFusion[nIdxAjoutTimbre].libelle	= "Affranchissement"
-			jsWrapper.data.champsFusion[nIdxAjoutTimbre].ordre		= 999
+			jsWrapper.data.champsFusion[nIdxAjoutTimbre].type			= "SYS"
+			jsWrapper.data.champsFusion[nIdxAjoutTimbre].libelle		= "Affranchissement"
+			jsWrapper.data.champsFusion[nIdxAjoutTimbre].ordre			= 999
 		fin
 	fin
 
@@ -208,9 +206,6 @@ si __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesig
 			si pas bDoublonSys alors
 				jsChampsFusionFinal[jsChampsFusionFinal..Occurrence + 1] = ...
 				jsData.champsFusion[nIndM]
-			sinon
-				Trace("btnDocumentPersonnaliser : champ modèle ignoré (doublon SYS) : " ...
-				+ jsData.champsFusion[nIndM].nom)
 			fin
 		fin
 	fin
@@ -257,12 +252,7 @@ si __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesig
 			sInjectePB2	est une chaîne	= jsWrapper.data.champsFusion[nIndPurgeBase].injecteParBase
 			sLibelleP2	est une chaîne	= jsWrapper.data.champsFusion[nIndPurgeBase].libelle
 
-			si sInjectePB2 = "1" alors
-				// Champ injecté par la base à l'exploitation précédente — à purger
-				Trace("PARTIE 2 : champ " + sLibelleP2 + " injecteParBase=[" + sInjectePB2 + "] => PURGÉ")
-			sinon
-				// Champ du modèle (ou SYS) — préservé
-				Trace("PARTIE 2 : champ " + sLibelleP2 + " injecteParBase=[" + sInjectePB2 + "] => conservé")
+			si sInjectePB2 <> "1" alors
 				nIdxConserve est un entier = jsChampsFusionSansBase..Occurrence + 1
 				jsChampsFusionSansBase[nIdxConserve] = jsWrapper.data.champsFusion[nIndPurgeBase]
 			fin
@@ -431,12 +421,6 @@ si __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesig
 				//   (RemplirDesignerApercu) a déjà rempli ces colonnes
 				//   avec les vraies valeurs fraîches par enregistrement.
 				si Position(sNomsTechniquesBase, "," + jsValeurModele.nom + ",") > 0 alors
-					// TRACE TEMPORAIRE (Point 2, Sous-étape B) — premier record uniquement
-					si nIndW = 1 alors
-						Trace("[Point2-B] " + jsValeurModele.nom + " regimeBase=" ...
-						+ (bRegimeBPourCorrectionA ? "V" sinon "F") ...
-						+ " presentBase=V -> valeur='" + jsValeurModele.valeur + "' (base prime, modele ignoré)")
-					fin
 					continuer
 				fin
 
@@ -445,9 +429,6 @@ si __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesig
 				//   vide pour les standards absents (matrice §3). Symétrique
 				//   avec SelectionModèle.txt.
 				si bRegimeBPourCorrectionA alors
-					si nIndW = 1 alors
-						Trace("[Point2-B] " + jsValeurModele.nom + " regimeBase=V presentBase=F -> valeur='' (absent en B, vide)")
-					fin
 					continuer
 				fin
 
@@ -470,9 +451,6 @@ si __stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].JsonDesig
 					// régime A : fiche client figée).
 					jsWrapper.data.donneesApercu[nIndW].enregistrement[ ...
 					jsWrapper.data.donneesApercu[nIndW].enregistrement..Occurrence + 1] = jsValeurModele
-					si nIndW = 1 alors
-						Trace("[Point2-B] " + jsValeurModele.nom + " regimeBase=F -> valeur='" + jsValeurModele.valeur + "' (ajout modele, régime A)")
-					fin
 				fin
 			fin
 		fin
@@ -623,7 +601,7 @@ si bAvecBaseLocal alors
 	//   est prise en compte automatiquement. Symétrique avec
 	//   SelectionModèle.txt (ÉTAPE C).
 	tabStandardsRef		est un tableau de structDesignerChampStandard	= cpDesigner.RemplirDesignerChampsStandard(__stOperation.IdClient)
-	sNomsStandards		est une chaîne												= ","
+	sNomsStandards			est une chaîne												= ","
 	pour tout stStdRef de tabStandardsRef
 		si stStdRef.nom <> "" alors
 			sNomsStandards += stStdRef.nom + ","
@@ -640,7 +618,6 @@ si bAvecBaseLocal alors
 
 	pour tout stBaseChampC, sLibelleC de __stOperation.taaBaseChamp
 		si sLibelleC = "Séquentiel" _ou_ sLibelleC = "Affranchissement" alors
-			Trace("btnDocumentPersonnaliser : libellé base ignoré (collision SYS) : " + sLibelleC)
 			continuer
 		fin
 		si Position(sLibellesPresents, "," + sLibelleC + ",") > 0 alors
@@ -649,7 +626,7 @@ si bAvecBaseLocal alors
 
 		nOrdreMax++
 		jsNouvelleEntree est un JSON = "{}"
-		jsNouvelleEntree.nom				= stBaseChampC.Champ
+		jsNouvelleEntree.nom					= stBaseChampC.Champ
 		jsNouvelleEntree.libelle			= sLibelleC
 		// Lot 1 formatage — type FIN transmis tel quel (cohérent avec
 		// RemplirDesignerChampsFusion, cf. CDC formatage §3.1).
@@ -658,7 +635,7 @@ si bAvecBaseLocal alors
 		sinon
 			jsNouvelleEntree.type = "TXT"
 		fin
-		jsNouvelleEntree.ordre			= nOrdreMax
+		jsNouvelleEntree.ordre				= nOrdreMax
 		jsNouvelleEntree.origine			= "import"
 		// Cahier des charges (Option A) — categorie déterminée par
 		//   croisement avec la liste officielle des standards
@@ -668,9 +645,7 @@ si bAvecBaseLocal alors
 		sinon
 			jsNouvelleEntree.categorie = "specifique"
 		fin
-		// TRACE TEMPORAIRE (Option A) — à retirer après validation
-		Trace("Etape C: " + stBaseChampC.Champ + " -> categorie=" + jsNouvelleEntree.categorie)
-		jsNouvelleEntree.presenteEnBase															= Vrai
+		jsNouvelleEntree.presenteEnBase																= Vrai
 		// L18/A35 PARTIE 1 — MARQUEUR CHAÎNE robuste : valeur "1"
 		//   (et NON booléen Vrai). Justification : un attribut JSON
 		//   booléen ABSENT lu via `= Vrai` en WLangage a un
@@ -680,7 +655,7 @@ si bAvecBaseLocal alors
 		//   contre une lecture chaîne défensive (cf. PARTIE 2 et 3),
 		//   et un attribut JSON absent lu en chaîne retourne ""
 		//   -> JAMAIS de faux positif sur les champs du modèle.
-		jsNouvelleEntree.injecteParBase															= "1"
+		jsNouvelleEntree.injecteParBase																= "1"
 
 		jsWrapper.data.champsFusion[jsWrapper.data.champsFusion..Occurrence + 1]		= jsNouvelleEntree
 	fin
@@ -750,20 +725,17 @@ pour nIndB = 1 _à_ jsWrapper.data.champsFusion..Occurrence
 	fin
 
 	sNomTechB				est une chaîne		= jsWrapper.data.champsFusion[nIndB].nom
-	sLibB					est une chaîne		= jsWrapper.data.champsFusion[nIndB].libelle
-	sCleLocaleB			est une chaîne		= "LOCAL_" + sLocalIdB
+	sLibB						est une chaîne		= jsWrapper.data.champsFusion[nIndB].libelle
+	sCleLocaleB				est une chaîne		= "LOCAL_" + sLocalIdB
 
 	// Déterminer si le champ a une correspondance base (= la base
 	// fait foi pour les valeurs). Le mapping nom = "Champ3" a été
 	// fait par l'étape A (L18/A40) ci-dessus si correspondance libellé.
-	bAvecCorrespBase	est un booléen		= Faux
+	bAvecCorrespBase		est un booléen		= Faux
 	si sNomTechB <> "" _et_ Position(sNomsTechniquesBase, "," + sNomTechB + ",") > 0 alors
 		bAvecCorrespBase = Vrai
 	fin
 
-	// L18/A33 — TRACE TEMPORAIRE (à retirer après validation)
-	Trace("CorrectionB champ " + sLibB + " localId=[" + sLocalIdB + "] nomTech=[" + sNomTechB ...
-	+ "] avecBase=" + bAvecCorrespBase + " echantDefaut=[" + jsWrapper.data.champsFusion[nIndB].echantillonDefaut + "]")
 
 	si jsWrapper.data.donneesApercu..Occurrence = 0 alors
 		continuer  // pas d'enregistrement à remplir
@@ -793,20 +765,13 @@ pour nIndB = 1 _à_ jsWrapper.data.champsFusion..Occurrence
 			sValeurB = jsWrapper.data.champsFusion[nIndB].echantillonDefaut
 		fin
 
-		// TRACE TEMPORAIRE (Point 2, Sous-étape A) — à retirer après validation.
-		si nIndEB = 1 alors
-			Trace("[Point2-A] " + sLibB + " (" + sNomTechB + ") regimeBase=" ...
-			+ (bAvecBaseLocal ? "V" sinon "F") ...
-			+ " corresp=" + (bAvecCorrespBase ? "V" sinon "F") ...
-			+ " -> valeur='" + sValeurB + "'")
-		fin
 
 		// Injecter ou mettre à jour la clé sCleLocaleB dans cet enregistrement
 		// Pattern d'assignation directe (pas de variable JSON intermédiaire)
 		bDejaB est un booléen = Faux
 		pour nIndCkB = 1 _à_ jsWrapper.data.donneesApercu[nIndEB].enregistrement..Occurrence
 			si jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIndCkB].nom = sCleLocaleB alors
-				jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIndCkB].valeur	= sValeurB
+				jsWrapper.data.donneesApercu[nIndEB].enregistrement[nIndCkB].valeur		= sValeurB
 				bDejaB																						= Vrai
 				sortir
 			fin
@@ -827,8 +792,8 @@ fin
 //   direct d'afficher ou non le QR de rapprochement (règle N >= 2). Une seule
 //   donnée transmise à l'ouverture suffit (pas de dialogue continu iframe<->serveur).
 // ═════════════════════════════════════════════════════════════════════════
-stEtatRappOuv			est une structDesignerEtatRapprochement = cpDesigner.RecalculeEtatRapprochement(__stOperation)
-nNbAutresPersoOuv		est un entier = 0
+stEtatRappOuv			est une structDesignerEtatRapprochement		= cpDesigner.RecalculeEtatRapprochement(__stOperation)
+nNbAutresPersoOuv		est un entier										= 0
 pour tout stLigneRappOuv de stEtatRappOuv.tabDocuments
 	si stLigneRappOuv.IndexDocument <> _nIndDesignerEnCours _et_ stLigneRappOuv.EstPersonnalise alors
 		nNbAutresPersoOuv++
@@ -843,23 +808,3 @@ jsWrapper.qrRapprochementZone = cpDesigner.ConstruireDatamatrixRapprochement(__s
 
 gsJsonDesigner = JSONVersChaîne(jsWrapper)
 
-
-
-
-
-
-Code navigateur retour Ajax :
-
-// Envoyer le JSON au Designer
-si gsJsonDesigner <> "" alors
-	btnFerme.Visible					= Faux
-	grpBoutonProgression.Visible	= Faux
-	btnPrécédent.Visible				= Faux
-	btnSuivant.Visible				= Faux
-	grpTunnelNombre.Visible			= Faux
-	grpTunnelMontantHT.Visible		= Faux
-	btnAccueil.Etat					= Grisé
-	celLtrConteneur.Plan				= 2
-	EnvoyerMessageIframe(gsJsonDesigner)
-	gsJsonDesigner 					= ""
-fin

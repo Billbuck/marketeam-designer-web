@@ -25,13 +25,11 @@ sCommandeBat			est une chaîne
 
 // ─── Validation du JSON en entrée ────────────────────────────────────────
 si stDocument.JsonDesignerData = "" alors
-	Trace("GenererPsmdServeur : pJsonDesigner vide")
 	renvoyer Faux
 fin
 
 // ─── Validation de la configuration INI ──────────────────────────────────
 si sNodeExe = "" ou sNodeCli = "" alors
-	Trace("GenererPsmdServeur : section [NODE] manquante dans le fichier INI (CHEMIN / CLI)")
 	renvoyer Faux
 fin
 
@@ -105,13 +103,13 @@ sCheminJsonTemp		= sRepTravail + "psmd_json_" + sCodeTemp + ".tmp"
 //      Garde-fou : si __stOperation/taaBaseChamp inaccessibles (hors
 //      tunnel courrier), mapping vide > aucune substitution > PSMD
 //      écrit avec @LOCAL_xxx@ comme avant.
-taaMappingPsmd		est un tableau associatif de chaîne = Partage.ConstruireMappingPsmLibelle(stDocument.JsonDesignerData)
+taaMappingPsmd		est un tableau associatif de chaîne	= Partage.ConstruireMappingPsmLibelle(stDocument.JsonDesignerData)
 
 // 3. SUBSTITUTION TEXTUELLE DIRECTE sur la chaîne JSON entière.
 //    sJsonPsmdTemp est la copie chaîne destinée au fichier temp.
 //    Pour chaque entrée du mapping, 3 motifs de substitution.
-sJsonPsmdTemp	est une chaîne	= stDocument.JsonDesignerData
-nNbSubst			est un entier	= 0
+sJsonPsmdTemp		est une chaîne								= stDocument.JsonDesignerData
+nNbSubst				est un entier								= 0
 
 si taaMappingPsmd..Occurrence > 0 alors
 	pour tout sNomPsmSubst, sCleMappingSubst de taaMappingPsmd
@@ -121,9 +119,9 @@ si taaMappingPsmd..Occurrence > 0 alors
 		// a. Marqueurs @KEY@ dans contenu / contenuRtf / qrConfig.fields tokens
 		sMarqA	est une chaîne	= "@" + sCleMappingSubst + "@"
 		sMarqB	est une chaîne	= "@" + sNomPsmSubst + "@"
-		nPosA		est un entier	= Position(sJsonPsmdTemp, sMarqA)
+		nPosA		est un entier	= sJsonPsmdTemp.Position(sMarqA)
 		si nPosA > 0 alors
-			sJsonPsmdTemp = Remplace(sJsonPsmdTemp, sMarqA, sMarqB)
+			sJsonPsmdTemp = sJsonPsmdTemp.Remplace(sMarqA, sMarqB)
 			nNbSubst++
 		fin
 
@@ -135,10 +133,10 @@ si taaMappingPsmd..Occurrence > 0 alors
 		//     psmd-generator émette la variable alias correspondante.
 		pour nIndSufFmt = 1 _à_ 9
 			sSufFmt		est une chaîne	= ExtraitChaîne("__MAJ" + TAB + "__MIN" + TAB + "__PRO" + TAB + "__DATE1" + TAB + "__DATE2" + TAB + "__DATE3" + TAB + "__DATE4" + TAB + "__DATE5" + TAB + "__DATE6", nIndSufFmt, TAB)
-			sMarqA2	est une chaîne	= "@" + sCleMappingSubst + sSufFmt + "@"
-			sMarqB2	est une chaîne	= "@" + sNomPsmSubst + sSufFmt + "@"
-			si Position(sJsonPsmdTemp, sMarqA2) > 0 alors
-				sJsonPsmdTemp = Remplace(sJsonPsmdTemp, sMarqA2, sMarqB2)
+			sMarqA2		est une chaîne	= "@" + sCleMappingSubst + sSufFmt + "@"
+			sMarqB2		est une chaîne	= "@" + sNomPsmSubst + sSufFmt + "@"
+			si sJsonPsmdTemp.Position(sMarqA2) > 0 alors
+				sJsonPsmdTemp = sJsonPsmdTemp.Remplace(sMarqA2, sMarqB2)
 				nNbSubst++
 			fin
 		fin
@@ -147,35 +145,32 @@ si taaMappingPsmd..Occurrence > 0 alors
 		// Guillemets WLangage : "" = un guillemet littéral.
 		sKeyA	est une chaîne	= """key"":""" + sCleMappingSubst + """"
 		sKeyB	est une chaîne	= """key"":""" + sNomPsmSubst + """"
-		nPosB	est un entier	= Position(sJsonPsmdTemp, sKeyA)
+		nPosB	est un entier	= sJsonPsmdTemp.Position(sKeyA)
 		si nPosB > 0 alors
-			sJsonPsmdTemp = Remplace(sJsonPsmdTemp, sKeyA, sKeyB)
+			sJsonPsmdTemp = sJsonPsmdTemp.Remplace(sKeyA, sKeyB)
 			nNbSubst++
 		fin
 
 		// c. source.champFusion / champFusion : "champFusion":"LOCAL_xxx"
 		sCFA	est une chaîne	= """champFusion"":""" + sCleMappingSubst + """"
 		sCFB	est une chaîne	= """champFusion"":""" + sNomPsmSubst + """"
-		nPosC	est un entier	= Position(sJsonPsmdTemp, sCFA)
+		nPosC	est un entier	= sJsonPsmdTemp.Position(sCFA)
 		si nPosC > 0 alors
-			sJsonPsmdTemp = Remplace(sJsonPsmdTemp, sCFA, sCFB)
+			sJsonPsmdTemp = sJsonPsmdTemp.Remplace(sCFA, sCFB)
 			nNbSubst++
 		fin
 	fin
-	Trace("L18/A44 v5 (nommage libellé) : " + nNbSubst + " substitution(s) effectuée(s) sur la chaîne JSON.")
-sinon
-	Trace("L18/A44 v5 (nommage libellé) : aucun mapping LOCAL_xxx > libellé (régime A ou pas de spécifique mappable). Substitution PSMD sautée.")
 fin
 
 // ─── Substitution nom d'affichage -> nom technique dans le \fonttbl (Lot 2B) ──
 //   Couvre PROD (--imposition) ET BAT (--no-bleed) : même fichier temp.
 //   Opère sur la copie chaîne sJsonPsmdTemp (le JsonDesignerData en base reste intact).
 nIdClientPolice est un entier = 0
-QUAND EXCEPTION DANS
+quand exception dans
 	nIdClientPolice = __stOperation.IdClient
-FAIRE
+faire
 	nIdClientPolice = 0
-FIN
+fin
 sJsonPsmdTemp = SubstitueNomTechniquePolices(sJsonPsmdTemp, nIdClientPolice)
 
 // ─── Injection de l'URL générique dans les QR interactifs (zonesQR) ──────────
@@ -192,8 +187,8 @@ si sUrlQrInteractif = "" alors
 	sUrlQrInteractif = "https://www.marketeam.com"
 fin
 
-QUAND EXCEPTION DANS
-	jPsmdQr		est un JSON			= ChaîneVersUTF8(sJsonPsmdTemp)
+quand exception dans
+	jPsmdQr		est un JSON			= sJsonPsmdTemp.VersUTF8()
 	bModifieQr	est un booléen		= Faux
 
 	// Deux formes possibles, comme JsonContientQrInteractif : data.zonesQR ou racine zonesQR
@@ -222,16 +217,14 @@ QUAND EXCEPTION DANS
 	fin
 
 	si bModifieQr alors
-		sJsonPsmdTemp = JSONVersChaîne(jPsmdQr)
-		Trace("GenererPsmdServeur : URL générique injectée dans zonesQR — " + sUrlQrInteractif)
+		sJsonPsmdTemp = jPsmdQr.VersChaîne()
 	fin
-FAIRE
-	Trace("GenererPsmdServeur : injection QR interactif ignorée (JSON non parsable / structure inattendue) : " + ExceptionInfo(errMessage))
-FIN
+faire
+//	Trace("GenererPsmdServeur : injection QR interactif ignorée (JSON non parsable / structure inattendue) : " + ExceptionInfo(errMessage))
+fin
 
 // ─── Écriture du JSON dans le fichier temporaire ─────────────────────────
-si pas fSauveTexte(sCheminJsonTemp, ChaîneVersUTF8(sJsonPsmdTemp)) alors
-	Trace("GenererPsmdServeur : échec fSauveTexte JSON temp : " + sCheminJsonTemp)
+si pas fSauveTexte(sCheminJsonTemp, sJsonPsmdTemp.VersUTF8()) alors
 	renvoyer Faux
 fin
 
@@ -249,7 +242,6 @@ sCommande = ChaîneConstruit(
 sNodeExe, sNodeCli, sCheminJsonTemp, sCheminPsmd)
 
 si pas LanceAppli(sCommande, exeIconise, exeBloquant) alors
-	Trace("GenererPsmdServeur : LanceAppli a échoué — " + ErreurInfo(errComplet))
 	renvoyer Faux
 fin
 
@@ -272,7 +264,6 @@ fin
 
 // ─── Vérification de la présence du .psmd produit ────────────────────────
 si pas fFichierExiste(sCheminPsmd) alors
-	Trace("GenererPsmdServeur : .psmd introuvable après génération : " + sCheminPsmd)
 	renvoyer Faux
 fin
 
@@ -285,7 +276,6 @@ si fFichierExiste(sCheminPsmdBat) alors
 	stDocument.CheminPsmdBat	= sCheminPsmdBat
 sinon
 	stDocument.CheminPsmdBat	= sCheminPsmd
-	Trace("GenererPsmdServeur : PSMD BAT absent, fallback sur PSMD production")
 fin
 
 // ─── Lot 2C : copie des polices utilisées dans Fonts (avant rendu BAT) ───────

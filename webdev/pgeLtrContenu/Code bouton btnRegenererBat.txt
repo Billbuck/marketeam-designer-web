@@ -4,7 +4,7 @@
 //
 // Enchaînement (CE document uniquement) :
 //   1. InjecteOuRetireQrRapprochement : injecte/retire la zone système
-//      "sys-qr-rapprochement" dans le JsonDesignerData selon QrRequis.
+//      "sys-datamatrix-rapprochement" dans le JsonDesignerData selon QrRequis.
 //   2. Régénère le PSMD puis le BAT (flux IDENTIQUE à la validation Designer :
 //      ServeurTraiterMessageDesigner branche DOCUMENT).
 //
@@ -52,6 +52,10 @@ si _nIndDoc >= 1 _et_ _nIndDoc <= __stOperation.stOperationLettre.tabStDocument.
 			fin
 		fin
 
+		// Marqueur d'état du BAT généré (rapprochement) : ce BAT vient d'être
+		// produit avec le JSON courant (zone injectée/retirée à l'étape 1).
+		__stOperation.stOperationLettre.tabStDocument[_nIndDoc].EstBatGenereAvecRapprochement = cpDesigner.JsonContientQrRapprochement(__stOperation.stOperationLettre.tabStDocument[_nIndDoc].JsonDesignerData)
+
 		znrLtrContenu[_nIndDoc].btnRegenererBAT.Visible = Faux
 
 		// Préparation de l'aperçu
@@ -71,7 +75,3 @@ si _nIndDoc >= 1 _et_ _nIndDoc <= __stOperation.stOperationLettre.tabStDocument.
 	fin
 
 fin
-
-
-// Code Navigateur Retour Traitement Ajax :
-documentViewer.show();

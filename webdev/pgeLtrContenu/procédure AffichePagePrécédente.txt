@@ -1,0 +1,12 @@
+procédure AffichePagePrécédente()
+
+
+si PageMémorise(Vrai) alors
+	si __stOperation.stOperationLettre.IdPackage = 0 alors
+		PageAffiche(pgeLtrContenant)
+	sinon
+		PageAffiche(pgeBaseDonnees)
+	fin
+fin
+
+

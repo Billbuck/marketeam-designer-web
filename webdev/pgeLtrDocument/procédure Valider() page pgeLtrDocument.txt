@@ -117,7 +117,7 @@ fin
 
 		nIdMod				est un entier		= ltr_modele.IdModele
 
-		// ─── 1. PDF → Modeles/ ──────────────────────────────────────────
+		// ─── 1. PDF -> Modeles/ ──────────────────────────────────────────
 		sRepDocument		est une chaîne		= CheminModele(__REP_MODELE__)
 		sFicPdf			est une chaîne		= __DOC_LTR_MODELE__ + nIdMod + __PDF__
 		sSourcePdf		est une chaîne		= _stDocument.Repertoire + ["\"] + _stDocument.NomFichierTemp
@@ -126,13 +126,11 @@ fin
 		si Minuscule(sSourcePdf) <> Minuscule(sCiblePdf) alors
 			si fFichierExiste(sCiblePdf) alors fSupprime(sCiblePdf)
 			si pas fDéplaceFichier(sSourcePdf, sCiblePdf) alors
-				Trace("DeplacerFichiersModele : échec PDF", sSourcePdf, "-->", sCiblePdf)
 				retour Faux
 			fin
-			Trace("DeplacerFichiersModele : PDF --> " + sCiblePdf)
 		fin
 
-		// ─── 2. Vignettes (BAT format fini prioritaire) → Vignettes/ ────
+		// ─── 2. Vignettes (BAT format fini prioritaire) -> Vignettes/ ────
 		sRepVignette est une chaîne = CheminModele(__REP_VIGNETTE__)
 		pour nPage = 1 _à_ _stDocument.NombrePage
 			sFicVignette			est une chaîne		= __DOC_LTR_MODELE__ + nIdMod + "p" + nPage + __JPG__
@@ -149,14 +147,11 @@ fin
 				si Minuscule(sSourceVignette) <> Minuscule(sCibleVignette) alors
 					si fFichierExiste(sCibleVignette) alors fSupprime(sCibleVignette)
 					fCopieFichier(sSourceVignette, sCibleVignette)
-					Trace("DeplacerFichiersModele : Vignette p" + nPage + " --> " + sCibleVignette)
-				sinon
-					Trace("DeplacerFichiersModele : Vignette p" + nPage + " déjà en place")
 				fin
 			fin
 		fin
 
-		// ─── 3. Images de fond → Fonds/ ─────────────────────────────────
+		// ─── 3. Images de fond -> Fonds/ ─────────────────────────────────
 		sRepFond est une chaîne = CheminModele(__REP_FOND__)
 		pour nPage = 1 _à_ _stDocument.NombrePage
 			si _stDocument.tabImageFond..Occurrence >= nPage _et_ _stDocument.tabImageFond[nPage].CheminPhysique <> "" alors
@@ -166,9 +161,6 @@ fin
 				si Minuscule(_stDocument.tabImageFond[nPage].CheminPhysique) <> Minuscule(sCibleFond) alors
 					si fFichierExiste(sCibleFond) alors fSupprime(sCibleFond)
 					fCopieFichier(_stDocument.tabImageFond[nPage].CheminPhysique, sCibleFond)
-					Trace("DeplacerFichiersModele : Fond p" + nPage + " --> " + sCibleFond)
-				sinon
-					Trace("DeplacerFichiersModele : Fond p" + nPage + " déjà en place")
 				fin
 			fin
 		fin
@@ -178,7 +170,6 @@ fin
 		si _stDocument.RepertoireTravail <> "" _et_ Contient(_stDocument.RepertoireTravail, "\Temp\") alors
 			si fRepExiste(_stDocument.RepertoireTravail) alors
 				fRepSupprime(_stDocument.RepertoireTravail, frRécursif)
-				Trace("DeplacerFichiersModele : Temp modèle supprimé --> " + _stDocument.RepertoireTravail)
 			fin
 		fin
 

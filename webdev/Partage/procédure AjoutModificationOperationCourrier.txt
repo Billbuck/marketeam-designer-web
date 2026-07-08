@@ -60,7 +60,6 @@ si stOperation.stOperationLettre.stEnveloppe.JsonDesignerData <> "" alors
 
 	// Normalisation format (comme V3 pour documents)
 	si jDocEnv.pages..Occurrence = 0 _et_ jDocEnv.data.pages..Occurrence > 0 alors
-		Trace("AjoutModificationOperationCourrier : normalisation format enveloppe structDesignerLoad --> data")
 		stOperation.stOperationLettre.stEnveloppe.JsonDesignerData	= JSONVersChaîne(jDocEnv.data)
 		jDocEnv																		= stOperation.stOperationLettre.stEnveloppe.JsonDesignerData.VersUTF8()
 	fin
@@ -89,7 +88,6 @@ si stOperation.stOperationLettre.stEnveloppe.JsonDesignerData <> "" alors
 				jDocEnv.zonesImage[nIndEnv].source.valeur	= sUrlImageEnv
 
 				bModifieEnv											= Vrai
-				Trace("AjoutModificationOperationCourrier : image enveloppe " + sNomSimpleEnv + " --> " + sUrlImageEnv)
 			fin
 
 		fin
@@ -145,21 +143,22 @@ pour tout stDocument de stOperation.stOperationLettre.tabStDocument
 	fin
 
 
-	ope_lettre_contenu.IdModele						= stDocument.IdModele
-	ope_lettre_contenu.IdDocumentClient				= stDocument.IdDocumentClient
-	ope_lettre_contenu.IdSupportGrammage			= stDocument.IdSupportGrammage
-	ope_lettre_contenu.EstRectoVerso					= stDocument.EstRectoVerso
-	ope_lettre_contenu.EstFondPerdu					= stDocument.EstFondPerdu
-	ope_lettre_contenu.NombrePage						= stDocument.NombrePage
-	ope_lettre_contenu.NomFichierOrigine			= stDocument.NomFichierOrigine
-	ope_lettre_contenu.ModeImpression				= stDocument.ModeImpression
-	ope_lettre_contenu.EstPdfClient					= stDocument.EstPdfClient
-	ope_lettre_contenu.EstDocumentEnAttente		= stDocument.EstDocumentEnAttente
-	ope_lettre_contenu.EstPersonnaliseDesigner 	= stDocument.EstPersonnaliseDesigner
-	ope_lettre_contenu.IdPackageContenu				= stDocument.IdPackageContenu
-	ope_lettre_contenu.IdPapier						= stDocument.IdPapier
-	ope_lettre_contenu.QuantiteDocumentClient		= stDocument.QuantiteDocumentClient
-	ope_lettre_contenu.JsonDesignerData				= stDocument.JsonDesignerData
+	ope_lettre_contenu.IdModele								= stDocument.IdModele
+	ope_lettre_contenu.IdDocumentClient						= stDocument.IdDocumentClient
+	ope_lettre_contenu.IdSupportGrammage					= stDocument.IdSupportGrammage
+	ope_lettre_contenu.EstRectoVerso							= stDocument.EstRectoVerso
+	ope_lettre_contenu.EstFondPerdu							= stDocument.EstFondPerdu
+	ope_lettre_contenu.NombrePage								= stDocument.NombrePage
+	ope_lettre_contenu.NomFichierOrigine					= stDocument.NomFichierOrigine
+	ope_lettre_contenu.ModeImpression						= stDocument.ModeImpression
+	ope_lettre_contenu.EstPdfClient							= stDocument.EstPdfClient
+	ope_lettre_contenu.EstDocumentEnAttente				= stDocument.EstDocumentEnAttente
+	ope_lettre_contenu.EstPersonnaliseDesigner			= stDocument.EstPersonnaliseDesigner
+	ope_lettre_contenu.EstBatGenereAvecRapprochement	= stDocument.EstBatGenereAvecRapprochement
+	ope_lettre_contenu.IdPackageContenu						= stDocument.IdPackageContenu
+	ope_lettre_contenu.IdPapier								= stDocument.IdPapier
+	ope_lettre_contenu.QuantiteDocumentClient				= stDocument.QuantiteDocumentClient
+	ope_lettre_contenu.JsonDesignerData						= stDocument.JsonDesignerData
 
 
 	si ope_lettre_contenu.IdModele = 0 				alors ope_lettre_contenu.IdModele..Null = Vrai
@@ -256,7 +255,6 @@ sdReqLettreContenu.AnnuleDéclaration()
 		// Si pages est absent à la racine mais présent sous Document,
 		// on normalise en extrayant la partie Document.
 		si jDoc.pages..Occurrence = 0 _et_ jDoc.data.pages..Occurrence > 0 alors
-			Trace("ModificationCheminDesignerJson : normalisation format structDesignerLoad --> data")
 			stDocument.JsonDesignerData	= JSONVersChaîne(jDoc.data)
 			jDoc									= stDocument.JsonDesignerData.VersUTF8()
 		fin
@@ -359,9 +357,6 @@ sdReqLettreContenu.AnnuleDéclaration()
 				sUrlImage est une chaîne = sRepertoirePrintshopRelatif + sNomFichierImage
 				sUrlImage												= sUrlImage.Remplace("\", "/")
 				jDoc.zonesImage[nIndZone].source.valeur		= sUrlImage
-
-				Trace("ModificationCheminDesignerJson : image " + sNomFichierImage + " --> " + sUrlImage)
-
 			fin
 
 		fin

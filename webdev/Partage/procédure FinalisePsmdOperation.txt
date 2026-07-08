@@ -35,7 +35,6 @@ nNbPsmd				est un entier	= 0
 nNbOk					est un entier	= 0
 
 si pNomCsv = "" alors
-	Trace("FinalisePsmdOperation : nom CSV vide")
 	renvoyer Faux
 fin
 
@@ -88,7 +87,6 @@ pour toute chaîne sCheminPsmd de sListePsmd séparée par RC
 
 		bufPsmd = fChargeBuffer(sCheminPsmd)
 		si Taille(bufPsmd) = 0 alors
-			Trace("FinalisePsmdOperation : échec lecture (vide) : " + sCheminPsmd)
 			continuer
 		fin
 
@@ -100,11 +98,7 @@ pour toute chaîne sCheminPsmd de sListePsmd séparée par RC
 			bufResultat	= Gauche(bufPsmd, nPosDebut - 1) + sNouvelleSection + Milieu(bufPsmd, nFinBloc)
 			si fSauveBuffer(sCheminPsmd, bufResultat) alors
 				nNbOk++
-			sinon
-				Trace("FinalisePsmdOperation : échec écriture : " + sCheminPsmd)
 			fin
-		sinon
-			Trace("FinalisePsmdOperation : <database_settings> introuvable dans " + sCheminPsmd)
 		fin
 fin
 

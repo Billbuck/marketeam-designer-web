@@ -32,6 +32,7 @@ sinon
 		cas __CHAMP_TYPE_DECIMAL__      : sValeur = CleanNumerique(sValeur)
 		cas __CHAMP_TYPE_MONETAIRE__    : sValeur = CleanNumerique(sValeur)
 		cas __CHAMP_TYPE_COORDONNEE__   : sValeur = CleanCoordonnee(sValeur)
+		cas __CHAMP_TYPE_CODE_BARRES__  : sValeur = CleanCodeBarres(sValeur, TailleChampMax(pCode))
 		autre cas
 	fin
 fin
@@ -183,12 +184,26 @@ fin
 		fin
 	fin
 
+	procédure interne CleanCodeBarres(pValeurCdb, pTailleMax)
+		// Valeur destinée à être ENCODÉE en code-barres : ASCII imprimable
+		// UNIQUEMENT (codes 32 à 126). Un seul caractère hors plage (accent,
+		// insécable...) -> rejet en NULL, cohérent avec CleanDate/CleanUrl.
+		// Les espaces de tête/queue sont déjà retirés en amont (SansEspace).
+		nIndCarCdb est un entier
+		pour nIndCarCdb = 1 _à_ Taille(pValeurCdb)
+			si Asc(pValeurCdb[[nIndCarCdb]]) < 32 _ou_ Asc(pValeurCdb[[nIndCarCdb]]) > 126 alors
+				renvoyer ""
+			fin
+		fin
+		renvoyer Gauche(pValeurCdb, pTailleMax)
+	fin
+
 	procédure interne CleanCoordonnee(pCoord)
 		// Coordonnée (lat/long pour QR géo) : point décimal, pleine précision,
 		// aucun espace, aucun arrondi, aucun symbole. JAMAIS CleanNumerique
 		// (qui arrondit à 2 et remet une virgule -> QR cassé).
 		sCoord est une chaîne = ChaîneFormate(pCoord, ccSansEspace + ccSansEspaceIntérieur)
-		sCoord = Remplace(sCoord, ",", ".")
+		sCoord = sCoord.Remplace(",", ".")
 		// Nombre signé décimal valide -> conservé ; sinon NULL (cohérent
 		// CleanDate / CleanHeure).
 		si sCoord.RegexVérifie("^[+-]?\d+(\.\d+)?$") <> "" alors

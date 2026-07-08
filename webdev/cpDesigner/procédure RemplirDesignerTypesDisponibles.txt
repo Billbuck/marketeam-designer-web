@@ -20,6 +20,8 @@
 //   IMG  Image         <- __CHAMP_TYPE_IMAGE__
 //   ALG  Alliage       <- __CHAMP_TYPE_ALLIAGE__
 //   COO  Coordonnée    <- __CHAMP_TYPE_COORDONNEE__   (latitude/longitude QR géo)
+//   CDB  Code barres   <- __CHAMP_TYPE_CODE_BARRES__  (valeur ASCII encodable ;
+//                          SEUL type proposé dans la combo Champ des codes-barres)
 //
 // Le code "SYS" reste réservé aux zones système injectées par WebDev
 // (adresse destinataire, séquentiel, datamatrix...) et n'est PAS exposé
@@ -106,6 +108,11 @@ tabTypes.Ajoute(stUnType)
 // Coordonnée (latitude/longitude pour QR géo)
 stUnType.code		= __CHAMP_TYPE_COORDONNEE__
 stUnType.libelle	= "Coordonnée"
+tabTypes.Ajoute(stUnType)
+
+// Code barres (valeur ASCII encodable — seul type accepté par les zones code-barres)
+stUnType.code		= __CHAMP_TYPE_CODE_BARRES__
+stUnType.libelle	= "Code barres"
 tabTypes.Ajoute(stUnType)
 
 RENVOYER tabTypes

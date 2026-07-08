@@ -1,5 +1,5 @@
-stMontantDue est une structMontantDue
-bEstOperationPretePourValidation est un booléen
+stMontantDue							est une structMontantDue
+bEstOperationPretePourValidation	est un booléen
 
 si _bSauvegardeEnCours = Vrai alors
 	retour
@@ -26,29 +26,13 @@ si PageMémorise() alors
 
 		_bSauvegardeEnCours 				= Vrai
 
-		// ═══════════════════════════════════════════════════════════════════
-		// [TEST-RAPPROCHEMENT — TEMPORAIRE] Échafaudage de test PHASE 2.
-		//   Trace l'état de rapprochement calculé (un Trace par document + N
-		//   global). NE MODIFIE RIEN. À RETIRER en fin de chantier.
-		// ═══════════════════════════════════════════════════════════════════
 		si __stOperation.TypeOperation = __OPERATION_COURRIER__ alors
 			stEtatRappTest est une structDesignerEtatRapprochement = cpDesigner.RecalculeEtatRapprochement(__stOperation)
-			Trace("[TEST-RAPPROCHEMENT] N(personnalises)=" + stEtatRappTest.NbDocumentsPersonnalises ...
-				+ " QrNecessaire=" + (stEtatRappTest.QrNecessaire ? "V" sinon "F") ...
-				+ " ToutConformeQr=" + (stEtatRappTest.EstToutConformeQr ? "V" sinon "F"))
-			pour tout stLigneRappTest de stEtatRappTest.tabDocuments
-				Trace("[TEST-RAPPROCHEMENT] doc#" + stLigneRappTest.IndexDocument ...
-					+ " (" + stLigneRappTest.Designation + ")" ...
-					+ " perso=" + (stLigneRappTest.EstPersonnalise ? "V" sinon "F") ...
-					+ " qrPresent=" + (stLigneRappTest.QrPresent ? "V" sinon "F") ...
-					+ " qrRequis=" + (stLigneRappTest.QrRequis ? "V" sinon "F") ...
-					+ " conformeQr=" + (stLigneRappTest.EstConformeQr ? "V" sinon "F"))
-			fin
 		fin
 		// ═══════════════════ FIN ÉCHAFAUDAGE TEST PHASE 2 ═══════════════════
 
 		bEstOperationPretePourValidation	= Partage.OpérationPrêtePourValidation(__stOperation,Partage.__vcUser.IDContact)
-		stMontantDue						= Partage.OpérationMontantDue(__stOperation)
+		stMontantDue							= Partage.OpérationMontantDue(__stOperation)
 		__stOperation.ResteAPayer			= stMontantDue.ResteAPayer
 
 		si EnregistreOperation() alors

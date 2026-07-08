@@ -16,33 +16,31 @@
 // Réutilise : RepCachePolices, RemplirLibellesGraisses, TraiteFamilleGooglePolice (UPSERT).
 //
 // Paramètres :
-//   pFamily          (chaîne)  : nom EXACT de la famille (casse Google)
-//   pForcerMiseAJour (booléen) : Vrai = autorise la mise à jour si version supérieure
-//
-// Retour : tableau de structDesignerPolice (lignes ACTIVES de la famille après
-//          opération). Tableau vide si clé absente / cache KO / API illisible /
-//          famille introuvable (tracé).
-// ─────────────────────────────────────────────────────────────────────────────
-procédure AjouteGooglePoliceUnitaire(pFamily est une chaîne, pForcerMiseAJour est un booléen = Faux, sStatut est une chaîne = "", sErreur est une chaîne = "") : tableau de structDesignerPolice
+//	pFamily (chaîne ANSI) : nom EXACT de la famille (casse Google)
+//	pForcerMiseAJour (booléen - valeur par défaut=0) : Vrai = autorise la mise à jour si version supérieure
+//	sStatut (chaîne ANSI - valeur par défaut="") : tableau de structDesignerPolice (lignes ACTIVES de la famille après
+//	sErreur (chaîne ANSI - valeur par défaut="") : <indiquez ici le rôle de sErreur>
 
-tabResultat			est un tableau de structDesignerPolice
-sCle				est une chaîne
-sUrlBase			est une chaîne
-sUrl				est une chaîne
-bufRes				est un Buffer			// corps HTTP brut (UTF-8) — parse JSON encoding-safe
-jReponse			est un JSON
-jItemFamille		est un JSON
-bJsonOk				est un booléen	= Vrai
-bTrouve				est un booléen	= Faux
-sFam				est une chaîne
-sVersionApi			est une chaîne	= ""
+procédure AjouteGooglePoliceUnitaire(pFamily est une chaîne ANSI, pForcerMiseAJour est un booléen = Faux, sStatut est une chaîne ANSI = "", sErreur est une chaîne ANSI = "") : tableau de structDesignerPolice
+
+tabResultat				est un tableau de structDesignerPolice
+sCle						est une chaîne
+sUrlBase					est une chaîne
+sUrl						est une chaîne
+bufRes					est un Buffer			// corps HTTP brut (UTF-8) — parse JSON encoding-safe
+jReponse					est un JSON
+jItemFamille			est un JSON
+bJsonOk					est un booléen	= Vrai
+bTrouve					est un booléen	= Faux
+sFam						est une chaîne
+sVersionApi				est une chaîne	= ""
 sVersionStockee		est une chaîne	= ""
-nNbExistant			est un entier	= 0
-taaLibelleGraisse	est un tableau associatif de chaînes
-sRepCache			est une chaîne
-nNbFichiers			est un entier	= 0
-nNbNomTech			est un entier	= 0
-sEchecs				est une chaîne	= ""
+nNbExistant				est un entier	= 0
+taaLibelleGraisse		est un tableau associatif de chaînes
+sRepCache				est une chaîne
+nNbFichiers				est un entier	= 0
+nNbNomTech				est un entier	= 0
+sEchecs					est une chaîne	= ""
 
 // ─── Clé API + URL (jamais en dur) ──────────────────────────────────────────
 sCle		= cpFonction.ValeurParametre("GoogleFonts_Api_Key", prm_parametre.ValChaine..Nom)
@@ -52,81 +50,75 @@ si sUrlBase = "" alors
 fin
 
 si sCle = "" alors
-	sStatut = "error"
-	sErreur = "clé API absente"
-	Trace("AjouteGooglePoliceUnitaire : paramètre GoogleFonts_Api_Key absent")
+	sStatut	= "error"
+	sErreur	= "clé API absente"
 	renvoyer tabResultat
 fin
 si pFamily = "" alors
-	sStatut = "error"
-	sErreur = "famille vide"
-	Trace("AjouteGooglePoliceUnitaire : famille vide")
+	sStatut	= "error"
+	sErreur	= "famille vide"
 	renvoyer tabResultat
 fin
 
 // ─── Cache global ───────────────────────────────────────────────────────────
 sRepCache = RepCachePolices()
 si sRepCache = "" alors
-	sStatut = "error"
-	sErreur = "cache indisponible"
-	Trace("AjouteGooglePoliceUnitaire : cache polices indisponible")
+	sStatut	= "error"
+	sErreur	= "cache indisponible"
 	renvoyer tabResultat
 fin
 
 // ─── Libellés de graisses ───────────────────────────────────────────────────
-taaLibelleGraisse = RemplirLibellesGraisses()
+taaLibelleGraisse	= RemplirLibellesGraisses()
 
 // ─── Appel API (liste COMPLÈTE — ?family= renvoie 400) ──────────────────────
-sUrl = sUrlBase + "?key=" + sCle + "&sort=popularity"
+sUrl					= sUrlBase + "?key=" + sCle + "&sort=popularity"
 si pas HTTPRequête(sUrl) alors
-	sStatut = "error"
-	sErreur = "API Google Fonts injoignable"
-	Trace("AjouteGooglePoliceUnitaire : échec HTTPRequête vers l'API Google Fonts")
+	sStatut	= "error"
+	sErreur	= "API Google Fonts injoignable"
 	renvoyer tabResultat
 fin
 // Corps de réponse en BUFFER (octets UTF-8 bruts) -> parse JSON encoding-safe
 // (la réponse Google est UTF-8 ; une chaîne ANSI la corromprait côté WebService).
 bufRes = HTTPDonneRésultat()
 
-QUAND EXCEPTION DANS
+quand exception dans
 	jReponse = bufRes
-FAIRE
+faire
 	bJsonOk = Faux
-FIN
+fin
 si bJsonOk = Faux _ou_ jReponse.items..Existe = Faux alors
-	sStatut = "error"
-	sErreur = "réponse API illisible"
-	Trace("AjouteGooglePoliceUnitaire : réponse API illisible ou sans 'items'")
+	sStatut	= "error"
+	sErreur	= "réponse API illisible"
 	renvoyer tabResultat
 fin
 
 // ─── Recherche de l'item family = pFamily (correspondance EXACTE) ───────────
-POUR nI = 1 _À_ jReponse.items..Occurrence
+pour nI = 1 _à_ jReponse.items..Occurrence
 	sFam = ""
-	QUAND EXCEPTION DANS
+	quand exception dans
 		si jReponse.items[nI].family..Existe alors
 			sFam = jReponse.items[nI].family
 		fin
-	FAIRE
-	FIN
+	faire
+	fin
 
-	SI sFam = pFamily ALORS
-		bTrouve = Vrai
-		jItemFamille = jReponse.items[nI]
-		QUAND EXCEPTION DANS
+	si sFam = pFamily alors
+		bTrouve			= Vrai
+		jItemFamille		= jReponse.items[nI]
+		quand exception dans
 			si jItemFamille.version..Existe alors
 				sVersionApi = jItemFamille.version
 			fin
-		FAIRE
-		FIN
-		SORTIR
-	FIN
-FIN
+		faire
+		fin
+		sortir
+	fin
+fin
 
 si pas bTrouve alors
-	sStatut = "error"
-	sErreur = "famille introuvable"
-	Trace("AjouteGooglePoliceUnitaire : famille introuvable dans l'API : " + pFamily)
+	sStatut	= "error"
+	sErreur	= "famille introuvable"
 	renvoyer tabResultat
 fin
 
@@ -137,29 +129,22 @@ sErreur = ""
 
 si nNbExistant = 0 alors
 	// ─── Création (INSERT) ───
-	tabResultat = TraiteFamilleGooglePolice(jItemFamille, pFamily, taaLibelleGraisse, sRepCache, sVersionApi, nNbFichiers, nNbNomTech, sEchecs)
-	sStatut = "added"
-	Trace("AjouteGooglePoliceUnitaire : " + pFamily + " statut=added (v=" + sVersionApi ...
-		+ ", entrées=" + tabResultat..Occurrence + ", TTF=" + nNbFichiers + ")")
+	tabResultat	= TraiteFamilleGooglePolice(jItemFamille, pFamily, taaLibelleGraisse, sRepCache, sVersionApi, nNbFichiers, nNbNomTech, sEchecs)
+	sStatut		= "added"
 sinon
 	si pas pForcerMiseAJour alors
 		// ─── Existe déjà, pas de forçage → aucune écriture ───
-		tabResultat = LitPolicesFamilleActives(pFamily, taaLibelleGraisse)
-		sStatut = "exists"
-		Trace("AjouteGooglePoliceUnitaire : " + pFamily + " statut=exists (aucune écriture)")
+		tabResultat	= LitPolicesFamilleActives(pFamily, taaLibelleGraisse)
+		sStatut		= "exists"
 	sinon
 		si VersionNum(sVersionApi) <= VersionNum(sVersionStockee) alors
 			// ─── À jour → aucune écriture ───
-			tabResultat = LitPolicesFamilleActives(pFamily, taaLibelleGraisse)
-			sStatut = "uptodate"
-			Trace("AjouteGooglePoliceUnitaire : " + pFamily + " statut=uptodate (API " ...
-				+ sVersionApi + " <= stockée " + sVersionStockee + ")")
+			tabResultat	= LitPolicesFamilleActives(pFamily, taaLibelleGraisse)
+			sStatut		= "uptodate"
 		sinon
 			// ─── Mise à jour EN PLACE (UPSERT, Id préservés) ───
-			tabResultat = TraiteFamilleGooglePolice(jItemFamille, pFamily, taaLibelleGraisse, sRepCache, sVersionApi, nNbFichiers, nNbNomTech, sEchecs)
-			sStatut = "updated"
-			Trace("AjouteGooglePoliceUnitaire : " + pFamily + " statut=updated (" ...
-				+ sVersionStockee + " -> " + sVersionApi + ", entrées=" + tabResultat..Occurrence + ")")
+			tabResultat	= TraiteFamilleGooglePolice(jItemFamille, pFamily, taaLibelleGraisse, sRepCache, sVersionApi, nNbFichiers, nNbNomTech, sEchecs)
+			sStatut		= "updated"
 		fin
 	fin
 fin
@@ -171,10 +156,10 @@ renvoyer tabResultat
 // PROCÉDURES INTERNES
 // ═════════════════════════════════════════════════════════════════════════
 
-	// ─── Détecte l'existant d'une famille (portée générale google) ──────────
-	//   Renvoie (par référence) le nb de lignes et la Version stockée (1re lue).
+// ─── Détecte l'existant d'une famille (portée générale google) ──────────
+//   Renvoie (par référence) le nb de lignes et la Version stockée (1re lue).
 	//   Paramètre chaîne QUOTÉ.
-	PROCÉDURE INTERNE DetecteExistant(LOCAL pFamilleL est une chaîne, nNb est un entier, sVer est une chaîne)
+	procédure interne DetecteExistant(local pFamilleL est une chaîne, nNb est un entier, sVer est une chaîne)
 		sReqEx	est une chaîne ANSI
 		sdReqEx	est une Source de Données
 		sReqEx = [
@@ -182,57 +167,57 @@ renvoyer tabResultat
 			WHERE Origine = 'google' AND IdMarque IS NULL AND IdClient IS NULL AND Famille = '[%pFamilleL%]'
 		]
 		si sdReqEx.ExécuteRequêteSQL(dsn_police.Connexion, hRequêteSansCorrection, sReqEx) alors
-			POUR TOUT sdReqEx
+			pour tout sdReqEx
 				nNb++
 				si sVer = "" alors sVer = sdReqEx.Version
-			FIN
+			fin
 		fin
 		sdReqEx.AnnuleDéclaration()
-	FIN
+	fin
 
 	// ─── Compare 2 versions Google « vNN » en numérique (repli 0) ───────────
-	PROCÉDURE INTERNE VersionNum(LOCAL pVer est une chaîne) : entier
+	procédure interne VersionNum(local pVer est une chaîne) : entier
 		sV est une chaîne = pVer
-		si Gauche(sV, 1) = "v" _ou_ Gauche(sV, 1) = "V" alors
-			sV = Milieu(sV, 2)
+		si sV.Gauche(1) = "v" _ou_ sV.Gauche(1) = "V" alors
+			sV = sV.Milieu(2)
 		fin
-		RENVOYER Val(sV)
-	FIN
+		renvoyer Val(sV)
+	fin
 
-	// ─── Lit les lignes ACTIVES d'une famille (générale google) en struct ───
+// ─── Lit les lignes ACTIVES d'une famille (générale google) en struct ───
 	//   Mapping identique à RemplirDesignerPolices (graisse via ici_police_weight).
-	PROCÉDURE INTERNE LitPolicesFamilleActives(LOCAL pFamilleL est une chaîne, LOCAL taaLibGr est un tableau associatif de chaînes) : tableau de structDesignerPolice
+	procédure interne LitPolicesFamilleActives(local pFamilleL est une chaîne, local taaLibGr est un tableau associatif de chaînes) : tableau de structDesignerPolice
 		tabAct	est un tableau de structDesignerPolice
-		stPA	est une structDesignerPolice
-		sReqA	est une chaîne ANSI
+		stPA		est une structDesignerPolice
+		sReqA		est une chaîne ANSI
 		sdReqA	est une Source de Données
 		sReqA = [
 			SELECT IdPolice, Nom, NomTechnique, Url, Weight, Style, BoldUrl, ItalicUrl, BoldItalicUrl
 			FROM dsn_police
 			WHERE Origine = 'google' AND IdMarque IS NULL AND IdClient IS NULL
-			  AND Famille = '[%pFamilleL%]' AND EstActif = 1
+			AND Famille = '[%pFamilleL%]' AND EstActif = 1
 			ORDER BY Weight
 		]
 		si sdReqA.ExécuteRequêteSQL(dsn_police.Connexion, hRequêteSansCorrection, sReqA) alors
-			POUR TOUT sdReqA
+			pour tout sdReqA
 				stPA.id				= sdReqA.IdPolice
-				stPA.nom			= sdReqA.Nom
+				stPA.nom				= sdReqA.Nom
 				stPA.nomTechnique	= sdReqA.NomTechnique
 				stPA.famille		= pFamilleL
-				SI taaLibGr[sdReqA.Weight]..Existe ALORS
+				si taaLibGr[sdReqA.Weight]..Existe alors
 					stPA.graisse = taaLibGr[sdReqA.Weight]
-				SINON
+				sinon
 					stPA.graisse = ""
-				FIN
-				stPA.weight			= sdReqA.Weight
-				stPA.style			= sdReqA.Style
-				stPA.url			= sdReqA.Url
-				stPA.boldUrl		= sdReqA.BoldUrl
-				stPA.italicUrl		= sdReqA.ItalicUrl
+				fin
+				stPA.weight				= sdReqA.Weight
+				stPA.style				= sdReqA.Style
+				stPA.url					= sdReqA.Url
+				stPA.boldUrl			= sdReqA.BoldUrl
+				stPA.italicUrl			= sdReqA.ItalicUrl
 				stPA.boldItalicUrl	= sdReqA.BoldItalicUrl
 				tabAct.Ajoute(stPA)
-			FIN
+			fin
 		fin
 		sdReqA.AnnuleDéclaration()
-		RENVOYER tabAct
-	FIN
+		renvoyer tabAct
+	fin

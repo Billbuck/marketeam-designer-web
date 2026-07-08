@@ -34,7 +34,6 @@ ORDER BY
 ]
 
 si pas sdReqCltBaseChamp.ExécuteRequêteSQL(clt_client..Connexion, hRequêteSansCorrection, sTexteRequete) alors
-	// Trace("Erreur requête ChargeTaaCltBaseChamp","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
 	renvoyer Faux
 fin
 

@@ -19,27 +19,27 @@
 // =============================================================================
 procédure AnalyseRemplissageBase(stOperation est une structOperation) : structRemplissageBase
 
-stRemplissage		est une structRemplissageBase
-taaColonnesBase		est un tableau associatif de structBaseChamp = stOperation.taaBaseChamp
+stRemplissage			est une structRemplissageBase
+taaColonnesBase		est un tableau associatif de structBaseChamp	= stOperation.taaBaseChamp
 
 // Locals de résolution (partagés avec les procédures internes)
-taaChampVu			est un tableau associatif de structRemplissageChamp	// clé = .Champ (dédup colonne)
-tabChampsUtilises	est un tableau de structRemplissageChamp
-taaLocalLibelle		est un tableau associatif de chaînes					// "LOCAL_xxx" -> libellé (par document)
+taaChampVu				est un tableau associatif de structRemplissageChamp	// clé = .Champ (dédup colonne)
+tabChampsUtilises		est un tableau de structRemplissageChamp
+taaLocalLibelle		est un tableau associatif de chaînes						// "LOCAL_xxx" -> libellé (par document)
 
 // Locals SQL
-sWhereBase			est une chaîne
-sListeIdBase		est une chaîne
-sFiltre				est une chaîne
-sConditionType		est une chaîne
-sColsClt			est une chaîne
-sColsDos			est une chaîne
-sAgregats			est une chaîne
-sInner				est une chaîne
-sRequete			est une chaîne
-nIdx				est un entier
-bAvecBase			est un booléen	= Faux
-sdReqDiag			est une Source de Données
+sWhereBase				est une chaîne
+sListeIdBase			est une chaîne
+sFiltre					est une chaîne
+sConditionType			est une chaîne
+sColsClt					est une chaîne
+sColsDos					est une chaîne
+sAgregats				est une chaîne
+sInner					est une chaîne
+sRequete					est une chaîne
+nIdx						est un entier
+bAvecBase				est un booléen											= Faux
+sdReqDiag				est une Source de Données
 
 
 // ─── a) Une base est-elle présente ? ─────────────────────────────────────
@@ -127,8 +127,8 @@ fin
 
 // Aucun champ utilisé : on compte quand même les enregistrements
 si tabChampsUtilises..Occurrence = 0 alors
-	sColsClt = "clt_base_ligne.IdBase AS k"
-	sColsDos = "dos_base_ligne.IdBase AS k"
+	sColsClt	= "clt_base_ligne.IdBase AS k"
+	sColsDos	= "dos_base_ligne.IdBase AS k"
 fin
 
 // Sous-requête interne : clt, dos, ou UNION ALL des deux (sans LIMIT)
@@ -153,15 +153,14 @@ sRequete = "SELECT COUNT(*) AS nbtotal" + sAgregats + " FROM (" + sInner + ") t"
 
 // ─── d) Exécution + remplissage de la structure ──────────────────────────
 si pas sdReqDiag.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sRequete) alors
-	// Trace("AnalyseRemplissageBase : erreur requête", HErreurInfo(), sRequete)
 	renvoyer stRemplissage		// BaseChargee = Vrai mais pas de données
 fin
 
 sdReqDiag.LitPremier(hSansRafraîchir)
 si pas sdReqDiag.EnDehors() alors
-	stRemplissage.NbEnregistrements = sdReqDiag.nbtotal
+	stRemplissage.NbEnregistrements	= sdReqDiag.nbtotal
 
-	nIdx = 0
+	nIdx										= 0
 	pour tout stCh de tabChampsUtilises
 		nIdx++
 		stCh.NbTotal		= stRemplissage.NbEnregistrements
@@ -174,21 +173,21 @@ si pas sdReqDiag.EnDehors() alors
 		stCh.MinLongueur	= {"sdReqDiag.minlen" + nIdx, indVariable}
 		stCh.MaxLongueur	= {"sdReqDiag.maxlen" + nIdx, indVariable}
 
-		sMinV est une chaîne = {"sdReqDiag.minval" + nIdx, indVariable}
-		sMaxV est une chaîne = {"sdReqDiag.maxval" + nIdx, indVariable}
+		sMinV	est une chaîne	= {"sdReqDiag.minval" + nIdx, indVariable}
+		sMaxV	est une chaîne	= {"sdReqDiag.maxval" + nIdx, indVariable}
 
 		// Numériques : le CAST SQL renvoie un point décimal -> on remet la
 		// virgule (cohérent avec le format base et l'entrée de FormateNombre).
 		// Coordonnée : on garde le point. Texte/date : inchangé.
 		selon stCh.Type
 			cas __CHAMP_TYPE_ENTIER__, __CHAMP_TYPE_DECIMAL__, __CHAMP_TYPE_MONETAIRE__
-				sMinV = Remplace(sMinV, ".", ",")
-				sMaxV = Remplace(sMaxV, ".", ",")
+				sMinV	= Remplace(sMinV, ".", ",")
+				sMaxV	= Remplace(sMaxV, ".", ",")
 			autre cas
 		fin
 
-		stCh.MinValeur = sMinV
-		stCh.MaxValeur = sMaxV
+		stCh.MinValeur	= sMinV
+		stCh.MaxValeur	= sMaxV
 		stRemplissage.tabChamps.Ajoute(stCh)
 	fin
 fin
@@ -200,23 +199,23 @@ renvoyer stRemplissage
 // PROCÉDURES INTERNES
 // ═════════════════════════════════════════════════════════════════════════
 
-	// ─── champsFusion d'un document : localId -> libellé (réplique minimale
+// ─── champsFusion d'un document : localId -> libellé (réplique minimale
 	//     de ChargeChampsFusion de VerifieConcordanceBaseDesigner) ──────────
-	procédure interne ChargeChampsFusionLocal(LOCAL pJson est une chaîne)
-		jDoc		est un JSON
-		jData		est un JSON
+	procédure interne ChargeChampsFusionLocal(local pJson est une chaîne)
+		jDoc			est un JSON
+		jData			est un JSON
 		bJsonOk		est un booléen	= Vrai
-		sLocalId	est une chaîne
-		sLibelle	est une chaîne
+		sLocalId		est une chaîne
+		sLibelle		est une chaîne
 
 		taaLocalLibelle.SupprimeTout()
 
 		si pJson <> "" alors
-			QUAND EXCEPTION DANS
+			quand exception dans
 				jDoc = pJson
-			FAIRE
+			faire
 				bJsonOk = Faux
-			FIN
+			fin
 
 			si bJsonOk alors
 				si jDoc.data..Existe alors
@@ -227,13 +226,13 @@ renvoyer stRemplissage
 
 				si jData.champsFusion..Existe alors
 					pour nC = 1 _à_ jData.champsFusion..Occurrence
-						sLocalId = ""
-						sLibelle = ""
-						QUAND EXCEPTION DANS
+						sLocalId	= ""
+						sLibelle	= ""
+						quand exception dans
 							si jData.champsFusion[nC].localId..Existe alors sLocalId = jData.champsFusion[nC].localId
 							si jData.champsFusion[nC].libelle..Existe alors sLibelle = jData.champsFusion[nC].libelle
-						FAIRE
-						FIN
+						faire
+						fin
 						si sLocalId <> "" _et_ sLocalId <> "0" alors
 							taaLocalLibelle["LOCAL_" + sLocalId] = sLibelle
 						fin
@@ -244,76 +243,76 @@ renvoyer stRemplissage
 	fin
 
 	// ─── Champ SYSTÈME ? (exclu du diagnostic) ───────────────────────────────
-	procédure interne EstChampSystemeLocal(LOCAL pCle est une chaîne) : booléen
+	procédure interne EstChampSystemeLocal(local pCle est une chaîne) : booléen
 		bSys est un booléen = Faux
 		si pCle = "Sequentiel" _ou_ pCle = "Timbre" _ou_ pCle = "Rapprochement" alors
 			bSys = Vrai
 		fin
-		QUAND EXCEPTION DANS
+		quand exception dans
 			si pCle = __CHAMP_CLIQUEZ_ICI__ alors bSys = Vrai
-		FAIRE
-		FIN
+		faire
+		fin
 		renvoyer bSys
 	fin
 
-	// ─── Résout une clé insérée -> colonne base (Champ/Libelle/Type), dédup ──
-	//   LOCAL_xxx : libellé via taaLocalLibelle -> colonne via taaColonnesBase
-	//   nom technique : recherche par .Champ dans taaColonnesBase
+// ─── Résout une clé insérée -> colonne base (Champ/Libelle/Type), dédup ──
+//   LOCAL_xxx : libellé via taaLocalLibelle -> colonne via taaColonnesBase
+//   nom technique : recherche par .Champ dans taaColonnesBase
 	//   Non résolvable à une colonne base -> ignoré (relève de la concordance).
-	procédure interne ResoutCle(LOCAL pCle est une chaîne)
+	procédure interne ResoutCle(local pCle est une chaîne)
 		sChamp		est une chaîne	= ""
-		sLibelle	est une chaîne	= ""
-		sType		est une chaîne	= ""
+		sLibelle		est une chaîne	= ""
+		sType			est une chaîne	= ""
 
-		si EstChampSystemeLocal(pCle) alors RETOUR
+		si EstChampSystemeLocal(pCle) alors retour
 
 		si Gauche(pCle, 6) = "LOCAL_" alors
 			// ─── SPÉCIFIQUE ───
-			si taaLocalLibelle[pCle]..Existe = Faux alors RETOUR
+			si taaLocalLibelle[pCle]..Existe = Faux alors retour
 			sLibelle = taaLocalLibelle[pCle]
-			si sLibelle = "" alors RETOUR
-			si taaColonnesBase[sLibelle]..Existe = Faux alors RETOUR
-			si taaColonnesBase[sLibelle].EstSupprimé alors RETOUR
+			si sLibelle = "" alors retour
+			si taaColonnesBase[sLibelle]..Existe = Faux alors retour
+			si taaColonnesBase[sLibelle].EstSupprimé alors retour
 			sChamp	= taaColonnesBase[sLibelle].Champ
-			sType	= taaColonnesBase[sLibelle].Type
+			sType		= taaColonnesBase[sLibelle].Type
 		sinon
 			// ─── STANDARD / nom technique : recherche par colonne ───
 			bTrouve est un booléen = Faux
 			pour tout stCol, sLib de taaColonnesBase
 				si stCol.EstSupprimé = Faux _et_ stCol.Champ = pCle alors
 					sChamp		= stCol.Champ
-					sLibelle	= sLib
-					sType		= stCol.Type
+					sLibelle		= sLib
+					sType			= stCol.Type
 					bTrouve		= Vrai
 					sortir
 				fin
 			fin
-			si pas bTrouve alors RETOUR
+			si pas bTrouve alors retour
 		fin
 
-		si sChamp = "" alors RETOUR
-		si taaChampVu[sChamp]..Existe alors RETOUR		// dédup par colonne
+		si sChamp = "" alors retour
+		si taaChampVu[sChamp]..Existe alors retour		// dédup par colonne
 
 		stCh est une structRemplissageChamp
-		stCh.Libelle	= sLibelle
-		stCh.Champ		= sChamp
-		stCh.Type		= sType
+		stCh.Libelle			= sLibelle
+		stCh.Champ				= sChamp
+		stCh.Type				= sType
 		taaChampVu[sChamp]	= stCh
 		tabChampsUtilises.Ajoute(stCh)
 	fin
 
-	// ─── Fragment SQL des agrégats d'une colonne ─────────────────────────────
-	//   Émet TOUJOURS 5 alias : rempli<i>, minlen<i>, maxlen<i>, minval<i>,
-	//   maxval<i>. Tout en UNE passe (aucune sous-requête / scan additionnel).
-	//
-	//   - NUM/DAT/COO : minval/maxval = valeur min/max (CAST AS CHAR) ;
-	//     minlen/maxlen = 0 (non pertinent).
-	//   - TEXTE : minlen/maxlen = longueur mini/maxi ; minval/maxval = la VALEUR
-	//     à cette longueur, via le trick argmin/argmax
-	//     SUBSTRING(MIN/MAX(CONCAT(LPAD(longueur,10,'0'), valeur)), 11) :
-	//     le préfixe longueur zero-paddé fait trier d'abord par longueur, sans
+// ─── Fragment SQL des agrégats d'une colonne ─────────────────────────────
+//   Émet TOUJOURS 5 alias : rempli<i>, minlen<i>, maxlen<i>, minval<i>,
+//   maxval<i>. Tout en UNE passe (aucune sous-requête / scan additionnel).
+//
+//   - NUM/DAT/COO : minval/maxval = valeur min/max (CAST AS CHAR) ;
+//     minlen/maxlen = 0 (non pertinent).
+//   - TEXTE : minlen/maxlen = longueur mini/maxi ; minval/maxval = la VALEUR
+//     à cette longueur, via le trick argmin/argmax
+//     SUBSTRING(MIN/MAX(CONCAT(LPAD(longueur,10,'0'), valeur)), 11) :
+//     le préfixe longueur zero-paddé fait trier d'abord par longueur, sans
 	//     GROUP_CONCAT (donc sans limite de taille).
-	procédure interne ConstruitAgregats(LOCAL pColBt est une chaîne, LOCAL pType est une chaîne, LOCAL pIdx est un entier) : chaîne
+	procédure interne ConstruitAgregats(local pColBt est une chaîne, local pType est une chaîne, local pIdx est un entier) : chaîne
 		sCondVide	est une chaîne	= pColBt + " IS NULL OR " + pColBt + " = ''"
 		sRempli		est une chaîne	= "SUM(CASE WHEN " + sCondVide + " THEN 0 ELSE 1 END) AS rempli" + pIdx
 		sMinLen		est une chaîne
@@ -325,36 +324,36 @@ renvoyer stRemplissage
 		selon pType
 			cas __CHAMP_TYPE_ENTIER__, __CHAMP_TYPE_DECIMAL__, __CHAMP_TYPE_MONETAIRE__
 				// virgule décimale en base -> tri texte FAUX -> CAST obligatoire
-				sValeur = "CAST(REPLACE(" + pColBt + ",',','.') AS DECIMAL(20,4))"
-				sMinLen = "0 AS minlen" + pIdx
-				sMaxLen = "0 AS maxlen" + pIdx
-				sMinVal = "CAST(MIN(CASE WHEN " + sCondVide + " THEN NULL ELSE " + sValeur + " END) AS CHAR) AS minval" + pIdx
-				sMaxVal = "CAST(MAX(CASE WHEN " + sCondVide + " THEN NULL ELSE " + sValeur + " END) AS CHAR) AS maxval" + pIdx
+				sValeur	= "CAST(REPLACE(" + pColBt + ",',','.') AS DECIMAL(20,4))"
+				sMinLen	= "0 AS minlen" + pIdx
+				sMaxLen	= "0 AS maxlen" + pIdx
+				sMinVal	= "CAST(MIN(CASE WHEN " + sCondVide + " THEN NULL ELSE " + sValeur + " END) AS CHAR) AS minval" + pIdx
+				sMaxVal	= "CAST(MAX(CASE WHEN " + sCondVide + " THEN NULL ELSE " + sValeur + " END) AS CHAR) AS maxval" + pIdx
 
 			cas __CHAMP_TYPE_COORDONNEE__
 				// point décimal déjà présent (CleanCoordonnee)
-				sValeur = "CAST(" + pColBt + " AS DECIMAL(18,8))"
-				sMinLen = "0 AS minlen" + pIdx
-				sMaxLen = "0 AS maxlen" + pIdx
-				sMinVal = "CAST(MIN(CASE WHEN " + sCondVide + " THEN NULL ELSE " + sValeur + " END) AS CHAR) AS minval" + pIdx
-				sMaxVal = "CAST(MAX(CASE WHEN " + sCondVide + " THEN NULL ELSE " + sValeur + " END) AS CHAR) AS maxval" + pIdx
+				sValeur	= "CAST(" + pColBt + " AS DECIMAL(18,8))"
+				sMinLen	= "0 AS minlen" + pIdx
+				sMaxLen	= "0 AS maxlen" + pIdx
+				sMinVal	= "CAST(MIN(CASE WHEN " + sCondVide + " THEN NULL ELSE " + sValeur + " END) AS CHAR) AS minval" + pIdx
+				sMaxVal	= "CAST(MAX(CASE WHEN " + sCondVide + " THEN NULL ELSE " + sValeur + " END) AS CHAR) AS maxval" + pIdx
 
 			cas __CHAMP_TYPE_DATE__
 				// AAAAMMJJ : tri texte déjà correct
-				sValeur = pColBt
-				sMinLen = "0 AS minlen" + pIdx
-				sMaxLen = "0 AS maxlen" + pIdx
-				sMinVal = "CAST(MIN(CASE WHEN " + sCondVide + " THEN NULL ELSE " + sValeur + " END) AS CHAR) AS minval" + pIdx
-				sMaxVal = "CAST(MAX(CASE WHEN " + sCondVide + " THEN NULL ELSE " + sValeur + " END) AS CHAR) AS maxval" + pIdx
+				sValeur	= pColBt
+				sMinLen	= "0 AS minlen" + pIdx
+				sMaxLen	= "0 AS maxlen" + pIdx
+				sMinVal	= "CAST(MIN(CASE WHEN " + sCondVide + " THEN NULL ELSE " + sValeur + " END) AS CHAR) AS minval" + pIdx
+				sMaxVal	= "CAST(MAX(CASE WHEN " + sCondVide + " THEN NULL ELSE " + sValeur + " END) AS CHAR) AS maxval" + pIdx
 
 			autre cas
 				// TEXTE (TXT/EML/URL/CDP/ALG/TEL/SMS/TIM/IMG/inconnu)
-				sLenExpr est une chaîne = "CHAR_LENGTH(" + pColBt + ")"
-				sArg     est une chaîne = "CONCAT(LPAD(" + sLenExpr + ",10,'0'), " + pColBt + ")"
-				sMinLen = "MIN(CASE WHEN " + sCondVide + " THEN NULL ELSE " + sLenExpr + " END) AS minlen" + pIdx
-				sMaxLen = "MAX(CASE WHEN " + sCondVide + " THEN NULL ELSE " + sLenExpr + " END) AS maxlen" + pIdx
-				sMinVal = "SUBSTRING(MIN(CASE WHEN " + sCondVide + " THEN NULL ELSE " + sArg + " END), 11) AS minval" + pIdx
-				sMaxVal = "SUBSTRING(MAX(CASE WHEN " + sCondVide + " THEN NULL ELSE " + sArg + " END), 11) AS maxval" + pIdx
+				sLenExpr	est une chaîne	= "CHAR_LENGTH(" + pColBt + ")"
+				sArg		est une chaîne	= "CONCAT(LPAD(" + sLenExpr + ",10,'0'), " + pColBt + ")"
+				sMinLen	= "MIN(CASE WHEN " + sCondVide + " THEN NULL ELSE " + sLenExpr + " END) AS minlen" + pIdx
+				sMaxLen	= "MAX(CASE WHEN " + sCondVide + " THEN NULL ELSE " + sLenExpr + " END) AS maxlen" + pIdx
+				sMinVal	= "SUBSTRING(MIN(CASE WHEN " + sCondVide + " THEN NULL ELSE " + sArg + " END), 11) AS minval" + pIdx
+				sMaxVal	= "SUBSTRING(MAX(CASE WHEN " + sCondVide + " THEN NULL ELSE " + sArg + " END), 11) AS maxval" + pIdx
 		fin
 
 		renvoyer sRempli + ", " + sMinLen + ", " + sMaxLen + ", " + sMinVal + ", " + sMaxVal

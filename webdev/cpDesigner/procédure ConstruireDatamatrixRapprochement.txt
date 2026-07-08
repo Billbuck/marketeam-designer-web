@@ -19,7 +19,9 @@
 //   [Rapprochement]). Symbologie DATAMATRIX (typeCodeBarres = "datamatrix",
 //   correction du 02/07/2026 — précédemment "qrcode" par erreur), avec zone
 //   de tranquillité par défaut de 2 modules (zoneTranquillite = 2).
-//   L'id historique "sys-qr-rapprochement" est CONSERVÉ (référencé partout).
+//   Id = "sys-datamatrix-rapprochement" (renommage du 06/07/2026, aligné
+//   PARTOUT : script.js QR_RAPPROCHEMENT_ID, JsonContientQrRapprochement,
+//   InjecteOuRetireQrRapprochement).
 //
 // Position FIXE (spec du 02/07/2026, source unique LitPositionQrRapprochement) :
 //   - 198 mm du bord GAUCHE de la page ;

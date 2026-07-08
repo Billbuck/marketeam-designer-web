@@ -29,11 +29,8 @@ procédure GenerSignatureHMAC(pMethode est une chaîne, pIdClient est une chaîn
 // Référence du calcul serveur (cpDesigner.AccessTokenVérification) :
 //   sBase = __API_CLE_SECRET_KEY__ + "POST|/api/endpoint|" + nIdClient + "|" + nIdContact + "|" + sTimestamp
 //   sSignature = HashChaîne(HA_SHA_256, sBase).BufferVersHexa(SansRegroupement, SansLigne)
-sBase		est une chaîne ANSI	= __API_CLE_SECRET_KEY__ + pMethode + "|/api/endpoint|" + pIdClient + "|" + pIdContact + "|" + pTimestamp
+sBase			est une chaîne ANSI	= __API_CLE_SECRET_KEY__ + pMethode + "|/api/endpoint|" + pIdClient + "|" + pIdContact + "|" + pTimestamp
 sSignature	est une chaîne ANSI	= HashChaîne(HA_SHA_256, sBase).BufferVersHexa(SansRegroupement, SansLigne)
 
-// Trace temporaire pour diagnostic — à retirer une fois validé
-Trace("GenerSignatureHMAC > sBase=[" + sBase + "]")
-Trace("GenerSignatureHMAC > sSignature=[" + sSignature + "]")
 
 renvoyer sSignature

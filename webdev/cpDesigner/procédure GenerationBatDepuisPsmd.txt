@@ -26,18 +26,15 @@ imgPrintshop		est une Image
 
 // ── Validation du PSMD ───────────────────────────────────────────────────
 si pCheminPsmd = "" ou pas fFichierExiste(pCheminPsmd) alors
-	// Trace("GenerationBatDepuisPsmd : PSMD introuvable : " + pCheminPsmd)
 	renvoyer stImageBat
 fin
 
 // ── Sérialisation JSON et appel API PSM PHP en POST ──────────────────────
 Sérialise(ptabPrintshopData, sJsonData, psdJSON)
-// Trace("GenerationBatDepuisPsmd : JSON data = " + sJsonData)
 
-sServeurPsm			= cpFonction.ValeurParametre("PSM_ServeurUrl", prm_parametre.ValChaine..Nom)
-sUrlPsm				= "http://" + sServeurPsm + "psm_marketeam_jpg.php?p=" + URLEncode(pCheminPsmd) + "&l=" + pNumPage
+sServeurPsm				= cpFonction.ValeurParametre("PSM_ServeurUrl", prm_parametre.ValChaine..Nom)
+sUrlPsm					= "http://" + sServeurPsm + "psm_marketeam_jpg.php?p=" + URLEncode(pCheminPsmd) + "&l=" + pNumPage
 
-// Trace("GenerationBatDepuisPsmd : URL = " + sUrlPsm)
 
 hPsm.URL					= sUrlPsm
 hPsm.Méthode			= httpPost
@@ -47,12 +44,10 @@ hPsm.Contenu			= "data=" + sJsonData.URLEncode()
 hReponse					= hPsm.Envoie()
 
 si ErreurDétectée alors
-	// Trace("GenerationBatDepuisPsmd : échec Envoie : " + ErreurInfo(errComplet))
 	renvoyer stImageBat
 fin
 
 si hReponse.CodeEtat <> 200 alors
-	// Trace("GenerationBatDepuisPsmd : code HTTP " + hReponse.CodeEtat + " — " + hReponse.Contenu)
 	renvoyer stImageBat
 fin
 
@@ -74,8 +69,6 @@ si imgPrintshop.SauveJPEG(pCheminJpgSortie, 100) alors
 	// ≠ racine réseau), laissant fuir le chemin physique vers le navigateur.
 	stImageBat.CheminRelatif	= pCheminJpgSortie.Remplace(cpProjet.__sRepRacine, cpProjet.__sHttpMarketeam)
 	stImageBat.CheminRelatif	= stImageBat.CheminRelatif.Remplace("\", "/")
-sinon
-	// Trace("GenerationBatDepuisPsmd : échec SauveJPEG : " + pCheminJpgSortie)
 fin
 
 renvoyer stImageBat

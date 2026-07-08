@@ -1,0 +1,234 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] ChargeTabStructLtrDocument ( [<pIdOperation> [, <pIdPackage> [, <pIdCampagne>]]])
+//
+// Paramètres :
+//	pIdOperation (valeur par défaut=0) : <indiquez ici le rôle de pIdLettreContenu>
+//	pIdPackage (valeur par défaut=0) : < indiquez ici le rôle de pNumDocument >
+//	pIdCampagne (valeur par défaut=0) : < indiquez ici le rôle de pIdCampagne >
+// Valeur de retour :
+// 	tableau (structDocument) : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+//	pPdfAnalyseDocument (valeur par défaut=1) : < indiquez ici le rôle de pChargementPdf >
+procédure ChargeTabStructLtrDocument(pIdOperation = 0,  pIdPackage = 0, pIdCampagne = 0)
+
+stDocument					est une structDocument
+sTexteRequete				est une chaîne
+sdReqChargeTabDocument	est une Source de Données
+
+tabDocument					est un tableau de structDocument
+sWhere							est une chaîne
+sSelect						est une chaîne
+sFrom							est une chaîne
+
+si pIdOperation <> 0 alors
+	sTexteRequete =
+	[
+		SELECT
+		ope_lettre_contenu.IdLettreContenu,
+		ope_lettre_contenu.IdLettre,
+		ope_lettre_contenu.IdSupportGrammage,
+		ope_lettre_contenu.IdPackageContenu,
+		ope_lettre_contenu.IdDocumentClient,
+		ope_lettre_contenu.IdPapier,
+		ope_lettre_contenu.IdModele,
+		ope_lettre_contenu.ModeImpression,
+		ope_lettre_contenu.EstPdfClient,
+		ope_lettre_contenu.EstDocumentEnAttente,
+		ope_lettre_contenu.EstPersonnaliseDesigner,
+		ope_lettre_contenu.EstBatGenereAvecRapprochement,
+		ope_lettre_contenu.EstRectoVerso,
+		ope_lettre_contenu.EstFondPerdu,
+		ope_lettre_contenu.QuantiteDocumentClient,
+		ope_lettre_contenu.NombrePage,
+		ope_lettre_contenu.NomFichierOrigine,
+		ope_lettre_contenu.JsonDesignerData,
+		ltr_support_grammage.A4PliableMachine,
+		ltr_support_grammage.Poids,
+		ltr_grammage.Libelle LibelleGrammage,
+		ltr_type_support.IdTypeSupport,
+		ltr_type_support.DelaiOffsetSupplementaire,
+		ltr_type_support.DelaiLaserSupplementaire,
+		ltr_type_support.Libelle LibelleTypeSupport,
+		ltr_type_support.FichierApercu,
+		ltr_support.IdSupport,
+		ltr_support.Libelle LibelleSupport,
+		ltr_support.Format LibelleFormat,
+		ltr_support.HauteurFerme,
+		ltr_support.LargeurFerme,
+		ltr_support.HauteurOuvert,
+		ltr_support.LargeurOuvert,
+		ltr_support.NbPageObligatoire,
+		ltr_support.NbPageTotale,
+		
+		ltr_papier.Libelle LibellePapier,
+		ltr_papier.EstPapierCouche
+		%2	
+		FROM
+		ltr_type_support, ltr_support, ltr_support_grammage, ltr_grammage, ltr_papier, ope_lettre, dos_operation, clt_client , ope_lettre_contenu %3 
+		
+		WHERE
+		ope_lettre.IdLettre = dos_operation.IdOperation AND
+		dos_operation.IdClient = clt_client.IdClient AND
+		ope_lettre_contenu.IdLettre = ope_lettre.IdLettre AND
+		ope_lettre_contenu.IdSupportGrammage = ltr_support_grammage.IdSupportGrammage AND
+		ltr_support_grammage.IdSupport = ltr_support.IdSupport AND
+		ltr_support.IdTypeSupport = ltr_type_support.IdTypeSupport AND
+		ltr_support_grammage.IdGrammage = ltr_grammage.IdGrammage AND
+		ope_lettre_contenu.IdPapier = ltr_papier.IdPapier AND
+		ope_lettre.IdLettre = %1
+		%4
+	]
+
+	si pIdPackage > 0 alors
+		sSelect	= ",ltr_package_contenu.PrixAchatContenu, ltr_package_contenu.DeductionContenu"
+		sFrom		= "LEFT JOIN ltr_package_contenu ON ope_lettre_contenu.IdPackageContenu = ltr_package_contenu.IdPackageContenu"
+		//		sWhere = "AND ltr_support_grammage.IdSupportGrammage = ltr_package_contenu.IdSupportGrammage"
+	fin
+
+	sTexteRequete = ChaîneConstruit(sTexteRequete,pIdOperation,sSelect, sFrom, sWhere)
+
+sinon
+
+	// Ici on charge la structure d'un package ou d'un campagne !
+	sTexteRequete =
+	[
+		SELECT
+		ltr_package.IdMarque,
+		ltr_package_contenu.IdSupportGrammage,
+		ltr_package_contenu.IdPackageContenu,
+		ltr_campagne_contenu.IdDocumentClient,
+		ltr_package_contenu.IdPapier,
+		ltr_campagne_contenu.IdModele,
+		ltr_package_contenu.ModeImpression,
+		ltr_package_contenu.EstRectoVerso,
+		ltr_package_contenu.EstFondPerdu,
+		ltr_package_contenu.NbrPage NombrePage,
+		ltr_support_grammage.A4PliableMachine,
+		ltr_support_grammage.Poids,
+		ltr_grammage.Libelle LibelleGrammage,
+		ltr_type_support.DelaiOffsetSupplementaire,
+		ltr_type_support.DelaiLaserSupplementaire,
+		ltr_type_support.IdTypeSupport,
+		ltr_type_support.Libelle LibelleTypeSupport,
+		ltr_type_support.FichierApercu,
+		ltr_support.IdSupport,
+		ltr_support.Libelle LibelleSupport,
+		ltr_support.Format LibelleFormat,
+		ltr_support.HauteurFerme,
+		ltr_support.LargeurFerme,
+		ltr_support.HauteurOuvert,
+		ltr_support.LargeurOuvert,
+		ltr_support.NbPageObligatoire,
+		ltr_support.NbPageTotale,
+		
+		ltr_papier.Libelle LibellePapier,
+		ltr_papier.EstPapierCouche,
+		ltr_package_contenu.PrixAchatContenu, 
+		ltr_package_contenu.DeductionContenu
+		FROM
+		ltr_type_support, ltr_support, ltr_support_grammage, ltr_grammage, ltr_papier, ltr_package, ltr_package_contenu LEFT JOIN ltr_campagne_contenu ON ltr_package_contenu.IdPackageContenu = ltr_campagne_contenu.IdPackageContenu AND ltr_campagne_contenu.IdCampagne = %2
+		WHERE
+		ltr_package.IdPackage = ltr_package_contenu.IdPackage AND
+		ltr_package_contenu.IdSupportGrammage = ltr_support_grammage.IdSupportGrammage AND
+		ltr_support_grammage.IdSupport = ltr_support.IdSupport AND
+		ltr_support.IdTypeSupport = ltr_type_support.IdTypeSupport AND
+		ltr_support_grammage.IdGrammage = ltr_grammage.IdGrammage AND
+		ltr_package_contenu.IdPapier = ltr_papier.IdPapier AND
+		ltr_package.IdPackage = %1
+	]
+
+	sTexteRequete = ChaîneConstruit(sTexteRequete,pIdPackage, pIdCampagne)
+
+fin
+
+
+si pas sdReqChargeTabDocument.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	<compile si TypeConfiguration <> Webservice>
+		Info("Erreur requête")
+	<fin>
+fin
+
+pour tout sdReqChargeTabDocument
+	VariableRAZ(stDocument)
+
+	stDocument.TypeFichier							= __PDF__
+
+	stDocument.IdTypeSupport						= sdReqChargeTabDocument.IdTypeSupport
+	stDocument.IdSupport								= sdReqChargeTabDocument.IdSupport
+	stDocument.IdSupportGrammage					= sdReqChargeTabDocument.IdSupportGrammage
+	stDocument.IdPackageContenu					= sdReqChargeTabDocument.IdPackageContenu
+	stDocument.IdDocumentClient					= sdReqChargeTabDocument.IdDocumentClient
+	stDocument.IdModele								= sdReqChargeTabDocument.IdModele
+	stDocument.IdPapier								= sdReqChargeTabDocument.IdPapier
+	stDocument.JsonDesignerData					= sdReqChargeTabDocument.JsonDesignerData
+	stDocument.ModeImpression						= __MODE_AUTOMATIQUE__ //sdReqChargeTabDocument.ModeImpression
+	stDocument.ModeImpressionSelectionne		= sdReqChargeTabDocument.ModeImpression
+	stDocument.EstRectoVerso						= sdReqChargeTabDocument.EstRectoVerso
+	stDocument.EstFondPerdu							= sdReqChargeTabDocument.EstFondPerdu
+	stDocument.EstPapierCouche						= sdReqChargeTabDocument.EstPapierCouche
+	stDocument.NombrePage							= sdReqChargeTabDocument.NombrePage
+	stDocument.A4PliableMachine					= sdReqChargeTabDocument.A4PliableMachine
+	stDocument.HauteurFerme							= sdReqChargeTabDocument.HauteurFerme
+	stDocument.LargeurFerme							= sdReqChargeTabDocument.LargeurFerme
+	stDocument.HauteurOuvert						= sdReqChargeTabDocument.HauteurOuvert
+	stDocument.LargeurOuvert						= sdReqChargeTabDocument.LargeurOuvert
+	stDocument.NbPageObligatoire					= sdReqChargeTabDocument.NbPageObligatoire
+	stDocument.Poids									= sdReqChargeTabDocument.Poids
+	stDocument.DelaiLaserSupplementaire			= sdReqChargeTabDocument.DelaiLaserSupplementaire
+	stDocument.DelaiOffsetSupplementaire		= sdReqChargeTabDocument.DelaiOffsetSupplementaire
+	stDocument.LibelleSupport						= sdReqChargeTabDocument.LibelleSupport
+	stDocument.LibelleTypeSupport					= sdReqChargeTabDocument.LibelleTypeSupport
+	stDocument.LibelleFormat						= sdReqChargeTabDocument.LibelleFormat
+	stDocument.LibelleGrammage						= sdReqChargeTabDocument.LibelleGrammage
+	stDocument.LibellePapier						= sdReqChargeTabDocument.LibellePapier
+	stDocument.NbPageTotale							= sdReqChargeTabDocument.NbPageTotale
+	stDocument.FichierApercu						= sdReqChargeTabDocument.FichierApercu
+	si pIdPackage > 0 alors
+		stDocument.PrixAchatContenu				= sdReqChargeTabDocument.PrixAchatContenu
+		stDocument.DeductionContenu				= sdReqChargeTabDocument.DeductionContenu
+	fin
+	stDocument.EstUploadé = Faux
+
+	LibelleDocumentDesignation(stDocument)
+
+	si pIdOperation > 0 alors
+		stDocument.QuantiteDocumentClient			= sdReqChargeTabDocument.QuantiteDocumentClient
+		stDocument.EstPdfClient							= sdReqChargeTabDocument.EstPdfClient
+		stDocument.IdLettreContenu						= sdReqChargeTabDocument.IdLettreContenu
+		stDocument.CodeTemp								= sdReqChargeTabDocument.IdLettreContenu
+		stDocument.EstDocumentEnAttente				= sdReqChargeTabDocument.EstDocumentEnAttente
+		stDocument.EstPersonnaliseDesigner 			= sdReqChargeTabDocument.EstPersonnaliseDesigner
+		stDocument.EstBatGenereAvecRapprochement 	= sdReqChargeTabDocument.EstBatGenereAvecRapprochement
+		stDocument.NomFichierOrigine					= sdReqChargeTabDocument.NomFichierOrigine
+
+		// ─── AJOUT : Renseigner le répertoire du document ────────────────────
+		stDocument.Repertoire							= cpProjet.CheminFichier(sdReqChargeTabDocument.IdLettre, __REP_DOCUMENT__, Vrai)
+		stDocument.NomFichierTemp						= __DOC_LTR__ + sdReqChargeTabDocument.IdLettreContenu + __PDF__
+		stDocument.RepertoireTravail					= cpProjet.CheminFichier(sdReqChargeTabDocument.IdLettre, __REP_TEMP__, Vrai)
+
+		ChargeDocument(stDocument,sdReqChargeTabDocument.IdLettre)
+
+	sinon
+		stDocument.EstPdfClient							= (sdReqChargeTabDocument.IdModele = 0 _et_ sdReqChargeTabDocument.IdDocumentClient = 0)
+		stDocument.EstDocumentEnAttente				= Vrai
+
+		si sdReqChargeTabDocument.IdModele > 0 _ou_ sdReqChargeTabDocument.IdDocumentClient > 0 alors
+
+			ChargeDocument(stDocument,sdReqChargeTabDocument.IdLettre)
+
+		fin
+
+	fin
+
+	tabDocument.Ajoute(stDocument)
+fin
+
+
+
+fin:
+sdReqChargeTabDocument.AnnuleDéclaration()
+renvoyer tabDocument

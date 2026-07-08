@@ -19,13 +19,11 @@ sCommande			est une chaîne
 
 // ─── Validation du JSON en entrée ────────────────────────────────────────
 si stEnveloppe.JsonDesignerData = "" alors
-	Trace("GenererPsmdServeurEnveloppe : JsonDesignerData vide")
 	renvoyer Faux
 fin
 
 // ─── Validation de la configuration INI ──────────────────────────────────
 si sNodeExe = "" _ou_ sNodeCli = "" alors
-	Trace("GenererPsmdServeurEnveloppe : section [NODE] manquante dans le fichier INI")
 	renvoyer Faux
 fin
 
@@ -37,18 +35,17 @@ sCheminJsonTemp	= sRepTravail + "psmd_json_env_" + pCodeTemp + __TMP__
 
 // ─── Substitution nom d'affichage -> nom technique dans le \fonttbl (Lot 2B) ──
 //   Opère sur une copie chaîne (le JsonDesignerData de l'enveloppe reste intact).
-sJsonEnvTemp est une chaîne = stEnveloppe.JsonDesignerData
-nIdClientPolice est un entier = 0
-QUAND EXCEPTION DANS
+sJsonEnvTemp			est une chaîne		= stEnveloppe.JsonDesignerData
+nIdClientPolice		est un entier		= 0
+quand exception dans
 	nIdClientPolice = __stOperation.IdClient
-FAIRE
+faire
 	nIdClientPolice = 0
-FIN
+fin
 sJsonEnvTemp = SubstitueNomTechniquePolices(sJsonEnvTemp, nIdClientPolice)
 
 // ─── Écriture du JSON dans le fichier temporaire ─────────────────────────
-si pas fSauveTexte(sCheminJsonTemp, ChaîneVersUTF8(sJsonEnvTemp)) alors
-	Trace("GenererPsmdServeurEnveloppe : échec fSauveTexte : " + sCheminJsonTemp)
+si pas fSauveTexte(sCheminJsonTemp, sJsonEnvTemp.VersUTF8()) alors
 	renvoyer Faux
 fin
 
@@ -66,10 +63,8 @@ sCommande = ChaîneConstruit(
 ],
 sNodeExe, sNodeCli, sCheminJsonTemp, sCheminPsmd)
 
-Trace("GenererPsmdServeurEnveloppe : CMD = " + sCommande)
 
 si pas LanceAppli(sCommande, exeIconise, exeBloquant) alors
-	Trace("GenererPsmdServeurEnveloppe : LanceAppli échoué — " + ErreurInfo(errComplet))
 	renvoyer Faux
 fin
 
@@ -80,7 +75,6 @@ fin
 
 // ─── Vérification présence du .psmd produit ──────────────────────────────
 si pas fFichierExiste(sCheminPsmd) alors
-	Trace("GenererPsmdServeurEnveloppe : .psmd introuvable après génération : " + sCheminPsmd)
 	renvoyer Faux
 fin
 
@@ -91,5 +85,4 @@ stEnveloppe.NomFichierPsmdEnveloppe	= sNomFichierPsmd
 // ─── Lot 2C : copie des polices utilisées dans Fonts (même répertoire d'opération) ──
 CopiePolicesUtiliseesVersFonts(stEnveloppe.JsonDesignerData, stEnveloppe.RepertoireTravail)
 
-Trace("GenererPsmdServeurEnveloppe : .psmd généré : " + sCheminPsmd)
 renvoyer Vrai

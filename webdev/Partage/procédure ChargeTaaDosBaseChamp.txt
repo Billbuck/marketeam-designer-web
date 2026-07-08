@@ -18,7 +18,7 @@ sdReqDosBaseChamp	est une Source de Données
 stBaseChamp			est une structBaseChamp
 taaBaseChamp		est un tableau associatif de structBaseChamp
 
-sTexteRequete = 
+sTexteRequete =
 [
 SELECT
 	Champ,
@@ -35,7 +35,6 @@ ORDER BY
 
 
 si pas sdReqDosBaseChamp.ExécuteRequêteSQL(clt_client..Connexion, hRequêteSansCorrection, sTexteRequete) alors
-	// Trace("Erreur requête ChargeTaaDosBaseChamp","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
 	renvoyer Faux
 fin
 

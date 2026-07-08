@@ -17,11 +17,11 @@
 // ─────────────────────────────────────────────────────────────────────────────
 procédure VerifiePolicesProjet(pStOperation est une structOperation) : chaîne
 
-sNonConf		est une chaîne	= ""
+sNonConf			est une chaîne	= ""
 sNonConfDoc		est une chaîne
 
 // ─── Documents ──────────────────────────────────────────────────────────────
-POUR TOUT stDocument DE pStOperation.stOperationLettre.tabStDocument
+pour tout stDocument de pStOperation.stOperationLettre.tabStDocument
 	si stDocument.JsonDesignerData <> "" alors
 		sNonConfDoc = CopiePolicesUtiliseesVersFonts(stDocument.JsonDesignerData, "", Vrai)
 		si sNonConfDoc <> "" alors
@@ -29,10 +29,10 @@ POUR TOUT stDocument DE pStOperation.stOperationLettre.tabStDocument
 			sNonConf += sNonConfDoc
 		fin
 	fin
-FIN
+fin
 
 // ─── Enveloppe (mêmes polices possibles) ────────────────────────────────────
-QUAND EXCEPTION DANS
+quand exception dans
 	si pStOperation.stOperationLettre.stEnveloppe.JsonDesignerData <> "" alors
 		sNonConfDoc = CopiePolicesUtiliseesVersFonts(pStOperation.stOperationLettre.stEnveloppe.JsonDesignerData, "", Vrai)
 		si sNonConfDoc <> "" alors
@@ -40,11 +40,7 @@ QUAND EXCEPTION DANS
 			sNonConf += sNonConfDoc
 		fin
 	fin
-FAIRE
-FIN
-
-si sNonConf <> "" alors
-	Trace("VerifiePolicesProjet : non-conformités projet : " + sNonConf)
+faire
 fin
 
 renvoyer sNonConf

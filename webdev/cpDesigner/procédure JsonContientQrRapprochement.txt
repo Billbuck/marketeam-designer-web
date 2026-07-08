@@ -1,0 +1,65 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// cpDesigner.JsonContientQrRapprochement
+// Rôle : Détecter la présence de la zone système « datamatrix de rapprochement »
+//        (id strict "sys-datamatrix-rapprochement") dans le JSON Designer d'un document.
+//
+//        SOURCE UNIQUE de cette détection (symétrique de JsonContientQrInteractif) :
+//          - RecalculeEtatRapprochement (QrPresent par document) ;
+//          - pose du marqueur structDocument.EstBatGenereAvecRapprochement après CHAQUE
+//            génération de BAT (ServeurTraiterMessageDesigner, btnRegenererBat,
+//            SelectionModèle, UploadFichier, SupprimerPersonnalisation).
+//
+//        Le JSON accepté peut être :
+//          - le JSON "data only" stocké dans JsonDesignerData ;
+//          - un wrapper Designer complet avec .data.
+//        On scanne zonesCodeBarres (canal réel de la zone) ET zonesQR (robustesse).
+//
+// Paramètre :
+//   pJsonData : JSON Designer (chaîne)
+// Retour : booléen — Vrai si la zone est présente ; Faux si JSON vide/mal formé.
+// ─────────────────────────────────────────────────────────────────────────────
+procédure JsonContientQrRapprochement(pJsonData est une chaîne) : booléen
+
+si pJsonData = "" alors
+	renvoyer Faux
+fin
+
+quand exception dans
+
+	jDoc	est un JSON	= ChaîneVersUTF8(pJsonData)
+
+	// Source des zones : .data si wrapper complet, sinon racine
+	jData	est un JSON
+	si jDoc.data..Existe alors
+		jData = jDoc.data
+	sinon
+		jData = jDoc
+	fin
+
+	// Zones code-barres (canal réel de la zone de rapprochement)
+	si jData.zonesCodeBarres..Existe alors
+		pour nIndZoneRap = 1 _à_ jData.zonesCodeBarres..Occurrence
+			si jData.zonesCodeBarres[nIndZoneRap].id..Existe alors
+				si jData.zonesCodeBarres[nIndZoneRap].id = "sys-datamatrix-rapprochement" alors
+					renvoyer Vrai
+				fin
+			fin
+		fin
+	fin
+
+	// Zones QR (robustesse historique)
+	si jData.zonesQR..Existe alors
+		pour nIndZoneRap = 1 _à_ jData.zonesQR..Occurrence
+			si jData.zonesQR[nIndZoneRap].id..Existe alors
+				si jData.zonesQR[nIndZoneRap].id = "sys-datamatrix-rapprochement" alors
+					renvoyer Vrai
+				fin
+			fin
+		fin
+	fin
+
+	renvoyer Faux
+
+faire
+	renvoyer Faux
+fin

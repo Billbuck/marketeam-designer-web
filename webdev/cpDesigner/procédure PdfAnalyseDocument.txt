@@ -10,8 +10,8 @@
 //        exporteurs comme CorelDraw, certaines versions d'InDesign, etc.)
 //
 // Paramètres :
-//   stDocument (StructDocument) : structure document avec Répertoire, NomFichierTemp
-// -----------------------------------------------------------------------------
+//	stDocument (structDocument) : structure document avec Répertoire, NomFichierTemp
+
 procédure PdfAnalyseDocument(stDocument est une structDocument)
 
 sMessageErreur			est une chaîne
@@ -127,17 +127,6 @@ pour tout stPage de stResultat.pages
 	stPagePdf.TrimBoxLargeurMm		= stPage.trimbox.largeurMm
 	stPagePdf.TrimBoxHauteurMm		= stPage.trimbox.hauteurMm
 
-	Trace("=== DIAGNOSTIC FOND PERDU ===")
-	Trace("LargeurInterne", rLargeurInterne)
-	Trace("HauteurInterne", rHauteurInterne)
-	Trace("LargeurExterne", rLargeurExterne)
-	Trace("HauteurExterne", rHauteurExterne)
-	Trace("MediaBoxLargeurMm", stPagePdf.MediaBoxLargeurMm)
-	Trace("MediaBoxHauteurMm", stPagePdf.MediaBoxHauteurMm)
-	Trace("BleedBoxLargeurMm", stPagePdf.BleedBoxLargeurMm)
-	Trace("BleedBoxHauteurMm", stPagePdf.BleedBoxHauteurMm)
-	Trace("TrimBoxLargeurMm", stPagePdf.TrimBoxLargeurMm)
-	Trace("TrimBoxHauteurMm", stPagePdf.TrimBoxHauteurMm)
 
 	// -----------------------------------------------------------------
 	// Détection du fond perdu (BleedBox > TrimBox)
@@ -218,7 +207,7 @@ pour tout stPage de stResultat.pages
 				fin
 			fin
 
-			// Format fini identifié → injection des boîtes dans le PDF
+			// Format fini identifié -> injection des boîtes dans le PDF
 			si rFondPerduDetecte > 0 alors
 				sUrlInject est une chaîne = "http://localhost:5000/PyMuPdfExtract/inject_trim_bleed_boxes" +...
 				"?file=" + URLEncode(stDocument.Repertoire + stDocument.NomFichierTemp) +...
@@ -238,21 +227,17 @@ pour tout stPage de stResultat.pages
 
 				si hRepInject.CodeEtat = 200 alors
 					vInject est un Variant = JSONVersVariant(hRepInject.Contenu)
-					si vInject.success = Vrai alors
-						Trace("InjectTrimBleedBoxes : injected=" + vInject.injected + " / bleedMm=" + vInject.bleedMm)
-					sinon
-						Trace("InjectTrimBleedBoxes : erreur API = " + vInject.erreur)
+					si vInject.success = Faux alors
 						rFondPerduDetecte = 0
 					fin
 				sinon
-					Trace("InjectTrimBleedBoxes : HTTP " + hRepInject.CodeEtat)
 					rFondPerduDetecte = 0
 				fin
 			fin
 		fin
 
 
-		// Fond perdu non détectable ou injection échouée → rejet
+		// Fond perdu non détectable ou injection échouée -> rejet
 		si rFondPerduDetecte = 0 alors
 			fSupprime(stDocument.Repertoire + stDocument.NomFichierTemp)
 			sMessageErreur = "Votre document a été déclaré avec fond perdu" + RC + "mais aucun fond perdu n'a été détecté dans le PDF"
@@ -375,11 +360,6 @@ pour tout stPage de stResultat.pages
 				stPagePdf.TauxEncrageBordureBas		= vEdge.pages[1].inkCoverage.bottom
 				stPagePdf.TauxEncrageBordureGauche	= vEdge.pages[1].inkCoverage.left
 				stPagePdf.TauxEncrageBordureDroite	= vEdge.pages[1].inkCoverage.right
-				Trace("Taux encrage bordure (3mm) :" +...
-				" H=" + stPagePdf.TauxEncrageBordureHaut +...
-				" B=" + stPagePdf.TauxEncrageBordureBas +...
-				" G=" + stPagePdf.TauxEncrageBordureGauche +...
-				" D=" + stPagePdf.TauxEncrageBordureDroite)
 
 				// Seuil 10% : blocage si au moins un côté dépasse
 				si stPagePdf.TauxEncrageBordureHaut > 10 _ou_

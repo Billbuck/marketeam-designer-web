@@ -12,32 +12,32 @@
 // de la repérer pour éviter les doublons à chaque réouverture.
 //
 // Paramètres :
-//   stLoadDoc          : structure document Designer en cours de remplissage
-//   pLargeurOuvertMm   : largeur du document ouvert en mm (pour centrage)
-//   pHauteurOuvertMm   : hauteur du document ouvert en mm (pour centrage)
-// ─────────────────────────────────────────────────────────────────────────────
-procédure RemplirDesignerZoneSystemeQrInteractif(stLoadDoc est une structDesignerDocument, pLargeurOuvertMm est un réel, pHauteurOuvertMm est un réel)
+//	stLoadDoc (structDesignerDocument) : structure document Designer en cours de remplissage
+//	pLargeurOuvertMm : largeur du document ouvert en mm (pour centrage)
+//	pHauteurOuvertMm : hauteur du document ouvert en mm (pour centrage)
+
+procédure RemplirDesignerZoneSystemeQrInteractif(stLoadDoc est une structDesignerDocument, pLargeurOuvertMm, pHauteurOuvertMm)
 
 
 // Taille fixe par défaut du QR (l'utilisateur peut redimensionner ensuite)
-nTailleMm est un réel = 30
+nTailleMm		est un réel		= 30
 
 
 // ─── Construction de la zone QR système ──────────────────────────────────
-stZoneQR est une structDesignerZoneQR
+stZoneQR		est une structDesignerZoneQR
 
-stZoneQR.id				= "sys-qr-cliquezici"
-stZoneQR.page			= 1
-stZoneQR.nom			= "QR Code Interactif"
-stZoneQR.niveau		= 100
-stZoneQR.rotation		= 0
-stZoneQR.verrouille	= Faux
+stZoneQR.id							= "sys-qr-cliquezici"
+stZoneQR.page						= 1
+stZoneQR.nom						= "QR Code Interactif"
+stZoneQR.niveau					= 100
+stZoneQR.rotation					= 0
+stZoneQR.verrouille				= Faux
 
 // Position centrée sur la page
-stZoneQR.Géométrie.xMm			= (pLargeurOuvertMm - nTailleMm) / 2
-stZoneQR.Géométrie.yMm			= (pHauteurOuvertMm - nTailleMm) / 2
-stZoneQR.Géométrie.largeurMm	= nTailleMm
-stZoneQR.Géométrie.hauteurMm	= nTailleMm
+stZoneQR.geometrie.xMm			= (pLargeurOuvertMm - nTailleMm) / 2
+stZoneQR.geometrie.yMm			= (pHauteurOuvertMm - nTailleMm) / 2
+stZoneQR.geometrie.largeurMm	= nTailleMm
+stZoneQR.geometrie.hauteurMm	= nTailleMm
 
 // Contenu : URL générique du Courrier interactif, LUE EN BASE (prm_parametre).
 // Plus de placeholder figé : la valeur — provisoire tant que la page définitive
@@ -45,40 +45,39 @@ stZoneQR.Géométrie.hauteurMm	= nTailleMm
 // Identique pour tous (l'URL variable par destinataire sera traitée plus tard,
 // au module d'export). Repli si paramètre vide/introuvable : page publique
 // Marketeam, pour que le QR ne soit jamais vide/illisible.
-stZoneQR.typeCode	= "QRCode"
+stZoneQR.typeCode					= "QRCode"
 
 sUrlGenerique est une chaîne = cpFonction.ValeurParametre("Url_Courrier_Interactif_Generique", prm_parametre.ValChaine..Nom)
 si sUrlGenerique = "" alors
 	sUrlGenerique = "https://www.marketeam.com"
-	Trace("RemplirDesignerZoneSystemeQrInteractif : paramètre Url_Courrier_Interactif_Generique vide/introuvable — repli sur " + sUrlGenerique)
 fin
-stZoneQR.contenu	= sUrlGenerique
+stZoneQR.contenu											= sUrlGenerique
 
 // Couleurs : noir sur blanc
-stZoneQR.Couleurs.codeCmjn.c	= 0
-stZoneQR.Couleurs.codeCmjn.M	= 0
-stZoneQR.Couleurs.codeCmjn.y	= 0
-stZoneQR.Couleurs.codeCmjn.k	= 100
+stZoneQR.couleurs.codeCmjn.c							= 0
+stZoneQR.couleurs.codeCmjn.m							= 0
+stZoneQR.couleurs.codeCmjn.y							= 0
+stZoneQR.couleurs.codeCmjn.k							= 100
 
-stZoneQR.Couleurs.fondCmjn.c	= 0
-stZoneQR.Couleurs.fondCmjn.M	= 0
-stZoneQR.Couleurs.fondCmjn.y	= 0
-stZoneQR.Couleurs.fondCmjn.k	= 0
+stZoneQR.couleurs.fondCmjn.c							= 0
+stZoneQR.couleurs.fondCmjn.m							= 0
+stZoneQR.couleurs.fondCmjn.y							= 0
+stZoneQR.couleurs.fondCmjn.k							= 0
 
 
 // ─── Contraintes : NON-SUPPRIMABLE mais MODIFIABLE ───────────────────────
 // On NE met PAS systeme=Vrai (qui rendrait la zone inerte/non-sélectionnable).
 // Seul nonSupprimable=Vrai protège contre la suppression. systemeLibelle
 // affiche un badge visuel pour l'utilisateur.
-stZoneQR.contrainte.Géométrie.positionFixe	= Faux
-stZoneQR.contrainte.Géométrie.locked			= Faux
-stZoneQR.contrainte.Géométrie.minWMm			= 0
-stZoneQR.contrainte.Géométrie.maxWMm			= 0
-stZoneQR.contrainte.Géométrie.minHMm			= 0
-stZoneQR.contrainte.Géométrie.maxHMm			= 0
+stZoneQR.contrainte.geometrie.positionFixe		= Faux
+stZoneQR.contrainte.geometrie.locked				= Faux
+stZoneQR.contrainte.geometrie.minWMm				= 0
+stZoneQR.contrainte.geometrie.maxWMm				= 0
+stZoneQR.contrainte.geometrie.minHMm				= 0
+stZoneQR.contrainte.geometrie.maxHMm				= 0
 
 // Style : on autorise la modification des couleurs
-stZoneQR.contrainte.style.couleursModifiable	= Vrai
+stZoneQR.contrainte.style.couleursModifiable		= Vrai
 
 // Global : la zone vit (sélectionnable, toolbar) mais ne peut être supprimée
 // ni changer de page (le QR Interactif reste sur la page 1)

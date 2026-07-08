@@ -1,28 +1,32 @@
-PROCÉDURE SelectionAdressage(bRegenererJson est un booléen = Vrai)
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// SelectionAdressage ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure SelectionAdressage(bRegenererJson est un booléen = Vrai)
 
 __stOperation.stOperationLettre.stEnveloppe.EstAdressageExpediteur	= intAdressageExpediteur
 __stOperation.stOperationLettre.stEnveloppe.EstAdressageLogo			= intAdressageLogo
 __stOperation.stOperationLettre.stEnveloppe.EstAdressagePromotion		= intAdressagePromotion
 
-
-Trace("=== SelectionAdressage - Diagnostic Enveloppe ===")
-Trace("EnveloppeFond.CheminPhysique = [" + __stOperation.stOperationLettre.stEnveloppe.EnveloppeFond.CheminPhysique + "]")
-Trace("EnveloppeFond.CheminRelatif = [" + __stOperation.stOperationLettre.stEnveloppe.EnveloppeFond.CheminRelatif + "]")
-Trace("FichierApercu = [" + __stOperation.stOperationLettre.stEnveloppe.FichierApercu + "]")
-Trace("IdEnveloppe = " + __stOperation.stOperationLettre.IdEnveloppe)
-Trace("JsonDesignerData vide = " + (__stOperation.stOperationLettre.stEnveloppe.JsonDesignerData = ""))
-
-SI bRegenererJson = Vrai ALORS
+si bRegenererJson = Vrai alors
 	__stOperation.stOperationLettre.stEnveloppe.JsonDesignerData = cpDesigner.ComposerJsonDesignerCreation(__stOperation, __tabEchantillonBaseLigne, __stOperation.TypeOperation, Vrai, 0)
-FIN
+fin
 
-SI intAdressageExpediteur = Faux _ET_ intAdressageLogo = Faux _ET_ intAdressagePromotion = Faux ALORS
+si intAdressageExpediteur = Faux _et_ intAdressageLogo = Faux _et_ intAdressagePromotion = Faux alors
 	btnEnveloppePersonnaliser.Visible	= Faux
 	btnEnveloppeSupprimer.Visible			= Faux
 	btnEnveloppeAperçu.Visible				= Faux
 	btnEnveloppeModèle.Visible				= Faux
 	cboEnveloppeSelection.Etat				= Actif
-SINON
+sinon
 	btnEnveloppePersonnaliser..Visible	= (cboEnveloppeSelection..ValeurMémorisée <= 0)
-FIN
+fin
 

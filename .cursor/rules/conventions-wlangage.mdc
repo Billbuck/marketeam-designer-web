@@ -41,3 +41,8 @@ Ne jamais supposer qu'une procédure n'existe pas. Signaler tout maillon manquan
 - `si … alors … fin` sur **une seule ligne** est interdit avec `fin` :
   soit tout sur une ligne **sans** `fin`, soit en bloc multiligne avec `fin`.
 - Complétion de chemin : `ComplèteRep(...)`.
+- **Procédures internes** : elles partagent la portée de la procédure hôte.
+  Un paramètre (ou une variable) d'une procédure interne ne doit JAMAIS porter
+  le même nom qu'un paramètre/variable de l'hôte (erreur « déclaration
+  impossible » + erreurs « paramètre par référence » en cascade).
+  Suffixer les noms (ex. `pValeurCdb` si l'hôte a déjà `pValeur`).

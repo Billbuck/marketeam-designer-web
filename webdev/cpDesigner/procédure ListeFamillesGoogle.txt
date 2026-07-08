@@ -48,7 +48,6 @@ nTtlJours		est un entier	= 7		// TTL EN DUR (jours) — PAS de paramètre prm_pa
 // ─── Dossier cache global ───────────────────────────────────────────────────
 sRepCache = RepCachePolices()
 si sRepCache = "" alors
-	Trace("ListeFamillesGoogle : cache indisponible")
 	renvoyer tabFamilles
 fin
 sCheminCache = sRepCache + "familles_google.json"
@@ -70,13 +69,9 @@ si pas pForcer _et_ fFichierExiste(sCheminCache) alors
 				tabFamilles.Ajoute(vCache.familles[nI])
 			fin
 			si tabFamilles..Occurrence > 0 alors
-				Trace("ListeFamillesGoogle : cache servi (" + tabFamilles..Occurrence ...
-				+ " familles, âge " + nAgeJours + "j)")
 				renvoyer tabFamilles
 			fin
 		fin
-		// Cache illisible -> on retombe sur le refetch ci-dessous.
-		Trace("ListeFamillesGoogle : cache illisible, refetch API")
 	fin
 fin
 
@@ -87,13 +82,11 @@ si sUrlBase = "" alors
 	sUrlBase = "https://www.googleapis.com/webfonts/v1/webfonts"
 fin
 si sCle = "" alors
-	Trace("ListeFamillesGoogle : paramètre GoogleFonts_Api_Key absent")
 	renvoyer tabFamilles
 fin
 
 sUrl = sUrlBase + "?key=" + sCle + "&sort=alpha"
 si pas HTTPRequête(sUrl) alors
-	Trace("ListeFamillesGoogle : échec HTTPRequête vers l'API Google Fonts")
 	renvoyer tabFamilles
 fin
 // Corps de réponse en BUFFER (octets UTF-8 bruts) -> parse JSON encoding-safe.
@@ -105,7 +98,6 @@ faire
 	bJsonOk = Faux
 fin
 si bJsonOk = Faux _ou_ jReponse.items..Existe = Faux alors
-	Trace("ListeFamillesGoogle : réponse API illisible ou sans 'items'")
 	renvoyer tabFamilles
 fin
 
@@ -124,7 +116,6 @@ pour nI = 1 _à_ jReponse.items..Occurrence
 fin
 
 si tabFamilles..Occurrence = 0 alors
-	Trace("ListeFamillesGoogle : aucune famille collectée")
 	renvoyer tabFamilles
 fin
 
@@ -134,10 +125,6 @@ tabFamilles.Trie()
 // ─── Écriture du cache (JSON UTF-8) ─────────────────────────────────────────
 varCache.familles = tabFamilles
 Sérialise(varCache, sJsonCache, psdJSON)
-si pas fSauveTexte(sCheminCache, sJsonCache.VersUTF8()) alors
-	Trace("ListeFamillesGoogle : échec écriture cache " + sCheminCache)
-sinon
-	Trace("ListeFamillesGoogle : cache reconstruit (" + tabFamilles..Occurrence + " familles)")
-fin
+fSauveTexte(sCheminCache, sJsonCache.VersUTF8())
 
 renvoyer tabFamilles

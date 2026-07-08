@@ -1,0 +1,19 @@
+---
+description: Format des alertes et points d'action dans les réponses à Michel
+alwaysApply: true
+---
+
+# Communication — alertes visibles
+
+Michel lit vite (en diagonale). Toute alerte, action à faire de son côté, ou
+point en suspens doit être affichée de façon GRAPHIQUE et impossible à rater,
+jamais noyée dans un paragraphe ou une liste de manipulations.
+
+Format à utiliser :
+
+> ⚠️ **ACTION REQUISE — [sujet]**
+> Description courte et impérative de ce qu'il faut faire.
+
+Regrouper les alertes dans une section dédiée « ⚠️ Alertes » en fin de réponse
+quand il y en a plusieurs. Une alerte déjà émise mais non traitée doit être
+répétée dans les réponses suivantes tant qu'elle n'est pas résolue.

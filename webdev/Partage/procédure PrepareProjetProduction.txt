@@ -16,7 +16,6 @@ procédure PrepareProjetProduction(pIdOperation) : booléen
 sNomCsv est une chaîne = Partage.ExporteBaseOperationCsv(pIdOperation)
 
 si sNomCsv = "" alors
-	Trace("PrepareProjetProduction : export CSV échoué (IdOperation=" + pIdOperation + ")")
 	renvoyer Faux
 fin
 

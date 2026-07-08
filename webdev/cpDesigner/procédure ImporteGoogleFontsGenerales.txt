@@ -18,7 +18,6 @@
 // dynamiques ("100","regular","300italic"…).
 //
 // Retour : chaîne récapitulative (familles importées / non trouvées / nb créées-MAJ).
-//          Également tracée (Trace).
 // ─────────────────────────────────────────────────────────────────────────────
 procédure ImporteGoogleFontsGenerales() : chaîne
 
@@ -35,12 +34,12 @@ sNonTrouvees		est une chaîne	= ""
 
 nNbFamilles			est un entier	= 0
 nNbCreees			est un entier	= 0
-nNbFichiers			est un entier	= 0		// Lot 2A-2 : fichiers TTF téléchargés (regular + variantes)
-nNbNomTech			est un entier	= 0		// Lot 2A-2 : NomTechnique corrigés depuis le nameID1 réel
-nNbPurgees			est un entier	= 0		// Voie B : entrées Google générales purgées avant reconstruction
-nNbFichSuppr		est un entier	= 0		// Voie B : fichiers cache supprimés lors de la purge
-sEchecsTtf			est une chaîne	= ""		// Lot 2A-2 : polices dont le NomTechnique n'a PU être corrigé
-sRepCache			est une chaîne	= ""		// Lot 2A-2 : dossier cache global des polices
+nNbFichiers			est un entier	= 0								// Lot 2A-2 : fichiers TTF téléchargés (regular + variantes)
+nNbNomTech			est un entier	= 0								// Lot 2A-2 : NomTechnique corrigés depuis le nameID1 réel
+nNbPurgees			est un entier	= 0								// Voie B : entrées Google générales purgées avant reconstruction
+nNbFichSuppr		est un entier	= 0								// Voie B : fichiers cache supprimés lors de la purge
+sEchecsTtf			est une chaîne	= ""								// Lot 2A-2 : polices dont le NomTechnique n'a PU être corrigé
+sRepCache			est une chaîne	= ""								// Lot 2A-2 : dossier cache global des polices
 
 taaCible				est un tableau associatif de booléens		// familles cibles (clé = family)
 taaTrouvee			est un tableau associatif de booléens		// familles cibles trouvées dans l'API
@@ -83,15 +82,11 @@ taaCible["Roboto Mono"]			= Vrai
 taaCible["Source Code Pro"]	= Vrai
 
 // ─── 3. Libellés de graisses « principales » (ici_police_weight) ──────────
-taaLibelleGraisse = RemplirLibellesGraisses()
+taaLibelleGraisse					= RemplirLibellesGraisses()
 
 // ─── 3 bis. Cache global des fichiers de police (Lot 2A-2, stratégie A) ────
 //   Si indisponible : l'import DB continue, mais sans téléchargement ni
-//   correction de NomTechnique (tracé).
-sRepCache = RepCachePolices()
-si sRepCache = "" alors
-	Trace("ImporteGoogleFonts : cache polices indisponible -> téléchargement/NomTechnique sautés")
-fin
+sRepCache							= RepCachePolices()
 
 // ─── 3 ter. PURGE des entrées Google générales (Voie B : import idempotent) ──
 //   À chaque import, on supprime TOUTES les entrées Google de portée générale
@@ -104,73 +99,72 @@ fin
 PurgePolicesGoogleGenerales()
 
 // ─── 4. Appel API (liste COMPLÈTE, jamais ?family=) ───────────────────────
-sUrl = sUrlBase + "?key=" + sCle + "&sort=popularity"
-ResLancement = HTTPRequête(sUrl)
+sUrl				= sUrlBase + "?key=" + sCle + "&sort=popularity"
+ResLancement		= HTTPRequête(sUrl)
 si pas ResLancement alors
 	renvoyer "Import annulé : échec HTTPRequête vers l'API Google Fonts."
 fin
 sResCode = HTTPDonneRésultat()
 
 // ─── 5. Parsing JSON dynamique ────────────────────────────────────────────
-QUAND EXCEPTION DANS
+quand exception dans
 	jReponse = sResCode
-FAIRE
+faire
 	bJsonOk = Faux
-FIN
+fin
 si bJsonOk = Faux _ou_ jReponse.items..Existe = Faux alors
 	renvoyer "Import annulé : réponse API illisible ou sans 'items'."
 fin
 
 // ─── 6. Parcours + filtre + mapping ───────────────────────────────────────
-POUR nI = 1 _À_ jReponse.items..Occurrence
+pour nI = 1 _à_ jReponse.items..Occurrence
 	sFamily = ""
-	QUAND EXCEPTION DANS
+	quand exception dans
 		si jReponse.items[nI].family..Existe alors
 			sFamily = jReponse.items[nI].family
 		fin
-	FAIRE
-	FIN
+	faire
+	fin
 
 	si sFamily <> "" _et_ taaCible[sFamily]..Existe alors
 		taaTrouvee[sFamily]	= Vrai
 		nNbFamilles++
 		// Version Google au niveau famille (pour la colonne dsn_police.Version)
 		sVersionFam est une chaîne = ""
-		QUAND EXCEPTION DANS
+		quand exception dans
 			si jReponse.items[nI].version..Existe alors
 				sVersionFam = jReponse.items[nI].version
 			fin
-		FAIRE
-		FIN
+		faire
+		fin
 		// Traitement par famille délégué à la procédure partagée (Lot A1).
 		// Compteurs accumulés PAR RÉFÉRENCE ; nNbCreees = somme des entrées créées.
 		tabAjoutFam = TraiteFamilleGooglePolice(jReponse.items[nI], sFamily, taaLibelleGraisse, sRepCache, sVersionFam, nNbFichiers, nNbNomTech, sEchecsTtf)
 		nNbCreees += tabAjoutFam..Occurrence
 	fin
-FIN
+fin
 
-// ─── 7. Familles cibles non trouvées (trace) ──────────────────────────────
-POUR TOUT bCible, sCibleNom DE taaCible
+// ─── 7. Familles cibles non trouvées ──────────────────────────────
+pour tout bCible, sCibleNom de taaCible
 	si taaTrouvee[sCibleNom]..Existe = Faux alors
 		si sNonTrouvees <> "" alors sNonTrouvees += ", "
 		sNonTrouvees += sCibleNom
 	fin
-FIN
+fin
 
 // ─── 8. Récap ─────────────────────────────────────────────────────────────
 sRecap = "Import Google Fonts terminé — familles importées : " + nNbFamilles ...
-	+ " / 21 ; entrées Google générales purgées : " + nNbPurgees ...
-	+ " ; fichiers cache supprimés : " + nNbFichSuppr ...
-	+ " ; entrées créées : " + nNbCreees ...
-	+ " ; fichiers TTF téléchargés : " + nNbFichiers ...
-	+ " ; NomTechnique corrigés : " + nNbNomTech
++ " / 21 ; entrées Google générales purgées : " + nNbPurgees ...
++ " ; fichiers cache supprimés : " + nNbFichSuppr ...
++ " ; entrées créées : " + nNbCreees ...
++ " ; fichiers TTF téléchargés : " + nNbFichiers ...
++ " ; NomTechnique corrigés : " + nNbNomTech
 si sNonTrouvees <> "" alors
 	sRecap += " ; familles NON trouvées : " + sNonTrouvees
 fin
 si sEchecsTtf <> "" alors
 	sRecap += " ; polices en échec (NomTechnique non corrigé) : " + sEchecsTtf
 fin
-Trace(sRecap)
 
 renvoyer sRecap
 
@@ -179,57 +173,57 @@ renvoyer sRecap
 // PROCÉDURES INTERNES
 // ═════════════════════════════════════════════════════════════════════════
 
-	// ─── Purge des entrées Google GÉNÉRALES + leurs fichiers cache (Voie B) ──
-	//   Supprime TOUTES les entrées Origine='google' de portée générale
-	//   (IdMarque IS NULL AND IdClient IS NULL) ainsi que leurs fichiers cache.
-	//   PRÉSERVE les polices manuelles (Origine <> 'google') et les portées
-	//   marque/client. On collecte d'abord les IdPolice dans un tableau pour ne
+// ─── Purge des entrées Google GÉNÉRALES + leurs fichiers cache (Voie B) ──
+//   Supprime TOUTES les entrées Origine='google' de portée générale
+//   (IdMarque IS NULL AND IdClient IS NULL) ainsi que leurs fichiers cache.
+//   PRÉSERVE les polices manuelles (Origine <> 'google') et les portées
+//   marque/client. On collecte d'abord les IdPolice dans un tableau pour ne
 	//   pas modifier dsn_police pendant l'itération du curseur de requête.
-	PROCÉDURE INTERNE PurgePolicesGoogleGenerales()
+	procédure interne PurgePolicesGoogleGenerales()
 		tabIds		est un tableau de entier
 		sReqDel		est une chaîne ANSI
-		sdReqDel	est une Source de Données
+		sdReqDel		est une Source de Données
 		sReqDel = [
 			SELECT IdPolice FROM dsn_police
 			WHERE Origine = 'google' AND IdMarque IS NULL AND IdClient IS NULL
 		]
 		si sdReqDel.ExécuteRequêteSQL(dsn_police.Connexion, hRequêteSansCorrection, sReqDel) alors
-			POUR TOUT sdReqDel
+			pour tout sdReqDel
 				tabIds.Ajoute(sdReqDel.IdPolice)
-			FIN
+			fin
 		fin
 		sdReqDel.AnnuleDéclaration()
 
-		POUR TOUT nIdSuppr DE tabIds
+		pour tout nIdSuppr de tabIds
 			SupprimeFichiersCachePolice(nIdSuppr)
 			si dsn_police.LitRecherchePremier(IdPolice, nIdSuppr) alors
 				si dsn_police.Supprime() alors
 					nNbPurgees++
 				fin
 			fin
-		FIN
-	FIN
+		fin
+	fin
 
 	// ─── Supprime les 4 fichiers de cache d'une police (si présents) ────────
-	PROCÉDURE INTERNE SupprimeFichiersCachePolice(LOCAL pId est un entier)
+	procédure interne SupprimeFichiersCachePolice(local pId est un entier)
 		si sRepCache = "" alors
-			RETOUR
+			retour
 		fin
 		SupprimeSiExiste(sRepCache + "police_" + pId + "_regular.ttf")
 		SupprimeSiExiste(sRepCache + "police_" + pId + "_bold.ttf")
 		SupprimeSiExiste(sRepCache + "police_" + pId + "_italic.ttf")
 		SupprimeSiExiste(sRepCache + "police_" + pId + "_bolditalic.ttf")
-	FIN
+	fin
 
-	PROCÉDURE INTERNE SupprimeSiExiste(LOCAL pChemin est une chaîne)
+	procédure interne SupprimeSiExiste(local pChemin est une chaîne)
 		si fFichierExiste(pChemin) alors
 			si fSupprime(pChemin) alors
 				nNbFichSuppr++
 			fin
 		fin
-	FIN
+	fin
 
-	// ─── Traitement par famille : délégué à la procédure PARTAGÉE ───────────
-	//   cpDesigner.TraiteFamilleGooglePolice (extraite au Lot A1) — réutilisée
-	//   par l'ajout unitaire. UrlVariante / TelechargeVariante / l'INSERT y sont
-	//   désormais internes. La purge globale ci-dessus reste propre à l'import.
+// ─── Traitement par famille : délégué à la procédure PARTAGÉE ───────────
+//   cpDesigner.TraiteFamilleGooglePolice (extraite au Lot A1) — réutilisée
+//   par l'ajout unitaire. UrlVariante / TelechargeVariante / l'INSERT y sont
+//   désormais internes. La purge globale ci-dessus reste propre à l'import.

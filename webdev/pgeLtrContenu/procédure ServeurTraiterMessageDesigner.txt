@@ -24,7 +24,6 @@ selon vMessage.action
 		// L'utilisateur a validé son document dans le Designer
 		si vMessage.success = Vrai alors
 			// vMessage.data contient le JSON complet exporté par exportToWebDev()
-			Trace("Document validé reçu du Designer")
 			jDoc est un JSON = ChaîneVersUTF8(gsJsonRecu)
 
 			// ═════════════════════════════════════════════════════════════
@@ -65,10 +64,7 @@ selon vMessage.action
 					sInjectePB3	est une chaîne	= jDoc.data.champsFusion[nIndPart3].injecteParBase
 					sLibelleP3	est une chaîne	= jDoc.data.champsFusion[nIndPart3].libelle
 
-					si sInjectePB3 = "1" alors
-						Trace("PARTIE 3 : champ " + sLibelleP3 + " injecteParBase=[" + sInjectePB3 + "] => PURGÉ (non persisté)")
-					sinon
-						Trace("PARTIE 3 : champ " + sLibelleP3 + " injecteParBase=[" + sInjectePB3 + "] => persisté")
+					si sInjectePB3 <> "1" alors
 						nIdxConservePart3 est un entier = jChampsFusionPurge..Occurrence + 1
 						jChampsFusionPurge[nIdxConservePart3] = jDoc.data.champsFusion[nIndPart3]
 					fin
@@ -114,8 +110,14 @@ selon vMessage.action
 						fin
 
 						// ─── Marquer le document comme personnalisé ─────────────
-						__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].EstPersonnaliseDesigner	= Vrai
-						__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].DateHeureDesigner			= DateHeureSys()
+						__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].EstPersonnaliseDesigner			= Vrai
+						__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].DateHeureDesigner					= DateHeureSys()
+
+						// ─── Marqueur d'état du BAT généré (rapprochement) ──────
+						// Trace AVEC QUOI ce BAT vient d'être généré : comparé à
+						// QrRequis dans InitZnrContenu pour la visibilité de
+						// btnRegenererBAT (remplace la comparaison au JSON volatil).
+						__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].EstBatGenereAvecRapprochement	= cpDesigner.JsonContientQrRapprochement(sJsonData)
 
 						// Validation Designer (document) -> l'audit de remplissage devient
 						// périmé : on vide le marqueur (mémoire seule, persisté au prochain
@@ -160,19 +162,12 @@ selon vMessage.action
 					fin
 				fin
 			fin
-
-		sinon
-			Trace("Validation échouée : " + vMessage.error)
 		fin
 
 	cas "cancelled"
 		// L'utilisateur a annulé le projet
-		Trace("Projet annulé par l'utilisateur")
-		// TODO : Retour à la page précédente du tunnel
-		// PageAffiche(PAGE_TunnelCommande, "")
 
 	autre cas
-		Trace("Action non gérée côté serveur : " + vMessage.action)
 
 fin
 

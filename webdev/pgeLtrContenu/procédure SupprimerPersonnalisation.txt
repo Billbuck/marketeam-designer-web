@@ -36,7 +36,6 @@ si stDoc.IdModele > 0 alors
 	// puis recopie les fichiers du modèle et recharge JsonDesignerData
 	SelectionModèle(nIdModele, pLigne)
 	__stOperation.stOperationLettre.tabStDocument[pLigne].EstPersonnaliseDesigner	= Faux
-	Trace("SupprimerDocument : modèle " + nIdModele + " rechargé pour ligne " + pLigne)
 	renvoyer Vrai
 fin
 
@@ -68,8 +67,6 @@ si stDoc.CodeTemp <> "" alors
 	si fFichierExiste(sRepUpload + "psmd_bat_" + sCodeTempDoc + ".psmd.images.json") alors
 		fSupprime(sRepUpload + "psmd_bat_" + sCodeTempDoc + ".psmd.images.json")
 	fin
-
-	Trace("SupprimerDocument : personnalisation supprimée pour PDF (CodeTemp=" + sCodeTempDoc + ")")
 fin
 
 // Vide tabImageBat (issu du Designer) — on garde tabImageFond et tabPagePDF
@@ -119,9 +116,6 @@ si stDoc.CodeTemp <> "" _et_ __stOperation.stOperationLettre.tabStDocument[pLign
 					fin
 				fin
 				bRegenereJson = Vrai
-				Trace("SupprimerDocument : BAT régénéré via Designer/PSMD (porte-adresse=" + nAvecAdresse + ") pour CodeTemp=" + sCodeTempBat)
-			sinon
-				Trace("SupprimerDocument : échec GenererPsmdServeurDocument pour CodeTemp=" + sCodeTempBat)
 			fin
 		fin
 
@@ -140,7 +134,6 @@ si stDoc.CodeTemp <> "" _et_ __stOperation.stOperationLettre.tabStDocument[pLign
 			__stOperation.stOperationLettre.tabStDocument[pLigne].tabPagePDF[1].HauteurInterne, ...
 			__stOperation.stOperationLettre.tabStDocument[pLigne].Repertoire, ...
 			sRepUploadRel)
-			Trace("SupprimerDocument : BAT trimmed régénéré (fond perdu) pour CodeTemp=" + sCodeTempBat)
 
 		sinon
 
@@ -155,9 +148,6 @@ si stDoc.CodeTemp <> "" _et_ __stOperation.stOperationLettre.tabStDocument[pLign
 						stImgBat.CheminPhysique		= sFicBat
 						stImgBat.CheminRelatif		= sRepUploadRel + sNomBat + "p" + nNumPage + __JPG__
 						__stOperation.stOperationLettre.tabStDocument[pLigne].tabImageBat.Ajoute(stImgBat)
-						Trace("SupprimerDocument : BAT à vide (non fond perdu) p" + nNumPage + " --> " + sFicBat)
-					sinon
-						Trace("SupprimerDocument : échec copie fond->BAT p" + nNumPage, ErreurInfo(errComplet))
 					fin
 				fin
 			fin
@@ -168,7 +158,10 @@ si stDoc.CodeTemp <> "" _et_ __stOperation.stOperationLettre.tabStDocument[pLign
 fin
 
 // ─── Reset des données de personnalisation ───────────────────────────────
-__stOperation.stOperationLettre.tabStDocument[pLigne].EstPersonnaliseDesigner	= Faux
+__stOperation.stOperationLettre.tabStDocument[pLigne].EstPersonnaliseDesigner			= Faux
+// Marqueur d'état du BAT généré (rapprochement) : le BAT vient d'être refait
+// (JSON recomposé sans zone de rapprochement, ou fond/trim) -> reflète le JSON.
+__stOperation.stOperationLettre.tabStDocument[pLigne].EstBatGenereAvecRapprochement	= cpDesigner.JsonContientQrRapprochement(__stOperation.stOperationLettre.tabStDocument[pLigne].JsonDesignerData)
 // Si JSON régénéré (cas porte-adresse), on le conserve comme état initial.
 // Sinon on le vide pour signifier "aucune donnée Designer".
 si bRegenereJson = Faux alors

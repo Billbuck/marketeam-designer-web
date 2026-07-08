@@ -24,75 +24,72 @@
 //          RemplirDesignerPolices : id/nom/nomTechnique/famille/graisse/weight/
 //          style/url/boldUrl/italicUrl/boldItalicUrl).
 // ─────────────────────────────────────────────────────────────────────────────
-procédure TraiteFamilleGooglePolice(LOCAL jItem est un JSON, LOCAL pFamily est une chaîne, LOCAL taaLibelleGraisse est un tableau associatif de chaînes, LOCAL pRepCache est une chaîne, LOCAL pVersion est une chaîne, nNbFichiers est un entier, nNbNomTech est un entier, sEchecs est une chaîne) : tableau de structDesignerPolice
+procédure TraiteFamilleGooglePolice(local jItem est un JSON, local pFamily est une chaîne, local taaLibelleGraisse est un tableau associatif de chaînes, local pRepCache est une chaîne, local pVersion est une chaîne, nNbFichiers est un entier, nNbNomTech est un entier, sEchecs est une chaîne) : tableau de structDesignerPolice
 
 tabPolices		est un tableau de structDesignerPolice
 taaWeights		est un tableau associatif de booléens		// clé chaîne = poids présent
-sVar			est une chaîne
-nW				est un entier
-sNom			est une chaîne
+sVar				est une chaîne
+nW					est un entier
+sNom				est une chaîne
 sLibGraisse		est une chaîne
 sUrlReg			est une chaîne
 sUrlIta			est une chaîne
-sUrlBold		est une chaîne
+sUrlBold			est une chaîne
 sUrlBoldIta		est une chaîne
 nId				est un entier
 sCheminReg		est une chaîne
-sNameId1		est une chaîne
+sNameId1			est une chaîne
 sNomTechFinal	est une chaîne
 stP				est une structDesignerPolice
 
 // ─── Recensement des graisses NON-italiques présentes (regular -> 400) ──────
-QUAND EXCEPTION DANS
-	SI jItem.variants..Existe ALORS
-		POUR nV = 1 _À_ jItem.variants..Occurrence
+quand exception dans
+	si jItem.variants..Existe alors
+		pour nV = 1 _à_ jItem.variants..Occurrence
 			sVar = jItem.variants[nV]
-			SI Position(sVar, "italic") > 0 ALORS
+			si sVar.Position("italic") > 0 alors
 				// variante italique : pas d'entrée
-			SINON SI sVar = "regular" ALORS
+			sinon si sVar = "regular" alors
 				taaWeights["400"] = Vrai
-			SINON SI sVar = "700" ALORS
+			sinon si sVar = "700" alors
 				// Bold de l'ancre 400 : pas d'entrée propre
-			SINON SI EstNumérique(sVar) ALORS
+			sinon si EstNumérique(sVar) alors
 				taaWeights[sVar] = Vrai
-			FIN
-		FIN
-	FIN
-FAIRE
-FIN
+			fin
+		fin
+	fin
+faire
+fin
 
-SI taaWeights["400"]..Existe = Faux ALORS
-	Trace("TraiteFamilleGooglePolice : famille sans poids 400 (regular) : " + pFamily)
-FIN
 
 // ─── Une entrée par graisse présente ────────────────────────────────────────
-POUR TOUT bW, sWCle DE taaWeights
+pour tout bW, sWCle de taaWeights
 	nW = Val(sWCle)
 
 	// URLs (test présence + https forcé)
-	SI nW = 400 ALORS
+	si nW = 400 alors
 		sUrlReg		= UrlVariante(jItem, "regular")
 		sUrlIta		= UrlVariante(jItem, "italic")
-		sUrlBold	= UrlVariante(jItem, "700")
+		sUrlBold		= UrlVariante(jItem, "700")
 		sUrlBoldIta	= UrlVariante(jItem, "700italic")
-	SINON
+	sinon
 		sUrlReg		= UrlVariante(jItem, sWCle)
 		sUrlIta		= UrlVariante(jItem, sWCle + "italic")
-		sUrlBold	= ""
+		sUrlBold		= ""
 		sUrlBoldIta	= ""
-	FIN
+	fin
 
 	// Libellé (Nom) : Regular -> Famille seule ; sinon Famille + libellé graisse
-	SI nW = 400 ALORS
+	si nW = 400 alors
 		sNom = pFamily
-	SINON
-		SI taaLibelleGraisse[nW]..Existe ALORS
+	sinon
+		si taaLibelleGraisse[nW]..Existe alors
 			sLibGraisse = taaLibelleGraisse[nW]
-		SINON
+		sinon
 			sLibGraisse = sWCle
-		FIN
+		fin
 		sNom = pFamily + " " + sLibGraisse
-	FIN
+	fin
 
 	// ─── UPSERT par (Famille, Weight) en portée générale google ─────────────
 	//   Si la ligne existe -> UPDATE en GARDANT l'IdPolice (références préservées,
@@ -100,18 +97,18 @@ POUR TOUT bW, sWCle DE taaWeights
 	//   Après purge globale (import), TrouveIdPolice ne trouve rien -> INSERT
 	//   -> résultat identique à l'ancien comportement.
 	nId = TrouveIdPolice(pFamily, nW)
-	SI nId > 0 ALORS
+	si nId > 0 alors
 		// ─── UPDATE en place (IdPolice inchangé) ───
 		si dsn_police.LitRecherchePremier(IdPolice, nId) alors
-			dsn_police.Nom						= sNom
+			dsn_police.Nom							= sNom
 			dsn_police.NomTechnique				= sNom
 			dsn_police.Famille					= pFamily
-			dsn_police.Url						= sUrlReg
+			dsn_police.Url							= sUrlReg
 			dsn_police.BoldUrl					= sUrlBold
-			dsn_police.ItalicUrl				= sUrlIta
+			dsn_police.ItalicUrl					= sUrlIta
 			dsn_police.BoldItalicUrl			= sUrlBoldIta
-			dsn_police.Weight					= nW
-			dsn_police.Style					= "normal"
+			dsn_police.Weight						= nW
+			dsn_police.Style						= "normal"
 			dsn_police.Origine					= "google"
 			dsn_police.Version					= pVersion
 			dsn_police.DateHeureModification	= DateHeureSys()
@@ -121,18 +118,18 @@ POUR TOUT bW, sWCle DE taaWeights
 		sinon
 			nId = 0
 		fin
-	SINON
+	sinon
 		// ─── INSERT (portée générale : IdMarque/IdClient NULL) ───
 		dsn_police.RAZ()
-		dsn_police.Nom					= sNom
+		dsn_police.Nom						= sNom
 		dsn_police.NomTechnique			= sNom
 		dsn_police.Famille				= pFamily
-		dsn_police.Url					= sUrlReg
+		dsn_police.Url						= sUrlReg
 		dsn_police.BoldUrl				= sUrlBold
-		dsn_police.ItalicUrl			= sUrlIta
+		dsn_police.ItalicUrl				= sUrlIta
 		dsn_police.BoldItalicUrl		= sUrlBoldIta
-		dsn_police.Weight				= nW
-		dsn_police.Style				= "normal"
+		dsn_police.Weight					= nW
+		dsn_police.Style					= "normal"
 		dsn_police.IdMarque..Null		= Vrai
 		dsn_police.IdClient..Null		= Vrai
 		dsn_police.EstActif				= 1
@@ -142,7 +139,7 @@ POUR TOUT bW, sWCle DE taaWeights
 		si dsn_police.Ajoute() alors
 			nId = dsn_police.IdPolice
 		fin
-	FIN
+	fin
 
 	si nId > 0 alors
 		sNomTechFinal = sNom
@@ -181,11 +178,11 @@ POUR TOUT bW, sWCle DE taaWeights
 		stP.nom				= sNom
 		stP.nomTechnique	= sNomTechFinal
 		stP.famille			= pFamily
-		SI taaLibelleGraisse[nW]..Existe ALORS
+		si taaLibelleGraisse[nW]..Existe alors
 			stP.graisse = taaLibelleGraisse[nW]
-		SINON
+		sinon
 			stP.graisse = ""
-		FIN
+		fin
 		stP.weight			= nW
 		stP.style			= "normal"
 		stP.url				= sUrlReg
@@ -194,7 +191,7 @@ POUR TOUT bW, sWCle DE taaWeights
 		stP.boldItalicUrl	= sUrlBoldIta
 		tabPolices.Ajoute(stP)
 	fin
-FIN
+fin
 
 renvoyer tabPolices
 
@@ -203,54 +200,53 @@ renvoyer tabPolices
 // PROCÉDURES INTERNES
 // ═════════════════════════════════════════════════════════════════════════
 
-	// ─── Recherche d'une ligne existante par (Famille, Weight) générale google ──
+// ─── Recherche d'une ligne existante par (Famille, Weight) générale google ──
 	//   Paramètre chaîne QUOTÉ. Renvoie l'IdPolice existant, 0 si absent.
-	PROCÉDURE INTERNE TrouveIdPolice(LOCAL pFamilleL est une chaîne, LOCAL pWeightL est un entier) : entier
-		nIdT	est un entier	= 0
-		sReqT	est une chaîne ANSI
+	procédure interne TrouveIdPolice(local pFamilleL est une chaîne, local pWeightL est un entier) : entier
+		nIdT		est un entier	= 0
+		sReqT		est une chaîne ANSI
 		sdReqT	est une Source de Données
 		sReqT = [
 			SELECT IdPolice FROM dsn_police
 			WHERE Origine = 'google' AND IdMarque IS NULL AND IdClient IS NULL
-			  AND Famille = '[%pFamilleL%]' AND Weight = [%pWeightL%]
+			AND Famille = '[%pFamilleL%]' AND Weight = [%pWeightL%]
 		]
 		si sdReqT.ExécuteRequêteSQL(dsn_police.Connexion, hRequêteSansCorrection, sReqT) alors
-			POUR TOUT sdReqT
+			pour tout sdReqT
 				nIdT = sdReqT.IdPolice
-				SORTIR
-			FIN
+				sortir
+			fin
 		fin
 		sdReqT.AnnuleDéclaration()
-		RENVOYER nIdT
-	FIN
+		renvoyer nIdT
+	fin
 
 	// ─── URL d'une variante (clé dynamique dans files) + https forcé ────────
-	PROCÉDURE INTERNE UrlVariante(LOCAL jItemL est un JSON, LOCAL pVariant est une chaîne) : chaîne
+	procédure interne UrlVariante(local jItemL est un JSON, local pVariant est une chaîne) : chaîne
 		sU est une chaîne = ""
-		QUAND EXCEPTION DANS
-			SI jItemL.files[pVariant]..Existe ALORS
+		quand exception dans
+			si jItemL.files[pVariant]..Existe alors
 				sU = jItemL.files[pVariant]
-			FIN
-		FAIRE
-		FIN
-		SI sU <> "" _ET_ Gauche(sU, 7) = "http://" ALORS
-			sU = "https://" + Milieu(sU, 8)
-		FIN
-		RENVOYER sU
-	FIN
+			fin
+		faire
+		fin
+		si sU <> "" _et_ sU.Gauche(7) = "http://" alors
+			sU = "https://" + sU.Milieu(8)
+		fin
+		renvoyer sU
+	fin
 
-	// ─── Télécharge une variante dans le cache (nommage déterministe) ───────
-	//   <cache>\police_<IdPolice>_<suffixe>.ttf ; URL vide -> rien.
+// ─── Télécharge une variante dans le cache (nommage déterministe) ───────
+//   <cache>\police_<IdPolice>_<suffixe>.ttf ; URL vide -> rien.
 	//   Renvoie le chemin local si OK, "" sinon (tracé).
-	PROCÉDURE INTERNE TelechargeVariante(LOCAL pIdPolice est un entier, LOCAL pSuffixe est une chaîne, LOCAL pUrl est une chaîne, LOCAL pRepCacheL est une chaîne) : chaîne
+	procédure interne TelechargeVariante(local pIdPolice est un entier, local pSuffixe est une chaîne, local pUrl est une chaîne, local pRepCacheL est une chaîne) : chaîne
 		sDest est une chaîne
 		si pUrl = "" _ou_ pRepCacheL = "" alors
-			RENVOYER ""
+			renvoyer ""
 		fin
 		sDest = pRepCacheL + "police_" + pIdPolice + "_" + pSuffixe + ".ttf"
 		si TelechargeFichierBinaire(pUrl, sDest) alors
-			RENVOYER sDest
+			renvoyer sDest
 		fin
-		Trace("TraiteFamilleGooglePolice : échec téléchargement police #" + pIdPolice + " " + pSuffixe + " : " + pUrl)
-		RENVOYER ""
-	FIN
+		renvoyer ""
+	fin

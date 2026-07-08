@@ -4,7 +4,7 @@ procédure AjoutImages(pIdCollection est un entier)
 // Envoie un fichier ZIP au webservice DesignerImageAjout via multipart/form-data
 // avec authentification HMAC.
 //
-// Inspirée de ImporterFichier (création de collection).
+// Inspirée de ImporterCollection (création de collection).
 //
 // Comportement :
 //   - Si l'utilisateur a uploadé 1 seul fichier .zip → on l'envoie tel quel.

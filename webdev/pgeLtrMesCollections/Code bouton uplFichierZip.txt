@@ -26,7 +26,7 @@ fin
 
 // Code Serveur : Réception des fichiers uploadés de uplFichierZip
 
-ImporterFichier(SansEspace(saiNomCollection))
+ImporterCollection(SansEspace(saiNomCollection))
 
 // Code Navigateur : Après réception des fichiers uploadés de uplFichierZip
 

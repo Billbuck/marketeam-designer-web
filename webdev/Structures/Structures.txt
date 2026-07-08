@@ -1,0 +1,4973 @@
+
+
+// ***** Zecible *****
+
+structZecibleCriteresB2C est une Structure
+	'civ'			est une chaîne ANSI		// Identifiants des civilités
+	'idage'			est une chaîne ANSI		// Identifiants des tranches d'âges
+	'age'			est une chaîne ANSI		// Tranches d'âges numériques Exemple : ["18-25", "40-51"]
+	'csp'			est une chaîne ANSI		// Identifiants des catégories socioprofessionnelles
+	'log'			est une chaîne ANSI		// Identifiants des types de logements
+	'fam'			est une chaîne ANSI		// Identifiants des critères familiaux
+	'pro'			est une chaîne ANSI		// Identifiants des secteurs professionnels
+	'imp'			est une chaîne ANSI		// Identifiants des tranches d'imposition
+	'int'			est une chaîne ANSI		// Identifiants des centres d'intérêt
+	'fam_int'		est une chaîne ANSI		// Identifiants des familles de centres d'intérêt
+	'ach'			est une chaîne ANSI		// Identifiants des critères d'achats avérés
+	'fam_ach'		est une chaîne ANSI		// Identifiants des familles de critères d'achats avérés
+	'dpe'			est une chaîne ANSI		// Diagnostic de performance énergétique
+	'sur'			est une chaîne ANSI		// Identifiants des surfaces habitables
+	'fon'			est une chaîne ANSI		// Identifiants des valeurs foncières
+fin
+
+
+structZecibleCriteresB2B est une Structure
+	idfamfonc		est une chaîne ANSI		// Identifiants des familles de fonctions
+	idssfamfonc		est une chaîne ANSI		// Identifiants des sous-familles de fonctions
+	idfonc			est une chaîne ANSI		// Identifiants des fonctions
+	idnaf8			est une chaîne ANSI		// Identifiants des codes NAF 2008
+	idfamnaf8		est une chaîne ANSI		// Identifiants des familles de codes NAF 2008
+	idssfamnaf8		est une chaîne ANSI		// Identifiants des sous-familles de codes NAF 2008
+	idforme			est une chaîne ANSI		// Identifiants des formes juridiques
+	idfamforme		est une chaîne ANSI		// Identifiants des familles de formes juridiques
+	idssfamforme	est une chaîne ANSI		// Identifiants des sous-familles de formes juridiques
+	convention		est une chaîne ANSI		// Identifiants des conventions collectives
+	institution		est une chaîne ANSI		// Identifiants des institutions
+	ideff			est une chaîne ANSI		// Identifiants des tranches d'effectifs
+	idca			est une chaîne ANSI		// Identifiants des tranches de chiffre d'affaires
+	ca				est une chaîne ANSI		// Tranches de chiffre d'affaires numériques  Exemple : ["0-250000", "250000-500000"]
+	datecrea		est une chaîne ANSI		// [start] Date de création (début de la plage) [stop] Date de création (fin de la plage)
+	natetab			est une chaîne ANSI		// Nature de l'établissement Valeurs autorisées : siege etablissement
+	b2b				est une chaîne ANSI		// Paramètres B2B avancés Valeurs autorisées : dateferm dateradia lj
+fin
+
+
+structZecibleCritere est une Structure
+	core				est une chaîne	// b2b ou b2c
+	location			est une chaîne	// email, mobile, geo, tmkmobile, fixe, tel
+	routage_option		est une entier	// toujours 3 : Routage autonome (routeur externe)
+	nombre_sms			est un entier	// toujours 1
+	CriteresB2B			est une structZecibleCriteresB2B
+	CriteresB2C			est une structZecibleCriteresB2C
+	Exclusion 			est une chaîne
+	'scorenomi'		est une chaîne ANSI		// Score de nomination [nominatif generique nonclasse]
+	'nbcontacts'	est une chaîne ANSI		// Champ pour l'application d'un nombre de contacts maximum [foyer] en B2C [siret siren] en B2B
+	'maxcontacts'	est un entier			// Nombre de contacts maximum à appliquer au champ défini avec nbcontacts
+	Volume 				est un entier
+fin
+
+structZecibleZones est une Structure
+	type_zone			est une chaîne ANSI
+	Adresse				est une chaîne
+	latitude			est un réel
+	longitude			est un réel
+	tabCodes				est un tableau de chaîne ANSI
+fin
+
+structZecibleTarifs est une Structure
+	tarifs_perso 			est une chaîne
+	cpm_loc_mobile			est un réel
+	cpm_loc_email			est un réel
+	cpm_fiches				est un réel
+	cpm_ht_fiches			est un réel
+	total_ht_fiches 		est un réel
+	cpm_ht	 				est un réel
+	total_ht		 		est un réel
+	total_tva 				est un réel
+	total_ttc 				est un réel
+	decideurs 				est un booléen
+	routage_email_externe 	est un booléen
+	routage_mobile_externe 	est un booléen
+fin
+
+structZecibleReponse est une Structure
+	numFound			est un entier
+	numFoundBefore		est un entier
+	totUnsubs			est un entier
+	tarifs 			est une structZecibleTarifs <sérialise = "tarifs">
+	uid 				est une chaîne
+fin
+
+structBreakdown est une Structure
+	field	est une chaîne
+	Label	est une chaîne
+	value	est une chaîne
+	total	est un entier
+fin
+
+structZecibleBreakdown est une Structure
+	total		est un entier
+	breakdown	est un tableau de structBreakdown
+	tTime		est un entier
+fin
+
+structZecibleVentilation est une Structure
+	Famille 	est une chaîne
+	Code 		est une chaîne
+	Libelle 	est une chaîne
+	Distance 	est un réel
+	Total 		est un entier
+fin
+
+structZecibleData est une Structure
+	_id				est une chaîne
+	'Email'			est une chaîne
+	'age'			est une chaîne
+	'civ'			est une chaîne
+	'nom'			est une chaîne
+	'prenom'		est une chaîne
+	'rsoc' 			est une chaîne
+	'fonc'			est une chaîne
+	'fixe'			est une chaîne
+	'tel'			est une chaîne // Fixe ou Mobile (pour le call center)
+	'mobile' 		est une chaîne
+	'rnvpadr1'		est une chaîne
+	'rnvpadr2'		est une chaîne
+	'rnvpadr3'		est une chaîne
+	'rnvpadr4'		est une chaîne
+	'rnvpcp'		est une chaîne
+	'rnvpville'		est une chaîne
+	'cedex'			est une chaîne
+fin
+
+structZecibleContact est une Structure
+	total 			est un entier
+	tabZecibleData 	est un tableau <sérialise = "datas"> de structZecibleData
+fin
+
+structZecibleBase est une Structure
+	status				est une chaîne
+	stZecibleContact	est une structZecibleContact <sérialise = "contacts">
+fin
+
+// ***** Webservice ****
+
+// Structure pour recevoir les paramètres
+structWsRequeteSpatialRectangle est une Structure
+	lat_min		est un réel
+	lat_max		est un réel
+	lng_min		est un réel
+	lng_max		est un réel
+	exclude_ids	est un tableau de chaînes
+fin
+
+structWsUslSession est une Structure
+	id_session		est une chaîne
+	min_coverage	est un réel
+fin
+
+
+structWsFranceRequeteRectangle est une Structure
+	lat_min					est un réel
+	lat_max					est un réel
+	lng_min					est un réel
+	lng_max					est un réel
+	type_zone				est une chaîne	// "iris", "commune", "departement"
+	id_session				est une chaînes
+fin
+
+structWsFranceRequeteCodes est une Structure
+	type_zone		est une chaîne				// "iris", "commune", "code_postal", "departement"
+	codes			est un tableau de chaînes	// Liste des codes à récupérer
+fin
+
+structWsFranceComptageRequete est une Structure
+	nom_base		est une chaîne
+	codes_zones		est un tableau de chaînes	// Codes IRIS uniquement
+fin
+
+structWsRequeteTest est une Structure <sérialise = "Test">
+	MessageTest 		est une chaîne ANSI
+fin
+
+structWsRequeteFranceRecherche est une Structure
+	type_zone			est une chaîne ANSI
+	recherche 			est une chaîne ANSI
+	limit 				est un entier
+fin
+
+structWsRequeteAccessToken est une Structure <sérialise = "AccessToken">
+	Email 				est une chaîne ANSI
+	ApiKey				est une chaîne ANSI
+fin
+
+structWsReponseAccessToken est une Structure <sérialise = "AccessToken>">
+	AccessToken 		est une chaîne ANSI		// Non haché
+	RefreshToken 		est une chaîne ANSI		// Non haché
+	Expiration			est une DateHeure 		// Durée de validité
+fin
+
+structWsRequeteTokenEtat est une Structure <sérialise = "TokenEtat">
+	AccessToken			est une chaîne ANSI
+fin
+
+structWsReponseTokenEtat est une Structure <sérialise = "TokenEtat">
+	Etat				est une chaîne ANSI
+	RefreshToken		est une chaîne ANSI		// Non haché
+	Expiration			est une DateHeure		// Durée de validité
+fin
+
+
+structWsRequeteRefreshToken est une Structure <sérialise = "RefreshToken">
+	RefreshToken		est une chaîne ANSI
+fin
+
+structWsRequeteBddBaseStructure est une Structure <sérialise = "Structure">
+	IdBase				est un entier
+fin
+
+structWsReponseBddBaseStructure est une Structure
+	stBase 			est une structWsBddBase
+fin
+
+structWsRequeteBddBaseLigne est une Structure <sérialise = "Lignes">
+	IdBase 				est un entier
+	IdFiltre 			est un entier
+fin
+
+structWsIdBaseFiltre est une Structure <sérialise = "Bases">
+	IdBase				est un entier
+	IdFiltre			est un entier
+fin
+
+structWsRequeteBddFiltreAjoute est une Structure
+	IdBase				est un entier
+	Nom					est une chaîne ANSI
+	Phrase				est une chaîne ANSI
+	tabFiltreCritere	est un tableau de structWsBddFiltreCritere
+fin
+
+structWsRequeteBddFiltreModifie est une Structure
+	IdFiltre			est un entier
+	IdBase				est un entier
+	Nom					est une chaîne ANSI
+	Phrase				est une chaîne ANSI
+	tabFiltreCritere	est un tableau de structWsBddFiltreCritere
+fin
+
+structWsRequeteBddFiltreSupprimer est une Structure
+	IdFiltre est un entier
+fin
+
+structWsReponseBddFiltre est une Structure
+	IdFiltre	est un entier
+	Message		est une chaîne ANSI
+	NbrTotal	est un entier
+	NbrSociete	est un entier
+	NbrContact	est un entier
+	NbrAdresse	est un entier
+	NbrSms		est un entier
+	NbrFixe		est un entier
+	NbrTel		est un entier
+	NbrEmail	est un entier
+fin
+
+structWsRequeteWbsSmsEnvoi est une Structure
+	Portable 			est une chaîne ANSI
+	From				est une chaîne ANSI
+	'Message'			est une chaîne ANSI
+	MessageType 		est une chaîne ANSI // M pour marketing - N pour notification
+	ReferenceClient 	est une chaîne ANSI
+	DateEnvoiSouhaite 	est une Date
+	HeureEnvoiSouhaite	est une Heure
+fin
+
+structWsRequeteWbsSmsSupprime est une Structure
+	DateCreation 		est une Date
+	ReferenceClient 	est une chaîne ANSI
+	ListeIdSmsEnvoi		est une chaîne ANSI
+fin
+
+
+structWsRequeteSmsOperation est une Structure
+	tabBase				est un tableau  de structWsIdBaseFiltre
+	NomOperation 		est une chaîne ANSI
+	From				est une chaîne ANSI
+	'Message'			est une chaîne ANSI
+	DateEnvoi			est une Date
+	HeureEnvoi			est une Heure
+	DateFin 			est une Date
+	HeureFin 			est une Heure
+	ReferenceClient		est une chaîne ANSI
+	UrlRedirection		est une chaîne ANSI
+fin
+
+structWsReponseSmsOperation est une Structure
+	IdOperation 		est un entier
+	ReferenceClient		est une chaîne ANSI
+	NbrSmsFinal 		est un entier
+	CadenceHoraire 		est un entier
+	MontantHT 			est un monétaire
+	MontantTTC 			est un monétaire
+	PuMoyenHT 			est un monétaire
+	LimiteValidation 	est une DateHeure
+fin
+
+structWsRequeteVmsUpload est une Structure
+	Designation			est une chaîne ANSI
+	Format		 		est une chaîne ANSI
+	Fichier				est un Buffer
+fin
+
+structWsRequeteVmsPolly est une Structure
+	Designation 		est une chaîne ANSI
+	'Message' 			est une chaîne ANSI
+	Voix 				est une chaîne ANSI
+	Mode 				est une chaîne ANSI
+fin
+
+structWsReponseVmsPolly est une Structure
+	IdVmsMessage 		est un entier
+	VmsMessageAudio 	est une chaîne ANSI
+	Durée 				est un entier
+fin
+
+structWsRequeteVmsOperation est une Structure
+	tabBase				est un tableau de structWsIdBaseFiltre
+	NomOperation		est une chaîne ANSI
+	IdMessage			est un entier
+	NumeroAppelant		est une chaîne ANSI
+	DateEnvoi			est une Date
+	HeureEnvoi			est une Heure
+	DateFin 			est une Date
+	HeureFin 			est une Heure
+	ReferenceClient		est une chaîne ANSI
+fin
+
+structWsReponseVmsOperation est une Structure
+	IdOperation			est un entier
+	ReferenceClient		est une chaîne ANSI
+	CadenceHoraire 		est un entier
+	NbrTelFinal			est un entier
+	MontantHT			est un monétaire
+	MontantTTC			est un monétaire
+	PuMoyenHT			est un monétaire
+	LimiteValidation	est une DateHeure
+fin
+
+structWsMessageVms est une Structure
+	IdVmsMessage		est un entier
+	Libelle 			est une chaîne ANSI
+	Durée 				est un entier
+fin
+
+structWsRequeteOperationValidation est une Structure
+	IdOperation			est un entier
+	ReferenceClient		est une chaîne ANSI
+	DateEnvoiSouhaite	est une Date
+	HeureEnvoiSouhaite	est une Heure
+	ModeReglement		est une chaîne ANSI
+fin
+
+structWsRequeteOperationStatut est une Structure
+	IdOperation			est un entier
+	ReferenceClient		est une chaîne ANSI
+fin
+
+structWsReponseOperationStatut est une Structure
+	IdOperation			est un entier
+	IdClientFacturation	est un entier <sérialise="IdEtablissement">
+	IdValideur			est un entier <sérialise="IdContact">
+	ReferenceClient		est une chaîne ANSI
+	NomOperation 		est une chaîne ANSI
+	Statut 				est une chaîne ANSI
+	StatutLibelle 		est une chaîne ANSI
+	DateEnvoiSouhaite	est une Date
+	HeureEnvoiSouhaite	est une Heure
+fin
+
+structWsRequeteRapportSms est une Structure
+	IdOperation			est un entier
+	ReferenceClient		est une chaîne ANSI
+	Format 				est une chaîne ANSI
+fin
+
+structWsRequeteOperationSupprime est une Structure
+	IdOperation			est un entier
+	ReferenceClient		est une chaîne ANSI
+fin
+
+structWsRequeteOperationListe est une Structure
+	DateCreationDebut	est une Date
+	DateCreationFin 	est une Date
+	Statut	 			est une chaîne ANSI
+	TypeProjet 			est une chaîne ANSI
+fin
+
+structWsOperation est une Structure
+	IdOperation			est un entier
+	IdClientFacturation	est un entier <sérialise = "IdEtablissement">
+	IdValideur 			est un entier <sérialise = "IdContact">
+	Dossier				est une chaîne ANSI
+	Statut				est une chaîne ANSI
+	StatutLibelle		est une chaîne ANSI
+	TypeProjet			est une chaîne ANSI
+	TypeProjetLibelle	est une chaîne ANSI
+	NomOperation		est une chaîne ANSI
+	NumCommandeClient	est une chaîne ANSI
+	NbrDestinataire		est un entier
+	DateHeureCreation	est une DateHeure
+	DateEnvoiSouhaite	est une Date
+	HeureEnvoiSouhaite	est une Heure
+	MontantHT			est un monétaire
+	MontantTTC			est un monétaire
+	TauxTVA				est un monétaire
+	ResteAPayer 		est un monétaire
+fin
+
+structWsReponseOperationListe est une Structure <sérialise = "Liste Operation">
+	tabOperation		est un tableau	<sérialise = "Operation"> de structWsOperation
+fin
+
+structWsBddBaseChamp est une Structure
+	IdBaseChamp 		est un entier
+	Champ 				est une chaîne ANSI
+	Libelle 			est une chaîne ANSI
+	Type 				est une chaîne ANSI
+fin
+
+structWsBddFiltreCritere est une Structure
+	IdBaseChamp 		est un entier
+	'Filtre' 			est une chaîne ANSI			// Codes de filtre (S, C, D, E, I, S, B, R, N)
+	Valeur1 			est une chaîne ANSI
+	Valeur2 			est une chaîne ANSI
+fin
+
+structWsBddFiltre est une Structure
+	IdFiltre 			est un entier
+	Nom					est une chaîne ANSI
+	Phrase				est une chaîne ANSI
+	NbrTotal			est un entier
+	NbrSociete			est un entier
+	NbrContact			est un entier
+	NbrAdresse			est un entier
+	NbrSms				est un entier
+	NbrFixe				est un entier
+	NbrTel				est un entier
+	NbrEmail			est un entier
+	tabFiltreCritere	est un tableau de structWsBddFiltreCritere
+fin
+
+structWsBddBase est une Structure
+	IdBase 				est un entier
+	Nom 				est une chaîne ANSI
+	NbrTotal 			est un entier
+	NbrSociete 			est un entier
+	NbrContact 			est un entier
+	NbrAdresse 			est un entier
+	NbrSms 				est un entier
+	NbrFixe 			est un entier
+	NbrTel 				est un entier
+	NbrEmail			est un entier
+	tabBaseChamp 		est un tableau de structWsBddBaseChamp
+	tabBaseFiltre 		est un tableau de structWsBddFiltre
+fin
+
+structWsReponseBddBaseListe est une Structure
+	tabBase 			est un tableau de structWsBddBase
+fin
+
+structWsContact est une Structure
+	IdContact			est un entier
+	IdEtablissement		est un entier
+	Civilite			est une chaîne ANSI
+	Nom					est une chaîne ANSI
+	Prenom				est une chaîne ANSI
+	EstActif 			est un booléen
+fin
+
+structWsEtablissement est une Structure
+	IdEtablissement		est un entier
+	Societe				est une chaîne ANSI
+	Enseigne			est une chaîne ANSI
+	EstActif 			est un booléen
+	tabContact			est un tableau de structWsContact
+fin
+
+structWsReponseEtablissementListe est une Structure
+	tabEtablissement 	est un tableau de structWsEtablissement
+fin
+
+structWsRequeteEtablissementInfo est une Structure
+	IdEtablissement 	est un entier
+fin
+
+structWsReponseEtablissementInfo est une Structure
+	Etablissement 		est une structWsEtablissement
+fin
+
+structWsRequeteContactInfo est une Structure
+	IdContact 			est un entier
+fin
+
+structWsReponseContactInfo est une Structure
+	Contact 			est une structWsContact
+fin
+
+structWsRequeteClientActiviteSms est une Structure
+	DateDebut 			est une Date
+	DateFin 			est une Date
+	IdEtablissement 	est un entier
+fin
+
+structWsActiviteSms est une Structure
+	IdReference 		est une chaîne ANSI
+	IdEtablissement		est un entier
+	IdContact 			est un entier
+	Portable 			est une chaîne ANSI
+	MessageType 		est une chaîne ANSI
+	Statut 				est une chaîne ANSI
+	DateHeureEnvoi 		est une DateHeure
+fin
+
+structWsReponseClientActiviteSms est une Structure
+	Total 				est un entier
+	tabActiviteSms 		est un tableau de structWsActiviteSms
+fin
+
+structWsRequeteClientStopPubSms est une Structure
+	DateDebut			est une Date
+	DateFin				est une Date
+	IdEtablissement		est un entier
+fin
+
+structWsStopPubSms est une Structure
+	IdEtablissement 	est un entier
+	Portable 			est une chaîne ANSI
+	DateHeureStopPub 	est une DateHeure
+fin
+
+structWsReponseClientStopPubSms est une Structure
+	Total 				est un entier
+	tabStopPubSms		est un tableau de structWsStopPubSms
+fin
+
+
+structWsBddLigne est une Structure
+	IdBaseLigne			est un entier
+	Code				est une chaîne ANSI
+	Reference			est une chaîne ANSI
+	CodeAlliage			est une chaîne ANSI
+	Contact				est une chaîne ANSI
+	Civilite			est une chaîne ANSI
+	Nom					est une chaîne ANSI
+	Prenom				est une chaîne ANSI
+	Societe				est une chaîne ANSI
+	Enseigne			est une chaîne ANSI
+	Adresse1			est une chaîne ANSI
+	Adresse2			est une chaîne ANSI
+	Adresse3			est une chaîne ANSI
+	Adresse4			est une chaîne ANSI
+	CodePostal			est une chaîne ANSI
+	Ville				est une chaîne ANSI
+	Pays				est une chaîne ANSI
+	Tel					est une chaîne ANSI
+	Portable			est une chaîne ANSI
+	Email				est une chaîne ANSI
+	Champ1				est une chaîne ANSI
+	Champ2				est une chaîne ANSI
+	Champ3				est une chaîne ANSI
+	Champ4				est une chaîne ANSI
+	Champ5				est une chaîne ANSI
+	Champ6				est une chaîne ANSI
+	Champ7				est une chaîne ANSI
+	Champ8				est une chaîne ANSI
+	Champ9				est une chaîne ANSI
+	Champ10				est une chaîne ANSI
+	Champ11				est une chaîne ANSI
+	Champ12				est une chaîne ANSI
+	Champ13				est une chaîne ANSI
+	Champ14				est une chaîne ANSI
+	Champ15				est une chaîne ANSI
+	Champ16				est une chaîne ANSI
+	Champ17				est une chaîne ANSI
+	Champ18				est une chaîne ANSI
+	Champ19				est une chaîne ANSI
+	Champ20				est une chaîne ANSI
+	Champ21				est une chaîne ANSI
+	Champ22				est une chaîne ANSI
+	Champ23				est une chaîne ANSI
+	Champ24				est une chaîne ANSI
+	Champ25				est une chaîne ANSI
+	Champ26				est une chaîne ANSI
+	Champ27				est une chaîne ANSI
+	Champ28				est une chaîne ANSI
+	Champ29				est une chaîne ANSI
+	Champ30				est une chaîne ANSI
+	Sexe				est une chaîne ANSI
+	Profil				est une chaîne ANSI
+fin
+
+structWsReponseBddBaseLigne est une Structure
+	tabBaseLigne 		est un tableau de structWsBddLigne
+fin
+
+structWsReponseBddImportation est une Structure
+	Statut				est une chaîne ANSI
+	'Message'			est une chaîne ANSI
+	IdWbsBase			est un entier
+	url_confirmation	est une chaîne ANSI
+	taaColonne 			est un tableau associatif  		<sérialise = "Colonnes"> d'entiers
+	stMapping			est une structWsBddMapping 		<sérialise = "Mapping">
+	stInformations 		est une structWsBddInformations	<sérialise = "Informations">
+fin
+
+StructWsBddTestLigne	est une Structure
+	Contact				est un booléen
+	Civilite			est un booléen
+	Nom					est un booléen
+	Prenom				est un booléen
+	Societe				est un booléen
+	Enseigne			est un booléen
+	Adresse1			est un booléen
+	Adresse2			est un booléen
+	Adresse3			est un booléen
+	Adresse4			est un booléen
+	CodePostal			est un booléen
+	Ville				est un booléen
+	Tel					est un booléen
+	Portable			est un booléen
+	Email				est un booléen
+fin
+
+
+structWsBddStandard est une Structure <sérialise = "Standard">
+	Colonne				est un tableau de chaînes ANSI
+	Type				est une chaîne ANSI
+fin
+
+structWsBddOptionnel est une Structure <sérialise = "Optionnel">
+	Colonne				est une chaîne ANSI
+	Libelle				est une chaîne ANSI
+	Type				est une chaîne ANSI
+fin
+
+structWsBddMapping est une Structure
+	taaType 			est un tableau associatif de chaînes ANSI
+	tabStandard			est un tableau							<sérialise = "Standard"> de structWsBddStandard
+	tabOptionnel		est un tableau							<sérialise = "Optionnel"> de structWsBddOptionnel
+fin
+
+
+structWsRequeteBddImportation est une Structure
+	FichierNom 			est une chaîne ANSI
+	FichierFormat 		est une chaîne ANSI // XLS XLSX CSV
+	FichierContenu 		est un Buffer
+	stMapping 			est une structWsBddMapping				<sérialise = "Mapping">
+fin
+
+
+structWsBaseDeDonnées est une Structure
+	IdBase				est un entier
+	TypeFichier			est une chaîne ANSI
+	stMapping 			est une structWsBddMapping				<sérialise = "Mapping">
+	taaColonne			est un tableau associatif				<sérialise = "Colonnes"> d'entiers
+	tabImportChamp		est un tableau							<sérialise = "Champs"> de structWsBddChamp
+	stInformations		est une structWsBddInformations			<sérialise = "Informations">
+fin
+
+
+structWsRequeteBddConfirmation est une Structure
+	IdWbsBase			est un entier
+	BaseNom 			est une chaîne ANSI
+	stMapping 			est une structWsBddMapping				<sérialise = "Mapping">
+	Decision			est une chaîne ANSI
+fin
+
+structWsRequeteBddAnnulation est une Structure
+	IdWbsBase   est un entier
+fin
+
+structWsRequeteTraitement est une Structure
+	IdWbsBase est un entier
+fin
+
+structWsRequeteBddSuppression est une Structure
+	IdBase				est un entier
+fin
+
+structWsRequeteBddModification est une Structure
+	IdWbsBase			est un entier
+	stMapping 			est une structWsBddMapping				<sérialise = "Mapping">
+fin
+
+
+structWsBddChamp est une Structure
+	Code				est une chaîne
+	Champ				est une chaîne
+	Type				est une chaîne
+	Ordre				est un entier
+	Libelle				est une chaîne
+	tabColonne			est un tableau d'entiers
+	Extrait				est un entier
+fin
+
+structWsBddInformations est une Structure
+	NbrTotal			est un entier	// Nombre de lignes dans le fichier
+	NbrSociete			est un entier	// Nombre de sociétés dans le fichier
+	NbrContact			est un entier	// Nombre de contacts dans le fichier
+	NbrAdresse			est un entier	// Nombre d'adresses exploitable dans le fichier
+	NbrTel				est un entier	// Nombre de numéros exploitable dans le fichier
+	NbrFixe				est un entier	// Nombre de numéros exploitable dans le fichier
+	NbrEmail			est un entier	// Nombre d’émail exploitable dans le fichier
+	NbrSms				est un entier	// Nombre de portables exploitable dans le fichier
+fin
+
+
+
+// ****** cliquezici nicolas ******************
+
+eStyleTexte est une Enumération
+	XXXL		= "Titre"
+	XXL			= "Sous Titre"
+	XL			= "Taille XL"
+	L			= "Taille L"
+	M			= "Taille Standard"
+	S			= "Taille S"
+	XS			= "Taille XS"
+	XXS			= "Taille XXS"
+	XXXS		= "Taille XXXS"
+fin
+
+
+enumSens est une Enumération
+	Monter		= 1
+	Descendre	= 2
+fin
+
+enumPositionBloc	est une Enumération
+	Haut		= 1
+	Bas			= 2
+fin
+
+structCombo est une Structure
+	Libelle				est une chaîne
+	Coche				est un booléen
+	TypeOperation		est une chaîne
+	EstCliquezIci		est un booléen
+fin
+
+structPerformanceDossier est une Structure
+	IdOperation					est un entier
+	NomOperation				est une chaîne
+	Dossier						est une chaîne
+	DateHeureCreation			est une DateHeure
+	DateEnvoi					est une Date
+	HeureEnvoi					est une Heure
+	EstEnvoiImmediat			est un booléen
+	NbrDestinataire				est un entier
+	NbrDiffusion				est un entier
+	TauxDiffusion				est un monétaire
+	NbrDélivré					est un entier
+	TauxDélivré					est un monétaire
+	NbrErreur					est un entier
+	TauxErreur					est un monétaire
+	NbrStop						est un entier
+	TauxStop					est un monétaire
+	NbrRepondeur				est un entier
+	TauxRepondeur				est un monétaire
+	NbrAudience					est un entier
+	NbrAudienceUnique			est un entier
+	TauxAudienceUnique			est un monétaire
+	NbrInteraction				est un entier
+	NbrInteractionUnique		est un entier
+	TauxInteractionUnique		est un monétaire
+	NbrLead						est un entier
+	NbrLeadUnique				est un entier
+	TauxLeadUnique				est un monétaire
+	MontantHT					est un monétaire
+	CoutAuLead					est un monétaire
+fin
+
+structPerformance est une Structure
+	TypeOperation				est une chaîne
+	EstCliquezIci				est un entier
+	NbrDestinataire				est un entier
+	NbrDiffusion				est un entier
+	TauxDiffusion				est un monétaire
+	NbrDélivré					est un entier
+	TauxDélivré					est un monétaire
+	NbrErreur					est un entier
+	TauxErreur					est un monétaire
+	NbrStop						est un entier
+	TauxStop					est un monétaire
+	NbrRepondeur				est un entier
+	TauxRepondeur				est un monétaire
+	NbrAudience					est un entier
+	NbrAudienceUnique			est un entier
+	TauxAudienceUnique			est un monétaire
+	NbrInteraction				est un entier
+	NbrInteractionUnique		est un entier
+	TauxInteractionUnique		est un monétaire
+	NbrLead						est un entier
+	NbrLeadUnique				est un entier
+	TauxLeadUnique				est un monétaire
+	MontantHT					est un monétaire
+	CoutAuLead					est un monétaire
+	taaDossier					est un tableau associatif de structPerformanceDossier
+fin
+
+//		cd.Societe DossierSociete,
+//		td.Civilite DossierCivilite,
+//		td.Nom DossierNom,
+//		td.Prenom DossierPrenom,
+//		cf.Societe FacturationSociete,
+//		cf.EstFacturationMensuelle,
+//		cf.ReserveArgent,
+//		tf.Civilite ValideurCivilite,
+//		tf.Nom ValideurNom,
+//		tf.Prenom ValideurPrenom,
+//		p.IdPaiement,
+//		p.EstReserve,
+//		p.DateHeureCreation PaiementDateHeureCreation,
+//		r.IdReglement,
+//		r.DateHeureReceptionReglement,
+//		r.Statut ReglementStatut,
+//		m.LibelleSingulier ModeReglement,
+//		i.Type
+
+
+structFactureDetail est une Structure
+	Designation					est une chaîne
+	Quantite					est un entier
+	PrixUnitaire				est un monétaire
+	TauxTva						est un monétaire
+	MontantHT					est un monétaire
+	MontantTVA					est un monétaire
+	MontantTTC					est un monétaire
+fin
+
+structFactureLigne est une Structure
+	Dossier						est une chaîne
+	Designation					est une chaîne
+	IdReference					est un entier
+	TypeOperation				est une chaîne
+	EstCliquezIci				est un booléen
+	NomOperation				est une chaîne
+	NumCommandeClient			est une chaîne
+	Quantite					est un entier
+	MontantHT					est un monétaire
+	TauxTVA						est un monétaire
+	MontantTVA					est un monétaire
+	MontantTTC					est un monétaire
+	ResteAPayer					est un monétaire
+	tabFactureDetail			est un tableau de structFactureDetail
+fin
+
+structFacture est une Structure
+	IdFacture					est un entier
+	IdAdresseFacturation		est un entier
+	IdClient					est un entier
+	Societe 					est une chaîne
+	Contact						est une chaîne
+	Prenom 						est une chaîne
+	Designation					est une chaîne
+	NbrOperation				est un entier
+	DateFacture					est une Date
+	DateEcheance 				est une Date
+	NumeroFacture				est une chaîne
+	TypeFacture					est une chaîne
+	MontantHT					est un monétaire
+	TauxTVA						est un monétaire
+	MontantTVA					est un monétaire
+	MontantTTC					est un monétaire
+	ResteAPAyer					est un monétaire
+	EstSolde					est un booléen
+	DateHeureCreation			est une DateHeure
+	DateHeureImpression			est une DateHeure
+	tabFactureLigne				est un tableau de structFactureLigne
+fin
+
+
+structSynthèse est une Structure
+	IdOperation						est un entier
+	Dossier							est une chaîne
+	Statut							est une chaîne
+	IdClient						est un entier
+	IdClientFacturation				est un entier
+	IdAdresseFacturation			est un entier
+	IdFacture 						est un entier
+	IdFactureLigne 					est un entier
+	IdContact						est un entier
+	IdValideur						est un entier
+	TypeOperation					est une chaîne
+	NomOperation					est une chaîne
+
+	DossierSociete					est une chaîne
+	DossierCivilite					est une chaîne
+	DossierNom						est une chaîne
+	DossierPrenom					est une chaîne
+	FacturationSociete				est une chaîne
+	EstFacturationMensuelle			est un booléen
+	ReserveArgent					est un monétaire
+	ValideurCivilite				est une chaîne
+	ValideurNom						est une chaîne
+	ValideurPrenom					est une chaîne
+	EmailLeadEnCopie				est une chaîne
+	EmailLeadType					est une chaîne
+	IdPaiement						est un entier
+	EstReserve						est un booléen
+	EstPlafondEncoursDepassé 		est un booléen
+	PaiementDateHeureCreation		est une DateHeure
+	IdReglement						est un entier
+	DateHeureReceptionReglement		est une DateHeure
+	ReglementStatut					est une chaîne
+	LibelleModeReglement			est une chaîne
+	MotifRefus						est une chaîne
+	EstBaseDeDonnéesChargée			est un booléen
+
+	// CliquezIci
+	EstCliquezIci					est un booléen
+	TypeCliquezici					est une chaîne
+
+	// SMS
+	Message							est une chaîne
+	EstSmsPersonnalise				est un booléen
+	Cadence							est un entier
+
+	// VMS
+	IdMessage						est un entier
+
+	// Callcenter
+	IdMessageRepondeur				est un entier
+	Nom								est une chaîne
+	Objectif						est une chaîne
+	Informations					est une chaîne
+	DateDebutSouhaite				est une Date
+	DateFinSouhaite					est une Date
+	HeureFinSouhaite				est une Heure
+	EstTransfertAppel				est un booléen
+	EstMessageRepondeur				est un booléen
+	EstSmsConfirmation				est un booléen
+	LeFromConfirmation				est une chaîne
+	SmsConfirmation					est une chaîne
+	EstSmsRappel					est un booléen
+	LeFromRappel					est une chaîne
+	SmsRappel						est une chaîne
+	DateRappel						est une Date
+	TransfertNumero					est une chaîne
+	TransfertMotifAutorise			est un entier
+	JoursAppel						est un entier
+	UsePortable						est un booléen
+	UseFixe							est un booléen
+	UsePriorite						est un booléen
+	NbrQuestionBrancheMax			est un entier
+	NbrReponseBrancheMax			est un entier
+	NbrFormulaireBrancheMax			est un entier
+	NbrRelance						est un entier
+	DateMaxRendezVous				est une Date
+	DateDebutAgenda					est une Date
+	DateFinAgenda					est une Date
+	DecalageAgenda					est un entier
+
+
+	// ------------------------------------
+
+	MontantNetHT					est un monétaire
+	MontantTTC						est un monétaire
+	ResteAPayer						est un monétaire
+
+	DateEnvoiSouhaite				est une Date
+	HeureEnvoiSouhaite				est une Heure
+	EstEnvoiImmediat				est un booléen
+	DateHeureCreation				est une DateHeure
+	DateHeureLimiteValidation		est une DateHeure
+	DateHeureLimitePriseEnCharge	est une DateHeure
+	DateHeurePriseEnCharge			est une DateHeure
+
+	EstModifiableParUnTiers			est un booléen
+	EstVisibleParUnTiers			est un booléen
+
+	NbrDestinataire					est un entier
+	NbrDiffusion					est un entier
+	NbrDelivre						est un entier
+	NbrRepondeur					est un entier
+	NbrAboutement					est un entier
+	NbrRendezVous					est un entier
+	NbrInjoignable					est un entier
+	NbrMessageDepose				est un entier
+	NbrErreur						est un entier
+	NbrStop							est un entier
+	NbrAudience						est un entier
+	NbrAudienceUnique				est un entier
+	NbrInteraction					est un entier
+	NbrInteractionUnique			est un entier
+	NbrLead							est un entier
+	NbrLeadUnique					est un entier
+fin
+
+
+
+
+structNouveauCliquezIci est une Structure
+
+	Type							est une chaîne
+	IdModele						est un entier
+	IdStructure						est un entier
+	IdTheme							est un entier
+	IdMarque						est un entier
+	IdClient						est un entier
+	IdContact						est un entier
+	UrlClient						est une chaîne
+
+	EmailLeadType 					est une chaîne
+	EmailLeadEnCopie				est une chaîne
+
+	NomTheme						est une chaîne
+	NomStructure					est une chaîne
+	NomModele						est une chaîne
+
+	stTheme							est une structIciTheme
+	tabBloc							est un tableau de structIciBloc
+fin
+
+eIciTypeVariable est une Enumération
+	tou // Tout
+	lib // Libellé de champ
+	sai // Libellé de champ de saisie
+	fon // Fond de champ de saisie
+	bor // Bordure de champ de saisie
+	blo // Fond de bloc
+	pag // Fond de page
+	rst // Tout le reste
+fin
+
+eIciCliquezIci est une Enumération
+	Theme
+	Operation
+	Modele
+	Gabarit
+	Standard
+fin
+
+structIciBloc est une Structure
+	Type				est une chaîne
+	Nom					est une chaîne
+	Libelle				est une chaîne
+	GroupeOffre			est un booléen
+	Propriete			est une chaîne ANSI
+	Valeur				est une chaîne ANSI
+	EstActif			est un booléen // Rajouté pour les prototypes
+fin
+
+structIciTheme est une Structure
+	IdTheme							est un entier
+	NomTheme						est une chaîne
+	LargeurL						est un entier
+	LargeurM						est un entier
+	LargeurS						est un entier
+	ProprieteDefaut					est une chaîne	//structIciThemeProprieteDefaut
+	ProprieteTexte					est une chaîne	//structIciThemeProprieteTexte
+	ProprieteCombo					est une chaîne	//structIciThemeProprieteCombo
+	ProprieteInterrupteur			est une chaîne	//structIciThemeProprieteInterrupteur
+	ProprieteFormulaire 			est une chaîne  //structIciThemeProprieteFormulaire
+	ProprieteLien					est une chaîne	//structIciThemeProprieteLien
+	ProprieteBouton					est une chaîne	//structIciThemeProprieteBouton
+fin
+
+structIciThemePolice est une Structure
+	Nom					est une chaîne
+	Type				est une chaîne	// Web, Google, Client
+	IdClientPolice  	est un entier 	// Pour les user-font
+	Style 				est une chaîne	// Pour les web-font
+	tabStyle 			est un tableau d'entiers
+fin
+
+structIciThemeStyleTexte est une Structure
+	PoliceCode						est une chaîne
+	PoliceLibelle					est une chaîne
+	PoliceTailleL					est un entier
+	PoliceTailleM					est un entier
+	PoliceTailleS					est un entier
+fin
+
+structIciThemeStyleLien est une Structure
+	NomStyle						est une chaîne
+	PoliceCode						est une chaîne // Pour supprimer PoliceTaille
+	PoliceCouleur					est une chaîne
+	PoliceFondCouleur				est une chaîne
+	PoliceFamille					est une chaîne
+	PoliceStyle						est une chaîne	// Graisse 100 200 300 400 ...
+	PoliceSouligne					est un booléen
+	BordureCouleur					est une chaîne
+	BordureEpaisseur				est un entier
+	BordureArrondi					est un entier
+	MargeInterneHorizontal			est un entier
+	MargeInterneVertical			est un entier
+	AlignHorizontal					est une chaîne
+fin
+
+structIciThemeProprieteDefaut est une Structure
+	tabPolices						est un tableau de structIciThemePolice
+	ListeCouleurDefaut 				est une chaîne
+	ListeCouleurClient 				est une chaîne
+	ListeCouleur					est une chaîne
+	PageFondCouleur					est une chaîne
+	BlocFondCouleur					est une chaîne
+	MargeVerticaleEntreBloc			est un entier
+	MargeHorizontaleBloc			est un entier
+	MargeVerticaleEntreChamp		est un entier
+	AlignementFormulaire			est un entier
+//	AlignementRWD					est un entier
+
+	PoliceFamille					est une chaîne
+
+	LibelleCouleur					est une chaîne
+	SaisieCouleur					est une chaîne
+	ChampFondCouleur				est une chaîne
+	FondBlocCouleur					est une chaîne
+
+	BordureCouleur					est une chaîne
+	BordureArrondi					est un entier
+	BordureEpaisseur				est un entier
+fin
+
+structIciThemeProprieteFormulaire est une Structure
+
+	BlocFondCouleur					est une chaîne
+
+	LibellePoliceFamille			est une chaîne
+	LibellePoliceCode				est une chaîne	// Pour supprimer PoliceTaille
+	LibellePoliceCouleur			est une chaîne
+	LibellePoliceStyle				est une chaîne
+	LibelleAlignementHorizontal		est une chaîne
+
+	SaisiePoliceFamille				est une chaîne
+	SaisiePoliceCode				est une chaîne	// Pour supprimer PoliceTaille
+	SaisiePoliceCouleur				est une chaîne
+	SaisieFondCouleur				est une chaîne
+	SaisiePoliceStyle				est une chaîne
+	SaisieAlignementHorizontal		est une chaîne
+	MargeInterneVerticale			est un entier
+
+	BordureEpaisseur				est un entier
+	BordureArrondi					est un entier
+	BordureCouleur					est une chaîne
+fin
+
+
+
+structIciThemeProprieteTexte est une Structure
+	TaaStyle 						est un tableau associatif de structIciThemeStyleTexte
+fin
+
+structIciThemeProprieteCombo est une Structure
+	BordureCouleur					est une chaîne
+	BordureEpaisseur				est un entier
+	BordureArrondi					est un entier
+	FlecheCouleur					est une chaîne
+	FlecheTaille					est un entier
+	SaisiePoliceFamille				est une chaîne
+	SaisiePoliceStyle				est une chaîne
+
+	SaisiePoliceCode				est une chaîne // Pour supprimer PoliceTaille
+	SaisiePoliceCouleur				est une chaîne
+	SaisieFondCouleur				est une chaîne
+	SaisieAlignementHorizontal		est une chaîne
+	MargeInterneVerticale			est un entier
+
+	LibellePoliceCode				est une chaîne // Pour supprimer PoliceTaille
+	LibellePoliceCouleur			est une chaîne
+	LibellePoliceFamille			est une chaîne
+	LibellePoliceStyle				est une chaîne
+	LibelleAlignementHorizontal		est une chaîne
+	LibellePosition					est une chaîne
+
+	FocusPolice						est une chaîne
+	FocusBordure					est une chaîne
+	FocusCouleur					est une chaîne
+fin
+
+structIciThemeProprieteInterrupteur est une Structure
+	CocheType						est une chaîne	// radio ou checkbox
+	CocheModele 					est un entier
+	CocheTaille						est un entier
+	CocheCouleurCoché				est une chaîne
+	CocheCouleurNonCoché			est une chaîne
+	PoliceFamille					est une chaîne
+
+	PoliceCode						est une chaîne // Pour supprimer PoliceTaille
+	PoliceCouleurCoché				est une chaîne
+	PoliceCouleurNonCoché			est une chaîne
+	PoliceStyle						est une chaîne	// Graisse 100 200 300 400 ...
+	MargeGauche						est un entier
+	MargeDroite						est un entier
+fin
+
+structIciThemeProprieteLien est une Structure
+	tabStyle						est un tableau de structIciThemeStyleLien
+fin
+
+structIciThemeProprieteBouton est une Structure
+	MargeExterneHorizontal			est un entier	// Marge externe gauche et droite du texte / bord
+	MargeExterneVertical			est un entier	// Marge externe haut et bas du texte / bord
+	MargeInterneHorizontal			est un entier	// Marge interne gauche et droite du texte / bord
+	MargeInterneVertical			est un entier	// Marge interne haut et bas du texte / bord
+	BordureCouleur					est une chaîne
+	BordureEpaisseur				est un entier
+	BordureArrondi					est un entier
+	BoutonFondCouleur				est une chaîne
+	PoliceFamille					est une chaîne
+	BlocFondCouleur 				est une chaîne
+	PoliceCode						est une chaîne // Pour supprimer PoliceTaille
+	PoliceCouleur					est une chaîne
+	PoliceStyle						est une chaîne
+fin
+
+
+// BLOC OFFRE
+structIciBlocProprieteOffre est une Structure
+	QuestionPoliceCode						est une chaîne
+	QuestionPoliceFamille					est une chaîne
+	QuestionAlignHorizontal					est une chaîne
+	QuestionPoliceCouleur   				est une chaîne
+	QuestionPoliceStyle  					est une chaîne
+	BlocFondCouleur					est une chaîne
+	PasControleCaseACocher			est un booléen
+fin
+structIciBlocValeurOffre est une Structure
+	LibelleQuestion					est une chaîne
+	tabOffre						est un tableau de structIciBlocLigneOffre
+fin
+structIciBlocLigneOffre est une Structure
+	IdOffre							est un entier
+	TypeOffre						est une chaîne 	// Interrupteur / Combo / Lien
+	Libelle							est une chaîne
+	TabValeur						est un tableau de chaînes
+	Obligatoire						est un booléen
+fin
+
+// BLOC COUNTDOWN
+
+structIciBlocProprieteCountdown est une Structure
+	BlocFondCouleur 				est une chaîne
+	PoliceCouleur					est une chaîne
+	FlipPanelCouleur				est une chaîne
+	LargeurMax						est un entier
+fin
+
+structIciBlocValeurCountdown est une Structure
+	DateHeureFin 					est une DateHeure
+fin
+
+// BLOC TEXTE
+structIciBlocProprieteTexte est une Structure
+	BlocFondCouleur					est une chaîne
+	PoliceCouleur					est une chaîne
+	PoliceFamille					est une chaîne
+	PoliceTailleL					est un entier
+	PoliceTailleM					est un entier
+	PoliceTailleS					est un entier
+	PoliceStyle						est une chaîne
+	AlignHorizontal					est une chaîne
+	PaddingTop						est un entier // Surcharge de l'espacement supérieur
+	PaddingBottom					est un entier // Surcharge de l'espacement inférieur
+fin
+
+structIciBlocValeurTexte est une Structure
+	Texte							est une chaîne
+	Indication						est une chaîne
+fin
+
+structIciBlocProprieteTexteDefilant est une Structure
+	BlocFondCouleur					est une chaîne
+	PoliceCouleur					est une chaîne
+	PoliceFamille					est une chaîne
+	PoliceCode 						est une chaîne
+	PoliceStyle						est une chaîne
+	AlignHorizontal					est une chaîne
+	PaddingTop						est un entier	// Surcharge de l'espacement supérieur
+	PaddingBottom					est un entier	// Surcharge de l'espacement inférieur
+	'Temporisation'					est un entier
+	VitesseDefilement 				est un entier
+fin
+
+structIciBlocValeurTexteDefilant est une Structure
+	tabTexte						est un tableau de chaînes
+fin
+
+
+// BLOC IMAGE
+structIciBlocProprieteImage est une Structure
+	BlocFondCouleur					est une chaîne
+	HauteurMax						est un entier
+	AlignHorizontal					est une chaîne	// (left,center,right)
+	MargeHorizontal					est un entier
+	MargeVertical					est un entier
+fin
+
+structIciBlocValeurImage est une Structure
+	IdImage							est un entier
+	Libelle 						est une chaîne
+	Lien							est une chaîne
+fin
+
+
+
+// BLOC LIEN
+structIciBlocProprieteLien est une Structure
+	BlocFondCouleur						est une chaîne // <--- Continuer ICI
+	Style							est un entier
+	AlignHorizontal					est une chaîne
+	MargeExterneHorizontal			est un entier
+	MargeExterneVertical			est un entier
+fin
+
+structIciBlocValeurLien est une Structure
+	Libellé							est une chaîne
+	Lien							est une chaîne
+	TypeLien						est un entier
+fin
+
+// BLOC SEPARATEUR
+structIciBlocProprieteSeparateur est une Structure
+	BlocFondCouleur						est une chaîne
+	Hauteur							est une chaîne
+fin
+structIciBlocValeurSeparateur est une Structure
+fin
+
+// BLOC VIDEO
+structIciBlocProprieteVideo est une Structure
+	LectureAuto					est un booléen
+	AvecControle				est un booléen
+	LectureEnBoucle				est un booléen
+	Mute 						est un booléen
+fin
+structIciBlocValeurVideo est une Structure
+	IdVideo						est une chaîne
+fin
+
+
+// BLOC YOUTUBE
+structIciBlocProprieteYoutube est une Structure
+	LectureAuto						est un booléen
+	AvecControle					est un booléen
+fin
+structIciBlocValeurYoutube est une Structure
+	IdYoutube						est une chaîne
+fin
+
+// BLOC GRATTAGE
+structIciBlocProprieteGrattage est une Structure
+	MargeHorizontal					est un entier
+	MargeVertical					est un entier
+fin
+structIciBlocValeurGrattage est une Structure
+	IdImage							est un entier
+	Code							est une chaîne
+	Libelle							est une chaîne	// Message
+	BoutonLien						est une chaîne
+	BoutonTexte						est une chaîne
+fin
+
+// BLOC BANNIERE
+structIciBlocProprieteBanniere est une Structure
+	VitesseDefilement				est un entier	// defaut : 300ms
+	AdapteHauteur					est un booléen
+	JoueAuto						est un booléen
+	JoueAutoVitesse					est un entier	// defaut : 3000ms
+	AfficheFleche					est un booléen
+	AffichePoint					est un booléen
+	ChargementImmediat				est une chaîne	// ondemand OU progressive
+	AnimationFondu					est un booléen	// glisse ou fondu
+fin
+
+structIciBlocValeurBanniere est une Structure
+	tabIdImage						est un tableau d'entiers	// Image
+	tabLien							est un tableau de chaînes	// Lien
+	tabLibelle						est un tableau de chaînes	// Libelle
+fin
+
+// BLOC GRILLE
+structIciBlocProprieteGrille est une Structure
+	NbColonne						est un entier
+
+	BlocFondCouleur					est une chaîne
+
+	GrilleEspacement 				est un entier
+	VersoFondCouleur				est une chaîne
+
+	TextePoliceFamille				est une chaîne
+	TextePoliceCode					est une chaîne
+	TextePoliceStyle				est une chaîne
+	TexteAlignementHorizontal 		est une chaîne
+	TextePoliceCouleur				est une chaîne
+
+	LienStyle						est un entier
+	LienPoliceFamille				est une chaîne
+	LienAlignHorizontal				est une chaîne
+	LienMargeSuperieur				est un entier
+fin
+
+
+
+structIciBlocValeurGrille est une Structure
+	tabIdImage						est un tableau d'entiers	// Images
+	tabDescription					est un tableau de chaînes	// Description de l'image
+	tabLien							est un tableau de chaînes	// Lien
+	tabLibelle						est un tableau de chaînes	// Libelle
+	LibelleLien						est une chaîne
+fin
+
+// BLOC RESEAUX SOCIAUX
+structIciBlocProprieteSocial est une Structure
+	BlocFondCouleur						est une chaîne
+	MargeVerticale 						est un entier
+	IconeCouleur 						est une chaîne
+	IconeHauteur 						est un entier
+	IconeGap 							est un entier
+	AlignementHorizontal 				est une chaîne
+fin
+
+structIciBlocValeurSocial est une Structure
+	TabLien								est un tableau de chaînes					// Lien
+	TabType								est un tableau de chaînes					// Type de lien (facebook, twitter...)
+fin
+
+structIciBlocSocialLien est une Structure
+	Icône							est une chaîne
+	Lien							est une chaîne
+fin
+
+// BLOC ADRESSE
+structIciBlocProprieteAdresse est une Structure
+	BlocFondCouleur						est une chaîne
+	PoliceFamille					est une chaîne
+	PoliceCouleur					est une chaîne
+	AlignHorizontal					est une chaîne
+	Gap 							est un entier
+	AdresseFondCouleur 				est une chaîne
+	BordureCouleur					est une chaîne
+	BordureEpaisseur				est un entier
+	BordurePadding					est un entier // Padding entre la bordure et le texte (0 px si pas de bordure)
+fin
+structIciBlocValeurAdresse est une Structure
+	TabLibelle						est un tableau de chaînes	// Libellé des lignes
+	tabStyle						est un tableau de chaînes	// Style du libellé
+	TabActif						est un tableau de booléens	// Activation de la ligne
+	TabValeur						est un tableau de chaînes	// Blocs d'adresses non formatées (utilisé pour éditer chaque ligne indépendamment au sein d'un bloc adresse)
+fin
+
+// BLOC HTML
+structIciBlocProprieteHtml est une Structure
+	// aucune propriété pour le moment
+fin
+structIciBlocValeurHtml est une Structure
+	CodeHtml				est une chaîne
+	CodeCss					est une chaîne
+	CodeJavascript			est une chaîne
+fin
+
+structIciBlocValeurFormulaire est une Structure
+	TabLibelle						est un tableau de chaînes
+	TabType							est un tableau de chaînes
+	TabIndication					est un tableau de chaînes
+	TabValeur						est un tableau de chaînes
+	TabObligatoire					est un tableau de booléens
+fin
+
+// BLOC BOUTON VALIDATION
+structIciBlocProprieteBouton est une Structure
+	PopupTitrePoliceCode				est une chaîne
+	PopupMessagePoliceCode				est une chaîne
+	OptinCocheModele					est un entier
+	OptinMessagePoliceCode				est une chaîne
+	OptinPropositionPoliceCode			est une chaîne
+	OptinPoliceFamille 					est une chaîne
+	OptinTexteCouleur 					est une chaîne
+	OptinFondCouleur 					est une chaîne
+	OptinCocheTaille 					est un entier
+	OptinCocheCouleurNonCoché			est une chaîne
+	OptinCocheCouleurCoché				est une chaîne
+	PopupPoliceFamille					est une chaîne
+	PopupGroupeDepliable				est un booléen
+	PopupCouleurFondConfirmation		est une chaîne
+	PopupCouleurTexteConfirmation		est une chaîne
+	PopupCouleurFondErreur				est une chaîne
+	PopupCouleurTexteErreur				est une chaîne
+fin
+
+structIciBlocValeurBouton est une Structure
+	Libelle							est une chaîne
+	Type							est un entier
+	PageEnregistrement				est une chaîne
+	TypeOptin						est un entier
+	TextePrincipal					est une chaîne
+	MessageConfirmation				est une chaîne // Message après validation
+	tabOption						est un tableau de chaîne
+fin
+
+// BLOC LIEN CGV
+structIciBlocProprieteCgv est une Structure
+	BlocFondCouleur				est une chaîne
+	LienAlignHorizontal			est une chaîne	// (left,center,right)
+	LienStyle					est un entier
+	LienPoliceFamille			est une chaîne
+	LienMargeExterneHorizontal	est un entier
+	LienMargeExterneVertical	est un entier
+
+
+	PopupFondCouleur			est une chaîne
+
+	TitrePoliceCode				est une chaîne
+	TitrePoliceFamille			est une chaîne
+	TitreAlignHorizontal		est une chaîne
+	TitrePoliceCouleur 			est une chaîne
+	TitrePoliceStyle 			est une chaîne
+
+	TextePoliceCode				est une chaîne
+	TextePoliceFamille			est une chaîne
+	TexteAlignHorizontal		est une chaîne	// (left,center,right, justify)
+	TextePoliceCouleur			est une chaîne
+	TextePoliceStyle			est une chaîne
+fin
+
+structIciBlocValeurCgv est une Structure
+	LibelleLien					est une chaîne
+	LibelleTitre				est une chaîne
+	TabIdCgv					est un tableau d'entiers
+fin
+
+// BLOC SCRIPT
+structIciBlocProprieteScript est une Structure
+	BlocFondCouleur					est une chaîne
+	MargeExterneHorizontal			est un entier
+	MargeExterneVertical			est un entier
+	AlignHorizontal					est une chaîne	// (left,center,right)
+	StyleLien						est un entier
+	PoliceLien						est une chaîne
+
+	ScriptPoliceCode				est une chaîne
+	ScriptPoliceStyle				est une chaîne
+	ScriptStyleBouton				est un entier
+	ScriptPoliceFamilleTexte		est une chaîne
+	ScriptPoliceFamilleBouton		est une chaîne
+	ScriptCouleurChamp				est une chaîne
+	ScriptCouleurCoche				est une chaîne
+fin
+
+structIciBlocValeurScript est une Structure
+	LibelleLien					est une chaîne
+	IdScript					est un entier
+fin
+
+// BLOC DESTINEO
+structIciBlocProprieteDestineo est une Structure
+	// aucune propriété pour le moment
+fin
+
+structIciBlocValeurDestineo est une Structure
+	// aucune valeur pour le moment
+fin
+
+
+// BLOC CARTE
+structIciBlocProprieteCarte est une Structure
+	RatioHauteur			est un entier
+	MargeVertical			est un entier
+	Zoom					est un entier	// defaut : 10
+	Draggable       		est un booléen
+	Scrollwheel       		est un booléen
+	ZoomControl				est un booléen
+	PanControl				est un booléen
+	StreetViewControl		est un booléen
+	FullscreenControl		est un booléen
+	CodeSnazzy				est une chaîne
+fin
+structIciBlocValeurCarte est une Structure
+	tabLibelle						est un tableau de chaînes	// Libellé des marqueurs
+	tabAdresse						est un tableau de chaînes
+	tabLatitude						est un tableau de chaînes
+	tabLongitude					est un tableau de chaînes
+fin
+
+structChampFormulaire est une Structure
+	TypeChamp		est une chaîne
+	LibelleChamp	est une chaîne
+	ValeurChamp		est une chaîne
+fin
+
+//***** fin cliquezici nicolas
+
+
+structGoogleFile est une Structure
+	'100'		est une chaîne
+	'200'		est une chaîne
+	'300'		est une chaîne
+	regular		est une chaîne
+	'500'		est une chaîne
+	'600'		est une chaîne
+	'700'		est une chaîne
+	'800'		est une chaîne
+	'900'		est une chaîne
+
+	'100italic'	est une chaîne
+	'200italic'	est une chaîne
+	'300italic'	est une chaîne
+	italic		est une chaîne
+	'500italic'	est une chaîne
+	'600italic'	est une chaîne
+	'700italic'	est une chaîne
+	'800italic'	est une chaîne
+	'900italic'	est une chaîne
+fin
+
+structGoogleFont est une Structure
+	family			est une chaîne
+	category		est une chaîne
+	variants		est un tableau de chaînes
+	subsets			est un tableau de chaînes
+	Version			est une chaîne
+	lastModified	est une chaîne
+	files			est une structGoogleFile
+fin
+
+
+structListeGoogleFont est une Structure
+	items est un tableau de structGoogleFont
+fin
+
+
+structIciReponse		est une Structure
+	IdCliquezIci		est un entier
+	IdBaseLigne			est un entier
+	TypeEnregistrement	est une chaîne
+	tabChamp			est un tableau de structChampFormulaire
+fin
+
+
+structIciTracking est une Structure
+	IdBaseLigne		est un entier
+	IdCliquezIci	est un entier
+	AdresseIP		est une chaîne
+	Plateforme		est une chaîne
+//	Longitude		est un réel
+//	Latitude		est un réel
+//	Connexion		est une chaine
+//	Utilisateur		est une chaine
+//	Operateur		est une chaine
+//	Continent		est une chaine
+//	Pays			est une chaine
+//	Region			est une chaine
+//	Ville			est une chaine
+//	CodePostal		est une chaine
+fin
+
+// ChatGTP
+
+structGptMessage est une Structure
+	role				est une chaîne	<sérialise="role">
+	Content				est une chaîne	<sérialise="content">
+fin
+
+structGpt est une Structure
+	model				est une chaîne	<sérialise="model">
+	messages			est un tableau	<sérialise="messages"> de structGptMessage
+	max_tokens			est un entier	<sérialise="max_tokens">
+	temperature			est un réel		<sérialise="temperature">
+	//	top_p				est un entier	<Sérialise="top_p">
+	//	frequency_penalty	est un entier	<Sérialise="frequency_penalty">
+	//	presence_penalty	est un entier	<Sérialise="presence_penalty">
+	//	'stop'				est une chaîne	<Sérialise="stop">
+fin
+
+structTelRendezVousChamp est une Structure
+	IdAgendaChamp					est un entier
+	IdRendezVousChamp				est un entier
+	Libelle							est une chaîne
+	Valeur							est une chaîne
+fin
+
+
+structTelRendezVous est une Structure
+	IdBaseLigne						est un entier
+	Jour							est un entier
+	Date							est une Date
+	HeureDebut						est une Heure
+	HeureFin						est une Heure
+	tabTelRendezVousChamp			est un tableau de structTelRendezVousChamp
+fin
+
+
+
+structTelCreneau est une Structure
+	Jour							est un entier
+	TypeCreneau						est une chaîne
+	HeureDebut						est une Heure
+	HeureFin						est une Heure
+fin
+
+structTelAgenda est une Structure
+	IdTel							est un entier
+	IdAgenda						est un entier
+	Designation						est une chaîne
+	RdvDuree						est un entier
+	RdvSimultane					est un entier
+	HeureDebutJournée				est une Heure
+	HeureDebutPause					est une Heure
+	HeureFinPause					est une Heure
+	HeureFinJournée					est une Heure
+	EstPause						est un booléen
+	TabTelCreneau					est un tableau de structTelCreneau
+fin
+
+structTelAboutement est une Structure
+	IdTel							est un entier
+	IdAboutement					est un entier
+	RdvDuree						est un entier
+	HeureDebutJournée				est une Heure
+	HeureDebutPause					est une Heure
+	HeureFinPause					est une Heure
+	HeureFinJournée					est une Heure
+	EstPause						est un booléen
+	tabTelCreneau					est un tableau de structTelCreneau
+fin
+
+
+structAgenda est une Structure
+	Id								est un entier
+	Jour							est un entier
+	Date							est une Date
+	HeureDebut						est une Heure
+	HeureFin						est une Heure
+	DateHeureDebut					est une DateHeure
+	DateHeureFin					est une DateHeure
+	Titre							est une chaîne
+	Contenu							est une chaîne
+	Note							est une chaîne
+	Bulle							est une chaîne
+	CouleurFond						est un entier
+fin
+
+structPaiementParametreAbonnement est une Structure
+	IdAbonnementEnCours								est un entier
+	TypeAbonnement									est une chaîne
+	DateFin											est une chaîne
+	IdPack											est un entier
+fin
+
+structPaiementParametreMontant est une Structure
+	TauxTVA											est un monétaire
+	MontantHT										est un monétaire
+	MontantTVA										est un monétaire
+	MontantTTC										est un monétaire
+	AcompteVerse									est un monétaire
+	ResteAPayer										est un monétaire
+fin
+
+structPaiementParametre est une Structure
+	Mode											est une chaîne		// Mode reel ou mode test
+	TransactionMontant								est un monétaire
+	TypeOperation									est une chaîne		// Pour l'habillage
+	EstCliquezIci									est un booléen
+	IdClient										est un entier
+	IdContact										est un entier
+	IdAdresseFacturation							est un entier
+
+	EstReferenceObligatoire							est un booléen
+	ReferenceExpressionReguliere					est une chaîne
+	ReferenceExpressionReguliereAide				est une chaîne
+	ReferenceLibelle								est une chaîne
+	NumCommandeClient								est une chaîne
+
+	Dossier											est une chaîne
+	Designation										est une chaîne
+
+	AugmenteReserveArgent							est un booléen
+
+	PageEnCours										est une chaîne
+
+	TransactionType									est une chaîne
+
+	stMontant										est une structPaiementParametreMontant
+	stAbonnement 									est une structPaiementParametreAbonnement
+
+	IdReserve										est un entier
+	IdOperation										est un entier
+	IdAbonnementFonction							est un entier
+	IdAbonnementPrestation							est un entier
+	IdAbonnementFonctionRenouvellement				est un entier
+	IdAbonnementPrestationRenouvellement			est un entier
+	IdAbonnementFonctionHistorique					est un entier
+	IdAbonnementPrestationHistorique				est un entier
+
+	ListeIdSmsNotification							est une chaîne
+	ListeIdVmsUnitaire								est une chaîne
+	ListeIdEmailNotification						est une chaîne
+
+	EstReglementReserveArgent						est un booléen
+	EstReglementEnCompte							est un booléen
+	EstReglementCarteBancaire						est un booléen
+	EstReglementPayPal								est un booléen
+	EstReglementPrelevement							est un booléen
+	EstReglementVirement							est un booléen
+	EstReglementCheque								est un booléen
+
+	Email											est une chaîne
+	Référence										est une chaîne		// Pour forcer la référence par rapport à l'opération
+	UserCreation									est une chaîne
+fin
+
+structPaiementSécurisé est une Structure
+	ModeRèglement								est une chaîne		// Pour forcer un mode de règlement
+	ModeRèglementAbonnement						est une chaîne
+	CarteParDefaut								est un booléen
+	IdReglement									est un entier		// Valeur de retour du règlement
+	IdPaiement									est un entier		// Valeur de retour du paiement
+	IdFactureLigne 								est un entier
+	IdFacture 									est un entier
+
+	IdCarteBancaire								est un entier		// Pour forcer ou stocker le Token de la carte bancaire
+	IdTransaction								est un entier
+	NumTransaction								est une chaîne		// Numéro de transaction reçu par le composant
+	CarteLibelle								est une chaîne
+	CartePorteur								est une chaîne
+	CodeEmetteur								est une chaîne
+	CodeAuthenticite							est une chaîne
+	ForceCarteBancaire							est une chaîne		// N° Token pour forcer le règlement par une carte bancaire
+	ForcePaypal									est un booléen		// Pour forcer la validation de Paypal au retour du paiement
+	MessageErreur								est une chaîne
+fin
+
+
+structCompteBancaire est une Structure
+	Iban											est une chaîne
+	Bic												est une chaîne
+	Banque											est une chaîne
+	Adresse											est une chaîne
+	CodePostal										est une chaîne
+	Ville											est une chaîne
+	Pays											est une chaîne
+	Code											est une chaîne
+	Agence											est une chaîne
+	Compte											est une chaîne
+	Date											est une chaîne
+fin
+
+
+structTarifCourrier est une Structure
+	FraisFixeAdressageCouleur					est un monétaire
+	FraisFixeAdressageNoir						est un monétaire
+	TraitementRnvp								est un monétaire
+	PrixInsertion								est un monétaire
+	PrixAnnexeKg								est un monétaire
+	PrixCouleur									est un monétaire
+	PrixNoir									est un monétaire
+	PrixC6AF									est un monétaire
+	PrixC6DF									est un monétaire
+	PrixC5AF									est un monétaire
+	PrixC4AF									est un monétaire
+	PrixFeuille									est un monétaire
+fin
+
+structTarifSms est une Structure
+	FraisFixeFacturation						est un monétaire
+	MinimumFacturation							est un monétaire
+	PrixAvantSeuil								est un monétaire
+	PrixApresSeuil								est un monétaire
+	Seuil										est un entier
+fin
+
+structTarifVms est une Structure
+	FraisFixeFacturation						est un monétaire
+	MinimumFacturation							est un monétaire
+	PrixAvantSeuil								est un monétaire
+	PrixApresSeuil								est un monétaire
+	Seuil										est un entier
+fin
+
+structTarifTract est une Structure
+	FraisFixeFacturation						est un monétaire
+	MinimumFacturation							est un monétaire
+	CoefficientAvantSeuil						est un monétaire
+	CoefficientApresSeuil						est un monétaire
+	Seuil										est un entier
+fin
+
+
+structTarifEmail est une Structure
+	FraisFixeFacturation						est un monétaire
+	MinimumFacturation							est un monétaire
+	PrixAvantSeuil								est un monétaire
+	PrixApresSeuil								est un monétaire
+	Seuil										est un entier
+fin
+
+structTarifBdd est une Structure
+	FraisFixeFacturation						est un monétaire
+	MinimumFacturation							est un monétaire
+	CoefMajoration								est un monétaire
+	CodePrestationAvecCriteres					est une chaîne
+	CodePrestationSansCriteres					est une chaîne
+fin
+
+structTarifCliquezIci est une Structure
+	FraisFixeFacturation						est un monétaire
+	PrixAvantSeuil								est un monétaire
+	PrixApresSeuil								est un monétaire
+	Seuil										est un entier
+fin
+
+//structTarifTracking est une structure
+//	FraisFixeFacturation						est un monetaire
+//	PrixAvantSeuil								est un monetaire
+//	PrixApresSeuil								est un monetaire
+//	Seuil										est un entier
+//FIN
+
+//structTarifCallCenter est une structure
+//	FraisFixeFacturation						est un monetaire
+//	MinimumFacturation							est un monétaire
+//	PrixAvantSeuil								est un monetaire
+//	PrixApresSeuil								est un monetaire
+//	Seuil										est un entier
+//	PrixQuestion								est un monétaire
+//	PrixReponse									est un monétaire
+//	PrixFormulaire								est un monétaire
+//fin
+
+//structTarifClient	est une structure
+//	stTarifCourrier 							est une structTarifCourrier
+//	stTarifTract								est une structTarifTract
+//	stTarifSms	 								est une structTarifSms
+//	stTarifVms	 								est une structTarifVms
+//	stTarifEmail 								est une structTarifEmail
+//	stTarifCliquezIci							est une structTarifCliquezIci
+//	stTarifCallCenter							est une structTarifCallCenter
+//	TaaTarifBdd									est un tableau associatif de structTarifBdd
+//	//	stTarifCliquezIci 							est une structTarifCliquezIci
+//FIN
+
+
+structPagePdf est une Structure
+	IdFormatImpression					est un entier
+	EstPortrait								est un booléen
+	EstFondPerdu							est un booléen
+	NumeroPage								est un entier
+	HauteurInterne							est un réel
+	LargeurInterne							est un réel
+	HauteurExterne							est un réel
+	LargeurExterne							est un réel
+	HauteurFormat							est un réel
+	LargeurFormat							est un réel
+	Rotation									est un numérique(3,1)
+	// Fond perdu détaillé (depuis PyMuPdfExtract)
+	FondPerduHautMm						est un réel
+	FondPerduBasMm							est un réel
+	FondPerduGaucheMm						est un réel
+	FondPerduDroiteMm						est un réel
+	FondPerduMinimumMm					est un réel
+	// Coordonnées exactes des boîtes PDF (pour normalize_bleedbox)
+	MediaBoxXMm								est un réel
+	MediaBoxYMm								est un réel
+	MediaBoxLargeurMm						est un réel
+	MediaBoxHauteurMm						est un réel
+	BleedBoxXMm								est un réel
+	BleedBoxYMm								est un réel
+	BleedBoxLargeurMm						est un réel
+	BleedBoxHauteurMm						est un réel
+	TrimBoxXMm								est un réel
+	TrimBoxYMm								est un réel
+	TrimBoxLargeurMm						est un réel
+	TrimBoxHauteurMm						est un réel
+	TauxEncrageBordureHaut				est un réel
+	TauxEncrageBordureBas				est un réel
+	TauxEncrageBordureGauche			est un réel
+	TauxEncrageBordureDroite			est un réel
+fin
+
+structDocumentPrintshop est une Structure
+	ListeObject							est une chaîne Unicode
+	ListeVariable						est une chaîne Unicode
+	ListePage							est une chaîne Unicode
+	FichierPsmd							est une chaîne Unicode
+fin
+
+structDocumentImage est une Structure
+	CheminRelatif 						est une chaîne
+	CheminPhysique 						est une chaîne
+fin
+
+structDocument est une Structure
+	NomFichierOrigine						est une chaîne									// Nom du document donné par le client
+	NomFichierTemp							est une chaîne
+	CodeTemp									est une chaîne									// Nom du fichier temporaire enregistré sur le serveur, valable pour le Document, le Psmd, le Bat etc...
+	Repertoire								est une chaîne
+	TypeFichier								est une chaîne
+	IdLettreContenu						est un entier
+	IdTypeSupport							est un entier
+	IdSupport								est un entier
+	IdSupportGrammage						est un entier
+	IdPackageContenu						est un entier
+	IdDocumentClient						est un entier
+	IdModele									est un entier
+	IdPapier									est un entier
+	PeutEtrePorteAdresse					est un booléen
+	FichierApercu							est une chaîne
+	QuantiteDocumentClient				est un entier
+	DelaiOffsetSupplementaire			est un entier
+	DelaiLaserSupplementaire			est un entier
+	EstBloquantHorsDotation				est un booléen
+	EstPersonnalisable					est un booléen
+	ModeImpression							est une chaîne
+	ModeImpressionSelectionne			est une chaîne
+	EstPdfClient							est un booléen
+	EstDocumentEnAttente					est un booléen
+	EstRectoVerso							est un booléen
+	EstFondPerdu							est un booléen
+	EstPapierCouche						est un booléen
+	EstCliquezIci 							est un booléen
+	NombrePage								est un entier
+	EstUploadé								est un booléen
+	A4PliableMachine						est un booléen
+	HauteurFerme							est un numérique(4,1)
+	LargeurFerme							est un numérique(4,1)
+	HauteurOuvert							est un numérique(4,1)
+	LargeurOuvert							est un numérique(4,1)
+	NbPageObligatoire						est un entier
+	Poids										est un monétaire
+	PrixAchatContenu						est un monétaire
+	DeductionContenu						est un monétaire
+	LibelleTypeSupport					est une chaîne
+	LibelleSupport							est une chaîne
+	LibelleFormat							est une chaîne
+	LibelleGrammage						est une chaîne
+	LibellePapier							est une chaîne
+	NbPageTotale							est un entier
+	Designation								est une chaîne
+	tabPagePDF								est un tableau de structPagePdf
+	tabImageFond							est un tableau de structDocumentImage	// JPG fond Ghostscript (BleedBox ou TrimBox + blanc tournant)
+	tabImageBat								est un tableau de structDocumentImage	// JPG BAT (rendu PSMD via API PSM)
+	JsonDesignerData						est une chaîne									// Bloc "data" JSON retourné par le Designer du document
+	EstPersonnaliseDesigner				est un booléen									// Vrai = l'utilisateur a personnalisé via le Designer
+	DateHeureDesigner						est une DateHeure								// Date/heure dernière sauvegarde Designer
+	EstBatGenereAvecRapprochement		est un booléen									// Vrai = le dernier BAT généré contient le datamatrix de rapprochement (comparé à QrRequis pour la visibilité de btnRegenererBAT)
+	CheminPsmdTemp							est une chaîne									// Chemin physique complet du fichier PSMD production (avec fond perdu + SRA)
+	CheminPsmdBat							est une chaîne									// Chemin physique complet du fichier PSMD BAT (format fini, sans fond perdu ni SRA)
+	NomFichierPsmd							est une chaîne									// Nom du fichier PSMD (sans répertoire)
+	RepertoireTravail 					est une chaîne
+fin
+
+
+
+StructOperationRnvp est une Structure
+	IdRnvp									est un entier
+	IdBaseClient							est un entier
+	NomBaseClient							est une chaîne
+	Statut									est une chaîne
+	TypeDeduplication						est une chaîne
+	NbrAdresseEntrée						est un entier
+	PrixUnitaireAchat						est un monétaire
+	PrixUnitaireFacture						est un monétaire
+fin
+
+StructOperationBloctel est une Structure
+	IdBloctel								est un entier
+	IdBaseClient							est un entier
+	IdBaseSource							est un entier
+	IdFiltreSource							est un entier
+	FichierEntree							est une chaîne
+	FichierSortie							est une chaîne
+	NomBaseClient							est une chaîne
+	Statut									est une chaîne
+	NbrTelephoneEntree						est un entier
+	NbrPortableEntree						est un entier
+	NbrTelephoneSortie						est un entier
+	NbrPortableSortie						est un entier
+	PrixUnitaireAchat						est un monétaire
+	PrixUnitaireFacture						est un monétaire
+fin
+
+StructOperationLettre est une Structure
+	IdLettre										est un entier
+	IdEnveloppe									est un entier
+	IdEnveloppeClient							est un entier
+	IdPackage									est un entier
+	IdCampagne									est un entier
+	IdTimbreTarif								est un entier
+	IdDistributeur								est un entier
+	QuantiteEnveloppeClient					est un entier
+	EstMarketing								est un booléen
+	EstEnveloppeFenetre						est un booléen
+	EstAlliage									est un booléen
+	EstAlliageClient							est un booléen
+	EstPackageClient							est un booléen
+	EstPackageMarque							est un booléen
+	EstPackageMarketeam						est un booléen
+	PoidsTotal									est un monétaire
+	PackageModeImpression					est une chaîne
+	FraisFixePackage							est un monétaire
+	PuVentePackage								est un monétaire
+	PuAchatPackage								est un monétaire
+	DeductionEnveloppe						est un monétaire
+	Previsionnelle								est un entier		// pour le calcul automatique du prix du package
+	MinimumFacturation						est un monétaire
+	RemiseCoupon								est un monétaire
+	DelaiSupplementaire						est un entier		// Délai supplémentaire en jours pour la préparation du Package
+	SeuilMinPackage							est un entier		// Seuil pour accéder au package
+	stEnveloppe									est une StructEnveloppe
+	NumeroDocumentEnCours					est un entier
+	tabStDocument								est un tableau de structDocument
+fin
+
+structOperationTract est une Structure
+	IdTract									est un entier
+	IdEnveloppe								est un entier
+	IdEnveloppeClient						est un entier
+	IdPackage								est un entier
+	IdCampagne								est un entier
+	IdEtude 								est un entier  // IdEtude Mediaposte
+	QuantiteEnveloppeClient					est un entier
+	PoidsTotal								est un monétaire
+
+	SemaineDistribution						est un entier
+
+	FraisFixePackage						est un monétaire
+	PuVentePackage							est un monétaire
+
+	EstPackageClient						est un booléen // si EstClient ou Tarif Package = 0
+	EstPackageMarque						est un booléen // si Tarif Package > 0
+	EstPackageMarketeam						est un booléen // si ttb_package_tarif  existe
+
+	PackageModeImpression					est une chaîne
+	PuAchatPackage							est un monétaire
+
+	DeductionEnveloppe						est un monétaire
+
+	Previsionnelle							est un entier		// pour le calcul automatique du prix du package
+
+	MinimumFacturation						est un monétaire
+	RemiseCoupon							est un monétaire
+	DelaiSupplementaire						est un entier		// Délai supplémentaire en jours pour la préparation du Package
+	SeuilMinPackage							est un entier		// Seuil pour accéder au package
+
+	stEnveloppe								est une StructEnveloppe
+
+	NumeroDocumentEnCours					est un entier
+
+	tabStDocument							est un tableau de structDocument
+
+	EnveloppeApercu							est une structDocumentImage		//un WL.image		// Apercu de l'enveloppe non personnalisée
+	EnveloppeApercuPersonnalisée			est une structDocumentImage		// WL.image		// Apercu de l'enveloppe personnalisée
+
+fin
+
+
+
+
+structRnvp est une Structure
+	IdRnvp									est un entier
+	Statut									est une chaîne
+	TypeDeduplication						est un entier
+	TypeDedoublonnage						est un entier
+	TypeRnvp								est une chaîne
+	EstPaye									est un booléen
+	NbrDestinataire							est un entier
+	NbrAdresseEntree							est un entier
+	taaRnvpSortie							est un tableau associatif de structRnvpSortie	// la clé représente le code CQadrs
+fin
+
+structRnvpSortie est une Structure
+	Tot										est un entier	// Total sur le code
+	Ind										est un entier	// Nbr total doublons Individu --- IndividuTri >= 2
+	Foy										est un entier	// Nbr total doublons Foyer --- FoyerTri >= 2
+fin
+
+StructEnveloppe est une Structure
+	IdEnveloppe										est un entier
+	IdInsertion										est un entier
+	Libelle											est une chaîne
+	Hauteur											est un entier
+	Largeur											est un entier
+	NbrFenetre										est un entier
+	PoidsInsertionMin								est un monétaire
+	PoidsInsertionMax								est un monétaire
+	NbrInsertionMax								est un entier
+	Poids												est un monétaire
+	PrixAchatEnveloppe							est un monétaire
+	PrixEnveloppe									est un monétaire
+	PrixInsertion									est un monétaire
+	PrixAdressage									est un monétaire
+	QuantiteEnveloppeClient						est un entier
+	EstBloquantHorsDotation						est un booléen
+	EstAdressageExpediteur						est un booléen
+	EstAdressageLogo 								est un booléen
+	EstAdressagePromotion 						est un booléen
+	Type												est une chaîne
+	FichierApercu									est une chaîne						// Nom fichier sans extension (depuis ltr_enveloppe)
+	EnveloppeFond									est une structDocumentImage	// JPG statique \Enveloppes\ (fond Designer)
+	EnveloppeBAT									est une structDocumentImage	// JPG BAT généré par PrintShop Mail
+	JsonDesignerData								est une chaîne					// Bloc "data" JSON retourné par le Designer de l'enveloppe
+	CheminPsmdEnveloppe							est une chaîne						// Chemin physique complet du .psmd enveloppe
+	NomFichierPsmdEnveloppe						est une chaîne						// Nom du fichier PSMD enveloppe (sans répertoire)
+	RepertoireTravail								est une chaîne
+fin
+
+structTimbre est une Structure
+	IdTimbre								est un entier
+	IdTimbreTarif							est un entier
+	Libelle									est une chaîne
+	DelaisAcheminement						est un entier
+	DebutDistribution						est un entier
+	FinDistribution							est un entier
+	PrixUnitaire							est un monétaire
+	MontantTotal							est un monétaire
+	DateDebutDistribution					est une Date
+	DateFinDistribution						est une Date
+fin
+
+
+
+structOperationLigne est une Structure
+	IdOperation								est un entier
+	IdOperationLigne						est un entier
+	IdSupport								est un entier				// Ajouté pour la gestion des coupons au niveau des supports, solution de M....
+	NumeroOperation							est un entier				// Utilisé comme clé dans la fenêtre car en création on a pas d'IdOperation
+	CodePrestation							est une chaîne
+	Designation								est une chaîne
+	Qte										est un entier
+	PrixUnitaireAchat						est un numérique(6,4)
+	PrixUnitaireVenteCalcule				est un numérique(6,3)		// Issu de la calculette
+	PrixUnitaireVenteMinimum				est un numérique(6,3)		// Calculé entre le prix calculette et le prix après seuil
+	PrixUnitaireVenteBrut					est un numérique(6,3)		// Par défaut = prix calculette mais modifiable à la hausse uniquement
+	PrixUnitaireVenteNet					est un numérique(6,3)		// Prix après remise, ne peut pas être inférieur au prix minimum
+	RemiseTaux								est un numérique(4,2)
+	RemiseMontant							est un numérique(6,2)
+	TauxTva									est un numérique(3,2)
+	Total									est un numérique(6,2)
+	TypeLigneCalcule						est une chaîne
+	IdLigne									est un entier				// Numéro de la ligne dans la table hiérachique du deviseur
+fin
+
+
+structDateDistribution est une Structure
+	Date								est une Date
+	Stat								est un réel
+fin
+
+structOffre est une Structure
+	IdOffre								est un entier
+	TypeOffre							est un caractère
+	Libelle								est une chaîne
+	Offre								est une chaîne
+fin
+
+
+structOperationSms est une Structure
+	IdSmsModele							est un entier
+	LeFrom								est une chaîne
+	Message								est une chaîne
+	EstSmsPersonnalise					est un booléen
+	ModeleVariable						est une chaîne
+	DateFin								est une Date						// Pour la cadence pour contrôle
+	HeureFin							est une Heure						// Pour la cadence pour contrôle
+	Cadence								est un entier
+	Paquet								est un entier
+	Pause								est un entier
+	PrixAchat							est un numérique(6,3)
+	taaCreditSms						est un tableau associatif d'entiers	// Cle = crédit , Valeur = nombre
+	taaTailleSms						est un tableau associatif d'entiers // Cle = taille , Valeur = nombre
+	TailleMax							est un entier
+fin
+
+structOperationVms est une Structure
+	IdMessage							est un entier
+	NumeroAppelant						est une chaîne
+	DateFin								est une Date	// Pour la cadence pour contrôle
+	HeureFin							est une Heure	// Pour la cadence pour contrôle
+	Cadence								est un entier
+	Paquet								est un entier
+	Pause								est un entier
+	PrixAchat							est un numérique(6,3)
+fin
+
+
+structOperationEmail est une Structure
+	IdEmailModele						est un entier
+	IdCampagne							est un entier
+	Sujet								est une chaîne
+	Corps								est une chaîne
+	NomExpediteur						est une chaîne
+	EmlExpediteur						est une chaîne
+	EstEmailPersonnalise				est un booléen
+	CoutEmail							est un monétaire
+	CompensationMinimumFacturation		est un monétaire
+	//	MinimumFacturation 					est un monétaire
+	//	FraisFixe			 				est un monétaire
+	RemiseCoupon						est un monétaire
+fin
+
+structBaseChamp est une Structure
+	Champ					est une chaîne
+	Type					est une chaîne
+	Ordre					est un entier
+	EstSupprimé				est un booléen
+	ColonnesInversées		est une chaîne
+	Pointer					est un entier		// Pour faire le dédoublonnage dans le traitement CalculTaaBaseChamp
+fin
+
+structClientBase est une Structure
+	IdBase				est un entier									// Id du fichier
+	IdClient			est un entier
+	IdContact			est un entier
+	EstSupprime			est un booléen									// En modification on a supprimé ce fichier
+	EstAjoute			est un booléen									// En modification on a ajouté ce fichier
+	EstAlliageClient	est un booléen									// Colonne Alliage du client
+	EstPartage			est un booléen
+	Nom					est une chaîne
+	NomOrigine			est une chaîne									// Nom d'origine du ficher
+	NomFichierTemp		est une chaîne									// Nom du fichier Temporaire
+	TypeFichier			est une chaîne									// Type de fichier
+	NbrLigne			est un entier									// Nombre de ligne dans le fichier
+	NbrSociete			est un entier									// Nombre de société dans le fichier
+	NbrContact			est un entier									// Nombre de contact dans le fichier
+	NbrAdresse			est un entier									// Nombre d'adresse exploitable dans le fichier
+	NbrTel				est un entier									// Nombre de numéro exploitable dans le fichier
+	NbrFixe			est un entier									// Nombre de numéro exploitable dans le fichier
+	NbrEmail			est un entier									// Nombre d'email exploitable dans le fichier
+	NbrSms				est un entier									// Nombre de portable exploitable dans le fichier
+	taaBaseChamp		est un tableau associatif de structBaseChamp	//structBaseChamp 	// Liste des champs optionnels avec leur Type ( taaBaseChamp[591] = "VEHICULE" / "TXT"   // On pourrait mettre ici la liste des colonnes exploités dans la base (en remplacement de de la variable colonnes)
+	tabClientBaseLigne	est un tableau de structClientBaseLigne
+fin
+
+
+structClientBaseLigne 					est une Structure
+	IdBaseligne							est un entier
+	Reference							est une chaîne
+	Societe								est une chaîne
+	Enseigne							est une chaîne
+	Contact								est une chaîne
+	Civilite							est une chaîne
+	Nom									est une chaîne
+	Prenom								est une chaîne
+	Adresse1							est une chaîne
+	Adresse2							est une chaîne
+	Adresse3							est une chaîne
+	Adresse4							est une chaîne
+	CodePostal							est une chaîne
+	Ville								est une chaîne
+	Pays								est une chaîne
+	Tel									est une chaîne
+	Portable							est une chaîne
+	Email								est une chaîne
+	CodeAlliage							est une chaîne
+	Code								est une chaîne
+	Champ1								est une chaîne
+	Champ2								est une chaîne
+	Champ3								est une chaîne
+	Champ4								est une chaîne
+	Champ5								est une chaîne
+	Champ6								est une chaîne
+	Champ7								est une chaîne
+	Champ8								est une chaîne
+	Champ9								est une chaîne
+	Champ10								est une chaîne
+	Champ11								est une chaîne
+	Champ12								est une chaîne
+	Champ13								est une chaîne
+	Champ14								est une chaîne
+	Champ15								est une chaîne
+	Champ16								est une chaîne
+	Champ17								est une chaîne
+	Champ18								est une chaîne
+	Champ19								est une chaîne
+	Champ20								est une chaîne
+	Champ21								est une chaîne
+	Champ22								est une chaîne
+	Champ23								est une chaîne
+	Champ24								est une chaîne
+	Champ25								est une chaîne
+	Champ26								est une chaîne
+	Champ27								est une chaîne
+	Champ28								est une chaîne
+	Champ29								est une chaîne
+	Champ30								est une chaîne
+	Profil								est une chaîne
+	Sexe								est une chaîne
+
+	EstDoublonsTel						est un booléen
+	EstDoublonsSms						est un booléen
+	EstDoublonsLtr						est un booléen
+	EstDoublonsEml						est un booléen
+
+	EstUnicode							est un booléen
+	NbrCaractereSms						est un entier
+	NbrSmsCommande						est un entier
+
+	taaChampValeur						est un tableau associatif de chaînes	// Valeur des champs optionnels ( taaChampValeur["Vehicule"] = "Peugeot" )
+fin
+
+StructBaseLigne est une Structure
+	IdBaseLigne							est un entier
+
+	Sequentiel							est un entier		// Pour être en phase en courrier avec le traitement rnvp (IdOperation + Sequentiel = IdRnvp + Sequentiel)
+	Reference							est une chaîne
+	CodeAlliage							est une chaîne
+
+	Contact								est une chaîne
+	Civilite							est une chaîne
+	Nom									est une chaîne
+	Prenom								est une chaîne
+
+	Societe								est une chaîne
+	Enseigne							est une chaîne
+
+	Adresse1							est une chaîne
+	Adresse2							est une chaîne
+	Adresse3							est une chaîne
+	Adresse4							est une chaîne
+	CodePostal						est une chaîne
+	Ville							est une chaîne
+	Pays								est une chaîne
+
+	Tel								est une chaîne
+	Portable							est une chaîne
+	Email							est une chaîne
+
+	Code								est une chaîne
+	Champ1								est une chaîne
+	Champ2								est une chaîne
+	Champ3								est une chaîne
+	Champ4								est une chaîne
+	Champ5								est une chaîne
+	Champ6								est une chaîne
+	Champ7								est une chaîne
+	Champ8								est une chaîne
+	Champ9								est une chaîne
+	Champ10								est une chaîne
+	Champ11								est une chaîne
+	Champ12								est une chaîne
+	Champ13								est une chaîne
+	Champ14								est une chaîne
+	Champ15								est une chaîne
+	Champ16								est une chaîne
+	Champ17								est une chaîne
+	Champ18								est une chaîne
+	Champ19								est une chaîne
+	Champ20								est une chaîne
+	Champ21								est une chaîne
+	Champ22								est une chaîne
+	Champ23								est une chaîne
+	Champ24								est une chaîne
+	Champ25								est une chaîne
+	Champ26								est une chaîne
+	Champ27								est une chaîne
+	Champ28								est une chaîne
+	Champ29								est une chaîne
+	Champ30								est une chaîne
+
+	EstDoublonsTel						est un booléen
+	EstDoublonsSms						est un booléen
+	EstDoublonsLtr						est un booléen
+	EstDoublonsEml						est un booléen
+
+	Sexe								est une chaîne
+	Profil								est une chaîne
+	EstUnicode							est un booléen
+	NbrCaractereSms						est un entier
+	NbrSmsCommande						est un entier
+fin
+
+
+StructUsl est une Structure
+	IdUsl								est un entier
+	IdPlateforme						est un entier
+	Potentiel							est un entier
+	Tranche								est un caractère
+fin
+
+
+StructBase est une Structure
+	IdBase								est un entier							// Id de dos_base
+	IdBaseClient						est un entier							// Id de clt_client
+	IdFiltre							est un entier							// Id du filtre lié à clt_base
+	IdOperation							est un entier
+//	Statut								est une chaine
+	EstSupprime							est un booléen							// En modification on a supprimé ce fichier
+	EstAjoute							est un booléen							// En modification on a ajouté ce fichier
+	EstAlliageClient					est un booléen							// Colonne Alliage du client
+	IdZecible 							est un entier							// Est une base louée Zecible
+	Nom									est une chaîne
+	NbrTotal							est un entier
+	NbrSociete							est un entier
+	NbrContact							est un entier
+	NbrAdresse							est un entier
+	NbrSms								est un entier
+	NbrTel								est un entier
+	NbrEmail							est un entier
+	taaBaseChamp						est un tableau associatif de structBaseChamp	//structBaseChamp 	// Liste des champs optionnels avec leur Type ( taaBaseChamp[591] = "VEHICULE" / "TXT"   // On pourrait mettre ici la liste des colonnes exploités dans la base (en remplacement de de la variable colonnes)
+fin
+
+
+// =============================================================================
+// Chantier 2 — Diagnostic de remplissage de la base.
+// Structures de retour du moteur Partage.AnalyseRemplissageBase.
+// Modèle : structConcordance.txt (rapport + tableau de lignes).
+// =============================================================================
+
+// Une ligne de diagnostic = un champ réellement utilisé dans les documents,
+// résolu à une colonne physique de la base.
+structRemplissageChamp est une Structure
+	Libelle			est une chaîne					// Libellé lisible du champ
+	Champ				est une chaîne					// Colonne physique (ex: "Champ3", "Nom")
+	Type				est une chaîne					// Type fin (__CHAMP_TYPE_*)
+	NbRenseignes	est un entier sur 8 octets	// Enregistrements où la valeur est non vide
+	NbTotal			est un entier sur 8 octets	// Total d'enregistrements analysés
+	Taux				est un réel						// % de remplissage (NbRenseignes / NbTotal * 100)
+	MinLongueur		est un entier					// TEXTE : nb de caractères de la valeur la plus courte (0 sinon)
+	MaxLongueur		est un entier					// TEXTE : nb de caractères de la valeur la plus longue (0 sinon)
+	MinValeur		est une chaîne					// TEXTE : valeur échantillon la plus courte ; NUM/DAT/COO : valeur min brute
+	MaxValeur		est une chaîne					// TEXTE : valeur échantillon la plus longue ; NUM/DAT/COO : valeur max brute
+fin
+
+// Rapport global du diagnostic.
+structRemplissageBase est une Structure
+	NbEnregistrements	est un entier sur 8 octets						// Total analysé (en-tête du rapport)
+	BaseChargee			est un booléen										// Vrai si au moins une base non supprimée
+	tabChamps			est un tableau de structRemplissageChamp	// Une entrée par champ utilisé
+fin
+
+//structAdrexoSecteur est une structure
+//	IdSecteur							est un entier
+//	IdPdv								est un entier
+//	IdDepot								est un entier
+//	NbrBoites							est un entier
+//	CodeIris							est une chaîne
+//	CodePostal							est une chaine
+//	CodeCommune							est une chaine
+//	NomCommune							est une chaine
+//	TauxCouvertureIris					est un reel
+//	TauxCouvertureSecteur				est un reel
+//	TypeIris							est un caractère
+//fin
+
+//structAdrexoPdv est une structure
+//	IdPdv								est un entier
+//	NomPdv								est une chaine
+//	Adresse								est une chaine
+//	Longitude							est un reel
+//	Latitude							est un réel
+//	BoundingBox							est une chaine
+//	MetaDonnees							est une chaine
+//	NbrBoites							est un entier
+//	tabAdrexoSecteur					est un tableau de structAdrexoSecteur
+//fin
+
+//structAdrexoEtude est une structure
+//	NomEtude							est une chaine
+//	NbrBoites							est un entier
+////	tabAdrexoPdv						est un tableau de structAdrexoPdv
+//FIN
+
+structMediaposteEtude est une Structure
+	IdEtude 							est un entier
+	NomEtude 							est une chaîne
+	NbrBoites							est un entier
+fin
+
+
+
+structMontantDue est une Structure												// Montant due à une opération
+	TotalTTC							est un monétaire
+	CoutAffranchissement				est un monétaire
+	EncoursActuel						est un monétaire
+	PlafondEncours						est un monétaire
+	ReserveArgent						est un monétaire
+	AcomptesVersés						est un monétaire
+	MontantDuePaybox					est un monétaire
+	MontantDueReserve					est un monétaire
+	TropPerçu							est un monétaire
+	ResteAPayer							est un monétaire
+fin
+
+
+structDistributionPosteva est une Structure
+	ModeImpression						est une chaîne
+	LimiteValidation					est une DateHeure
+	LimitePriseEnCharge					est une DateHeure
+	DateDepotPoste						est une Date
+	MontantHT							est un monétaire
+fin
+
+structDistributionTracteva est une Structure
+	ModeImpression					est une chaîne
+	LimiteValidation				est une DateHeure
+	LimitePriseEnCharge				est une DateHeure
+	LundiDistribution				est une Date
+	MontantHT						est un monétaire
+fin
+
+structDistributionSmarteva est une Structure
+	ModeImpression					est une chaîne
+	LimiteValidation				est une DateHeure
+	LimitePriseEnCharge				est une DateHeure
+	LundiDistribution				est une Date
+	MontantHT						est un monétaire
+fin
+
+structDistributionTouteBoite est une Structure
+	LimiteValidation				est une DateHeure
+	LimitePriseEnCharge				est une DateHeure
+	LimiteExpeditionPlateforme		est une Date
+	DebutDistribution				est une Date
+	ModeImpression					est une chaîne
+	DelaiOffsetSupplementaires		est un entier
+fin
+
+
+structNotificationEnvoi est une Structure
+	CodeNotification	est une chaîne
+	IdClient			est un entier
+	IdContact			est un entier
+	IdOperation			est un entier
+	TypeOperation 		est une chaîne
+	IdFacture			est un entier
+	TypeFacture 		est une chaîne
+	IdAbonnement		est un entier
+	TypeAbonnement		est une chaîne
+	EmailFacturation	est une chaîne
+	Variables 			est un JSON
+fin
+
+structPrestation est une Structure
+	LibellePrestation					est une chaîne
+	PrixAchatUnitaire					est un monétaire
+	PrixAchatHoraire					est un monétaire
+	PrixAchatCalcule					est un booléen
+	CoefficientMarge					est un réel
+	PrixVenteUnitaire					est un monétaire
+	PrixVenteHoraire					est un monétaire
+	EstEligibleCoupon					est un booléen
+	TypePriseEnChargeCoupon				est une chaîne
+fin
+
+structFrais est une Structure
+	FraisFixeFacturation				est un monétaire
+	MinimumFacturation					est un monétaire
+fin
+
+structLimite est une Structure
+	LimiteMin							est un entier
+	LimiteMax							est un entier
+	LimiteVal							est un entier
+fin
+
+structRnvpQualite est une Structure
+	Qualite								est une chaîne
+	Libelle								est une chaîne
+	Pictogramme							est une chaîne
+fin
+
+structRnvpLigne est une Structure
+	IdRnvpLigne								est un entier
+	CQadrs									est un entier
+	CorrectionImportante					est un caractère
+	CorrectionDouteuse						est un caractère
+	Societe									est une chaîne
+	CivCourte								est une chaîne
+	CivLongue								est une chaîne
+	Nom										est une chaîne
+	Prenom									est une chaîne
+	Contact									est une chaîne
+	Adresse1								est une chaîne
+	Adresse2								est une chaîne
+	Adresse3								est une chaîne
+	Adresse4								est une chaîne
+	NumVoie									est une chaîne
+	BisTer									est une chaîne
+	TypeVoie								est une chaîne
+	LibelleVoie								est une chaîne
+	Insee									est une chaîne
+	CodePostal								est une chaîne
+	Ville									est une chaîne
+	AgeMoyen								est une chaîne
+	Email									est une chaîne
+	Portable								est une chaîne
+	Tel1									est une chaîne
+	Tel2									est une chaîne
+	FoyerGrp								est un entier
+	FoyerTri								est un entier
+	IndividuGrp								est un entier
+	IndividuTri								est un entier
+	PoidsGrp								est un entier
+fin
+
+structRapport est une Structure
+	Champ 									est une chaîne
+	Libelle 								est une chaîne
+	Type 									est une chaîne
+	Ordre 									est un entier
+	EstObligatoire 							est un booléen
+fin
+
+structOperation est une Structure
+	IdOperation								est un entier
+	IdContact								est un entier
+	IdClient								est un entier
+	IdClientFacturation						est un entier
+	IdAdresseFacturation					est un entier
+	IdValideur								est un entier
+	Dossier									est une chaîne
+	DateHeureLimiteValidation				est une DateHeure
+	DateHeureValidation						est une DateHeure
+	DateHeureLimitePriseEnCharge			est une DateHeure
+	DateHeureCheckRemplissage 				est une DateHeure
+	DateHeureRefus							est une DateHeure
+	MotifRefus								est une chaîne
+	Designation								est une chaîne
+	NumCommandeClient						est une chaîne
+	StatutDossier							est une chaîne
+	DateHeureCreation						est une DateHeure
+	DateHeureModification					est une DateHeure
+	UserCreation							est une chaîne
+	UserModification						est une chaîne
+	CodeTemp								est une chaîne	// Code unique en attendant la création de l’opération pour la création des fichiers temporaires
+	IdCoupon								est un entier
+	TypeCoupon								est une chaîne
+	NomOperation							est une chaîne
+	Statut									est une chaîne
+	ElementManquant 						est une chaîne
+	NbrDestinataire							est un entier
+	TypeOperation							est une chaîne
+	TypeProjet								est une chaîne
+	MontantBrutHT							est un numérique(6,2)
+	MontantNetHT							est un numérique(6,2)
+	TauxTva									est un numérique(4,2)
+	MontantTVA								est un numérique(6,2)
+	MontantTTC								est un numérique(6,2)
+	CoutAffranchissement					est un numérique(6,2)
+	RemiseCoupon							est un numérique(6,2)
+	RemiseMontant							est un numérique(6,2)
+	ResteAPayer								est un numérique(6,2)
+	RemiseTaux								est un numérique(3,2)
+	DateEnvoiSouhaite						est une Date
+	HeureEnvoiSouhaite						est une Heure
+	SupprimeDoublons						est un booléen
+
+	EstFacturationMensuelle					est un booléen
+	EstPlafondEncoursDepasse				est un booléen
+
+	EstModifiableParUnTiers					est un booléen
+	EstVisibleParUnTiers					est un booléen
+	EstVisibleParLeClient					est un booléen
+	EstDossierInternet						est un booléen
+	EstBrouillon							est un booléen
+	EstEnvoiImmediat						est un booléen
+	EstDevisDetaille						est un booléen
+	EstBaseEnAttente						est un booléen
+	EstDocumentEnAttente					est un booléen
+	EstMessageEnAttente 					est un booléen
+	EstLandingPageEnAttente					est un booléen
+	EstInjectionEnAttente					est un booléen
+	EstLocationBase							est un booléen
+	EstCliquezIci							est un booléen
+	EstChronodirect							est un booléen
+	tabRapport								est un tableau de structRapport	// Colonnes de champs et libellés présente dans le rapport
+	tabBase									est un tableau de StructBase
+	taaBaseChamp							est un tableau associatif de structBaseChamp // Liste des CHAMPS communs aux bases de données
+
+	stNouveauCliquezIci						est une structNouveauCliquezIci, sérialise = faux
+
+	stOperationLettre						est une StructOperationLettre, sérialise = faux
+	stOperationTract						est une structOperationTract, sérialise = faux
+	stOperationSms							est une structOperationSms
+	stOperationVms							est une structOperationVms, sérialise = faux
+	stOperationEmail						est une structOperationEmail, sérialise = faux
+	stOperationCallCenter					est une structOperationCallCenter, sérialise = faux
+	stOperationRnvp							est une StructOperationRnvp, sérialise = faux
+	stOperationBloctel						est une StructOperationBloctel, sérialise = faux
+	tabOperationLigne						est un tableau de structOperationLigne
+
+	//	TarifClient							est une structTarifClient
+fin
+
+structAdrexoAgence est une Structure
+	IdAdrexoAgence						est un entier
+	Code								est un entier
+	Libelle								est une chaîne
+	Adresse								est une chaîne
+	Voie								est une chaîne
+	CodePostal							est une chaîne
+	Ville								est une chaîne
+	Telephone							est une chaîne
+	Qte									est un entier
+	NbrColis							est un entier
+	PoidsTotal							est un numérique(8,2)
+	PrixAchat							est un monétaire
+fin
+
+
+//structOperateurTelephonique est une structure
+//	MCC										est une chaîne
+//	MNC										est une chaine
+//	PLMN									est une chaine
+//	Iso 									est une chaîne
+//	Pays									est une chaine
+//	Indicatif								est une chaîne
+//	Operateur								est une chaine
+//	Couleur									est une chaine
+//FIN
+
+
+structGeoRecherche est une Structure
+	Categorie					est un entier
+	IdRegion					est un entier
+	Region						est une chaîne
+	IdDepartement				est un entier
+	Departement					est une chaîne
+	CodeDepartement				est une chaîne
+	EstVilleQuartier			est un booléen
+	IdVille						est un entier
+	CodePostal					est une chaîne
+	Ville						est une chaîne
+	IdRue						est un entier
+	Rue							est une chaîne
+	IdNumero					est un entier
+	Distance					est un entier
+	Nombre						est un entier
+	NbrNumeroDansRue			est un entier
+	NbrRueDansVille				est un entier
+	NbrVilleDansDepartement		est un entier
+	NbrDepartementDansRegion	est un entier
+	Longitude					est un réel
+	Latitude					est un réel
+fin
+
+structResultat est une Structure
+	Categorie			est un entier
+	Nombre				est un entier
+	Total				est un entier
+fin
+
+structPoint est une Structure
+	Lng	est un réel
+	Lat	est un réel
+fin
+
+StructPolygone est une Structure
+	Type		est une chaîne
+	Rayon		est réel
+	tabPoint	est un tableau de structPoint
+fin
+
+
+structRapportExcelCartouche est une Structure
+	Société					est une chaîne
+	Contact					est une chaîne
+	Designation				est une chaîne
+	Dossier					est une chaîne
+	Date					est une chaîne
+	Heure					est une chaîne
+	MontantHT				est un monétaire
+fin
+
+structRapportExcelFeuille est une Structure
+	Titre					est une chaîne
+	SousTitre				est une chaîne
+	NomFeuille 				est une chaîne
+	LibelleQuestion1		est une chaîne
+	LibelleQuestion2		est une chaîne
+	tabQuestion				est un tableau de tableau de chaînes
+	taaEntête				est un tableau associatif d'entiers
+	tabColonne				est un tableau de chaînes
+	tabAlignement			est un tableau de chaîne
+	tabExcel				est un tableau de tableau de chaînes
+	telColonneQuestionDebut	est un entier	// Première colonne des questions
+	telColonneQuestionFin	est un entier	// Dernière colonne des questions
+fin
+
+structRapportExcel est une Structure
+	stCartouche				est une structRapportExcelCartouche
+	TypeOperation			est une chaîne
+	tabFeuille				est un tableau de structRapportExcelFeuille
+fin
+
+structEmailCouleur est une Structure
+	XXL			est une chaîne
+	XL			est une chaîne
+	L			est une chaîne
+	M			est une chaîne
+	S			est une chaîne
+	XS			est une chaîne
+	XXS			est une chaîne
+	Cadre		est une chaîne
+	'Tableau'	est une chaîne
+fin
+
+structEmailTableau est une Structure
+	Champ			est une chaîne
+	Type			est une chaîne
+	Libelle			est une chaîne
+	Alignement		est une chaîne
+	'Procedure'		est une Procédure
+fin
+
+structEmailInformation est une Structure
+	Libelle 		est une chaîne
+	Valeur 			est une chaîne
+fin
+
+structEmail est une Structure
+	Contact					est une chaîne
+	Société					est une chaîne
+	Titre					est une chaîne
+	'Message'				est une chaîne
+	tabInformation			est un tableau de structEmailInformation	// C'est la que l'on indique les différentes informations (Nom de l'opération, Dossier, Résultat, etc...)
+	tabTableauEntête		est un tableau de structEmailTableau
+	tabTableauValeur		est un tableau de tableau de chaînes
+	CodeLogo				est une chaîne
+	CodeIcone				est une chaîne
+	Couleur					est une structEmailCouleur
+fin
+
+
+//structProprieteInterrupteur est une Structure
+//	ClassHtml		est une chaîne
+//	CocheType		est une chaîne	// radio ou checkbox
+//	CocheStyle		est une chaîne
+//	CocheTaille		est un entier
+//	CocheCouleur	est une chaîne
+//	PoliceFamille	est une chaîne
+//	PoliceTaille	est un entier
+//	PoliceCouleur	est une chaîne
+//	CheminFichier	est une chaîne
+//FIN
+
+
+//structProprieteCombo est une Structure
+//	ClassHtml				est une chaîne
+//	BordureCouleur			est une chaîne
+//	BordureEpaisseur		est un entier
+//	BordureArrondi			est un entier
+//	FondCouleur				est une chaîne
+//	FlecheImage				est une chaîne
+//	FlecheCouleur			est une chaîne
+//	FlecheTaille			est un entier
+//	SaisiePoliceFamille		est une chaîne
+//	SaisiePoliceTaille		est un entier
+//	SaisiePoliceCouleur		est une chaîne
+//	LibellePoliceTaille		est un entier
+//	LibellePoliceCouleur	est une chaîne
+//	LibellePoliceFamille	est une chaîne
+//	Hauteur					est un entier
+//	FocusPolice				est une chaîne
+//	FocusBordure			est une chaîne
+//	FocusCouleur			est une chaîne
+//FIN
+
+//structProprieteLien est une Structure
+//	ClasseHtml				est une chaîne
+//	FondCouleur				est une chaîne
+//	PoliceTaille			est un entier
+//	PoliceCouleur			est une chaîne
+//	PoliceFamille			est une chaîne
+//	AlignHorizontal			est une chaîne
+//	MargeHorizontal			est un entier
+//	MargeVertical			est un entier
+//FIN
+//
+//
+//structProprieteTexte est une Structure
+//	ClasseHtml				est une chaîne
+//	FondCouleur				est une chaîne
+//	PoliceTaille			est un entier
+//	PoliceCouleur			est une chaîne
+//	PoliceFamille			est une chaîne
+//	AlignHorizontal			est une chaîne
+//	MargeHorizontal			est un entier
+//	MargeVertical			est un entier
+//FIN
+//
+//structProprieteImage est une Structure
+//	ClasseHtml				est une chaîne
+//	FondCouleur				est une chaîne
+//	AlignHorizontal			est une chaîne	// (Gauche,Centre,Droite,100%)
+//	MargeHorizontal			est un entier
+//	MargeVertical			est un entier
+//FIN
+//
+//structProprieteGrattage est une Structure
+//	ClasseHtml				est une chaîne
+//	FondCouleur				est une chaîne
+//	AlignHorizontal			est une chaîne	// (Gauche,Centre,Droite,100%)
+//	MargeHorizontal			est un entier
+//	MargeVertical			est un entier
+//FIN
+//
+//
+//
+//structProprieteBanniere est une Structure
+//	ClasseHtml				est une chaîne
+//	VitesseDefilement		est un entier
+//	Transition				est une chaîne
+//	ImageLargeur			est un entier	// Largeur des images attendues
+//	ImageHauteur			est un entier	// Hauteur des images attendues
+//	// Ajouter Propriete du banniere transition etc...
+//FIN
+//
+//structProprieteDestineo est une Structure
+//	ClasseHtml				est une chaîne
+//	VitesseDefilement		est un entier
+//	Transition				est une chaîne
+//	ImageLargeur			est un entier	// Largeur des images attendues
+//	ImageHauteur			est un entier	// Hauteur des images attendues
+//	// Ajouter Propriete du banniere transition etc...
+//FIN
+//
+//
+//
+//structProprieteSaisie est une Structure
+//	ClassHtml				est une chaîne
+//	BordureCouleur			est une chaîne
+//	BordureEpaisseur		est un entier
+//	BordureArrondi			est un entier
+//	FondCouleur				est une chaîne
+//	SaisiePoliceFamille		est une chaîne
+//	SaisiePoliceTaille		est un entier
+//	SaisiePoliceCouleur		est une chaîne
+//	LibellePoliceTaille		est un entier
+//	LibellePoliceCouleur	est une chaîne
+//	LibellePoliceFamille	est une chaîne
+//FIN
+//
+//structProprieteAdresse est une Structure
+//	ClassHtml				est une chaîne
+//	FondCouleur				est une chaîne
+//	PoliceFamille			est une chaîne
+//	PoliceTaille			est un entier
+//	PoliceCouleur			est une chaîne
+//	MargeHorizontal			est un entier
+//	MargeVertical			est un entier
+//FIN
+
+//structProprieteBouton est une Structure
+//	ClassHtml				est une chaîne
+//	Largeur					est un entier
+//	Hauteur					est un entier
+//
+//	BordureCouleur			est une chaîne
+//	BordureEpaisseur		est un entier
+//	BordureArrondi			est un entier
+//
+//	FondCouleur				est une chaîne
+//
+//	Image					est une chaîne
+//
+//	PoliceFamille			est une chaîne
+//	PoliceTaille			est un entier
+//	PoliceCouleur			est une chaîne
+//
+//	MargeHorizontal			est un entier	// Marge gauche ou droite du texte / bord
+//	MargeVertical			est un entier	// Marge gauche ou droite du texte / bord
+//FIN
+
+
+// cliquez ici
+
+
+//structProprieteDefautCliquezIci est une structure
+//	ListePolices					est une chaine
+//	ListeCouleurs					est une chaine
+//	SaisiePoliceStyle				est une chaîne
+//	LibellePoliceStyle				est une chaîne
+//	SaisiePoliceCouleur				est une chaine
+//	LibellePoliceCouleur			est une chaine
+//	LibellePoliceTailleL			est un entier
+//	SaisiePoliceTailleL				est un entier
+//	LibellePoliceTailleM			est un entier
+//	SaisiePoliceTailleM				est un entier
+//	SaisiePoliceTailleS				est un entier
+//	LibellePoliceTailleS			est un entier
+//	SaisiePoliceFamille				est une chaîne
+//	LibellePoliceFamille			est une chaine
+//	ChampCouleurFond				est une chaîne
+//	FondOpacite						est un entier
+//	FondCouleur						est une chaîne
+//	BordureCouleur					est une chaîne
+//	BordureArrondi					est un entier
+//	BordureEpaisseur				est un entier
+//	MargeVertical					est un entier
+//	MargeHorizontal					est un entier
+//FIN
+
+// DEBUT DEBUT DEBUT DEBUT DEBUT DEBUT DEBUT DEBUT En provenance de la collection de procedure CliquezIci
+
+
+
+structTelResultat est une Structure
+	ZnrLigne						est un entier	// pour afficher les réponses en mode précédent
+	ValeurReponse					est une chaîne
+	DateHeureReponse				est une DateHeure
+fin
+
+structTelReponse est une Structure
+	IdReponse						est un entier
+	IdQuestionSuivante				est un entier
+	Ordre							est un entier
+	EstObligatoire					est un booléen
+	EstChampSaisie					est un booléen	// Exemple: Interrupteur = Autre (possibilité d'un champ de saisie)
+	Reponse							est une chaîne
+	tabResultat						est un tableau de structTelResultat
+fin
+
+structTelQuestionnaire est une Structure
+	IdQuestion						est un entier
+	IdQuestionSuivante				est un entier
+	EstPremiereQuestion				est un booléen
+	EstDerniereQuestion				est un booléen
+	EstConditionnel					est un booléen
+	Type							est une chaîne
+	Resume							est une chaîne
+	Question						est une chaîne
+	NomAgenda						est une chaîne		// Nom de l'agenda
+	tabReponse						est un tableau de structTelReponse
+	stTelAgenda						est une structTelAgenda
+	Ligne							est un numérique(4,2)
+	Colonne							est un entier
+fin
+
+structTelPlanning est une Structure
+	IdTrancheHoraire				est un entier
+	DatePlanning					est une Date
+	NbrDestinataire					est un entier
+	NbrRappel1Calcule				est un entier
+	NbrRappel2Calcule				est un entier
+	NbrRappel3Calcule				est un entier
+fin
+
+structTelTrancheHoraire est une Structure
+	IdTrancheHoraire				est un entier
+	HeureDebut						est une chaîne
+	HeureFin						est une chaîne
+	Coefficient						est un réel
+	'Fixe'							est un entier
+	'Portable'						est un entier
+	'Actif'							est un entier
+	'Inactif'						est un entier
+	'Indetermine'					est un entier
+	PA								est un entier	// Portable Actif
+	PI								est un entier	// Portable Inactif
+	PN								est un entier	// Portable Indéterminé
+	FA								est un entier	// Fixe Actif
+	FI								est un entier	// Fixe Inactif
+	FN								est un entier	// Fixe Indéterminé
+	NbrDestinataire					est un entier
+	EstPossible						est un booléen
+fin
+
+structOperationCallCenter est une Structure
+	IdTypeScript					est un entier
+	IdMessage						est un entier
+	IdModele						est un entier
+	EstVerrouiller					est un booléen 		// Pour le tunnel
+	JoursAppel						est un entier
+	UsePortable						est un booléen		// Utilisation des portables
+	UseFixe							est un booléen		// Utilisation des Fixes
+	UsePriorite						est une chaîne		// Priorité Fixe ou Portable
+	NbrRelance						est un entier
+	NbrBaseDeDonnees				est un entier
+	NbrAppelHeureTheorique			est un entier
+	NbrDestinataire					est un entier
+	NbrFixe							est un entier
+	NbrPortable						est un entier
+	NbrActif						est un entier
+	NbrInactif						est un entier
+	NbrIndetermine					est un entier
+	ModeTrancheHoraire				est une chaîne		// Automatique ou Imposé
+	DateDebutSouhaite				est une chaîne
+	DateFinSouhaite					est une chaîne
+	DateDebutAgenda					est une chaîne		// Date de début des rendez-vous
+	DateFinAgenda					est une chaîne		// Date de fin des rendez-vous
+	DecalageAgenda					est un entier		// Nombre de jour entre la date du jour (aujourd'hui) et le premier rendez-vous proposé [par défaut 1 (J + 1)]
+	DateDebutRelance				est une chaîne		// Date de début de la relance téléphonique
+	DateFinRelance					est une chaîne		// Date de fin de la relance téléphonique
+	Introduction					est une chaîne
+	Nom								est une chaîne
+	Objectif						est une chaîne
+	Informations					est une chaîne
+	NbrQuestionBrancheMax			est un entier
+	NbrReponseBrancheMax			est un entier
+	NbrFormulaireBrancheMax			est un entier
+	NumeroAppelant					est une chaîne
+	EstSmsConfirmation				est un booléen 		// On envoi des SMS de confirmation pour les relances de Rendez-vous
+	EstSmsRappel					est un booléen 		// On envoi des SMS de rappel pour les relances de Rendez-vous
+	LeFromConfirmation				est une chaîne
+	SmsConfirmation					est une chaîne		// Message SMS de confirmation de rendez-vous
+	LeFromRappel					est une chaîne
+	SmsRappel						est une chaîne		// Message SMS de rappel de rendez-vous
+	DateRappel						est un entier
+	EstTransfertAppel				est un booléen		// Aboutement
+	EstMessageRepondeur				est un booléen
+	TransfertNumero					est une chaîne
+	TransfertMotifAutorise			est un entier
+	EmailLeadEnCopie				est une chaîne
+	stTelAboutement					est une structTelAboutement
+	tabAgendaChamp					est un tableau de structTelAgendaChamp		// Un seul tableau de champs pour tous les agendas
+	tabProfil						est un tableau de structTelProfil
+	tabTrancheHoraire				est un tableau de structTelTrancheHoraire	// en mode manuel les tranches horaires sont personnalisées
+	tabPlanning						est un tableau de structTelPlanning
+	taaPlanningDisponibilite		est un tableau associatif d'entiers
+	tabQuestionnaire				est un tableau de structTelQuestionnaire
+fin
+
+
+structPlanetPressEnregistrement est une Structure
+	IdEnregistrement	est une chaîne
+	Tri					est une chaîne
+	Destinataire		est une chaîne
+	Timbre				est une chaîne
+	FondDePage			est une chaîne
+	Alliage				est une chaîne
+	'Noir'				est une chaîne
+	Verso				est une chaîne
+	Sequentiel			est une chaîne
+	Enveloppe			est une chaîne
+fin
+
+structPlanetPressJob est une Structure
+	JobId				est une chaîne
+	tabEnregistrement	est un tableau de structPlanetPressEnregistrement
+fin
+
+
+// FIN FIN FIN FIN FIN FIN FIN FIN  En provenance de la collection de procedure CliquezIci
+
+//structProprieteOffreCliquezIci est une structure
+//	stProprieteQuestion 			est une structProprieteTexteCliquezIci
+//	stProprieteInterrupteur			est une structProprieteInterrupteurCliquezIci
+//	stProprieteCombo				est une structProprieteComboCliquezIci
+//	stProprieteLien					est une structProprieteLienCliquezIci
+//fin
+//
+structValeurOffreCliquezIci est une Structure
+	TypeOffre					est un caractère	// Interrupteur / Combo / Lien
+	Libelle						est une chaîne
+	tabValeur					est un tableau de chaînes
+fin
+
+structListeValeurOffreCliquezIci est une Structure
+	Question					est une chaîne
+	tabOffre					est un tableau de structValeurOffreCliquezIci
+fin
+
+
+//structProprieteInterrupteurCliquezIci est une Structure
+//	ClasseHtml					est une chaîne
+//	CocheType					est une chaîne	// radio ou checkbox
+//	CocheArrondi				est un entier
+//	CocheTaille					est un entier
+//	CocheCouleur				est une chaîne
+//	PoliceFamille				est une chaîne
+//	PoliceTailleL				est un entier
+//	PoliceTailleM				est un entier
+//	PoliceTailleS				est un entier
+//	PoliceCouleur				est une chaîne
+//	PoliceStyle					est une chaîne	// Graisse 100 200 300 400 ...
+//	MargeGauche					est un entier
+//	//	CheminFichier est une chaîne
+//FIN
+
+//structValeurInterrupteurCliquezIci est une Structure
+//	tabValeur est un tableau de chaînes
+//FIN
+
+//structProprieteComboCliquezIci est une Structure
+//	ClasseHtml						est une chaîne
+//	BordureCouleur					est une chaîne
+//	BordureEpaisseur				est un entier
+//	BordureArrondi					est un entier
+//	FondCouleur						est une chaîne
+//	FlecheCouleur					est une chaîne
+//	FlecheTaille					est un entier
+//	SaisiePoliceFamille				est une chaîne
+//	SaisiePoliceStyle				est une chaîne
+//	SaisiePoliceTailleL				est un entier
+//	SaisiePoliceTailleM				est un entier
+//	SaisiePoliceTailleS				est un entier
+//	SaisiePoliceCouleur				est une chaîne
+//	SaisieAlignementHorizontal		est une chaine
+//	LibellePoliceTailleL			est un entier
+//	LibellePoliceTailleM			est un entier
+//	LibellePoliceTailleS			est un entier
+//	LibellePoliceCouleur			est une chaîne
+//	LibellePoliceFamille			est une chaîne
+//	LibellePoliceStyle				est une chaîne
+//	LibelleAlignementHorizontal		est une chaîne
+//	LibellePosition					est une chaine
+//	Hauteur							est un entier
+//	FocusPolice						est une chaîne
+//	FocusBordure					est une chaîne
+//	FocusCouleur					est une chaîne
+//	MargeGauche						est un entier
+//FIN
+
+//structValeurComboCliquezIci est une Structure
+//	Libelle 						est une chaîne
+//	tabValeur 						est un tableau de chaînes
+//FIN
+
+
+//structProprieteLienCliquezIci est une Structure
+//	ClasseHtml						est une chaîne
+//	PoliceTailleL					est un entier
+//	PoliceTailleM					est un entier
+//	PoliceTailleS					est un entier
+//	PoliceCouleur					est une chaîne
+//	PoliceFamille					est une chaîne
+//	PoliceStyle						est une chaîne
+//	PoliceSouligne					est un booléen
+//	AlignHorizontal					est une chaîne
+//	MargeHorizontal					est un entier
+//	MargeVertical					est un entier
+//FIN
+
+//structValeurLienCliquezIci est une Structure
+//	Libelle 						est une chaîne
+//	Lien 							est une chaîne
+//FIN
+
+structProprieteReseauSocialCliquezIci est une Structure
+	ClasseHtml						est une chaîne
+	Hauteur							est un entier
+	IconeTailleL					est un entier
+	IconeTailleM					est un entier
+	IconeTailleS					est un entier
+	IconeCouleur					est une chaîne
+	FondCouleur						est une chaîne
+	BordureCouleur					est une chaîne
+	BordureEpaisseur				est un entier
+	BordureArrondi					est un entier
+	AlignHorizontal					est une chaîne
+	MargeHorizontal					est un entier
+	MargeVertical					est un entier
+	MargeVerticalReseau				est un entier
+	LibelleOuBulle					est un booléen
+	TabReseauSocial					est un tableau de structValeurReseauSocialCliquezIci
+fin
+
+structValeurReseauSocialCliquezIci est une Structure
+	Icône							est une chaîne
+	Lien							est une chaîne
+fin
+
+//structProprieteTexteCliquezIci est une Structure
+//	ClasseHtml						est une chaîne
+//	PoliceTailleL					est un entier
+//	PoliceTailleM					est un entier
+//	PoliceTailleS					est un entier
+//	PoliceCouleur					est une chaîne
+//	PoliceFamille					est une chaîne
+//	PoliceStyle						est une chaîne	// Graisse 100 200 300 400 ...
+//	AlignHorizontal					est une chaîne
+//	MargeHorizontal					est un entier
+//	MargeVertical					est un entier
+//	FondCouleur						est une chaîne
+//	FondOpacite						est un réel
+//	FondImage						est une chaîne
+//	FondImageMode					est une chaîne
+//	FondImageRepetition				est une chaîne
+//	FondImagePositionHorizontale	est une chaîne
+//	FondImagePositionVerticale		est une chaîne
+//	ImageRepetition					est une chaîne
+//	ImagePositionHorizontale		est une chaîne
+//	ImagePositionVerticale			est une chaîne
+//FIN
+
+structValeurTexteCliquezIci est une Structure
+	Texte 							est une chaîne
+fin
+
+
+//structProprieteImageCliquezIci est une Structure
+//	ClasseHtml						est une chaîne
+//	FondCouleur						est une chaîne
+//	FondOpacite						est un réel
+//	FondImage						est une chaîne
+//	FondImageMode					est une chaîne
+//	FondImageRepetition				est une chaîne
+//	FondImagePositionHorizontale	est une chaîne
+//	FondImagePositionVerticale		est une chaîne
+//	ImageMode						est une chaine
+//	AlignHorizontal					est une chaîne	// (left,center,right)
+//	MargeHorizontal					est un entier
+//	MargeVertical					est un entier
+//	LargeurMaxL						est un entier
+//	LargeurMaxM						est un entier
+//	LargeurMaxS						est un entier
+//	HauteurMaxL						est un entier
+//	HauteurMaxM						est un entier
+//	HauteurMaxS						est un entier
+//FIN
+
+structValeurImageCliquezIci est une Structure
+	IdImage							est un entier
+	Lien							est une chaîne
+fin
+
+
+
+//structProprieteGrattageCliquezIci est une Structure
+//	ClasseHtml						est une chaîne
+//	FondCouleur						est une chaîne
+//	FondOpacite						est un réel
+//	ImageMode						est une chaine
+//	AlignHorizontal					est une chaîne	// (left,center,right)
+//	MargeHorizontal					est un entier
+//	MargeVertical					est un entier
+//FIN
+
+structValeurGrattageCliquezIci est une Structure
+	ImageDessus						est une chaîne
+	ImageDessous					est une chaîne
+	Code							est une chaîne
+	Libelle							est une chaîne	// Message
+	BoutonLien						est une chaîne
+	BoutonTexte						est une chaîne
+fin
+
+//structProprieteBanniereCliquezIci est une Structure
+//	ClasseHtml						est une chaîne
+//	VitesseDefilement				est un entier	// defaut : 300ms
+//	AdapteHauteur					est un booléen
+//	JoueAuto						est un booléen
+//	JoueAutoVitesse					est un entier	// defaut : 3000ms
+//	AfficheFleche					est un booléen
+//	AffichePoint					est un booléen
+//	//	ClassePoint					est une chaine //
+//	ChargementImmediat				est une chaîne	// ondemand OU progressive
+//	AnimationFondu					est un booléen	// glisse ou fondu
+//	//	ImageLargeur				est un entier // Largeur des images attendues
+//	//	ImageHauteur				est un entier // Hauteur des images attendues
+//FIN
+
+structValeurBanniereCliquezIci est une Structure
+	tabIdImage						est un tableau d'entiers	// Image
+	tabLien							est un tableau de chaînes	// Lien
+fin
+
+
+//structProprieteDestineoCliquezIci est une Structure
+//	ClasseHtml						est une chaîne
+//	VitesseDefilement				est un entier
+//	Transition						est une chaîne
+//	ImageLargeur					est un entier	// Largeur des images attendues
+//	ImageHauteur					est un entier	// Hauteur des images attendues
+//	// Ajouter Propriete du banniere transition etc...
+//FIN
+
+
+
+structValeurHtmlCliquezIci est une Structure
+	Html 							est une chaîne
+fin
+
+//structProprieteFormulaireCliquezIci est une Structure
+//	ClasseHtml						est une chaîne
+//	Hauteur							est un entier
+//	BordureCouleur					est une chaîne
+//	BordureEpaisseur				est un entier
+//	BordureArrondi					est un entier
+//	FondCouleur						est une chaîne
+//
+//	SaisiePoliceTailleL				est un entier
+//	SaisiePoliceTailleM				est un entier
+//	SaisiePoliceTailleS				est un entier
+//	SaisiePoliceCouleur				est une chaîne
+//	SaisiePoliceFamille				est une chaîne
+//	SaisiePoliceStyle				est une chaine
+//	SaisieAlignementHorizontal		est une chaîne
+//
+//	LibellePoliceTailleL			est un entier
+//	LibellePoliceTailleM			est un entier
+//	LibellePoliceTailleS			est un entier
+//	LibellePoliceCouleur			est une chaîne
+//	LibellePoliceFamille			est une chaîne
+//	LibellePoliceStyle				est une chaine
+//	LibelleAlignementHorizontal		est une chaine
+//	LibellePosition					est une chaine
+//	LibelleLargeur					est un entier
+//
+//	MargeGauche						est un entier
+//FIN
+
+structValeurFormulaireCliquezIci est une Structure
+	//	Libelle 						est une chaîne
+	//	LibelleOuIndication				est un booleen
+	//	Champ 							est une chaîne
+	tabChamp 						est un tableau de chaînes
+fin
+
+
+//structProprieteBoutonCliquezIci est une Structure
+//	ClasseHtml						est une chaîne
+//
+//	BlocFondCouleur					est une chaine
+//	BlocFondOpacite					est un entier
+//	BlocImageFond					est une chaine
+//	MargeHorizontal					est un entier	// Marge gauche ou droite du texte / bord
+//	MargeVertical					est un entier	// Marge gauche ou droite du texte / bord
+//	AlignementHorizontal			est une chaine
+//
+//	BordureCouleur					est une chaîne
+//	BordureEpaisseur				est un entier
+//	BordureArrondi					est un entier
+//
+//	BoutonLargeur					est un entier
+//	BoutonHauteur					est un entier
+//	BoutonFondCouleur				est une chaîne
+//	BoutonImage						est une chaîne
+//
+//	PoliceFamille					est une chaîne
+//	PoliceTailleL					est un entier
+//	PoliceTailleM					est un entier
+//	PoliceTailleS					est un entier
+//	PoliceCouleur					est une chaîne
+//	PoliceStyle						est une chaîne
+//
+//FIN
+
+//structValeurBoutonCliquezIci est une Structure
+//	Libelle							est une chaîne
+//	Image							est une chaine
+//FIN
+
+
+
+
+
+structEnveloppeClient est une Structure
+	IdEnveloppeClient	est un entier
+	Libelle				est une chaîne
+	EstBloquant			est un booléen
+fin
+
+//structEnveloppePersonnalisée est une structure
+//	Libelle							est une chaine
+//	IdModeleEnveloppe				est un entier
+//	FraisFixeFacturation			est un monétaire
+//	PrixUnitaireExpress				est un monétaire
+//	PrixUnitaireStandard			est un monétaire
+//	PrixUnitaireLent				est un monétaire
+//	HauteurEnveloppePersonnalise	est un entier
+//	LargeurEnveloppePersonnalise	est un entier
+//	TypeFichier						est une chaîne
+//	Image							est une WL.Image
+//FIN
+
+
+
+structRueCdpVille est une Structure
+	Rue	est une chaîne
+	Cdp	est une chaîne
+	Vil	est une chaîne
+fin
+
+
+structTarifTimbre est une Structure
+	IdTimbre				est un entier
+	IdTimbreTarif			est un entier
+	Libelle					est une chaîne
+	DelaisAcheminement		est un entier
+	SeuilPoidsMin			est un entier
+	SeuilPoidsMax			est un entier
+	PrixUnitaire			est un numérique
+	PrixKg					est un numérique
+fin
+
+structTarifGestion est une Structure
+	PuFeuille		est un monétaire
+	PuInsertion		est un monétaire
+	KgAnnexe		est un monétaire
+	PuCouleur		est un monétaire
+	PuNoir			est un monétaire
+	PuC6AF			est un monétaire
+	//	PuC6DF 			est un monetaire
+	PuC5AF			est un monétaire
+	PuC4AF			est un monétaire
+fin
+
+structLtrGestion est une Structure
+	Libelle						est une chaîne
+	IdGestion					est un entier
+	IdTimbre					est un entier
+	IdDocumentClient			est un entier
+	IdFondPage					est un entier
+	EstVerso					est un booléen
+	EstNoir						est un booléen
+	EstC6AF						est un booléen
+	EstC5AF						est un booléen
+	EstC4AF						est un booléen
+	MaxC6						est un entier
+	MaxC5						est un entier
+	MaxC4						est un entier
+	ParametresModifiables		est un booléen
+	AffranchissementModifiable	est un booléen
+fin
+
+structDocGestionContenu est une Structure
+	IdDocGestionContenu			est un entier
+	IdDocGestion				est un entier
+	IdPlanetPress				est un entier
+	IdFondPage					est un entier
+	Destinataire				est une chaîne
+	Reference					est une chaîne
+	Montant						est un monétaire
+	NbrPages					est un entier
+	PagePDf						est un entier
+fin
+
+structDocGestion est une Structure
+	//	IdPlanetPress				est un entier
+	IdEnveloppe					est un entier
+	IdTimbreTarif				est un entier
+	IdTimbre					est un entier
+	EstValidé					est un booléen
+	Adresse						est une chaîne
+	Destinataire1				est une chaîne
+	Destinataire2				est une chaîne
+	Adr1						est une chaîne
+	Adr2						est une chaîne
+	Adr3						est une chaîne
+	Adr4						est une chaîne
+	CdpVille					est une chaîne
+	//	Reference 					est une chaine
+	//	Montant						est un monetaire
+	Date						est une Date
+	PoidsPli					est un numérique
+	EstNoir						est un booléen
+	EstVerso					est un booléen
+	//	NbrPages 					est un entier
+	NbrInsertions				est un entier
+	NomDeFichierOrigine			est une chaîne
+	TypeEnveloppe				est une chaîne
+	CoutInsertion				est un monétaire
+	CoutImpression				est un monétaire
+	CoutEnveloppe				est un monétaire
+	CoutPrestation				est un monétaire
+	CoutTimbre					est un monétaire
+	tabDocGestionContenu		est un tableau de structDocGestionContenu
+fin
+
+
+structSelection est une Structure
+	Calendrier					est une chaîne
+	Indice						est un entier
+	Couleur						est un entier
+fin
+
+structComboType est une Structure
+	Affiché						est une chaîne
+	Memorisée					est une chaîne
+fin
+
+
+structImage est une Structure
+	LargeurCalcule				est un entier
+	HauteurCalcule				est un entier
+	LargeurImage				est un entier
+	HauteurImage				est un entier
+	Fichier						est une chaîne
+	FichierRelatif				est une chaîne
+fin
+
+structPopupImage est une Structure
+	ImageEnCours				est un entier
+	LargeurMax					est un entier
+	HauteurMax					est un entier
+	Ratio						est un réel
+	tabImage					est un tableau de structImage
+fin
+
+structTelAgendaChamp est une Structure
+	IdAgendaChamp				est un entier
+	Libelle 					est une chaîne
+	ValeurDefaut				est une chaîne
+	ValeurSaisie				est une chaîne
+	EstObligatoire				est un booléen
+	EstPortable					est un booléen
+fin
+
+structTelProfil est une Structure
+	'Telephone'					est une chaîne	// P Portable F Fixe N Null
+	'Profil'					est une chaîne	// A Actif I Inactif N Null
+	'Age'						est une chaîne	// A = 0-5 ans B = 5-10 ans C = 15-20 ans etc...
+	'Sexe'						est une chaîne	// H Homme F Femme   N Null
+	NbrDestinataire				est un entier
+fin
+
+
+structDateCalendrier est une Structure
+	Date						est une chaîne	// date sur le calendrier
+	DateCallCenter				est une chaîne	// date possible en call centers
+	DateDistribution			est une chaîne	// date possible de la distribution postale
+	DateOperation				est une chaîne	// date possible de l'operation
+	Libelle						est une chaîne
+	LibCouleur					est une chaîne
+	LibFond						est une chaîne
+	CelFond						est une chaîne
+fin
+
+structMois est une Structure
+	Libelle					est une chaîne
+	tabDateCalendrier		est un tableau de structDateCalendrier
+fin
+
+structCalendrier est une Structure
+	NbrDestinataire			est un entier
+	EstBaseDeDonnéesChargé	est un booléen
+	JoursAppel				est un entier
+	NumMoisEnCours			est un entier
+	NbrRelance				est un entier
+	TypeOperation			est une chaîne
+	DateLimiteValidation	est une chaîne
+	DateEnvoiSouhaite		est une chaîne
+	HeureEnvoiSouhaite		est une chaîne	// pour le digital
+	DateFinSouhaite			est une chaîne	// pour calculer la cadence
+	HeureFinSouhaite		est une chaîne	// pour calculer la cadence
+	EstEnvoiImmediat		est un booléen	// pour le digital
+	EstCadence				est un booléen
+	Cadence					est un entier	// pour le digital
+	DateDebutDistribution	est une chaîne	// Pour le courrier
+	DateFinDistribution		est une chaîne	// pour le courrier
+	DateDebutCallCenter		est une chaîne
+	DateFinCallCenter		est une chaîne
+	DateDebutRelance		est une chaîne	// Date de début de la relance téléphonique
+	DateFinRelance			est une chaîne	// Date de fin de la relance téléphonique
+	tabMois					est un tableau de structMois
+fin
+
+structDetailDepot est une Structure
+	Produit				est une chaîne
+	Destination			est une chaîne
+	TranchePoids		est une chaîne
+	NbPlis				est un entier
+	TarifSansSurtaxe	est un monétaire
+	PoidMaximal			est un entier
+fin
+
+
+
+// Description de la transaction
+structVirementTransaction est une Structure
+	// Informations pour la table tel_operateur_releve
+	IdTransaction		est une chaîne
+	IdBeneficiaire		est un entier
+	IdReleve			est une chaîne
+
+	// Informations pour la table bnk_virement_lot_transaction
+	CompteDe			est une chaîne
+	BIC					est une chaîne
+	IBAN				est une chaîne
+	Montant				est un monétaire
+	Reference			est une chaîne
+	Motif				est une chaîne
+fin
+
+// Représente un ensemble des transactions
+structVirementLot est une Structure
+	IdCompte			est un entier
+	DateDebit			est une Date
+	CompteDe			est une chaîne
+	BIC					est une chaîne
+	IBAN				est une chaîne
+	Reference			est une chaîne
+	Methode				est une chaîne
+	Code				est une chaîne
+	NbrLots				est un entier
+	SommeLots			est un monétaire
+	tabTransactions		est un tableau de structVirementTransaction
+fin
+
+// Définition d'un fichier complet de virement
+structVirement est une Structure
+	IdVirement			est un entier
+	IdBanque			est un entier
+	Banque				est une chaîne
+	Reference			est une chaîne
+	DateHeureCreation	est une DateHeure
+	UtilisateurCreation	est une chaîne
+	EstPrive			est un booléen
+	Regroupement		est une chaîne
+	NbrTransactions		est un entier
+	SommeTransactions	est un monétaire
+	NomEmmetteur		est une chaîne
+	tabLots				est un tableau de structVirementLot
+fin
+
+structRechercheSirene est une Structure
+	Civilite		est une chaîne
+	Nom			est une chaîne
+	prenom			est une chaîne
+	Societe		est une chaîne
+	Enseigne		est une chaîne
+	NomUsage		est une chaîne
+	Adr1			est une chaîne
+	Adr2			est une chaîne
+	CodePostal		est une chaîne
+	Ville			est une chaîne
+	Naf 			est une chaîne
+fin
+
+structFicheSociete	est une Structure
+	Siret					est une chaîne
+	Societe					est une chaîne
+	Enseigne				est une chaîne
+	Adr1					est une chaîne
+	Adr2					est une chaîne
+	Adr3					est une chaîne
+	CodePostal				est une chaîne
+	Ville					est une chaîne
+	Naf						est une chaîne
+	Latitude				est un réel
+	Longitude				est un réel
+	DateCreation			est une Date
+	FormeJuridique			est une chaîne
+	TrancheEffectif			est une chaîne
+	Activite				est une chaîne
+	CatergorieEntreprise	est une chaîne
+fin
+
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//		Structures liées à CHRONODATA
+//-------------------------------------------------------------------------------------------------------------------------------------------
+
+//structOperationBdd est une structure // clt_recherche
+//	IdRecherche								est un entier
+//	IdBase									est un entier									// dos_base.IdBase
+//	Nom										est une chaine
+//	Criteres								est une chaine
+//	TypeSexe								est une chaine
+//	AgeSens									est une chaine
+//	AgeMin									est un entier
+//	AgeMax									est un entier
+//	ErreurImportation						est une chaine
+//	CodePrestation							est une chaine
+//	stDataBase								est un structDataBase
+//	tabStDataRubrique						est un tableau de structDataRubrique			// bdd rubriques
+//	taaStTheme								est un tableau associatif de structDataTheme	// A sortir au projet
+//	//-----------------------------------------------------------------------
+//	// Partie recherche liés aux fournisseurs
+//	tabGeoRecherche							est un tableau de structGEoRecherche
+//
+//	//-----------------------------------------------------------------------
+//
+//fin
+
+structDataBase est une Structure
+	IdBase									est un entier
+	IdPartenaire							est un entier
+	Partenaire								est une chaîne
+	Libelle									est une chaîne
+	AgeMin									est un entier
+	AgeMax									est un entier
+	EstGeoRegion							est un booléen
+	EstGeoDepartement						est un booléen
+	EstGeoCdp								est un booléen
+	EstGeoVille								est un booléen
+	EstGeoRue								est un booléen
+	EstGeoNumero							est un booléen
+	NomFonctionComptage						est une chaîne
+	NomFonctionRecuperation					est une chaîne
+	EstActif								est un booléen
+	TypeBase								est une chaîne
+	TypeFichier								est une chaîne
+fin
+
+structDataTheme est une Structure
+	//IdTheme								est un entier cle du tableau associatif
+	Libelle								est une chaîne
+	'Constante'							est une chaîne
+fin
+
+structDataRubrique est une Structure
+	IdRubrique							est un entier
+	IdBase								est un entier
+	IdGauche							est un entier
+	IdDroite							est un entier
+	IdNiveau							est un entier
+	IdTheme								est un entier
+	Correspondance						est une chaîne
+	Libelle								est une chaîne
+	Couleur								est une chaîne
+fin
+
+
+// Gestion  d'un filtre de critères // A pousser dans la fenetre bdd critere
+structFiltre est une Structure
+	tabStDataRubrique 					est un tableau de structDataRubrique
+fin
+
+
+structInscriptionIdentité est une Structure
+	IdOperateur						est un entier
+	IdParrain						est un entier
+	Civilite						est une chaîne
+	Nom								est une chaîne
+	Prénom							est une chaîne
+	Adresse1						est une chaîne
+	Adresse2						est une chaîne
+	CodePostal						est une chaîne
+	Ville							est une chaîne
+	Pays							est une chaîne
+	Email							est une chaîne
+	Portable						est une chaîne
+	DateNaissance					est une chaîne
+	EmailParrain					est une chaîne
+fin
+
+structInscriptionExperienceOpérateur est une Structure
+	OuiNonExperienceOpérateur		est une chaîne
+	NombreAnnée						est une chaîne
+	AppelEntrant					est un booléen
+	taaTypeAppel					est un tableau associatif de booléens
+	taaTypeMission					est un tableau associatif de booléens
+	taaCible						est un tableau associatif de booléens
+	taaDomaine						est un tableau associatif de booléens
+fin
+
+structInscriptionExperienceProfessionnelle est une Structure
+	OuiNonExperienceProfessionnelle	est une chaîne
+	NombreAnnée						est une chaîne
+	taaDomaine						est un tableau associatif de booléens
+fin
+
+structInscriptionCompetence est une Structure
+	Situtation						est une chaîne
+	stExperienceOpérateur			est une structInscriptionExperienceOpérateur
+	stExperienceProfessionnelle		est une structInscriptionExperienceProfessionnelle
+	NiveauEtude						est une chaîne
+	taaLangue						est un tableau associatif d'entiers
+fin
+
+structInscriptionDisponibilité est une Structure
+	Disponibilite					est une chaîne	// Régulière ou Ponctuelle
+	tabDisponibilite				est une chaîne
+fin
+
+structInscriptionJuridique est une Structure
+	Statut							est une chaîne
+	Enseigne						est une chaîne
+	Siret							est une chaîne
+	Ape								est une chaîne	// Informations retournées par L’API
+	SiretContact					est une chaîne	// Informations retournées par L’API pour contrôler
+	SiretSociete					est une chaîne	// Informations retournées par L’API pour contrôler
+	SiretAdresse					est une chaîne	// Informations retournées par L’API pour contrôler
+	SiretEnCoursCreation			est un booléen
+	SoumisTva						est une chaîne
+fin
+
+structInscriptionEquipement est une Structure
+	TypeOrdinateur					est une chaîne
+	CasqueOperateur					est une chaîne
+	ConnexionInternet				est une chaîne
+	FournisseurAcces				est une chaîne
+	AgeOrdinateur					est une chaîne
+	EnvironnementCalme				est une chaîne
+fin
+
+
+structInscriptionReponse est une Structure
+	IdReponse						est un entier
+	Reponse							est une chaîne
+	Point							est un entier
+fin
+
+structInscriptionQuestion est une Structure
+	IdQuestion						est un entier
+	Question						est une chaîne
+	tabReponse						est un tableau de structInscriptionReponse
+fin
+
+structInscriptionQuestionnaire est une Structure
+	Note							est un entier
+	Maximum							est un entier
+	QuestionEnCours					est un entier
+	NombreDeQuestion				est un entier
+	EstTerminé						est un booléen
+	taaQuestionnaire				est un tableau associatif d'entiers
+	//tabQuestionnaire				est un tableau de structInscriptionQuestion
+fin
+
+
+structInscriptionCastingAudio est une Structure
+	IdPbxMessage					est un entier
+	Version							est un entier
+	Durée							est un entier
+	LigneEnCours					est un entier
+	EstEnLigne						est un booléen
+	EstVersionEnregistré			est un booléen
+	EstEnregistré					est un booléen
+fin
+
+structInscriptionProfil est une Structure
+	Presentation					est une chaîne
+	Motivation						est une chaîne
+fin
+
+structInscription est une Structure
+	DateHeureModification				est une chaîne
+	PlanEnCours								est un entier
+	NbrHeureOperateur						est un entier
+	stIdentité								est une structInscriptionIdentité
+	stCompetence							est une structInscriptionCompetence
+	stEquipement							est une structInscriptionEquipement
+	stDisponibilité						est une structInscriptionDisponibilité
+	stJuridique								est une structInscriptionJuridique
+	stCompteBancaire						est une structCompteBancaire
+	stQuestionnaire						est une structInscriptionQuestionnaire
+	stCastingAudio							est une structInscriptionCastingAudio
+	stProfil									est une structInscriptionProfil
+fin
+
+
+// =============================================================================
+// STRUCTURES DESIGNER VDP - VERSION 3.3
+// Architecture contraintes à 3 niveaux (geometrie, style, global)
+// =============================================================================
+
+// =============================================================================
+// SECTION 1 : STRUCTURES DE BASE (réutilisables)
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// IDENTIFICATION DU DOCUMENT
+// -----------------------------------------------------------------------------
+structDesignerIdentification est une Structure
+	'idDocument'			est une chaîne		<sérialise = "idDocument">				// Identifiant unique du document
+	'nomDocument'			est une chaîne		<sérialise = "nomDocument">			// Nom affiché du document
+	'dateCreation'			est une chaîne		<sérialise = "dateCreation">			// Date de création (format AAAA-MM-JJ)
+fin
+
+// -----------------------------------------------------------------------------
+// COULEUR CMJN
+// -----------------------------------------------------------------------------
+structDesignerCouleurCMJN est une Structure
+	'c'						est un entier		<sérialise = "c">					// Cyan (0-100)
+	'M'						est un entier		<sérialise = "m">					// Magenta (0-100)
+	'y'						est un entier		<sérialise = "y">					// Jaune (0-100)
+	'k'						est un entier		<sérialise = "k">					// Noir (0-100)
+fin
+
+// -----------------------------------------------------------------------------
+// GÉOMÉTRIE (position et dimensions en mm)
+// -----------------------------------------------------------------------------
+structDesignerGeometrie est une Structure
+	'xMm'						est un réel			<sérialise = "xMm">					// Position X en mm (depuis le bord gauche)
+	'yMm'						est un réel			<sérialise = "yMm">					// Position Y en mm (depuis le bord supérieur)
+	'largeurMm'				est un réel			<sérialise = "largeurMm">			// Largeur en mm
+	'hauteurMm'				est un réel			<sérialise = "hauteurMm">			// Hauteur en mm
+fin
+
+// -----------------------------------------------------------------------------
+// BORDURE
+// -----------------------------------------------------------------------------
+structDesignerBordure est une Structure
+	'epaisseur'				est un réel										<sérialise = "epaisseur">			// Épaisseur en pixels (0 = pas de bordure)
+	'couleurCmjn'			est une structDesignerCouleurCMJN		<sérialise = "couleurCmjn">		// Couleur CMJN de la bordure
+	'style'					est une chaîne									<sérialise = "style">				// Style : "solid", "dashed", "dotted"
+fin
+
+// -----------------------------------------------------------------------------
+// FOND
+// -----------------------------------------------------------------------------
+structDesignerFond est une Structure
+	'transparent'			est un booléen									<sérialise = "transparent">		// Vrai = fond transparent (couleurCmjn ignorée)
+	'couleurCmjn'			est une structDesignerCouleurCMJN		<sérialise = "couleurCmjn">		// Couleur CMJN du fond
+fin
+
+
+// =============================================================================
+// SECTION 2 : FORMAT DU DOCUMENT
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// FOND PERDU
+// -----------------------------------------------------------------------------
+structDesignerFondPerdu est une Structure
+	'actif'					est un booléen		<sérialise = "actif">				// Activer le fond perdu
+	'hautMm'					est un réel			<sérialise = "hautMm">				// Valeur Haut du fond perdu en mm
+	'basMm'					est un réel			<sérialise = "basMm">				// Valeur bas du fond perdu en mm
+	'gaucheMm'				est un réel			<sérialise = "gaucheMm">			// Valeur gauche du fond perdu en mm
+	'droiteMm'				est un réel			<sérialise = "droiteMm">			// Valeur droite du fond perdu en mm
+fin
+
+// -----------------------------------------------------------------------------
+// TRAITS DE COUPE
+// -----------------------------------------------------------------------------
+structDesignerTraitsCoupe est une Structure
+	'actif'					est un booléen		<sérialise = "actif">				// Activer les traits de coupe
+fin
+
+// -----------------------------------------------------------------------------
+// FORMAT DOCUMENT COMPLET
+// -----------------------------------------------------------------------------
+structDesignerFormatDocument est une Structure
+	'largeurMm'						est un réel										<sérialise = "largeurMm">					// Largeur du document en mm
+	'hauteurMm'						est un réel										<sérialise = "hauteurMm">					// Hauteur du document en mm
+	'fondPerdu'						est une structDesignerFondPerdu			<sérialise = "fondPerdu">					// Configuration fond perdu
+	'traitsCoupe'					est une structDesignerTraitsCoupe		<sérialise = "traitsCoupe">				// Configuration traits de coupe
+	'margeSecurite'				est un entier									<sérialise = "margeSecurite">				// Marge de sécurité en mm
+	'largeurMaxImageMm'			est un entier									<sérialise = "largeurMaxImageMm">
+	'hauteurMaxImageMm'			est un entier									<sérialise = "hauteurMaxImageMm">
+	'formatPapierLargeurMm'		est un entier									<sérialise = "formatPapierLargeurMm">	// Largeur format papier SRA (DEVMODE)
+	'formatPapierHauteurMm'		est un entier									<sérialise = "formatPapierHauteurMm">	// Hauteur format papier SRA (DEVMODE)
+fin
+
+
+// =============================================================================
+// SECTION 3 : POLICES DE CARACTÈRES
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// CHAMP DE FUSION
+// -----------------------------------------------------------------------------
+// V3.4 : un champ peut désormais avoir 'nom' vide ("") s'il a été créé dans
+//        le Designer et n'est pas encore mappé à une colonne BDD. Dans ce
+//        cas 'localId' est renseigné et sert de clé de substitution dans le
+//        contenu (@LOCAL_<localId>@) et dans donneesApercu (nom = "LOCAL_<localId>").
+//        À la "vérification de cohérence" côté SaaS, la plateforme attribue
+//        un 'nom' technique au champ et la substitution @LOCAL_<id>@ -> @nom@
+//        est effectuée par le Designer à la prochaine ouverture (cf. cahier
+//        des charges §4.2).
+// -----------------------------------------------------------------------------
+structDesignerChampFusion est une Structure
+	'nom'							est une chaîne		<sérialise = "nom">						// Nom technique du champ (ex: "NOM", "PRENOM", "Champ7"). Vide pour un champ non mappé.
+	'type'						est une chaîne		<sérialise = "type">						// Code du type (cf. structDesignerTypeChamp - section 5.1)
+	'libelle'					est une chaîne		<sérialise = "libelle">					// Libellé affiché du champ
+	'ordre'						est un entier		<sérialise = "ordre">					// Ordre d'affichage
+	'localId'					est une chaîne		<sérialise = "localId">					// V3.4 - UUID Designer pour les champs créés non mappés (vide pour les champs déjà mappés à la création)
+	'echantillonDefaut'		est une chaîne		<sérialise = "echantillonDefaut">	// V3.4 - Valeur d'échantillon par défaut saisie à la création (optionnel)
+fin
+
+// -----------------------------------------------------------------------------
+// CHAMP STANDARD (V3.4 - NOUVEAU)
+// Référence transmise dans le message 'load' au niveau racine pour alimenter
+// la modale "Ajouter un champ" du Designer (onglet Standard).
+// -----------------------------------------------------------------------------
+structDesignerChampStandard est une Structure
+	'nom'						est une chaîne		<sérialise = "nom">					// Nom technique tel qu'il sera attribué au champ (ex: "NOM", "PRENOM")
+	'libelle'				est une chaîne		<sérialise = "libelle">				// Libellé affiché dans la liste standard
+	'type'					est une chaîne		<sérialise = "type">					// Code du type (cf. structDesignerTypeChamp)
+	'placeholderDefaut'	est une chaîne		<sérialise = "placeholderDefaut">
+fin
+
+
+// -----------------------------------------------------------------------------
+// TYPE DE CHAMP DISPONIBLE (V3.4 - NOUVEAU)
+// Référence transmise dans le message 'load' au niveau racine pour alimenter
+// la modale "Ajouter un champ" du Designer (onglet Spécifique : combo Type).
+//
+// Liste exhaustive des codes V3.4 et leur correspondance avec les constantes
+// WebDev :
+//   TXT  Texte         <- __CHAMP_TYPE_TEXTE__         (chaîne libre)
+//   ENT  Entier        <- __CHAMP_TYPE_ENTIER__        (numérique)
+//   DEC  Décimal       <- __CHAMP_TYPE_DECIMAL__       (numérique)
+//   MON  Monétaire     <- __CHAMP_TYPE_MONETAIRE__     (numérique)
+//   DAT  Date          <- __CHAMP_TYPE_DATE__          (date/heure)
+//   TIM  Heure         <- __CHAMP_TYPE_HEURE__         (date/heure)
+//   EML  Email         <- __CHAMP_TYPE_EMAIL__         (chaîne contrainte)
+//   TEL  Téléphone     <- __CHAMP_TYPE_TELEPHONE__     (chaîne contrainte)
+//   SMS  Portable      <- __CHAMP_TYPE_PORTABLE__      (chaîne contrainte)
+//   CDP  Code postal   <- __CHAMP_TYPE_CODEPOSTAL__    (chaîne contrainte)
+//   URL  URL           <- __CHAMP_TYPE_URL__           (chaîne contrainte)
+//   IMG  Image         <- __CHAMP_TYPE_IMAGE__         (placeholder visuel)
+//   ALG  Alliage       <- __CHAMP_TYPE_ALLIAGE__       (chaîne libre métier - NPAI La Poste)
+//
+// Le code SYS reste réservé aux zones système injectées par WebDev (adresse
+// destinataire, séquentiel, datamatrix...) et n'est PAS exposé dans
+// typesDisponibles.
+// -----------------------------------------------------------------------------
+structDesignerTypeChamp est une Structure
+	'code'					est une chaîne		<sérialise = "code">					// Code court du type (3 lettres, ex: "TXT", "DAT", "MON")
+	'libelle'				est une chaîne		<sérialise = "libelle">				// Libellé affiché dans la combo (ex: "Texte", "Date", "Monétaire")
+fin
+
+
+// -----------------------------------------------------------------------------
+// POLICE DISPONIBLE (envoyée au Designer pour affichage dans la combo)
+// -----------------------------------------------------------------------------
+structDesignerPolice est une Structure
+	'id'							est un entier		<sérialise = "id">					// ID en base de données (0 si non défini)
+	'nom'							est une chaîne		<sérialise = "nom">					// Nom AFFICHÉ dans la combo (libellé libre, ex: "Roboto Light")
+	'nomTechnique'				est une chaîne		<sérialise = "nomTechnique">		// Nom INTERNE réel de la police (écrit dans le \fonttbl du PSMD au Lot 2 ; correspond au nom interne du TTF). Non lu par le JS web.
+	'url'							est une chaîne		<sérialise = "url">					// URL du fichier police principal (.ttf, .woff2)
+	'weight'						est un entier		<sérialise = "weight">				// Poids CSS : 100=Thin, 300=Light, 400=Regular, 500=Medium, 700=Bold, 900=Black
+	'style'						est une chaîne		<sérialise = "style">				// Style CSS : "normal" ou "italic"
+	'boldUrl'					est une chaîne		<sérialise = "boldUrl">				// URL variante Bold (vide si non disponible)
+	'italicUrl'					est une chaîne		<sérialise = "italicUrl">			// URL variante Italic (vide si non disponible)
+	'boldItalicUrl'			est une chaîne		<sérialise = "boldItalicUrl">		// URL variante Bold+Italic (vide si non disponible)
+	'famille'					est une chaîne		<sérialise = "famille">				// Famille (cascade combo 1) = dsn_police.Famille ; repli = nom si vide
+	'graisse'					est une chaîne		<sérialise = "graisse">				// Libellé de graisse (cascade combo 2) = ici_police_weight.Nom (EstPrincipal=1) pour Weight ; TEL QUEL (y compris 400)
+fin
+
+
+// -----------------------------------------------------------------------------
+// URLS DES VARIANTES DE POLICE UTILISÉE (retournée à l'export)
+// -----------------------------------------------------------------------------
+structDesignerPoliceUtiliseeUrls est une Structure
+	'regular'				est une chaîne		<sérialise = "regular">				// URL variante Regular (toujours renseignée)
+	'bold'					est une chaîne		<sérialise = "bold">					// URL variante Bold (vide si non utilisée)
+	'italic'					est une chaîne		<sérialise = "italic">				// URL variante Italic (vide si non utilisée)
+	'boldItalic'			est une chaîne		<sérialise = "boldItalic">			// URL variante Bold+Italic (vide si non utilisée)
+fin
+
+// -----------------------------------------------------------------------------
+// POLICE UTILISÉE (retournée à l'export pour génération PSMD)
+// -----------------------------------------------------------------------------
+structDesignerPoliceUtilisee est une Structure
+	'nom'						est une chaîne										<sérialise = "nom">		// Nom de la police utilisée
+	'urls'					est une structDesignerPoliceUtiliseeUrls	<sérialise = "urls">		// URLs des variantes utilisées
+fin
+
+
+// =============================================================================
+// SECTION 4 : PAGES
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// PAGE DU DOCUMENT
+// -----------------------------------------------------------------------------
+structDesignerPage est une Structure
+	'numero'					est un entier			<sérialise = "numero">				// Numéro de la page (1 = recto, 2 = verso)
+	'nom'						est une chaîne			<sérialise = "nom">					// Nom de la page ("Recto", "Verso")
+	'urlFond'				est une chaîne			<sérialise = "urlFond">				// URL de l'image de fond (vide = pas de fond)
+	'cheminFond'			est une chaîne			<sérialise = "cheminFond">
+fin
+
+
+// =============================================================================
+// SECTION 5 : CONTRAINTES DE ZONE (architecture à 3 niveaux)
+// =============================================================================
+// -----------------------------------------------------------------------------
+// AREA DE CONTRAINTE
+// Zone rectangulaire délimitant les déplacements/redimensionnements autorisés
+// -----------------------------------------------------------------------------
+structDesignerAreaContrainte est une Structure
+	'xMm'					est un réel			<sérialise = "xMm">					// Position X du coin supérieur gauche en mm
+	'yMm'					est un réel			<sérialise = "yMm">					// Position Y du coin supérieur gauche en mm
+	'wMm'					est un réel			<sérialise = "wMm">					// Largeur de l'area en mm
+	'hMm'					est un réel			<sérialise = "hMm">					// Hauteur de l'area en mm
+fin
+
+// -----------------------------------------------------------------------------
+// CONTRAINTE GÉOMÉTRIE (communes à tous les types de zones)
+// -----------------------------------------------------------------------------
+structDesignerContrainteGeometrie est une Structure
+	'positionFixe'			est un booléen									<sérialise = "positionFixe">	// Position X,Y non modifiable (drag bloqué). Défaut: false
+	'locked'					est un booléen									<sérialise = "locked">			// Contrainte Template : position ET taille non modifiables en mode Standard. Défaut: false
+	'minWMm'					est un réel										<sérialise = "minWMm">			// Largeur minimale en mm (0 = pas de minimum)
+	'maxWMm'					est un réel										<sérialise = "maxWMm">			// Largeur maximale en mm (0 = pas de maximum)
+	'minHMm'					est un réel										<sérialise = "minHMm">			// Hauteur minimale en mm (0 = pas de minimum)
+	'maxHMm'					est un réel										<sérialise = "maxHMm">			// Hauteur maximale en mm (0 = pas de maximum)
+	'area'					est une structDesignerAreaContrainte	<sérialise = "area">				// Zone autorisée (null = pas de contrainte)
+fin
+
+// -----------------------------------------------------------------------------
+// CONTRAINTE GLOBAL (communes à tous les types de zones)
+// SOURCE DE VÉRITÉ pour systeme, imprimable, selectionnable, toolbarAffichable
+// -----------------------------------------------------------------------------
+structDesignerContrainteGlobal est une Structure
+	'systeme'					est un booléen		<sérialise = "systeme">					// Zone système (entièrement protégée). Défaut: false
+	'systemeLibelle'			est une chaîne		<sérialise = "systemeLibelle">		// Libellé affiché dans le badge système. Défaut: ""
+	'nonSupprimable'			est un booléen		<sérialise = "nonSupprimable">		// Zone non supprimable. Défaut: false
+	'imprimable'				est un booléen		<sérialise = "imprimable">				// Zone imprimée. Défaut: true (ATTENTION)
+	'selectionnable'			est un booléen		<sérialise = "selectionnable">		// Zone sélectionnable. Défaut: true
+	'toolbarAffichable'		est un booléen		<sérialise = "toolbarAffichable">	// Toolbar visible à la sélection. Défaut: true
+	'pageModifiable'			est un booléen		<sérialise = "pageModifiable">		// Peut changer de page (Recto/Verso). Défaut: true
+fin
+
+// -----------------------------------------------------------------------------
+// CONTRAINTE STYLE - TEXTE
+// Contrôle quelles sections de la toolbar sont modifiables
+// -----------------------------------------------------------------------------
+structDesignerContrainteStyleTexte est une Structure
+	'contenuModifiable'			est un booléen	<sérialise = "contenuModifiable">		// Contenu texte modifiable. Défaut: true
+	'typographieModifiable'		est un booléen	<sérialise = "typographieModifiable">	// Section Typographie modifiable. Défaut: true
+	'alignementsModifiable'		est un booléen	<sérialise = "alignementsModifiable">	// Section Alignements modifiable. Défaut: true
+	'fondModifiable'				est un booléen	<sérialise = "fondModifiable">			// Section Fond modifiable. Défaut: true
+	'bordureModifiable'			est un booléen	<sérialise = "bordureModifiable">		// Section Bordure modifiable. Défaut: true
+fin
+
+// -----------------------------------------------------------------------------
+// CONTRAINTE STYLE - IMAGE
+// Contrôle quelles sections de la toolbar sont modifiables
+// -----------------------------------------------------------------------------
+structDesignerContrainteStyleImage est une Structure
+	'typeSourceModifiable'		est un booléen	<sérialise = "typeSourceModifiable">	// Peut basculer Image fixe / Champ fusion. Défaut: true
+	'imageModifiable'				est un booléen	<sérialise = "imageModifiable">			// Peut changer l'image. Défaut: true
+	'affichageModifiable'		est un booléen	<sérialise = "affichageModifiable">		// Section Affichage modifiable. Défaut: true
+	'fondModifiable'				est un booléen	<sérialise = "fondModifiable">			// Section Fond modifiable. Défaut: true
+	'bordureModifiable'			est un booléen	<sérialise = "bordureModifiable">		// Section Bordure modifiable. Défaut: true
+fin
+
+// -----------------------------------------------------------------------------
+// CONTRAINTE STYLE - CODE-BARRES (barcode)
+// Contrôle quelles sections de la toolbar sont modifiables
+// -----------------------------------------------------------------------------
+structDesignerContrainteStyleBarcode est une Structure
+	'typeCodeModifiable'			est un booléen	<sérialise = "typeCodeModifiable">		// Peut changer le type de code. Défaut: true
+	'typeSourceModifiable'		est un booléen	<sérialise = "typeSourceModifiable">	// Peut basculer Valeur fixe / Champ fusion. Défaut: true
+	'donneesModifiable'			est un booléen	<sérialise = "donneesModifiable">		// Peut modifier la valeur ou le champ. Défaut: true
+	'apparenceModifiable'		est un booléen	<sérialise = "apparenceModifiable">		// Section Affichage modifiable. Défaut: true
+	'fondModifiable'				est un booléen	<sérialise = "fondModifiable">			// Section Fond modifiable. Défaut: true
+fin
+
+// -----------------------------------------------------------------------------
+// CONTRAINTE STYLE - QR CODE MARKETEAM (qr)
+// Contrôle quelles sections de la toolbar sont modifiables
+// -----------------------------------------------------------------------------
+structDesignerContrainteStyleQR est une Structure
+	'couleursModifiable'		est un booléen	<sérialise = "couleursModifiable">		// Section Couleurs modifiable. Défaut: true
+fin
+
+structDesignerContrainteStyle est une Structure
+	'contenuModifiable'					est un booléen		<sérialise = "contenuModifiable">
+	'typographieModifiable'				est un booléen		<sérialise = "typographieModifiable">
+	'alignementsModifiable'				est un booléen		<sérialise = "alignementsModifiable">
+	'fondModifiable'						est un booléen		<sérialise = "fondModifiable">
+	'bordureModifiable'					est un booléen		<sérialise = "bordureModifiable">
+	'typeSourceModifiable'				est un booléen		<sérialise = "typeSourceModifiable">
+	'imageModifiable'						est un booléen		<sérialise = "imageModifiable">
+	'affichageModifiable'				est un booléen		<sérialise = "affichageModifiable">
+	'typeCodeModifiable'					est un booléen		<sérialise = "typeCodeModifiable">
+	'donneesModifiable'					est un booléen		<sérialise = "donneesModifiable">
+	'apparenceModifiable'				est un booléen		<sérialise = "apparenceModifiable">
+	'couleursModifiable'					est un booléen		<sérialise = "couleursModifiable">
+fin
+
+// -----------------------------------------------------------------------------
+// CONTRAINTE DE ZONE COMPLÈTE (structure à 3 niveaux)
+// -----------------------------------------------------------------------------
+structDesignerZoneContrainte est une Structure
+	'Géométrie'				est une structDesignerContrainteGeometrie	<sérialise = "geometrie">	// Contraintes de position et taille
+	'style'					est une structDesignerContrainteStyle		<sérialise = "style">		// Contraintes de style (structure selon type de zone)
+	'global'					est une structDesignerContrainteGlobal		<sérialise = "global">		// Contraintes comportementales
+fin
+
+
+// =============================================================================
+// SECTION 6 : ZONES TEXTE
+// =============================================================================
+structDesignerStyleTexte est une Structure
+	'police'				est une chaîne						<sérialise = "police">				// Nom de la police (ex: "Roboto")
+	'taillePt'				est un réel							<sérialise = "taillePt">			// Taille en points
+	'couleurCmjn'			est une structDesignerCouleurCMJN		<sérialise = "couleurCmjn">			// Couleur du texte CMJN
+	'gras'					est un booléen						<sérialise = "gras">				// OBSOLÈTE - utiliser formatage partiel
+	'interligne'			est un réel							<sérialise = "interligne">			// Facteur d'interlignage (1.0 = normal)
+	'alignementH'			est une chaîne						<sérialise = "alignementH">			// "left", "center", "right", "justify"
+	'alignementV'			est une chaîne						<sérialise = "alignementV">			// "top", "middle", "bottom"
+fin
+
+// -----------------------------------------------------------------------------
+// COPYFITTING (réduction automatique de la taille)
+// -----------------------------------------------------------------------------
+structDesignerCopyfitting est une Structure
+	'actif'					est un booléen		<sérialise = "actif">					// Activer le copy fitting
+	'tailleMinimum'			est un entier		<sérialise = "tailleMinimum">			// Taille minimum en points
+	'autoriserRetourLigne'	est un booléen		<sérialise = "autoriserRetourLigne">	// Autoriser retour à la ligne automatique
+fin
+
+// -----------------------------------------------------------------------------
+// FORMATAGE PARTIEL - STYLES
+// -----------------------------------------------------------------------------
+structDesignerFormatageStyles est une Structure
+	'gras'					est un booléen						<sérialise = "gras">				// Appliquer gras
+	'souligne'				est un booléen						<sérialise = "souligne">			// Appliquer souligné
+	'Couleur'				est une chaîne						<sérialise = "couleur">				// Couleur hex (ex: "#FF0000")
+fin
+
+// -----------------------------------------------------------------------------
+// FORMATAGE PARTIEL (gras, souligné, couleur sur une portion de texte)
+// -----------------------------------------------------------------------------
+structDesignerFormatage est une Structure
+	'debut'					est un entier						<sérialise = "debut">				// Index de début (caractère)
+	'fin'					est un entier						<sérialise = "fin">					// Index de fin (caractère)
+	'styles'				est une structDesignerFormatageStyles	<sérialise = "styles">				// Styles à appliquer
+fin
+
+// -----------------------------------------------------------------------------
+// ZONE TEXTE (V3.3 - format unifié)
+// -----------------------------------------------------------------------------
+structDesignerZoneTexte est une Structure
+	// --- Identification ---
+	'id'					est une chaîne						<sérialise = "id">									// Identifiant unique (ex: "zone-1")
+	'page'					est un entier						<sérialise = "page">								// Numéro de page (1 = recto, 2 = verso)
+	'nom'					est une chaîne						<sérialise = "nom">									// Nom de la zone (optionnel)
+	'niveau'				est un entier						<sérialise = "niveau">								// Ordre d'empilement (z-index)
+	'rotation'				est un entier						<sérialise = "rotation">							// Rotation en degrés
+
+	// --- Préférence utilisateur ---
+	'verrouille'			est un booléen						<sérialise = "verrouille">							// Préférence utilisateur : zone figée (onglet Personnalisation)
+
+	// --- Géométrie ---
+	'Géométrie'				est une structDesignerGeometrie			<sérialise = "geometrie">							// Position et dimensions
+
+	// --- Contenu ---
+	'contenu'				est une chaîne						<sérialise = "contenu">								// Texte avec champs de fusion (@NOM@)
+	'formatage'				est un tableau						<sérialise = "formatage"> de structDesignerFormatage	// Formatage partiel
+	'quillDelta'			est une chaîne						<sérialise = "quillDelta">							// Contenu Quill au format Delta (pour édition WYSIWYG)
+	'contenuRtf'			est une chaîne						<sérialise = "contenuRtf">
+	'supprimerLignesVides'	est un entier						<sérialise = "supprimerLignesVides">				// 0=Conserver, 1=Supprimer si variable vide
+
+	// --- Apparence ---
+	'style'					est une structDesignerStyleTexte		<sérialise = "style">								// Style typographique
+	'Fond'					est une structDesignerFond				<sérialise = "fond">								// Fond de la zone
+	'bordure'				est une structDesignerBordure			<sérialise = "bordure">								// Bordure de la zone
+	'copyfitting'			est une structDesignerCopyfitting		<sérialise = "copyfitting">							// Configuration copy fitting
+
+	// --- Contraintes ---
+	'contrainte'			est une structDesignerZoneContrainte	<sérialise = "contrainte">							// Toutes les contraintes (format 3 niveaux)
+fin
+
+
+// =============================================================================
+// SECTION 7 : ZONES IMAGE
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// SOURCE IMAGE
+// -----------------------------------------------------------------------------
+structDesignerSourceImage est une Structure
+	'type'					est une chaîne		<sérialise = "type">				// "fixe", "champ", "url"
+	'valeur'					est une chaîne		<sérialise = "valeur">			// URL ou nom du champ de fusion
+	'nomOriginal'			est une chaîne		<sérialise = "nomOriginal">	// Nom du fichier uploadé
+	'imageBase64'			est une chaîne		<sérialise = "imageBase64">	// Données base64 de l'image compressée
+	'largeurPx'				est un entier		<sérialise = "largeurPx">		// Largeur image en pixels (pour calcul DPI)
+	'hauteurPx'				est un entier		<sérialise = "hauteurPx">		// Hauteur image en pixels (pour calcul DPI)
+	'nomFichier'			est une chaîne		<sérialise = "nomFichier">		// Chemin physique du fichier image sauvegardé sur le serveur
+fin
+
+// -----------------------------------------------------------------------------
+// REDIMENSIONNEMENT IMAGE
+// -----------------------------------------------------------------------------
+structDesignerRedimensionnement est une Structure
+	'mode'					est une chaîne		<sérialise = "mode">				// "initial", "ajuster", "couper"
+	'alignementH'			est une chaîne		<sérialise = "alignementH">	// "left", "center", "right"
+	'alignementV'			est une chaîne		<sérialise = "alignementV">	// "top", "middle", "bottom"
+fin
+
+// -----------------------------------------------------------------------------
+// ZONE IMAGE
+// -----------------------------------------------------------------------------
+structDesignerZoneImage est une Structure
+	// --- Identification ---
+	'id'								est une chaîne											<sérialise = "id">
+	'page'							est un entier											<sérialise = "page">
+	'nom'								est une chaîne											<sérialise = "nom">
+	'niveau'							est un entier											<sérialise = "niveau">
+	'rotation'						est un entier											<sérialise = "rotation">
+
+	// --- Préférence utilisateur ---
+	'verrouille'					est un booléen											<sérialise = "verrouille">
+
+	// --- Géométrie ---
+	'Géométrie'						est une structDesignerGeometrie					<sérialise = "geometrie">
+
+	// --- Contenu ---
+	'source'							est une structDesignerSourceImage				<sérialise = "source">
+	'redimensionnement'			est une structDesignerRedimensionnement		<sérialise = "redimensionnement">
+
+	// --- Apparence ---
+	'Fond'							est une structDesignerFond							<sérialise = "fond">
+	'bordure'						est une structDesignerBordure						<sérialise = "bordure">
+
+	// --- Contraintes ---
+	'contrainte'					est une structDesignerZoneContrainte			<sérialise = "contrainte">
+
+	'largeurMaxImageMm'			est un entier											<sérialise = "largeurMaxImageMm">
+	'hauteurMaxImageMm'			est un entier											<sérialise = "hauteurMaxImageMm">
+fin
+
+
+// =============================================================================
+// SECTION 8 : ZONES QR CODE (Landing pages Marketeam)
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// COULEURS QR CODE
+// -----------------------------------------------------------------------------
+structDesignerCouleursQR est une Structure
+	'codeCmjn'				est une structDesignerCouleurCMJN		<sérialise = "codeCmjn">
+	'fondCmjn'				est une structDesignerCouleurCMJN		<sérialise = "fondCmjn">
+fin
+
+// -----------------------------------------------------------------------------
+// ZONE QR CODE
+// -----------------------------------------------------------------------------
+structDesignerZoneQR est une Structure
+	// --- Identification ---
+	'id'						est une chaîne									<sérialise = "id">
+	'page'					est un entier									<sérialise = "page">
+	'nom'						est une chaîne									<sérialise = "nom">
+	'niveau'					est un entier									<sérialise = "niveau">
+	'rotation'				est un entier									<sérialise = "rotation">
+
+	// --- Préférence utilisateur ---
+	'verrouille'			est un booléen									<sérialise = "verrouille">
+
+	// --- Géométrie ---
+	'Géométrie'				est une structDesignerGeometrie			<sérialise = "geometrie">
+
+	// --- Contenu ---
+	'typeCode'				est une chaîne									<sérialise = "typeCode">			// Toujours "QRCode"
+	'contenu'				est une chaîne									<sérialise = "contenu">				// URL ou contenu du QR code
+
+	// --- Apparence ---
+	'Couleurs'				est une structDesignerCouleursQR			<sérialise = "couleurs">
+
+	// --- Contraintes ---
+	'contrainte'			est une structDesignerZoneContrainte	<sérialise = "contrainte">
+fin
+
+
+// =============================================================================
+// SECTION 9 : ZONES CODE-BARRES (1D et 2D)
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// ZONE CODE-BARRES
+// Types supportés : code128, code39, ean13, ean8, upca, upce, itf14, datamatrix, qrcode
+// -----------------------------------------------------------------------------
+structDesignerZoneCodeBarres est une Structure
+	// --- Identification ---
+	'id'						est une chaîne									<sérialise = "id">
+	'page'					est un entier									<sérialise = "page">
+	'nom'						est une chaîne									<sérialise = "nom">
+	'niveau'					est un entier									<sérialise = "niveau">
+	'rotation'				est un entier									<sérialise = "rotation">
+
+	// --- Préférence utilisateur ---
+	'verrouille'			est un booléen									<sérialise = "verrouille">
+
+	// --- Géométrie ---
+	'Géométrie'				est une structDesignerGeometrie			<sérialise = "geometrie">
+
+	// --- Contenu ---
+	'typeCodeBarres'		est une chaîne									<sérialise = "typeCodeBarres">		// Type : "code128", "ean13", "datamatrix", "qrcode", etc.
+	'forme'					est une chaîne									<sérialise = "forme">					// Forme DataMatrix : "square" (défaut) ou "rectangle" (12x36)
+	'sourceType'			est une chaîne									<sérialise = "sourceType">				// "fixe" ou "champ"
+	'champFusion'			est une chaîne									<sérialise = "champFusion">			// Nom du champ sans @ (vide si statique)
+	'valeurStatique'		est une chaîne									<sérialise = "valeurStatique">		// Valeur si pas de champ fusion
+	'texteLisible'			est une chaîne									<sérialise = "texteLisible">			// "aucun" ou "dessous"
+	'taillePolice'			est un entier									<sérialise = "taillePolice">			// Taille du texte lisible en points
+	'zoneTranquillite'	est un entier									<sérialise = "zoneTranquillite">		// Zone de tranquillité 0-9 (largeurs de module) — codes-barres/datamatrix, PAS les QR. 0 = aucune (tag QuietZoneAll absent du PSMD)
+	'qrConfig'				est une chaîne									<sérialise = "qrConfig">				// Configuration QR intelligent (null si non applicable)
+
+	// --- Apparence ---
+	'couleurCmjn'			est une structDesignerCouleurCMJN		<sérialise = "couleurCmjn">			// Couleur du code
+	'couleurFondCmjn'		est une structDesignerCouleurCMJN		<sérialise = "couleurFondCmjn">		// Couleur de fond
+	'transparent'			est un booléen									<sérialise = "transparent">			// Fond transparent
+
+	// --- Contraintes ---
+	'contrainte'			est une structDesignerZoneContrainte	<sérialise = "contrainte">
+fin
+
+
+// =============================================================================
+// SECTION 10 : CONTRAINTES GLOBALES DU DOCUMENT
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// AUTORISATIONS DE CRÉATION PAR TYPE DE ZONE
+// -----------------------------------------------------------------------------
+structDesignerConstraintsAutorisations est une Structure
+	'texte'					est un booléen		<sérialise = "texte">				// Autoriser création zones texte
+	'Image'					est un booléen		<sérialise = "image">				// Autoriser création zones image
+	'qr'						est un booléen		<sérialise = "qr">					// Autoriser création QR Code Marketeam
+	'barcode'				est un booléen		<sérialise = "barcode">				// Autoriser création codes-barres
+fin
+
+// -----------------------------------------------------------------------------
+// LIMITES DE NOMBRE PAR TYPE DE ZONE
+// Valeur -1 = illimité, 0 = interdit, >0 = nombre maximum
+// -----------------------------------------------------------------------------
+structDesignerConstraintsLimites est une Structure
+	'texte'					est un entier		<sérialise = "texte">				// Limite zones texte (-1 = illimité)
+	'Image'					est un entier		<sérialise = "image">				// Limite zones image (-1 = illimité)
+	'qr'						est un entier		<sérialise = "qr">					// Limite QR Code (-1 = illimité)
+	'barcode'				est un entier		<sérialise = "barcode">				// Limite codes-barres (-1 = illimité)
+fin
+
+// -----------------------------------------------------------------------------
+// CONTRAINTES GLOBALES DU DOCUMENT
+// -----------------------------------------------------------------------------
+structDesignerConstraints est une Structure
+	'autorisations'			est une structDesignerConstraintsAutorisations	<sérialise = "autorisations">
+	'limites'					est une structDesignerConstraintsLimites			<sérialise = "limites">
+fin
+
+
+// =============================================================================
+// SECTION 11 : DONNÉES D'APERÇU
+// =============================================================================
+
+structDesignerChamp est une Structure
+	'nom'					est une chaîne		<sérialise = "nom">
+	'valeur'				est une chaîne		<sérialise = "valeur">
+fin
+
+structDesignerEnregistrement est une Structure
+	'Enregistrement'		est un tableau		<sérialise = "enregistrement"> de structDesignerChamp
+fin
+
+
+// =============================================================================
+// SECTION 12 : DOCUMENT COMPLET
+// =============================================================================
+
+structDesignerDocument est une Structure
+	'identification'		est une structDesignerIdentification		<sérialise = "identification">
+	'formatDocument'		est une structDesignerFormatDocument		<sérialise = "formatDocument">
+	'champsFusion'			est un tableau							<sérialise = "champsFusion"> de structDesignerChampFusion
+	'donneesApercu'			est un tableau							<sérialise = "donneesApercu"> de structDesignerEnregistrement
+	'polices'				est un tableau							<sérialise = "polices"> de structDesignerPolice
+	'policesUtilisees'		est un tableau							<sérialise = "policesUtilisees"> de structDesignerPoliceUtilisee
+	'pages'					est un tableau							<sérialise = "pages"> de structDesignerPage
+	'zonesTexte'			est un tableau							<sérialise = "zonesTexte"> de structDesignerZoneTexte
+	'zonesQR'				est un tableau							<sérialise = "zonesQR"> de structDesignerZoneQR
+	'zonesCodeBarres'		est un tableau							<sérialise = "zonesCodeBarres"> de structDesignerZoneCodeBarres
+	'zonesImage'			est un tableau							<sérialise = "zonesImage"> de structDesignerZoneImage
+fin
+
+structDesignerLimites est une Structure
+	'zipMaxFileSize'		est un entier				<sérialise = "zipMaxFileSize">
+	'zipMinImageSize'		est un entier				<sérialise = "zipMinImageSize">
+	'zipMaxImageSize'		est un entier				<sérialise = "zipMaxImageSize">
+	'zipExtensions'			est un tableau				<sérialise = "zipAcceptedImageExtensions"> de chaînes
+fin
+
+// =============================================================================
+// SECTION 13 : MESSAGES POSTMESSAGE
+// =============================================================================
+
+structDesignerLoad est une Structure
+	'action'							est une chaîne										<sérialise = "action">					// Toujours "load"
+	'mode' 							est une chaîne 									<sérialise = "mode">
+	'auth'							est une structDesignerAuth						<sérialise = "auth">
+	'bases'							est une structDesignerBaseListe				<sérialise = "bases">					// Les bases de données utilisé dans l'opération
+	'Theme'							est une chaîne ANSI								<sérialise = "theme">					// Pour définir la couleur du thème
+	'Document'						est une structDesignerDocument				<sérialise = "data">						// Document à charger
+	'constraints'					est une structDesignerConstraints			<sérialise = "constraints">			// Contraintes globales
+	'limites'						est une structDesignerLimites					<sérialise = "limites">					// Limites sur les images acceptées
+	'champsStandard'				est un tableau 									<sérialise = "champsStandard"> de structDesignerChampStandard
+	'typesDisponibles'			est un tableau										<sérialise = "typesDisponibles"> de structDesignerTypeChamp
+	'ChampsFusionInterdit'		est un booléen										<sérialise = "ChampsFusionInterdit">
+	'autoriserGestionChamps'	est un booléen										<sérialise = "autoriserGestionChamps">
+	'policesDisponibles'			est un tableau										<sérialise = "policesDisponibles"> de structDesignerPolice
+	'policesSysteme' 				est un tableau 									<sérialise = "policesSysteme"> de chaîne
+	'ZonePersonnalisation'		est un tableau										<sérialise = "ZonePersonnalisation"> de structDesignerZonePersonnalisationPage
+fin
+
+structDesignerBase est une Structure
+	IdBase					est un entier						<sérialise = "IdBase">
+	origine					est une chaîne						<sérialise = "origine">
+fin
+
+structDesignerBaseListe est une Structure
+	pListe 					est un tableau   					<sérialise = "liste"> de structDesignerBase
+fin
+
+structDesignerAuth est une Structure
+	IdClient						est un entier						<sérialise = "idClient">
+	IdContact					est un entier						<sérialise = "idContact">
+	SecretKey					est une chaîne						<sérialise = "secretKey">
+	UrlWebservice				est une chaîne						<sérialise = "urlWebservice">
+	UrlCollectionListe		est une chaîne						<sérialise = "urlCollectionListe">
+	UrlPoliceAjout				est une chaîne						<sérialise = "urlPoliceAjout">
+	UrlPoliceListe				est une chaîne						<sérialise = "urlPoliceListe">
+fin
+
+
+structDesignerExport est une Structure
+	'action'					est une chaîne									<sérialise = "action">				// Toujours "exported"
+	'success'				est un booléen									<sérialise = "success">				// Succès de l'export
+	'data'					est une structDesignerDocument			<sérialise = "data">					// Document exporté
+fin
+
+structDesignerZoneSystemeTexte est une Structure
+	Id								est une chaîne
+	Nom							est une chaîne
+	Page							est un entier
+	Contenu						est une chaîne
+	PosX							est un entier
+	PosY							est un entier
+	Largeur						est un entier
+	Hauteur						est un entier
+	Police						est une chaîne
+	TaillePt						est une chaîne
+	AlignementV					est une chaîne
+	AlignementH					est une chaîne
+	FondTransparent			est un booléen
+	BordureEpaisseur			est un entier
+	BordureStyle				est une chaîne
+	Imprimable					est un booléen
+fin
+
+structDesignerZoneSystemeDatamatrix est une Structure
+	Id								est une chaîne
+	Nom							est une chaîne
+	Page							est un entier
+	SourceType					est une chaîne	// "fixe" ou "champ"
+	ChampFusion					est une chaîne	// Nom du champ sans @ (vide si statique)
+	ValeurStatique				est une chaîne
+	PosX							est un entier
+	PosY							est un entier
+	Largeur						est un entier
+	Hauteur						est un entier
+	Forme							est une chaîne
+	FondTransparent			est un booléen
+	Imprimable					est un booléen
+fin
+
+
+
+
+
+// =============================================================================
+// SECTION 13 bis : ZONE DE PERSONNALISATION (message load -> Designer)
+// =============================================================================
+// Délimite, par PAGE (index 0 = 1re page / recto si le document commence par le recto),
+// le rectangle (mm, repère format fini : origine coin haut-gauche) où l’utilisateur peut
+// créer / déplacer / redimensionner les zones. Indépendant de l’« area » par zone
+// (stDesignerAreaContrainte) qui borne le contenu à l’intérieur d’une zone.
+//
+// Sérialisation JSON : propriété "ZonePersonnalisation" (casse recommandée ; le Designer
+// accepte aussi "zonePersonnalisation" en secours).
+//
+// Formes acceptées côté Designer après sérialisation JSON :
+//   • Objet avec clés de page en chaîne : "0", "1", "2", …  ->  { "0": { ... }, "1": { ... } }
+//   • Tableau : l’indice du tableau = index de page (0, 1, …)
+// « Pas de limite » pour une page : absence de clé pour cette page (objet) ou pas d’élément
+// à cet index (tableau plus court / trou).
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// RECTANGLE AUTORISÉ POUR UNE PAGE (mm, format fini)
+// Même sémantique que stDesignerGeometrie (xMm, yMm, largeurMm, hauteurMm).
+// Soit tu réutilises stDesignerGeometrie, soit tu gardes ce type dédié pour la doc métier.
+// -----------------------------------------------------------------------------
+structDesignerZonePersonnalisationPage est une Structure
+	'xMm'				est un réel		<sérialise = "xMm">			// Coin supérieur gauche du rectangle autorisé (mm depuis le bord gauche du format fini)
+	'yMm'				est un réel		<sérialise = "yMm">			// Coin supérieur gauche (mm depuis le bord supérieur du format fini)
+	'largeurMm'		est un réel		<sérialise = "largeurMm">	// Largeur du rectangle autorisé (mm)
+	'hauteurMm'		est un réel		<sérialise = "hauteurMm">	// Hauteur du rectangle autorisé (mm)
+fin
+
+// -----------------------------------------------------------------------------
+// TABLEAU PAR PAGE (option A — index 0 = première page)
+// Ex. : [ stPage0, stPage1 ] ou tableau plus court : seules les premières pages ont une limite ;
+// les pages sans entrée ne sont pas limitées par ZonePersonnalisation.
+// -----------------------------------------------------------------------------
+// (Type tableau WebDev selon ta syntaxe projet, par ex. :)
+// stDesignerZonePersonnalisationTableau est un tableau de stDesignerZonePersonnalisationPage
+
+// -----------------------------------------------------------------------------
+// DÉTAIL PAR PAGE (option B — clés "0", "1", … dans le JSON)
+// Souvent produit en construisant un objet JSON côté code ou via désérialisation JSON.
+// Ex. JSON : "ZonePersonnalisation": { "0": { "xMm": 0, "yMm": 0, "largeurMm": 105, "hauteurMm": 297 } }
+// -----------------------------------------------------------------------------
+// Pas de structure WebDev « objet dynamique » universelle : à mapper selon ton générateur JSON
+// (chaîne JSON, ou structure clé/valeur si tu en as une dans le projet).
+
+// =============================================================================
+// STRUCTURES WEBDEV POUR API PYMUPDFEXTRACT V2.2
+// =============================================================================
+// Ces structures correspondent EXACTEMENT au JSON retourné par l'API
+// Utilisation : Désérialise(stResultat, sJsonReponse, psdJSON)
+// =============================================================================
+
+// =============================================================================
+// Structures du rapport de vérification de concordance base <-> Designer.
+// Produites par cpDesigner.VerifieConcordanceBaseDesigner(stOperation).
+//   - structDesignerAnomalieConcordance : une anomalie rattachée à un document.
+//   - structDesignerRapportConcordance  : le rapport complet (par document).
+// =============================================================================
+
+structDesignerAnomalieConcordance est une Structure
+	IndexDocument	est un entier		// Position dans tabStDocument (1..n)
+	Designation		est une chaîne		// .Designation du document (titre de section)
+	TypeProbleme	est une chaîne		// "ABSENT" / "ECART_CASSE" / "NON_RESOLVABLE" / "CHAMP_INCONNU" / "AMBIGU" / "AUCUNE_BASE"
+	CleInseree		est une chaîne		// Clé telle qu'insérée (nettoyée)
+	LibelleResolu	est une chaîne		// Libellé lisible (spécifique) ou nom technique (standard)
+	Nature			est une chaîne		// "standard" / "specifique" / ""
+	Detail			est une chaîne		// Message prêt à afficher pour cette anomalie
+fin
+
+structDesignerRapportConcordance est une Structure
+	EstConcordant	est un booléen															// Vrai si 0 anomalie
+	NbAnomalies		est un entier
+	BaseChargee		est un booléen															// Vrai si au moins une base non supprimée
+	tabAnomalies	est un tableau de structDesignerAnomalieConcordance		// déjà ordonné par document
+fin
+
+// =============================================================================
+// Structures de l'état de RAPPROCHEMENT (chantier QR de rapprochement).
+// Produites par cpDesigner.RecalculeEtatRapprochement(stOperation).
+// CALCULÉES À LA DEMANDE — NON persistées (recalcul dynamique).
+//
+//   - structDesignerEtatRapprochementDocument : état d'UN document.
+//   - structDesignerEtatRapprochement         : agrégat opération + tableau
+//                                               par document.
+//
+// Correspondance avec le vocabulaire du cahier des charges :
+//   EstPersonnalise  <-> bPersonnalise   QrPresent  <-> bQrPresent
+//   QrRequis         <-> bQrRequis        EstConformeQr <-> bConformeQr
+//   QrNecessaire     <-> bQrNecessaire    NbDocumentsPersonnalises <-> N
+// =============================================================================
+
+structDesignerEtatRapprochementDocument est une Structure
+	IndexDocument		est un entier		// Position 1..n dans tabStDocument
+	Designation			est une chaîne		// Libellé du document
+	EstPersonnalise	est un booléen		// (A) pavé d'adresse OU (B) >=1 champ base
+	QrPresent			est un booléen		// QR de rapprochement déjà présent (critère provisoire Phase 2)
+	QrRequis				est un booléen		// EstPersonnalise ET QrNecessaire (agrégat)
+	EstConformeQr		est un booléen		// QrRequis = QrPresent
+fin
+
+structDesignerEtatRapprochement est une Structure
+	NbDocumentsPersonnalises	est un entier		// N
+	QrNecessaire					est un booléen		// N >= 2
+	EstToutConformeQr				est un booléen		// Vrai si tous les documents EstConformeQr
+	tabDocuments					est un tableau de structDesignerEtatRapprochementDocument
+fin
+
+
+
+stPrintshopData est une Structure
+	Champ		est une chaîne
+	Valeur	est une chaîne
+fin
+
+
+// -----------------------------------------------------------------------------
+// STRUCTURE : Box PDF (MediaBox, CropBox, TrimBox, BleedBox)
+// -----------------------------------------------------------------------------
+stPyMuPdfBox est une Structure
+	largeurMm		est un réel		<sérialise = "largeurMm">
+	hauteurMm		est un réel		<sérialise = "hauteurMm">
+	xMm			est un réel		<sérialise = "xMm">
+	yMm			est un réel		<sérialise = "yMm">
+fin
+
+
+// -----------------------------------------------------------------------------
+// STRUCTURE : Fond perdu (calculé à partir de TrimBox et BleedBox)
+// -----------------------------------------------------------------------------
+stPyMuPdfFondPerdu est une Structure
+	Gauche		est un réel		<sérialise = "gauche">
+	Droite		est un réel		<sérialise = "droite">
+	Haut			est un réel		<sérialise = "haut">
+	Bas			est un réel		<sérialise = "bas">
+	minimum		est un réel		<sérialise = "minimum">
+fin
+
+
+// -----------------------------------------------------------------------------
+// STRUCTURE : Page PDF
+// -----------------------------------------------------------------------------
+stPyMuPdfPage est une Structure
+	numero			est un entier				<sérialise = "numero">
+	mediabox			est un stPyMuPdfBox			<sérialise = "mediabox">
+	cropbox			est un stPyMuPdfBox			<sérialise = "cropbox">
+	trimbox			est un stPyMuPdfBox			<sérialise = "trimbox">
+	bleedbox			est un stPyMuPdfBox			<sérialise = "bleedbox">
+	trimboxDefini		est un booléen				<sérialise = "trimboxDefini">
+	bleedboxDefini		est un booléen				<sérialise = "bleedboxDefini">
+	fondPerdu			est un stPyMuPdfFondPerdu		<sérialise = "fondPerdu">
+	formatDetecte		est une chaîne				<sérialise = "formatDetecte">		// "A4", "A5", "DL", "" si non reconnu
+	orientation			est une chaîne				<sérialise = "orientation">		// "portrait", "paysage", ""
+	rotation			est un entier				<sérialise = "rotation">		// 0, 90, 180, 270
+fin
+
+
+// -----------------------------------------------------------------------------
+// STRUCTURE : Métadonnées du document
+// -----------------------------------------------------------------------------
+stPyMuPdfMetadata est une Structure
+	format			est une chaîne	<sérialise = "format">			// "PDF 1.5", "PDF 1.6", etc.
+	title				est une chaîne	<sérialise = "title">
+	author			est une chaîne	<sérialise = "author">
+	subject			est une chaîne	<sérialise = "subject">
+	keywords			est une chaîne	<sérialise = "keywords">
+	creator			est une chaîne	<sérialise = "creator">			// Logiciel créateur
+	producer			est une chaîne	<sérialise = "producer">		// Producteur PDF
+	creationDate		est une chaîne	<sérialise = "creationDate">
+	modDate			est une chaîne	<sérialise = "modDate">
+	encryption			est une chaîne	<sérialise = "encryption">		// null si non chiffré
+fin
+
+
+// -----------------------------------------------------------------------------
+// STRUCTURE : Permissions du document
+// -----------------------------------------------------------------------------
+stPyMuPdfPermissions est une Structure
+	print				est un booléen	<sérialise = "print">			// Impression autorisée
+	printHq			est un booléen	<sérialise = "printHq">			// Impression haute qualité
+	copy				est un booléen	<sérialise = "copy">			// Copie autorisée
+	edit				est un booléen	<sérialise = "edit">			// Modification autorisée
+	annotate			est un booléen	<sérialise = "annotate">		// Annotations autorisées
+	form				est un booléen	<sérialise = "form">			// Formulaires autorisés
+	accessibility		est un booléen	<sérialise = "accessibility">		// Accessibilité autorisée
+	assemble			est un booléen	<sérialise = "assemble">		// Assemblage autorisé
+fin
+
+
+// -----------------------------------------------------------------------------
+// STRUCTURE : Sécurité du document
+// -----------------------------------------------------------------------------
+stPyMuPdfSecurite est une Structure
+	needsPassword	est un entier				<sérialise = "needsPassword">	// 0 = pas de mot de passe
+	isEncrypted		est un booléen				<sérialise = "isEncrypted">
+	Permissions		est un stPyMuPdfPermissions		<sérialise = "permissions">
+fin
+
+
+// -----------------------------------------------------------------------------
+// STRUCTURE : Police utilisée dans le document
+// -----------------------------------------------------------------------------
+stPyMuPdfPolice est une Structure
+	nom				est une chaîne				<sérialise = "nom">			// Nom nettoyé (ex: "Arial")
+	nomComplet			est une chaîne				<sérialise = "nomComplet">		// Avec préfixe (ex: "ABCDEF+Arial")
+	type				est une chaîne				<sérialise = "type">			// TrueType, Type0, Type1...
+	extension			est une chaîne				<sérialise = "extension">		// ttf, otf, cid...
+	pages				est un tableau				<sérialise = "pages"> d'entiers
+fin
+
+
+// -----------------------------------------------------------------------------
+// STRUCTURE : Image présente dans le document
+// -----------------------------------------------------------------------------
+stPyMuPdfImage est une Structure
+	xref						est un entier		<sérialise = "xref">
+	nom						est une chaîne		<sérialise = "nom">
+	largeurPx					est un entier		<sérialise = "largeurPx">
+	hauteurPx					est un entier		<sérialise = "hauteurPx">
+	bitsParComposant				est un entier		<sérialise = "bitsParComposant">
+	espaceColorimetrique			est une chaîne		<sérialise = "espaceColorimetrique">		// DeviceRGB, DeviceCMYK, ICCBased...
+	Filtre					est une chaîne		<sérialise = "filtre">					// DCTDecode (JPEG), FlateDecode...
+	tailleEstimeeKo				est un réel			<sérialise = "tailleEstimeeKo">
+	pages						est un tableau		<sérialise = "pages"> d'entiers
+fin
+
+
+// -----------------------------------------------------------------------------
+// STRUCTURE : Résultat complet de l'analyse PDF
+// -----------------------------------------------------------------------------
+// V2.2 : messages et erreurs à la racine (plus de sous-structure validation)
+// -----------------------------------------------------------------------------
+stPyMuPdfResultat est une Structure
+	success			est un booléen						<sérialise = "success">
+	fichier			est une chaîne						<sérialise = "fichier">
+	cheminComplet		est une chaîne						<sérialise = "cheminComplet">
+	estUnPdf			est un booléen						<sérialise = "estUnPdf">
+	nombrePages			est un entier						<sérialise = "nombrePages">
+	metadata			est un stPyMuPdfMetadata				<sérialise = "metadata">
+	securite			est un stPyMuPdfSecurite				<sérialise = "securite">
+	polices			est un tableau						<sérialise = "polices"> de stPyMuPdfPolice
+	Images			est un tableau						<sérialise = "images"> de stPyMuPdfImage
+	pages				est un tableau						<sérialise = "pages"> de stPyMuPdfPage
+	messages			est un tableau						<sérialise = "messages"> de chaînes
+	erreurs			est un tableau						<sérialise = "erreurs"> de chaînes
+fin

@@ -18,7 +18,6 @@ procédure SupprimerDocument()
 si _stDocument.RepertoireTravail <> "" _et_ Contient(_stDocument.RepertoireTravail, "\Temp\") alors
 	si fRepExiste(_stDocument.RepertoireTravail) alors
 		fRepSupprime(_stDocument.RepertoireTravail, frRécursif)
-		Trace("SupprimerDocument Modèle : Temp supprimé --> " + _stDocument.RepertoireTravail)
 	fin
 fin
 

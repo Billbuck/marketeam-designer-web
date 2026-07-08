@@ -974,6 +974,7 @@ constante
 	__CHAMP_TYPE_URL__											= "URL"
 	__CHAMP_TYPE_ALLIAGE__										= "ALG"
 	__CHAMP_TYPE_COORDONNEE__									= "COO"
+	__CHAMP_TYPE_CODE_BARRES__									= "CDB"
 
 	__CHAMP_TYPE_DATE_HEURE__									= "DTH"
 	__CHAMP_TYPE_SMS_STATUT__									= "SST"

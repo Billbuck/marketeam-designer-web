@@ -22,7 +22,6 @@ nNbTraitees				est un entier	= 0
 sCheminManifeste = sCheminPsmd + ".images.json"
 
 si pas fFichierExiste(sCheminManifeste) alors
-	// Trace("TraiterManifestImagesDesigner : manifeste introuvable : " + sCheminManifeste)
 	retour
 fin
 
@@ -32,7 +31,6 @@ sContenuManifeste = fChargeTexte(sCheminManifeste)
 
 si sContenuManifeste = "" _ou_ sContenuManifeste = "[]" alors
 	fSupprime(sCheminManifeste)
-	// Trace("TraiterManifestImagesDesigner : manifeste vide, rien à traiter")
 	retour
 fin
 
@@ -46,7 +44,6 @@ jDoc = sJsonDesignerData.VersUTF8()
 
 si jDoc.zonesImage..Occurrence = 0 alors
 	fSupprime(sCheminManifeste)
-	// Trace("TraiterManifestImagesDesigner : aucune zone image dans le JSON")
 	retour
 fin
 
@@ -70,7 +67,6 @@ pour nIndZone = 1 _à_ jDoc.zonesImage..Occurrence
 			// Si le manifeste contient fullPath="0" (pas de base64 à extraire),
 			// l'image a déjà été traitée -> ne rien toucher
 			si sFullPath = "" _ou_ sFullPath = "0" _ou_ pas fFichierExiste(sFullPath) alors
-				// Trace("TraiterManifestImagesDesigner : zone " + sZoneId + " --> manifeste sans fichier valide (" + sFullPath + "), conserve l'existant")
 				sortir
 			fin
 
@@ -78,7 +74,6 @@ pour nIndZone = 1 _à_ jDoc.zonesImage..Occurrence
 			sAncienFichier	est une chaîne	= jDoc.zonesImage[nIndZone].source.nomFichier
 			si sAncienFichier <> "" _et_ sAncienFichier <> sFullPath _et_ fFichierExiste(sAncienFichier) alors
 				fSupprime(sAncienFichier)
-				// Trace("TraiterManifestImagesDesigner : ancienne image supprimée : " + sAncienFichier)
 			fin
 
 			// Chemin physique
@@ -95,7 +90,6 @@ pour nIndZone = 1 _à_ jDoc.zonesImage..Occurrence
 			jDoc.zonesImage[nIndZone].source.imageBase64	= ""
 
 			nNbTraitees++
-			// Trace("TraiterManifestImagesDesigner : zone " + sZoneId + " --> " + sFileName)
 			sortir
 
 		fin
@@ -146,7 +140,6 @@ pour nIndZone = 1 _à_ jDoc.zonesImage..Occurrence
 	// Arrivé ici : pas dans manifeste, pas de base64, pas d'URL -> orpheline
 	si fFichierExiste(sAncienFichier) alors
 		fSupprime(sAncienFichier)
-		// Trace("TraiterManifestImagesDesigner : image orpheline supprimée : " + sAncienFichier)
 	fin
 	jDoc.zonesImage[nIndZone].source.nomFichier = ""
 	nNbTraitees++
@@ -156,7 +149,6 @@ fin
 // ─── Re-sérialisation du JSON ────────────────────────────────────────────
 si nNbTraitees > 0 alors
 	sJsonDesignerData = jDoc.VersChaîne()
-	// Trace("TraiterManifestImagesDesigner : " + nNbTraitees + " image(s) traitée(s), base64 purgé")
 fin
 
 // ─── Suppression du manifeste ────────────────────────────────────────────

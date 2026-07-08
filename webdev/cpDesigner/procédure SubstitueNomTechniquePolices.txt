@@ -28,32 +28,32 @@
 // ─────────────────────────────────────────────────────────────────────────────
 procédure SubstitueNomTechniquePolices(pJson est une chaîne, pIdClient est un entier) : chaîne
 
-sJson			est une chaîne	= pJson
+sJson				est une chaîne	= pJson
 tabPolices		est un tableau de structDesignerPolice
-sNom			est une chaîne
-sNomTech		est une chaîne
+sNom				est une chaîne
+sNomTech			est une chaîne
 sFontA			est une chaîne
 sFontB			est une chaîne
-sPolA			est une chaîne
-sPolB			est une chaîne
-nNbSubst		est un entier	= 0
+sPolA				est une chaîne
+sPolB				est une chaîne
+nNbSubst			est un entier	= 0
 
 si sJson = "" alors
 	renvoyer sJson
 fin
 
 // ─── Table nom -> nomTechnique (portée 3 niveaux), repli général ────────────
-QUAND EXCEPTION DANS
+quand exception dans
 	tabPolices = RemplirDesignerPolices(pIdClient)
-FAIRE
-	Trace("SubstitueNomTechniquePolices : RemplirDesignerPolices(" + pIdClient + ") a échoué : " + ExceptionInfo(errMessage))
-FIN
+faire
+
+fin
 
 si tabPolices..Occurrence = 0 _et_ pIdClient <> 0 alors
-	QUAND EXCEPTION DANS
+	quand exception dans
 		tabPolices = RemplirDesignerPolices(0)
-	FAIRE
-	FIN
+	faire
+	fin
 fin
 
 si tabPolices..Occurrence = 0 alors
@@ -62,7 +62,7 @@ si tabPolices..Occurrence = 0 alors
 fin
 
 // ─── Substitution ciblée (2 motifs ancrés), idempotente ─────────────────────
-POUR TOUT stP DE tabPolices
+pour tout stP de tabPolices
 	sNom		= stP.nom
 	sNomTech	= stP.nomTechnique
 
@@ -70,22 +70,21 @@ POUR TOUT stP DE tabPolices
 	si sNom <> "" _et_ sNomTech <> "" _et_ sNom <> sNomTech alors
 
 		// a. Table de police RTF (JSON-échappé : double backslash)
-		sFontA = "\\fcharset0 " + sNom + ";"
-		sFontB = "\\fcharset0 " + sNomTech + ";"
-		si Position(sJson, sFontA) > 0 alors
-			sJson = Remplace(sJson, sFontA, sFontB)
+		sFontA		= "\\fcharset0 " + sNom + ";"
+		sFontB		= "\\fcharset0 " + sNomTech + ";"
+		si sJson.Position(sFontA) > 0 alors
+			sJson = sJson.Remplace(sFontA, sFontB)
 			nNbSubst++
 		fin
 
 		// b. Champ style.police
-		sPolA = """police"":""" + sNom + """"
-		sPolB = """police"":""" + sNomTech + """"
-		si Position(sJson, sPolA) > 0 alors
-			sJson = Remplace(sJson, sPolA, sPolB)
+		sPolA	= """police"":""" + sNom + """"
+		sPolB	= """police"":""" + sNomTech + """"
+		si sJson.Position(sPolA) > 0 alors
+			sJson = sJson.Remplace(sPolA, sPolB)
 			nNbSubst++
 		fin
 	fin
-FIN
+fin
 
-Trace("SubstitueNomTechniquePolices : " + nNbSubst + " substitution(s) de nom de police.")
 renvoyer sJson

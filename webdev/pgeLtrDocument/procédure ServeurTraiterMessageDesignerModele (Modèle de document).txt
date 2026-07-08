@@ -92,8 +92,6 @@ selon vMessage.action
 							si hRepPlaceholder.CodeEtat = 200 alors
 								jBat.zonesImage[nInd].source.nomFichier	= sCheminPlaceholder
 								jBat.zonesImage[nInd].source.type			= "fichier"
-							sinon
-								Trace("ServeurTraiterMessageDesignerModele : -> échec placeholder zone " + nInd)
 							fin
 						fin
 					fin
@@ -118,7 +116,6 @@ selon vMessage.action
 				sJsonModeleTemp = cpDesigner.SubstitueNomTechniquePolices(sJsonModeleTemp, nIdClientPolice)
 
 				si pas fSauveTexte(sCheminJsonTemp, ChaîneVersUTF8(sJsonModeleTemp)) alors
-					Trace("ServeurTraiterMessageDesignerModele : échec écriture JSON temp")
 					renvoyer Faux
 				fin
 				// Commande Node avec chemins ENTRE GUILLEMETS (protège les espaces
@@ -169,21 +166,16 @@ selon vMessage.action
 					fin
 
 				sinon
-					Trace("ServeurTraiterMessageDesignerModele : ERREUR PSMD BAT introuvable")
 					PopupAfficheMessage("Erreur lors de la génération du document" + RC + "Merci de réitérer l'opération", "Erreur", __OPERATION_COURRIER__, __TOAST_ANNULATION__)
 				fin
 
 			fin
 
-		sinon
-			Trace("ServeurTraiterMessageDesignerModele : validation échouée : " + vMessage.error)
 		fin
 
 	cas "cancelled"
-		Trace("ServeurTraiterMessageDesignerModele : annulé par l'utilisateur")
 
 	autre cas
-		Trace("ServeurTraiterMessageDesignerModele : action non gérée : " + vMessage.action)
 
 fin
 

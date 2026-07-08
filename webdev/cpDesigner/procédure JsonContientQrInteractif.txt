@@ -16,8 +16,8 @@
 //   pJsonData : JSON Designer (chaîne)
 //
 // Retour : booléen
-//   Vrai → contient au moins 1 QR Dynamique
-//   Faux → JSON vide, mal formé, ou aucun QR
+//   Vrai -> contient au moins 1 QR Dynamique
+//   Faux -> JSON vide, mal formé, ou aucun QR
 // ─────────────────────────────────────────────────────────────────────────────
 procédure JsonContientQrInteractif(pJsonData est une chaîne) : booléen
 
@@ -28,10 +28,10 @@ fin
 
 quand exception dans
 
-	jDoc est un JSON = ChaîneVersUTF8(pJsonData)
+	jDoc		est un JSON		= pJsonData.VersUTF8()
 
 	// Source des zones : data.zonesQR si imbriqué (wrapper), sinon racine
-	jSource est un JSON
+	jSource	est un JSON
 	si jDoc.data..Existe alors
 		jSource = jDoc.data
 	sinon
@@ -45,7 +45,5 @@ quand exception dans
 	renvoyer (jSource.zonesQR..Occurrence > 0)
 
 faire
-	// JSON mal formé ou structure inattendue → on considère qu'il n'y a pas de QR
-	Trace("JsonContientQrInteractif : exception parsing : " + ExceptionInfo(errMessage))
 	renvoyer Faux
 fin

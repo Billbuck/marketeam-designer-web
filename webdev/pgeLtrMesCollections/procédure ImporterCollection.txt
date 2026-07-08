@@ -1,4 +1,4 @@
-procédure ImporterFichier(pNomCollection est une chaîne)
+procédure ImporterCollection(pNomCollection est une chaîne)
 
 // ─── Code du bouton "Importer" page pgeLtrMesCollections ──────────────────
 // Envoie un fichier ZIP de collection au webservice DesignerImageUploadStock
@@ -117,7 +117,7 @@ selon nCodeEtat
 				sMessage += RC + nFichiersIgnores + " fichier(s) ignoré(s)."
 			fin
 
-			PopupAfficheMessage(sMessage, "Collection '" + pNomCollection + "importée avec succès.",__OPERATION_COURRIER__,__TOAST_INFORMATION__)
+			PopupAfficheMessage(sMessage, "Collection '" + pNomCollection + "' importée avec succès.",__OPERATION_COURRIER__,__TOAST_INFORMATION__)
 
 
 		sinon
@@ -152,7 +152,6 @@ btnImporter.Etat	= Grisé
 		selon nTypeInfo
 			cas httpTraceEntêteEnvoyé
 				sLigne = "===== ENTÊTES ENVOYÉS =====" + RC + UTF8VersChaîne(bufData)
-				Trace(sLigne)
 			cas httpTraceDonnéeEnvoyée
 				// On ne loggue que les 500 premiers octets pour ne pas saturer la trace.
 				// Milieu() fonctionne aussi sur les Buffer en WLanguage.
@@ -163,14 +162,10 @@ btnImporter.Etat	= Grisé
 				sinon
 					sLigne += UTF8VersChaîne(bufData)
 				fin
-				Trace(sLigne)
 			cas httpTraceEntêteRecu
 				sLigne = "===== ENTÊTES REÇUS =====" + RC + UTF8VersChaîne(bufData)
-				Trace(sLigne)
 			cas httpTraceDonnéeRecue
 				sLigne = "===== DONNÉES REÇUES =====" + RC + UTF8VersChaîne(bufData)
-				Trace(sLigne)
 			cas httpTraceInfo
-				Trace("===== INFO cURL =====" + RC + UTF8VersChaîne(bufData))
 		fin
 	fin

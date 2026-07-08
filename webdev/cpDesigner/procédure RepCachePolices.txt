@@ -19,7 +19,6 @@ sRep est une chaîne = cpProjet.__sMarketeamRepRacine + "Polices\"
 
 si pas fRépertoireExiste(sRep) alors
 	si pas fRepCrée(sRep) alors
-		Trace("RepCachePolices : échec création dossier " + sRep)
 		renvoyer ""
 	fin
 fin

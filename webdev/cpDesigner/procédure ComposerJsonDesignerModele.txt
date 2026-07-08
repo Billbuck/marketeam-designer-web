@@ -86,8 +86,6 @@ fin
 // Pages : recto seul ou recto/verso, images de fond
 stLoad.Document.pages = RemplirDesignerPages(pStDocument.EstRectoVerso, pStDocument.tabImageFond, pStDocument.Repertoire + pStDocument.NomFichierTemp)
 
-Trace("ComposerJsonDesignerModele : cheminFond page 1 = [" + stLoad.Document.pages[1].cheminFond + "]")
-Trace("ComposerJsonDesignerModele : Nombre de pages = " + stLoad.Document.pages..Occurrence)
 
 // =========================================================================
 // BLOCS COMMUNS

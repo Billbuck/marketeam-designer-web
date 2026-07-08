@@ -211,9 +211,6 @@ stLoad.autoriserGestionChamps	= (pas bAvecBase)
 // SÉRIALISATION EN JSON
 // =========================================================================
 
-Trace("cheminFond page 1 = [" + stLoad.Document.pages[1].cheminFond + "]")
-Trace("Nombre de pages = " + stLoad.Document.pages..Occurrence)
-
 Sérialise(stLoad, sJsonDocument, psdJSON + psdMiseEnForme)
 
 sJsonDocument = sJsonDocument.Remplace("""##Null##""","null")

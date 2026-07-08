@@ -1,0 +1,11 @@
+procédure AffichePageSuivante()
+
+si PageMémorise() alors
+	si __stOperation.EstCliquezIci = Vrai alors
+		PageAffiche(pgeIciChoix)
+	sinon
+		PageAffiche(pgeLtrPlannificateur)
+	fin
+sinon
+	popJaugeProgression.Ferme()
+fin

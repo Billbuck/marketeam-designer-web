@@ -50,8 +50,8 @@ POUR TOUT stDocument DE pStOperation.stOperationLettre.tabStDocument
 	bPorteAdresseIntention est un booléen = (bEnvFenetre = Vrai _ET_ nIndexDoc = 1)
 	stLigne.EstPersonnalise = cpDesigner.DocumentEstPersonnaliseBase(stDocument, pStOperation) _OU_ bPorteAdresseIntention
 
-	// QR de rapprochement déjà présent ? (critère PROVISOIRE Phase 2)
-	stLigne.QrPresent = DocumentContientQrRapprochement(stDocument.JsonDesignerData)
+	// Datamatrix de rapprochement déjà présent ? (SOURCE UNIQUE de détection)
+	stLigne.QrPresent = cpDesigner.JsonContientQrRapprochement(stDocument.JsonDesignerData)
 
 	SI stLigne.EstPersonnalise ALORS
 		nNbPerso++
@@ -76,71 +76,8 @@ stEtat.EstToutConformeQr = bTout
 
 RENVOYER stEtat
 
-
-// ═════════════════════════════════════════════════════════════════════════
-// PROCÉDURE INTERNE
-// ═════════════════════════════════════════════════════════════════════════
-
-	// ─── QR de rapprochement présent dans le document ? ─────────────────────
-	//   CRITÈRE DÉFINITIF (Phase 3a) : zone d'id "sys-qr-rapprochement"
-	//   (zone code-barres système injectée par InjecteOuRetireQrRapprochement,
-	//   sur le modèle du datamatrix d'affranchissement). On scanne aussi
-	//   zonesQR par robustesse. Si rien -> Faux.
-	PROCÉDURE INTERNE DocumentContientQrRapprochement(LOCAL pJson est une chaîne)
-		jDoc	est un JSON
-		jData	est un JSON
-		bJsonOk	est un booléen	= Vrai
-		bTrouve	est un booléen	= Faux
-
-		SI pJson = "" ALORS
-			RENVOYER Faux
-		FIN
-
-		QUAND EXCEPTION DANS
-			jDoc = pJson
-		FAIRE
-			bJsonOk = Faux
-		FIN
-
-		SI bJsonOk = Faux ALORS
-			RENVOYER Faux
-		FIN
-
-		SI jDoc.data..Existe ALORS
-			jData = jDoc.data
-		SINON
-			jData = jDoc
-		FIN
-
-		// Zones QR
-		SI jData.zonesQR..Existe ALORS
-			POUR nZ = 1 _À_ jData.zonesQR..Occurrence
-				SI EstZoneRapprochement(jData.zonesQR[nZ]) ALORS
-					bTrouve = Vrai
-				FIN
-			FIN
-		FIN
-
-		// Zones code-barres
-		SI bTrouve = Faux _ET_ jData.zonesCodeBarres..Existe ALORS
-			POUR nZ = 1 _À_ jData.zonesCodeBarres..Occurrence
-				SI EstZoneRapprochement(jData.zonesCodeBarres[nZ]) ALORS
-					bTrouve = Vrai
-				FIN
-			FIN
-		FIN
-
-		RENVOYER bTrouve
-	FIN
-
-	// ─── Une zone est-elle le QR de rapprochement ? (critère DÉFINITIF : id) ─
-	PROCÉDURE INTERNE EstZoneRapprochement(LOCAL jZone est un JSON)
-		sId est une chaîne = ""
-		QUAND EXCEPTION DANS
-			SI jZone.id..Existe ALORS
-				sId = jZone.id
-			FIN
-		FAIRE
-		FIN
-		RENVOYER (sId = "sys-qr-rapprochement")
-	FIN
+// Note (06/07/2026) : la détection de présence de la zone est désormais
+// portée par cpDesigner.JsonContientQrRapprochement (SOURCE UNIQUE, partagée
+// avec la pose du marqueur structDocument.EstBatGenereAvecRapprochement) — les anciennes
+// procédures internes DocumentContientQrRapprochement / EstZoneRapprochement
+// ont été supprimées.

@@ -30,10 +30,10 @@ fRepCrée(sRepUpload)
 
 // L'enveloppe utilise ce sous-répertoire pour ses fichiers temporaires
 // (PSMD via GenererPsmdServeurEnveloppe + BAT JPG)
-__stOperation.stOperationLettre.stEnveloppe.RepertoireTravail = sRepUpload
+__stOperation.stOperationLettre.stEnveloppe.RepertoireTravail	= sRepUpload
 
 // Suppression BAT enveloppe précédent si existant (changement de type d'enveloppe)
-sCheminJpgBat = sRepUpload + __DOC_ENV_BAT__ + __stOperation.CodeTemp + __JPG__
+sCheminJpgBat																	= sRepUpload + __DOC_ENV_BAT__ + __stOperation.CodeTemp + __JPG__
 si fFichierExiste(sCheminJpgBat) alors
 	fSupprime(sCheminJpgBat)
 fin
@@ -56,7 +56,6 @@ __stOperation.stOperationLettre.stEnveloppe.EnveloppeFond.CheminRelatif			= cpPr
 
 // Vérification que le JPG de fond existe
 si pas fFichierExiste(__stOperation.stOperationLettre.stEnveloppe.EnveloppeFond.CheminPhysique) alors
-	Trace("GenereVignetteEnveloppe : JPG fond introuvable : " + __stOperation.stOperationLettre.stEnveloppe.EnveloppeFond.CheminPhysique)
 	retour
 fin
 
@@ -66,7 +65,6 @@ fin
 sJsonDesigner = cpDesigner.ComposerJsonDesignerCreation(__stOperation, __tabEchantillonBaseLigne, __OPERATION_COURRIER__, Vrai, 0)
 
 si sJsonDesigner = "" alors
-	Trace("GenereVignetteEnveloppe : échec ComposerJsonDesignerCreation")
 	retour
 fin
 
@@ -75,11 +73,7 @@ fin
 // ─────────────────────────────────────────────────────────────────────────────
 __stOperation.stOperationLettre.stEnveloppe.JsonDesignerData = sJsonDesigner
 
-si Partage.GenererPsmdServeurEnveloppe(__stOperation.stOperationLettre.stEnveloppe, __stOperation.CodeTemp) alors
-	Trace("GenereVignetteEnveloppe : PSMD = " +
-	__stOperation.stOperationLettre.stEnveloppe.CheminPsmdEnveloppe)
-sinon
-	Trace("GenereVignetteEnveloppe : échec GenererPsmdServeurEnveloppe")
+si pas cpDesigner.GenererPsmdServeurEnveloppe(__stOperation.stOperationLettre.stEnveloppe, __stOperation.CodeTemp) alors
 	retour
 fin
 
@@ -87,7 +81,7 @@ fin
 // Phase 5 — Génération BAT JPG via API PSM PHP
 // Construction des données de fusion depuis l'échantillon (même logique que Document)
 // ─────────────────────────────────────────────────────────────────────────────
-tabPrintshopData	est un tableau de stPrintshopData
+tabPrintshopData		est un tableau de stPrintshopData
 stPrintshopData		est un stPrintshopData
 
 si __tabEchantillonBaseLigne..Occurrence > 0 alors
@@ -106,14 +100,11 @@ si __tabEchantillonBaseLigne..Occurrence > 0 alors
 fin
 
 sCheminJpgBat	= sRepUpload + __DOC_ENV_BAT__ + __stOperation.CodeTemp + __JPG__
-stImageBat		= Partage.GenerationBatDepuisPsmd(__stOperation.stOperationLettre.stEnveloppe.CheminPsmdEnveloppe, sCheminJpgBat, 1, tabPrintshopData)
+stImageBat		= cpDesigner.GenerationBatDepuisPsmd(__stOperation.stOperationLettre.stEnveloppe.CheminPsmdEnveloppe, sCheminJpgBat, 1, tabPrintshopData)
 
 
 si stImageBat.CheminPhysique <> "" alors
 	__stOperation.stOperationLettre.stEnveloppe.EnveloppeBAT = stImageBat
-	Trace("GenereVignetteEnveloppe : BAT = " + stImageBat.CheminPhysique)
-sinon
-	Trace("GenereVignetteEnveloppe : échec GenerationBatDepuisPsmd")
 fin
 
 // Nettoyage du manifeste images (supprime le .images.json même si vide)
