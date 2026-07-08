@@ -12919,7 +12919,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Mapper les clés WebDev vers les clés internes (texte → textQuill)
-        const mappedAutorisations = mapConstraintKeys(constraints.autorisations);
+        let mappedAutorisations = mapConstraintKeys(constraints.autorisations);
         const mappedLimites = mapConstraintKeys(constraints.limites);
         
         // Conversion des VALEURS de limites WebDev → JS
@@ -12930,6 +12930,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (mappedLimites[key] === -1) {
                     mappedLimites[key] = null;
                 }
+            }
+        }
+        
+        // DÉRIVATION DÉFENSIVE (08/07/2026) : bloc constraints SANS autorisations
+        // (cas du bloc réécrit par exportToWebDev — limites seules — réinjecté par
+        // WebDev à la réouverture d'un document validé). Sans cette dérivation,
+        // les autorisations de la SESSION PRÉCÉDENTE restaient appliquées (ex.
+        // « tout interdit » hérité de l'enveloppe → section ACTIONS masquée sur
+        // le document rouvert). Règle : limite 0 = interdit, sinon autorisé.
+        if (!mappedAutorisations && mappedLimites) {
+            mappedAutorisations = {};
+            for (const key in mappedLimites) {
+                mappedAutorisations[key] = (mappedLimites[key] !== 0);
             }
         }
         
@@ -28494,8 +28507,15 @@ document.addEventListener('DOMContentLoaded', () => {
         //        Valeur par défaut : Vrai (compat ascendante quand le flag est
         //        absent — versions antérieures du contrat WebDev).
         //        Cf. cahier des charges V2.3 §5.2.
-        if (isLoadEnvelope) {
-            const raw = jsonData.autoriserGestionChamps;
+        //        ⚠️ RESET À CHAQUE LOAD (08/07/2026) : ces drapeaux étaient
+        //        remis à jour UNIQUEMENT pour les messages wrapper
+        //        (isLoadEnvelope). Un chargement "data only" conservait alors
+        //        les valeurs de la session PRÉCÉDENTE (ex. verrou de
+        //        l'enveloppe encore actif à la réouverture d'un document →
+        //        impossible d'ajouter des champs). Désormais : toujours
+        //        réinitialisés, avec leur valeur par défaut si absents.
+        {
+            const raw = isLoadEnvelope ? jsonData.autoriserGestionChamps : undefined;
             if (raw === undefined || raw === null) {
                 autoriserGestionChamps = true; // défaut
             } else {
@@ -28509,7 +28529,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // PHASE 3b — Drapeau global QR de rapprochement : au moins un AUTRE
             //   document est personnalisé (=> N>=2 si le document courant l'est).
-            const rawQrRapp = jsonData.qrRapprochementRequisSiPersonnalise;
+            const rawQrRapp = isLoadEnvelope ? jsonData.qrRapprochementRequisSiPersonnalise : undefined;
             qrRappRequisSiAutre = (
                 rawQrRapp === true || rawQrRapp === 1 || rawQrRapp === '1' ||
                 rawQrRapp === 'Vrai' || rawQrRapp === 'true' || rawQrRapp === 'True'
@@ -28518,7 +28538,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // PHASE — Template complet de la zone QR de rapprochement (source
             //   unique serveur). Utilisé pour l'ajout dynamique en direct.
-            qrRappZoneTemplate = (jsonData.qrRapprochementZone && typeof jsonData.qrRapprochementZone === 'object')
+            qrRappZoneTemplate = (isLoadEnvelope && jsonData.qrRapprochementZone && typeof jsonData.qrRapprochementZone === 'object')
                 ? jsonData.qrRapprochementZone
                 : null;
             if (DEBUG) console.log('loadFromWebDev: qrRapprochementZone reçu =', (qrRappZoneTemplate !== null));
@@ -29080,6 +29100,16 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Ajuster le zoom pour afficher le document en entier après chargement
         fitToView();
+
+        // Ré-ajustement DIFFÉRÉ (08/07/2026) : sur Safari et Firefox, la mise
+        // en page (dimensions du conteneur, fonds) n'est pas encore stabilisée
+        // au moment du premier fitToView -> zoom minimal (25%) au lieu de
+        // l'ajustement. On rejoue le fit une fois le layout posé, comme un
+        // clic utilisateur sur « Ajuster à la page ».
+        requestAnimationFrame(() => {
+            requestAnimationFrame(fitToView);
+        });
+        setTimeout(fitToView, 350);
 
         return true;
     }
@@ -30442,7 +30472,18 @@ document.addEventListener('DOMContentLoaded', () => {
         // Le mapping interne (textQuill) → WebDev (texte) est fait ici.
         if (documentState.constraints && documentState.constraints.limites) {
             const lim = documentState.constraints.limites;
+            // 08/07/2026 : export des AUTORISATIONS en plus des limites.
+            // Le bloc limité aux limites était réinjecté tel quel par WebDev à
+            // la réouverture (jsWrapper.constraints = jsDesigner.constraints)
+            // → autorisations perdues → héritage de la session précédente.
+            const aut = documentState.constraints.autorisations || {};
             output.constraints = {
+                autorisations: {
+                    texte:   aut.textQuill !== false,
+                    image:   aut.image     !== false,
+                    qr:      aut.qr        !== false,
+                    barcode: aut.barcode   !== false
+                },
                 limites: {
                     texte:   (lim.textQuill === null || lim.textQuill === undefined) ? -1 : lim.textQuill,
                     image:   (lim.image     === null || lim.image     === undefined) ? -1 : lim.image,
@@ -31900,10 +31941,39 @@ document.addEventListener('DOMContentLoaded', () => {
         btnValidateCancel.addEventListener('click', hideValidateModal);
     }
 
+    /**
+     * Sort du mode plein écran s'il est actif (tous navigateurs).
+     * Indispensable avant de rendre la main à la plateforme (validation /
+     * annulation) : le Designer masqué resterait sinon l'élément plein écran
+     * du navigateur et la plateforme derrière serait inerte aux clics
+     * (bug du 08/07/2026).
+     * @returns {void}
+     */
+    function exitFullscreenIfActive() {
+        const doc = document;
+        const isFs = doc.fullscreenElement ||
+                     doc.webkitFullscreenElement ||
+                     doc.mozFullScreenElement ||
+                     doc.msFullscreenElement;
+        if (!isFs) return;
+        try {
+            if (doc.exitFullscreen) {
+                doc.exitFullscreen();
+            } else if (doc.webkitExitFullscreen) {
+                doc.webkitExitFullscreen();
+            } else if (doc.mozCancelFullScreen) {
+                doc.mozCancelFullScreen();
+            } else if (doc.msExitFullscreen) {
+                doc.msExitFullscreen();
+            }
+        } catch (e) { /* defensive */ }
+    }
+
     // Modale de validation : bouton "Confirmer la validation"
     if (btnValidateConfirm) {
         btnValidateConfirm.addEventListener('click', () => {
             hideValidateModal();
+            exitFullscreenIfActive();
             
             try {
                 const exported = exportToWebDev();
@@ -31948,6 +32018,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnCancelProjectConfirm) {
         btnCancelProjectConfirm.addEventListener('click', () => {
             hideCancelProjectModal();
+            exitFullscreenIfActive();
             sendMessageToParent({
                 action: 'cancelled'
             });
