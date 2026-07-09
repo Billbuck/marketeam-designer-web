@@ -1,0 +1,46 @@
+procédure BddBaseLigne(stRequeteBddLigne est une structWsRequeteBddBaseLigne)
+
+sTexteRequete				est une chaîne ANSI
+sdReqBaseLigne				est une Source de Données
+sWhere 						est une chaîne
+
+stBaseLigne					est une structWsReponseBddBaseLigne
+jsonReponseStructBaseLigne	est un chaîne ANSI
+
+si stRequeteBddLigne.IdBase = 0 alors
+	GénéreJsonErreur("IdBase = 0")
+	renvoyer Faux
+fin
+
+si pas clt_base.LitRecherchePremier(IdBase,stRequeteBddLigne.IdBase) _et_ clt_base.IdClient <> Partage.__vcUser.IDClient _et_ clt_base.IdContact <> Partage.__vcUser.IDContact alors
+	GénéreJsonErreur("Base de données introuvable")
+	renvoyer Faux
+fin
+
+si stRequeteBddLigne.IdFiltre > 0 alors
+	sWhere = " AND (" + GenereRequeteFiltreClientBase(stRequeteBddLigne.IdBase, stRequeteBddLigne.IdFiltre) + ")"
+fin
+
+sTexteRequete = [
+	SELECT
+	clt_base_ligne.*
+	FROM
+	clt_base_ligne
+	WHERE
+	clt_base_ligne.IdBase = [%stRequeteBddLigne.IdBase%]
+	[%sWhere%]
+	ORDER BY
+	clt_base_ligne.IdBaseLigne
+]
+
+si pas sdReqBaseLigne.ExécuteRequêteSQL(clt_base.Connexion,hRequêteSansCorrection,sTexteRequete) alors
+	fSauveTexte(fRepDonnées() + "\ErreurRequete.txt",sTexteRequete)
+	GénéreJsonErreur("Erreur Requete")
+	renvoyer Faux
+fin
+
+FichierVersMémoire(stBaseLigne.tabBaseLigne,sdReqBaseLigne)
+
+Sérialise(stBaseLigne,jsonReponseStructBaseLigne,psdJSON+psdMiseEnForme)
+
+renvoyer GénéreJsonSuccès("Base de données récupérée avec succès", jsonReponseStructBaseLigne)

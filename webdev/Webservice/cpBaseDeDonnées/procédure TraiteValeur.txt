@@ -1,0 +1,221 @@
+procédure TraiteValeur(pValeur est une chaîne ANSI, pType, pCode, sEncodage)
+
+sValeur est une chaîne = pValeur.SansEspace()
+
+
+si sValeur = "" alors
+	renvoyer "NULL"
+sinon
+	sValeur = Encodage(sValeur, sEncodage)
+	selon pType
+		cas __CHAMP_TYPE_TEXTE__			: sValeur = CleanTexte(sValeur,TailleChampMax(pCode))
+		cas __CHAMP_TYPE_CODEPOSTAL__		: sValeur = sValeur.Gauche(TailleChampMax(pCode))
+		cas __CHAMP_TYPE_ALLIAGE__			: sValeur = sValeur.Gauche(TailleChampMax(pCode))
+		cas __CHAMP_TYPE_TELEPHONE__		: sValeur = CleanNumeroTelephone(sValeur,"TEL")
+		cas __CHAMP_TYPE_PORTABLE__		: sValeur = CleanNumeroTelephone(sValeur,"SMS")
+		cas __CHAMP_TYPE_DATE__				: sValeur = CleanDate(sValeur)
+		cas __CHAMP_TYPE_HEURE__			: sValeur = CleanHeure(sValeur)
+		cas __CHAMP_TYPE_EMAIL__			: sValeur = CleanEmail(sValeur,TailleChampMax(pCode))
+		cas __CHAMP_TYPE_URL__				: sValeur = CleanUrl(sValeur,TailleChampMax(pCode))
+		cas __CHAMP_TYPE_CODE_BARRES__	: sValeur = CleanCodeBarres(sValeur,TailleChampMax(pCode))
+		cas __CHAMP_TYPE_ENTIER__			: sValeur = CleanNumerique(sValeur)
+		cas __CHAMP_TYPE_DECIMAL__			: sValeur = CleanNumerique(sValeur)
+		cas __CHAMP_TYPE_MONETAIRE__		: sValeur = CleanNumerique(sValeur)
+		autre cas
+	fin
+fin
+
+si sValeur = "" alors
+	sValeur = "NULL"
+sinon
+	sValeur = cpFonction.Quotes(sValeur)
+fin
+
+renvoyer sValeur
+
+	procédure interne Encodage(pContenu, pEncodage)
+
+		sValeurAINSI	est une chaîne ANSI = pContenu
+		sValeurUTF8		est une chaîne
+
+		selon pEncodage
+			cas "UTF8" 	: renvoyer sValeurAINSI.UTF8VersChaîne()
+			cas "AINSI"	: renvoyer sValeurAINSI
+			autre cas
+				sValeurUTF8 = sValeurAINSI.UTF8VersChaîne()
+				selon Vrai
+					cas sValeurAINSI = sValeurUTF8
+						renvoyer sValeurUTF8
+
+					cas sValeurUTF8.Contient(["é","è","ë","ê","é","ã","à","ü","ù","ï","ô","õ","ö"])
+						pEncodage = "UTF8"
+						renvoyer sValeurUTF8
+
+					autre cas
+						pEncodage = "AINSI"
+						renvoyer sValeurAINSI
+				fin
+		fin
+	fin
+
+	procédure interne TailleChampMax(pCodeChamp)
+		selon pCodeChamp
+			cas __CHAMP_CODE_CONTACT__		: renvoyer 60
+			cas __CHAMP_CODE_CIVILITE__		: renvoyer 20
+			cas __CHAMP_CODE_PRENOM__		: renvoyer 32
+			cas __CHAMP_CODE_NOM__			: renvoyer 32
+			cas __CHAMP_CODE_TEL__			: renvoyer 20
+			cas __CHAMP_CODE_PORTABLE__		: renvoyer 20
+			cas __CHAMP_CODE_ADRESSE1__		: renvoyer 100
+			cas __CHAMP_CODE_ADRESSE2__		: renvoyer 100
+			cas __CHAMP_CODE_ADRESSE3__		: renvoyer 100
+			cas __CHAMP_CODE_ADRESSE4__		: renvoyer 100
+			cas __CHAMP_CODE_REFERENCE__		: renvoyer 100
+			cas __CHAMP_CODE_SOCIETE__		: renvoyer 100
+			cas __CHAMP_CODE_ENSEIGNE__		: renvoyer 100
+			cas __CHAMP_CODE_CODE_POSTAL__	: renvoyer 10
+			cas __CHAMP_CODE_VILLE__		: renvoyer 100
+			cas __CHAMP_CODE_CDP_VILLE__		: renvoyer 120
+			cas __CHAMP_CODE_ALLIAGE__		: renvoyer 100
+			cas __CHAMP_CODE_PAYS__			: renvoyer 100
+			cas __CHAMP_CODE_EMAIL__		: renvoyer 255
+			autre cas						: renvoyer 500
+		fin
+	fin
+
+	procédure interne CleanTexte(pTexte, pTailleMax)
+
+		tantque pTexte[[1]] dans (" ","-") _et_ Taille(pTexte) > 0
+			pTexte[[1]] = ""
+		fin
+
+		renvoyer SansEspace(Gauche(pTexte, pTailleMax))
+	fin
+
+	procédure interne CleanNumeroTelephone(pTel,pTyp) : chaîne
+
+		si pTel = "" alors renvoyer ""
+
+		sTel est une chaîne = pTel
+
+		sTel = sTel.Supprime(["-"," ",".","/","\","(",")","+","_",TAB,RC,Caract(39),Caract(171),Caract(187),Caract(145),Caract(146),Caract(147),Caract(148)])
+		si sTel[[à 2]] = "00" alors sTel[[à 2]] = ""
+		si sTel[[à 2]] = "33" alors sTel[[à 2]] = ""
+		si sTel[[1]] = "0" alors sTel[[1]] = ""
+
+		sTel = "33"+sTel
+
+		si sTel.Taille() = 11 _et_ sTel.CaractOccurrenceType(ctNumérique) = 11 alors
+			selon pTyp
+				cas "SMS"
+					si sTel[[3]] = "6" _ou_ sTel[[3]] = "7" alors
+						renvoyer sTel
+					fin
+
+				cas "TEL"
+					si sTel[[3]] = "1" _ou_ sTel[[3]] = "2"  _ou_ sTel[[3]] = "3" _ou_ sTel[[3]] = "4" _ou_ sTel[[3]] = "5"  _ou_ sTel[[3]] = "8"  _ou_ sTel[[3]] = "9" alors
+						renvoyer sTel
+					fin
+
+				autre cas
+					renvoyer sTel
+			fin
+		fin
+		renvoyer ""
+	fin
+
+	procédure interne CleanDate(pDate)
+		sEntrée	est une chaîne
+		dSortie	est une Date
+
+		sEntrée	= Majuscule(SansEspace(pDate,sscTout))
+		sEntrée	= sEntrée.Remplace([" ","-","/","\","_",":",".",","],"")
+
+		si sEntrée.CaractOccurrenceType(ctNumérique) <> sEntrée.Taille() alors renvoyer ""
+
+		si sEntrée.Taille() = 6 alors
+			sEntrée = sEntrée[[à 4]] + "20" + sEntrée[[5 à]]
+		fin
+
+		si sEntrée.Taille() <> 8 alors renvoyer ""
+
+		si Val(sEntrée.Droite(4)) >= "1900" _et_ Val(sEntrée.Droite(4)) <= "2100"  alors
+			dSortie = sEntrée.VersDate("JJMMAAAA")
+		sinon
+			dSortie = sEntrée.VersDate("AAAAMMJJ")
+		fin
+
+		si DateValide(dSortie) alors
+			renvoyer dSortie
+		sinon
+			renvoyer ""
+		fin
+	fin
+
+	procédure interne CleanHeure(pHeure)
+
+		sHeure est une chaîne
+		sHeure = Remplace(pHeure,[" ","-","/","\","_",":",".",","],"")
+
+		si sHeure.CaractOccurrenceType(ctNumérique) <> sHeure.Taille() alors renvoyer ""
+
+		si pas HeureValide(sHeure) alors renvoyer ""
+
+		selon sHeure.Taille()
+			cas 4 		: renvoyer HeureVersChaîne(sHeure,"HH:MM")
+			cas 6 		: renvoyer HeureVersChaîne(sHeure,"HH:MM:SS")
+			autre cas	: renvoyer HeureVersChaîne(sHeure,"HH:MM:SS:CCC")
+		fin
+	fin
+
+	procédure interne CleanUrl(pUrl est une chaîne, pTailleMax)
+
+		// Vérifier si l'URL correspond au motif
+		si pUrl.RegexVérifie("^https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)$") <> "" _et_ pUrl.Taille() <= pTailleMax alors
+			renvoyer pUrl
+		sinon
+			renvoyer ""
+		fin
+	fin
+
+	procédure interne CleanNumerique(pNumerique)
+
+		pNumerique = ChaîneFormate(pNumerique,ccSansEspace+ccSansEspaceIntérieur)
+
+		si CaractOccurrenceType(pNumerique,ctLettre) > 0 _ou_ pNumerique = "" alors
+			renvoyer "0"
+		sinon
+			pNumerique = Remplace(pNumerique,".",",")
+			si Abs(Val(pNumerique)) > 0 alors
+				renvoyer pNumerique
+			sinon
+				renvoyer "0"
+			fin
+		fin
+	fin
+
+	procédure interne CleanEmail(pEmail, pTailleMax = 200)
+
+		sEmail est une chaîne = Minuscule(pEmail)
+
+		si EmailVérifieAdresse(sEmail,emailValideSyntaxeStrict) <> emailAdresseValide _et_ pEmail > pTailleMax alors
+			sEmail = ""
+		fin
+
+		renvoyer sEmail
+
+	fin
+
+	procédure interne CleanCodeBarres(pValeurCdb, pTailleMax)
+		// Valeur destinée à être ENCODÉE en code-barres : ASCII imprimable
+		// UNIQUEMENT (codes 32 à 126). Un seul caractère hors plage (accent,
+		// insécable...) -> rejet en NULL, cohérent avec CleanDate/CleanUrl.
+		// Les espaces de tête/queue sont déjà retirés en amont (SansEspace).
+		nIndCarCdb est un entier
+		pour nIndCarCdb = 1 _à_ Taille(pValeurCdb)
+			si Asc(pValeurCdb[[nIndCarCdb]]) < 32 _ou_ Asc(pValeurCdb[[nIndCarCdb]]) > 126 alors
+				renvoyer ""
+			fin
+		fin
+		renvoyer Gauche(pValeurCdb, pTailleMax)
+	fin

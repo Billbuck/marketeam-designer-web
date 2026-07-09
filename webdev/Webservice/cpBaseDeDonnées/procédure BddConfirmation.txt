@@ -1,0 +1,76 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] BddConfirmation (<stConfirmation> est structWsRequeteBddConfirmation)
+//
+// Paramètres :
+//	stConfirmation (structWsRequeteBddConfirmation) : <indiquez ici le rôle de stConfirmation>
+// Valeur de retour :
+// 	Type indéterminé : // 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure BddConfirmation(local stConfirmation est une structWsRequeteBddConfirmation)
+
+jsonStructImport			est une chaîne ANSI
+stBaseDeDonnées				est une structWsBaseDeDonnées
+stInformations				est une structInformations
+jsonStructInformations		est une chaîne ANSI
+varReponse					est un Variant
+
+si stConfirmation.BaseNom.SansEspace() = "" alors
+	GénéreJsonErreur("Nom de fichier", "Nom de fichier absent")
+	renvoyer Faux
+fin
+
+si pas wbs_base.LitRecherchePremier(IdWbsBase_IdClient_IdContact, [stConfirmation.IdWbsBase, Partage.__vcUser.IDClient, Partage.__vcUser.IDContact]) alors
+	GénéreJsonErreur("IdWbsBase", "Incorrect")
+	renvoyer Faux
+sinon
+	jsonStructImport = wbs_base.Json
+	quand exception dans
+		Désérialise(stBaseDeDonnées, jsonStructImport, psdJSON)
+	faire
+		GénéreJsonErreur("jsonStructImport", "Erreur de désérialisation", 500)
+		renvoyer Faux
+	fin
+fin
+
+// Le mapping a été modifié lors de la confirmation
+si stConfirmation.stMapping.tabStandard.Occurrence > 0 _ou_ stConfirmation.stMapping.tabOptionnel.Occurrence > 0 alors
+	stBaseDeDonnées.stMapping	= stConfirmation.stMapping
+
+	// On refait le contrôle des colonnes et des affectations
+	stInformations				= VérifierColonnesMapping(stBaseDeDonnées)
+	si stInformations.tabColonnesManquantes.Occurrence > 0 _ou_ stInformations.tabColonnesExploitées.Occurrence = 0
+		Sérialise(stInformations, jsonStructInformations, psdJSON)
+		GénéreJsonErreur("Erreur confirmation", jsonStructInformations)
+		renvoyer Faux
+	sinon
+		stBaseDeDonnées.tabImportChamp = IdentificationDesColonnes(stBaseDeDonnées)
+	fin
+fin
+
+// Créer la base client (sans les lignes) - COMME AVANT
+stBaseDeDonnées.IdBase = CreationClientBase(stBaseDeDonnées, stConfirmation.IdWbsBase, stConfirmation.BaseNom)
+
+// Sérialiser le mapping validé pour le stocker
+Sérialise(stBaseDeDonnées, jsonStructImport, psdJSON)
+
+// Mettre à jour wbs_base
+si wbs_base.LitRecherchePremier(IdWbsBase, stConfirmation.IdWbsBase) alors
+	wbs_base.Statut					= __WBS_BDD_STATUT_EN_COURS__
+	wbs_base.Json					= jsonStructImport  // Mapping validé mis à jour
+	wbs_base.IdClientBase			= stBaseDeDonnées.IdBase
+	wbs_base.LigneEnCours			= 0                 // Début du fichier
+	wbs_base.Progression			= 0
+	wbs_base.DateHeureModification	= DateHeureSys()
+	wbs_base.Modifie()
+fin
+
+// Retourner immédiatement
+varReponse.IdWbsBase	= stConfirmation.IdWbsBase
+varReponse.IdBase		= stBaseDeDonnées.IdBase
+varReponse.Progression	= 0
+
+renvoyer GénéreJsonPending(varReponse)

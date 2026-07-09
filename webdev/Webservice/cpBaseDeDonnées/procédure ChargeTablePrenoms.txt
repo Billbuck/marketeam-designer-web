@@ -1,0 +1,26 @@
+procédure ChargeTablePrenoms()
+
+sdReqPrenom	est une Source de Données
+taaPrenom	est un tableau associatif de chaînes ANSI
+
+sTexteRequete		est une chaîne	=
+[
+	SELECT
+	Prenom,
+	CONCAT(IF(Adb=0,'[%__TEL_PROFIL_NON_DETERMINE__%]',IF(Adb<%1,'[%__TEL_PROFIL_INACTIF__%]','[%__TEL_PROFIL_ACTIF__%]')),IF(Sexe=1,'[%__TEL_PROFIL_HOMME__%]',IF(Sexe=2,'[%__TEL_PROFIL_FEMME__%]','[%__TEL_PROFIL_NON_DETERMINE__%]'))) Profil
+	FROM
+	bdd_prenom
+]
+
+sTexteRequete = ChaîneConstruit(sTexteRequete,Val(DateSys().Gauche(4)) - 50)
+
+sdReqPrenom.ExécuteRequêteSQL(bdd_prenom..Connexion, hRequêteSansCorrection, sTexteRequete)
+
+pour tout sdReqPrenom
+	taaPrenom[sdReqPrenom.prenom] = sdReqPrenom.Profil
+fin
+
+renvoyer taaPrenom
+
+fin:
+sdReqPrenom.AnnuleDéclaration()

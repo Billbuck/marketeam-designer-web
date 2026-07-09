@@ -1,0 +1,37 @@
+// Résumé : Affine le TYPE des champs optionnels d'un mapping automatique en
+//          analysant le CONTENU des premières lignes du fichier (et non plus
+//          seulement les en-têtes). Seuls les optionnels restés en Texte sont
+//          affinés ; les types déjà pré-proposés par l'en-tête (ex. Date pour
+//          « Date Rdv ») sont conservés. L'utilisateur garde la main dans
+//          l'écran de mapping.
+//
+// Créée le 09/07/2026 (chantier refonte RubriqueAutomatique, point 3).
+//
+// Paramètres :
+//	stMapping      : mapping proposé par RubriqueAutomatique (MODIFIÉ)
+//	taaColonne     : tableau associatif en-tête -> indice de colonne
+//	taaEchantillon : indice de colonne -> valeurs (cf. RécupérerEchantillonFichier)
+// Valeur de retour :
+// 	Aucune (stMapping est modifié par référence)
+//
+procédure AffineTypesOptionnels(stMapping est une structWsBddMapping, taaColonne est un tableau associatif d'entiers, taaEchantillon est un tableau associatif de chaînes ANSI)
+
+nInd		est un entier
+nColonne	est un entier
+sTypeInféré	est une chaîne
+
+pour nInd = 1 _à_ stMapping.tabOptionnel.Occurrence
+
+	// On n'affine que les optionnels sans type pré-proposé par l'en-tête
+	si stMapping.tabOptionnel[nInd].Type <> __CHAMP_TYPE_TEXTE__ alors continuer
+
+	nColonne = taaColonne[stMapping.tabOptionnel[nInd].Colonne]
+	si taaEchantillon[nColonne]..Vide = Vrai alors continuer
+
+	sTypeInféré = InféreTypeColonne(taaEchantillon[nColonne])
+
+	si sTypeInféré <> __CHAMP_TYPE_TEXTE__ alors
+		stMapping.tabOptionnel[nInd].Type	= sTypeInféré
+		stMapping.taaType[nColonne]			= sTypeInféré
+	fin
+fin

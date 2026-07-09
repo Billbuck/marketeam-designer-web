@@ -1,0 +1,25 @@
+procédure ChargeTableCivilites()
+
+taaCivilite 	est un tableau associatif de chaînes ANSI
+sdReqCivilite 	est une Source de Données
+sTexteRequete 	est une chaîne ANSI
+
+sTexteRequete =
+[
+	SELECT
+	Longue,
+	Courte
+	FROM
+	bdd_civilite
+]
+
+sdReqCivilite.ExécuteRequêteSQL(bdd_civilite..Connexion, hRequêteSansCorrection, sTexteRequete)
+
+pour tout sdReqCivilite
+	taaCivilite[Majuscule(SansAccent(sdReqCivilite.Longue))] = sdReqCivilite.Courte
+fin
+
+renvoyer taaCivilite
+
+fin:
+sdReqCivilite.AnnuleDéclaration()

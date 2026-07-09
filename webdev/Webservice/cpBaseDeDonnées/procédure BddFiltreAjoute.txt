@@ -1,0 +1,142 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// BddFiltreAjoute ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure BddFiltreAjoute(stRequeteFiltreAjoute est une structWsRequeteBddFiltreAjoute)
+// Variables locales
+stFiltreReponse		est une structWsReponseBddFiltre
+jsonReponseFiltre	est une chaîne ANSI
+sTexteRequete 		est une chaîne
+sdReqFiltre 		est une Source de Données
+
+
+// Vérifications des données d'entrée
+si stRequeteFiltreAjoute.IdBase <= 0 alors
+	GénéreJsonErreur("IdBase invalide", "La base de données n'est pas spécifiée")
+	renvoyer Faux
+fin
+
+si stRequeteFiltreAjoute.Nom.SansEspace() = "" alors
+	GénéreJsonErreur("Nom du filtre", "Le nom du filtre est requis")
+	renvoyer Faux
+fin
+
+
+// Vérifie que la base de données existe et appartient au client
+si pas clt_base.LitRecherchePremier(IdBase_IdClient, [stRequeteFiltreAjoute.IdBase, Partage.__vcUser.IDClient]) alors
+	GénéreJsonErreur("Base de données", "Introuvable ou accès non autorisé")
+	renvoyer Faux
+fin
+
+sTexteRequete = [
+	SELECT CASE WHEN EXISTS (
+		SELECT 1 
+		FROM clt_base_filtre 
+		WHERE clt_base_filtre.IdBase = [%stRequeteFiltreAjoute.IdBase%] 
+		AND UPPER(clt_base_filtre.Nom) = '[%stRequeteFiltreAjoute.Nom.SansEspace()%]'
+	) THEN 1 ELSE 0 END AS Existe
+]
+
+si pas sdReqFiltre.ExécuteRequêteSQL(clt_base.Connexion,hRequêteSansCorrection, sTexteRequete) alors
+	GénéreJsonErreur("Erreur SQL", "Requête sdReqFiltre",500)
+	renvoyer Faux
+fin
+
+si sdReqFiltre.LitPremier() alors
+	si sdReqFiltre.Existe = 1 alors
+		GénéreJsonErreur("Nom du filtre", "Nom du filtre existant pour cette base de données")
+		renvoyer Faux
+	fin
+fin
+
+si stRequeteFiltreAjoute.tabFiltreCritere.Occurrence = 0 alors
+	GénéreJsonErreur("Critères absents", "Au moins un critère de filtrage est requis")
+	renvoyer Faux
+fin
+
+si stRequeteFiltreAjoute.Phrase.SansEspace() = "" alors
+	GénéreJsonErreur("Phrase", "Absente")
+	renvoyer Faux
+fin
+
+si pas stRequeteFiltreAjoute.Phrase.RegexVérifie("^(\(*\d+\)*(\s+(ET|OU)\s+\(*\d+\)*)*)$") alors
+	GénéreJsonErreur("Phrase", "Incorrect")
+	renvoyer Faux
+fin
+
+
+// Préparation de la phrase de condition
+sCondition est une chaîne
+sCondition = stRequeteFiltreAjoute.Phrase
+
+pour nInd = 1 _à_ stRequeteFiltreAjoute.tabFiltreCritere.Occurrence
+	sCondition = sCondition.Remplace(nInd, "[[" + nInd + "]]", MotComplet)
+fin
+
+// Création du filtre
+clt_base_filtre.RAZ()
+clt_base_filtre.DateHeureCreation		= DateHeureSys()
+clt_base_filtre.UserCreation			= "webservice"
+clt_base_filtre.IdBase					= stRequeteFiltreAjoute.IdBase
+clt_base_filtre.IdClient				= Partage.__vcUser.IDClient
+clt_base_filtre.IdContact				= Partage.__vcUser.IDContact
+clt_base_filtre.Nom						= stRequeteFiltreAjoute.Nom
+clt_base_filtre.Phrase					= sCondition
+
+si pas clt_base_filtre.Ajoute() alors
+	GénéreJsonErreur("Erreur", "Impossible d'ajouter le filtre")
+	renvoyer Faux
+fin
+
+nIdFiltre est un entier = clt_base_filtre.IdFiltre
+
+// Ajout des critères
+pour tout stCritere de stRequeteFiltreAjoute.tabFiltreCritere
+	clt_base_filtre_critere.RAZ()
+	clt_base_filtre_critere.IdFiltre		= nIdFiltre
+	clt_base_filtre_critere.IdBaseChamp		= stCritere.IdBaseChamp
+	clt_base_filtre_critere.Filtre			= stCritere.Filtre
+	clt_base_filtre_critere.Valeur1			= stCritere.Valeur1
+	clt_base_filtre_critere.Valeur2			= stCritere.Valeur2
+
+	si pas clt_base_filtre_critere.Ajoute() alors
+		// Erreur lors de l'ajout d'un critère - on supprime le filtre créé
+		si clt_base_filtre.LitRecherchePremier(IdFiltre, nIdFiltre) alors
+			clt_base_filtre.Supprime()
+		fin
+
+		GénéreJsonErreur("Erreur", "Impossible d'ajouter un critère au filtre")
+		renvoyer Faux
+	fin
+fin
+
+// Préparation de la réponse
+stFiltreReponse.IdFiltre	= nIdFiltre
+stFiltreReponse.Message		= "Filtre créé avec succès"
+
+// Calcul des totaux
+Partage.CalculeTotauxClientBaseFiltre(stRequeteFiltreAjoute.IdBase, nIdFiltre)
+
+si clt_base_filtre.LitRecherchePremier(IdFiltre,nIdFiltre) alors
+	stFiltreReponse.NbrSociete	= clt_base_filtre.NbrSociete
+	stFiltreReponse.NbrContact	= clt_base_filtre.NbrContact
+	stFiltreReponse.NbrAdresse	= clt_base_filtre.NbrAdresse
+	stFiltreReponse.NbrEmail	= clt_base_filtre.NbrEmail
+	stFiltreReponse.NbrFixe		= clt_base_filtre.NbrFixe
+	stFiltreReponse.NbrSms		= clt_base_filtre.NbrSms
+	stFiltreReponse.NbrTel		= clt_base_filtre.NbrTel
+	stFiltreReponse.NbrTotal	= clt_base_filtre.NbrTotal
+fin
+
+Sérialise(stFiltreReponse, jsonReponseFiltre, psdJSON+psdMiseEnForme)
+
+renvoyer GénéreJsonSuccès("Filtre créé avec succès", jsonReponseFiltre)
+

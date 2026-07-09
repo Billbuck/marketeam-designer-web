@@ -1,0 +1,55 @@
+procédure CreationClientBase(stBaseDeDonnées est une structWsBaseDeDonnées, pIdWbsBase, pBaseNom)
+
+nIdBase est un entier
+
+cpConnexion.gcnxBaseChronodirect.TransactionDébut()
+
+retour = Vrai
+
+clt_base.RAZ()
+clt_base.IdClient			= Partage.__vcUser.IDClient
+clt_base.IdContact			= Partage.__vcUser.IDContact
+clt_base.UserCreation		= "webservice"
+clt_base.DateHeureCreation	= DateHeureSys()
+clt_base.Nom				= pBaseNom
+clt_base.EstPartage		= Faux
+clt_base.NbrTotal			= stBaseDeDonnées.stInformations.NbrTotal
+clt_base.NbrAdresse		= stBaseDeDonnées.stInformations.NbrAdresse
+clt_base.NbrContact		= stBaseDeDonnées.stInformations.NbrContact
+clt_base.NbrEmail			= stBaseDeDonnées.stInformations.NbrEmail
+clt_base.NbrSms				= stBaseDeDonnées.stInformations.NbrSms
+clt_base.NbrSociete		= stBaseDeDonnées.stInformations.NbrSociete
+clt_base.NbrTel				= stBaseDeDonnées.stInformations.NbrTel
+clt_base.NbrFixe			= stBaseDeDonnées.stInformations.NbrFixe
+
+si pas clt_base.Ajoute() alors retour Faux
+
+si pas wbs_base.LitRecherchePremier(IdWbsBase, pIdWbsBase) alors retour Faux
+wbs_base.Statut 					= __WBS_BDD_STATUT_EN_COURS__
+wbs_base.IdClientBase 				= clt_base.IdBase
+wbs_base.DateHeureModification	= DateHeureSys()
+
+si pas wbs_base.Modifie() alors retour Faux
+
+nIdBase =  clt_base.IdBase
+
+pour tout stImportChamp de stBaseDeDonnées.tabImportChamp sur ordre
+	clt_base_champ.RAZ()
+	clt_base_champ.IdBase	= nIdBase
+	clt_base_champ.Ordre	= stImportChamp.Ordre
+	clt_base_champ.Libelle	= stImportChamp.Libelle
+	clt_base_champ.Type		= stImportChamp.Type
+	clt_base_champ.Champ	= stImportChamp.Champ
+	si pas clt_base_champ.Ajoute() alors retour Faux
+fin
+
+fin:
+
+si retour = Vrai alors
+	cpConnexion.gcnxBaseChronodirect.TransactionFin()
+	renvoyer nIdBase
+sinon
+	cpConnexion.gcnxBaseChronodirect.TransactionAnnule()
+	renvoyer 0
+fin
+

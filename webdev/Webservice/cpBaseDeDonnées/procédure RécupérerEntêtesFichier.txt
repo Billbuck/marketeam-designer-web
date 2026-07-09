@@ -1,0 +1,95 @@
+// Résumé : Lit la première ligne d'un fichier d'import (CSV/TXT/XLS/XLSX)
+//          et renvoie le tableau associatif en-tête -> indice de colonne.
+//
+// Modif 09/07/2026 : l'encodage n'est plus deviné valeur par valeur (liste
+// d'accents incomplète -> mojibake). Il est détecté UNE fois en amont par
+// DétecteEncodageFichier et passé en paramètre ; le décodage devient
+// déterministe. Le BOM UTF-8 éventuel est retiré de la première ligne.
+//
+// Paramètres :
+//	pCheminFichier : chemin complet du fichier
+//	pTypeFichier   : __CSV__ / __TXT__ / __XLS__ / __XLSX__
+//	pEncodage      : "UTF8" / "AINSI" (cf. DétecteEncodageFichier) ;
+//	                 vide = ancien comportement heuristique (compatibilité)
+// Valeur de retour :
+// 	tableau associatif d'entiers : en-tête -> indice de colonne
+//
+procédure RécupérerEntêtesFichier(pCheminFichier, pTypeFichier, pEncodage = "")
+
+nInd			est un entier
+nIdFichier		est un entier
+taaEntête		est un tableau associatif d'entiers
+sPremièreLigne	est une chaîne ANSI
+sColonne 		est une chaîne
+xDocument		est un xlsDocument
+tabSéparateur 	est un tableau de chaînes ANSI
+
+tabSéparateur.Ajoute(",")
+tabSéparateur.Ajoute(";")
+tabSéparateur.Ajoute(TAB)
+
+
+selon pTypeFichier
+	cas __CSV__, __TXT__
+		nIdFichier = fOuvre(pCheminFichier,foAnsi)
+
+		si nIdFichier = -1 alors
+			fSauveTexte(fRepDonnées() + ["\"] + "Erreur.txt", "Impossible d'ouvrir le fichier : " + pCheminFichier)
+			renvoyer taaEntête
+		fin
+
+		// Lecture de la première ligne pour récupérer les en-têtes
+		sPremièreLigne = fLitLigne(nIdFichier)
+		fFerme(nIdFichier)
+
+		// Retirer le BOM UTF-8 éventuel (3 octets EF BB BF en tête de fichier)
+		si sPremièreLigne[[à 3]] = Caract(0xEF) + Caract(0xBB) + Caract(0xBF) alors
+			sPremièreLigne = sPremièreLigne[[4 à]]
+		fin
+
+		pour toute chaîne sColonne de sPremièreLigne séparée par tabSéparateur
+			nInd++
+			sColonne = Encodage(sColonne)
+			taaEntête[sColonne] = nInd
+		fin
+
+		renvoyer taaEntête
+
+	cas __XLS__, __XLSX__
+
+		xDocument = xlsOuvre(pCheminFichier)
+		xDocument..Feuille = 1
+
+		pour nInd = 1 _à_ xDocument..NombreColonne
+			taaEntête[xDocument[1,nInd]..Valeur] = nInd
+		fin
+		xDocument.Ferme()
+
+		renvoyer taaEntête
+fin
+
+
+	procédure interne Encodage(pContenu)
+
+		sValeurAINSI	est une chaîne ANSI	= pContenu
+		sValeurUTF8		est une chaîne
+
+		// Encodage détecté en amont pour tout le fichier : décodage déterministe
+		selon pEncodage
+			cas "UTF8"	: renvoyer sValeurAINSI.UTF8VersChaîne()
+			cas "AINSI"	: renvoyer sValeurAINSI
+		fin
+
+		// Compatibilité : pEncodage non fourni -> ancienne heuristique
+		sValeurUTF8 = sValeurAINSI.UTF8VersChaîne()
+		selon Vrai
+			cas sValeurAINSI = sValeurUTF8
+				renvoyer sValeurUTF8
+
+			cas sValeurUTF8.Contient(["é","è","ë","ê","é","ã","à","ü","ù","ï","ô","õ","ö"])
+				renvoyer sValeurUTF8
+
+			autre cas
+				renvoyer sValeurAINSI
+		fin
+	fin

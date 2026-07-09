@@ -1,0 +1,150 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// BddImportationMultipart ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure BddImportationMultipart()
+
+// ============================================================
+// Lecture des paramètres multipart
+// ============================================================
+sFichierNom		est une chaîne	= WebserviceParameter("FichierNom")
+sFichierFormat	est une chaîne	= WebserviceParameter("FichierFormat")
+sInfoFichier	est une chaîne	= WebserviceParameter("FichierContenu")
+
+// Le fichier uploadé retourne : "NomOriginal.xlsx;C:\WEBDEV\TmpUpload\fichier.upl"
+sNomOriginal	est une chaîne	= sInfoFichier.ExtraitChaîne(1, ";")
+sFichierTemp	est une chaîne	= sInfoFichier.ExtraitChaîne(2, ";")
+
+// ============================================================
+// Validation des paramètres
+// ============================================================
+si sFichierNom.SansEspace() = "" alors
+	GénéreJsonErreur("Nom de fichier", "FichierNom absent")
+	renvoyer Faux
+fin
+
+si sFichierTemp = "" ou pas fFichierExiste(sFichierTemp) alors
+	GénéreJsonErreur("FichierContenu", "Fichier non reçu")
+	renvoyer Faux
+fin
+
+// ============================================================
+// Variables de travail (identique à l'ancienne procédure)
+// ============================================================
+sFichierTemporaire		est une chaîne ANSI
+stBaseDeDonnées			est une structWsBaseDeDonnées
+jsonStructImport		est une chaîne ANSI
+stInformations			est une structInformations
+jsonStructInformations	est une chaîne ANSI
+stImportationReponse	est une structWsReponseBddImportation
+
+// ============================================================
+// Déterminer le type de fichier
+// ============================================================
+selon "." + sFichierFormat.Minuscule()
+	cas __CSV__, __TXT__    : sFichierTemporaire = "Test" + GénèreMotDePasse(8) + __CSV__
+	cas __XLS__, __XLSX__   : sFichierTemporaire = "Test" + GénèreMotDePasse(8) + __XLSX__
+	autre cas               : GénéreJsonErreur("Fichier", "Format de fichier non pris en charge") ; renvoyer Faux
+fin
+
+stBaseDeDonnées.TypeFichier = "." + sFichierFormat.Minuscule()
+
+// ============================================================
+// Copier le fichier temporaire (déjà binaire, pas de décodage Base64)
+// ============================================================
+si pas fCopieFichier(sFichierTemp, fRepDonnées() + ["\"] + sFichierTemporaire) alors
+	GénéreJsonErreur("Impossible de copier le fichier temporaire.", 500)
+	renvoyer Faux
+fin
+
+// ============================================================
+// À partir d'ici, le code est IDENTIQUE à BddImportation
+// ============================================================
+// Détection d'encodage 09/07/2026 : UNE fois pour tout le fichier (fini la
+// devinette valeur par valeur qui produisait du « BÃ¢timent »). Stocké dans
+// la structure -> sérialisé dans wbs_base.Json -> réutilisé par BddTraitement.
+si stBaseDeDonnées.TypeFichier dans (__CSV__, __TXT__) alors
+	stBaseDeDonnées.Encodage = DétecteEncodageFichier(fRepDonnées() + ["\"] + sFichierTemporaire)
+fin
+
+stBaseDeDonnées.taaColonne = RécupérerEntêtesFichier(fRepDonnées() + ["\"] + sFichierTemporaire, stBaseDeDonnées.TypeFichier, stBaseDeDonnées.Encodage)
+
+si stBaseDeDonnées.stMapping.tabStandard.Occurrence = 0 _et_ stBaseDeDonnées.stMapping.tabOptionnel.Occurrence = 0 alors
+	stBaseDeDonnées.stMapping = RubriqueAutomatique(stBaseDeDonnées.taaColonne)
+	// Affinage 09/07/2026 : le type des optionnels restés Texte est inféré
+	// depuis le CONTENU des 50 premières lignes (Date/Email/Entier/Décimal)
+	AffineTypesOptionnels(stBaseDeDonnées.stMapping, stBaseDeDonnées.taaColonne, RécupérerEchantillonFichier(fRepDonnées() + ["\"] + sFichierTemporaire, stBaseDeDonnées.TypeFichier))
+sinon
+	stInformations = VérifierColonnesMapping(stBaseDeDonnées)
+	si stInformations.tabColonnesManquantes.Occurrence > 0 _ou_ stInformations.tabColonnesExploitées.Occurrence = 0
+		Sérialise(stInformations, jsonStructInformations, psdJSON)
+		GénéreJsonErreur("Erreur d'importation", jsonStructInformations)
+		renvoyer Faux
+	fin
+fin
+
+stBaseDeDonnées.tabImportChamp = IdentificationDesColonnes(stBaseDeDonnées)
+
+// ============================================================
+// Vérification des colonnes exploitables
+// ============================================================
+bEmail		est un booléen
+bPortable	est un booléen
+bTel		est un booléen
+nAdresse	est un entier
+
+pour tout stBddChamp de stBaseDeDonnées.tabImportChamp
+	selon stBddChamp.Code
+		cas __CHAMP_CODE_EMAIL__        : bEmail = Vrai
+		cas __CHAMP_CODE_PORTABLE__     : bPortable = Vrai
+		cas __CHAMP_CODE_TEL__          : bTel = Vrai
+		cas __CHAMP_CODE_NUMERO_VOIE__  : nAdresse += 1
+		cas __CHAMP_CODE_NOM_VOIE__     : nAdresse += 1
+		cas __CHAMP_CODE_ADRESSE1__     : nAdresse += 2
+		cas __CHAMP_CODE_CODE_POSTAL__  : nAdresse += 1
+		cas __CHAMP_CODE_VILLE__        : nAdresse += 1
+		cas __CHAMP_CODE_CDP_VILLE__    : nAdresse += 2
+		autre cas
+	fin
+fin
+
+si bEmail = Faux _et_ bPortable = Faux _et_ bTel = Faux _et_ nAdresse < 4 alors
+	GénéreJsonErreur("Aucun enregistrement exploitable", "Aucune colonne Portable, Tel, Email ou Adresse")
+	renvoyer Faux
+fin
+
+// ============================================================
+// Enregistrement en base de données
+// ============================================================
+Sérialise(stBaseDeDonnées, jsonStructImport, psdJSON)
+
+wbs_base.RAZ()
+wbs_base.IdClient			= Partage.__vcUser.IDClient
+wbs_base.IdContact			= Partage.__vcUser.IDContact
+wbs_base.Type				= __WBS_BDD_TYPE_IMPORT__
+wbs_base.Statut				= __WBS_BDD_STATUT_PRET__
+wbs_base.FichierClient		= sFichierNom
+wbs_base.FichierTemporaire	= sFichierTemporaire
+wbs_base.Json				= jsonStructImport
+wbs_base.DateHeureCreation	= DateHeureSys()
+
+si wbs_base.Ajoute() alors
+	stImportationReponse.Message		= "Vérification des colonnes terminée. Veuillez confirmer pour continuer."
+	stImportationReponse.IdWbsBase		= wbs_base.IdWbsBase
+	stImportationReponse.taaColonne		= stBaseDeDonnées.taaColonne
+	stImportationReponse.stMapping		= stBaseDeDonnées.stMapping
+	stImportationReponse.stInformations	= stInformations
+
+	renvoyer GénéreJsonPending(stImportationReponse)
+sinon
+	GénéreJsonErreur("Erreur Interne" + RC + HErreurInfo(hErrComplet))
+	renvoyer Faux
+fin

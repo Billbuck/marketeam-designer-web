@@ -1,0 +1,109 @@
+procédure BddBaseListe()
+
+
+sTexteRequete					est une chaîne ANSI
+sdReqBaseListe 					est une Source de Données
+stReponseBddBaseListe			est une structWsReponseBddBaseListe
+stBase 							est une structWsBddBase
+stFiltre 						est une structWsBddFiltre
+jsonStructBaseListe 			est une chaîne ANSI
+
+sTexteRequete = [
+	SELECT
+	clt_base.*
+	FROM
+	clt_base
+	WHERE
+	clt_base.IdClient = [%Partage.__vcUser.IDClient%]
+	AND clt_base.IdContact = [%Partage.__vcUser.IDContact%]
+	ORDER BY
+	clt_base.IdBase DESC
+]
+
+si pas sdReqBaseListe.ExécuteRequêteSQL(clt_base.Connexion,hRequêteSansCorrection,sTexteRequete) alors
+	fSauveTexte(fRepDonnées() + "\ErreurRequete.txt",sTexteRequete)
+	GénéreJsonErreur("Erreur Requete",500)
+	renvoyer Faux
+fin
+
+FichierVersTableau(stReponseBddBaseListe.tabBase,sdReqBaseListe)
+
+pour tout stBase de stReponseBddBaseListe.tabBase
+	sTexteRequete = [
+		SELECT
+		clt_base_champ.*
+		FROM
+		clt_base_champ
+		WHERE
+		clt_base_champ.IdBase = [%stBase.IdBase%]
+		ORDER BY
+		clt_base_champ.Ordre
+	]
+	si pas sdReqBaseListe.ExécuteRequêteSQL(clt_base.Connexion,hRequêteSansCorrection,sTexteRequete) alors
+		fSauveTexte(fRepDonnées() + "\ErreurRequete.txt",sTexteRequete)
+		GénéreJsonErreur("Erreur Requete")
+		renvoyer Faux
+	fin
+	FichierVersTableau(stBase.tabBaseChamp,sdReqBaseListe)
+
+	sTexteRequete = [
+		SELECT
+		clt_base_filtre.*
+		FROM
+		clt_base_filtre
+		WHERE
+		clt_base_filtre.IdBase = [%stBase.IdBase%]
+		ORDER BY
+		clt_base_filtre.IdFiltre
+	]
+	si pas sdReqBaseListe.ExécuteRequêteSQL(clt_base.Connexion,hRequêteSansCorrection,sTexteRequete) alors
+		fSauveTexte(fRepDonnées() + "\ErreurRequete.txt",sTexteRequete)
+		GénéreJsonErreur("Erreur Requete")
+		renvoyer Faux
+	fin
+
+	FichierVersTableau(stBase.tabBaseFiltre,sdReqBaseListe)
+
+	pour tout stFiltre de stBase.tabBaseFiltre
+		sTexteRequete = [
+			SELECT
+			clt_base_filtre_critere.*
+			FROM
+			clt_base_filtre_critere
+			WHERE
+			clt_base_filtre_critere.IdFiltre = [%stFiltre.IdFiltre%]
+			ORDER BY
+			clt_base_filtre_critere.IdCritere
+		]
+		si pas sdReqBaseListe.ExécuteRequêteSQL(clt_base.Connexion,hRequêteSansCorrection,sTexteRequete) alors
+			fSauveTexte(fRepDonnées() + "\ErreurRequete.txt",sTexteRequete)
+			GénéreJsonErreur("Erreur Requete")
+			renvoyer Faux
+		fin
+
+		FichierVersTableau(stFiltre.tabFiltreCritere,sdReqBaseListe)
+	fin
+fin
+
+Sérialise(stReponseBddBaseListe,jsonStructBaseListe,psdJSON+psdMiseEnForme)
+
+
+renvoyer GénéreJsonSuccès("Liste des bases de données",jsonStructBaseListe)
+
+
+//SI clt_base.LitRecherchePremier(IdBase, stBddSuppression.IdBase) ALORS
+//	SI clt_base.IdClient = stBddSuppression.Identification.IdClient _ET_ clt_base.IdContact = stBddSuppression.Identification.IdContact ALORS
+//		SI clt_base.Supprime() ALORS
+//			RENVOYER GénéreJsonSuccés("Suppression OK","")
+//		SINON
+//			GénéreJsonErreur("Erreur de suppression")
+//			RENVOYER Faux
+//		FIN
+//	SINON
+//		GénéreJsonErreur("Erreur d'authentification")
+//		RENVOYER Faux
+//	FIN
+//SINON
+//	GénéreJsonErreur("Erreur Base de données introuvable")
+//	RENVOYER Faux
+//FIN

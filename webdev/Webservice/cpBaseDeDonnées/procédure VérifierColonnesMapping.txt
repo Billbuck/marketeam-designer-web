@@ -1,0 +1,89 @@
+procédure VérifierColonnesMapping(stBaseDeDonnées est une structWsBaseDeDonnées)
+
+
+nInd					est un entier
+sLibelle 				est une chaîne ANSI
+stInformations			est une structInformations
+stColonnes				est une structColonnes
+taaColonneManquantes	est un tableau associatif de tableau de chaînes ANSI
+taaColonneExploitées	est un tableau associatif de tableau de chaînes ANSI
+tabColonne 				est un tableau de chaînes ANSI
+
+//fSauveTexte(fRepDonnées() + "\Verification.txt","Standard")
+
+
+pour tout stImportStandard de stBaseDeDonnées.stMapping.tabStandard
+	sLibelle = LibelleCodeChamp(stImportStandard.Type)
+//	fAjouteTexte(fRepDonnées() + "\Verification.txt",RC + "sLibelle : " + sLibelle)
+	pour tout sColonne de stImportStandard.Colonne
+//		fAjouteTexte(fRepDonnées() + "\Verification.txt",RC + "sColonne : " + sColonne)
+		si stBaseDeDonnées.taaColonne[sColonne]..Vide alors
+//			fAjouteTexte(fRepDonnées() + "\Verification.txt",RC + "Statut : Manquante")
+			si taaColonneManquantes[sColonne]..Vide alors
+				tabColonne.SupprimeTout()
+				tabColonne.Ajoute(sLibelle)
+				taaColonneManquantes[sColonne] = tabColonne
+			sinon
+				taaColonneManquantes[sColonne].Ajoute(sLibelle)
+			fin
+		sinon
+//			fAjouteTexte(fRepDonnées() + "\Verification.txt",RC + "Statut : Exploitée")
+			si taaColonneExploitées[sColonne]..Vide alors
+				tabColonne.SupprimeTout()
+				tabColonne.Ajoute(sLibelle)
+				taaColonneExploitées[sColonne] = tabColonne
+			sinon
+				taaColonneExploitées[sColonne].Ajoute(sLibelle)
+			fin
+
+		fin
+	fin
+fin
+
+//fAjouteTexte(fRepDonnées() + "\Verification.txt",RC + "Optionnel")
+
+pour tout stImportOptionnel de stBaseDeDonnées.stMapping.tabOptionnel
+	nInd++
+	sLibelle = "Champ optionnel " + nInd
+//	fAjouteTexte(fRepDonnées() + "\Verification.txt",RC + "sColonne : " + stImportOptionnel.Colonne +rc + "sLibelle : " + sLibelle)
+	si stImportOptionnel.Colonne <> "" _et_ stBaseDeDonnées.taaColonne[stImportOptionnel.Colonne]..Vide alors
+//		fAjouteTexte(fRepDonnées() + "\Verification.txt",RC + "Statut : Manquante")
+		si taaColonneManquantes[stImportOptionnel.Colonne]..Vide alors
+			tabColonne.SupprimeTout()
+			tabColonne.Ajoute(sLibelle)
+			taaColonneManquantes[stImportOptionnel.Colonne] = tabColonne
+		sinon
+			taaColonneManquantes[stImportOptionnel.Colonne].Ajoute(sLibelle)
+		fin
+	sinon
+//		fAjouteTexte(fRepDonnées() + "\Verification.txt",RC + "Statut : Exploitée")
+		si taaColonneExploitées[stImportOptionnel.Colonne]..Vide alors
+			tabColonne.SupprimeTout()
+			tabColonne.Ajoute(sLibelle)
+			taaColonneExploitées[stImportOptionnel.Colonne] = tabColonne
+		sinon
+			taaColonneExploitées[stImportOptionnel.Colonne].Ajoute(sLibelle)
+		fin
+	fin
+fin
+
+pour tout nPos, sColonne de stBaseDeDonnées.taaColonne
+	si taaColonneExploitées[sColonne]..Vide alors
+		stInformations.tabColonnesInutilisées.Ajoute(sColonne)
+	fin
+fin
+
+pour tout tabPosition, sColonne de taaColonneManquantes
+	stColonnes.Colonne 		= sColonne
+	stColonnes.tabPosition	= tabPosition
+	stInformations.tabColonnesManquantes.Ajoute(stColonnes)
+fin
+
+pour tout tabPosition, sColonne de taaColonneExploitées
+	stColonnes.Colonne		= sColonne
+	stColonnes.tabPosition	= tabPosition
+	stInformations.tabColonnesExploitées.Ajoute(stColonnes)
+fin
+
+
+renvoyer stInformations

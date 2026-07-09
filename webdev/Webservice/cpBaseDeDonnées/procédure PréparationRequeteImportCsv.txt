@@ -1,0 +1,148 @@
+procédure PréparationRequeteImportCsv(stBaseDeDonnées est une structWsBaseDeDonnées, pFichierTemporaire est une chaîne)
+
+nModulo 			est un entier
+nColonne			est un entier
+nIdFichier			est un entier
+sLigne				est une chaîne ANSI
+sInsert				est une chaîne ANSI
+sSexeProfil			est une chaîne ANSI
+sValues				est une chaîne ANSI
+sEncodage 			est une chaîne ANSI
+sContenu			est une chaîne ANSI
+sColonne 			est une chaîne ANSI
+sValeur				est une chaîne ANSI
+tabValeur			est un tableau de chaînes ANSI
+stImportChamp		est une structWsBddChamp
+stTestLigne   		est une StructWsBddTestLigne
+//sTexteRequete		est une chaîne ANSI
+taaPrenom 			est un tableau associatif de chaînes ANSI
+taaCivilite 		est un tableau associatif de chaînes ANSI
+tabSeparateur 		est un tableau de chaînes ANSI
+tabRequete 			est un tableau de chaînes ANSI
+
+
+tabSeparateur.Ajoute(",")
+tabSeparateur.Ajoute(";")
+tabSeparateur.Ajoute(TAB)
+
+taaPrenom 	= ChargeTablePrenoms()
+taaCivilite	= ChargeTableCivilites()
+
+
+
+sInsert = "IdBase"
+pour tout stImportChamp de stBaseDeDonnées.tabImportChamp sur Ordre
+	sInsert += "," + stImportChamp.Champ
+	si stImportChamp.Champ = __CHAMP_PRENOM__ alors
+		sSexeProfil = ",Sexe,Profil"
+	fin
+fin
+
+sInsert += sSexeProfil
+
+nIdFichier = fOuvre(fRepDonnées() + ["\"] + pFichierTemporaire,foAnsi)
+fLitLigne(nIdFichier) // On passe l'entête de colonnes
+
+sLigne = fLitLigne(nIdFichier) // On charge la première ligne
+tantque sLigne <> EOT
+	nModulo++
+	VariableRAZ(stTestLigne)
+
+
+	sLigne.VersTableau(tabValeur, tabSeparateur) // On transforme la ligne en tableau
+
+	sValeur = "ValIdBase"
+
+
+	pour tout stImportChamp de stBaseDeDonnées.tabImportChamp sur ordre
+
+		sContenu = ""
+
+		pour tout nColonne de stImportChamp.tabColonne
+
+			selon stImportChamp.Extrait
+				cas 0
+					si stImportChamp.Code = __CHAMP_CODE_CONTACT__ alors // Si c'est la colonne Contact, on transforme la civilité longue en courte
+						si stBaseDeDonnées.stMapping.taaType[nColonne] = __CHAMP_CODE_CIVILITE__ alors
+							sContenu += [" "] + CiviliteLongueVersCourte(tabValeur[nColonne])
+						sinon
+							sContenu += [" "] + tabValeur[nColonne]
+						fin
+					sinon
+						si nColonne <= tabValeur.Occurrence alors
+							sContenu += [" "] + tabValeur[nColonne]
+						sinon
+							sContenu += [" "] + " "
+						fin
+					fin
+
+				cas 1 // Pour récupérer le Code Postal
+					sContenu = tabValeur[nColonne].ExtraitChaîne(1, " ")
+
+				cas 2 // Pour récupérer la Ville
+					sContenu = tabValeur[nColonne][[tabValeur[nColonne].Position(" ")+1 à]]
+			fin
+		fin
+
+		sColonne = TraiteValeur(sContenu, stImportChamp.Type, stImportChamp.Code, sEncodage)
+
+		si stImportChamp.Champ = __CHAMP_PRENOM__ alors
+			sSexeProfil = AnalysePrenom(sColonne, taaPrenom)
+		fin
+
+		AnalyseLigne(stTestLigne, sColonne , stImportChamp.Code)
+
+		sValeur	+= [","] + sColonne
+	fin
+
+	si ComptabiliseLigne(stBaseDeDonnées, stTestLigne) alors
+		sValeur += sSexeProfil
+		sValues += [","] + "(" + sValeur + ")"
+	fin
+
+	si modulo(nModulo,100) = 0 alors
+		tabRequete.Ajoute([
+			START TRANSACTION;
+			INSERT INTO clt_base_ligne ([%sInsert%])
+			VALUES
+			[%sValues%];
+			COMMIT;
+		])
+		sValues	= ""
+		nModulo	= 0
+	fin
+
+	sLigne = fLitLigne(nIdFichier) // On charge la ligne suivante
+fin
+
+si nModulo > 0 alors
+	tabRequete.Ajoute([
+		START TRANSACTION;
+		INSERT INTO clt_base_ligne ([%sInsert%])
+		VALUES
+		[%sValues%];
+		COMMIT;
+	])
+fin
+
+renvoyer tabRequete
+
+fin:
+fFerme(nIdFichier)
+
+
+
+
+procédure interne CiviliteLongueVersCourte(pCiviliteLongue)
+
+	sCiviliteCourte est une chaîne ANSI
+
+	sCiviliteCourte = taaCivilite[Majuscule(SansAccent(pCiviliteLongue))]
+
+	si sCiviliteCourte = "" alors
+		renvoyer pCiviliteLongue
+	sinon
+		renvoyer sCiviliteCourte
+	fin
+
+fin

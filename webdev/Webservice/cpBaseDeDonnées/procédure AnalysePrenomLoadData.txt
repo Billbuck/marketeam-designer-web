@@ -1,0 +1,35 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// AnalysePrenomLoadData ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure AnalysePrenomLoadData(local sPrenom est une chaîne, taaPrenom est un tableau associatif de chaînes ANSI)
+
+sProfil	est une chaîne ANSI
+sSexe	est une chaîne ANSI
+
+si sPrenom <> "\N" _et_ sPrenom <> "" alors
+	sPrenom	= sPrenom.SansAccent()
+	sPrenom	= sPrenom.Majuscule()
+	sPrenom	= sPrenom.Remplace("'", "")
+	sPrenom	= sPrenom.Remplace("-", " ")
+	si pas taaPrenom[sPrenom]..Vide alors
+		sProfil	= taaPrenom[sPrenom][[1]]
+		sSexe	= taaPrenom[sPrenom][[2]]
+	sinon
+		sProfil	= __TEL_PROFIL_NON_DETERMINE__
+		sSexe	= __TEL_PROFIL_NON_DETERMINE__
+	fin
+sinon
+	sProfil	= __TEL_PROFIL_NON_DETERMINE__
+	sSexe	= __TEL_PROFIL_NON_DETERMINE__
+fin
+
+renvoyer (sSexe, sProfil)

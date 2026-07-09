@@ -1,0 +1,35 @@
+// Résumé : Supprime un enregistrement d'un fichier de données en fonction des critères spécifiés.
+// Syntaxe :
+// [ <Résultat> = ] BddSuppression (<stBddSuppression> est structWsRequeteBddSuppression)
+//
+// Paramètres :
+//	stBddSuppression (structWsRequeteBddSuppression) : La structure contenant les critères de suppression de l'enregistrement.
+// Valeur de retour :
+// 	Type indéterminé : Vrai si la suppression a été effectuée avec succès, Faux sinon.
+//
+// Cette fonction permet de supprimer un enregistrement d'un fichier de données en se basant
+// sur les critères spécifiés dans la structure passée en paramètre.
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+
+procédure BddSuppression(stBddSuppression est une structWsRequeteBddSuppression)
+
+
+si clt_base.LitRecherchePremier(IdBase, stBddSuppression.IdBase) alors
+	si clt_base.IdClient = Partage.__vcUser _et_ clt_base.IdContact = Partage.__vcUser.IDContact alors
+		si clt_base.Supprime() alors
+			renvoyer GénéreJsonSuccès("Base de données supprimée avec succès","")
+		sinon
+			GénéreJsonErreur("Erreur de suppression")
+			renvoyer Faux
+		fin
+	sinon
+		GénéreJsonErreur("Erreur d'authentification")
+		renvoyer Faux
+	fin
+sinon
+	GénéreJsonErreur("Erreur Base de données introuvable")
+	renvoyer Faux
+fin

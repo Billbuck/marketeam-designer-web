@@ -1,0 +1,51 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// DécouperLigneCsv ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure DécouperLigneCsv(sLigne est une chaîne ANSI, tabSeparateur est un tableau de chaînes ANSI)
+
+tabValeur		est un tableau de chaînes ANSI
+sSeparateur		est une chaîne ANSI
+sValeur			est une chaîne ANSI
+nPos			est un entier
+nMaxOccurrences	est un entier
+nOccurrences	est un entier
+
+// Détecter le séparateur utilisé (celui qui apparaît le plus)
+pour tout sSep de tabSeparateur
+	nOccurrences = sLigne.Occurrence(sSep)
+	si nOccurrences > nMaxOccurrences alors
+		nMaxOccurrences	= nOccurrences
+		sSeparateur		= sSep
+	fin
+fin
+
+// Si aucun séparateur trouvé, retourner la ligne entière
+si sSeparateur = "" alors
+	tabValeur.Ajoute(sLigne)
+	renvoyer tabValeur
+fin
+
+// Découper la ligne
+nPos	= 1
+sValeur	= sLigne.ExtraitChaîne(nPos, sSeparateur)
+tantque sValeur <> EOT
+	// Nettoyer les guillemets si présents
+	si sValeur.Gauche(1) = """" _et_ sValeur.Droite(1) = """" alors
+		sValeur = sValeur.Milieu(2, sValeur.Taille() - 2)
+	fin
+	tabValeur.Ajoute(sValeur)
+	nPos++
+	sValeur = sLigne.ExtraitChaîne(nPos, sSeparateur)
+fin
+
+renvoyer tabValeur
+

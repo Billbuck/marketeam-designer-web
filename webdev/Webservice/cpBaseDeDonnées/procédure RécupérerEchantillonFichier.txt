@@ -1,0 +1,80 @@
+// Résumé : Lit les N premières lignes de DONNÉES d'un fichier d'import
+//          (CSV/TXT/XLS/XLSX) et renvoie, pour chaque colonne, ses valeurs
+//          concaténées (séparées par RC). Sert à l'inférence de type par le
+//          contenu (cf. InféreTypeColonne / AffineTypesOptionnels).
+//
+// Créée le 09/07/2026 (chantier refonte RubriqueAutomatique, point 3).
+//
+// Paramètres :
+//	pCheminFichier : chemin complet du fichier temporaire
+//	pTypeFichier   : __CSV__ / __TXT__ / __XLS__ / __XLSX__
+//	pNbLignesMax   : nombre de lignes de données échantillonnées (défaut 50)
+// Valeur de retour :
+// 	tableau associatif de chaînes ANSI : clé = indice de colonne (1..n),
+//	valeur = valeurs de la colonne séparées par RC
+//
+procédure RécupérerEchantillonFichier(pCheminFichier, pTypeFichier, pNbLignesMax = 50)
+
+nIdFichier		est un entier
+nLigne			est un entier
+nCol				est un entier
+sLigne			est une chaîne ANSI
+taaEchantillon	est un tableau associatif de chaînes ANSI
+tabSéparateur	est un tableau de chaînes ANSI
+tabValeur		est un tableau de chaînes ANSI
+xDocument		est un xlsDocument
+
+tabSéparateur.Ajoute(",")
+tabSéparateur.Ajoute(";")
+tabSéparateur.Ajoute(TAB)
+
+selon pTypeFichier
+	cas __CSV__, __TXT__
+		nIdFichier = fOuvre(pCheminFichier, foAnsi)
+		si nIdFichier = -1 alors renvoyer taaEchantillon
+
+		// Sauter la ligne d'en-têtes
+		sLigne = fLitLigne(nIdFichier)
+
+		tantque nLigne < pNbLignesMax
+			sLigne = fLitLigne(nIdFichier)
+			si sLigne = EOT alors sortir
+			nLigne++
+
+			tabValeur = DécouperLigneCsv(sLigne, tabSéparateur)
+			pour nCol = 1 _à_ tabValeur.Occurrence
+				AjouteValeur(nCol, tabValeur[nCol])
+			fin
+		fin
+		fFerme(nIdFichier)
+
+	cas __XLS__, __XLSX__
+		xDocument					= xlsOuvre(pCheminFichier)
+		xDocument..Feuille		= 1
+
+		// Ligne 1 = en-têtes -> données à partir de la ligne 2
+		pour nLigne = 2 _à_ Min(xDocument..NombreLigne, pNbLignesMax + 1)
+			pour nCol = 1 _à_ xDocument..NombreColonne
+				AjouteValeur(nCol, xDocument[nLigne, nCol]..Valeur)
+			fin
+		fin
+		xDocument.Ferme()
+fin
+
+renvoyer taaEchantillon
+
+	// pValeur est LOCAL (passage par valeur) : une cellule Excel (..Valeur)
+	// renvoie un variant, refusé en passage par référence vers une chaîne
+	// typée (erreur 1143 en prod). « local » autorise la conversion.
+	procédure interne AjouteValeur(pColonne est un entier, local pValeur est une chaîne ANSI)
+
+		// Neutraliser les RC internes (cellule Excel multi-lignes) :
+		// RC est le séparateur de valeurs de l'échantillon
+		sValeur est une chaîne ANSI = pValeur.Remplace([RC, Caract(13), Caract(10)], " ")
+
+		si taaEchantillon[pColonne]..Vide = Vrai alors
+			taaEchantillon[pColonne] = sValeur
+		sinon
+			taaEchantillon[pColonne] += RC + sValeur
+		fin
+	fin

@@ -1,0 +1,61 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] BddModification ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Type indéterminé : // 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure BddModification(stModification est une structWsRequeteBddModification)
+
+
+stBaseDeDonnées			est une structWsBaseDeDonnées
+jsonEntête				est une chaîne ANSI
+sEntete					est une chaîne ANSI
+stInformations			est une structInformations
+jsonStructInformations	est une chaîne ANSI
+stImportationReponse	est une structWsReponseBddImportation
+
+si wbs_base.LitRecherchePremier(IdWbsBase, stModification.IdWbsBase) alors
+	sEntete = wbs_base.Json
+	Désérialise(stBaseDeDonnées,sEntete,psdJSON)
+fin
+
+
+stBaseDeDonnées.stMapping 	= stModification.stMapping
+
+stInformations = VérifierColonnesMapping(stBaseDeDonnées)
+si stInformations.tabColonnesManquantes.Occurrence > 0 _ou_ stInformations.tabColonnesExploitées.Occurrence = 0
+	Sérialise(stInformations, jsonStructInformations,psdJSON)
+	//	fAjouteTexte(fRepDonnées() + "\Importation.txt",RC + "Informations" + RC + bufInformations)
+	GénéreJsonErreur("Erreur de modification", jsonStructInformations)
+	renvoyer Faux
+fin
+
+
+stBaseDeDonnées.tabImportChamp = IdentificationDesColonnes(stBaseDeDonnées)
+
+Sérialise(stBaseDeDonnées,jsonEntête,psdJSON)
+
+si wbs_base.LitRecherchePremier(IdWbsBase, stModification.IdWbsBase) alors
+	wbs_base.DateHeureModification = DateHeureSys()
+	wbs_base.Json = jsonEntête
+	si wbs_base.Modifie() alors
+		stImportationReponse.Message			= "Vérification des colonnes terminée. Veuillez confirmer pour continuer."
+		stImportationReponse.IdWbsBase			= wbs_base.IdWbsBase
+		stImportationReponse.taaColonne			= stBaseDeDonnées.taaColonne
+		stImportationReponse.stMapping			= stBaseDeDonnées.stMapping
+		stImportationReponse.stInformations		= stInformations
+		renvoyer GénéreJsonPending(stImportationReponse)
+	sinon
+		GénéreJsonErreur("Erreur Interne" +RC+ HErreurInfo(hErrComplet))
+		renvoyer Faux
+	fin
+sinon
+	GénéreJsonErreur("Erreur Interne" +RC+ HErreurInfo(hErrComplet))
+	renvoyer Faux
+fin

@@ -1,0 +1,42 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] ComptabiliseLigne (<stImport> est structWsBaseDeDonnées, <stTestLigne> est StructWsBddTestLigne)
+//
+// Paramètres :
+//	stImport (structWsBaseDeDonnées) : <indiquez ici le rôle de stImport>
+//	stTestLigne (StructWsBddTestLigne) : <indiquez ici le rôle de stTestLigne>
+// Valeur de retour :
+// 	booléen : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure ComptabiliseLigne(stBaseDeDonnées est une structWsBaseDeDonnées, stTestLigne est une StructWsBddTestLigne)
+
+bSociete	est un booléen
+bContact	est un booléen
+bTel		est un booléen
+bPortable 	est un booléen
+bFixe 		est un booléen
+bEmail		est un booléen
+bAdresse	est un booléen
+
+
+si stTestLigne.Societe _ou_ stTestLigne.Enseigne	alors bSociete = Vrai
+si stTestLigne.Contact _ou_ stTestLigne.Nom			alors bContact = Vrai
+si stTestLigne.Tel _ou_ stTestLigne.Portable		alors bTel = Vrai
+si stTestLigne.Tel									alors bFixe = Vrai
+si stTestLigne.Portable								alors bPortable = Vrai
+si stTestLigne.Email								alors bEmail = Vrai
+si stTestLigne.CodePostal _et_ stTestLigne.Ville _et_ (stTestLigne.Adresse1 _ou_ stTestLigne.Adresse2 _ou_ stTestLigne.Adresse3 _ou_ stTestLigne.Adresse4) alors bAdresse = Vrai
+
+stBaseDeDonnées.stInformations.NbrSociete	+= bSociete
+stBaseDeDonnées.stInformations.NbrContact	+= bContact
+stBaseDeDonnées.stInformations.NbrTel		+= bTel
+stBaseDeDonnées.stInformations.NbrFixe		+= bFixe
+stBaseDeDonnées.stInformations.NbrSms		+= bPortable
+stBaseDeDonnées.stInformations.NbrEmail		+= bEmail
+stBaseDeDonnées.stInformations.NbrAdresse	+= bAdresse
+stBaseDeDonnées.stInformations.NbrTotal		+= (bTel _ou_ bEmail _ou_ bAdresse)
+
+renvoyer (bTel + bFixe + bPortable + bEmail + bAdresse) > 0

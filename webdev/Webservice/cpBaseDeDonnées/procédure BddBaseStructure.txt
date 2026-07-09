@@ -1,0 +1,82 @@
+procédure BddBaseStructure(stRequeteBddStructure est une structWsRequeteBddBaseStructure)
+
+sTexteRequete 					est une chaîne ANSI
+sdReqBaseListe 					est une Source de Données
+stReponseBddBaseStructure		est une structWsReponseBddBaseStructure
+stFiltre 						est une structWsBddFiltre
+jsonStructBaseStructure 		est une chaîne ANSI
+
+
+si pas clt_base.LitRecherchePremier(IdBase,stRequeteBddStructure.IdBase) alors
+	GénéreJsonErreur("Base inconnu")
+	renvoyer Faux
+fin
+
+si clt_base.IdClient <> Partage.__vcUser.IDClient alors
+	GénéreJsonErreur("Baqe inconnu")
+	renvoyer Faux
+fin
+
+FichierVersMémoire(stReponseBddBaseStructure.stBase,clt_base)
+
+sTexteRequete = [
+	SELECT
+	clt_base_champ.*
+	FROM
+	clt_base_champ
+	WHERE
+	clt_base_champ.IdBase = [%clt_base.IdBase%]
+	ORDER BY
+	clt_base_champ.Ordre
+]
+
+si pas sdReqBaseListe.ExécuteRequêteSQL(clt_base.Connexion,hRequêteSansCorrection,sTexteRequete) alors
+	fSauveTexte(fRepDonnées() + "\ErreurRequete.txt",sTexteRequete)
+	GénéreJsonErreur("Erreur Requete")
+	renvoyer Faux
+fin
+FichierVersTableau(stReponseBddBaseStructure.stBase.tabBaseChamp,sdReqBaseListe)
+
+sTexteRequete = [
+	SELECT
+	clt_base_filtre.*
+	FROM
+	clt_base_filtre
+	WHERE
+	clt_base_filtre.IdBase = [%clt_base.IdBase%]
+	ORDER BY
+	clt_base_filtre.IdFiltre
+]
+si pas sdReqBaseListe.ExécuteRequêteSQL(clt_base.Connexion,hRequêteSansCorrection,sTexteRequete) alors
+	fSauveTexte(fRepDonnées() + "\ErreurRequete.txt",sTexteRequete)
+	GénéreJsonErreur("Erreur Requete")
+	renvoyer Faux
+fin
+
+FichierVersTableau(stReponseBddBaseStructure.stBase.tabBaseFiltre,sdReqBaseListe)
+
+pour tout stFiltre de stReponseBddBaseStructure.stBase.tabBaseFiltre
+	sTexteRequete = [
+		SELECT
+		clt_base_filtre_critere.*
+		FROM
+		clt_base_filtre_critere
+		WHERE
+		clt_base_filtre_critere.IdFiltre = [%stFiltre.IdFiltre%]
+		ORDER BY
+		clt_base_filtre_critere.IdCritere
+	]
+	si pas sdReqBaseListe.ExécuteRequêteSQL(clt_base.Connexion,hRequêteSansCorrection,sTexteRequete) alors
+		fSauveTexte(fRepDonnées() + "\ErreurRequete.txt",sTexteRequete)
+		GénéreJsonErreur("Erreur Requete")
+		renvoyer Faux
+	fin
+
+	FichierVersTableau(stFiltre.tabFiltreCritere,sdReqBaseListe)
+fin
+
+Sérialise(stReponseBddBaseStructure,jsonStructBaseStructure,psdJSON+psdMiseEnForme)
+
+
+renvoyer GénéreJsonSuccès("Structure de la base de données",jsonStructBaseStructure)
+

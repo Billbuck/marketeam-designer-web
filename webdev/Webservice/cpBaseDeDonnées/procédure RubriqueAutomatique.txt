@@ -1,0 +1,317 @@
+// Résumé : Propose automatiquement un mapping (standard + optionnel) à partir
+//          des en-têtes de colonnes d'un fichier client (CSV/XLS).
+//
+// Refonte 09/07/2026 : le « selon Vrai » historique (~90 cas) est remplacé par
+// une TABLE DE RÈGLES parcourue dans l'ordre par un moteur générique.
+// Ajouter/modifier une reconnaissance = ajouter/modifier UNE ligne AjouteRegle.
+//
+// Format d'une règle : AjouteRegle(<mots-clés>, <cibles>)
+//	<mots-clés> : mots séparés par « + », TOUS doivent matcher. Préfixes :
+//		(aucun)	le mot doit être CONTENU dans l'en-tête
+//		=		le mot doit être contenu en MOT COMPLET
+//		!		le mot ne doit PAS être contenu (négation)
+//		?		l'en-tête doit être EXACTEMENT égal au mot
+//	<cibles> : codes standard (__CHAMP_CODE_*) séparés par « > » : la première
+//		cible encore libre est retenue (cascade, ex. ADR 2 -> AD1 sinon AD2).
+//		Si toutes les cibles sont prises, on continue avec les règles suivantes.
+//		Cibles spéciales :
+//		"OPT"		champ optionnel Texte (colonne légitime mais non standard)
+//		"OPT:DAT"	champ optionnel pré-typé Date
+//	La comparaison se fait sur l'en-tête en MAJUSCULES SANS ACCENT.
+//
+// Corrections apportées lors de la refonte (vs comportement 8 ans) :
+//	- Plus AUCUNE colonne écartée en silence : les ex-exclusions (Date, Interlocuteur,
+//	  Vendeur, Nom de campagne, Civilité abrégée, Contact non exact) deviennent
+//	  des champs OPTIONNELS visibles au mapping (modifiables/supprimables).
+//	- Faux positifs corrigés : TEL ignore « HOTEL », BP et CP exigent un mot
+//	  complet, REF ignore « PREF(ECTURE) », PAY ignore « PAYE(UR/MENT) ».
+//
+// Paramètres :
+//	taaColonne : tableau associatif nom d'en-tête -> indice de colonne
+// Valeur de retour :
+// 	structWsBddMapping : mapping proposé (tabStandard + tabOptionnel + taaType)
+//
+procédure RubriqueAutomatique(local taaColonne est un tableau associatif d'entiers)
+
+// Les structures structAdresse1, structContact et structRegleMapping sont
+// déclarées dans le code de DÉCLARATION de la collection cpBaseDeDonnées
+// (déplacées le 09/07/2026, avec structDefChampStandard et structColonnes).
+
+nLigne 			est un entier
+nAdr1Position 	est un entier
+nConPosition 	est un entier
+bColonneTraitée	est un booléen
+sColonne		est une chaîne ANSI
+taaChamp		est un tableau associatif de chaînes
+stMapping 		est une structWsBddMapping
+stAdresse1 		est une structAdresse1
+stContact 		est une structContact
+tabRegle		est un tableau de structRegleMapping
+
+// ------------------------------------------------------------------
+// TABLE DES RÈGLES (l'ordre = la priorité, comme l'ancien selon Vrai)
+// ------------------------------------------------------------------
+
+// --- Colonnes légitimes mais NON standard -> optionnel (ex-exclusions silencieuses)
+AjouteRegle("NOM+CAMP",			"OPT")							// nom de campagne
+AjouteRegle("CIV+ABR",			"OPT")							// civilité abrégée
+AjouteRegle("DATE",				"OPT:" + __CHAMP_TYPE_DATE__)	// ex. « Date Rdv » (cf. bug 09/07/2026)
+AjouteRegle("INTERLOCUTEUR",	"OPT")
+AjouteRegle("VENDEUR",			"OPT")
+AjouteRegle("?CONTACT",			__CHAMP_CODE_CONTACT__)			// exactement « CONTACT » -> standard
+AjouteRegle("CONTACT",			"OPT")							// « CONTACT ... » (ex. Contact principal) -> optionnel
+
+// --- Standards spécifiques (motifs composés, prioritaires)
+AjouteRegle("COD+ALLIAGE",		__CHAMP_CODE_ALLIAGE__)
+AjouteRegle("PRENOM+RAISON",	__CHAMP_CODE_PRENOM__)
+AjouteRegle("PRENOM+ENSEIGNE",	__CHAMP_CODE_PRENOM__)
+AjouteRegle("=NOM+RAISON",		__CHAMP_CODE_NOM__)
+AjouteRegle("=NOM+ENSEIGNE",	__CHAMP_CODE_NOM__)
+AjouteRegle("=NOM+SOC",			__CHAMP_CODE_SOCIETE__)
+AjouteRegle("=NOM+ENT",			__CHAMP_CODE_SOCIETE__)
+AjouteRegle("=NOM+PRENOM",		__CHAMP_CODE_CONTACT__)
+
+// --- Adresse décomposée (numéro / complément / type / nom de voie)
+AjouteRegle("N°+VOI",			__CHAMP_CODE_NUMERO_VOIE__)
+AjouteRegle("Nº+VOI",			__CHAMP_CODE_NUMERO_VOIE__)
+AjouteRegle("NO+!NOM+VOI",		__CHAMP_CODE_NUMERO_VOIE__)
+AjouteRegle("NUM+VOI",			__CHAMP_CODE_NUMERO_VOIE__)
+AjouteRegle("N°+RUE",			__CHAMP_CODE_NUMERO_VOIE__)
+AjouteRegle("NUM+RUE",			__CHAMP_CODE_NUMERO_VOIE__)
+AjouteRegle("COMP+NUM",			__CHAMP_CODE_COMPLEMENT_NUMERO__)
+AjouteRegle("COMP+VOI",			__CHAMP_CODE_ADRESSE2__)
+AjouteRegle("COMP+RUE",			__CHAMP_CODE_ADRESSE2__)
+AjouteRegle("TYP+VOI",			__CHAMP_CODE_TYPE_VOIE__)
+AjouteRegle("TYP+RUE",			__CHAMP_CODE_TYPE_VOIE__)
+AjouteRegle("NOM+VOI",			__CHAMP_CODE_NOM_VOIE__)
+AjouteRegle("=NOM+RUE",			__CHAMP_CODE_NOM_VOIE__)
+
+// --- Adresses numérotées (cascade : première ligne d'adresse libre)
+AjouteRegle("ADR+1",			__CHAMP_CODE_ADRESSE1__)
+AjouteRegle("ADR+2",			__CHAMP_CODE_ADRESSE1__ + ">" + __CHAMP_CODE_ADRESSE2__)
+AjouteRegle("ADR+3",			__CHAMP_CODE_ADRESSE1__ + ">" + __CHAMP_CODE_ADRESSE2__ + ">" + __CHAMP_CODE_ADRESSE3__)
+AjouteRegle("ADR+4",			__CHAMP_CODE_ADRESSE1__ + ">" + __CHAMP_CODE_ADRESSE2__ + ">" + __CHAMP_CODE_ADRESSE3__ + ">" + __CHAMP_CODE_ADRESSE4__)
+AjouteRegle("COMP+ADR",			__CHAMP_CODE_ADRESSE2__ + ">" + __CHAMP_CODE_ADRESSE3__ + ">" + __CHAMP_CODE_ADRESSE4__)
+AjouteRegle("BOI+POS",			__CHAMP_CODE_ADRESSE2__ + ">" + __CHAMP_CODE_ADRESSE3__ + ">" + __CHAMP_CODE_ADRESSE4__)
+AjouteRegle("=BP",				__CHAMP_CODE_ADRESSE2__ + ">" + __CHAMP_CODE_ADRESSE3__ + ">" + __CHAMP_CODE_ADRESSE4__)	// mot complet : évite les faux positifs
+AjouteRegle("LIEU+DIT",			__CHAMP_CODE_ADRESSE2__ + ">" + __CHAMP_CODE_ADRESSE3__ + ">" + __CHAMP_CODE_ADRESSE4__)
+
+// --- Code postal / ville
+AjouteRegle("C+POS+VIL",		__CHAMP_CODE_CDP_VILLE__)
+AjouteRegle("C+POS",			__CHAMP_CODE_CODE_POSTAL__)
+AjouteRegle("COD+VIL",			__CHAMP_CODE_CDP_VILLE__)
+AjouteRegle("CP+VIL",			__CHAMP_CODE_CDP_VILLE__)
+AjouteRegle("CDP+VIL",			__CHAMP_CODE_CDP_VILLE__)
+
+// --- Téléphonie qualifiée (!HOTEL : « Hôtel » sans accent contient TEL)
+AjouteRegle("TEL+1+!HOTEL",		__CHAMP_CODE_TEL__)
+AjouteRegle("TEL+FIX+!HOTEL",	__CHAMP_CODE_TEL__)
+AjouteRegle("TEL+PRO+!HOTEL",	__CHAMP_CODE_TEL__)
+AjouteRegle("TEL+MOB",			__CHAMP_CODE_PORTABLE__)
+AjouteRegle("TEL+POR",			__CHAMP_CODE_PORTABLE__)
+
+// --- Standards génériques (motifs simples, en dernier)
+AjouteRegle("REF+!PREF",		__CHAMP_CODE_REFERENCE__)		// !PREF : évite « Préfecture »
+AjouteRegle("ALLIAGE",			__CHAMP_CODE_ALLIAGE__)
+AjouteRegle("SOC",				__CHAMP_CODE_SOCIETE__)
+AjouteRegle("ENS",				__CHAMP_CODE_ENSEIGNE__)
+AjouteRegle("CIV",				__CHAMP_CODE_CIVILITE__)
+AjouteRegle("TITRE",			__CHAMP_CODE_CIVILITE__)
+AjouteRegle("=NOM",				__CHAMP_CODE_NOM__)
+AjouteRegle("PRENOM",			__CHAMP_CODE_PRENOM__)
+AjouteRegle("ADR",				__CHAMP_CODE_ADRESSE1__)
+AjouteRegle("=CP",				__CHAMP_CODE_CODE_POSTAL__)		// mot complet : évite les faux positifs
+AjouteRegle("CDP",				__CHAMP_CODE_CODE_POSTAL__)
+AjouteRegle("VILL",				__CHAMP_CODE_VILLE__)
+AjouteRegle("MMUNE",			__CHAMP_CODE_VILLE__)			// co MMUNE
+AjouteRegle("LOCALITE",			__CHAMP_CODE_VILLE__)
+AjouteRegle("PAY+!PAYE",		__CHAMP_CODE_PAYS__)			// !PAYE : évite « Payeur », « Payement »
+AjouteRegle("TEL+!HOTEL",		__CHAMP_CODE_TEL__)
+AjouteRegle("GSM",				__CHAMP_CODE_PORTABLE__)
+AjouteRegle("PORTABLE",			__CHAMP_CODE_PORTABLE__)
+AjouteRegle("MOBILE",			__CHAMP_CODE_PORTABLE__)
+AjouteRegle("SMS",				__CHAMP_CODE_PORTABLE__)
+AjouteRegle("MAIL",				__CHAMP_CODE_EMAIL__)
+AjouteRegle("COURRIEL",			__CHAMP_CODE_EMAIL__)
+
+// ------------------------------------------------------------------
+// MOTEUR : première règle qui matche ET dont une cible est libre
+// ------------------------------------------------------------------
+pour tout nCol, sCol de taaColonne
+
+	sColonne		= Majuscule(sCol.SansAccent())
+	bColonneTraitée	= Faux
+
+	pour tout stRegle de tabRegle
+
+		si RegleMatche(sColonne, stRegle.Mots) alors
+
+			si Gauche(stRegle.Cibles, 3) = "OPT" alors
+				si stRegle.Cibles = "OPT" alors
+					AjouteOptionnel(nCol, sCol)
+				sinon
+					AjouteOptionnel(nCol, sCol, stRegle.Cibles.ExtraitChaîne(2, ":"))
+				fin
+				bColonneTraitée = Vrai
+			sinon
+				// Cascade : première cible standard encore libre
+				pour toute chaîne sCible de stRegle.Cibles séparée par ">"
+					si taaChamp[sCible]..Vide = Vrai alors
+						AjouteStandard(nCol, sCol, sCible)
+						bColonneTraitée = Vrai
+						SORTIR
+					fin
+				fin
+			fin
+
+			si bColonneTraitée alors SORTIR
+			// sinon : règle matchée mais cibles toutes prises -> règles suivantes
+		fin
+	fin
+
+	si pas bColonneTraitée alors
+		AjouteOptionnel(nCol, sCol)
+	fin
+fin
+
+// ------------------------------------------------------------------
+// Post-traitement : champs composés Contact et Adresse1
+// ------------------------------------------------------------------
+si nConPosition > 0 alors
+	stStandard est une structWsBddStandard
+	si stContact.Civ <> "" alors stStandard.Colonne.Ajoute(stContact.Civ)
+	si stContact.Nom <> "" alors stStandard.Colonne.Ajoute(stContact.Nom)
+	si stContact.Pre <> "" alors stStandard.Colonne.Ajoute(stContact.Pre)
+	si stStandard.Colonne.Occurrence > 1 alors // Il faut au moins 2 colonnes pour créer le contact
+		stStandard.Type = __CHAMP_CODE_CONTACT__
+		stMapping.tabStandard.Insère(nConPosition, stStandard)
+	sinon
+		nConPosition = 0
+	fin
+fin
+
+si nAdr1Position > 0 alors
+	si nConPosition > 0 alors nAdr1Position++
+	stStandard est une structWsBddStandard
+	si stAdresse1.Num <> "" alors stStandard.Colonne.Ajoute(stAdresse1.Num)
+	si stAdresse1.Cmp <> "" alors stStandard.Colonne.Ajoute(stAdresse1.Cmp)
+	si stAdresse1.Typ <> "" alors stStandard.Colonne.Ajoute(stAdresse1.Typ)
+	si stAdresse1.Nom <> "" alors stStandard.Colonne.Ajoute(stAdresse1.Nom)
+	stStandard.Type		= __CHAMP_CODE_ADRESSE1__
+	stMapping.tabStandard.Insère(nAdr1Position, stStandard)
+fin
+
+
+renvoyer stMapping
+
+	procédure interne AjouteRegle(pMots est une chaîne ANSI, pCibles est une chaîne ANSI)
+
+		stRegle est une structRegleMapping
+		stRegle.Mots	= pMots
+		stRegle.Cibles	= pCibles
+		tabRegle.Ajoute(stRegle)
+	fin
+
+
+	// Vrai si TOUS les mots-clés de la règle matchent l'en-tête pColonne
+	// (paramètres TYPÉS obligatoirement : sur un paramètre non typé, la
+	// résolution de Contient(..., MotComplet) échoue à l'exécution en prod
+	// 64 bits — erreur 1037 « Aucune syntaxe de 'Contient' ne correspond »)
+	procédure interne RegleMatche(pColonne est une chaîne ANSI, pMots est une chaîne ANSI) : booléen
+
+		sMotNu est une chaîne ANSI
+
+		pour toute chaîne sMot de pMots séparée par "+"
+			sMotNu = sMot[[2 à]]
+			selon sMot[[1]]
+				cas "!"		: si pColonne.Contient(sMotNu) alors renvoyer Faux
+				cas "="		: si pas pColonne.Contient(sMotNu, MotComplet) alors renvoyer Faux
+				cas "?"		: si pColonne <> sMotNu alors renvoyer Faux
+				autre cas	: si pas pColonne.Contient(sMot) alors renvoyer Faux
+			fin
+		fin
+		renvoyer Vrai
+	fin
+
+
+	procédure interne AjouteStandard(pColonne, pValeur, pType)
+
+		taaChamp[pType] = Vrai
+
+		stMapping.taaType[pColonne] = pType
+
+		selon pType
+			cas __CHAMP_CODE_NUMERO_VOIE__
+				stAdresse1.Num	= pValeur
+				taaChamp[__CHAMP_CODE_ADRESSE1__] = Vrai
+				nAdr1Position = (nAdr1Position = 0) ? (nLigne + 1) sinon nAdr1Position
+
+			cas __CHAMP_CODE_COMPLEMENT_NUMERO__
+				stAdresse1.Cmp	= pValeur
+				taaChamp[__CHAMP_CODE_ADRESSE1__] = Vrai
+				nAdr1Position = (nAdr1Position = 0) ? (nLigne + 1) sinon nAdr1Position
+
+			cas __CHAMP_CODE_TYPE_VOIE__
+				stAdresse1.Typ	= pValeur
+				taaChamp[__CHAMP_CODE_ADRESSE1__] = Vrai
+				nAdr1Position = (nAdr1Position = 0) ? (nLigne + 1) sinon nAdr1Position
+
+			cas __CHAMP_CODE_NOM_VOIE__
+				stAdresse1.Nom	= pValeur
+				taaChamp[__CHAMP_CODE_ADRESSE1__] = Vrai
+				nAdr1Position = (nAdr1Position = 0) ? (nLigne + 1) sinon nAdr1Position
+
+			cas __CHAMP_CODE_CIVILITE__
+				nLigne++
+				stStandard est une structWsBddStandard
+				stStandard.Colonne.Ajoute(pValeur)
+				stStandard.Type	= pType
+				stMapping.tabStandard.Ajoute(stStandard)
+
+				stContact.Civ		= pValeur
+				nConPosition		= (nLigne + 1)
+
+			cas __CHAMP_CODE_NOM__
+				nLigne++
+				stStandard est une structWsBddStandard
+				stStandard.Colonne.Ajoute(pValeur)
+				stStandard.Type	= pType
+				stMapping.tabStandard.Ajoute(stStandard)
+
+				stContact.Nom		= pValeur
+				nConPosition		= (nLigne + 1)
+
+			cas __CHAMP_CODE_PRENOM__
+				nLigne++
+				stStandard est une structWsBddStandard
+				stStandard.Colonne.Ajoute(pValeur)
+				stStandard.Type	= pType
+				stMapping.tabStandard.Ajoute(stStandard)
+
+				stContact.Pre		= pValeur
+				nConPosition		= (nLigne + 1)
+
+			autre cas
+				nLigne++
+				stStandard est une structWsBddStandard
+				stStandard.Colonne.Ajoute(pValeur)
+				stStandard.Type	= pType
+				stMapping.tabStandard.Ajoute(stStandard)
+		fin
+	fin
+
+
+	// pTypeOpt : type pré-proposé pour le champ optionnel (défaut Texte ;
+	// Date pour les colonnes dont l'en-tête contient « date », cf. 09/07/2026).
+	// Le type Texte pourra ensuite être affiné par AffineTypesOptionnels
+	// (analyse du CONTENU des premières lignes du fichier).
+	procédure interne AjouteOptionnel(pColonne, pValeur, pTypeOpt = __CHAMP_TYPE_TEXTE__)
+
+		stMapping.taaType[pColonne] = pTypeOpt
+
+		stOptionnel est une structWsBddOptionnel
+		stOptionnel.Colonne	= pValeur
+		stOptionnel.Libelle	= pValeur
+		stOptionnel.Type	= pTypeOpt
+		stMapping.tabOptionnel.Ajoute(stOptionnel)
+	fin

@@ -1,0 +1,39 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] BddFiltreSupprimer (<stRequeteFiltreSupprimer> est structWsRequeteBddFiltreSupprimer)
+//
+// Paramètres :
+//	stRequeteFiltreSupprimer (structWsRequeteBddFiltreSupprimer) : <indiquez ici le rôle de stRequeteFiltreSupprimer>
+// Valeur de retour :
+// 	Type indéterminé : // 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure BddFiltreSupprimer(stRequeteFiltreSupprimer est une structWsRequeteBddFiltreSupprimer)
+
+// Vérifications des données d'entrée
+si stRequeteFiltreSupprimer.IdFiltre <= 0 alors
+	GénéreJsonErreur("IdFiltre invalide", "L'identifiant du filtre est requis")
+	renvoyer Faux
+fin
+
+// Vérifie que le filtre existe et appartient au client
+si pas clt_base_filtre.LitRecherchePremier(IdFiltre, stRequeteFiltreSupprimer.IdFiltre) alors
+	GénéreJsonErreur("Filtre", "Introuvable")
+	renvoyer Faux
+fin
+
+si clt_base_filtre.IdClient <> Partage.__vcUser.IDClient alors
+	GénéreJsonErreur("Filtre", "Accès non autorisé")
+	renvoyer Faux
+fin
+
+// Suppression du filtre (la suppression des critères est automatique grâce à la contrainte de clé étrangère)
+si pas clt_base_filtre.Supprime() alors
+	GénéreJsonErreur("Erreur", "Impossible de supprimer le filtre")
+	renvoyer Faux
+fin
+
+renvoyer GénéreJsonSuccès("Filtre supprimé avec succès", "")
+

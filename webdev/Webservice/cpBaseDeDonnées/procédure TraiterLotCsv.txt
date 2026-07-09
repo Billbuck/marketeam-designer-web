@@ -1,0 +1,191 @@
+procédure TraiterLotCsv(stBaseDeDonnées est une structWsBaseDeDonnées, sFichierTemporaire est une chaîne, nLignesParLot est un entier, nIdBase est un entier, nPositionFichier est un entier = 0, nNbrLignesTotalConnu est un entier = 0)
+
+nIdFichier				est un entier
+nIdFichierExport		est un entier
+nLignesTraitees			est un entier	= 0
+nNbrLignesTotal		est un entier	= nNbrLignesTotalConnu
+sLigne					est une chaîne ANSI
+sLigneExport			est une chaîne ANSI
+sColonne				est une chaîne ANSI
+sContenu				est une chaîne ANSI
+// Encodage détecté UNE fois à l'import (cf. DétecteEncodageFichier 09/07/2026),
+// resérialisé via wbs_base.Json. Vide (ancien import) -> heuristique historique.
+sEncodage				est une chaîne ANSI	= stBaseDeDonnées.Encodage
+sSexe					est une chaîne ANSI
+sProfil					est une chaîne ANSI
+sFichierExport			est une chaîne
+sListeChamps			est une chaîne
+tabValeur				est un tableau de chaînes ANSI
+tabSeparateur			est un tableau de chaînes ANSI
+stImportChamp			est une structWsBddChamp
+stTestLigne				est une StructWsBddTestLigne
+taaPrenom				est un tableau associatif de chaînes ANSI
+taaCivilite				est un tableau associatif de chaînes ANSI
+sdReqInsert				est une Source de Données
+bTermine				est un booléen	= Faux
+nPositionFinLot			est un entier
+bAvecSexeProfil			est un booléen	= Faux
+
+tabSeparateur.Ajoute(",")
+tabSeparateur.Ajoute(";")
+tabSeparateur.Ajoute(TAB)
+
+taaPrenom		= ChargeTablePrenoms()
+taaCivilite		= ChargeTableCivilites()
+
+// Construire la liste des champs pour LOAD DATA
+sListeChamps	= "IdBase"
+pour tout stImportChamp de stBaseDeDonnées.tabImportChamp sur Ordre
+	sListeChamps += "," + stImportChamp.Champ
+	si stImportChamp.Champ = __CHAMP_PRENOM__ alors
+		bAvecSexeProfil = Vrai
+	fin
+fin
+si bAvecSexeProfil alors
+	sListeChamps += ",Sexe,Profil"
+fin
+
+// Ouvrir le fichier source en mode ANSI
+nIdFichier = fOuvre(fRepDonnées() + ["\"] + sFichierTemporaire, foLecture + foAnsi)
+
+si nIdFichier = -1 alors
+	renvoyer (0, 0, Vrai, 0)
+fin
+
+// Compter les lignes SEULEMENT au premier appel
+si nNbrLignesTotal = 0 alors
+	sLigne = fLitLigne(nIdFichier)
+	tantque sLigne <> EOT
+		nNbrLignesTotal++
+		sLigne = fLitLigne(nIdFichier)
+	fin
+	nNbrLignesTotal-- // Moins la ligne d'en-tête
+fin
+
+// Se positionner au bon endroit
+si nPositionFichier > 0 alors
+	fPositionne(nIdFichier, nPositionFichier, fpDébut)
+sinon
+	fPositionne(nIdFichier, 0, fpDébut)
+	sLigne = fLitLigne(nIdFichier) // Sauter l'en-tête
+fin
+
+// Créer le fichier CSV temporaire pour LOAD DATA
+sFichierExport		= fRepDonnées() + ["\"] + "import_lot_" + DateHeureSys() + ".csv"
+nIdFichierExport	= fCrée(sFichierExport, foAnsi)
+
+si nIdFichierExport = -1 alors
+	fFerme(nIdFichier)
+	renvoyer (0, nNbrLignesTotal, Vrai, 0)
+fin
+
+// Traiter le lot de lignes
+sLigne = fLitLigne(nIdFichier)
+
+tantque sLigne <> EOT et nLignesTraitees < nLignesParLot
+	nLignesTraitees++
+
+	VariableRAZ(stTestLigne)
+	tabValeur.SupprimeTout()
+	tabValeur		= DécouperLigneCsv(sLigne, tabSeparateur)
+
+	sLigneExport	= "" + nIdBase
+	sSexe			= ""
+	sProfil			= ""
+
+	pour tout stImportChamp de stBaseDeDonnées.tabImportChamp sur Ordre
+		sContenu = ""
+
+		pour tout nColonne de stImportChamp.tabColonne
+			selon stImportChamp.Extrait
+				cas 0
+					si nColonne <= tabValeur.Occurrence alors
+						// Conversion civilité si champ Contact et colonne civilité
+						si stImportChamp.Code = __CHAMP_CODE_CONTACT__ alors
+							si stBaseDeDonnées.stMapping.taaType[nColonne] = __CHAMP_CODE_CIVILITE__ alors
+								sContenu += [" "] + CiviliteLongueVersCourte(tabValeur[nColonne])
+							sinon
+								sContenu += [" "] + tabValeur[nColonne]
+							fin
+						sinon
+							sContenu += [" "] + tabValeur[nColonne]
+						fin
+					fin
+				cas 1
+					si nColonne <= tabValeur.Occurrence alors
+						sContenu = tabValeur[nColonne].ExtraitChaîne(1, " ")
+					fin
+				cas 2
+					si nColonne <= tabValeur.Occurrence alors
+						sContenu = tabValeur[nColonne][[tabValeur[nColonne].Position(" ") + 1 à ]]
+					fin
+			fin
+		fin
+
+		sColonne = TraiteValeurLoadData(sContenu, stImportChamp.Type, stImportChamp.Code, sEncodage)
+
+		si stImportChamp.Champ = __CHAMP_PRENOM__ alors
+			(sSexe, sProfil) = AnalysePrenomLoadData(sColonne, taaPrenom)
+		fin
+
+		AnalyseLigne(stTestLigne, sColonne, stImportChamp.Code)
+		sLigneExport += TAB + sColonne
+	fin
+
+	si ComptabiliseLigne(stBaseDeDonnées, stTestLigne) alors
+		si bAvecSexeProfil alors
+			sLigneExport += TAB + sSexe + TAB + sProfil
+		fin
+		fEcritLigne(nIdFichierExport, sLigneExport)
+	fin
+
+	// Sauvegarder la position AVANT de lire la ligne suivante
+	nPositionFinLot	= fPositionne(nIdFichier, 0, fpCourant)
+
+	sLigne			= fLitLigne(nIdFichier)
+fin
+
+// Vérifier si on a terminé
+si sLigne = EOT alors
+	bTermine = Vrai
+fin
+
+fFerme(nIdFichier)
+fFerme(nIdFichierExport)
+
+// Exécuter LOAD DATA INFILE
+si nLignesTraitees > 0 alors
+	// Remplacer les antislash pour MySQL
+	sFichierExportMySQL	est une chaîne	= sFichierExport.Remplace("\", "/")
+
+	sRequete			est une chaîne	= [
+		LOAD DATA LOCAL INFILE '[%sFichierExportMySQL%]'
+		INTO TABLE clt_base_ligne
+		CHARACTER SET latin1
+		FIELDS TERMINATED BY '\t'
+		LINES TERMINATED BY '\r\n'
+		([%sListeChamps%])
+	]
+
+	sdReqInsert.ExécuteRequêteSQL(clt_base_ligne.Connexion, hRequêteSansCorrection, sRequete)
+fin
+
+// Supprimer le fichier temporaire d'export
+fSupprime(sFichierExport)
+
+sdReqInsert.AnnuleDéclaration()
+
+// Retourner les résultats
+renvoyer (nLignesTraitees, nNbrLignesTotal, bTermine, nPositionFinLot)
+
+
+	// Procédure interne pour convertir les civilités
+	procédure interne CiviliteLongueVersCourte(pCiviliteLongue)
+		sCiviliteCourte est une chaîne ANSI
+		sCiviliteCourte = taaCivilite[Majuscule(SansAccent(pCiviliteLongue))]
+		si sCiviliteCourte = "" alors
+			renvoyer pCiviliteLongue
+		sinon
+			renvoyer sCiviliteCourte
+		fin
+	fin

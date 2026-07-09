@@ -1,0 +1,21 @@
+procédure BddAnnulerMapping(local stAnnulation est une structWsRequeteBddAnnulation)
+
+si stAnnulation.IdWbsBase <= 0 alors
+	GénéreJsonErreur("IdWbsBase", "IdWbsBase invalide")
+	renvoyer Faux
+fin
+
+si pas wbs_base.LitRecherchePremier(IdWbsBase_IdClient_IdContact, [stAnnulation.IdWbsBase, Partage.__vcUser.IDClient, Partage.__vcUser.IDContact]) alors
+	GénéreJsonErreur("IdWbsBase", "Enregistrement introuvable")
+	renvoyer Faux
+fin
+
+si wbs_base.FichierTemporaire <> "" alors
+	si fFichierExiste(fRepDonnées() + ["\"] + wbs_base.FichierTemporaire) alors
+		fSupprime(fRepDonnées() + ["\"] + wbs_base.FichierTemporaire)
+	fin
+fin
+
+cpFonction.SupprimeEnregistrement(wbs_base..Nom, "IdWbsBase = " + stAnnulation.IdWbsBase)
+
+renvoyer GénéreJsonSuccès("Annulation", "OK")

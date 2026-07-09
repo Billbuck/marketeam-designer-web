@@ -660,6 +660,7 @@ fin
 structWsBaseDeDonnées est une Structure
 	IdBase				est un entier
 	TypeFichier			est une chaîne ANSI
+	Encodage			est une chaîne ANSI	// "UTF8" / "AINSI" — détecté UNE fois à l'import (cf. DétecteEncodageFichier 09/07/2026)
 	stMapping 			est une structWsBddMapping				<sérialise = "Mapping">
 	taaColonne			est un tableau associatif				<sérialise = "Colonnes"> d'entiers
 	tabImportChamp		est un tableau							<sérialise = "Champs"> de structWsBddChamp

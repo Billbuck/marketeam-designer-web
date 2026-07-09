@@ -1,0 +1,122 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// BddFiltreModifie ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure BddFiltreModifie(stRequeteFiltreModifie est une structWsRequeteBddFiltreModifie)
+// Variables locales
+stFiltreReponse		est une structWsReponseBddFiltre
+jsonReponseFiltre	est une chaîne ANSI
+sTexteRequete		est une chaîne
+sdReqSupprCriteres	est une Source de Données
+
+// Vérifications des données d'entrée
+si stRequeteFiltreModifie.IdFiltre <= 0 alors
+	GénéreJsonErreur("IdFiltre invalide", "L'identifiant du filtre est requis")
+	renvoyer Faux
+fin
+
+si stRequeteFiltreModifie.IdBase <= 0 alors
+	GénéreJsonErreur("IdBase invalide", "La base de données n'est pas spécifiée")
+	renvoyer Faux
+fin
+
+si stRequeteFiltreModifie.Nom = "" alors
+	GénéreJsonErreur("Nom du filtre", "Le nom du filtre est requis")
+	renvoyer Faux
+fin
+
+si stRequeteFiltreModifie.tabFiltreCritere.Occurrence = 0 alors
+	GénéreJsonErreur("Critères absents", "Au moins un critère de filtrage est requis")
+	renvoyer Faux
+fin
+
+// Vérifie que le filtre existe et appartient au client
+si pas clt_base_filtre.LitRecherchePremier(IdFiltre, stRequeteFiltreModifie.IdFiltre) alors
+	GénéreJsonErreur("Filtre", "Introuvable")
+	renvoyer Faux
+fin
+
+si clt_base_filtre.IdClient <> Partage.__vcUser.IDClient alors
+	GénéreJsonErreur("Filtre", "Accès non autorisé")
+	renvoyer Faux
+fin
+
+// Préparation de la phrase de condition
+sCondition est une chaîne
+sCondition = stRequeteFiltreModifie.Phrase
+
+pour nInd = 1 _à_ stRequeteFiltreModifie.tabFiltreCritere.Occurrence
+	sCondition = sCondition.Remplace(nInd, "[[" + nInd + "]]", MotComplet)
+fin
+
+// Mise à jour du filtre
+clt_base_filtre.DateHeureModification	= DateHeureSys()
+clt_base_filtre.UserModification		= "webservice"
+clt_base_filtre.Nom						= stRequeteFiltreModifie.Nom
+clt_base_filtre.Phrase					= sCondition
+
+si pas clt_base_filtre.Modifie() alors
+	GénéreJsonErreur("Erreur", "Impossible de modifier le filtre")
+	renvoyer Faux
+fin
+
+// Suppression des critères existants
+
+sTexteRequete = [
+	DELETE FROM clt_base_filtre_critere
+	WHERE IdFiltre = [% stRequeteFiltreModifie.IdFiltre %]
+]
+
+si pas sdReqSupprCriteres.ExécuteRequêteSQL(clt_base_filtre_critere.Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	GénéreJsonErreur("Erreur", "Impossible de supprimer les critères existants")
+	renvoyer Faux
+fin
+
+// Ajout des nouveaux critères
+pour tout stCritere de stRequeteFiltreModifie.tabFiltreCritere
+	clt_base_filtre_critere.RAZ()
+	clt_base_filtre_critere.IdFiltre		= stRequeteFiltreModifie.IdFiltre
+	clt_base_filtre_critere.IdBaseChamp		= stCritere.IdBaseChamp
+	clt_base_filtre_critere.Filtre			= stCritere.Filtre
+	clt_base_filtre_critere.Valeur1			= stCritere.Valeur1
+	clt_base_filtre_critere.Valeur2			= stCritere.Valeur2
+
+	si pas clt_base_filtre_critere.Ajoute() alors
+		GénéreJsonErreur("Erreur", "Impossible d'ajouter un critère au filtre")
+		renvoyer Faux
+	fin
+fin
+
+// Préparation de la réponse
+stFiltreReponse.IdFiltre	= stRequeteFiltreModifie.IdFiltre
+stFiltreReponse.Message		= "Filtre modifié avec succès"
+
+// Calcul des totaux
+Partage.CalculeTotauxClientBaseFiltre(stRequeteFiltreModifie.IdBase, stRequeteFiltreModifie.IdFiltre)
+
+si clt_base_filtre.LitRecherchePremier(IdFiltre, stRequeteFiltreModifie.IdFiltre) alors
+	stFiltreReponse.NbrSociete	= clt_base_filtre.NbrSociete
+	stFiltreReponse.NbrContact	= clt_base_filtre.NbrContact
+	stFiltreReponse.NbrAdresse	= clt_base_filtre.NbrAdresse
+	stFiltreReponse.NbrEmail	= clt_base_filtre.NbrEmail
+	stFiltreReponse.NbrFixe		= clt_base_filtre.NbrFixe
+	stFiltreReponse.NbrSms		= clt_base_filtre.NbrSms
+	stFiltreReponse.NbrTel		= clt_base_filtre.NbrTel
+	stFiltreReponse.NbrTotal	= clt_base_filtre.NbrTotal
+fin
+
+
+Sérialise(stFiltreReponse, jsonReponseFiltre, psdJSON+psdMiseEnForme)
+
+renvoyer GénéreJsonSuccès("Filtre modifié avec succès", jsonReponseFiltre)
+
+fin:
+sdReqSupprCriteres.AnnuleDéclaration()

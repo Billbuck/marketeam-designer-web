@@ -1,0 +1,118 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// BddTraitement ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure BddTraitement(local stRequete est un structWsRequeteTraitement)
+
+nLignesParLot				est un entier	= 5000
+stBaseDeDonnées				est une structWsBaseDeDonnées
+sJsonMapping				est une chaîne ANSI
+varReponse					est un Variant
+nNbrLignesTraitees			est un entier
+nNbrLignesTotal				est un entier
+nPositionFinLot				est un entier
+bTermine					est un booléen	= Faux
+
+// Vérifier le paramètre
+si stRequete.IdWbsBase <= 0 alors
+	GénéreJsonErreur("IdWbsBase", "IdWbsBase absent ou invalide")
+	renvoyer Faux
+fin
+
+// Lire l'enregistrement wbs_base
+si pas wbs_base.LitRecherchePremier(IdWbsBase_IdClient_IdContact, [stRequete.IdWbsBase, Partage.__vcUser.IDClient, Partage.__vcUser.IDContact]) alors
+	GénéreJsonErreur("IdWbsBase", "Enregistrement non trouvé")
+	renvoyer Faux
+fin
+
+// Vérifier le statut
+si wbs_base.Statut = __WBS_BDD_STATUT_TERMINE__ alors
+	varReponse.Progression	= 100
+	varReponse.Termine		= Vrai
+	varReponse.IdBase		= wbs_base.IdClientBase
+	renvoyer GénéreJsonSuccès("Traitement déjà terminé", VariantVersJSON(varReponse, psdMiseEnForme))
+fin
+
+// Désérialiser le mapping
+sJsonMapping = wbs_base.Json
+
+quand exception dans
+	Désérialise(stBaseDeDonnées, sJsonMapping, psdJSON)
+faire
+	GénéreJsonErreur("Json", "Erreur de désérialisation du mapping", 500)
+	renvoyer Faux
+fin
+
+
+// Traiter un lot de lignes selon le type de fichier
+selon stBaseDeDonnées.TypeFichier
+	cas __TXT__, __CSV__
+		(nNbrLignesTraitees, nNbrLignesTotal, bTermine, nPositionFinLot) = TraiterLotCsv(
+		stBaseDeDonnées,
+		wbs_base.FichierTemporaire,
+		nLignesParLot,
+		wbs_base.IdClientBase,
+		wbs_base.PositionFichier,
+		wbs_base.NbrLignesTotal
+		)
+	cas __XLS__, __XLSX__
+		(nNbrLignesTraitees, nNbrLignesTotal, bTermine, nPositionFinLot) = TraiterLotXls(
+		stBaseDeDonnées,
+		wbs_base.FichierTemporaire,
+		nLignesParLot,
+		wbs_base.IdClientBase,
+		wbs_base.PositionFichier,
+		wbs_base.NbrLignesTotal
+		)
+	autre cas
+		GénéreJsonErreur("TypeFichier", "Type de fichier non supporté")
+		renvoyer Faux
+fin
+
+
+// Mettre à jour wbs_base avec les nouvelles positions
+wbs_base.LigneEnCours		= wbs_base.LigneEnCours + nNbrLignesTraitees
+wbs_base.PositionFichier	= nPositionFinLot
+wbs_base.NbrLignesTotal		= nNbrLignesTotal
+
+si bTermine alors
+	wbs_base.Statut			= __WBS_BDD_STATUT_TERMINE__
+	wbs_base.Progression	= 100
+
+	// Recalculer les totaux directement depuis la base (dédoublonnés)
+	CalculeTotauxClientBase(wbs_base.IdClientBase)
+
+	// Supprimer le fichier temporaire
+	si fFichierExiste(fRepDonnées() + ["\"] + wbs_base.FichierTemporaire) alors
+		fSupprime(fRepDonnées() + ["\"] + wbs_base.FichierTemporaire)
+	fin
+
+	// Supprimer l'enregistrement wbs_base
+	cpFonction.SupprimeEnregistrement(wbs_base..Nom, "IdWbsBase = " + wbs_base.IdWbsBase)
+
+sinon
+	// Calculer la progression
+	si nNbrLignesTotal > 0 alors
+		wbs_base.Progression = Arrondi((wbs_base.LigneEnCours / nNbrLignesTotal) * 100)
+	fin
+fin
+
+wbs_base.DateHeureModification = DateHeureSys()
+wbs_base.Modifie()
+
+// Réponse
+varReponse.Progression		= wbs_base.Progression
+varReponse.Termine			= bTermine
+varReponse.LignesTraitees	= wbs_base.LigneEnCours
+varReponse.LignesTotal		= nNbrLignesTotal
+varReponse.IdBase			= wbs_base.IdClientBase
+
+renvoyer GénéreJsonSuccès("Traitement en cours", VariantVersJSON(varReponse, psdMiseEnForme))

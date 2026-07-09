@@ -1,0 +1,47 @@
+// Résumé : Détecte l'encodage d'un fichier texte (CSV/TXT) de manière
+//          DÉTERMINISTE, une seule fois pour TOUT le fichier.
+//
+// Créée le 09/07/2026 (correctif encodage import : mojibake « BÃ¢timent »).
+//
+// Pourquoi : l'ancienne détection se faisait valeur par valeur, avec une
+// liste d'accents incomplète (« â » absent...), et la première valeur mal
+// classée verrouillait l'encodage de tout le fichier. Ici on s'appuie sur
+// la STRUCTURE binaire de l'UTF-8 (grammaire stricte) :
+//	1. BOM UTF-8 (EF BB BF) en tête -> UTF8, certain.
+//	2. Test aller-retour : si décoder le fichier comme de l'UTF-8 puis le
+//	   ré-encoder redonne EXACTEMENT les mêmes octets, c'est de l'UTF-8
+//	   valide (un fichier ANSI accentué échoue toujours à ce test, car ses
+//	   octets 0xE0-0xFF isolés violent la grammaire UTF-8).
+//	3. Sinon -> ANSI (Windows-1252).
+// Un fichier 100 % ASCII passe le test et renvoie UTF8 : sans importance,
+// les deux encodages sont identiques sur l'ASCII.
+//
+// Limite assumée : un caractère UTF-8 sans équivalent ANSI (emoji...) fait
+// échouer l'aller-retour -> fichier traité en ANSI. Cas marginal pour des
+// fichiers clients français, et l'ancien code ne le gérait pas non plus.
+//
+// Paramètres :
+//	pCheminFichier : chemin complet du fichier à analyser
+// Valeur de retour :
+// 	chaîne : "UTF8" ou "AINSI" (valeurs attendues par TraiteValeur/LoadData)
+//
+procédure DétecteEncodageFichier(pCheminFichier)
+
+bufFichier	est un Buffer = fChargeBuffer(pCheminFichier)
+sAnsi		est une chaîne ANSI
+
+si Taille(bufFichier) = 0 alors renvoyer "AINSI"
+
+// 1. BOM UTF-8 en tête de fichier
+si Taille(bufFichier) >= 3 _et_ bufFichier[[à 3]] = Caract(0xEF) + Caract(0xBB) + Caract(0xBF) alors
+	renvoyer "UTF8"
+fin
+
+// 2. Test structurel aller-retour UTF-8
+sAnsi = UTF8VersChaîne(bufFichier)
+si ChaîneVersUTF8(sAnsi) = bufFichier alors
+	renvoyer "UTF8"
+fin
+
+// 3. Par défaut : ANSI (Windows-1252)
+renvoyer "AINSI"

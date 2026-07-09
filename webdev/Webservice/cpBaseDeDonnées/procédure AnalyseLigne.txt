@@ -1,0 +1,36 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//AnalyseLigne (<stTestLigne>, <pColonne>, <pcode>)
+//
+// Paramètres :
+// 	stTestLigne : <indiquez ici le rôle de stTestLigne>
+//	pColonne : <indiquez ici le rôle de pColonne>
+//	pcode : <indiquez ici le rôle de pcode>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure AnalyseLigne(stTestLigne, pColonne, pcode)
+
+si pColonne <> "NULL" _et_ pColonne <> "\N" _et_ pColonne <> "" _et_ pcode <> "" alors
+	selon pcode
+		cas __CHAMP_CODE_SOCIETE__		: stTestLigne.Societe		= Vrai
+		cas __CHAMP_CODE_ENSEIGNE__		: stTestLigne.Enseigne		= Vrai
+		cas __CHAMP_CODE_CIVILITE__		: stTestLigne.Civilite		= Vrai
+		cas __CHAMP_CODE_NOM__			: stTestLigne.Nom 			= Vrai
+		cas __CHAMP_CODE_PRENOM__		: stTestLigne.Prenom		= Vrai
+		cas __CHAMP_CODE_CONTACT__		: stTestLigne.Contact		= Vrai
+		cas __CHAMP_CODE_TEL__			: stTestLigne.Tel			= Vrai
+		cas __CHAMP_CODE_PORTABLE__		: stTestLigne.Portable		= Vrai
+		cas __CHAMP_CODE_EMAIL__		: stTestLigne.Email			= Vrai
+		cas __CHAMP_CODE_ADRESSE1__		: stTestLigne.Adresse1		= Vrai
+		cas __CHAMP_CODE_ADRESSE2__		: stTestLigne.Adresse2		= Vrai
+		cas __CHAMP_CODE_ADRESSE3__		: stTestLigne.Adresse3		= Vrai
+		cas __CHAMP_CODE_ADRESSE4__		: stTestLigne.Adresse4		= Vrai
+		cas __CHAMP_CODE_CODE_POSTAL__	: stTestLigne.CodePostal	= Vrai
+		cas __CHAMP_CODE_VILLE__		: stTestLigne.Ville			= Vrai
+		autre cas
+	fin
+fin
