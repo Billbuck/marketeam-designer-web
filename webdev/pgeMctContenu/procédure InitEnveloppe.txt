@@ -1,0 +1,62 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//Init ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure InitEnveloppe()
+
+sPrefixe est une chaîne
+
+
+si __stOperation.TypeOperation = __OPERATION_TRACTEVA__ alors
+	dispContenu[1].Visible = Faux
+	retour
+fin
+
+selon __stOperation.TypeOperation
+	cas __OPERATION_COURRIER__							: sPrefixe = "ltr-"
+	cas __OPERATION_TRACTEVA__,__OPERATION_SMARTEVA__	: sPrefixe = "ttb-"
+fin
+
+
+InitTboEnveloppeClient()
+
+si __stOperation.stOperationLettre.stEnveloppe.EstAdressageExpediteur _ou_ __stOperation.stOperationLettre.stEnveloppe.EstAdressageLogo _ou_ __stOperation.stOperationLettre.stEnveloppe.EstAdressagePromotion alors
+	intAdressageExpediteur.Etat		= Grisé
+	intAdressageLogo.Etat			= Grisé
+	intAdressagePromotion.Etat		= Grisé
+fin
+
+intAdressageExpediteur			= __stOperation.stOperationLettre.stEnveloppe.EstAdressageExpediteur
+intAdressageLogo				= __stOperation.stOperationLettre.stEnveloppe.EstAdressageLogo
+intAdressagePromotion			= __stOperation.stOperationLettre.stEnveloppe.EstAdressagePromotion
+
+si ltr_enveloppe.LitRecherchePremier(IdEnveloppe,__stOperation.stOperationLettre.IdEnveloppe) alors
+	imgEnveloppe..Image			= "ext/Enveloppes/" + sPrefixe + ltr_enveloppe.FichierApercu + "-out" + __SVG__
+	libEnveloppeDesignation		= "Adressage enveloppe " + ltr_enveloppe.Libelle
+
+	// En modification, FichierApercu et EnveloppeFond ne sont pas dans ope_lettre
+	// -> les renseigner depuis ltr_enveloppe (données statiques du type d'enveloppe)
+	si __stOperation.stOperationLettre.stEnveloppe.FichierApercu = "" alors
+		__stOperation.stOperationLettre.stEnveloppe.FichierApercu = ltr_enveloppe.FichierApercu
+	fin
+
+	si __stOperation.stOperationLettre.stEnveloppe.EnveloppeFond.CheminPhysique	= "" alors
+		__stOperation.stOperationLettre.stEnveloppe.EnveloppeFond.CheminPhysique	= cpProjet.__sRepRacine + "Enveloppes\" + ltr_enveloppe.FichierApercu + __JPG__
+		__stOperation.stOperationLettre.stEnveloppe.EnveloppeFond.CheminRelatif		= cpProjet.__sHttpMarketeam + "Enveloppes/" + ltr_enveloppe.FichierApercu + __JPG__
+	fin
+fin
+
+// En modification avec JSON existant : on met à jour l'UI sans écraser le JSON
+si __stOperation.stOperationLettre.stEnveloppe.JsonDesignerData <> "" alors
+	SelectionAdressage(Faux)
+sinon
+	SelectionAdressage(Vrai)
+fin

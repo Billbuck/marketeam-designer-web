@@ -1,0 +1,31 @@
+procédure InitClassHtml()
+
+
+cboEnveloppeSelection..ClasseHTML			= ClassHtmlTypeOperation("cbo",__stOperation.TypeOperation)
+cboSource..ClasseHTML						= ClassHtmlTypeOperation("cbo",__stOperation.TypeOperation)
+cboBibliothèque..ClasseHTML					= ClassHtmlTypeOperation("cbo",__stOperation.TypeOperation)
+cboSelection..ClasseHTML					= ClassHtmlTypeOperation("cbo",__stOperation.TypeOperation)
+
+btnEnveloppeAperçu..ClasseHTML				= ClassHtmlTypeOperation("btn",__stOperation.TypeOperation,"apercu")
+btnEnveloppeSupprimer..ClasseHTML			= ClassHtmlTypeOperation("btn",__stOperation.TypeOperation,"supprimer")
+btnEnveloppeModèle..ClasseHTML				= ClassHtmlTypeOperation("btn",__stOperation.TypeOperation,"modele")
+btnEnveloppePersonnaliser..ClasseHTML		= ClassHtmlTypeOperation("btn",__stOperation.TypeOperation,"modifier")
+btnDocumentAperçu..ClasseHTML				= ClassHtmlTypeOperation("btn",__stOperation.TypeOperation,"apercu")
+btnPersonnalisationSupprimer..ClasseHTML	= ClassHtmlTypeOperation("btn",__stOperation.TypeOperation,"supprimer")
+btnDocumentImporter..ClasseHTML				= ClassHtmlTypeOperation("btn",__stOperation.TypeOperation,"importer")
+btnDocumentPersonnaliser..ClasseHTML		= ClassHtmlTypeOperation("btn",__stOperation.TypeOperation,"modifier")
+btnVerifieConcordence..ClasseHTML			= ClassHtmlTypeOperation("btn",__stOperation.TypeOperation,"valider")
+
+popUploadFichierDocument..ClasseHTML		= ClassHtmlTypeOperation("cel",__stOperation.TypeOperation,"popup")
+popDocumentModele..ClasseHTML				= ClassHtmlTypeOperation("cel",__stOperation.TypeOperation,"popup")
+popEnveloppeModele..ClasseHTML				= ClassHtmlTypeOperation("cel",__stOperation.TypeOperation,"popup")
+
+uplDocumentUpload..ClasseHTML				= ClassHtmlTypeOperation("btn",__stOperation.TypeOperation)
+btnValiderUpload..ClasseHTML				= ClassHtmlTypeOperation("btn",__stOperation.TypeOperation)
+btnPopupModeleValider..ClasseHTML			= ClassHtmlTypeOperation("btn",__stOperation.TypeOperation)
+
+btnAuditRemplissageChamps.Couleur			= Partage.CouleurTypeOperation(__stOperation.TypeOperation,"L")
+libTitrePopupDocument.Couleur				= Partage.CouleurTypeOperation(__stOperation.TypeOperation,"L")
+libTitrePopupModeleDocument.Couleur			= Partage.CouleurTypeOperation(__stOperation.TypeOperation,"L")
+libTitrePopupModeleEnveloppe.Couleur		= Partage.CouleurTypeOperation(__stOperation.TypeOperation,"L")
+

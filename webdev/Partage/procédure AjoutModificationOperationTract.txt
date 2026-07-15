@@ -1,0 +1,173 @@
+procédure AjoutModificationOperationTract(stOperation est une structOperation)
+
+
+stDocument est une structDocument
+sTexteRequete est une chaîne
+sdReqTractContenu est une Source de Données
+sListeDocument est une chaîne
+bEstModeCreation est un booléen = (stOperation.IdOperation = 0)  // On fait le test maintenant car après l'appel de AjoutModificationOperation l'IdOperation sera renseigné
+
+// On met à jour le booléen pour calculer le statut de l'opération dans le trigger HF
+stOperation.EstDocumentEnAttente = Faux
+stOperation.EstInjectionEnAttente = Faux
+
+pour tout stDocument de stOperation.stOperationTract.tabStDocument
+	si stDocument.EstDocumentEnAttente = Vrai alors
+		si stDocument.EstPdfClient = Vrai _ou_ stDocument.IdModele > 0 alors // Si EstDocumentEnAttente est a VRAI et que IdModele > 0 c'est que la personnalisation n'a toujours pas été faite.
+			stOperation.EstDocumentEnAttente = Vrai
+		sinon
+			stOperation.EstInjectionEnAttente = Vrai
+		fin
+	fin
+fin
+
+
+AjoutModificationOperation(stOperation)  // On ajoute / met à jour les données dans la table dos_operation
+
+si bEstModeCreation alors
+	ope_tract.RAZ()
+	ope_tract.IdTract = stOperation.IdOperation
+sinon
+	ope_tract.LitRecherchePremier(IdTract,stOperation.IdOperation)
+	si pas ope_tract.Trouve() alors
+		<compile si TypeConfiguration <> Webservice>
+			Info("Erreur positionnement ope_tract")
+		<fin>
+		renvoyer Faux
+	fin
+fin
+
+ope_tract.IdEnveloppe 							= stOperation.stOperationTract.IdEnveloppe
+ope_tract.IdEnveloppeClient						= stOperation.stOperationTract.IdEnveloppeClient
+ope_tract.IdEtude 								= stOperation.stOperationTract.IdEtude
+ope_tract.IdPackage 							= stOperation.stOperationTract.IdPackage
+ope_tract.IdCampagne	 						= stOperation.stOperationTract.IdCampagne
+ope_tract.QuantiteEnveloppeClient	 			= stOperation.stOperationTract.QuantiteEnveloppeClient
+ope_tract.PoidsTotal							= stOperation.stOperationTract.PoidsTotal
+ope_tract.SemaineDistribution					= stOperation.stOperationTract.SemaineDistribution
+//		ope_tract.IdAdressageClient						= stOperation.stOperationTract.stAdressageNoir.IdAdressageClient
+//		ope_tract.AdressageExpediteur 					= stOperation.stOperationTract.stAdressageNoir.TexteAdressageExpediteur
+//		ope_tract.IdPolice								= stOperation.stOperationTract.stAdressageNoir.IdPolice
+//		ope_tract.PoliceTaille							= stOperation.stOperationTract.stAdressageNoir.PoliceTaille
+//		ope_tract.PoliceCouleur							= stOperation.stOperationTract.stAdressageNoir.PoliceCouleur
+
+si stOperation.stOperationTract.IdEnveloppe = 0	 									alors ope_tract.IdEnveloppe..Null = Vrai
+si stOperation.stOperationTract.IdEnveloppeClient = 0 								alors ope_tract.IdEnveloppeClient..Null = Vrai
+si stOperation.stOperationTract.IdEtude = 0 										alors ope_tract.IdEtude..Null = Vrai
+si stOperation.stOperationTract.IdPackage = 0 										alors ope_tract.IdPackage..Null = Vrai
+si stOperation.stOperationTract.IdCampagne = 0 										alors ope_tract.IdCampagne..Null = Vrai
+//		SI stOperation.stOperationTract.stAdressageNoir.IdAdressageClient = 0				ALORS ope_tract.IdAdressageClient..Null = vrai
+//		SI stOperation.stOperationTract.stAdressageNoir.IdPolice = 0						ALORS ope_tract.IdPolice..Null = vrai
+//		SI stOperation.stOperationTract.stAdressageNoir.TexteAdressageExpediteur = ""		ALORS ope_tract.AdressageExpediteur..Null = vrai
+//		SI stOperation.stOperationTract.stAdressageNoir.PoliceTaille = ""					ALORS ope_tract.PoliceTaille..Null = vrai
+//		SI stOperation.stOperationTract.stAdressageNoir.PoliceCouleur = ""					ALORS ope_tract.PoliceCouleur..Null = vrai
+
+
+si bEstModeCreation alors
+	si pas ope_tract.Ajoute() alors
+		<compile si TypeConfiguration <> Webservice>
+			Info("Erreur :",ErreurInfo(errComplet))
+		<fin>
+		renvoyer Faux
+	fin
+sinon
+	si pas ope_tract.Modifie() alors
+		<compile si TypeConfiguration <> Webservice>
+			Info("Erreur :",ErreurInfo(errComplet))
+		<fin>
+		renvoyer Faux
+	fin
+fin
+
+
+
+//// On met a jour les informations de dispatche
+//pour TOUT stAdrexoAgence de stOperation.stOperationTract.stAdrexoEtude.tabStAdrexoAgence
+//	si HLitRecherchePremier(ttb_adrexo_etude_dispatch,PRIMARY,[stOperation.stOperationTract.stAdrexoEtude.IdAdrexoEtude,stAdrexoAgence.IdAdrexoAgence]) ALORS
+//		ttb_adrexo_etude_dispatch.NbrColis 		= stAdrexoAgence.NbrColis
+//		ttb_adrexo_etude_dispatch.PoidsTotal	= stAdrexoAgence.PoidsTotal
+//		ttb_adrexo_etude_dispatch.PrixAchat		= stAdrexoAgence.PrixAchat
+//		si pas HModifie(ttb_adrexo_etude_dispatch) ALORS
+//			renvoyer Faux
+//		FIN
+//	FIN
+//FIN
+
+
+
+// ******************************** Enregistrement des données de chaque document
+
+pour tout stDocument de stOperation.stOperationTract.tabStDocument
+	si stDocument.IdLettreContenu = 0 alors
+		ope_tract_contenu.RAZ()
+		ope_tract_contenu.IdTract = stOperation.IdOperation
+	sinon
+		ope_tract_contenu.LitRecherchePremier(IdTractContenu, stDocument.IdLettreContenu)
+		si pas ope_tract_contenu.Trouve() alors
+			<compile si TypeConfiguration <> Webservice>
+				Info("Erreur positionnement ope_tract_contenu")
+			<fin>
+
+			renvoyer Faux
+		fin
+	fin
+
+	ope_tract_contenu.IdModele 						= stDocument.IdModele
+	ope_tract_contenu.IdDocumentClient				= stDocument.IdDocumentClient
+	ope_tract_contenu.IdSupportGrammage 			= stDocument.IdSupportGrammage
+	ope_tract_contenu.EstRectoVerso 				= stDocument.EstRectoVerso
+	ope_tract_contenu.EstFondPerdu 					= stDocument.EstFondPerdu
+	ope_tract_contenu.NombrePage 					= stDocument.NombrePage
+	ope_tract_contenu.NomFichierOrigine 			= stDocument.NomFichierOrigine
+	ope_tract_contenu.ModeImpression 				= stDocument.ModeImpression
+	ope_tract_contenu.EstPdfClient					= stDocument.EstPdfClient
+	ope_tract_contenu.EstDocumentEnAttente 			= stDocument.EstDocumentEnAttente
+	ope_tract_contenu.IdPackageContenu 				= stDocument.IdPackageContenu
+	ope_tract_contenu.IdPapier 						= stDocument.IdPapier
+	ope_tract_contenu.QuantiteDocumentClient		= stDocument.QuantiteDocumentClient
+
+
+	si ope_tract_contenu.IdModele = 0 				alors ope_tract_contenu.IdModele..Null = Vrai
+	si ope_tract_contenu.IdDocumentClient = 0		alors ope_tract_contenu.IdDocumentClient..Null = Vrai
+	si ope_tract_contenu.IdPackageContenu = 0 		alors ope_tract_contenu.IdPackageContenu..Null = Vrai
+	si ope_tract_contenu.IdPapier = 0 				alors ope_tract_contenu.IdPapier..Null = Vrai
+
+	// Enregistrement du prix sélectionné
+	si stDocument.IdLettreContenu = 0 alors
+		si pas ope_tract_contenu.Ajoute() alors
+			<compile si TypeConfiguration <> Webservice>
+				Info("Erreur :",ErreurInfo(errComplet))
+			<fin>
+			renvoyer Faux
+		fin
+		stDocument.IdLettreContenu = ope_tract_contenu.IdTractContenu
+	sinon
+		si pas ope_tract_contenu.Modifie() alors
+			<compile si TypeConfiguration <> Webservice>
+				Info("Erreur :",ErreurInfo(errComplet))
+			<fin>
+			renvoyer Faux
+		fin
+	fin
+	sListeDocument += [","] + stDocument.IdLettreContenu
+fin
+
+
+// ******************************** Enregistrement des données de chaque distributeur, ne concerne que Smarteva et Tracteva Laser
+// En modification on supprime et on enregistre a nouveau
+// EN MODIFICATION ON SUPPRIME LES DOCUMENTS QUI NE SONT PLUS PRESENT
+
+si sListeDocument <> "" alors
+	sTexteRequete = ChaîneConstruit("DELETE FROM ope_tract_contenu WHERE IdTract = %1 AND IdTractContenu NOT IN (%2)",stOperation.IdOperation,sListeDocument)
+	si pas sdReqTractContenu.ExécuteRequêteSQL(ope_tract_contenu..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+		<compile si TypeConfiguration <> Webservice>
+			Info("Erreur requête AjoutModificationOperationTract")
+		<fin>
+		renvoyer Faux
+	fin
+fin
+
+renvoyer Vrai
+
+fin:
+sdReqTractContenu.AnnuleDéclaration()

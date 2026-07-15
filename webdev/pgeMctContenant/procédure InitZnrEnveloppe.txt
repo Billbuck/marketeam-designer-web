@@ -1,0 +1,69 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//InitCboEnveloppe ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure InitZnrEnveloppe()
+
+nInd			est un entier
+sTexteRequete	est une chaîne
+sdReqEnveloppe	est une Source de Données
+sWhere			est une chaîne
+sPrefixe		est une chaîne
+
+selon __stOperation.TypeOperation
+	cas __OPERATION_COURRIER__							: sPrefixe = "ltr-"
+	cas __OPERATION_TRACTEVA__,__OPERATION_SMARTEVA__	: sPrefixe = "ttb-"
+fin
+
+selon Vrai
+	cas __stOperation.TypeOperation = __OPERATION_SMARTEVA__ 	: sWhere = "AND NbrFenetre = 0"
+	cas __stOperation.stOperationLettre.EstMarketing = Vrai 	: sWhere = "AND EstMarketing = 1"
+	autre cas
+fin
+
+sTexteRequete =
+[
+	SELECT
+		NbrFenetre,
+		IdEnveloppe,
+		Libelle,
+		FichierApercu
+	FROM
+		ltr_enveloppe
+	WHERE
+		ltr_enveloppe.EstActif = 1
+		[%sWhere%]
+	ORDER BY 1
+]
+
+
+
+
+sTexteRequete = ChaîneConstruit(sTexteRequete,sWhere)
+
+si pas HExécuteRequêteSQL(sdReqEnveloppe, ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour
+fin
+
+pour tout sdReqEnveloppe
+	nInd = ZoneRépétéeAjouteLigne(znrEnveloppe)
+	znrEnveloppe[nInd].attNbrFenetre	= sdReqEnveloppe.NbrFenetre
+	znrEnveloppe[nInd].attIdEnveloppe 	= sdReqEnveloppe.IdEnveloppe
+	znrEnveloppe[nInd].libEnveloppe 	= sdReqEnveloppe.Libelle
+	znrEnveloppe[nInd].attImageOut		= "ext/Enveloppes/" + sPrefixe + sdReqEnveloppe.FichierApercu + "-out" + __SVG__
+	znrEnveloppe[nInd].attImageOver		= "ext/Enveloppes/" + sPrefixe + sdReqEnveloppe.FichierApercu + "-over" + __SVG__
+fin
+
+
+
+fin:
+HAnnuleDéclaration(sdReqEnveloppe)

@@ -1,0 +1,13 @@
+procédure InitClassHtml()
+
+
+popEnveloppe..ClasseHTML		= Partage.ClassHtmlTypeOperation("cel",__stOperation.TypeOperation,"popup")
+popTypeSupport..ClasseHTML		= Partage.ClassHtmlTypeOperation("cel",__stOperation.TypeOperation,"popup")
+btnZnrSupprimer..ClasseHTML		= Partage.ClassHtmlTypeOperation("btn",__stOperation.TypeOperation,"supprimer")
+btnZnrCadenas..ClasseHTML		= Partage.ClassHtmlTypeOperation("btn",__stOperation.TypeOperation,"cadenas")
+btnNouveau..ClasseHTML			= Partage.ClassHtmlTypeOperation("btn",__stOperation.TypeOperation)
+cboZnrSupport..ClasseHTML		= Partage.ClassHtmlTypeOperation("cbo",__stOperation.TypeOperation)
+cboZnrGrammage..ClasseHTML		= Partage.ClassHtmlTypeOperation("cbo",__stOperation.TypeOperation)
+cboZnrPapier..ClasseHTML		= Partage.ClassHtmlTypeOperation("cbo",__stOperation.TypeOperation)
+saiEnveloppe..ClasseHTML		= Partage.ClassHtmlTypeOperation("cbo",__stOperation.TypeOperation)
+libTitrePopupSupport..Couleur	= Partage.CouleurTypeOperation(__stOperation.TypeOperation,"XL")

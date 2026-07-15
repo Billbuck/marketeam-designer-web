@@ -1,0 +1,28 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] SaisieOk (<pPrecedent>)
+//
+// Paramètres :
+// 	pPrecedent : <indiquez ici le rôle de pPrecedent>
+
+// Valeur de retour :
+// 	booléen : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure SaisieOk(pPrecedent)
+
+
+si __stOperation.stOperationLettre.tabStDocument..Occurrence = 0 alors
+	si pPrecedent = Faux alors
+		PopupAfficheMessage("Merci de sélectionner un document",*,__stOperation.TypeOperation,__TOAST_INFORMATION__)
+	fin
+	renvoyer Faux
+fin
+
+si ControlePoids() = Faux alors
+	renvoyer Faux
+fin
+
+renvoyer Vrai

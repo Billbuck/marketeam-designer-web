@@ -1,0 +1,122 @@
+procédure SelectionTypeSupport()
+
+InitCboSupport()
+
+stDocument 	est un structDocument
+sPrefixe	est une chaîne
+
+selon __stOperation.TypeOperation
+	cas __OPERATION_COURRIER__							: sPrefixe = "ltr-"
+	cas __OPERATION_TRACTEVA__,__OPERATION_SMARTEVA__	: sPrefixe = "ttb-"
+fin
+
+stDocument.IdTypeSupport 			= znrTypeSupport.attIdTypeSupport
+stDocument.FichierApercu			= znrTypeSupport.attFichierApercu
+stDocument.LibelleTypeSupport		= znrTypeSupport.attLibelleTypeSupport
+stDocument.IdSupport 				= cboSupport..ValeurMémorisée
+stDocument.IdSupportGrammage 		= cboGrammage..ValeurMémorisée
+stDocument.LibelleSupport 			= cboSupport..ValeurAffichée
+stDocument.LibelleGrammage			= cboGrammage..ValeurAffichée
+stDocument.LibellePapier			= cboPapierDocumentClient..ValeurAffichée
+stDocument.EstFondPerdu				= Faux
+stDocument.EstDocumentEnAttente	= Vrai
+stDocument.EstPdfClient				= Vrai
+stDocument.RepertoireTravail 		= cpProjet.__sMarketeamRepRacine + cpProjet.__sRepUpload + "\"
+
+stDocument.IdPapier 		= cboPapierDocumentClient..ValeurMémorisée
+HLitRecherchePremier(ltr_papier,IdPapier,cboPapierDocumentClient..ValeurMémorisée)
+si HTrouve(ltr_papier) alors
+	stDocument.EstPapierCouche = ltr_papier.EstPapierCouche
+fin
+
+
+HLitRecherchePremier(ltr_support_grammage,IdSupportGrammage, cboGrammage..ValeurMémorisée)
+si HTrouve(ltr_support_grammage) alors
+	stDocument.A4PliableMachine 	= ltr_support_grammage.A4PliableMachine
+	stDocument.Poids 				= ltr_support_grammage.Poids
+	_rPoidsTotal 					+= stDocument.Poids
+fin
+
+si HLitRecherchePremier(ltr_type_support,IdTypeSupport,attIdTypeSupport) alors
+	stDocument.DelaiLaserSupplementaire		= ltr_type_support.DelaiLaserSupplementaire
+	stDocument.DelaiOffsetSupplementaire	= ltr_type_support.DelaiOffsetSupplementaire
+fin
+
+si HLitRecherchePremier(ltr_support,IdSupport, cboSupport..ValeurMémorisée) alors
+	stDocument.IdSupport 		= cboSupport..ValeurMémorisée
+	stDocument.HauteurOuvert 		= ltr_support.HauteurOuvert
+	stDocument.HauteurFerme 		= ltr_support.HauteurFerme
+	stDocument.LargeurOuvert 		= ltr_support.LargeurOuvert
+	stDocument.LargeurFerme 		= ltr_support.LargeurFerme
+	stDocument.NbPageObligatoire 	= ltr_support.NbPageObligatoire
+	stDocument.NbPageTotale			= ltr_support.NbPageTotale
+	stDocument.EstRectoVerso 		= saiRectoVerso //intRectoVerso
+
+	si ltr_support.NbPageObligatoire = 0 alors
+		stDocument.NombrePage = ((saiRectoVerso = 1) ? 2 sinon 1)
+	sinon
+		stDocument.NombrePage = ltr_support.NbPageObligatoire
+	fin
+fin
+
+// Compose la désignation du document
+Partage.LibelleDocumentDesignation(stDocument)
+
+saiEnveloppe..Etat = Grisé
+
+si __stOperation.stOperationLettre.EstEnveloppeFenetre = Vrai _et_ __stOperation.stOperationLettre.tabStDocument..Occurrence = 0 alors
+	stDocument.ModeImpressionSelectionne = __MODE_LASER__
+sinon
+	stDocument.ModeImpressionSelectionne = __MODE_AUTOMATIQUE__
+fin
+
+Ajoute(__stOperation.stOperationLettre.tabStDocument,stDocument)
+
+__stOperation.stOperationLettre.NumeroDocumentEnCours++
+nInd est un entier
+
+nInd = ZoneRépétéeAjouteLigne(znrContenu)
+si nInd > 1 alors
+	znrContenu[1].attVisibleBtnSupprimer					= Faux
+fin
+
+
+znrContenu[nInd].attFichierApercu							= stDocument.FichierApercu
+znrContenu[nInd].attNbPageObligatoire						= stDocument.NbPageObligatoire
+
+znrContenu[nInd].attVisibleBtnSupprimer						= Vrai
+
+znrContenu[nInd].attContenuCboGrammage						= cboGrammage..Contenu
+znrContenu[nInd].attContenuCboPapier						= cboPapierDocumentClient..Contenu
+znrContenu[nInd].attContenuCboSupport						= cboSupport..Contenu
+
+
+znrContenu[nInd].attValeurCboSupport						= cboSupport..ValeurMémorisée
+znrContenu[nInd].attValeurCboPapier							= cboPapierDocumentClient..ValeurMémorisée
+znrContenu[nInd].attValeurCboGrammage						= cboGrammage..ValeurMémorisée
+
+
+znrContenu[nInd].attLigneCboSupport							= cboSupport
+znrContenu[nInd].attLigneCboPapier							= cboPapierDocumentClient
+znrContenu[nInd].attLigneCboGrammage						= cboGrammage
+
+znrContenu[nInd].attListeIdCboSupport						= cboSupport..Note
+znrContenu[nInd].attListeIdCboPapier						= cboPapierDocumentClient..Note
+znrContenu[nInd].attListeIdCboGrammage						= cboGrammage..Note
+
+
+znrContenu[nInd].attLibelleDesignation						= attLibelleTypeSupport
+znrContenu[nInd].attPoids									= stDocument.Poids
+znrContenu[nInd].attValeurIntRectoVerso						= saiRectoVerso //intRectoVerso
+znrContenu[nInd].attValeurIntEstFondPerdu					= Faux
+znrContenu[nInd].intZnrEstFondPerdu..Etat					= Actif
+znrContenu[nInd].intZnrIntRectoVerso..Etat					= saiRectoVerso..Etat
+
+znrContenu[nInd].attImage									= "ext/Supports/" + sPrefixe + stDocument.FichierApercu + "-out" + __SVG__
+
+TunnelCalculeTarif()
+TunnelAfficheInformationsBandeauDroit()
+
+si pas _bAvecEnveloppe ou nInd = 4 alors
+	btnNouveau..Visible = Faux
+fin

@@ -12,35 +12,35 @@
 //
 procédure SaisieOk(pPrecedent)
 
-nInd est un entier
-nIdModele est un entier
-nIdDocumentClient est un entier
+nInd					est un entier
+nIdModele			est un entier
+nIdDocumentClient	est un entier
 
 
 pour toute ligne de znrLtrContenu
 	nInd++
 	selon ExtraitChaîne(attCboSouceGlien,attCboSourceValeur)
 		cas "F" // Fichier
-			
+
 		cas "M" // Modèle
 			nIdModele = ExtraitChaîne(attCboModeleGlien,attCboSelectionValeur)
 			si nIdModele = 0 alors
-				si pPrecedent = Faux alors 
-					PopupAfficheMessage("Merci de sélectionner un modèle",*,__OPERATION_COURRIER__,__TOAST_ANNULATION__)
+				si pPrecedent = Faux alors
+					PopupAfficheMessage("Merci de sélectionner un modèle",*,__stOperation.TypeOperation,__TOAST_ANNULATION__)
 				fin
 				renvoyer Faux
 			fin
-//			si __stOperation.stOperationLettre.tabStDocument[nInd].EstDocumentEnAttente = Vrai ALORS
-//				ToastAffiche("Merci de personnaliser le modèle",toastCourt,cvMilieu,chCentre,HTMLVersRVB(__COULEUR_ORANGE_MARKETEAM__))
-//				renvoyer faux
-//			FIN
-			
+			//			si __stOperation.stOperationLettre.tabStDocument[nInd].EstDocumentEnAttente = Vrai ALORS
+			//				ToastAffiche("Merci de personnaliser le modèle",toastCourt,cvMilieu,chCentre,HTMLVersRVB(__COULEUR_ORANGE_MARKETEAM__))
+			//				renvoyer faux
+			//			FIN
+
 		cas "C" // Document client
 			nIdDocumentClient = ExtraitChaîne(attCboDocumentGlien,attCboSelectionValeur)
 			si nIdDocumentClient = 0 alors
-//				SI pPrecedent = Faux ALORS ToastAffiche("Merci de sélectionner un document",toastCourt,cvMilieu,chCentre,HTMLVersRVB(__COULEUR_COURRIER_L__))
-				si pPrecedent = Faux alors 
-					PopupAfficheMessage("Merci de sélectionner un document",*,__OPERATION_COURRIER__,__TOAST_ANNULATION__)
+				//				SI pPrecedent = Faux ALORS ToastAffiche("Merci de sélectionner un document",toastCourt,cvMilieu,chCentre,HTMLVersRVB(__COULEUR_COURRIER_L__))
+				si pPrecedent = Faux alors
+					PopupAfficheMessage("Merci de sélectionner un document",*,__stOperation.TypeOperation,__TOAST_ANNULATION__)
 				fin
 				renvoyer Faux
 			fin
@@ -55,14 +55,14 @@ fin
 //   Documents en attente exclus (bouton indisponible pour eux).
 //   NB : via PageMémorise, un renvoyer Faux ne bloque que le sens SUIVANT
 //   (en précédent, PageMémorise renvoie pPrecedent) — assumé.
-stEtatRappNav	est une structDesignerEtatRapprochement = cpDesigner.RecalculeEtatRapprochement(__stOperation)
-nIndDocNav		est un entier = 0
+stEtatRappNav	est une structDesignerEtatRapprochement		= cpDesigner.RecalculeEtatRapprochement(__stOperation)
+nIndDocNav		est un entier										= 0
 pour tout stDocumentNav de __stOperation.stOperationLettre.tabStDocument
 	nIndDocNav++
 	si stDocumentNav.EstDocumentEnAttente = Faux alors
 		si stEtatRappNav.tabDocuments[nIndDocNav].QrRequis <> stDocumentNav.EstBatGenereAvecRapprochement alors
 			si pPrecedent = Faux alors
-				PopupAfficheMessage("Merci de régénérer le BAT du document " + nIndDocNav + " (bouton « Régénérer le BAT »)",*,__OPERATION_COURRIER__,__TOAST_ANNULATION__)
+				PopupAfficheMessage("Merci de régénérer le BAT du document " + nIndDocNav + " (bouton « Régénérer le BAT »)",*,__stOperation.TypeOperation,__TOAST_ANNULATION__)
 			fin
 			renvoyer Faux
 		fin

@@ -1,5 +1,5 @@
 si PageAfficheDialogue(pgeOuiNon, ...
-	"Souhaitez-vous annuler votre personnalisation ?", __OPERATION_COURRIER__) = Vrai alors
+	"Souhaitez-vous annuler votre personnalisation ?", __stOperation.TypeOperation) = Vrai alors
 
 	si SupprimerPersonnalisation(attNumDocument) alors
 

@@ -110,7 +110,8 @@ selon vMessage.action
 						fin
 
 						// ─── Marquer le document comme personnalisé ─────────────
-						__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].EstPersonnaliseDesigner			= Vrai
+						__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].EstPersonnaliseDesigner			= (Vrai _et_ __stOperation.TypeOperation = __OPERATION_COURRIER__)
+
 						__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].DateHeureDesigner					= DateHeureSys()
 
 						// ─── Marqueur d'état du BAT généré (rapprochement) ──────
@@ -158,7 +159,7 @@ selon vMessage.action
 
 					sinon
 						PopupAfficheMessage(
-						"Erreur lors de la génération du document" + RC + "Merci de réitérer l'opération", "Erreur", __OPERATION_COURRIER__, __TOAST_ANNULATION__)
+						"Erreur lors de la génération du document" + RC + "Merci de réitérer l'opération", "Erreur", __stOperation.TypeOperation, __TOAST_ANNULATION__)
 					fin
 				fin
 			fin

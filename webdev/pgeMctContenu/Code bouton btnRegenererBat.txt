@@ -71,7 +71,7 @@ si _nIndDoc >= 1 _et_ _nIndDoc <= __stOperation.stOperationLettre.tabStDocument.
 			fin
 		fin
 	sinon
-		PopupAfficheMessage("Erreur lors de la régénération du BAT" + RC + "Merci de réitérer l'opération", "Erreur", __OPERATION_COURRIER__, __TOAST_ANNULATION__)
+		PopupAfficheMessage("Erreur lors de la régénération du BAT" + RC + "Merci de réitérer l'opération", "Erreur", __stOperation.TypeOperation, __TOAST_ANNULATION__)
 	fin
 
 fin

@@ -1,0 +1,63 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//InitZnr ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure InitZnrContenu()
+
+
+stDocument	est une structDocument
+nInd		est un entier
+sPrefixe	est une chaîne
+
+selon __stOperation.TypeOperation
+	cas __OPERATION_COURRIER__							: sPrefixe = "ltr-"
+	cas __OPERATION_TRACTEVA__,__OPERATION_SMARTEVA__	: sPrefixe = "ttb-"
+fin
+
+
+pour tout stDocument de __stOperation.stOperationLettre.tabStDocument
+	nInd = ZoneRépétéeAjouteLigne(znrContenu)
+
+	__stOperation.stOperationLettre.NumeroDocumentEnCours = nInd
+
+	znrContenu[nInd].attPoids 						= stDocument.Poids
+	znrContenu[nInd].attFichierApercu 					= stDocument.FichierApercu
+	znrContenu[nInd].attLibelleDesignation 			= stDocument.LibelleTypeSupport + " " + stDocument.LibelleSupport
+	znrContenu[nInd].attValeurIntEstFondPerdu 			= stDocument.EstFondPerdu
+	znrContenu[nInd].attValeurIntRectoVerso 			= stDocument.EstRectoVerso
+	znrContenu[nInd].attNbPageObligatoire	 			= stDocument.NbPageObligatoire
+
+	znrContenu[nInd].intZnrEstFondPerdu..Etat 			= (stDocument.NomFichierOrigine <> "") ? AffichageSeulement sinon Actif
+ 	znrContenu[nInd].intZnrIntRectoVerso..Etat 		= (stDocument.NomFichierOrigine <> "" _ou_ stDocument.NbPageObligatoire <> 0) ? AffichageSeulement sinon Actif
+	znrContenu[nInd].cboZnrSupport..Etat				= (stDocument.NomFichierOrigine <> "") ? AffichageSeulement sinon Actif
+	znrContenu[nInd].cboZnrGrammage..Etat				= (stDocument.NomFichierOrigine <> "") ? AffichageSeulement sinon Actif
+	znrContenu[nInd].cboZnrPapier..Etat				= (stDocument.NomFichierOrigine <> "") ? AffichageSeulement sinon Actif
+
+	znrContenu[nInd].btnZnrSupprimer..Visible			= (stDocument.EstDocumentEnAttente = Vrai _et_ ((nInd = 1 _et_ __stOperation.stOperationLettre.tabStDocument..Occurrence = 1) _ou_ (nInd > 1)) )
+	znrContenu[nInd].btnZnrCadenas..Visible			= (stDocument.EstDocumentEnAttente = Faux)
+
+
+	znrContenu[nInd].attImage							= "ext/Supports/" + sPrefixe + stDocument.FichierApercu  + "-out" + __SVG__
+
+	InitCboZnrSupport(stDocument.IdTypeSupport,nInd,Faux,stDocument.IdSupport)
+
+	InitCboZnrGrammage(nInd,stDocument.IdSupportGrammage)
+
+	InitCboZnrPapier(nInd,stDocument.IdPapier)
+
+
+	_rPoidsTotal 				+= stDocument.Poids
+
+fin
+
+__stOperation.stOperationLettre.NumeroDocumentEnCours = znrContenu..Occurrence + 1
+
+

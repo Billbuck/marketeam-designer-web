@@ -24,13 +24,14 @@ sRepUpload					est une chaîne
 //      restauration dans la structure
 //   f. régénération PSMD + BAT (ordre identique à btnRegenererBat)
 // Quand EstPersonnaliseDesigner = Faux : comportement historique inchangé.
+
 bRemplacementFond			est un booléen	= Faux
 sJsonSauvegarde			est une chaîne
 dhDesignerSauvegarde		est une DateHeure
 
 retour = Vrai
 
-nInd																	= znrLtrContenu
+nInd = znrLtrContenu
 
 __stOperation.stOperationLettre.NumeroDocumentEnCours	= nInd
 
@@ -67,7 +68,7 @@ si sFichier <> "" _et_ Minuscule(fExtraitChemin(sFichier, fExtension)) = __PDF__
 		si sMessage <> "" alors
 			// Document courant INTACT (aucun nettoyage effectué) ; le fichier
 			// uploadé a été supprimé par le contrôle.
-			PopupAfficheMessage(sMessage, "Erreur", __OPERATION_COURRIER__, __TOAST_ANNULATION__)
+			PopupAfficheMessage(sMessage, "Erreur", __stOperation.TypeOperation, __TOAST_ANNULATION__)
 			retour Faux
 		fin
 		// Conforme : nettoyage différé des anciens fichiers (PDF, fonds, BAT,
@@ -160,7 +161,7 @@ si sFichier <> "" _et_ Minuscule(fExtraitChemin(sFichier, fExtension)) = __PDF__
 				__stOperation.stOperationLettre.tabStDocument[nInd].CodeTemp, ...
 				__stOperation.stOperationLettre.tabStDocument[nInd].NombrePage, Vrai)
 
-				__stOperation.stOperationLettre.tabStDocument[nInd].EstPersonnaliseDesigner	= Vrai
+				__stOperation.stOperationLettre.tabStDocument[nInd].EstPersonnaliseDesigner	= (Vrai _et_ __stOperation.TypeOperation = __OPERATION_COURRIER__)
 				__stOperation.stOperationLettre.tabStDocument[nInd].DateHeureDesigner			= dhDesignerSauvegarde
 
 				// ─────────────────────────────────────────────────────
@@ -188,7 +189,7 @@ si sFichier <> "" _et_ Minuscule(fExtraitChemin(sFichier, fExtension)) = __PDF__
 					// pas de retour Faux (qui effacerait le document), le BAT
 					// pourra être régénéré via « Régénérer le BAT ».
 					PopupAfficheMessage(
-					"Erreur lors de la génération du document" + RC + "Merci de réitérer l'opération", "Erreur", __OPERATION_COURRIER__, __TOAST_ANNULATION__)
+					"Erreur lors de la génération du document" + RC + "Merci de réitérer l'opération", "Erreur", __stOperation.TypeOperation, __TOAST_ANNULATION__)
 				fin
 
 			sinon si __stOperation.stOperationLettre.EstEnveloppeFenetre = Faux alors
@@ -209,9 +210,9 @@ si sFichier <> "" _et_ Minuscule(fExtraitChemin(sFichier, fExtension)) = __PDF__
 
 			sinon
 				si nInd = 1 alors
-					__stOperation.stOperationLettre.tabStDocument[nInd].JsonDesignerData = cpDesigner.ComposerJsonDesignerCreation(__stOperation, __tabEchantillonBaseLigne, __OPERATION_COURRIER__, Faux, nInd, -1, -1, -1, 1)
+					__stOperation.stOperationLettre.tabStDocument[nInd].JsonDesignerData = cpDesigner.ComposerJsonDesignerCreation(__stOperation, __tabEchantillonBaseLigne, __stOperation.TypeOperation, Faux, nInd, -1, -1, -1, 1)
 				sinon
-					__stOperation.stOperationLettre.tabStDocument[nInd].JsonDesignerData = cpDesigner.ComposerJsonDesignerCreation(__stOperation, __tabEchantillonBaseLigne, __OPERATION_COURRIER__, Faux, nInd, -1, -1, -1, 0)
+					__stOperation.stOperationLettre.tabStDocument[nInd].JsonDesignerData = cpDesigner.ComposerJsonDesignerCreation(__stOperation, __tabEchantillonBaseLigne, __stOperation.TypeOperation, Faux, nInd, -1, -1, -1, 0)
 				fin
 
 
@@ -231,28 +232,28 @@ si sFichier <> "" _et_ Minuscule(fExtraitChemin(sFichier, fExtension)) = __PDF__
 						AfficheVignettePopupUpload()
 					sinon
 						PopupAfficheMessage(
-						"Erreur lors de la génération du document" + RC + "Merci de réitérer l'opération", "Erreur", __OPERATION_COURRIER__, __TOAST_ANNULATION__)
+						"Erreur lors de la génération du document" + RC + "Merci de réitérer l'opération", "Erreur", __stOperation.TypeOperation, __TOAST_ANNULATION__)
 						retour Faux
 					fin
 				sinon
 					PopupAfficheMessage(
-					"Erreur lors de la génération du document" + RC + "Merci de réitérer l'opération", "Erreur", __OPERATION_COURRIER__, __TOAST_ANNULATION__)
+					"Erreur lors de la génération du document" + RC + "Merci de réitérer l'opération", "Erreur", __stOperation.TypeOperation, __TOAST_ANNULATION__)
 					retour Faux
 				fin
 			fin
 
 		sinon
-			PopupAfficheMessage(sMessage, "Erreur", __OPERATION_COURRIER__, __TOAST_ANNULATION__)
+			PopupAfficheMessage(sMessage, "Erreur", __stOperation.TypeOperation, __TOAST_ANNULATION__)
 			retour Faux
 		fin
 
 	sinon
-		PopupAfficheMessage("Erreur lors du renommage de votre fichier" + RC + "Merci de réitérer l'opération", "Erreur", __OPERATION_COURRIER__, __TOAST_ANNULATION__)
+		PopupAfficheMessage("Erreur lors du renommage de votre fichier" + RC + "Merci de réitérer l'opération", "Erreur", __stOperation.TypeOperation, __TOAST_ANNULATION__)
 		retour Faux
 	fin
 
 sinon
-	PopupAfficheMessage("Erreur lors de l'importation de votre fichier" + RC + "Merci de réitérer l'opération", "Erreur", __OPERATION_COURRIER__, __TOAST_ANNULATION__)
+	PopupAfficheMessage("Erreur lors de l'importation de votre fichier" + RC + "Merci de réitérer l'opération", "Erreur", __stOperation.TypeOperation, __TOAST_ANNULATION__)
 	retour Faux
 fin
 
@@ -274,7 +275,7 @@ si retour = Faux alors
 		fin
 		si __stOperation.stOperationLettre.tabStDocument[nInd].JsonDesignerData = "" alors
 			__stOperation.stOperationLettre.tabStDocument[nInd].JsonDesignerData					= sJsonSauvegarde
-			__stOperation.stOperationLettre.tabStDocument[nInd].EstPersonnaliseDesigner		= Vrai
+			__stOperation.stOperationLettre.tabStDocument[nInd].EstPersonnaliseDesigner		= (Vrai _et_ __stOperation.TypeOperation = __OPERATION_COURRIER__)
 			__stOperation.stOperationLettre.tabStDocument[nInd].DateHeureDesigner				= dhDesignerSauvegarde
 		fin
 	sinon

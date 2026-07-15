@@ -1,0 +1,64 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// Init ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure Init()
+
+sPrefixe est une chaîne
+
+selon __stOperation.TypeOperation
+	cas __OPERATION_COURRIER__							: sPrefixe = "ltr-"
+	cas __OPERATION_TRACTEVA__,__OPERATION_SMARTEVA__	: sPrefixe = "ttb-"
+fin
+
+
+InitZnrEnveloppe()
+
+
+si _bAvecEnveloppe alors
+	btnNouveau..Libellé = "Ajouter un document dans l'enveloppe"
+sinon
+	btnNouveau..Libellé = "Sélectionner le document"
+fin
+
+btnNouveau..Visible = ((__stOperation.TypeOperation = __OPERATION_TRACTEVA__ _ou_ __stOperation.stOperationLettre.IdEnveloppe <> 0) _et_ __stOperation.stOperationLettre.tabStDocument..Occurrence < 4)
+
+dispContenant[1]..Visible = _bAvecEnveloppe
+
+si __stOperation.TypeOperation = __OPERATION_TRACTEVA__
+	si __stOperation.stOperationLettre.tabStDocument..Occurrence = 0 alors
+		popTypeSupport.InitZnrTypeSupport()
+		PopupAffiche(popTypeSupport,popupHautCentre)
+	sinon
+		btnNouveau..Visible = Faux // Pas possible d'ajouter un deuxième document
+	fin
+fin
+
+
+si __stOperation.stOperationLettre.tabStDocument..Occurrence = 0 alors
+
+	__stOperation.stOperationLettre.NumeroDocumentEnCours = 1
+	imgEnveloppe..Visible = Faux
+
+sinon // Modification
+
+	si HLitRecherchePremier(ltr_enveloppe,IdEnveloppe,__stOperation.stOperationLettre.IdEnveloppe) alors
+		imgEnveloppe..Visible 	= Vrai
+		imgEnveloppe..Image		= "ext/Enveloppes/" + sPrefixe + ltr_enveloppe.FichierApercu + "-out" + __SVG__
+		saiEnveloppe			= ltr_enveloppe.Libelle
+	fin
+
+	_rPoidsTotal = __stOperation.stOperationLettre.stEnveloppe.Poids
+	saiEnveloppe..Etat = Grisé
+
+	InitZnrContenu()
+
+fin

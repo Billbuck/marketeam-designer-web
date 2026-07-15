@@ -1,0 +1,95 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//InitCboTypeSupport ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+//	pAvecEnveloppe (valeur par défaut=1) : < indiquez ici le rôle de pSansEnveloppe >
+procédure InitZnrTypeSupport()
+
+nInd												est un entier
+sWhere												est une chaîne
+nHauteurMin, nHauteurMax, nLargeurMin, nLargeurMax	sont des entiers
+sPrefixe											est une chaîne
+
+selon __stOperation.TypeOperation
+	cas __OPERATION_COURRIER__						: sPrefixe = "ltr-"
+	cas __OPERATION_TRACTEVA__,__OPERATION_SMARTEVA__	: sPrefixe = "ttb-"
+fin
+
+ZoneRépétéeSupprimeTout(popTypeSupport.znrTypeSupport)
+
+sTexteRequete est une chaîne
+sdReqTypeSupport est une Source de Données
+
+sTexteRequete =
+[
+	SELECT DISTINCT
+	ltr_type_support.IdTypeSupport,
+	ltr_type_support.Libelle,
+	ltr_type_support.FichierApercu
+	FROM
+	ltr_type_support, ltr_support, ltr_support_grammage
+	WHERE
+	ltr_support.EstActif = 1 AND
+	ltr_type_support.IdTypeSupport = ltr_support.IdTypeSupport AND
+	ltr_support_grammage.IdSupport = ltr_support.IdSupport 
+	%1
+]
+
+// Ajout des critères liés à l'enveloppe
+// Premier document on contrôle l'existence d'uner fenêtre sur l'enveloppe
+si __stOperation.stOperationLettre.NumeroDocumentEnCours = 1 _et_ __stOperation.stOperationLettre.stEnveloppe.NbrFenetre > 0 alors
+	sWhere +=  " AND ltr_type_support.PeutEtrePorteAdresse = 1 "
+fin
+
+si __stOperation.stOperationLettre.NumeroDocumentEnCours = 1 _et_ __stOperation.stOperationLettre.EstMarketing = Faux alors // En courrier de gestion le premier document est forcément une lettre
+	sWhere += " AND ltr_support_grammage.A4PliableMachine = 1"
+fin
+
+nHauteurMax = __stOperation.stOperationLettre.stEnveloppe.Hauteur - _MARGE_MAX_HAUTEUR_
+nHauteurMin = __stOperation.stOperationLettre.stEnveloppe.Hauteur - _MARGE_MIN_HAUTEUR_
+nLargeurMax = __stOperation.stOperationLettre.stEnveloppe.Largeur - _MARGE_MAX_LARGEUR_
+nLargeurMin = __stOperation.stOperationLettre.stEnveloppe.Largeur - _MARGE_MIN_LARGEUR_
+
+sWhere += ChaîneConstruit(" AND ((HauteurFerme BETWEEN %1 and %2 AND LargeurFerme BETWEEN %3 AND %4) OR (HauteurFerme BETWEEN %3 and %4 AND LargeurFerme BETWEEN %1 AND %2) OR (ltr_support_grammage.A4PliableMachine = 1 AND LargeurOuvert BETWEEN %3 AND %4)) ", nHauteurMin, nHauteurMax, nLargeurMin, nLargeurMax)
+
+
+sWhere += ChaîneConstruit(" AND (ltr_support_grammage.Poids + %1) <= %2", _rPoidsTotal, __stOperation.stOperationLettre.stEnveloppe.PoidsInsertionMax)
+
+si __stOperation.stOperationLettre.EstMarketing = Vrai alors
+	InitRequeteDocumentPossibleGruntzmacher(sWhere)
+fin
+
+si _bAvecEnveloppe = Vrai alors
+	sTexteRequete = ChaîneConstruit(sTexteRequete,sWhere)
+sinon
+	sTexteRequete = ChaîneConstruit(sTexteRequete,"")
+fin
+
+si pas HExécuteRequêteSQL(sdReqTypeSupport, ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour	
+fin
+
+
+
+pour tout sdReqTypeSupport
+	nInd = ZoneRépétéeAjouteLigne(popTypeSupport.znrTypeSupport)
+	popTypeSupport.znrTypeSupport[nInd].attIdTypeSupport 			= sdReqTypeSupport.IdTypeSupport
+	popTypeSupport.znrTypeSupport[nInd].attFichierApercu 			= sdReqTypeSupport.FichierApercu
+	popTypeSupport.znrTypeSupport[nInd].attLibelleTypeSupport 		= sdReqTypeSupport.Libelle
+	popTypeSupport.znrTypeSupport[nInd].attImageOut					= "ext/Supports/" + sPrefixe + sdReqTypeSupport.FichierApercu + "-out" + __SVG__
+	popTypeSupport.znrTypeSupport[nInd].attImageOver				= "ext/Supports/" + sPrefixe + sdReqTypeSupport.FichierApercu + "-over" + __SVG__
+fin
+
+
+
+fin:
+HAnnuleDéclaration(sdReqTypeSupport)

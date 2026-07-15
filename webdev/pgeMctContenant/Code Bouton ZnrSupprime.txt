@@ -1,0 +1,26 @@
+_sEffetAnimation = ""
+
+btnNouveau..Visible = Vrai
+
+si znrContenu..Occurrence = 1 _ou_ znrContenu > 1 alors
+	__stOperation.stOperationLettre.NumeroDocumentEnCours--
+	_rPoidsTotal -= Val(attPoids)
+	Supprime(__stOperation.stOperationLettre.tabStDocument,znrContenu)
+	ZoneRépétéeSupprime(znrContenu,znrContenu)
+	selon __stOperation.stOperationLettre.tabStDocument..Occurrence
+		cas 0 : saiEnveloppe..Etat = Actif
+		cas 1 : znrContenu[1].attVisibleBtnSupprimer = Vrai
+	fin
+//	InitCboTypeSupport()
+//	LibelleNumeroDocument()
+fin
+
+
+TunnelCalculeTarif()
+TunnelAfficheInformationsBandeauDroit()
+
+
+si pas _bAvecEnveloppe alors
+	popTypeSupport.InitZnrTypeSupport()
+	PopupAffiche(popTypeSupport,popupHautCentre)
+fin

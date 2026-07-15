@@ -1,0 +1,18 @@
+procédure ControlePoids()
+
+
+si __stOperation.TypeOperation dans (__OPERATION_COURRIER__, __OPERATION_SMARTEVA__) alors
+	si _rPoidsTotal > __stOperation.stOperationLettre.stEnveloppe.PoidsInsertionMax alors
+		PopupAfficheMessage("Le poids total de votre enveloppe fait " + NumériqueVersChaîne(ArrondiSupérieur(_rPoidsTotal), ",1f") + "0 g, pour un poids maximum pour cette enveloppe de " + NumériqueVersChaîne(ArrondiSupérieur(__stOperation.stOperationLettre.stEnveloppe.PoidsInsertionMax), ",1f") + "0 g","Erreur",__stOperation.TypeOperation,__TOAST_ANNULATION__)
+		renvoyer Faux
+	fin
+
+	pour tout stDocument de __stOperation.stOperationLettre.tabStDocument
+		si stDocument.Poids = 0 alors
+			PopupAfficheMessage("Pas de grammage disponible pour cette configuration","Erreur",__stOperation.TypeOperation,__TOAST_ANNULATION__)
+			renvoyer Faux
+		fin
+	fin
+fin
+
+renvoyer Vrai

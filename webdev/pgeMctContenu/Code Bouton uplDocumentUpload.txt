@@ -1,0 +1,36 @@
+
+*** Code Navigateur "A chaque modification de la liste des fichiers sélectionnés" :
+
+// Si le champ contient un fichier : lance l'envoi du fichier
+sExtensionFichier est une chaîne
+P est un entier
+sFichierUpload est une chaîne = uplDocumentUpload
+
+//saiTest = "OFF"
+
+si uplDocumentUpload..Occurrence > 0 alors
+	sExtensionFichier = Droite(sFichierUpload,5)
+	P = Position(sExtensionFichier,".",0) + 1
+	sExtensionFichier = Majuscule(sExtensionFichier[[P	à]])
+	si sExtensionFichier <> "PDF" alors
+		UploadSupprime(uplDocumentUpload,1)
+		PopupAfficheMessage(sFichierUpload +" : seuls les fichiers PDF sont pris en charge",*,__stOperation.TypeOperation,__TOAST_INFORMATION__)
+	sinon
+		AffichePopupProgression("Traitement en cours",_sTypeOperation)
+		UploadLance(uplDocumentUpload)
+	fin
+//SINON
+//	CelluleFermeDialogue(popGenerationEnCours)
+//	// La liste vient d'être vidée (principalement par l'envoi d'un fichier)
+//	// => Il ne faut pas effacer le libellé LIB_Upload_Fichier. Ce Libellé indique que l'upload est terminé.
+fin
+
+*** code serveur récéption des fichiers :
+
+UploadFichier()
+
+
+
+*** Code Navigateur Aprés récéption des fichiers : 
+
+popJaugeProgression.Ferme()
