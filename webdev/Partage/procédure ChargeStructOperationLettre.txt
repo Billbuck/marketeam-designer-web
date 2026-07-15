@@ -1,0 +1,166 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] ChargeStructOperationLettre (<pIdOperation>)
+//
+// Paramètres :
+//	pIdOperation : <indiquez ici le rôle de pIdOperation>
+// Valeur de retour :
+// 	StructOperationLettre : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+//	pIdDossier : <indiquez ici le rôle de pIdDossier>
+//	pPdfAnalyseDocument (valeur par défaut=1) : < indiquez ici le rôle de pChargementPdf >
+procédure ChargeStructOperationLettre(pIdOperation)
+
+stOperationLettre				est une StructOperationLettre
+sFondCheminPhysique			est une chaîne
+sFondCheminRelatif			est une chaîne
+sBatCheminPhysique			est une chaîne
+sBatCheminRelatif				est une chaîne
+sTexteRequete					est une chaîne
+sdReqOpeLettre					est une Source de Données
+sdReqRnvp						est une Source de Données
+
+sTexteRequete =
+[
+	SELECT 
+		ope_lettre.IdLettre,
+		ope_lettre.EstMarketing,
+		ope_lettre.EstAlliage,
+		ope_lettre.EstAlliageClient,
+		ope_lettre.IdEnveloppe,
+		ope_lettre.IdEnveloppeClient,
+		ope_lettre.QuantiteEnveloppeClient,
+		ope_lettre.EstAdressageExpediteur,
+		ope_lettre.EstAdressageLogo,
+		ope_lettre.EstAdressagePromotion,
+		ope_lettre.JsonDesignerData,
+		ope_lettre.IdCampagne,
+		ope_lettre.IdPackage,
+		ope_lettre.IdTimbreTarif,
+		ope_lettre.TypeDedoublonnage,
+		ope_lettre.TypeRnvp,
+		ope_lettre.IdRnvp,
+		ope_lettre.AdressageExpediteur TexteAdressageExpediteur,
+		ope_lettre.NomFichierEnveloppePersonnalise NomFichierOrigine,
+		ope_lettre.HauteurEnveloppePersonnalise HauteurSurEnveloppe,
+		ope_lettre.LargeurEnveloppePersonnalise LargeurSurEnveloppe,
+		'[%__DOC_ENV_IMAGE__%][%pIdOperation%]' NomFichierTemp,
+		ope_lettre.TypeFichierEnveloppePersonnalise TypeFichier,
+		ope_lettre.TauxEncrageEnveloppePersonnalise TauxEncrageEnveloppe,
+		
+		IF(ltr_package.PrixUnitaire = 0 OR ltr_package.IdClient = [%Partage.__vcUser.IDClient%],1,0) EstPackageClient, 
+		IF(ltr_package.PrixUnitaire > 0, 1, 0) EstPackageMarque,		
+		IF(ltr_package_tarif.PrixUnitaire > 0, 1, 0) EstPackageMarketeam,
+		IFNULL(ltr_package_tarif.PrixUnitaire, ltr_package.PrixUnitaire) PuVentePackage,
+		ltr_package.PackageModeImpression,
+		ltr_package.FraisFixeFacturation FraisFixePackage,
+		ltr_package.PrixUnitaireAchat PuAchatPackage,
+		ltr_package.MinimumFacturation,
+		ltr_package.DelaiSupplementaire,
+		ltr_package.SeuilMinPackage,
+		ltr_package.DeductionEnveloppe,
+		ltr_package.Previsionnelle,
+		
+		ltr_enveloppe.IdEnveloppe,
+		ltr_enveloppe.IdInsertion,
+		ltr_enveloppe.Libelle,
+		ltr_enveloppe.Hauteur,
+		ltr_enveloppe.Largeur,
+		ltr_enveloppe.NbrFenetre,
+		IF(ltr_enveloppe.NbrFenetre > 0,1,0) EstEnveloppeFenetre,
+		ltr_enveloppe.PoidsInsertionMin,
+		ltr_enveloppe.PoidsInsertionMax,
+		ltr_enveloppe.NbrInsertionMax,
+		ltr_enveloppe.Poids,
+		ltr_enveloppe.PrixAchat PrixAchatEnveloppe,
+		ltr_enveloppe.Type						
+
+	FROM
+		ope_lettre
+		JOIN ltr_enveloppe ON ope_lettre.IdEnveloppe = ltr_enveloppe.IdEnveloppe
+		LEFT JOIN ltr_package On ltr_package.IdPackage = ope_lettre.IdPackage
+		LEFT JOIN ltr_package_tarif ON ltr_package_tarif.IdPackage = ope_lettre.IdPackage AND ltr_package_tarif.IdPackPrestation = [%Partage.__vcUser.IdPackPrestation%]
+	WHERE 
+		IdLettre = %1
+]
+
+
+sTexteRequete = ChaîneConstruit(sTexteRequete,pIdOperation)
+
+si pas sdReqOpeLettre.ExécuteRequêteSQL(ope_lettre..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	<compile si TypeConfiguration <> Webservice>
+		Info("Erreur requête")
+	<fin>
+	renvoyer stOperationLettre
+fin
+
+si sdReqOpeLettre.LitPremier() alors
+
+	FichierVersMémoire(stOperationLettre, sdReqOpeLettre)
+	FichierVersMémoire(stOperationLettre.stEnveloppe,sdReqOpeLettre)
+
+	sBatCheminPhysique		= cpProjet.CheminFichier(sdReqOpeLettre.IdLettre,__REP_BAT__,Vrai)
+	sBatCheminRelatif			= cpProjet.CheminFichier(sdReqOpeLettre.IdLettre,__REP_BAT__,Faux)
+
+	sFondCheminPhysique		= cpProjet.CheminFichier(sdReqOpeLettre.IdLettre,__REP_FOND__,Vrai)
+	sFondCheminRelatif		= cpProjet.CheminFichier(sdReqOpeLettre.IdLettre,__REP_FOND__,Faux)
+
+	// ─── CORRECTION : fFichierExiste sur chemin PHYSIQUE (pas relatif) ───────
+	si fFichierExiste(sFondCheminPhysique + __DOC_ENV_FOND__ + pIdOperation + __JPG__) alors
+		stOperationLettre.stEnveloppe.EnveloppeFond.CheminPhysique	= sFondCheminPhysique 	+ __DOC_ENV_FOND__ + pIdOperation + __JPG__
+		stOperationLettre.stEnveloppe.EnveloppeFond.CheminRelatif	= sFondCheminRelatif 	+ __DOC_ENV_FOND__ + pIdOperation + __JPG__
+	fin
+
+	si fFichierExiste(sBatCheminPhysique + __DOC_ENV_BAT__ + pIdOperation + __JPG__) alors
+		stOperationLettre.stEnveloppe.EnveloppeBAT.CheminPhysique	= sBatCheminPhysique 	+ __DOC_ENV_BAT__ + pIdOperation + __JPG__
+		stOperationLettre.stEnveloppe.EnveloppeBAT.CheminRelatif		= sBatCheminRelatif 		+ __DOC_ENV_BAT__ + pIdOperation + __JPG__
+	fin
+
+	// ─── AJOUT : Renseigner le répertoire de travail de l'enveloppe ──────────
+	stOperationLettre.stEnveloppe.RepertoireTravail = cpProjet.CheminFichier(sdReqOpeLettre.IdLettre, __REP_TEMP__, Vrai)
+
+	stOperationLettre.tabStDocument						= ChargeTabStructLtrDocument(stOperationLettre.IdLettre,stOperationLettre.IdPackage,stOperationLettre.IdCampagne)
+fin
+
+
+
+
+renvoyer stOperationLettre
+
+fin:
+sdReqOpeLettre.AnnuleDéclaration()
+sdReqRnvp.AnnuleDéclaration()
+
+
+
+//	stOperationLettre.IdLettre 							= sdReqOpeLettre.IdLettre
+//	stOperationLettre.EstMarketing 						= sdReqOpeLettre.EstMarketing
+//	stOperationLettre.EstAlliage 						= sdReqOpeLettre.EstAlliage
+//	stOperationLettre.EstAlliageClient					= sdReqOpeLettre.EstAlliageClient
+//	stOperationLettre.IdEnveloppe 						= sdReqOpeLettre.IdEnveloppe
+//	stOperationLettre.IdEnveloppeClient					= sdReqOpeLettre.IdEnveloppeClient
+//	stOperationLettre.QuantiteEnveloppeClient			= sdReqOpeLettre.QuantiteEnveloppeClient
+//	stOperationLettre.EstAdressageCouleur 				= sdReqOpeLettre.EstAdressageCouleur
+//	stOperationLettre.EstAdressageNoir 					= sdReqOpeLettre.EstAdressageNoir
+//	stOperationLettre.IdCampagne						= sdReqOpeLettre.IdCampagne
+//	stOperationLettre.IdPackage							= sdReqOpeLettre.IdPackage
+//	stOperationLettre.IdTimbreTarif						= sdReqOpeLettre.IdTimbreTarif
+//	stOperationLettre.EstAdressageNoir					= sdReqOpeLettre.EstAdressageNoir
+//	stOperationLettre.EstAdressageCouleur				= sdReqOpeLettre.EstAdressageCouleur
+//	stOperationLettre.EstPackageClient					= sdReqOpeLettre.EstClient
+//	stOperationLettre.TypeDedoublonnage					= sdReqOpeLettre.TypeDedoublonnage
+//	stOperationLettre.TypeRnvp							= sdReqOpeLettre.TypeRnvp
+//	stOperationLettre.IdRnvp							= sdReqOpeLettre.IdRnvp
+//	SI stOperationLettre.IdPackage <> 0 ALORS
+//		stOperationLettre.FraisFixePackage				= sdReqOpeLettre.FraisFixeFacturation
+//		stOperationLettre.PuVentePackage 				= sdReqOpeLettre.PrixUnitaire
+//		stOperationLettre.PuAchatPackage	 			= sdReqOpeLettre.PrixUnitaireAchat
+//		stOperationLettre.MinimumFacturation 			= sdReqOpeLettre.MinimumFacturation
+//		stOperationLettre.DelaiSupplementaire 			= sdReqOpeLettre.DelaiSupplementaire
+//		stOperationLettre.SeuilMinPackage 				= sdReqOpeLettre.SeuilMinPackage
+//		stOperationLettre.DeductionEnveloppe			= sdReqOpeLettre.DeductionEnveloppe
+//		stOperationLettre.Previsionnelle				= sdReqOpeLettre.Previsionnelle
+//	FIN

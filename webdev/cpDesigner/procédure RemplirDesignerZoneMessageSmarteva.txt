@@ -1,0 +1,88 @@
+// -----------------------------------------------------------------------------
+// cpDesigner.RemplirDesignerZoneMessageSmarteva()
+// Rôle : Créer LA zone de message d'une enveloppe SMARTEVA (tract sous
+//        enveloppe) — spécifications du 15/07/2026 :
+//
+//	- Zone UNIQUE, texte noir, impression jet d'encre noir.
+//	- Géométrie FIGÉE, calculée depuis le format de l'enveloppe :
+//	    marge de 30 mm de chaque côté, hauteur 12 mm, centrée verticalement.
+//	    Ex. enveloppe 229 x 114 : x=30, y=51, L=169, H=12 (centre 114,5 / 57).
+//	- Contenu pré-rempli « Invitation personnelle », SEUL élément modifiable
+//	  par l'utilisateur (équivalent de l'adressage expéditeur du courrier).
+//	- Police Roboto 26 pt, texte centré H+V, ajustement automatique de la
+//	  taille (copyfitting) si le message dépasse la zone.
+//	- Champs de fusion sans objet : le tract n'est pas adressé (le wrapper
+//	  est composé avec ChampsFusionInterdit, cf. ComposerJsonDesignerCreation).
+//
+// La zone n'est PAS une zone « système » (le contenu doit rester éditable) :
+// c'est une zone texte standard entièrement contrainte — géométrie verrouillée,
+// non supprimable, seul le contenu est modifiable dans la toolbar.
+//
+// Paramètres :
+//	stDesignerDocument (structDesignerDocument) : document Designer à remplir
+//	stEnveloppe (StructEnveloppe) : enveloppe de l'opération (Largeur/Hauteur mm)
+// -----------------------------------------------------------------------------
+procédure RemplirDesignerZoneMessageSmarteva(stDesignerDocument est une structDesignerDocument, stEnveloppe est une StructEnveloppe)
+
+MARGE_LATERALE_MM	est un réel	= 30	// marge de chaque côté de l'enveloppe
+HAUTEUR_ZONE_MM		est un réel	= 12
+
+stZoneMessage est une structDesignerZoneTexte
+
+// --- Identification ---
+stZoneMessage.id			= "smarteva-message"
+stZoneMessage.page			= 1
+stZoneMessage.nom			= "Message enveloppe"
+stZoneMessage.niveau		= 10
+stZoneMessage.rotation		= 0
+stZoneMessage.verrouille	= Vrai
+
+// --- Géométrie (mm, origine coin haut-gauche) : pleine largeur moins les
+//     marges, centrée verticalement ---
+stZoneMessage.Géométrie.xMm			= MARGE_LATERALE_MM
+stZoneMessage.Géométrie.yMm			= (stEnveloppe.Hauteur / 2) - (HAUTEUR_ZONE_MM / 2)
+stZoneMessage.Géométrie.largeurMm	= stEnveloppe.Largeur - (2 * MARGE_LATERALE_MM)
+stZoneMessage.Géométrie.hauteurMm	= HAUTEUR_ZONE_MM
+
+// --- Contenu pré-rempli, modifiable par l'utilisateur ---
+stZoneMessage.contenu					= "Invitation personnelle"
+stZoneMessage.supprimerLignesVides	= 0
+
+// --- Apparence : Roboto 26, noir 100 %, centré H+V ---
+stZoneMessage.style.police			= "Roboto"
+stZoneMessage.style.taillePt		= 26
+stZoneMessage.style.couleurCmjn.c	= 0
+stZoneMessage.style.couleurCmjn.M	= 0
+stZoneMessage.style.couleurCmjn.y	= 0
+stZoneMessage.style.couleurCmjn.k	= 100
+stZoneMessage.style.interligne		= 1
+stZoneMessage.style.alignementH		= "center"
+stZoneMessage.style.alignementV		= "middle"
+
+stZoneMessage.Fond.transparent		= Vrai
+stZoneMessage.bordure.epaisseur		= 0
+
+// --- Ajustement automatique de la taille si le message dépasse la zone ---
+stZoneMessage.copyfitting.actif					= Vrai
+stZoneMessage.copyfitting.tailleMinimum			= 8
+stZoneMessage.copyfitting.autoriserRetourLigne	= Vrai
+
+// --- Contraintes : tout est figé SAUF le contenu texte ---
+stZoneMessage.contrainte.Géométrie.positionFixe	= Vrai		// pas de déplacement
+stZoneMessage.contrainte.Géométrie.locked			= Vrai		// pas de redimensionnement
+
+stZoneMessage.contrainte.style.contenuModifiable			= Vrai	// SEULE liberté de l'utilisateur
+stZoneMessage.contrainte.style.typographieModifiable		= Faux
+stZoneMessage.contrainte.style.alignementsModifiable		= Faux
+stZoneMessage.contrainte.style.fondModifiable				= Faux
+stZoneMessage.contrainte.style.bordureModifiable			= Faux
+
+stZoneMessage.contrainte.global.systeme				= Faux	// PAS système : le contenu doit rester éditable
+stZoneMessage.contrainte.global.systemeLibelle		= ""
+stZoneMessage.contrainte.global.nonSupprimable		= Vrai
+stZoneMessage.contrainte.global.imprimable			= Vrai
+stZoneMessage.contrainte.global.selectionnable		= Vrai
+stZoneMessage.contrainte.global.toolbarAffichable	= Vrai
+stZoneMessage.contrainte.global.pageModifiable		= Faux
+
+stDesignerDocument.zonesTexte.Ajoute(stZoneMessage)

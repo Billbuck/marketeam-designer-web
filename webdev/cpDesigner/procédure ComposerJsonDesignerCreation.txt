@@ -60,14 +60,23 @@ si pEstEnveloppe alors
 
 	stLoad.Document.pages = RemplirDesignerPages(Faux, tabImagesEnv, sCheminPdfEnv)
 
-	// Zones système enveloppe (A.11)
-	// Adresse destinataire + séquentiel toujours
-	// Datamatrix + mention La Poste
-	RemplirDesignerZonesSystemeEnveloppe(stLoad.Document, stOperation.stOperationLettre.IdEnveloppe, stOperation.taaBaseChamp, bAvecBase)
+	si stOperation.TypeOperation = __OPERATION_SMARTEVA__ alors
+		// ── ENVELOPPE SMARTEVA (15/07/2026) ──────────────────────────────
+		// Distribution NON adressée : AUCUNE zone système postale (pas
+		// d'adresse destinataire, séquentiel, dépôt, mention, datamatrix).
+		// Une SEULE zone : le message optionnel (« Invitation personnelle »),
+		// texte noir centré, géométrie figée — seul le texte est modifiable.
+		RemplirDesignerZoneMessageSmarteva(stLoad.Document, stOperation.stOperationLettre.stEnveloppe)
+	sinon
+		// Zones système enveloppe (A.11)
+		// Adresse destinataire + séquentiel toujours
+		// Datamatrix + mention La Poste
+		RemplirDesignerZonesSystemeEnveloppe(stLoad.Document, stOperation.stOperationLettre.IdEnveloppe, stOperation.taaBaseChamp, bAvecBase)
 
-	// Zones personnalisables Adressage Expéditeur, Logo, Image promotionnelle
-	si stOperation.stOperationLettre.stEnveloppe.EstAdressageExpediteur _ou_ stOperation.stOperationLettre.stEnveloppe.EstAdressageLogo _ou_ stOperation.stOperationLettre.stEnveloppe.EstAdressagePromotion alors
-		stLoad.ZonePersonnalisation = RemplirDesignerZonesPersonnalisablesEnveloppe(stLoad.Document, stOperation.stOperationLettre.stEnveloppe)
+		// Zones personnalisables Adressage Expéditeur, Logo, Image promotionnelle
+		si stOperation.stOperationLettre.stEnveloppe.EstAdressageExpediteur _ou_ stOperation.stOperationLettre.stEnveloppe.EstAdressageLogo _ou_ stOperation.stOperationLettre.stEnveloppe.EstAdressagePromotion alors
+			stLoad.ZonePersonnalisation = RemplirDesignerZonesPersonnalisablesEnveloppe(stLoad.Document, stOperation.stOperationLettre.stEnveloppe)
+		fin
 	fin
 
 sinon
@@ -202,6 +211,14 @@ fin
 //        ChampsFusionInterdit = Vrai, autoriserGestionChamps est sans
 //        effet côté Designer (la toolbar Data est masquée de toute façon).
 stLoad.autoriserGestionChamps	= (pas bAvecBase)
+
+// TRACT (15/07/2026) : les champs de fusion sont INTERDITS partout — le
+// tract n'est pas adressé, il n'y a aucune base. Sans ce verrou, l'absence
+// de base donnait au contraire autoriserGestionChamps = Vrai.
+si stOperation.TypeOperation dans (__OPERATION_TRACTEVA__, __OPERATION_SMARTEVA__) alors
+	stLoad.ChampsFusionInterdit		= Vrai
+	stLoad.autoriserGestionChamps	= Faux
+fin
 
 
 // Polices utilisées : vide en création (aucune police encore utilisée)

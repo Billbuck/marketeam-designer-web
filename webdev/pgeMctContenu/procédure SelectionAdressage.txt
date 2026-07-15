@@ -12,6 +12,11 @@
 //
 procédure SelectionAdressage(bRegenererJson est un booléen = Vrai)
 
+// Garde 15/07/2026 : les interrupteurs d'adressage sont SPÉCIFIQUES COURRIER.
+// En Smarteva la personnalisation d'enveloppe = un message texte optionnel
+// saisi dans le Designer (cf. InitEnveloppe) — rien à faire ici.
+si __stOperation.TypeOperation <> __OPERATION_COURRIER__ alors retour
+
 __stOperation.stOperationLettre.stEnveloppe.EstAdressageExpediteur	= intAdressageExpediteur
 __stOperation.stOperationLettre.stEnveloppe.EstAdressageLogo			= intAdressageLogo
 __stOperation.stOperationLettre.stEnveloppe.EstAdressagePromotion		= intAdressagePromotion

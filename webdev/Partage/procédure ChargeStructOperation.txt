@@ -41,8 +41,10 @@ si dos_operation.LitRecherchePremier(IdOperation, pIdOperation) alors
 
 	selon stOperation.TypeOperation
 		cas __OPERATION_COURRIER__ 	: stOperation.stOperationLettre 	= ChargeStructOperationLettre(pIdOperation)
-		cas __OPERATION_TRACTEVA__	: stOperation.stOperationTract		= ChargeStructOperationTract(pIdOperation)
-		cas __OPERATION_SMARTEVA__	: stOperation.stOperationTract		= ChargeStructOperationTract(pIdOperation)
+		// Unification 15/07/2026 : le tract remplit la MÊME structure commune
+		// stOperationLettre (depuis ses tables ope_tract / ope_tract_contenu)
+		cas __OPERATION_TRACTEVA__	: stOperation.stOperationLettre		= ChargeStructOperationTract(pIdOperation)
+		cas __OPERATION_SMARTEVA__	: stOperation.stOperationLettre		= ChargeStructOperationTract(pIdOperation)
 		cas __OPERATION_SMS__		: stOperation.stOperationSms 		= ChargeStructOperationSms(pIdOperation)
 		cas __OPERATION_VMS__		: stOperation.stOperationVms 		= ChargeStructOperationVms(pIdOperation)
 		cas __OPERATION_TEL__		: stOperation.stOperationCallCenter	= ChargeStructOperationCallCenter(pIdOperation)

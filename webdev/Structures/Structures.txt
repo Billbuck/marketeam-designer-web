@@ -2080,19 +2080,25 @@ StructOperationBloctel est une Structure
 	PrixUnitaireFacture						est un monétaire
 fin
 
+// Structure COMMUNE Courrier + Tract (Tracteva/Smarteva) — unification 15/07/2026.
+// Les pages du tunnel (pgeMctContenant/pgeMctContenu) travaillent TOUTES dans
+// cette structure, quel que soit le type d'opération. La persistance reste
+// séparée : ope_lettre/ope_lettre_contenu pour le courrier,
+// ope_tract/ope_tract_contenu pour le tract (cf. ChargeStructOperationTract /
+// AjoutModificationOperationTract, seules procédures à faire la traduction).
+// L'ex-structure structOperationTract (quasi-jumelle) est SUPPRIMÉE : ses
+// champs doublons sont ici, ses champs propres sont dans la section TRACT.
 StructOperationLettre est une Structure
-	IdLettre										est un entier
+
+	// ─────────── COMMUN Courrier + Tract ───────────
+	IdLettre										est un entier		// = IdOperation (IdTract pour un tract)
 	IdEnveloppe									est un entier
 	IdEnveloppeClient							est un entier
 	IdPackage									est un entier
 	IdCampagne									est un entier
-	IdTimbreTarif								est un entier
 	IdDistributeur								est un entier
 	QuantiteEnveloppeClient					est un entier
-	EstMarketing								est un booléen
 	EstEnveloppeFenetre						est un booléen
-	EstAlliage									est un booléen
-	EstAlliageClient							est un booléen
 	EstPackageClient							est un booléen
 	EstPackageMarque							est un booléen
 	EstPackageMarketeam						est un booléen
@@ -2110,48 +2116,16 @@ StructOperationLettre est une Structure
 	stEnveloppe									est une StructEnveloppe
 	NumeroDocumentEnCours					est un entier
 	tabStDocument								est un tableau de structDocument
-fin
 
-structOperationTract est une Structure
-	IdTract									est un entier
-	IdEnveloppe								est un entier
-	IdEnveloppeClient						est un entier
-	IdPackage								est un entier
-	IdCampagne								est un entier
-	IdEtude 								est un entier  // IdEtude Mediaposte
-	QuantiteEnveloppeClient					est un entier
-	PoidsTotal								est un monétaire
+	// ─────────── SPÉCIFIQUE COURRIER (sans objet en Tracteva/Smarteva) ───────────
+	IdTimbreTarif								est un entier
+	EstMarketing								est un booléen		// courrier marketing / courrier de gestion
+	EstAlliage									est un booléen
+	EstAlliageClient							est un booléen
 
-	SemaineDistribution						est un entier
-
-	FraisFixePackage						est un monétaire
-	PuVentePackage							est un monétaire
-
-	EstPackageClient						est un booléen // si EstClient ou Tarif Package = 0
-	EstPackageMarque						est un booléen // si Tarif Package > 0
-	EstPackageMarketeam						est un booléen // si ttb_package_tarif  existe
-
-	PackageModeImpression					est une chaîne
-	PuAchatPackage							est un monétaire
-
-	DeductionEnveloppe						est un monétaire
-
-	Previsionnelle							est un entier		// pour le calcul automatique du prix du package
-
-	MinimumFacturation						est un monétaire
-	RemiseCoupon							est un monétaire
-	DelaiSupplementaire						est un entier		// Délai supplémentaire en jours pour la préparation du Package
-	SeuilMinPackage							est un entier		// Seuil pour accéder au package
-
-	stEnveloppe								est une StructEnveloppe
-
-	NumeroDocumentEnCours					est un entier
-
-	tabStDocument							est un tableau de structDocument
-
-	EnveloppeApercu							est une structDocumentImage		//un WL.image		// Apercu de l'enveloppe non personnalisée
-	EnveloppeApercuPersonnalisée			est une structDocumentImage		// WL.image		// Apercu de l'enveloppe personnalisée
-
+	// ─────────── SPÉCIFIQUE TRACT (sans objet en Courrier) ───────────
+	IdEtude										est un entier		// Étude de ciblage Mediaposte
+	SemaineDistribution						est un entier		// Semaine de distribution souhaitée
 fin
 
 
@@ -2770,8 +2744,7 @@ structOperation est une Structure
 
 	stNouveauCliquezIci						est une structNouveauCliquezIci, sérialise = faux
 
-	stOperationLettre						est une StructOperationLettre, sérialise = faux
-	stOperationTract						est une structOperationTract, sérialise = faux
+	stOperationLettre						est une StructOperationLettre, sérialise = faux	// structure COMMUNE Courrier + Tract (unification 15/07/2026, ex-stOperationTract supprimée)
 	stOperationSms							est une structOperationSms
 	stOperationVms							est une structOperationVms, sérialise = faux
 	stOperationEmail						est une structOperationEmail, sérialise = faux

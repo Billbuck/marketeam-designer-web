@@ -1,0 +1,35 @@
+CREATE TABLE `ope_tract_contenu` (
+	`IdTractContenu` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdTract` INT(11) NOT NULL,
+	`IdSupportGrammage` INT(11) NOT NULL,
+	`IdPapier` INT(11) NULL DEFAULT NULL,
+	`IdPackageContenu` INT(11) NULL DEFAULT NULL,
+	`IdModele` INT(11) NULL DEFAULT NULL,
+	`IdDocumentClient` INT(11) NULL DEFAULT NULL,
+	`QuantiteDocumentClient` MEDIUMINT(9) NULL DEFAULT NULL,
+	`EstRectoVerso` TINYINT(1) NOT NULL DEFAULT '0',
+	`EstFondPerdu` TINYINT(1) NOT NULL DEFAULT '0',
+	`EstAmalgameOffset` TINYINT(1) NOT NULL DEFAULT '0',
+	`NombrePage` TINYINT(3) UNSIGNED NOT NULL DEFAULT '1',
+	`ModeImpression` CHAR(1) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`NomFichierOrigine` VARCHAR(100) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`EstPdfClient` TINYINT(1) NOT NULL DEFAULT '0',
+	`EstDocumentEnAttente` TINYINT(1) NOT NULL DEFAULT '0',
+	PRIMARY KEY (`IdTractContenu`) USING BTREE,
+	INDEX `FK OperationContenuLettre / DocumentClient` (`IdDocumentClient`) USING BTREE,
+	INDEX `FK OperationContenuLettre / SupportGrammage` (`IdSupportGrammage`) USING BTREE,
+	INDEX `IdPackageContenu` (`IdPackageContenu`) USING BTREE,
+	INDEX `IdPapier` (`IdPapier`) USING BTREE,
+	INDEX `IdModele` (`IdModele`) USING BTREE,
+	INDEX `FK OperationContenuLettre / Operation` (`IdTract`) USING BTREE,
+	CONSTRAINT `ope_tract_contenu_ibfk_1` FOREIGN KEY (`IdDocumentClient`) REFERENCES `ltr_document_client` (`IdDocumentClient`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `ope_tract_contenu_ibfk_2` FOREIGN KEY (`IdTract`) REFERENCES `dos_operation` (`IdOperation`) ON UPDATE RESTRICT ON DELETE CASCADE,
+	CONSTRAINT `ope_tract_contenu_ibfk_3` FOREIGN KEY (`IdSupportGrammage`) REFERENCES `ltr_support_grammage` (`IdSupportGrammage`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `ope_tract_contenu_ibfk_4` FOREIGN KEY (`IdModele`) REFERENCES `ltr_modele` (`IdModele`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `ope_tract_contenu_ibfk_5` FOREIGN KEY (`IdPackageContenu`) REFERENCES `ltr_package_contenu` (`IdPackageContenu`) ON UPDATE RESTRICT ON DELETE SET NULL,
+	CONSTRAINT `ope_tract_contenu_ibfk_6` FOREIGN KEY (`IdPapier`) REFERENCES `ltr_papier` (`IdPapier`) ON UPDATE RESTRICT ON DELETE RESTRICT
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+ROW_FORMAT=COMPACT
+;

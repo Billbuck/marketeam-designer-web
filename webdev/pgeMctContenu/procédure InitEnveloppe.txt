@@ -1,14 +1,13 @@
-// Résumé : <indiquez ici ce que fait la procédure>
-// Syntaxe :
-//Init ()
+// Résumé : Initialise le bloc « enveloppe » de pgeMctContenu selon le type
+//          d'opération.
 //
-// Paramètres :
-//	Aucun
-// Valeur de retour :
-// 	Aucune
-//
-// Exemple :
-// Indiquez ici un exemple d'utilisation.
+//	COURRIER  : 3 interrupteurs d'adressage (Expéditeur / Logo / Promotion)
+//	            qui pilotent la composition du JSON Designer (SelectionAdressage).
+//	SMARTEVA  : PAS d'interrupteurs — la personnalisation se limite à UN
+//	            message texte noir optionnel au centre de l'enveloppe
+//	            (ex. « Invitation personnelle »), saisi dans le Designer.
+//	            Enveloppe blanche si aucun message. (précision 15/07/2026)
+//	TRACTEVA  : pas d'enveloppe du tout -> bloc masqué.
 //
 procédure InitEnveloppe()
 
@@ -21,26 +20,16 @@ si __stOperation.TypeOperation = __OPERATION_TRACTEVA__ alors
 fin
 
 selon __stOperation.TypeOperation
-	cas __OPERATION_COURRIER__							: sPrefixe = "ltr-"
-	cas __OPERATION_TRACTEVA__,__OPERATION_SMARTEVA__	: sPrefixe = "ttb-"
+	cas __OPERATION_COURRIER__	: sPrefixe = "ltr-"
+	cas __OPERATION_SMARTEVA__	: sPrefixe = "ttb-"
 fin
 
 
 InitTboEnveloppeClient()
 
-si __stOperation.stOperationLettre.stEnveloppe.EstAdressageExpediteur _ou_ __stOperation.stOperationLettre.stEnveloppe.EstAdressageLogo _ou_ __stOperation.stOperationLettre.stEnveloppe.EstAdressagePromotion alors
-	intAdressageExpediteur.Etat		= Grisé
-	intAdressageLogo.Etat			= Grisé
-	intAdressagePromotion.Etat		= Grisé
-fin
-
-intAdressageExpediteur			= __stOperation.stOperationLettre.stEnveloppe.EstAdressageExpediteur
-intAdressageLogo				= __stOperation.stOperationLettre.stEnveloppe.EstAdressageLogo
-intAdressagePromotion			= __stOperation.stOperationLettre.stEnveloppe.EstAdressagePromotion
-
+// ─── Aperçu + données statiques de l'enveloppe (commun Courrier/Smarteva) ───
 si ltr_enveloppe.LitRecherchePremier(IdEnveloppe,__stOperation.stOperationLettre.IdEnveloppe) alors
 	imgEnveloppe..Image			= "ext/Enveloppes/" + sPrefixe + ltr_enveloppe.FichierApercu + "-out" + __SVG__
-	libEnveloppeDesignation		= "Adressage enveloppe " + ltr_enveloppe.Libelle
 
 	// En modification, FichierApercu et EnveloppeFond ne sont pas dans ope_lettre
 	// -> les renseigner depuis ltr_enveloppe (données statiques du type d'enveloppe)
@@ -53,6 +42,42 @@ si ltr_enveloppe.LitRecherchePremier(IdEnveloppe,__stOperation.stOperationLettre
 		__stOperation.stOperationLettre.stEnveloppe.EnveloppeFond.CheminRelatif		= cpProjet.__sHttpMarketeam + "Enveloppes/" + ltr_enveloppe.FichierApercu + __JPG__
 	fin
 fin
+
+// ─────────────────────────────────────────────────────────────────────────
+// SMARTEVA : pas d'interrupteurs d'adressage. Un seul bouton
+// « Personnaliser » (message optionnel), aperçu/suppression si un message
+// a déjà été saisi (JsonDesignerData non vide). Aucune génération de JSON
+// tant que l'utilisateur n'ouvre pas le Designer (enveloppe blanche par défaut).
+// ─────────────────────────────────────────────────────────────────────────
+si __stOperation.TypeOperation = __OPERATION_SMARTEVA__ alors
+	libEnveloppeDesignation			= "Message sur l'enveloppe " + ltr_enveloppe.Libelle
+
+	// Interrupteurs d'adressage = spécifiques courrier -> masqués
+	intAdressageExpediteur..Visible	= Faux
+	intAdressageLogo..Visible			= Faux
+	intAdressagePromotion..Visible	= Faux
+
+	btnEnveloppePersonnaliser..Visible	= Vrai
+	btnEnveloppeSupprimer..Visible		= (__stOperation.stOperationLettre.stEnveloppe.JsonDesignerData <> "")
+	btnEnveloppeAperçu..Visible			= (__stOperation.stOperationLettre.stEnveloppe.JsonDesignerData <> "")
+
+	retour
+fin
+
+// ─────────────────────────────────────────────────────────────────────────
+// COURRIER : logique historique des 3 interrupteurs d'adressage
+// ─────────────────────────────────────────────────────────────────────────
+libEnveloppeDesignation = "Adressage enveloppe " + ltr_enveloppe.Libelle
+
+si __stOperation.stOperationLettre.stEnveloppe.EstAdressageExpediteur _ou_ __stOperation.stOperationLettre.stEnveloppe.EstAdressageLogo _ou_ __stOperation.stOperationLettre.stEnveloppe.EstAdressagePromotion alors
+	intAdressageExpediteur.Etat		= Grisé
+	intAdressageLogo.Etat			= Grisé
+	intAdressagePromotion.Etat		= Grisé
+fin
+
+intAdressageExpediteur			= __stOperation.stOperationLettre.stEnveloppe.EstAdressageExpediteur
+intAdressageLogo				= __stOperation.stOperationLettre.stEnveloppe.EstAdressageLogo
+intAdressagePromotion			= __stOperation.stOperationLettre.stEnveloppe.EstAdressagePromotion
 
 // En modification avec JSON existant : on met à jour l'UI sans écraser le JSON
 si __stOperation.stOperationLettre.stEnveloppe.JsonDesignerData <> "" alors

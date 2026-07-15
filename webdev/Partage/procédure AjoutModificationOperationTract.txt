@@ -1,17 +1,38 @@
+// Résumé : Enregistre une opération TRACT (Tracteva/Smarteva) depuis la
+//          structure COMMUNE StructOperationLettre vers les tables
+//          ope_tract / ope_tract_contenu (unification du 15/07/2026).
+//
+// RÈGLE D'OR : cette procédure et ChargeStructOperationTract sont les SEULS
+// endroits du projet qui traduisent la structure commune vers les tables
+// tract (et inversement).
+//
+// Structure calquée sur AjoutModificationOperationCourrier (le miroir
+// courrier) : mêmes étapes, mêmes traitements Designer (réécriture des
+// chemins JSON de l'enveloppe et des documents, régénération PSMD), seules
+// les tables cibles changent. La procédure interne
+// ModificationCheminDesignerJson est une COPIE de celle du courrier —
+// candidate à une extraction partagée (cpDesigner) lors d'un prochain
+// nettoyage.
+//
+// PRÉREQUIS BDD (cf. MariaDB/ALTER TABLE ope_tract - colonnes Designer.txt) :
+//	- ope_tract : JsonDesignerData (message d'enveloppe Smarteva — PAS de
+//	  colonnes EstAdressage*, spécifiques courrier)
+//	- ope_tract_contenu : JsonDesignerData, EstPersonnaliseDesigner,
+//	  EstBatGenereAvecRapprochement
+//
 procédure AjoutModificationOperationTract(stOperation est une structOperation)
 
-
-stDocument est une structDocument
-sTexteRequete est une chaîne
-sdReqTractContenu est une Source de Données
-sListeDocument est une chaîne
-bEstModeCreation est un booléen = (stOperation.IdOperation = 0)  // On fait le test maintenant car après l'appel de AjoutModificationOperation l'IdOperation sera renseigné
+stDocument			est une structDocument
+sTexteRequete		est une chaîne
+sdReqTractContenu	est une Source de Données
+sListeDocument		est une chaîne
+bEstModeCreation	est un booléen	= (stOperation.IdOperation = 0)	// On fait le test maintenant car après l'appel de AjoutModificationOperation l'IdOperation sera renseigné
 
 // On met à jour le booléen pour calculer le statut de l'opération dans le trigger HF
-stOperation.EstDocumentEnAttente = Faux
-stOperation.EstInjectionEnAttente = Faux
+stOperation.EstDocumentEnAttente		= Faux
+stOperation.EstInjectionEnAttente	= Faux
 
-pour tout stDocument de stOperation.stOperationTract.tabStDocument
+pour tout stDocument de stOperation.stOperationLettre.tabStDocument
 	si stDocument.EstDocumentEnAttente = Vrai alors
 		si stDocument.EstPdfClient = Vrai _ou_ stDocument.IdModele > 0 alors // Si EstDocumentEnAttente est a VRAI et que IdModele > 0 c'est que la personnalisation n'a toujours pas été faite.
 			stOperation.EstDocumentEnAttente = Vrai
@@ -20,7 +41,6 @@ pour tout stDocument de stOperation.stOperationTract.tabStDocument
 		fin
 	fin
 fin
-
 
 AjoutModificationOperation(stOperation)  // On ajoute / met à jour les données dans la table dos_operation
 
@@ -37,31 +57,75 @@ sinon
 	fin
 fin
 
-ope_tract.IdEnveloppe 							= stOperation.stOperationTract.IdEnveloppe
-ope_tract.IdEnveloppeClient						= stOperation.stOperationTract.IdEnveloppeClient
-ope_tract.IdEtude 								= stOperation.stOperationTract.IdEtude
-ope_tract.IdPackage 							= stOperation.stOperationTract.IdPackage
-ope_tract.IdCampagne	 						= stOperation.stOperationTract.IdCampagne
-ope_tract.QuantiteEnveloppeClient	 			= stOperation.stOperationTract.QuantiteEnveloppeClient
-ope_tract.PoidsTotal							= stOperation.stOperationTract.PoidsTotal
-ope_tract.SemaineDistribution					= stOperation.stOperationTract.SemaineDistribution
-//		ope_tract.IdAdressageClient						= stOperation.stOperationTract.stAdressageNoir.IdAdressageClient
-//		ope_tract.AdressageExpediteur 					= stOperation.stOperationTract.stAdressageNoir.TexteAdressageExpediteur
-//		ope_tract.IdPolice								= stOperation.stOperationTract.stAdressageNoir.IdPolice
-//		ope_tract.PoliceTaille							= stOperation.stOperationTract.stAdressageNoir.PoliceTaille
-//		ope_tract.PoliceCouleur							= stOperation.stOperationTract.stAdressageNoir.PoliceCouleur
+ope_tract.IdEnveloppe					= stOperation.stOperationLettre.IdEnveloppe
+ope_tract.IdEnveloppeClient			= stOperation.stOperationLettre.IdEnveloppeClient
+ope_tract.IdEtude						= stOperation.stOperationLettre.IdEtude
+ope_tract.IdPackage						= stOperation.stOperationLettre.IdPackage
+ope_tract.IdCampagne						= stOperation.stOperationLettre.IdCampagne
+ope_tract.QuantiteEnveloppeClient	= stOperation.stOperationLettre.QuantiteEnveloppeClient
+ope_tract.PoidsTotal						= stOperation.stOperationLettre.PoidsTotal
+ope_tract.SemaineDistribution			= stOperation.stOperationLettre.SemaineDistribution
+// PAS d'EstAdressageExpediteur/Logo/Promotion : spécifiques courrier. La
+// personnalisation d'enveloppe Smarteva = le seul JsonDesignerData (message
+// texte noir optionnel au centre de l'enveloppe).
 
-si stOperation.stOperationTract.IdEnveloppe = 0	 									alors ope_tract.IdEnveloppe..Null = Vrai
-si stOperation.stOperationTract.IdEnveloppeClient = 0 								alors ope_tract.IdEnveloppeClient..Null = Vrai
-si stOperation.stOperationTract.IdEtude = 0 										alors ope_tract.IdEtude..Null = Vrai
-si stOperation.stOperationTract.IdPackage = 0 										alors ope_tract.IdPackage..Null = Vrai
-si stOperation.stOperationTract.IdCampagne = 0 										alors ope_tract.IdCampagne..Null = Vrai
-//		SI stOperation.stOperationTract.stAdressageNoir.IdAdressageClient = 0				ALORS ope_tract.IdAdressageClient..Null = vrai
-//		SI stOperation.stOperationTract.stAdressageNoir.IdPolice = 0						ALORS ope_tract.IdPolice..Null = vrai
-//		SI stOperation.stOperationTract.stAdressageNoir.TexteAdressageExpediteur = ""		ALORS ope_tract.AdressageExpediteur..Null = vrai
-//		SI stOperation.stOperationTract.stAdressageNoir.PoliceTaille = ""					ALORS ope_tract.PoliceTaille..Null = vrai
-//		SI stOperation.stOperationTract.stAdressageNoir.PoliceCouleur = ""					ALORS ope_tract.PoliceCouleur..Null = vrai
+// ─── Mise à jour des chemins images enveloppe AVANT sauvegarde BDD ──────
+// Même traitement que AjoutModificationOperationCourrier : les chemins
+// nomFichier/valeur des images Designer pointent vers Temp et doivent
+// pointer vers Printshop AVANT d'être sauvegardés en BDD.
+si stOperation.stOperationLettre.stEnveloppe.JsonDesignerData <> "" alors
 
+	jDocEnv est un JSON = stOperation.stOperationLettre.stEnveloppe.JsonDesignerData.VersUTF8()
+
+	// Normalisation format (comme V3 pour documents)
+	si jDocEnv.pages..Occurrence = 0 _et_ jDocEnv.data.pages..Occurrence > 0 alors
+		stOperation.stOperationLettre.stEnveloppe.JsonDesignerData	= JSONVersChaîne(jDocEnv.data)
+		jDocEnv																		= stOperation.stOperationLettre.stEnveloppe.JsonDesignerData.VersUTF8()
+	fin
+
+	si jDocEnv.zonesImage..Occurrence > 0 alors
+
+		sRepPrintshopEnv		est une chaîne	= cpProjet.CheminFichier(stOperation.IdOperation, __REP_PRINTSHOP__, Vrai)
+		sRepPrintshopEnvRel	est une chaîne	= cpProjet.CheminFichier(stOperation.IdOperation, __REP_PRINTSHOP__, Faux)
+		bModifieEnv				est un booléen	= Faux
+
+		pour nIndEnv = 1 _à_ jDocEnv.zonesImage..Occurrence
+
+			sNomFichierEnv est une chaîne = jDocEnv.zonesImage[nIndEnv].source.nomFichier
+			si sNomFichierEnv <> "" alors
+
+				// Si déjà dans Printshop, ne pas toucher
+				si sNomFichierEnv.Gauche(sRepPrintshopEnv.Taille()) = sRepPrintshopEnv alors
+					continuer
+				fin
+
+				sNomSimpleEnv est une chaîne = fExtraitChemin(sNomFichierEnv, fFichier + fExtension)
+				jDocEnv.zonesImage[nIndEnv].source.nomFichier = sRepPrintshopEnv + sNomSimpleEnv
+
+				sUrlImageEnv est une chaîne = sRepPrintshopEnvRel + sNomSimpleEnv
+				sUrlImageEnv										= sUrlImageEnv.Remplace("\", "/")
+				jDocEnv.zonesImage[nIndEnv].source.valeur	= sUrlImageEnv
+
+				bModifieEnv											= Vrai
+			fin
+
+		fin
+
+		si bModifieEnv alors
+			stOperation.stOperationLettre.stEnveloppe.JsonDesignerData = jDocEnv.VersChaîne()
+		fin
+
+	fin
+
+fin
+
+ope_tract.JsonDesignerData				= stOperation.stOperationLettre.stEnveloppe.JsonDesignerData
+
+si stOperation.stOperationLettre.IdEnveloppe = 0				alors ope_tract.IdEnveloppe..Null = Vrai
+si stOperation.stOperationLettre.IdEnveloppeClient = 0		alors ope_tract.IdEnveloppeClient..Null = Vrai
+si stOperation.stOperationLettre.IdEtude = 0					alors ope_tract.IdEtude..Null = Vrai
+si stOperation.stOperationLettre.IdPackage = 0				alors ope_tract.IdPackage..Null = Vrai
+si stOperation.stOperationLettre.IdCampagne = 0				alors ope_tract.IdCampagne..Null = Vrai
 
 si bEstModeCreation alors
 	si pas ope_tract.Ajoute() alors
@@ -79,25 +143,9 @@ sinon
 	fin
 fin
 
-
-
-//// On met a jour les informations de dispatche
-//pour TOUT stAdrexoAgence de stOperation.stOperationTract.stAdrexoEtude.tabStAdrexoAgence
-//	si HLitRecherchePremier(ttb_adrexo_etude_dispatch,PRIMARY,[stOperation.stOperationTract.stAdrexoEtude.IdAdrexoEtude,stAdrexoAgence.IdAdrexoAgence]) ALORS
-//		ttb_adrexo_etude_dispatch.NbrColis 		= stAdrexoAgence.NbrColis
-//		ttb_adrexo_etude_dispatch.PoidsTotal	= stAdrexoAgence.PoidsTotal
-//		ttb_adrexo_etude_dispatch.PrixAchat		= stAdrexoAgence.PrixAchat
-//		si pas HModifie(ttb_adrexo_etude_dispatch) ALORS
-//			renvoyer Faux
-//		FIN
-//	FIN
-//FIN
-
-
-
 // ******************************** Enregistrement des données de chaque document
 
-pour tout stDocument de stOperation.stOperationTract.tabStDocument
+pour tout stDocument de stOperation.stOperationLettre.tabStDocument
 	si stDocument.IdLettreContenu = 0 alors
 		ope_tract_contenu.RAZ()
 		ope_tract_contenu.IdTract = stOperation.IdOperation
@@ -107,32 +155,32 @@ pour tout stDocument de stOperation.stOperationTract.tabStDocument
 			<compile si TypeConfiguration <> Webservice>
 				Info("Erreur positionnement ope_tract_contenu")
 			<fin>
-
 			renvoyer Faux
 		fin
 	fin
 
-	ope_tract_contenu.IdModele 						= stDocument.IdModele
-	ope_tract_contenu.IdDocumentClient				= stDocument.IdDocumentClient
-	ope_tract_contenu.IdSupportGrammage 			= stDocument.IdSupportGrammage
-	ope_tract_contenu.EstRectoVerso 				= stDocument.EstRectoVerso
-	ope_tract_contenu.EstFondPerdu 					= stDocument.EstFondPerdu
-	ope_tract_contenu.NombrePage 					= stDocument.NombrePage
-	ope_tract_contenu.NomFichierOrigine 			= stDocument.NomFichierOrigine
-	ope_tract_contenu.ModeImpression 				= stDocument.ModeImpression
-	ope_tract_contenu.EstPdfClient					= stDocument.EstPdfClient
-	ope_tract_contenu.EstDocumentEnAttente 			= stDocument.EstDocumentEnAttente
-	ope_tract_contenu.IdPackageContenu 				= stDocument.IdPackageContenu
-	ope_tract_contenu.IdPapier 						= stDocument.IdPapier
-	ope_tract_contenu.QuantiteDocumentClient		= stDocument.QuantiteDocumentClient
+	ope_tract_contenu.IdModele								= stDocument.IdModele
+	ope_tract_contenu.IdDocumentClient					= stDocument.IdDocumentClient
+	ope_tract_contenu.IdSupportGrammage					= stDocument.IdSupportGrammage
+	ope_tract_contenu.EstRectoVerso						= stDocument.EstRectoVerso
+	ope_tract_contenu.EstFondPerdu						= stDocument.EstFondPerdu
+	ope_tract_contenu.NombrePage							= stDocument.NombrePage
+	ope_tract_contenu.NomFichierOrigine					= stDocument.NomFichierOrigine
+	ope_tract_contenu.ModeImpression						= stDocument.ModeImpression
+	ope_tract_contenu.EstPdfClient						= stDocument.EstPdfClient
+	ope_tract_contenu.EstDocumentEnAttente				= stDocument.EstDocumentEnAttente
+	ope_tract_contenu.EstPersonnaliseDesigner			= stDocument.EstPersonnaliseDesigner
+	ope_tract_contenu.EstBatGenereAvecRapprochement	= stDocument.EstBatGenereAvecRapprochement
+	ope_tract_contenu.IdPackageContenu					= stDocument.IdPackageContenu
+	ope_tract_contenu.IdPapier								= stDocument.IdPapier
+	ope_tract_contenu.QuantiteDocumentClient			= stDocument.QuantiteDocumentClient
+	ope_tract_contenu.JsonDesignerData					= stDocument.JsonDesignerData
 
-
-	si ope_tract_contenu.IdModele = 0 				alors ope_tract_contenu.IdModele..Null = Vrai
+	si ope_tract_contenu.IdModele = 0				alors ope_tract_contenu.IdModele..Null = Vrai
 	si ope_tract_contenu.IdDocumentClient = 0		alors ope_tract_contenu.IdDocumentClient..Null = Vrai
-	si ope_tract_contenu.IdPackageContenu = 0 		alors ope_tract_contenu.IdPackageContenu..Null = Vrai
-	si ope_tract_contenu.IdPapier = 0 				alors ope_tract_contenu.IdPapier..Null = Vrai
+	si ope_tract_contenu.IdPackageContenu = 0		alors ope_tract_contenu.IdPackageContenu..Null = Vrai
+	si ope_tract_contenu.IdPapier = 0				alors ope_tract_contenu.IdPapier..Null = Vrai
 
-	// Enregistrement du prix sélectionné
 	si stDocument.IdLettreContenu = 0 alors
 		si pas ope_tract_contenu.Ajoute() alors
 			<compile si TypeConfiguration <> Webservice>
@@ -140,6 +188,8 @@ pour tout stDocument de stOperation.stOperationTract.tabStDocument
 			<fin>
 			renvoyer Faux
 		fin
+		// Convention : stDocument.IdLettreContenu porte l'IdTractContenu pour
+		// un tract (mêmes noms de fichiers __DOC_LTR__*, cf. DéplaceFichierUpload)
 		stDocument.IdLettreContenu = ope_tract_contenu.IdTractContenu
 	sinon
 		si pas ope_tract_contenu.Modifie() alors
@@ -149,12 +199,25 @@ pour tout stDocument de stOperation.stOperationTract.tabStDocument
 			renvoyer Faux
 		fin
 	fin
+
+	// On modifie le JsonDesignerData (chemins définitifs + PSMD production)
+
+	si ModificationCheminDesignerJson(stOperation.IdOperation) alors
+		si ope_tract_contenu.LitRecherchePremier(IdTractContenu, stDocument.IdLettreContenu) alors
+			ope_tract_contenu.JsonDesignerData = stDocument.JsonDesignerData
+			ope_tract_contenu.Modifie()
+		fin
+		// Régénérer le PSMD production avec les chemins finaux (Documents, Printshop)
+		// Le PSMD sera déplacé par DéplaceFichierUpload vers le répertoire Printshop
+		si stDocument.JsonDesignerData <> "" alors
+			cpDesigner.GenererPsmdServeurDocument(stDocument)
+		fin
+	fin
+
 	sListeDocument += [","] + stDocument.IdLettreContenu
 fin
 
 
-// ******************************** Enregistrement des données de chaque distributeur, ne concerne que Smarteva et Tracteva Laser
-// En modification on supprime et on enregistre a nouveau
 // EN MODIFICATION ON SUPPRIME LES DOCUMENTS QUI NE SONT PLUS PRESENT
 
 si sListeDocument <> "" alors
@@ -171,3 +234,129 @@ renvoyer Vrai
 
 fin:
 sdReqTractContenu.AnnuleDéclaration()
+
+	// COPIE de la procédure interne de AjoutModificationOperationCourrier
+	// (candidate à une extraction partagée cpDesigner). Les chemins de
+	// fichiers restent basés __OPERATION_COURRIER__ / __DOC_LTR__* : les
+	// documents client et modèles sont rangés dans l'arborescence courrier,
+	// commune aux deux métiers (cf. DéplaceFichierUpload branche tract).
+	procédure interne ModificationCheminDesignerJson(pIdOperation)
+
+		sRepertoireFinalDocument	est une chaîne
+		sNomFichierFinalPdf			est une chaîne
+		sFondRepertoireRelatif		est une chaîne
+		jDoc								est un JSON
+
+		// ─── Garde : pas de JSON → rien à faire ─────────────────────────────
+		si stDocument.JsonDesignerData = "" alors
+			renvoyer Faux
+		fin
+
+		jDoc = stDocument.JsonDesignerData.VersUTF8()
+
+		// ─── [V3] Normalisation du format JSON ──────────────────────────────
+		si jDoc.pages..Occurrence = 0 _et_ jDoc.data.pages..Occurrence > 0 alors
+			stDocument.JsonDesignerData	= JSONVersChaîne(jDoc.data)
+			jDoc									= stDocument.JsonDesignerData.VersUTF8()
+		fin
+
+		// ─── Garde : pas de pages dans le JSON → rien à faire ────────────────
+		si jDoc.pages..Occurrence = 0 alors
+			renvoyer Faux
+		fin
+
+		selon Vrai
+
+			// =========================================================================
+			// CAS 1 : Dotation / Document client
+			// =========================================================================
+			cas stDocument.IdDocumentClient > 0
+				si ltr_document_client.LitRecherchePremier(IdDocumentClient, stDocument.IdDocumentClient) alors
+					sNomFichierFinalPdf = __DOC_LTR_CLIENT__ + stDocument.IdDocumentClient + __PDF__
+
+					selon Vrai
+						cas ltr_document_client.IdMarque > 0
+							sRepertoireFinalDocument	= CheminMarque(ltr_document_client.IdMarque, __OPERATION_COURRIER__, __REP_DOCUMENT__)
+							sFondRepertoireRelatif		= cpProjet.CheminMarque(ltr_document_client.IdMarque, __OPERATION_COURRIER__, __REP_FOND__, Faux)
+
+						cas ltr_document_client.IdClient > 0
+							sRepertoireFinalDocument	= CheminClient(ltr_document_client.IdClient, __OPERATION_COURRIER__, __REP_DOCUMENT__)
+							sFondRepertoireRelatif		= cpProjet.CheminClient(ltr_document_client.IdClient, __OPERATION_COURRIER__, __REP_FOND__, Faux)
+
+						autre cas
+							renvoyer Faux
+					fin
+				sinon
+					renvoyer Faux
+				fin
+
+			// =========================================================================
+			// CAS 2 : Modèle
+			// =========================================================================
+			cas stDocument.IdModele > 0
+				si ltr_modele.LitRecherchePremier(IdModele, stDocument.IdModele) alors
+					sNomFichierFinalPdf			= __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__
+					sRepertoireFinalDocument	= CheminFichier(pIdOperation, __REP_DOCUMENT__)
+					sFondRepertoireRelatif		= cpProjet.CheminFichier(pIdOperation, __REP_FOND__, Faux)
+				sinon
+					renvoyer Faux
+				fin
+
+			// =========================================================================
+			// CAS 3 : PDF client
+			// =========================================================================
+			cas pIdOperation > 0
+				sNomFichierFinalPdf			= __DOC_LTR__ + stDocument.IdLettreContenu + __PDF__
+				sRepertoireFinalDocument	= CheminFichier(pIdOperation, __REP_DOCUMENT__)
+				sFondRepertoireRelatif		= cpProjet.CheminFichier(pIdOperation, __REP_FOND__, Faux)
+
+			autre cas
+				renvoyer Faux
+
+		fin
+
+		// ─── Mise à jour des chemins fond dans le JSON ─────────────────────
+		pour nNumPage = 1 _à_ stDocument.NombrePage
+			si nNumPage <= jDoc.pages..Occurrence alors
+				jDoc.pages[nNumPage].cheminFond	= sRepertoireFinalDocument + sNomFichierFinalPdf
+				jDoc.pages[nNumPage].urlFond		= sFondRepertoireRelatif + __DOC_LTR_FOND__ + stDocument.IdLettreContenu + "p" + nNumPage + __JPG__
+			fin
+		fin
+
+		// ─── [V2] Mise à jour des chemins images Designer ───────────────────
+		si jDoc.zonesImage..Occurrence > 0 alors
+
+			sRepertoirePrintshopFinal		est une chaîne	= cpProjet.CheminFichier(pIdOperation, __REP_PRINTSHOP__, Vrai)
+			sRepertoirePrintshopRelatif	est une chaîne	= cpProjet.CheminFichier(pIdOperation, __REP_PRINTSHOP__, Faux)
+
+			pour nIndZone = 1 _à_ jDoc.zonesImage..Occurrence
+
+				sAncienChemin est une chaîne = jDoc.zonesImage[nIndZone].source.nomFichier
+
+				si sAncienChemin = "" alors
+					continuer
+				fin
+
+				// Si déjà dans Printshop, ne pas toucher
+				si sAncienChemin.Gauche(sRepertoirePrintshopFinal.Taille()) = sRepertoirePrintshopFinal alors
+					continuer
+				fin
+
+				sNomFichierImage est une chaîne = fExtraitChemin(sAncienChemin, fFichier + fExtension)
+
+				// Nouveau chemin physique (sera effectif après DéplaceFichierUpload)
+				jDoc.zonesImage[nIndZone].source.nomFichier = sRepertoirePrintshopFinal + sNomFichierImage
+
+				// Nouvelle URL web
+				sUrlImage est une chaîne = sRepertoirePrintshopRelatif + sNomFichierImage
+				sUrlImage											= sUrlImage.Remplace("\", "/")
+				jDoc.zonesImage[nIndZone].source.valeur	= sUrlImage
+			fin
+
+		fin
+
+		stDocument.JsonDesignerData = jDoc.VersChaîne()
+
+		renvoyer Vrai
+
+	fin

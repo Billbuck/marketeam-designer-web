@@ -82,9 +82,13 @@ selon vMessage.action
 					si cpDesigner.GenererPsmdServeurEnveloppe(__stOperation.stOperationLettre.stEnveloppe, __stOperation.CodeTemp) alors
 						GenererBatEnveloppeDepuisPsmd(__stOperation.stOperationLettre.stEnveloppe, __stOperation.CodeTemp)
 						cpDesigner.TraiterManifestImagesDesigner(__stOperation.stOperationLettre.stEnveloppe.CheminPsmdEnveloppe, __stOperation.stOperationLettre.stEnveloppe.JsonDesignerData)
-						intAdressageExpediteur.Etat		= Grisé
-						intAdressageLogo.Etat				= Grisé
-						intAdressagePromotion.Etat			= Grisé
+						// Interrupteurs d'adressage : spécifiques COURRIER (masqués en
+						// Smarteva, cf. InitEnveloppe 15/07/2026)
+						si __stOperation.TypeOperation = __OPERATION_COURRIER__ alors
+							intAdressageExpediteur.Etat		= Grisé
+							intAdressageLogo.Etat				= Grisé
+							intAdressagePromotion.Etat			= Grisé
+						fin
 						btnEnveloppeSupprimer..Visible	= Vrai
 						btnEnveloppeAperçu.Visible			= Vrai
 					fin
@@ -110,7 +114,10 @@ selon vMessage.action
 						fin
 
 						// ─── Marquer le document comme personnalisé ─────────────
-						__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].EstPersonnaliseDesigner			= (Vrai _et_ __stOperation.TypeOperation = __OPERATION_COURRIER__)
+						// Unification 15/07/2026 : vrai pour TOUS les types (courrier
+						// ET tract) — la personnalisation Designer d'un document tract
+						// est persistée dans ope_tract_contenu.EstPersonnaliseDesigner
+						__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].EstPersonnaliseDesigner			= Vrai
 
 						__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].DateHeureDesigner					= DateHeureSys()
 
@@ -131,17 +138,22 @@ selon vMessage.action
 
 						// ─── Détection QR Code Interactif (= opération "Cliquez Ici") ─
 						// Flag par document + propagation au flag global de l'opération.
-						__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].EstCliquezIci				= cpDesigner.JsonContientQrInteractif(sJsonData)
+						// Unification 15/07/2026 : le recalcul de TypeProjet est réservé
+						// au COURRIER (l'ancien code écrasait TypeProjet en
+						// __OPERATION_COURRIER__ même pour un Tracteva/Smarteva).
+						si __stOperation.TypeOperation = __OPERATION_COURRIER__ alors
+							__stOperation.stOperationLettre.tabStDocument[_nIndDesignerEnCours].EstCliquezIci				= cpDesigner.JsonContientQrInteractif(sJsonData)
 
-						// Recalcul du flag global : Vrai si AU MOINS un document est EstCliquezIci
-						__stOperation.EstCliquezIci																						= Faux
-						__stOperation.TypeProjet																							= __OPERATION_COURRIER__
-						pour tout stDoc de __stOperation.stOperationLettre.tabStDocument
-							si stDoc.EstCliquezIci alors
-								__stOperation.EstCliquezIci	= Vrai
-								__stOperation.TypeProjet		= __OPERATION_COURRIER_INTERACTIF__
+							// Recalcul du flag global : Vrai si AU MOINS un document est EstCliquezIci
+							__stOperation.EstCliquezIci																						= Faux
+							__stOperation.TypeProjet																							= __OPERATION_COURRIER__
+							pour tout stDoc de __stOperation.stOperationLettre.tabStDocument
+								si stDoc.EstCliquezIci alors
+									__stOperation.EstCliquezIci	= Vrai
+									__stOperation.TypeProjet		= __OPERATION_COURRIER_INTERACTIF__
 
-								sortir
+									sortir
+								fin
 							fin
 						fin
 

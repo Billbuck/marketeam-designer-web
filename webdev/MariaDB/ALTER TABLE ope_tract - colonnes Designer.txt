@@ -1,0 +1,39 @@
+-- ============================================================================
+-- Mise à niveau des tables TRACT (V1) pour le pipeline Designer — 15/07/2026
+-- Chantier unification Courrier + Tract (structure commune StructOperationLettre,
+-- persistance séparée ope_lettre*/ope_tract*).
+--
+-- PERSONNALISATION ENVELOPPE SMARTEVA (précision du 15/07/2026) :
+-- elle se limite à UNE zone de texte noir au centre de l'enveloppe
+-- (ex. « Invitation personnelle »), optionnelle (enveloppe blanche sinon).
+-- PAS d'adressage expéditeur / logo / promotion comme en courrier
+-- -> AUCUNE colonne EstAdressage* dans ope_tract.
+-- Le message est porté par le JsonDesignerData de l'enveloppe (zone texte
+-- unique éditée dans le Designer), même pipeline PSMD/BAT que le courrier.
+--
+-- Les colonnes ajoutées sont les homologues de celles d'ope_lettre /
+-- ope_lettre_contenu apparues avec le Designer. Sans elles :
+--   - le message d'enveloppe Smarteva ne peut pas être sauvegardé ;
+--   - un document tract personnalisé perd sa personnalisation ;
+--   - le bouton « Régénérer le BAT » ne peut pas raisonner.
+--
+-- NB : aligner le type de JsonDesignerData sur celui d'ope_lettre.JsonDesignerData
+-- (LONGTEXT supposé ici — vérifier avant exécution).
+-- ============================================================================
+
+ALTER TABLE `ope_tract`
+	ADD COLUMN `JsonDesignerData` LONGTEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci' AFTER `QuantiteEnveloppeClient`;
+
+ALTER TABLE `ope_tract_contenu`
+	ADD COLUMN `EstPersonnaliseDesigner` TINYINT(1) NOT NULL DEFAULT '0' AFTER `EstDocumentEnAttente`,
+	ADD COLUMN `EstBatGenereAvecRapprochement` TINYINT(1) NOT NULL DEFAULT '0' AFTER `EstPersonnaliseDesigner`,
+	ADD COLUMN `JsonDesignerData` LONGTEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci' AFTER `EstBatGenereAvecRapprochement`;
+
+-- ----------------------------------------------------------------------------
+-- COLONNES À DÉPRÉCIER (ancien système d'adressage V1, remplacé par le
+-- JsonDesignerData de l'enveloppe personnalisée dans le Designer) :
+--   ope_tract.IdAdressageClient, IdPolice, PoliceTaille, PoliceCouleur,
+--   AdressageExpediteur, IdModeleEnveloppe
+-- Ne pas supprimer tant que d'anciennes opérations V1 y font référence ;
+-- simplement ne plus les alimenter.
+-- ----------------------------------------------------------------------------

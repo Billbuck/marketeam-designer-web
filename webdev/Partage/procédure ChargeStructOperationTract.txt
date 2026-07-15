@@ -1,0 +1,134 @@
+// Résumé : Charge une opération TRACT (Tracteva/Smarteva) depuis les tables
+//          ope_tract / ope_tract_contenu vers la structure COMMUNE
+//          StructOperationLettre (unification Courrier + Tract du 15/07/2026).
+//
+// RÈGLE D'OR : cette procédure et AjoutModificationOperationTract sont les
+// SEULS endroits du projet qui traduisent la structure commune vers les
+// tables tract (et inversement). Aucune page, aucune procédure métier ne
+// doit connaître ope_tract / ope_tract_contenu.
+//
+// Différences avec ChargeStructOperationLettre (le miroir courrier) :
+//	- tables ope_tract / ttb_package (référentiel package tract) ;
+//	- LEFT JOIN sur ltr_enveloppe : un Tracteva n'a PAS d'enveloppe
+//	  (IdEnveloppe NULL) et doit quand même se charger ;
+//	- champs spécifiques tract : IdEtude, SemaineDistribution ;
+//	- pas de timbre, pas d'alliage, pas de RNVP (spécifiques courrier).
+//
+// PRÉREQUIS BDD (cf. MariaDB/ALTER TABLE ope_tract - colonnes Designer.txt) :
+//	ope_tract doit porter JsonDesignerData (message d'enveloppe Smarteva :
+//	zone de texte noir unique, optionnelle — PAS d'adressage expéditeur/
+//	logo/promotion, spécifiques courrier).
+//
+// Paramètres :
+//	pIdOperation : IdOperation (= IdTract) de l'opération
+// Valeur de retour :
+// 	StructOperationLettre : structure commune remplie
+//
+procédure ChargeStructOperationTract(pIdOperation)
+
+stOperationLettre		est une StructOperationLettre
+sFondCheminPhysique	est une chaîne
+sFondCheminRelatif	est une chaîne
+sBatCheminPhysique	est une chaîne
+sBatCheminRelatif		est une chaîne
+sTexteRequete			est une chaîne
+sdReqOpeTract			est une Source de Données
+
+sTexteRequete =
+[
+	SELECT 
+		ope_tract.IdTract IdLettre,
+		ope_tract.IdEnveloppe,
+		ope_tract.IdEnveloppeClient,
+		ope_tract.QuantiteEnveloppeClient,
+		ope_tract.IdPackage,
+		ope_tract.IdCampagne,
+		ope_tract.PoidsTotal,
+		ope_tract.IdEtude,
+		ope_tract.SemaineDistribution,
+		ope_tract.JsonDesignerData,
+
+		IF(ttb_package.PrixUnitaire = 0 OR ttb_package.IdClient = [%Partage.__vcUser.IDClient%],1,0) EstPackageClient, 
+		IF(ttb_package.PrixUnitaire > 0, 1, 0) EstPackageMarque,		
+		IF(ttb_package_tarif.PrixUnitaire > 0, 1, 0) EstPackageMarketeam,
+		IFNULL(ttb_package_tarif.PrixUnitaire, ttb_package.PrixUnitaire) PuVentePackage,
+		ttb_package.PackageModeImpression,
+		ttb_package.FraisFixeFacturation FraisFixePackage,
+		ttb_package.PrixUnitaireAchat PuAchatPackage,
+		ttb_package.MinimumFacturation,
+		ttb_package.DelaiSupplementaire,
+		ttb_package.SeuilMinPackage,
+		ttb_package.DeductionEnveloppe,
+		ttb_package.Previsionnelle,
+
+		ltr_enveloppe.IdEnveloppe,
+		ltr_enveloppe.IdInsertion,
+		ltr_enveloppe.Libelle,
+		ltr_enveloppe.Hauteur,
+		ltr_enveloppe.Largeur,
+		ltr_enveloppe.NbrFenetre,
+		IF(IFNULL(ltr_enveloppe.NbrFenetre,0) > 0,1,0) EstEnveloppeFenetre,
+		ltr_enveloppe.PoidsInsertionMin,
+		ltr_enveloppe.PoidsInsertionMax,
+		ltr_enveloppe.NbrInsertionMax,
+		ltr_enveloppe.Poids,
+		ltr_enveloppe.PrixAchat PrixAchatEnveloppe,
+		ltr_enveloppe.Type						
+
+	FROM
+		ope_tract
+		LEFT JOIN ltr_enveloppe ON ope_tract.IdEnveloppe = ltr_enveloppe.IdEnveloppe
+		LEFT JOIN ttb_package On ttb_package.IdPackage = ope_tract.IdPackage
+		LEFT JOIN ttb_package_tarif ON ttb_package_tarif.IdPackage = ope_tract.IdPackage AND ttb_package_tarif.IdPackPrestation = [%Partage.__vcUser.IdPackPrestation%]
+	WHERE 
+		ope_tract.IdTract = %1
+]
+
+
+sTexteRequete = ChaîneConstruit(sTexteRequete,pIdOperation)
+
+si pas sdReqOpeTract.ExécuteRequêteSQL(ope_tract..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	<compile si TypeConfiguration <> Webservice>
+		Info("Erreur requête ChargeStructOperationTract")
+	<fin>
+	renvoyer stOperationLettre
+fin
+
+si sdReqOpeTract.LitPremier() alors
+
+	FichierVersMémoire(stOperationLettre, sdReqOpeTract)
+	FichierVersMémoire(stOperationLettre.stEnveloppe,sdReqOpeTract)
+
+	sBatCheminPhysique	= cpProjet.CheminFichier(pIdOperation,__REP_BAT__,Vrai)
+	sBatCheminRelatif		= cpProjet.CheminFichier(pIdOperation,__REP_BAT__,Faux)
+
+	sFondCheminPhysique	= cpProjet.CheminFichier(pIdOperation,__REP_FOND__,Vrai)
+	sFondCheminRelatif	= cpProjet.CheminFichier(pIdOperation,__REP_FOND__,Faux)
+
+	// Fond et BAT de l'enveloppe (Smarteva uniquement — un Tracteva n'a pas
+	// d'enveloppe, les fichiers n'existent simplement pas)
+	si fFichierExiste(sFondCheminPhysique + __DOC_ENV_FOND__ + pIdOperation + __JPG__) alors
+		stOperationLettre.stEnveloppe.EnveloppeFond.CheminPhysique	= sFondCheminPhysique	+ __DOC_ENV_FOND__ + pIdOperation + __JPG__
+		stOperationLettre.stEnveloppe.EnveloppeFond.CheminRelatif	= sFondCheminRelatif		+ __DOC_ENV_FOND__ + pIdOperation + __JPG__
+	fin
+
+	si fFichierExiste(sBatCheminPhysique + __DOC_ENV_BAT__ + pIdOperation + __JPG__) alors
+		stOperationLettre.stEnveloppe.EnveloppeBAT.CheminPhysique	= sBatCheminPhysique		+ __DOC_ENV_BAT__ + pIdOperation + __JPG__
+		stOperationLettre.stEnveloppe.EnveloppeBAT.CheminRelatif		= sBatCheminRelatif		+ __DOC_ENV_BAT__ + pIdOperation + __JPG__
+	fin
+
+	// Répertoire de travail de l'enveloppe (Designer)
+	stOperationLettre.stEnveloppe.RepertoireTravail = cpProjet.CheminFichier(pIdOperation, __REP_TEMP__, Vrai)
+
+	// Documents du tract (ope_tract_contenu) — ChargeTabStructTtbDocument doit
+	// remplir structDocument comme son homologue courrier ChargeTabStructLtrDocument
+	// (y compris JsonDesignerData, EstPersonnaliseDesigner,
+	// EstBatGenereAvecRapprochement après l'ALTER TABLE)
+	stOperationLettre.tabStDocument = ChargeTabStructTtbDocument(pIdOperation,stOperationLettre.IdPackage,stOperationLettre.IdCampagne)
+fin
+
+
+renvoyer stOperationLettre
+
+fin:
+sdReqOpeTract.AnnuleDéclaration()

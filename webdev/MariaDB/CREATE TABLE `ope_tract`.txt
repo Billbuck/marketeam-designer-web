@@ -1,0 +1,39 @@
+CREATE TABLE `ope_tract` (
+	`IdTract` INT(10) NOT NULL,
+	`IdEnveloppe` INT(10) NULL DEFAULT NULL,
+	`IdEnveloppeClient` INT(10) NULL DEFAULT NULL,
+	`IdEtude` INT(10) NULL DEFAULT NULL,
+	`IdPackage` INT(10) NULL DEFAULT NULL,
+	`IdCampagne` INT(10) NULL DEFAULT NULL,
+	`IdModeleEnveloppe` INT(10) NULL DEFAULT NULL,
+	`IdAdressageClient` INT(10) NULL DEFAULT NULL,
+	`IdPolice` INT(10) NULL DEFAULT NULL,
+	`SemaineDistribution` TINYINT(1) UNSIGNED NULL DEFAULT NULL,
+	`PoidsTotal` DECIMAL(6,2) UNSIGNED NULL DEFAULT NULL,
+	`AdressageExpediteur` VARCHAR(1000) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`PoliceTaille` TINYINT(3) UNSIGNED NULL DEFAULT NULL,
+	`PoliceCouleur` CHAR(7) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`QuantiteEnveloppeClient` MEDIUMINT(9) NULL DEFAULT NULL,
+	PRIMARY KEY (`IdTract`) USING BTREE,
+	INDEX `IdEnveloppe` (`IdEnveloppe`) USING BTREE,
+	INDEX `IdPackage` (`IdPackage`) USING BTREE,
+	INDEX `IdEnveloppePersonnalise` (`IdModeleEnveloppe`) USING BTREE,
+	INDEX `IdEnveloppeClient` (`IdEnveloppeClient`) USING BTREE,
+	INDEX `IdCampagne` (`IdCampagne`) USING BTREE,
+	INDEX `FK_ope_lettre_ltr_adressage_client` (`IdAdressageClient`) USING BTREE,
+	INDEX `IdPolice` (`IdPolice`) USING BTREE,
+	INDEX `IdEtude` (`IdEtude`) USING BTREE,
+	CONSTRAINT `FK_ope_tract_dos_operation` FOREIGN KEY (`IdTract`) REFERENCES `dos_operation` (`IdOperation`) ON UPDATE RESTRICT ON DELETE CASCADE,
+	CONSTRAINT `FK_ope_tract_ltr_adressage_client` FOREIGN KEY (`IdAdressageClient`) REFERENCES `ltr_adressage_client` (`IdAdressageClient`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `FK_ope_tract_ltr_enveloppe` FOREIGN KEY (`IdEnveloppe`) REFERENCES `ltr_enveloppe` (`IdEnveloppe`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `FK_ope_tract_ltr_enveloppe_client` FOREIGN KEY (`IdEnveloppeClient`) REFERENCES `ltr_enveloppe_client` (`IdEnveloppeClient`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `FK_ope_tract_ltr_modele_enveloppe` FOREIGN KEY (`IdModeleEnveloppe`) REFERENCES `ltr_modele_enveloppe` (`IdModeleEnveloppe`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `FK_ope_tract_prm_police` FOREIGN KEY (`IdPolice`) REFERENCES `prm_police` (`IdPolice`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `FK_ope_tract_ttb_campagne` FOREIGN KEY (`IdCampagne`) REFERENCES `ttb_campagne` (`IdCampagne`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `FK_ope_tract_ttb_etude` FOREIGN KEY (`IdEtude`) REFERENCES `ttb_etude` (`IdEtude`) ON UPDATE NO ACTION ON DELETE NO ACTION,
+	CONSTRAINT `FK_ope_tract_ttb_package` FOREIGN KEY (`IdPackage`) REFERENCES `ttb_package` (`IdPackage`) ON UPDATE RESTRICT ON DELETE RESTRICT
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+ROW_FORMAT=COMPACT
+;

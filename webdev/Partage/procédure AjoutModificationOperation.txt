@@ -27,7 +27,8 @@ fin
 
 selon stOperation.TypeOperation
 	cas __OPERATION_TRACTEVA__, __OPERATION_SMARTEVA__
-		stOperation.EstBaseEnAttente = (stOperation.stOperationTract.IdEtude = 0)
+		// Unification 15/07/2026 : IdEtude vit dans la structure commune
+		stOperation.EstBaseEnAttente = (stOperation.stOperationLettre.IdEtude = 0)
 
 	cas __OPERATION_RNVP__, __OPERATION_BLOCTEL__, __OPERATION_BASE_DE_DONNEES__
 		stOperation.EstBaseEnAttente = Faux

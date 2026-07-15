@@ -62,7 +62,10 @@ fin
 // ─────────────────────────────────────────────────────────────────────────────
 // Phase 2 — Composition JSON Designer
 // ─────────────────────────────────────────────────────────────────────────────
-sJsonDesigner = cpDesigner.ComposerJsonDesignerCreation(__stOperation, __tabEchantillonBaseLigne, __OPERATION_COURRIER__, Vrai, 0)
+// Thème = type d'opération réel (15/07/2026 : plus de __OPERATION_COURRIER__
+// codé en dur — en Smarteva le thème "ttb" ET la composition de zones
+// diffèrent, cf. ComposerJsonDesignerCreation)
+sJsonDesigner = cpDesigner.ComposerJsonDesignerCreation(__stOperation, __tabEchantillonBaseLigne, __stOperation.TypeOperation, Vrai, 0)
 
 si sJsonDesigner = "" alors
 	retour
