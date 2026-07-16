@@ -1,0 +1,42 @@
+procédure ChargeTaaDosBaseChamp(pIdOperation)
+
+sTexteRequete		est une chaîne
+sdReqDosBaseChamp	est une Source de Données
+stBaseChamp			est une structBaseChamp
+taaBaseChamp		est un tableau associatif de structBaseChamp
+
+sTexteRequete =
+[
+	SELECT
+		Champ,
+		Libelle,
+		Ordre,
+		Type
+	FROM 
+		dos_base_champ
+		JOIN dos_base ON dos_base.IdBase = dos_base_champ.IdBase
+	WHERE 
+		dos_base.IdOperation = [%pIdOperation%]
+	ORDER BY 
+		Ordre
+]
+
+
+si pas sdReqDosBaseChamp.ExécuteRequêteSQL(clt_client..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+	renvoyer Faux
+fin
+
+
+pour tout sdReqDosBaseChamp
+	VariableRAZ(stBaseChamp)
+	stBaseChamp.Champ							= sdReqDosBaseChamp.Champ
+	stBaseChamp.Ordre							= sdReqDosBaseChamp.Ordre
+	stBaseChamp.Type							= sdReqDosBaseChamp.Type
+	taaBaseChamp[sdReqDosBaseChamp.Libelle]	= stBaseChamp
+fin
+
+renvoyer taaBaseChamp
+
+fin:
+sdReqDosBaseChamp.AnnuleDéclaration()

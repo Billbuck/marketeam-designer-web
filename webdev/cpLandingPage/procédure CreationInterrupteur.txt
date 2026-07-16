@@ -1,0 +1,18 @@
+procédure CreationInterrupteur(stValeurInterrupteur est un structIciBlocLigneOffre, pIndiceFormulaireHTML)
+
+sCodeHTML est une chaîne
+sIdOption est une chaîne
+
+si stValeurInterrupteur.TabValeur..Occurrence = 0 alors renvoyer ""
+
+sIdOption =  "interrupteur_option" + pIndiceFormulaireHTML
+
+
+sCodeHTML += RC+ [
+<div class="cochechoix">
+	<input name="choix_[%pIndiceFormulaireHTML%]" id="[%sIdOption%]" type="checkbox" value="[%stValeurInterrupteur.TabValeur[1]%]" class="interrupteur_offre">
+	<label for="[%sIdOption%]"><span>[%stValeurInterrupteur.TabValeur[1]%]</span></label>
+</div>
+]
+
+renvoyer sCodeHTML

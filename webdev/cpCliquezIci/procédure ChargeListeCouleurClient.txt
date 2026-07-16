@@ -1,0 +1,56 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] ChargeListeCouleurClient (<pIdClient>)
+//
+// Paramètres :
+// 	pIdClient : <indiquez ici le rôle de pIdClient>
+// Valeur de retour :
+// 	chaîne ANSI : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure ChargeListeCouleurClient(pIdClient)
+
+
+sTexteRequete		est une chaîne
+sWhere				est une chaîne
+sdReqCouleur		est une Source de Données
+sListeCouleurClient	est une chaîne 
+
+sWhere = [
+	AND EXISTS(SELECT clt_mere.IdMere FROM clt_mere WHERE clt_mere.IdMere = ici_couleur.IdMere AND clt_mere.IdClient = [%pIdClient%])
+	-- AND ici_couleur.IdMere <> [%pIdClient%]
+	AND ici_couleur.EstActif = 1
+]
+
+sTexteRequete =
+[
+	SELECT
+	ici_couleur.IdCouleur,
+	ici_couleur.CouleurHTML,
+	ici_couleur.CouleurRVB,
+	ici_couleur.Libelle
+	FROM
+	ici_couleur
+	WHERE
+	1=1
+	[%sWhere%]
+	ORDER BY
+	ici_couleur.IdCouleur DESC
+]
+
+
+si pas sdReqCouleur.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	renvoyer ""               
+fin
+
+pour tout sdReqCouleur 
+	sListeCouleurClient += [TAB] + sdReqCouleur.CouleurHTML
+fin
+
+renvoyer sListeCouleurClient
+
+fin:
+sdReqCouleur.AnnuleDéclaration()

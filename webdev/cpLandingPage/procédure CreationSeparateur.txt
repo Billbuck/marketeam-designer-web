@@ -1,0 +1,21 @@
+procédure CreationSeparateur(pPropriete est une chaîne, pValeur est une chaîne)
+
+sCodeHTML 			est une chaîne
+stPropriete			est une structIciBlocProprieteSeparateur
+stValeur			est une structIciBlocValeurSeparateur
+sCouleurFond		est une chaîne
+
+si pPropriete<>"" 	alors 
+	Désérialise(stPropriete,pPropriete,psdJSON)
+	sCouleurFond = "background-color:[%stPropriete.BlocFondCouleur%]"
+fin
+si pValeur<>"" 		alors Désérialise(stValeur,pValeur,psdJSON)
+
+si stPropriete.Hauteur= 0 alors renvoyer ""
+
+sCodeHTML = [
+	<div class="bloc-container separateur" style="height:[%stPropriete.Hauteur%]px;[%sCouleurFond%]">
+	</div>
+]
+
+renvoyer sCodeHTML

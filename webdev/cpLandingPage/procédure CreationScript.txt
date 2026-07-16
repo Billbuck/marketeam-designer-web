@@ -1,0 +1,82 @@
+procédure CreationScript(pPropriete est une chaîne, pValeur est une chaîne, pstTheme est un structIciTheme)
+
+sCodeHTML					est une chaîne
+stProprieteScript			est une structIciBlocProprieteScript
+stValeurScript				est une structIciBlocValeurScript
+stThemeProprieteDefaut		est une structIciThemeProprieteDefaut
+stThemeProprieteTexte		est une structIciThemeProprieteTexte
+stThemeProprieteLien		est une structIciThemeProprieteLien
+stThemeStyleTexte			est une structIciThemeStyleTexte
+sStyle						est une chaîne
+
+
+Désérialise(stThemeProprieteDefaut,pstTheme.ProprieteDefaut,psdJSON)
+Désérialise(stThemeProprieteLien,pstTheme.ProprieteLien,psdJSON)
+Désérialise(stThemeProprieteTexte,pstTheme.ProprieteTexte,psdJSON)
+Désérialise(stProprieteScript,pPropriete,psdJSON)
+Désérialise(stValeurScript,pValeur,psdJSON)
+
+stThemeStyleTexte = stThemeProprieteTexte.TaaStyle[stProprieteScript.ScriptPoliceCode]
+
+
+//  	text-align:			[%DonneAlignementHorizontal(stProprieteLien.tabStyle[stProprieteDefaut.ScriptStyleBouton].AlignHorizontal)%] !important;
+sStyle = [
+.txt-14px-Gauche-Milieu {
+	color: 		 [%stProprieteScript.ScriptCouleurChamp%] !important;
+	font-family: '[%stProprieteScript.ScriptPoliceFamilleTexte%]', Arial !important;
+	font-size:   [%stThemeStyleTexte.PoliceTailleL%]px !important;
+	font-weight: [%stProprieteScript.ScriptPoliceStyle%] !important;
+}
+.pgiKcScript-3 {
+	font-family: 		'[%stProprieteScript.ScriptPoliceFamilleBouton%]', Arial !important;
+
+	margin: 			[%stProprieteScript.MargeExterneVertical%]px [%stProprieteScript.MargeExterneHorizontal%]px;
+	background-color:	[%stThemeProprieteLien.tabStyle[stProprieteScript.ScriptStyleBouton].PoliceFondCouleur%] !important;
+	font-size: 			[%stThemeProprieteLien.tabStyle[stProprieteScript.ScriptStyleBouton].PoliceCode%]px !important; /* Erreur ici a corriger */
+	color: 				[%stThemeProprieteLien.tabStyle[stProprieteScript.ScriptStyleBouton].PoliceCouleur%] !important;
+	font-weight:		[%stThemeProprieteLien.tabStyle[stProprieteScript.ScriptStyleBouton].PoliceStyle%] !important;
+	font-style:  		"normal" !important;
+	text-decoration:	[%(stThemeProprieteLien.tabStyle[stProprieteScript.ScriptStyleBouton].PoliceSouligne) ? "underline" sinon "none" %] !important;
+	border: 			[%stThemeProprieteLien.tabStyle[stProprieteScript.ScriptStyleBouton].BordureEpaisseur%]px solid [%stThemeProprieteLien.tabStyle[stProprieteScript.ScriptStyleBouton].BordureCouleur%] !important;
+	border-radius: 		[%stThemeProprieteLien.tabStyle[stProprieteScript.ScriptStyleBouton].BordureArrondi%]px !important;
+	padding:			[%(stThemeProprieteLien.tabStyle[stProprieteScript.ScriptStyleBouton].BordureEpaisseur)>0 ? "0.4em 0.7em" sinon "0" %] !important;
+	transition: 		background-color 300ms ease-out;
+}
+
+
+
+@media all and (max-width:[%pstTheme.LargeurM%]px) {
+	.txt-14px-Gauche-Milieu { font-size: [%stThemeStyleTexte.PoliceTailleM%]px !important; }
+	.pgiKcScript-3 { font-size: [%stThemeProprieteLien.tabStyle[stProprieteScript.ScriptStyleBouton].PoliceCode%]px !important; } /* Erreur a corriger */
+}
+@media all and (max-width:[%pstTheme.LargeurS%]px) {
+	.txt-14px-Gauche-Milieu { font-size:   [%stThemeStyleTexte.PoliceTailleS%]px !important; }
+	.pgiKcScript-3 { font-size: [%stThemeProprieteLien.tabStyle[stProprieteScript.ScriptStyleBouton].PoliceCode%]px !important; } /*Erreur a corriger */
+}
+]
+
+sStyle = Encode(URLEncode(sStyle,encodeURLParamètre))
+
+
+sCodeHTML = [
+	<div class="bloc-container link lien[%stProprieteScript.StyleLien%]" style="text-align:[%DonneAlignementHorizontal(stProprieteScript.AlignHorizontal,"html")%]">
+		<a href="#" onclick="return AfficheScript();" class="bouton-script">[%stValeurScript.LibelleLien%]</a>
+		<button onclick="return MasqueScript();" class="croix" style="display:none"></button>
+		<iframe src="pgeScript.awp?P1=[%stValeurScript.IdScript%]&P2=[%sStyle%]&P3=[%URLEncode(stProprieteScript.ScriptCouleurCoche)%]" width="100%" height="300" frameborder="0" class="iframe-script" style="display:none"></iframe>
+	</div>
+	
+	<script>
+	function AfficheScript() {	
+		$(".bouton-script").hide("fast");
+		$(".iframe-script, .croix").show("slow");
+		return false;
+	}
+	function MasqueScript() {	
+		$(".bouton-script").show("slow");
+		$(".iframe-script, .croix").hide("fast");
+		return false;
+	}
+	</script>
+]
+
+renvoyer sCodeHTML

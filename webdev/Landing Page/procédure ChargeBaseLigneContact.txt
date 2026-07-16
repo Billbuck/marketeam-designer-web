@@ -1,0 +1,79 @@
+// Résumé : Fabrique une « ligne de base » de substitution avec les infos de
+//          l'utilisateur de la plateforme (le contact de l'opération), pour
+//          personnaliser la landing de TEST d'une opération SANS base injectée.
+//          Même logique que le BAT, qui affiche les infos de l'utilisateur
+//          quand il n'y a pas de base. (CDC QR interactif V2 — 16/07/2026)
+//
+// Renvoie AUSSI le tableau des champs standard (libellés identiques à ceux
+// posés par l'import dans dos_base_champ, cf. LibelleTypeChamp du webservice)
+// pour que les marqueurs [Civilité], [Nom], [Prénom]... se résolvent.
+//
+// ⚠ Noms de colonnes clt_contact / clt_client à vérifier au report WebDev :
+//   j'ai suivi les conventions du projet (Civilite, Nom, Prenom, Email...).
+//
+// Paramètres :
+//	pIdOperation : opération dont on cherche le contact
+// Valeur de retour :
+// 	(StructBaseLigne, tableau associatif de structBaseChamp)
+//
+procédure ChargeBaseLigneContact(pIdOperation)
+
+sTexteRequete	est une chaîne
+sdReqContact	est une Source de Données
+stBaseLigne		est une StructBaseLigne
+stBaseChamp		est une structBaseChamp
+taaBaseChamp	est un tableau associatif de structBaseChamp
+
+sTexteRequete =
+[
+	SELECT
+		clt_contact.Civilite,
+		clt_contact.Nom,
+		clt_contact.Prenom,
+		clt_contact.Email,
+		clt_contact.Tel,
+		clt_contact.Portable,
+		clt_client.Societe,
+		clt_client.Adresse1,
+		clt_client.CodePostal,
+		clt_client.Ville
+	FROM
+		dos_operation
+		JOIN clt_contact ON clt_contact.IdContact = dos_operation.IdContact
+		JOIN clt_client  ON clt_client.IdClient   = dos_operation.IdClientFacturation
+	WHERE
+		dos_operation.IdOperation = [%pIdOperation%]
+]
+
+si pas sdReqContact.ExécuteRequêteSQL(clt_client..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	renvoyer (stBaseLigne, taaBaseChamp)
+fin
+
+si sdReqContact.LitPremier() alors
+	FichierVersMémoire(stBaseLigne, sdReqContact)
+	stBaseLigne.IdBaseLigne = -1	// marqueur « ligne de substitution » (pas un vrai destinataire)
+
+	// Champs standard, avec les MÊMES libellés que dos_base_champ
+	AjouteChampStandard("Civilité",		__CHAMP_CIVILITE__,		__CHAMP_TYPE_TEXTE__)
+	AjouteChampStandard("Nom",			__CHAMP_NOM__,			__CHAMP_TYPE_TEXTE__)
+	AjouteChampStandard("Prénom",		__CHAMP_PRENOM__,		__CHAMP_TYPE_TEXTE__)
+	AjouteChampStandard("Société",		__CHAMP_SOCIETE__,		__CHAMP_TYPE_TEXTE__)
+	AjouteChampStandard("Adresse 1",	__CHAMP_ADRESSE1__,		__CHAMP_TYPE_TEXTE__)
+	AjouteChampStandard("Code postal",	__CHAMP_CODE_POSTAL__,	__CHAMP_TYPE_CODEPOSTAL__)
+	AjouteChampStandard("Ville",		__CHAMP_VILLE__,		__CHAMP_TYPE_TEXTE__)
+	AjouteChampStandard("Email",		__CHAMP_EMAIL__,		__CHAMP_TYPE_EMAIL__)
+	AjouteChampStandard("Téléphone",	__CHAMP_TEL__,			__CHAMP_TYPE_TELEPHONE__)
+	AjouteChampStandard("Portable",		__CHAMP_PORTABLE__,		__CHAMP_TYPE_PORTABLE__)
+fin
+
+renvoyer (stBaseLigne, taaBaseChamp)
+
+fin:
+sdReqContact.AnnuleDéclaration()
+
+	procédure interne AjouteChampStandard(pLibelle est une chaîne, pChamp est une chaîne, pType est une chaîne)
+		VariableRAZ(stBaseChamp)
+		stBaseChamp.Champ		= pChamp
+		stBaseChamp.Type		= pType
+		taaBaseChamp[pLibelle]	= stBaseChamp
+	fin

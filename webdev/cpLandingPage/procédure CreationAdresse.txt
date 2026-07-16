@@ -1,0 +1,103 @@
+procédure CreationAdresse(pPropriete est une chaîne, pValeur est une chaîne, nPLargeurL est un entier <utile>, pLargeurM est un entier, pLargeurS est un entier)
+
+sCodeHTML					est une chaîne
+stProprieteAdresse			est une structIciBlocProprieteAdresse
+stValeurAdresse				est une structIciBlocValeurAdresse
+sListeAdresse				est une chaîne
+nNumAdresse					est un entier
+nLigne						est un entier
+sAdresseFormaté				est une chaîne
+sAdresseLigne				est une chaîne
+
+sGrilleS					est une chaîne
+sGrilleM					est une chaîne
+sGrilleL					est une chaîne
+
+Désérialise(stProprieteAdresse,pPropriete,psdJSON)
+Désérialise(stValeurAdresse,pValeur,psdJSON)
+
+pour tout élément sBlocAdresse de stValeurAdresse.TabValeur
+	nNumAdresse++
+	nLigne			= 0
+	sAdresseFormaté	= ""
+	pour toute chaîne sAdresseLigne de sBlocAdresse séparée par RC
+		nLigne++
+		sAdresseFormaté += [RC] + [
+			<span class="style-ligne [%stValeurAdresse.tabStyle[nLigne]%]" style="font-family:[%stProprieteAdresse.PoliceFamille%]; text-align:[%DonneAlignementHorizontal(stProprieteAdresse.AlignHorizontal,"html")%];">
+			[%sAdresseLigne%]
+			</span>
+		]
+	fin
+
+	sListeAdresse += [
+		<div class="bloc-adresse child">
+		<div class="bloc-inner">[%sAdresseFormaté%]</div>
+		</div>
+	]
+fin
+
+// Définir les grilles en fonction du nombre d'adresses
+selon stValeurAdresse.TabValeur.Occurrence
+	cas 0, 1
+		sGrilleS	= "1fr;"
+		sGrilleM	= "1fr;"
+		sGrilleL	= "1fr;"
+	cas 2
+		sGrilleS	= "1fr;"
+		sGrilleM	= "1fr 1fr;"
+		sGrilleL	= "1fr 1fr;"
+	autres cas
+		sGrilleS	= "1fr;"
+		sGrilleM	= "1fr 1fr;"
+		sGrilleL	= "1fr 1fr 1fr;"
+fin
+
+sCodeHTML = [
+	<div class='bloc-container blocs-adresse'>
+	[%sListeAdresse%]
+	</div>
+	
+	<style>
+	.blocs-adresse {
+		background: 	[%stProprieteAdresse.BlocFondCouleur%];	
+		display: 		grid;
+		gap: 			[%stProprieteAdresse.Gap%]px; /* Espace entre les blocs */
+	}
+	
+	.bloc-adresse {
+		padding-left: 	0px;
+		padding-right: 	0px;
+		background: 	[%stProprieteAdresse.AdresseFondCouleur%];
+		border-color: 	[%stProprieteAdresse.BordureCouleur%]; /* Définit la couleur de la bordure en rouge */
+		padding: 		[%stProprieteAdresse.BordurePadding%]px;
+		border-width: 	[%stProprieteAdresse.BordureEpaisseur%]px; /* Définit l'épaisseur de la bordure à 2 pixels */
+		border-style: 	solid; /* Nécessaire pour rendre la bordure visible */
+	}
+	
+	.blocs-adresse span {
+		text-align: 	[%stProprieteAdresse.AlignHorizontal%];
+		color: 			[%stProprieteAdresse.PoliceCouleur%];	
+		display: 		block;
+	}
+	
+	@media (max-width: [%pLargeurS%]px) {
+		.blocs-adresse {
+			grid-template-columns:	[%sGrilleS%]
+		}
+	}
+	
+	@media (min-width: [%pLargeurS%]px) and (max-width: [%pLargeurM%]px) {
+		.blocs-adresse {
+			grid-template-columns:	[%sGrilleM%]
+		}
+	}
+	
+	@media (min-width: [%pLargeurM%]px) {
+		.blocs-adresse {
+			grid-template-columns:	[%sGrilleL%]
+		}
+	}
+	</style>
+]
+
+renvoyer sCodeHTML

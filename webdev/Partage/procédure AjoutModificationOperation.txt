@@ -21,6 +21,17 @@ sinon
 	fin
 fin
 
+// ─── QR interactif (CDC V2 16/07/2026) : code de test de l'opération ──────
+// Généré à la création, ou en rattrapage pour les opérations d'avant la
+// colonne CodeTest. Sert à l'URL de test du QR du BAT : cliquez.info/!<CodeTest>
+// Alphabet volontairement limité aux lettres/chiffres : le code voyage dans une URL.
+si stOperation.CodeTest = "" alors
+	sAlphabetCodeTest est une chaîne = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+	pour nIndCodeTest = 1 _à_ 10
+		stOperation.CodeTest += sAlphabetCodeTest[[Hasard(1, Taille(sAlphabetCodeTest))]]
+	fin
+fin
+
 // **************************************************** Données communes à la création et à la modification
 // On met à jour le booléen pour calculer le statut de l'opération dans le trigger HF
 

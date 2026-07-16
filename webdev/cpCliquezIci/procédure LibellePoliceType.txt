@@ -1,0 +1,22 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] LibellePoliceType (<pType>)
+//
+// Paramètres :
+//	pType : <indiquez ici le rôle de pType>
+// Valeur de retour :
+// 	chaîne ANSI : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure LibellePoliceType(pType)
+
+selon pType
+	cas __POLICE_WEB__		: renvoyer "Web font"
+	cas __POLICE_CLIENT__	: renvoyer "User font"
+	cas __POLICE_GOOGLE__	: renvoyer "Google font"
+	autre cas				: renvoyer "A définir"
+		
+fin
+

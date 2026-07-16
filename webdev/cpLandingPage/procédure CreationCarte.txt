@@ -1,0 +1,267 @@
+procédure CreationCarte(pNumBloc est un entier, pPropriete est une chaîne, pValeur est une chaîne)
+
+// ─────────────────────────────────────────────────────────────────────────────────────
+// Étape 1 : Déclarations des variables locales
+// ─────────────────────────────────────────────────────────────────────────────────────
+sCodeHTML				est une chaîne	// Contiendra le HTML + CSS
+sCodeJS					est une chaîne	// Contiendra le code JavaScript (multi-lignes)
+sCodeMarqueur			est une chaîne
+sStyleCss				est une chaîne	// Bloc <style> pour la carte
+sClasseHtml				est une chaîne	// Nom de classe dynamique (ex: bloc-1)
+sIdMap					est une chaîne	// ID du <div> où la carte sera rendue
+
+stProprieteCarte		est une structIciBlocProprieteCarte
+stValeurCarte			est une structIciBlocValeurCarte
+
+
+// ─────────────────────────────────────────────────────────────────────────────────────
+// Étape 2 : Désérialisation des structures
+// ─────────────────────────────────────────────────────────────────────────────────────
+Désérialise(stProprieteCarte, pPropriete, psdJSON)
+Désérialise(stValeurCarte, pValeur, psdJSON)
+
+stProprieteCarte.CodeSnazzy = [
+[{"featureType":"water","elementType":"geometry.fill","stylers":[{"color":"#d3d3d3"}]},{"featureType":"transit","stylers":[{"color":"#808080"},{"visibility":"off"}]},{"featureType":"road.highway","elementType":"geometry.stroke","stylers":[{"visibility":"on"},{"color":"#b3b3b3"}]},{"featureType":"road.highway","elementType":"geometry.fill","stylers":[{"color":"#ffffff"}]},{"featureType":"road.local","elementType":"geometry.fill","stylers":[{"visibility":"on"},{"color":"#ffffff"},{"weight":1.8}]},{"featureType":"road.local","elementType":"geometry.stroke","stylers":[{"color":"#d7d7d7"}]},{"featureType":"poi","elementType":"geometry.fill","stylers":[{"visibility":"on"},{"color":"#ebebeb"}]},{"featureType":"administrative","elementType":"geometry","stylers":[{"color":"#a7a7a7"}]},{"featureType":"road.arterial","elementType":"geometry.fill","stylers":[{"color":"#ffffff"}]},{"featureType":"road.arterial","elementType":"geometry.fill","stylers":[{"color":"#ffffff"}]},{"featureType":"landscape","elementType":"geometry.fill","stylers":[{"visibility":"on"},{"color":"#efefef"}]},{"featureType":"road","elementType":"labels.text.fill","stylers":[{"color":"#696969"}]},{"featureType":"administrative","elementType":"labels.text.fill","stylers":[{"visibility":"on"},{"color":"#737373"}]},{"featureType":"poi","elementType":"labels.icon","stylers":[{"visibility":"off"}]},{"featureType":"poi","elementType":"labels","stylers":[{"visibility":"off"}]},{"featureType":"road.arterial","elementType":"geometry.stroke","stylers":[{"color":"#d6d6d6"}]},{"featureType":"road","elementType":"labels.icon","stylers":[{"visibility":"off"}]},{},{"featureType":"poi","elementType":"geometry.fill","stylers":[{"color":"#dadada"}]}]
+]
+
+//stProprieteCarte.CodeSnazzy = [
+//[{"featureType":"all","elementType":"labels","stylers":[{"visibility":"off"},{"color":"#f49f53"}]},{"featureType":"all","elementType":"labels.text","stylers":[{"visibility":"simplified"}]},{"featureType":"landscape","elementType":"all","stylers":[{"color":"#f9ddc5"},{"lightness":-7}]},{"featureType":"poi.business","elementType":"all","stylers":[{"color":"#645c20"},{"lightness":38}]},{"featureType":"poi.government","elementType":"all","stylers":[{"color":"#9e5916"},{"lightness":46}]},{"featureType":"poi.medical","elementType":"geometry.fill","stylers":[{"color":"#813033"},{"lightness":38},{"visibility":"off"}]},{"featureType":"poi.park","elementType":"all","stylers":[{"color":"#645c20"},{"lightness":39}]},{"featureType":"poi.school","elementType":"all","stylers":[{"color":"#a95521"},{"lightness":35}]},{"featureType":"poi.sports_complex","elementType":"all","stylers":[{"color":"#9e5916"},{"lightness":32}]},{"featureType":"road","elementType":"all","stylers":[{"color":"#813033"},{"lightness":43}]},{"featureType":"road.local","elementType":"geometry.fill","stylers":[{"color":"#f19f53"},{"weight":1.3},{"visibility":"on"},{"lightness":16}]},{"featureType":"road.local","elementType":"geometry.stroke","stylers":[{"color":"#f19f53"},{"lightness":-10}]},{"featureType":"transit","elementType":"all","stylers":[{"lightness":38}]},{"featureType":"transit.line","elementType":"all","stylers":[{"color":"#813033"},{"lightness":22}]},{"featureType":"transit.station","elementType":"all","stylers":[{"visibility":"off"}]},{"featureType":"water","elementType":"all","stylers":[{"color":"#1994bf"},{"saturation":-69},{"gamma":0.99},{"lightness":43}]}]
+//]
+
+//[{"featureType":"water","elementType":"geometry","stylers":[{"color":"#e9e9e9"},{"lightness":17}]},{"featureType":"landscape","elementType":"geometry","stylers":[{"color":"#f5f5f5"},{"lightness":20}]},{"featureType":"road.highway","elementType":"geometry.fill","stylers":[{"color":"#ffffff"},{"lightness":17}]},{"featureType":"road.highway","elementType":"geometry.stroke","stylers":[{"color":"#ffffff"},{"lightness":29},{"weight":0.2}]},{"featureType":"road.arterial","elementType":"geometry","stylers":[{"color":"#ffffff"},{"lightness":18}]},{"featureType":"road.local","elementType":"geometry","stylers":[{"color":"#ffffff"},{"lightness":16}]},{"featureType":"poi","elementType":"geometry","stylers":[{"color":"#f5f5f5"},{"lightness":21}]},{"featureType":"poi.park","elementType":"geometry","stylers":[{"color":"#dedede"},{"lightness":21}]},{"elementType":"labels.text.stroke","stylers":[{"visibility":"on"},{"color":"#ffffff"},{"lightness":16}]},{"elementType":"labels.text.fill","stylers":[{"saturation":36},{"color":"#333333"},{"lightness":40}]},{"elementType":"labels.icon","stylers":[{"visibility":"off"}]},{"featureType":"transit","elementType":"geometry","stylers":[{"color":"#f2f2f2"},{"lightness":19}]},{"featureType":"administrative","elementType":"geometry.fill","stylers":[{"color":"#fefefe"},{"lightness":20}]},{"featureType":"administrative","elementType":"geometry.stroke","stylers":[{"color":"#fefefe"},{"lightness":17},{"weight":1.2}]}]
+
+// ─────────────────────────────────────────────────────────────────────────────────────
+// Étape 3 : Préparation des noms dynamiques
+// ─────────────────────────────────────────────────────────────────────────────────────
+sClasseHtml	= "bloc-" + pNumBloc
+sIdMap		= "map-"  + pNumBloc
+
+
+// ─────────────────────────────────────────────────────────────────────────────────────
+// Étape 4 : Construction du HTML (bloc container + div carte)
+// ─────────────────────────────────────────────────────────────────────────────────────
+sCodeHTML	= [
+	<div class="[%sClasseHtml%] bloc-container">
+	<div id="[%sIdMap%]" class="map-carte-[%pNumBloc%]"></div>
+	</div>
+]
+
+
+// ─────────────────────────────────────────────────────────────────────────────────────
+// Étape 5 : Construction du <style> CSS
+// ─────────────────────────────────────────────────────────────────────────────────────
+
+sStyleCss = [
+	<style>
+	.[%sClasseHtml%].bloc-container {
+		padding: 0px 0px;
+	}
+
+	.map-carte-[%pNumBloc%] {
+		width: 			100%;
+		aspect-ratio:	[%Arrondi(100/Max(25,stProprieteCarte.RatioHauteur),2)%] / 1;
+		margin: 		[%stProprieteCarte.MargeVertical%]px 0;
+		position: 		relative;
+	}
+	</style>
+]
+
+// On ajoute ce style au HTML
+sCodeHTML += sStyleCss
+
+
+// ─────────────────────────────────────────────────────────────────────────────────────
+// Étape 6 : Préparation du Code JavaScript
+// ─────────────────────────────────────────────────────────────────────────────────────
+//   - Variables JS locales à ce bloc
+//   - Lecture/parse du CodeSnazzy si besoin
+//   - mapOptions + init de la carte
+//   - Construction de listMarkers[...] en WLangage
+//   - Fonctions pour géocoder si lat/lng manquants, placer markers, fitBounds
+//   - Redimensionnement
+
+sCodeJS = [
+	$(document).ready(function(){
+	// Variables pour ce bloc
+	var mapInstance[%pNumBloc%];
+	var markers[%pNumBloc%] = [];
+	var bounds[%pNumBloc%] = new google.maps.LatLngBounds();
+	var geocoder[%pNumBloc%] = new google.maps.Geocoder();
+
+	// Snazzy (thème)
+	var snazzyStyles[%pNumBloc%] = null;
+]
+
+// Si code Snazzy non vide => JSON.parse(...)
+si stProprieteCarte.CodeSnazzy <> "" alors
+	sCodeJS += [
+		try {
+		snazzyStyles[%pNumBloc%] = JSON.parse('[%Remplace(stProprieteCarte.CodeSnazzy, "'", "\\'")%]');
+		} catch(e) {
+		console.warn('Snazzy code JSON parse error', e);
+		snazzyStyles[%pNumBloc%] = null;
+		}
+	]
+fin
+
+// ─────────────────────────────────────────────────────────────────────────────────────
+// Étape 7 : mapOptions + init
+// ─────────────────────────────────────────────────────────────────────────────────────
+
+
+
+sCodeJS += [
+	var mapOptions[%pNumBloc%] = {
+		center: 			{ lat: 48.8566, lng: 2.3522 }, // Centre par défaut, ajusté par fitBounds
+		zoom: 				[%stProprieteCarte.Zoom%],
+		draggable: 			[%stProprieteCarte.Draggable ? "true" sinon "false"%],
+		scrollwheel: 		[%stProprieteCarte.Scrollwheel ? "true" sinon "false"%],
+		zoomControl: 		[%stProprieteCarte.ZoomControl ? "true" sinon "false"%],
+		mapTypeControl:		[%stProprieteCarte.PanControl ? "true" sinon "false"%],
+		streetViewControl:	[%stProprieteCarte.StreetViewControl ? "true" sinon "false"%],
+		fullscreenControl:	[%stProprieteCarte.FullscreenControl ? "true" sinon "false"%],
+		styles: 			snazzyStyles[%pNumBloc%] || []
+	};
+
+	mapInstance[%pNumBloc%] = new google.maps.Map(
+		document.getElementById('[%sIdMap%]'),
+		mapOptions[%pNumBloc%]
+	);
+
+	// Liste de marqueurs
+	var listMarkers[%pNumBloc%] = [
+]
+
+
+// ─────────────────────────────────────────────────────────────────────────────────────
+// Étape 8 : Boucle WLangage pour alimenter listMarkers
+// ─────────────────────────────────────────────────────────────────────────────────────
+//  - On crée des objets { title, lat, lng, address }
+//  - On ignore si tout vide
+si stValeurCarte.tabLibelle..Occurrence > 0 alors
+	pour nInd = 1 _à_ stValeurCarte.tabLibelle..Occurrence
+		si pas (stValeurCarte.tabLatitude[nInd] = "" _et_ stValeurCarte.tabAdresse[nInd] = "") alors
+
+			// On ajoute un objet JS
+			sCodeMarqueur += [
+				{
+				title: '[%stValeurCarte.tabLibelle[nInd]%]',
+			]
+
+			si (stValeurCarte.tabLatitude[nInd] <> "") _et_ (stValeurCarte.tabLongitude[nInd] <> "") alors
+				sCodeMarqueur += [
+					lat: [%stValeurCarte.tabLatitude[nInd]%],
+					lng: [%stValeurCarte.tabLongitude[nInd]%],
+				]
+			sinon
+				sCodeMarqueur += [
+					lat: null,
+					lng: null,
+				]
+			fin
+
+			sCodeMarqueur += [
+				address: '[%stValeurCarte.tabAdresse[nInd]%]'
+			]
+
+			si nInd = stValeurCarte.tabLibelle..Occurrence alors
+				sCodeMarqueur += [
+					}
+				]
+			sinon
+				sCodeMarqueur += [
+					},
+				]
+			fin
+
+		fin
+	fin
+fin
+
+// On ferme le tableau JS
+sCodeMarqueur += RC + "];"
+
+
+sCodeJS += RC + sCodeMarqueur
+
+// ─────────────────────────────────────────────────────────────────────────────────────
+// Étape 9 : Fonctions pour géocoder, placer markers, fitBounds, etc.
+// ─────────────────────────────────────────────────────────────────────────────────────
+
+
+sCodeJS += RC + [
+    function placeAllMarkers() {
+        var pending = listMarkers[%pNumBloc%].length;
+        if (pending === 0) {
+            return;
+        }
+
+        listMarkers[%pNumBloc%].forEach(function(mObj) {
+            if (mObj.lat !== null && mObj.lng !== null) {
+                createMarker(mObj.lat, mObj.lng, mObj.title);
+                doneOne();
+            } else if (mObj.address) {
+                geocoder[%pNumBloc%].geocode({ address: mObj.address }, function(results, status) {
+                    if (status === "OK" && results[0]) {
+                        var loc = results[0].geometry.location;
+                        createMarker(loc.lat(), loc.lng(), mObj.title);
+                    }
+                    doneOne();
+                });
+            } else {
+                // ni coords ni address => on ignore
+                doneOne();
+            }
+        });
+
+        function doneOne() {
+            pending--;
+            if (pending === 0) {
+                // Quand tous sont traités, fitBounds si markers > 0
+                if (markers[%pNumBloc%].length > 0) {
+
+					if (markers[%pNumBloc%].length === 1) {
+                        // Si un seul marqueur, définir le centre et le zoom souhaité
+                        mapInstance[%pNumBloc%].setCenter(markers[%pNumBloc%][0].getPosition());
+                        mapInstance[%pNumBloc%].setZoom([%stProprieteCarte.Zoom%]);
+                    } else {
+                        // Si plusieurs marqueurs, ajuster les limites pour les inclure tous
+                        mapInstance[%pNumBloc%].fitBounds(bounds[%pNumBloc%]);
+                    }
+                }
+            }
+        }
+
+
+        function createMarker(lat, lng, title) {
+            var pos = { lat: lat, lng: lng };
+            var mk = new google.maps.Marker({
+                map: mapInstance[%pNumBloc%],
+                position: pos,
+                title: title || ""
+            });
+            markers[%pNumBloc%].push(mk);
+            bounds[%pNumBloc%].extend(pos);
+        }
+    }
+
+	// Appel de la fonction
+	placeAllMarkers();
+
+    // Sur resize => resize + fitBounds
+    $(window).resize(function(){
+        google.maps.event.trigger(mapInstance[%pNumBloc%], "resize");
+        if (markers[%pNumBloc%].length > 0) {
+            mapInstance[%pNumBloc%].fitBounds(bounds[%pNumBloc%]);
+        }
+    });
+
+	});
+]
+
+
+// On ajoute le code JS à _tabCodeJS
+TableauAjoute(_tabCodeJS, sCodeJS)
+
+// On renvoie le code HTML final (div + style)
+renvoyer sCodeHTML

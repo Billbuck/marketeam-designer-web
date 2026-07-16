@@ -1,0 +1,12 @@
+procédure CouleurHtmlVersRvb(pCouleurHtml)
+
+CouleurRvb est une Couleur
+
+
+quand exception dans
+	CouleurRvb = HTMLVersRVB(pCouleurHtml)
+faire
+	renvoyer HTMLVersRVB("#ffffff")
+sinon
+	renvoyer CouleurRvb
+fin

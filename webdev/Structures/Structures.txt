@@ -2698,6 +2698,7 @@ structOperation est une Structure
 	UserCreation							est une chaîne
 	UserModification						est une chaîne
 	CodeTemp								est une chaîne	// Code unique en attendant la création de l’opération pour la création des fichiers temporaires
+	CodeTest								est une chaîne	// Code non devinable de l'URL de test du QR interactif : cliquez.info/!<CodeTest> (CDC QR interactif V2 16/07/2026)
 	IdCoupon								est un entier
 	TypeCoupon								est une chaîne
 	NomOperation							est une chaîne

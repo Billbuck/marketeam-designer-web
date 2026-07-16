@@ -1,0 +1,40 @@
+// pPremiereLigne (16/07/2026, CDC QR interactif V2) :
+//	Faux (défaut) = ligne au hasard — comportement historique des aperçus ;
+//	Vrai          = PREMIÈRE ligne de la base — pour le scan du QR d'un BAT,
+//	                afin d'afficher la même personne que celle du BAT.
+procédure ChargeUneBaseLigne(pIdCliquezIci, pPremiereLigne est un booléen = Faux)
+
+sTexteRequete	est une chaîne
+sOrdre			est une chaîne
+sdReqLigne		est une Source de Données
+stBaseLigne		est une StructBaseLigne
+
+sOrdre = (pPremiereLigne ? "dos_base_ligne.IdBaseLigne" sinon "RAND()")
+
+sTexteRequete =
+[
+	SELECT
+		dos_base_ligne.*
+	FROM
+		dos_base
+		JOIN dos_base_ligne ON dos_base_ligne.IdBase = dos_base.IdBase
+	WHERE
+		dos_base.IdOperation = [%pIdCliquezIci%]
+	ORDER BY 
+		[%sOrdre%]
+	LIMIT 1
+]
+
+si pas sdReqLigne.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	renvoyer stBaseLigne
+fin
+
+si sdReqLigne.LitPremier() alors
+	FichierVersMémoire(stBaseLigne,sdReqLigne)
+fin
+
+renvoyer stBaseLigne
+
+fin:
+sdReqLigne.AnnuleDéclaration()

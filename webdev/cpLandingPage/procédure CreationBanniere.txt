@@ -1,0 +1,74 @@
+procédure CreationBanniere(nNumBloc est un entier, pPropriete est une chaîne, pValeur est une chaîne)
+
+sCodeHTML				est une chaîne
+sCodeJS					est une chaîne
+sClasseHtml				est une chaîne
+stProprieteBanniere		est une structIciBlocProprieteBanniere
+stValeurBanniere		est une structIciBlocValeurBanniere
+sImage					est une chaîne
+
+Désérialise(stProprieteBanniere,pPropriete,psdJSON)
+Désérialise(stValeurBanniere,pValeur,psdJSON)
+
+sClasseHtml = "bloc-" + nNumBloc
+
+sCodeJS = [
+$(document).ready(function(){
+	$('.[%sClasseHtml%]').slick({
+		speed: 			[%stProprieteBanniere.VitesseDefilement%],
+		autoplay: 		[%(stProprieteBanniere.JoueAuto ? "true" sinon "false")%],
+		autoplaySpeed: 	[%stProprieteBanniere.JoueAutoVitesse%],
+		adaptiveHeight: [%(stProprieteBanniere.AdapteHauteur ? "true" sinon "false")%],
+		arrows: 		[%(stProprieteBanniere.AfficheFleche ? "true" sinon "false")%],
+		fade: 			[%(stProprieteBanniere.AnimationFondu ? "true" sinon "false")%],
+		dots: 			[%(stProprieteBanniere.AffichePoint ? "true" sinon "false")%],
+		infinite: 		true,
+		cssEase: 		'linear'
+	}); 
+});
+]
+
+sCodeHTML = "<div class=""[%sClasseHtml%] bloc-container"">"
+
+selon Vrai
+
+	cas stValeurBanniere.tabIdImage..Occurrence > 0
+		pour nInd = 1 _à_ stValeurBanniere.tabIdImage..Occurrence
+
+			HLitRecherchePremier(ici_image,IdImage,stValeurBanniere.tabIdImage[nInd])
+			si pas HTrouve(ici_image) alors
+				Info("Erreur Image bannière non trouvé")
+			sinon
+				selon Vrai
+					cas ici_image.IdMarque > 0	: sImage = CheminMarque(ici_image.IdMarque,__OPERATION_CLIQUEZICI__,__REP_IMAGE__,Faux) + __DOC_ICI_IMAGE__ + ici_image.IdImage + "." + ici_image.TypeFichier
+					cas ici_image.IdClient > 0	: sImage = CheminClient(ici_image.IdClient,__OPERATION_CLIQUEZICI__,__REP_IMAGE__,Faux) + __DOC_ICI_IMAGE__ + ici_image.IdImage + "." + ici_image.TypeFichier
+					autre cas					: sImage = CheminMarketeam(__OPERATION_CLIQUEZICI__,__REP_IMAGE__,Faux) + __DOC_ICI_IMAGE__ + ici_image.IdImage + "." + ici_image.TypeFichier
+				fin
+			fin
+			sCodeHTML += "<div>"
+			si SansEspace(stValeurBanniere.tabLien[nInd]) <> "" alors
+				sCodeHTML += [
+				<a href="[%SansEspace(stValeurBanniere.tabLien[nInd])%]" target="blank" class="lien-banniere">
+				]
+			fin
+			sCodeHTML += [
+			<img src="[%sImage%]" alt="[%stValeurBanniere.tabIdImage[nInd]%]" libelle="[%stValeurBanniere.tabLibelle[nInd]%]" />
+			]
+			si SansEspace(stValeurBanniere.tabLien[nInd]) <> "" alors
+				sCodeHTML += "</a>"
+			fin
+			sCodeHTML += "</div>"
+		fin
+
+	autre cas
+		sImage =  cpProjet.__sHttpMarketeam + "image-vide.png"
+		sCodeHTML += "<div><img src=""" + sImage + """ /></div>"
+		sCodeHTML += "<div><img src=""" + sImage + """ /></div>"
+
+fin
+
+sCodeHTML += "</div>"
+
+TableauAjoute(_tabCodeJS,sCodeJS)
+
+renvoyer sCodeHTML

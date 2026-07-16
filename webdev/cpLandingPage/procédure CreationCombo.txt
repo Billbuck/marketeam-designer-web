@@ -1,0 +1,89 @@
+procédure CreationCombo(nNumBloc est un entier, sLibellePosition est une chaîne, stValeurCombo est un structIciBlocLigneOffre, pIndiceFormulaireHTML,  pLargeurM est un entier, pLargeurS est un entier)
+
+sCodeHTML			est une chaîne
+sStyle100pourcent	est une chaîne
+sCodeJS				est une chaîne
+sObligatoire		est une chaîne
+sClasseHtml est une chaîne = "BlocCombo_cbo_"+pIndiceFormulaireHTML
+
+si stValeurCombo.TabValeur..Occurrence = 0 alors renvoyer ""
+
+sCodeJS = [
+	$(document).ready(function(){
+		$(function() { $('select.bloc').selectBoxIt([% (sLibellePosition = __POSITION_INTERIEUR__) ? "{defaultText: """ + stValeurCombo.Libelle + """}" sinon "" %]); });
+	});
+]
+
+sObligatoire		= (stValeurCombo.Obligatoire) ? "obligatoire" sinon ""
+
+sStyle100pourcent	= [
+	<style>
+		#BlocCombo-cbo-[%nNumBloc%]SelectBoxItContainer, #BlocCombo-cbo-[%nNumBloc%]SelectBoxIt {
+			width: 100% !important; 
+		}
+	
+	@media all and (max-width:[%pLargeurM%]px) {
+		#BlocCombo-cbo-[%nNumBloc%]SelectBoxItContainer, #BlocCombo-cbo-[%nNumBloc%]SelectBoxIt {
+			width: 100% !important; 
+		}
+	}
+	
+	@media all and (max-width:[%pLargeurS%]px) {
+		#BlocCombo-cbo-[%nNumBloc%]SelectBoxItContainer, BlocCombo-cbo-[%nNumBloc%]SelectBoxIt {
+			width: 100% !important; 
+		}
+	}
+	</style>
+]
+
+
+
+
+selon sLibellePosition
+	cas __POSITION_EXTERIEUR__  // "E"
+		sCodeHTML += RC + [
+			<div class="combo combo-label-left">
+				<div class="lib-champ">
+					<label id="label_[%sClasseHtml%]" name="liste_[%nNumBloc%]" class="label_combo">[%stValeurCombo.Libelle%]</label>
+				</div>
+				<div class="champ">
+					<select id="[%sClasseHtml%]" class="bloc [%sClasseHtml%] [%sObligatoire%]" label="[%stValeurCombo.Libelle%]">
+		]
+
+	cas __POSITION_INTERIEUR__  // "I"
+		sCodeHTML += RC + sStyle100pourcent + [
+			<div class="combo">
+				<div class="lib-champ">
+					<label id="label_[%sClasseHtml%]" name="liste_[%nNumBloc%]" class="label_combo"></label>
+				</div>
+				<div class="champ">
+					<select id="[%sClasseHtml%]" class="bloc [%sClasseHtml%] [%sObligatoire%]" label="[%stValeurCombo.Libelle%]">
+		]
+
+	autre cas // pas de libellé (on masque le label)
+		sCodeHTML += RC + sStyle100pourcent + [
+			<div class="combo">
+				<div class="lib-champ">
+					<label id="label_[%sClasseHtml%]" name="liste_[%nNumBloc%]" class="label_combo" style="display:none"></label>
+				</div>
+				<div class="champ">
+					<select id="[%sClasseHtml%]" class="bloc [%sClasseHtml%] [%sObligatoire%]" style="width:100%" label="[%stValeurCombo.Libelle%]">
+		]
+fin
+
+pour nCpt = 1 _à_ stValeurCombo.TabValeur..Occurrence
+	sCodeHTML += RC + [
+						<option value="[%stValeurCombo.TabValeur[nCpt]%]">[%stValeurCombo.TabValeur[nCpt]%]</option>
+	]
+fin
+
+sCodeHTML += [
+					</select>
+				</div>
+			</div>
+		<!-- [%sLibellePosition%] -->
+]
+
+TableauAjoute(_tabCodeJS, sCodeJS)
+
+renvoyer sCodeHTML

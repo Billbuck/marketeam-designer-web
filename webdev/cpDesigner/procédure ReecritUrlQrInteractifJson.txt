@@ -1,0 +1,69 @@
+// -----------------------------------------------------------------------------
+// cpDesigner.ReecritUrlQrInteractifJson()
+// Rôle : Remplacer, dans un JsonDesignerData, l'URL de test provisoire du QR
+//        interactif par l'URL définitive de l'opération
+//        (CDC QR interactif V2 — 16/07/2026).
+//
+// Cas d'usage : le Designer a composé le QR AVANT le premier enregistrement de
+// l'opération -> le contenu porte le marqueur « !0 » (scan = « Landing en
+// cours de création »). Au premier enregistrement, le CodeTest existe : on
+// réécrit le contenu. Le PSMD est régénéré juste après par l'appelant ; le
+// BAT, lui, n'est PAS régénéré (décision donneur d'ordre : l'utilisateur
+// régénère son BAT pour obtenir le QR définitif).
+//
+// Zones réécrites : TOUTES les zones du tableau zonesQR.
+//	Dans le Designer, zonesQR = les « QR Code interactif » exclusivement : leur
+//	contenu légitime est TOUJOURS l'URL de la landing de l'opération (zone
+//	système OU zone ajoutée à la main — son contenu par défaut, l'ancienne URL
+//	générique marketeam.com, doit aussi être remplacé ; recette du 16/07/2026).
+//	Les QR « lien personnel » de l'utilisateur sont des codes-barres de type
+//	qrcode, stockés dans zonesCodeBarres : ils ne sont JAMAIS touchés.
+//
+// Paramètres :
+//	pJson    : JsonDesignerData (data only ou wrapper)
+//	pUrlTest : URL définitive (cpDesigner.UrlTestQrInteractif)
+// Retour : le JSON réécrit (ou inchangé si vide/non parsable/rien à faire)
+// -----------------------------------------------------------------------------
+procédure ReecritUrlQrInteractifJson(pJson est une chaîne, pUrlTest est une chaîne) : chaîne
+
+bModifie	est un booléen
+
+si pJson = "" _ou_ pUrlTest = "" alors renvoyer pJson
+
+quand exception dans
+
+	jDoc est un JSON = pJson.VersUTF8()
+
+	// Source des zones : data.zonesQR si wrapper, sinon racine
+	jSource est un JSON
+	si jDoc.data..Existe alors
+		jSource = jDoc.data
+	sinon
+		jSource = jDoc
+	fin
+
+	si pas jSource.zonesQR..Existe _ou_ jSource.zonesQR..Occurrence = 0 alors
+		renvoyer pJson
+	fin
+
+	pour nIndQr = 1 _à_ jSource.zonesQR..Occurrence
+		si jSource.zonesQR[nIndQr].contenu <> pUrlTest alors
+			jSource.zonesQR[nIndQr].contenu	= pUrlTest
+			bModifie								= Vrai
+		fin
+	fin
+
+	si bModifie alors
+		si jDoc.data..Existe alors
+			jDoc.data = jSource
+		sinon
+			jDoc = jSource
+		fin
+		renvoyer jDoc.VersChaîne()
+	fin
+
+	renvoyer pJson
+
+faire
+	renvoyer pJson
+fin

@@ -1,0 +1,39 @@
+function ControleSaisie(_bPasControleCaseACocher)
+{
+	var MessageErreur 			= '';
+	var AuMoinsUnInterrupteur 	= false;
+
+	// Contrôle des case à cocher (offre)
+	if ($('input[type=checkbox].interrupteur_offre').length) {
+		$('input[type=checkbox].interrupteur_offre').each(function(i) {
+			if (this.checked) {
+				AuMoinsUnInterrupteur = true;
+			}
+		});	
+		if ((AuMoinsUnInterrupteur == false) && (_bPasControleCaseACocher == false))  {
+			MessageErreur = "Vous devez sélectionner au moins une offre (case à cocher)<br>"
+		}
+	}
+	
+	// Contrôle des combos obligatoire (offre)
+	$('select.obligatoire').each(function(i) {
+		if ($(this).val() == '< faites votre choix >') {
+			MessageErreur += "Vous devez faire un choix pour <strong>" + $(this).attr('label') + "</strong><br>"
+		}
+	});	
+	
+	// Contrôle des champs obligatoire (formulaire)
+	$('input.obligatoire').each(function(i) {
+		if ($(this).val() == '') {
+			MessageErreur += "Le champ <strong>" + $(this).attr('label') + "</strong> est obligatoire<br>"
+			$(this).blur();
+		}
+	});
+	
+	// Contrôle OPTIN (validation)
+	if (($("#optin_0").length) && ($("#optin_0").is(':checked') == false)) {
+		MessageErreur += "Vous devez accepter les conditions de l'offre<br>"
+	}
+	
+	return MessageErreur;
+}

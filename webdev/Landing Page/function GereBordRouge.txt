@@ -1,0 +1,8 @@
+function GereBordRouge(object)
+{
+	if ($(object).val() != '') { 
+		$(object).removeClass('bord-rouge');  
+	} else {				
+		$(object).addClass('bord-rouge'); 
+	}
+}

@@ -1,0 +1,194 @@
+procédure CreationTexteDéfilant(pNumBloc, pThemeProprieteDefaut, pThemeProprieteTexte, pPropriete, pValeur, pLargeurL <utile>, pLargeurM, pLargeurS)
+
+sCodeHTML						est une chaîne
+sLibelleBloc					est une chaîne
+sLibelleBlocMessage				est une chaîne
+sStylePersonnalisé				est une chaîne
+sScript							est une chaîne
+sListeDesMessages				est une chaîne
+nVitesseDefilement 				est un entier
+
+stThemeProprieteDefaut			est une structIciThemeProprieteDefaut
+stThemeProprieteTexte			est une structIciThemeProprieteTexte
+stProprieteTexteDefilant		est une structIciBlocProprieteTexteDefilant
+stValeurTexteDefilant			est une structIciBlocValeurTexteDefilant
+
+Désérialise(stThemeProprieteDefaut, pThemeProprieteDefaut,psdJSON)
+Désérialise(stThemeProprieteTexte, pThemeProprieteTexte,psdJSON)
+Désérialise(stProprieteTexteDefilant, pPropriete,psdJSON)
+Désérialise(stValeurTexteDefilant, pValeur,psdJSON)
+
+
+selon stProprieteTexteDefilant.VitesseDefilement
+	cas 1		: nVitesseDefilement = 55
+	cas 2		: nVitesseDefilement = 35
+	cas 3		: nVitesseDefilement = 15
+	autre cas	: nVitesseDefilement = 35
+fin
+
+sLibelleBloc							= "texte-defilant-" + pNumBloc
+sLibelleBlocMessage						= "texte-defilant-message-" + pNumBloc
+
+
+sStylePersonnalisé						= [
+	<style>
+	
+	.[%sLibelleBloc%]	{
+		display: 			flex;
+		position: 			relative;
+		height:				auto;
+		min-height: 		[%stThemeProprieteTexte.TaaStyle[stProprieteTexteDefilant.PoliceCode].PoliceTailleL%]px;
+		overflow: 			hidden; /* Cache tout débordement */
+		background-color: 	[%stProprieteTexteDefilant.BlocFondCouleur%] !important;
+		padding-top:		[%stProprieteTexteDefilant.PaddingTop%]px !important;	
+		padding-bottom:		[%stProprieteTexteDefilant.PaddingBottom%]px !important;
+		padding-left: 		[%stThemeProprieteDefaut.MargeHorizontaleBloc%]px !important;
+		padding-right: 		[%stThemeProprieteDefaut.MargeHorizontaleBloc%]px !important;
+		align-items: 		center;
+		justify-content: 	[%DonneAlignementHorizontal(stProprieteTexteDefilant.AlignHorizontal,"flex")%];
+	}
+	
+	.[%sLibelleBlocMessage%] {
+		position: 			absolute;
+		display: 			flex;
+		white-space: 		pre; /* Préserve les espaces */
+		background-color: 	[%stProprieteTexteDefilant.BlocFondCouleur%]; /* Fond identique au body */
+		font-family: 		'[%stProprieteTexteDefilant.PoliceFamille%]';
+		color: 		 		[%stProprieteTexteDefilant.PoliceCouleur%];
+		font-size:   		[%stThemeProprieteTexte.TaaStyle[stProprieteTexteDefilant.PoliceCode].PoliceTailleL%]px;
+		font-weight: 		[%stProprieteTexteDefilant.PoliceStyle%];
+		font-style:  		"normal";
+	}
+	
+	/* Style pour chaque caractère du message */
+	.[%sLibelleBlocMessage%] span {
+		display: 			inline-block;
+		opacity: 			0; /* Initialement invisible */
+		transform: 			translateY(-[%Arrondi(stThemeProprieteTexte.TaaStyle[stProprieteTexteDefilant.PoliceCode].PoliceTailleL / 5) %]px); /* Légèrement au-dessus */
+	}
+	
+	/* Keyframes pour l'animation de disparition */
+	@keyframes fadeOut {
+		to { opacity: 0; }
+	}
+	
+	/* Keyframes pour l'animation d'apparition */
+	@keyframes dropIn {
+		0% { 
+			opacity: 		0;
+			transform: 		translateY(-[%Arrondi(stThemeProprieteTexte.TaaStyle[stProprieteTexteDefilant.PoliceCode].PoliceTailleL / 5) %]px);
+		}
+		100% { 
+			opacity: 		1;
+			transform: 		translateY(0);
+		}
+	}
+	
+	@media only screen and (max-width : [%pLargeurM%]px) {
+		.[%sLibelleBlocMessage%] {
+			font-size:   		[%stThemeProprieteTexte.TaaStyle[stProprieteTexteDefilant.PoliceCode].PoliceTailleM%]px !important;
+		}
+		.[%sLibelleBloc%]	{
+			min-height: 		[%stThemeProprieteTexte.TaaStyle[stProprieteTexteDefilant.PoliceCode].PoliceTailleM%]px;
+			padding-top:		[%Arrondi(stProprieteTexteDefilant.PaddingTop * pLargeurM / pLargeurL)%]px !important;	
+			padding-bottom:		[%Arrondi(stProprieteTexteDefilant.PaddingTop * pLargeurM / pLargeurL)%]px !important;
+		}
+	}
+	
+	@media only screen and (max-width : [%pLargeurS%]px) {
+		.[%sLibelleBlocMessage%] {
+			font-size:   		[%stThemeProprieteTexte.TaaStyle[stProprieteTexteDefilant.PoliceCode].PoliceTailleS%]px !important;
+		}
+		.[%sLibelleBloc%]	{
+			min-height: 		[%stThemeProprieteTexte.TaaStyle[stProprieteTexteDefilant.PoliceCode].PoliceTailleS%]px;
+			padding-top:		[%Arrondi(stProprieteTexteDefilant.PaddingTop * pLargeurS / pLargeurL)%]px !important;	
+			padding-bottom:		[%Arrondi(stProprieteTexteDefilant.PaddingTop * pLargeurS / pLargeurL)%]px !important;
+		}
+	}
+	
+	</style>
+]
+
+
+
+pour tout sMessage de stValeurTexteDefilant.tabTexte
+	si sMessage <> "" alors
+		sListeDesMessages += [","] + """" + SansEspace(sMessage) + """"
+	fin
+fin
+
+
+sScript = [
+	// Liste des messages à afficher
+	const messages = [[%sListeDesMessages%]];
+	
+	let currentIndex = 0; // Index du message actuel
+	let isFirstMessage = true; // Alterne entre les deux éléments de message
+	
+	// Fonction pour animer l'apparition d'un message
+	function animateMessage(element, text) {
+	// Divise le texte en caractères et crée un span pour chacun
+	element.innerHTML = text.split('').map(char => 
+	`<span style="animation: dropIn 0.3s forwards;">${char}</span>`
+	).join('');
+	
+	// Ajoute un délai à chaque caractère pour créer un effet cascade
+	element.querySelectorAll('span').forEach((span, index) => {
+	span.style.animationDelay = `${index * [%nVitesseDefilement%] }ms`;
+	});
+	}
+	
+	// Fonction pour faire disparaître un message
+	function fadeOutMessage(element) {
+	return new Promise((resolve) => {
+	element.style.animation = 'fadeOut 0.5s forwards';
+	setTimeout(resolve, 400); // Attendre que l'animation soit terminée
+	});
+	}
+	
+	// Fonction pour mettre à jour et animer le prochain message
+	async function updateMessage() {
+	// Détermine quel élément est actuel et lequel est le suivant
+	const currentElement = document.getElementById(isFirstMessage ? 'message1' : 'message2');
+	const nextElement = document.getElementById(isFirstMessage ? 'message2' : 'message1');
+	
+	// Fait disparaître le message actuel
+	await fadeOutMessage(currentElement);
+	
+	// Prépare le prochain message
+	currentIndex = (currentIndex + 1) % messages.length;
+	nextElement.style.opacity = '0'; // Assure que le prochain élément est invisible
+	animateMessage(nextElement, messages[currentIndex]);
+	
+	// Fait apparaître le nouveau message
+	nextElement.style.animation = 'none';
+	nextElement.offsetHeight; // Force un reflow
+	nextElement.style.animation = null;
+	nextElement.style.opacity = '1';
+	
+	// Prépare pour le prochain cycle
+	isFirstMessage = !isFirstMessage;
+	setTimeout(updateMessage, [%stProprieteTexteDefilant.Temporisation%]);
+	}
+	
+	// Initialise l'animation dès que le DOM est chargé
+	document.addEventListener('DOMContentLoaded', () => {
+	const firstElement = document.getElementById('message1');
+	animateMessage(firstElement, messages[0]);
+	setTimeout(updateMessage, [%stProprieteTexteDefilant.Temporisation%]);
+	});
+]
+
+
+sCodeHTML = [
+	<div class="[%sLibelleBloc%]">
+		<div class="[%sLibelleBlocMessage%]" id="message1"></div>
+		<div class="[%sLibelleBlocMessage%]" id="message2"></div>
+	</div>
+	
+	[%sStylePersonnalisé%]
+]
+
+_tabCodeJS.Ajoute(sScript)
+
+renvoyer sCodeHTML

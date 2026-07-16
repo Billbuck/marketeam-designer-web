@@ -1,0 +1,297 @@
+procédure MaPage()
+
+_sCodeComplet				est une chaîne
+_cnxBaseChronodirect		est une Connexion
+_nIdBaseLigne				est un entier
+_nIdCliquezIci				est un entier
+                        	
+_stNouveauCliquezIci		est une structNouveauCliquezIci
+_tabLibelleFormulaire		est un tableau associatif de chaînes
+_tabLibVariablePost			est un tableau de chaînes
+_tabIdVariablePost			est un tableau de chaînes
+_bPasControleCaseACocher	est un booléen	<synchronisé navigateur>
+
+_sCodeGrattee 				est une chaîne // utilisé pour contrôle saisie ImageAgratter
+
+
+*** Fin d'initialisation de la landing page
+
+stBloc est un structIciBloc
+
+sCode 					est une chaîne	= PageParamètre("P1")
+nIdStructureTmp 		est un entier	= PageParamètre("P2")
+
+si sCode = "" _et_ nIdStructureTmp = 0 alors
+	ZTR_Rendu = [
+		<!DOCTYPE html>
+		<html>
+		<head><title>Bienvenue sur cliquez.info</title></head>
+		<body><p>Ce domaine héberge des pages personnalisées de la Plateforme Marketeam.</p></body>
+		</html>
+	]
+	retour
+fin
+
+sTexteRequeteRecherche	est une chaîne
+sdReqPageP				est une Source de Données
+sdTmpStructure			est une Source de Données
+stTracking				est une structIciTracking
+sTexteRequete			est une chaîne
+
+sTexteRequeteRecherche =
+[
+	SELECT
+		dos_base_ligne.IdBaseLigne,
+
+		clt_client.IdClient,
+		0 IdMarque,		
+		dos_operation.IdOperation,
+		dos_operation.DateHeurePriseEnCharge,
+		
+		ope_cliquezici.IdCliquezIci,
+		ope_cliquezici.UrlClient,
+		ope_cliquezici.LargeurL,
+		ope_cliquezici.LargeurM,
+		ope_cliquezici.LargeurS,
+		ope_cliquezici.ProprieteDefaut,
+		ope_cliquezici.ProprieteTexte,
+		ope_cliquezici.ProprieteCombo,
+		ope_cliquezici.ProprieteInterrupteur,
+		ope_cliquezici.ProprieteLien,
+		ope_cliquezici.ProprieteBouton,
+		ope_cliquezici.ProprieteFormulaire,
+		
+		ope_cliquezici_bloc.Nom,
+		ope_cliquezici_bloc.Libelle,
+		ope_cliquezici_bloc.Position,
+		ope_cliquezici_bloc.Type,
+		ope_cliquezici_bloc.Actif,
+		ope_cliquezici_bloc.Propriete,
+		ope_cliquezici_bloc.Valeur
+	FROM
+		dos_base_ligne
+		JOIN dos_base ON dos_base_ligne.IdBase = dos_base.IdBase
+		JOIN dos_operation ON dos_base.IdOperation = dos_operation.IdOperation
+		JOIN ope_cliquezici ON dos_operation.IdOperation = ope_cliquezici.IdCliquezIci
+		JOIN clt_client ON clt_client.IdClient = dos_operation.IdClientFacturation
+		LEFT JOIN ope_cliquezici_bloc ON ope_cliquezici_bloc.IdCliquezIci = ope_cliquezici.IdCliquezIci
+	WHERE
+		dos_base_ligne.Code = '[%sCode%]' 
+	ORDER BY
+		ope_cliquezici_bloc.IdCliquezIciBloc
+]
+
+
+// ═════════════════════════════════════════════════════════════════════════
+// MODE TEST PAR OPÉRATION — scan du QR d'un BAT courrier interactif
+// (CDC QR interactif V2 du 16/07/2026)
+//
+// URL : cliquez.info/!<CodeTest>  (CodeTest = code non devinable porté par
+// dos_operation). La page est cuisinée depuis la DERNIÈRE VERSION ENREGISTRÉE
+// de l'opération (ope_cliquezici / ope_cliquezici_bloc) :
+//   - opération inconnue ou jamais enregistrée -> page « en cours de création » ;
+//   - PAS de tracking, PAS de contrôle des 30 jours ;
+//   - pas de vrais leads : _nIdBaseLigne reste à 0, EnregistreCliquezIci
+//     n'écrit rien (même comportement que les aperçus actuels) ;
+//   - personnalisation : même règle que le BAT (1re ligne de la base si
+//     injectée, sinon infos du contact de l'opération — cf. PersonnaliseChamps).
+// ═════════════════════════════════════════════════════════════════════════
+si Contient(sCode,"!") alors
+
+	sCodeTestOp est une chaîne = Remplace(sCode,"!","")
+
+	si sCodeTestOp = "" _ou_ sCodeTestOp = "0" _ou_ pas dos_operation.LitRecherchePremier(CodeTest, sCodeTestOp) alors
+		AfficheLandingEnConstruction()
+		retour
+	fin
+
+	si pas ope_cliquezici.LitRecherchePremier(IdCliquezIci, dos_operation.IdOperation) alors
+		// Opération trouvée mais jamais enregistrée avec une landing
+		AfficheLandingEnConstruction()
+		retour
+	fin
+
+	_nIdCliquezIci = dos_operation.IdOperation
+
+	// Redirection vers l'URL du client, comme en production (résolution du
+	// champ possible uniquement si une base est injectée)
+	si ope_cliquezici.UrlClient <> "" alors
+		si Contient(ope_cliquezici.UrlClient,"Champ") alors
+			stLigneTest est une StructBaseLigne = ChargeUneBaseLigne(_nIdCliquezIci, Vrai)
+			si stLigneTest.IdBaseLigne > 0 _et_ dos_base_ligne.LitRecherchePremier(IdBaseLigne, stLigneTest.IdBaseLigne) alors
+				ScriptAffiche({"dos_base_ligne." + ope_cliquezici.UrlClient, indRubrique})
+				retour
+			fin
+		fin
+		ScriptAffiche(ope_cliquezici.UrlClient)
+		retour
+	fin
+
+	// Recette de la landing = dernière version enregistrée
+	FichierVersMémoire(_stNouveauCliquezIci.stTheme, ope_cliquezici)
+	_stNouveauCliquezIci.IdClient	= dos_operation.IdClientFacturation
+	_stNouveauCliquezIci.IdMarque	= 0
+
+	sTexteRequete = [
+	select * from ope_cliquezici_bloc where IdCliquezIci = [%_nIdCliquezIci%] order by IdCliquezIciBloc
+	]
+
+	si pas HExécuteRequêteSQL(sdTmpStructure, ope_cliquezici..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+		Info("Erreur requête")
+		retour
+	fin
+
+	pour tout sdTmpStructure
+		VariableRAZ(stBloc)
+		FichierVersMémoire(stBloc,sdTmpStructure)
+		_stNouveauCliquezIci.tabBloc.Ajoute(stBloc)
+	fin
+
+	PersonnaliseChamps(Vrai, Vrai)	// Vrai n°2 = scan de BAT : 1re ligne de base, repli contact sans base
+
+sinon si nIdStructureTmp > 0 _ou_ Contient(sCode,"@") alors
+
+	si nIdStructureTmp > 0 alors
+		si pas tmp_structure.LitRecherchePremier(IdStructure,nIdStructureTmp) alors
+			_sCodeComplet = "<p>La structure n'a pas été trouvée ("+nIdStructureTmp+")</p>"
+		fin
+	sinon
+		si pas tmp_structure.LitRecherchePremier(Code,Remplace(sCode,"@","")) alors
+			_sCodeComplet = "<p>La structure n'a pas été trouvée ("+nIdStructureTmp+")</p>"
+		sinon
+			nIdStructureTmp = tmp_structure.IdStructure
+		fin
+	fin
+
+	_nIdCliquezIci = tmp_structure.IdOperation
+
+	si _sCodeComplet = "" alors
+		si tmp_structure.UrlClient <> "" alors
+			ScriptAffiche(tmp_structure.UrlClient)
+			retour
+		sinon
+			FichierVersMémoire(_stNouveauCliquezIci.stTheme,tmp_structure)
+			_stNouveauCliquezIci.IdClient	= tmp_structure.IdClient
+			_stNouveauCliquezIci.IdMarque	= tmp_structure.IdMarque
+
+			sTexteRequete = [
+			select * from tmp_structure_bloc where IdStructure = [%nIdStructureTmp%]
+			]
+
+			si pas HExécuteRequêteSQL(sdTmpStructure, tmp_structure..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+				Info("Erreur requête")
+				retour
+			fin
+
+			pour tout sdTmpStructure
+				VariableRAZ(stBloc)
+				FichierVersMémoire(stBloc,sdTmpStructure)
+				_stNouveauCliquezIci.tabBloc.Ajoute(stBloc)
+			fin
+
+			PersonnaliseChamps(Vrai)
+		fin
+	fin
+
+sinon // Production
+	si pas sdReqPageP.ExécuteRequêteSQL(dos_base..Connexion, hRequêteSansCorrection, sTexteRequeteRecherche) alors
+		Info("Erreur requête")
+		retour
+	fin
+
+
+	si sdReqPageP.LitPremier(hSansRafraîchir) alors
+
+		si pas DateHeureValide(sdReqPageP.DateHeurePriseEnCharge) _ou_ DateDifférence(sdReqPageP.DateHeurePriseEnCharge..PartieDate,DateSys()) > 30 alors
+			//PageAffiche(pgeSmartQode)
+			retour
+		fin
+		stTracking.IdBaseLigne		= sdReqPageP.IdBaseLigne
+		stTracking.IdCliquezIci	= sdReqPageP.IdOperation
+		stTracking.Plateforme		= Plateforme()
+		stTracking.AdresseIP		= NavigateurAdresseIP(Vrai)
+
+		cpProjet.TrackingComptabilise(stTracking) // A maintenir au dessus
+		cpProjet.TrackingEnregistre(stTracking)
+
+		si sdReqPageP.UrlClient <> "" alors
+			si Contient(sdReqPageP.UrlClient,"Champ") alors
+				si dos_base_ligne.LitRecherchePremier(IdBaseLigne, sdReqPageP.IdBaseLigne) alors
+					ScriptAffiche({"dos_base_ligne." + sdReqPageP.UrlClient,indRubrique})
+				fin
+			sinon
+				ScriptAffiche(sdReqPageP.UrlClient)
+			fin
+			retour
+		fin
+
+		_nIdBaseLigne = sdReqPageP.IdBaseLigne
+		_nIdCliquezIci = sdReqPageP.IdCliquezIci
+
+		FichierVersMémoire(_stNouveauCliquezIci.stTheme,sdReqPageP)
+		_stNouveauCliquezIci.IdClient	= sdReqPageP.IdClient
+		_stNouveauCliquezIci.IdMarque	= sdReqPageP.IdMarque
+		FichierVersMémoire(_stNouveauCliquezIci.tabBloc, sdReqPageP)
+
+		PersonnaliseChamps(Faux)
+	fin
+fin
+
+
+Init()
+
+ZTR_Rendu = _sCodeComplet
+
+
+
+fin:
+HAnnuleDéclaration(sdReqPageP)
+HAnnuleDéclaration(sdTmpStructure)
+
+
+	// Page générique affichée quand le QR de test pointe vers une opération
+	// inconnue ou jamais enregistrée (CDC QR interactif V2 16/07/2026)
+	procédure interne AfficheLandingEnConstruction()
+		ZTR_Rendu = [
+			<!DOCTYPE html>
+			<html lang="fr">
+			<head>
+				<meta charset="utf-8">
+				<meta name="viewport" content="initial-scale=1.0">
+				<title>Landing page en cours de création</title>
+				<style>
+					body { font-family: Arial, Helvetica, sans-serif; background:#f5f5f5; margin:0;
+						display:flex; align-items:center; justify-content:center; height:100vh; }
+					.carte { background:#fff; border-radius:12px; padding:40px 32px; text-align:center;
+						box-shadow:0 2px 12px rgba(0,0,0,.12); max-width:420px; margin:16px; }
+					h1 { font-size:22px; color:#333; margin:0 0 12px; }
+					p  { font-size:15px; color:#666; margin:0; line-height:1.5; }
+				</style>
+			</head>
+			<body>
+				<div class="carte">
+					<h1>Landing page en cours de cr&eacute;ation</h1>
+					<p>Votre landing page n'a pas encore &eacute;t&eacute; enregistr&eacute;e.<br>
+					Enregistrez votre op&eacute;ration puis r&eacute;g&eacute;n&eacute;rez le BAT pour la consulter.</p>
+				</div>
+			</body>
+			</html>
+		]
+	fin
+
+
+	procédure interne Plateforme()
+		selon NavigateurPlateforme()
+			cas NavigateurPlateformeAndroid			:	renvoyer "Android"
+			cas NavigateurPlateformeBlackBerry     	:	renvoyer "BlackBerry"
+			cas NavigateurPlateformeiPad           	:	renvoyer "iPad"
+			cas NavigateurPlateformeiPhone         	:	renvoyer "iPhone"
+			cas NavigateurPlateformeMobile         	:	renvoyer "Mobile"
+			cas NavigateurPlateformeRobot          	:	renvoyer "Robot"
+			cas NavigateurPlateformeStandard       	:	renvoyer "Standard"
+			cas NavigateurPlateformeWindowsMobile  	:	renvoyer "WindowsMobile"
+			cas NavigateurPlateformeWindowsPhone   	:	renvoyer "WindowsPhone"
+			autre cas								: 	renvoyer "Inconnue"
+		fin
+	fin
+

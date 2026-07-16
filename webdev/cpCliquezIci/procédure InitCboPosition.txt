@@ -1,0 +1,7 @@
+procédure InitCboPosition(pChampCbo est un Champ)
+
+ListeSupprimeTout(pChampCbo)
+ListeAjoute(pChampCbo,"Sans libellé"	+ gLien(""))
+ListeAjoute(pChampCbo,"Extérieur" 		+ gLien(__POSITION_EXTERIEUR__))
+ListeAjoute(pChampCbo,"Intérieur" 		+ gLien(__POSITION_INTERIEUR__))
+ListeSelectPlus(pChampCbo,1)	

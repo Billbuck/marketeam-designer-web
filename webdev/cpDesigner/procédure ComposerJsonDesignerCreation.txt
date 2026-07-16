@@ -139,7 +139,8 @@ sinon
 	// son propre QR depuis le Designer — sinon doublon à la réouverture).
 	si stOperation.EstCliquezIci _et_ pIndexDocument = 1 alors
 		si pas cpDesigner.JsonContientQrInteractif(stDoc.JsonDesignerData) alors
-			RemplirDesignerZoneSystemeQrInteractif(stLoad.Document, stDoc.LargeurOuvert, stDoc.HauteurOuvert)
+			// URL de test de l'opération (CDC QR interactif V2 16/07/2026)
+			RemplirDesignerZoneSystemeQrInteractif(stLoad.Document, stDoc.LargeurOuvert, stDoc.HauteurOuvert, cpDesigner.UrlTestQrInteractif(stOperation))
 		fin
 	fin
 

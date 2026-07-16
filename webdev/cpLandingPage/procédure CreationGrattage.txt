@@ -1,0 +1,253 @@
+procédure CreationGrattage(pPropriete est une chaîne, pValeur est une chaîne, pLargeurL)
+// -------------------------------------------------------------------------
+// BUT : Générer un bloc HTML + JS pour "gratter" l'image du dessus
+//       et révéler celle du dessous. 50-60% grattés => tout se dévoile.
+//       Compatible souris ET smartphone (pointer events).
+//       Recalcule la taille et ré-initialise à chaque resize.
+//       Le pinceau est adaptatif en fonction de la largeur du conteneur.
+// -------------------------------------------------------------------------
+
+// (1) Récupération standard des chemins
+sCodeHTML			est une chaîne
+sCodeJS				est une chaîne
+sStyleCss			est une chaîne
+sRepertoire			est une chaîne
+sUrlImageDessus		est une chaîne
+sUrlImageDessous	est une chaîne
+sFormat				est une chaîne
+nHauteurImg			est un entier
+nLargeurImg			est un entier
+sLargeurCalc		est une chaîne
+sHauteurCalc		est une chaîne
+
+stProprieteGrattage	est une structIciBlocProprieteGrattage
+stValeurGrattage	est une structIciBlocValeurGrattage
+
+// Désérialiser
+Désérialise(stProprieteGrattage, pPropriete, psdJSON)
+Désérialise(stValeurGrattage, pValeur, psdJSON)
+
+si stValeurGrattage.IdImage > 0 alors
+	si ici_image.LitRecherchePremier(IdImage, stValeurGrattage.IdImage) alors
+		sFormat		= Majuscule(ici_image.TypeFichier)
+		nLargeurImg	= ici_image.Largeur
+		nHauteurImg	= ici_image.Hauteur
+
+		// Répertoire selon IdMarque / IdClient...
+		selon Vrai
+			cas ici_image.IdMarque > 0
+				sRepertoire = CheminMarque(ici_image.IdMarque, __OPERATION_CLIQUEZICI__, __REP_GRATTAGE__, Faux)
+			cas ici_image.IdClient > 0
+				sRepertoire = CheminClient(ici_image.IdClient, __OPERATION_CLIQUEZICI__, __REP_GRATTAGE__, Faux)
+			autre cas
+				sRepertoire = CheminMarketeam(__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__, Faux)
+		fin
+
+		// URLs
+		sUrlImageDessus		= sRepertoire + __DOC_ICI_GRATTAGE__ + ici_image.IdImage + "-dessus."  + ici_image.TypeFichier
+		sUrlImageDessous	= sRepertoire + __DOC_ICI_GRATTAGE__ + ici_image.IdImage + "-dessous." + ici_image.TypeFichier
+	fin
+fin
+
+// (2) Calculer les dimensions en fonction de l'image (utile si besoin)
+(sLargeurCalc, sHauteurCalc) = CalculLargeurHauteur(pLargeurL)
+
+// (3) Feuille de style
+sStyleCss =
+[
+	.scratch-container {
+	/* Bloc responsive
+	- Largeur = 100%
+	- Hauteur via aspect-ratio (pour conserver ratio original)
+	- On peut ajouter un max-width si voulu
+	*/
+	width: 100%;
+	aspect-ratio: [%nLargeurImg%] / [%nHauteurImg%];
+	margin: 0 auto;
+	position: relative;
+	border: 1px solid #ccc;
+	}
+	.scratch-container img {
+	position: absolute;
+	top: 0; left: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	z-index: 0; /* image dessous */
+	}
+	.scratch-container canvas {
+	position: absolute;
+	top: 0; left: 0;
+	width: 100%;
+	height: 100%;
+	z-index: 1; /* canevas dessus */
+	touch-action: none; 
+	}
+]
+
+// (4) Code HTML
+sCodeHTML =
+[
+	<div class="bloc-container grattage">
+	<div id="scratch-container" class="scratch-container">
+	<img id="imgBelow" src="[%sUrlImageDessous%]" alt="Image de fond" />
+	<canvas id="scratch-canvas"></canvas>
+	</div>
+	</div>
+	<style>
+	[%sStyleCss%]
+	</style>
+]
+
+// (5) Code JavaScript : pointer events + resize + pinceau adaptatif
+sCodeJS =
+[
+	$(document).ready(function() {
+	
+	// Sélecteurs
+	const canvas  = document.getElementById("scratch-canvas");
+	const ctx     = canvas.getContext("2d");
+	const container = document.getElementById("scratch-container");
+	const imgBelow = document.getElementById("imgBelow");
+	
+	const imgAbove = new Image();
+	imgAbove.crossOrigin = "anonymous";
+	imgAbove.src = "[%sUrlImageDessus%]"; // image du dessus
+	
+	// Paramètres
+	let isDrawing       = false;
+	let revealThreshold = 60; // % de grattage pour tout révéler
+	// Valeur "de base" pour le pinceau quand la largeur conteneur ~ pLargeurL
+	let baseBrushRadius = 40; 
+	let referenceWidth  = [%pLargeurL%]; 
+	
+	// Dès que l'image du dessus est chargée, on initialise
+	imgAbove.onload = function() {
+	initScratch();
+	};
+	
+	// Quand la fenêtre est redimensionnée => réinitialiser le grattage
+	// (Evite le décalage du curseur)
+	$(window).on("resize", function() {
+	initScratch();
+	});
+	
+	// Fonction init : recalcule la taille du canvas, redessine l'image
+	function initScratch() {
+	let width  = container.offsetWidth;
+	let height = container.offsetHeight;
+	
+	canvas.width  = width;
+	canvas.height = height;
+	
+	// Calcul adaptatif du pinceau
+	let scale = width / referenceWidth;
+	let brushRadius = baseBrushRadius * scale;
+	if (brushRadius < 5) brushRadius = 5; // minimum
+	
+	// Dessiner l'image du dessus en "source-over"
+	ctx.globalCompositeOperation = "source-over";
+	ctx.drawImage(imgAbove, 0, 0, width, height);
+	
+	// Re-attacher les pointer events
+	canvas.removeEventListener("pointerdown", onPointerDown);
+	canvas.removeEventListener("pointermove", onPointerMove);
+	canvas.removeEventListener("pointerup",   onPointerUp);
+	canvas.removeEventListener("pointerleave",onPointerUp);
+	
+	// On stocke le brushRadius dans une variable globale
+	window._brushRadius = brushRadius;
+	
+	// Attacher pointer events
+	canvas.addEventListener("pointerdown", onPointerDown);
+	canvas.addEventListener("pointermove", onPointerMove);
+	canvas.addEventListener("pointerup",   onPointerUp);
+	canvas.addEventListener("pointerleave",onPointerUp);
+	
+	isDrawing = false;
+	}
+	
+	// Pointer events handlers
+	function onPointerDown(e) {
+	e.preventDefault();
+	isDrawing = true;
+	}
+	function onPointerUp(e) {
+	e.preventDefault();
+	isDrawing = false;
+	}
+	function onPointerMove(e) {
+	if(!isDrawing) return;
+	e.preventDefault();
+	
+	let rect = canvas.getBoundingClientRect();
+	let x = e.clientX - rect.left;
+	let y = e.clientY - rect.top;
+	
+	let brushRadius = window._brushRadius || 40;
+	ctx.globalCompositeOperation = "destination-out";
+	ctx.beginPath();
+	ctx.arc(x, y, brushRadius, 0, 2 * Math.PI);
+	ctx.fill();
+	
+	let percent = getScratchedPercent();
+	// console.log("Pourcentage gratté =", percent.toFixed(2));
+	if(percent >= revealThreshold) {
+	// Tout effacer => image dessous visible
+	ctx.clearRect(0, 0, canvas.width, canvas.height);
+	// Désactiver le grattage
+	canvas.removeEventListener("pointermove", onPointerMove);
+	// alert("Félicitations, plus de " + revealThreshold + "% a été gratté !");
+	}
+	}
+	
+	// Calcul du pourcentage gratté (alpha=0 => transparent)
+	function getScratchedPercent() {
+	try {
+	let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+	let pixels = imageData.data;
+	let total = pixels.length / 4;
+	let countTransparent = 0;
+	
+	for(let i = 3; i < pixels.length; i += 4) {
+	if(pixels[i] === 0) {
+	countTransparent++;
+	}
+	}
+	return (countTransparent / total) * 100;
+	} catch(e) {
+	console.error("Lecture impossible (CORS?)", e);
+	return 0;
+	}
+	}
+	
+	});
+]
+
+TableauAjoute(_tabCodeJS, sCodeJS)
+renvoyer sCodeHTML
+
+// ----------------------------------------------------------------
+// PROCÉDURE INTERNE : CalculLargeurHauteur
+	// ----------------------------------------------------------------
+	procédure interne CalculLargeurHauteur(pLargeurPage)
+
+		nHauteurCalc	est un entier
+		nHauteurMax		est un entier	= 100
+
+		si nLargeurImg = 0 alors nLargeurImg = 1
+		si nHauteurImg = 0 alors nHauteurImg = 1
+
+		si sFormat = "SVG" alors
+			// Cas particulier : SVG => Hauteur en px, largeur en auto
+			sHauteurCalc	= (pLargeurPage * nHauteurMax / 100) + "px"
+			sLargeurCalc	= "auto"
+		sinon
+			// Calcul standard
+			nHauteurCalc	= Min(nHauteurImg, pLargeurPage * nHauteurMax / 100, pLargeurPage * nHauteurImg / nLargeurImg)
+			sHauteurCalc	= nHauteurCalc + "px"
+			sLargeurCalc	= Min(nLargeurImg, (nLargeurImg / nHauteurImg) * nHauteurCalc) + "px"
+		fin
+
+		renvoyer (sLargeurCalc, sHauteurCalc)
+	fin

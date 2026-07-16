@@ -1,0 +1,38 @@
+// -----------------------------------------------------------------------------
+// cpDesigner.UrlTestQrInteractif()
+// Rôle : Composer l'URL de TEST encodée dans le QR interactif du BAT
+//        (CDC QR interactif V2 — 16/07/2026).
+//
+//	- Opération enregistrée (CodeTest disponible) :
+//	    https://cliquez.info/!<CodeTest>
+//	  Le « ! » signale au serveur landing un scan de BAT : page cuisinée depuis
+//	  la dernière version ENREGISTRÉE de l'opération, sans tracking ni leads.
+//	- Opération jamais enregistrée : marqueur « !0 » -> le scan affiche la
+//	  page « Landing en cours de création ». Décision donneur d'ordre : pas
+//	  d'enregistrement automatique ; le BAT devra être régénéré après le
+//	  premier enregistrement pour porter l'URL définitive.
+//
+// Le paramètre Url_CliquezIci est un gabarit avec [Code] (ex. « cliquez.info/[Code] »).
+//
+// Paramètres :
+//	stOperation (structOperation) : opération en cours
+// Valeur de retour :
+// 	chaîne : URL complète à encoder dans le QR
+// -----------------------------------------------------------------------------
+procédure UrlTestQrInteractif(stOperation est une structOperation)
+
+sGabarit	est une chaîne	= cpFonction.ValeurParametre("Url_CliquezIci", prm_parametre.ValChaine..Nom)
+sCode		est une chaîne
+
+si sGabarit = "" alors
+	// Repli : le QR ne doit jamais être vide/illisible
+	renvoyer "https://www.marketeam.com"
+fin
+
+si stOperation.IdOperation > 0 _et_ stOperation.CodeTest <> "" alors
+	sCode = "!" + stOperation.CodeTest
+sinon
+	sCode = "!0"	// pas encore enregistrée -> « Landing en cours de création »
+fin
+
+renvoyer "https://" + Remplace(sGabarit, "[Code]", sCode)

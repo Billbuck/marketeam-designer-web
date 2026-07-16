@@ -1,0 +1,234 @@
+procédure ConstructionRendu(pLargeurL,pLargeurM,pLargeurS)
+
+stBloc					est une structIciBloc
+nInd					est un entier				// Indice des champs du formulaire / bloc offre
+nBloc					est un entier
+bDebutOk				est un booléen
+bFinOK					est un booléen
+nNumBlocDebut			est un entier
+stProprieteOffre		est une structIciBlocProprieteOffre
+stValeurOffre			est une structIciBlocValeurOffre
+stValeurSaisie			est une structIciBlocValeurFormulaire
+stValeurBouton			est une structIciBlocValeurBouton
+stProprieteBouton 		est une structIciBlocProprieteBouton
+sPageEnregistrement		est une chaîne = "pgeEnregistrement.awp"
+
+cpLandingPage._StyleCss = ConstructionCssTheme(POPUP_CGV..Alias, pLargeurL, pLargeurM, pLargeurS, _stNouveauCliquezIci.stTheme)
+
+
+sCodeHTML est une chaîne = [
+	<div id="container" class="container">
+]
+
+sBlocDefaut est une chaîne = [
+	<div class="bloc-modele">%1</div>
+]
+
+sBlocOffreDebut est une chaîne = [
+	<div class="bloc-offre">
+]
+sBlocOffre est une chaîne
+
+sBlocOffreFin est une chaîne = [
+	</div>
+]
+
+si _stNouveauCliquezIci.tabBloc..Occurrence > 0 alors
+	pour tout stBloc de _stNouveauCliquezIci.tabBloc
+		nBloc++
+		si stBloc.GroupeOffre alors
+			si pas bDebutOk alors
+				bDebutOk= Vrai
+				nNumBlocDebut = nBloc
+			fin
+		sinon
+			si bDebutOk _et_ pas bFinOK alors
+				si sBlocOffre = "" alors sBlocOffre = "<br><br>"
+				sCodeHTML += ChaîneConstruit(sBlocOffreDebut,nNumBlocDebut) + sBlocOffre + ChaîneConstruit(sBlocOffreFin,nNumBlocDebut)
+				bFinOK= Vrai
+			fin
+		fin
+
+		selon stBloc.Type
+			cas __BLOC_TEXTE__			: sCodeHTML += ChaîneConstruit(sBlocDefaut, cpLandingPage.CreationTexte(nBloc, stBloc.Propriete, stBloc.Valeur, pLargeurL, pLargeurM, pLargeurS))
+			cas __BLOC_TEXTE_DEFILANT__	: sCodeHTML += ChaîneConstruit(sBlocDefaut, cpLandingPage.CreationTexteDéfilant(nBloc, _stNouveauCliquezIci.stTheme.ProprieteDefaut, _stNouveauCliquezIci.stTheme.ProprieteTexte, stBloc.Propriete, stBloc.Valeur, pLargeurL, pLargeurM, pLargeurS))
+			cas __BLOC_GRILLE__			: sCodeHTML += ChaîneConstruit(sBlocDefaut, cpLandingPage.CreationGrille(nBloc, _stNouveauCliquezIci, stBloc.Propriete, stBloc.Valeur, pLargeurM, pLargeurS))
+			cas __BLOC_BANNIERE__		: sCodeHTML += ChaîneConstruit(sBlocDefaut, cpLandingPage.CreationBanniere(nBloc, stBloc.Propriete, stBloc.Valeur))
+			cas	__BLOC_IMAGE__			: sCodeHTML += ChaîneConstruit(sBlocDefaut, cpLandingPage.CreationImage(nBloc,stBloc.Propriete, stBloc.Valeur, pLargeurL, pLargeurM, pLargeurS))
+			cas __BLOC_GRATTAGE__		: sCodeHTML += ChaîneConstruit(sBlocDefaut, cpLandingPage.CreationGrattage(stBloc.Propriete, stBloc.Valeur, pLargeurL))
+			cas __BLOC_HTML__ 			: sCodeHTML += ChaîneConstruit(sBlocDefaut, cpLandingPage.CreationHTML(stBloc.Propriete, stBloc.Valeur, pLargeurL, pLargeurM, pLargeurS))
+			cas __BLOC_ADRESSE__ 		: sCodeHTML += ChaîneConstruit(sBlocDefaut, cpLandingPage.CreationAdresse(stBloc.Propriete, stBloc.Valeur, pLargeurL, pLargeurM, pLargeurS))
+			cas __BLOC_LIEN__			: sCodeHTML += ChaîneConstruit(sBlocDefaut, cpLandingPage.CreationLien(stBloc.Propriete, stBloc.Valeur, _stNouveauCliquezIci.stTheme.ProprieteLien))
+			cas __BLOC_SEPARATEUR__		: sCodeHTML += ChaîneConstruit(sBlocDefaut, cpLandingPage.CreationSeparateur(stBloc.Propriete, stBloc.Valeur))
+			cas __BLOC_SCRIPT__			: sCodeHTML += ChaîneConstruit(sBlocDefaut, cpLandingPage.CreationScript(stBloc.Propriete, stBloc.Valeur, _stNouveauCliquezIci.stTheme))
+			cas __BLOC_CARTE__			: sCodeHTML += ChaîneConstruit(sBlocDefaut, cpLandingPage.CreationCarte(nBloc, stBloc.Propriete, stBloc.Valeur))
+			cas __BLOC_VIDEO__			: sCodeHTML += ChaîneConstruit(sBlocDefaut, cpLandingPage.CreationVideo(nBloc, stBloc.Propriete, stBloc.Valeur))
+			cas __BLOC_YOUTUBE__		: sCodeHTML += ChaîneConstruit(sBlocDefaut, cpLandingPage.CreationYoutube(stBloc.Propriete, stBloc.Valeur))
+			cas __BLOC_SOCIAL__ 		: sCodeHTML += ChaîneConstruit(sBlocDefaut, cpLandingPage.CreationSocial(nBloc, _stNouveauCliquezIci))
+			cas __BLOC_CGV__			: sCodeHTML += ChaîneConstruit(sBlocDefaut, cpLandingPage.CreationCgv(nBloc,_stNouveauCliquezIci))
+			cas __BLOC_COUNTDOWN__		: sCodeHTML += ChaîneConstruit(sBlocDefaut, cpLandingPage.CreationFlipCountdown(nBloc, stBloc.Propriete, stBloc.Valeur, pLargeurL, pLargeurM, pLargeurS))
+
+			cas __BLOC_OFFRE__
+
+				sCodeHTML += ChaîneConstruit(sBlocDefaut, cpLandingPage.CreationOffre(nBloc,_stNouveauCliquezIci))
+
+				Désérialise(stValeurOffre,_stNouveauCliquezIci.tabBloc[nBloc].Valeur,psdJSON)
+				pour tout stLigneOffre de stValeurOffre.tabOffre
+					nInd++
+					selon stLigneOffre.TypeOffre
+						cas __OFFRE_COMBO__			:
+														TableauAjoute(_tabIdVariablePost,"BlocCombo_cbo_[%nInd%]")
+														TableauAjoute(_tabLibVariablePost,stLigneOffre.Libelle)
+
+						cas __OFFRE_INTERRUPTEUR__, __OFFRE_PERSONNALISEE__	:
+														TableauAjoute(_tabIdVariablePost,"interrupteur_option[%nInd%]")
+														TableauAjoute(_tabLibVariablePost,stLigneOffre.TabValeur[1])
+
+					fin
+				fin
+				Désérialise(stProprieteOffre,_stNouveauCliquezIci.tabBloc[nBloc].Propriete,psdJSON)
+				_bPasControleCaseACocher = stProprieteOffre.PasControleCaseACocher
+
+
+
+			cas __BLOC_FORMULAIRE__
+				sCodeHTML += ChaîneConstruit(sBlocDefaut, cpLandingPage.CreationFormulaire(nBloc,_stNouveauCliquezIci))
+
+				Désérialise(stValeurSaisie,_stNouveauCliquezIci.tabBloc[nBloc].Valeur,psdJSON)
+				pour nChamp=1 _à_ stValeurSaisie.TabLibelle..Occurrence
+					TableauAjoute(_tabIdVariablePost,"input_[%nChamp%]")
+					TableauAjoute(_tabLibVariablePost,stValeurSaisie.TabLibelle[nChamp])
+				fin
+
+
+
+			cas __BLOC_DESTINEO__
+
+			cas __BLOC_BOUTON__
+
+				sCodeHTML += ChaîneConstruit(sBlocDefaut, cpLandingPage.CréationBouton(_stNouveauCliquezIci, stBloc.Propriete, stBloc.Valeur, _nIdCliquezIci, _nIdBaseLigne, _tabIdVariablePost, _tabLibVariablePost))
+
+				// On stock la page d'enregistrement pour le tracking
+				Désérialise(stValeurBouton,stBloc.Valeur,psdJSON)
+				Désérialise(stProprieteBouton,stBloc.Propriete,psdJSON)
+				si stValeurBouton.MessageConfirmation = "" alors stValeurBouton.MessageConfirmation = "Votre demande a bien été prise en compte"
+
+				sPageEnregistrement = stValeurBouton.PageEnregistrement
+				si sPageEnregistrement = "" alors sPageEnregistrement = "pgeEnregistrement.awp"
+				si pas Contient(Minuscule(sPageEnregistrement),".awp") alors sPageEnregistrement += ".awp"
+
+
+			autre cas
+
+		fin
+	fin
+fin
+
+
+sCodeHTML += RC + "</TABLE>"
+
+// JS
+sCodeHTML += RC + "<script type=""text/javascript"">" + RC
+pour nCpt = 1 _à_ cpLandingPage._tabCodeJS..Occurrence
+	sCodeHTML += cpLandingPage._tabCodeJS[nCpt] + RC
+fin
+sCodeHTML += "</script>"
+// Gestion bord rouge (champs obligatoires)
+sCodeHTML += RC + [
+<script>
+	$('input.obligatoire, select.obligatoire').blur(function() {
+		GereBordRouge(this);
+	});
+</script>
+
+]
+
+// Tracking (clics sur lien / image)
+sCodeHTML += RC + [
+<script>
+	// Ici le tracking
+	$("a").click(function(e){
+	
+		// Vérifie si le clic est sur le bouton d'informations pour les options optin
+		if ($(this).attr("onclick") === "AfficheOption(); return false;") {
+			// Ignore ce clic pour le tracking et arrête la fonction ici
+			return;
+		}
+	
+		if ([%_nIdBaseLigne%] != 0 ) { 
+		
+			switch (true) {
+				case $(this).hasClass("lien-image") :
+					Tracking('[%__TRACKING_IMAGE__%]', $(this).find('img').attr('libelle'), $(this).attr('href'));
+					break;
+				case $(this).hasClass("lien-banniere") :
+					Tracking('[%__TRACKING_BANNIERE__%]', $(this).find('img').attr('libelle'), $(this).attr('href'));
+					break;
+				case $(this).hasClass("tracking-social") :
+					var libelleValue = $(this).data('libelle');
+					Tracking('[%__TRACKING_SOCIAL__%]', libelleValue, $(this).attr('href'));
+					break;
+				case $(this).hasClass("lien-grille") :
+					console.log("Gille Libelle",$(this).attr('libelle'));
+					Tracking('[%__TRACKING_GRILLE__%]', $(this).attr('libelle'), $(this).attr('href'));
+					break;
+				case $(this).hasClass("bouton-script") :
+					Tracking('[%__TRACKING_SCRIPT__%]', $(this).text(), $(this).attr('href'));
+					break;
+				case $(this).hasClass("tracking-cgv") :
+					Tracking('[%__TRACKING_CGV__%]', $(this).text(), $(this).attr('href'));
+					break;
+				default :
+					Tracking('[%__TRACKING_LIEN__%]', $(this).text(), $(this).attr('href'));
+			}
+			
+			if (($(this).attr('href') == '') || ($(this).attr('href') == '#')) {  
+				// Coupe la redirection
+				 e.preventDefault();
+			 }
+		} else {
+			return true; 
+		}
+	});
+	
+	function Tracking(pTypeLien, pLibelle, pLien) {
+		// Construction de l'objet des paramètres à envoyer en JSON
+		var parametresObjet = {
+			"IdBaseLigne": "[%_nIdBaseLigne%]",
+			"TypeEnregistrement": "[%__TRACKING__%]",
+			"IdCliquezIci": "[%_nIdCliquezIci%]",
+			"tabChamp": [
+				{
+					"TypeChamp": pTypeLien,
+					"LibelleChamp": pLibelle, 
+					"ValeurChamp": pLien
+				}]
+		};
+		console.log(parametresObjet);
+		$.ajax({
+			url: '/[%RépertoireWeb%]/FR/[%sPageEnregistrement%]',
+			type: 'POST',
+			contentType: 'application/json', 		// Spécifie que le type de contenu envoyé est JSON
+			data: JSON.stringify(parametresObjet), 	// Convertit l'objet JavaScript en chaîne JSON
+			dataType: 'html', 						// Le type de données que vous attendez en réponse du serveur
+			success: function(code_html, statut) {
+			if (code_html != '') {
+					// JoliToast(code_html, [%__TOAST_SUCCES__%], 5);
+				}
+			},
+			error: function(resultat, statut, erreur) {
+				// JoliToast(resultat, [%__TOAST_ERREUR__%]);
+			}
+		});
+		
+		return true;
+	}
+	
+</script>
+]
+
+// CSS
+sCodeHTML += RC+ cpLandingPage._StyleCss +RC
+fSauveTexte("C:\BlocAdresse\page.html",sCodeHTML)
+
+_sCodeComplet = sCodeHTML

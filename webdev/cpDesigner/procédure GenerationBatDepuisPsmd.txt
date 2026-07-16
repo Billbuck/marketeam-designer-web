@@ -22,7 +22,7 @@ sJsonData			est une chaîne ANSI
 hPsm					est une httpRequête
 hReponse				est un httpRéponse
 bufPrintshop		est un Buffer
-imgPrintshop		est une Image
+imgPrintshop		est une WL.Image
 
 // ── Validation du PSMD ───────────────────────────────────────────────────
 si pCheminPsmd = "" ou pas fFichierExiste(pCheminPsmd) alors

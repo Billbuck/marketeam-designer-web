@@ -1,0 +1,42 @@
+procédure CreationVideo(pNumBloc, pPropriete est une chaîne, pValeur est une chaîne  )
+
+sCodeHTML				est une chaîne
+stPropriete				est une structIciBlocProprieteVideo
+stValeur				est une structIciBlocValeurVideo
+sCheminVideo			est une chaîne
+sRepertoireClient		est une chaîne
+sFichier				est une chaîne
+sLibelleBloc			est une chaîne	= "Video-" + pNumBloc 
+sParametre 				est une chaîne
+
+Désérialise(stPropriete,pPropriete,psdJSON)
+Désérialise(stValeur,pValeur,psdJSON)
+
+si stPropriete.AvecControle 	alors sParametre += [" "] + "controls"
+si stPropriete.LectureAuto	 	alors sParametre += [" "] + "autoplay"
+si stPropriete.LectureEnBoucle	alors sParametre += [" "] + "loop"
+si stPropriete.Mute				alors sParametre += [" "] + "muted"
+
+si ici_image.LitRecherchePremier(IdImage,stValeur.IdVideo) alors
+	selon Vrai
+		cas ici_image.IdMarque > 0 	: sRepertoireClient = CheminMarque(ici_image.IdMarque,__OPERATION_CLIQUEZICI__,__REP_VIDEO__,Faux)
+		cas ici_image.IdClient > 0 	: sRepertoireClient = CheminClient(ici_image.IdClient,__OPERATION_CLIQUEZICI__,__REP_VIDEO__,Faux)
+		autre cas					: sRepertoireClient = CheminMarketeam(__OPERATION_CLIQUEZICI__,__REP_VIDEO__,Faux)
+	fin
+	sFichier = __DOC_ICI_VIDEO__ + ici_image.IdImage + "." + ici_image.TypeFichier
+fin
+
+sCheminVideo	= sRepertoireClient + sFichier
+
+sCodeHTML		= [
+	<div class="[%sLibelleBloc%]">
+		<video width=100% height=auto [%sParametre%]>
+			<source src="[%sCheminVideo%]" type="video/mp4">
+			Désolé, votre navigateur ne supporte pas les vidéos intégrées.
+		</video>
+	</div>
+]
+
+
+
+renvoyer sCodeHTML

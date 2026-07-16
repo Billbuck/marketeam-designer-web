@@ -1,0 +1,19 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//InitCboPoliceFamille (<pCombo> est champ, <tabPolice> est tableau (structIciThemePolice))
+//
+// Paramètres :
+//	pCombo (champ) : <indiquez ici le rôle de pCombo>
+//	tabPolice (tableau (structIciThemePolice)) : <indiquez ici le rôle de pTabPolice>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure InitCboPoliceFamille(pCombo est un Champ, tabPolice tableau de structIciThemePolice)
+
+pCombo.SupprimeTout()
+pour toute stPolice de tabPolice
+	pCombo.Ajoute(stPolice.Nom + gLien(stPolice.Nom))
+fin

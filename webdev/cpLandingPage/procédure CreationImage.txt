@@ -1,0 +1,176 @@
+procédure CreationImage(pNumBloc est un entier, pPropriete est une chaîne, pValeur est une chaîne, pTailleL est un entier, pTailleM est un entier, pTailleS est un entier)
+
+
+sCodeHTML		est une chaîne
+sClasseHtml		est une chaîne
+sStyleCss		est une chaîne
+sImageMode		est une chaîne
+sUrlImage		est une chaîne
+sFormat			est une chaîne
+nHauteurImg		est un entier
+nLargeurImg		est un entier
+sLargeurCalc	est une chaîne
+sHauteurCalc	est une chaîne
+sMaxWidth		est un chaîne
+sRepRacine		est une chaîne
+bufImgSVG		est un Buffer
+
+stProprieteImage est une structIciBlocProprieteImage
+stValeurImage est une structIciBlocValeurImage
+
+Désérialise(stProprieteImage,pPropriete,psdJSON)
+Désérialise(stValeurImage,pValeur,psdJSON)
+
+sClasseHtml = "bloc-"+pNumBloc
+
+selon Vrai
+	cas stValeurImage.IdImage > 0
+		si pas ici_image.LitRecherchePremier(IdImage,stValeurImage.IdImage) alors
+			Info("Erreur Image non trouvée")
+		sinon
+			sFormat		= Majuscule(ici_image.TypeFichier)
+			nLargeurImg	= ici_image.Largeur
+			nHauteurImg	= ici_image.Hauteur
+			selon Vrai
+				cas ici_image.IdMarque > 0	: sUrlImage 	= CheminMarque(ici_image.IdMarque,__OPERATION_CLIQUEZICI__,__REP_IMAGE__,Faux) + __DOC_ICI_IMAGE__ + ici_image.IdImage + "." + ici_image.TypeFichier
+				cas ici_image.IdClient > 0	: sUrlImage 	= CheminClient(ici_image.IdClient,__OPERATION_CLIQUEZICI__,__REP_IMAGE__,Faux) + __DOC_ICI_IMAGE__ + ici_image.IdImage + "." + ici_image.TypeFichier
+				autre cas					: sUrlImage 	= CheminMarketeam(__OPERATION_CLIQUEZICI__,__REP_IMAGE__,Faux) + __DOC_ICI_IMAGE__ + ici_image.IdImage + "." + ici_image.TypeFichier
+			fin
+		fin
+
+	autres cas
+
+		sRepRacine 	= ValeurParametre("rep_racine_marketeam")
+		Trace("sRepRacine ", sRepRacine)
+		sUrlImage	= "image-vide.png"
+		sFormat		= "PNG"
+		nLargeurImg	= 800
+		nHauteurImg	= 600
+
+fin
+
+
+// Récupération des caractéristiques de l'image
+
+stProprieteImage.HauteurMax = (stProprieteImage.HauteurMax = 0) ? 30 sinon stProprieteImage.HauteurMax
+sImageMode = "inherit"
+sCodeHTML = [
+	<div class="[%sClasseHtml%] bloc-container image">
+]
+si SansEspace(stValeurImage.Lien) <> "" alors
+	sCodeHTML += [
+			<a href="[%SansEspace(stValeurImage.Lien)%]" target="blank" class="lien-image">
+	]
+fin
+
+si sUrlImage <> "" alors
+	sCodeHTML += [
+		<img src="[%sUrlImage%]" style="width:100%; height: auto;" libelle="[%ici_image.Nom%]">
+	]
+sinon
+	sCodeHTML += bufImgSVG
+fin
+
+si SansEspace(stValeurImage.Lien) <> "" alors
+	sCodeHTML += "</a>"
+fin
+sCodeHTML += "</div>"
+
+// Style (hors dimensions)
+sStyleCss = [
+
+.[%sClasseHtml%] {
+	background: 		[%stProprieteImage.BlocFondCouleur%];
+	display: 			flex;
+	justify-content: 	[%DonneAlignementHorizontal(stProprieteImage.AlignHorizontal,"html")%]; /* Centre l'image horizontalement */
+    align-items: 		center;     /* Centre l'image verticalement si nécessaire */
+	height: 			auto;
+}
+
+/* Ajout des marges par défaut pour les tailles L et supérieures */
+.[%sClasseHtml%] img, .[%sClasseHtml%]-image { 
+	margin: [%stProprieteImage.MargeVertical%]px [%stProprieteImage.MargeHorizontal%]px;
+}
+
+@media all and (max-width:[%pTailleM%]px) {
+	.[%sClasseHtml%] img, .[%sClasseHtml%]-image { 
+		margin: 	[%stProprieteImage.MargeVertical * pTailleM / pTailleL%]px [%stProprieteImage.MargeHorizontal * pTailleM / pTailleL%]px;
+	}
+}
+
+@media all and (max-width:[%pTailleS%]px) {
+	.[%sClasseHtml%] img, .[%sClasseHtml%]-image { 	
+		margin: 	[%stProprieteImage.MargeVertical * pTailleS / pTailleL%]px [%stProprieteImage.MargeHorizontal * pTailleS / pTailleL%]px;
+	}
+}
+
+]
+
+(sLargeurCalc,sHauteurCalc, sMaxWidth) = CalculLargeurHauteur(pTailleL)
+// Style avec dimension taille L
+sStyleCss += [
+/* Hauteur max : [%stProprieteImage.HauteurMax%] */
+.[%sClasseHtml%] img, .[%sClasseHtml%] svg {
+	width: 		[%sLargeurCalc%] !important;
+	height: 	[%sHauteurCalc%] !important;
+	[%sMaxWidth%]
+	pourcent: [%stProprieteImage.HauteurMax%];
+}
+
+]
+
+// Style par tranche de 10px
+pour nTaille = pTailleL _à_ 320 pas -10
+
+	(sLargeurCalc,sHauteurCalc, sMaxWidth) = CalculLargeurHauteur(nTaille)
+
+	sStyleCss += [
+	
+	@media all and (max-width:[%nTaille%]px) {
+		.[%sClasseHtml%] img, .[%sClasseHtml%]-image, .[%sClasseHtml%] svg { 
+			width: 		[%sLargeurCalc%] !important;
+			height: 	[%sHauteurCalc%] !important;
+			[%sMaxWidth%]
+		}		
+	}
+	
+	]
+
+fin
+
+sStyleCss = [
+<style>
+[%sStyleCss%]
+</style>
+]
+
+sCodeHTML += sStyleCss
+
+renvoyer sCodeHTML
+
+procédure interne CalculLargeurHauteur(pLargeurPage)
+
+	sHautCalc est une chaîne
+	sLargCalc est une chaîne
+	sLargImgMax est une chaîne
+
+	si nLargeurImg = 0 alors nLargeurImg = 1
+	si nHauteurImg = 0 alors nHauteurImg = 1
+
+	si sFormat = "SVG" alors
+		sHautCalc		= (pLargeurPage * stProprieteImage.HauteurMax / 100) +"px"
+		sLargCalc		= "auto"
+		sLargImgMax		= ""
+	sinon
+		sHautCalc		= "auto"
+		sLargCalc		= (pLargeurPage * stProprieteImage.HauteurMax / 100) +"px"
+		si stProprieteImage.MargeHorizontal>0 alors
+			sLargImgMax		= "max-width : calc(" + pLargeurPage + "px - " + 2*stProprieteImage.MargeHorizontal + "px);"
+		sinon
+			sLargImgMax		= "max-width : " + pLargeurPage + "px ;"
+		fin
+	fin
+
+	renvoyer (sLargCalc,sHautCalc,sLargImgMax)
+
+fin

@@ -1,0 +1,54 @@
+function JoliToast(pTexte, pType, pCouleurTexte, pCouleurFond, pDuree = 3, pCallBack = '')
+	{
+    var titre;
+    var icone;
+    var duree;
+
+    // Durée du toast en millisecondes
+    duree = (pDuree === 0) ? false : pDuree * 1000;
+
+    switch (pType) {
+        case 1:
+            icone = 'info';
+            titre = 'Information';
+            break;
+
+        case 2:
+            icone = 'error';
+            titre = 'Erreur';
+            break;
+
+        case 3:
+            icone = 'success';
+            titre = 'Confirmation';
+            break;
+
+        case 4:
+            icone = 'warning';
+            titre = 'Attention';
+            break;
+
+        default:
+            icone = 'info';
+            titre = 'Information';
+    }
+
+    $.toast({
+        heading: 			titre,
+        text: 				pTexte,
+        position: 			'mid-center', // 'top-center'
+        stack: 				1, // Nombre maximum de toasts à afficher simultanément
+        hideAfter: 			duree, // Durée du toast en millisecondes
+        showHideTransition: 'slide',
+		allowToastClose: 	true,
+        icon: 				icone,
+        textColor: 			String(pCouleurTexte), // Assurez-vous que c'est une chaîne
+        bgColor: 			String(pCouleurFond), // Assurez-vous que c'est une chaîne
+        loaderBg: 			'#E4E6E8',
+        afterHidden: function () {
+            if (pCallBack !== '') {
+                $("." + pCallBack).click();
+            }
+        }
+    });
+}

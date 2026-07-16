@@ -1,0 +1,22 @@
+-- ============================================================================
+-- QR interactif — code de test par opération (CDC V2 du 16/07/2026)
+--
+-- CodeTest = code NON DEVINABLE qui identifie l'opération dans l'URL de test
+-- du QR code du BAT : cliquez.info/!<CodeTest>
+-- (on n'utilise pas l'IdOperation en clair : les numéros se suivent, un
+-- curieux pourrait tous les essayer et voir les pages des autres clients).
+--
+-- Généré par AjoutModificationOperation :
+--   - à la création de l'opération ;
+--   - en modification si vide (rattrapage des opérations existantes).
+-- ============================================================================
+
+ALTER TABLE `dos_operation`
+	ADD COLUMN `CodeTest` VARCHAR(12) NULL DEFAULT NULL COLLATE 'utf8mb4_bin',
+	ADD UNIQUE INDEX `CodeTest` (`CodeTest`);
+
+-- Rattrapage immédiat des opérations existantes (facultatif : le rattrapage
+-- se fait aussi au fil de l'eau à la prochaine modification de chaque opération)
+UPDATE dos_operation
+SET CodeTest = SUBSTRING(MD5(CONCAT(RAND(), IdOperation)), 1, 10)
+WHERE CodeTest IS NULL;

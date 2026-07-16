@@ -1,0 +1,22 @@
+procédure CreationYoutube(pPropriete est une chaîne, pValeur est une chaîne)
+
+sCodeHTML				est une chaîne
+sIdYoutube				est une chaîne
+sAutoplay				est une chaîne
+sControle				est une chaîne
+stPropriete				est une structIciBlocProprieteYoutube
+stValeur				est une structIciBlocValeurYoutube
+
+Désérialise(stPropriete,pPropriete,psdJSON)
+Désérialise(stValeur,pValeur,psdJSON)
+sIdYoutube = stValeur.IdYoutube
+sControle = pas (stPropriete.AvecControle) ? "?controls=0" sinon ""
+sAutoplay = (stPropriete.LectureAuto) ? "autoplay;" sinon ""
+
+sCodeHTML	= [
+<div class="bloc-container youtube">
+	<iframe width="100%" height="315" src="https://www.youtube-nocookie.com/embed/[%sIdYoutube%][%sControle%]" frameborder="0" allow="accelerometer;[%sAutoplay%] encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+]
+
+renvoyer sCodeHTML

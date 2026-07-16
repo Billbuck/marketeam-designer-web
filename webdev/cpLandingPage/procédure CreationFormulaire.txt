@@ -1,0 +1,403 @@
+procédure CreationFormulaire(pNumBloc est un entier, stNouveauCliquezIci est une structNouveauCliquezIci)
+sCodeHTML						est une chaîne
+sScript							est une chaîne
+sListeScript					est une chaîne
+taaTypeScript 					est un tableau associatif de chaînes
+sCodeFormulaire					est une chaîne
+sObligatoire					est une chaîne
+sCodeChamp						est une chaîne
+stIciThemeProprieteFormulaire	est une structIciThemeProprieteFormulaire
+stValeurSaisie					est une structIciBlocValeurFormulaire
+
+Désérialise(stIciThemeProprieteFormulaire, stNouveauCliquezIci.stTheme.ProprieteFormulaire, psdJSON)
+Désérialise(stValeurSaisie, stNouveauCliquezIci.tabBloc[pNumBloc].Valeur, psdJSON)
+
+
+
+pour nChamp = 1 _à_ stValeurSaisie.TabLibelle.Occurrence
+	sObligatoire = (stValeurSaisie.TabObligatoire[nChamp]) ? "obligatoire" sinon ""
+	selon stValeurSaisie.TabType[nChamp]
+
+		cas __CHAMP_TYPE_TELEPHONE__
+			sCodeFormulaire = [
+				<div class="formulaire">
+					<div class="lib-champ">
+						<label for="input_[%nChamp%]">[%stValeurSaisie.TabLibelle[nChamp]%]</label>
+					</div>
+					<div class="champ">
+						<input 
+							type="tel" 
+							name="input_[%nChamp%]" 
+							id="input_[%nChamp%]" 
+							placeholder="[%stValeurSaisie.TabIndication[nChamp]%]" 
+							value="[%stValeurSaisie.TabValeur[nChamp]%]" 
+							class="telephone-masque [%sObligatoire%]"
+						/>
+					</div>
+				</div>
+			]
+
+			taaTypeScript["telephone"] = [
+					$(".telephone-masque").inputmask({
+						regex: "^0\\d \\d\\d \\d\\d \\d\\d \\d\\d$",
+						placeholder: " ",
+						showMaskOnHover: false,
+						showMaskOnFocus: false,
+						autoUnmask: true,
+						removeMaskOnSubmit: true,
+						clearMaskOnLostFocus: true,
+						onUnMask: function(maskedValue, unmaskedValue, opts) {
+        					var val = maskedValue.replace(/\s/g, "");
+							if(val === "0" || val.length < 2) {
+								return "";
+							}
+							return val;
+    					}
+					});
+			]
+
+		cas __CHAMP_TYPE_PORTABLE__
+			sCodeFormulaire = [
+				<div class="formulaire">
+					<div class="lib-champ">
+						<label for="input_[%nChamp%]">[%stValeurSaisie.TabLibelle[nChamp]%]</label>
+					</div>
+					<div class="champ">
+						<input 
+							type="tel" 
+							name="input_[%nChamp%]" 
+							id="input_[%nChamp%]" 
+							placeholder="[%stValeurSaisie.TabIndication[nChamp]%]" 
+							value="[%stValeurSaisie.TabValeur[nChamp]%]" 
+							class="portable-masque [%sObligatoire%]"
+						/>
+					</div>
+				</div>
+			]
+
+			taaTypeScript["portable"] = [
+				$(".portable-masque").inputmask({
+					regex: "^(06|07) \\d\\d \\d\\d \\d\\d \\d\\d$",
+					placeholder: " ",
+					showMaskOnHover: false,
+					showMaskOnFocus: false,
+					autoUnmask: true,
+					removeMaskOnSubmit: true,
+					clearMaskOnLostFocus: true,
+					onUnMask: function(maskedValue, unmaskedValue, opts) {
+        				var val = maskedValue.replace(/\s/g, "");
+        				if(val === "0" || val.length < 2) {
+            				return "";
+        				}
+        				return val;
+    				}
+				});
+			]
+
+
+		cas __CHAMP_TYPE_MONETAIRE__
+			sCodeFormulaire = [
+				<div class="formulaire">
+					<div class="lib-champ">
+						<label for="input_[%nChamp%]">[%stValeurSaisie.TabLibelle[nChamp]%]</label>
+					</div>
+					<div class="champ">
+						<input 
+							type="text" 
+							name="input_[%nChamp%]" 
+							id="input_[%nChamp%]" 
+							placeholder="[%stValeurSaisie.TabIndication[nChamp]%]" 
+							value="[%stValeurSaisie.TabValeur[nChamp]%]" 
+							class="monetaire-masque [%sObligatoire%]"
+						/>
+					</div>
+				</div>
+			]
+
+			taaTypeScript["monetaire"] = [
+				$(".monetaire-masque").inputmask({
+					alias: "numeric",
+					groupSeparator: " ",
+					autoGroup: true,
+					digits: 2,
+					digitsOptional: true,
+					placeholder: " ",
+					rightAlign: false,
+					suffix: " €",
+					allowMinus: false,
+					allowPlus: false,
+					radixPoint: ",",
+					onBeforePaste: function (pastedValue, opts) {
+						return pastedValue.replace('.', ',');
+					},
+					showMaskOnHover: false,
+					showMaskOnFocus: false,
+					removeMaskOnSubmit: true,
+					clearMaskOnLostFocus: true
+				});
+			]
+
+		cas __CHAMP_TYPE_CODEPOSTAL__
+			sCodeFormulaire = [
+				<div class="formulaire">
+					<div class="lib-champ">
+					<label for="input_[%nChamp%]">[%stValeurSaisie.TabLibelle[nChamp]%]</label>
+						</div>
+					<div class="champ">
+						<input 
+							type="text" 
+							name="input_[%nChamp%]" 
+							id="input_[%nChamp%]" 
+							placeholder="[%stValeurSaisie.TabIndication[nChamp]%]" 
+							value="[%stValeurSaisie.TabValeur[nChamp]%]" 
+							class="codepostal-masque [%sObligatoire%]"
+						/>
+					</div>
+				</div>
+			]
+
+			taaTypeScript["codepostal"] = [
+				$(".codepostal-masque").inputmask({
+					regex: "^\\d{5}$",
+					placeholder: " ",
+					showMaskOnHover: false,
+					showMaskOnFocus: false,
+					autoUnmask: true,
+					removeMaskOnSubmit: true,
+					clearMaskOnLostFocus: true
+				});
+			]
+
+
+		cas __CHAMP_TYPE_DATE__
+			sCodeFormulaire = [
+				<div class="formulaire">
+					<div class="lib-champ">
+						<label for="input_[%nChamp%]">[%stValeurSaisie.TabLibelle[nChamp]%]</label>
+					</div>
+					<div class="champ">
+						<input 
+							type="text" 
+							name="input_[%nChamp%]" 
+							id="input_[%nChamp%]" 
+							placeholder="[%stValeurSaisie.TabIndication[nChamp]%]" 
+							value="[%stValeurSaisie.TabValeur[nChamp]%]" 
+							class="date-masque [%sObligatoire%]"
+						/>
+					</div>
+				</div>
+			]
+
+			taaTypeScript["date"] = [
+				$(".date-masque").inputmask({
+					alias: "datetime",
+					inputFormat: "dd/mm/yyyy",
+					placeholder: " ",
+					showMaskOnHover: false,
+					showMaskOnFocus: false,
+					autoUnmask: true,
+					removeMaskOnSubmit: true,
+					clearMaskOnLostFocus: true
+				});
+			]
+
+
+		cas __CHAMP_TYPE_HEURE__
+			sCodeFormulaire = [
+				<div class="formulaire">
+					<div class="lib-champ">
+						<label for="input_[%nChamp%]">[%stValeurSaisie.TabLibelle[nChamp]%]</label>
+					</div>
+					<div class="champ">
+						<input 
+							type="text" 
+							name="input_[%nChamp%]" 
+							id="input_[%nChamp%]" 
+							placeholder="[%stValeurSaisie.TabIndication[nChamp]%]" 
+							value="[%stValeurSaisie.TabValeur[nChamp]%]" 
+							class="time-masque [%sObligatoire%]"
+						/>
+					</div>
+				</div>
+			]
+
+			taaTypeScript["time"] = [
+				$(".time-masque").inputmask({
+					alias: "datetime",
+					inputFormat: "HH:MM",
+					placeholder: " ",
+					showMaskOnHover: false,
+					showMaskOnFocus: false,
+					autoUnmask: true,
+					removeMaskOnSubmit: true,
+					clearMaskOnLostFocus: true
+				});
+			]
+
+
+		cas __CHAMP_TYPE_DATE_HEURE__
+			sCodeFormulaire = [
+				<div class="formulaire">
+					<div class="lib-champ">
+						<label for="input_[%nChamp%]">[%stValeurSaisie.TabLibelle[nChamp]%]</label>
+					</div>
+					<div class="champ">
+						<input 
+							type="text" 
+							name="input_[%nChamp%]" 
+							id="input_[%nChamp%]" 
+							placeholder="[%stValeurSaisie.TabIndication[nChamp]%]" 
+							value="[%stValeurSaisie.TabValeur[nChamp]%]" 
+							class="datetime-masque [%sObligatoire%]"
+						/>
+					</div>
+				</div>
+			]
+
+			taaTypeScript["datetime"] = [
+				$(".datetime-masque").inputmask({
+					alias: "datetime",
+					inputFormat: "dd/mm/yyyy HH:MM",
+					placeholder: " ",
+					showMaskOnHover: false,
+					showMaskOnFocus: false,
+					autoUnmask: true,
+					removeMaskOnSubmit: true,
+					clearMaskOnLostFocus: true
+				});
+			]
+
+
+		cas __CHAMP_TYPE_ENTIER__
+			sCodeFormulaire = [
+				<div class="formulaire">
+					<div class="lib-champ">
+						<label for="input_[%nChamp%]">[%stValeurSaisie.TabLibelle[nChamp]%]</label>
+					</div>
+					<div class="champ">
+						<input 
+							type="text" 
+							name="input_[%nChamp%]" 
+							id="input_[%nChamp%]" 
+							placeholder="[%stValeurSaisie.TabIndication[nChamp]%]" 
+							value="[%stValeurSaisie.TabValeur[nChamp]%]" 
+							class="entier-masque [%sObligatoire%]"
+						/>
+					</div>
+				</div>
+			]
+
+			taaTypeScript["entier"] = [
+				$(".entier-masque").inputmask({
+					alias: "numeric",
+					groupSeparator: " ",
+					autoGroup: true,
+					digits: 0,
+					digitsOptional: false,
+					placeholder: " ",
+					rightAlign: false,
+					allowMinus: false,
+					allowPlus: false,
+					showMaskOnHover: false,
+					showMaskOnFocus: false,
+					removeMaskOnSubmit: true,
+					clearMaskOnLostFocus: true
+				});
+			]
+
+
+		cas __CHAMP_TYPE_DECIMAL__
+			sCodeFormulaire = [
+				<div class="formulaire">
+					<div class="lib-champ">
+						<label for="input_[%nChamp%]">[%stValeurSaisie.TabLibelle[nChamp]%]</label>
+					</div>
+					<div class="champ">
+						<input 
+							type="text" 
+							name="input_[%nChamp%]" 
+							id="input_[%nChamp%]" 
+							placeholder="[%stValeurSaisie.TabIndication[nChamp]%]" 
+							value="[%stValeurSaisie.TabValeur[nChamp]%]" 
+							class="decimal-masque [%sObligatoire%]"
+						/>
+					</div>
+				</div>
+			]
+
+			taaTypeScript["decimal"] = [
+				$(".decimal-masque").inputmask({
+					alias: "numeric",
+					groupSeparator: " ",
+					autoGroup: true,
+					digits: 2,
+					digitsOptional: true,
+					placeholder: " ",
+					rightAlign: false,
+					allowMinus: false,
+					allowPlus: false,
+					radixPoint: ",",
+					onBeforePaste: function (pastedValue, opts) {
+						return pastedValue.replace('.', ',');
+					},
+					showMaskOnHover: false,
+					showMaskOnFocus: false,
+					removeMaskOnSubmit: true,
+					clearMaskOnLostFocus: true
+				});
+			]
+
+
+		autre cas
+			sCodeFormulaire = [
+				<div class="formulaire">
+					<div class="lib-champ">
+						<label for="input_[%nChamp%]">[%stValeurSaisie.TabLibelle[nChamp]%]</label>
+					</div>
+					<div class="champ">
+						<input 
+							type="text" 
+							name="input_[%nChamp%]" 
+							id="input_[%nChamp%]" 
+							placeholder="[%stValeurSaisie.TabIndication[nChamp]%]" 
+							value="[%stValeurSaisie.TabValeur[nChamp]%]" 
+							class="[%sObligatoire%]"
+						/>
+					</div>
+				</div>
+			]
+	fin
+
+	sCodeChamp += [RC] + sCodeFormulaire
+fin
+
+
+pour tout sTypeScript, sType de taaTypeScript
+	sListeScript += [RC] + sTypeScript
+fin
+
+sScript = [
+	$(document).ready(function(){
+	
+		[%sListeScript%]
+		
+		$("#input_[*], #input_[*], ..., #input_decimal").on("keypress", function(e){
+			var char = String.fromCharCode(e.which);
+			if (!/[0-9\s,/:]/.test(char)) {
+				e.preventDefault();
+			}
+		});
+	});
+]
+
+_tabCodeJS.Ajoute(sScript)
+
+sCodeHTML = [
+	<div class="bloc-container" style="background-color:[%stIciThemeProprieteFormulaire.BlocFondCouleur%]">
+		[%sCodeChamp%]
+	</div>
+]
+
+
+
+renvoyer sCodeHTML

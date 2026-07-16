@@ -129,6 +129,16 @@ fin
 // ******************************** Enregistrement des données de chaque document
 
 pour tout stDocument de stOperation.stOperationLettre.tabStDocument
+
+	// ─── QR interactif (CDC V2 16/07/2026) ──────────────────────────────
+	// Si le QR a été composé AVANT le premier enregistrement, son contenu
+	// porte le marqueur « !0 » : maintenant que l'opération a son CodeTest,
+	// on pose l'URL de test définitive. Le PSMD est régénéré plus bas ;
+	// le BAT sera régénéré par l'utilisateur (décision donneur d'ordre).
+	si stOperation.EstCliquezIci _et_ stDocument.JsonDesignerData <> "" alors
+		stDocument.JsonDesignerData = cpDesigner.ReecritUrlQrInteractifJson(stDocument.JsonDesignerData, cpDesigner.UrlTestQrInteractif(stOperation))
+	fin
+
 	si stDocument.IdLettreContenu = 0 alors
 		ope_lettre_contenu.RAZ()
 		ope_lettre_contenu.IdLettre = stOperation.IdOperation

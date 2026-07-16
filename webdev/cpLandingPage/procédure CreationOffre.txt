@@ -1,0 +1,56 @@
+procédure CreationOffre(pNumBloc est un entier, stNouveauCliquezIci est une structNouveauCliquezIci)
+
+sCodeOffre					est une chaîne
+sCodeHtml 					est une chaîne
+stProprieteOffre			est une structIciBlocProprieteOffre
+stValeurOffre				est une structIciBlocValeurOffre
+stValeurTexte				est une structIciBlocValeurTexte
+stThemeProprieteCombo		est une structIciThemeProprieteCombo
+stThemeProprieteTexte		est une structIciThemeProprieteTexte
+stThemeProprieteDefaut		est une structIciThemeProprieteDefaut
+stProprieteTexte			est une structIciBlocProprieteTexte
+nIndiceFormulaireHTML		est un  entier
+sProprieteTexte				est une chaîne
+sValeurTexte 				est une chaîne
+
+Désérialise(stProprieteOffre, stNouveauCliquezIci.tabBloc[pNumBloc].Propriete,psdJSON)
+Désérialise(stThemeProprieteTexte, stNouveauCliquezIci.stTheme.ProprieteTexte,psdJSON)
+Désérialise(stThemeProprieteCombo, stNouveauCliquezIci.stTheme.ProprieteCombo,psdJSON)
+Désérialise(stThemeProprieteDefaut, stNouveauCliquezIci.stTheme.ProprieteDefaut,psdJSON)
+Désérialise(stValeurOffre,stNouveauCliquezIci.tabBloc[pNumBloc].Valeur,psdJSON)
+
+stValeurTexte.Texte						= stValeurOffre.LibelleQuestion
+
+stProprieteTexte.BlocFondCouleur		= stProprieteOffre.BlocFondCouleur
+stProprieteTexte.PoliceFamille			= stProprieteOffre.QuestionPoliceFamille
+stProprieteTexte.PoliceTailleL			= stThemeProprieteTexte.TaaStyle[stProprieteOffre.QuestionPoliceCode].PoliceTailleL
+stProprieteTexte.PoliceTailleM			= stThemeProprieteTexte.TaaStyle[stProprieteOffre.QuestionPoliceCode].PoliceTailleM
+stProprieteTexte.PoliceTailleS			= stThemeProprieteTexte.TaaStyle[stProprieteOffre.QuestionPoliceCode].PoliceTailleS
+stProprieteTexte.PoliceCouleur			= stProprieteOffre.QuestionPoliceCouleur
+stProprieteTexte.PoliceStyle			= stProprieteOffre.QuestionPoliceStyle
+stProprieteTexte.AlignHorizontal		= stProprieteOffre.QuestionAlignHorizontal
+
+Sérialise(stProprieteTexte,sProprieteTexte,psdJSON)
+Sérialise(stValeurTexte,sValeurTexte,psdJSON)
+
+sCodeOffre = CreationTexteOffre(pNumBloc, sProprieteTexte, sValeurTexte, stNouveauCliquezIci.stTheme.LargeurL, stNouveauCliquezIci.stTheme.LargeurM, stNouveauCliquezIci.stTheme.LargeurS)
+
+
+pour tout stLigneOffre de stValeurOffre.tabOffre
+	nIndiceFormulaireHTML++
+	selon stLigneOffre.TypeOffre
+		cas __OFFRE_COMBO__									: sCodeOffre += CreationCombo(pNumBloc, stThemeProprieteCombo.LibellePosition,stLigneOffre, nIndiceFormulaireHTML, stNouveauCliquezIci.stTheme.LargeurM, stNouveauCliquezIci.stTheme.LargeurS)
+		cas __OFFRE_INTERRUPTEUR__, __OFFRE_PERSONNALISEE__	: sCodeOffre += CreationInterrupteur(stLigneOffre, nIndiceFormulaireHTML)
+		autres cas
+	fin
+fin
+
+sCodeHtml = [
+	<div class="bloc-container" style="background-color:[%stProprieteOffre.BlocFondCouleur%]">
+		[%sCodeOffre%]
+	</div>
+
+]
+
+
+renvoyer sCodeHtml

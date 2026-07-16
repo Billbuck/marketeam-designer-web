@@ -1,0 +1,139 @@
+// pScanBat (16/07/2026, CDC QR interactif V2) : Vrai = scan du QR d'un BAT
+//	courrier (URL !<CodeTest>). Deux différences avec le mode test historique :
+//	- la ligne de base utilisée est la PREMIÈRE (même personne que le BAT),
+//	  et non une ligne au hasard ;
+//	- sans base injectée, repli sur les infos du contact de l'opération
+//	  (même comportement que le BAT), au lieu de ne pas personnaliser.
+procédure PersonnaliseChamps(pEnModeTest = Faux, pScanBat est un booléen = Faux)
+
+bChampsDejaCharges		est un booléen
+taaBaseChamp			est un tableau associatif de structBaseChamp
+stBaseLigne				est une StructBaseLigne
+stBlocValeurTexte		est une structIciBlocValeurTexte
+stBlocValeurAdresse		est une structIciBlocValeurAdresse
+stBlocValeurFormulaire	est une structIciBlocValeurFormulaire
+stBlocValeurGrille		est une structIciBlocValeurGrille
+stBlocValeurLien		est une structIciBlocValeurLien
+stBlocValeurOffre		est une structIciBlocValeurOffre
+stLigneOffre			est une structIciBlocLigneOffre
+
+
+
+si pEnModeTest = Faux alors
+	// Je suis en production
+	stBaseLigne		= ChargeBaseLigne(_nIdBaseLigne)
+sinon
+	// Je suis en mode test
+	si _nIdCliquezIci > 0 alors
+		// J'ai une opération, je recherche une ligne d'enregistrement
+		// (la PREMIÈRE pour un scan de BAT, une au hasard sinon)
+		stBaseLigne		= ChargeUneBaseLigne(_nIdCliquezIci, pScanBat)
+		si stBaseLigne.IdBaseLigne = 0 alors
+			si pScanBat alors
+				// Pas de base injectée : repli sur les infos du contact de
+				// l'opération, comme le BAT (CDC QR interactif V2)
+				(stBaseLigne, taaBaseChamp) = ChargeBaseLigneContact(_nIdCliquezIci)
+				si stBaseLigne.IdBaseLigne = 0 alors retour
+				bChampsDejaCharges = Vrai
+			sinon
+				// Pas encore d'enregistrement pour l'opération, je ne personnalise pas et je sors
+				retour
+			fin
+		fin
+	sinon
+		// Je ne suis pas lié à une opération, je ne personnalise pas et je sors
+		retour
+	fin
+fin
+
+
+si pas bChampsDejaCharges alors
+	taaBaseChamp = ChargeTaaDosBaseChamp(_nIdCliquezIci)
+fin
+
+
+
+
+pour tout stBloc de _stNouveauCliquezIci.tabBloc
+	selon stBloc.Type
+		cas __BLOC_TEXTE__
+			Désérialise(stBlocValeurTexte, stBloc.Valeur, psdJSON)
+			stBlocValeurTexte.Texte = Personnalisation(stBlocValeurTexte.Texte)
+			Sérialise(stBlocValeurTexte,stBloc.Valeur,psdJSON)
+
+		cas __BLOC_ADRESSE__
+			Désérialise(stBlocValeurAdresse, stBloc.Valeur, psdJSON)
+			pour tout sAdresse de stBlocValeurAdresse.TabValeur
+				sAdresse = Personnalisation(sAdresse)
+			fin
+			Sérialise(stBlocValeurAdresse, stBloc.Valeur, psdJSON)
+
+
+		cas __BLOC_FORMULAIRE__
+			Désérialise(stBlocValeurFormulaire, stBloc.Valeur, psdJSON)
+			pour tout sValeur de stBlocValeurFormulaire.TabValeur
+				sValeur = Personnalisation(sValeur)
+			fin
+			Sérialise(stBlocValeurFormulaire, stBloc.Valeur, psdJSON)
+
+		cas __BLOC_GRILLE__
+			Désérialise(stBlocValeurGrille, stBloc.Valeur, psdJSON)
+			pour tout sDescription de stBlocValeurGrille.tabDescription
+				sDescription = Personnalisation(sDescription)
+			fin
+			pour tout sLien de stBlocValeurGrille.tabLien
+				sLien = Personnalisation(sLien)
+			fin
+			Sérialise(stBlocValeurGrille, stBloc.Valeur, psdJSON)
+
+		cas __BLOC_LIEN__
+			Désérialise(stBlocValeurLien, stBloc.Valeur, psdJSON)
+			stBlocValeurLien.Lien = Personnalisation(stBlocValeurLien.Lien)
+			Sérialise(stBlocValeurLien, stBloc.Valeur, psdJSON)
+
+		cas __BLOC_OFFRE__
+			Désérialise(stBlocValeurOffre, stBloc.Valeur, psdJSON)
+			pour tout stLigneOffre de stBlocValeurOffre.tabOffre
+				stLigneOffre.Libelle = Personnalisation(stLigneOffre.Libelle)
+				pour tout sValeur de stLigneOffre.TabValeur
+					sValeur = Personnalisation(sValeur)
+				fin
+			fin
+			Sérialise(stBlocValeurOffre, stBloc.Valeur, psdJSON)
+
+
+		autre cas
+	fin
+fin
+
+
+
+	procédure interne Personnalisation(pTexte)
+		sValeur est une chaîne
+
+		si ChaîneOccurrence(pTexte,["[","]"]) >= 2 alors
+			pour tout stBaseChamp, sLibelle de taaBaseChamp
+				sValeur = ""
+				selon stBaseChamp.Type
+					cas __CHAMP_TYPE_TEXTE__		: sValeur = {"stBaseLigne." + stBaseChamp.Champ,indVariable }
+					cas __CHAMP_TYPE_ENTIER__ 		: sValeur = NumériqueVersChaîne({"stBaseLigne." + stBaseChamp.Champ,indVariable }, "dS")
+					cas __CHAMP_TYPE_DECIMAL__ 		: sValeur = NumériqueVersChaîne({"stBaseLigne." + stBaseChamp.Champ,indVariable }, ",2fS")
+					cas __CHAMP_TYPE_MONETAIRE__ 	: sValeur = NumériqueVersChaîne({"stBaseLigne." + stBaseChamp.Champ,indVariable }, ",2fS") + " €"
+					cas __CHAMP_TYPE_DATE__ 		: sValeur = ChaîneVersDate({"stBaseLigne." + stBaseChamp.Champ,indVariable },"JJ/MM/AAAA")
+					cas __CHAMP_TYPE_EMAIL__		: sValeur = {"stBaseLigne." + stBaseChamp.Champ,indVariable }
+					cas __CHAMP_TYPE_TELEPHONE__	: sValeur = Telephone({"stBaseLigne." + stBaseChamp.Champ,indVariable },1," ")
+					cas __CHAMP_TYPE_PORTABLE__		: sValeur = Telephone({"stBaseLigne." + stBaseChamp.Champ,indVariable },1," ")
+					cas __CHAMP_TYPE_CODEPOSTAL__	: sValeur = {"stBaseLigne." + stBaseChamp.Champ,indVariable }
+					autres cas 						: sValeur = {"stBaseLigne." + stBaseChamp.Champ,indVariable }
+				fin
+				pTexte = Remplace(pTexte,"[" + sLibelle + "]",sValeur)
+			fin
+		fin
+
+		renvoyer pTexte
+
+	fin
+
+
+
+

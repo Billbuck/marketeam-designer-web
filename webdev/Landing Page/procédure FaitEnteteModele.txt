@@ -1,0 +1,28 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] FaitEnteteModele ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	chaîne ANSI : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure FaitEnteteModele()
+
+sCodeCss est une chaîne = [
+<style>
+td.bord { 
+	border-left: 1px solid #ccc; 
+	border-right: 1px solid #ccc; 
+	border-top: 1px dashed #fff;
+	border-bottom: 1px dashed #fff;
+	display: block;
+}
+tr.bloc-modele:hover td.bord { border: 1px dashed #a10ba1 !important; }
+</style>
+]
+
+renvoyer sCodeCss

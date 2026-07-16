@@ -182,7 +182,21 @@ sJsonPsmdTemp = SubstitueNomTechniquePolices(sJsonPsmdTemp, nIdClientPolice)
 //   (pas par id), parsing JSON (jamais de substitution textuelle aveugle). Le
 //   JsonDesignerData stocké en base reste intact : on n'opère que sur la copie
 //   chaîne sJsonPsmdTemp. L'URL variable par destinataire relève du module d'export.
-sUrlQrInteractif est une chaîne = cpFonction.ValeurParametre("Url_Courrier_Interactif_Generique", prm_parametre.ValChaine..Nom)
+// 16/07/2026 (CDC QR interactif V2) : on injecte l'URL DE TEST de l'opération
+// (cliquez.info/!<CodeTest>), plus l'URL générique. C'était CE bloc qui
+// écrasait le QR avec marketeam.com à chaque génération de PSMD/BAT.
+// Repli sur l'ancien paramètre générique si l'opération n'est pas accessible.
+// NB module d'export (production) : ce bloc devra alors poser @Code@ par
+// destinataire au lieu de l'URL de test.
+sUrlQrInteractif est une chaîne = ""
+quand exception dans
+	sUrlQrInteractif = cpDesigner.UrlTestQrInteractif(__stOperation)
+faire
+	sUrlQrInteractif = ""
+fin
+si sUrlQrInteractif = "" alors
+	sUrlQrInteractif = cpFonction.ValeurParametre("Url_Courrier_Interactif_Generique", prm_parametre.ValChaine..Nom)
+fin
 si sUrlQrInteractif = "" alors
 	sUrlQrInteractif = "https://www.marketeam.com"
 fin

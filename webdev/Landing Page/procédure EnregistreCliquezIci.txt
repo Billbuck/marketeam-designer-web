@@ -1,0 +1,31 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//EmailCliquezIci (<pListeReponse>)
+//
+// Paramètres :
+//	pListeReponse : <indiquez ici le rôle de pListeReponse>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+//	NomUser : <indiquez ici le rôle de NomUser>
+//	sLeMessage : <indiquez ici le rôle de sLeMessage>
+//	sType (valeur par défaut="Nouveau") : < indiquez ici le rôle de sType >
+// 	pMode : <indiquez ici le rôle de pMode>
+procédure EnregistreCliquezIci(pListeReponse)
+
+
+si HLitRecherchePremier(dos_base_ligne,IdBaseLigne,_nIdBaseLigne) alors
+	HRAZ(ope_cliquezici_clic)
+	ope_cliquezici_clic.IdCliquezIci 	= _nIdCliquezIci
+	ope_cliquezici_clic.IdBaseLigne 	= _nIdBaseLigne
+	ope_cliquezici_clic.DateHeureClic 	= DateHeureSys()
+	ope_cliquezici_clic.CasesCochees 	= pListeReponse
+	si pas HAjoute(ope_cliquezici_clic) alors
+		// A Faire : Procedure enregistrement dans un fichier ini ou xml au cas ou !!!
+	fin
+fin
+
+//Partage.EnvoiEmail(dos_operation.CodeSite,_nIdCliquezIci,__EMAIL_CLIQUEZICI__,_stCliquezIci.EmailValidation,_nIdBaseLigne,pListeReponse,_stCliquezIci.EmailValidationCopie)

@@ -1,0 +1,390 @@
+procédure ConstructionCssTheme(pPopupCgvAlias, nLargeurL est un entier, nLargeurM est un entier, nLargeurS entier, stTheme est un structIciTheme)
+
+sCss									est une chaîne
+//sLargeurLibelle							est une chaine
+//sLargeurChamp							est une chaine
+//sMargeChamp								est une chaine
+sCodeGestionLargeurResponsive			est une chaîne
+sCodePoliceGoogle						est une chaîne
+sCodePoliceClient						est une chaîne
+sCodeStyleTailleL						est une chaîne
+sCodeStyleTailleM						est une chaîne
+sCodeStyleTailleS						est une chaîne
+sRepertoireWeb							est une chaîne
+sStyleDesLiens							est une chaîne
+sStyleDesLiensResponsive				est une chaîne
+
+stIciThemeProprieteDefaut				est une structIciThemeProprieteDefaut
+stIciThemeProprieteTexte				est une structIciThemeProprieteTexte
+//stIciThemeProprieteCombo				est une structicithemeProprietecombo
+stIciThemeProprieteInterrupteur			est une structIciThemeProprieteInterrupteur
+stIciThemeProprieteLien					est une structIciThemeProprieteLien
+stIciThemeProprieteBouton				est une structIciThemeProprieteBouton
+//stIciThemeProprieteFormulaire			est une structIciThemeProprieteFormulaire
+
+Désérialise(stIciThemeProprieteDefaut,			stTheme.ProprieteDefaut,psdJSON)
+Désérialise(stIciThemeProprieteTexte,			stTheme.ProprieteTexte,psdJSON)
+//Désérialise(stIciThemeProprieteCombo, 			stTheme.ProprieteCombo,psdJSON)
+Désérialise(stIciThemeProprieteInterrupteur, 	stTheme.ProprieteInterrupteur,psdJSON)
+Désérialise(stIciThemeProprieteLien, 			stTheme.ProprieteLien,psdJSON)
+Désérialise(stIciThemeProprieteBouton, 			stTheme.ProprieteBouton,psdJSON)
+//Désérialise(stIciThemeProprieteFormulaire, 		stTheme.ProprieteFormulaire,psdJSON)
+
+<compile si TypeConfiguration=Site>
+	sRepertoireWeb = RépertoireWeb()
+<fin>
+
+// Traitement des polices
+pour tout stPolice de stIciThemeProprieteDefaut.tabPolices
+	selon stPolice.Type
+		cas __POLICE_CLIENT__ : sCodePoliceClient += CssImportPoliceExterne(stPolice.IdClientPolice)
+		cas __POLICE_GOOGLE__ : sCodePoliceGoogle += Remplace(stPolice.Nom," ","+") + ":wght@100;200;300;400;500;600;700;800;900&family="
+	fin
+fin
+
+si sCodePoliceGoogle<>"" alors
+	sCodePoliceGoogle = [
+		<link rel="preconnect" href="https://fonts.gstatic.com">
+		<link href="https://fonts.googleapis.com/css2?family=[% Gauche(sCodePoliceGoogle,Taille(sCodePoliceGoogle)-Taille("&family=")) %]&display=swap" rel="stylesheet">
+	]
+	<compile si TypeConfiguration=Site>
+		MaPage..HTMLEntête += sCodePoliceGoogle
+	<fin>
+fin
+
+// Traitement de la largeur de page en responsive
+pour nLargeur=nLargeurL _à_ 300 pas -1
+	sCodeGestionLargeurResponsive += RC + "@media (max-width: " + nLargeur + "px) { .container { margin:auto; width:" + nLargeur + "px; } }"
+fin
+
+// Traitement des styles de texte
+pour tout stStyle, sPoliceCode de stIciThemeProprieteTexte.TaaStyle
+	sCodeStyleTailleL += [
+
+.[%sPoliceCode%] {
+	font-size:   [%stStyle.PoliceTailleL%]px;
+}
+	]
+
+	sCodeStyleTailleM += [
+	.[%sPoliceCode%] { 
+		font-size:   [%stStyle.PoliceTailleM%]px;
+	}
+	]
+
+	sCodeStyleTailleS += [
+	.[%sPoliceCode%] { 
+		font-size:   [%stStyle.PoliceTailleS%]px;
+	}
+	]
+fin
+
+//
+
+
+// Généralités
+sCss = [
+<HEAD>
+	<STYLE>
+		[%sCodePoliceClient%]
+	</STYLE>
+</HEAD>
+
+<STYLE>
+body {
+	overflow-x: hidden; /* supprime le débordement horizontal éventuel */
+	
+	font-family: 		'[%stIciThemeProprieteDefaut.PoliceFamille%]';
+	font-size:   		[%stIciThemeProprieteTexte.TaaStyle[M.Nom].PoliceTailleL%]px;
+	font-weight: 		[%__STYLE_REGULAR__%];
+	font-style:  		"normal";
+	color: 		 		[%stIciThemeProprieteDefaut.LibelleCouleur%];
+}
+
+body * {
+	outline: none;
+}
+
+tbody {
+	background-color: 	[%stIciThemeProprieteDefaut.BlocFondCouleur%];
+}
+
+html, body, body form {
+	background-color: 	[%stIciThemeProprieteDefaut.PageFondCouleur%];
+	scrollbar-color: #ccc transparent;
+	scrollbar-width: thin;
+}
+
+body::-webkit-scrollbar {
+  width: 0px;
+}
+ 
+body::-webkit-scrollbar-thumb {
+  background-color: #ccc;
+  outline: 			none;
+}
+
+#dww[%pPopupCgvAlias%] {
+	width: 		100% !important;
+	height: 	100% !important;
+	position: 	fixed !important;
+	left:		0 !important;
+	top:		0 !important;
+	overflow:	hidden;
+	max-width:	none !important;
+	}
+	
+	
+.container { 
+	margin: 				0 auto;
+	width: 					[%nLargeurL%]px;
+	border: 				none;
+}
+
+.bloc-modele {
+	/*	border-bottom: 	1px solid #ccc; */
+	clear: 			both;
+	width: 			100%;
+	float: 			left;
+	overflow-x:		hidden;
+	overflow-y:		hidden;
+}
+
+.bloc-container {
+	padding: 	[%stIciThemeProprieteDefaut.MargeVerticaleEntreBloc%]px [%stIciThemeProprieteDefaut.MargeHorizontaleBloc%]px;
+	clear:		both;
+}
+
+
+.bloc-container.image, 
+.bloc-container.youtube,
+.bloc-container.slick-slider, 
+.bloc-container.grattage {
+	padding: 0;
+}
+
+
+.blocs-adresse {
+    padding: [%stIciThemeProprieteDefaut.MargeVerticaleEntreBloc%]px [%stIciThemeProprieteDefaut.MargeHorizontaleBloc%]px;
+}
+
+
+.croix {
+	display: 		block;
+	width: 			32px;
+	height: 		32px;
+	float: 			right;
+	background: 	transparent url(/[%sRepertoireWeb%]/ext/croix.svg) no-repeat center center / contain;
+	border: 		none;
+	margin-top: 	20px;
+	margin-bottom: 	20px;
+}
+
+.croix:hover {
+	background-color: transparent;
+}
+
+.bloc-container.separateur {
+	padding-top: 0;
+	padding-bottom: 0;
+}
+]
+
+
+// Textes & libellés de champs
+sCss+= [
+
+label {
+	font-size:   [%stIciThemeProprieteTexte.TaaStyle[M.Nom].PoliceTailleL%]px;
+}
+	
+[%sCodeStyleTailleL%]
+
+label,
+.label,
+.label_combo,
+.titre,
+.sous-titre,
+.texte-standard,
+.texte-special {
+	cursor:	default;
+}
+
+]
+sCss += CréationCssInterrupteurChoix(nLargeurL, nLargeurM, nLargeurS, stTheme)
+sCss += CréationCssFormulaire(nLargeurL, nLargeurM, nLargeurS, stTheme)
+sCss += CréationCssCombo(nLargeurL, nLargeurM, nLargeurS, stTheme)
+
+
+// Liens
+
+pour tout stThemeStyleLien, nStyle de stIciThemeProprieteLien.tabStyle
+		sCss += [
+
+	.lien[%nStyle%] a {
+		padding: 			[%stThemeStyleLien.MargeInterneVertical%]px [%stThemeStyleLien.MargeInterneHorizontal%]px;
+		background-color:	[%stThemeStyleLien.PoliceFondCouleur%];
+		font-size: 			[%stIciThemeProprieteTexte.TaaStyle[stThemeStyleLien.PoliceCode].PoliceTailleL%]px;
+		color: 				[%stThemeStyleLien.PoliceCouleur%];
+		font-family: 		'[%stThemeStyleLien.PoliceFamille%]';
+		font-weight:		[%stThemeStyleLien.PoliceStyle%];
+		font-style:  		"normal";
+		text-decoration:	[%(stThemeStyleLien.PoliceSouligne) ? "underline" sinon "none" %];
+		border-color: 		[%stThemeStyleLien.BordureCouleur%];
+		border-width: 		[%stThemeStyleLien.BordureEpaisseur%]px;
+		border-radius: 		[%stThemeStyleLien.BordureArrondi%]px;
+		border-style:		solid;
+		display:			inline-block;
+		-webkit-transition: all 300ms ease-out;
+		-moz-transition: 	all 300ms ease-out;
+		-o-transition: 		all 300ms ease-out;
+		transition: 		all 300ms ease-out;
+	}
+
+
+		]
+fin
+
+//	padding:			[%(stProprieteLien.tabStyle[nStyle].BordureEpaisseur)>0 ? "0.4em 0.7em" SINON "0" %];
+
+
+// bouton validation et réseaux sociaux
+sCss+= [
+
+
+button {
+	text-align:			center;
+	margin: 			[%stIciThemeProprieteBouton.MargeExterneVertical%]px [%stIciThemeProprieteBouton.MargeExterneHorizontal%]px;
+	background-color:	[%stIciThemeProprieteBouton.BoutonFondCouleur%];
+	font-size: 			[%stIciThemeProprieteTexte.TaaStyle[stIciThemeProprieteBouton.PoliceCode].PoliceTailleL%]px;
+	color: 				[%stIciThemeProprieteBouton.PoliceCouleur%];
+	font-family: 		'[%stIciThemeProprieteBouton.PoliceFamille%]';
+	font-weight:		[%stIciThemeProprieteBouton.PoliceStyle%];
+	font-style:  		"normal";
+	border-color: 		[%stIciThemeProprieteBouton.BordureCouleur%];
+	border-width: 		[%stIciThemeProprieteBouton.BordureEpaisseur%]px;
+	border-radius: 		[%stIciThemeProprieteBouton.BordureArrondi%]px;
+	border-style:		solid;
+	padding:			[%stIciThemeProprieteBouton.MargeInterneVertical%]px [%stIciThemeProprieteBouton.MargeInterneHorizontal%]px;
+	-webkit-transition: all 300ms ease-out;
+	-moz-transition: 	all 300ms ease-out;
+	-o-transition: 		all 300ms ease-out;
+	transition: 		all 300ms ease-out;
+}
+
+
+]
+
+// Bannière
+sCss+= [
+
+.slick-slider img {
+	display: block;
+	width: 100%;
+}
+.slick-dotted.slick-slider { margin-bottom: 0px; }
+
+.slick-prev, .slick-next {
+	margin: 0;
+}
+
+.numero { display: none; }
+
+]
+
+
+si nLargeurL = 0 alors
+	nLargeurL = 1
+fin
+
+
+pour nLien = 1 _à_ stIciThemeProprieteLien.tabStyle.Occurrence
+	sStyleDesLiens += [RC] + [
+		.lien[%nLien%] a {
+			font-size:   	[%stIciThemeProprieteTexte.TaaStyle[stIciThemeProprieteLien.tabStyle[nLien].PoliceCode].PoliceTailleM%]px;
+			padding: 		[%Arrondi(stIciThemeProprieteLien.tabStyle[nLien].MargeInterneVertical * nLargeurM / nLargeurL)%]px [%Arrondi(stIciThemeProprieteLien.tabStyle[nLien].MargeInterneHorizontal * nLargeurM / nLargeurL)%]px;
+		}
+	]
+
+	sStyleDesLiensResponsive += [RC] + [
+ 	.lien[%nLien%] a {
+		font-size:   	[%stIciThemeProprieteTexte.TaaStyle[stIciThemeProprieteLien.tabStyle[nLien].PoliceCode].PoliceTailleS%]px;
+		padding: 		[%Arrondi(stIciThemeProprieteLien.tabStyle[nLien].MargeInterneVertical * nLargeurS / nLargeurL)%]px [%Arrondi(stIciThemeProprieteLien.tabStyle[nLien].MargeInterneHorizontal * nLargeurS / nLargeurL)%]px;
+	}
+	]
+fin
+
+//
+
+//margin: 		[%stProprieteBouton.MargeExterneVertical * nLargeurS / nLargeurL%]px [%stProprieteBouton.MargeExterneHorizontal * nLargeurS / nLargeurL%]px;
+
+
+
+// Gestion Responsive
+sCss+= [
+
+@media all and (max-width:[%nLargeurL%]px) {
+	.container {
+	 width:100%;
+	 border: none;
+	 }
+}
+
+@media all and (max-width:[%nLargeurM%]px) {
+
+	.bloc-container {
+		padding-top: 		[%Arrondi(stIciThemeProprieteDefaut.MargeVerticaleEntreBloc * nLargeurM / nLargeurL)%]px;
+		padding-bottom: 	[%Arrondi(stIciThemeProprieteDefaut.MargeVerticaleEntreBloc * nLargeurM / nLargeurL)%]px;
+	}
+
+	body, label {
+		font-size:   [%stIciThemeProprieteTexte.TaaStyle[M.Nom].PoliceTailleM%]px;
+	}
+
+	[%sCodeStyleTailleM%]
+
+	[%sStyleDesLiens%]
+
+	button {
+		font-size: 		[%stIciThemeProprieteTexte.TaaStyle[stIciThemeProprieteBouton.PoliceCode].PoliceTailleM%]px;
+		margin: 		[%Arrondi(stIciThemeProprieteBouton.MargeExterneVertical * nLargeurM / nLargeurL)%]px [%Arrondi(stIciThemeProprieteBouton.MargeExterneHorizontal * nLargeurM / nLargeurL)%]px;
+		padding: 		[%Arrondi(stIciThemeProprieteBouton.MargeInterneVertical * nLargeurM / nLargeurL)%]px [%Arrondi(stIciThemeProprieteBouton.MargeInterneHorizontal * nLargeurM / nLargeurL)%]px;
+	}
+
+	
+}
+
+@media all and (max-width:[%nLargeurS%]px) {
+
+	.bloc-container {
+		padding-top: 		[%Arrondi(stIciThemeProprieteDefaut.MargeVerticaleEntreBloc * nLargeurS / nLargeurL)%]px;
+		padding-bottom: 	[%Arrondi(stIciThemeProprieteDefaut.MargeVerticaleEntreBloc * nLargeurS / nLargeurL)%]px;
+	}
+
+	body, label {
+		font-size:   	[%stIciThemeProprieteTexte.TaaStyle[M.Nom].PoliceTailleS%]px;
+	}
+
+	[%sCodeStyleTailleS%]
+
+	[%sStyleDesLiensResponsive%]
+
+	button {
+		font-size: 		[%stIciThemeProprieteTexte.TaaStyle[stIciThemeProprieteBouton.PoliceCode].PoliceTailleS%]px;
+		margin: 		[%Arrondi(stIciThemeProprieteBouton.MargeExterneVertical * nLargeurS / nLargeurL)%]px [%Arrondi(stIciThemeProprieteBouton.MargeExterneHorizontal * nLargeurS / nLargeurL)%]px;
+		padding: 		[%Arrondi(stIciThemeProprieteBouton.MargeInterneVertical * nLargeurS / nLargeurL)%]px [%Arrondi(stIciThemeProprieteBouton.MargeInterneHorizontal * nLargeurS / nLargeurL)%]px;
+	}
+
+
+}
+
+[%sCodeGestionLargeurResponsive%]
+
+]
+
+// Balise de FIN
+sCss+= [
+</STYLE>
+]
+
+renvoyer sCss

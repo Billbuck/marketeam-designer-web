@@ -1,0 +1,7 @@
+procédure InitCboAlignementImage(pChampCbo est un Champ)
+
+ListeSupprimeTout(pChampCbo)
+ListeAjoute(pChampCbo,"Gauche" 		+ gLien(__ALIGNEMENT_GAUCHE__))
+ListeAjoute(pChampCbo,"Centre" 		+ gLien(__ALIGNEMENT_CENTRE__))
+ListeAjoute(pChampCbo,"Droite" 		+ gLien(__ALIGNEMENT_DROITE__))
+ListeSelectPlus(pChampCbo,2)	

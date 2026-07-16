@@ -1,0 +1,115 @@
+procédure CreationCgv(pNumBloc, stNouveauCliquezIci est une structNouveauCliquezIci)
+
+
+
+sCodeHTML				est une chaîne
+stThemeProprieteDefaut	est une structIciThemeProprieteDefaut
+stThemeProprieteTexte	est une structIciThemeProprieteTexte
+stProprieteCgv			est une structIciBlocProprieteCgv
+stValeurCgv				est une structIciBlocValeurCgv
+sLogo					est une chaîne
+sStyleCss				est une chaîne
+nLargeurL 				est un entier = stNouveauCliquezIci.stTheme.LargeurL
+nLargeurM 				est un entier = stNouveauCliquezIci.stTheme.LargeurM
+nLargeurS 				est un entier = stNouveauCliquezIci.stTheme.LargeurS
+
+Désérialise(stProprieteCgv,stNouveauCliquezIci.tabBloc[pNumBloc].Propriete,psdJSON)
+Désérialise(stValeurCgv,stNouveauCliquezIci.tabBloc[pNumBloc].Valeur,psdJSON)
+Désérialise(stThemeProprieteTexte, stNouveauCliquezIci.stTheme.ProprieteTexte,psdJSON)
+Désérialise(stThemeProprieteDefaut, stNouveauCliquezIci.stTheme.ProprieteDefaut,psdJSON)
+
+sTexteCGV est une chaîne = FaitTexteCGV(stValeurCgv)
+
+//sCodeHTML			= [
+//	<div class="container-social lien-social">
+//	<a href="[%sLien%]" target="_new" class="tracking-social" data-libelle="[%sLibelle%]">
+//	<div class="icone-social">[%sCodeSvgIcone%]</div>
+//	</a>
+//	</div>
+//]
+
+// Lien
+sCodeHTML = [
+	<div class="bloc-container lien[%stProprieteCgv.LienStyle%]" style="background: [%stProprieteCgv.BlocFondCouleur%]; text-align:[%DonneAlignementHorizontal(stProprieteCgv.LienAlignHorizontal,"html")%]; padding: [%stThemeProprieteDefaut.MargeVerticaleEntreBloc + stProprieteCgv.LienMargeExterneVertical%]px [%stThemeProprieteDefaut.MargeHorizontaleBloc + stProprieteCgv.LienMargeExterneHorizontal%]px">
+		<a href="#" class="tracking-cgv" onclick='AfficheCgv();' style="font-family:[%stProprieteCgv.LienPoliceFamille%]">[%stValeurCgv.LibelleLien%]</a>
+	</div>
+]
+
+<compile si TypeConfiguration=Site>
+	{"POPUP_CGV", indPage}..CouleurFond = HTMLVersRVB(stProprieteCgv.PopupFondCouleur)
+<fin>
+
+{"POPUP_CGV.ZTR_TitreCgv", indChamp}..CadrageHorizontal = TitreCadrage()
+
+procédure interne TitreCadrage()
+	selon stProprieteCgv.TitreAlignHorizontal
+		cas __ALIGNEMENT_GAUCHE__	: renvoyer chGauche
+		cas __ALIGNEMENT_CENTRE__	: renvoyer chCentre
+		cas __ALIGNEMENT_DROITE__	: renvoyer chDroite
+		autre cas					: renvoyer chGauche
+	fin
+fin
+
+{"POPUP_CGV.ZTR_TitreCgv", indChamp} 	= [
+<style>
+.titreCGV {
+	font-family: '[%stProprieteCgv.TitrePoliceFamille%]' !important;
+	color: 		 [%stProprieteCgv.TitrePoliceCouleur%] !important;
+	font-size:   [%stThemeProprieteTexte.TaaStyle[stProprieteCgv.TitrePoliceCode].PoliceTailleL%]px !important;
+	font-weight: [%stProprieteCgv.TitrePoliceStyle%] !important;
+	font-style:  "normal" !important;
+	text-align:  [%DonneAlignementHorizontal(stProprieteCgv.TitreAlignHorizontal)%] !important;
+}
+@media only screen and (max-width : [%nLargeurM%]px) {
+	.titreCGV {
+		font-size:   [%stThemeProprieteTexte.TaaStyle[stProprieteCgv.TitrePoliceCode].PoliceTailleM%]px !important;
+	}
+}
+
+@media only screen and (max-width : [%nLargeurS%]px) {
+	.titreCGV {
+		font-size:   [%stThemeProprieteTexte.TaaStyle[stProprieteCgv.TitrePoliceCode].PoliceTailleS%]px !important;
+	}
+}
+[%sStyleCss%]
+</style>
+
+[%sLogo%]
+<span class="titreCGV">
+	[%stValeurCgv.LibelleTitre%]
+</span>
+]
+
+{"POPUP_CGV.ZTR_CGV", indChamp}			= [
+<style>
+.texteCGV {
+	font-family: 	'[%stProprieteCgv.TextePoliceFamille%]' !important;
+	color: 		 	[%stProprieteCgv.TextePoliceCouleur%] !important;
+	font-size:   	[%stThemeProprieteTexte.TaaStyle[stProprieteCgv.TextePoliceCode].PoliceTailleL%]px !important;
+	font-weight: 	[%stProprieteCgv.TextePoliceStyle%] !important;
+	font-style:  	"normal" !important;
+	text-align:  	[%DonneAlignementHorizontal(stProprieteCgv.TexteAlignHorizontal)%] !important;
+	padding-right: 	20px;
+	padding-bottom: 20px;
+}
+
+@media only screen and (max-width : [%nLargeurM%]px) {
+	.texteCGV {
+		font-size:   [%stThemeProprieteTexte.TaaStyle[stProprieteCgv.TextePoliceCode].PoliceTailleM%]px !important;
+	}
+}
+
+@media only screen and (max-width : [%nLargeurS%]px) {
+	.texteCGV {
+		font-size:   [%stThemeProprieteTexte.TaaStyle[stProprieteCgv.TextePoliceCode].PoliceTailleS%]px !important;
+	}
+}
+</style>
+
+<div id="lipsum" class="texteCGV">
+	[%sTexteCGV%]
+</div>
+]
+
+
+renvoyer sCodeHTML

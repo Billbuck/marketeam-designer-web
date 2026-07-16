@@ -1,0 +1,121 @@
+procédure CreationSocial(pNumBloc est un entier, stNouveauCliquezIci est une structNouveauCliquezIci)
+sCodeHTML						est une chaîne
+sCodeChamp						est une chaîne
+stProprieteSocial				est une structIciBlocProprieteSocial
+stIciThemeProprieteDefaut		est une structIciThemeProprieteDefaut
+stValeurSocial					est une structIciBlocValeurSocial
+sLien							est une chaîne
+sLibelle						est une chaîne
+sCodeSvgIcone					est une chaîne
+nLargeurL						est un entier
+nLargeurM						est un entier
+nLargeurS						est un entier
+
+Désérialise(stProprieteSocial, stNouveauCliquezIci.tabBloc[pNumBloc].Propriete, psdJSON)
+Désérialise(stValeurSocial, stNouveauCliquezIci.tabBloc[pNumBloc].Valeur, psdJSON)
+Désérialise(stIciThemeProprieteDefaut, stNouveauCliquezIci.stTheme.ProprieteDefaut, psdJSON)
+nLargeurL	= stNouveauCliquezIci.stTheme.LargeurL
+nLargeurM	= stNouveauCliquezIci.stTheme.LargeurM
+nLargeurS	= stNouveauCliquezIci.stTheme.LargeurS
+
+
+
+pour nChamp = 1 _à_ stValeurSocial.TabLien..Occurrence
+	si stValeurSocial.TabLien[nChamp] <> "" alors
+
+		sLien 		= Minuscule(stValeurSocial.TabLien[nChamp])
+		sLibelle	= LibelleReseauSociale(stValeurSocial.TabType[nChamp])
+
+		si pas Contient(sLien, "http://") _et_ pas Contient(sLien, "https://") alors sLien = "http://" + sLien
+
+			sCodeSvgIcone		= IconeReseauSocial(stValeurSocial.TabType[nChamp], stProprieteSocial.IconeCouleur)
+
+			// Insertion directe du SVG dans le HTML
+			sCodeHTML			= [
+				<div class="container-social lien-social">
+					<a href="[%sLien%]" target="_new" class="tracking-social" data-libelle="[%sLibelle%]">
+						<div class="icone-social">[%sCodeSvgIcone%]</div>
+					</a>
+				</div>
+			]
+			sCodeChamp += [RC] + sCodeHTML
+		fin
+	fin
+
+	sCodeHTML = [
+		<div class="bloc-social">
+		[%sCodeChamp%]
+		</div>
+		
+		<style>
+		.bloc-social {
+		display: flex;
+		justify-content: [%DonneAlignementHorizontal(stProprieteSocial.AlignementHorizontal,"flex")%];
+		align-items: center;
+		gap: [%stProprieteSocial.IconeGap%]px;
+		background: [%stProprieteSocial.BlocFondCouleur%];
+		flex-wrap: nowrap;
+		padding-top: [%stProprieteSocial.MargeVerticale%]px;
+		padding-bottom: [%stProprieteSocial.MargeVerticale%]px;
+		padding-left: [%stIciThemeProprieteDefaut.MargeHorizontaleBloc%]px;
+		padding-right: [%stIciThemeProprieteDefaut.MargeHorizontaleBloc%]px;
+		box-sizing: border-box;
+		max-width: [%nLargeurL%]px;
+		margin: 0 auto;
+		}
+		.container-social {
+		flex: 0 1 auto;
+		text-align: center;
+		}
+		
+		.icone-social {
+		display: flex;
+		}
+		
+		.icone-social svg {
+		height: [%stProprieteSocial.IconeHauteur%]px;
+		width: auto;
+		max-width: 100%;
+		max-height: 100%;
+		box-sizing: border-box;
+		}
+		
+		/* Pour les écrans entre M et L */
+		@media (max-width: [%nLargeurL%]px) and (min-width: [%nLargeurM + 1%]px) {
+		.icone-social svg {
+		height: [%stProprieteSocial.IconeHauteur%]px;
+		}
+		}
+		
+		/* Pour les écrans entre S et M */
+		@media (max-width: [%nLargeurM%]px) and (min-width: [%nLargeurS + 1%]px) {
+		.icone-social svg {
+		height: calc([%stProprieteSocial.IconeHauteur%]px * 0.85);
+		}
+		.bloc-social {
+		gap: calc([%stProprieteSocial.IconeGap%]px * 0.75);
+		}
+		}
+		
+		/* Pour les écrans inférieurs à S */
+		@media (max-width: [%nLargeurS%]px) {
+		.icone-social svg {
+		height: calc([%stProprieteSocial.IconeHauteur%]px * 0.60);
+		}
+		.bloc-social {
+		gap: calc([%stProprieteSocial.IconeGap%]px * 0.5);
+		}
+		}
+		</style>
+]
+
+renvoyer sCodeHTML
+
+
+
+	procédure interne LibelleReseauSociale(pCode)
+		si ici_reseau_social.LitRecherchePremier(Code,pCode) alors
+			renvoyer ici_reseau_social.Libelle
+		fin
+		renvoyer pCode
+	fin

@@ -1,0 +1,70 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] CalculeTaillePolice (<pTailleDesktopM>, <pTaillePortableM>, <pTailleTabletteXXXL>, <pTailleTabletteXXXS>)
+//
+// Paramètres :
+//	pTailleDesktopM : <indiquez ici le rôle de pTailleDesktopM>
+//	pTaillePortableM : <indiquez ici le rôle de pTaillePortableM>
+//	pTailleTabletteXXXL : <indiquez ici le rôle de pTailleTabletteXXXL>
+//	pTailleTabletteXXXS : <indiquez ici le rôle de pTailleTabletteXXXS>
+// Valeur de retour :
+// 	tableau associatif (tableau associatif (entier)) : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure CalculeTaillePolice(pTailleDesktopM, pTaillePortableM, pTailleTabletteXXXL, pTailleTabletteXXXS)
+
+// Variables pour stocker les résultats
+nLigne 				est un entier
+tabTailleReel		est un tableau de 3 par 9 réels
+taaTaillePolice 	est un tableau associatif de tableau associatif d'entiers
+taaTaille 			est un tableau associatif d'entiers
+
+// Calcul de la taille M pour Tablette
+pTailleTabletteM		est réel
+pTailleTabletteM = (pTailleDesktopM + pTaillePortableM) / 2
+
+// Calcul des intervalles pour la Tablette
+rTailleIntervalleSuperieur	est réel
+rTailleIntervalleInferieur	est réel
+rTailleIntervalleSuperieur	= (pTailleTabletteXXXL - pTailleTabletteM) / 4
+rTailleIntervalleInferieur	= (pTailleTabletteM - pTailleTabletteXXXS) / 4
+
+// Tailles pour la Tablette
+tabTailleReel[2][1]				= pTailleTabletteXXXL
+tabTailleReel[2][2]				= pTailleTabletteXXXL - rTailleIntervalleSuperieur
+tabTailleReel[2][3]				= tabTailleReel[2][2] - rTailleIntervalleSuperieur
+tabTailleReel[2][4]				= tabTailleReel[2][3] - rTailleIntervalleSuperieur
+tabTailleReel[2][5]				= pTailleTabletteM
+tabTailleReel[2][6]				= pTailleTabletteM - rTailleIntervalleInferieur
+tabTailleReel[2][7]				= tabTailleReel[2][6] - rTailleIntervalleInferieur
+tabTailleReel[2][8]				= tabTailleReel[2][7] - rTailleIntervalleInferieur
+tabTailleReel[2][9]				= pTailleTabletteXXXS
+
+// Calcul des ratios
+ratio_M_Tablette_to_Desktop		est réel
+ratio_M_Tablette_to_Portable	est réel
+ratio_M_Tablette_to_Desktop		= pTailleDesktopM / pTailleTabletteM
+ratio_M_Tablette_to_Portable	= pTaillePortableM / pTailleTabletteM
+
+// Calcul des tailles pour Desktop
+pour i = 1 à 9
+	tabTailleReel[1][i] = Arrondi(tabTailleReel[2][i] * ratio_M_Tablette_to_Desktop, 2)
+fin
+
+// Calcul des tailles pour Portable
+pour i = 1 à 9
+	tabTailleReel[3][i] = Arrondi(tabTailleReel[2][i] * ratio_M_Tablette_to_Portable, 2)
+fin
+
+
+pour tout eStyle de eStyleTexte
+	nLigne++
+	taaTaille[__DESKTOP__]				= Arrondi(tabTailleReel[1][nLigne])
+	taaTaille[__TABLETTE__]				= Arrondi(tabTailleReel[2][nLigne])
+	taaTaille[__MOBILE__]				= Arrondi(tabTailleReel[3][nLigne])
+	taaTaillePolice[eStyle.Nom]	= taaTaille
+fin
+
+renvoyer taaTaillePolice

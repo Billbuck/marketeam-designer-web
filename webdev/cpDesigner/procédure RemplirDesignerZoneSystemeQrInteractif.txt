@@ -16,7 +16,10 @@
 //	pLargeurOuvertMm : largeur du document ouvert en mm (pour centrage)
 //	pHauteurOuvertMm : hauteur du document ouvert en mm (pour centrage)
 
-procédure RemplirDesignerZoneSystemeQrInteractif(stLoadDoc est une structDesignerDocument, pLargeurOuvertMm, pHauteurOuvertMm)
+// pUrlQr (16/07/2026, CDC QR interactif V2) : URL de test à encoder dans le
+// QR, composée par cpDesigner.UrlTestQrInteractif (vide = ancien comportement,
+// paramètre générique Url_Courrier_Interactif_Generique).
+procédure RemplirDesignerZoneSystemeQrInteractif(stLoadDoc est une structDesignerDocument, pLargeurOuvertMm, pHauteurOuvertMm, pUrlQr est une chaîne = "")
 
 
 // Taille fixe par défaut du QR (l'utilisateur peut redimensionner ensuite)
@@ -39,19 +42,20 @@ stZoneQR.geometrie.yMm			= (pHauteurOuvertMm - nTailleMm) / 2
 stZoneQR.geometrie.largeurMm	= nTailleMm
 stZoneQR.geometrie.hauteurMm	= nTailleMm
 
-// Contenu : URL générique du Courrier interactif, LUE EN BASE (prm_parametre).
-// Plus de placeholder figé : la valeur — provisoire tant que la page définitive
-// n'existe pas — est administrée en base via Url_Courrier_Interactif_Generique.
-// Identique pour tous (l'URL variable par destinataire sera traitée plus tard,
-// au module d'export). Repli si paramètre vide/introuvable : page publique
-// Marketeam, pour que le QR ne soit jamais vide/illisible.
+// Contenu (CDC QR interactif V2 — 16/07/2026) : URL de TEST de l'opération
+// (cliquez.info/!<CodeTest>), passée par l'appelant via UrlTestQrInteractif.
+// Si l'opération n'est pas encore enregistrée, l'URL porte le marqueur !0 :
+// le scan affiche « Landing en cours de création » — le BAT devra être
+// régénéré après le premier enregistrement.
+// NB : de toute façon, le contenu FINAL du QR est imposé à la génération du
+// PSMD (GenererPsmdServeurDocument) — c'est LE point d'autorité.
 stZoneQR.typeCode					= "QRCode"
 
-sUrlGenerique est une chaîne = cpFonction.ValeurParametre("Url_Courrier_Interactif_Generique", prm_parametre.ValChaine..Nom)
-si sUrlGenerique = "" alors
-	sUrlGenerique = "https://www.marketeam.com"
+sUrlQrContenu est une chaîne = pUrlQr
+si sUrlQrContenu = "" alors
+	sUrlQrContenu = "https://www.marketeam.com"	// le QR ne doit jamais être vide/illisible
 fin
-stZoneQR.contenu											= sUrlGenerique
+stZoneQR.contenu											= sUrlQrContenu
 
 // Couleurs : noir sur blanc
 stZoneQR.couleurs.codeCmjn.c							= 0

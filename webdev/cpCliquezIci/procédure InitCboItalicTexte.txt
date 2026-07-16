@@ -1,0 +1,6 @@
+procédure InitCboItalicTexte(pChampCbo est un Champ)
+
+ListeSupprimeTout(pChampCbo)
+ListeAjoute(pChampCbo,"Non"	+ gLien(0))
+ListeAjoute(pChampCbo,"Oui"	+ gLien(1))
+ListeSelectPlus(pChampCbo,1)
