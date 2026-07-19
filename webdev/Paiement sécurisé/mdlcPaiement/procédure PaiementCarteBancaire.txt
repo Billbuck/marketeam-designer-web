@@ -1,0 +1,155 @@
+procédure PaiementCarteBancaire()
+
+sActivite			est une chaîne
+nOptionPageAdresse	est un entier
+
+
+//Paramètre du mode test : http://www1.paybox.com/espace-integrateur-documentation/comptes-de-tests/
+
+_stPaiementSécurisé.IdReglement			= 0
+_stPaiementSécurisé.IdPaiement			= 0
+
+si intCarteMémoriser = Vrai _ou_ _stPaiementSécurisé.IdCarteBancaire > 0 alors
+	_stPaiementSécurisé.ModeRèglement			= __REGLEMENT_CARTE_BANCAIRE_ENREGISTREE__
+	_stPaiementSécurisé.ModeRèglementAbonnement	= __REGLEMENT_CARTE_BANCAIRE_ENREGISTREE__
+sinon
+	_stPaiementSécurisé.ModeRèglement			= __REGLEMENT_CARTE_BANCAIRE__
+	_stPaiementSécurisé.ModeRèglementAbonnement	= __REGLEMENT_CARTE_BANCAIRE__
+fin
+
+
+si _sPayboxCompte = "DEV" alors
+	_psPaybox:Site						= _sPayboxDevSite 					// Contrat générique pour tous les commerçants afin de faire des tests
+	_psPaybox:IdentifiantSite			= _sPayboxDevIdentifiantSite 		// Ce paramètre correspond à "site", et il doit avoir 7 caractère, mettez bien un guillemet si cela commence par un zéro !
+	_psPaybox:Rang						= _sPayboxDevRang					// Ici également mettre entre guillemet avec un zéro devant si nécessaire pour avoir 2 caractères
+	_psPaybox.Clé						= _sPayboxDevCle			 		// Mot de passe du back-office commerçant
+sinon
+	_psPaybox:Site						= _sPayboxProdSite			 		// Contrat Chronodirect / Marketeam --> PEUT ETRE UTILISÉ EN MODE TEST
+	_psPaybox:IdentifiantSite		= _sPayboxProdIdentifiantSite
+	_psPaybox:Rang						= _sPayboxProdRang
+	_psPaybox.Clé						= _sPayboxProdCle
+fin
+
+_psPaybox.IgnoreTestPageRetour			= pas _bPayboxTestPageRetour
+
+
+//	 Il est possible de forcer des paramètres pour les requêtes HTTP :
+_psPaybox.HTTP_ModeRequete				= PaiementSécurisé.HTTP_MODE_NATIF // ou  PaiementSécurisé.HTTP_MODE_WININET
+_psPaybox.HTTP_TimeOut					= 15*1000 //15s
+_psPaybox.HTTP_VersionSSL				= ProtocoleTLS1_2 + ProtocoleTLS1_3 //(uniquement pris en compte avec HTTP_MODE_NATIF)
+//MonPaiement.HTTP_IgnoreErreur			= httpIgnoreCertificatInvalide
+
+// Mode simulation de paiement ou vrai paiement ?
+_psPaybox:Simulation					= _bPayboxModeReel = Faux ? MODE_TEST sinon MODE_REEL
+
+
+//	Il est possible ici de forcer des valeurs dans le formulaire qui sera envoyé à la banque, exemple :
+//	MonPaiement:FormulaireParamètreAjoute("TYPECARTE","PAYPAL") 			//pour forcer le type de paiement en PAYPAL
+//	MonPaiement:FormulaireParamètreAjoute("PRIV_CODETRAITEMENT","123") 		//Spécifique SOFINCO
+//	MonPaiement:FormulaireParamètreAjoute("NUMQUESTION","123456") 			//pour forcer un id unique du jour, par défaut ce sera l'IdTransaction
+//	MonPaiement:FormulaireParamètreAjoute("ARCHIVAGE","123456") 			//pour forcer un id d'archivage (sur 12 max)
+//	pour un paiement différé, ci-dessous 4 jours
+//	nNbJourDiffere est un entier = 4
+//	MonPaiement:FormulaireParamètreAjoute("DIFFERE",NumériqueVersChaine(nNbJourDiffere, "03d"))
+
+
+//nouvelle carte ?
+si _stPaiementSécurisé.IdCarteBancaire = 0 alors
+	//nouvelle carte
+
+	_stPaiementSécurisé.CarteLibelle		 	= saiCarteBancaireLibelle
+	_stPaiementSécurisé.CartePorteur		 	= saiCarteBancairePorteur
+	_stPaiementSécurisé.CodeAuthenticite		= Droite(saiCarteNumero,4)
+	_stPaiementSécurisé.CodeEmetteur			= Gauche(ChaîneFormate(saiCarteNumero,ccSansPonctuationNiEspace),8)
+	_stPaiementSécurisé.CarteParDefaut			= intCarteParDefaut
+
+
+	_psPaybox:CarteNuméro						= ChaîneFormate(saiCarteNumero,ccSansPonctuationNiEspace) 	//si un n° de carte est donné le n° de token dans CarteToken est effacé (c'est l'un ou l'autre)
+	_psPaybox:CarteCVV							= saiCarteCode
+	_psPaybox:CarteDateExpiration				= cboCarteMois.ValeurMémorisée + cboCarteAnnée.ValeurMémorisée
+	_psPaybox:CarteMemorise						= intCarteMémoriser
+	_psPaybox:ReferenceAbonne					= cpConnexion.__sConnexion +"_"+ _stPaiementParametre.IdClient +"_"+ _stPaiementParametre.IdContact +"_"+ DateHeureSys()
+	_psPaybox.Mode3DS							= _bPaybox3DSecure
+
+	saiCarteNumero								= ""
+	saiCarteCode								= ""
+	cboCarteMois								= ""
+	cboCarteAnnée								= ""
+	saiCarteBancairePorteur						= ""
+	saiCarteBancaireLibelle						= ""
+
+	intCarteMémoriser							= Faux
+
+
+	sActivite									= PaiementSécurisé.PAYBOX_ACTIVITE_INTERNET
+
+
+	si _psPaybox.Mode3DS alors
+		//----------------------------------------------------------------------------------------------------------------
+		//--------------Gestion du retour après la vérification 3DSecure
+		//----------------------------------------------------------------------------------------------------------------
+		//si actuellement en SSL ?
+		si _bPayboxForcerHttps = Faux alors
+			si PaiementSécurisé::ValeurEnvironnement("HTTPS", "off") ~= "on" alors
+				nOptionPageAdresse				= paSécurisée
+			sinon
+				nOptionPageAdresse				= paComplète
+			fin
+			_psPaybox.ForceHTTPS				= Faux
+		sinon
+			nOptionPageAdresse					= paSécurisée
+			_psPaybox.ForceHTTPS				= Vrai
+		fin
+
+		//pour le retour à la boutique
+		_psPaybox:PageRetour3DSecure			= PageAdresse(RetourPaiement3DSecure,nOptionPageAdresse)
+		//pour la gestion des retour de serveur à serveur
+		_psPaybox:PageRetourServeurÀServeur		= PageAdresse(RetourPaiementServeur,nOptionPageAdresse)
+
+		//En cas de vérification 3DS.....
+		_psPaybox:Fin3DSecure					=  lienFin3DSecure..NomComplet
+
+		//Traitement Serveur à serveur effectué en parallèle
+		_psPaybox:SurAppelServeur				=  lienFin3DSecure..NomComplet
+		//----------------------------------------------------------------------------------------------------------------
+	fin
+
+sinon
+	//utilisation d'une carte enregistrée
+
+	_psPaybox.Mode3DS							= Faux
+
+	si HLitRecherchePremier(clt_carte_bancaire,IdCarteBancaire,_stPaiementSécurisé.IdCarteBancaire) alors
+		_psPaybox:CarteToken					= CarteBancaireDecrypte(clt_carte_bancaire.Token)
+		_psPaybox:CarteDateExpiration			= CarteBancaireDecrypte(clt_carte_bancaire.DateExp)
+		_psPaybox:CarteCVV						= CarteBancaireDecrypte(clt_carte_bancaire.Cvv)
+		_psPaybox:ReferenceAbonne				= CarteBancaireDecrypte(clt_carte_bancaire.Refabo)
+		sActivite								= PaiementSécurisé.PAYBOX_ACTIVITE_RECURRENT
+	sinon
+		retour
+	fin
+fin
+
+_psPaybox:NuméroCommande			= _stPaiementParametre.Référence
+
+_psPaybox:VerifieSignaturePaybox	= Vrai //Faux
+
+//Et lance le paiement avec le montant à payer et l’émail client
+si Paiement_Direct(_psPaybox, _stPaiementParametre.TransactionMontant, _stPaiementParametre.Email, _stPaiementParametre) = Faux alors
+	//	Le paiement a échoué
+	Erreur("Échec du paiement : " +RC+ _psPaybox:ErreurInfo)
+
+sinon
+	//	Le paiement OK ou lancement 3DSecure OK
+	//	Note : l'identifiant de transaction est dans accessible par la propriété MonPaiement:IdTransaction
+
+	//si pas de 3D Sécure on a la réponse tout de suite ici
+	si _psPaybox.Mode3DS = Faux alors
+		FinPaiement()
+		//SINON
+		//en cas de 3D Sécure la fin du traitement sera dans le traitement indiqué dans "MonPaiement:Fin3DSecure"
+		//ici dans le code serveur du lien "LIEN_Fin_3DSecure"
+	fin
+fin
+
+

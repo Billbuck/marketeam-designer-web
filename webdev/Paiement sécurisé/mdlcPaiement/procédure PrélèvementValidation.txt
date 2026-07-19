@@ -1,0 +1,11 @@
+procédure PrélèvementValidation()
+
+_stPaiementSécurisé.IdReglement				= 0
+_stPaiementSécurisé.IdPaiement				= 0
+_stPaiementSécurisé.ModeRèglement			= __REGLEMENT_PRELEVEMENT__
+
+si EnregistrePaiement() alors
+	_procedureRetourPrélèvement(_paiement_validé_)
+sinon
+	_procedureRetourPrélèvement(_paiement_erreur_)
+fin

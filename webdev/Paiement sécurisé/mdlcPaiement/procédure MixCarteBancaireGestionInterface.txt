@@ -1,0 +1,20 @@
+procédure MixCarteBancaireGestionInterface()
+
+si _taaInterrupteur[intModeCarteBancaire..Alias] = Vrai alors
+	cboCarteBancaire.Visible						= (cboCarteBancaire.Occurrence > 1)
+	imgCarteBancaireMémorisée.Visible				= (cboCarteBancaire.Occurrence > 1)
+	banPaiementSécurisé[_ban_carte2_].Visible		= (_bCarteBancaireMémorisée = Faux)
+	banPaiementSécurisé[_ban_carte3_].Visible		= (_bCarteBancaireMémorisée = Faux) _et_ (intCarteMémoriser = Vrai) _et_ mixCarteOk()
+	btnCarteBancaireMemorisePayer.Visible			= (_bCarteBancaireMémorisée = Vrai)
+	intCarteMémoriser.Visible						= (_bCarteBancaireMémorisée = Faux) _et_ mixCarteOk()
+	libCarteMémoriser.Visible						= (_bCarteBancaireMémorisée = Faux) _et_ mixCarteOk()
+	btnCarteBancairePayer.Visible					= (_bCarteBancaireMémorisée = Faux) _et_ (intCarteMémoriser = Faux) _et_ mixCarteOk()
+	btnNouvelleCarteBancaireMemoriséPayer.Visible	= (_bCarteBancaireMémorisée = Faux) _et_ (intCarteMémoriser = Vrai) _et_ SansEspace(saiCarteBancaireLibelle) <> "" _et_ mixCarteOk()
+ sinon
+	btnCarteBancaireMemorisePayer.Visible			= Faux
+	cboCarteBancaire.Visible						= Faux
+	imgCarteBancaireMémorisée.Visible				= Faux
+	banPaiementSécurisé[_ban_carte2_].Visible		= Faux
+	banPaiementSécurisé[_ban_carte3_].Visible		= Faux
+fin
+

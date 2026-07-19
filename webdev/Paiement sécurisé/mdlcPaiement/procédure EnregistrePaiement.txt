@@ -1,0 +1,378 @@
+procédure EnregistrePaiement()
+
+sTexteRequete		est une chaîne
+sdReqFacture		est une Source de Données
+
+sTexteRequete =
+[
+	SELECT
+		clt_facture_ligne.IdFactureLigne,
+		clt_facture_ligne.Designation,
+		clt_facture_ligne.IdReserve,
+		clt_facture_ligne.IdOperation,
+		clt_facture_ligne.IdAbonnementFonction,
+		clt_facture_ligne.IdAbonnementFonctionRenouvellement,
+		clt_facture_ligne.IdAbonnementFonctionHistorique,
+		clt_facture_ligne.IdAbonnementPrestation,
+		clt_facture_ligne.IdAbonnementPrestationRenouvellement,
+		clt_facture_ligne.IdAbonnementPrestationHistorique,
+		clt_facture_ligne.ListeIdSmsNotification,
+		clt_facture_ligne.ListeIdVmsUnitaire,
+		clt_facture_ligne.ListeIdEmailNotification,
+		clt_facture_ligne.TypeFactureLigne,
+		clt_facture_ligne.TauxTVA,
+		clt_facture_ligne.MontantHT,
+		clt_facture_ligne.MontantTVA,
+		clt_facture_ligne.MontantTTC,
+		clt_facture_ligne.ResteAPayer
+	FROM
+		clt_facture_ligne
+	WHERE
+		clt_facture_ligne.IdFacture = [%_stPaiementSécurisé.IdFacture%]
+		AND clt_facture_ligne.ResteAPayer > 0
+]
+
+
+retour = Vrai
+
+cpConnexion.gcnxBaseChronodirect.TransactionDébut()
+
+si _stPaiementSécurisé.IdReglement > 0 alors
+	retour Faux
+fin
+
+si pas _stPaiementSécurisé.ModeRèglement = __REGLEMENT_RESERVE__ alors
+	si pas EnregistreReglement() alors STOP; retour Faux
+fin
+
+selon _stPaiementParametre.TransactionType
+
+	cas __TRANSACTION_RESERVE_ARGENT__
+		si pas CréationReserve() alors STOP; retour Faux
+		si pas EnregistrePaiement() alors STOP; retour Faux
+		// Monté en réserve d'argent par le trigger
+
+	cas __TRANSACTION_OPERATION__, __TRANSACTION_BLOCTEL__, __TRANSACTION_RNVP__
+		si pas EnregistrePaiement() alors retour Faux
+
+	cas __TRANSACTION_ABONNEMENT_FONCTION__
+		si pas CréationAbonnementFonction() alors STOP; retour Faux
+		si pas EnregistrePaiement() alors STOP; retour Faux
+
+	cas __TRANSACTION_ABONNEMENT_PRESTATION__
+		si pas CréationAbonnementPrestation() alors STOP; retour Faux
+		si pas EnregistrePaiement() alors STOP; retour Faux
+
+	cas __TRANSACTION_ABONNEMENT_FONCTION_RENOUVELLEMENT__
+		si pas EnregistrePaiement() alors STOP; retour Faux
+
+	cas __TRANSACTION_ABONNEMENT_PRESTATION_RENOUVELLEMENT__
+		si pas EnregistrePaiement() alors STOP; retour Faux
+
+	cas __TRANSACTION_FACTURE__
+
+		si pas sdReqFacture.ExécuteRequêteSQL(clt_facture_ligne..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+			Trace("Erreur requête","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+			retour Faux
+		fin
+
+		pour tout sdReqFacture
+			_stPaiementSécurisé.IdFactureLigne							= sdReqFacture.IdFactureLigne
+			_stPaiementParametre.Designation							= sdReqFacture.Designation
+			_stPaiementParametre.IdReserve								= sdReqFacture.IdReserve
+			_stPaiementParametre.IdOperation							= sdReqFacture.IdOperation
+			_stPaiementParametre.IdAbonnementFonction					= sdReqFacture.IdAbonnementFonction
+			_stPaiementParametre.IdAbonnementFonctionRenouvellement		= sdReqFacture.IdAbonnementFonctionRenouvellement
+			_stPaiementParametre.IdAbonnementFonctionHistorique			= sdReqFacture.IdAbonnementFonctionHistorique
+			_stPaiementParametre.IdAbonnementPrestation					= sdReqFacture.IdAbonnementPrestation
+			_stPaiementParametre.IdAbonnementPrestationRenouvellement	= sdReqFacture.IdAbonnementPrestationRenouvellement
+			_stPaiementParametre.IdAbonnementPrestationHistorique		= sdReqFacture.IdAbonnementPrestationHistorique
+			_stPaiementParametre.ListeIdSmsNotification					= sdReqFacture.ListeIdSmsNotification
+			_stPaiementParametre.ListeIdVmsUnitaire						= sdReqFacture.ListeIdVmsUnitaire
+			_stPaiementParametre.ListeIdEmailNotification				= sdReqFacture.ListeIdEmailNotification
+			_stPaiementParametre.stMontant.TauxTVA						= sdReqFacture.TauxTva
+			_stPaiementParametre.stMontant.MontantHT					= sdReqFacture.MontantHT
+			_stPaiementParametre.stMontant.MontantTVA					= sdReqFacture.MontantTVA
+			_stPaiementParametre.stMontant.MontantTTC					= sdReqFacture.MontantTTC
+			_stPaiementParametre.stMontant.ResteAPayer					= sdReqFacture.ResteAPayer
+			_stPaiementParametre.TransactionMontant						= sdReqFacture.ResteAPayer
+
+//			SELON Vrai
+//				CAS sdReqFacture.IdAbonnementFonction > 0
+//					SI PAS clt_abonnement_fonction.LitRecherchePremier(IdAbonnementFonction, sdReqFacture.IdAbonnementFonction) ALORS STOP; RETOUR Faux
+//					_stPaiementParametre.stAbonnement.DateFin					= clt_abonnement_fonction.DateFin
+//					_stPaiementParametre.stAbonnement.IdAbonnementEnCours		= clt_abonnement_fonction.IdAbonnementFonction
+//					_stPaiementParametre.stAbonnement.IdPack					= clt_abonnement_fonction.IdPackFonction
+//					_stPaiementParametre.stAbonnement.TypeAbonnement			= clt_abonnement_fonction.TypeAbonnement
+//					SI PAS CréationAbonnementFonction() ALORS STOP; RETOUR Faux
+//
+//				CAS sdReqFacture.IdAbonnementPrestation > 0
+//					SI PAS clt_abonnement_prestation.LitRecherchePremier(IdAbonnementPrestation, sdReqFacture.IdAbonnementPrestation) ALORS STOP; RETOUR Faux
+//					_stPaiementParametre.stAbonnement.DateFin					= clt_abonnement_prestation.DateFin
+//					_stPaiementParametre.stAbonnement.IdAbonnementEnCours		= clt_abonnement_prestation.IdAbonnementPrestation
+//					_stPaiementParametre.stAbonnement.IdPack					= clt_abonnement_prestation.IdPackPrestation
+//					_stPaiementParametre.stAbonnement.TypeAbonnement			= clt_abonnement_prestation.TypeAbonnement
+//					SI PAS CréationAbonnementPrestation() ALORS STOP; RETOUR Faux
+//
+//				AUTRE CAS
+//
+//			FIN
+
+		si pas EnregistrePaiement() alors STOP; retour Faux
+	fin
+
+	autres cas : STOP; retour Faux
+fin
+
+
+fin:
+sdReqFacture.AnnuleDéclaration()
+si retour = Vrai alors
+	cpConnexion.gcnxBaseChronodirect.TransactionFin()
+sinon
+	ModifieReglementStatut(_stPaiementSécurisé.IdReglement, __REGLEMENT_STATUT_ERREUR__)
+	si _stPaiementParametre.IdOperation > 0 alors
+		ModifieStatutOperation(_stPaiementParametre.IdOperation)
+	fin
+	cpConnexion.gcnxBaseChronodirect.TransactionAnnule()
+fin
+
+	procédure interne CréationAbonnementFonction()
+		si pas clt_abonnement_fonction.LitRecherchePremier(IdAbonnementFonction, _stPaiementParametre.stAbonnement.IdAbonnementEnCours) alors retour Faux
+		clt_abonnement_fonction.EstInterrompu	= Vrai
+		si pas clt_abonnement_fonction.Modifie() alors retour Faux // On modifie est on supprime pour mémoriser par le Trigger
+		si pas clt_abonnement_fonction.Supprime() alors retour Faux
+		clt_abonnement_fonction.RAZ()
+		clt_abonnement_fonction.DateHeureCreation				= DateHeureSys()
+		clt_abonnement_fonction.IdCarteBancaire					= _stPaiementSécurisé.IdCarteBancaire
+		clt_abonnement_fonction.IdCarteBancaire.Null			= (_stPaiementSécurisé.IdCarteBancaire = 0)
+		clt_abonnement_fonction.IdClient						= _stPaiementParametre.IdClient
+		clt_abonnement_fonction.IdPackFonction					= _stPaiementParametre.stAbonnement.IdPack
+		clt_abonnement_fonction.NumCommandeClient				= _stPaiementParametre.NumCommandeClient
+		clt_abonnement_fonction.NumCommandeClient.Null			= (_stPaiementParametre.NumCommandeClient = "")
+		clt_abonnement_fonction.DateDebut						= DateSys()
+		clt_abonnement_fonction.DateFin							= _stPaiementParametre.stAbonnement.DateFin
+		clt_abonnement_fonction.TypeAbonnement					= _stPaiementParametre.stAbonnement.TypeAbonnement
+		clt_abonnement_fonction.EstActif						= Vrai
+		clt_abonnement_fonction.EstValide						= Vrai
+		clt_abonnement_fonction.StatutAbonnement				= __ABONNEMENT_STATUT_REGLEMENT_VALIDE__
+		clt_abonnement_fonction.ModeReglementAbonnementFonction	= _stPaiementSécurisé.ModeRèglement
+		clt_abonnement_fonction.TauxTVA							= _stPaiementParametre.stMontant.TauxTVA
+		clt_abonnement_fonction.MontantHT						= _stPaiementParametre.stMontant.MontantHT
+		clt_abonnement_fonction.MontantTVA						= _stPaiementParametre.stMontant.MontantTVA
+		clt_abonnement_fonction.MontantTTC						= _stPaiementParametre.stMontant.MontantTTC
+		clt_abonnement_fonction.AcompteVerse					= _stPaiementParametre.stMontant.AcompteVerse
+		si pas clt_abonnement_fonction.Ajoute() alors retour Faux
+		_stPaiementParametre.IdAbonnementFonction = clt_abonnement_fonction.IdAbonnementFonction
+		renvoyer Vrai
+	fin
+
+	procédure interne CréationAbonnementPrestation()
+		si pas clt_abonnement_prestation.LitRecherchePremier(IdAbonnementPrestation, _stPaiementParametre.stAbonnement.IdAbonnementEnCours) alors retour Faux
+		clt_abonnement_prestation.EstInterrompu	= Vrai
+		si pas clt_abonnement_prestation.Modifie() 	alors retour Faux // On modifie est on supprime pour mémoriser par le Trigger
+		si pas clt_abonnement_prestation.Supprime() 	alors retour Faux
+		clt_abonnement_prestation.RAZ()
+		clt_abonnement_prestation.DateHeureCreation					= DateHeureSys()
+		clt_abonnement_prestation.IdCarteBancaire					= _stPaiementSécurisé.IdCarteBancaire
+		clt_abonnement_prestation.IdCarteBancaire.Null				= (_stPaiementSécurisé.IdCarteBancaire = 0)
+		clt_abonnement_prestation.IdClient							= _stPaiementParametre.IdClient
+		clt_abonnement_prestation.IdPackPrestation					= _stPaiementParametre.stAbonnement.IdPack
+		clt_abonnement_prestation.NumCommandeClient					= _stPaiementParametre.NumCommandeClient
+		clt_abonnement_prestation.NumCommandeClient.Null			= (_stPaiementParametre.NumCommandeClient = "")
+		clt_abonnement_prestation.DateDebut							= DateSys()
+		clt_abonnement_prestation.DateFin							= _stPaiementParametre.stAbonnement.DateFin
+		clt_abonnement_prestation.TypeAbonnement					= _stPaiementParametre.stAbonnement.TypeAbonnement
+		clt_abonnement_prestation.EstActif							= Vrai
+		clt_abonnement_prestation.EstValide							= Vrai
+		clt_abonnement_prestation.StatutAbonnement					= __ABONNEMENT_STATUT_REGLEMENT_VALIDE__
+		clt_abonnement_prestation.ModeReglementAbonnementPrestation	= _stPaiementSécurisé.ModeRèglement
+		clt_abonnement_prestation.TauxTVA							= _stPaiementParametre.stMontant.TauxTVA
+		clt_abonnement_prestation.MontantHT							= _stPaiementParametre.stMontant.MontantHT
+		clt_abonnement_prestation.MontantTVA						= _stPaiementParametre.stMontant.MontantTVA
+		clt_abonnement_prestation.MontantTTC						= _stPaiementParametre.stMontant.MontantTTC
+		clt_abonnement_prestation.AcompteVerse						= _stPaiementParametre.stMontant.AcompteVerse
+		si pas clt_abonnement_prestation.Ajoute() alors retour Faux
+		_stPaiementParametre.IdAbonnementPrestation = clt_abonnement_prestation.IdAbonnementPrestation
+		renvoyer Vrai
+	fin
+
+	procédure interne CréationReserve()
+		// Création de clt_reserve
+		clt_reserve.RAZ()
+		clt_reserve.IdClient			= _stPaiementParametre.IdClient
+		clt_reserve.IdContact			= _stPaiementParametre.IdContact
+		clt_reserve.DateHeureCreation	= DateHeureSys()
+		clt_reserve.TauxTVA				= _stPaiementParametre.stMontant.TauxTVA
+		clt_reserve.MontantHT			= _stPaiementParametre.stMontant.MontantHT
+		clt_reserve.MontantTVA			= _stPaiementParametre.stMontant.MontantTVA
+		clt_reserve.MontantTTC			= _stPaiementParametre.stMontant.MontantTTC
+		clt_reserve.ResteAPayer			= _stPaiementParametre.stMontant.ResteAPayer
+		clt_reserve.Motif				= _stPaiementParametre.Designation
+		clt_reserve.TypeReserve			= __RESERVE_AUGMENTATION__
+		si pas clt_reserve.Ajoute() alors retour Faux
+		_stPaiementParametre.IdReserve = clt_reserve.IdReserve
+		renvoyer Vrai
+	fin
+
+	procédure interne  EnregistrePaiement()
+		clt_paiement.RAZ()
+		clt_paiement.DateHeureCreation		= DateHeureSys()
+		clt_paiement.UserCreation			= _stPaiementParametre.UserCreation
+		clt_paiement.IdClient				= _stPaiementParametre.IdClient
+		clt_paiement.IdContact				= _stPaiementParametre.IdContact
+		clt_paiement.IdReglement			= _stPaiementSécurisé.IdReglement
+		clt_paiement.IdReglement.Null		= (_stPaiementSécurisé.IdReglement = 0)
+		clt_paiement.IdFactureLigne			= _stPaiementSécurisé.IdFactureLigne
+		clt_paiement.IdFactureLigne.Null	= (_stPaiementSécurisé.IdFactureLigne = 0)
+		clt_paiement.NumCommandeClient		= _stPaiementParametre.NumCommandeClient
+		clt_paiement.NumCommandeClient.Null	= (_stPaiementParametre.NumCommandeClient = "")
+		clt_paiement.Designation			= _stPaiementParametre.Designation
+		clt_paiement.EstReserve				= (_stPaiementSécurisé.ModeRèglement = __REGLEMENT_RESERVE__)
+		clt_paiement.Montant				= _stPaiementParametre.TransactionMontant
+		selon Vrai
+			cas _stPaiementParametre.IdReserve > 0 								: clt_paiement.IdReserve = _stPaiementParametre.IdReserve
+			cas _stPaiementParametre.IdOperation > 0							: clt_paiement.IdOperation	= _stPaiementParametre.IdOperation
+			cas _stPaiementParametre.IdAbonnementFonction > 0 					: clt_paiement.IdAbonnementFonction = _stPaiementParametre.IdAbonnementFonction
+			cas _stPaiementParametre.IdAbonnementFonctionRenouvellement > 0 	: clt_paiement.IdAbonnementFonctionRenouvellement = _stPaiementParametre.IdAbonnementFonctionRenouvellement
+			cas _stPaiementParametre.IdAbonnementFonctionHistorique > 0 		: clt_paiement.IdAbonnementFonctionHistorique = _stPaiementParametre.IdAbonnementFonctionHistorique
+			cas _stPaiementParametre.IdAbonnementPrestation > 0 				: clt_paiement.IdAbonnementPrestation = _stPaiementParametre.IdAbonnementPrestation
+			cas _stPaiementParametre.IdAbonnementPrestationRenouvellement > 0	: clt_paiement.IdAbonnementPrestationRenouvellement = _stPaiementParametre.IdAbonnementPrestationRenouvellement
+			cas _stPaiementParametre.IdAbonnementPrestationHistorique > 0		: clt_paiement.IdAbonnementPrestationHistorique = _stPaiementParametre.IdAbonnementPrestationHistorique
+			cas _stPaiementParametre.ListeIdSmsNotification <> ""				: clt_paiement.ListeIdSmsNotification = _stPaiementParametre.ListeIdSmsNotification
+			cas _stPaiementParametre.ListeIdVmsUnitaire <> ""					: clt_paiement.ListeIdVmsUnitaire = _stPaiementParametre.ListeIdVmsUnitaire
+			cas _stPaiementParametre.ListeIdEmailNotification <> ""			: clt_paiement.ListeIdEmailNotification = _stPaiementParametre.ListeIdEmailNotification
+			autre cas : STOP
+		fin
+		si pas clt_paiement.Ajoute() alors STOP; renvoyer Faux
+		_stPaiementSécurisé.IdPaiement 	= clt_paiement.IdPaiement
+
+		// 		Le Trigger met a jour les statuts
+		selon Vrai
+			cas _stPaiementParametre.IdReserve > 0
+				si pas clt_reserve.LitRecherchePremier(IdReserve, _stPaiementParametre.IdReserve) alors STOP; renvoyer Faux
+				clt_reserve.DateHeureModification = DateHeureSys()
+				si pas clt_reserve.Modifie() alors STOP; renvoyer Faux
+
+			cas _stPaiementParametre.IdOperation > 0
+				si pas dos_operation.LitRecherchePremier(IdOperation, _stPaiementParametre.IdOperation) alors STOP; renvoyer Faux
+				dos_operation.DateHeureModification		= DateHeureSys()
+				dos_operation.NumCommandeClient			= _stPaiementParametre.NumCommandeClient
+				dos_operation.NumCommandeClient.Null	= (_stPaiementParametre.NumCommandeClient = "")
+				si pas dos_operation.Modifie() alors STOP; renvoyer Faux
+
+			cas _stPaiementParametre.IdAbonnementFonction > 0
+				si pas clt_abonnement_fonction.LitRecherchePremier(IdAbonnementFonction, _stPaiementParametre.IdAbonnementFonction) alors STOP; renvoyer Faux
+				clt_abonnement_fonction.DateHeureModification										= DateHeureSys()
+				clt_abonnement_fonction.ModeReglementAbonnementFonction								= _stPaiementSécurisé.ModeRèglement
+				clt_abonnement_fonction.NumCommandeClient											= _stPaiementParametre.NumCommandeClient
+				clt_abonnement_fonction.NumCommandeClient.Null										= (_stPaiementParametre.NumCommandeClient = "")
+				si pas clt_abonnement_fonction.Modifie() alors STOP; renvoyer Faux
+
+			cas _stPaiementParametre.IdAbonnementFonctionRenouvellement > 0
+				si pas clt_abonnement_fonction_renouvellement.LitRecherchePremier(IdAbonnementFonctionRenouvellement, _stPaiementParametre.IdAbonnementFonctionRenouvellement) alors STOP; renvoyer Faux
+				clt_abonnement_fonction_renouvellement.DateHeureModification						= DateHeureSys()
+				clt_abonnement_fonction_renouvellement.ModeReglementAbonnementFonction				= _stPaiementSécurisé.ModeRèglement
+				clt_abonnement_fonction_renouvellement.NumCommandeClient							= _stPaiementParametre.NumCommandeClient
+				clt_abonnement_fonction_renouvellement.NumCommandeClient.Null						= (_stPaiementParametre.NumCommandeClient = "")
+				si pas clt_abonnement_fonction_renouvellement.Modifie() alors STOP; renvoyer Faux
+
+			cas _stPaiementParametre.IdAbonnementFonctionHistorique > 0
+				si pas clt_abonnement_fonction_historique.LitRecherchePremier(IdAbonnementFonctionHistorique, _stPaiementParametre.IdAbonnementFonctionHistorique) alors STOP; renvoyer Faux
+				clt_abonnement_fonction_historique.DateHeureModification							= DateHeureSys()
+				clt_abonnement_fonction_historique.ModeReglementAbonnementFonction					= _stPaiementSécurisé.ModeRèglement
+				clt_abonnement_fonction_historique.NumCommandeClient								= _stPaiementParametre.NumCommandeClient
+				clt_abonnement_fonction_historique.NumCommandeClient.Null							= (_stPaiementParametre.NumCommandeClient = "")
+				si pas clt_abonnement_fonction_historique.Modifie() alors STOP; renvoyer Faux
+
+			cas _stPaiementParametre.IdAbonnementPrestation > 0
+				si pas clt_abonnement_prestation.LitRecherchePremier(IdAbonnementPrestation, _stPaiementParametre.IdAbonnementPrestation) alors STOP; renvoyer Faux
+				clt_abonnement_prestation.DateHeureModification										= DateHeureSys()
+				clt_abonnement_prestation.ModeReglementAbonnementPrestation							= _stPaiementSécurisé.ModeRèglement
+				clt_abonnement_prestation.NumCommandeClient											= _stPaiementParametre.NumCommandeClient
+				clt_abonnement_prestation.NumCommandeClient.Null									= (_stPaiementParametre.NumCommandeClient = "")
+				si pas clt_abonnement_prestation.Modifie() alors STOP; renvoyer Faux
+
+			cas _stPaiementParametre.IdAbonnementPrestationRenouvellement > 0
+				si pas clt_abonnement_prestation_renouvellement.LitRecherchePremier(IdAbonnementPrestationRenouvellement, _stPaiementParametre.IdAbonnementPrestationRenouvellement) alors STOP; renvoyer Faux
+				clt_abonnement_prestation_renouvellement.DateHeureModification						= DateHeureSys()
+				clt_abonnement_prestation_renouvellement.ModeReglementAbonnementPrestation			= _stPaiementSécurisé.ModeRèglement
+				clt_abonnement_prestation_renouvellement.NumCommandeClient							= _stPaiementParametre.NumCommandeClient
+				clt_abonnement_prestation_renouvellement.NumCommandeClient.Null						= (_stPaiementParametre.NumCommandeClient = "")
+				si pas clt_abonnement_prestation_renouvellement.Modifie() alors STOP; renvoyer Faux
+
+			cas _stPaiementParametre.IdAbonnementPrestationHistorique > 0
+				si pas clt_abonnement_prestation_historique.LitRecherchePremier(IdAbonnementPrestationHistorique, _stPaiementParametre.IdAbonnementPrestationHistorique) alors STOP; renvoyer Faux
+				clt_abonnement_prestation_historique.DateHeureModification						= DateHeureSys()
+				clt_abonnement_prestation_historique.ModeReglementAbonnementPrestation			= _stPaiementSécurisé.ModeRèglement
+				clt_abonnement_prestation_historique.NumCommandeClient							= _stPaiementParametre.NumCommandeClient
+				clt_abonnement_prestation_historique.NumCommandeClient.Null						= (_stPaiementParametre.NumCommandeClient = "")
+				si pas clt_abonnement_prestation_historique.Modifie() alors STOP; renvoyer Faux
+
+			cas _stPaiementParametre.ListeIdSmsNotification <> ""
+
+			cas _stPaiementParametre.ListeIdVmsUnitaire <> ""
+
+			cas _stPaiementParametre.ListeIdEmailNotification <> ""
+
+			autre cas : STOP
+		fin
+
+		renvoyer Vrai
+	fin
+
+
+	procédure interne EnregistreReglement()
+
+		clt_reglement.RAZ()
+		clt_reglement.DateHeureCreation					= DateHeureSys()
+		clt_reglement.DateHeureReceptionReglement		= DateHeureSys()
+
+		clt_reglement.CodeModeReglement					=  _stPaiementSécurisé.ModeRèglement
+		clt_reglement.Statut							= (_stPaiementSécurisé.ModeRèglement = __REGLEMENT_PRELEVEMENT__) ? __REGLEMENT_STATUT_EN_ATTENTE__ sinon __REGLEMENT_STATUT_VALIDE__
+		clt_reglement.IdClient							= _stPaiementParametre.IdClient
+		clt_reglement.IdContact							= _stPaiementParametre.IdContact
+		clt_reglement.Est3DSecure						= _bPaybox3DSecure
+		clt_reglement.Montant							= _stPaiementParametre.TransactionMontant
+		clt_reglement.Reference							= _stPaiementSécurisé.ModeRèglement +"-"+ _stPaiementParametre.Référence
+		clt_reglement.UserCreation						= _stPaiementParametre.UserCreation
+
+		clt_reglement.NumTransaction					= _stPaiementSécurisé.NumTransaction
+		clt_reglement.NumTransaction..Null				= (_stPaiementSécurisé.NumTransaction = "")
+
+		clt_reglement.IdFacture							= _stPaiementSécurisé.IdFacture
+		clt_reglement.IdFacture.Null					= (_stPaiementSécurisé.IdFacture = 0)
+
+		clt_reglement.IdTransaction						= _stPaiementSécurisé.IdTransaction
+		clt_reglement.IdTransaction.Null				= (_stPaiementSécurisé.IdTransaction = 0)
+
+		clt_reglement.IdCarteBancaire					= _stPaiementSécurisé.IdCarteBancaire
+		clt_reglement.IdCarteBancaire..Null				= (_stPaiementSécurisé.IdCarteBancaire = 0)
+
+		clt_reglement.DateHeureReceptionReglement.Null	= (_stPaiementSécurisé.ModeRèglement = __REGLEMENT_PRELEVEMENT__)
+		clt_reglement.DateEncaissementSouhaite..Null	= Vrai
+
+		si pas clt_reglement.Ajoute() alors renvoyer Faux
+		_stPaiementSécurisé.IdReglement = clt_reglement.IdReglement
+		renvoyer Vrai
+	fin
+
+
+	procédure interne ModifieReglementStatut(pIdReglement, pStatut)
+
+		si clt_reglement.LitRecherchePremier(IdReglement,pIdReglement) alors
+			clt_reglement.Statut = pStatut
+			renvoyer clt_reglement.Modifie()
+		fin
+
+		renvoyer Faux
+	fin
+
+	procédure interne ModifieStatutOperation(pIdOperation)
+
+		si dos_operation.LitRecherchePremier(IdOperation,pIdOperation) alors
+			renvoyer dos_operation.Modifie() // Le Trigger va modifier le statut
+		fin
+		renvoyer Faux
+	fin
+

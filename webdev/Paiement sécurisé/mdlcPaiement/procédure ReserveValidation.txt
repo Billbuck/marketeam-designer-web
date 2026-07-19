@@ -1,0 +1,14 @@
+procédure ReserveValidation()
+
+_stPaiementSécurisé.ModeRèglement = __REGLEMENT_RESERVE__
+
+si EnregistrePaiement() alors
+	si HLitRecherchePremier(clt_client,IdClient,_stPaiementParametre.IdClient) alors
+		libMontantReserve = "Montant disponible sur votre réserve = " + NumériqueVersChaîne(clt_client.ReserveArgent, ",2fS") + " €"
+	fin
+	PopupAfficheMessage("Il vous reste sur la réserve la somme de " + NumériqueVersChaîne(clt_client.ReserveArgent, ",2fS") + " €","RÈGLEMENT EFFECTUÉ SUR VOTRE RÉSERVE D'ARGENT",_stPaiementParametre.TypeOperation,__TOAST_INFORMATION__,10s)
+	
+	_procedureRetourReserveArgent(_paiement_validé_)
+sinon
+	_procedureRetourReserveArgent(_paiement_erreur_)
+fin

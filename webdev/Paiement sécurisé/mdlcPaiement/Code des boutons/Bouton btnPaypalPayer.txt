@@ -1,0 +1,228 @@
+Code Navigateur :
+//lien de paiement invisible
+//LIB_Accéder_à_la_vérification="Accès au serveur PayPal en cours..."
+
+si navSaisiePaypalOk() = Faux alors
+	retour
+fin
+
+PopupAffiche(popWaitPaypal)
+
+
+
+Code Serveur :
+
+
+_stPaiementParametre.NumCommandeClient	= SansEspace(saiRéférenceClient)
+si _stPaiementParametre.EstReferenceObligatoire = Vrai alors
+	si _stPaiementParametre.NumCommandeClient <> ""
+	 	si  _stPaiementParametre.ReferenceExpressionReguliere = "" _ou_ RegexVérifie(saiRéférenceClient,_stPaiementParametre.ReferenceExpressionReguliere) alors
+			si dos_operation.LitRecherchePremier(IdOperation,_stPaiementParametre.IdOperation) alors
+				dos_operation.NumCommandeClient = SansEspace(saiRéférenceClient)
+				si pas dos_operation.Modifie() alors
+					Erreur("Erreur enregistrement référence client")
+					retour
+				fin
+			fin
+		sinon
+			PopupAfficheMessage(_stPaiementParametre.ReferenceLibelle + " est incorrect" + [RC] + _stPaiementParametre.ReferenceExpressionReguliereAide,"Erreur",_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
+			retour
+		fin
+	sinon
+		PopupAfficheMessage(_stPaiementParametre.ReferenceLibelle + " est obligatoire","Erreur",_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
+		retour
+	fin
+fin
+
+_stPaiementSécurisé.IdReglement				= 0
+_stPaiementSécurisé.IdPaiement				= 0
+_stPaiementSécurisé.ModeRèglement			= __REGLEMENT_PAYPAL__
+_stPaiementSécurisé.ModeRèglementAbonnement	= __REGLEMENT_PAYPAL__
+
+//pour indiquer un répertoire spécifique pour le fichier des paiements du composant (ou une connexion)
+//il est même conseillé de mettre ce code dans l'initialisation du projet (pour les pages AWP de retour)
+//ParamètresDonnées(fRepDonnées()+"\Paiement")
+
+// En cas de problème, afin d'activer un log d'exécution utilisez la ligne de code suivante DANS LE CODE D'INITIALISATION DU PROJET (après connexion au site) :
+// dbgActiveLog(COL_PAIEMENTSECURISE.gsRépertoiresDonnées + [fSép] + "Trace_PS_" + DateHeureSys() + ".wlog", LogTout)
+// Aide en ligne sur les logs d'exécution : https://doc.pcsoft.fr/fr-FR/?2019030&name=Log_execution
+// Le fichier .wlog généré doit être ouvert avec WEBDEV et le projet préalablement chargé.
+// Pour voir le détail des actions effectuées par le composant, il faut au préalable charger le projet WW_PaiementSecurise dans la configuration composant.
+
+//on exécute le traitement qui rempli l'iFrame qui permet de lancer le paiement
+// Déclare un objet PaiementSécurisé
+
+
+//Pour ce type de paiement sécurisé, Paypal doit fournir les éléments suivant :
+
+// A FAIRE : [PAYPAL] Pour obtenir vos propres codes de test, visitez le site http://developer.paypal.com/
+// Si vous n'avez pas de compte SandBox de test, il faut en créé une pour le mode simulation (différent de votre "vrai" compte PayPal)
+// Mode opératoire au 15/09/2009 :
+// - Allez sur la page http://developer.paypal.com/
+// - Cliquer sur le bouton "Sign UP" et compléter le formulaire
+// - Validez la création de votre compte avec le lien que vous allez recevoir par email
+// - Connectez-vous dans un navigateur à votre compte Sandbox
+// Pour obtenir vos identifiants nécessaire au paiement sécurisé, une fois connecté suivez les étapes suivantes
+// - Allez dans le menu de gauche et choisissez "Api Credentials"
+// - Cliquez sur "Create Test Account"
+// - Choisissez un compte de vendeur (Seller) et Laissez "United Stats" pour le pays (sinon le type de compte ne permettra pas d'avoir les identifiants)
+// - une fois le compte créé, cliquez anouveau sur "Api Credentials", et la s'affiche les informations :
+// "API Username" => MonPaiement:PayPalIdentifiant
+// "API Password" => MonPaiement:PayPalMotDePasse
+// "Signature"    => MonPaiement:PayPalSignature
+
+//La langue et la devise sont paramétrables
+selon Nation()
+	cas nationFrançais
+		_psPaypal:Langue	= "fr_FR"
+		_psPaypal:Devise	= eEUR
+	autre cas
+		_psPaypal:Langue	= "en_US"
+		_psPaypal:Devise	= "USD"
+fin
+//Autres codes langues : https://developer.paypal.com/docs/api/reference/locale-codes/
+
+
+// Paramétrage du paiement (ici données de test PayPal)
+//API Username (et PAS Test Account)
+
+/// MODE DEV
+// ⚠ MIROIR : identifiants MASQUÉS (jamais de secrets dans le dépôt Git).
+// Les vraies valeurs sont dans le projet WebDev — à migrer vers prm_parametre
+// comme Paybox (cf. Code d'initialisation du modèle de champ).
+_psPaypal:PayPalIdentifiant	= "paypal-facilitator_api1.chronodirect.com"
+//API Password
+_psPaypal:PayPalMotDePasse	= "***MASQUE-VOIR-PROJET-WEBDEV***"
+//Signature
+_psPaypal:PayPalSignature	= "***MASQUE-VOIR-PROJET-WEBDEV***"
+
+
+// Mode simulation de paiement ou vrai paiement ?
+_psPaypal:Simulation			= MODE_TEST
+//_psPaypal:Simulation			= MODE_REEL
+
+/// MODE PROD
+//	_psPaypal:PayPalIdentifiant	= "paypal_api1.chronodirect.com"
+//	//API Password
+//	_psPaypal:PayPalMotDePasse	= "***MASQUE-VOIR-PROJET-WEBDEV***"
+//	//Signature
+//	_psPaypal:PayPalSignature	= "***MASQUE-VOIR-PROJET-WEBDEV***"
+
+
+
+//	 Il est possible de forcer des paramètres pour les requêtes HTTP :
+_psPaypal.HTTP_ModeRequete		= PaiementSécurisé.HTTP_MODE_NATIF // ou  PaiementSécurisé.HTTP_MODE_WININET
+_psPaypal.HTTP_TimeOut			= 5*1000 //5s
+_psPaypal.HTTP_VersionSSL		= ProtocoleTLS1_2 + ProtocoleTLS1_3 //(uniquement pris en compte avec HTTP_MODE_NATIF)
+
+//	MonPaiement.HTTP_IgnoreErreur	= httpIgnoreCertificatInvalide
+//Pour forcer la génération des différentes URLs en HTTPS (en cas de proxy HTTPS par exemple)
+//MonPaiement:ForceHTTPS			= Vrai
+//Note :
+// Ces paramètres n'ont pas d'influence sur la redirection des navigateur au moment de l'envoie vers le site de la banque et eu moment du retour à la boutique
+// Ils ont une influence sur :
+// - l'interrogation directe de PayPal en fin de traitement
+
+
+
+//!!!! Attention  !!!!
+//En mode simulation il est nécessaire d'avoir un navigateur ouvert sur votre SandBox Paypal de test (http://developer.paypal.com/), en parallèle du test WEBDEV.
+//Il doit s'agir d'un navigateur du même type que celui de votre test (il ne faut pas mélanger Internet Explorateur et Firefoxe par exemple)
+
+//EN CAS D'ERREUR : "La page de retour <http://www.mondomaine.fr/MONSITE_WEB/FR/retourboutique.awp?TEST=O> n'a pas renvoyé le résultat attendu"
+//En cas d'erreur sur le test de la page de retour de paiement sur le serveur sur un problème de résolution d'adresse
+//il est possible de désactiver le test en mettant la propriété IgnoreTestPageRetour à vrai :
+//MonPaiement.IgnoreTestPageRetour=vrai
+
+//----------------------------------------------------------------------------------------------------------------
+//--------------Gestion du retour à la boutique
+//----------------------------------------------------------------------------------------------------------------
+//si actuellement en SSL ?
+
+nOptionPageAdresse est un entier
+
+si _bPayboxForcerHttps = Faux alors
+	si PaiementSécurisé::ValeurEnvironnement("HTTPS", "off") ~= "on" alors
+		nOptionPageAdresse	=paSécurisée
+	sinon
+		nOptionPageAdresse	=paComplète
+	fin
+	_psPaypal.ForceHTTPS 	= Faux
+sinon
+	nOptionPageAdresse		= paSécurisée
+	_psPaypal.ForceHTTPS	= Vrai
+fin
+
+//- A ----- Pages AWP pour le fonctionnement interne du composant
+// il faut dans un premier temps indiquer le nom de pages AWP contenant la page interne PI_PAYBACK du composant
+// ! Mais attention votre traitement de gestion de retour lui n'est pas dans ces pages !
+//pour le retour à la boutique
+_psPaypal:PageRetourBoutique		= PageAdresse(RetourPaiement3DSecure,nOptionPageAdresse)
+
+
+// Ensuite cette page appellera un traitement propre à votre site
+
+//- B ----- Indiquez le ou les lien(s) ou bouton(s) qui sera/seront exécutés lors du retour à la boutique
+//Vous pouvez également indiquer le lien HTTP vers une page AWP du projet
+//Dans le cas d'un paiement abandonné
+_psPaypal:SurAbandonPaiement		= lienRetourPaypalAnnule..NomComplet
+//Dans le cas d'un paiement refusé
+_psPaypal:SurRefusPaiement			= lienRetourPaypalAnnule..NomComplet
+//Dans cet exemple on donne toujours le même lien, et on fait un SELON dans son code
+
+//Dans le cas d'un accord de paiement validé (attention pour le paiement PayPal il faudra une étape supplémentaire après l'accord PayPal)
+_psPaypal:SurValidationPaiement		= lienRetourPaypalValide..NomComplet
+//ou avec une page AWP pour la gestion du retour on pourrait faire :
+//MonPaiement:SurValidationPaiement 		= PageAdresse("",paCOMPLETE)[[A PositionOccurrence(PageAdresse("",paCOMPLETE),"/",3)]] +RépertoireWeb()+["/"]+"FR/PAGE_ACCORD.awp"
+
+//Remarque : Dans le paiement PayPal MonPaiement:SurAppelServeur et MonPaiement:SurRefusPaiement ne sont pas utilisé
+
+//----------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------
+
+
+//Il est possible ici de forcer des valeurs dans le formulaire qui sera envoyé à PayPal
+//Liste de tous les paramètres possibles est celle des paramètres de SetExpressCheckout :
+// https://cms.paypal.com/us/cgi-bin/?cmd=_render-content&content_ID=developer/e_howto_api_nvp_r_SetExpressCheckout
+// Exemple :
+//		MonPaiement.FormulaireParamètreAjoute("PAYMENTREQUEST_0_SHIPTONAME",			"Jean AUGER")
+//		MonPaiement.FormulaireParamètreAjoute("PAYMENTREQUEST_0_SHIPTOSTREET",			"35 rue des Lilas")
+//		MonPaiement.FormulaireParamètreAjoute("PAYMENTREQUEST_0_SHIPTOSTREET2",			"Res. Marine, Bat. C Apt 124")
+//		MonPaiement.FormulaireParamètreAjoute("PAYMENTREQUEST_0_SHIPTOCITY",			"PARIS")
+//		MonPaiement.FormulaireParamètreAjoute("PAYMENTREQUEST_0_SHIPTOZIP",				"75001")
+//		MonPaiement.FormulaireParamètreAjoute("PAYMENTREQUEST_0_SHIPTOCOUNTRYCODE",		"FR")
+//		MonPaiement.FormulaireParamètreAjoute("PAYMENTREQUEST_0_SHIPTOPHONENUM",		"01 23 45 67 89")
+
+
+//Pour PayPal il est possible de décrire le contenu du panier
+//	MonPaiement.PayPalPanierSupprimeTout()
+//	moMontantLigne est un monetaire
+//	moMontantLigne=ArrondiInférieur(SAI_MONTANT/6,2)
+//	MonPaiement.PayPalPanierAjouteLigne(moMontantLigne,"WEBDEV","AGL pour le développement de sites dynamiques",2,"http://www.pcsoft.fr/webdev/index.html")
+//	//on ne change pas le montant pour la ligne 2
+//	MonPaiement.PayPalPanierAjouteLigne(moMontantLigne,"WINDEV Mobile","AGL pour le développement d'applications Mobile",2,"http://www.pcsoft.fr/windevppc/index.html")
+//	//pour s'assurer que le total reste bon dans cet exemple, on prend la différence
+//	moMontantLigne=SAI_MONTANT-(4*moMontantLigne)
+//	MonPaiement.PayPalPanierAjouteLigne(moMontantLigne,"WINDEV","AGL pour le développement d'applications pour PC",1,"http://www.pcsoft.fr/windev/index.html")
+//!! Attention dans le cas de la description d'un panier il faut que la somme total des montant soit égale au montant total !!
+
+//Plus simplement on peut faire :
+//- Ne rien faire : dans ce cas il y aura une ligne avec "Total"
+// - Mettre un seule ligne pour avoir un libellé personnalisé :
+_psPaypal.PayPalPanierSupprimeTout()
+_psPaypal.PayPalPanierAjouteLigne(_stPaiementParametre.TransactionMontant,"Total du panier")
+
+// Lance la procédure de paiement à proprement dit
+// Initialise le numéro de commande (de test ici)
+_psPaypal:NuméroCommande = _stPaiementParametre.Référence
+
+//Et lance le paiement avec le montant à payer et l’émail client
+si Paiement_DepuisBanque(_psPaypal, _stPaiementParametre.TransactionMontant, _stPaiementParametre.Email, _stPaiementParametre) = Faux alors
+	//Le paiement n'a pas pu être lancé, le client n'a même pas été redirigé vers la banque
+	PopupAfficheMessage("Échec du lancement paiement sécurisé","ERREUR",_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
+
+sinon
+	//Le paiement OK, le site Paypal va s'afficher à l'internaute
+
+	//Note : l'identifiant de transaction est dans accessible par la propriété MonPaiement:IdTransaction
+fin

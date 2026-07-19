@@ -1,0 +1,75 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// Init ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure Init()
+
+btnSuivant..Visible														= Faux
+btnSauvegarderTunnel..Visible											= Faux
+
+VariableRAZ(mdcPaiement._stPaiementParametre)
+VariableRAZ(mdcPaiement._stPaiementSécurisé)
+
+mdcPaiement._stPaiementParametre.TransactionMontant					= __stOperation.MontantTTC
+mdcPaiement._stPaiementParametre.IdClient								= __stOperation.IdClientFacturation
+mdcPaiement._stPaiementParametre.IdContact								= Partage.__vcUser.IDContact
+mdcPaiement._stPaiementParametre.UserCreation							= Partage.__vcUser.NomUser
+mdcPaiement._stPaiementParametre.Dossier								= __stOperation.Dossier
+mdcPaiement._stPaiementParametre.Designation							= __stOperation.NomOperation
+mdcPaiement._stPaiementParametre.Email									= Partage.__vcUser.stCoordonnées.Email
+mdcPaiement._stPaiementParametre.PageEnCours							= pgePaiement.Nom
+mdcPaiement._stPaiementParametre.TransactionType						= __TRANSACTION_OPERATION__
+mdcPaiement._stPaiementParametre.Référence								= GénèreMotDePasse(5,"ABCEDFGHIJKLMNOPQRSTUVWXYZ") +"-"+ Gauche(HeureSys(),6)
+mdcPaiement._stPaiementParametre.IdOperation							= __stOperation.IdOperation
+mdcPaiement._stPaiementParametre.IdAdresseFacturation					= __stOperation.IdAdresseFacturation
+mdcPaiement._stPaiementParametre.TypeOperation							= __stOperation.TypeOperation
+mdcPaiement._stPaiementParametre.EstCliquezIci							= __stOperation.EstCliquezIci
+mdcPaiement._stPaiementParametre.AugmenteReserveArgent					= Faux
+mdcPaiement._stPaiementParametre.Mode									= "Test"
+
+mdcPaiement._stPaiementParametre.stMontant.TauxTVA						= cpProjet.__moTauxTva
+mdcPaiement._stPaiementParametre.stMontant.MontantHT					= __stOperation.MontantNetHT
+mdcPaiement._stPaiementParametre.stMontant.MontantTVA					= __stOperation.MontantTVA
+mdcPaiement._stPaiementParametre.stMontant.MontantTTC					= __stOperation.MontantTTC
+mdcPaiement._stPaiementParametre.stMontant.ResteAPayer					= __stOperation.MontantTTC
+
+si __stOperation.IdClientFacturation = Partage.__vcUser.IDClient alors
+	mdcPaiement._stPaiementParametre.EstReglementEnCompte		= __stOperation.EstFacturationMensuelle _et_ __stOperation.EstPlafondEncoursDepasse = Faux _et_ (Partage.__vcUser.EstAdministrateur _ou_ Partage.__vcUser.taaDroit[#DROIT_VALIDER_UNE_OPÉRATION])
+	mdcPaiement._stPaiementParametre.EstReglementCarteBancaire	= (Partage.__vcUser.EstAdministrateur _ou_ Partage.__vcUser.taaDroit[#DROIT_PAYER_UNE_OPÉRATION])
+	mdcPaiement._stPaiementParametre.EstReglementPayPal		= (Partage.__vcUser.EstAdministrateur _ou_ Partage.__vcUser.taaDroit[#DROIT_PAYER_UNE_OPÉRATION])
+	mdcPaiement._stPaiementParametre.EstReglementPrelevement	= Partage.__vcUser.EstEnPrelevement _et_ (Partage.__vcUser.EstAdministrateur _ou_ Partage.__vcUser.taaDroit[#DROIT_PAYER_UNE_OPÉRATION])
+	mdcPaiement._stPaiementParametre.EstReglementReserveArgent	= (Partage.__vcUser.EstAdministrateur _ou_ Partage.__vcUser.taaDroit[#DROIT_PAYER_UNE_OPÉRATION])
+	mdcPaiement._stPaiementParametre.EstReglementCheque		= Faux // (Partage.__vcUser.EstCheque _et_ (Partage.__vcUser.EstAdministrateur _OU_ Partage.__vcUser.taaDroit[#DROIT_PAYER_UNE_OPÉRATION]))
+	mdcPaiement._stPaiementParametre.EstReglementVirement		= Faux // (Partage.__vcUser.EstVirement _ET_ (Partage.__vcUser.EstAdministrateur _OU_ Partage.__vcUser.taaDroit[#DROIT_PAYER_UNE_OPÉRATION]))
+
+sinon
+	mdcPaiement._stPaiementParametre.EstReglementEnCompte		= __stOperation.EstFacturationMensuelle _et_ __stOperation.EstPlafondEncoursDepasse = Faux _et_ (Partage.__vcUser.EstAdministrateur _ou_ Partage.__vcUser.taaDroit[#DROIT_VALIDER_UNE_OPÉRATION_POUR_COMPTE_TIERS])
+	mdcPaiement._stPaiementParametre.EstReglementCarteBancaire	= (__stOperation.IdValideur = Partage.__vcUser.IDContact _et_ (Partage.__vcUser.EstAdministrateur _ou_ Partage.__vcUser.taaDroit[#DROIT_PAYER_UNE_OPÉRATION_POUR_COMPTE_TIERS]))
+	mdcPaiement._stPaiementParametre.EstReglementPayPal		= (__stOperation.IdValideur = Partage.__vcUser.IDContact _et_ (Partage.__vcUser.EstAdministrateur _ou_ Partage.__vcUser.taaDroit[#DROIT_PAYER_UNE_OPÉRATION_POUR_COMPTE_TIERS]))
+	mdcPaiement._stPaiementParametre.EstReglementPrelevement	= Faux
+	mdcPaiement._stPaiementParametre.EstReglementReserveArgent	= (__stOperation.IdValideur = Partage.__vcUser.IDContact _et_ (Partage.__vcUser.EstAdministrateur _ou_ Partage.__vcUser.taaDroit[#DROIT_PAYER_UNE_OPÉRATION_POUR_COMPTE_TIERS]))
+	mdcPaiement._stPaiementParametre.EstReglementCheque		= Faux
+	mdcPaiement._stPaiementParametre.EstReglementVirement		= Faux
+fin
+
+si pas mdcPaiement.InitPaiementSécurisé() alors
+	Info("Erreur",mdcPaiement._stPaiementSécurisé.MessageErreur)
+	retour
+fin
+
+mdcPaiement._procedureRetourReserveArgent			= ValidationPaiement
+mdcPaiement._procedureRetourCarteBancaire			= ValidationPaiement
+mdcPaiement._procedureRetourPaypal					= ValidationPaiement
+mdcPaiement._procedureRetourReceptionFacture		= ValidationPaiement
+mdcPaiement._procedureRetourVirement				= ValidationPaiement
+mdcPaiement._procedureRetourChèque					= ValidationPaiement
+mdcPaiement._procedureRetourPrélèvement				= ValidationPaiement
+mdcPaiement._ProcedureRetourPaiementDejaRéalisé		= PaiementDejaRéalisé

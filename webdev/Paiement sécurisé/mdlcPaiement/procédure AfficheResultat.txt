@@ -1,0 +1,24 @@
+procédure AfficheResultat(pStatut, pMessage = "")
+
+
+selon pStatut
+	cas _paiement_validé_
+		pMessage = (pMessage = "") ? "Paiement effectué" sinon pMessage
+		PopupAfficheMessage(pMessage,*,_stPaiementParametre.TypeOperation,__TOAST_VALIDATION__,10s)
+		
+	cas _paiement_annulé_
+		pMessage = (pMessage = "") ? "Paiement annulé" sinon pMessage
+		PopupAfficheMessage(pMessage,*,_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
+		
+	cas _paiement_refusé_
+		pMessage = (pMessage = "") ? "Paiement refusé" sinon pMessage
+		PopupAfficheMessage(pMessage,*,_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
+		
+	cas _paiement_erreur_
+		pMessage = (pMessage = "") ? "Paiement en erreur" sinon pMessage
+		PopupAfficheMessage(pMessage,*,_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
+		
+	autre cas
+		pMessage = "Statut non défini " + pStatut
+		PopupAfficheMessage(pMessage,*,_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
+fin

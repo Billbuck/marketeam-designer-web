@@ -1,0 +1,99 @@
+// Résumé : Effectue les opérations suite au paiement
+// Syntaxe :
+// FinPaiement ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure FinPaiement()
+
+
+//	 Ici on peut enregistrer tous les paramètres reçus dans un fichier
+//	 Ces paramètres se trouvent dans le tableau associatif "COL_PAIEMENTSECURISE.ParametresReçus"	
+
+sListeParametres	est une chaîne
+nPaiementStatut		est un entier sans signe sur 8 octets
+sInformation		est une chaîne
+nIdTransaction		est un entier
+dhDateHeurePaiement	est une DateHeure
+
+sListeParametres = ListeParametresReçus(RC)
+
+si pas sListeParametres ~~ "" alors
+	_stPaiementSécurisé.NumTransaction = ExtraitChaîne(ExtraitChaîne(sListeParametres,4,RC),2,"=")
+fin
+
+si EnModeTest() alors
+	// Info("Fin Paiement",sListeParametres)
+fin
+
+//	Exemple de retour :
+//			NUMTRANS=0014399511
+//			NUMAPPEL=0032615226
+//			NUMQUESTION=0000000050
+//			SITE=1999888
+//			RANG=63
+//			AUTORISATION=XXXXXX
+//			CODEREPONSE=00000
+//			COMMENTAIRE=Demande traitée avec succès
+//			REFABONNE=C8_132465
+//			PORTEUR=SLDLrcsLMPC
+//			PAYS=FRA
+
+// ATTENTION : En cas de paiement avec vérification 3DS ce code sera aussi exécuté sur le retour Serveur à Serveur !!
+// Dans ce cas l'état de la transaction sera PAIEMENT_ACCORD, sauf si le retour au site se produit avant, dans ce cas l'état de la transaction sera celui du retour au site, soit PAIEMENT_VALIDE si tout est OK
+//selon TransactionEtat(saiRéférence, _stPaiementSécurisé.Information, _stPaiementSécurisé.IdTransaction, _stPaiementSécurisé.DateHeurePaiement, _stPaiementSécurisé.Token)
+
+selon TransactionEtat(saiRéférence, sInformation, nIdTransaction, dhDateHeurePaiement)
+	
+	cas PAIEMENT_ACCORD
+		_stPaiementSécurisé.IdTransaction = nIdTransaction
+		ChaîneAffiche("Accord 3DS, <"+COL_PAIEMENTSECURISE.ParametresReçus["ps_retours2s"]+">")
+		
+	
+	cas PAIEMENT_VALIDE
+		
+		_stPaiementSécurisé.IdTransaction = nIdTransaction
+		
+		nPaiementStatut[_paiement_validé_] = Vrai
+		
+		si EnregistrePaiement()	alors
+			//	si c'était avec mémorisation d'une nouvelle carte, on stocke les informations nécessaires pour faire des futurs paiements en un clic
+			nPaiementStatut[_paiement_enregistrement_ok_] = Vrai
+			
+			si _psPaybox:CarteMemorise alors
+				
+				si _psPaybox.Mode3DS _et_ _psPaybox:CarteToken ~="" alors
+					_psPaybox:CarteToken = COL_PAIEMENTSECURISE.ParametresReçus["PORTEUR"]			
+				fin
+				si CarteBancaireMémorise()	alors
+					nPaiementStatut[_carte_memorise_ok_] = Vrai
+				sinon
+					nPaiementStatut[_carte_memorise_erreur_] = Vrai
+				fin
+			fin
+		sinon
+			nPaiementStatut[_paiement_enregistrement_erreur_] = Vrai
+		fin
+		
+		PaiementStatut(nPaiementStatut)		
+
+	cas PAIEMENT_REFUSE
+		_stPaiementSécurisé.IdTransaction = nIdTransaction
+		nPaiementStatut[_paiement_refusé_] = Vrai
+		PaiementStatut(nPaiementStatut)
+			
+	autre cas 
+		_stPaiementSécurisé.IdTransaction = nIdTransaction
+		nPaiementStatut[_paiement_annulé_] = Vrai
+		PaiementStatut(nPaiementStatut)
+fin
+
+
+
+RazBanPaiementSécurisé()

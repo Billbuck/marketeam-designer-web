@@ -1,0 +1,60 @@
+procédure PaiementDejaRéalisé()
+
+selon Vrai
+
+	cas _stPaiementParametre.IdReserve > 0
+		si clt_paiement.LitRecherchePremier(IdReserve,_stPaiementParametre.IdReserve) alors
+			// Le paiement à déjà été effectué --> peut-être sur une autre page
+			renvoyer Vrai
+		fin
+
+	cas _stPaiementParametre.IdOperation > 0
+		si clt_paiement.LitRecherchePremier(IdOperation,_stPaiementParametre.IdOperation) alors
+			// Le paiement à déjà été effectué --> peut-être sur une autre page
+			renvoyer Vrai
+		fin
+
+	cas _stPaiementParametre.IdAbonnementFonction > 0
+		si clt_paiement.LitRecherchePremier(IdAbonnementFonction,_stPaiementParametre.IdAbonnementFonction) alors
+			// Le paiement à déjà été effectué --> peut-être sur une autre page
+			renvoyer Vrai
+		fin
+
+	cas _stPaiementParametre.IdAbonnementFonctionRenouvellement > 0
+		si clt_paiement.LitRecherchePremier(IdAbonnementFonctionRenouvellement,_stPaiementParametre.IdAbonnementFonctionRenouvellement) alors
+			// Le paiement à déjà été effectué --> peut-être sur une autre page
+			renvoyer Vrai
+		fin
+
+	cas _stPaiementParametre.IdAbonnementPrestation > 0
+		si clt_paiement.LitRecherchePremier(IdAbonnementPrestation,_stPaiementParametre.IdAbonnementPrestation) alors
+			// Le paiement à déjà été effectué --> peut-être sur une autre page
+			renvoyer Vrai
+		fin
+
+	cas _stPaiementParametre.IdAbonnementPrestationRenouvellement > 0
+		si clt_paiement.LitRecherchePremier(IdAbonnementPrestationRenouvellement,_stPaiementParametre.IdAbonnementPrestationRenouvellement) alors
+			// Le paiement à déjà été effectué --> peut-être sur une autre page
+			renvoyer Vrai
+		fin
+
+
+	cas _stPaiementSécurisé.IdFacture > 0
+		si clt_facture.LitRecherchePremier(IdFacture,_stPaiementSécurisé.IdFacture) alors
+			si clt_facture.EstSolde = Vrai alors
+				// Le paiement à déjà été effectué --> peut-être sur une autre page
+				renvoyer Vrai
+			fin
+		fin
+
+	cas _stPaiementParametre.AugmenteReserveArgent = Vrai
+		si clt_paiement.LitRecherchePremier(Reference,_stPaiementParametre.Référence) alors
+			renvoyer Vrai
+		fin
+
+
+	autre cas
+
+fin
+
+renvoyer Faux

@@ -1,0 +1,68 @@
+procédure NavSaisieCarteOk()
+
+dDate est une Date
+
+si _sCarteBancaireMois <> "" _et_ _sCarteBancaireAnnée <> "" alors
+	dDate.Année	= "20" + _sCarteBancaireAnnée
+	dDate.Mois	= _sCarteBancaireMois
+	dDate.Jour	= 1
+	dDate		= DernierJourDuMois(dDate)
+fin
+
+si _bCarteBancaireMémorisée = Faux alors
+	si SansEspace(saiCarteBancairePorteur) = "" alors 
+		PopupAfficheMessage("Saisir le nom du porteur",*,_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
+		renvoyer Faux
+	fin
+	
+	si CaractOccurrenceType(saiCarteNumero,ctNumérique) pas dans (15,16) alors 
+		PopupAfficheMessage("Numéro de carte bancaire erroné",*,_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
+		renvoyer Faux
+	fin
+	
+	si _sCarteBancaireMois = "" alors 
+		PopupAfficheMessage("Veuillez sélectionner le mois d'expiration",*,_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
+		renvoyer Faux
+	fin
+
+	si _sCarteBancaireAnnée = "" alors 
+		PopupAfficheMessage("Veuillez sélectionner l'année d'expiration",*,_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
+		renvoyer Faux
+	fin
+	
+	si dDate < DateSys() alors
+		PopupAfficheMessage("Date d'expiration invalide",*,_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
+		renvoyer Faux
+	fin
+	
+	si Taille(saiCarteCode) < 3 alors 
+		PopupAfficheMessage("Code de cryptogramme erroné",*,_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
+		renvoyer Faux
+	fin
+	
+	si mixVerificationCarteBancaire(saiCarteNumero) = Faux alors
+		PopupAfficheMessage("Numéro de carte bancaire erroné",*,_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
+		renvoyer Faux
+	fin
+	
+	si AJAXExécute(ajaxActualiseChamps+ajaxSynchroniseVariablesServeur,NomCarteBancaireOK) = Faux alors 
+		PopupAfficheMessage("Une carte bancaire porte déjà ce nom (" + SansEspace(saiCarteBancaireLibelle) +")",*,_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
+		renvoyer Faux
+	fin
+fin
+
+si _stPaiementParametre.EstReferenceObligatoire = Vrai alors
+	si SansEspace(saiRéférenceClient) <> "" alors 
+		si _stPaiementParametre.ReferenceExpressionReguliere <> "" _et_ pas RegexVérifie(SansEspace(saiRéférenceClient),_stPaiementParametre.ReferenceExpressionReguliere) alors
+			PopupAfficheMessage(_stPaiementParametre.ReferenceLibelle + " incorrect" + [RC] + _stPaiementParametre.ReferenceExpressionReguliereAide,"Erreur",_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
+			renvoyer Faux
+		fin
+	sinon
+		PopupAfficheMessage(_stPaiementParametre.ReferenceLibelle + " obligatoire","Erreur",_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
+		renvoyer Faux
+	fin
+
+	
+fin
+
+renvoyer Vrai

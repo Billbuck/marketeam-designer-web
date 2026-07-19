@@ -1,0 +1,23 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//ChargeInfoPourExemple (<sParametre> [, <sDefaut>])
+//
+// Paramètres :
+//	sParametre : <indiquez ici le rôle de sParametre>
+// 	sDefaut (valeur par défaut="") : < indiquez ici le rôle de sDefaut >
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+// 	sValeur : <indiquez ici le rôle de sValeur>
+procédure ChargeInfoPourExemple(sParametre,sDefaut="")
+sValeur est une chaîne
+sValeur=ChargeParamètre(sParametre,sDefaut)
+
+si sValeur<>"" alors
+	sValeur= Décrypte(sValeur,"mot de passe", crypteAnsi+crypteSécurisé,encodeBASE64)	
+fin
+
+renvoyer sValeur

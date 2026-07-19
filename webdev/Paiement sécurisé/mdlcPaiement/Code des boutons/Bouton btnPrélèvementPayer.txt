@@ -1,0 +1,38 @@
+Code Navigateur :
+si navSaisiePrelevementOK() = Faux alors
+	retour
+fin
+
+
+Code Serveur :
+
+si PaiementDejaRéalisé() = Faux alors
+	_stPaiementParametre.NumCommandeClient	= SansEspace(saiRéférenceClient)
+	si _stPaiementParametre.EstReferenceObligatoire = Vrai alors
+		si _stPaiementParametre.NumCommandeClient <> ""
+			si  _stPaiementParametre.ReferenceExpressionReguliere = "" _ou_ RegexVérifie(saiRéférenceClient,_stPaiementParametre.ReferenceExpressionReguliere) alors
+				si dos_operation.LitRecherchePremier(IdOperation,_stPaiementParametre.IdOperation) alors
+					dos_operation.NumCommandeClient = SansEspace(saiRéférenceClient)
+					si pas dos_operation.Modifie() alors
+						Erreur("Erreur enregistrement référence client")
+						retour
+					fin
+				fin
+			sinon
+				PopupAfficheMessage(_stPaiementParametre.ReferenceLibelle + " est incorrect" + [RC] + _stPaiementParametre.ReferenceExpressionReguliereAide,"Erreur",_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
+				retour
+			fin	
+		sinon
+			PopupAfficheMessage(_stPaiementParametre.ReferenceLibelle + " est obligatoire","Erreur",_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
+			retour
+		fin
+	fin
+	
+	
+	_stPaiementSécurisé.ModeRèglement		= __REGLEMENT_PRELEVEMENT__
+	popPaiementOuiNon.__ProcedureNon		= PrélèvementAnnulation
+	popPaiementOuiNon.__ProcedureOui		= PrélèvementValidation
+	popPaiementOuiNon.AffichePaiementOuiNon("Confirmer le paiement par prélèvement ?",_stPaiementParametre.TypeOperation,*)
+sinon
+	_ProcedureRetourPaiementDejaRéalisé("Le paiement à déjà été effectué")
+fin

@@ -1,0 +1,19 @@
+Code Navigateur :
+si NavSaisieCarteOk() = Faux alors
+	retour
+fin
+
+
+Code serveur :
+
+si PaiementDejaRéalisé() = Faux alors
+	si SaisieCarteOk() = Vrai alors
+		MoiMême.Visible							= Vrai
+		_stPaiementSécurisé.IdCarteBancaire		= cboCarteBancaire.ValeurMémorisée
+		_stPaiementSécurisé.ModeRèglement		= __REGLEMENT_CARTE_BANCAIRE_ENREGISTREE__
+		_stPaiementParametre.NumCommandeClient	= SansEspace(saiRéférenceClient)
+		PaiementCarteBancaire()
+	fin
+sinon
+	_ProcedureRetourPaiementDejaRéalisé("Le paiement à déjà été effectué")
+fin

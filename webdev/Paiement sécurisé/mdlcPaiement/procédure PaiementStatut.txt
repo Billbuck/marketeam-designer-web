@@ -1,0 +1,32 @@
+procédure PaiementStatut(nStatut est un entier sans signe sur 8 octets)
+
+sStatut est une chaîne
+sRetour est une chaîne
+
+selon Vrai
+	cas nStatut[_paiement_validé_] = Vrai
+		selon Vrai
+			cas nStatut[_carte_memorise_ok_]			= Vrai	: sStatut += [TAB] + "Carte mémorisée"
+			cas nStatut[_carte_memorise_erreur_]		= Vrai	: sStatut += [TAB] + "Carte non mémorisée"
+			autres cas
+		fin
+		selon Vrai
+			cas nStatut[_paiement_enregistrement_ok_]		= Vrai	: sStatut = "Enregistré" 		; sRetour = _paiement_validé_
+			cas nStatut[_paiement_enregistrement_erreur_]	= Vrai	: sStatut = "Pas enregistré"	; sRetour = _paiement_erreur_
+			autres cas
+		fin
+
+	cas nStatut[_paiement_annulé_] = Vrai : sRetour = _paiement_annulé_
+
+	cas nStatut[_paiement_refusé_] = Vrai : sRetour = _paiement_refusé_
+
+	autre cas : sRetour = _paiement_erreur_
+
+fin
+
+selon _stPaiementSécurisé.ModeRèglement
+	cas __REGLEMENT_CARTE_BANCAIRE__ 				: _procedureRetourCarteBancaire(sRetour)
+	cas __REGLEMENT_CARTE_BANCAIRE_ENREGISTREE__ 	: _procedureRetourCarteBancaire(sRetour)
+	cas __REGLEMENT_PAYPAL__						: _procedureRetourPaypal(sRetour)
+	autres cas										: STOP
+fin

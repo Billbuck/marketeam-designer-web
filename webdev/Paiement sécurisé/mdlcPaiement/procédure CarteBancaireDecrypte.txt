@@ -1,0 +1,12 @@
+procédure CarteBancaireDecrypte(pValeur)
+
+
+sMessage	est un Buffer	= pValeur
+// ⚠ MIROIR : phrase secrète MASQUÉE (clé de chiffrement des cartes bancaires
+// — jamais de secrets dans le dépôt Git). La vraie valeur est dans le projet WebDev.
+bufCle		est un Buffer	= HashChaîne(HA_MD5_128, "***MASQUE-VOIR-PROJET-WEBDEV***")
+bufDecrypte	est un Buffer	= DécrypteStandard(sMessage, bufCle, crypteAES128)
+
+renvoyer bufDecrypte
+
+

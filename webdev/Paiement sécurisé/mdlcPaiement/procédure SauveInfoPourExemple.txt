@@ -1,0 +1,19 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//SauveInfoPourExemple (<sParametre>, <sValeur>)
+//
+// Paramètres :
+// 	sParametre : <indiquez ici le rôle de sParametre>
+// 	sValeur : <indiquez ici le rôle de sValeur>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure SauveInfoPourExemple(sParametre,sValeur)
+si sValeur~="" alors
+	SupprimeParamètre(sParametre)
+sinon
+	SauveParamètre(sParametre,Crypte(sValeur,"mot de passe", crypteAnsi+crypteSécurisé,encodeBASE64))
+fin

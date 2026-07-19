@@ -1,0 +1,98 @@
+procédure CarteBancaireMémorise()
+
+clt_carte_bancaire.RAZ()
+
+si _psPaybox:CarteToken = "" alors
+	Info("Erreur Token Vide")
+	renvoyer Faux
+fin
+
+
+clt_carte_bancaire.IdClient				= _stPaiementParametre.IdClient
+clt_carte_bancaire.IdContact				= _stPaiementParametre.IdContact
+clt_carte_bancaire.DateHeureCreation	= DateHeureSys()
+clt_carte_bancaire.Libelle					= _stPaiementSécurisé.CarteLibelle
+clt_carte_bancaire.Porteur					= _stPaiementSécurisé.CartePorteur
+clt_carte_bancaire.CodeAuthenticite		= cpFonction.CrypteEncode(_stPaiementSécurisé.CodeAuthenticite)
+clt_carte_bancaire.CodeEmetteur			= cpFonction.CrypteEncode(_stPaiementSécurisé.CodeEmetteur)
+clt_carte_bancaire.DateExpiration		= DernierJourDuMois(ChaîneVersDate(_psPaybox:CarteDateExpiration,"MMAA"))
+clt_carte_bancaire.Token					= CarteBancaireCrypte(_psPaybox:CarteToken)
+clt_carte_bancaire.DateExp					= CarteBancaireCrypte(_psPaybox:CarteDateExpiration)
+clt_carte_bancaire.Cvv						= CarteBancaireCrypte(_psPaybox:CarteCVV)
+clt_carte_bancaire.Refabo					= CarteBancaireCrypte(_psPaybox:ReferenceAbonne)
+clt_carte_bancaire.EstDefaut				= _stPaiementSécurisé.CarteParDefaut
+clt_carte_bancaire.EstActif				= Vrai
+clt_carte_bancaire.Origine					= cpCarteBancaire.stCarteBancaire.Origine
+clt_carte_bancaire.Banque					= cpCarteBancaire.stCarteBancaire.Banque
+clt_carte_bancaire.Marque					= cpCarteBancaire.stCarteBancaire.Marque
+clt_carte_bancaire.Pays						= cpCarteBancaire.stCarteBancaire.Pays
+clt_carte_bancaire.Origine.Null			= (cpCarteBancaire.stCarteBancaire.Origine = "")
+clt_carte_bancaire.Marque.Null			= (cpCarteBancaire.stCarteBancaire.Marque = "")
+clt_carte_bancaire.Banque.Null			= (cpCarteBancaire.stCarteBancaire.Banque = "")
+clt_carte_bancaire.Pays.Null				= (cpCarteBancaire.stCarteBancaire.Pays = "")
+clt_carte_bancaire.IdContact.Null		= (_stPaiementParametre.IdContact = 0)
+
+si clt_carte_bancaire.Ajoute() alors
+	_stPaiementSécurisé.IdCarteBancaire = clt_carte_bancaire.IdCarteBancaire
+	si _stPaiementSécurisé.CarteParDefaut = Vrai alors
+		ChangeCarteBancaireParDefaut(_stPaiementSécurisé.IdCarteBancaire)
+	fin
+	si clt_reglement.LitRecherchePremier(IdReglement,_stPaiementSécurisé.IdReglement) alors
+		clt_reglement.IdCarteBancaire = _stPaiementSécurisé.IdCarteBancaire
+		si clt_reglement.Modifie() alors
+			renvoyer Vrai
+		fin
+	fin
+sinon
+	_stPaiementSécurisé.IdCarteBancaire = 0
+	Erreur(HErreurInfo(hErrComplet))
+fin
+
+
+	procédure interne ChangeCarteBancaireParDefaut(pIdCarteBancaire)
+		
+		sTexteRequete	est une chaîne
+		sdReqDefaut		est une Source de Données
+		
+		sTexteRequete =
+		[
+			SELECT
+			IdCarteBancaire
+			FROM
+			clt_carte_bancaire
+			WHERE
+			IdCarteBancaire <> [%pIdCarteBancaire%]
+			AND EstActif = 1
+			AND EstDefaut = 1
+			AND IdClient = [%_stPaiementParametre.IdClient%]
+			AND (IdContact = [%_stPaiementParametre.IdContact%] OR IdContact IS NULL)
+		]
+		
+		si pas sdReqDefaut.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+			Info("Erreur requête")
+			renvoyer Faux
+		fin
+		
+		pour tout sdReqDefaut
+			si clt_carte_bancaire.LitRecherchePremier(IdCarteBancaire,sdReqDefaut.IdCarteBancaire) alors
+				clt_carte_bancaire.EstDefaut = Faux
+				si pas clt_carte_bancaire.Modifie() alors
+					renvoyer Faux
+				fin
+			fin
+		fin
+		
+		renvoyer Vrai
+		
+	fin:
+sdReqDefaut.AnnuleDéclaration()
+
+fin
+
+
+InitCboCarteBancaire()
+
+renvoyer Faux
+
+
+

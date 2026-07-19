@@ -1,0 +1,47 @@
+procédure VerificationCarteBancaire(local sCarteBancaire est une chaîne)
+
+sCarteBancaire = ChaîneFormate(sCarteBancaire,ccSansPonctuationNiEspace)
+
+nTaille			est un entier
+nTotal			est un entier
+nControle		est un entier
+
+nTaille = Taille(sCarteBancaire)
+
+si CaractOccurrenceType(sCarteBancaire,ctNumérique) = nTaille alors
+
+	nControle = sCarteBancaire[[nTaille]]
+	
+	nTaille--
+	
+	sCarteBancaire = Gauche(sCarteBancaire,nTaille)
+	
+	pour I = nTaille _à_ 1 pas -2
+		nTotal += LeDouble(Val(sCarteBancaire[[I]]))
+	fin
+
+ 	nTaille--
+ 		
+	pour I = nTaille à 1 pas -2
+		nTotal += Val(sCarteBancaire[[I]])
+	fin
+	
+	renvoyer (modulo((10 - modulo(nTotal,10)),10) = nControle)
+	
+sinon
+	renvoyer Faux
+fin
+
+	procédure interne LeDouble(pValeur)
+		nDouble est une chaîne
+		
+		nDouble = (pValeur * 2)
+		si Val(nDouble) <= 9	 alors
+			renvoyer Val(nDouble)
+		sinon
+			nDouble = Val(nDouble[[1]]) + Val(nDouble[[2]])
+			renvoyer Val(nDouble)
+		fin
+	fin
+
+

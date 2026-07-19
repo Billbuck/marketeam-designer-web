@@ -1,0 +1,102 @@
+
+Déclaration globales de mdlcPaiement
+
+_bPayboxTestPageRetour					est un booléen
+_bPayboxModeReel						est un booléen
+_bPayboxForcerHttps						est un booléen
+_bPaybox3DSecure						est un booléen
+_sPayboxDevSite							est une chaîne
+_sPayboxDevIdentifiantSite				est une chaîne
+_sPayboxDevRang							est une chaîne
+_sPayboxDevCle							est une chaîne
+_sPayboxProdSite						est une chaîne
+_sPayboxProdIdentifiantSite				est une chaîne
+_sPayboxProdRang						est une chaîne
+_sPayboxProdCle							est une chaîne
+_sPayboxCompte							est une chaîne
+
+
+
+_procedureRetourReserveArgent			est une Procédure
+_procedureRetourCarteBancaire			est une Procédure
+_procedureRetourPaypal					est une Procédure
+_procedureRetourReceptionFacture		est une Procédure
+_procedureRetourVirement				est une Procédure
+_procedureRetourChèque					est une Procédure
+_procedureRetourPrélèvement				est une Procédure
+
+_ProcédureAccordPaiementPaypal			est une Procédure
+_ProcédureRefusPaiementPaypal			est une Procédure
+_ProcedureRetourPaiementDejaRéalisé		est une Procédure
+
+
+
+// Structure à remplir pour faire un paiement
+_stPaiementParametre est une structPaiementParametre <synchronisé navigateur>
+
+_stPaiementSécurisé est une structPaiementSécurisé
+
+_psPaybox est un PaiementSécurisé(PayBox)
+_psPaypal est un PaiementSécurisé(PayPal)
+
+_bEstReserveDisponible					est un booléen <synchronisé navigateur>
+_bEstReserveObligatoire					est un booléen <synchronisé navigateur>
+_bEstReglementReserveArgent				est un booléen <synchronisé navigateur>
+_bEstReglementCarteBancaireDisponible	est un booléen <synchronisé navigateur>
+_bEstReglementPayPalDisponible			est un booléen <synchronisé navigateur>
+_bEstReglementPrelevementDisponible		est un booléen <synchronisé navigateur>
+_bEstReglementEnCompte					est un booléen <synchronisé navigateur>
+_bEstReglementVirement					est un booléen <synchronisé navigateur>
+_bEstReglementChèque					est un booléen <synchronisé navigateur>
+_bEstPlafondEncoursDépassé				est un booléen <synchronisé navigateur>
+
+_bCarteBancaireMémorisée				est un booléen <synchronisé navigateur>
+
+
+_taaInterrupteur 						est un tableau associatif <synchronisé navigateur> de booléens
+
+_sCarteBancaireMois						est une chaîne <synchronisé navigateur>
+_sCarteBancaireAnnée					est une chaîne <synchronisé navigateur>
+
+constante
+	_ban_parame_					= 1
+	_ban_montan_					= 2
+	_ban_refere_					= 3
+	_ban_reserv_					= 4
+	_ban_carte1_					= 5
+	_ban_carte2_					= 6
+	_ban_carte3_					= 7
+	_ban_paypal_					= 8
+	_ban_prelev_					= 9
+	_ban_recept_					= 10
+	_ban_vireme_					= 11
+	_ban_cheque_					= 12
+
+
+	_paiement_validé_					= 1
+	_paiement_enregistrement_ok_		= 2
+	_paiement_enregistrement_erreur_	= 3
+	_carte_memorise_ok_					= 4
+	_carte_memorise_erreur_				= 5
+	_paiement_annulé_					= 6
+	_paiement_refusé_					= 7
+	_paiement_erreur_					= 8
+
+fin
+
+
+Initialisation de mdlcPaiement :
+
+_bPayboxTestPageRetour			= cpFonction.ValeurParametre("Paybox_Test_Page_Retour",prm_parametre.ValNumerique.Nom)
+_bPayboxModeReel				= cpFonction.ValeurParametre("Paybox_Mode_Reel",prm_parametre.ValNumerique.Nom)
+_bPayboxForcerHttps				= cpFonction.ValeurParametre("Paybox_Forcer_Https",prm_parametre.ValNumerique.Nom)
+_bPaybox3DSecure				= cpFonction.ValeurParametre("Paybox_3D_Secure",prm_parametre.ValNumerique.Nom)
+_sPayboxDevSite					= cpFonction.ValeurParametre("Paybox_Dev_Site",prm_parametre.ValChaine.Nom)
+_sPayboxDevIdentifiantSite		= cpFonction.ValeurParametre("Paybox_Dev_Identifiant_Site",prm_parametre.ValChaine.Nom)
+_sPayboxDevRang					= cpFonction.ValeurParametre("Paybox_Dev_Rang",prm_parametre.ValChaine.Nom)
+_sPayboxDevCle					= cpFonction.ValeurParametre("Paybox_Dev_Cle",prm_parametre.ValChaine.Nom)
+_sPayboxProdSite				= cpFonction.ValeurParametre("Paybox_Prod_Site",prm_parametre.ValChaine.Nom)
+_sPayboxProdIdentifiantSite		= cpFonction.ValeurParametre("Paybox_Prod_Identifiant_Site",prm_parametre.ValChaine.Nom)
+_sPayboxProdRang				= cpFonction.ValeurParametre("Paybox_Prod_Rang",prm_parametre.ValChaine.Nom)
+_sPayboxProdCle					= cpFonction.ValeurParametre("Paybox_Prod_Cle",prm_parametre.ValChaine.Nom)
+_sPayboxCompte					= cpFonction.ValeurParametre("Paybox_Compte",prm_parametre.ValChaine.Nom)

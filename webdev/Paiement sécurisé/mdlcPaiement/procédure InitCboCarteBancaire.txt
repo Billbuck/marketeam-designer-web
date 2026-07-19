@@ -1,0 +1,82 @@
+procédure InitCboCarteBancaire(pIdCarteBancaire = 0)
+
+sTexteRequete		est une chaîne
+sdReqCarteBancaire	est une Source de Données
+
+sTexteRequete =
+[
+SELECT 
+	*
+FROM (
+	SELECT
+		c.IdCarteBancaire,
+		c.Libelle,
+		c.Token,
+		c.DateExp,
+		c.Refabo,
+		c.EstDefaut
+	FROM
+		clt_carte_bancaire c
+	WHERE
+		c.IdClient = [%Partage.__vcUser.IdClient%]
+		AND c.IdContact = [%Partage.__vcUser.IdContact%]
+		AND c.EstActif = 1
+		
+	UNION ALL
+
+	SELECT
+		c.IdCarteBancaire,
+		c.Libelle,
+		c.Token,
+		c.DateExp,
+		c.Refabo,
+		c.EstDefaut
+	FROM
+		clt_carte_bancaire c
+		JOIN clt_carte_bancaire_partage p ON p.IdCarteBancaire = c.IdCarteBancaire
+	WHERE
+		p.IdContact = [%Partage.__vcUser.IdContact%]
+		AND p.EstActif = 1 
+	) AS z
+	
+	ORDER BY
+		z.EstDefaut DESC,
+		z.IdCarteBancaire DESC
+]
+
+
+
+si pas HExécuteRequêteSQL(sdReqCarteBancaire, clt_carte_bancaire..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour               
+fin
+
+cboCarteBancaire.SupprimeTout()
+
+cboCarteBancaire.Ajoute("< Nouvelle Carte Bancaire >" + gLien(0))
+
+pour tout sdReqCarteBancaire
+	cboCarteBancaire.Ajoute(sdReqCarteBancaire.Libelle + gLien(sdReqCarteBancaire.IdCarteBancaire))
+fin
+
+selon Vrai
+	cas pIdCarteBancaire > 0 				: cboCarteBancaire = pIdCarteBancaire	; intCarteParDefaut = Faux ; intCarteParDefaut.Etat = Actif
+	cas cboCarteBancaire.Occurrence > 1		: cboCarteBancaire.SelectPlus(2)	; intCarteParDefaut = Faux ; intCarteParDefaut.Etat = Actif
+	autre cas								: cboCarteBancaire.SelectPlus(1)	; intCarteParDefaut = Vrai ; intCarteParDefaut.Etat = Inactif	
+fin
+
+_bCarteBancaireMémorisée = (cboCarteBancaire.ValeurMémorisée > 0)
+
+si _bCarteBancaireMémorisée = Vrai alors
+	si HLitRecherchePremier(clt_carte_bancaire,IdCarteBancaire,cboCarteBancaire.ValeurMémorisée) alors
+		selon Majuscule(clt_carte_bancaire.Origine)
+			cas "VISA"			: imgCarteBancaireMémorisée = "ext/Cartes/carte-visa 61x40.svg"
+			cas "MASTERCARD"	: imgCarteBancaireMémorisée = "ext/Cartes/carte-mastercard 61x40.svg"
+			cas "AMEX"			: imgCarteBancaireMémorisée = "ext/Cartes/carte-amex 61x40.svg"
+			autre cas			: imgCarteBancaireMémorisée = "ext/Cartes/carte-bleue 61x40.svg"
+		fin
+	fin
+fin
+
+fin:
+HAnnuleDéclaration(sdReqCarteBancaire)

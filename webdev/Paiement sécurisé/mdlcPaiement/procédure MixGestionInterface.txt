@@ -1,0 +1,78 @@
+procédure MixGestionInterface(pInterrupteur, pValeur est un booléen)
+
+sTypeOperation	est une chaîne
+bPaiement		est un booléen
+
+bPaiement = pInterrupteur dans (intModeCarteBancaire..Alias, intModePaypal..Alias, intModePrélév..Alias, intModeRecept..Alias, intModeVirement..Alias, intModeChèque..Alias)
+
+banPaiementSécurisé[_ban_reserv_]..Visible 	= _bEstReserveDisponible _ou_ _bEstReserveObligatoire	_et_ (pInterrupteur = intModeReserv..Alias _ou_ pValeur = 0)
+banPaiementSécurisé[_ban_carte1_]..Visible 	= _bEstReglementCarteBancaireDisponible 				_et_ (pInterrupteur = intModeCarteBancaire..Alias _ou_ pValeur = 0)
+banPaiementSécurisé[_ban_paypal_]..Visible 	= _bEstReglementPayPalDisponible 						_et_ (pInterrupteur = intModePaypal..Alias _ou_ pValeur = 0)
+banPaiementSécurisé[_ban_prelev_]..Visible 	= _bEstReglementPrelevementDisponible 					_et_ (pInterrupteur = intModePrélév..Alias _ou_ pValeur = 0)
+banPaiementSécurisé[_ban_recept_]..Visible 	= _bEstReglementEnCompte 								_et_ (pInterrupteur = intModeRecept..Alias _ou_ pValeur = 0)
+banPaiementSécurisé[_ban_vireme_]..Visible 	= _bEstReglementVirement 								_et_ (pInterrupteur = intModeVirement..Alias _ou_ pValeur = 0)
+banPaiementSécurisé[_ban_cheque_]..Visible 	= _bEstReglementChèque 									_et_ (pInterrupteur = intModeChèque..Alias _ou_ pValeur = 0)
+banPaiementSécurisé[_ban_refere_]..Visible	= _stPaiementParametre.EstReferenceObligatoire			_et_ (bPaiement		= Vrai _et_ pValeur = 1)
+
+
+// RESERVE D'ARGENT
+si _bEstReserveObligatoire _et_ pValeur = Vrai alors
+	_taaInterrupteur[intModeReserv.Alias]		= Vrai
+	btnReservePayer..Visible					= (_bEstReserveDisponible)
+	libMontantReserve..Visible					= Vrai
+	lnkReserveArgentCréditer.Visible 			= (_bEstReserveDisponible = Faux)
+sinon
+	_taaInterrupteur[intModeReserv.Alias]		= (pInterrupteur = intModeReserv..Alias) ? pValeur sinon Faux
+	btnReservePayer..Visible					= (pInterrupteur = intModeReserv..Alias) ? pValeur sinon Faux
+	libMontantReserve..Visible					= (pInterrupteur = intModeReserv..Alias) ? pValeur sinon Faux
+	lnkReserveArgentCréditer.Visible 			= (pInterrupteur = intModeReserv..Alias _et_ _bEstReserveDisponible = Faux) ? pValeur sinon Faux
+fin
+
+// CARTE BANCAIRE
+_taaInterrupteur[intModeCarteBancaire..Alias]	= (pInterrupteur = intModeCarteBancaire..Alias) ? pValeur sinon Faux
+grpCarteBancaire..Visible						= (pInterrupteur = intModeCarteBancaire..Alias) ? pValeur sinon Faux
+si pInterrupteur = intModeCarteBancaire..Alias alors MixCarteBancaireGestionInterface()
+
+// PAYPAL
+_taaInterrupteur[intModePaypal..Alias]		   	= (pInterrupteur = intModePaypal..Alias) ? pValeur sinon Faux
+btnPaypalPayer..Visible							= (pInterrupteur = intModePaypal..Alias) ? pValeur sinon Faux
+
+// PRELEVEMENT
+_taaInterrupteur[intModePrélév..Alias]       	= (pInterrupteur = intModePrélév..Alias) ? pValeur sinon Faux
+btnPrélèvementPayer..Visible					= (pInterrupteur = intModePrélév..Alias) ? pValeur sinon Faux
+
+// RECEPTION DE FACTURE
+_taaInterrupteur[intModeRecept..Alias]			= (pInterrupteur = intModeRecept..Alias) ? pValeur sinon Faux
+libPlafondEncoursDépassé..Visible				= (pInterrupteur = intModeRecept..Alias _et_ _bEstPlafondEncoursDépassé = Vrai _et_ pValeur = Vrai)
+btnReceptionFacture..Visible					= (pInterrupteur = intModeRecept..Alias _et_ _bEstPlafondEncoursDépassé = Faux) ? pValeur sinon Faux
+
+// VIREMENT
+_taaInterrupteur[intModeVirement..Alias]     	= (pInterrupteur = intModeVirement..Alias) ? pValeur sinon Faux
+libVirement..Visible							= (pInterrupteur = intModeVirement..Alias) ? pValeur sinon Faux
+btnVirement..Visible							= (pInterrupteur = intModeVirement..Alias) ? pValeur sinon Faux
+
+// CHEQUE
+_taaInterrupteur[intModeChèque..Alias]   		= (pInterrupteur = intModeChèque..Alias) ? pValeur sinon Faux
+libChèque..Visible								= (pInterrupteur = intModeChèque..Alias) ? pValeur sinon Faux
+btnChèque..Visible								= (pInterrupteur = intModeChèque..Alias) ? pValeur sinon Faux
+
+selon _stPaiementParametre.TypeOperation
+	cas __OPERATION_RNVP__		: sTypeOperation = __OPERATION_COURRIER__
+	cas __OPERATION_BLOCTEL__	: sTypeOperation = __OPERATION_TEL__
+	autre cas					: sTypeOperation = _stPaiementParametre.TypeOperation
+fin
+
+sInterON  est une chaîne 	= "ext\Boutons\Interrupteur\" + sTypeOperation + "-interrupteur-on"  + __SVG__
+sInterOFF est une chaîne	= "ext\Boutons\Interrupteur\" + sTypeOperation + "-interrupteur-off" + __SVG__
+
+pour tout bValeur, sAlias de _taaInterrupteur
+	selon sAlias
+		cas intModeReserv.Alias			: intModeReserv			= (bValeur = Faux) ? sInterOFF sinon sInterON
+		cas intModeCarteBancaire..Alias	: intModeCarteBancaire	= (bValeur = Faux) ? sInterOFF sinon sInterON
+		cas intModePaypal..Alias		: intModePaypal			= (bValeur = Faux) ? sInterOFF sinon sInterON
+		cas intModePrélév..Alias		: intModePrélév			= (bValeur = Faux) ? sInterOFF sinon sInterON
+		cas intModeRecept..Alias		: intModeRecept			= (bValeur = Faux) ? sInterOFF sinon sInterON
+		cas intModeVirement..Alias		: intModeVirement		= (bValeur = Faux) ? sInterOFF sinon sInterON
+		cas intModeChèque..Alias		: intModeChèque			= (bValeur = Faux) ? sInterOFF sinon sInterON
+	fin
+fin

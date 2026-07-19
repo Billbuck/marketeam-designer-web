@@ -1,0 +1,54 @@
+procédure InitClassHtmlPaiement()
+
+
+sTypeOperation est une chaîne
+
+selon _stPaiementParametre.TypeOperation
+	cas __OPERATION_RNVP__		: sTypeOperation = __OPERATION_COURRIER__
+	cas __OPERATION_BLOCTEL__	: sTypeOperation = __OPERATION_TEL__
+	autre cas					: sTypeOperation = _stPaiementParametre.TypeOperation
+fin
+
+
+intModeReserv			= "ext\Boutons\Interrupteur\" + sTypeOperation + "-interrupteur-off" + __SVG__
+intModeCarteBancaire	= "ext\Boutons\Interrupteur\" + sTypeOperation + "-interrupteur-off" + __SVG__
+intModePaypal			= "ext\Boutons\Interrupteur\" + sTypeOperation + "-interrupteur-off" + __SVG__
+intModePrélév			= "ext\Boutons\Interrupteur\" + sTypeOperation + "-interrupteur-off" + __SVG__
+intModeRecept			= "ext\Boutons\Interrupteur\" + sTypeOperation + "-interrupteur-off" + __SVG__
+intModeVirement			= "ext\Boutons\Interrupteur\" + sTypeOperation + "-interrupteur-off" + __SVG__
+intModeChèque			= "ext\Boutons\Interrupteur\" + sTypeOperation + "-interrupteur-off" + __SVG__
+
+libTitrePaiementTransaction..Couleur					= CouleurTypeOperation(_stPaiementParametre.TypeOperation,"XL")
+libCarteMémoriser..Couleur								= CouleurTypeOperation(_stPaiementParametre.TypeOperation,"XL")
+libCarteParDefaut..Couleur								= CouleurTypeOperation(_stPaiementParametre.TypeOperation,"XL")
+libReserveArgent..Couleur								= CouleurTypeOperation(_stPaiementParametre.TypeOperation,"XL")
+btnReservePayer.ClasseHTML								= ClassHtmlTypeOperation("btn",_stPaiementParametre.TypeOperation)
+libCarteBancaire..Couleur								= CouleurTypeOperation(_stPaiementParametre.TypeOperation,"XL")
+cboCarteBancaire.ClasseHTML							= ClassHtmlTypeOperation("cbo",_stPaiementParametre.TypeOperation)
+btnCarteBancaireMemorisePayer.ClasseHTML				= ClassHtmlTypeOperation("btn",_stPaiementParametre.TypeOperation)
+libCarteBancairePorteur.ClasseHTML						= ClassHtmlTypeOperation("lib",_stPaiementParametre.TypeOperation)
+saiCarteBancairePorteur.ClasseHTML						= ClassHtmlTypeOperation("sai",_stPaiementParametre.TypeOperation)
+btnCarteBancairePayer.ClasseHTML						= ClassHtmlTypeOperation("btn",_stPaiementParametre.TypeOperation)
+libCarteNumero.ClasseHTML								= ClassHtmlTypeOperation("lib",_stPaiementParametre.TypeOperation)
+saiCarteNumero.ClasseHTML								= ClassHtmlTypeOperation("sai",_stPaiementParametre.TypeOperation)
+libCarteDateExpiration.ClasseHTML						= ClassHtmlTypeOperation("lib",_stPaiementParametre.TypeOperation)
+cboCarteMois.ClasseHTML								= ClassHtmlTypeOperation("cbo",_stPaiementParametre.TypeOperation)
+cboCarteAnnée.ClasseHTML								= ClassHtmlTypeOperation("cbo",_stPaiementParametre.TypeOperation)	
+libCarteCryptogramme.ClasseHTML						= ClassHtmlTypeOperation("lib",_stPaiementParametre.TypeOperation)
+saiCarteCode.ClasseHTML								= ClassHtmlTypeOperation("sai",_stPaiementParametre.TypeOperation)
+btnNouvelleCarteBancaireMemoriséPayer.ClasseHTML		= ClassHtmlTypeOperation("btn",_stPaiementParametre.TypeOperation)
+libCarteBancaireLibelle.ClasseHTML						= ClassHtmlTypeOperation("lib",_stPaiementParametre.TypeOperation)
+saiCarteBancaireLibelle.ClasseHTML						= ClassHtmlTypeOperation("sai",_stPaiementParametre.TypeOperation)
+libPaypal..Couleur										= CouleurTypeOperation(_stPaiementParametre.TypeOperation,"XL")
+btnPaypalValider.ClasseHTML							= ClassHtmlTypeOperation("btn",_stPaiementParametre.TypeOperation)
+btnPaypalPayer.ClasseHTML								= ClassHtmlTypeOperation("btn",_stPaiementParametre.TypeOperation)
+libPrélévement..Couleur									= CouleurTypeOperation(_stPaiementParametre.TypeOperation,"XL")
+btnPrélèvementPayer.ClasseHTML							= ClassHtmlTypeOperation("btn",_stPaiementParametre.TypeOperation)
+libPaiement_à_réception_de..Couleur						= CouleurTypeOperation(_stPaiementParametre.TypeOperation,"XL")
+btnReceptionFacture.ClasseHTML							= ClassHtmlTypeOperation("btn",_stPaiementParametre.TypeOperation)
+libPayement_à_récéption_de1..Couleur					= CouleurTypeOperation(_stPaiementParametre.TypeOperation,"XL")
+btnVirement.ClasseHTML									= ClassHtmlTypeOperation("btn",_stPaiementParametre.TypeOperation)
+libPayement_à_récéption_de2..Couleur					= CouleurTypeOperation(_stPaiementParametre.TypeOperation,"XL")
+btnChèque.ClasseHTML									= ClassHtmlTypeOperation("btn",_stPaiementParametre.TypeOperation)
+libReferenceObligatoire..Couleur						= CouleurTypeOperation(_stPaiementParametre.TypeOperation,"XL")
+saiRéférenceClient.ClasseHTML							= ClassHtmlTypeOperation("sai",_stPaiementParametre.TypeOperation)

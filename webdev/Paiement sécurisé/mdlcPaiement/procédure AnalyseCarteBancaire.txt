@@ -1,0 +1,39 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// AnalyseCarteBancaire ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure AnalyseCarteBancaire()
+
+nAjax est un entier
+
+sCarteNumero est une chaîne
+
+sCarteNumero = ChaîneFormate(saiCarteNumero,ccSansPonctuationNiEspace)
+
+si Taille(sCarteNumero) <= 3 alors
+	imgCarteBancaire	= "ext\Cartes\carte-bleue 61x40.svg"
+sinon
+	si Taille(sCarteNumero) = CaractOccurrenceType(saiCarteNumero,ctNumérique) alors
+		nAjax = AJAXExécuteAsynchrone(ajaxSynchroniseVariablesServeur,cpCarteBancaire.IdentificationCarteBancaire, navAfficheCarteBancaire, sCarteNumero)
+	sinon
+		imgCarteBancaire = "ext\Cartes\carte-bleue 61x40.svg"
+	fin
+fin
+
+
+	procédure interne navAfficheCarteBancaire(sParam1 chaîne <utile>, nParam2 entier <utile>)
+		selon Majuscule(cpCarteBancaire.stCarteBancaire.Origine)
+			cas "VISA"					: imgCarteBancaire	= "ext\Cartes\carte-visa 61x40.svg"
+			cas "MASTERCARD"			: imgCarteBancaire	= "ext\Cartes\carte-mastercard 61x40.svg"
+			cas "AMERICAN EXPRESS"		: imgCarteBancaire	= "ext\Cartes\carte-amex 61x40.svg"
+			autre cas					: imgCarteBancaire	= "ext\Cartes\carte-bleue 61x40.svg"
+		fin
+	fin

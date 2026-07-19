@@ -1,0 +1,10 @@
+si PaiementDejaRéalisé() = Vrai alors
+	_ProcedureRetourPaiementDejaRéalisé("Le paiement à déjà été effectué")
+	retour
+fin
+
+_stPaiementSécurisé.ModeRèglement		= __REGLEMENT_RESERVE__
+popPaiementOuiNon.__ProcedureOui		= ReserveValidation
+popPaiementOuiNon.AffichePaiementOuiNon("Confirmer le paiement sur votre réserve d'argent  ?",_stPaiementParametre.TypeOperation)
+
+

@@ -1,0 +1,15 @@
+procédure navSaisieReceptionFactureOK()
+
+si _stPaiementParametre.EstReferenceObligatoire = Vrai alors
+	si SansEspace(saiRéférenceClient) <> "" alors
+		si _stPaiementParametre.ReferenceExpressionReguliere <> "" _et_ RegexVérifie(SansEspace(saiRéférenceClient),_stPaiementParametre.ReferenceExpressionReguliere) = Faux alors
+			PopupAfficheMessage(_stPaiementParametre.ReferenceLibelle + " incorrect" + [RC] + _stPaiementParametre.ReferenceExpressionReguliereAide,"Erreur",_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
+			renvoyer Faux
+		fin	
+	sinon
+		PopupAfficheMessage(_stPaiementParametre.ReferenceLibelle + " obligatoire","Erreur",_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
+		renvoyer Faux
+	fin
+fin
+
+renvoyer Vrai

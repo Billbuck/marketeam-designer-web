@@ -1,0 +1,10 @@
+procédure TraitementRetourPaiement(pCodeRetourPaybox)
+
+selon pCodeRetourPaybox
+	cas __REGLEMENT_STATUT_VALIDE__ : PopupAfficheMessage("Paiement validé",*,__stOperation.TypeOperation,__TOAST_VALIDATION__)
+	cas __REGLEMENT_STATUT_ANNULE__ : PopupAfficheMessage("Paiement annulé",*,__stOperation.TypeOperation,__TOAST_INFORMATION__)
+	cas __REGLEMENT_STATUT_REFUSE__ : PopupAfficheMessage("Paiement refusé",*,__stOperation.TypeOperation,__TOAST_ANNULATION__)
+	autre cas
+fin
+
+PageAffiche(pgeAccueil)

@@ -1,0 +1,28 @@
+Code Navigateur :
+
+si NavSaisieCarteOk() = Faux alors
+	retour
+fin
+
+
+Code Serveur :
+
+si PaiementDejaRéalisé() = Faux alors
+	si SaisieCarteOk() = Vrai alors
+		MoiMême..Visible						= Faux
+		_stPaiementSécurisé.ModeRèglement		= __REGLEMENT_CARTE_BANCAIRE__
+		_stPaiementParametre.NumCommandeClient	= SansEspace(saiRéférenceClient)
+		si _stPaiementParametre.EstReferenceObligatoire = Vrai alors
+			si dos_operation.LitRecherchePremier(IdOperation,_stPaiementParametre.IdOperation) alors
+				dos_operation.NumCommandeClient = SansEspace(saiRéférenceClient)
+				si pas dos_operation.Modifie() alors
+					Erreur("Erreur enregistrement référence client")
+					retour
+				fin
+			fin
+		fin
+		PaiementCarteBancaire()
+	fin
+sinon
+	_ProcedureRetourPaiementDejaRéalisé("Le paiement à déjà été effectué")
+fin

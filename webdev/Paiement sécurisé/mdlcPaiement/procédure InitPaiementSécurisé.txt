@@ -1,0 +1,141 @@
+procédure InitPaiementSécurisé()
+
+mMontantReserve	est un monétaire
+
+RazBanPaiementSécurisé()
+
+InitCboCarteMois()
+InitCboCarteAnnée()
+
+// En cas d'oubli on force certains paramètres
+_bEstReserveObligatoire				= Faux
+
+si _stPaiementParametre.TransactionMontant > 0 alors
+	saiMontant = _stPaiementParametre.TransactionMontant
+sinon
+	_stPaiementSécurisé.MessageErreur = "Montant non renseigné"
+	renvoyer Faux
+fin
+
+si _stPaiementParametre.Référence = "" alors
+	_stPaiementSécurisé.MessageErreur = "Référence non renseignée"
+	renvoyer Faux
+sinon
+	saiRéférence = _stPaiementParametre.Référence
+fin
+
+
+
+si _stPaiementParametre.IdOperation > 0	 _et_ pas dos_operation.LitRecherchePremier(IdOperation,_stPaiementParametre.IdOperation) alors
+	_stPaiementSécurisé.MessageErreur	= "N° Opération invalide"
+	renvoyer Faux
+sinon
+	saiRéférenceClient						= dos_operation.NumCommandeClient
+	_stPaiementParametre.NumCommandeClient	= dos_operation.NumCommandeClient
+fin
+
+si _stPaiementSécurisé.IdFacture > 0 _et_ pas clt_facture.LitRecherchePremier(IdFacture,_stPaiementSécurisé.IdFacture) alors
+	_stPaiementSécurisé.MessageErreur = "N° Facture invalide"
+	renvoyer Faux
+fin
+
+
+si clt_adresse_facturation.LitRecherchePremier(IdAdresseFacturation,_stPaiementParametre.IdAdresseFacturation) alors
+	si clt_adresse_facturation.EstReferenceObligatoire alors
+		libReferenceObligatoire									= cpFonction.NomPropre(clt_adresse_facturation.ReferenceLibelle)
+		_stPaiementParametre.ReferenceLibelle					= clt_adresse_facturation.ReferenceLibelle
+		_stPaiementParametre.ReferenceExpressionReguliere		= clt_adresse_facturation.ReferenceExpressionReguliere
+		_stPaiementParametre.ReferenceExpressionReguliereAide	= clt_adresse_facturation.ReferenceExpressionReguliereAide
+		_stPaiementParametre.EstReferenceObligatoire			= Vrai
+		saiRéférenceClient.Indication							= "Saisir le " + Minuscule(clt_adresse_facturation.ReferenceLibelle)
+		saiRéférenceClient.Bulle								= clt_adresse_facturation.ReferenceExpressionReguliereAide
+	fin
+sinon
+	STOP
+fin
+
+_bEstReglementReserveArgent					= _stPaiementParametre.EstReglementReserveArgent
+_bEstReglementCarteBancaireDisponible		= _stPaiementParametre.EstReglementCarteBancaire
+_bEstReglementPayPalDisponible				= _stPaiementParametre.EstReglementPayPal
+_bEstReglementPrelevementDisponible			= _stPaiementParametre.EstReglementPrelevement
+_bEstReglementEnCompte						= _stPaiementParametre.EstReglementEnCompte
+_bEstReglementVirement						= _stPaiementParametre.EstReglementVirement
+_bEstReglementChèque						= _stPaiementParametre.EstReglementCheque
+
+NumériqueVersChaîne(14.567, ",2fS")
+
+
+si _bEstReglementEnCompte = Vrai alors
+	_bEstPlafondEncoursDépassé = Partage.PlafondEncoursDepassé(_stPaiementParametre.IdClient, _stPaiementParametre.TransactionMontant, _stPaiementParametre.IdOperation)
+	si _bEstPlafondEncoursDépassé = Vrai alors
+		si clt_client.LitRecherchePremier(IdClient, _stPaiementParametre.IdClient) alors
+			libPlafondEncoursDépassé = ChaîneConstruit(libPlafondEncoursDépassé.ValeurInitiale,NumériqueVersChaîne(clt_client.PlafondEncours, ",2fS") + " €")
+		fin
+	fin
+fin
+
+si _stPaiementParametre.IdClient > 0 _et_ pas clt_client.LitRecherchePremier(IdClient, _stPaiementParametre.IdClient) alors
+	_stPaiementSécurisé.MessageErreur = "Client non renseigné"
+	renvoyer Faux
+sinon
+	mMontantReserve	= clt_client.ReserveArgent
+fin
+
+si _stPaiementParametre.EstReglementReserveArgent _et_ clt_client.ReserveArgent >= _stPaiementParametre.TransactionMontant alors
+	_bEstReserveDisponible	= Vrai
+	libMontantReserve		= "Montant disponible sur votre réserve = " + NumériqueVersChaîne(clt_client.ReserveArgent, ",2fS") + " €"
+fin
+
+si _stPaiementParametre.Email = "" alors
+	_stPaiementSécurisé.MessageErreur = "Email non renseigné"
+	renvoyer Faux
+fin
+
+
+
+si EmailVérifieAdresse(_stPaiementParametre.Email, emailValideSyntaxe) = emailAdresseValide alors
+	saiEmail = _stPaiementParametre.Email
+sinon
+	_stPaiementSécurisé.MessageErreur = "Email invalide"
+	renvoyer Faux
+fin
+
+si _stPaiementParametre.TypeOperation = "" alors
+	_stPaiementParametre.TypeOperation = __OPERATION_MARKETEAM__
+fin
+
+libMontantTransaction						= NumériqueVersChaîne(_stPaiementParametre.TransactionMontant, ",2fS") + " €"
+
+banPaiementSécurisé[_ban_montan_].Visible	= Vrai
+
+
+
+si _stPaiementParametre.TransactionMontant < 10
+	si _bEstReserveDisponible = Faux alors
+		libMontantReserve 					= "Tout paiement inférieur à 10 € doit être effectué sur la réserve d'argent." +"<br>"+ "Actuellement votre réserve d'argent est de " + NumériqueVersChaîne(clt_client.ReserveArgent, ",2fS") + " €"
+	fin
+	_bEstReserveObligatoire					= Vrai
+	_bEstReglementCarteBancaireDisponible	= Faux
+	_bEstReglementPayPalDisponible			= Faux
+	_bEstReglementPrelevementDisponible		= Faux
+	_bEstReglementVirement					= Faux
+	_bEstReglementChèque					= Faux
+fin
+
+banPaiementSécurisé[_ban_reserv_].Visible	= _bEstReglementReserveArgent _et_ (_bEstReserveDisponible _ou_ _bEstReserveObligatoire)
+banPaiementSécurisé[_ban_carte1_].Visible	= _bEstReglementCarteBancaireDisponible
+banPaiementSécurisé[_ban_paypal_].Visible	= _bEstReglementPayPalDisponible
+banPaiementSécurisé[_ban_prelev_].Visible	= _bEstReglementPrelevementDisponible
+banPaiementSécurisé[_ban_recept_].Visible	= _bEstReglementEnCompte
+banPaiementSécurisé[_ban_vireme_].Visible	= _bEstReglementVirement
+banPaiementSécurisé[_ban_cheque_].Visible	= _bEstReglementChèque
+banPaiementSécurisé[_ban_refere_].Visible	= Faux
+
+InitCboCarteBancaire()
+
+InitClassHtmlPaiement()
+
+
+renvoyer Vrai
+
+

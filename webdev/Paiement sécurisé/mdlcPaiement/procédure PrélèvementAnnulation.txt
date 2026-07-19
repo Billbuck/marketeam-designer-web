@@ -1,0 +1,3 @@
+procédure PrélèvementAnnulation()
+
+_procedureRetourPrélèvement(_paiement_annulé_)
