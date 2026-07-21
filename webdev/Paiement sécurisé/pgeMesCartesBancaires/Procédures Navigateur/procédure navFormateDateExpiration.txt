@@ -1,0 +1,32 @@
+procédure navFormateDateExpiration()
+
+//Formatage à la volée de la date d'expiration en MM/AAAA (code NAVIGATEUR)
+//À appeler dans l'événement « À chaque modification » (code navigateur) du champ saiCarteBancaireDateExpiration
+
+sChiffres	est une chaîne
+sCaractere	est une chaîne
+sFormate	est une chaîne
+
+pour i = 1 _à_ Taille(saiCarteBancaireDateExpiration)
+	sCaractere = saiCarteBancaireDateExpiration[[i]]
+	si sCaractere >= "0" _et_ sCaractere <= "9" alors
+		sChiffres += sCaractere
+	fin
+fin
+
+//mois saisi sans le zéro : "2" à "9" devient "02" à "09"
+si Taille(sChiffres) >= 1 _et_ sChiffres[[1]] >= "2" _et_ sChiffres[[1]] <= "9" alors
+	sChiffres = "0" + sChiffres
+fin
+
+sChiffres = Gauche(sChiffres, 6)	//MMAAAA
+
+si Taille(sChiffres) <= 2 alors
+	sFormate = sChiffres
+sinon
+	sFormate = Gauche(sChiffres,2) + "/" + Milieu(sChiffres,3)
+fin
+
+si saiCarteBancaireDateExpiration <> sFormate alors
+	saiCarteBancaireDateExpiration = sFormate
+fin

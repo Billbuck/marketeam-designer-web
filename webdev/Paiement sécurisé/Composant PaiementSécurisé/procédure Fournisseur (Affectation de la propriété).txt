@@ -1,0 +1,59 @@
+procédure Fournisseur(local nFournisseur est un entier)
+	
+	// RAZ des erreurs
+	XERREUR()
+	
+	selon Vrai 
+		
+		// Vérifie si le fournisseur est correct		
+		cas (nFournisseur & Lyra) = Lyra , nFournisseur=CaisseEpargne,nFournisseur=Systempay_old// Dans le cas d'un fournisseur basé sur Lyra
+			//OK mais rien de spécial à faire
+			
+		cas (nFournisseur & MoneticoPaiementOld) = MoneticoPaiementOld // Dans le cas d'un fournisseur basé sur MoneticoPaiement AVANT septembre 2019
+			//OK mais rien de spécial à faire			
+			
+		cas (nFournisseur & MoneticoPaiement) = MoneticoPaiement // Dans le cas d'un fournisseur basé sur MoneticoPaiement
+			//OK mais rien de spécial à faire			
+			
+		cas nFournisseur dans (PayBox, PayPal, BanquePopulaire, OgoneECommerce,DataCash_Mastercard,Saferpay,Datatrans,Realex)
+			//OK mais rien de spécial à faire
+			
+		cas (nFournisseur & SIPS2) = SIPS2 // Dans le cas d'un fournisseur basé sur SIPS 2
+			//OK mais rien de spécial à faire
+			
+		cas (nFournisseur & Atos) = Atos // Dans le cas d'un fournisseur basé sur ATOS
+			// Chemin de l'API
+			si EnModeLinux() alors
+				m_sURLFournisseur = COL_PAIEMENTSECURISE.gsRépertoiresSite + [fSep]+"ATOS_Linux"+ [fSep] + m_sEXE_ATOSReponse
+			sinon	
+				m_sURLFournisseur = COL_PAIEMENTSECURISE.gsRépertoiresSite + [fSep] +"ATOS_Windows"+ [fSep]+ m_sEXE_ATOSReponse
+			fin
+			si fFichierExiste(m_sURLFournisseur) = Faux alors
+				
+				// Déclenche une erreur
+				XERREUR("ATTENTION le fournisseur de paiement Atos est obsolète et n'est conservé que par compatibilité pour les paiements déjà existant il faut utiliser SIPS2. Le CGI <"+m_sURLFournisseur+"> n'est plus livré.")
+				ChaîneAfficheHTML(m_sErreurInfo)
+			fin
+			
+
+			
+		// Mode de chargement différé
+		cas nFournisseur = 0xffff
+			
+		autre cas
+			
+			// Déclenche une erreur
+			ExceptionDéclenche(1, XERREUR("Fournisseur <"+nFournisseur+"> incorrect "+dbgInfo(dbgPile)))
+	fin
+	
+// Conserve la valeur
+m_nFournisseur = nFournisseur
+
+ConstruitURLFournisseur()
+
+// Redéfinit les paramètres dépendants
+Simulation = m_nSimulation
+
+si m_sLangue <> "" alors
+	Langue = m_sLangue
+fin

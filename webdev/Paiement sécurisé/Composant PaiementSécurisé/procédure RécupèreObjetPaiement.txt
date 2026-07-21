@@ -1,0 +1,35 @@
+// Résumé : Récupère l'objet de paiement sécurisé qui servi à effectuer la transaction d'un paiement (utile dans le cas de Cybermut, pour la gestion de l'interface "Retour")
+// Syntaxe :
+//[ <Résultat> = ] RécupèreObjetPaiement (<vNuméroCommande> [, <sErreur>])
+//
+// Paramètres :
+//	vNuméroCommande : Numéro de commande
+//	sErreur (valeur par défaut="") : Message d'erreur en cas d'échec
+// Valeur de retour :
+// 	Type indéterminé : Objet PaiementSécurisé ou Null en cas d'erreur
+//
+// Traitement automatique des exceptions :   exécuter le bloc de code CAS EXCEPTION:
+//
+
+procédure RécupèreObjetPaiement(local vNuméroCommande, sErreur="")
+
+pclPaiment	est un PaiementSécurisé(0xFFFF)
+bufObjet	est un Buffer		
+
+si clt_transaction.LitRecherchePremier(NuméroCommande,vNuméroCommande) alors
+	bufObjet = HexaVersBuffer(clt_transaction.ObjetPaiement)
+	<compile si TypeConfiguration=Android>
+		Désérialise(pclPaiment, bufObjet, psdXML)		
+	<sinon>	
+		Désérialise(pclPaiment, bufObjet, psdBinaire)		
+	<fin>
+sinon
+	sErreur = "Impossible de retrouver la commande n°<" + vNuméroCommande + "> dans la base locale. "+HErreurInfo()		
+	renvoyer Null
+fin
+
+renvoyer pclPaiment
+
+cas exception:
+sErreur = "Echec de la récupération de l'objet de paiement de la commande n°<" + vNuméroCommande + ">. " + ExceptionInfo()
+renvoyer Null

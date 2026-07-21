@@ -4,9 +4,6 @@ mMontantReserve	est un monétaire
 
 RazBanPaiementSécurisé()
 
-InitCboCarteMois()
-InitCboCarteAnnée()
-
 // En cas d'oubli on force certains paramètres
 _bEstReserveObligatoire				= Faux
 

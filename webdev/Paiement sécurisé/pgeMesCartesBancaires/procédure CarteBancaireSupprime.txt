@@ -1,0 +1,119 @@
+procédure CarteBancaireSupprime(pIdCarteBancaire)
+
+//Supprime le jeton chez Paybox (opération 00058) puis désactive la carte localement
+//Version autonome pour pgeMesCartesBancaires (hors modèle mdlcPaiement)
+
+psPaybox			est un PaiementSécurisé(PayBox)
+stParametre			est une structPaiementParametre
+bSupprimeePaybox	est un booléen
+sPayboxCompte		est une chaîne	= cpFonction.ValeurParametre("Paybox_Compte",prm_parametre.ValChaine.Nom)
+bPayboxModeReel		est un booléen	= cpFonction.ValeurParametre("Paybox_Mode_Reel",prm_parametre.ValNumerique.Nom)
+
+si pas HLitRecherchePremier(clt_carte_bancaire,IdCarteBancaire,pIdCarteBancaire) alors
+	renvoyer Faux
+fin
+
+//configuration Paybox : mêmes identifiants que pour un paiement
+si sPayboxCompte = "DEV" alors
+	psPaybox:Site						= cpFonction.ValeurParametre("Paybox_Dev_Site",prm_parametre.ValChaine.Nom)
+	psPaybox:IdentifiantSite			= cpFonction.ValeurParametre("Paybox_Dev_Identifiant_Site",prm_parametre.ValChaine.Nom)
+	psPaybox:Rang						= cpFonction.ValeurParametre("Paybox_Dev_Rang",prm_parametre.ValChaine.Nom)
+	psPaybox.Clé						= cpFonction.ValeurParametre("Paybox_Dev_Cle",prm_parametre.ValChaine.Nom)
+sinon
+	psPaybox:Site						= cpFonction.ValeurParametre("Paybox_Prod_Site",prm_parametre.ValChaine.Nom)
+	psPaybox:IdentifiantSite			= cpFonction.ValeurParametre("Paybox_Prod_Identifiant_Site",prm_parametre.ValChaine.Nom)
+	psPaybox:Rang						= cpFonction.ValeurParametre("Paybox_Prod_Rang",prm_parametre.ValChaine.Nom)
+	psPaybox.Clé						= cpFonction.ValeurParametre("Paybox_Prod_Cle",prm_parametre.ValChaine.Nom)
+fin
+
+psPaybox.HTTP_ModeRequete				= PaiementSécurisé.HTTP_MODE_NATIF
+psPaybox.HTTP_TimeOut					= 15*1000 //15s
+psPaybox.HTTP_VersionSSL				= ProtocoleTLS1_2 + ProtocoleTLS1_3
+psPaybox:Simulation						= bPayboxModeReel = Faux ? MODE_TEST sinon MODE_REEL
+psPaybox.Mode3DS						= Faux
+
+//informations de l'abonné Paybox à supprimer
+psPaybox:CarteToken						= CarteBancaireDecrypte(clt_carte_bancaire.Token)
+psPaybox:CarteDateExpiration			= CarteBancaireDecrypte(clt_carte_bancaire.DateExp)
+psPaybox:ReferenceAbonne				= CarteBancaireDecrypte(clt_carte_bancaire.Refabo)
+//référence de traçabilité de l'opération dans clt_transaction
+psPaybox:NuméroCommande					= "DELCB_" + pIdCarteBancaire + "_" + DateHeureSys()
+
+stParametre.IdClient					= Partage.__vcUser.IdClient
+stParametre.IdContact					= Partage.__vcUser.IdContact
+
+//le montant (1) est imposé par la signature de CarteOperation mais n'est pas envoyé pour un 00058
+bSupprimeePaybox = CarteOperation(psPaybox, CarteSupprime, 1, stParametre)
+
+si pas bSupprimeePaybox alors
+	//jeton peut-être déjà absent côté Paybox : on désactive quand même localement
+	Info("Suppression du jeton Paybox non confirmée : " + psPaybox:ErreurInfo)
+fin
+
+//relecture : l'appel Paybox a pu déplacer le contexte HFSQL
+si pas HLitRecherchePremier(clt_carte_bancaire,IdCarteBancaire,pIdCarteBancaire) alors
+	renvoyer Faux
+fin
+
+clt_carte_bancaire.EstActif	= Faux
+clt_carte_bancaire.EstDefaut	= Faux
+
+si pas HModifie(clt_carte_bancaire) alors
+	renvoyer Faux
+fin
+
+//il faut toujours une carte par défaut parmi les cartes actives restantes
+ReattribueCarteParDefaut()
+
+renvoyer Vrai
+
+
+	procédure interne ReattribueCarteParDefaut()
+		
+		sTexteReqDefaut	est une chaîne
+		sdReqActive		est une Source de Données
+		
+		//cartes actives du client, la carte par défaut en tête sinon la dernière ajoutée
+		sTexteReqDefaut =
+		[
+			SELECT
+			IdCarteBancaire,
+			EstDefaut
+			FROM
+			clt_carte_bancaire
+			WHERE
+			EstActif = 1
+			AND IdClient = [%Partage.__vcUser.IdClient%]
+			AND (IdContact = [%Partage.__vcUser.IdContact%] OR IdContact IS NULL)
+			ORDER BY
+			EstDefaut DESC,
+			IdCarteBancaire DESC
+		]
+		
+		si pas sdReqActive.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteReqDefaut) alors
+			Info("Erreur requête")
+			renvoyer Faux
+		fin
+		
+		si pas sdReqActive.LitPremier() alors
+			//aucune carte active : aucune carte par défaut
+			renvoyer Vrai
+		fin
+		
+		si sdReqActive.EstDefaut = 1 alors
+			//il existe encore une carte par défaut : rien à faire
+			renvoyer Vrai
+		fin
+		
+		//la première ligne = dernière carte ajoutée : elle devient la carte par défaut
+		si clt_carte_bancaire.LitRecherchePremier(IdCarteBancaire,sdReqActive.IdCarteBancaire) alors
+			clt_carte_bancaire.EstDefaut = Vrai
+			renvoyer clt_carte_bancaire.Modifie()
+		fin
+		
+		renvoyer Faux
+		
+	fin:
+sdReqActive.AnnuleDéclaration()
+
+fin

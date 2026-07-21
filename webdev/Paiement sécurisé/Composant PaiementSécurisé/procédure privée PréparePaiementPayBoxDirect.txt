@@ -1,0 +1,176 @@
+// Résumé : Prépare le fichier de configuration de PayBox
+// Syntaxe :
+//[ <Résultat> = ] PréparePaiementPayBoxDirect (<moMontant> est monétaire [, <eActionSurLacarte> est COL_PAIEMENTSECURISE.ActionCarte])
+//
+// Paramètres :
+//	moMontant (monétaire) : Montant du paiement à effectuer
+//	eActionSurLacarte (COL_PAIEMENTSECURISE.ActionCarte) : <indiquez ici le rôle de eActionSurLacarte>
+// Valeur de retour :
+// 	booléen :       Chemin du fichier de configuration
+//
+// Traitement automatique des exceptions :   exécuter le bloc de code CAS EXCEPTION:
+//
+// Traitement automatique des erreurs :   exécuter le bloc de code CAS ERREUR
+//
+
+//	sAdresseEmail (chaîne ANSI) : Adresse email du client
+procédure privée PréparePaiementPayBoxDirect(local moMontant est un monétaire,eActionSurLacarte est un ActionCarte = CarteDebite) : booléen
+sDonneesFormulaire			est une chaîne
+bCaptureApresInscription	est un booléen = Faux	//l'inscription abonné (00056) est une autorisation seule : il faudra capturer (00002) pour encaisser
+
+// RAZ des erreurs
+XERREUR()
+
+
+XFORM			est une chaîne = "PAYBOX_" + NuméroCommande
+// Création d'un formulaire
+CréeFormulaire(XFORM)
+
+si Mode3DS alors
+	//Identification commerçant
+	sDonneesFormulaire+=AjouteChampFormulaireHTTP(XFORM,"IdMerchant", IdentifiantSite,"hidden","HTML")
+	sDonneesFormulaire+=AjouteChampFormulaireHTTP(XFORM,"IdSession", m_sIdentifiantTransaction,"hidden","HTML")
+	//Transaction
+	sDonneesFormulaire+=AjouteChampFormulaireHTTP(XFORM,"Amount", Arrondi(moMontant * 100),"hidden","HTML")
+	sDonneesFormulaire+=AjouteChampFormulaireHTTP(XFORM,"Currency", DeviseVersCodeISO4217(),"hidden","HTML")
+	sDonneesFormulaire+=AjouteChampFormulaireHTTP(XFORM,"REFERENCE", NuméroCommande,"hidden","HTML")
+	sDonneesFormulaire+=AjouteChampFormulaireHTTP(XFORM,"CCNumber", CarteNuméro,"hidden","HTML")
+	sDonneesFormulaire+=AjouteChampFormulaireHTTP(XFORM,"CCExpDate", CarteDateExpiration,"hidden","HTML")
+	sDonneesFormulaire+=AjouteChampFormulaireHTTP(XFORM,"CVVCode", CarteCVV,"hidden","HTML")
+	
+	//enregistrement de carte (inscription abonné 00056) : la DSP2 impose un challenge 3DS explicite,
+	//sinon l'ACS peut répondre en frictionless et Paybox refuse (00051 authentification trop faible)
+	//(manuel DSP2 Verifone : variable "ChallengeIndicator" en requête RemoteMPI, "SOUHAITAUTH3DS" dans la réponse)
+	si CarteMemorise alors
+		sDonneesFormulaire+=AjouteChampFormulaireHTTP(XFORM,"ChallengeIndicator", "04","hidden","HTML")
+	fin
+	
+	sDonneesFormulaire+=AjouteChampFormulaireHTTP(XFORM,"URLRetour", URLPayback(URL_RETOUR3DS),"hidden","HTML")
+	sDonneesFormulaire+=AjouteChampFormulaireHTTP(XFORM,"URLHttpDirect", URLPayback(URL_S2S3DS),"hidden","HTML")
+	
+sinon
+	//Identification commerçant
+	AjouteChampFormulaireHTTP(XFORM,"VERSION", VersionProtocole)
+	AjouteChampFormulaireHTTP(XFORM,"SITE", Site)
+	AjouteChampFormulaireHTTP(XFORM,"IDENTIFIANT", IdentifiantSite)
+	AjouteChampFormulaireHTTP(XFORM,"RANG", NumériqueVersChaîne(Rang, "02d"))
+	AjouteChampFormulaireHTTP(XFORM,"CLE", Clé)	
+	AjouteChampFormulaireHTTP(XFORM,"NUMQUESTION", NumériqueVersChaîne(m_nIDTransaction, "010d"))
+	//Débit ?
+	selon eActionSurLacarte
+		cas CarteDebite
+			//token d'une carte enregistrée ou N° de carte qu'il ne faut pas enregistrer ? 		=> TYPE_PAYBOX_DEBIT_DIRECT / TYPE_PAYBOX_ABONNE_DEBIT_DIRECT
+			//N° de CB à enregistrer 															=> TYPE_PAYBOX_ABONNE_DEBIT_ET_ENREGISTRE	
+			si pas CarteNuméro~="" alors
+				//CB
+				si CarteMemorise alors
+					AjouteChampFormulaireHTTP(XFORM,"TYPE", PAYBOX_TYPE_ABONNE_DEBIT_ET_ENREGISTRE)
+					AjouteChampFormulaireHTTP(XFORM,"REFABONNE", ReferenceAbonne) //Référence du client abonné (Direct Plus)		
+					bCaptureApresInscription = Vrai
+				sinon		
+					AjouteChampFormulaireHTTP(XFORM,"TYPE", PAYBOX_TYPE_AUTORISATION_ET_DEBIT)
+				fin		
+			sinon si pas CarteToken~="" alors
+				//token de CB	
+				AjouteChampFormulaireHTTP(XFORM,"TYPE", PAYBOX_TYPE_ABONNE_AUTORISATION_ET_DEBIT)
+				AjouteChampFormulaireHTTP(XFORM,"REFABONNE", ReferenceAbonne) //Référence du client abonné (Direct Plus)		
+			sinon
+				//rien !!
+				XERREUR("Paiement sans carte ni abonnement")
+				renvoyer Faux
+			fin
+			//Transaction
+			AjouteChampFormulaireHTTP(XFORM,"DEVISE", DeviseVersCodeISO4217())
+			AjouteChampFormulaireHTTP(XFORM,"MONTANT", Arrondi(moMontant * 100))
+			AjouteChampFormulaireHTTP(XFORM,"REFERENCE", NuméroCommande)
+			
+			
+			AjouteChampFormulaireHTTP(XFORM,"DIFFERE", "000")
+			
+			//Pour avoir le pays de la carte en retour
+			AjouteChampFormulaireHTTP(XFORM,"PAYS", "")
+			//pour avoir l'empreinte de la carte en retour
+			AjouteChampFormulaireHTTP(XFORM,"SHA-1", "?")
+			
+		cas CarteSupprime
+			AjouteChampFormulaireHTTP(XFORM,"TYPE", PAYBOX_TYPE_ABONNE_SUPPRIME)
+			AjouteChampFormulaireHTTP(XFORM,"REFABONNE", ReferenceAbonne) //Référence du client abonné (Direct Plus)		
+			
+			
+		autre cas
+			XERREUR("Action sur carte non prévue : "+eActionSurLacarte..Nom)
+			renvoyer Faux	
+	fin
+	
+	
+	// Horodatage
+	dhHorodatage est une DateHeure = DateHeureLocaleVersUTC(DateHeureSys)
+	AjouteChampFormulaireHTTP(XFORM,"DATEQ", DateVersChaîne(dhHorodatage,"JJMMAAAAHHmmSS"))
+	
+	
+	//Informations Porteur
+	si pas CarteNuméro~="" alors
+		AjouteChampFormulaireHTTP(XFORM,"PORTEUR", CarteNuméro) //Numéro de carte ou token
+	sinon si pas CarteToken~="" alors
+		AjouteChampFormulaireHTTP(XFORM,"PORTEUR", CarteToken) //Numéro de carte ou token		
+	fin
+	
+	si Taille(CarteDateExpiration)<>4 alors
+		XERREUR("Date de fin de validité de la carte incorrecte")
+		renvoyer Faux
+	fin
+	AjouteChampFormulaireHTTP(XFORM,"DATEVAL", CarteDateExpiration)
+	
+	//CVV envoyé seulement s'il est fourni : les paiements sur abonné (jeton) se font sans CVV
+	si pas CarteCVV~="" alors
+		AjouteChampFormulaireHTTP(XFORM,"CVV", CarteCVV)
+	fin
+	
+	//Autres              
+	//Provenance 
+	AjouteChampFormulaireHTTP(XFORM,"ACTIVITE", PAYBOX_ACTIVITE_INTERNET)
+	//ID d'archivage
+	AjouteChampFormulaireHTTP(XFORM,"ARCHIVAGE", DateSys()+m_sIdentifiantTransaction)
+	
+	// Données personnalisées
+	pour tout sValeur, sNomChamp de m_taParamSuppFormulairePaiement
+		AjouteChampFormulaireHTTP(XFORM,sNomChamp,sValeur)		
+	fin
+	
+	
+fin
+
+
+// Envoi de la commande
+sErreur            	est une chaîne	
+si pas PayboxDirectEnvoieFormulaire(XFORM, sErreur,sDonneesFormulaire) alors 
+	COL_PAIEMENTSECURISE.gsDernierTypeRetour=URL_REFUSED
+	XERREUR(sErreur)
+	renvoyer Faux
+sinon
+	COL_PAIEMENTSECURISE.gsDernierTypeRetour=URL_OK
+fin
+
+//le 00056 n'a fait qu'autoriser : capture du montant pour encaisser réellement
+//(sauf en mode "inscription seule" : enregistrement de carte sans encaissement)
+si bCaptureApresInscription _et_ pas CarteInscriptionSeule alors
+	si pas PayboxDirectCapture(moMontant, sErreur) alors
+		COL_PAIEMENTSECURISE.gsDernierTypeRetour=URL_REFUSED
+		XERREUR(sErreur)
+		renvoyer Faux
+	fin
+fin
+
+
+XTRACE("Appels de Paybox Direct <"+m_sURLFournisseur+">")
+
+renvoyer Vrai
+
+
+cas exception:
+XERREUR("WL_EXCEPTION [PréparePaiementPayBoxDirect] : " + ExceptionInfo)
+renvoyer ""
+
+cas erreur:
+XERREUR("WL_ERREUR [PréparePaiementPayBoxDirect] : " + WL.ErreurInfo)
+renvoyer ""

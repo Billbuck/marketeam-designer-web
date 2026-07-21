@@ -1,0 +1,43 @@
+procédure FinEnregistrementCarte()
+
+//Fin de l'enregistrement d'une carte sans achat (appelée par le lien lienFinEnregistrementCarte au retour du 3DS,
+//ou directement par LanceEnregistrementCarte si le 3DS est désactivé)
+
+sInformation		est une chaîne
+nIdTransaction		est un entier
+dhDateHeurePaiement	est une DateHeure
+sToken				est une chaîne
+sListeParam			est une chaîne
+nIdCarteBancaire	est un entier
+taParamRetour		est un tableau associatif (SansDoublon+ccSansCasse) de chaînes
+
+//purge des données sensibles conservées en session le temps du 3DS
+gpsPaybox:CarteNuméro	= ""
+gpsPaybox:CarteCVV		= ""
+
+//paramètres re-postés vers la page au retour du 3DS, lus dans un tableau LOCAL
+//(le tableau global du composant est écrasé par les traitements internes)
+sListeParam = ListeParametresReçus("&", taParamRetour)
+
+selon TransactionEtat(gsRefEnregistrementCarte, sInformation, nIdTransaction, dhDateHeurePaiement)
+
+	cas PAIEMENT_VALIDE
+		//le jeton Paybox est dans le paramètre PORTEUR du retour
+		sToken = taParamRetour["PORTEUR"]
+		si sToken = "" alors
+			Info("Enregistrement impossible : jeton Paybox absent du retour." +RC+ "Paramètres reçus : " + sListeParam)
+		sinon
+			nIdCarteBancaire = cpCarteBancaire.CarteBancaireEnregistre(Partage.__vcUser.IdClient, Partage.__vcUser.IdContact, gsCarteLibelle, gsCartePorteur, gsCarteCode4, gsCarteCode8, gsCarteDateMMAA, sToken, gpsPaybox:ReferenceAbonne, gbCarteDefaut)
+			si nIdCarteBancaire > 0 alors
+				InitZnrMesCartesBancaires()
+				//PopupFerme(popXXX)	//à adapter si la saisie est dans une popup
+				Info("Votre carte a été enregistrée. L'autorisation de 1 € ne sera pas débitée.")
+			fin
+		fin
+
+	cas PAIEMENT_REFUSE
+		Info("Enregistrement refusé par la banque. " + sInformation)
+
+	autre cas
+		Info("Enregistrement abandonné. " + sInformation)
+fin

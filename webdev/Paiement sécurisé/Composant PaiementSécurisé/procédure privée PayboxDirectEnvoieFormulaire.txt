@@ -1,0 +1,91 @@
+// Résumé : Envoie le formulaire Paybox
+// Syntaxe :
+//[ <Résultat> = ] PayboxDirectEnvoieFormulaire (<sFormulaire> est chaîne, <sErreur> est chaîne, <sDonneesFormulaire> est chaîne)
+//
+// Paramètres :
+//	sFormulaire (chaîne ANSI) : Nom du formulaire
+//	sErreur (chaîne ANSI) : (sortie) Message d'erreur
+//	sDonneesFormulaire (chaîne ANSI) : <indiquez ici le rôle de sDonneesFormulaire>
+// Valeur de retour :
+// 	booléen :  Vrai si la commande a bien été envoyée, Faux sinon
+//
+
+procédure privée PayboxDirectEnvoieFormulaire(local sFormulaire est une chaîne, sErreur est une chaîne,sDonneesFormulaire est une chaîne)	
+	
+	// Vide la liste des valeurs
+	SupprimeTout(m_taValeurs)	
+	
+	sRetourRequete 	est une chaîne ANSI
+	bRequeteOK 		est un booléen
+	
+	//
+	
+	
+	// Envoi de la commande	
+	si Mode3DS alors
+		sFormulaireHTML 			est une chaîne ANSI		
+		sFormulaireHTML = ChaîneConstruit(HTML_FORM, "%2", "PaymentRequest", "%3", "%1")
+				
+		sFormulaireHTML = ChaîneConstruit(sFormulaireHTML, ConvertirTexteEnTML(TexteTransition), m_sURLFournisseur, sDonneesFormulaire)
+		MarquerPaiement(NuméroCommande,PAIEMENT_ATTENTE)
+		
+		// Affiche les données
+		<compile si TypeConfiguration=Site ou TypeConfiguration=ComposantExterne>
+			XTRACE("Appels de l'URL Paybox 3DSecure <"+m_sURLFournisseur+">")
+			AfficheUneChaine(sFormulaireHTML, typeMimeHTML)	
+		<sinon>		
+			XTRACE("page Paybox 3DSecure dans champ HTML <"+HTML_3DS+">")
+			
+			si AttendRetour3DS() alors
+				{HTML_3DS,indChamp}..SécuritéHtml = Faux
+				{HTML_3DS,indChamp}..Valeur=sFormulaireHTML
+			sinon		
+			sErreur = "Impossible de démarrer l'attente du retour 3DS"
+			XERREUR(sErreur)
+			renvoyer Faux	
+			fin
+			
+			
+		<fin>
+		
+		
+		renvoyer Vrai
+		
+	sinon
+		//(bRequeteOK,sRetourRequete) = RequeteWeb(<sURLHTTP>: m_sURLFournisseur,<sNomFormulaire>: sFormulaire)
+		(bRequeteOK,sRetourRequete) = RequeteWeb(m_sURLFournisseur,"", sFormulaire)
+		si pas bRequeteOK alors 
+			sErreur = sRetourRequete
+			renvoyer Faux
+		fin
+			
+		
+		m_taValeurs.SupprimeTout()
+		sCodeReponse est une chaîne = LectureRéponseHTTP("CODEREPONSE",sRetourRequete)
+		TableauCopie(m_taValeurs,COL_PAIEMENTSECURISE.ParametresReçus)
+		//COL_PAIEMENTSECURISE.ParametresReçus <= m_taValeurs
+		
+		si pas (sCodeReponse = "00000") alors 
+			sErreur = "Code erreur Paybox "+sCodeReponse+" : "+HTMLVersTexte(LectureRéponseHTTP("COMMENTAIRE",sRetourRequete))
+			MarquerPaiement(NuméroCommande,PAIEMENT_REFUSE,"",sErreur)
+//			SI EnModeTest() ALORS			
+//				sErreur+=rc+"Envoyé : "+rc+TableauVersChaîne(m_tabParametresFormulaire)
+//				sErreur+=rc+"Reçu : "+rc+sRetourRequete
+////				Trace("Requête envoyée : "+TableauVersChaîne(m_tabParametresFormulaire))					
+////				Trace("retour complet : "+sRetourRequete)					
+//				stop
+//			FIN
+			renvoyer Faux		
+		sinon
+			//récupère le numéro de token de carte le cas échéant
+			si m_taValeurs["PORTEUR"]<>"" alors CarteToken = m_taValeurs["PORTEUR"]
+			//log les informations de retour
+			XTRACE("Retour du paiement Paybox direct OK :"+sRetourRequete)
+			MarquerPaiement(NuméroCommande,PAIEMENT_VALIDE)
+			renvoyer Vrai
+		fin
+		
+	fin
+
+	
+	renvoyer Vrai

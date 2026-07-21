@@ -1,0 +1,40 @@
+// Résumé : Enregistre la transaction
+// Syntaxe :
+//[ <Résultat> = ] MiseajourObjetTransaction ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Type indéterminé :  Identifiant de la transaction
+//
+// Traitement automatique des exceptions :   exécuter le bloc de code CAS EXCEPTION:
+//
+
+procédure privée MiseajourObjetTransaction()
+
+// RAZ des erreurs
+XERREUR()
+
+bufTransaction est un Buffer
+si HLitRecherchePremier(clt_transaction,IdTransaction,m_nIDTransaction) alors
+	// Sérialise l'objet
+	<compile si TypeConfiguration=Android>
+		Sérialise(objet, bufTransaction, psdXML)
+	<sinon>	
+		Sérialise(objet, bufTransaction, psdBinaire)
+	<fin>
+//	clt_transaction.ObjetPaiement = bufTransaction
+	clt_transaction.ObjetPaiement = BufferVersHexa(bufTransaction, SansRegroupement, SansLigne)
+	HModifie(clt_transaction)
+	XTRACE("Mise à jour de l'objet dans la transaction")
+	renvoyer clt_transaction.IdTransaction
+sinon
+	XERREUR("[MiseajourObjetTransaction], transaction non trouvée : " +m_nIDTransaction)
+	
+	renvoyer -1
+fin
+
+
+cas exception:
+XERREUR("WL_EXCEPTION [MiseajourObjetTransaction] : " + ExceptionInfo)
+renvoyer -1

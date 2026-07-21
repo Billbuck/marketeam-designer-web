@@ -1,0 +1,26 @@
+// Résumé : Lecture d'une réponse NVP Paypal
+// Syntaxe :
+//[ <Résultat> = ] LectureRéponseHTTP (<sNomValeur> est chaîne, <sReponseHTTP> est chaîne)
+//
+// Paramètres :
+//	sNomValeur (chaîne ANSI) : Nom de la valeur à lire
+//	sReponseHTTP (chaîne ANSI) : Réponse HTTP
+// Valeur de retour :
+// 	chaîne ANSI : Valeur lue ou chaîne vide ("") en cas d'erreur 
+//
+procédure privée LectureRéponseHTTP(local sNomValeur est une chaîne, local sReponseHTTP est une chaîne)
+	
+	tabValeurs	est un tableau de chaînes
+	
+	// Si la liste des valeurs est vide
+	si m_taValeurs..Vide alors
+	
+		// Extrait les valeurs
+		ChaîneVersTableau(sReponseHTTP, tabValeurs, "&")
+		
+		pour i = 1 _à_ tabValeurs..Occurrence
+			m_taValeurs[ExtraitChaîne(tabValeurs[i], 1, "=")] = (tabValeurs[i][[Position(tabValeurs[i], "=") + 1 à]])
+		fin
+	fin
+	
+renvoyer m_taValeurs[sNomValeur]

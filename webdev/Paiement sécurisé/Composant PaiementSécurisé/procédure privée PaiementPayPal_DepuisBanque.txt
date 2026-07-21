@@ -1,0 +1,125 @@
+// Résumé : Effectue la demande de paiement au travers de PayPal (API REST Orders v2)
+// Syntaxe :
+//[ <Résultat> = ] PaiementPayPal_DepuisBanque (<moMontant> est monétaire, <sAdresseEmail> est chaîne)
+//
+// Paramètres :
+//	moMontant (monétaire) : Montant du paiement à effectuer
+//	sAdresseEmail (chaîne ANSI) : Adresse email du client
+// Valeur de retour :
+// 	booléen :        Vrai si l'appel du paiement a été réalisé, Faux dans le cas contraire
+//
+// Crée une commande (POST /v2/checkout/orders, intent CAPTURE) puis redirige le client
+// vers la page d'approbation PayPal. La capture est faite au retour (OnRetourPaiementPayPal).
+//
+// Traitement automatique des exceptions :   exécuter le bloc de code CAS EXCEPTION:
+//
+
+procédure privée PaiementPayPal_DepuisBanque(local moMontant est un monétaire, local sAdresseEmail est une chaîne)
+	
+	// RAZ des erreurs
+	XERREUR()
+	
+	sJeton			est une chaîne
+	sErreur			est une chaîne
+	sURLApi			est une chaîne = (Simulation ? "https://api-m.sandbox.paypal.com" sinon "https://api-m.paypal.com")
+	sURLApprobation	est une chaîne
+	requete			est un httpRequête
+	réponse			est un httpRéponse
+	vCommande		est un Variant
+	vRéponse		est un Variant
+	bufTransaction	est un Buffer
+	
+	// Jeton d'accès OAuth2
+	sJeton = PaypalObtientToken(sErreur)
+	si sJeton = "" alors
+		XERREUR(sErreur)
+		renvoyer Faux
+	fin
+	
+	// Construction de la commande
+	vCommande.intent = "CAPTURE"
+	vCommande.purchase_units[1].reference_id			= "default"
+	vCommande.purchase_units[1].invoice_id				= NuméroCommande
+	vCommande.purchase_units[1].custom_id				= m_nIDTransaction
+	vCommande.purchase_units[1].description				= "Commande " + NuméroCommande
+	vCommande.purchase_units[1].amount.currency_code	= DeviseVersChaîne()
+	vCommande.purchase_units[1].amount.value			= NumériqueVersChaîne(moMontant, ".2f")
+	
+	// Expérience de paiement : retour boutique via les pages internes du composant
+	vCommande.payment_source.paypal.experience_context.return_url			= URLPayback(URL_OK)
+	vCommande.payment_source.paypal.experience_context.cancel_url			= URLPayback(URL_CANCEL)
+	vCommande.payment_source.paypal.experience_context.locale				= Remplace(Langue, "_", "-")
+	vCommande.payment_source.paypal.experience_context.brand_name			= "Marketeam"
+	vCommande.payment_source.paypal.experience_context.shipping_preference	= "NO_SHIPPING"
+	vCommande.payment_source.paypal.experience_context.user_action			= "PAY_NOW"
+	
+	requete.URL							= sURLApi + "/v2/checkout/orders"
+	requete.Méthode						= httpPost
+	requete.ContentType					= "application/json"
+	requete.EnTête["Authorization"]		= "Bearer " + sJeton
+	//idempotence : un même identifiant de transaction ne peut pas créer deux commandes
+	requete.EnTête["PayPal-Request-Id"]	= "MKT-TR-" + m_nIDTransaction
+	requete.Contenu						= VariantVersJSON(vCommande)
+	
+	XTRACE("PAYPAL création de commande REST pour " + NuméroCommande + " montant " + NumériqueVersChaîne(moMontant, ".2f"))
+	
+	réponse = HTTPEnvoie(requete)
+	
+	si ErreurDétectée alors
+		XERREUR("PAYPAL création de commande impossible : " + WL.ErreurInfo)
+		renvoyer Faux
+	fin
+	
+	si réponse.CodeEtat <> 200 _et_ réponse.CodeEtat <> 201 alors
+		XERREUR("PAYPAL création de commande refusée, HTTP " + réponse.CodeEtat + " : " + réponse.Contenu)
+		renvoyer Faux
+	fin
+	
+	vRéponse = JSONVersVariant(réponse.Contenu)
+	
+	si pas vRéponse.id..Existe _ou_ vRéponse.id = "" alors
+		XERREUR("PAYPAL réponse sans identifiant de commande : " + réponse.Contenu)
+		renvoyer Faux
+	fin
+	
+	// L'identifiant de commande PayPal remplace l'ancien TOKEN Express Checkout
+	m_sToken = vRéponse.id
+	
+	// URL d'approbation : lien "payer-action" (ou "approve" selon le mode de création)
+	pour tout vLien de vRéponse.links
+		si vLien.rel = "payer-action" _ou_ vLien.rel = "approve" alors
+			sURLApprobation = vLien.href
+			sortir
+		fin
+	fin
+	
+	si sURLApprobation = "" alors
+		XERREUR("PAYPAL réponse sans lien d'approbation : " + réponse.Contenu)
+		renvoyer Faux
+	fin
+	
+	XTRACE("PAYPAL commande créée <" + m_sToken + ">, redirection vers l'approbation")
+	
+	//// Ré-enregistre l'objet de paiement (pour tenir compte de l'identifiant de commande)	
+	HLitRecherchePremier(clt_transaction, IdTransaction, m_sIdentifiantTransaction)
+	dbgAssertion(HTrouve(clt_transaction),"Transaction non retrouvée pour mise à jour de l'identifiant de commande PayPal")
+	// Sérialise l'objet
+	<compile si TypeConfiguration=Android>
+		Sérialise(objet, bufTransaction, psdXML)
+	<sinon>	
+		Sérialise(objet, bufTransaction, psdBinaire)
+	<fin>
+	clt_transaction.ObjetPaiement = BufferVersHexa(bufTransaction, SansRegroupement, SansLigne)
+	HModifie(clt_transaction)	
+	////
+	
+	// Redirection vers PayPal
+	<compile si TypeConfiguration=Site ou TypeConfiguration=ComposantExterne>
+		ScriptAffiche(sURLApprobation, "")	
+	<fin>
+	
+renvoyer Vrai
+	
+cas exception:
+	XERREUR("WL_EXCEPTION [PaiementPayPal] : " + ExceptionInfo)
+	renvoyer Faux

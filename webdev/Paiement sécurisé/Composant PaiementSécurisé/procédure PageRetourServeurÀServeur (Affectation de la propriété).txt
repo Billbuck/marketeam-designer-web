@@ -1,0 +1,86 @@
+procédure PageRetourServeurÀServeur(sNomPage)
+
+	// RAZ des erreurs
+	XERREUR()
+
+	// Vérifie si c'est une URL complète
+	si sNomPage [= "http:" _ou_ sNomPage [= "https:" _ou_ sNomPage [= "HTTP:" _ou_ sNomPage [= "HTTPS:" alors
+		
+		// C'est une URL complète
+		m_sPagePayBack = SansEspace(sNomPage)
+		
+	// Vérifie si c'est une URL relative
+	sinon 
+		// C'est une URL relative ou juste le nom de la page
+		<compile si TypeConfiguration=Site ou TypeConfiguration=ComposantExterne>
+			m_sPagePayBack = URLDomaineEnCours() + ["/"] + RépertoireWeb() + ["/"] + LangueVersRépertoire() + ["/"] + SansEspace(sNomPage)
+			
+		<fin>
+		//extension OK ?
+		si Majuscule(Droite(m_sPagePayBack,4))<>".AWP" alors
+			//Ajout de l'extension
+			m_sPagePayBack+=".awp"		
+		fin	
+	fin
+	
+	sUrlTest est une chaîne = m_sPagePayBack
+	sListeParamètres est une chaîne
+	
+	si Position(sUrlTest,"?")>0 alors
+		sListeParamètres=sUrlTest[[Position(sUrlTest,"?")+1 à]]+"&"+sListeParamètres+"&TEST=O"
+		sUrlTest=sUrlTest[[à Position(sUrlTest,"?")-1]]
+	sinon
+		sListeParamètres="TEST=O"
+	fin
+	
+	//test de la page
+	sResultatHTMLTest est une chaîne
+	//si on est pas sur une adresse "localhost" on vérifie l'accès à la page de retour de serveur à serveur
+	si pas IgnoreTestPageRetour _et_ Position(m_sPagePayBack,"localhost",0,SansCasse)<1 alors
+		
+		bResOK est un booléen
+		//(bResOK,sResultatHTMLTest) = RequeteWeb(<sURLHTTP>: m_sPagePayBack+["?"]+sListeParamètres,<nMéthode>: httpget)
+		(bResOK,sResultatHTMLTest) = RequeteWeb(m_sPagePayBack+["?"]+sListeParamètres,"","",httpGet)
+		
+		
+		si pas (bResOK _et_ sResultatHTMLTest~~ "OK") alors
+			sResultatHTMLTest=ChaîneFormate(ConvertirHTMLEnTexte(sResultatHTMLTest),ccSansAccent+ccSansPonctuationNiEspace)
+		fin
+	sinon
+		//en localhost on considère que c'est OK
+		sResultatHTMLTest="OK"
+	fin
+	
+	si pas sResultatHTMLTest~~ "OK"  alors
+		sDomaine est une chaîne	
+		sDomaine=ExtraitChaîne(ExtraitChaîne(m_sPagePayBack,2,"//"),1,"/")
+		
+		sRepertoireFichierHost est une chaîne
+		
+		
+
+<si CibleExécution=SiteWindows>
+		
+		sRepertoireFichierHost = "(" + ComplèteRep(SysRep(srSystème) + ["\"] + "drivers\etc\hosts") + ")"
+	
+<sinon si CibleExécution=SiteLinux>
+	
+	sRepertoireFichierHost = ""
+	
+<fin>
+
+			
+		AfficheChaineEnHTML(ChaîneConstruit([
+			La page de retour <%1> n'a pas renvoyé le résultat attendu. Vérifiez l'affectation de la propriété 'clPaiement.PageRetourServeuraServeur'.
+			Assurez-vous que la machine peut adresser le serveur <%2>, si nécessaires ajouter le domaine dans le fichier hosts %3
+			Dans le cas  cas de problème de résolution d'adresse ou de nom de domaine sur le serveur il est possible de désactiver le test de cette page en affectant la propriété 'clPaiement.IgnoreTestPageRetour' à Vrai 
+			
+			Cette URL doit répondre OK dans un navigateur SUR LE SERVEUR : 
+			 %1
+			
+			Au lieu de <OK>, voici les données actuellement récupérés  : 
+			<%4>
+			],m_sPagePayBack+["?"]+sListeParamètres,
+				sDomaine,
+				sRepertoireFichierHost,sResultatHTMLTest))
+	fin

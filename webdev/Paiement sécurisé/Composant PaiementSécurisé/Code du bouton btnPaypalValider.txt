@@ -1,0 +1,38 @@
+sErreur			est une chaîne
+sInformations	est une chaîne
+sNumTransaction	est une chaîne
+
+btnPaypalPayer..Visible		= Faux
+btnPaypalValider..Visible	= Faux
+btnPaypalAnnuler..Visible	= Faux
+
+//Note : 
+//Les fonctions TransactionEtat, TransactionEtatSelonID permettent de récupérer à tout moment les information sur le paiement
+//a partie du numéro de commande (TransactionEtat) ou de identifiant de transaction (TransactionEtatSelonID)
+
+//lance la validation effective du paiement accordé par PayPal
+//Le n° de commande est dans le champ de saisie SAI_NUM_TRANSACTION et à déjà été vérifié dans le lien "LIEN_Retour_accord_validé"
+
+si pas PaiementTermine(saiRéférence,sErreur,sInformations,sNumTransaction) alors
+	//Le paiement n'a pas été accepté
+	LIB_Accéder_à_la_vérification="Paiement refusé !"
+	PopupAfficheMessage("Malgré le pré-accord de PayPal le paiement a été refusé : " +RC+ sErreur+[RC]+sInformations,*,_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
+	
+	_procedureRetourPaypal(_paiement_refusé_)
+sinon
+	//Le paiement validé avec succès
+	//Recherche possible de la commande dans la base pour mise à jour de son état en "paiement OK"...
+	//Exemple : HLitRecherchePremier(COMMANDE,IDCOMMANDE,sIDCommande)
+	_stPaiementSécurisé.NumTransaction = sNumTransaction
+	
+	si EnregistrePaiement() alors
+		_procedureRetourPaypal(_paiement_validé_)
+	sinon
+		_procedureRetourPaypal(_paiement_erreur_)
+	fin
+	
+	//La il faudrait rediriger vers une page permettant l'édition du ticket, de la facture etc...
+//	LIB_Accéder_à_la_vérification="Paiement accepté !"
+//	Info("Le paiement a été effectué avec succès, n° de transaction PayPal : "+sNumTransaction)
+fin
+

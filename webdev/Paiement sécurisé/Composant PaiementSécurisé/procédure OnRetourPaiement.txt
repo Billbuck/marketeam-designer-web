@@ -1,0 +1,46 @@
+// Résumé : Gestion du retour de paiement
+// Syntaxe :
+//OnRetourPaiement ( [<nIDTransaction> est entier [, <sAction> est chaîne]])
+//
+// Paramètres :
+//	nIDTransaction (entier) : Identifiant de la transaction
+//	sAction (chaîne) : Action à effectuer
+// Valeur de retour :
+// 	Aucune
+//
+// Traitement automatique des exceptions :   exécuter le bloc de code CAS EXCEPTION:
+//
+
+procédure OnRetourPaiement(local nIDTransaction est un entier = PaiementSécurisé.RecupereUnParamètre("secid"), sAction est une chaîne = PaiementSécurisé.RecupereUnParamètre("act"))
+
+	//on traite le retour d'un paiement (retour à la boutique ou retour S2s)
+	
+	//Dans tous les cas on cherche d'abord la transaction
+	
+	si pas HLitRecherchePremier(clt_transaction, IdTransaction, nIDTransaction) alors	
+		AfficheChaineEnHTML("Transaction "+nIDTransaction+" non trouvée, Paramètres reçus :  "+ListeParametresReçus())
+		retour
+	sinon
+		//transaction trouvée
+		
+		//on récupère l'objet sérialisé enregistré dans le fichier des transaction
+		//cela permet de retrouver tous les paramètres enregistrés au départ du paiement
+		clPaiement 	est un PaiementSécurisé(0xffff)
+		bufObjet	est un Buffer = HexaVersBuffer(clt_transaction.ObjetPaiement)
+		// Désérialise l'objet
+		<compile si TypeConfiguration=Android>
+			Désérialise(clPaiement, bufObjet, psdXML)
+		<sinon>
+			Désérialise(clPaiement, bufObjet, psdBinaire)
+		<fin>
+		
+		//Appel la méthode qui traite le retour
+		clPaiement:OnRetourPaiement(sAction)
+				
+	fin
+
+cas exception:
+
+	ChaîneAffiche("<HTML>"+ConvertirTexteEnTML("Exception (TR"+nIDTransaction+") : "+RC+ExceptionInfo())+"</HTML>",typeMimeHTML)	
+	
+retour

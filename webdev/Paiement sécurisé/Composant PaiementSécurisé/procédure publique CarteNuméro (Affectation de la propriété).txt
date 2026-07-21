@@ -1,0 +1,4 @@
+procédure publique CarteNuméro(sValeur est une chaîne)
+//RAZ token
+m_sCarte_Token = ""
+m_sCarte_Numero=Remplace(ChaîneFormate(sValeur,ccSansEspaceIntérieur)," ","")

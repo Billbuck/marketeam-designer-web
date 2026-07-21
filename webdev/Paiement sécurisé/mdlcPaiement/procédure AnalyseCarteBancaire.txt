@@ -16,12 +16,12 @@ nAjax est un entier
 
 sCarteNumero est une chaîne
 
-sCarteNumero = ChaîneFormate(saiCarteNumero,ccSansPonctuationNiEspace)
+sCarteNumero = ChaîneFormate(saiCarteBancaireNumero,ccSansPonctuationNiEspace)
 
 si Taille(sCarteNumero) <= 3 alors
 	imgCarteBancaire	= "ext\Cartes\carte-bleue 61x40.svg"
 sinon
-	si Taille(sCarteNumero) = CaractOccurrenceType(saiCarteNumero,ctNumérique) alors
+	si Taille(sCarteNumero) = CaractOccurrenceType(saiCarteBancaireNumero,ctNumérique) alors
 		nAjax = AJAXExécuteAsynchrone(ajaxSynchroniseVariablesServeur,cpCarteBancaire.IdentificationCarteBancaire, navAfficheCarteBancaire, sCarteNumero)
 	sinon
 		imgCarteBancaire = "ext\Cartes\carte-bleue 61x40.svg"

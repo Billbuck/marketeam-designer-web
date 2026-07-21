@@ -1,0 +1,82 @@
+// Résumé : Gestion du retour PayBox 3DSecure
+// Syntaxe :
+//[ <Résultat> = ] OnRetourPaiementPayBoxDirecte3DSecure (<nMode> est entier, <sInformations> est chaîne)
+//
+// Paramètres :
+//	nMode (entier) : <indiquez ici le rôle de nMode>
+//	sInformations (chaîne ANSI) : (sortie) Informations sur le retour
+// Valeur de retour :
+// 	booléen : // 	Aucune
+//
+//	sAction (chaîne ANSI) : (sortie) Mode d'erreur
+procédure OnRetourPaiementPayBoxDirecte3DSecure(nMode est un entier,sInformations est une chaîne)  : booléen
+//par défaut
+bRetour est un booléen = Faux
+sListeParam		est une chaîne
+//Paramètres reçus
+ParametresReçus est un tableau associatif (SansDoublon+ccSansCasse) de chaînes
+sListeParam = ListeParametresReçus("&",ParametresReçus)
+XTRACE("BRUT = " + ValeurEnvironnement("QUERY_STRING","") + " | METHODE = " + ValeurEnvironnement("REQUEST_METHOD",""))
+XTRACE("Retour Paybox 3D Secure " +sListeParam)
+
+//	IdSession=88&StatusPBX=Autorisation à faire&3DSTATUS=Y&3DSIGNVAL=Y&3DENROLLED=Y&3DERROR=0&3DECI=05&3DXID=MDAwMDAwMDAwMDAxMjM0NTY3ODk=&3DCAVV=CAACB0STOCk0WZEBGJM4AAAAAAA=
+// &3DCAVVALGO=2&ID3D=7700000028824
+// &Check=jhZVSGxgX9ZiJI0xasbh6ms5gl9YYzSKMHlWo/fOUr4B4ooJDMvFO/ykv9t2t8vzL4ZE8mpbyJQVnK8mrPJ5TWOet4GK9JiOKGHgS2ZV5K6Ep2YvyLYFMxm8K1Bbcp+MKviAsHmXXEz6fzo4iqhHdmVWpVmfBCXp+8eKTt9cehk=
+// &act=ps_retour3DS&secid=88&fpay=1
+
+//récupère les informations de carte (PAN + CVV + date d'expiration) conservées pendant la phase 3DS
+sCarteInfo3DS est une chaîne = Décrypte(m_sCarte_Temps3DS, "cbszi4q87q", crypteSécurisé, encodeBASE64)
+CarteNuméro			= ExtraitChaîne(sCarteInfo3DS, 1, TAB)
+CarteCVV			= ExtraitChaîne(sCarteInfo3DS, 2, TAB)
+CarteDateExpiration	= ExtraitChaîne(sCarteInfo3DS, 3, TAB)
+sCarteInfo3DS		= ""
+//Efface les infos de carte qui étaient enregistrées (cryptées)
+m_sCarte_Temps3DS=""
+MiseajourObjetTransaction()
+
+//3dSecure OK ?
+si ParametresReçus["StatusPBX"]~="Autorisation à faire" alors
+	bRetour = Vrai
+	//paiement OK
+	nMode = PAIEMENT_ACCORD
+	XTRACE("Accord 3D Secure Paybox")
+	MarquerPaiement(NuméroCommande, PAIEMENT_ACCORD)
+	//on enregistre
+	//on termine
+
+	//	Anciens paramètres 3DS v1, obsolètes — remplacés par ID3D
+	//	FormulaireParamètreAjoute("3DSTATUS",ParametresReçus["3DSTATUS"])
+	//	FormulaireParamètreAjoute("3DENROLLED",ParametresReçus["3DENROLLED"])
+	//	FormulaireParamètreAjoute("3DECI",ParametresReçus["3DECI"])
+	//	FormulaireParamètreAjoute("3DERROR",ParametresReçus["3DERROR"])
+	//	FormulaireParamètreAjoute("3DXID",ParametresReçus["3DXID"])
+	//	FormulaireParamètreAjoute("3DCAVV",ParametresReçus["3DCAVV"])
+	//	FormulaireParamètreAjoute("3DCAVVALGO",ParametresReçus["3DCAVVALGO"])
+	//	FormulaireParamètreAjoute("3DSIGNVAL",ParametresReçus["3DSIGNVAL"])
+	FormulaireParamètreAjoute("ID3D",ParametresReçus["ID3D"])
+
+	XTRACE("Lancement paiement direct Paybox suite accord 3D Secure")
+
+	Multitâche(-200)	// pause de 2 secondes : laisse Paybox finaliser le dossier 3DS avant de débiter
+
+	Mode3DS = Faux //plus 3DS
+	si PaiementPayBox_Direct(m_moMontant,CarteDebite) alors
+		nMode = PAIEMENT_VALIDE
+		sInformations+="Validation du paiement"
+	sinon
+		nMode = PAIEMENT_REFUSE
+		sInformations+="Echec du paiement refusé malgré l'accord 3D Secure. "+ErreurInfo
+	fin
+	//Purge des données sensibles sitôt le débit effectué
+	//(accès direct aux membres : le setter de CarteNuméro effacerait le token)
+	m_sCarte_Numero	= ""
+	m_sCarte_CVV	= ""
+	MarquerPaiement(NuméroCommande, nMode)
+sinon
+	XTRACE("Retour Paybox 3D Secure refusé : "+ParametresReçus["StatusPBX"])
+	sInformations+="Paybox 3D Secure refusé "+ParametresReçus["StatusPBX"]
+	nMode = PAIEMENT_REFUSE
+	bRetour = Vrai
+fin
+
+renvoyer bRetour

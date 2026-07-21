@@ -1,0 +1,18 @@
+// Résumé : Crée un formulaire HTTP
+// Syntaxe :
+//CréeFormulaire (<sFormulaire> est chaîne)
+//
+// Paramètres :
+//	sFormulaire (chaîne ANSI) : Nom du formulaire
+// Valeur de retour :
+// 	Aucune
+//
+procédure privée CréeFormulaire(local sFormulaire est une chaîne)
+
+	// Crée le formulaire
+	HTTPCréeFormulaire(sFormulaire)
+	TableauSupprimeTout(m_tabParametresFormulaire)
+	
+	
+	// Vide la liste des valeurs
+	SupprimeTout(m_taValeurs)

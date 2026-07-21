@@ -1,0 +1,174 @@
+procédure LanceEnregistrementCarte()
+
+//Enregistre une carte bancaire SANS achat :
+//3DS (RemoteMPI) puis inscription abonné Paybox (00056) avec une autorisation de 1 € JAMAIS capturée (donc jamais débitée)
+
+sCarteNumero			est une chaîne
+sDateSaisie				est une chaîne
+sCryptogramme			est une chaîne
+sEmailClient			est une chaîne
+nOptionPageAdresse		est un entier
+sPayboxCompte			est une chaîne	= cpFonction.ValeurParametre("Paybox_Compte",prm_parametre.ValChaine.Nom)
+bPayboxModeReel			est un booléen	= cpFonction.ValeurParametre("Paybox_Mode_Reel",prm_parametre.ValNumerique.Nom)
+bPayboxTestPageRetour	est un booléen	= cpFonction.ValeurParametre("Paybox_Test_Page_Retour",prm_parametre.ValNumerique.Nom)
+bPayboxForcerHttps		est un booléen	= cpFonction.ValeurParametre("Paybox_Forcer_Https",prm_parametre.ValNumerique.Nom)
+
+//------------------------------------------------------------------ contrôles de saisie
+
+sCarteNumero	= ChaîneFormate(saiCarteBancaireNumero,ccSansPonctuationNiEspace)
+sCryptogramme	= saiCarteBancaireCryptogramme
+si Taille(sCarteNumero) <> CaractOccurrenceType(sCarteNumero,ctNumérique) alors
+	Info("Numéro de carte invalide")
+	renvoyer Faux
+fin
+si Gauche(sCarteNumero,2) = "34" _ou_ Gauche(sCarteNumero,2) = "37" alors
+	//le contrat Paybox actuel n'inclut pas American Express (cf. Vision, marques acceptées)
+	//si un contrat Amex est souscrit un jour : rétablir ici le contrôle 15 chiffres + CID 4 chiffres
+	Info("Les cartes American Express ne sont pas acceptées. Utilisez une carte CB, Visa ou Mastercard.")
+	renvoyer Faux
+sinon
+	//autres cartes : 16 chiffres, cryptogramme à 3 chiffres
+	si Taille(sCarteNumero) <> 16 alors
+		Info("Le numéro de carte comporte 16 chiffres")
+		renvoyer Faux
+	fin
+	si Taille(sCryptogramme) <> 3 alors
+		Info("Le cryptogramme comporte 3 chiffres (au verso de la carte)")
+		renvoyer Faux
+	fin
+	//clé de Luhn : détecte les fautes de frappe avant d'appeler Paybox (fonction du composant, 16 chiffres uniquement)
+	si pas bVérifierCléLuhn(sCarteNumero) alors
+		Info("Numéro de carte invalide (erreur de saisie probable)")
+		renvoyer Faux
+	fin
+fin
+
+sDateSaisie = ChaîneFormate(saiCarteBancaireDateExpiration,ccSansPonctuationNiEspace)
+selon Taille(sDateSaisie)
+	cas 4	: gsCarteDateMMAA = sDateSaisie											//saisie MM/AA
+	cas 6	: gsCarteDateMMAA = Gauche(sDateSaisie,2) + Droite(sDateSaisie,2)		//saisie MM/AAAA
+	autre cas
+		Info("Date d'expiration invalide")
+		renvoyer Faux
+fin
+si Gauche(gsCarteDateMMAA,2) < "01" _ou_ Gauche(gsCarteDateMMAA,2) > "12" alors
+	Info("Mois d'expiration invalide")
+	renvoyer Faux
+fin
+si DernierJourDuMois(ChaîneVersDate(gsCarteDateMMAA,"MMAA")) < DateSys() alors
+	Info("Cette carte est expirée")
+	renvoyer Faux
+fin
+
+si Taille(sCryptogramme) <> CaractOccurrenceType(sCryptogramme,ctNumérique) alors
+	Info("Cryptogramme invalide")
+	renvoyer Faux
+fin
+
+si saiCarteBancaireLibelle = "" alors
+	Info("Donnez un nom à la carte bancaire")
+	renvoyer Faux
+fin
+
+//email de l'utilisateur connecté (exigé par le composant pour la transaction)
+sEmailClient = Partage.__vcUser.stCoordonnées.Email
+si sEmailClient = "" alors
+	Info("Email de l'utilisateur introuvable")
+	renvoyer Faux
+fin
+
+//identification de la marque : remplit cpCarteBancaire.stCarteBancaire (utilisé par l'enregistrement final)
+cpCarteBancaire.IdentificationCarteBancaire(sCarteNumero)
+
+//mémorise pour FinEnregistrementCarte (après le retour 3DS)
+gsCarteLibelle	= saiCarteBancaireLibelle
+gsCartePorteur	= saiCarteBancairePorteur
+gsCarteCode4	= Droite(sCarteNumero,4)
+gsCarteCode8	= Gauche(sCarteNumero,8)
+gbCarteDefaut	= intCarteBancaireDefaut
+
+//------------------------------------------------------------------ configuration Paybox
+
+si sPayboxCompte = "DEV" alors
+	gpsPaybox:Site						= cpFonction.ValeurParametre("Paybox_Dev_Site",prm_parametre.ValChaine.Nom)
+	gpsPaybox:IdentifiantSite			= cpFonction.ValeurParametre("Paybox_Dev_Identifiant_Site",prm_parametre.ValChaine.Nom)
+	gpsPaybox:Rang						= cpFonction.ValeurParametre("Paybox_Dev_Rang",prm_parametre.ValChaine.Nom)
+	gpsPaybox.Clé						= cpFonction.ValeurParametre("Paybox_Dev_Cle",prm_parametre.ValChaine.Nom)
+sinon
+	gpsPaybox:Site						= cpFonction.ValeurParametre("Paybox_Prod_Site",prm_parametre.ValChaine.Nom)
+	gpsPaybox:IdentifiantSite			= cpFonction.ValeurParametre("Paybox_Prod_Identifiant_Site",prm_parametre.ValChaine.Nom)
+	gpsPaybox:Rang						= cpFonction.ValeurParametre("Paybox_Prod_Rang",prm_parametre.ValChaine.Nom)
+	gpsPaybox.Clé						= cpFonction.ValeurParametre("Paybox_Prod_Cle",prm_parametre.ValChaine.Nom)
+fin
+
+gpsPaybox.IgnoreTestPageRetour			= pas bPayboxTestPageRetour
+gpsPaybox.HTTP_ModeRequete				= PaiementSécurisé.HTTP_MODE_NATIF
+gpsPaybox.HTTP_TimeOut					= 15*1000 //15s
+gpsPaybox.HTTP_VersionSSL				= ProtocoleTLS1_2 + ProtocoleTLS1_3
+gpsPaybox:Simulation					= bPayboxModeReel = Faux ? MODE_TEST sinon MODE_REEL
+
+//informations de la carte à inscrire
+gpsPaybox:CarteNuméro					= sCarteNumero
+gpsPaybox:CarteCVV						= sCryptogramme
+gpsPaybox:CarteDateExpiration			= gsCarteDateMMAA
+gpsPaybox:CarteMemorise					= Vrai
+gpsPaybox.CarteInscriptionSeule			= Vrai	//00056 SANS capture : rien n'est encaissé
+gpsPaybox:ReferenceAbonne				= cpConnexion.__sConnexion +"_"+ Partage.__vcUser.IdClient +"_"+ Partage.__vcUser.IdContact +"_"+ DateHeureSys()
+gpsPaybox.Mode3DS						= cpFonction.ValeurParametre("Paybox_3D_Secure",prm_parametre.ValNumerique.Nom)
+
+//raz des saisies sensibles
+saiCarteBancaireNumero					= ""
+saiCarteBancaireCryptogramme			= ""
+saiCarteBancaireDateExpiration			= ""
+
+si gpsPaybox.Mode3DS alors
+	//----------------------------------------------------------------------------------------------------------------
+	//--------------Gestion du retour après la vérification 3DSecure
+	//----------------------------------------------------------------------------------------------------------------
+	//si actuellement en SSL ?
+	si bPayboxForcerHttps = Faux alors
+		si PaiementSécurisé::ValeurEnvironnement("HTTPS", "off") ~= "on" alors
+			nOptionPageAdresse			= paSécurisée
+		sinon
+			nOptionPageAdresse			= paComplète
+		fin
+		gpsPaybox.ForceHTTPS			= Faux
+	sinon
+		nOptionPageAdresse				= paSécurisée
+		gpsPaybox.ForceHTTPS			= Vrai
+	fin
+
+	//pour le retour à la boutique
+	gpsPaybox:PageRetour3DSecure		= PageAdresse(RetourPaiement3DSecure,nOptionPageAdresse)
+	//pour la gestion des retours de serveur à serveur
+	gpsPaybox:PageRetourServeurÀServeur	= PageAdresse(RetourPaiementServeur,nOptionPageAdresse)
+
+	//En cas de vérification 3DS.....
+	gpsPaybox:Fin3DSecure				= lienFinEnregistrementCarte..NomComplet
+
+	//Traitement Serveur à serveur effectué en parallèle
+	gpsPaybox:SurAppelServeur			= lienFinEnregistrementCarte..NomComplet
+	//----------------------------------------------------------------------------------------------------------------
+fin
+
+gsRefEnregistrementCarte				= "ADDCB_" + Partage.__vcUser.IdContact + "_" + DateHeureSys()
+gpsPaybox:NuméroCommande				= gsRefEnregistrementCarte
+gpsPaybox:VerifieSignaturePaybox		= Vrai
+
+gstParametreCarte.IdClient				= Partage.__vcUser.IdClient
+gstParametreCarte.IdContact				= Partage.__vcUser.IdContact
+gstParametreCarte.TransactionMontant	= 1
+gstParametreCarte.Email					= sEmailClient
+gstParametreCarte.Référence				= gsRefEnregistrementCarte
+
+//autorisation de contrôle de 1 € (jamais capturée, donc jamais débitée)
+si Paiement_Direct(gpsPaybox, 1, sEmailClient, gstParametreCarte) = Faux alors
+	Erreur("Échec de l'enregistrement de la carte : " +RC+ gpsPaybox:ErreurInfo)
+sinon
+	//si pas de 3D Secure on a la réponse tout de suite ici
+	si gpsPaybox.Mode3DS = Faux alors
+		FinEnregistrementCarte()
+	fin
+fin
+
+renvoyer Vrai

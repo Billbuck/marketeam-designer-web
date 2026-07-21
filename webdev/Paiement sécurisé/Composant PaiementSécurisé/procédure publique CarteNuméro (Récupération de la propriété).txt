@@ -1,0 +1,3 @@
+procédure publique CarteNuméro() : chaîne
+
+renvoyer m_sCarte_Numero

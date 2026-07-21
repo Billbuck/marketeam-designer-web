@@ -1,0 +1,126 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//ConstruitURLPaybox ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure ConstruitURLPaybox()
+sPreprod  est une chaîne
+
+si m_bURLFournisseurChangee alors
+	si m_sIdentifiant = IDENTIFIANT_TEST_PAYBOX alors
+		m_sURLFournisseur= m_taURL_Simu_Fournisseurs[PayBox]
+	sinon	
+		si m_nSimulation=MODE_TEST alors
+			m_sURLFournisseur= m_taURL_Test_Fournisseurs[PayBox]
+		sinon
+			m_sURLFournisseur= m_taURL_Fournisseurs[PayBox]
+		fin
+	fin
+	retour
+fin
+
+
+//https://tpeweb.paybox.com/cgi/RemoteMPI.cgi
+
+// Identifiant de test : environnement de test
+si m_sIdentifiant = IDENTIFIANT_TEST_PAYBOX alors
+	
+	// URL de test
+	si ModeDirect alors
+		si m_bMode3DS alors
+			m_sURLFournisseur ="https://preprod-tpeweb.paybox.com"
+		sinon
+			m_sURLFournisseur ="https://preprod-ppps.paybox.com"
+		fin
+	sinon
+		m_sURLFournisseur ="https://preprod-tpeweb.paybox.com"
+	fin
+sinon	
+	// En pré-production, ajoute le préfixe des serveurs de pré-production
+	si m_nSimulation=MODE_TEST alors
+		sPreprod = "preprod-"			
+	fin
+	bServeurOK est un booléen= Faux
+	tabServeursPaybox 				est un tableau de chaînes
+	si ModeDirect alors
+		si m_bMode3DS alors
+			tabServeursPaybox=m_tabServeursPayboxDirect3DS
+		sinon
+			tabServeursPaybox=m_tabServeursPayboxDirect
+		fin
+	sinon
+		tabServeursPaybox=m_tabServeursPaybox
+	fin
+	// Détermine le serveur Paybox
+	pour tout sServeur de tabServeursPaybox
+		// Appel du serveur
+		sRetourRequete 	est une chaîne
+		bRequeteOK 		est un booléen
+		(bRequeteOK,sRetourRequete) = RequeteWeb("https://" + sServeur + "/load.html")
+		si bRequeteOK alors
+			// Lit la valeur du <DIV id="server_status">
+		 	si ExtraitChaîne(ExtraitChaîne(ExtraitChaîne(sRetourRequete,2,"id=""server_status"""),2,">"),1,"<")~="OK" alors
+		 		bServeurOK = Vrai
+		 	fin
+		 	
+//			// Lecture du résultats
+//			XMLDocument("DOC_TPE", sRetourRequete, xdHTML)
+//			SI PAS ErreurDétectée ALORS
+//				// Racine (HTML)
+//				XMLRacine("DOC_TPE")
+//				// BODY
+//				XMLFils("DOC_TPE"); XMLSuivant("DOC_TPE")
+//				// DIV[2]
+//				XMLFils("DOC_TPE"); XMLSuivant("DOC_TPE"); XMLSuivant("DOC_TPE")
+//				SI XMLDonnée("DOC_TPE") = "OK" ALORS
+//					bServeurOK = Vrai
+//				FIN
+//			FIN			
+//			// Fin de lecture
+//			XMLTermine("DOC_TPE")
+		fin
+		
+		// Si on a trouvé le serveur
+		si bServeurOK alors
+			
+			// Conserve le serveur
+			m_sURLFournisseur = "https://" + sPreprod + sServeur
+			sortir
+		fin
+	fin
+	
+
+	// Pas de serveur à appeler
+	si pas bServeurOK alors
+		//aucun serveur OK, on prend le premier (il peut y avoir un pb d'accès depuis le serveur de déploiement)
+		m_sURLFournisseur = "https://" + sPreprod + tabServeursPaybox[1]		
+		XERREUR("Aucun serveur Paybox n'est accessible, utilisation du premier serveur")
+	fin	
+fin
+
+si ModeDirect alors
+	si m_bMode3DS alors
+		m_sURLFournisseur+="/cgi/RemoteMPI.cgi"
+	sinon
+		m_sURLFournisseur+="/PPPS.php"
+	fin
+sinon
+	si m_taParamSuppFormulairePaiement["PBX_TYPEPAIEMENT"]~="LIMONETIK" alors
+		m_sURLFournisseur+= "/php/"
+	sinon
+	si FormatAffichage = Ordinateurs alors
+		m_sURLFournisseur+= "/cgi/MYchoix_pagepaiement.cgi"
+	sinon
+		m_sURLFournisseur+="/cgi/ChoixPaiementMobile.cgi"
+	fin
+	fin
+
+fin
+

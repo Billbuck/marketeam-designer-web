@@ -1,0 +1,13 @@
+Bloc à AJOUTER dans les déclarations globales de pgeMesCartesBancaires :
+
+
+//---- Enregistrement d'une carte bancaire sans achat (inscription Paybox 00056 sans capture)
+gpsPaybox					est un PaiementSécurisé(PayBox)
+gstParametreCarte			est une structPaiementParametre
+gsRefEnregistrementCarte	est une chaîne
+gsCarteLibelle				est une chaîne
+gsCartePorteur				est une chaîne
+gsCarteCode4				est une chaîne
+gsCarteCode8				est une chaîne
+gsCarteDateMMAA				est une chaîne
+gbCarteDefaut				est un booléen

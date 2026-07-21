@@ -1,0 +1,3 @@
+procédure publique CarteToken() : chaîne
+
+renvoyer m_sCarte_Token

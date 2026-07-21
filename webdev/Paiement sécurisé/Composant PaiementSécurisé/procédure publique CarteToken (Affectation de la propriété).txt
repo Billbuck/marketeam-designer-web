@@ -1,0 +1,5 @@
+procédure publique CarteToken(local sValeur est une chaîne)
+//RAZ N° carte
+m_sCarte_Numero = ""
+
+m_sCarte_Token=sValeur

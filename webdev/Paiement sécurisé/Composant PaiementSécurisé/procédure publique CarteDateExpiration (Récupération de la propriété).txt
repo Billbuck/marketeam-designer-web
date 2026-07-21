@@ -1,0 +1,3 @@
+procédure publique CarteDateExpiration() : chaîne
+
+renvoyer m_sCarte_DateExpiration

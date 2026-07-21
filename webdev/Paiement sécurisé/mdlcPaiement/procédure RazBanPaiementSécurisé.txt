@@ -6,10 +6,9 @@ cboCarteBancaire.SupprimeTout()
 _taaInterrupteur.SupprimeTout()
 
 saiCarteBancairePorteur								= ""
-saiCarteNumero										= ""
-cboCarteMois										= ""
-cboCarteAnnée										= ""
-saiCarteCode										= ""
+saiCarteBancaireNumero								= ""
+saiCarteBancaireDateExpiration						= ""
+saiCarteBancaireCryptogramme						= ""
 saiCarteBancaireLibelle								= ""
 imgCarteBancaireMémorisée.Visible					= Faux
 cboCarteBancaire.Visible							= Faux

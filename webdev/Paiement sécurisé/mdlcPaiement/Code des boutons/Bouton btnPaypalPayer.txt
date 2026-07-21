@@ -83,30 +83,19 @@ fin
 //Autres codes langues : https://developer.paypal.com/docs/api/reference/locale-codes/
 
 
-// Paramétrage du paiement (ici données de test PayPal)
-//API Username (et PAS Test Account)
-
-/// MODE DEV
-// ⚠ MIROIR : identifiants MASQUÉS (jamais de secrets dans le dépôt Git).
-// Les vraies valeurs sont dans le projet WebDev — à migrer vers prm_parametre
-// comme Paybox (cf. Code d'initialisation du modèle de champ).
-_psPaypal:PayPalIdentifiant	= "paypal-facilitator_api1.chronodirect.com"
-//API Password
-_psPaypal:PayPalMotDePasse	= "***MASQUE-VOIR-PROJET-WEBDEV***"
-//Signature
-_psPaypal:PayPalSignature	= "***MASQUE-VOIR-PROJET-WEBDEV***"
-
+// Paramétrage du paiement : API REST Orders v2
+// PayPalIdentifiant = Client ID de l'application REST, PayPalMotDePasse = Secret
+// (identifiants stockés dans prm_parametre, jamais en dur dans le code)
+si cpFonction.ValeurParametre("Paypal_Compte",prm_parametre.ValChaine.Nom) = "DEV" alors
+	_psPaypal:PayPalIdentifiant	= cpFonction.ValeurParametre("Paypal_Dev_ClientId",prm_parametre.ValChaine.Nom)
+	_psPaypal:PayPalMotDePasse	= cpFonction.ValeurParametre("Paypal_Dev_Secret",prm_parametre.ValChaine.Nom)
+sinon
+	_psPaypal:PayPalIdentifiant	= cpFonction.ValeurParametre("Paypal_Prod_ClientId",prm_parametre.ValChaine.Nom)
+	_psPaypal:PayPalMotDePasse	= cpFonction.ValeurParametre("Paypal_Prod_Secret",prm_parametre.ValChaine.Nom)
+fin
 
 // Mode simulation de paiement ou vrai paiement ?
-_psPaypal:Simulation			= MODE_TEST
-//_psPaypal:Simulation			= MODE_REEL
-
-/// MODE PROD
-//	_psPaypal:PayPalIdentifiant	= "paypal_api1.chronodirect.com"
-//	//API Password
-//	_psPaypal:PayPalMotDePasse	= "***MASQUE-VOIR-PROJET-WEBDEV***"
-//	//Signature
-//	_psPaypal:PayPalSignature	= "***MASQUE-VOIR-PROJET-WEBDEV***"
+_psPaypal:Simulation			= cpFonction.ValeurParametre("Paypal_Mode_Reel",prm_parametre.ValNumerique.Nom) = Faux ? MODE_TEST sinon MODE_REEL
 
 
 
@@ -219,7 +208,8 @@ _psPaypal:NuméroCommande = _stPaiementParametre.Référence
 //Et lance le paiement avec le montant à payer et l’émail client
 si Paiement_DepuisBanque(_psPaypal, _stPaiementParametre.TransactionMontant, _stPaiementParametre.Email, _stPaiementParametre) = Faux alors
 	//Le paiement n'a pas pu être lancé, le client n'a même pas été redirigé vers la banque
-	PopupAfficheMessage("Échec du lancement paiement sécurisé","ERREUR",_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
+	PopupFerme(popWaitPaypal)
+	PopupAfficheMessage("Échec du lancement paiement sécurisé" +RC+ _psPaypal:ErreurInfo,"ERREUR",_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
 
 sinon
 	//Le paiement OK, le site Paypal va s'afficher à l'internaute

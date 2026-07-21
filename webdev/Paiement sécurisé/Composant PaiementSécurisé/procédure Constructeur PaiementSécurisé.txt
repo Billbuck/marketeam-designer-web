@@ -1,0 +1,281 @@
+// Résumé : Crée un nouvel objet de paiement sécurisé
+// Syntaxe :
+//Constructeur (<nFournisseur> est entier)
+//
+// Paramètres :
+//	nFournisseur (entier) : Fournisseur de paiement sécurisé (Paybox, CréditMutuel, CIC, OBC, ...)
+// Valeur de retour :
+// 	Aucune
+//
+procédure Constructeur(local nFournisseur est un entier)
+
+	sLangue est une chaîne
+	m_bVerifieSignaturePaybox=Vrai
+	m_nPort_3DS = 8082
+	m_sAdresseIP_3DS = "127.0.0.1"
+	m_sVariablesRetourPaybox="montant:M;reference:R;auto:A;trans:T;abo:B;paiement:P;carte:C;idtrans:S;erreur:E;auth:F;3sd:G;paysip:i;payscarte:Y;fincb:J;debcb:N"
+
+	m_sVariablesRetourPayboxAvecAbonnement=m_sVariablesRetourPaybox+";abocarte:U"
+	m_sVariablesRetourPaybox+=";sign:K"
+	m_sVariablesRetourPayboxAvecAbonnement+=";sign:K"
+	// RAZ des erreurs
+	XERREUR()
+	quand exception dans
+		<compile si TypeConfiguration=Site ou TypeConfiguration=ComposantExterne>
+			FormatAffichage =  (NavigateurPlateforme() dans (NavigateurPlateformeAndroid, NavigateurPlateformeBlackBerry, ...
+			NavigateurPlateformeiPhone, NavigateurPlateformeMobile, ...
+			NavigateurPlateformeWindowsMobile, NavigateurPlateformeWindowsPhone) ? TerminauxMobiles sinon Ordinateurs)
+		<sinon>
+			<compile si TypeConfiguration=Android ou  TypeConfiguration=iOS>
+				FormatAffichage =TerminauxMobiles
+			<sinon>
+				FormatAffichage =Ordinateurs
+			<fin>
+		<fin>
+
+	faire
+		FormatAffichage=Ordinateurs
+	fin
+
+
+	DossierFichierClePublic=fRepDonnées()
+	//Noms des éléments externes utilisés
+	//DLLs
+	//ms_DLLATOS="apipayment.dll"
+	si EnModeLinux() alors
+		m_sEXE_ATOSRequete = "request"
+		m_sEXE_ATOSReponse = "response"
+	sinon
+		m_sEXE_ATOSRequete = "request.exe"
+		m_sEXE_ATOSReponse = "response.exe"
+	fin
+
+	//Serveurs Paybox
+	m_tabServeursPaybox 			= ["tpeweb.paybox.com", "tpeweb1.paybox.com"]
+	m_tabServeursPayboxDirect 		= ["ppps.paybox.com", "ppps.paybox.com"]
+	m_tabServeursPayboxDirect3DS	= ["tpeweb.paybox.com", "tpeweb0.paybox.com","tpeweb1.paybox.com","tpeweb2.paybox.com"]
+
+	//SIPS 2 (ATOS 2)
+	m_taURL_Fournisseurs[SIPS2						]	        = "https://sherlocks-payment-webinit.secure.lcl.fr"      		 +"/paymentInit"
+	m_taURL_Fournisseurs[BNP_SIPS2					]	        = "https://payment-webinit.mercanet.bnpparibas.net"				+"/paymentInit"
+	m_taURL_Fournisseurs[SociétéGénérale_SIPS2		]	        = "https://sherlocks-payment-webinit.secure.lcl.fr"      		 +"/paymentInit"
+
+	m_taURL_Test_Fournisseurs[SIPS2					]	        = "https://sherlocks-payment-webinit.test.secure.lcl.fr"        +"/paymentInit"
+	m_taURL_Test_Fournisseurs[BNP_SIPS2				]	        = "https://payment-webinit-mercanet.test.sips-services.com"      +"/paymentInit"
+	m_taURL_Test_Fournisseurs[SociétéGénérale_SIPS2	]	        = "https://sherlocks-payment-webinit.test.secure.lcl.fr"        +"/paymentInit"
+
+	m_taURL_Simu_Fournisseurs[SIPS2					]	        = "https://sherlocks-payment-webinit-simu.secure.lcl.fr"        +"/paymentInit"
+	m_taURL_Simu_Fournisseurs[BNP_SIPS2				]	        = "https://payment-webinit.simu.mercanet.bnpparibas.net"        +"/paymentInit"
+	m_taURL_Simu_Fournisseurs[SociétéGénérale_SIPS2	]	        = "https://sherlocks-payment-webinit-simu.secure.lcl.fr"        +"/paymentInit"
+
+	//Realex
+	m_taURL_Fournisseurs[Realex						]	        = "https://hpp.realexpayments.com/pay"
+	m_taURL_Test_Fournisseurs[Realex				]	        = "https://hpp.sandbox.realexpayments.com/pay"
+
+	//PAYBOX
+	m_taURL_Fournisseurs[PayBox						]	        = "https://preprod-tpeweb.paybox.com"
+
+
+
+	// MoneticoPaiement
+	m_taURL_Fournisseurs[CréditMutuelOld			]	        = "https://paiement.creditmutuel.fr"							+"/paiement.cgi"
+	m_taURL_Fournisseurs[CICOld						]	        = "https://ssl.paiement.cic-banques.fr"                         +"/paiement.cgi"
+	m_taURL_Fournisseurs[OBCOld						]	        = "https://ssl.paiement.banque-obc.fr"                          +"/paiement.cgi"
+	m_taURL_Test_Fournisseurs[CréditMutuelOld		]	        = "https://paiement.creditmutuel.fr/test"                       +"/paiement.cgi"
+	m_taURL_Test_Fournisseurs[CICOld				]	        = "https://ssl.paiement.cic-banques.fr/test"                    +"/paiement.cgi"
+	m_taURL_Test_Fournisseurs[OBCOld				]	        = "https://ssl.paiement.banque-obc.fr/test"                     +"/paiement.cgi"
+
+	m_taURL_Fournisseurs[MoneticoPaiement			]	        = "https://p.monetico-services.com"								+"/paiement.cgi"
+	m_taURL_Test_Fournisseurs[MoneticoPaiement		]	        = "https://p.monetico-services.com/test"        	            +"/paiement.cgi"
+
+
+	// PayPal
+	m_taURL_Fournisseurs[PayPal						]	        = "https://api-3t.paypal.com/nvp"
+	m_taURL_Test_Fournisseurs[PayPal				]	        = "https://api-3t.sandbox.paypal.com/nvp"
+
+	// Banque populaire
+	m_taURL_Fournisseurs[BanquePopulaire			]	        = "https://ecom.cimetz.com/telepaie/cgishell.exe/epaie01.exe"
+	m_taURL_Test_Fournisseurs[BanquePopulaire		]	        = "https://ecom.cimetz.com/telepaie/cgishell.exe/epaie01.exe"
+
+	// Ogone
+	m_taURL_Fournisseurs[OgoneECommerce				]	        = "https://secure.ogone.com/ncol/prod/orderstandard.asp"
+	m_taURL_Test_Fournisseurs[OgoneECommerce		]	        = "https://secure.ogone.com/ncol/test/orderstandard.asp"
+
+	// Lyra
+	m_taURL_Fournisseurs[Lyra					]	        = "https://secure.payzen.eu/vads-payment/"
+	m_taURL_Fournisseurs[Systempay				]	        = "https://paiement.systempay.fr/vads-payment/"
+	m_taURL_Fournisseurs[Systempay_old			]	        = "https://paiement.systempay.fr/vads-payment/" //par compatibilité
+	m_taURL_Fournisseurs[CaisseEpargne			]	        = "https://paiement.systempay.fr/vads-payment/" //par compatibilité
+	m_taURL_Fournisseurs[Cyberplus				]	        = "https://paiement.systempay.fr/vads-payment/"
+	m_taURL_Fournisseurs[SPPLUS					]	        = "https://paiement.systempay.fr/vads-payment/"
+	m_taURL_Fournisseurs[Sogecommerce			]	        = "https://sogecommerce.societegenerale.eu/vads-payment/"
+	m_taURL_Fournisseurs[DGFIP					]	        = "https://dgfip.payzen.eu/vads-payment/"
+	m_taURL_Fournisseurs[PayZen					]	        = "https://secure.payzen.eu/vads-payment/"
+	m_taURL_Fournisseurs[PayZenCréditDuNord		]	        = "https://secure.payzen.eu/vads-payment/"
+	m_taURL_Fournisseurs[PayZenGermany			]	        = "https://secure.payzen.eu/vads-payment/"
+	m_taURL_Fournisseurs[PayZenIndia			]	        = "https://secure.payzen.co.in/vads-payment/"
+	m_taURL_Fournisseurs[PayZenBrésil			]	        = "https://secure.payzen.com.br/vads-payment/"
+	m_taURL_Fournisseurs[PayZenLatAm			]	        = "https://secure.payzen.lat/vads-payment/"
+	m_taURL_Fournisseurs[PayZenByOSB			]	        = "https://secure.osb.pf/vads-payment/"
+	m_taURL_Fournisseurs[EpayNC					]	        = "https://epayNC.nc/vads-payment/"
+	m_taURL_Fournisseurs[Innopay				]	        = "https://secure.innopay.ch/vads-payment/"
+	m_taURL_Fournisseurs[mPay24					]	        = "https://payment.mpay24.com/vads-payment/"
+	m_taURL_Fournisseurs[BNPPIRB				]	        = "https://e-paiement-securite-bici.com/vads-payment/"
+	m_taURL_Fournisseurs[PayZenDemo				]	        = "https://demo.payzen.eu/vads-payment/"
+
+	m_taURL_Test_Fournisseurs[Lyra				]	    = "https://secure.payzen.eu/vads-payment/"
+	m_taURL_Test_Fournisseurs[Systempay			]	    = "https://paiement.systempay.fr/vads-payment/"
+	m_taURL_Test_Fournisseurs[Systempay_old		]	    = "https://paiement.systempay.fr/vads-payment/" //par compatibilité
+	m_taURL_Test_Fournisseurs[CaisseEpargne		]	    = "https://paiement.systempay.fr/vads-payment/" //par compatibilité
+	m_taURL_Test_Fournisseurs[Cyberplus			]	    = "https://paiement.systempay.fr/vads-payment/"
+	m_taURL_Test_Fournisseurs[SPPLUS			]	    = "https://paiement.systempay.fr/vads-payment/"
+	m_taURL_Test_Fournisseurs[Sogecommerce		]	    = "https://sogecommerce.societegenerale.eu/vads-payment/"
+	m_taURL_Test_Fournisseurs[DGFIP				]	    = "https://dgfip.payzen.eu/vads-payment/"
+	m_taURL_Test_Fournisseurs[PayZen			]	    = "https://secure.payzen.eu/vads-payment/"
+	m_taURL_Test_Fournisseurs[PayZenCréditDuNord]	    = "https://secure.payzen.eu/vads-payment/"
+	m_taURL_Test_Fournisseurs[PayZenGermany		]	    = "https://secure.payzen.eu/vads-payment/"
+	m_taURL_Test_Fournisseurs[PayZenIndia		]	    = "https://secure.payzen.co.in/vads-payment/"
+	m_taURL_Test_Fournisseurs[PayZenBrésil		]	    = "https://secure.payzen.com.br/vads-payment/"
+	m_taURL_Test_Fournisseurs[PayZenLatAm		]	    = "https://secure.payzen.lat/vads-payment/"
+	m_taURL_Test_Fournisseurs[PayZenByOSB		]	    = "https://secure.osb.pf/vads-payment/"
+	m_taURL_Test_Fournisseurs[EpayNC			]	    = "https://epayNC.nc/vads-payment/"
+	m_taURL_Test_Fournisseurs[Innopay			]	    = "https://secure.innopay.ch/vads-payment/"
+	m_taURL_Test_Fournisseurs[mPay24			]	    = "https://payment.mpay24.com/vads-payment/"
+	m_taURL_Test_Fournisseurs[BNPPIRB			]	    = "https://e-paiement-securite-bici.com/vads-payment/"
+	m_taURL_Test_Fournisseurs[PayZenDemo		]	    = "https://demo.payzen.eu/vads-payment/"
+
+	// SaferPay
+	m_taURL_Fournisseurs[Saferpay			]	        = "https://www.saferpay.com/hosting/CreatePayInit.asp"
+	m_taURL_Test_Fournisseurs[Saferpay		]	        = "https://test.saferpay.com/hosting/CreatePayInit.asp"
+
+	m_sURL_TEST_SAFERPAY_VERIFICATION					= "https://test.saferpay.com/hosting/VerifyPayConfirm.asp"
+	m_sURL_SAFERPAY_VERIFICATION						= "https://www.saferpay.com/hosting/VerifyPayConfirm.asp"
+
+	// DataCash Mastercard
+	m_taURL_Fournisseurs[DataCash_Mastercard]	        = "https://migs.mastercard.com.au/vpcpay"
+	m_taURL_Test_Fournisseurs[DataCash_Mastercard]	    = "https://migs-mtf.mastercard.com.au/vpcpay"
+
+	//datatrans
+	m_taURL_Fournisseurs[Datatrans			]	        = "https://pay.datatrans.com"+"/upp/jsp/upStart.jsp"
+	m_taURL_Test_Fournisseurs[Datatrans		]	        = "https://pay.sandbox.datatrans.com"+"/upp/jsp/upStart.jsp"
+
+	m_sURL_LANGUE_SAFERPAY								= "https://www.saferpay.com/vt/xml/language.xml"
+
+	// Définit le fournisseur
+	Fournisseur = nFournisseur
+
+	// Devise "EUR" par défaut
+	Devise = eEUR
+	TokenAlgorithmeHachage=HA_HMAC_SHA_256
+	HachageAlgorithme= HA_SHA_256
+	sLangue = "FR"
+	// Langue par défaut
+	selon Vrai
+		cas (Fournisseur & Lyra) = Lyra, Fournisseur = Systempay_old, Fournisseur = CaisseEpargne
+			HachageAlgorithme= HA_SHA_160 //par compatibilité mais HA_SHA_256 conseillé
+			sLangue = "fr"
+
+		cas Fournisseur = OgoneECommerce
+			HachageAlgorithme= HA_SHA_160
+			sLangue = "fr_FR"
+			//"fr_FR", "en_US", "nl_NL", "nl_BE", "it_IT", "de_DE", "es_ES", "no_NO", "tr_TR"
+
+		cas Fournisseur = Datatrans
+			HachageAlgorithme= HA_HMAC_SHA_256
+			sLangue = "fr"
+			//de,en,fr,it,es,el,no,da,pl,pt
+
+		cas (Fournisseur & Atos) = Atos
+			sLangue = "FR"
+			//"FR", "GE", "EN", "SP", "IT"
+
+		cas Fournisseur = SIPS2
+			HachageAlgorithme= HA_HMAC_SHA_256
+
+		cas Fournisseur = Realex
+			sLangue = "GB"
+			HachageAlgorithme= HA_SHA_160
+
+		cas Fournisseur = PayBox
+			sLangue = "FRA"
+			//"FRA", "GBR", "DEU"
+			HachageAlgorithme= HA_HMAC_SHA_512
+			VersionProtocole="00104"
+
+		cas (Fournisseur & MoneticoPaiementOld) = MoneticoPaiementOld
+			HachageAlgorithme=HA_HMAC_SHA_160
+			sLangue = "FR"
+			//"FR", "EN", "DE", "IT", "ES", "NL"
+
+		cas (Fournisseur & MoneticoPaiement) = MoneticoPaiement
+			HachageAlgorithme=HA_HMAC_SHA_160
+			sLangue = "FR"
+			//"FR", "EN", "DE", "IT", "ES", "NL"
+
+		cas Fournisseur = DataCash_Mastercard
+			sLangue = "fr_FR"
+			HachageAlgorithme= HA_HMAC_SHA_256
+
+		cas Fournisseur = PayPal
+			sLangue = "FR"
+			//AU,DE,FR,GB,IT,ES,US
+
+		autres cas
+		//rien : langue et algo par défaut
+	fin
+
+	Langue = sLangue
+
+	// Mode par défaut
+	si EnModeTest() alors
+		Simulation = 	MODE_TEST
+	sinon
+		Simulation = 	MODE_REEL
+	fin
+
+
+	selon Vrai
+
+		// Adresse IP des serveurs Lyra
+		cas (nFournisseur & Lyra) = Lyra
+			//Documentation :	En cas de restriction mise en place du côté du site marchand, il faudra autoriser la plage d'adresses d'IP 194.50.38.0/255.
+			ServeurBanqueAdresseAjoute("194.50.38.0","194.50.38.255")
+
+		cas nFournisseur = PayBox
+			ServeurBanqueAdresseAjoute("62.161.15.193")   // Production (nouvelle)
+			ServeurBanqueAdresseAjoute("62.161.13.193")   // Production et Recette (nouvelle)
+			ServeurBanqueAdresseAjoute("195.25.67.22")    // Ancienne, à garder tant qu'elle existe
+			ServeurBanqueAdresseAjoute("194.2.122.190")   // Ancienne, encore dans la doc officielle
+
+//			ServeurBanqueAdresseAjoute("195.101.99.76")	 	//Pré-production
+//			ServeurBanqueAdresseAjoute("194.2.122.158")		//Principale
+//			ServeurBanqueAdresseAjoute("194.2.122.190")		//Principale
+//			ServeurBanqueAdresseAjoute("195.25.67.22")		//Principale
+//			ServeurBanqueAdresseAjoute("195.25.7.166")		//
+
+		// Adresse IP des serveurs Ogone
+		cas nFournisseur = OgoneECommerce
+			ServeurBanqueAdresseAjoute("84.233.249.112", "84.233.249.127")
+			ServeurBanqueAdresseAjoute("212.23.45.96", "212.23.45.11 ")
+			ServeurBanqueAdresseAjoute("212.35.124.160", "212.35.124.175")
+			ServeurBanqueAdresseAjoute("212.35.124.176", "212.35.124.191")
+			ServeurBanqueAdresseAjoute("213.254.248.96", "213.254.248.111")
+			ServeurBanqueAdresseAjoute("213.254.248.112", "213.254.248.127")
+			ServeurBanqueAdresseAjoute("72.52.4.0", "72.52.4.255")
+			ServeurBanqueAdresseAjoute("72.52.5.0", "72.52.5.255")
+			ServeurBanqueAdresseAjoute("209.200.154.0", "209.200.154.255")
+		autre cas
+			//pas d'IP prédéfinies
+	fin
+
+	ActiveTLS12()
+
+	HTTP_ModeRequete	= HTTP_MODE_NATIF
+	HTTP_IgnoreErreur 	= 0 //httpIgnoreCertificatInvalide
+	HTTP_TimeOut		= 5*1000 //5s
+	<compile si pas TypeConfiguration=Android>
+		HTTP_VersionSSL		= ProtocoleTLS1_2 + ProtocoleTLS1_3
+
+	<fin>
+
+	EnvoyertransactionReference = Vrai

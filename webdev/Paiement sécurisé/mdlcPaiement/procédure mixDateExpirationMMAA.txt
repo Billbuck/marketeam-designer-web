@@ -1,0 +1,30 @@
+procédure mixDateExpirationMMAA()
+
+//Convertit la saisie de saiCarteBancaireDateExpiration (MM/AA ou MM/AAAA) en "MMAA" (format Paybox DATEVAL)
+//Renvoie "" si la saisie est invalide
+//Procédure "mix" : utilisable en code serveur et en code navigateur
+
+sChiffres	est une chaîne
+sCaractere	est une chaîne
+sMois		est une chaîne
+
+pour i = 1 _à_ Taille(saiCarteBancaireDateExpiration)
+	sCaractere = saiCarteBancaireDateExpiration[[i]]
+	si sCaractere >= "0" _et_ sCaractere <= "9" alors
+		sChiffres += sCaractere
+	fin
+fin
+
+selon Taille(sChiffres)
+	cas 4	: //MMAA : rien à faire
+	cas 6	: sChiffres = Gauche(sChiffres,2) + Droite(sChiffres,2)	//MMAAAA -> MMAA
+	autre cas
+		renvoyer ""
+fin
+
+sMois = Gauche(sChiffres,2)
+si sMois < "01" _ou_ sMois > "12" alors
+	renvoyer ""
+fin
+
+renvoyer sChiffres

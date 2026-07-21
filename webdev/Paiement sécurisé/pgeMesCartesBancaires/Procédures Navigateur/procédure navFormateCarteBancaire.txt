@@ -1,0 +1,47 @@
+procédure navFormateCarteBancaire()
+
+//Formatage à la volée du numéro de carte bancaire (code NAVIGATEUR)
+//À appeler dans l'événement « À chaque modification » (code navigateur) du champ saiCarteBancaireNumero
+//	American Express (préfixe 34/37) : 15 chiffres en 4-6-5
+//	Autres (Visa, Mastercard, CB...) : 16 chiffres en 4-4-4-4
+
+sChiffres	est une chaîne
+sCaractere	est une chaîne
+sFormate	est une chaîne
+nPosGroupe	est un entier = 1
+tabGroupes	est un tableau d'entiers
+
+//ne garde que les chiffres
+pour i = 1 _à_ Taille(saiCarteBancaireNumero)
+	sCaractere = saiCarteBancaireNumero[[i]]
+	si sCaractere >= "0" _et_ sCaractere <= "9" alors
+		sChiffres += sCaractere
+	fin
+fin
+
+si Gauche(sChiffres,2) = "34" _ou_ Gauche(sChiffres,2) = "37" alors
+	//American Express : 15 chiffres en 4-6-5
+	sChiffres = Gauche(sChiffres, 15)
+	tabGroupes.Ajoute(4)
+	tabGroupes.Ajoute(6)
+	tabGroupes.Ajoute(5)
+sinon
+	//autres cartes : 16 chiffres en 4-4-4-4
+	sChiffres = Gauche(sChiffres, 16)
+	tabGroupes.Ajoute(4)
+	tabGroupes.Ajoute(4)
+	tabGroupes.Ajoute(4)
+	tabGroupes.Ajoute(4)
+fin
+
+pour tout nTailleGroupe de tabGroupes
+	si nPosGroupe > Taille(sChiffres) alors sortir
+	si sFormate <> "" alors sFormate += " "
+	sFormate += Milieu(sChiffres, nPosGroupe, nTailleGroupe)
+	nPosGroupe += nTailleGroupe
+fin
+
+//ne réaffecte que si nécessaire (évite de déplacer le curseur inutilement)
+si saiCarteBancaireNumero <> sFormate alors
+	saiCarteBancaireNumero = sFormate
+fin

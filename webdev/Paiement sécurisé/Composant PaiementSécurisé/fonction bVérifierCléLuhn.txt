@@ -1,0 +1,64 @@
+// Résumé : Fonction qui permet de vérifier que le numéro de carte bancaire saisi est correct
+// Syntaxe :
+//[ <Résultat> = ] bVérifierCléLuhn (<nCB> est chaîne)
+//
+// Paramètres :
+//	nCB (chaîne ANSI) : Numéro de la carte
+// Valeur de retour :
+// 	booléen : Vrai si le numéro est correcte/cohérent
+//
+fonction bVérifierCléLuhn(nCB est une chaîne) : booléen
+
+	sNuméroCB 	est une chaîne = Remplace(ChaîneFormate(nCB,ccSansEspaceIntérieur)," ","")
+	nLongueur 	est un entier = 0 		// Nombre de chiffres du code
+	nIndice	  	est un entier = 0
+	nCheck 	  	est un entier
+	nNum 		est un entier
+
+// Vérifier la taille du numéro
+nLongueur = Taille(sNuméroCB)
+
+// La taille est incorrecte
+si nLongueur = 0 ou nLongueur <> 16 alors renvoyer Faux
+
+// Le numéro ne contient que des "0"
+si sNuméroCB = Répète("0", 16) alors renvoyer Faux
+
+
+nTaille est un entier = Taille(sNuméroCB)
+// Tester si chaque caractère est bien un chiffre
+pour nIndice = 1 à nTaille
+	// Le numéro contient un 0 ou un caractère
+	si Val(sNuméroCB[[nIndice]]) = 0 et sNuméroCB[[nIndice]] <> "0" alors renvoyer Faux
+fin
+
+// Déterminer la validité du code selon l'algorithme de la clé de Luhn
+// Comptage de la première série de nombres
+// XXXXXXXXXX
+// x x x x x
+// Somme de cette série pour obtenir eCheck
+pour nIndice = nLongueur à 1 pas -2
+	nNum = Val(sNuméroCB[[nIndice à nIndice]])
+	nCheck += nNum
+fin
+
+// Comptage de la seconde série de nombres
+// XXXXXXXXXX
+// x x x x x
+// Somme de la multiplication par deux (-9 si cette multiplication est supérieure à 9)
+// de cette série pour obtenir eCheck
+pour nIndice = nLongueur-1 à 1 pas -2
+	nNum = Val(sNuméroCB[[nIndice à nIndice]])
+	nNum = nNum * 2
+	si nNum > 9 alors
+		nCheck += nNum - 9
+	sinon
+		nCheck += nNum
+	fin
+fin
+
+// La somme totale doit être un multiple de 10 pour que ce numéro soit correct
+si modulo(nCheck,10) <> 0 alors renvoyer Faux
+
+// Le N° de la carte bancaire est correct
+renvoyer Vrai

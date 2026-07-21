@@ -1,6 +1,7 @@
 procédure PaiementCarteBancaire()
 
 sActivite			est une chaîne
+sDateMMAA			est une chaîne
 nOptionPageAdresse	est un entier
 
 
@@ -57,24 +58,35 @@ _psPaybox:Simulation					= _bPayboxModeReel = Faux ? MODE_TEST sinon MODE_REEL
 si _stPaiementSécurisé.IdCarteBancaire = 0 alors
 	//nouvelle carte
 
+	//le contrat Paybox n'inclut pas American Express (refus bancaire 00157 sinon)
+	si Gauche(ChaîneFormate(saiCarteBancaireNumero,ccSansPonctuationNiEspace),2) = "34" _ou_ Gauche(ChaîneFormate(saiCarteBancaireNumero,ccSansPonctuationNiEspace),2) = "37" alors
+		Erreur("Les cartes American Express ne sont pas acceptées." +RC+ "Utilisez une carte CB, Visa ou Mastercard.")
+		retour
+	fin
+
+	sDateMMAA = mixDateExpirationMMAA()
+	si sDateMMAA = "" alors
+		Erreur("Date d'expiration invalide")
+		retour
+	fin
+
 	_stPaiementSécurisé.CarteLibelle		 	= saiCarteBancaireLibelle
 	_stPaiementSécurisé.CartePorteur		 	= saiCarteBancairePorteur
-	_stPaiementSécurisé.CodeAuthenticite		= Droite(saiCarteNumero,4)
-	_stPaiementSécurisé.CodeEmetteur			= Gauche(ChaîneFormate(saiCarteNumero,ccSansPonctuationNiEspace),8)
+	_stPaiementSécurisé.CodeAuthenticite		= Droite(saiCarteBancaireNumero,4)
+	_stPaiementSécurisé.CodeEmetteur			= Gauche(ChaîneFormate(saiCarteBancaireNumero,ccSansPonctuationNiEspace),8)
 	_stPaiementSécurisé.CarteParDefaut			= intCarteParDefaut
 
 
-	_psPaybox:CarteNuméro						= ChaîneFormate(saiCarteNumero,ccSansPonctuationNiEspace) 	//si un n° de carte est donné le n° de token dans CarteToken est effacé (c'est l'un ou l'autre)
-	_psPaybox:CarteCVV							= saiCarteCode
-	_psPaybox:CarteDateExpiration				= cboCarteMois.ValeurMémorisée + cboCarteAnnée.ValeurMémorisée
+	_psPaybox:CarteNuméro						= ChaîneFormate(saiCarteBancaireNumero,ccSansPonctuationNiEspace) 	//si un n° de carte est donné le n° de token dans CarteToken est effacé (c'est l'un ou l'autre)
+	_psPaybox:CarteCVV							= saiCarteBancaireCryptogramme
+	_psPaybox:CarteDateExpiration				= sDateMMAA
 	_psPaybox:CarteMemorise						= intCarteMémoriser
 	_psPaybox:ReferenceAbonne					= cpConnexion.__sConnexion +"_"+ _stPaiementParametre.IdClient +"_"+ _stPaiementParametre.IdContact +"_"+ DateHeureSys()
 	_psPaybox.Mode3DS							= _bPaybox3DSecure
 
-	saiCarteNumero								= ""
-	saiCarteCode								= ""
-	cboCarteMois								= ""
-	cboCarteAnnée								= ""
+	saiCarteBancaireNumero						= ""
+	saiCarteBancaireCryptogramme				= ""
+	saiCarteBancaireDateExpiration				= ""
 	saiCarteBancairePorteur						= ""
 	saiCarteBancaireLibelle						= ""
 
@@ -122,9 +134,10 @@ sinon
 	si HLitRecherchePremier(clt_carte_bancaire,IdCarteBancaire,_stPaiementSécurisé.IdCarteBancaire) alors
 		_psPaybox:CarteToken					= CarteBancaireDecrypte(clt_carte_bancaire.Token)
 		_psPaybox:CarteDateExpiration			= CarteBancaireDecrypte(clt_carte_bancaire.DateExp)
-		_psPaybox:CarteCVV						= CarteBancaireDecrypte(clt_carte_bancaire.Cvv)
+		//pas de CVV : le paiement sur abonné (jeton Paybox) se fait sans CVV
 		_psPaybox:ReferenceAbonne				= CarteBancaireDecrypte(clt_carte_bancaire.Refabo)
-		sActivite								= PaiementSécurisé.PAYBOX_ACTIVITE_RECURRENT
+		//client présent qui clique (CIT) : activité internet, pas récurrent
+		sActivite								= PaiementSécurisé.PAYBOX_ACTIVITE_INTERNET
 	sinon
 		retour
 	fin

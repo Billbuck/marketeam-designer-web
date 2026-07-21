@@ -1,0 +1,74 @@
+// Résumé : Capture (TYPE 00002) du montant autorisé par une inscription abonné (TYPE 00056)
+// Syntaxe :
+//[ <Résultat> = ] PayboxDirectCapture (<moMontant> est monétaire, <sErreur> est chaîne)
+//
+// Paramètres :
+//	moMontant (monétaire) : Montant à capturer (le même que l'autorisation)
+//	sErreur (chaîne ANSI) : (sortie) Message d'erreur
+// Valeur de retour :
+// 	booléen : Vrai si la capture a été acceptée par Paybox, Faux sinon
+//
+// Traitement automatique des exceptions :   exécuter le bloc de code CAS EXCEPTION:
+//
+
+procédure privée PayboxDirectCapture(local moMontant est un monétaire, sErreur est une chaîne) : booléen
+
+// RAZ des erreurs
+XERREUR()
+
+//références de l'autorisation à capturer, renvoyées par Paybox dans la réponse du 00056
+sNumTrans	est une chaîne = m_taValeurs["NUMTRANS"]
+sNumAppel	est une chaîne = m_taValeurs["NUMAPPEL"]
+
+//le jeton (PORTEUR) et le REFABONNE de l'inscription doivent survivre à la réponse de capture
+//(qui écrase COL_PAIEMENTSECURISE.ParametresReçus avec des valeurs vides)
+sPorteurInscription		est une chaîne = COL_PAIEMENTSECURISE.ParametresReçus["PORTEUR"]
+sRefabonneInscription	est une chaîne = COL_PAIEMENTSECURISE.ParametresReçus["REFABONNE"]
+
+si sNumTrans = "" _ou_ sNumAppel = "" alors
+	sErreur = "Capture impossible : NUMTRANS/NUMAPPEL absents de la réponse d'inscription abonné"
+	renvoyer Faux
+fin
+
+//recommandation Verifone : laisser quelques secondes à Paybox avant la capture
+Multitâche(-300)
+
+sFormCapture est une chaîne = "PAYBOX_CAPT_" + NuméroCommande
+CréeFormulaire(sFormCapture)
+
+AjouteChampFormulaireHTTP(sFormCapture,"VERSION", VersionProtocole)
+AjouteChampFormulaireHTTP(sFormCapture,"SITE", Site)
+AjouteChampFormulaireHTTP(sFormCapture,"IDENTIFIANT", IdentifiantSite)
+AjouteChampFormulaireHTTP(sFormCapture,"RANG", NumériqueVersChaîne(Rang, "02d"))
+AjouteChampFormulaireHTTP(sFormCapture,"CLE", Clé)
+AjouteChampFormulaireHTTP(sFormCapture,"TYPE", PAYBOX_TYPE_DEBIT_SUR_AUTORISATION)
+//NUMQUESTION unique du jour, distinct de celui de l'inscription (qui vaut IdTransaction)
+AjouteChampFormulaireHTTP(sFormCapture,"NUMQUESTION", NumériqueVersChaîne(1000000000 + m_nIDTransaction, "010d"))
+AjouteChampFormulaireHTTP(sFormCapture,"MONTANT", Arrondi(moMontant * 100))
+AjouteChampFormulaireHTTP(sFormCapture,"DEVISE", DeviseVersCodeISO4217())
+AjouteChampFormulaireHTTP(sFormCapture,"REFERENCE", NuméroCommande)
+AjouteChampFormulaireHTTP(sFormCapture,"NUMTRANS", sNumTrans)
+AjouteChampFormulaireHTTP(sFormCapture,"NUMAPPEL", sNumAppel)
+AjouteChampFormulaireHTTP(sFormCapture,"REFABONNE", ReferenceAbonne)
+
+// Horodatage
+dhHorodatage est une DateHeure = DateHeureLocaleVersUTC(DateHeureSys)
+AjouteChampFormulaireHTTP(sFormCapture,"DATEQ", DateVersChaîne(dhHorodatage,"JJMMAAAAHHmmSS"))
+
+XTRACE("Capture Paybox (00002) après inscription abonné, NUMTRANS=" + sNumTrans + " NUMAPPEL=" + sNumAppel)
+
+//envoi sur la même plateforme que l'inscription (m_sURLFournisseur inchangée, recommandation Verifone)
+si pas PayboxDirectEnvoieFormulaire(sFormCapture, sErreur, "") alors
+	renvoyer Faux
+fin
+
+//restaure le jeton et le REFABONNE de l'inscription pour la suite du traitement (mémorisation de la carte)
+si sPorteurInscription <> "" alors COL_PAIEMENTSECURISE.ParametresReçus["PORTEUR"] = sPorteurInscription
+si sRefabonneInscription <> "" alors COL_PAIEMENTSECURISE.ParametresReçus["REFABONNE"] = sRefabonneInscription
+
+renvoyer Vrai
+
+cas exception:
+XERREUR("WL_EXCEPTION [PayboxDirectCapture] : " + ExceptionInfo)
+sErreur = ExceptionInfo
+renvoyer Faux

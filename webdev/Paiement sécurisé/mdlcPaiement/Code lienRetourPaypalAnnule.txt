@@ -1,0 +1,47 @@
+//Accord de paiement refusé ou annulation de l'internaute
+
+//Récupération des informations sur le paiement
+sIDCommande est une chaîne
+moMontantPaiement est un monétaire
+
+sIDCommande =PaiementSécurisé.RecupereUnParamètre("reference")
+moMontantPaiement =Val(PaiementSécurisé.RecupereUnParamètre("montant"))/100
+
+//on vérifie que c'est bien pour la commande en cours
+si sIDCommande<>saiRéférence alors
+	Erreur("Le numéro de commande reçu ne correspond pas à votre numéro de commande")
+	retour
+fin
+//on vérifie que c'est bien pour le montant prévu
+si moMontantPaiement<>saiMontant alors
+	Erreur("Le montant payé ne correspond pas au montant du")
+	retour
+	
+fin
+
+//Note : 
+//Les fonctions TransactionEtat, TransactionEtatSelonID permettent de récupérer à tout moment les information sur le paiement
+//a partie du numéro de commande (TransactionEtat) ou de identifiant de transaction (TransactionEtatSelonID)
+
+// En fonction du type de retour
+selon TypeRetourPaiement()
+//on aurait aussi pu  chercher l'état de la commande dans la base des paiement avec :
+//TransactionEtat(sIDCommande) qui retourne aussi URL_OK, URL_REFUSED, URL_CANCEL ou chaîne vide si aucun type de retour n'a été détecté
+
+	// Paiement annulé
+	cas URL_CANCEL
+		Info("Retour à la boutique avec le paiement PayPal annulé") 		
+		
+	// Paiement refusé
+	cas URL_REFUSED
+//		Info("Retour à la boutique avec le paiement PayPal refusé")
+		_ProcédureRefusPaiementPaypal()
+		MixGestionInterface(intModePaypal..Alias,Vrai)
+		
+	// Erreur
+	autre cas
+		Erreur("Une erreur survenue dans le traitement de la transaction, type de retour de paiement inattendu en annulation/refis : "+TypeRetourPaiement())
+		
+fin
+
+

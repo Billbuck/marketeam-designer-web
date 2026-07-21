@@ -1,0 +1,53 @@
+// Résumé : Ajout un champ dans un formulaire HTTP
+// Syntaxe :
+//[ <Résultat> = ] AjouteChampFormulaireHTTP (<sFormulaire>, <sNomChamp> est chaîne ANSI, <sValeurChamp> est chaîne ANSI [, <sTypeChamp> est chaîne ANSI [, <sTypeEncodage> est chaîne ANSI [, <bParcoursTableau> est booléen]]])
+//
+// Paramètres :
+//	sFormulaire : Nom du formulaire HTTP
+//	sNomChamp (chaîne ANSI) : Nom du champ dans le formulaire
+//	sValeurChamp (chaîne ANSI) : Valeur du champ dans le formulaire
+//	sTypeChamp (chaîne ANSI - valeur par défaut="hidden") : Type du champ dans le formulaire
+//	sTypeEncodage (chaîne ANSI - valeur par défaut="TXT") : Type d'encodage parmi HTML, URL et TXT
+//	bParcoursTableau (booléen - valeur par défaut=0) : < indiquez ici le rôle de bParcoursTableau >
+// Valeur de retour :
+// 	Type indéterminé :        // 	Aucune
+//
+procédure privée AjouteChampFormulaireHTTP(sFormulaire, local sNomChamp est une chaîne ANSI, local sValeurChamp est une chaîne ANSI, local sTypeChamp est une chaîne ANSI = "hidden", local sTypeEncodage est une chaîne ANSI="TXT", local bParcoursTableau est un booléen = Faux)
+
+	stUneValeurDeFormulaire 			est un ParametreFormulaire
+	sValeurChampsDansFormulaire			est une chaîne ANSI
+	
+	//les paramètres supplémentaires ont priorité
+	//il y a un paramètre personnalisé pour ce champ ?
+	si pas bParcoursTableau _et_ pas m_taParamSuppFormulairePaiement[sNomChamp]..Vide alors
+		//Oui
+		//on récupère sa valeur
+		sValeurChamp = m_taParamSuppFormulairePaiement[sNomChamp]
+		//XTRACE("Valeur redéfinie : "+sNomChamp+" : "+ sValeurChamp)
+		//on le supprime du tableau
+		Supprime(m_taParamSuppFormulairePaiement, sNomChamp)
+	fin
+	
+	//mémorise le paramètre et sa valeur
+	stUneValeurDeFormulaire.Nom = sNomChamp
+	stUneValeurDeFormulaire.Valeur = sValeurChamp
+	Ajoute(m_tabParametresFormulaire, stUneValeurDeFormulaire)
+	
+	//Ajout au formulaire
+	HTTPAjouteParamètre(sFormulaire, sNomChamp,	sValeurChamp)
+	
+	
+	//il faut encode les données ?
+	selon Majuscule(sTypeEncodage)
+		cas "HTML" : sValeurChampsDansFormulaire=HTMLEncode(sValeurChamp)	
+		cas "URL" 	: sValeurChampsDansFormulaire=URLEncode(sValeurChamp)	
+		cas "TXT","TEXT" //pour PAYBBOX, et SaferPay
+			sValeurChampsDansFormulaire = sValeurChamp
+			renvoyer sNomChamp + "=" + sValeurChampsDansFormulaire + RC
+		autre cas : sValeurChampsDansFormulaire = sValeurChamp	
+	fin
+
+renvoyer ChaîneConstruit([
+	<input type="%1" name="%2" value="%3">
+	
+	], sTypeChamp, sNomChamp, sValeurChampsDansFormulaire)

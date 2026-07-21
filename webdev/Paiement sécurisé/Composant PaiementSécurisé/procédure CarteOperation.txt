@@ -1,0 +1,29 @@
+// Résumé : effectue une opération sur une carte enregistrée (suppression par exemple)
+// Syntaxe :
+//[ <Résultat> = ] CarteOperation (<pclPaiementSécurisé> est PaiementSécurisé dynamique, <eActionSurLacarte> est COL_PAIEMENTSECURISE.ActionCarte, <moMontant> est monétaire, <stTransaction> est structTransaction)
+//
+// Paramètres :
+//	pclPaiementSécurisé (PaiementSécurisé dynamique) : <indiquez ici le rôle de pclPaiementSécurisé>
+//	eActionSurLacarte (COL_PAIEMENTSECURISE.ActionCarte) : <indiquez ici le rôle de eActionSurLacarte>
+//	moMontant (monétaire) : <indiquez ici le rôle de moMontant>
+//	stTransaction (structTransaction) : <indiquez ici le rôle de stTransaction>
+
+// Valeur de retour :
+// 	booléen : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//// Traitement automatique des exceptions :   exécuter le bloc de code CAS EXCEPTION:
+//
+
+procédure CarteOperation(pclPaiementSécurisé est un PaiementSécurisé dynamique, eActionSurLacarte est un ActionCarte, moMontant est un monétaire, stPaiementParametre est une structPaiementParametre) : booléen
+
+bRetour est un booléen
+
+// Lance la procédure de paiement
+bRetour = pclPaiementSécurisé:Paiement_Direct(moMontant, "", eActionSurLacarte, stPaiementParametre)
+
+renvoyer bRetour
+
+cas exception:	
+renvoyer Faux

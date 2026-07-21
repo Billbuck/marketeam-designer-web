@@ -1,0 +1,19 @@
+Code de clic SERVEUR d'un bouton de test TEMPORAIRE (à poser sur n'importe quelle page, ex. pgeMesCartesBancaires,
+et à SUPPRIMER une fois l'étape 1 validée) :
+
+
+psPaypalTest	est un PaiementSécurisé(PayPal)
+sJeton			est une chaîne
+sErreur			est une chaîne
+
+psPaypalTest:PayPalIdentifiant	= cpFonction.ValeurParametre("Paypal_Dev_ClientId",prm_parametre.ValChaine.Nom)
+psPaypalTest:PayPalMotDePasse	= cpFonction.ValeurParametre("Paypal_Dev_Secret",prm_parametre.ValChaine.Nom)
+psPaypalTest:Simulation			= MODE_TEST
+
+sJeton = psPaypalTest:PaypalObtientToken(sErreur)
+
+si sJeton = "" alors
+	Erreur("Échec OAuth2 PayPal :" + RC + sErreur)
+sinon
+	Info("Jeton OAuth2 PayPal obtenu : " + Gauche(sJeton,12) + "... (" + Taille(sJeton) + " caractères)")
+fin

@@ -1,0 +1,52 @@
+// Résumé : supprime les paramètres et informations reçus de la banque pour un paiement
+// Syntaxe :
+//[ <Résultat> = ] ParametresSupprime (<sNuméroCommandeOuIdTransaction>, <bDepuisNumeroCommande> est booléen, <bSupprimeEnregistrement> est booléen)
+//
+// Paramètres :
+//	sNuméroCommandeOuIdTransaction : Numéro de commande ou identifiant de transaction
+//	bDepuisNumeroCommande (booléen) : Vrai si sNuméroCommandeOuIdTransaction est le n° de commande, Faux si c'est l'identifiant de transaction
+//	bSupprimeEnregistrement (booléen) : Vrai pour supprimer totalement l'enregistrement correspondant à ce paiement dans la base des transactions, Faux pour mettre à vide les rubriques avec des informations de retour de la banque
+// Valeur de retour :
+// 	booléen : Vrai si l'effacement a pu être fait ou s'il n'existe pas
+//
+procédure ParametresSupprime(local sNuméroCommandeOuIdTransaction, bDepuisNumeroCommande est un booléen,bSupprimeEnregistrement est un booléen) : booléen
+bRetour est un booléen
+si bDepuisNumeroCommande alors
+	HLitRecherchePremier(clt_transaction, NumeroCommande, sNuméroCommandeOuIdTransaction)
+sinon	
+	HLitRecherchePremier(clt_transaction, IdTransaction, sNuméroCommandeOuIdTransaction)
+fin
+si HTrouve(clt_transaction) alors
+	
+	si bSupprimeEnregistrement alors			
+		si pas HSupprime(clt_transaction) alors
+			XERREUR(HErreurInfo())
+			<compile si pas TypeConfiguration=Android>
+				ErreurPropage()				
+			<fin>
+			bRetour = Faux
+		sinon
+			bRetour = Vrai
+		fin
+	sinon
+		clt_transaction.Parametres		=	""
+		clt_transaction.Informations	=	""
+		clt_transaction.Loginfo			=	""
+		clt_transaction.ObjetPaiement	=	""
+		si pas HModifie(clt_transaction) alors
+			XERREUR(HErreurInfo())
+			<compile si pas TypeConfiguration=Android>
+				ErreurPropage()			
+			<fin>
+			bRetour = Faux
+		sinon
+			bRetour = Vrai
+		fin
+		
+	fin		
+sinon
+	//non trouvé donc OK
+	bRetour =  Vrai
+fin
+
+renvoyer bRetour

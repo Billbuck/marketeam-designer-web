@@ -1,0 +1,6 @@
+procédure PageRetourServeurÀServeur()
+
+	// RAZ des erreurs
+	XERREUR()
+
+renvoyer m_sPagePayBack

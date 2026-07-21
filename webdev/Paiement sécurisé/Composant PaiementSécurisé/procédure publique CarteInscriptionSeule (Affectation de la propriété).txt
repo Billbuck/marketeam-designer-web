@@ -1,0 +1,3 @@
+procédure publique CarteInscriptionSeule(local bValeur est un booléen)
+
+m_bCarte_InscriptionSeule = bValeur

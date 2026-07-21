@@ -1,0 +1,55 @@
+//Traitement qui sera exécuté au retour du site PayPal en cas d'accord de paiement
+//Attention le paiement n'est pas encore effectué ! 
+//La page qui contient ce traitement doit demander confirmation à l'internaute en lui affichant un récapitulatif et le montant qui va être débité de son compte
+
+//Ici c'est la même page que pa page de départ du paiement
+
+//Note : 
+// En cas de problème, de non fonctionnement comme attendu...
+// Il est possible :
+// 1 - De consulter le log de la transaction dans la table "Transactions", rubrique "LogInfo"
+//	Ce log est aussi récupérable par code avec les fonctions TransactionLog, TransactionLogSelonID.
+//  Il est possible de récupérer le log à partie du numéro de commande (TransactionLog) ou de l'identifiant de transaction (TransactionLogSelonID)
+// 
+// OU
+//
+// 2 - D'activer un log d'exécution 
+// Pour cela utilisez la ligne de code suivante DANS LE CODE D'INITIALISATION DU PROJET (après connexion au site) : 
+// dbgActiveLog(COL_PAIEMENTSECURISE.gsRépertoiresDonnées + [fSép] + "Trace_PS_" + DateHeureSys() + ".wlog", LogTout)
+// Voici un lien vers l'aide en ligne sur le fonctionnement des logs d'exécution : https://doc.pcsoft.fr/fr-FR/?2019030&name=Log_execution
+// Le fichier .wlog généré doit être ouvert avec WEBDEV et le projet préalablement chargé.
+// Pour voir le détail des actions effectuées par le composant, il faut au préalable charger le projet WW_PaiementSecurise dans la configuration composant.
+//
+//Les fonctions TransactionEtat, TransactionEtatSelonID permettent de récupérer à tout moment les informations sur le paiement
+//a partie du numéro de commande (TransactionEtat) ou de identifiant de transaction (TransactionEtatSelonID)
+
+//Récupération possible des informations sur le paiement via les paramètres :
+sIDCommande est une chaîne
+moMontantPaiement est un monétaire
+sIDCommande = PaiementSécurisé.RecupereUnParamètre("reference")
+moMontantPaiement =Val(PaiementSécurisé.RecupereUnParamètre("montant"))/100
+
+// On vérifie bien le retour validé et que c'est la bonne commande
+si TypeRetourPaiement()=URL_OK _et_ sIDCommande = saiRéférence alors
+	// Accord de paiement validé
+	
+	
+	MixGestionInterface(intModePaypal..Alias,Vrai) // Maintenir au dessus
+	
+	LIB_Accéder_à_la_vérification 			= "PayPal nous a donné sont accord pour le paiement de la commande, cliquez sur le bouton ci-dessous pour terminer et valider votre achat."
+	LIB_Accéder_à_la_vérification.Visible	= Vrai
+	btnPaypalPayer..Visible					= Faux
+	btnPaypalValider..Visible				= Vrai
+	btnPaypalAnnuler..Visible				= Vrai
+
+	_ProcédureAccordPaiementPaypal()
+
+	
+	
+	//Recherche possible de la commande dans la base pour mise à jour de son état en "paiement autorisé"...
+	//Exemple : HLitRecherchePremier(COMMANDE,IDCOMMANDE,sIDCommande)	
+	
+sinon
+	ChaîneAffiche("Retour d'accord PayPal incorrect : "+TypeRetourPaiement() +"  sIDCommande = " + sIDCommande + " saiRéférence = " + saiRéférence  ,"text/plain")
+fin
+

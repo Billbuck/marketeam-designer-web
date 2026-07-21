@@ -1,0 +1,30 @@
+// Résumé : Effectue la demande de paiement au travers de PayBox
+// Syntaxe :
+//[ <Résultat> = ] PaiementPayBox_Direct (<moMontant> est monétaire [, <eActionSurLacarte> est COL_PAIEMENTSECURISE.ActionCarte])
+//
+// Paramètres :
+//	moMontant (monétaire) : Montant du paiement à effectuer
+//	eActionSurLacarte (COL_PAIEMENTSECURISE.ActionCarte) : Adresse email du client
+// Valeur de retour :
+// 	booléen :       Vrai si l'appel du paiement a été réalisé, Faux dans le cas contraire
+//
+// Traitement automatique des exceptions :   exécuter le bloc de code CAS EXCEPTION:
+//
+
+procédure privée PaiementPayBox_Direct(local moMontant est un monétaire,eActionSurLacarte est un ActionCarte = CarteDebite)
+
+	// RAZ des erreurs
+	XERREUR()
+
+	bRetour 			est un booléen
+	
+	ConstruitURLPaybox()
+	
+	// Prépare l'appel à PayBox
+	bRetour = PréparePaiementPayBoxDirect(moMontant, eActionSurLacarte) 
+	
+renvoyer bRetour
+
+cas exception:
+	XERREUR("WL_EXCEPTION [PaiementPayBox] : " + ExceptionInfo)
+	renvoyer Faux

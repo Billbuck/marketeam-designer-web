@@ -1,0 +1,12 @@
+Code de clic SERVEUR du bouton btnCarteBancaireAjouter :
+
+LanceEnregistrementCarte()
+
+
+---------------------------------------------------------------------
+
+Champ Lien à CRÉER sur la page : lienFinEnregistrementCarte
+- invisible (comme lienFin3DSecure dans le modèle mdlcPaiement)
+- code de clic SERVEUR :
+
+FinEnregistrementCarte()

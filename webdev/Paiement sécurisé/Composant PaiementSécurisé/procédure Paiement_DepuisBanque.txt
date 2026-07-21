@@ -1,0 +1,27 @@
+// Résumé : Lance une procédure de paiement sécurisé pour un paiement via un site de banque
+// Syntaxe :
+//[ <Résultat> = ] Paiement_DepuisBanque (<pclPaiementSécurisé> est PaiementSécurisé dynamique, <mOMontant> est monétaire, <sAdresseEmail> est chaîne, <stPaiementParametre> est structPaiementParametre)
+//
+// Paramètres :
+//	pclPaiementSécurisé (PaiementSécurisé dynamique) : Configuration du paiement sécurisé
+//	mOMontant (monétaire) : Montant de la transaction
+//	sAdresseEmail (chaîne ANSI) : Adresse email du client
+//	stPaiementParametre (structPaiementParametre) : <indiquez ici le rôle de stTransaction>
+
+// Valeur de retour :
+// 	booléen : Vrai si la procédure de paiement a bien été exécutée, Faux sinon
+//
+// Traitement automatique des exceptions :   exécuter le bloc de code CAS EXCEPTION:
+//
+
+procédure Paiement_DepuisBanque(pclPaiementSécurisé est un PaiementSécurisé dynamique, local mOMontant est un monétaire, local sAdresseEmail est une chaîne, local stPaiementParametre est une structPaiementParametre) : booléen
+
+	bRetour est un booléen
+	
+	// Lance la procédure de paiement
+	bRetour = pclPaiementSécurisé:Paiement_DepuisBanque(mOMontant, sAdresseEmail, stPaiementParametre)
+	
+renvoyer bRetour
+
+cas exception:	
+	renvoyer Faux

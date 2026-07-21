@@ -1,0 +1,67 @@
+procédure InitZnrMesCartesBancaires()
+
+znrCarteBancaire.SupprimeTout()
+
+nInd				est un entier
+sTexteRequete		est une chaîne
+sdReqMesCartes		est une Source de Données
+nNbrJourExpiration	est un entier
+sCode 				est une chaîne
+
+sTexteRequete =
+[
+	SELECT
+		IdCarteBancaire,
+		EstDefaut,
+		Libelle,
+		CodeAuthenticite,
+		CodeEmetteur,
+		DateExpiration,
+		Origine
+	FROM
+		clt_carte_bancaire
+	WHERE
+		EstActif = 1
+		AND IdClient = [%Partage.__vcUser.IdClient%] AND (IdContact = [%Partage.__vcUser.IdContact%] OR IdContact IS NULL)
+	ORDER BY
+		EstDefaut DESC,
+		IdCarteBancaire DESC 
+]
+
+
+si pas HExécuteRequêteSQL(sdReqMesCartes, ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour
+fin
+
+pour tout sdReqMesCartes
+	nInd												= znrCarteBancaire.AjouteLigne()
+	nNbrJourExpiration 									= DateDifférence(DateSys(),sdReqMesCartes.DateExpiration)
+	znrCarteBancaire[nInd].attIdCarteBancaire			= sdReqMesCartes.IdCarteBancaire
+	znrCarteBancaire[nInd].libCarteBancaire				= sdReqMesCartes.Libelle
+	sCode = sdReqMesCartes.CodeAuthenticite
+	znrCarteBancaire[nInd].libCarteNumero				= "---- " + DecrypteDecode(sCode)
+	znrCarteBancaire[nInd].libCarteParDefaut.Visible	= (sdReqMesCartes.EstDefaut = 1)
+	selon Vrai
+		cas sdReqMesCartes.DateExpiration <= DateSys()	: znrCarteBancaire[nInd].libExpiration	= "Expiré"
+		cas nNbrJourExpiration < 90						: znrCarteBancaire[nInd].libExpiration	= "Expire dans " + nNbrJourExpiration + " jours"
+		autre cas										: znrCarteBancaire[nInd].libExpiration	= ""
+	fin
+
+	selon Majuscule(sdReqMesCartes.Origine)
+		cas "VISA"			: znrCarteBancaire[nInd].icoCarteBancaire	= "ext/Cartes/carte-visa 61x40.svg"
+		cas "MASTERCARD"	: znrCarteBancaire[nInd].icoCarteBancaire	= "ext/Cartes/carte-mastercard 61x40.svg"
+		cas "AMEX"			: znrCarteBancaire[nInd].icoCarteBancaire	= "ext/Cartes/carte-amex 61x40.svg"
+		autre cas			: znrCarteBancaire[nInd].icoCarteBancaire	= "ext/Cartes/carte-bleue 61x40.svg"
+	fin
+fin
+
+si znrCarteBancaire.Occurrence > 0 alors
+	znrCarteBancaire.SelectPlus(1)
+	SelectionCarteBancaire(znrCarteBancaire.attIdCarteBancaire)
+fin
+
+dispCarteBancaire[1].Visible = (znrCarteBancaire.Occurrence > 0)
+
+fin:
+HAnnuleDéclaration(sdReqMesCartes)

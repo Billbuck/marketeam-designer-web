@@ -1,21 +1,21 @@
 procédure mixCarteOk()
 
-dDate est une Date
+dDate		est une Date
+sDateMMAA	est une chaîne = mixDateExpirationMMAA()
 
-si _sCarteBancaireMois <> "" _et_ _sCarteBancaireAnnée <> "" alors
-	dDate.Année	= "20" + _sCarteBancaireAnnée
-	dDate.Mois	= _sCarteBancaireMois
+si sDateMMAA <> "" alors
+	dDate.Année	= "20" + Droite(sDateMMAA,2)
+	dDate.Mois	= Gauche(sDateMMAA,2)
 	dDate.Jour	= 1
 	dDate		= DernierJourDuMois(dDate)
 fin
 
 si _bCarteBancaireMémorisée = Faux alors
-	si CaractOccurrenceType(saiCarteNumero,ctNumérique) pas dans (15,16)	alors	renvoyer Faux
-	si _sCarteBancaireMois = ""												alors 	renvoyer Faux
-	si _sCarteBancaireAnnée = ""											alors 	renvoyer Faux
-	si dDate < DateSys()													alors 	renvoyer Faux
-	si Taille(saiCarteCode) < 3 											alors	renvoyer Faux
-	si mixVerificationCarteBancaire(saiCarteNumero) = Faux 					alors	renvoyer Faux
+	si CaractOccurrenceType(saiCarteBancaireNumero,ctNumérique) pas dans (15,16)	alors	renvoyer Faux
+	si sDateMMAA = ""																alors 	renvoyer Faux
+	si dDate < DateSys()															alors 	renvoyer Faux
+	si Taille(saiCarteBancaireCryptogramme) < 3 									alors	renvoyer Faux
+	si mixVerificationCarteBancaire(saiCarteBancaireNumero) = Faux 					alors	renvoyer Faux
 fin
 
 renvoyer Vrai

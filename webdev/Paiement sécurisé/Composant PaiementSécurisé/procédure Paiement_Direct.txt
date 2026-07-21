@@ -1,0 +1,84 @@
+// Résumé : Lance la procédure de paiement via le site de la banque
+// Syntaxe :
+//[ <Résultat> = ] Paiement_Direct (<moMontant> est monétaire, <sAdresseEmail> est chaîne, <eActionSurLacarte> est COL_PAIEMENTSECURISE.ActionCarte, <stTransaction> est structTransaction)
+//
+// Paramètres :
+//	moMontant (monétaire) : Montant du paiement
+//	sAdresseEmail (chaîne ANSI) : Adresse email du client
+//	eActionSurLacarte (COL_PAIEMENTSECURISE.ActionCarte) : <indiquez ici le rôle de eActionSurLacarte>
+//	stTransaction (structTransaction) : <indiquez ici le rôle de stTransaction>
+
+// Valeur de retour :
+// 	booléen :       Vrai si l'appel du paiement a été réalisé, Faux dans le cas contraire
+//
+// Traitement automatique des exceptions :   exécuter le bloc de code CAS EXCEPTION:
+//
+
+procédure Paiement_Direct(local moMontant est un monétaire, local sAdresseEmail est une chaîne, eActionSurLacarte est un ActionCarte, local stPaiementParametre est une structPaiementParametre) : booléen
+
+	bRetour est un booléen
+	
+	ModeDirect 	= Vrai
+	
+	// RAZ des erreurs
+	XERREUR()
+	//RAZ id transaction précédente
+	m_nIDTransaction = 0
+	
+	m_moMontant=moMontant
+	m_sAdresseEmail=sAdresseEmail
+	//
+	<compile si pas TypeConfiguration=Site>
+		
+		si Mode3DS _et_ (eActionSurLacarte=CarteDebite  _ou_ eActionSurLacarte=CarteCrédite) _et_ (HTML_3DS~="" _ou_ pas ChampExiste(HTML_3DS)) alors XERREUR("Paramètres PayBox Direct avec 3DS incomplets, il faut un champ HTML pour le 3DS (Propriété HTML_3DS)"); renvoyer Faux
+		si Mode3DS _et_ (eActionSurLacarte=CarteDebite  _ou_ eActionSurLacarte=CarteCrédite) _et_ Fin3DSecure~="" alors XERREUR("Paramètres PayBox Direct avec 3DS incomplets, il faut un procédure de fin de 3DS (Propriété Fin3DSecure)"); renvoyer Faux
+		
+	<fin>
+	
+	// Vérifications
+	si Fournisseur = ""																alors XERREUR("Le fournisseur de paiement sécurisé n'a pas été spécifié"); renvoyer Faux
+	si eActionSurLacarte = CarteDebite _et_ NuméroCommande = ""						alors XERREUR("Le numéro de commande n'a pas été spécifié"); renvoyer Faux
+	si eActionSurLacarte = CarteDebite _et_ sAdresseEmail = ""						alors XERREUR("L'adresse email n'a pas été spécifiée"); renvoyer Faux
+	si pas (eActionSurLacarte=CarteDebite  _ou_ eActionSurLacarte=CarteCrédite) _et_ moMontant = ""	alors XERREUR("Le montant n'a pas été spécifié"); renvoyer Faux
+	si Fournisseur = PayBox _et_ (Rang = "" _ou_ VersionProtocole="" _ou_             
+								 Site="" _ou_ Clé="")								alors XERREUR("Paramètres PayBox Direct incomplets (VersionProtocole,Rang,Site,Clé)"); renvoyer Faux
+			
+	
+
+	// Ouverture du fichier de données
+	si HCréationSiInexistant(clt_transaction) = Faux alors 
+		XERREUR("Impossible d'ouvrir le fichier d'enregistrement des transaction")
+		renvoyer Faux
+	fin
+		
+	//Récupération du cookie de session des sites avec contexte (sécurité anti vol d'URL ajouté en version 24)
+	CookieRécupere()
+	
+	//en 3D Secure il faut conserver les informations de carte pour le retour du 3DS
+	//PAN + CVV + date d'expiration chiffrés ensemble : ces membres ne sont plus sérialisés en clair
+	si CarteNuméro <> "" _et_ Mode3DS alors
+		m_sCarte_Temps3DS =  Crypte(CarteNuméro + TAB + CarteCVV + TAB + CarteDateExpiration, "cbszi4q87q", crypteSécurisé, encodeBASE64)
+	fin	
+	// Enregistre la transaction
+	m_sIdentifiantTransaction = EnregistreTransaction(moMontant, sAdresseEmail, stPaiementParametre)
+	
+	si m_sIdentifiantTransaction = -1 alors renvoyer Faux
+	
+	// PayBox
+	si Fournisseur = PayBox alors
+		
+		// Paiement PayBox
+		bRetour = PaiementPayBox_Direct(moMontant, eActionSurLacarte)			
+		si bRetour alors COL_PAIEMENTSECURISE.gsDernierTypeRetour=URL_OK
+	// Fournisseur non géré
+	sinon
+		XERREUR("Le fournisseur "+Fournisseur+" de paiement sécurisé direct non géré")
+		
+		renvoyer Faux
+	fin
+	
+renvoyer bRetour
+
+cas exception:
+	XERREUR("WL_EXCEPTION [Paiement_Direct] : " + ExceptionInfo)
+	renvoyer Faux

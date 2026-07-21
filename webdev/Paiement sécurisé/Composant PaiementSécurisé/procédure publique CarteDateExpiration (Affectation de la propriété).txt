@@ -1,0 +1,3 @@
+procédure publique CarteDateExpiration(local sValeur est une chaîne)
+
+m_sCarte_DateExpiration=sValeur

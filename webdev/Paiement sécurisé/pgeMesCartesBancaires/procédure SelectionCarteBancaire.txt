@@ -1,0 +1,53 @@
+procédure SelectionCarteBancaire(pIdCarteBancaire)
+
+nInd				est un entier
+sTexteRequete		est une chaîne
+sdReqCartePartage	est une Source de Données
+
+sTexteRequete =
+[
+	SELECT
+		p.IdCarteBancaire,
+		c.IdClient,
+		t.Societe,
+		c.IdContact,
+		c.Civilite,
+		c.Nom,
+		c.Prenom
+	FROM 
+		clt_mere m
+		JOIN clt_contact c ON c.IdClient = m.IdClient
+		join clt_client t on t.IdClient = m.IdClient
+		LEFT JOIN clt_carte_bancaire_partage p ON c.IdContact = p.IdContact AND p.IdCarteBancaire = [%pIdCarteBancaire%]
+	WHERE
+		m.IdMere = [%Partage.__vcUser.IDClient%]
+		AND c.IdContact <> [%Partage.__vcUser.IDContact%]
+	order by 
+		c.IdClient,
+		c.IdContact desc
+		
+]
+
+si pas HExécuteRequêteSQL(sdReqCartePartage, ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour               
+fin
+
+znrCarteBancairePartage.SupprimeTout()
+
+sdReqCartePartage.LitPremier(hSansRafraîchir)
+tantque pas sdReqCartePartage.EnDehors()
+	nInd = znrCarteBancairePartage.AjouteLigne()
+	znrCarteBancairePartage[nInd].attIdClient 		= sdReqCartePartage.IdClient
+	znrCarteBancairePartage[nInd].attIdContact 		= sdReqCartePartage.IdContact
+	znrCarteBancairePartage[nInd].libSocieteContact = sdReqCartePartage.Societe + " - " + sdReqCartePartage.Civilite +[" "]+ sdReqCartePartage.Nom +[" "]+ sdReqCartePartage.Prenom
+	znrCarteBancairePartage[nInd].attEstPartage 	= (sdReqCartePartage.IdCarteBancaire > 0)
+	sdReqCartePartage.LitSuivant()
+fin
+
+dispCarteBancaire[2].Visible = znrCarteBancairePartage.Occurrence > 0
+dispCarteBancaire[3].Visible = znrCarteBancairePartage.Occurrence > 0
+
+
+fin:
+HAnnuleDéclaration(sdReqCartePartage)

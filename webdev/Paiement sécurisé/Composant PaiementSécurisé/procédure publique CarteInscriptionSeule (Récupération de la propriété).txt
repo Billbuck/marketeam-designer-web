@@ -1,0 +1,3 @@
+procédure publique CarteInscriptionSeule() : booléen
+
+renvoyer m_bCarte_InscriptionSeule

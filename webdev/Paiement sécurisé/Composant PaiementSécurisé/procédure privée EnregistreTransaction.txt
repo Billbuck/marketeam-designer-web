@@ -1,0 +1,94 @@
+// Résumé : Enregistre la transaction
+// Syntaxe :
+//[ <Résultat> = ] EnregistreTransaction (<moMontant> est monétaire, <sAdresseEmail> est chaîne, <stTransaction> est structTransaction)
+//
+// Paramètres :
+//	moMontant (monétaire) : Montant de la transaction
+//	sAdresseEmail (chaîne ANSI) : Adresse email du client
+//	stTransaction (structTransaction) : <indiquez ici le rôle de nIdClient>
+// Valeur de retour :
+// 	Type indéterminé :  Identifiant de la transaction
+//
+// Traitement automatique des exceptions :   exécuter le bloc de code CAS EXCEPTION:
+//
+
+//	nIdContact (entier) : <indiquez ici le rôle de nIdContact>
+//	sPageEnCours (chaîne ANSI) : <indiquez ici le rôle de sPageEnCours>
+//	sTransactionEnCours (chaîne ANSI) : <indiquez ici le rôle de sTransactionEnCours>
+//	nIdOperation (entier) : <indiquez ici le rôle de nIdOperation>
+//	nIdReserve (entier) : <indiquez ici le rôle de nIdReserve>
+//	nIdAbonnementFonction (entier) : <indiquez ici le rôle de nIdAbonnementFonction>
+//	nIdAbonnementFonctionRenouvellement (entier) : <indiquez ici le rôle de pNIdAbonnementFonctionRenouvellement>
+//	nIdAbonnementPrestation (entier) : <indiquez ici le rôle de nIdAbonnementPrestation>
+//	nIdAbonnementPrestationRenouvellement (entier) : <indiquez ici le rôle de nIdAbonnementPrestationRenouvellement>
+procédure privée EnregistreTransaction(local moMontant est un monétaire, local sAdresseEmail est une chaîne, local stPaiementParametre est une structPaiementParametre)
+// RAZ des erreurs
+XERREUR()
+
+bufTransaction	est un Buffer
+clPaiement		est un PaiementSécurisé(0xffff)
+
+
+
+HRAZ(clt_transaction)
+
+// Crée un enregistrement
+clt_transaction.DateCreation								= DateDuJour + Maintenant
+clt_transaction.Email										= sAdresseEmail
+clt_transaction.Fournisseur									= Fournisseur
+clt_transaction.Montant										= moMontant
+clt_transaction.NumeroCommande								= NuméroCommande
+clt_transaction.Devise										= Devise
+clt_transaction.Etat										= PAIEMENT_ATTENTE
+
+clt_transaction.IdClient									= stPaiementParametre.IdClient
+clt_transaction.IdContact									= stPaiementParametre.IdContact
+clt_transaction.PageEnCours									= stPaiementParametre.PageEnCours
+clt_transaction.TransactionType								= stPaiementParametre.TransactionType
+clt_transaction.IdOperation									= stPaiementParametre.IdOperation
+
+clt_transaction.IdClient.Null								= (stPaiementParametre.IdClient = 0)
+clt_transaction.IdContact.Null								= (stPaiementParametre.IdContact = 0)
+clt_transaction.PageEnCours.Null							= (stPaiementParametre.PageEnCours = "")
+clt_transaction.TransactionType.Null						= (stPaiementParametre.TransactionType = "")
+clt_transaction.IdOperation.Null							= (stPaiementParametre.IdOperation = 0)
+
+<si CibleExécution=Site>
+	// Récupère l'URL de la page actuelle
+	m_sURLActuelle					= URLPageCourante()			
+	clt_transaction.URLAnnulation	= URLSelonAction(SurAbandonPaiement)
+	clt_transaction.URLRefus		= URLSelonAction(SurRefusPaiement)
+	clt_transaction.URLValidation	= URLSelonAction(SurValidationPaiement)
+	clt_transaction.URLS2S			= URLSelonAction(SurAppelServeur)
+<fin>
+
+clt_transaction.Ajoute()
+
+//récupère l'ID de la transaction
+m_sIdentifiantTransaction	= clt_transaction.IdTransaction
+m_nIDTransaction			= clt_transaction.IdTransaction
+// Sérialise l'objet
+<compile si TypeConfiguration=Android>
+	Sérialise(objet, bufTransaction, psdXML)
+<sinon>	
+	Sérialise(objet, bufTransaction, psdBinaire)
+<fin>
+si clt_transaction.LitRecherchePremier(IDTransaction,m_nIDTransaction) alors
+	
+	//		Transaction.ObjetPaiement = bufTransaction
+	clt_transaction.ObjetPaiement = BufferVersHexa(bufTransaction, SansRegroupement, SansLigne)
+	si HModifie(clt_transaction) alors
+		// Vérification A Supprimer 
+		si clt_transaction.LitRecherchePremier(IDTransaction,m_nIDTransaction) alors
+			bufTransaction = HexaVersBuffer(clt_transaction.ObjetPaiement)
+			Désérialise(clPaiement,bufTransaction,psdBinaire)
+		fin
+		XTRACE("Création de la transaction avant envoie")
+	fin
+fin
+
+renvoyer clt_transaction.IdTransaction
+
+cas exception:
+XERREUR("WL_EXCEPTION [EnregistreTransaction] : " + ExceptionInfo)
+renvoyer -1

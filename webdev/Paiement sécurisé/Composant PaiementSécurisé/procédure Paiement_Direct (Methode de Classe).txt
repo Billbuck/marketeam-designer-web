@@ -1,0 +1,13 @@
+procédure Paiement_Direct(PclPaiementSécurisé est un PaiementSécurisé dynamique, local mOMontant est un monétaire, local sAdresseEmail est une chaîne, local stPaiementParametre est une structPaiementParametre) : booléen
+
+	bRetour est un booléen
+	
+	gsDernierTypeRetour=URL_RETOUR
+	
+	// Lance la procédure de paiement
+	bRetour = PclPaiementSécurisé:Paiement_Direct(mOMontant, sAdresseEmail,CarteDebite, stPaiementParametre)
+	
+renvoyer bRetour
+
+cas exception:	
+	renvoyer Faux

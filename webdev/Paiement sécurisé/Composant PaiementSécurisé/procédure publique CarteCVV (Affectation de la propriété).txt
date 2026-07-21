@@ -1,0 +1,3 @@
+procédure publique CarteCVV(local sValeur est une chaîne)
+
+m_sCarte_CVV=sValeur

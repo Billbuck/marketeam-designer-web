@@ -1,0 +1,176 @@
+// Résumé : Lance la procédure de paiement via le site de la banque
+// Syntaxe :
+//[ <Résultat> = ] Paiement_DepuisBanque (<moMontant> est monétaire, <sAdresseEmail> est chaîne)
+//
+// Paramètres :
+//	moMontant (monétaire) : Montant du paiement
+//	sAdresseEmail (chaîne ANSI) : Adresse email du client
+// Valeur de retour :
+// 	booléen :       Vrai si l'appel du paiement a été réalisé, Faux dans le cas contraire
+//
+// Traitement automatique des exceptions :   exécuter le bloc de code CAS EXCEPTION:
+//
+
+procédure Paiement_DepuisBanque(local moMontant est un monétaire, local sAdresseEmail est une chaîne, local stPaiementParametre est une structPaiementParametre) : booléen
+
+	bRetour est un booléen
+	
+	// RAZ des erreurs
+	XERREUR()
+	//RAZ id transaction précédente
+	m_nIDTransaction = 0
+	
+	m_moMontant=moMontant
+	m_sAdresseEmail=sAdresseEmail
+	
+	si PageRetourBoutique ~= "" alors
+		XERREUR([
+		WL_EXCEPTION [Paiement] : La page de retour à la boutique n'a pas été spécifié.
+		Vous devez affecter la propriété 'PageRetourBoutique' de la classe 'PaimentSécurisé'  avec le nom d'une page AWP de votre projet. 
+		Exemple : MonPaiement:.PageRetourBoutique="retourboutique"
+		Cette page qui doit contenir la page interne PI_PAYBACK sans code supplémentaire.
+		Note : 
+		- cette page doit uniquement contenir la page interne PI_PAYBACK sans code supplémentaire.
+		- il est conseiller de cocher l'option 'ne pas référencer cette page' dans le détails de cette page
+		- Il en est de même pour la page de retour de serveur à serveur avec la propriété 'PageRetourServeurÀServeur'
+		] )
+		renvoyer Faux
+	fin
+	
+	si PageRetourServeurÀServeur ~= "" _et_ pas Fournisseur = PayPal alors //pas de retour de serveur à serveur en PayPal
+		XERREUR([
+		WL_EXCEPTION [Paiement] : La page de gestion des retours de serveur à serveur n'a pas été spécifié.
+		Vous devez affecter la propriété 'PageRetourServeuraServeur' de la classe 'PaimentSécurisé'  avec le nom d'une page AWP de votre projet. 
+		Exemple : MonPaiement:.PageRetourBoutique="nompersonnalisecomplexepourplusdesecurite"
+		Notes :
+		- cette page qui doit uniquement contenir la page interne PI_PAYBACK sans code supplémentaire.
+		- il est conseiller de mettre un nom de page non standard pour que cette page ne soit pas retrouvée
+		- il est conseiller de cocher l'option 'ne pas référencer cette page' dans le détails de cette page
+		- Il en est de même pour la page de retour à la boutique avec la propriété 'PageRetourBoutique'
+		] )
+		renvoyer Faux
+	fin
+	
+	// Vérifications
+	si Fournisseur 	= 0															alors ExceptionDéclenche(1, XERREUR("Le fournisseur de paiement sécurisé n'a pas été spécifié"))
+	si ((Fournisseur & Lyra ) = Lyra _ou_ (Fournisseur & MoneticoPaiementOld ) = MoneticoPaiementOld _ou_ (Fournisseur dans (PayBox, BanquePopulaire))) _et_ Contrat = ""		alors 
+			ExceptionDéclenche(1, XERREUR("Le numéro de contrat n'a pas été spécifié"))
+	fin
+	si NuméroCommande = ""														alors ExceptionDéclenche(1, XERREUR("Le numéro de commande n'a pas été spécifié"))
+	si CodeSociété	= ""														alors ExceptionDéclenche(1, XERREUR("Le code société n'a pas été spécifié"))
+	si Fournisseur = PayBox _et_ Rang = ""										alors ExceptionDéclenche(1, XERREUR("Le numéro de rang PayBox n'a pas été spécifié"))
+	si Fournisseur = PayPal _et_ PayPalIdentifiant = ""							alors ExceptionDéclenche(1, XERREUR("Le Client ID PayPal (PayPalIdentifiant) n'a pas été spécifié"))
+	si Fournisseur = PayPal _et_ PayPalMotDePasse = ""							alors ExceptionDéclenche(1, XERREUR("Le Secret PayPal (PayPalMotDePasse) n'a pas été spécifié"))
+	//API REST Orders v2 : la "signature" NVP n'existe plus, le contrôle a été supprimé
+	
+	si Fournisseur = DataCash_Mastercard _et_ CléMAC = ""						alors ExceptionDéclenche(1, XERREUR("La ""Secure Hash Secret 1"" Mastercard n'a pas été spécifiée dans CléMAC"))
+	si Fournisseur = DataCash_Mastercard _et_ AccessCode = ""					alors ExceptionDéclenche(1, XERREUR("Le ""Access Code"" Mastercard n'a pas été spécifié dans AccessCode"))
+	si Fournisseur = DataCash_Mastercard _et_ CodeSociété = ""					alors ExceptionDéclenche(1, XERREUR("Le ""Merchant ID"" Mastercard n'a pas été spécifié dans CodeSociété"))
+			
+	// Ouverture du fichier de données
+	si HCréationSiInexistant(clt_transaction) = Faux alors 
+		XERREUR("Impossible d'ouvrir le fichier d'enregistrement des transaction")
+		renvoyer Faux
+	fin
+	
+	
+	//Récupération du cookie de session des sites avec contexte (sécurité anti vol d'URL ajouté en version 24)
+	CookieRécupere()
+	
+	
+	
+	si Fournisseur <> PayPal alors
+		
+		
+		m_sToken = BufferVersHexa(HashChaîne(TokenAlgorithmeHachage, NuméroCommande + "*" + CodeSociété + "*TOK" + AliasMoteurWEBDEV(), "PCSOFT"),SansRegroupement)
+	fin
+		
+	// Enregistre la transaction
+	m_sIdentifiantTransaction = EnregistreTransaction(moMontant, sAdresseEmail, stPaiementParametre)
+	si m_sIdentifiantTransaction = -1 alors renvoyer Faux
+	
+	// PayBox
+	si Fournisseur = PayBox alors
+		
+		// Paiement PayBox
+		bRetour = PaiementPayBox_DepuisBanque(moMontant, sAdresseEmail)			
+		
+	// CM-CIC (CIC, Crédit Mutuel, Banque OBC) AVANT septembre 2019
+	sinon si (Fournisseur & MoneticoPaiementOld) = MoneticoPaiementOld
+			
+		// CM-CIC Paiement (Ex CyberMut)
+		bRetour = PaiementMoneticoPaiementOld_DepuisBanque(moMontant, sAdresseEmail)			
+		
+	sinon si (Fournisseur & MoneticoPaiement) = MoneticoPaiement
+			
+		// CM-CIC Paiement 
+		bRetour = PaiementMoneticoPaiement_DepuisBanque(moMontant, sAdresseEmail)			
+		
+	// ATOS (Société Générale, Crédit Agricole)
+	sinon si (Fournisseur & Atos) = Atos
+		
+		// Paiement ATOS
+		bRetour = PaiementATOS_DepuisBanque(moMontant, sAdresseEmail)
+	sinon si (Fournisseur & SIPS2) = SIPS2 // Dans le cas d'un fournisseur basé sur SIPS 2
+	
+	// Paiement SIPS 2
+	bRetour = PaiementSips2_DepuisBanque(moMontant, sAdresseEmail)
+	
+	// PayPal
+	sinon si Fournisseur = PayPal
+	
+		// Paiement PayPal
+		bRetour = PaiementPayPal_DepuisBanque(moMontant, sAdresseEmail)
+		
+	// Banque Populaire
+	sinon si Fournisseur = BanquePopulaire
+	
+		// Paiement CyberPaiement
+		bRetour = PaiementCyberPaiement_DepuisBanque(moMontant, sAdresseEmail)
+		
+	// Ogone Standard
+	sinon si Fournisseur = OgoneECommerce
+	
+		// Paiement Ogone
+		bRetour = PaiementOgone_DepuisBanque(moMontant, sAdresseEmail)
+
+	// Lyra :  SystemPay, CaisseEpargne..
+	sinon si (Fournisseur & Lyra) = Lyra _ou_ Fournisseur = Systempay_old _ou_ Fournisseur = CaisseEpargne
+		
+		// Paiement de la plateforme Lyra : Systempay entre autre
+		bRetour = PaiementLyra_DepuisBanque(moMontant, sAdresseEmail)
+			
+	// Saferpay (Système Allemand)
+	sinon si Fournisseur = Saferpay
+		
+		// Paiement Saferpay (six card solutions)
+		bRetour = PaiementSaferpay_DepuisBanque(moMontant, sAdresseEmail)
+
+	// Datatrans (Système Suisse)
+	sinon si Fournisseur = Datatrans
+		
+		// Paiement Datatrans
+		bRetour = PaiementDatatrans_DepuisBanque(moMontant, sAdresseEmail)
+	
+	// Mastercard
+	sinon si Fournisseur = DataCash_Mastercard
+	
+	// Paiement Mastercard
+	bRetour = PaiementDataCashMastercard_DepuisBanque(moMontant, sAdresseEmail)
+
+	sinon si Fournisseur = Realex
+		
+		// Paiement Realex
+		bRetour = PaiementRealex_DepuisBanque(moMontant, sAdresseEmail)
+		
+	
+	// Fournisseur non géré
+	sinon
+		renvoyer Faux
+	fin
+	
+renvoyer bRetour
+
+cas exception:
+	XERREUR("WL_EXCEPTION [Paiement_DepuisBanque] : " + ExceptionInfo)
+	renvoyer Faux

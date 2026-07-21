@@ -1,0 +1,26 @@
+procédure navFormateCryptogramme()
+
+//Formatage à la volée du cryptogramme (code NAVIGATEUR)
+//À appeler dans l'événement « À chaque modification » (code navigateur) du champ saiCarteBancaireCryptogramme
+//	American Express (préfixe 34/37) : 4 chiffres (CID au recto)
+//	Autres (Visa, Mastercard, CB...) : 3 chiffres (CVV/CVC au verso)
+
+sChiffres	est une chaîne
+sCaractere	est une chaîne
+nTailleMax	est un entier = 3
+
+si Gauche(saiCarteBancaireNumero,2) = "34" _ou_ Gauche(saiCarteBancaireNumero,2) = "37" alors
+	nTailleMax = 4
+fin
+
+pour i = 1 _à_ Taille(saiCarteBancaireCryptogramme)
+	sCaractere = saiCarteBancaireCryptogramme[[i]]
+	si sCaractere >= "0" _et_ sCaractere <= "9" alors
+		sChiffres += sCaractere
+	fin
+fin
+sChiffres = Gauche(sChiffres, nTailleMax)
+
+si saiCarteBancaireCryptogramme <> sChiffres alors
+	saiCarteBancaireCryptogramme = sChiffres
+fin

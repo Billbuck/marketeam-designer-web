@@ -1,0 +1,103 @@
+// Résumé : Gestion du retour PayPal (API REST Orders v2) : capture du paiement approuvé
+// Syntaxe :
+//[ <Résultat> = ] OnRetourPaiementPayPal (<nMode> est entier, <sInformations> est chaîne, <sErreur> est chaîne, <moMontant> est monétaire, <trsID> est chaîne)
+//
+// Paramètres :
+//	nMode (entier) : (sortie) Mode de retour
+//	sInformations (chaîne) : (sortie) Informations sur la gestion du retour
+//	sErreur (chaîne) : (sortie) Message d'erreur du système
+//	moMontant (monétaire) : Montant de la transaction
+//	trsID (chaîne) : (sortie) Identifiant de la capture PayPal
+// Valeur de retour :
+// 	booléen :      Vrai si le paiement a réellement été effectué, Faux si une erreur est survenue
+//
+procédure OnRetourPaiementPayPal(nMode est un entier, sInformations est une chaîne, sErreur est une chaîne, local moMontant est un monétaire, trsID est une chaîne)
+	
+	// RAZ des erreurs
+	XERREUR()
+	
+	sJeton		est une chaîne
+	sURLApi		est une chaîne = (Simulation ? "https://api-m.sandbox.paypal.com" sinon "https://api-m.paypal.com")
+	requete		est un httpRequête
+	réponse		est un httpRéponse
+	vRéponse	est un Variant
+	
+	XTRACE("PAYPAL capture du paiement de " + moMontant + " pour commande " + NuméroCommande + ", ordre <" + m_sToken + ">")
+	
+	si m_sToken = "" alors
+		nMode			= PAIEMENT_REFUSE
+		sInformations	= "Identifiant de commande PayPal introuvable"
+		XERREUR("PAYPAL capture impossible : " + sInformations)
+		renvoyer Faux
+	fin
+	
+	// Jeton d'accès OAuth2
+	sJeton = PaypalObtientToken(sErreur)
+	si sJeton = "" alors
+		nMode			= PAIEMENT_REFUSE
+		sInformations	= sErreur
+		renvoyer Faux
+	fin
+	
+	// Capture de la commande approuvée par le client
+	requete.URL							= sURLApi + "/v2/checkout/orders/" + m_sToken + "/capture"
+	requete.Méthode						= httpPost
+	requete.ContentType					= "application/json"
+	requete.EnTête["Authorization"]		= "Bearer " + sJeton
+	//idempotence : pas de double capture pour une même transaction
+	requete.EnTête["PayPal-Request-Id"]	= "MKT-CAPT-" + m_nIDTransaction
+	requete.Contenu						= "{}"
+	
+	réponse = HTTPEnvoie(requete)
+	
+	si ErreurDétectée alors
+		nMode			= PAIEMENT_REFUSE
+		sInformations	= "Appel de capture PayPal impossible : " + WL.ErreurInfo
+		XERREUR("PAYPAL " + sInformations)
+		MarquerPaiement(NuméroCommande, PAIEMENT_REFUSE, sInformations)
+		renvoyer Faux
+	fin
+	
+	si réponse.CodeEtat <> 200 _et_ réponse.CodeEtat <> 201 alors
+		//message d'erreur détaillé PayPal (JSON) si disponible
+		vRéponse = JSONVersVariant(réponse.Contenu)
+		si vRéponse.details..Existe _et_ vRéponse.details[1].issue..Existe alors
+			selon vRéponse.details[1].issue
+				cas "INSTRUMENT_DECLINED"
+					sInformations = "Le moyen de paiement a été refusé par PayPal. Veuillez réessayer avec un autre moyen de paiement."
+				cas "ORDER_NOT_APPROVED"
+					sInformations = "Le paiement n'a pas été approuvé sur PayPal."
+				autre cas
+					sInformations = vRéponse.details[1].issue + " : " + vRéponse.details[1].description
+			fin
+		sinon
+			sInformations = "HTTP " + réponse.CodeEtat + " : " + réponse.Contenu
+		fin
+		nMode = PAIEMENT_REFUSE
+		XERREUR("PAYPAL capture refusée : " + sInformations)
+		MarquerPaiement(NuméroCommande, PAIEMENT_REFUSE, sInformations)
+		renvoyer Faux
+	fin
+	
+	vRéponse = JSONVersVariant(réponse.Contenu)
+	
+	si vRéponse.status <> "COMPLETED" alors
+		nMode			= PAIEMENT_REFUSE
+		sInformations	= "Capture PayPal non aboutie, statut : " + vRéponse.status
+		XERREUR("PAYPAL " + sInformations)
+		MarquerPaiement(NuméroCommande, PAIEMENT_REFUSE, sInformations)
+		renvoyer Faux
+	fin
+	
+	// Récupère l'identifiant de la capture (l'équivalent de l'ancien TRANSACTIONID)
+	si vRéponse.purchase_units..Existe _et_ vRéponse.purchase_units[1].payments.captures..Existe alors
+		trsID = vRéponse.purchase_units[1].payments.captures[1].id
+	fin
+	XTRACE("PAYPAL capture COMPLETED, identifiant : " + trsID)
+	sInformations += [RC] + "Identifiant de transaction PayPal : " + trsID
+	MarquerPaiement(NuméroCommande, PAIEMENT_VALIDE, sInformations + [" "] + sErreur)
+	
+	// Code d'erreur par défaut
+	sErreur = "00000"
+	
+renvoyer Vrai

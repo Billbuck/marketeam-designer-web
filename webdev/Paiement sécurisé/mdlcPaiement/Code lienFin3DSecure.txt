@@ -1,0 +1,24 @@
+
+
+FinPaiement()
+
+
+//Note : 
+// En cas de problème, de non fonctionnement comme attendu...
+// Il est possible :
+// 1 - De consulter le log de la transaction dans la table "Transactions", rubrique "LogInfo"
+//	Ce log est aussi récupérable par code avec les fonctions TransactionLog, TransactionLogSelonID.
+//  Il est possible de récupérer le log à partie du numéro de commande (TransactionLog) ou de l'identifiant de transaction (TransactionLogSelonID)
+// 
+// OU
+//
+// 2 - D'activer un log d'exécution 
+// Pour cela utilisez la ligne de code suivante DANS LE CODE D'INITIALISATION DU PROJET (après connexion au site) : 
+// dbgActiveLog(COL_PAIEMENTSECURISE.gsRépertoiresDonnées + [fSép] + "Trace_PS_" + DateHeureSys() + ".wlog", LogTout)
+// Voici un lien vers l'aide en ligne sur le fonctionnement des logs d'exécution : https://doc.pcsoft.fr/fr-FR/?2019030&name=Log_execution
+// Le fichier .wlog généré doit être ouvert avec WEBDEV et le projet préalablement chargé.
+// Pour voir le détail des actions effectuées par le composant, il faut au préalable charger le projet WW_PaiementSecurise dans la configuration composant.
+//
+//Les fonctions TransactionEtat, TransactionEtatSelonID permettent de récupérer à tout moment les informations sur le paiement
+//a partie du numéro de commande (TransactionEtat) ou de identifiant de transaction (TransactionEtatSelonID)
+

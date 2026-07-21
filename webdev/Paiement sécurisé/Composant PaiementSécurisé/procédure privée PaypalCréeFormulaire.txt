@@ -1,0 +1,20 @@
+// Résumé : Crée le formulaire NVP PayPal
+// Syntaxe :
+//PaypalCréeFormulaire (<sFormulaire> est chaîne)
+//
+// Paramètres :
+//	sFormulaire (chaîne) : Nom du formulaire
+// Valeur de retour :
+// 	Aucune
+//
+procédure privée PaypalCréeFormulaire(local sFormulaire est une chaîne)
+
+	// Crée le formulaire
+	CréeFormulaire(sFormulaire)
+
+	// Ajoute les paramètres obligatoires
+	AjouteChampFormulaireHTTP(sFormulaire, "USER", 			PayPalIdentifiant)
+	AjouteChampFormulaireHTTP(sFormulaire, "PWD", 			PayPalMotDePasse)
+	AjouteChampFormulaireHTTP(sFormulaire, "SIGNATURE", 	PayPalSignature)
+	AjouteChampFormulaireHTTP(sFormulaire, "VERSION", 		PAYPAL_VERSION)
+	

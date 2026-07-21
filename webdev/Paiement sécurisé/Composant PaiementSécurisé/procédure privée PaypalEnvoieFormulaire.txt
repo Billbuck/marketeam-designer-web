@@ -1,0 +1,61 @@
+// Résumé : Envoie le formulaire NVP Paypal
+// Syntaxe :
+//[ <Résultat> = ] PaypalEnvoieFormulaire (<sFormulaire> est chaîne, <sErreur> est chaîne, <sReponseHTTP> est chaîne)
+//
+// Paramètres :
+//	sFormulaire (chaîne ANSI) : Nom du formulaire
+//	sErreur (chaîne ANSI) : (sortie) Message d'erreur
+//	sReponseHTTP (chaîne ANSI) : (sortie) Réponse HTTP
+// Valeur de retour :
+// 	booléen :  Vrai si la commande a bien été envoyée, Faux sinon
+//
+procédure privée PaypalEnvoieFormulaire(local sFormulaire est une chaîne, sErreur est une chaîne, sReponseHTTP est une chaîne)	
+	
+	// Vide la liste des valeurs
+	SupprimeTout(m_taValeurs)	
+	
+	sRetourRequete 	est une chaîne
+	bRequeteOK 		est un booléen
+	
+	sContenuFormulaire est une chaîne
+	pour tout sDonneeFormulaire de m_tabParametresFormulaire
+		sContenuFormulaire+=["&"]+sDonneeFormulaire.Nom+"="+sDonneeFormulaire.Valeur
+	fin		
+	XTRACE("Envoie d'une requête PAYPAL avec : "+sContenuFormulaire)	
+	
+	// Envoi de la commande	
+	//(bRequeteOK,sRetourRequete) = RequeteWeb(<sURLHTTP>: m_sURLFournisseur,<sNomFormulaire>: sFormulaire)
+	(bRequeteOK,sRetourRequete) = RequeteWeb(m_sURLFournisseur,"",sFormulaire)
+	si pas bRequeteOK alors 
+		sErreur = sRetourRequete
+		renvoyer Faux
+	fin
+		
+	sReponseHTTP = sRetourRequete		
+	
+	// Vérifie que la réponse est correcte
+	si pas (LectureRéponseHTTP("ACK",sReponseHTTP) [= "Success") alors 
+		
+		sErreur = "ACK : " + URLDécode(m_taValeurs["ACK"]) + [RC] + URLDécode(m_taValeurs["L_SHORTMESSAGE0"]) + [RC] + URLDécode(m_taValeurs["L_LONGMESSAGE0"]) + [RC] + "Code erreur : " + URLDécode(m_taValeurs["L_ERRORCODE0"])
+		
+		XERREUR("PAYPAL ERREUR ACK "+sReponseHTTP)	
+		
+//		si :m_nSimulation ALORS
+//			sErreur += [rc] + [
+//				Attention en mode simulation il est nécessaire d'avoir un navigateur ouvert sur votre SandBox Paypal de test (http://developer.paypal.com/), en parallèle du test WEBDEV. 
+//				Il doit s'agir d'un navigateur du même type que celui de votre test (il ne faut pas mélanger Internet Explorer et Firefox par exemple).
+//				Si vous êtes connecté à un compte Sandbox, vérifiez vos identifiants de connexion par rapport au compte Sandbox auquel vous êtes connecté.
+//				]
+//		FIN
+		
+		renvoyer Faux
+	fin
+	
+	// Vérifie que le token correspond
+	si m_sToken <> "" _et_ pas (LectureRéponseHTTP("TOKEN", sReponseHTTP) = m_sToken) alors 
+		sErreur = "Le token PayPal n'a pas pu être récupéré"
+		XERREUR(sErreur)	
+		renvoyer Faux
+	fin
+	
+renvoyer Vrai

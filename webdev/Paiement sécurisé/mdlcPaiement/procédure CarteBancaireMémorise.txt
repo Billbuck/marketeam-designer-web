@@ -18,7 +18,7 @@ clt_carte_bancaire.CodeEmetteur			= cpFonction.CrypteEncode(_stPaiementSécuris�
 clt_carte_bancaire.DateExpiration		= DernierJourDuMois(ChaîneVersDate(_psPaybox:CarteDateExpiration,"MMAA"))
 clt_carte_bancaire.Token					= CarteBancaireCrypte(_psPaybox:CarteToken)
 clt_carte_bancaire.DateExp					= CarteBancaireCrypte(_psPaybox:CarteDateExpiration)
-clt_carte_bancaire.Cvv						= CarteBancaireCrypte(_psPaybox:CarteCVV)
+//PCI-DSS : le CVV n'est jamais stocké (colonne Cvv supprimée de la table)
 clt_carte_bancaire.Refabo					= CarteBancaireCrypte(_psPaybox:ReferenceAbonne)
 clt_carte_bancaire.EstDefaut				= _stPaiementSécurisé.CarteParDefaut
 clt_carte_bancaire.EstActif				= Vrai

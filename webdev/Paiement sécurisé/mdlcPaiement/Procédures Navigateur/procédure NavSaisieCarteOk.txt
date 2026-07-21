@@ -1,10 +1,11 @@
 procédure NavSaisieCarteOk()
 
-dDate est une Date
+dDate		est une Date
+sDateMMAA	est une chaîne = mixDateExpirationMMAA()
 
-si _sCarteBancaireMois <> "" _et_ _sCarteBancaireAnnée <> "" alors
-	dDate.Année	= "20" + _sCarteBancaireAnnée
-	dDate.Mois	= _sCarteBancaireMois
+si sDateMMAA <> "" alors
+	dDate.Année	= "20" + Droite(sDateMMAA,2)
+	dDate.Mois	= Gauche(sDateMMAA,2)
 	dDate.Jour	= 1
 	dDate		= DernierJourDuMois(dDate)
 fin
@@ -15,18 +16,13 @@ si _bCarteBancaireMémorisée = Faux alors
 		renvoyer Faux
 	fin
 	
-	si CaractOccurrenceType(saiCarteNumero,ctNumérique) pas dans (15,16) alors 
+	si CaractOccurrenceType(saiCarteBancaireNumero,ctNumérique) pas dans (15,16) alors 
 		PopupAfficheMessage("Numéro de carte bancaire erroné",*,_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
 		renvoyer Faux
 	fin
 	
-	si _sCarteBancaireMois = "" alors 
-		PopupAfficheMessage("Veuillez sélectionner le mois d'expiration",*,_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
-		renvoyer Faux
-	fin
-
-	si _sCarteBancaireAnnée = "" alors 
-		PopupAfficheMessage("Veuillez sélectionner l'année d'expiration",*,_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
+	si sDateMMAA = "" alors 
+		PopupAfficheMessage("Veuillez saisir la date d'expiration (MM/AAAA)",*,_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
 		renvoyer Faux
 	fin
 	
@@ -35,12 +31,12 @@ si _bCarteBancaireMémorisée = Faux alors
 		renvoyer Faux
 	fin
 	
-	si Taille(saiCarteCode) < 3 alors 
+	si Taille(saiCarteBancaireCryptogramme) < 3 alors 
 		PopupAfficheMessage("Code de cryptogramme erroné",*,_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
 		renvoyer Faux
 	fin
 	
-	si mixVerificationCarteBancaire(saiCarteNumero) = Faux alors
+	si mixVerificationCarteBancaire(saiCarteBancaireNumero) = Faux alors
 		PopupAfficheMessage("Numéro de carte bancaire erroné",*,_stPaiementParametre.TypeOperation,__TOAST_ANNULATION__,10s)
 		renvoyer Faux
 	fin

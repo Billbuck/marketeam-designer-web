@@ -1,0 +1,67 @@
+// Résumé : Obtient un jeton d'accès OAuth2 pour l'API REST PayPal (Orders v2)
+// Syntaxe :
+//[ <Résultat> = ] PaypalObtientToken (<sErreur> est chaîne)
+//
+// Paramètres :
+//	sErreur (chaîne ANSI) : (sortie) Message d'erreur en cas d'échec
+// Valeur de retour :
+// 	chaîne : Jeton d'accès OAuth2, ou "" en cas d'échec
+//
+// Utilise les propriétés :
+//	PayPalIdentifiant = Client ID de l'application REST
+//	PayPalMotDePasse  = Secret de l'application REST
+//	Simulation        = MODE_TEST -> api-m.sandbox.paypal.com, sinon api-m.paypal.com
+//
+// Traitement automatique des exceptions :   exécuter le bloc de code CAS EXCEPTION:
+//
+
+procédure PaypalObtientToken(sErreur est une chaîne = "") : chaîne
+
+// RAZ des erreurs
+XERREUR()
+
+sURLApi		est une chaîne = (Simulation ? "https://api-m.sandbox.paypal.com" sinon "https://api-m.paypal.com")
+requete		est un httpRequête
+réponse		est un httpRéponse
+vRéponse	est un Variant
+
+requete.URL			= sURLApi + "/v1/oauth2/token"
+requete.Méthode		= httpPost
+requete.ContentType	= "application/x-www-form-urlencoded"
+requete.Contenu		= "grant_type=client_credentials"
+//authentification HTTP Basic : Client ID + Secret
+requete.Utilisateur	= PayPalIdentifiant
+requete.MotDePasse	= PayPalMotDePasse
+
+réponse = HTTPEnvoie(requete)
+
+si ErreurDétectée alors
+	sErreur = "Appel OAuth2 PayPal impossible : " + WL.ErreurInfo
+	XERREUR("PAYPAL OAuth2 : " + sErreur)
+	renvoyer ""
+fin
+
+si réponse.CodeEtat <> 200 alors
+	//la réponse d'erreur PayPal ne contient pas de secret : traçable
+	sErreur = "OAuth2 PayPal refusé, HTTP " + réponse.CodeEtat + " : " + réponse.Contenu
+	XERREUR("PAYPAL OAuth2 : " + sErreur)
+	renvoyer ""
+fin
+
+vRéponse = JSONVersVariant(réponse.Contenu)
+
+si pas vRéponse.access_token..Existe _ou_ vRéponse.access_token = "" alors
+	sErreur = "Réponse OAuth2 PayPal sans jeton d'accès"
+	XERREUR("PAYPAL OAuth2 : " + sErreur)
+	renvoyer ""
+fin
+
+//ne jamais tracer le jeton complet
+XTRACE("Jeton OAuth2 PayPal obtenu, expiration dans " + vRéponse.expires_in + " s")
+
+renvoyer vRéponse.access_token
+
+cas exception:
+sErreur = ExceptionInfo
+XERREUR("WL_EXCEPTION [PaypalObtientToken] : " + ExceptionInfo)
+renvoyer ""

@@ -1,0 +1,233 @@
+<compile si TypeConfiguration=Android>
+	constant
+		eATS =	6  
+		eBEF =  3  
+		eCYP =  26  
+		eCZK =  27  
+		eDEM =  5  
+		eDKK =  7  
+		eEEK =  28  
+		eESP =  8  
+		eEUR =  0  
+		eFIM =  15  
+		eFRF =  1  
+		eGBP =  12  
+		eGRD =  14  
+		eHUF =  29  
+		eIEP =  9  
+		eITL =  2  
+		eLTL =  30  
+		eLVL =  31  
+		eLUF =  4  
+		eMTL =  32  
+		eNLG =  10  
+		ePLN =  33  
+		ePTE =  11  
+		eSEK =  13  
+		eSIT =  34  
+		eSKK = 	35 
+	fin
+<fin>
+
+constant
+	PAYBOX_TYPE_AUTORISATION						= 	"00001"
+	PAYBOX_TYPE_DEBIT_SUR_AUTORISATION				= 	"00002"
+	PAYBOX_TYPE_AUTORISATION_ET_DEBIT				= 	"00003"
+	PAYBOX_TYPE_CREDIT								= 	"00004"
+	PAYBOX_TYPE_ANNULATION							= 	"00005"
+         
+	PAYBOX_TYPE_TRANSACTION_VERIFIE					= 	"00011"
+	PAYBOX_TYPE_TRANSACTION_SANS_AUTORISATION		= 	"00012"
+	PAYBOX_TYPE_REMBOURSEMENT						= 	"00014"
+	PAYBOX_TYPE_TRANSASCTION_CONSULTATION			= 	"00017"
+         
+	PAYBOX_TYPE_ABONNE_AUTORISATION					= 	"00051"
+	PAYBOX_TYPE_ABONNE_DEBIT_SUR_AUTORISATION		= 	"00052"
+	PAYBOX_TYPE_ABONNE_AUTORISATION_ET_DEBIT		= 	"00053"
+	PAYBOX_TYPE_ABONNE_CREDIT						= 	"00054"
+	PAYBOX_TYPE_ABONNE_REMBOURSEMENT				= 	"00055"
+	PAYBOX_TYPE_ABONNE_DEBIT_ET_ENREGISTRE			= 	"00056"
+	PAYBOX_TYPE_ABONNE_MODIFE						= 	"00057"
+	PAYBOX_TYPE_ABONNE_SUPPRIME						= 	"00058"
+         
+	PAYBOX_TYPE_TRANSACTION_FORCE					= 	"00061"
+
+	PAYBOX_ACTIVITE_NON_SPECIFIE					= 	"020"
+	PAYBOX_ACTIVITE_TELEPHONE						= 	"021"
+	PAYBOX_ACTIVITE_CORRESPONDANCE					= 	"022"
+	PAYBOX_ACTIVITE_MINITEL							= 	"023"
+	PAYBOX_ACTIVITE_INTERNET						= 	"024"
+	PAYBOX_ACTIVITE_RECURRENT						= 	"027"
+fin
+
+// Décrit un paramètre de formulaire
+ParametreFormulaire est une Structure
+	Nom						est une chaîne ANSI
+	Valeur					est une chaîne ANSI
+fin
+
+// Décrit une ligne de panier
+LignePanier est une Structure
+	PrixUnitaireArticle		est un monétaire
+	NomArticle				est une chaîne
+	DescriptionArticle		est une chaîne
+	Quantite				est un entier
+	URL						est une chaîne
+fin
+
+
+
+// Classe CPaiementSécurisé
+// Gère les transactions de paiement sécurisé
+PaiementSécurisé est une Classe
+	
+privé
+	m_nFournisseur					est un entier										// Fournisseur
+	m_nSimulation					est un entier										// Vrai (1) : mode test (SandBox); Faux (0) : mode réel, 2 mode simulation
+	m_sDevise						est une chaîne										// Devise (par défaut : eEUR)
+	m_sLangue						est une chaîne										// Langue (par défaut : FR ou US)
+	m_sURLFournisseur				est une chaîne										// URL du fournisseur
+	m_sContrat						est une chaîne										// N° de contrat, TPE
+	m_sIdentifiant					est une chaîne										// Identifiant, code société
+	m_sRang							est une chaîne										// Rang PayBox
+	m_sIdentifiantSolution			est une chaîne										// vads_contrib Lyra (PayZen)
+	m_sToken						est une chaîne										// Token PayPal
+	m_sPayerID						est une chaîne										// PayerID PayPal
+	m_sTexteLibre					est une chaîne										// Texte de transition
+	m_sIdentifiantTransaction		est une chaîne 										// Identifiant de transaction client
+	m_sNuméroCommande				est une chaîne 										// Numéro de commande client
+	m_sPhraseClé					est une chaîne										// Phrase clé (paiement CM-CIC/Ogone)
+	m_sPhraseCléOut					est une chaîne										// Phrase clé (Ogone)
+	m_sCléCalculée					est une chaîne										// Clé calculée (paiement CM-CIC/SIPS 2)
+	m_sVersionClé					est une chaîne										// version de la clé (SIPS 2)
+	m_sInterfaceVersion				est une chaîne										// version de l'interface SIPS
+	m_sRépertoireFichierClePublic	est une chaîne										// Répertoire des données
+	m_sMotDePasse					est une chaîne										// Mot de passe des données
+	//m_cnxConnexion					est une connexion									// Connexion 
+	m_sURLActuelle					est une chaîne										// URL de page au moment du paiement
+	m_sErreurInfo					est une chaîne										// Dernier message d'erreur
+	m_sActPaiementAbandon			est une chaîne										// Action lors d'un abandon
+	m_sActPaiementRefusé			est une chaîne										// Action lors d'un refus
+	m_sActPaiementAccepté			est une chaîne										// Action lors d'un paiement
+	m_sActAppelServeur				est une chaîne 										// Action lors d'un appel serveur
+	m_sPathFile						est une chaîne										// "PathFile" SogenActif
+	m_sEmplacementLogo				est une chaîne										// Emplacement des logos
+	m_sOgoneUserID					est une chaîne										// USERID Ogone
+	m_taValeurs						est un tableau associatif (SansDoublon+ccSansCasse) de chaînes	// Paramètres NVP de Paypal			
+	m_sPagePayBack					est une chaîne										// Page de gestion des retours serveur à serveur
+	m_sPageRetourBoutique			est une chaîne										// Page de gestion des retours à la boutique
+	m_bVerifieSignaturePaybox		est un booléen										// Flag de vérification des signatures Paybox
+	m_sCleMAC						est une chaîne										// Clé MAC
+	m_sCleMACRetour					est une chaîne										// Clé MAC
+	//m_bActiveLogRetourPaiement		est un booléen										// Flag d'activation des logs de retour
+	m_taAdresseIPServeursBanque		est un tableau associatif (ccSansCasse+SansDoublon) de booléens
+	m_sDiversPersonnalise			est une chaîne
+	m_moMontant						est un monétaire
+	m_sAdresseEmail					est une chaîne
+	m_tabParametresFormulaire		est un tableau de ParametreFormulaire
+	m_taParamSuppFormulairePaiement est un tableau associatif (ccSansCasse+SansDoublon) de chaînes
+	
+	<compile si TypeConfiguration=Android>
+		m_nIDTransaction				est un entier sur 8 octets
+	<sinon>	
+		m_nIDTransaction				est un entier sans signe sur 8 octets
+	<fin>
+	m_FormatAffichage				est un FormatSitePaiement							// Format de la page de paiement
+	m_sNomFournisseurAtos			est une chaîne
+	m_sNomFournisseur_SIPS2			est une chaîne
+	m_bModeDirect					est un booléen
+	m_bMode3DS						est un booléen
+	
+	m_sCompteUtilisateurLancement 	est une chaîne
+	m_sCompteMotDePasseLancement  	est une chaîne
+	
+	m_bIgnoreTestPagePayback		est un booléen
+	
+	m_tabPanier 					est un tableau de LignePanier	// Panier Paypal
+	
+	// Nom des exécutables DLL et URL des différents mode de paiement		
+	m_sEXE_ATOSRequete					est une chaîne
+	m_sEXE_ATOSReponse					est une chaîne
+	
+	
+	m_sURL_SAFERPAY_VERIFICATION		est une chaîne
+	m_sURL_LANGUE_SAFERPAY				est une chaîne
+	m_sURL_TEST_SAFERPAY_VERIFICATION	est une chaîne
+	m_tabServeursPaybox 				est un tableau de chaînes
+	m_tabServeursPayboxDirect			est un tableau de chaînes
+	m_tabServeursPayboxDirect3DS		est un tableau de chaînes
+	m_sVariablesRetourPaybox			est une chaîne
+	m_sVariablesRetourPayboxAvecAbonnement	est une chaîne
+	
+	m_taURL_Fournisseurs				est un tableau associatif (*, *, wlEntier) de chaînes
+	m_taURL_Test_Fournisseurs			est un tableau associatif (*, *, wlEntier) de chaînes
+	m_taURL_Simu_Fournisseurs			est un tableau associatif (*, *, wlEntier) de chaînes
+	
+	m_bURLFournisseurChangee 			est un booléen
+	m_nIgnoreErreurHTTP					est un entier sur 8 octets
+	m_nModeRequeteHTTP					est un entier 
+	m_nTimeOutHTTP						est un entier 
+	m_nVersionSSL						est un entier 
+	
+	m_AlgorithmeHachage					est un entier
+	m_AlgorithmeHachageToken			est un entier
+	m_bRetourS2sGet						est un booléen
+
+	m_sCookiesSiteAvantPaiement			est une chaîne
+	
+	//Info de CB pour les paiements directs
+	m_sCarte_Numero						est une chaîne <sérialise = faux> //pour ne pas enregistrer le numéro de carte dans la table "Transactions" lors de la sérialisation
+	m_sCarte_CVV						est une chaîne <sérialise = faux> //PCI-DSS : jamais sérialisé dans clt_transaction.ObjetPaiement
+	m_sCarte_DateExpiration				est une chaîne <sérialise = faux>
+	m_sCarte_Token						est une chaîne <sérialise = faux>
+	m_bCarte_Memorise					est un booléen
+	m_bCarte_InscriptionSeule			est un booléen //inscription abonné (00056) sans capture : enregistrement de carte sans encaissement
+	m_sCarte_ReferenceAbonne			est une chaîne
+	m_sCarte_Temps3DS					est une chaîne //pour enregistrer le numéro de carte temporairement durant la phase 3D Secure
+	
+	m_btransactionReference				est un booléen
+	
+	m_HTML_3DS							est une chaîne
+	m_nPort_3DS							est un entier
+	m_sAdresseIP_3DS					est une chaîne
+	
+	m_bForceHTTPS						est un booléen
+fin
+
+
+constant
+	
+	// Versions
+	//CIC_VERSION		= "1.2open"	
+	CIC_VERSION_OLD		= "3.0"	
+	MONETICO_VERSION	= "3.0"	
+	PAYBOX_VERSION		= "v2"
+	PAYPAL_VERSION		= "65.0"//"3.2"
+	CBM_FORMULAIRE		= "PaymentRequest"
+	BP_MCC				= 5965
+	
+	
+	PARAM_RETOURS2S		= "ps_retours2s=1"	
+	
+	MoneticoPaiement_CTLHMAC		="V1.04.sha1.php--[CtlHmac%1%2]-%3"
+	MoneticoPaiement_CTLHMACSTR	="CtlHmac%1%2"
+	
+	HTML_FORM			= [
+<!doctype html> 
+<html>
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
+		<title>Redirection...</title>
+	</head>
+	<body onload="document.forms[0].submit();">
+		%4
+			<form action="%1" method="post" name="%2" target="_self">
+			%3
+			</form>
+	</body>
+</html>
+	]
+		HTTP_MODE_WININET 	= 1
+		HTTP_MODE_NATIF 	= 2
+		
+fin
