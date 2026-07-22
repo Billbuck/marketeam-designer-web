@@ -1,0 +1,393 @@
+// Résumé : Traite le retour du paiement
+// Syntaxe :
+//[ <Résultat> = ] OnRetourPaiement (<sAction> est chaîne)
+//
+// Paramètres :
+//	sAction (chaîne ANSI) : valeur parmi	URL_S2S, URL_CANCEL, URL_REFUSED, URL_OK
+// Valeur de retour :
+// 	booléen :      Vrai si le retour a été géré
+//
+// Traitement automatique des exceptions :   exécuter le bloc de code CAS EXCEPTION:
+//
+
+procédure OnRetourPaiement(local sAction est une chaîne)
+
+	nMode 							est un entier
+	sInformations					est une chaîne // information en cas d'erreur
+	nIndiceParametreaFaireSuivre 	est un entier
+	
+	// RAZ des erreurs
+	XERREUR()
+		
+	// Il s'agit d'un retour s2s ?
+	si sAction dans  (URL_S2S,URL_S2S3DS) alors
+		XTRACE("Retour de paiement de serveur à serveur")
+		// Oui
+		//on vérifie qu'on est sur la bonne page de retour de paiement (page potentiellement personnalisée pour être inconnue)
+		//on compare le nom théorique de la page (sans chemin ni extension)  par rapport au nom réel
+		<compile si TypeConfiguration=Site ou TypeConfiguration=ComposantExterne>
+			sNomPage est une chaîne=Remplace(ExtraitChaîne(ExtraitChaîne(ExtraitChaîne(:PageRetourServeurÀServeur,1,"?"),1,"/",DepuisFin),1,"."),"_","-")
+			si pas sNomPage~= Remplace(MaPage..Nom,"_","-") _ou_ pas sNomPage~= Remplace(ExtraitChaîne(ExtraitChaîne(PageAdresse(MaPage,paRelative),1,"/",DepuisFin),1,".awp"),"_","-") alors
+				nMode = PAIEMENT_FALSIFIE
+				sInformations = ChaîneConstruit("Le nom de la page de retour attendu <%1> et différent du nom réel <%2>",ExtraitChaîne(ExtraitChaîne(ExtraitChaîne(:PageRetourServeurÀServeur,1,"?"),1,"/",DepuisFin),1,"."), MaPage..Nom)
+				XERREUR(sInformations)
+				//pas la bonne page...
+				AfficheChaineEnHTML("bad page")
+				renvoyer Faux
+			fin			
+		<fin>
+	sinon
+		XTRACE("Retour de paiement vers la boutique")
+	fin
+		
+	//paramètres a donnée au site WEBDEV dans tous les cas
+	sListeParamètres est une chaîne
+	
+	//Le mode par défaut c'est son état actuel
+	nMode=clt_transaction.Etat
+	
+	//on traite en fonction du fournisseur (de la banque)
+	selon Vrai
+		//paiement SIPS 2 ?
+		cas :Fournisseur dans (SIPS2,BNP_SIPS2,SociétéGénérale_SIPS2)		
+			nIndiceParametreaFaireSuivre = 4				
+			// Traite la réponse et récupère l'identifiant de transaction original
+			si pas OnRetourPaiementSIPS2(nMode,sInformations) alors
+				XTRACE(XERREUR(sInformations))
+			fin
+			
+			sListeParamètres	+= ["&"] + "montant=" + (clt_transaction.Montant*100) + "&reference=" + clt_transaction.NumeroCommande
+			// Complète la liste des paramètres 
+			sListeParamètres	+= ["&"]+sInformations	
+			
+		//paiement ATOS ?
+		cas (:Fournisseur & Atos) = Atos
+			nIndiceParametreaFaireSuivre = 4				
+			// Traite la réponse et récupère l'identifiant de transaction original
+			si pas OnRetourPaiementAtos(sAction,nMode,sInformations) alors
+				XERREUR(sInformations)
+			fin
+			
+			sListeParamètres	+= ["&"] + "montant=" + (clt_transaction.Montant*100) + "&reference=" + clt_transaction.NumeroCommande
+			// Complète la liste des paramètres 
+			sListeParamètres	+= ["&"]+sInformations	
+						
+		//paiement MoneticoPaiement ? AVANT septembre 2019
+		cas (:Fournisseur & MoneticoPaiementOld) = MoneticoPaiementOld
+	
+			si sAction = URL_S2S alors
+				//Exemple de retour S2S
+				//TPE=0000001&date=29/09/2009_a_10:52:46&montant=250EUR&reference=Commande_2009092910523192&MAC=55C22039C438704483A5CBCB47C9F3F3137CAC20&texte-libre=&code-retour=payetest&cvx=oui&vld=1219&brand=na&status3ds=-1&numauto=000000			
+				nIndiceParametreaFaireSuivre=5
+			sinon
+				//exemple de retour annulé/refusé
+				//act=ps_refused&secid=5&fpay=4098&site=WW_Paiement_Securise_CM-CIC_paiement&prvtk=2dd695682c3432d7aabad46a58c8706598e37a49			
+				nIndiceParametreaFaireSuivre=2
+			fin
+			
+			si pas OnRetourPaiementMoneticoPaiementOld(sAction,nMode,sInformations) alors
+				XERREUR("Echec de la vérification MoneticoPaiement : "+sInformations)
+			fin
+			sListeParamètres	+= ["&"] + "montant=" + (clt_transaction.Montant * 100) + "&reference=" + clt_transaction.NumeroCommande
+
+		//paiement MoneticoPaiement ?
+		cas (:Fournisseur & MoneticoPaiement) = MoneticoPaiement
+	
+			si sAction = URL_S2S alors
+				//Exemple de retour S2S
+				//TPE=0000001&date=29/09/2009_a_10:52:46&montant=250EUR&reference=Commande_2009092910523192&MAC=55C22039C438704483A5CBCB47C9F3F3137CAC20&texte-libre=&code-retour=payetest&cvx=oui&vld=1219&brand=na&status3ds=-1&numauto=000000			
+				nIndiceParametreaFaireSuivre=5
+			sinon
+				//exemple de retour annulé/refusé
+				//act=ps_refused&secid=5&fpay=4098&site=WW_Paiement_Securise_CM-CIC_paiement&prvtk=2dd695682c3432d7aabad46a58c8706598e37a49			
+				nIndiceParametreaFaireSuivre=2
+			fin
+			
+			si pas OnRetourPaiementMoneticoPaiement(sAction,nMode,sInformations) alors
+				XERREUR("Échec de la vérification MoneticoPaiement : "+sInformations)
+			fin
+			sListeParamètres	+= ["&"] + "montant=" + (clt_transaction.Montant * 100) + "&reference=" + clt_transaction.NumeroCommande
+			
+		//Paiement PayBox ?
+		cas :Fournisseur = PayBox
+			si sAction = URL_S2S3DS alors
+				// -----------------------------------------------------------------------
+				// Notification serveur-à-serveur du 3D Secure (Remote MPI).
+				// Elle sert uniquement à vérifier la signature Paybox.
+				// Le sort du paiement est décidé par l'appel Paybox Direct (retour
+				// navigateur) : on ne marque rien, on ne redirige rien, on accuse
+				// simplement réception auprès de Paybox.
+				// -----------------------------------------------------------------------
+				nModeS2S3DS		est un entier	= clt_transaction.Etat
+				sInfoS2S3DS		est une chaîne
+				OnRetourPaiementPayBox(sAction, nModeS2S3DS, sInfoS2S3DS)
+				si nModeS2S3DS = PAIEMENT_FALSIFIE alors
+					XERREUR("ALERTE : signature invalide sur la notification S2S 3DS. "+sInfoS2S3DS)
+				fin
+				XTRACE("Accusé réception notification S2S 3DS Paybox")
+				AfficheUneChaine("Retour S2S fait","text/plain")
+				renvoyer Vrai
+			fin		
+			si sAction =URL_RETOUR3DS alors
+				sListeParamètres	+= ["&"] + "montant=" + (clt_transaction.Montant*100) + "&reference=" + clt_transaction.NumeroCommande
+				nIndiceParametreaFaireSuivre=1
+				si pas OnRetourPaiementPayBoxDirecte3DSecure( nMode,sInformations) alors
+					XERREUR("Echec de la vérification PayBox 3DS : "+sInformations)
+				sinon				
+					//on ajoute  les paramètres de la validation directe de la transaction
+					pour tout sValeurParametre,sNomParametre de COL_PAIEMENTSECURISE.ParametresReçus
+						sListeParamètres+=["&"]+sNomParametre+"="+sValeurParametre
+					fin	
+				fin
+			sinon
+				si sAction = URL_S2S  alors
+					nIndiceParametreaFaireSuivre=1
+				sinon
+					nIndiceParametreaFaireSuivre=2
+				fin
+				// Gestion du retour PayBox
+				si pas OnRetourPaiementPayBox(sAction,nMode, sInformations) alors
+					XERREUR("Echec de la vérification PayBox : "+sInformations)
+				fin
+				si nMode<>PAIEMENT_VALIDE alors
+					sListeParamètres	+= ["&"]+"erreur=" +sInformations
+				sinon
+					si CarteMemorise alors
+						sListeParamètres	+= ["&"]+"refabo=" +ReferenceAbonne					
+					fin					
+				fin
+			fin
+			
+		//Paiement PayPal ?
+		cas :Fournisseur = PayPal
+
+			nIndiceParametreaFaireSuivre=2		
+			//si ToKenCheck("token",nMode,sInformations) ALORS
+				selon sAction
+					cas URL_OK
+						//en fait pour PayPal le paiement n'est pas validé mais accordé (on peut le demander)
+						nMode=PAIEMENT_ACCORD
+						XTRACE("PAIEMENT_ACCORD")
+					cas URL_CANCEL
+						nMode=PAIEMENT_ABANDON
+						XTRACE("PAIEMENT_ABANDON")
+						
+					cas URL_REFUSED
+						nMode=PAIEMENT_REFUSE
+						XTRACE("PAIEMENT_REFUSE")
+						
+					autre cas
+						nMode=PAIEMENT_REFUSE
+						XTRACE("PAIEMENT_REFUSE ("+sAction+")")
+				fin
+			sListeParamètres	+= ["&"] + "montant=" + (clt_transaction.Montant * 100) + "&reference=" + clt_transaction.NumeroCommande
+						
+		//Paiement Lyra (Systempay, CaisseEpargne...)
+		cas (:Fournisseur & Lyra) = Lyra, :Fournisseur = Systempay_old, :Fournisseur = CaisseEpargne
+			nIndiceParametreaFaireSuivre=1
+			si pas OnRetourPaiementLyra(nMode, sInformations,sAction) alors			
+				XERREUR("Echec de la vérification Lyra : "+sInformations)
+			fin
+			sListeParamètres	+= ["&"] + "montant=" + (clt_transaction.Montant * 100) + "&reference=" + clt_transaction.NumeroCommande
+			
+		//Paiement BanquePopulaire ?	
+		cas :Fournisseur = BanquePopulaire
+			nIndiceParametreaFaireSuivre=3
+			si pas OnRetourPaiementCyberPaiement(sAction,nMode, sInformations) alors
+				XERREUR("Echec de la vérification CyberPaiement : "+sInformations)
+			fin
+				
+	
+	
+		//Paiement OgoneECommerce ?
+		cas :Fournisseur = OgoneECommerce
+			nIndiceParametreaFaireSuivre=7
+			// Gestion du retour Ogone
+			si pas OnRetourPaiementOgone(sAction,nMode, sInformations) alors
+				XERREUR("Echec de la vérification Ogone : "+sInformations)
+			fin
+			sListeParamètres	+= ["&"] + "montant=" + (clt_transaction.Montant * 100) + "&reference=" + clt_transaction.NumeroCommande
+			
+			//Saferpay ?
+		cas :Fournisseur = Saferpay
+			nIndiceParametreaFaireSuivre=2
+			// Gestion du retour Saferpay
+			si pas OnRetourPaiementSaferpay(nMode, sInformations,sAction,sListeParamètres) alors
+				XERREUR("Echec de la vérification Saferpay : "+sInformations)
+			fin
+			sListeParamètres	= "montant=" + (clt_transaction.Montant * 100) + "&reference=" + clt_transaction.NumeroCommande+["&"]+sListeParamètres
+
+			//Datatrans ?
+		cas :Fournisseur = Datatrans
+			nIndiceParametreaFaireSuivre=2
+			// Gestion du retour Saferpay
+			si pas OnRetourPaiementDatatrans(nMode, sInformations,sAction) alors
+				XERREUR("Echec de la vérification Datatrans : "+sInformations)
+			fin
+			sListeParamètres	= "montant=" + (clt_transaction.Montant * 100) + "&reference=" + clt_transaction.NumeroCommande+["&"]+sListeParamètres
+			
+		//Paiement BanquePopulaire ?	
+		cas :Fournisseur = DataCash_Mastercard
+			nIndiceParametreaFaireSuivre=3 //on ne fait pas suivre l'action "URL_RETOUR"
+			si pas OnRetourPaiementDataCashMastercard(sAction,nMode, sInformations) alors
+				XERREUR("Echec de la vérification DataCash MasterCard : "+sInformations)
+			sinon
+				//vpc_Amount=25000
+				//vpc_OrderInfo=CMD2018012209251059
+				//vpc_TransactionNo=1100000032
+				sListeParamètres	+= ["&"] + "montant=" + (clt_transaction.Montant*100) + "&reference=" + clt_transaction.NumeroCommande
+			fin
+			
+		//Paiement Realex ?
+		cas :Fournisseur = Realex
+		
+		// Gestion du retour Realex
+		si pas OnRetourPaiementRealex(sAction,nMode, sInformations) alors
+			XTRACE(XERREUR("Echec de la vérification Realex : "+sInformations))
+		fin
+		sListeParamètres	+= ["&"] + "montant=" + (clt_transaction.Montant * 100) + "&reference=" + clt_transaction.NumeroCommande
+		
+		
+		autre cas
+			XERREUR("Retour du fournisseur "+:Fournisseur+" non géré")
+			AfficheChaineEnHTML("Retour du fournisseur non géré")
+			
+			
+	fin
+	
+	//si Fournisseur <> paypal  alors
+		selon nMode
+			cas PAIEMENT_ABANDON
+				sListeParamètres +=["&"]+ URL_CANCEL
+			cas PAIEMENT_REFUSE
+				sListeParamètres +=["&"]+ URL_REFUSED
+			cas PAIEMENT_VALIDE,PAIEMENT_ACCORD
+				sListeParamètres +=["&"]+ URL_OK
+			cas PAIEMENT_ATTENTE
+				sListeParamètres +=["&"]+ URL_S2S
+			autre cas
+				sListeParamètres +=["&"]+ URL_REFUSED
+		fin	
+	//fin
+	
+		
+	sURLRetour est une chaîne
+	//Il s'agit d'un retour s2s ?
+	si sAction dans (URL_S2S,URL_S2S3DS) alors			
+		//Oui			
+		//donc dans tous les cas l'URL de l'application a contacter est l'URL S2S
+		//et on met à jour le fichier si OK dans la partie S2S
+		sURLRetour=RécupèreURLAppelServeur(clt_transaction.IdTransaction,(nMode dans (PAIEMENT_VALIDE,PAIEMENT_ACCORD)))	
+		XTRACE("URL retour S2S : "+sURLRetour)
+	sinon
+		//en fonction du mode
+		si nMode=URL_RETOUR3DS alors
+			sURLRetour=RécupèreURLFin3DSecure(clt_transaction.IdTransaction)
+			XTRACE("URL retour 3DS : "+sURLRetour)		
+		sinon
+			selon nMode
+				// Transaction acceptée
+				cas PAIEMENT_VALIDE,PAIEMENT_ACCORD
+					sURLRetour=RécupèreURLValidationPaiement(clt_transaction.IdTransaction)		
+					XTRACE("URL retour VALIDE/ACCORD : "+sURLRetour)		
+				// Paiement refusé
+				cas PAIEMENT_REFUSE
+					sURLRetour=RécupèreURLRefusPaiement(clt_transaction.IdTransaction)		
+					XTRACE("URL retour REFUSE : "+sURLRetour)		
+				// Transaction annulée
+				cas PAIEMENT_ABANDON
+					sURLRetour=RécupèreURLAbandonPaiement(clt_transaction.IdTransaction)		
+					XTRACE("URL retour ABANDON : "+sURLRetour)		
+				// Cas non géré
+				autre cas
+					sURLRetour=RécupèreURLRefusPaiement(clt_transaction.IdTransaction)		
+					XTRACE("URL retour AUTRE (REFUSE) : "+sURLRetour)		
+			fin			
+		fin
+	fin
+	
+	// Régénère la liste des paramètres reçus
+	tantque RecupereUnParamètre(nIndiceParametreaFaireSuivre) <> ""
+		<compile si TypeConfiguration=Site ou TypeConfiguration=ComposantExterne>
+			sListeParamètres += ["&"] + RecupereUnParamètre(nIndiceParametreaFaireSuivre,paramSansDécodage)
+		<sinon>		
+			sListeParamètres += ["&"] + RecupereUnParamètre(nIndiceParametreaFaireSuivre)
+		<fin>
+		nIndiceParametreaFaireSuivre ++
+	fin
+	
+	// Renomme le paramètre NCERROR
+	si Fournisseur = OgoneECommerce alors
+		sListeParamètres = Remplace(sListeParamètres, "STATUS", "erreur", SansCasse+MotComplet)
+	fin
+	
+	// Appel du site WEBDEV (URL de retour)
+	
+	si Position(sURLRetour,"?")>0 alors
+		sListeParamètres=sURLRetour[[Position(sURLRetour,"?")+1 à]]+"&"+sListeParamètres
+		sURLRetour=sURLRetour[[à Position(sURLRetour,"?")-1]]
+		XTRACE("URL après traitement paramètres : "+sURLRetour)		
+	fin
+	
+	//Si c'est une action serveur à serveur ? 
+	si sAction=URL_S2S alors				
+		//A/R à la banque
+		si (Fournisseur & MoneticoPaiementOld) = MoneticoPaiementOld alors
+				XTRACE("Accusés réception retour serveur à serveur MoneticoPaiement")
+				AfficheUneChaine([
+				version=2
+				cdr=0
+				
+				],"text/plain")	
+		sinon			
+			XTRACE("Accusés réception retour serveur à serveur")
+			AfficheUneChaine("Retour S2S fait","text/plain")	
+		fin
+			
+		//on appel le script
+		
+		//stemps=ScriptExécute(sURLRetour, sListeParamètres)	
+		//httprequête pour passer les paramètres en POST
+		
+
+<si CibleExécution=SiteWindows>
+			HTTPParamètre(httpParamètreMode, 1) //utilise la couche Wininet (Internet Explorer)
+	
+<fin>
+
+	
+		//Ajoute une info qui permet au code de l'appelant de vérifier qu'il s'agit de l'appel de serveur à serveur
+		sListeParamètres+="&"+PARAM_RETOURS2S
+		
+		XTRACE("Retour de serveur à serveur, appel de l'action du site en S2S <"+sURLRetour+">")
+		sRetourRequete 	est une chaîne
+		bRequeteOK 		est un booléen
+		si RetourS2SEnGET alors
+			//(bRequeteOK,sRetourRequete) = RequeteWeb(<sURLHTTP>: sURLRetour+["?"]+sListeParamètres,<nMéthode>: httpGet,<bAvecCookie>: vrai)
+			(bRequeteOK,sRetourRequete) = RequeteWeb(sURLRetour+["?"]+sListeParamètres,"","", httpGet,typeMimeFormulaireSimple, Vrai)
+		sinon		
+			//(bRequeteOK,sRetourRequete) = RequeteWeb(<sURLHTTP>: sURLRetour,<sContenu>:sListeParamètres,<nMéthode>: httppost,<bAvecCookie>: vrai)
+			(bRequeteOK,sRetourRequete) = RequeteWeb( sURLRetour,sListeParamètres,"", httpPost,typeMimeFormulaireSimple, Vrai)
+		fin
+		si pas bRequeteOK alors
+			XTRACE("Échec de l'appel du code du site pour l'action S2S  : <"+sRetourRequete+">")
+		sinon
+			XTRACE("Action S2S du site OK, 100 premiers caractères renvoyés : <"+sRetourRequete[[ à 100]]+">") 
+		fin
+	sinon	
+		//Sinon c'est le retour à la boutique
+		XTRACE("Retour du paiement appel du retour vers la boutique du site <"+sURLRetour+">")
+		//le navigateur de l'internaute doit donc appeler l'URL de retour
+		ScriptAffichePOST(sURLRetour, sListeParamètres)		
+	fin
+	
+renvoyer Vrai
+
+cas exception:
+	XERREUR("Exception dans OnRetourPaiement : "+ExceptionInfo(errComplet))
+	AfficheChaineEnHTML("Exception dans OnRetourPaiement. "+ExceptionInfo(errComplet))		
+	renvoyer Faux
+	
+fin:
+	// Marque le paiement selon le mode
+	MarquerPaiement(clt_transaction.NumeroCommande, nMode, sListeParamètres, sInformations)	

@@ -1,0 +1,39 @@
+// Résumé : Renvoie le type de retour détecté
+// Syntaxe :
+//[ <Résultat> = ] TypeRetourPaiement ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Type indéterminé : URL_OK, URL_REFUSED, URL_CANCEL ou chaîne vide si aucun type de retour n'a été détecté
+//
+procédure TypeRetourPaiement()
+
+ListeParametresReçus()
+
+pour tout sValeurParametre,sNomParametre de ParametresReçus
+	selon sNomParametre
+		cas URL_OK
+			renvoyer URL_OK
+			
+		cas URL_REFUSED
+			renvoyer URL_REFUSED
+			
+		cas URL_CANCEL
+			renvoyer URL_CANCEL
+			
+		autre cas	
+			//on continue : le marqueur peut être plus loin dans la liste des paramètres
+			//(l'ancien code renvoyait ici gsDernierTypeRetour, un état de session périmé :
+			// un abandon PayPal après un paiement carte renvoyait "validé" à tort)
+	fin
+fin
+
+//aucun marqueur dans les paramètres reçus : repli sur le dernier type mémorisé (paiement direct)
+si gbModeDirect alors
+	renvoyer gsDernierTypeRetour
+fin
+
+//type de retour non trouvé
+	
+renvoyer ""
