@@ -1,0 +1,18 @@
+// Récupération de la propriété PaypalIdentifiant :
+
+procédure PayPalIdentifiant()
+
+	// RAZ des erreurs
+	XERREUR()
+	
+renvoyer m_sContrat
+
+// Affectation de la propriété PayPalIdentifiant :
+
+procédure PayPalIdentifiant(local Valeur)
+
+	// RAZ des erreurs
+	XERREUR()
+
+	// Conserve la valeur
+	m_sContrat = Valeur

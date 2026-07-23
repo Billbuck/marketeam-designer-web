@@ -1,0 +1,37 @@
+// Résumé : Pour PayPal : Termine un paiement pour lequel un accord a été reçu
+// Syntaxe :
+//[ <Résultat> = ] PaiementTermine (<vNuméroCommande>, <sErreur> est chaîne ANSI, <sInformations> est chaîne ANSI, <sTRSID> est chaîne ANSI)
+//
+// Paramètres :
+//	vNuméroCommande : Numéro de la commande à valider
+//	sErreur (chaîne ANSI) : Information en cas d'échec/refus
+//	sInformations (chaîne ANSI) : Information complémentaire (dans tous les cas, paiement effectué ou non)
+//	sTRSID (chaîne ANSI) : (sortie) Identifiant de la transaction PayPal
+// Valeur de retour :
+// 	booléen :   Vrai si le paiement a été accepté, Faux sinon
+/// Exemple :
+//	sErreur est une chaine
+//	sInformations est une chaine
+//	sTRSID est une chaine
+//
+//	//lance la validation effective du paiement accordé par PayPal
+//	SI PAS PaiementTermine(SAI_NUM_TRANSACTION,sErreur,sInformations,sTRSID) ALORS
+//		//Le paiement n'a pas été accepté
+//		Erreur("Malgré le pré-accord de PayPal le paiement a été refusé : ",sErreur+[RC]+sInformations)
+//	SINON
+//		//Le paiement validé avec succès
+//		//La il faudrait rediriger vers une page permettant l'édition du ticket, de la facture etc...
+//		Info("Le paiement a été effectué avec succès")
+//	FIN
+//
+procédure PaiementTermine(local vNuméroCommande, sErreur est une chaîne, sInformations est une chaîne, sTRSID est une chaîne)
+
+	nMode 		est un entier
+	clPaiement 	est un PaiementSécurisé dynamique <- RécupèreObjetPaiement(vNuméroCommande, sErreur)	
+	
+	si clPaiement <> Null alors		
+		// Transaction récupérée (et on est positionné sur l'enreg du fichier)
+		renvoyer clPaiement:OnRetourPaiementPayPal(nMode, sInformations, sErreur, clPaiement.Montant, sTRSID) 		
+	sinon	
+		renvoyer Faux
+	fin

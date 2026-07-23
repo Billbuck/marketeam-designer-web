@@ -1,0 +1,17 @@
+// Récupération de la propriété IdentifiantSite :
+
+procédure IdentifiantSite()
+
+	// RAZ des erreurs
+	XERREUR()
+
+renvoyer m_sIdentifiant
+
+// Affectation de la propriété IdentifiantSite :
+
+procédure IdentifiantSite(Valeur)
+
+	// RAZ des erreurs
+	XERREUR()
+
+	m_sIdentifiant = Valeur

@@ -1,0 +1,11 @@
+// Récupération de la propriété Site :
+
+procédure publique Site() : chaîne
+
+renvoyer m_sContrat
+
+// Affectation de la propriété Site :
+
+procédure publique Site(sValeur est une chaîne)
+
+m_sContrat=sValeur

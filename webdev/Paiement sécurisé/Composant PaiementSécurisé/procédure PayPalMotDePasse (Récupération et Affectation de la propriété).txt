@@ -1,0 +1,18 @@
+// Récupération de la propriété PayPalMotDePasse :
+
+procédure PayPalMotDePasse()
+
+	// RAZ des erreurs
+	XERREUR()
+
+renvoyer m_sIdentifiant
+
+// Affectation de la propriété PayPalMotDePasse :
+
+procédure PayPalMotDePasse(local Valeur)
+
+	// RAZ des erreurs
+	XERREUR()
+
+	// Conserve la valeur
+	m_sIdentifiant = Valeur

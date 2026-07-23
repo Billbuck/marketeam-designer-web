@@ -87,8 +87,8 @@ privé
 	m_sDevise						est une chaîne										// Devise (par défaut : eEUR)
 	m_sLangue						est une chaîne										// Langue (par défaut : FR ou US)
 	m_sURLFournisseur				est une chaîne										// URL du fournisseur
-	m_sContrat						est une chaîne										// N° de contrat, TPE
-	m_sIdentifiant					est une chaîne										// Identifiant, code société
+	m_sContrat						est une chaîne <sérialise = faux>					// N° de contrat, TPE (Site Paybox / Client ID PayPal) : jamais sérialisé, ré-injecté au retour depuis prm_parametre
+	m_sIdentifiant					est une chaîne <sérialise = faux>					// Identifiant, code société (IdentifiantSite Paybox / Secret PayPal) : jamais sérialisé, ré-injecté au retour depuis prm_parametre
 	m_sRang							est une chaîne										// Rang PayBox
 	m_sIdentifiantSolution			est une chaîne										// vads_contrib Lyra (PayZen)
 	m_sToken						est une chaîne										// Token PayPal
@@ -102,7 +102,7 @@ privé
 	m_sVersionClé					est une chaîne										// version de la clé (SIPS 2)
 	m_sInterfaceVersion				est une chaîne										// version de l'interface SIPS
 	m_sRépertoireFichierClePublic	est une chaîne										// Répertoire des données
-	m_sMotDePasse					est une chaîne										// Mot de passe des données
+	m_sMotDePasse					est une chaîne <sérialise = faux>					// Mot de passe des données (Clé Paybox / mot de passe PPPS) : jamais sérialisé, ré-injecté au retour depuis prm_parametre
 	//m_cnxConnexion					est une connexion									// Connexion 
 	m_sURLActuelle					est une chaîne										// URL de page au moment du paiement
 	m_sErreurInfo					est une chaîne										// Dernier message d'erreur

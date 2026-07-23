@@ -1,0 +1,11 @@
+// Récupération de la propriété Clé :
+
+procédure publique Clé() : chaîne
+
+renvoyer m_sMotDePasse
+
+// Affectation de la propriété Clé :
+
+procédure publique Clé(sValeur est une chaîne)
+
+m_sMotDePasse=sValeur

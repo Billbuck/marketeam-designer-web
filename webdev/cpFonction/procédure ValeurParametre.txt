@@ -1,0 +1,21 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] ValeurParametre (<pCle> [, <pChamp>])
+//
+// Paramètres :
+//	pCle : <indiquez ici le rôle de pCle>
+//	pChamp : < indiquez ici le rôle de pChamp >
+// Valeur de retour :
+// 	Type indéterminé : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure ValeurParametre(pCle, pChamp = prm_parametre.ValChaine..Nom)
+
+
+si prm_parametre.LitRecherchePremier(ClefRecherche,pCle) alors
+	renvoyer {"prm_parametre." + pChamp, indRubrique}
+sinon
+	renvoyer "Erreur"
+fin

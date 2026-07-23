@@ -1,0 +1,54 @@
+// Résumé : Ré-injecte les identifiants sensibles exclus de la sérialisation (<sérialise = faux>)
+// Syntaxe :
+//RéinjecteIdentifiantsSensibles ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Les membres m_sContrat, m_sIdentifiant et m_sMotDePasse ne sont plus sérialisés
+// dans clt_transaction.ObjetPaiement (le Secret PayPal et la clé PPPS Paybox y
+// étaient lisibles). Cette méthode doit être appelée après CHAQUE désérialisation
+// d'un objet PaiementSécurisé, pour recharger ces valeurs depuis prm_parametre :
+//	- PayBox : Site (m_sContrat) + IdentifiantSite (m_sIdentifiant) + Clé (m_sMotDePasse)
+//	- PayPal : Client ID (m_sContrat) + Secret (m_sIdentifiant)
+// Ne JAMAIS tracer les valeurs lues (XTRACE/XERREUR sans secret).
+//
+
+procédure publique RéinjecteIdentifiantsSensibles()
+
+	procédure interne LitParametreRéinjection(pCleParametre) : chaîne
+		si prm_parametre.LitRecherchePremier(ClefRecherche, pCleParametre) alors
+			renvoyer prm_parametre.ValChaine
+		fin
+		XERREUR("Paramètre <" + pCleParametre + "> introuvable dans prm_parametre")
+		renvoyer ""
+	fin
+
+	selon m_nFournisseur
+		cas PayBox
+			si LitParametreRéinjection("Paybox_Compte") = "DEV" alors
+				m_sContrat		= LitParametreRéinjection("Paybox_Dev_Site")
+				m_sIdentifiant	= LitParametreRéinjection("Paybox_Dev_Identifiant_Site")
+				m_sMotDePasse	= LitParametreRéinjection("Paybox_Dev_Cle")
+			sinon
+				m_sContrat		= LitParametreRéinjection("Paybox_Prod_Site")
+				m_sIdentifiant	= LitParametreRéinjection("Paybox_Prod_Identifiant_Site")
+				m_sMotDePasse	= LitParametreRéinjection("Paybox_Prod_Cle")
+			fin
+			XTRACE("Ré-injection des identifiants Paybox effectuée (site " + m_sContrat + ")")
+
+		cas PayPal
+			si LitParametreRéinjection("Paypal_Compte") = "DEV" alors
+				m_sContrat		= LitParametreRéinjection("Paypal_Dev_ClientId")
+				m_sIdentifiant	= LitParametreRéinjection("Paypal_Dev_Secret")
+			sinon
+				m_sContrat		= LitParametreRéinjection("Paypal_Prod_ClientId")
+				m_sIdentifiant	= LitParametreRéinjection("Paypal_Prod_Secret")
+			fin
+			XTRACE("Ré-injection des identifiants PayPal effectuée")
+
+		autre cas
+			// Marketeam n'utilise que Paybox et PayPal : rien à ré-injecter
+	fin

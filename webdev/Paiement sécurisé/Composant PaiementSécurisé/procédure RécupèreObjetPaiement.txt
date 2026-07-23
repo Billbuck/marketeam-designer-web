@@ -23,6 +23,9 @@ si clt_transaction.LitRecherchePremier(NuméroCommande,vNuméroCommande) alors
 	<sinon>	
 		Désérialise(pclPaiment, bufObjet, psdBinaire)		
 	<fin>
+	//les identifiants sensibles (Clé Paybox, Site/IdentifiantSite, Client ID/Secret PayPal)
+	//ne sont plus sérialisés (<sérialise = faux>) : on les recharge depuis prm_parametre
+	pclPaiment:RéinjecteIdentifiantsSensibles()
 sinon
 	sErreur = "Impossible de retrouver la commande n°<" + vNuméroCommande + "> dans la base locale. "+HErreurInfo()		
 	renvoyer Null

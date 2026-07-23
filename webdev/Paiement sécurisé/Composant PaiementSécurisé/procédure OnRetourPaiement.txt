@@ -34,6 +34,10 @@ procédure OnRetourPaiement(local nIDTransaction est un entier = PaiementSécuri
 			Désérialise(clPaiement, bufObjet, psdBinaire)
 		<fin>
 		
+		//les identifiants sensibles (Clé Paybox, Site/IdentifiantSite, Client ID/Secret PayPal)
+		//ne sont plus sérialisés (<sérialise = faux>) : on les recharge depuis prm_parametre
+		clPaiement:RéinjecteIdentifiantsSensibles()
+		
 		//Appel la méthode qui traite le retour
 		clPaiement:OnRetourPaiement(sAction)
 				
