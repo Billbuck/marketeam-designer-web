@@ -1,0 +1,16 @@
+procédure InitInterface()
+
+ChampSaisie est un Champ
+
+pour nInd = 1 _à_ grpChamps..Occurrence
+	ChampSaisie <- EnumèreChamp(grpChamps,nInd)
+	ChampSaisie = ""
+fin
+
+znrChampsSupplementaires.SupprimeTout()
+
+dispMenu[1].Visible					= Faux
+dispMenu[3].Visible					= Faux
+dispMenu[4].Visible					= Vrai
+celConteneur.Visible				= Faux
+celChampsSupplementaires.Visible	= Faux

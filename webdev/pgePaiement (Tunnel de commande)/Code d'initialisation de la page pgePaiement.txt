@@ -1,0 +1,9 @@
+// Décalartion globales de pgePaiement :
+
+procédure MaPage()
+
+Tunnel.__taaPageVisitée[PageCourante] = Vrai
+
+// Fin d'initialisation de pgePaiement
+
+Init()

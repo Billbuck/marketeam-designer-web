@@ -1,0 +1,4 @@
+function SupprimeObjetDroppe(IdSource)
+{
+	$("#"+IdSource).remove();
+}

@@ -52,7 +52,10 @@ gsJsonDocument      = gsJsonDocument
 gsXmlPsmd           = gsXmlPsmd
 
 // Activation écoute messages Designer
-EcouterMessagesIframe("gsJsonRecu", BTN_TraiterMessage.Alias)
+// 3e paramètre (28/07/2026) : procédure qui fournit au Designer un jeton
+// d'authentification fabriqué côté serveur (la clé secrète n'est plus
+// envoyée au navigateur).
+EcouterMessagesIframe("gsJsonRecu", BTN_TraiterMessage.Alias, &DonneJetonDesigner)
 
 // Lance un timer toutes les 9 minutes
 Timer(NavKeepAlive, 9 min)

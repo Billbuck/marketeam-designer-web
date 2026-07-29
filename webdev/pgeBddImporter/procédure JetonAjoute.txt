@@ -1,0 +1,17 @@
+procédure JetonAjoute(pIdCible,pJeton)
+
+sAlias		est une chaîne
+sJeton		est une chaîne
+
+sJeton = Remplace(pJeton,TAB,"")
+sJeton = Remplace(sJeton,Caract(10),"")
+
+sAlias = Remplace(pIdCible,"dww","")
+
+si sJeton <> "" _et_ sAlias <> "" _et_ {_taaAliasVersChamp[sAlias],indChamp}..Etat <> AffichageSeulement alors
+	SaisieAjouteJeton({_taaAliasVersChamp[sAlias],indChamp},sJeton)
+	// _taaColonne[_taaChampCible[sAlias]] = Vrai
+	renvoyer Vrai
+fin
+
+renvoyer Faux

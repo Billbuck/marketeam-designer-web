@@ -1,0 +1,33 @@
+procédure InitTunnel()
+
+//		znpTarif..CouleurFond 	= Partage.CouleurTypeOperation(__stOperation.TypeOperation,"XS")
+
+InitTitreOperation()
+
+libTitre..Couleur 							= Partage.CouleurTypeOperation(__stOperation.TypeOperation,"XXL")
+
+
+libTitreValidation..Couleur				= Partage.CouleurTypeOperation(__stOperation.TypeOperation,"L")
+libSousTitreValidation..Couleur			= Partage.CouleurTypeOperation(__stOperation.TypeOperation,"L")
+
+libTitrePopValidation.Couleur				= Partage.CouleurTypeOperation(__stOperation.TypeOperation,"XL")
+celPopGaucheValider.CouleurFond			= Partage.CouleurTypeOperation(__stOperation.TypeOperation,"M")
+
+libTitrePopRèglement.Couleur				= Partage.CouleurTypeOperation(__stOperation.TypeOperation,"XL")
+celPopGauchePayer.CouleurFond				= Partage.CouleurTypeOperation(__stOperation.TypeOperation,"M")
+
+btnSuivant.ClasseHTML						= ClassHtmlTypeOperation("btn",__stOperation.TypeOperation)
+btnValidationOui.ClasseHTML				= ClassHtmlTypeOperation("btn",__stOperation.TypeOperation)
+btnValidationNon.ClasseHTML				= ClassHtmlTypeOperation("btn",__stOperation.TypeOperation)
+btnPayerOui.ClasseHTML						= ClassHtmlTypeOperation("btn",__stOperation.TypeOperation)
+btnPayerNon.ClasseHTML						= ClassHtmlTypeOperation("btn",__stOperation.TypeOperation)
+btnSauvegarderTunnel.ClasseHTML			= ClassHtmlTypeOperation("btn",__stOperation.TypeOperation)
+btnFerme.ClasseHTML							= ClassHtmlTypeOperation("btn",__stOperation.TypeOperation)
+btnAccueil.ClasseHTML						= ClassHtmlTypeOperation("lgo",__stOperation.TypeOperation,"small")
+
+saiOperationNbrDestinataire..Etat		= (__stOperation.EstBaseEnAttente = Vrai) ? Actif sinon AffichageSeulement
+libOperationTypeOperation					= LibelleTypeProjet(__stOperation.TypeOperation,Faux)
+
+InitProgressBar()
+
+TunnelAfficheInformationsBandeauDroit()

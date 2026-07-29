@@ -1,0 +1,4 @@
+procédure AvantUploadJS()
+
+// Inutile
+// AJAXExécute(ajaxActualiseChamps+ajaxSynchroniseVariablesServeur,InitInterface)

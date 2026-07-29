@@ -1,0 +1,126 @@
+// Déclarations globales de pgeBddImporter (serveur)
+
+procédure MaPage()
+
+
+_sUnivers = __OPERATION_BASE_DE_DONNEES__
+_bMenuGrisé = Vrai
+
+_nIdCltBase					est un entier
+_sFichierTemporaire			est une chaîne
+_stWsBddImportReponse		est une structWsReponseBddImportation
+_taaAliasVersChamp			est un tableau associatif	<synchronisé navigateur> de chaîne
+
+// Variables globales pour le traitement par lots
+gnIdWbsBaseEnCours			est un entier	<synchronisé navigateur>
+gnIdBaseResultat			est un entier	<synchronisé navigateur>
+gbTraitementTermine			est un booléen	<synchronisé navigateur>
+gsNomFichierImporte			est une chaîne	<synchronisé navigateur>
+
+
+_sUploadReponseJSON			est une chaîne	<synchronisé navigateur>
+
+
+
+ListeAjoute(cboChampType,Partage.LibelleChampType(__CHAMP_TYPE_TEXTE__) 	+ gLien(__CHAMP_TYPE_TEXTE__))					//	1
+ListeAjoute(cboChampType,Partage.LibelleChampType(__CHAMP_TYPE_ENTIER__) 	+ gLien(__CHAMP_TYPE_ENTIER__))					//	2
+ListeAjoute(cboChampType,Partage.LibelleChampType(__CHAMP_TYPE_DECIMAL__) 	+ gLien(__CHAMP_TYPE_DECIMAL__))					//	3
+ListeAjoute(cboChampType,Partage.LibelleChampType(__CHAMP_TYPE_MONETAIRE__)	+ gLien(__CHAMP_TYPE_MONETAIRE__))			//	4
+ListeAjoute(cboChampType,Partage.LibelleChampType(__CHAMP_TYPE_DATE__) 		+ gLien(__CHAMP_TYPE_DATE__))						//	5
+ListeAjoute(cboChampType,Partage.LibelleChampType(__CHAMP_TYPE_EMAIL__) 	+ gLien(__CHAMP_TYPE_EMAIL__))					// 6
+ListeAjoute(cboChampType,Partage.LibelleChampType(__CHAMP_TYPE_TELEPHONE__)	+ gLien(__CHAMP_TYPE_TELEPHONE__))			//	7
+ListeAjoute(cboChampType,Partage.LibelleChampType(__CHAMP_TYPE_PORTABLE__) 	+ gLien(__CHAMP_TYPE_PORTABLE__))			//	8
+ListeAjoute(cboChampType,Partage.LibelleChampType(__CHAMP_TYPE_CODE_BARRES__) 	+ gLien(__CHAMP_TYPE_CODE_BARRES__))	//	9
+ListeAjoute(cboChampType,Partage.LibelleChampType(__CHAMP_TYPE_URL__) 		+ gLien(__CHAMP_TYPE_URL__))						// 10
+ListeAjoute(cboChampType,Partage.LibelleChampType(__CHAMP_TYPE_IMAGE__) 	+ gLien(__CHAMP_TYPE_IMAGE__))					//	11
+ListeAjoute(cboChampType,Partage.LibelleChampType(__CHAMP_TYPE_ALLIAGE__) 	+ gLien(__CHAMP_TYPE_ALLIAGE__))					//	12
+
+
+MaPage..HTMLFinPage += [
+<style>
+	.estSource { 
+		z-index: 9;
+	}
+	.estCible { 
+		transition: 0.3s background ease-in-out; 
+		z-index: 0;
+	}
+	.estCible .wbJeton { animation: none !important; }
+	
+	.ui-droppable-hover { 
+		background: [%__COULEUR_BDD_XS__%];
+		cursor: 	grab; 
+	}
+</style>
+
+<script>
+
+	RelanceDragSource();
+	
+	$(".estCible").droppable({
+		drop: function(event, ui){			
+			
+			var TexteBouton = $("#"+ui.helper[0].id + " .Rubrique").text();
+			var IdSource 	= ui.helper[0].id;
+			var IdCible 	= $(this).attr("id");
+			
+			AjouteRubriqueCible(TexteBouton, IdSource, IdCible);	
+		}
+	});
+	
+</script>
+]
+
+
+local
+
+
+// Charger le contenu du fichier JS
+sContenuJS		est une chaîne	= UTF8VersChaîne(fChargeTexte(fRepWeb() + "/js/upload-bdd.js"))
+sUrlWebService	est une chaîne	= cpFonction.ValeurParametre("WS_Bdd_Import-multipart",prm_parametre.ValChaine.Nom)
+
+// Remplacer les placeholders
+// SÉCURITÉ (28/07/2026) : %%SECRETKEY%% supprimé — la clé secrète ne doit
+// JAMAIS être injectée dans le navigateur. La signature est désormais
+// calculée côté serveur (cf. DonneSignatureUpload / DonneJetonUpload).
+sContenuJS = sContenuJS.Remplace("%%IDCLIENT%%", Partage.__vcUser.IDClient)
+sContenuJS = sContenuJS.Remplace("%%IDCONTACT%%", Partage.__vcUser.IDContact)
+sContenuJS = sContenuJS.Remplace("%%URLWEBSERVICE%%", sUrlWebService)
+
+// Injecter le JS dans la page
+MaPage..HTMLEntête += RC + "<script type=""text/javascript"">" + RC + sContenuJS + RC + "</script>"
+
+
+// Fin d'initialisation de pgeBddImporter (serveur)
+
+Init()
+
+
+// Déclarations globales de pgeBddImporter (navigateur)
+
+gnIdWbsBaseEnCours	= gnIdWbsBaseEnCours
+gnIdBaseResultat	= gnIdBaseResultat
+gbTraitementTermine = gbTraitementTermine
+gsNomFichierImporte = gsNomFichierImporte
+
+_dhDateHeureDebut				est une DateHeure					// DateHeure de début
+_dhDateHeureDernierLot			est une DateHeure					// DateHeure du dernier lot reçu
+_nTempsEstiméParLot				est un réel			= 1.7			// Temps moyen estimé en secondes pour un lot
+_nProgressionParLot				est un réel			= 0.0			// % de progression par lot (sera recalculé)
+_nProgressionCible				est un réel			= 0.0			// Progression reçue du serveur
+_nProgressionAffichée			est un réel			= 0.0			// Progression affichée
+_nVitesseProgression			est un réel			= 0.0			// % par seconde
+_nIdTimerJauge					est un entier						// Timer pour l'animation
+_nSeuilAffichageJauge			est un entier		= 10000			// Seuil en nombre de lignes pour afficher la jauge
+_bJaugeAffichée					est un booléen		= Faux			// Vrai si la jauge est affichée
+_bInterruption					est un booléen		= Faux			// Vrai si l'utilisateur a demandé l'interruption
+
+
+// Chargement de pgeBddImporter (onload navigateur)
+
+_sUploadReponseJSON = _sUploadReponseJSON
+
+// 3 callbacks : après upload, avant upload, fourniture du jeton de signature
+// (ordre POSITIONNEL, cf. function InitUploadCallback : arguments[0..2])
+InitUploadCallback(&ApresUploadJS, &AvantUploadJS, &DonneJetonUpload)
+

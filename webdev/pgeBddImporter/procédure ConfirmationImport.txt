@@ -1,0 +1,50 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// ConfirmationImport ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure ConfirmationImport(stMapping est une structWsBddMapping)
+
+stConfirmation			est une structWsRequeteBddConfirmation
+jsonStructConfirmation	est une chaîne ANSI
+ReqBddConfirme			est un restRequête
+ReqBddResultat			est un restRéponse
+jsonResultat			est un JSON
+
+ReqBddConfirme.URL			= cpFonction.ValeurParametre("WS_Bdd_Import_Confirmation", prm_parametre.ValChaine.Nom)
+ReqBddConfirme.Méthode		= httpPost
+ReqBddConfirme.ContentType	= typeMimeJSON
+cpToken.MarketeamTokenEntête(ReqBddConfirme)
+
+si _stWsBddImportReponse.IdWbsBase > 0 alors
+	stConfirmation.IdWbsBase	= _stWsBddImportReponse.IdWbsBase
+	stConfirmation.BaseNom		= NomPropre(saiBddNom)
+	stConfirmation.stMapping	= stMapping
+	stConfirmation.Decision		= "GO"
+	Sérialise(stConfirmation, jsonStructConfirmation, psdJSON)
+	ReqBddConfirme.Contenu	= jsonStructConfirmation
+
+	ReqBddResultat			= ReqBddConfirme.Envoie()
+
+	si ReqBddResultat.CodeEtat = "200" alors
+		jsonResultat = ReqBddResultat.Contenu
+
+		si jsonResultat.IdWbsBase > 0 alors
+			// Traitement par lots nécessaire
+			renvoyer jsonResultat.IdWbsBase
+		sinon si jsonResultat.IdBase > 0 alors
+			// Ancien comportement - base créée directement
+			gnIdBaseResultat = jsonResultat.IdBase
+			renvoyer 0
+		fin
+	fin
+fin
+
+renvoyer -1

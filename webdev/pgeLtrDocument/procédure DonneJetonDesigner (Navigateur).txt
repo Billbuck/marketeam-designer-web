@@ -1,0 +1,12 @@
+// Résumé : Relais navigateur entre l'écouteur de messages du Designer
+//          (EcouterMessagesIframe, action 'tokenRequest') et le serveur.
+//          Passée en 3e paramètre de EcouterMessagesIframe à l'onload.
+//          Le jeton (horodatage + signature) est fabriqué CÔTÉ SERVEUR :
+//          la clé secrète ne quitte jamais le serveur.
+//
+// Valeur de retour :
+// 	chaîne : "idClient|idContact|AAAAMMJJHHMMSS|signature" (vide si échec AJAX)
+//
+procédure DonneJetonDesigner()
+
+renvoyer AJAXExécute(cpDesigner.AjaxDonneJetonWebservice)

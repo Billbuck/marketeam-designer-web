@@ -1,0 +1,5 @@
+procédure RetourRefusPaypal(pMessage = "Refus de transaction")
+
+si pMessage <> "" alors
+	PopupAfficheMessage(pMessage,"Paypal",__stOperation.TypeOperation,__TOAST_ANNULATION__)
+fin

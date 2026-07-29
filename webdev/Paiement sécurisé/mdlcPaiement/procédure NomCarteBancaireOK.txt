@@ -1,19 +1,19 @@
 procédure NomCarteBancaireOK()
 
 sTexteRequete	est une chaîne
-sdReqNom		est une Source de Données
+sdReqNom			est une Source de Données
 
 sTexteRequete =
 [
 	SELECT
-		IdCarteBancaire
+	IdCarteBancaire
 	FROM
-		clt_carte_bancaire
+	clt_carte_bancaire
 	WHERE
-		EstActif = 1
-		AND IdClient = [%Partage.__vcUser.IdClient%] 
-		AND (IdContact = [%Partage.__vcUser.IdContact%] OR IdContact IS NULL)
-		AND Libelle = '[%SansEspace(saiCarteBancaireLibelle)%]'
+	EstActif = 1
+	AND IdClient = [%Partage.__vcUser.IdClient%] 
+	AND (IdContact = [%Partage.__vcUser.IdContact%] OR IdContact IS NULL)
+	AND Libelle = [%cpFonction.Quotes(sansespace(saiCarteBancaireLibelle))%]
 	LIMIT 1		
 ]
 

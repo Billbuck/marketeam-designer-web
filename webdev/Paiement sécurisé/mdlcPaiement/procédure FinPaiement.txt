@@ -85,11 +85,15 @@ selon TransactionEtat(saiRéférence, sInformation, nIdTransaction, dhDateHeureP
 
 	cas PAIEMENT_REFUSE
 		_stPaiementSécurisé.IdTransaction = nIdTransaction
+		//le détail du refus sera affiché par AfficheResultat
+		_sInformationEchec = sInformation
 		nPaiementStatut[_paiement_refusé_] = Vrai
 		PaiementStatut(nPaiementStatut)
 			
 	autre cas 
 		_stPaiementSécurisé.IdTransaction = nIdTransaction
+		//le détail de l'annulation sera affiché par AfficheResultat
+		_sInformationEchec = sInformation
 		nPaiementStatut[_paiement_annulé_] = Vrai
 		PaiementStatut(nPaiementStatut)
 fin

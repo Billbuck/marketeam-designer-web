@@ -1,0 +1,67 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//ValidationReceptionFacture ( [<pRetour>])
+//
+// Paramètres :
+//	pRetour (valeur par défaut=1) : < indiquez ici le rôle de pRetour >
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+// 	pMontant : <indiquez ici le rôle de pMontant>
+procédure ValidationReceptionFacture(pRetour = mdcPaiement._paiement_validé_)
+
+
+saiMontantReserveHT					= 0
+saiMontantReserveTTC				= 0
+banArgent[_ban_filtre_].Visible	= Vrai
+banArgent[_ban_tableau_].Visible	= Vrai
+banArgent[_ban_montant_].Visible	= Faux
+banArgent[_ban_fille_].Visible		= Faux
+banArgent[_ban_affecter_].Visible	= Faux
+banArgent[_ban_paiement_].Visible	= Faux
+btnCréditer.Visible					= _bCrediterVisible
+btnAffecter.Visible					= (_bAffecterVisible _et_ znrFille.Occurrence > 0)
+
+retour = Vrai
+cpConnexion.gcnxBaseChronodirect.TransactionDébut()
+
+
+si pRetour = mdcPaiement._paiement_validé_ alors
+	// Création de clt_reserve
+	clt_reserve.RAZ()
+	clt_reserve.IdClient					= mdcPaiement._stPaiementParametre.IdClient
+	clt_reserve.IdContact					= mdcPaiement._stPaiementParametre.IdContact
+	clt_reserve.DateHeureCreation			= DateHeureSys()
+	clt_reserve.TauxTVA						= mdcPaiement._stPaiementParametre.stMontant.TauxTVA
+	clt_reserve.MontantHT					= mdcPaiement._stPaiementParametre.stMontant.MontantHT
+	clt_reserve.MontantTVA					= mdcPaiement._stPaiementParametre.stMontant.MontantTVA
+	clt_reserve.MontantTTC					= mdcPaiement._stPaiementParametre.stMontant.MontantTTC
+	clt_reserve.ResteAPayer					= mdcPaiement._stPaiementParametre.TransactionMontant
+	clt_reserve.Motif						= mdcPaiement._stPaiementParametre.Designation
+	clt_reserve.TypeReserve					= __RESERVE_AUGMENTATION__
+	si pas clt_reserve.Ajoute() alors STOP; retour Faux
+
+	si pas clt_client.LitRecherchePremier(IdClient,Partage.__vcUser.IDClient) alors STOP; retour Faux
+	_mReserveArgent = clt_client.ReserveArgent
+
+fin
+
+RéserveArgent = NumériqueVersChaîne(_mReserveArgent, ",2fS") + " €"
+
+mdcPaiement.AfficheResultat(pRetour)
+InitZnrReserve()
+InitZnrFille()
+
+fin:
+
+si retour = Vrai alors
+	cpConnexion.gcnxBaseChronodirect.TransactionFin()
+sinon
+	cpConnexion.gcnxBaseChronodirect.TransactionAnnule()
+fin
+
+
+

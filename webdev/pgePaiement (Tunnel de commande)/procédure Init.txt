@@ -65,13 +65,11 @@ si pas mdcPaiement.InitPaiementSécurisé() alors
 	retour
 fin
 
-mdcPaiement._procedureRetourReserveArgent			= ValidationPaiement
-mdcPaiement._procedureRetourCarteBancaire			= ValidationPaiement
-mdcPaiement._procedureRetourPaypal					= ValidationPaiement
-mdcPaiement._procedureRetourReceptionFacture		= ValidationPaiement
-mdcPaiement._procedureRetourVirement				= ValidationPaiement
-mdcPaiement._procedureRetourChèque					= ValidationPaiement
+mdcPaiement._procedureRetourReserveArgent				= ValidationPaiement
+mdcPaiement._procedureRetourCarteBancaire				= ValidationPaiement
+mdcPaiement._procedureRetourPaypal						= ValidationPaiement
+mdcPaiement._procedureRetourReceptionFacture			= ValidationPaiement
+mdcPaiement._procedureRetourVirement					= ValidationPaiement
+mdcPaiement._procedureRetourChèque						= ValidationPaiement
 mdcPaiement._procedureRetourPrélèvement				= ValidationPaiement
 mdcPaiement._ProcedureRetourPaiementDejaRéalisé		= PaiementDejaRéalisé
-mdcPaiement._ProcédureAccordPaiementPaypal			= RetourAccordPaypal
-mdcPaiement._ProcédureRefusPaiementPaypal			= RetourRefusPaypal

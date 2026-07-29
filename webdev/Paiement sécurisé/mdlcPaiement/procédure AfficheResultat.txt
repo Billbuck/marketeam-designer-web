@@ -1,5 +1,16 @@
 procédure AfficheResultat(pStatut, pMessage = "")
 
+//si la page appelante n'a pas fourni de message, on complète le libellé du statut
+//avec le détail mémorisé par le dernier chemin d'échec (ErreurInfo Paybox, sInformation de TransactionEtat...)
+si pMessage = "" _et_ _sInformationEchec <> "" alors
+	selon pStatut
+		cas _paiement_annulé_	: pMessage = "Paiement annulé" + RC + _sInformationEchec
+		cas _paiement_refusé_	: pMessage = "Paiement refusé" + RC + _sInformationEchec
+		cas _paiement_erreur_	: pMessage = "Paiement en erreur" + RC + _sInformationEchec
+		autre cas				: pMessage = _sInformationEchec
+	fin
+fin
+_sInformationEchec = ""
 
 selon pStatut
 	cas _paiement_validé_

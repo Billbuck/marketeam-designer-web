@@ -1,0 +1,17 @@
+procédure RetourRefusPaypal(pMessage = "Refus de transaction")
+
+saiMontantReserveHT						= 0
+saiMontantReserveTTC						= 0
+btnCréditer.Visible						= Vrai
+btnAffecter.Visible						= Faux
+btnValider..Visible						= Faux
+banArgent[_ban_filtre_].Visible		= Vrai
+banArgent[_ban_tableau_].Visible		= Vrai
+banArgent[_ban_montant_].Visible		= Faux
+banArgent[_ban_affecter_].Visible	= Faux
+banArgent[_ban_fille_].Visible		= Faux
+banArgent[_ban_paiement_].Visible	= Vrai
+
+si pMessage <> "" alors
+	PopupAfficheMessage(pMessage,"Paypal",__OPERATION_MARKETEAM__,__TOAST_ANNULATION__)
+fin

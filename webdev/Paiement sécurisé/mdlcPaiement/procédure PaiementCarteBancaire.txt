@@ -3,6 +3,7 @@ procédure PaiementCarteBancaire()
 sActivite			est une chaîne
 sDateMMAA			est une chaîne
 nOptionPageAdresse	est un entier
+nPaiementStatut		est un entier sans signe sur 8 octets
 
 
 //Paramètre du mode test : http://www1.paybox.com/espace-integrateur-documentation/comptes-de-tests/
@@ -149,8 +150,17 @@ _psPaybox:VerifieSignaturePaybox	= Vrai //Faux
 
 //Et lance le paiement avec le montant à payer et l’émail client
 si Paiement_Direct(_psPaybox, _stPaiementParametre.TransactionMontant, _stPaiementParametre.Email, _stPaiementParametre) = Faux alors
-	//	Le paiement a échoué
-	Erreur("Échec du paiement : " +RC+ _psPaybox:ErreurInfo)
+	//	Le paiement a échoué : on passe par le même entonnoir que le refus 3DS
+	//	(PaiementStatut → callback de la page appelante) pour que la page réorganise
+	//	sa propre interface, exactement comme sur un retour Paybox refusé.
+	//	Surtout pas de Erreur() ici : ça interromprait le traitement.
+	_sInformationEchec = _psPaybox:ErreurInfo
+
+	//la zone paiement revient au choix du mode de paiement
+	MixGestionInterface("", Faux)
+
+	nPaiementStatut[_paiement_refusé_] = Vrai
+	PaiementStatut(nPaiementStatut)
 
 sinon
 	//	Le paiement OK ou lancement 3DSecure OK

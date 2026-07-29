@@ -1,0 +1,87 @@
+<style>
+/* Conteneur global - taille fixe */
+#uploadContainer {
+    width: 232px;
+    height: 40px;
+    position: relative;
+}
+
+/* Bouton upload */
+#btnUploadBdd {
+    width: 232px;
+    height: 40px;
+    background-color: #FF7F00;
+    border: none;
+    border-radius: 20px;
+    color: white;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+#btnUploadBdd:hover {
+    background-color: #E86811;
+}
+
+/* Zone progression - même taille que le bouton */
+#progressZone {
+    display: none;
+    width: 232px;
+    height: 40px;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Texte phase */
+#phaseText {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    color: #333;
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* Barre de progression */
+#progressBarBg {
+    width: 200px;
+    height: 12px;
+    background: #E0E0E0;
+    border-radius: 6px;
+    overflow: hidden;
+}
+#progressBar {
+    width: 0%;
+    height: 100%;
+    background: #FF7F00; /*linear-gradient(90deg, #FF7F00, #FFB347);*/
+    border-radius: 6px;
+    transition: width 0.2s ease-out;
+}
+
+/* Message erreur */
+#errorText {
+    display: none;
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    color: #D32F2F;
+    text-align: center;
+}
+</style>
+
+<input type="file" id="inputFichierBdd" accept=".csv,.txt,.xls,.xlsx" style="display:none">
+
+<div id="uploadContainer">
+    <button type="button" id="btnUploadBdd">Sélectionnez votre fichier</button>
+
+    <div id="progressZone">
+		<span id="phaseText">Phase 1/2 : Envoi...</span>
+        <div id="progressBarBg">
+            <div id="progressBar"></div>
+        </div>
+    </div>
+
+    <span id="errorText"></span>
+</div>

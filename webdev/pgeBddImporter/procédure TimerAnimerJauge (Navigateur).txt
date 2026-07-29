@@ -1,0 +1,34 @@
+procédure TimerAnimerJauge()
+
+nSecondesRestantes	est un réel
+nMinutes			est un entier
+nSecondes			est un entier
+
+// Ne pas animer si la vitesse n'est pas encore calculée
+si _nVitesseProgression <= 0.0 alors
+	retour
+fin
+
+// Avancer la jauge selon la vitesse estimée (timer toutes les 100ms = 0.1s)
+_nProgressionAffichée = _nProgressionAffichée + (_nVitesseProgression / 10.0)
+
+// Ne pas dépasser 99% tant que le serveur n'a pas confirmé 100%
+si _nProgressionCible < 100.0 et _nProgressionAffichée > 99.0 alors
+	_nProgressionAffichée = 99.0
+fin
+
+// Ne jamais dépasser 100%
+si _nProgressionAffichée > 100.0 alors
+	_nProgressionAffichée = 100.0
+fin
+
+popProgression.dispImportProgression.jaugeProgression	= _nProgressionAffichée
+//popProgression.dispImportProgression.libPourcentage	= Arrondi(_nProgressionAffichée) + "%"
+
+// Mettre à jour le temps restant estimé
+si _nVitesseProgression > 0.0 et _nProgressionAffichée < 100.0 alors
+	nSecondesRestantes										= (100.0 - _nProgressionAffichée) / _nVitesseProgression
+	nMinutes												= nSecondesRestantes / 60
+	nSecondes												= modulo(Arrondi(nSecondesRestantes), 60)
+	popProgression.dispImportProgression.libTempsRestant	= "Temps restant estimé : " + NumériqueVersChaîne(nMinutes, "02d") + "m " + NumériqueVersChaîne(nSecondes, "02d") + "s"
+fin

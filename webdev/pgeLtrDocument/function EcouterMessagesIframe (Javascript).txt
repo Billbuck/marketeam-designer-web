@@ -1,0 +1,64 @@
+function EcouterMessagesIframe(nomVariable, aliasBoutonServeur, procJetonAuth) {
+    var messageCount = 0;
+
+    // Actions qui nécessitent un traitement côté serveur
+    var actionsServeur = ["validated", "cancelled"];
+
+    console.log("🎧 Écoute iframe activée (variable: " + nomVariable + ")");
+
+    window.addEventListener('message', function(event) {
+        if (!event.data || !event.data.action) return;
+
+        // ── SÉCURITÉ (28/07/2026) : demande de jeton d'authentification ──
+        // Le Designer n'a plus la clé secrète : il demande ici un jeton frais
+        // (idClient|idContact|timestamp|signature) fabriqué CÔTÉ SERVEUR par
+        // la procédure navigateur passée en 3e paramètre (DonneJetonDesigner).
+        // On répond DIRECTEMENT à l'iframe, sans toucher à la variable
+        // synchronisée ni au bouton serveur (sinon la vue Designer se ferme).
+        if (event.data.action === 'tokenRequest') {
+            var jeton = '';
+            if (typeof procJetonAuth === 'function') {
+                try {
+                    jeton = procJetonAuth() || '';
+                } catch (e) {
+                    console.error('❌ Erreur obtention jeton auth:', e);
+                }
+            } else {
+                console.error('❌ tokenRequest reçu mais aucune procédure jeton enregistrée (3e paramètre de EcouterMessagesIframe)');
+            }
+            var p = String(jeton).split('|');
+            var reponse = {
+                action: 'tokenResponse',
+                requestId: event.data.requestId,
+                idClient:  (p.length === 4) ? p[0] : '',
+                idContact: (p.length === 4) ? p[1] : '',
+                timestamp: (p.length === 4) ? p[2] : '',
+                signature: (p.length === 4) ? p[3] : ''
+            };
+            if (event.source) {
+                event.source.postMessage(reponse, '*');
+            }
+            return;
+        }
+
+        messageCount++;
+        console.log('📩 Message reçu:', event.data);
+
+        // Stocker dans la variable synchronisée
+        if (nomVariable) {
+            var jsonComplet = JSON.stringify(event.data);
+            SetVariableWebDev(nomVariable, jsonComplet);
+
+            // Si l'action nécessite un traitement serveur -> clic bouton caché
+            if (actionsServeur.indexOf(event.data.action) !== -1) {
+                console.log('🔄 Déclenchement serveur pour:', event.data.action);
+                var btn = document.getElementById(aliasBoutonServeur);
+                if (btn) {
+                    btn.click();
+                } else {
+                    console.error('❌ Bouton non trouvé avec id:', aliasBoutonServeur);
+                }
+            }
+        }
+    });
+}

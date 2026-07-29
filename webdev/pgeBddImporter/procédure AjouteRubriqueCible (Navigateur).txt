@@ -1,0 +1,11 @@
+procédure AjouteRubriqueCible(pJeton est une chaîne, pIdSource est une chaîne, pIdCible est une chaîne)
+
+si AJAXExécute(ajaxActualiseChamps+ajaxSynchroniseVariablesServeur,JetonAjoute,pIdCible, pJeton) alors
+
+	SupprimeObjetDroppé(pIdSource)
+	
+	AJAXExécuteAsynchrone(ajaxActualiseChamps+ajaxSynchroniseVariablesServeur,EnleveRubriqueSource,RelanceDragSource,pJeton)
+	
+	BTN_Post.ExécuteTraitement(trtClic)
+	
+fin	

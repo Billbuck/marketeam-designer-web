@@ -297,15 +297,19 @@ quand exception dans
 	tabSansCorrespondance		est un tableau de Variants
 	tabValeursSansImage			est un tableau de chaînes
 
-	// DEBUG : afficher les 3 premiers noms de fichiers et les 3 premières valeurs BDD
-	fAjouteTexte(fRepDonnées() + "\DesignerImageUpload_debug.txt", ...
-	"--- DEBUG COMPARAISON ---" + RC + ...
-	"Fichier 1: [" + fExtraitChemin(tabImagesValides[1], fFichier) + "]" + RC + ...
-	"Fichier 2: [" + fExtraitChemin(tabImagesValides[2], fFichier) + "]" + RC + ...
-	"Fichier 3: [" + fExtraitChemin(tabImagesValides[3], fFichier) + "]" + RC + ...
-	"Valeur BDD 1: [" + tabValeursBDD[1] + "]" + RC + ...
-	"Valeur BDD 2: [" + tabValeursBDD[2] + "]" + RC + ...
-	"Valeur BDD 3: [" + tabValeursBDD[3] + "]" + RC)
+	// DEBUG : afficher jusqu'à 3 noms de fichiers et 3 valeurs BDD.
+	// CORRECTIF (29/07/2026) : accès aux indices PROTÉGÉ. L'ancien code lisait
+	// [1], [2] et [3] en dur -> plantage "accès à l'élément 2" dès que la
+	// colonne n'avait qu'une ou deux valeurs distinctes en base (l'import
+	// entier échouait en 400 à cause d'une simple trace de débogage).
+	sDebugComparaison est une chaîne = "--- DEBUG COMPARAISON ---" + RC
+	pour nIDbg = 1 _à_ Min(3, tabImagesValides.Occurrence)
+		sDebugComparaison += "Fichier " + nIDbg + ": [" + fExtraitChemin(tabImagesValides[nIDbg], fFichier) + "]" + RC
+	fin
+	pour nIDbg2 = 1 _à_ Min(3, tabValeursBDD.Occurrence)
+		sDebugComparaison += "Valeur BDD " + nIDbg2 + ": [" + tabValeursBDD[nIDbg2] + "]" + RC
+	fin
+	fAjouteTexte(fRepDonnées() + "\DesignerImageUpload_debug.txt", sDebugComparaison)
 
 	// Pour chaque image valide, chercher une correspondance
 	pour tout sFichierImage de tabImagesValides

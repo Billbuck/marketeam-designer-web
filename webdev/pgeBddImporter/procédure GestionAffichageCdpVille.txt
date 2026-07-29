@@ -1,0 +1,36 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// GestionAffichageCdpVille ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure GestionAffichageCdpVille()
+
+bInt est un booléen = pas intMasquer
+bCdp est un booléen = saiCodePostal <> ""
+bVil est un booléen = saiVille <> ""
+bCpv est un booléen = saiCdpVille <> ""
+
+selon Vrai
+	cas bCdp = Faux _et_ bVil = Faux _et_ bCpv = Faux
+		dispChamps[11].Visible	= bInt				// Code postal
+		dispChamps[12].Visible	= bInt				// Ville
+		dispChamps[13].Visible	= bInt				// Code postal + Ville
+
+	cas bCdp = Vrai _ou_ bVil = Vrai
+		dispChamps[11].Visible	= bInt _ou_ bCdp	// Code postal
+		dispChamps[12].Visible	= bInt _ou_ bVil	// Ville
+		dispChamps[13].Visible	= Faux          	// Code postal + Ville
+
+	autre cas
+		dispChamps[11].Visible	= Faux				// Code postal
+		dispChamps[12].Visible	= Faux              // Ville
+		dispChamps[13].Visible	= bInt _ou_ bCpv    // Code postal + Ville
+
+fin

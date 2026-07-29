@@ -1,0 +1,193 @@
+procédure CallbackTraitementLot(sRetour)
+
+jsonRetour			est un JSON
+nProgression		est un entier
+nLignesTraitees		est un entier
+nLignesTotal		est un entier
+sDiff				est une chaîne
+duréeEcoulée		est une Durée
+nSecondesEcoulées	est un réel
+sDiffLot			est une chaîne
+duréeLot			est une Durée
+nSecondesLot		est un réel
+nTempsRestantEstimé	est un réel
+
+
+si sRetour = "" alors
+	retour
+fin
+
+jsonRetour = sRetour
+
+// ============================================================
+// VÉRIFIER SI INTERRUPTION DEMANDÉE
+// ============================================================
+si _bInterruption alors
+	// Arrêter le timer
+	si _bJaugeAffichée alors
+		FinTimer(_nIdTimerJauge)
+	fin
+
+	// Supprimer les données côté serveur
+	AJAXExécute(ajaxSynchroniseVariablesServeur, AnnulerImport, jsonRetour.IdBase, gnIdWbsBaseEnCours)
+
+	// Fermer la popup
+	popProgression.Ferme()
+
+	// Réinitialiser les variables
+	gbTraitementTermine	= Vrai
+	gnIdBaseResultat	= -1
+
+	// Message à l'utilisateur
+	Info("Import annulé. Les données ont été supprimées.")
+
+	retour
+fin
+
+// ============================================================
+// VÉRIFIER SI ERREUR SERVEUR PENDANT LE TRAITEMENT D'UN LOT
+// (ServeurTraiterUnLot renvoie Erreur = Vrai quand le webservice
+//  répond autre chose que 200 -> sans ce test, la popup se fermait
+//  comme si tout allait bien, sans aucun message.)
+// ============================================================
+si jsonRetour.Erreur = 1 ou jsonRetour.Erreur = "true" ou jsonRetour.Erreur = Vrai alors
+	// Arrêter le timer d'animation si la jauge est affichée
+	si _bJaugeAffichée alors
+		FinTimer(_nIdTimerJauge)
+	fin
+
+	// Nettoyer les données partielles côté serveur (même ménage que
+	// l'interruption utilisateur : wbs_base, et clt_base si connue)
+	AJAXExécute(ajaxSynchroniseVariablesServeur, AnnulerImport, jsonRetour.IdBase, gnIdWbsBaseEnCours)
+
+	// Fermer la popup et prévenir l'utilisateur
+	popProgression.Ferme()
+	gbTraitementTermine	= Vrai
+	gnIdBaseResultat	= -1
+	Info("L'import a été interrompu par une erreur serveur : aucune base n'a été créée." + RC + "Réessayez, puis contactez le support si le problème persiste.")
+
+	retour
+fin
+
+// Récupérer les valeurs de progression
+nProgression	= jsonRetour.Progression
+nLignesTraitees	= jsonRetour.LignesTraitees
+nLignesTotal	= jsonRetour.LignesTotal
+
+// ============================================================
+// PREMIER CALLBACK : décider si afficher la jauge
+// ============================================================
+si _nVitesseProgression = 0.0 alors
+	// C'est le premier callback
+
+	// Calculer le vrai % par lot
+	si nLignesTotal > 0 alors
+		_nProgressionParLot = (5000.0 / nLignesTotal) * 100.0
+	fin
+
+	// Calculer le temps réel du premier lot
+	sDiff				= DateHeureDifférence(_dhDateHeureDebut, DateHeureSys())
+	duréeEcoulée		= ChaîneVersDurée(sDiff, duréeCentième)
+	nSecondesEcoulées	= (duréeEcoulée.Heure * 3600) + (duréeEcoulée.Minute * 60) + duréeEcoulée.Seconde
+
+	// Initialiser le temps estimé par lot
+	si nSecondesEcoulées > 0.0 alors
+		_nTempsEstiméParLot = nSecondesEcoulées
+	fin
+
+	// Si fichier >= seuil -> afficher la jauge
+	si nLignesTotal >= _nSeuilAffichageJauge alors
+		// Basculer vers la jauge
+		popProgression.dispImportProgression[1].Visible			= Faux
+		popProgression.dispImportProgression[2].Visible			= Vrai
+
+		// Initialiser la jauge à 0% (artificiel)
+		_nProgressionAffichée									= 0.0
+		popProgression.dispImportProgression.jaugeProgression	= 0
+		//		popProgression.dispImportProgression.jaugeProgression.	= "0%"
+		popProgression.dispImportProgression.libLignes			= NumériqueVersChaîne(nLignesTraitees, "dS") + " / " + NumériqueVersChaîne(nLignesTotal, "dS") + " lignes"
+		popProgression.dispImportProgression.libTempsRestant	= "Temps restant estimé : calcul..."
+
+
+
+
+		// Calculer la vitesse pour aller de 0 à 100 dans le temps restant
+		// Temps restant = temps par lot × nombre de lots restants
+		nTempsRestantEstimé								= _nTempsEstiméParLot * ((100.0 - nProgression) / _nProgressionParLot)
+		si nTempsRestantEstimé > 0.0 alors
+			_nVitesseProgression = 100.0 / nTempsRestantEstimé
+		fin
+
+		// Mémoriser la vraie progression du serveur
+		_nProgressionCible	= nProgression
+
+		// Lancer le timer d'animation de la jauge
+		_nIdTimerJauge		= Timer(TimerAnimerJauge, 10)
+		_bJaugeAffichée		= Vrai
+	sinon
+		// Petit fichier, on garde l'image va-et-vient
+		_nProgressionCible		= nProgression
+		_nProgressionAffichée	= nProgression
+		// Calculer quand même la vitesse pour les callbacks suivants
+		si _nTempsEstiméParLot > 0.0 alors
+			_nVitesseProgression = _nProgressionParLot / _nTempsEstiméParLot
+		fin
+	fin
+sinon
+	// ============================================================
+	// CALLBACKS SUIVANTS : ajuster les estimations
+	// ============================================================
+
+	// Mesurer le temps réel du dernier lot et ajuster l'estimation
+	si DateHeureValide(_dhDateHeureDernierLot) alors
+		sDiffLot		= DateHeureDifférence(_dhDateHeureDernierLot, DateHeureSys())
+		duréeLot		= ChaîneVersDurée(sDiffLot, duréeCentième)
+		nSecondesLot	= (duréeLot.Heure * 3600) + (duréeLot.Minute * 60) + duréeLot.Seconde + (duréeLot.Milliseconde / 1000.0)
+
+		// Ajuster l'estimation (moyenne pondérée : 70% ancienne valeur, 30% nouvelle)
+		si nSecondesLot > 0.0 alors
+			_nTempsEstiméParLot = (_nTempsEstiméParLot * 0.7) + (nSecondesLot * 0.3)
+			// Recalculer la vitesse
+			si _nTempsEstiméParLot > 0.0 alors
+				_nVitesseProgression = _nProgressionParLot / _nTempsEstiméParLot
+			fin
+		fin
+	fin
+
+	// Mettre à jour la cible (proportionnelle car jauge démarre à 0)
+	// Exemple : serveur à 10%, jauge affichée doit être à (10/100)*100 = 10% vers la fin
+	_nProgressionCible = (nProgression / 100.0) * 100.0
+
+	// Si l'affichage est en retard, accélérer pour rattraper
+	si _nProgressionAffichée < _nProgressionCible - 5.0 alors
+		_nVitesseProgression = _nVitesseProgression * 1.5
+	fin
+
+	// Mettre à jour les lignes (seulement si jauge affichée)
+	si _bJaugeAffichée alors
+		popProgression.dispImportProgression.libLignes = NumériqueVersChaîne(nLignesTraitees, "dS") + " / " + NumériqueVersChaîne(nLignesTotal, "dS") + " lignes"
+
+	fin
+fin
+
+// Mémoriser l'heure de ce lot pour le prochain calcul
+_dhDateHeureDernierLot = DateHeureSys()
+
+// Vérifier si terminé
+si jsonRetour.Termine = 1 ou jsonRetour.Termine = "true" ou jsonRetour.Termine = Vrai alors
+
+	// Arrêter le timer si jauge affichée
+	si _bJaugeAffichée alors
+		FinTimer(_nIdTimerJauge)
+	fin
+
+	// Fermer la popup
+	popProgression.Ferme()
+
+	gnIdBaseResultat	= jsonRetour.IdBase
+	gbTraitementTermine	= Vrai
+	AJAXExécute(ajaxSynchroniseVariablesServeur, FermerPageDialogue, jsonRetour.IdBase)
+sinon
+	// Pas terminé -> relancer un appel asynchrone pour le lot suivant
+	AJAXExécuteAsynchrone(ajaxSynchroniseVariablesServeur, ServeurTraiterUnLot, CallbackTraitementLot)
+fin

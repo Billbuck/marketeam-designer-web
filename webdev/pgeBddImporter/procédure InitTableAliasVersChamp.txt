@@ -1,0 +1,13 @@
+procédure InitTableAliasVersChamp()
+
+nInd	est un entier
+sCible	est une chaîne
+sChamp  est une chaîne
+
+_taaAliasVersChamp.SupprimeTout()
+
+pour nInd = 1 _à_ grpCible..Occurrence
+	sCible = EnumèreChamp(grpCible,nInd)
+	sChamp = EnumèreChamp(grpChamps,nInd)
+	_taaAliasVersChamp[{sCible,indChamp}..Alias] = sChamp
+fin

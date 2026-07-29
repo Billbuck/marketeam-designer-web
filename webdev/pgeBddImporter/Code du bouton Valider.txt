@@ -1,0 +1,63 @@
+// Clic sur btnValider (onclick navigateur)
+
+// Initialiser les variables
+_dhDateHeureDebut		= DateHeureSys()
+_dhDateHeureDernierLot	= ""
+_nProgressionCible		= 0.0
+_nProgressionAffichée	= 0.0
+_nProgressionParLot		= 5.0
+_nVitesseProgression	= 0.0
+_bJaugeAffichée			= Faux
+_bInterruption 			= Faux
+
+
+// Initialiser le champ disposition : afficher image va-et-vient, masquer jauge
+popProgression.dispImportProgression[1].Visible	= Vrai
+popProgression.dispImportProgression[2].Visible	= Faux
+
+// Ouvrir la popup
+popProgression.Affiche(popupHautCentre)
+
+
+// Clic sur btnValider ( dispMenu ) (serveur)
+
+stMapping	est une structWsBddMapping
+bValide		est un booléen
+
+(bValide, stMapping) = SaisieOk()
+
+si bValide alors
+	gnIdWbsBaseEnCours	= ConfirmationImport(stMapping)
+	gbTraitementTermine	= Faux
+	// Ne PAS appeler PageFermeDialogue ici, laisser l'étape 3 gérer
+sinon
+	//popJaugeProgression.Ferme()
+	gnIdWbsBaseEnCours = -99  // Code spécial pour indiquer "ne rien faire"
+fin
+
+// Retour de traitement AJAX après le clic sur btnValider ( dispMenu ) (navigateur)
+
+selon Vrai
+	cas gnIdWbsBaseEnCours > 0
+		// Traitement par lots : lancer le premier appel asynchrone
+		AJAXExécuteAsynchrone(ajaxSynchroniseVariablesServeur, ServeurTraiterUnLot, CallbackTraitementLot)
+
+	cas gnIdWbsBaseEnCours = 0
+		// Ancien comportement : la base a été créée directement par la
+		// confirmation (pas de traitement par lots). L'import a RÉUSSI :
+		// fermer la popup et rendre la main à la page appelante.
+		popProgression.Ferme()
+		AJAXExécute(ajaxSynchroniseVariablesServeur, FermerPageDialogue, gnIdBaseResultat)
+
+	cas gnIdWbsBaseEnCours = -99
+		// Saisie refusée par SaisieOk (le message d'erreur est déjà affiché) :
+		// refermer la popup de progression ouverte au clic, sinon elle
+		// reste à l'écran par-dessus le message.
+		popProgression.Ferme()
+
+	autre cas
+		// -1 : erreur du webservice à la confirmation -> rien n'a démarré.
+		// Refermer la popup et prévenir l'utilisateur (sinon échec silencieux).
+		popProgression.Ferme()
+		Info("L'import n'a pas pu démarrer suite à une erreur serveur." + RC + "Réessayez, puis contactez le support si le problème persiste.")
+fin

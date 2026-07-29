@@ -1,0 +1,13 @@
+function EnvoyerMessageIframe(jsonString) {
+    var iframe = document.querySelector('iframe');
+    if (iframe && iframe.contentWindow) {
+        // Convertir la chaîne JSON en objet
+        var message = JSON.parse(jsonString);
+        iframe.contentWindow.postMessage(message, '*');
+        console.log('📤 Message envoyé à iframe:', message);
+        return true;
+    } else {
+        console.error('❌ iframe non trouvée');
+        return false;
+    }
+}

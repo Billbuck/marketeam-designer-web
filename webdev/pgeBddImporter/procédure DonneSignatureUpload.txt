@@ -1,0 +1,26 @@
+// Résumé : Fabrique l'horodatage et la signature HMAC pour l'upload BDD.
+//          Appelée en AJAX par le navigateur (relais DonneJetonUpload) juste
+//          avant l'envoi du fichier au webservice multipart.
+//
+//          SÉCURITÉ (28/07/2026) : auparavant la clé __API_CLE_SECRET_KEY__
+//          était injectée en clair dans upload-bdd.js (%%SECRETKEY%%) et la
+//          signature était calculée dans le navigateur -> clé visible par
+//          n'importe qui via le code source de la page. Désormais la clé ne
+//          quitte JAMAIS le serveur : le navigateur ne reçoit que le couple
+//          horodatage + signature, périssable.
+//
+//          Le calcul est STRICTEMENT identique à celui du webservice
+//          (cpDesigner.AccessTokenVérification) via cpDesigner.GenerSignatureHMAC :
+//          SHA-256(clé + "POST|/api/endpoint|" + IdClient + "|" + IdContact + "|" + timestamp)
+//
+// Paramètres :
+//	Aucun (IdClient / IdContact lus dans la session : Partage.__vcUser)
+// Valeur de retour :
+// 	chaîne : "AAAAMMJJHHMMSS|signature" (séparateur "|")
+//
+procédure DonneSignatureUpload()
+
+sTimestamp	est une chaîne	= Gauche(DateHeureSys(), 14)
+sSignature	est une chaîne	= cpDesigner.GenerSignatureHMAC("POST", NumériqueVersChaîne(Partage.__vcUser.IDClient, "d"), NumériqueVersChaîne(Partage.__vcUser.IDContact, "d") , sTimestamp)
+
+renvoyer sTimestamp + "|" + sSignature

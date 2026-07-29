@@ -4647,7 +4647,9 @@ fin
 structDesignerAuth est une Structure
 	IdClient						est un entier						<sérialise = "idClient">
 	IdContact					est un entier						<sérialise = "idContact">
-	SecretKey					est une chaîne						<sérialise = "secretKey">
+	// SÉCURITÉ (28/07/2026) : membre SecretKey SUPPRIMÉ — la clé secrète ne
+	// doit jamais être envoyée au navigateur. La signature est fournie à la
+	// demande par cpDesigner.AjaxDonneJetonWebservice.
 	UrlWebservice				est une chaîne						<sérialise = "urlWebservice">
 	UrlCollectionListe		est une chaîne						<sérialise = "urlCollectionListe">
 	UrlPoliceAjout				est une chaîne						<sérialise = "urlPoliceAjout">

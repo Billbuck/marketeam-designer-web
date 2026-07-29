@@ -1,0 +1,180 @@
+procédure InitProgressBar()
+
+nInd						est un entier
+nEtape					est un entier
+nPageEnCours			est un entier
+sClassOn				est une chaîne
+sClassOFF				est une chaîne
+
+structStep est une Structure
+	Bouton			est une chaîne
+	Libelle			est une chaîne
+	Etat			est un entier
+	CouleurFond		est une chaîne
+	Position		est un entier
+	Page			est une chaîne
+	ClassHtml		est une chaîne
+fin
+
+tabStep	est un tableau de structStep
+stStep	est une structStep
+
+grpBoutonProgression.Visible = Faux
+
+
+si __stOperation.IdClient > 0 alors
+	AjouteProgressBar("PARAMETRE","pgeParametre")
+fin
+
+si __stOperation.TypeOperation pas dans (__OPERATION_TRACTEVA__,__OPERATION_SMARTEVA__) alors
+	AjouteProgressBar("BASE DE DONNEES","pgeBaseDonnees")
+fin
+
+si __stOperation.TypeOperation dans (__OPERATION_TRACTEVA__,__OPERATION_SMARTEVA__) alors
+	AjouteProgressBar("ETUDE DE CIBLE","pgeEtudeCible")
+fin
+
+si __stOperation.TypeOperation = __OPERATION_SMS__ alors
+	AjouteProgressBar("SMS","pgeSms")
+fin
+
+si __stOperation.TypeOperation = __OPERATION_VMS__ alors
+	AjouteProgressBar("VMS","pgeVms")
+fin
+
+
+si __stOperation.TypeOperation = __OPERATION_SMS__ _et_ __stOperation.EstCliquezIci = Faux alors
+	AjouteProgressBar("PLANIFICATEUR","pgeSmsPlannificateur")
+fin
+
+si __stOperation.TypeOperation = __OPERATION_VMS__ alors
+	AjouteProgressBar("PLANIFICATEUR","pgeVmsPlannificateur")
+fin
+
+si __stOperation.TypeOperation dans (__OPERATION_COURRIER__,__OPERATION_TRACTEVA__,__OPERATION_SMARTEVA__)	_et_ __stOperation.stOperationLettre.IdPackage = 0	alors
+	AjouteProgressBar("CONTENANT","pgeMctContenant")
+fin
+
+si __stOperation.TypeOperation dans (__OPERATION_COURRIER__,__OPERATION_TRACTEVA__,__OPERATION_SMARTEVA__)  alors
+	AjouteProgressBar("CONTENU","pgeMctContenu")
+fin
+
+
+si __stOperation.TypeOperation = __OPERATION_COURRIER__ _et_ __stOperation.EstCliquezIci = Faux alors
+	AjouteProgressBar("PLANIFICATEUR","pgeLtrPlannificateur")
+fin
+
+si __stOperation.TypeOperation dans (__OPERATION_TRACTEVA__,__OPERATION_SMARTEVA__) _et_ __stOperation.EstCliquezIci = Faux alors
+	AjouteProgressBar("PLANIFICATEUR","pgeTtbPlannificateur")
+fin
+
+si __stOperation.EstCliquezIci = Vrai alors
+	AjouteProgressBar("REDIRECTION","pgeIciChoix")
+fin
+
+si __stOperation.stNouveauCliquezIci.Type = __ICI_WEB__ alors
+	AjouteProgressBar("LANDING PAGE","pgeIciPage")
+fin
+
+si __stOperation.TypeOperation = __OPERATION_SMS__ _et_ __stOperation.EstCliquezIci = Vrai alors
+	AjouteProgressBar("PLANIFICATEUR","pgeSmsPlannificateur")
+fin
+
+si __stOperation.TypeOperation = __OPERATION_COURRIER__ _et_ __stOperation.EstCliquezIci = Vrai alors
+	AjouteProgressBar("PLANIFICATEUR","pgeLtrPlannificateur")
+fin
+
+si __stOperation.TypeOperation dans (__OPERATION_TRACTEVA__,__OPERATION_SMARTEVA__) _et_ __stOperation.EstCliquezIci = Vrai alors
+	AjouteProgressBar("PLANIFICATEUR","pgeTtbPlannificateur")
+fin
+
+
+si __stOperation.TypeOperation = __OPERATION_TEL__ alors
+	AjouteProgressBar("CALL CENTER","pgeTelParametre")
+fin
+
+si __stOperation.TypeOperation = __OPERATION_TEL__ _et_ __stOperation.stOperationCallCenter.EstMessageRepondeur = Vrai alors
+	AjouteProgressBar("REPONDEUR","pgeTelMessageRepondeur")
+fin
+
+si __stOperation.TypeOperation = __OPERATION_TEL__ _et_ __stOperation.stOperationCallCenter.EstTransfertAppel = Vrai alors
+	AjouteProgressBar("TRANSFERT","pgeTelAboutement")
+fin
+
+si __stOperation.TypeOperation = __OPERATION_TEL__ alors
+	AjouteProgressBar("INFORMATIONS","pgeTelInformations")
+fin
+
+si __stOperation.TypeOperation = __OPERATION_TEL__ alors
+	AjouteProgressBar("SCRIPT","pgeTelScript")
+fin
+
+si __stOperation.TypeOperation = __OPERATION_TEL__ _et_ __stOperation.stOperationCallCenter.tabQuestionnaire.Cherche(tcLinéaire,"Type",__TEL_QUESTION_AGENDA__) > 0 alors
+	AjouteProgressBar("AGENDA","pgeTelAgenda")
+fin
+
+si __stOperation.TypeOperation = __OPERATION_TEL__ alors
+	AjouteProgressBar("PLANIFICATEUR","pgeTelPlannificateur")
+fin
+
+si __stOperation.TypeOperation = __OPERATION_TEL__ _et_ __stOperation.stOperationCallCenter.tabQuestionnaire.Cherche(tcLinéaire,"Type",__TEL_QUESTION_AGENDA__) > 0 alors
+	AjouteProgressBar("RENDEZ-VOUS","pgeTelRendezVous")
+fin
+
+AjouteProgressBar("DEVIS","pgeDevis")
+
+si Tunnel.EstReglementPossible(__stOperation) = Vrai
+	AjouteProgressBar("REGLEMENT","pgePaiement")
+fin
+
+
+pour tout stStep de tabStep
+	nInd++
+	stStep.Position = nInd - nPageEnCours
+fin
+
+selon tabStep.Occurrence
+	cas >= 13 	: sClassOFF = "step-8px" 	; sClassOn = "step-14px"
+	cas 12		: sClassOFF = "step-9px" 	; sClassOn = "step-14px"
+	cas 11		: sClassOFF = "step-10px" 	; sClassOn = "step-14px"
+	cas 10 		: sClassOFF = "step-12px" 	; sClassOn = "step-14px"
+	cas  9 		: sClassOFF = "step-13px" 	; sClassOn = "step-14px"
+	autres cas 	: sClassOFF = "step-14px"	; sClassOn = "step-14px"
+fin
+
+
+pour tout stStep de tabStep
+	{stStep.Bouton,indChamp}..Visible		= Vrai
+	{stStep.Bouton,indChamp}..Libellé		= stStep.Libelle
+	{stStep.Bouton,indChamp}..Note 			= stStep.Page
+	{stStep.Bouton,indChamp}..Etat 			= (stStep.Position < 0 _ou_ __stOperation.IdOperation > 0 _ou_ (stStep.Position <> 0 _et_ Tunnel.__taaPageVisitée[stStep.Page] = Vrai)) ? Actif sinon Grisé
+	{stStep.Bouton,indChamp}..ClasseHTML 	= (stStep.Position = 0) ? sClassOn sinon sClassOFF
+
+	selon Vrai
+		cas stStep.Position = 0 :
+			{stStep.Bouton,indChamp}..CouleurFond 	= Partage.CouleurTypeOperation(__stOperation.TypeOperation,"M")
+
+		cas stStep.Position < 0
+			{stStep.Bouton,indChamp}..CouleurFond 	= Partage.CouleurTypeOperation(__stOperation.TypeOperation,"XL")
+
+		cas stStep.Position > 0 _et_ (__stOperation.IdOperation > 0 _ou_ Tunnel.__taaPageVisitée[stStep.Page] = Vrai)
+			{stStep.Bouton,indChamp}..CouleurFond 	= Partage.CouleurTypeOperation(__stOperation.TypeOperation,"S")
+
+		cas stStep.Position > 0
+			{stStep.Bouton,indChamp}..CouleurFond	= HTMLVersRVB(__COULEUR_GRIS_S__)
+	fin
+fin
+
+
+	procédure interne AjouteProgressBar(pTexte, pPage)
+		nEtape++
+		VariableRAZ(stStep)
+		stStep.Bouton			= "btnStep" + nEtape
+		stStep.Libelle 		= pTexte
+		stStep.Page 			= Majuscule(pPage)
+		si Majuscule(pPage)	= PageCourante() alors
+			nPageEnCours 		= nEtape
+		fin
+		tabStep.Ajoute(stStep)
+	fin
+

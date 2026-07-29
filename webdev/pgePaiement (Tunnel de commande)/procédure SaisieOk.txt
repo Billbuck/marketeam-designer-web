@@ -1,0 +1,17 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] SaisieOk ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	booléen : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure SaisieOk()
+
+
+renvoyer Vrai
+

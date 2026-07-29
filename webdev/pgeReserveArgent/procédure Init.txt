@@ -1,0 +1,58 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// Init ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure Init()
+
+InitCboAnnée()
+InitCboMois()
+InitCboSociete()
+InitZnrReserve()
+
+banArgent[_ban_tableau_].Visible = (znrReserve.Occurrence > 0)
+
+si clt_client.LitRecherchePremier(IdClient,Partage.__vcUser.IDClient) alors
+	_mReserveArgent		= clt_client.ReserveArgent
+	RéserveArgent		= NumériqueVersChaîne(_mReserveArgent, ",2fS") + " €"
+fin
+
+mdcPaiement._procedureRetourReserveArgent			= ValidationPaiement
+mdcPaiement._procedureRetourCarteBancaire			= ValidationPaiement
+mdcPaiement._procedureRetourPaypal					= ValidationPaiement
+mdcPaiement._procedureRetourReceptionFacture		= ValidationReceptionFacture
+mdcPaiement._procedureRetourVirement				= ValidationPaiement
+mdcPaiement._procedureRetourChèque					= ValidationPaiement
+mdcPaiement._procedureRetourPrélèvement				= ValidationPaiement
+mdcPaiement._ProcedureRetourPaiementDejaRéalisé	= PaiementDejaRéalisé
+mdcPaiement._ProcédureAccordPaiementPaypal			= RetourAccordPaypal
+mdcPaiement._ProcédureRefusPaiementPaypal			= RetourRefusPaypal
+
+
+InitZnrFille()
+
+_bAffecterVisible = _bAffecterVisible _et_ (znrFille.Occurrence > 0)
+
+btnCréditer.Visible	= _bCrediterVisible
+btnAffecter.Visible	= _bAffecterVisible
+
+
+si _pMode = "Créditer" alors
+	banArgent[_ban_montant_].Visible	= Vrai
+	banArgent[_ban_filtre_].Visible		= Faux
+	banArgent[_ban_tableau_].Visible	= Faux
+	banArgent[_ban_fille_].Visible		= Faux
+	banArgent[_ban_paiement_].Visible	= Faux
+	banArgent[_ban_affecter_].Visible	= Faux
+	btnAnnuler.Visible					= Vrai
+	btnCréditer.Visible					= Faux
+	btnAffecter.Visible					= Faux
+fin
+

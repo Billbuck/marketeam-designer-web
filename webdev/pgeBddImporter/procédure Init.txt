@@ -1,0 +1,5 @@
+procédure Init()
+
+grpPartage.Visible = (Partage.__vcUser.Partage _ou_ (Partage.__vcUser.IdMere <> Partage.__vcUser.IDClient and Partage.__vcUser.taaDroit[#DROIT_AJOUTER_UN_MODÈLE]))
+
+InitTableAliasVersChamp()

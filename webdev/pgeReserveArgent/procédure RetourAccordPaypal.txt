@@ -1,0 +1,10 @@
+procédure RetourAccordPaypal()
+
+banArgent[_ban_filtre_].Visible		= Faux
+banArgent[_ban_tableau_].Visible	= Faux
+banArgent[_ban_montant_].Visible	= Faux
+banArgent[_ban_affecter_].Visible	= Faux
+banArgent[_ban_fille_].Visible		= Faux
+banArgent[_ban_paiement_].Visible	= Vrai
+
+PopupAfficheMessage("Accord de paiement" +RC+ "Pour finaliser la transaction, cliquez sur valider le paiement","Paypal",__OPERATION_MARKETEAM__,__TOAST_INFORMATION__)

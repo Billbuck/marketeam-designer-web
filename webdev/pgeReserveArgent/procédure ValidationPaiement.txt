@@ -1,0 +1,47 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//ValidationPaiement ( [<pRetour>])
+//
+// Paramètres :
+//	pRetour (valeur par défaut=1) : < indiquez ici le rôle de pRetour >
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+// 	pMontant : <indiquez ici le rôle de pMontant>
+procédure ValidationPaiement(pRetour = mdcPaiement._paiement_validé_)
+
+saiMontantReserveHT						= 0
+saiMontantReserveTTC						= 0
+banArgent[_ban_filtre_].Visible		= Vrai
+banArgent[_ban_tableau_].Visible		= Vrai
+banArgent[_ban_montant_].Visible		= Faux
+banArgent[_ban_fille_].Visible		= Faux
+banArgent[_ban_affecter_].Visible	= Faux
+banArgent[_ban_paiement_].Visible	= Faux
+btnValider..Visible						= Faux
+btnCréditer.Visible						= _bCrediterVisible
+btnAffecter.Visible						= (_bAffecterVisible _et_ znrFille.Occurrence > 0)
+
+si pRetour = mdcPaiement._paiement_validé_ alors
+	si clt_client.LitRecherchePremier(IdClient,Partage.__vcUser.IDClient) alors
+		_mReserveArgent = clt_client.ReserveArgent
+	fin
+fin
+
+RéserveArgent = NumériqueVersChaîne(_mReserveArgent, ",2fS") + " €"
+
+
+si _pMode = "Créditer" alors
+	PageFermeDialogue(_mReserveArgent)
+sinon
+	mdcPaiement.AfficheResultat(pRetour)
+	InitZnrReserve()
+	InitZnrFille()
+fin
+
+
+
+

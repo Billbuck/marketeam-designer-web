@@ -1,0 +1,5 @@
+procédure RetourAccordPaypal()
+
+//retour du site PayPal avec accord : le paiement n'est pas encore débité,
+//le modèle de champ affiche le bouton "valider le paiement" (capture)
+PopupAfficheMessage("Accord de paiement" + RC + "Pour finaliser la transaction, cliquez sur valider le paiement","Paypal",__stOperation.TypeOperation,__TOAST_INFORMATION__)

@@ -1,0 +1,8 @@
+procédure CleanLibelle(local pLibelle)
+
+pLibelle	= Remplace(pLibelle,["d'","l'"],"")
+pLibelle	= Remplace(pLibelle,["'" , """" , "[" , "]" , "(" , ")" , "." , "*" , "/" , "\" , "?" , "@" , "%" , "!" , "&", ESP]," ")
+pLibelle	= Remplace(pLibelle,"  "," ")
+pLibelle	= Remplace(pLibelle,"  "," ")
+pLibelle	= Gauche(NomPropre(pLibelle),20)
+renvoyer pLibelle

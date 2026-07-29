@@ -1,0 +1,7 @@
+procédure ApresUploadJS()
+
+// Appeler le traitement serveur
+AJAXExécute(ajaxActualiseChamps+ajaxSynchroniseVariablesServeur,TraiterReponseUpload, _sUploadReponseJSON)
+
+// Exécuter le code navigateur d'origine
+RelanceDragSource()

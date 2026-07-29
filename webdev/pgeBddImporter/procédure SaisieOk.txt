@@ -1,0 +1,231 @@
+procédure SaisieOk()
+
+nInd						est un entier
+sLibelle					est une chaîne
+sChamp						est une chaîne
+sRetour						est une chaîne
+taaLibelleChamp				est un tableau associatif d'entiers
+taalibelleOrigine			est un tableau associatif de chaînes
+nNbrChampsSupplementaire	est un entier
+stMapping 					est une structWsBddMapping
+
+
+
+si SansEspace(saiBddNom) = "" alors
+	PopupAfficheMessage("Donnez un nom à votre base de données","Erreur",__OPERATION_BASE_DE_DONNEES__,__TOAST_ANNULATION__,15 s)
+	renvoyer (Faux, stMapping)
+fin
+
+pour nInd = 1 _à_ grpChamps..Occurrence
+	sChamp	= EnumèreChamp(grpChamps,nInd)
+	pour toute chaîne sColonne de {sChamp,indChamp} séparée par RC
+		si _stWsBddImportReponse.taaColonne[sColonne]..Vide alors
+			PopupAfficheMessage("La colonne """ + sColonne + """ présente dans le champ prédéfini """ + {sChamp,indChamp}..Libellé + """ est inconnue" ,"Erreur",__OPERATION_BASE_DE_DONNEES__,__TOAST_ANNULATION__,15 s)
+			renvoyer (Faux, stMapping)
+		fin
+	fin
+fin
+
+
+pour nInd = 1 _à_ znrChampsSupplementaires.Occurrence
+	si znrChampsSupplementaires[nInd].attCoche = Vrai alors
+		nNbrChampsSupplementaire++
+		sLibelle = SansEspace(znrChampsSupplementaires[nInd].attLibelle)
+		sChamp	 = znrChampsSupplementaires[nInd].attLigne
+
+		si sLibelle = "" alors
+			PopupAfficheMessage("Saisir le libellé du champ supplémentaire """ + sChamp + "","Erreur",__OPERATION_BASE_DE_DONNEES__,__TOAST_ANNULATION__,15 s)
+			renvoyer (Faux, stMapping)
+		fin
+		taaLibelleChamp[Majuscule(SansAccent(SansEspace(sLibelle)))]++
+		taalibelleOrigine[Majuscule(SansAccent(SansEspace(sLibelle)))]	= sLibelle
+		sRetour															= VerifieLibelleChamp(sLibelle)
+		selon sRetour
+			cas "1" // Pas de problème
+
+			cas "0"
+				PopupAfficheMessage("Le libellé """ + sLibelle + """ est impossible"+RC+"Vous devez le renommer","Erreur",__OPERATION_BASE_DE_DONNEES__,__TOAST_ANNULATION__,15 s)
+				renvoyer (Faux, stMapping)
+
+			autres cas
+				si Taille(sRetour) = 1 alors
+					sLibelle = Remplace(sLibelle," ",ESP)
+					PopupAfficheMessage("Le caractère " + sRetour + " est interdit dans le nom des libellés"+RC+"Vous devez renommer le libelle : " + sLibelle,"Erreur",__OPERATION_BASE_DE_DONNEES__,__TOAST_ANNULATION__,15 s)
+				sinon
+					sLibelle = Remplace(sLibelle," ",ESP)
+					PopupAfficheMessage("Les caractères " + sRetour + " sont interdits dans le nom des libellés"+RC+"Vous devez renommer le libelle : " + sLibelle,"Erreur",__OPERATION_BASE_DE_DONNEES__,__TOAST_ANNULATION__,15 s)
+				fin
+				renvoyer (Faux, stMapping)
+		fin
+	fin
+fin
+
+si nNbrChampsSupplementaire > 30 alors
+	PopupAfficheMessage("Le nombre de champs supplémentaires est limité à 30 champs","Erreur",__OPERATION_BASE_DE_DONNEES__,__TOAST_ANNULATION__,15 s)
+	renvoyer (Faux, stMapping)
+fin
+
+sRetour = VerifieDoublonLibelleChamp(taaLibelleChamp, taalibelleOrigine)
+si sRetour <> "" alors
+	si ChaîneOccurrence(sRetour,"#") = 0 alors
+		sLibelle = Remplace(sRetour," ",ESP)
+		PopupAfficheMessage("Le libellé (" + sLibelle + ") est en doublon"+RC+"Vous devez les renommer","Erreur",__OPERATION_BASE_DE_DONNEES__,__TOAST_ANNULATION__,15 s)
+	sinon
+		sLibelle = Remplace(sRetour," ",ESP)
+		sLibelle = Remplace(sLibelle,"#",", ")
+		PopupAfficheMessage("Les libellés (" + sLibelle + ") sont en doublon"+RC+"Vous devez les renommer","Erreur",__OPERATION_BASE_DE_DONNEES__,__TOAST_ANNULATION__,15 s)
+	fin
+	renvoyer (Faux, stMapping)
+fin
+
+AjouteStandard(__CHAMP_CODE_REFERENCE__,		saiRéférence)
+AjouteStandard(__CHAMP_CODE_SOCIETE__,		saiSociete)
+AjouteStandard(__CHAMP_CODE_ENSEIGNE__,		saiEnseigne)
+AjouteStandard(__CHAMP_CODE_CIVILITE__,		saiCivilité)
+AjouteStandard(__CHAMP_CODE_NOM__,			saiNom)
+AjouteStandard(__CHAMP_CODE_PRENOM__,		saiPrénom)
+AjouteStandard(__CHAMP_CODE_CONTACT__,		saiContact) // Important le contact après Civilité Nom Prénom
+AjouteStandard(__CHAMP_CODE_ADRESSE1__,		saiAdresse1)
+AjouteStandard(__CHAMP_CODE_ADRESSE2__,		saiAdresse2)
+AjouteStandard(__CHAMP_CODE_ADRESSE3__,		saiAdresse3)
+AjouteStandard(__CHAMP_CODE_ADRESSE4__,		saiAdresse4)
+AjouteStandard(__CHAMP_CODE_CODE_POSTAL__,	saiCodePostal)
+AjouteStandard(__CHAMP_CODE_VILLE__,			saiVille)
+AjouteStandard(__CHAMP_CODE_CDP_VILLE__,		saiCdpVille)
+AjouteStandard(__CHAMP_CODE_PAYS__,			saiPays)
+AjouteStandard(__CHAMP_CODE_TEL__,		 	saiTel)
+AjouteStandard(__CHAMP_CODE_PORTABLE__,		saiPortable)
+AjouteStandard(__CHAMP_CODE_EMAIL__,			saiEmail)
+AjouteStandard(__CHAMP_CODE_ALLIAGE__,		saiCodeAlliage)
+
+pour nInd = 1 _à_ znrChampsSupplementaires..Occurrence
+	si znrChampsSupplementaires[nInd].attLigne <> "" _et_ znrChampsSupplementaires[nInd].attLibelle <> "" _et_ znrChampsSupplementaires[nInd].attCoche = Vrai alors
+		AjouteOptionnel(znrChampsSupplementaires[nInd].attLigne, znrChampsSupplementaires[nInd].attLibelle, znrChampsSupplementaires[nInd].attCboValeur)
+	fin
+fin
+
+renvoyer (Vrai, stMapping)
+
+
+	procédure interne AjouteStandard(pCode, pValeur)
+		nColonne est un entier
+		si SansEspace(pValeur) <> "" alors
+			stStandard 			est une structWsBddStandard
+			stStandard.Type		= pCode
+			pour toute chaîne sColonne de pValeur séparée par RC
+				stStandard.Colonne.Ajoute(sColonne)
+				si _stWsBddImportReponse.taaColonne[sColonne].Existe alors
+					nColonne = _stWsBddImportReponse.taaColonne[sColonne]
+					selon sColonne
+						cas saiRéférence		: stMapping.taaType[nColonne] = __CHAMP_CODE_REFERENCE__
+						cas saiSociete			: stMapping.taaType[nColonne] = __CHAMP_CODE_SOCIETE__
+						cas saiEnseigne			: stMapping.taaType[nColonne] = __CHAMP_CODE_ENSEIGNE__
+						cas saiCivilité			: stMapping.taaType[nColonne] = __CHAMP_CODE_CIVILITE__
+						cas saiNom				: stMapping.taaType[nColonne] = __CHAMP_CODE_NOM__
+						cas saiPrénom			: stMapping.taaType[nColonne] = __CHAMP_CODE_PRENOM__
+						cas saiContact			: stMapping.taaType[nColonne] = __CHAMP_CODE_CONTACT__
+						cas saiAdresse1			: stMapping.taaType[nColonne] = __CHAMP_CODE_ADRESSE1__
+						cas saiAdresse2			: stMapping.taaType[nColonne] = __CHAMP_CODE_ADRESSE2__
+						cas saiAdresse3			: stMapping.taaType[nColonne] = __CHAMP_CODE_ADRESSE3__
+						cas saiAdresse4			: stMapping.taaType[nColonne] = __CHAMP_CODE_ADRESSE4__
+						cas saiCodePostal		: stMapping.taaType[nColonne] = __CHAMP_CODE_CODE_POSTAL__
+						cas saiVille			: stMapping.taaType[nColonne] = __CHAMP_CODE_VILLE__
+						cas saiCdpVille			: stMapping.taaType[nColonne] = __CHAMP_CODE_CDP_VILLE__
+						cas saiPays				: stMapping.taaType[nColonne] = __CHAMP_CODE_PAYS__
+						cas saiTel				: stMapping.taaType[nColonne] = __CHAMP_CODE_TEL__
+						cas saiPortable			: stMapping.taaType[nColonne] = __CHAMP_CODE_PORTABLE__
+						cas saiEmail			: stMapping.taaType[nColonne] = __CHAMP_CODE_EMAIL__
+						cas saiCodeAlliage		: stMapping.taaType[nColonne] = __CHAMP_CODE_ALLIAGE__
+						autre cas				: stMapping.taaType[nColonne] = _stWsBddImportReponse.stMapping.taaType[nColonne]
+					fin
+				fin
+			fin
+			stMapping.tabStandard.Ajoute(stStandard)
+		fin
+	fin
+
+	procédure interne AjouteOptionnel(pColonne, pLibelle, pType)
+		stOptionnel  est une structWsBddOptionnel
+		stOptionnel.Colonne = pColonne
+		stOptionnel.Libelle	= pLibelle
+		stOptionnel.Type	= CboTypeChamp(pType)
+		stMapping.tabOptionnel.Ajoute(stOptionnel)
+		si _stWsBddImportReponse.taaColonne[pColonne].Existe alors
+			stMapping.taaType[_stWsBddImportReponse.taaColonne[pColonne]] = CboTypeChamp(pType)
+		fin
+	fin
+
+
+//	__CHAMP_TYPE_TEXTE__						//	1
+//	__CHAMP_TYPE_ENTIER__					//	2
+//	__CHAMP_TYPE_DECIMAL__					//	3
+//	__CHAMP_TYPE_MONETAIRE__				//	4
+//	__CHAMP_TYPE_DATE__						//	5
+//	__CHAMP_TYPE_EMAIL__						// 6
+//	__CHAMP_TYPE_TELEPHONE__				//	7
+//	__CHAMP_TYPE_PORTABLE__					//	8
+//	__CHAMP_TYPE_CODE_BARRES__				//	9
+//	__CHAMP_TYPE_URL__						// 10
+//	__CHAMP_TYPE_IMAGE__						//	11
+//	__CHAMP_TYPE_ALLIAGE__					//	12
+
+
+	procédure interne CboTypeChamp(pCboLigne)
+		selon pCboLigne
+			cas 1			: renvoyer __CHAMP_TYPE_TEXTE__
+			cas 2			: renvoyer __CHAMP_TYPE_ENTIER__
+			cas 3			: renvoyer __CHAMP_TYPE_DECIMAL__
+			cas 4			: renvoyer __CHAMP_TYPE_MONETAIRE__
+			cas 5			: renvoyer __CHAMP_TYPE_DATE__
+			cas 6			: renvoyer __CHAMP_TYPE_EMAIL__
+			cas 7			: renvoyer __CHAMP_TYPE_TELEPHONE__
+			cas 8			: renvoyer __CHAMP_TYPE_PORTABLE__
+			cas 9			: renvoyer __CHAMP_TYPE_CODE_BARRES__
+			cas 10		: renvoyer __CHAMP_TYPE_URL__
+			cas 11		: renvoyer __CHAMP_TYPE_IMAGE__
+			cas 12		: renvoyer __CHAMP_TYPE_ALLIAGE__
+			autre cas	: renvoyer __CHAMP_TYPE_TEXTE__
+		fin
+	fin
+
+	procédure interne VerifieDoublonLibelleChamp(taaLibelle est un tableau associatif d'entier,  taaOrigine est un tableau associatif de chaînes)
+
+		sListeOrigine est une chaîne
+
+		pour tout nTotal, sLibelle de taaLibelle
+			si nTotal > 1 alors
+				sListeOrigine += ["#"] + taaOrigine[sLibelle]
+			fin
+		fin
+
+		renvoyer sListeOrigine
+
+	fin
+
+	procédure interne VerifieLibelleChamp(local pLibelle)
+
+		sResultat	est une chaîne
+
+		pLibelle = Majuscule(pLibelle)
+
+		tabCaractèresAutorisés est un tableau de chaînes
+
+		tabCaractèresAutorisés = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","0","1","2","3","4","5","6","7","8","9","-","_"," "]
+
+		si pLibelle dans ("IDBASE","REFERENCE","SOCIETE","ENSEIGNE","CONTACT","PRENOM","NOM","ADRESSE1","ADRESSE2","ADRESSE3","ADRESSE4","CODEPOSTAL","VILLE","PAYS","TEL","PORTABLE","EMAIL","ALLIAGE","CODE","AND","OR","LEFT","RIGHT","JOIN","SELECT","INNER") alors
+			renvoyer Faux
+		fin
+
+		pLibelle = Remplace(pLibelle,tabCaractèresAutorisés,"")
+
+		si pLibelle <> "" alors
+			pour I = 1 _à_ Taille(pLibelle)
+				sResultat += [", "] + pLibelle[[I]]
+			fin
+
+			renvoyer sResultat
+		fin
+
+		renvoyer Vrai
+
+	fin

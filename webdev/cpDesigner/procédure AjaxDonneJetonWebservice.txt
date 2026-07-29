@@ -1,0 +1,36 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// cpDesigner.AjaxDonneJetonWebservice()
+// Rôle : Fabriquer, CÔTÉ SERVEUR, le jeton d'authentification (horodatage +
+//        signature HMAC SHA-256) dont le Designer a besoin pour appeler les
+//        webservices (DesignerImageUpload, DesignerCollectionListe,
+//        DesignerCollectionVerifie, DesignerPoliceAjout, DesignerPoliceListe).
+//
+// SÉCURITÉ (28/07/2026) : auparavant la clé __API_CLE_SECRET_KEY__ était
+// envoyée au navigateur (stAuth.SecretKey) et le Designer calculait lui-même
+// la signature -> clé visible dans le code source. Désormais la clé ne quitte
+// JAMAIS le serveur : le Designer demande ce jeton à la page hôte (postMessage
+// 'tokenRequest'), qui appelle cette procédure en AJAX (relais navigateur
+// DonneJetonDesigner) et lui répond par 'tokenResponse'.
+//
+// IMPORTANT : le jeton est périssable — AccessTokenVérification (webservice)
+// refuse tout horodatage de plus de 300 secondes. Le Designer en demande donc
+// un FRAIS à chaque appel.
+//
+// Les identifiants signés sont ceux de la SESSION (Partage.__vcUser) et sont
+// renvoyés avec le jeton : le Designer les utilise tels quels dans ses
+// en-têtes X-IdClient / X-IdContact, garantissant la cohérence avec la
+// signature.
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	chaîne : "idClient|idContact|AAAAMMJJHHMMSS|signature" (séparateur "|")
+// ─────────────────────────────────────────────────────────────────────────────
+procédure AjaxDonneJetonWebservice() : chaîne
+
+sIdClient	est une chaîne	= Partage.__vcUser.IDClient
+sIdContact	est une chaîne	= Partage.__vcUser.IDContact
+sTimestamp	est une chaîne	= GenerSignatureTimestamp()
+sSignature	est une chaîne	= GenerSignatureHMAC("POST", sIdClient, sIdContact, sTimestamp)
+
+renvoyer sIdClient + "|" + sIdContact + "|" + sTimestamp + "|" + sSignature

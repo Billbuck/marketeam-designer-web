@@ -1,0 +1,62 @@
+procédure TraiterReponseUpload(sReponseJSON)
+
+
+si sReponseJSON <> "" alors
+	Désérialise(_stWsBddImportReponse, sReponseJSON, psdJSON)
+	AffecteColonne(_stWsBddImportReponse.stMapping)
+	GestionAffichageCdpVille()
+	saiBddNom 							= gsNomFichierImporte
+	dispMenu[1].Visible					= Vrai
+	dispMenu[3].Visible					= Vrai
+	dispMenu[4].Visible					= Faux
+	celConteneur.Visible				= Vrai
+	celChampsSupplementaires.Visible	= (znrChampsSupplementaires.Occurrence > 0)
+sinon
+	ToastAffiche("Erreur lors du traitement", toastLong, cvMilieu, chCentre, HTMLVersRVB(__COULEUR_EMAIL_M__))
+fin
+
+
+	procédure interne AffecteColonne(stMapping est une structWsBddMapping)
+		pour tout stWsBddStandard de stMapping.tabStandard
+			sChampSaisie est une chaîne = TypeVersChamp(stWsBddStandard.Type)
+			pour tout sChamp de stWsBddStandard.Colonne
+				{sChampSaisie,indChamp} += [RC] + sChamp
+			fin
+		fin
+
+		nInd est un entier
+		pour tout stWsBddOptionnel de stMapping.tabOptionnel
+			nInd											= znrChampsSupplementaires.AjouteLigne()
+			znrChampsSupplementaires[nInd].attLibelle		= CleanLibelle(stWsBddOptionnel.Libelle)
+			znrChampsSupplementaires[nInd].attLigne			= stWsBddOptionnel.Colonne
+			znrChampsSupplementaires[nInd].attCoche			= Faux
+			znrChampsSupplementaires[nInd].attCboVisible	= Faux
+			znrChampsSupplementaires[nInd].attLibelleEtat	= AffichageSeulement
+		fin
+	fin
+
+	procédure interne TypeVersChamp(pType)
+		selon pType
+			cas __CHAMP_CODE_REFERENCE__	: renvoyer saiRéférence..Nom
+			cas __CHAMP_CODE_SOCIETE__		: renvoyer saiSociete..Nom
+			cas __CHAMP_CODE_ENSEIGNE__     : renvoyer saiEnseigne..Nom
+			cas __CHAMP_CODE_CONTACT__      : renvoyer saiContact..Nom
+			cas __CHAMP_CODE_CIVILITE__     : renvoyer saiCivilité..Nom
+			cas __CHAMP_CODE_NOM__          : renvoyer saiNom..Nom
+			cas __CHAMP_CODE_PRENOM__       : renvoyer saiPrénom..Nom
+			cas __CHAMP_CODE_ADRESSE1__     : renvoyer saiAdresse1..Nom
+			cas __CHAMP_CODE_ADRESSE2__     : renvoyer saiAdresse2..Nom
+			cas __CHAMP_CODE_ADRESSE3__     : renvoyer saiAdresse3..Nom
+			cas __CHAMP_CODE_ADRESSE4__     : renvoyer saiAdresse4..Nom
+			cas __CHAMP_CODE_CDP_VILLE__    : renvoyer saiCdpVille..Nom
+			cas __CHAMP_CODE_CODE_POSTAL__  : renvoyer saiCodePostal..Nom
+			cas __CHAMP_CODE_VILLE__        : renvoyer saiVille..Nom
+			cas __CHAMP_CODE_PAYS__         : renvoyer saiPays..Nom
+			cas __CHAMP_CODE_TEL__          : renvoyer saiTel..Nom
+			cas __CHAMP_CODE_PORTABLE__     : renvoyer saiPortable..Nom
+			cas __CHAMP_CODE_EMAIL__        : renvoyer saiEmail..Nom
+			cas __CHAMP_CODE_ALLIAGE__      : renvoyer saiCodeAlliage..Nom
+			autre cas						: renvoyer "Erreur"
+		fin
+	fin
+

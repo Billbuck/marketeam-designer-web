@@ -2,13 +2,18 @@ Code Navigateur :
 si NavSaisieCarteOk() = Faux alors
 	retour
 fin
+//anti double-clic : masquage immédiat côté navigateur pendant l'appel Paybox
+//(un masquage côté serveur n'atteindrait le navigateur qu'en fin de traitement, donc trop tard)
+MoiMême..Visible = Faux
 
 
 Code serveur :
 
+//pendant le traitement le bouton est masqué côté navigateur (anti double-clic)
+MoiMême..Visible = Faux
+
 si PaiementDejaRéalisé() = Faux alors
 	si SaisieCarteOk() = Vrai alors
-		MoiMême.Visible							= Vrai
 		_stPaiementSécurisé.IdCarteBancaire		= cboCarteBancaire.ValeurMémorisée
 		_stPaiementSécurisé.ModeRèglement		= __REGLEMENT_CARTE_BANCAIRE_ENREGISTREE__
 		_stPaiementParametre.NumCommandeClient	= SansEspace(saiRéférenceClient)
@@ -17,3 +22,7 @@ si PaiementDejaRéalisé() = Faux alors
 sinon
 	_ProcedureRetourPaiementDejaRéalisé("Le paiement à déjà été effectué")
 fin
+
+//pas de ré-affichage du bouton ici : en cas de refus, PaiementCarteBancaire remet
+//l'interface à l'état initial (choix du mode de paiement) et le bouton réapparaîtra
+//via MixCarteBancaireGestionInterface quand l'utilisateur recochera "Carte bancaire"

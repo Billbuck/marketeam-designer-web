@@ -1,0 +1,57 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//InitZnrFille ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure InitZnrFille()
+
+sTexteRequete	est une chaîne
+sdReqFille		est une Source de Données
+nInd			est un entier
+
+znrFille.SupprimeTout()
+
+sTexteRequete =
+[
+	SELECT
+		clt_client.IdClient,
+		clt_client.Societe,
+		clt_client.Adr1,
+		clt_client.Cdp,
+		clt_client.Ville,
+		clt_client.ReserveArgent
+	FROM
+		clt_mere
+		JOIN clt_client ON clt_client.IdClient = clt_mere.IdClient
+	WHERE
+		clt_mere.IdMere = [%Partage.__vcUser.IdClient%]
+		AND clt_mere.IdClient <> [%Partage.__vcUser.IdClient%]
+		AND clt_mere.EstRelationCommerciale = 1
+		AND clt_client.EstActif = 1
+]
+
+si pas HExécuteRequêteSQL(sdReqFille, ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour
+fin
+
+pour tout sdReqFille
+	nInd									= znrFille.AjouteLigne()
+	znrFille[nInd].attIdFille				= sdReqFille.IdClient
+	znrFille[nInd].libFille					= sdReqFille.Societe
+	znrFille[nInd].libAdresse				= sdReqFille.Adr1 + [" "] + sdReqFille.Cdp + [" "] + sdReqFille.Ville
+	znrFille[nInd].libRéserve				= NumériqueVersChaîne(sdReqFille.ReserveArgent, ",2fS") + " €"
+fin
+
+znrFille.SelectPlus(1)
+
+
+fin:
+HAnnuleDéclaration(sdReqFille)

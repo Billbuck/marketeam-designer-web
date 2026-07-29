@@ -1,0 +1,64 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// ServeurTraiterUnLot ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure ServeurTraiterUnLot()
+
+stRequeteTraitement		est une structWsRequeteTraitement
+jsonRequete				est une chaîne ANSI
+ReqTraitement			est un restRequête
+ReqResultat				est un restRéponse
+jsonResultat			est un JSON
+jsonRetour				est un JSON
+
+si gbTraitementTermine alors
+	jsonRetour.Termine	= Vrai
+	jsonRetour.IdBase	= gnIdBaseResultat
+	renvoyer JSONVersChaîne(jsonRetour)
+fin
+
+ReqTraitement.URL			= cpFonction.ValeurParametre("WS_Bdd_Import_Traitement", prm_parametre.ValChaine.Nom)
+ReqTraitement.Méthode		= httpPost
+ReqTraitement.ContentType	= typeMimeJSON
+cpToken.MarketeamTokenEntête(ReqTraitement)
+
+stRequeteTraitement.IdWbsBase = gnIdWbsBaseEnCours
+Sérialise(stRequeteTraitement, jsonRequete, psdJSON)
+ReqTraitement.Contenu	= jsonRequete
+
+ReqResultat				= ReqTraitement.Envoie()
+
+si ReqResultat.CodeEtat = "200" alors
+	jsonResultat				= ReqResultat.Contenu
+
+	// CORRIGÉ : Details avec un "s"
+	jsonRetour.Termine			= jsonResultat.Details.Termine
+	jsonRetour.IdBase			= jsonResultat.Details.IdBase
+	jsonRetour.Progression		= jsonResultat.Details.Progression
+	jsonRetour.LignesTraitees	= jsonResultat.Details.LignesTraitees
+	jsonRetour.LignesTotal		= jsonResultat.Details.LignesTotal
+	jsonRetour.Erreur			= Faux
+
+//	Trace("Progression : " + jsonRetour.Progression + "% - Lignes : " + jsonRetour.LignesTraitees + "/" + jsonRetour.LignesTotal)
+
+	si jsonResultat.Details.Termine = Vrai alors
+		gbTraitementTermine	= Vrai
+		gnIdBaseResultat	= jsonResultat.Details.IdBase
+	fin
+sinon
+	Trace("Erreur webservice : " + ReqResultat.CodeEtat)
+	jsonRetour.Termine	= Vrai
+	jsonRetour.IdBase	= -1
+	jsonRetour.Erreur	= Vrai
+	gbTraitementTermine	= Vrai
+fin
+
+renvoyer JSONVersChaîne(jsonRetour)

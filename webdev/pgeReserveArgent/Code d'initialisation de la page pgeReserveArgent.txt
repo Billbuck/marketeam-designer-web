@@ -1,0 +1,42 @@
+// Décalartion globales de pgeReserveArgent :
+procédure MaPage(_pMode = "")
+
+si _pMode = "Créditer" alors
+	_bMenuGrisé = Vrai
+fin
+
+_cModeAffectation	est un caractère	// (A) Ajouter (R) Retirer
+_nIdFille			est un entier
+_mReserveArgent		est un monétaire
+_bCrediterVisible 	est un booléen  <synchronisé navigateur> = (Partage.__vcUser.EstAdministrateur _ou_ Partage.__vcUser.taaDroit[#DROIT_CRÉDITER_LA_RÉSERVE_ARGENT])
+_bAffecterVisible	est un booléen  <synchronisé navigateur> = (Partage.__vcUser.IdMere = Partage.__vcUser.IDClient _et_ (Partage.__vcUser.EstAdministrateur _ou_ Partage.__vcUser.taaDroit[#DROIT_AFFECTER_RÉSERVE_ARGENT]))
+
+constante
+//	_ban_reserve_		= 1
+	_ban_filtre_		= 1
+	_ban_tableau_		= 2
+	_ban_montant_		= 3
+	_ban_affecter_		= 4
+	_ban_fille_			= 5
+	_ban_paiement_		= 6
+fin
+
+
+// Fin d'initialisation de pgeReserveArgent
+
+_WebSocketListeProcedure += Init
+
+Init()
+
+// Chargement de pgeReserveArgent (onload navigateur)
+
+RepriseSaisie(saiMontantReserveTTC)
+
+
+// Demande de mise à jour de l'affichage de pgeReserveArgent
+
+ChangeAction(caContinuer)
+
+// Synchronisation de pgeReserveArgent
+
+ChangeAction(caContinuer)

@@ -1,0 +1,13 @@
+procédure RemetRubriqueSource(pRubrique)
+
+nInd est un entier
+
+si _stWsBddImportReponse.taaColonne[pRubrique]..Vide = Faux alors
+	nInd											= znrChampsSupplementaires.AjouteLigne()
+	znrChampsSupplementaires[nInd].attLigne			= pRubrique
+	znrChampsSupplementaires[nInd].attLibelle		= CleanLibelle(pRubrique)
+	znrChampsSupplementaires[nInd].attCoche			= Faux
+	znrChampsSupplementaires[nInd].attCboVisible	= Faux
+	znrChampsSupplementaires[nInd].attLibelleEtat	= AffichageSeulement
+	celChampsSupplementaires.Visible				= Vrai
+fin

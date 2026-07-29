@@ -1,0 +1,248 @@
+procédure InitZnrReserve()
+
+
+nInd					est un entier
+sTexteRequete			est une chaîne
+sdReqReserve			est une Source de Données
+sWherePaiement			est une chaîne
+sWhereReserve			est une chaîne
+sOrderBy				est une chaîne
+taaTotaux				est un tableau associatif de monétaires
+mPeriodeDébit			est un monétaire
+mPériodeCrédit			est un monétaire
+mPériodeTotal			est un monétaire
+
+si cboMois.ValeurMémorisée > 0 alors
+	sWherePaiement = [
+		AND DATE(clt_paiement.DateHeureCreation) BETWEEN 
+		CONCAT([%cboAnnée.ValeurMémorisée%], '-', LPAD([%cboMois.ValeurMémorisée%], 2, '0'), '-01')
+		AND LAST_DAY(CONCAT([%cboAnnée.ValeurMémorisée%], '-', LPAD([%cboMois.ValeurMémorisée%], 2, '0'), '-01'))
+	]
+	sWhereReserve = [
+		AND DATE(clt_reserve.DateHeureCreation) BETWEEN 
+		CONCAT([%cboAnnée.ValeurMémorisée%], '-', LPAD([%cboMois.ValeurMémorisée%], 2, '0'), '-01')
+		AND LAST_DAY(CONCAT([%cboAnnée.ValeurMémorisée%], '-', LPAD([%cboMois.ValeurMémorisée%], 2, '0'), '-01'))
+	]
+sinon
+	sWherePaiement = [
+		AND DATE(clt_paiement.DateHeureCreation) BETWEEN CONCAT([%cboAnnée.ValeurMémorisée%], '-01-01') AND CONCAT([%cboAnnée.ValeurMémorisée%], '-12-31')
+	]
+	sWhereReserve = [
+		AND DATE(clt_reserve.DateHeureCreation) BETWEEN CONCAT([%cboAnnée.ValeurMémorisée%], '-01-01') AND CONCAT([%cboAnnée.ValeurMémorisée%], '-12-31')
+	]
+fin
+
+si intRegrouper = Vrai alors
+	sOrderBy = [
+	TypePaiementLibelle,
+	z.DateHeureCreation DESC
+	]
+sinon
+	sOrderBy = [
+	z.DateHeureCreation DESC
+	]
+fin
+
+sTexteRequete =
+[
+	SELECT
+		clt_client.Societe,
+		CONCAT(clt_contact.Prenom, ' ', clt_contact.Nom) AS contact,
+		z.Origine,
+		z.IdClient,
+		z.IdContact,
+		z.IdReserve,
+		z.Montant,
+		z.EstReserve,
+		z.Designation,
+		z.NumCommandeClient,
+		z.DateHeureCreation,
+		z.EstTestUnitaire,
+		z.TypePaiement,
+		CASE 
+			WHEN z.EstTestUnitaire = 1 THEN 'Test unitaire'
+			ELSE CASE z.TypePaiement
+				WHEN '[%__RESERVE_CADEAU__%]'								THEN 'Réserve d\'argent'
+				WHEN '[%__RESERVE_AFFECTATION__%]'							THEN 'Réserve d\'argent'
+				WHEN '[%__RESERVE_AUGMENTATION__%]'							THEN 'Réserve d\'argent'
+				WHEN '[%__RESERVE_SUPPRESSION_OPERATION__%]'				THEN 'Réserve d\'argent'
+				WHEN '[%__RESERVE_RETRAIT__%]'								THEN 'Réserve d\'argent'
+				WHEN '[%__TRANSACTION_RESERVE_ARGENT__%]'					THEN 'Réserve d\'argent' 
+				WHEN '[%__ABONNEMENT_FONCTION__%]'							THEN 'Abonnements'
+				WHEN '[%__ABONNEMENT_FONCTION_RENOUVELLEMENT__%]'			THEN 'Abonnements'
+				WHEN '[%__ABONNEMENT_PRESTATION__%]'						THEN 'Abonnements'
+				WHEN '[%__ABONNEMENT_PRESTATION_RENOUVELLEMENT__%]'			THEN 'Abonnements'
+				WHEN '[%__OPERATION_COURRIER__%]'							THEN 'Courrier'
+				WHEN '[%__OPERATION_COURRIER_INTERACTIF__%]'				THEN 'Courrier interactif'
+				WHEN '[%__OPERATION_COURRIER_GESTION__%]'					THEN 'Courrier de gestion'
+				WHEN '[%__OPERATION_SMARTEVA__%]'							THEN 'Tract sous enveloppe'
+				WHEN '[%__OPERATION_TRACTEVA__%]'							THEN 'Tract'
+				WHEN '[%__OPERATION_SMS__%]'								THEN 'Sms'
+				WHEN '[%__OPERATION_SMS_NOTIFICATION__%]'					THEN 'Sms de notification'
+				WHEN '[%__OPERATION_SMS_WEBSERVICE__%]'						THEN 'Sms webservice'
+				WHEN '[%__OPERATION_SMS_INTERACTIF__%]'						THEN 'Sms interactif'
+				WHEN '[%__OPERATION_VMS__%]'								THEN 'Vms'
+				WHEN '[%__OPERATION_VMS_UNITAIRE__%]'						THEN 'Vms unitaire'
+				WHEN '[%__OPERATION_EMAIL__%]'								THEN 'Email'
+				WHEN '[%__OPERATION_EMAIL_NOTIFICATION__%]'					THEN 'Email de notification'
+				WHEN '[%__OPERATION_EMAIL_INTERACTIF__%]'					THEN 'Email interactif'
+				WHEN '[%__OPERATION_TEL__%]'								THEN 'Call Center'
+				WHEN '[%__OPERATION_MARKETEAM__%]'							THEN 'Marketeam'
+				WHEN '[%__OPERATION_BASE_DE_DONNEES__%]'					THEN 'Base de données'
+				WHEN '[%__OPERATION_RNVP__%]'								THEN 'Traitement RNVP'
+				WHEN '[%__OPERATION_BLOCTEL__%]'							THEN 'Traitement Bloctel'
+				ELSE															 'A définir'
+			END 
+		END AS TypePaiementLibelle
+	FROM (
+		SELECT
+			'Paiement' AS Origine,
+			clt_paiement.IdClient,
+			clt_paiement.IdContact,
+			clt_paiement.IdReserve,
+			clt_paiement.Montant * -1 AS Montant,
+			clt_paiement.TypePaiement,
+			clt_paiement.EstReserve,
+			clt_paiement.Designation,
+			clt_paiement.NumCommandeClient,
+			clt_paiement.DateHeureCreation,
+			IF(COALESCE(clt_paiement.ListeIdSmsNotification, clt_paiement.ListeIdVmsUnitaire, clt_paiement.ListeIdEmailNotification) IS NULL, 0, 1) AS EstTestUnitaire
+		FROM
+			clt_paiement
+		WHERE
+			clt_paiement.IdClient = [%cboSociété.ValeurMémorisée%]
+			AND clt_paiement.EstReserve = 1
+			AND clt_paiement.TypePaiement <> '[%__OPERATION_SMS_WEBSERVICE__%]'
+			[%sWherePaiement%]
+		
+		UNION ALL
+
+		SELECT
+			'Paiement' AS Origine,
+			clt_paiement.IdClient,
+			clt_paiement.IdContact,
+			clt_paiement.IdReserve,
+			SUM(clt_paiement.Montant) * -1 AS Montant,
+			clt_paiement.TypePaiement,
+			clt_paiement.EstReserve,
+			CONCAT(COUNT(clt_paiement.IdPaiement), ' ', ' Sms webservice - Référence : ', clt_paiement.Reference) Designation,
+			clt_paiement.NumCommandeClient,
+			clt_paiement.DateHeureCreation,
+			IF(COALESCE(clt_paiement.ListeIdSmsNotification, clt_paiement.ListeIdVmsUnitaire, clt_paiement.ListeIdEmailNotification) IS NULL, 0, 1) AS EstTestUnitaire
+		FROM
+			clt_paiement
+		WHERE
+			clt_paiement.IdClient = [%cboSociété.ValeurMémorisée%]
+			AND clt_paiement.EstReserve = 1
+			AND clt_paiement.TypePaiement = '[%__OPERATION_SMS_WEBSERVICE__%]'
+			[%sWherePaiement%]
+		GROUP BY
+			clt_paiement.Reference
+			
+		UNION ALL
+	
+		SELECT
+			'Reserve' AS Origine,
+			clt_reserve.IdClient,
+			clt_reserve.IdContact,
+			clt_reserve.IdReserve,
+			clt_reserve.MontantTTC AS Montant,
+			clt_reserve.TypeReserve AS TypePaiement,
+			0 AS EstReserve,
+			clt_reserve.Motif AS Designation,
+			clt_reserve.NumCommandeClient,
+			clt_reserve.DateHeureCreation,
+			0 AS EstTestUnitaire
+		FROM
+			clt_reserve
+		WHERE
+			clt_reserve.IdClient = [%cboSociété.ValeurMémorisée%]
+			[%sWhereReserve%]
+		) AS z
+		
+	JOIN clt_client ON clt_client.IdClient			= z.IdClient
+	LEFT JOIN clt_contact ON clt_contact.IdContact	= z.IdContact
+		
+	ORDER BY
+	[%sOrderBy%]
+]
+
+
+si pas sdReqReserve.ExécuteRequêteSQL(clt_reserve..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour
+fin
+
+
+znrReserve.SupprimeTout()
+
+pour tout sdReqReserve
+	si sdReqReserve.montant > 0 alors
+		mPériodeCrédit	+= sdReqReserve.montant
+	sinon
+		mPeriodeDébit	+= sdReqReserve.montant
+	fin
+	mPériodeTotal += sdReqReserve.montant
+
+	nInd = znrReserve.AjouteLigne()
+	znrReserve[nInd].imgTypeOperation 		= cpProjet.IconeTypeProjet(sdReqReserve.TypePaiement, Vrai)
+	znrReserve[nInd].attIdReserve			= 0
+	znrReserve[nInd].libContact			= (sdReqReserve.IdContact > 0) ? sdReqReserve.Contact sinon "Marketeam"
+//	znrReserve[nInd].libRéférence			= sdReqReserve.Reference
+	znrReserve[nInd].libDésignation		= sdReqReserve.Designation
+	si sdReqReserve.TypePaiementLibelle = "Test unitaire" alors
+		znrReserve[nInd].libMontant		= NumériqueVersChaîne(sdReqReserve.Montant, "+,3fS") +" €"
+	sinon
+		znrReserve[nInd].libMontant		= NumériqueVersChaîne(sdReqReserve.Montant, "+,2fS") +" €"
+
+	fin
+	znrReserve[nInd].libMontant.Couleur	= (sdReqReserve.montant > 0) ? HTMLVersRVB(__COULEUR_MARKETEAM_XL__) sinon HTMLVersRVB(__COULEUR_EMAIL_L__)
+	znrReserve[nInd].libDate				= DateVersChaîne(sdReqReserve.DateHeureCreation.PartieDate,"Jjj JJ mmm AAAA")
+	znrReserve[nInd].libHeure				= HeureVersChaîne(sdReqReserve.DateHeureCreation.PartieHeure,"HH:MM:SS")
+
+	si intRegrouper = Vrai alors
+		znrReserve[nInd].attTypeReserve	= sdReqReserve.TypePaiementLibelle
+		RuptureReserveTotal(znrReserve[nInd].attTypeReserve)
+	fin
+fin
+
+saiPériodeDebit 	= mPeriodeDébit
+saiPériodeCrédit	= mPériodeCrédit
+saiPériodeTotal		= mPériodeTotal
+
+saiPériodeTotal.Couleur = mPériodeTotal > 0 ? HTMLVersRVB(__COULEUR_NOIR__) sinon HTMLVersRVB(__COULEUR_EMAIL_L__)
+
+si intRegrouper = Vrai alors
+	znrReserve.EnrouleTout()
+	znrReserve.ruptHautReserve.Visible = Vrai
+sinon
+	znrReserve.DérouleTout()
+	znrReserve.ruptHautReserve.Visible = Faux
+fin
+
+
+
+	procédure interne RuptureReserveTotal(pType)
+		nIdRepture est un entier
+
+		nIdRepture = ZoneRépétéeIndiceRupture(ruptHautReserve,nInd)
+
+		taaTotaux[pType] = taaTotaux[pType] + sdReqReserve.Montant
+
+		si pType = "Test unitaire" alors
+			znrReserve[nIdRepture].libMontantTotal	= NumériqueVersChaîne(taaTotaux[pType], "+,3fS") + " €"
+		sinon
+			znrReserve[nIdRepture].libMontantTotal	= NumériqueVersChaîne(taaTotaux[pType], "+,2fS") + " €"
+		fin
+
+
+		si taaTotaux[pType] > 0 alors
+			znrReserve[nIdRepture].libMontantTotal.Couleur	= HTMLVersRVB(__COULEUR_MARKETEAM_XL__)
+		sinon
+			znrReserve[nIdRepture].libMontantTotal.Couleur	= HTMLVersRVB(__COULEUR_EMAIL_L__)
+		fin
+	fin
+
+
+fin:
+sdReqReserve.AnnuleDéclaration()

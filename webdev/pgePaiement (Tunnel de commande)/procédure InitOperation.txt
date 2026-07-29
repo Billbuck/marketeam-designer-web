@@ -1,0 +1,15 @@
+procédure InitOperation()
+
+stMontantDue est une structMontantDue 
+mResteAPayer est un monétaire
+
+si __stOperation.TypeOperation = "" _et_ _nIdOperation <> 0  alors  // On vient d'entrer dans le tunnel il faut allumer
+	__stOperation			= Partage.ChargeStructOperation(_nIdOperation)
+	__stOperation.IdContact	= Partage.__vcUser.IDContact
+	
+	stMontantDue 	= Partage.OpérationMontantDue(__stOperation)
+	mResteAPayer	= stMontantDue.MontantDuePaybox + stMontantDue.MontantDueReserve
+	
+	InitVariables()
+	TunnelCalculeTarif()
+fin

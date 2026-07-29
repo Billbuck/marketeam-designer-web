@@ -1,0 +1,13 @@
+procédure EnleveRubriqueSource(pRubrique)
+
+sRubrique est une chaîne
+
+sRubrique = Remplace(pRubrique,TAB,"")
+sRubrique = Remplace(sRubrique,Caract(10),"")
+
+pour toute ligne nLigne de znrChampsSupplementaires
+	si attLigne[nLigne] = sRubrique alors 
+		ZoneRépétéeSupprime(znrChampsSupplementaires, nLigne)
+	fin
+fin
+celChampsSupplementaires.Visible = (znrChampsSupplementaires.Occurrence > 0)

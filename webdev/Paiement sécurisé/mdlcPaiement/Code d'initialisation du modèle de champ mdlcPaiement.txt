@@ -58,6 +58,10 @@ _taaInterrupteur 						est un tableau associatif <synchronisé navigateur> de bo
 _sCarteBancaireMois						est une chaîne <synchronisé navigateur>
 _sCarteBancaireAnnée					est une chaîne <synchronisé navigateur>
 
+//détail du dernier échec de paiement (ErreurInfo Paybox, sInformation de TransactionEtat...)
+//renseigné par les chemins d'échec, consommé et remis à zéro par AfficheResultat
+_sInformationEchec						est une chaîne
+
 constante
 	_ban_parame_					= 1
 	_ban_montan_					= 2

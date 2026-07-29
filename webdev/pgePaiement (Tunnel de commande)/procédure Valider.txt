@@ -1,0 +1,14 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//Valider ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure Valider()
+

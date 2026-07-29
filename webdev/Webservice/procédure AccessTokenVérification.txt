@@ -1,0 +1,132 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] ApiIdentification ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	booléen : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+//	Test (entier) : <indiquez ici le rôle de Test>
+procédure AccessTokenVérification()
+
+nIdApiKeyIp			est un entier
+sTexteRequete		est une chaîne ANSI
+sdReqVerification	est une Source de Données
+
+
+duRequete			est une Durée
+sBase				est une chaîne ANSI
+sSignature			est une chaîne ANSI
+sAccessToken		est une chaîne ANSI
+sAuthorization		est une chaîne ANSI		= WebserviceLitEntêteHTTP("Authorization")
+sAdresseIp			est une chaîne ANSI		= WebserviceAdresseIPClient(Vrai)
+
+// Paramètres pour l'authentification d'une requête de Marketeam ->- Webservice
+sAuth				est une chaîne ANSI		= WebserviceLitEntêteHTTP("X-Marketeam-Auth")
+sTimestamp			est une chaîne ANSI		= WebserviceLitEntêteHTTP("X-Timestamp")
+nIdClient			est une chaîne ANSI		= WebserviceLitEntêteHTTP("X-IdClient")
+nIdContact			est une chaîne ANSI		= WebserviceLitEntêteHTTP("X-IdContact")
+
+si sAdresseIp = "::1" alors
+	sAdresseIp = "127.0.0.1"
+fin
+
+
+// Vérification pour un client
+si sAuth = "" _ou_ sTimestamp = "" alors
+
+	si sAuthorization.SansEspace() = "" alors
+		GénéreJsonErreur("Authorization invalide")
+		renvoyer Faux
+	fin
+
+	si pas sAuthorization.Contient("Bearer", MotComplet+SansCasse) alors
+		GénéreJsonErreur("Bearer absent")
+		renvoyer Faux
+	fin
+
+	sAccessToken = SansEspace(sAuthorization.Remplace("Bearer","",MotComplet+SansCasse))
+
+	si sAccessToken.Taille() <> 32 alors
+		GénéreJsonErreur("Token invalide")
+		renvoyer Faux
+	fin
+
+	si pas wbs_token.LitRecherchePremier(AccessToken, sAccessToken) alors
+		GénéreJsonErreur("Token invalide")
+		renvoyer Faux
+	fin
+
+	sTexteRequete = [
+		SELECT
+			clt_contact_apikey_ip.IdApiKeyIp
+		FROM 
+			wbs_token
+			JOIN clt_contact_apikey_ip ON clt_contact_apikey_ip.IdApiKeyIp = wbs_token.IdApiKeyIp	
+		WHERE
+			wbs_token.IdToken = [%wbs_token.IdToken%]
+			AND clt_contact_apikey_ip.AdresseIp = '[%sAdresseIp%]'
+	]
+
+	si pas sdReqVerification.ExécuteRequêteSQL(wbs_token.Connexion,hRequêteSansCorrection,sTexteRequete) alors
+		GénéreJsonErreur("Erreur Requête","",500)
+		renvoyer Faux
+	fin
+
+	si pas sdReqVerification.LitPremier()  alors
+		GénéreJsonErreur("Adresse IP invalide")
+		renvoyer Faux
+	sinon
+		nIdApiKeyIp = sdReqVerification.IdApiKeyIp
+	fin
+
+
+	si wbs_token.DateHeureExpiration < DateHeureSys() alors
+		GénéreJsonErreur("Token expiré")
+		renvoyer Faux
+	fin
+
+	si wbs_token.Etat = __TOKEN_ETAT_RÉVOQUÉ__ alors
+		GénéreJsonErreur("Token révoqué")
+		renvoyer Faux
+	fin
+
+	si pas Partage.ChargeDonnéesUtilisateur(wbs_token.IdClient, wbs_token.IdContact) alors
+		GénéreJsonErreur("Chargement compte client impossible")
+		renvoyer Faux
+	fin
+
+	renvoyer Vrai
+
+sinon
+	// Vérification pour Marketeam
+	duRequete = DateHeureDifférence(sTimestamp, DateHeureSys()).VersDurée(duréeCentième)
+	si duRequete.EnSecondes > 300 alors
+		WebserviceEcritCodeHTTP(408, "Requête expirée")
+		renvoyer Faux
+	fin
+
+	// Recréer la signature attendue
+	sBase		= __API_CLE_SECRET_KEY__ + "POST|/api/endpoint|" + nIdClient + "|" + nIdContact + "|" + sTimestamp
+	sSignature 	= HashChaîne(HA_SHA_256, sBase).BufferVersHexa(SansRegroupement,SansLigne)
+
+	// Vérifier la signature
+	si sSignature <> sAuth alors
+		WebserviceEcritCodeHTTP(403, "Authentification échouée")
+		renvoyer Faux
+	fin
+
+	// Charger les droits et tarifs spécifiques (IdClient et IdContact validés)
+	si pas Partage.ChargeDonnéesUtilisateur(nIdClient, nIdContact) alors
+		GénéreJsonErreur("Chargement compte client impossible")
+		renvoyer Faux
+	fin
+
+	renvoyer Vrai
+
+fin
+

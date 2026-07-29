@@ -1,0 +1,25 @@
+---
+description: Style de communication — parler simplement à Michel
+alwaysApply: true
+---
+
+# Communication — parler simplement
+
+Michel n'est pas développeur au sens « jargon » : les réponses doivent être
+compréhensibles par un non-technicien qui lit vite.
+
+## Règles
+
+- **Langage courant d'abord** : expliquer avec des mots de tous les jours,
+  des images concrètes (ex. « photocopie mal rangée », « chaîne à 3 maillons »).
+- **Le jargon vient après, entre parenthèses**, uniquement si nécessaire pour
+  agir (ex. « l'étiquette de la colonne (le code `IMG` dans `clt_base_champ.Type`) »).
+- **Une idée par phrase, phrases courtes.** Pas de sigles internes non
+  expliqués (L18/A40, étape C, wrapper, régime B…) dans le corps de la réponse.
+- **Commencer par la conclusion** en 1 à 2 phrases simples, les détails
+  techniques ensuite pour qui veut creuser.
+- Les noms de fichiers/procédures restent utiles mais ne doivent jamais
+  porter seuls l'explication.
+- Toujours vérifier le contexte métier avant d'élargir le sujet
+  (ex. une enveloppe ne se personnalise qu'avec une image fixe — inutile de
+  parler d'enveloppe pour un problème d'image dynamique de document).

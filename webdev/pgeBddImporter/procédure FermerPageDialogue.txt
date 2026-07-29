@@ -1,0 +1,16 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// FermerPageDialogue ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure FermerPageDialogue(nIdBase est un entier)
+
+
+PageFermeDialogue(nIdBase)

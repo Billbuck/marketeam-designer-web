@@ -1,0 +1,122 @@
+procédure InitVariables()
+
+stTimbre est une structTimbre
+dhEnvoiSuggere est une DateHeure
+dhImmediate est une DateHeure
+
+//VariableRAZ(__vcTunnel)
+//__vcTunnel.nEtapeEnCours	= 1
+//__vcTunnel.nEtapeMax		= (_nIdOperation = 0) ? 1 SINON 8
+
+
+selon __stOperation.TypeOperation
+	cas __OPERATION_COURRIER__, __OPERATION_SMARTEVA__, __OPERATION_TRACTEVA__
+		
+		si __stOperation.stOperationLettre.IdCampagne <> 0 alors
+			
+			SupprimeTout(cpDeviseur.__tabTimbre)
+			SupprimeTout(Tunnel.__tabDistributionPosteva)
+			
+			HLitRecherchePremier(ltr_campagne,IdCampagne,__stOperation.stOperationLettre.IdCampagne)
+			si HTrouve(ltr_campagne) alors
+				Tunnel.__vcTunnel.dDateDébutCampagne 		= ltr_campagne.DateDebutUtilisation
+				Tunnel.__vcTunnel.dDateFinCampagne 		= ltr_campagne.DateFinUtilisation
+				Tunnel.__vcTunnel.dDateImposéeCampagne 	= ltr_campagne.DateEnvoiImposee
+				Tunnel.__vcTunnel.nIdTimbreTarif 			= ltr_campagne.IdTimbreTarif
+				// En création on sélectionne par défaut la date suggérée de la campagne
+				si _nIdOperation = 0 _et_ DateValide(ltr_campagne.DateEnvoiImposee) alors
+					__stOperation.DateEnvoiSouhaite = ltr_campagne.DateEnvoiImposee
+				fin
+			fin
+			
+			si ltr_campagne.IdTimbreTarif <> 0 alors
+				si HLitRecherchePremier(ltr_timbre_tarif,IdTimbreTarif,ltr_campagne.IdTimbreTarif) alors
+					si HLitRecherchePremier(ltr_timbre,IdTimbre,ltr_timbre_tarif.IdTimbre) alors
+						stTimbre.IdTimbre					= ltr_timbre_tarif.IdTimbre
+						stTimbre.IdTimbreTarif				= ltr_timbre_tarif.IdTimbreTarif
+						stTimbre.Libelle					= ltr_timbre.Libelle
+						stTimbre.DelaisAcheminement 		= ltr_timbre.DelaisAcheminement
+						stTimbre.DebutDistribution	 		= ltr_timbre.DebutDistribution
+						stTimbre.FinDistribution	 		= ltr_timbre.FinDistribution
+						stTimbre.PrixUnitaire				= Arrondi(ltr_timbre_tarif.PrixUnitaire + (ltr_timbre_tarif.PrixKg * __stOperation.stOperationLettre.PoidsTotal / 1000),2)
+						stTimbre.MontantTotal 				= stTimbre.PrixUnitaire * __stOperation.NbrDestinataire
+						Ajoute(cpDeviseur.__tabTimbre, stTimbre)	
+					fin
+					
+				fin
+				__stOperation.stOperationLettre.IdTimbreTarif = ltr_campagne.IdTimbreTarif
+			fin
+		fin
+
+		selon __stOperation.TypeOperation
+			cas __OPERATION_COURRIER__
+				si DateVersJour(DateSys()) > 5 _ou_ JourFérié(DateSys()) = Vrai _ou_ HeureSys() > "1800" alors
+					Tunnel.__vcTunnel.dBorneMinCalendrier = cpFonction.CalculeDateOuvrée(DateSys(),2,Faux)
+				sinon
+					Tunnel.__vcTunnel.dBorneMinCalendrier =  cpFonction.CalculeDateOuvrée(DateSys(),1,Faux)
+				fin
+			cas __OPERATION_SMARTEVA__ : Tunnel.__vcTunnel.dBorneMinCalendrier = ProchaineLundiOuvré(8)
+			cas __OPERATION_TRACTEVA__ : Tunnel.__vcTunnel.dBorneMinCalendrier = ProchaineLundiOuvré(7)
+		fin
+
+	cas __OPERATION_SMS__
+
+		dhImmediate = CalculeDateHeureOuvrée(DateHeureSys(),0,"0800","1300","1300","2100",Vrai)
+		Tunnel.__vcTunnel.dBorneMinCalendrier = dhImmediate..PartieDate
+	
+		si __stOperation.IdOperation > 0 alors // en modification on verifie si la programmation est toujours possible
+			dhEnvoiSuggere = DateHeureSys()[[à 12]]
+			dhEnvoiSuggere..Heure += 1
+			si dhEnvoiSuggere..Heure = "21" alors
+				dhEnvoiSuggere = DateSys() + "2100"
+			sinon
+				tantque dhEnvoiSuggere..PartieHeure[[3 à 4]] <> "00"
+					dhEnvoiSuggere..Minute +=1
+				fin
+			fin
+			
+			dhEnvoiSuggere = CalculeDateHeureOuvrée(dhEnvoiSuggere,0,"0800","1300","1300","2100",Vrai)
+
+
+		fin
+
+	cas __OPERATION_VMS__
+		
+		dhImmediate = CalculeDateHeureOuvrée(DateHeureSys(),0,"0800","1300","1300","2100",Vrai)
+		Tunnel.__vcTunnel.dBorneMinCalendrier = dhImmediate..PartieDate
+		
+		si __stOperation.IdOperation > 0 alors // en modification on verifie si la programmation est toujours possible
+			dhEnvoiSuggere = DateHeureSys()[[à 12]]
+			dhEnvoiSuggere..Heure += 1
+			si dhEnvoiSuggere..Heure = "21" alors
+				dhEnvoiSuggere = DateSys() + "2100"
+			sinon
+				tantque dhEnvoiSuggere..PartieHeure[[3 à 4]] <> "00"
+					dhEnvoiSuggere..Minute +=1
+				fin
+			fin
+			
+			dhEnvoiSuggere = CalculeDateHeureOuvrée(dhEnvoiSuggere,0,"0800","1300","1300","2100",Vrai)
+			
+		fin
+		
+	
+	autre cas
+		
+fin
+
+	procédure interne ProchaineLundiOuvré(pJourOuvré)
+		dDateArrivée est une Date = DateSys()
+		si HeureSys() > "1800" alors
+			dDateArrivée..Jour++
+		fin
+		nJour est un entier 
+		tantque DateVersJour(dDateArrivée) <> 1 _ou_ JourFérié(dDateArrivée) _ou_ nJour < pJourOuvré
+			si DateVersJour(dDateArrivée) <= 5 _et_ pas JourFérié(dDateArrivée) alors
+				nJour++
+			fin
+			dDateArrivée..Jour += 1
+		fin
+		
+		renvoyer dDateArrivée
+	fin

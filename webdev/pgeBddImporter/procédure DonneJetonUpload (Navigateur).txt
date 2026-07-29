@@ -1,0 +1,12 @@
+// Résumé : Relais navigateur entre upload-bdd.js et le serveur.
+//          Enregistrée auprès du script par InitUploadCallback (3e argument,
+//          window._callbackSignatureBDD). Le script l'appelle juste avant
+//          l'envoi du fichier pour obtenir l'horodatage + la signature,
+//          calculés CÔTÉ SERVEUR (la clé secrète n'est plus dans la page).
+//
+// Valeur de retour :
+// 	chaîne : "AAAAMMJJHHMMSS|signature" (vide si l'appel AJAX échoue)
+//
+procédure DonneJetonUpload()
+
+renvoyer AJAXExécute(DonneSignatureUpload)

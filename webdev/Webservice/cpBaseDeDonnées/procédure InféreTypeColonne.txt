@@ -1,105 +1,107 @@
-// Résumé : Transforme le mapping (standard + optionnel) en tableau de champs
-//          d'import (structWsBddChamp) avec code, champ SQL, libellé et type.
+// Résumé : Infère le type (__CHAMP_TYPE_*) d'une colonne à partir de ses
+//          VALEURS (échantillon des premières lignes du fichier), et non plus
+//          seulement de son en-tête. Détection volontairement CONSERVATRICE :
+//          en cas de doute, on renvoie Texte (le type reste modifiable par
+//          l'utilisateur dans l'écran de mapping).
 //
-// Refonte 09/07/2026 : les ~20 blocs « cas » identiques (copier/coller) sont
-// remplacés par une TABLE DE DÉFINITIONS (code -> champ / type / extrait).
-// Ajouter un champ standard = ajouter UNE ligne AjouteDef.
-// Seul le cas composite CDP_VILLE (code postal + ville dans la même colonne,
-// qui génère DEUX champs avec extraction) reste traité à part.
+// Créée le 09/07/2026 (chantier refonte RubriqueAutomatique, point 3).
+//
+// Règles :
+//	- Au moins 3 valeurs non vides, sinon Texte (échantillon trop faible).
+//	- Un type n'est retenu que si >= 90 % des valeurs non vides le respectent.
+//	- Types détectés : Date, Email, Entier, Décimal. Les types « risqués »
+//	  (téléphone, code postal...) ne sont PAS inférés : trop de faux positifs,
+//	  et les colonnes concernées sont normalement reconnues par leur en-tête.
+//	- Un nombre à zéro de tête (« 0612... », « 09170 ») n'est PAS un entier :
+//	  c'est un code (téléphone, code postal...) qui perdrait son zéro.
 //
 // Paramètres :
-//	stBaseDeDonnées (structWsBaseDeDonnées) : base en cours d'import (stMapping + taaColonne)
+//	pValeurs : valeurs de la colonne séparées par RC (cf. RécupérerEchantillonFichier)
 // Valeur de retour :
-// 	tableau (structWsBddChamp) : // 	tableau de structWsBddChamp
+// 	chaîne : constante __CHAMP_TYPE_*  (TXT par défaut)
 //
-procédure IdentificationDesColonnes(local stBaseDeDonnées est une structWsBaseDeDonnées)
+PROCÉDURE InféreTypeColonne(pValeurs est une chaîne ANSI)
 
-// La structure structDefChampStandard est déclarée dans le code de
-// DÉCLARATION de la collection cpBaseDeDonnées (déplacée le 09/07/2026).
+nNonVide		est un entier
+nDate			est un entier
+nEmail		est un entier
+nEntier		est un entier
+nDécimal		est un entier
+sValeur		est une chaîne
 
-nInd				est un entier
-nOrdre			est un entier
-stImportChamp	est une structWsBddChamp
-tabImportChamp	est un tableau de structWsBddChamp
-taaDef			est un tableau associatif de structDefChampStandard
+POUR TOUTE CHAÎNE sVal DE pValeurs SÉPARÉE PAR RC
+	sValeur = sVal.SansEspace()
+	SI sValeur = "" ALORS CONTINUER
 
-// ------------------------------------------------------------------
-// TABLE DES DÉFINITIONS : code standard -> (champ SQL, type, extrait)
-// ------------------------------------------------------------------
-AjouteDef(__CHAMP_CODE_REFERENCE__,		__CHAMP_REFERENCE__,	__CHAMP_TYPE_TEXTE__,		0)
-AjouteDef(__CHAMP_CODE_SOCIETE__,		__CHAMP_SOCIETE__,		__CHAMP_TYPE_TEXTE__,		0)
-AjouteDef(__CHAMP_CODE_ENSEIGNE__,		__CHAMP_ENSEIGNE__,		__CHAMP_TYPE_TEXTE__,		0)
-AjouteDef(__CHAMP_CODE_CIVILITE__,		__CHAMP_CIVILITE__,		__CHAMP_TYPE_TEXTE__,		0)
-AjouteDef(__CHAMP_CODE_NOM__,			__CHAMP_NOM__,			__CHAMP_TYPE_TEXTE__,		0)
-AjouteDef(__CHAMP_CODE_PRENOM__,		__CHAMP_PRENOM__,		__CHAMP_TYPE_TEXTE__,		0)
-AjouteDef(__CHAMP_CODE_CONTACT__,		__CHAMP_CONTACT__,		__CHAMP_TYPE_TEXTE__,		0)
-AjouteDef(__CHAMP_CODE_TEL__,			__CHAMP_TEL__,			__CHAMP_TYPE_TELEPHONE__,	0)
-AjouteDef(__CHAMP_CODE_PORTABLE__,		__CHAMP_PORTABLE__,		__CHAMP_TYPE_PORTABLE__,	0)
-AjouteDef(__CHAMP_CODE_EMAIL__,			__CHAMP_EMAIL__,		__CHAMP_TYPE_EMAIL__,		0)
-AjouteDef(__CHAMP_CODE_ADRESSE1__,		__CHAMP_ADRESSE1__,		__CHAMP_TYPE_TEXTE__,		0)
-AjouteDef(__CHAMP_CODE_ADRESSE2__,		__CHAMP_ADRESSE2__,		__CHAMP_TYPE_TEXTE__,		0)
-AjouteDef(__CHAMP_CODE_ADRESSE3__,		__CHAMP_ADRESSE3__,		__CHAMP_TYPE_TEXTE__,		0)
-AjouteDef(__CHAMP_CODE_ADRESSE4__,		__CHAMP_ADRESSE4__,		__CHAMP_TYPE_TEXTE__,		0)
-AjouteDef(__CHAMP_CODE_CODE_POSTAL__,	__CHAMP_CODE_POSTAL__,	__CHAMP_TYPE_CODEPOSTAL__,	0)
-AjouteDef(__CHAMP_CODE_VILLE__,			__CHAMP_VILLE__,		__CHAMP_TYPE_TEXTE__,		0)
-AjouteDef(__CHAMP_CODE_PAYS__,			__CHAMP_PAYS__,			__CHAMP_TYPE_TEXTE__,		2)
-AjouteDef(__CHAMP_CODE_ALLIAGE__,		__CHAMP_ALLIAGE__,		__CHAMP_TYPE_ALLIAGE__,	0)
+	nNonVide++
+	SELON Vrai
+		CAS EstDate(sValeur)	: nDate++
+		CAS EstEmail(sValeur)	: nEmail++
+		CAS EstEntier(sValeur)	: nEntier++
+		CAS EstDécimal(sValeur)	: nDécimal++
+	FIN
+FIN
 
-// ------------------------------------------------------------------
-// Champs STANDARD
-// ------------------------------------------------------------------
-pour tout stImportStandard de stBaseDeDonnées.stMapping.tabStandard
+SI nNonVide < 3 ALORS RENVOYER __CHAMP_TYPE_TEXTE__
 
-	si stImportStandard.Type = __CHAMP_CODE_CDP_VILLE__ alors
-		// Cas composite : la même colonne alimente DEUX champs par extraction
-		AjouteChamp(stImportStandard, __CHAMP_CODE_CODE_POSTAL__, __CHAMP_CODE_POSTAL__, __CHAMP_TYPE_CODEPOSTAL__, 1)
-		AjouteChamp(stImportStandard, __CHAMP_CODE_VILLE__, __CHAMP_VILLE__, __CHAMP_TYPE_TEXTE__, 2)
+// Seuil : au moins 90 % des valeurs non vides (comparaison en entiers)
+SELON Vrai
+	CAS nDate * 10 >= nNonVide * 9		: RENVOYER __CHAMP_TYPE_DATE__
+	CAS nEmail * 10 >= nNonVide * 9		: RENVOYER __CHAMP_TYPE_EMAIL__
+	CAS nEntier * 10 >= nNonVide * 9	: RENVOYER __CHAMP_TYPE_ENTIER__
+	// Une colonne numérique mixte (entiers + décimaux) est décimale
+	CAS (nDécimal + nEntier) * 10 >= nNonVide * 9 _ET_ nDécimal > 0	: RENVOYER __CHAMP_TYPE_DECIMAL__
+	AUTRE CAS							: RENVOYER __CHAMP_TYPE_TEXTE__
+FIN
 
-	sinon si taaDef[stImportStandard.Type]..Vide = Faux alors
-		AjouteChamp(stImportStandard, stImportStandard.Type, taaDef[stImportStandard.Type].Champ, taaDef[stImportStandard.Type].Type, taaDef[stImportStandard.Type].Extrait)
-	fin
-	// code inconnu -> ignoré (comme l'ancien « autre cas »)
-fin
+// Même logique de normalisation que CleanDate (TraiteValeur) :
+	// chiffres uniquement, 6 ou 8 caractères, date calendaire valide
+	PROCÉDURE INTERNE EstDate(pVal est une chaîne) : booléen
 
-// ------------------------------------------------------------------
-// Champs OPTIONNELS
-// ------------------------------------------------------------------
-pour tout stImportOptionnel de stBaseDeDonnées.stMapping.tabOptionnel
-	nInd++
-	VariableRAZ(stImportChamp)
-	stImportChamp.Code			= ""
-	stImportChamp.Champ			= "Champ" + nInd
-	stImportChamp.Libelle		= stImportOptionnel.Libelle
-	stImportChamp.Ordre			= ++nOrdre
-	stImportChamp.Type			= stImportOptionnel.Type
-	stImportChamp.Extrait		= 0
-	stImportChamp.tabColonne	= [stBaseDeDonnées.taaColonne[stImportOptionnel.Colonne]]
-	tabImportChamp.Ajoute(stImportChamp)
-fin
+		sEntrée	est une chaîne		= pVal.Remplace([" ","-","/","\","_",":",".",","], "")
+		dDate		est une Date
 
-renvoyer tabImportChamp
+		SI sEntrée.CaractOccurrenceType(ctNumérique) <> sEntrée.Taille() ALORS RENVOYER Faux
 
-	procédure interne AjouteDef(pCode est une chaîne, pChamp est une chaîne, pType est une chaîne, pExtrait est un entier)
+		SI sEntrée.Taille() = 6 ALORS
+			sEntrée = sEntrée[[À 4]] + "20" + sEntrée[[5 À]]
+		FIN
+		SI sEntrée.Taille() <> 8 ALORS RENVOYER Faux
 
-		stDef est une structDefChampStandard
-		stDef.Champ		= pChamp
-		stDef.Type		= pType
-		stDef.Extrait	= pExtrait
-		taaDef[pCode]	= stDef
-	fin
+		SI Val(sEntrée.Droite(4)) >= 1900 _ET_ Val(sEntrée.Droite(4)) <= 2100 ALORS
+			dDate = sEntrée.VersDate("JJMMAAAA")
+		SINON
+			dDate = sEntrée.VersDate("AAAAMMJJ")
+		FIN
+
+		RENVOYER DateValide(dDate)
+	FIN
 
 
-	procédure interne AjouteChamp(pImportStandard est une structWsBddStandard, pCode est une chaîne ANSI, pChamp est une chaîne, pType est une chaîne, pExtrait est un entier)
+	PROCÉDURE INTERNE EstEmail(pVal est une chaîne) : booléen
 
-		VariableRAZ(stImportChamp)
-		stImportChamp.Code			= pCode
-		stImportChamp.Champ			= pChamp
-		stImportChamp.Libelle		= LibelleTypeChamp(pChamp)
-		stImportChamp.Ordre			= ++nOrdre
-		stImportChamp.Type			= pType
-		stImportChamp.Extrait		= pExtrait
-		pour tout sColonne de pImportStandard.Colonne
-			stImportChamp.tabColonne.Ajoute(stBaseDeDonnées.taaColonne[sColonne])
-		fin
-		tabImportChamp.Ajoute(stImportChamp)
-	fin
+		SI PAS pVal.Contient("@") ALORS RENVOYER Faux
+		RENVOYER EmailVérifieAdresse(pVal.Minuscule(), emailValideSyntaxeStrict) = emailAdresseValide
+	FIN
+
+
+	PROCÉDURE INTERNE EstEntier(pVal est une chaîne) : booléen
+
+		SI pVal.CaractOccurrenceType(ctNumérique) <> pVal.Taille() ALORS RENVOYER Faux
+		// Zéro de tête = code (téléphone, code postal...), pas un nombre
+		SI pVal.Taille() > 1 _ET_ pVal[[1]] = "0" ALORS RENVOYER Faux
+		RENVOYER Vrai
+	FIN
+
+
+	PROCÉDURE INTERNE EstDécimal(pVal est une chaîne) : booléen
+
+		sNombre est une chaîne = pVal.Remplace(",", ".")
+
+		SI sNombre.Occurrence(".") <> 1 ALORS RENVOYER Faux
+
+		sNombre = sNombre.Remplace(".", "")
+		SI sNombre = "" ALORS RENVOYER Faux
+
+		RENVOYER sNombre.CaractOccurrenceType(ctNumérique) = sNombre.Taille()
+	FIN

@@ -12,7 +12,9 @@ stAuth est une structDesignerAuth
 
 stAuth.IdClient				= pIdClient
 stAuth.IdContact			= pIdContact
-stAuth.SecretKey			= __API_CLE_SECRET_KEY__
+// SÉCURITÉ (28/07/2026) : la clé secrète n'est PLUS envoyée au navigateur
+// (ancien stAuth.SecretKey supprimé). Le Designer demande désormais un jeton
+// périssable au serveur via cpDesigner.AjaxDonneJetonWebservice.
 stAuth.UrlWebservice		= cpFonction.ValeurParametre("WS_Designer_Upload", prm_parametre.ValChaine..Nom)
 stAuth.UrlCollectionListe	= cpFonction.ValeurParametre("WS_Designer_CollectionListe", prm_parametre.ValChaine..Nom)
 // Lot B1 : URL de l'endpoint d'ajout de Google Font (DesignerPoliceAjout)

@@ -1,0 +1,15 @@
+procédure PaiementDejaRéalisé(pMessage)
+
+
+saiMontantReserveHT					= 0
+saiMontantReserveTTC				= 0
+banArgent[_ban_filtre_].Visible		= Vrai
+banArgent[_ban_tableau_].Visible	= Vrai
+banArgent[_ban_montant_].Visible	= Faux
+banArgent[_ban_fille_].Visible		= Faux
+banArgent[_ban_affecter_].Visible	= Faux
+banArgent[_ban_paiement_].Visible	= Faux
+btnCréditer.Visible					= _bCrediterVisible
+btnAffecter.Visible					= (_bAffecterVisible _et_ znrFille.Occurrence > 0)
+
+PopupAfficheMessage(pMessage,"INFORMATION",mdcPaiement._stPaiementParametre.TypeOperation,__TOAST_INFORMATION__,10 s)

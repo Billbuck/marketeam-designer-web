@@ -1,0 +1,10 @@
+function RelanceDragSource()
+{
+	$(".estSource").draggable({
+		revert: true,
+		cursor: "grab"
+		
+	});
+	
+	console.log("RelanceDragSource");
+}

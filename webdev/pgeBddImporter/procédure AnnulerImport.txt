@@ -1,0 +1,13 @@
+procédure AnnulerImport(nIdBase, nIdWbsBase)
+
+// Supprimer clt_base (et clt_base_ligne en cascade)
+si nIdBase > 0 alors
+	cpFonction.SupprimeEnregistrement(clt_base..Nom, "IdBase = " + nIdBase)
+fin
+
+// Supprimer wbs_base
+si nIdWbsBase > 0 alors
+	cpFonction.SupprimeEnregistrement(wbs_base..Nom, "IdWbsBase = " + nIdWbsBase)
+fin
+
+renvoyer Vrai

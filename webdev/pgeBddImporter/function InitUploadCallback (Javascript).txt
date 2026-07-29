@@ -1,0 +1,6 @@
+function InitUploadCallback()
+{
+window._callbackUploadBDD = arguments[0];
+window._callbackAvantUploadBDD = arguments[1];
+window._callbackSignatureBDD = arguments[2];
+}

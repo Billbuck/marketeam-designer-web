@@ -258,7 +258,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @typedef {Object} AuthConfig
      * @property {string} idClient - Identifiant client Marketeam
      * @property {string} idContact - Identifiant contact (utilisateur)
-     * @property {string} secretKey - Clé secrète pour signature HMAC-SHA256
      * @property {string} urlWebservice - URL complète de l'endpoint upload (ex: "http://localhost/v1/api/designer/image/upload")
      * @property {string} urlCollectionListe - URL complète de l'endpoint listing collections (ex: "http://localhost/v1/api/designer/collection/liste")
      */
@@ -9560,7 +9559,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Lancer l'upload vers le webservice si auth disponible
             if (authConfig && authConfig.urlWebservice) {
                 const uploadResult = await uploadZipToWebservice(champSelectionne);
-                
+
                 if (uploadResult.success) {
                     if (DEBUG) console.log('ZIP Upload: Upload webservice réussi');
                     handleZipUploadResponse(uploadResult.data);
@@ -9610,8 +9609,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     clearZipData();
                     updateZipUploadUIState('champ_selectionne');
                 }
+            } else if (isInIframe) {
+                // Dans l'iframe (production), l'absence de config auth est une
+                // ERREUR : avant (28/07/2026) ce cas était totalement silencieux
+                // (aucun envoi, aucun message) — impossible à diagnostiquer.
+                console.error('ZIP Upload: authConfig absent ou urlWebservice vide — bloc auth non reçu au chargement ?', authConfig);
+                showNotification([{
+                    level: 'error',
+                    text: 'La connexion au serveur d\'images n\'est pas configurée : l\'envoi est impossible. Fermez le Designer puis rouvrez-le ; si le problème persiste, contactez le support.'
+                }], { title: 'Import impossible' });
+                clearZipData();
+                updateZipUploadUIState('champ_selectionne');
             } else {
-                // Pas de config auth → mode local uniquement (dev/test)
+                // Hors iframe : mode local uniquement (dev/test)
                 if (DEBUG) console.log('ZIP Upload: Pas de config auth, mode local uniquement');
                 // Popup locale si des fichiers ont été ignorés (pas de résumé serveur disponible)
                 if (zipUploadData.imagesIgnorees.length > 0) {
@@ -9656,56 +9666,75 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * Fonctions pour l'envoi direct du fichier ZIP au webservice.
      * Utilise XMLHttpRequest + FormData (multipart/form-data).
-     * Authentification par signature HMAC-SHA256.
+     * Authentification par signature HMAC-SHA256, fournie par le SERVEUR
+     * via la page parente (v. sécurité 28/07/2026 — plus de clé côté navigateur).
      * 
      * Fonctions principales :
-     *   - generateTimestamp() : Génère un timestamp AAAAMMJJHHMMSS
-     *   - generateSignature() : Calcule la signature HMAC-SHA256
+     *   - requestAuthToken() : Demande un jeton frais (timestamp + signature) au parent
+     *   - resolveAuthTokenResponse() : Réception de la réponse du parent
      *   - uploadZipToWebservice() : Envoi du ZIP au webservice
      *   - handleZipUploadResponse() : Traitement de la réponse
      * 
      * Dépendances :
      *   - authConfig (Section 2)
      *   - zipUploadData (Section 8b)
-     *   - crypto.subtle (Web Crypto API)
+     *   - sendMessageToParent / handleParentMessage (Section 21)
      */
     // ─────────────────────────────────────────────────────────────────────────────
 
+    // ─── SÉCURITÉ (28/07/2026) : la clé secrète a quitté le navigateur ───
+    // Avant : le Designer recevait la clé secrète (auth.secretKey) et calculait
+    // lui-même la signature HMAC → clé lisible dans le code source de la page.
+    // Maintenant : le Designer demande un jeton frais à la page parente WebDev
+    // via postMessage ({action:'tokenRequest', requestId}). La page fabrique le
+    // jeton CÔTÉ SERVEUR (cpDesigner.AjaxDonneJetonWebservice) et répond par
+    // {action:'tokenResponse', requestId, idClient, idContact, timestamp, signature}.
+    // Le jeton est demandé à CHAQUE appel car le webservice refuse les
+    // horodatages de plus de 5 minutes (AccessTokenVérification, 300 s).
+    let _tokenRequestSeq = 0;
+    const _pendingTokenRequests = new Map();
+
     /**
-     * Génère un timestamp au format AAAAMMJJHHMMSS pour l'authentification.
-     * @returns {string} Timestamp formaté (ex: "20260201143025")
+     * Demande un jeton d'authentification frais à la page parente (WebDev).
+     * @returns {Promise<{idClient:string, idContact:string, timestamp:string, signature:string}>}
      */
-    function generateTimestamp() {
-        const now = new Date();
-        return now.getFullYear().toString() +
-            ('0' + (now.getMonth() + 1)).slice(-2) +
-            ('0' + now.getDate()).slice(-2) +
-            ('0' + now.getHours()).slice(-2) +
-            ('0' + now.getMinutes()).slice(-2) +
-            ('0' + now.getSeconds()).slice(-2);
+    function requestAuthToken() {
+        return new Promise((resolve, reject) => {
+            if (!window.parent || window.parent === window) {
+                reject(new Error('Designer hors iframe : jeton d\'authentification indisponible'));
+                return;
+            }
+            const requestId = ++_tokenRequestSeq;
+            const timer = setTimeout(() => {
+                _pendingTokenRequests.delete(requestId);
+                console.error('requestAuthToken: pas de réponse de la page parente après 10 s (EcouterMessagesIframe à jour ? 3e paramètre passé ?)');
+                reject(new Error('Pas de réponse de la page parente (jeton d\'authentification)'));
+            }, 10000);
+            _pendingTokenRequests.set(requestId, { resolve, reject, timer });
+            sendMessageToParent({ action: 'tokenRequest', requestId: requestId });
+        });
     }
 
     /**
-     * Calcule la signature HMAC-SHA256 pour l'authentification au webservice.
-     * 
-     * Chaîne signée : secretKey + "POST|/api/endpoint|" + idClient + "|" + idContact + "|" + timestamp
-     * ATTENTION : Le chemin est TOUJOURS le chemin FIXE "/api/endpoint", pas l'URL réelle.
-     * 
-     * @param {string} timestamp - Timestamp au format AAAAMMJJHHMMSS
-     * @returns {Promise<string>} Signature SHA-256 en hexadécimal majuscule
+     * Réception d'une réponse 'tokenResponse' de la page parente :
+     * résout la promesse en attente portant le même requestId.
+     * @param {Object} message - Message tokenResponse reçu du parent
      */
-    async function generateSignature(timestamp) {
-        if (!authConfig) throw new Error('Configuration authentification non disponible');
-
-        // ATTENTION : le chemin est FIXE '/api/endpoint', pas l'URL réelle du webservice
-        const requete = 'POST|/api/endpoint|' + authConfig.idClient + '|' + authConfig.idContact + '|' + timestamp;
-        const dataToSign = authConfig.secretKey + requete;
-
-        const encoder = new TextEncoder();
-        const data = encoder.encode(dataToSign);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+    function resolveAuthTokenResponse(message) {
+        const pending = _pendingTokenRequests.get(message.requestId);
+        if (!pending) return;
+        _pendingTokenRequests.delete(message.requestId);
+        clearTimeout(pending.timer);
+        if (message.timestamp && message.signature) {
+            pending.resolve({
+                idClient: String(message.idClient || (authConfig && authConfig.idClient) || ''),
+                idContact: String(message.idContact || (authConfig && authConfig.idContact) || ''),
+                timestamp: String(message.timestamp),
+                signature: String(message.signature)
+            });
+        } else {
+            pending.reject(new Error('Jeton d\'authentification vide (session expirée ?)'));
+        }
     }
 
     /**
@@ -9760,11 +9789,10 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('format',    zipUploadData.format || '');
         formData.append('tailleZip', String(zipUploadData.tailleZip || 0));
 
-        // Générer l'authentification
-        const timestamp = generateTimestamp();
-        let signature;
+        // Générer l'authentification (jeton fabriqué côté serveur)
+        let jetonAuth;
         try {
-            signature = await generateSignature(timestamp);
+            jetonAuth = await requestAuthToken();
         } catch (e) {
             return { success: false, message: 'Erreur d\'authentification. Veuillez rafraîchir la page et réessayer.' };
         }
@@ -9872,10 +9900,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Ouvrir la connexion
             // NE PAS définir Content-Type pour multipart — le navigateur le génère automatiquement
             xhr.open('POST', url, true);
-            xhr.setRequestHeader('X-IdClient', authConfig.idClient);
-            xhr.setRequestHeader('X-IdContact', authConfig.idContact);
-            xhr.setRequestHeader('X-Timestamp', timestamp);
-            xhr.setRequestHeader('X-Marketeam-Auth', signature);
+            xhr.setRequestHeader('X-IdClient', jetonAuth.idClient);
+            xhr.setRequestHeader('X-IdContact', jetonAuth.idContact);
+            xhr.setRequestHeader('X-Timestamp', jetonAuth.timestamp);
+            xhr.setRequestHeader('X-Marketeam-Auth', jetonAuth.signature);
 
             xhr.send(formData);
         });
@@ -9932,14 +9960,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (DEBUG) console.log('ZIP Upload: Zone mise à jour - collectionId:', zoneData.source.collectionId, ', urlBase:', zoneData.source.urlBase);
 
+        // Nom d'affichage de la collection — déclaré ICI (portée fonction) car
+        // utilisé aussi par le saveState() en fin de fonction. Auparavant déclaré
+        // dans le bloc if ci-dessous -> ReferenceError systématique au saveState
+        // (l'upload réussissait mais l'UI affichait "erreur inattendue").
+        const nomCollection = (zipUploadData && zipUploadData.nomCollection)
+            ? zipUploadData.nomCollection
+            : (zipUploadData && zipUploadData.nomFichierZip)
+                ? zipUploadData.nomFichierZip.replace(/\.zip$/i, '')
+                : (details.collectionId ? 'Collection ' + String(details.collectionId) : '');
+
         // Ajouter ou mettre à jour la collection dans la combo et la sélectionner
         if (imageInputCollection && details.collectionId) {
             const collId = String(details.collectionId);
-            const nomCollection = (zipUploadData && zipUploadData.nomCollection)
-                ? zipUploadData.nomCollection
-                : (zipUploadData && zipUploadData.nomFichierZip)
-                    ? zipUploadData.nomFichierZip.replace(/\.zip$/i, '')
-                    : 'Collection ' + collId;
             const nbImg = (details.resume && details.resume.imagesStockees) || 0;
 
             // Chercher si une option avec ce collectionId existe déjà
@@ -10121,8 +10154,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setCollectionLoadingState(true);
 
         try {
-            const timestamp = generateTimestamp();
-            const signature = await generateSignature(timestamp);
+            const jetonAuth = await requestAuthToken();
 
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -10134,10 +10166,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-IdClient': authConfig.idClient,
-                    'X-IdContact': authConfig.idContact,
-                    'X-Timestamp': timestamp,
-                    'X-Marketeam-Auth': signature
+                    'X-IdClient': jetonAuth.idClient,
+                    'X-IdContact': jetonAuth.idContact,
+                    'X-Timestamp': jetonAuth.timestamp,
+                    'X-Marketeam-Auth': jetonAuth.signature
                 },
                 body: formBody.toString(),
                 signal: controller.signal
@@ -10202,8 +10234,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const tabBase = (basesConfig && basesConfig.liste) ? basesConfig.liste : [];
 
-        const timestamp = generateTimestamp();
-        const signature = await generateSignature(timestamp);
+        const jetonAuth = await requestAuthToken();
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -10219,10 +10250,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-IdClient': authConfig.idClient,
-                    'X-IdContact': authConfig.idContact,
-                    'X-Timestamp': timestamp,
-                    'X-Marketeam-Auth': signature
+                    'X-IdClient': jetonAuth.idClient,
+                    'X-IdContact': jetonAuth.idContact,
+                    'X-Timestamp': jetonAuth.timestamp,
+                    'X-Marketeam-Auth': jetonAuth.signature
                 },
                 body: formBody.toString(),
                 signal: controller.signal
@@ -10280,10 +10311,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return { success: false, statut: 'error', famille: nomFamille, polices: [], error: 'URL webservice non configurée' };
         }
 
-        const timestamp = generateTimestamp();
-        let signature;
+        let jetonAuth;
         try {
-            signature = await generateSignature(timestamp);
+            jetonAuth = await requestAuthToken();
         } catch (e) {
             console.warn('ajouteGooglePolice: échec génération signature', e);
             return { success: false, statut: 'error', famille: nomFamille, polices: [], error: 'Échec authentification' };
@@ -10303,10 +10333,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-IdClient': authConfig.idClient,
-                    'X-IdContact': authConfig.idContact,
-                    'X-Timestamp': timestamp,
-                    'X-Marketeam-Auth': signature
+                    'X-IdClient': jetonAuth.idClient,
+                    'X-IdContact': jetonAuth.idContact,
+                    'X-Timestamp': jetonAuth.timestamp,
+                    'X-Marketeam-Auth': jetonAuth.signature
                 },
                 body: formBody.toString(),
                 signal: controller.signal
@@ -10396,10 +10426,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         __chargeFamillesEnCours = (async () => {
-            const timestamp = generateTimestamp();
-            let signature;
+            let jetonAuth;
             try {
-                signature = await generateSignature(timestamp);
+                jetonAuth = await requestAuthToken();
             } catch (e) {
                 console.warn('chargeListeFamillesGoogle: échec génération signature', e);
                 return [];
@@ -10415,10 +10444,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-IdClient': authConfig.idClient,
-                        'X-IdContact': authConfig.idContact,
-                        'X-Timestamp': timestamp,
-                        'X-Marketeam-Auth': signature
+                        'X-IdClient': jetonAuth.idClient,
+                        'X-IdContact': jetonAuth.idContact,
+                        'X-Timestamp': jetonAuth.timestamp,
+                        'X-Marketeam-Auth': jetonAuth.signature
                     },
                     body: formBody.toString(),
                     signal: controller.signal
@@ -20172,11 +20201,47 @@ document.addEventListener('DOMContentLoaded', () => {
         if (sourceType === 'champ') {
             if (imageUploadGroup) imageUploadGroup.classList.add('hidden');
             if (imageChampGroup) imageChampGroup.classList.remove('hidden');
-            populateImageFieldsSelect(source.valeur);
+
+            // CORRECTIF (29/07/2026 v2) : la zone mémorise son champ sous DEUX
+            // formes possibles — le nom technique dans source.valeur (ex.
+            // "Champ2") et/ou la clé locale dans source.champFusion (ex.
+            // "LOCAL_bd87277f8962"). Or la combo Champ n'accepte qu'UNE forme
+            // (LOCAL_<localId> prioritaire, cf. populateImageFieldsSelect
+            // L18/A39), et le webservice des collections attend le nom
+            // physique. On résout donc le champ dans la liste champsFusion,
+            // quelle que soit la forme mémorisée, puis on donne à chaque
+            // consommateur la forme qu'il attend.
+            const candidats = [String(source.valeur || ''), String(source.champFusion || '')].filter(Boolean);
+            let champCombo = candidats[0] || '';   // valeur pour la combo Champ
+            let champColonne = candidats[0] || ''; // colonne physique pour les collections
+            try {
+                const champsDispo = (documentState && documentState.champsFusion) || [];
+                for (const cand of candidats) {
+                    const champMatch = champsDispo.find(c => {
+                        if (!c || typeof c !== 'object') return false;
+                        const lid = String(c.localId || '').trim();
+                        const cleLocale = (lid && lid !== '0') ? 'LOCAL_' + lid : '';
+                        return cand === c.nom || (cleLocale && cand === cleLocale);
+                    });
+                    if (champMatch) {
+                        const lid = String(champMatch.localId || '').trim();
+                        const cleLocale = (lid && lid !== '0') ? 'LOCAL_' + lid : '';
+                        // Même règle de priorité que populateImageFieldsSelect
+                        champCombo = cleLocale || champMatch.nom || cand;
+                        // Le webservice collections filtre sur le nom physique
+                        champColonne = champMatch.nom || cleLocale || cand;
+                        break;
+                    }
+                }
+            } catch (e) { /* en cas de pépin on garde les valeurs brutes */ }
+
+            const champValeur = champCombo;
+
+            populateImageFieldsSelect(champValeur);
             
             // Charger les collections pour ce champ et pré-sélectionner celle de la zone
-            if (source.valeur) {
-                fetchCollections(source.valeur, source.collectionId || '');
+            if (champColonne) {
+                fetchCollections(champColonne, source.collectionId || '');
             } else {
                 populateCollectionSelect([], '');
             }
@@ -20189,14 +20254,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     source.nbImagesServeur || source.nbImages || 0,
                     source.nomZip || 'ZIP importé'
                 );
-            } else if (source.valeur && zipUploadData.prete && zipUploadData.nomFichierZip) {
+            } else if (champValeur && zipUploadData.prete && zipUploadData.nomFichierZip) {
                 // ZIP validé en mémoire (pas encore uploadé) → afficher le résultat temporaire
                 updateZipUploadUIState('zip_valide');
                 showZipResult(
                     zipUploadData.imagesValides.length,
                     zipUploadData.nomFichierZip
                 );
-            } else if (source.valeur) {
+            } else if (champValeur) {
                 // Champ sélectionné mais pas de ZIP
                 updateZipUploadUIState('champ_selectionne');
             } else {
@@ -23332,7 +23397,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (typeof c === 'object') return c.type === 'IMG';
             return false;
         });
-        
+
         // Trier par ordre croissant
         const champsTries = [...imgChamps].sort((a, b) => (a.ordre || 0) - (b.ordre || 0));
         
@@ -28431,10 +28496,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Stocker les credentials d'authentification si fournis dans l'enveloppe
         if (isLoadEnvelope && jsonData.auth) {
+            // SÉCURITÉ (28/07/2026) : plus de secretKey ici — la signature est
+            // fournie par le serveur à chaque appel (cf. requestAuthToken).
             authConfig = {
                 idClient: String(jsonData.auth.idClient || ''),
                 idContact: String(jsonData.auth.idContact || ''),
-                secretKey: String(jsonData.auth.secretKey || ''),
                 urlWebservice: String(jsonData.auth.urlWebservice || ''),
                 urlCollectionListe: String(jsonData.auth.urlCollectionListe || ''),
                 // Lot B1 : URL de l'endpoint DesignerPoliceAjout (ajout/maj Google Font à chaud)
@@ -30865,6 +30931,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 break;
                 
+            case 'tokenResponse':
+                // Réponse de la page parente à une demande de jeton
+                // d'authentification (cf. requestAuthToken, Section 8b).
+                resolveAuthTokenResponse(message);
+                break;
+
             default:
                 console.warn('Action inconnue:', message.action);
         }
