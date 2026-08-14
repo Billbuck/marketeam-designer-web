@@ -1,0 +1,64 @@
+procédure InitCboTypeOperation()
+
+sTypeOperation		est une chaîne
+sTexteRequete		est une chaîne
+sdReqTypeOperation	est une Source de Données
+sWhere				est une chaîne
+
+sTypeOperation = cboTypeOperation.ValeurMémorisée
+
+si cboMois.ValeurMémorisée > 0 alors
+	sWhere = "AND MONTH(DateHeureCreation) = " + cboMois.ValeurMémorisée
+fin
+
+si cboSociété.ValeurMémorisée > 0 alors
+	sWhere += [RC] + [
+		AND IdClient = [%cboSociété.ValeurMémorisée%]
+	]
+sinon
+	sWhere += [RC] + [
+		AND IdClient IN (SELECT IdClient FROM clt_mere WHERE IdMere = [%Partage.__vcUser.IDClient%])
+	]
+fin
+
+sTexteRequete =
+[
+
+	SELECT TypeOperation FROM (
+		SELECT '[%__OPERATION_SMS_WEBSERVICE__%]' AS TypeOperation
+		FROM wbs_sms_envoi
+		WHERE 
+		YEAR(wbs_sms_envoi.DateHeureCreation) = [%cboAnnée.ValeurMémorisée%]
+		[%sWhere%]
+		LIMIT 1
+	) AS SubQuerySms
+]
+
+si pas HExécuteRequêteSQL(sdReqTypeOperation, ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour
+fin
+
+
+cboTypeOperation.SupprimeTout()
+
+
+pour tout sdReqTypeOperation
+	cboTypeOperation.Ajoute(Partage.LibelleTypeProjet(sdReqTypeOperation.TypeOperation) + gLien(sdReqTypeOperation.TypeOperation))
+fin
+
+si cboTypeOperation.Occurrence > 1 alors
+	cboTypeOperation.Insère("< Sélectionner >" + gLien(""),1)
+fin
+
+si sTypeOperation <> "" alors
+	cboTypeOperation = sTypeOperation
+fin
+
+si cboTypeOperation.Occurrence > 0 alors
+	cboTypeOperation.SelectPlus(1)
+fin
+
+
+fin:
+sdReqTypeOperation.AnnuleDéclaration()

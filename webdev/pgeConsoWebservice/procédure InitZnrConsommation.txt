@@ -1,0 +1,156 @@
+procédure InitZnrConsommation()
+
+nInd				est un entier
+
+sTexteRequete		est une chaîne
+sdReqConsommation	est une Source de Données
+sWhere				est une chaîne
+mPériodePayé		est un monétaire
+mPériodeImpayé		est un monétaire
+mPériodeTotal		est un monétaire
+
+si cboMois.ValeurMémorisée > 0 alors
+	sWhere = "AND MONTH(wbs_sms_envoi.DateHeureCreation) = '" + cboMois.ValeurMémorisée + "'"
+fin
+
+si cboSociété.ValeurMémorisée > 0 alors
+	sWhere += [RC] + "AND clt_client.IdClient = " + cboSociété.ValeurMémorisée
+fin
+
+
+selon cboTypeOperation.ValeurMémorisée
+
+
+	cas __OPERATION_SMS_WEBSERVICE__
+		sTexteRequete =
+		[
+			SELECT
+			'[%__OPERATION_SMS_WEBSERVICE__%]' TypeProjet,
+			wbs_sms_envoi.IdClient,
+			Societe,
+			wbs_sms_envoi.ReferenceClient Destinataire,
+			IdSmsWebservice id,
+			SUM(wbs_sms_envoi.NbrSmsFacture) Nombre,
+			SUM(wbs_sms_envoi.MontantHT) MontantHT,
+			SUM(wbs_sms_envoi.MontantTTC) MontantTTC,
+			wbs_sms_envoi.TauxTVA,
+			wbs_sms_envoi.EstPaye,
+			MIN(wbs_sms_envoi.DateHeureCreation) DateHeureCreation
+			FROM
+			wbs_sms_envoi
+			JOIN clt_client ON clt_client.IdClient = wbs_sms_envoi.IdClient
+			JOIN clt_mere ON clt_mere.IdClient = wbs_sms_envoi.IdClient
+			WHERE
+			clt_mere.IdMere = [%Partage.__vcUser.IDClient%]
+			AND YEAR(wbs_sms_envoi.DateHeureCreation) = '[%cboAnnée.ValeurMémorisée%]'
+			[%sWhere%]
+			GROUP BY
+			wbs_sms_envoi.ReferenceClient,
+			wbs_sms_envoi.EstPaye
+			ORDER BY
+			wbs_sms_envoi.DateHeureCreation DESC
+		]
+
+
+	autre cas
+
+		sTexteRequete =
+		[
+			SELECT
+			z.TypeProjet,
+			z.IdClient,
+			z.Societe,
+			z.Destinataire,
+			z.id,
+			z.Nombre,
+			z.MontantHT,
+			z.MontantTTC,
+			z.TauxTVA,
+			z.EstPaye,
+			z.DateHeureCreation
+			FROM (
+				SELECT
+				
+				'[%__OPERATION_SMS_WEBSERVICE__%]' TypeProjet,
+				wbs_sms_envoi.IdClient,
+				Societe,
+				wbs_sms_envoi.ReferenceClient Destinataire,
+				IdSmsWebservice id,
+				SUM(wbs_sms_envoi.NbrSmsFacture) Nombre,
+				SUM(wbs_sms_envoi.MontantHT) MontantHT,
+				SUM(wbs_sms_envoi.MontantTTC) MontantTTC,
+				wbs_sms_envoi.TauxTVA,
+				wbs_sms_envoi.EstPaye,
+				MIN(wbs_sms_envoi.DateHeureCreation) DateHeureEnvoi
+				FROM
+				wbs_sms_envoi
+				JOIN clt_client ON clt_client.IdClient = wbs_sms_envoi.IdClient
+				JOIN clt_mere ON clt_mere.IdClient = wbs_sms_envoi.IdClient
+				WHERE
+				clt_mere.IdMere = [%Partage.__vcUser.IDClient%]
+				AND YEAR(wbs_sms_envoi.DateHeureCreation) = '[%cboAnnée.ValeurMémorisée%]'
+				[%sWhere%]
+				GROUP BY
+				wbs_sms_envoi.ReferenceClient,
+				wbs_sms_envoi.EstPaye
+				) AS z
+			
+			ORDER BY
+			z.DateHeureCreation DESC
+		]
+fin
+
+
+
+si pas HExécuteRequêteSQL(sdReqConsommation, ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour
+fin
+
+znrConsommation.SupprimeTout()
+
+pour tout sdReqConsommation
+	mPériodeTotal += sdReqConsommation.MontantTTC
+	si sdReqConsommation.EstPaye = Faux alors
+		mPériodeImpayé += sdReqConsommation.MontantTTC
+	sinon
+		mPériodePayé += sdReqConsommation.MontantTTC
+	fin
+
+	nInd												= znrConsommation.AjouteLigne()
+	znrConsommation[nInd].attId							= sdReqConsommation.Id
+	znrConsommation[nInd].attTypeOperation				= sdReqConsommation.TypeProjet
+	znrConsommation[nInd].Icone							= cpProjet.IconeTypeProjet(sdReqConsommation.TypeProjet, Vrai)
+	znrConsommation[nInd].libTypeOperation				= Partage.LibelleTypeProjet(sdReqConsommation.TypeProjet)
+	znrConsommation[nInd].libDate						= DateHeureVersChaîne(sdReqConsommation.DateHeureCreation, "Jjj JJ mmm AA à HH:mm")
+	selon sdReqConsommation.TypeProjet
+		cas __OPERATION_SMS_WEBSERVICE__				: znrConsommation[nInd].libDestinataire	= sdReqConsommation.Destinataire
+		autres cas : STOP
+	fin
+	znrConsommation[nInd].libSociété					= sdReqConsommation.Societe
+
+	znrConsommation[nInd].libNombre					= NumériqueVersChaîne(sdReqConsommation.Nombre, "dS")
+	znrConsommation[nInd].libMontantHT					= NumériqueVersChaîne(sdReqConsommation.MontantHT, ",3fS") + " €"
+	znrConsommation[nInd].libResteAPayer				= (sdReqConsommation.EstPaye = 0) ? NumériqueVersChaîne(sdReqConsommation.MontantTTC, ",3fS") + " €" sinon "0,000 €"
+
+	znrConsommation[nInd].dispDestinataire[2].Visible	= (cboSociété.ValeurMémorisée = 0)
+fin
+
+dispTitre[2].Visible = (cboSociété.ValeurMémorisée = 0)
+
+si znrConsommation.Occurrence > 0 alors
+	znrConsommation.SelectPlus(1)
+	znrConsommation[1].btnAperçu.Visible		= Vrai
+	_nLignePrecedente							= 1
+sinon
+	_nLignePrecedente 							= 0
+fin
+
+celConsommation.Visible	= (znrConsommation.Occurrence > 0)
+
+saiPériodePayé			= mPériodePayé
+saiPériodeImpayé		= mPériodeImpayé
+saiPériodeTotal			= mPériodeTotal
+
+fin:
+HAnnuleDéclaration(sdReqConsommation)

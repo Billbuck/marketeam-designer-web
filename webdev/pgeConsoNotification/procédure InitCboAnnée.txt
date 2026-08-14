@@ -1,0 +1,56 @@
+procédure InitCboAnnée()
+
+sTexteRequete est une chaîne
+sdReqAnnée est une Source de Données
+
+
+sTexteRequete =
+[
+	SELECT
+	    Annee
+	FROM (
+	    SELECT YEAR(ope_sms_notification.DateHeureEnvoi) AS Annee
+	    FROM ope_sms_notification
+	    JOIN clt_mere ON clt_mere.IdClient = ope_sms_notification.IdClient
+	    WHERE clt_mere.IdMere = [%Partage.__vcUser.IdClient%]
+	    GROUP BY YEAR(ope_sms_notification.DateHeureEnvoi)
+	    
+		UNION
+	
+	    SELECT YEAR(ope_vms_unitaire.DateHeureEnvoi) AS Annee
+	    FROM ope_vms_unitaire
+	    JOIN clt_mere ON clt_mere.IdClient = ope_vms_unitaire.IdClient
+	    WHERE clt_mere.IdMere = [%Partage.__vcUser.IdClient%]
+	    GROUP BY YEAR(ope_vms_unitaire.DateHeureEnvoi)
+	    
+	    UNION
+	    
+	    SELECT YEAR(ope_email_notification.DateHeureEnvoi) AS Annee
+	    FROM ope_email_notification
+	    JOIN clt_mere ON clt_mere.IdClient = ope_email_notification.IdClient
+	    WHERE clt_mere.IdMere = [%Partage.__vcUser.IdClient%]
+	    GROUP BY YEAR(ope_email_notification.DateHeureEnvoi)
+	) t
+	GROUP BY Annee
+	ORDER BY Annee DESC;
+
+]
+
+si pas sdReqAnnée.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour
+fin
+
+pour tout sdReqAnnée
+	ListeAjoute(cboAnnée,sdReqAnnée.Annee + gLien(sdReqAnnée.Annee))
+fin
+
+si cboAnnée..Occurrence = 0 alors
+	cboAnnée.Ajoute(Gauche(DateSys(),4)+gLien(Gauche(DateSys(),4)))
+fin
+
+cboAnnée.SelectPlus(1)
+
+
+fin:
+sdReqAnnée.AnnuleDéclaration()

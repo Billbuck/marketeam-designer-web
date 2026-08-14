@@ -1,0 +1,52 @@
+procédure InitCboMois()
+
+sTexteRequete est une chaîne
+sdReqMois est une Source de Données
+dDate est une Date
+dDate = DateSys()
+
+sTexteRequete =
+[
+	SELECT DISTINCT
+	    Mois
+	FROM (
+		SELECT MONTH(wbs_sms_envoi.DateHeureCreation) AS Mois
+		FROM wbs_sms_envoi
+		JOIN clt_mere ON clt_mere.IdClient = wbs_sms_envoi.IdClient
+		WHERE clt_mere.IdMere = [%Partage.__vcUser.IDClient%]
+		AND YEAR(wbs_sms_envoi.DateHeureCreation) = [%cboAnnée.ValeurMémorisée%]
+		GROUP BY MONTH(wbs_sms_envoi.DateHeureCreation)
+	) t
+	ORDER BY Mois DESC;
+]
+
+si pas sdReqMois.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour
+fin
+
+cboMois.SupprimeTout()
+
+pour tout sdReqMois
+	cboMois.Ajoute(MoisEnLettre(sdReqMois.Mois) + gLien(sdReqMois.Mois))
+fin
+
+si cboMois.Occurrence > 1 alors
+	cboMois.Insère("< Mois >" + gLien(0),1)
+fin
+
+si cboMois..Occurrence = 0 alors
+	cboMois.Ajoute(NomPropre(DateVersMoisEnLettre(dDate)) + gLien(dDate.Mois))
+fin
+
+si cboAnnée.ValeurMémorisée = Gauche(DateSys(),4) alors
+	cboMois = dDate.Mois
+fin
+
+si cboMois < 0 alors
+	 cboMois.SelectPlus(1)
+fin
+
+fin:
+sdReqMois.AnnuleDéclaration()
+

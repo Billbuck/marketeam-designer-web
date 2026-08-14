@@ -1,0 +1,4 @@
+// Code Serveur "A Chaque modification de cboSociété"
+
+InitCboTypeOperation()
+InitZnrConsommation()

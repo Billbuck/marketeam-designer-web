@@ -1,0 +1,93 @@
+procédure InitCboSociete()
+
+nIdSociete		est un entier
+sTexteRequete	est une chaîne
+sdReqSociete	est une Source de Données
+sWhere			est une chaîne
+
+nIdSociete = cboSociété.ValeurMémorisée
+
+si cboMois.ValeurMémorisée > 0 alors
+	sWhere = "AND MONTH(DateHeureEnvoi) = " + cboMois.ValeurMémorisée
+fin
+
+sTexteRequete =
+[
+	SELECT DISTINCT
+		ope_sms_notification.IdClient,
+		Societe
+	FROM
+		ope_sms_notification
+		JOIN clt_client ON clt_client.IdClient = ope_sms_notification.IdClient
+		JOIN clt_mere ON clt_mere.IdClient = ope_sms_notification.IdClient
+	WHERE
+		clt_mere.IdMere = [%Partage.__vcUser.IdClient%]
+		AND YEAR(DateHeureEnvoi) = '[%cboAnnée.ValeurMémorisée%]'
+		[%sWhere%]
+	
+	UNION
+	
+	SELECT DISTINCT
+		ope_vms_unitaire.IdClient,
+		Societe
+	FROM
+		ope_vms_unitaire
+		JOIN clt_client ON clt_client.IdClient = ope_vms_unitaire.IdClient
+		JOIN clt_mere ON clt_mere.IdClient = ope_vms_unitaire.IdClient
+	WHERE
+		clt_mere.IdMere = [%Partage.__vcUser.IdClient%]
+		AND YEAR(DateHeureEnvoi) = '[%cboAnnée.ValeurMémorisée%]'
+		[%sWhere%]
+	
+	UNION
+	
+	SELECT DISTINCT
+		ope_email_notification.IdClient,
+		Societe
+	FROM
+		ope_email_notification
+		JOIN clt_client ON clt_client.IdClient = ope_email_notification.IdClient
+		JOIN clt_mere ON clt_mere.IdClient = ope_email_notification.IdClient
+	WHERE
+		clt_mere.IdMere = [%Partage.__vcUser.IdClient%]
+		AND YEAR(DateHeureEnvoi) = '[%cboAnnée.ValeurMémorisée%]'
+		[%sWhere%]
+]
+
+si pas HExécuteRequêteSQL(sdReqSociete, ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour
+fin
+
+
+cboSociété.SupprimeTout()
+
+
+pour tout sdReqSociete
+	ListeAjoute(cboSociété,sdReqSociete.Societe + gLien(sdReqSociete.IdClient))
+fin
+
+si cboSociété.Occurrence = 0 alors
+	cboSociété.Ajoute(Partage.__vcUser.Société + gLien(Partage.__vcUser.IDClient))
+fin
+
+si cboSociété.Occurrence > 1 alors
+	cboSociété.Insère("< Sélectionner >" + gLien(0),1)
+fin
+
+
+si nIdSociete > 0 alors
+	cboSociété = nIdSociete
+fin
+
+si cboSociété < 0 alors
+	cboSociété = Partage.__vcUser.IDClient
+fin
+
+si cboSociété < 0 alors
+	cboSociété.SelectPlus(1)
+fin
+
+
+fin:
+HAnnuleDéclaration(sdReqSociete)

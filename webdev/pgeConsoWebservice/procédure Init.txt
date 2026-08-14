@@ -1,0 +1,8 @@
+procédure Init()
+
+
+InitCboAnnée()
+InitCboMois()
+InitCboSociete()
+InitCboTypeOperation()
+InitZnrConsommation()
