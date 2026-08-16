@@ -243,6 +243,16 @@ pour tout sFichier de tabTousFichiers
 
 fin
 
+// CORRECTIF (14/08/2026) : si l'extraction n'a produit AUCUN fichier, inutile
+// de continuer (avant, on poursuivait et on pouvait répondre "succès" avec
+// une collection vide).
+si nTotalFichiersZip = 0 alors
+	fAjouteTexte(fRepDonnées() + "\DesignerImageUpload_debug.txt", "ERREUR: aucun fichier extrait du ZIP (extraction échouée ?)" + RC)
+	fRepSupprime(sRepTravail, frRécursif)
+	GénéreJsonErreur("fichierZip", "Aucun fichier n'a pu être extrait du ZIP")
+	renvoyer Faux
+fin
+
 
 quand exception dans
 
@@ -446,7 +456,9 @@ quand exception dans
 		fin
 
 		nCollectionId	= nIdCollectionExistante
-		sRepCollection	= CheminClient(Partage.__vcUser.IDClient, __OPERATION_COURRIER__, __REP_COLLECTION__) + NumériqueVersChaîne(nCollectionId, "08d") + "\"
+		// CORRECTIF (14/08/2026) : conversion en chemin RÉSEAU — le webservice
+		// tourne sur une autre machine que le serveur web (cf. CheminVersReseau)
+		sRepCollection	= CheminVersReseau(CheminClient(Partage.__vcUser.IDClient, __OPERATION_COURRIER__, __REP_COLLECTION__)) + NumériqueVersChaîne(nCollectionId, "08d") + "\"
 
 		// 1. Vider le contenu du dossier existant (sans supprimer le dossier)
 		si fRepExiste(sRepCollection) alors
@@ -510,7 +522,9 @@ quand exception dans
 		fin
 
 		nCollectionId	= ltr_designer_collection.IdCollection
-		sRepCollection	= CheminClient(Partage.__vcUser.IDClient, __OPERATION_COURRIER__, __REP_COLLECTION__) + NumériqueVersChaîne(nCollectionId, "08d") + "\"
+		// CORRECTIF (14/08/2026) : conversion en chemin RÉSEAU — le webservice
+		// tourne sur une autre machine que le serveur web (cf. CheminVersReseau)
+		sRepCollection	= CheminVersReseau(CheminClient(Partage.__vcUser.IDClient, __OPERATION_COURRIER__, __REP_COLLECTION__)) + NumériqueVersChaîne(nCollectionId, "08d") + "\"
 
 		si sRepCollection = "" _ou_ pas fRepCrée(sRepCollection) alors
 			fAjouteTexte(fRepDonnées() + "\DesignerImageUpload_debug.txt", "ERREUR: création dossier collection - " + sRepCollection + RC)
@@ -525,14 +539,55 @@ quand exception dans
 
 	// ─── Copier les nouvelles images (commun aux deux cas) ───
 
+	// CORRECTIF (14/08/2026) : le résultat de CHAQUE copie est désormais
+	// vérifié et tracé. Avant, un échec de fCopieFichier était IGNORÉ :
+	// le webservice répondait "succès" avec un dossier collection VIDE
+	// (constaté en production le 14/08/2026 — enregistrement créé en base
+	// mais aucune image copiée, sans aucun message d'erreur).
+	nNbCopiesOk				est un entier
+	nNbCopiesKo				est un entier
+	sPremiereErreurCopie	est une chaîne
+
 	// Images avec correspondance (renommées vers la casse BDD)
 	pour tout varCorr2 de tabCorrespondantes
-		fCopieFichier(varCorr2.cheminSource, sRepCollection + varCorr2.fichierStocke)
+		si fCopieFichier(varCorr2.cheminSource, sRepCollection + varCorr2.fichierStocke) alors
+			nNbCopiesOk++
+		sinon
+			nNbCopiesKo++
+			si sPremiereErreurCopie = "" alors
+				sPremiereErreurCopie = "[" + varCorr2.cheminSource + "] vers [" + sRepCollection + varCorr2.fichierStocke + "] : " + ErreurInfo()
+			fin
+		fin
 	fin
 
 	// Images sans correspondance (nom original conservé)
 	pour tout varSans2 de tabSansCorrespondance
-		fCopieFichier(varSans2.cheminSource, sRepCollection + varSans2.fichierStocke)
+		si fCopieFichier(varSans2.cheminSource, sRepCollection + varSans2.fichierStocke) alors
+			nNbCopiesOk++
+		sinon
+			nNbCopiesKo++
+			si sPremiereErreurCopie = "" alors
+				sPremiereErreurCopie = "[" + varSans2.cheminSource + "] vers [" + sRepCollection + varSans2.fichierStocke + "] : " + ErreurInfo()
+			fin
+		fin
+	fin
+
+	fAjouteTexte(fRepDonnées() + "\DesignerImageUpload_debug.txt", "Copies images : " + nNbCopiesOk + " réussie(s), " + nNbCopiesKo + " échouée(s)" + RC)
+
+	si nNbCopiesKo > 0 alors
+		fAjouteTexte(fRepDonnées() + "\DesignerImageUpload_debug.txt", "ERREUR copie : " + sPremiereErreurCopie + RC)
+
+		// Ne pas laisser d'enregistrement orphelin : si la collection venait
+		// d'être créée, on la supprime (en écrasement, on garde l'existante).
+		si pas bEcrasement alors
+			si ltr_designer_collection.LitRecherchePremier(IdCollection, nCollectionId) alors
+				ltr_designer_collection.Supprime()
+			fin
+		fin
+
+		fRepSupprime(sRepTravail, frRécursif)
+		GénéreJsonErreur("copie", "Échec de copie de " + nNbCopiesKo + " image(s) vers le dossier de la collection. Première erreur : " + sPremiereErreurCopie)
+		renvoyer Faux
 	fin
 
 

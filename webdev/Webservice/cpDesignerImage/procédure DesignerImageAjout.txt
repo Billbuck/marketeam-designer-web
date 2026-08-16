@@ -141,7 +141,9 @@ monZipArchive.Ferme()
 // ============================================================
 // 8. Construire le chemin physique de la collection (cible)
 // ============================================================
-sRepCollection est une chaîne = CheminClient(Partage.__vcUser.IDClient, __OPERATION_COURRIER__, __REP_COLLECTION__, Vrai) + ...
+// CORRECTIF (14/08/2026) : conversion en chemin RÉSEAU — le webservice
+// tourne sur une autre machine que le serveur web (cf. CheminVersReseau)
+sRepCollection est une chaîne = CheminVersReseau(CheminClient(Partage.__vcUser.IDClient, __OPERATION_COURRIER__, __REP_COLLECTION__, Vrai)) + ...
 									NumériqueVersChaîne(nIdCollection, "08d") + "\"
 
 si pas fRepExiste(sRepCollection) alors

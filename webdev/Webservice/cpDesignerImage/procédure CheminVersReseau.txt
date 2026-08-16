@@ -1,0 +1,30 @@
+// Résumé : Convertit un chemin physique LOCAL (construit sur la racine
+//          rep_racine_marketeam / __sRepRacine) en chemin RÉSEAU (racine UNC
+//          marketeam_rep_web / __sMarketeamRepRacine).
+//
+//          POURQUOI (14/08/2026) : en production, le webservice tourne sur une
+//          AUTRE machine que le serveur web. CheminClient / CheminMarque
+//          renvoient un chemin local (ex. C:\Sites\Root\Marketeam\MARKETEAM_WEB\...)
+//          qui, utilisé depuis le serveur de webservice, pointe sur SON propre
+//          disque : les images de collection étaient écrites au mauvais endroit
+//          (dossier du site resté vide, constat du 14/08/2026 en production).
+//
+//          Même principe que RepCachePolices (cache des polices), qui utilise
+//          déjà la racine UNC pour cette raison précise.
+//
+//          En DEV, les deux racines ont la même valeur : la conversion est
+//          neutre (aucun impact).
+//
+// Paramètres :
+//	pChemin (chaîne) : chemin physique local (issu de CheminClient / CheminMarque)
+// Valeur de retour :
+// 	chaîne : le même chemin exprimé sur la racine réseau
+//
+procédure CheminVersReseau(pChemin est une chaîne) : chaîne
+
+// Sécurité : si l'une des deux racines n'est pas renseignée, ne rien convertir
+si cpProjet.__sRepRacine = "" _ou_ cpProjet.__sMarketeamRepRacine = "" alors
+	renvoyer pChemin
+fin
+
+renvoyer pChemin.Remplace(cpProjet.__sRepRacine, cpProjet.__sMarketeamRepRacine)

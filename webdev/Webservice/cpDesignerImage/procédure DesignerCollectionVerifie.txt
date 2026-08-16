@@ -119,10 +119,13 @@ fin
 //   - Marque : CheminMarque(IdMarque, ...)
 //   - Client : CheminClient(IdClient, ...)
 sRepCollection	est une chaîne
+// CORRECTIF (14/08/2026) : conversion en chemin RÉSEAU — le webservice tourne
+// sur une autre machine que le serveur web ; sans conversion, on listait ici
+// le dossier (vide) du serveur de webservice -> fausses incompatibilités.
 si nIdMarqueCollection > 0 alors
-	sRepCollection = CheminMarque(nIdMarqueCollection, __OPERATION_COURRIER__, __REP_COLLECTION__) + NumériqueVersChaîne(nIdCollection, "08d") + "\"
+	sRepCollection = CheminVersReseau(CheminMarque(nIdMarqueCollection, __OPERATION_COURRIER__, __REP_COLLECTION__)) + NumériqueVersChaîne(nIdCollection, "08d") + "\"
 sinon
-	sRepCollection = CheminClient(Partage.__vcUser.IDClient, __OPERATION_COURRIER__, __REP_COLLECTION__) + NumériqueVersChaîne(nIdCollection, "08d") + "\"
+	sRepCollection = CheminVersReseau(CheminClient(Partage.__vcUser.IDClient, __OPERATION_COURRIER__, __REP_COLLECTION__)) + NumériqueVersChaîne(nIdCollection, "08d") + "\"
 fin
 
 tabFichiersCollection	est un tableau de chaînes

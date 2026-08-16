@@ -360,7 +360,9 @@ quand exception dans
 
 		// ─── Écrasement : réutiliser le même IdCollection ───
 		nCollectionId	= nIdCollectionExistante
-		sRepCollection	= CheminClient(Partage.__vcUser.IDClient, __OPERATION_COURRIER__, __REP_COLLECTION__) + NumériqueVersChaîne(nCollectionId, "08d") + "\"
+		// CORRECTIF (14/08/2026) : conversion en chemin RÉSEAU — le webservice
+		// tourne sur une autre machine que le serveur web (cf. CheminVersReseau)
+		sRepCollection	= CheminVersReseau(CheminClient(Partage.__vcUser.IDClient, __OPERATION_COURRIER__, __REP_COLLECTION__)) + NumériqueVersChaîne(nCollectionId, "08d") + "\"
 
 		// Vider le contenu du dossier existant (sans supprimer le dossier)
 		si fRepExiste(sRepCollection) alors
@@ -419,7 +421,9 @@ quand exception dans
 		fin
 
 		nCollectionId	= ltr_designer_collection.IdCollection
-		sRepCollection	= CheminClient(Partage.__vcUser.IDClient, __OPERATION_COURRIER__, __REP_COLLECTION__) + NumériqueVersChaîne(nCollectionId, "08d") + "\"
+		// CORRECTIF (14/08/2026) : conversion en chemin RÉSEAU — le webservice
+		// tourne sur une autre machine que le serveur web (cf. CheminVersReseau)
+		sRepCollection	= CheminVersReseau(CheminClient(Partage.__vcUser.IDClient, __OPERATION_COURRIER__, __REP_COLLECTION__)) + NumériqueVersChaîne(nCollectionId, "08d") + "\"
 
 		si sRepCollection = "" _ou_ pas fRepCrée(sRepCollection) alors
 			fAjouteTexte(fRepDonnées() + "\DesignerImageUploadStock_debug.txt", "ERREUR: création dossier - " + sRepCollection + RC)
