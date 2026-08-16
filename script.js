@@ -34326,6 +34326,24 @@ document.addEventListener('DOMContentLoaded', () => {
             return { ok: false, error: typeof result === 'string' ? result : 'Format invalide pour ce type.' };
         }
 
+        // ─── Dates : conversion échantillon saisie ↔ stockage ────────────
+        // CORRECTIF (16/08/2026) : l'échantillon d'un champ DAT est SAISI et
+        // AFFICHÉ en JJ/MM/AAAA (confort utilisateur) mais STOCKÉ en AAAAMMJJ,
+        // exactement comme une colonne de base de données. Toute la chaîne
+        // aval n'accepte que AAAAMMJJ : formatDateAAAAMMJJ pour l'aperçu et
+        // les masques de date PrintShop Mail pour le BAT. Sans conversion,
+        // l'aperçu restait brut (JJ/MM/AAAA) et le BAT sortait VIDE.
+        // Les deux fonctions sont pattern-guardées : une valeur qui n'est pas
+        // dans le format attendu est rendue telle quelle.
+        function echantillonDateVersStockage(valeur) {
+            const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(valeur || '').trim());
+            return m ? (m[3] + m[2] + m[1]) : String(valeur || '');
+        }
+        function echantillonDateVersAffichage(valeur) {
+            const m = /^(\d{4})(\d{2})(\d{2})$/.exec(String(valeur || '').trim());
+            return m ? (m[3] + '/' + m[2] + '/' + m[1]) : String(valeur || '');
+        }
+
         // ─── Rendu UI ────────────────────────────────────────────────────
 
         function renderTypeOptions() {
@@ -34658,7 +34676,11 @@ document.addEventListener('DOMContentLoaded', () => {
             //        (cf. cahier V2.4 §7.3.2). En mode édition (pas de
             //        valeur saisie utilisateur encore), l'algo retombe sur :
             //        echantillonDefaut → donneesApercu → placeholder.
-            inputEchantillon.value = resolveEchantillonValue(champ, { context: 'open-edit' });
+            // CORRECTIF (16/08/2026) : les dates sont STOCKÉES en AAAAMMJJ →
+            // reconversion en JJ/MM/AAAA pour l'affichage/saisie.
+            inputEchantillon.value = (champ.type === 'DAT')
+                ? echantillonDateVersAffichage(resolveEchantillonValue(champ, { context: 'open-edit' }))
+                : resolveEchantillonValue(champ, { context: 'open-edit' });
             // L8 / A17 - Valeur calculée par l'algo = auto-remplie. Flag à '1'
             //   (mais en mode édition la liste standard est masquée, donc le
             //   flag n'a pas d'impact pratique ; conservé pour cohérence).
@@ -34887,10 +34909,12 @@ document.addEventListener('DOMContentLoaded', () => {
             //     (Contexte 'create-standard-doubleclick'.)
             const ctx = fromDoubleClick ? 'create-standard-doubleclick' : 'create-standard';
             const userInput = fromDoubleClick ? '' : inputEchantillon.value;
-            const echantillon = resolveEchantillonValue(champ, {
+            let echantillon = resolveEchantillonValue(champ, {
                 context: ctx,
                 userInput: userInput
             });
+            // CORRECTIF (16/08/2026) : stockage des dates en AAAAMMJJ
+            if (champ.type === 'DAT') echantillon = echantillonDateVersStockage(echantillon);
             if (echantillon) champ.echantillonDefaut = echantillon;
             documentState.champsFusion.push(champ);
             mergeFields = documentState.champsFusion;
@@ -34914,10 +34938,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 origine: 'ajout',           // V2.4 - librement supprimable/modifiable
                 categorie: 'specifique'     // V2.4 - onglet figé en édition
             };
-            const echantillon = resolveEchantillonValue(champ, {
+            let echantillon = resolveEchantillonValue(champ, {
                 context: 'create-specific',
                 userInput: echantillonUserInput
             });
+            // CORRECTIF (16/08/2026) : stockage des dates en AAAAMMJJ
+            if (champ.type === 'DAT') echantillon = echantillonDateVersStockage(echantillon);
             if (echantillon) champ.echantillonDefaut = echantillon;
             documentState.champsFusion.push(champ);
             mergeFields = documentState.champsFusion;
@@ -34932,7 +34958,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (updates.libelle !== undefined) champ.libelle = updates.libelle;
             if (updates.type !== undefined) champ.type = updates.type;
             if (updates.echantillonDefaut !== undefined) {
-                champ.echantillonDefaut = updates.echantillonDefaut;
+                // CORRECTIF (16/08/2026) : les dates sont stockées en AAAAMMJJ
+                // (cf. echantillonDateVersStockage) — la saisie reste JJ/MM/AAAA.
+                champ.echantillonDefaut = (champ.type === 'DAT')
+                    ? echantillonDateVersStockage(updates.echantillonDefaut)
+                    : updates.echantillonDefaut;
                 // Axe 3 — Édition explicite par l'utilisateur : on autorise
                 //   l'écrasement de la valeur déjà propagée dans
                 //   donneesApercu. Le garde-fou presenteEnBase reste actif
@@ -35200,9 +35230,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         libelle: item.dataset.libelle,
                         type: item.dataset.type || 'TXT'
                     };
-                    inputEchantillon.value = resolveEchantillonValue(proposedChamp, {
-                        context: 'create-standard-doubleclick'
-                    });
+                    // CORRECTIF (16/08/2026) : dates stockées en AAAAMMJJ →
+                    // reconversion en JJ/MM/AAAA pour l'affichage/saisie.
+                    inputEchantillon.value = (proposedChamp.type === 'DAT')
+                        ? echantillonDateVersAffichage(resolveEchantillonValue(proposedChamp, {
+                            context: 'create-standard-doubleclick'
+                        }))
+                        : resolveEchantillonValue(proposedChamp, {
+                            context: 'create-standard-doubleclick'
+                        });
                     // L8 / A17 - Marquer comme auto-remplie pour permettre les
                     //   prochaines sélections d'écraser cette valeur.
                     inputEchantillon.dataset.autoFilled = '1';
