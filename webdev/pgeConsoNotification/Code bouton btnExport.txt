@@ -1,0 +1,43 @@
+// ============================================================================
+// Bouton btnExport (dans la zone répétée znrConsoNotification)
+// Deux codes : navigateur (toast d'attente) puis serveur Ajax (appel du
+// webservice WS_Rapport_Excel qui renvoie le fichier Excel).
+// ============================================================================
+
+
+// ----------------------------------------------------------------------------
+// Code NAVIGATEUR "Au clic sur btnExport"
+// ----------------------------------------------------------------------------
+
+duToast est une Durée
+duToast.EnMillisecondes = 5000
+
+jqToast("Génération en cours","Merci de patienter",attTypeOperation, duToast)
+
+
+// ----------------------------------------------------------------------------
+// Code SERVEUR (Ajax) "Au clic sur btnExport"
+// ----------------------------------------------------------------------------
+
+sUrl			est une chaîne
+sCode			est une chaîne
+sTypeRapport	est une chaîne
+sFiltre			est une chaîne
+
+// Aiguillage selon le type de la ligne cliquée
+selon znrConsoNotification[znrConsoNotification].attTypeOperation
+	cas __OPERATION_SMS_NOTIFICATION__		: sTypeRapport = __RAPPORT_CONSO_SMS__
+	cas __OPERATION_VMS_UNITAIRE__			: sTypeRapport = __RAPPORT_CONSO_VMS__
+	cas __OPERATION_EMAIL_NOTIFICATION__	: sTypeRapport = __RAPPORT_CONSO_EMAIL__
+	autre cas								: retour	// ligne Total : pas d'export
+fin
+
+// Filtres de la page : Année;Mois;Société;Contact (0 = tous)
+sFiltre = cboAnnée.ValeurMémorisée + ";" + cboMois.ValeurMémorisée + ";" + cboSociété.ValeurMémorisée + ";" + cboContact.ValeurMémorisée
+
+sUrl	= cpFonction.ValeurParametre("WS_Rapport_Excel",prm_parametre.ValChaine..Nom)
+sCode	= Partage.__vcUser.IDClient +"|"+ Partage.__vcUser.IDContact +"|"+ sTypeRapport +"|"+ "0" +"|"+ sFiltre
+sCode	= cpFonction.CrypteEncode(sCode)
+sUrl	+= ["/"] + sCode
+
+ScriptAffiche(sUrl)

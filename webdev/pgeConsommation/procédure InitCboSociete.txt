@@ -1,0 +1,63 @@
+procédure InitCboSociete()
+
+nIdSociete		est un entier
+sTexteRequete	est une chaîne
+sdReqSociete	est une Source de Données
+sWhere			est une chaîne
+
+nIdSociete = cboSociété.ValeurMémorisée
+
+si cboMois.ValeurMémorisée > 0 alors
+	sWhere = "AND MONTH(dos_operation.DateEnvoiSouhaite) = " + cboMois.ValeurMémorisée
+fin
+
+sTexteRequete =
+[
+	SELECT DISTINCT
+		dos_operation.IdClient,
+		clt_client.Societe
+	FROM
+		dos_operation
+		JOIN clt_mere ON dos_operation.IdClient = clt_mere.IdClient 
+		JOIN clt_client ON dos_operation.IdClient = clt_client.IdClient 
+	WHERE
+		clt_mere.IdMere = [%Partage.__vcUser.IdClient%] 
+		AND YEAR(dos_operation.DateEnvoiSouhaite) = '[%cboAnnée..ValeurMémorisée%]'
+		AND dos_operation.Statut >= [%__Statut_Prise_En_Charge_En_Attente__%]
+		[%sWhere%]
+]
+
+
+
+si pas HExécuteRequêteSQL(sdReqSociete, ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour
+fin
+
+
+cboSociété.SupprimeTout()
+
+
+pour tout sdReqSociete
+	ListeAjoute(cboSociété,sdReqSociete.Societe + gLien(sdReqSociete.IdClient))
+fin
+
+si cboSociété.Occurrence = 0 alors
+	cboSociété.Ajoute(Partage.__vcUser.Société + gLien(Partage.__vcUser.IDClient))
+fin
+
+si nIdSociete > 0 alors
+	cboSociété = nIdSociete
+fin
+
+si cboSociété < 0 alors
+	cboSociété = Partage.__vcUser.IDClient
+fin
+
+si cboSociété < 0 alors
+	cboSociété.SelectPlus(1)
+fin
+
+
+fin:
+HAnnuleDéclaration(sdReqSociete)

@@ -1,0 +1,31 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] AlignementTypeChamp (<pType>)
+//
+// Paramètres :
+//	pType : <indiquez ici le rôle de pType>
+// Valeur de retour :
+// 	chaîne Unicode : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure AlignementTypeChamp(pType)
+
+	selon pType
+		cas __FORMULAIRE_INTERRUPTEUR__	: renvoyer __ALIGNEMENT_CENTRE__
+		cas __FORMULAIRE_COMBO__		: renvoyer __ALIGNEMENT_GAUCHE__
+		cas __FORMULAIRE_SAISIE__		: renvoyer __ALIGNEMENT_GAUCHE__
+		cas __FORMULAIRE_OPTIN__		: renvoyer __ALIGNEMENT_CENTRE__
+		cas	__CHAMP_TYPE_TEXTE__		: renvoyer __ALIGNEMENT_GAUCHE__
+		cas	__CHAMP_TYPE_ENTIER__		: renvoyer __ALIGNEMENT_CENTRE__
+		cas	__CHAMP_TYPE_DECIMAL__		: renvoyer __ALIGNEMENT_DROITE__
+		cas	__CHAMP_TYPE_MONETAIRE__	: renvoyer __ALIGNEMENT_DROITE__
+		cas	__CHAMP_TYPE_DATE__			: renvoyer __ALIGNEMENT_CENTRE__
+		cas	__CHAMP_TYPE_HEURE__		: renvoyer __ALIGNEMENT_CENTRE__
+		cas	__CHAMP_TYPE_EMAIL__		: renvoyer __ALIGNEMENT_GAUCHE__
+		cas	__CHAMP_TYPE_TELEPHONE__	: renvoyer __ALIGNEMENT_CENTRE__
+		cas	__CHAMP_TYPE_PORTABLE__		: renvoyer __ALIGNEMENT_CENTRE__
+		cas	__CHAMP_TYPE_CODEPOSTAL__	: renvoyer __ALIGNEMENT_CENTRE__
+		autre cas						: renvoyer __ALIGNEMENT_GAUCHE__
+	fin

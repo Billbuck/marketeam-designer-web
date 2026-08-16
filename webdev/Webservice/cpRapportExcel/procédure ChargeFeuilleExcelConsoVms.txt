@@ -1,0 +1,166 @@
+// Résumé : Feuille Excel du détail de consommation des VMS unitaires.
+// Syntaxe :
+//[ <Résultat> = ] ChargeFeuilleExcelConsoVms (<pIdMere>, <pFiltre>)
+//
+// Paramètres :
+//	pIdMere : IdClient de la maison mère (client connecté)
+//	pFiltre : filtres de la page "Année;Mois;IdSociété;IdContact" (0 = tous)
+// Valeur de retour :
+// 	structRapportExcelFeuille
+//
+// ATTENTION : le lien URL vers le fichier audio n'est pas encore géré
+// (vms_message ne porte pas de chemin de fichier — en attente de la règle
+// de construction de l'URL). La colonne "Message vocal" affiche le libellé.
+//
+procédure ChargeFeuilleExcelConsoVms(pIdMere, pFiltre)
+
+nLigne					est un entier
+sTexteRequete			est une chaîne
+sdReqConsoVms			est une Source de Données
+nColonne				est un entier
+stRapportExcelFeuille	est une structRapportExcelFeuille
+sWhere					est une chaîne
+sAnnee					est une chaîne
+nMois					est un entier
+nIdSociete				est un entier
+nIdContactFiltre		est un entier
+mTotalHT				est un monétaire
+mTotalTTC				est un monétaire
+mTotalResteAPayer		est un monétaire
+
+
+sAnnee				= pFiltre.ExtraitChaîne(1,";")
+nMois				= pFiltre.ExtraitChaîne(2,";")
+nIdSociete			= pFiltre.ExtraitChaîne(3,";")
+nIdContactFiltre	= pFiltre.ExtraitChaîne(4,";")
+
+// Mêmes filtres que la page pgeConsoNotification
+si nMois > 0 alors
+	sWhere = "AND MONTH(ope_vms_unitaire.DateHeureEnvoi) = " + nMois
+fin
+si nIdSociete > 0 alors
+	sWhere += [RC] + "AND ope_vms_unitaire.IdClient = " + nIdSociete
+fin
+si nIdContactFiltre > 0 alors
+	sWhere += [RC] + "AND ope_vms_unitaire.IdContact = " + nIdContactFiltre
+fin
+
+// Colonnes de la feuille
+nColonne = 15
+
+stRapportExcelFeuille.taaEntête["Client"]			= 2
+stRapportExcelFeuille.tabColonne.Ajoute("Société")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_GAUCHE__)
+stRapportExcelFeuille.tabColonne.Ajoute("Contact")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_GAUCHE__)
+
+stRapportExcelFeuille.taaEntête["Diffusion"]		= 5
+stRapportExcelFeuille.tabColonne.Ajoute("Jour")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+stRapportExcelFeuille.tabColonne.Ajoute("Date")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+stRapportExcelFeuille.tabColonne.Ajoute("Heure")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+stRapportExcelFeuille.tabColonne.Ajoute("Portable")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+stRapportExcelFeuille.tabColonne.Ajoute("N° appelant")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+
+stRapportExcelFeuille.taaEntête["Message"]			= 2
+stRapportExcelFeuille.tabColonne.Ajoute("Message vocal")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_GAUCHE__)
+stRapportExcelFeuille.tabColonne.Ajoute("Durée")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+
+stRapportExcelFeuille.taaEntête["Rapport"]			= 1
+stRapportExcelFeuille.tabColonne.Ajoute("Erreur")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_GAUCHE__)
+
+stRapportExcelFeuille.taaEntête["Facturation"]		= 5
+stRapportExcelFeuille.tabColonne.Ajoute("Montant HT")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_DROITE__)
+stRapportExcelFeuille.tabColonne.Ajoute("TVA")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+stRapportExcelFeuille.tabColonne.Ajoute("Montant TTC")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_DROITE__)
+stRapportExcelFeuille.tabColonne.Ajoute("Payé")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+stRapportExcelFeuille.tabColonne.Ajoute("Reste à payer")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_DROITE__)
+
+
+sTexteRequete =
+[
+	SELECT
+		IFNULL(clt_client.Societe,'') Societe,
+		IFNULL(CONCAT_WS(' ', clt_contact.Prenom, clt_contact.Nom),'') Contact,
+		IFNULL(DATE_FORMAT(ope_vms_unitaire.DateHeureEnvoi, '%Y%m%d'),'') DateBrute,
+		IFNULL(DATE_FORMAT(ope_vms_unitaire.DateHeureEnvoi, '%d-%m-%Y'),'') DateEnvoi,
+		IFNULL(DATE_FORMAT(ope_vms_unitaire.DateHeureEnvoi, '%H:%i:%s'),'') HeureEnvoi,
+		IFNULL(ope_vms_unitaire.Portable,'') Portable,
+		IFNULL(ope_vms_unitaire.NumeroAppelant,'') NumeroAppelant,
+		IFNULL(vms_message.Libelle,'') LibelleMessage,
+		IFNULL(vms_message.Duree,0) Duree,
+		IFNULL(ope_vms_unitaire.MessageErreur,'') MessageErreur,
+		IFNULL(ope_vms_unitaire.MontantHT,0) MontantHT,
+		IFNULL(ope_vms_unitaire.TauxTVA,0) TauxTVA,
+		IFNULL(ope_vms_unitaire.MontantTTC,0) MontantTTC,
+		ope_vms_unitaire.EstPaye,
+		CASE WHEN ope_vms_unitaire.EstPaye = 0 THEN IFNULL(ope_vms_unitaire.MontantTTC,0) ELSE 0 END ResteAPayer
+	FROM
+		ope_vms_unitaire
+		JOIN clt_client ON clt_client.IdClient = ope_vms_unitaire.IdClient
+		JOIN clt_mere ON clt_mere.IdClient = ope_vms_unitaire.IdClient
+		LEFT JOIN clt_contact ON clt_contact.IdContact = ope_vms_unitaire.IdContact
+		LEFT JOIN vms_message ON vms_message.IdMessage = ope_vms_unitaire.IdMessage
+	WHERE
+		clt_mere.IdMere = [%pIdMere%]
+		AND YEAR(ope_vms_unitaire.DateHeureEnvoi) = '[%sAnnee%]'
+		[%sWhere%]
+	ORDER BY
+		ope_vms_unitaire.DateHeureEnvoi
+]
+
+si pas sdReqConsoVms.ExécuteRequêteSQL(ope_vms_unitaire..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	renvoyer stRapportExcelFeuille
+fin
+
+pour tout sdReqConsoVms
+	nLigne = stRapportExcelFeuille.tabExcel.AjouteLigne()
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(sdReqConsoVms.Societe)
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(sdReqConsoVms.Contact)
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(DateVersJourEnLettre(sdReqConsoVms.DateBrute))
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(sdReqConsoVms.DateEnvoi)
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(sdReqConsoVms.HeureEnvoi)
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(cpFonction.Telephone(sdReqConsoVms.Portable,1,"."))
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(cpFonction.Telephone(sdReqConsoVms.NumeroAppelant,1,"."))
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(sdReqConsoVms.LibelleMessage)
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(sdReqConsoVms.Duree > 0 ? NumériqueVersChaîne(sdReqConsoVms.Duree, "dS") + " s" sinon "")
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(sdReqConsoVms.MessageErreur)
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(NumériqueVersChaîne(sdReqConsoVms.MontantHT, ",3fS") + " €")
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(NumériqueVersChaîne(sdReqConsoVms.TauxTVA, ",2fS") + " %")
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(NumériqueVersChaîne(sdReqConsoVms.MontantTTC, ",3fS") + " €")
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(sdReqConsoVms.EstPaye = 1 ? "Oui" sinon "Non")
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(NumériqueVersChaîne(sdReqConsoVms.ResteAPayer, ",3fS") + " €")
+
+	mTotalHT			+= sdReqConsoVms.MontantHT
+	mTotalTTC			+= sdReqConsoVms.MontantTTC
+	mTotalResteAPayer	+= sdReqConsoVms.ResteAPayer
+fin
+
+// Ligne Total en fin de feuille
+si stRapportExcelFeuille.tabExcel.Occurrence > 0 alors
+	nLigne = stRapportExcelFeuille.tabExcel.AjouteLigne()
+	pour nInd = 1 à nColonne
+		stRapportExcelFeuille.tabExcel[nLigne].Ajoute("")
+	fin
+	stRapportExcelFeuille.tabExcel[nLigne][1]	= "Total"
+	stRapportExcelFeuille.tabExcel[nLigne][11]	= NumériqueVersChaîne(mTotalHT, ",3fS") + " €"
+	stRapportExcelFeuille.tabExcel[nLigne][13]	= NumériqueVersChaîne(mTotalTTC, ",3fS") + " €"
+	stRapportExcelFeuille.tabExcel[nLigne][15]	= NumériqueVersChaîne(mTotalResteAPayer, ",3fS") + " €"
+fin
+
+renvoyer stRapportExcelFeuille
+
+fin:
+sdReqConsoVms.AnnuleDéclaration()

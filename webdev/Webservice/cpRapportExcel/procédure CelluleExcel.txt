@@ -1,0 +1,30 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] CelluleExcel (<pLigne>, <pColonne>)
+//
+// Paramètres :
+// 	pLigne : <indiquez ici le rôle de pLigne>
+// 	pColonne : <indiquez ici le rôle de pColonne>
+// Valeur de retour :
+// 	chaîne Unicode : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure CelluleExcel(local pLigne, local pColonne)
+
+sLettre		est une chaîne
+nReste		est un entier
+sResultat	est une chaîne
+
+tantque pColonne > 0
+	pColonne--
+	nReste		= modulo(pColonne,26)
+	sLettre		= Caract(65 + nReste)
+	sResultat	= sLettre + sResultat
+	pColonne	= PartieEntière(pColonne / 26)
+fin
+
+sResultat = sResultat + pLigne
+
+renvoyer sResultat

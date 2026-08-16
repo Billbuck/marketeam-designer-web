@@ -1,0 +1,15 @@
+CREATE TABLE `clt_client_adresse_facturation` (
+	`IdAdresseFacturation` INT(11) NOT NULL,
+	`IdClient` INT(11) NOT NULL,
+	`EstAdresseClient` TINYINT(1) NOT NULL DEFAULT '1',
+	PRIMARY KEY (`IdClient`, `IdAdresseFacturation`, `EstAdresseClient`) USING BTREE,
+	INDEX `FK_clt_client_adresse_clt_adresse` (`IdAdresseFacturation`) USING BTREE,
+	INDEX `EstAdresseClient` (`EstAdresseClient`) USING BTREE,
+	INDEX `IdClient` (`IdClient`) USING BTREE,
+	INDEX `IdClient_EstAdresseClient` (`IdClient`, `EstAdresseClient`) USING BTREE,
+	CONSTRAINT `FK_clt_client_adresse_clt_client` FOREIGN KEY (`IdClient`) REFERENCES `clt_client` (`IdClient`) ON UPDATE NO ACTION ON DELETE CASCADE
+)
+COMMENT='La mère n\'a qu\'une adresse de facturation\r\n\r\nUne fille par defaut est rattaché à la mère et n\'à pas d\'adresse de facturation en propre la facture va à la mère\r\n\r\nSi une fille à une adresse de facturation, la mère peut créer une opération pour sa fille et facturer la fille.\r\nEt la fille peut créer une opération pour elle même.\r\nL\'adresse de facturation est alors l\'adresse de facturation de la fille'
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+;

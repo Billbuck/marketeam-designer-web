@@ -1,0 +1,165 @@
+// Résumé : Feuille Excel du détail de consommation des emails de notification.
+// Syntaxe :
+//[ <Résultat> = ] ChargeFeuilleExcelConsoEmail (<pIdMere>, <pFiltre>)
+//
+// Paramètres :
+//	pIdMere : IdClient de la maison mère (client connecté)
+//	pFiltre : filtres de la page "Année;Mois;IdSociété;IdContact" (0 = tous)
+// Valeur de retour :
+// 	structRapportExcelFeuille
+//
+// ATTENTION : le lien URL vers l'aperçu web du contenu de l'email n'est pas
+// encore géré (la page d'aperçu reste à créer). La colonne "Sujet" affiche
+// l'objet de l'email.
+//
+procédure ChargeFeuilleExcelConsoEmail(pIdMere, pFiltre)
+
+nLigne					est un entier
+sTexteRequete			est une chaîne
+sdReqConsoEmail			est une Source de Données
+nColonne				est un entier
+stRapportExcelFeuille	est une structRapportExcelFeuille
+sWhere					est une chaîne
+sAnnee					est une chaîne
+nMois					est un entier
+nIdSociete				est un entier
+nIdContactFiltre		est un entier
+mTotalHT				est un monétaire
+mTotalTTC				est un monétaire
+mTotalResteAPayer		est un monétaire
+
+
+sAnnee				= pFiltre.ExtraitChaîne(1,";")
+nMois				= pFiltre.ExtraitChaîne(2,";")
+nIdSociete			= pFiltre.ExtraitChaîne(3,";")
+nIdContactFiltre	= pFiltre.ExtraitChaîne(4,";")
+
+// Mêmes filtres que la page pgeConsoNotification
+si nMois > 0 alors
+	sWhere = "AND MONTH(ope_email_notification.DateHeureEnvoi) = " + nMois
+fin
+si nIdSociete > 0 alors
+	sWhere += [RC] + "AND ope_email_notification.IdClient = " + nIdSociete
+fin
+si nIdContactFiltre > 0 alors
+	sWhere += [RC] + "AND ope_email_notification.IdContact = " + nIdContactFiltre
+fin
+
+// Colonnes de la feuille
+nColonne = 15
+
+stRapportExcelFeuille.taaEntête["Client"]			= 2
+stRapportExcelFeuille.tabColonne.Ajoute("Société")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_GAUCHE__)
+stRapportExcelFeuille.tabColonne.Ajoute("Contact")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_GAUCHE__)
+
+stRapportExcelFeuille.taaEntête["Diffusion"]		= 4
+stRapportExcelFeuille.tabColonne.Ajoute("Jour")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+stRapportExcelFeuille.tabColonne.Ajoute("Date")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+stRapportExcelFeuille.tabColonne.Ajoute("Heure")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+stRapportExcelFeuille.tabColonne.Ajoute("Destinataire")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_GAUCHE__)
+
+stRapportExcelFeuille.taaEntête["Message"]			= 1
+stRapportExcelFeuille.tabColonne.Ajoute("Sujet")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_GAUCHE__)
+
+stRapportExcelFeuille.taaEntête["Rapport"]			= 3
+stRapportExcelFeuille.tabColonne.Ajoute("Ouvert")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+stRapportExcelFeuille.tabColonne.Ajoute("Rebond")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+stRapportExcelFeuille.tabColonne.Ajoute("Type rebond")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+
+stRapportExcelFeuille.taaEntête["Facturation"]		= 5
+stRapportExcelFeuille.tabColonne.Ajoute("Montant HT")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_DROITE__)
+stRapportExcelFeuille.tabColonne.Ajoute("TVA")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+stRapportExcelFeuille.tabColonne.Ajoute("Montant TTC")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_DROITE__)
+stRapportExcelFeuille.tabColonne.Ajoute("Payé")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+stRapportExcelFeuille.tabColonne.Ajoute("Reste à payer")
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_DROITE__)
+
+
+sTexteRequete =
+[
+	SELECT
+		IFNULL(clt_client.Societe,'') Societe,
+		IFNULL(CONCAT_WS(' ', clt_contact.Prenom, clt_contact.Nom),'') Contact,
+		IFNULL(DATE_FORMAT(ope_email_notification.DateHeureEnvoi, '%Y%m%d'),'') DateBrute,
+		IFNULL(DATE_FORMAT(ope_email_notification.DateHeureEnvoi, '%d-%m-%Y'),'') DateEnvoi,
+		IFNULL(DATE_FORMAT(ope_email_notification.DateHeureEnvoi, '%H:%i:%s'),'') HeureEnvoi,
+		IFNULL(ope_email_notification.Email,'') Destinataire,
+		IFNULL(ope_email_notification.Sujet,'') Sujet,
+		ope_email_notification.EstOuvert,
+		ope_email_notification.EstRebond,
+		IFNULL(ope_email_notification.TypeRebond,'') TypeRebond,
+		IFNULL(ope_email_notification.MontantHT,0) MontantHT,
+		IFNULL(ope_email_notification.TauxTVA,0) TauxTVA,
+		IFNULL(ope_email_notification.MontantTTC,0) MontantTTC,
+		ope_email_notification.EstPaye,
+		CASE WHEN ope_email_notification.EstPaye = 0 THEN IFNULL(ope_email_notification.MontantTTC,0) ELSE 0 END ResteAPayer
+	FROM
+		ope_email_notification
+		JOIN clt_client ON clt_client.IdClient = ope_email_notification.IdClient
+		JOIN clt_mere ON clt_mere.IdClient = ope_email_notification.IdClient
+		LEFT JOIN clt_contact ON clt_contact.IdContact = ope_email_notification.IdContact
+	WHERE
+		clt_mere.IdMere = [%pIdMere%]
+		AND YEAR(ope_email_notification.DateHeureEnvoi) = '[%sAnnee%]'
+		[%sWhere%]
+	ORDER BY
+		ope_email_notification.DateHeureEnvoi
+]
+
+si pas sdReqConsoEmail.ExécuteRequêteSQL(ope_email_notification..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	renvoyer stRapportExcelFeuille
+fin
+
+pour tout sdReqConsoEmail
+	nLigne = stRapportExcelFeuille.tabExcel.AjouteLigne()
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(sdReqConsoEmail.Societe)
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(sdReqConsoEmail.Contact)
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(DateVersJourEnLettre(sdReqConsoEmail.DateBrute))
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(sdReqConsoEmail.DateEnvoi)
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(sdReqConsoEmail.HeureEnvoi)
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(sdReqConsoEmail.Destinataire)
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(sdReqConsoEmail.Sujet)
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(sdReqConsoEmail.EstOuvert = 1 ? "Oui" sinon "Non")
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(sdReqConsoEmail.EstRebond = 1 ? "Oui" sinon "Non")
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(sdReqConsoEmail.TypeRebond)
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(NumériqueVersChaîne(sdReqConsoEmail.MontantHT, ",3fS") + " €")
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(NumériqueVersChaîne(sdReqConsoEmail.TauxTVA, ",2fS") + " %")
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(NumériqueVersChaîne(sdReqConsoEmail.MontantTTC, ",3fS") + " €")
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(sdReqConsoEmail.EstPaye = 1 ? "Oui" sinon "Non")
+	stRapportExcelFeuille.tabExcel[nLigne].Ajoute(NumériqueVersChaîne(sdReqConsoEmail.ResteAPayer, ",3fS") + " €")
+
+	mTotalHT			+= sdReqConsoEmail.MontantHT
+	mTotalTTC			+= sdReqConsoEmail.MontantTTC
+	mTotalResteAPayer	+= sdReqConsoEmail.ResteAPayer
+fin
+
+// Ligne Total en fin de feuille
+si stRapportExcelFeuille.tabExcel.Occurrence > 0 alors
+	nLigne = stRapportExcelFeuille.tabExcel.AjouteLigne()
+	pour nInd = 1 à nColonne
+		stRapportExcelFeuille.tabExcel[nLigne].Ajoute("")
+	fin
+	stRapportExcelFeuille.tabExcel[nLigne][1]	= "Total"
+	stRapportExcelFeuille.tabExcel[nLigne][11]	= NumériqueVersChaîne(mTotalHT, ",3fS") + " €"
+	stRapportExcelFeuille.tabExcel[nLigne][13]	= NumériqueVersChaîne(mTotalTTC, ",3fS") + " €"
+	stRapportExcelFeuille.tabExcel[nLigne][15]	= NumériqueVersChaîne(mTotalResteAPayer, ",3fS") + " €"
+fin
+
+renvoyer stRapportExcelFeuille
+
+fin:
+sdReqConsoEmail.AnnuleDéclaration()

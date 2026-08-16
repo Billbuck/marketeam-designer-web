@@ -1,0 +1,135 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//ChargeFeuilleExcelVmsRapport (<pIdOperation>)
+//
+// Paramètres :
+//	pIdOperation : <indiquez ici le rôle de pIdOperation>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+//	stEmail (structEmail) : <indiquez ici le rôle de stEmail>
+procédure ChargeFeuilleExcelVmsRapport(pIdOperation)
+
+nLigne					est un entier
+sTexteRequete			est une chaîne
+sSelect					est une chaîne
+sdReqRapportVms			est une Source de Données
+nColonne				est un entier
+stRapportExcelFeuille	est une structRapportExcelFeuille
+sValeur 				est une chaîne
+tabType 				est un tableau de chaînes
+taaColonneAnonymise 	est un tableau associatif de booléens
+
+// Colonnes sélectionnées par le client pour le rapport
+
+sTexteRequete	= [
+	SELECT
+		dos_operation_rapport.Champ,
+		dos_operation_rapport.Libelle,
+		dos_operation_rapport.Type
+	FROM dos_operation_rapport
+	WHERE dos_operation_rapport.IdOperation = [%pIdOperation%]
+	ORDER BY dos_operation_rapport.Ordre
+]
+
+si pas sdReqRapportVms.ExécuteRequêteSQL(dos_operation_rapport..Connexion,hRequêteSansCorrection,sTexteRequete) alors
+	renvoyer stRapportExcelFeuille
+fin
+
+pour tout sdReqRapportVms
+	nColonne++
+	taaColonneAnonymise[nColonne] = Vrai
+	sSelect += ["," + RC] + "IFNULL(dos_base_ligne." + sdReqRapportVms.Champ + ",'') AS 'Colonne" + nColonne + "'"
+	stRapportExcelFeuille.taaEntête["Fiche client"]++
+	stRapportExcelFeuille.tabColonne.Ajoute(sdReqRapportVms.Libelle)
+	tabType.Ajoute(sdReqRapportVms.Type)
+	stRapportExcelFeuille.tabAlignement.Ajoute(AlignementTypeChamp(sdReqRapportVms.Type))
+fin
+
+
+// On ajoute la colonne Date d'envoi
+nColonne++
+sSelect += ["," + RC]  + "IFNULL(DATE_FORMAT(ope_vms_envoi." + ope_vms_envoi.DateHeureEnvoi..Nom + ", '%d-%m-%Y'), '') AS 'Colonne" + nColonne + "'"
+stRapportExcelFeuille.taaEntête["Diffusion"]++
+stRapportExcelFeuille.tabColonne.Ajoute("Date")
+tabType.Ajoute(__CHAMP_TYPE_DATE_HEURE__)
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+
+// On ajoute la colonne Heure d'envoi
+nColonne++
+sSelect += ["," + RC]  + "IFNULL(DATE_FORMAT(ope_vms_envoi." + ope_vms_envoi.DateHeureEnvoi..Nom + ", '%H:%i:%s'), '') AS 'Colonne" + nColonne + "'"
+stRapportExcelFeuille.taaEntête["Diffusion"]++
+stRapportExcelFeuille.tabColonne.Ajoute("Heure")
+tabType.Ajoute(__CHAMP_TYPE_DATE_HEURE__)
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+
+// On ajoute la colonne Heure d'enregistrement
+nColonne++
+sSelect += ["," + RC]  + "IFNULL(DATE_FORMAT(ope_vms_envoi." + ope_vms_envoi.DateHeureEnregistre..Nom + ", '%H:%i:%s'), '') AS 'Colonne" + nColonne + "'"
+stRapportExcelFeuille.taaEntête["Diffusion"]++
+stRapportExcelFeuille.tabColonne.Ajoute("Enregistrement")
+tabType.Ajoute(__CHAMP_TYPE_DATE_HEURE__)
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+
+// On ajoute la colonne Heure de dépôt
+nColonne++
+sSelect += ["," + RC]  + "IFNULL(DATE_FORMAT(ope_vms_envoi." + ope_vms_envoi.DateHeureRapport..Nom + ", '%H:%i:%s'), '') AS 'Colonne" + nColonne + "'"
+stRapportExcelFeuille.taaEntête["Diffusion"]++
+stRapportExcelFeuille.tabColonne.Ajoute("Dépôt")
+tabType.Ajoute(__CHAMP_TYPE_DATE_HEURE__)
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+
+// On ajoute la colonne Statut
+nColonne++
+sSelect += ["," + RC]  + "ope_vms_envoi." + ope_vms_envoi.Statut..Nom + " AS 'Colonne" + nColonne + "'"
+stRapportExcelFeuille.taaEntête["Rapport"]++
+stRapportExcelFeuille.tabColonne.Ajoute("Statut")
+tabType.Ajoute(__CHAMP_TYPE_SMS_STATUT__)
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+
+
+sTexteRequete	=
+[
+	SELECT
+		dos_base.IdZecible,
+		[%sSelect%]
+	FROM
+		dos_base
+		JOIN dos_base_ligne ON dos_base.IdBase = dos_base_ligne.IdBase
+		JOIN ope_vms_envoi ON ope_vms_envoi.IdBaseLigne = dos_base_ligne.IdBaseLigne
+	WHERE
+		ope_vms_envoi.IdVms = [%pIdOperation%]
+	GROUP BY
+		ope_vms_envoi.IdBaseLigne
+]
+
+si pas sdReqRapportVms.ExécuteRequêteSQL(ope_vms_envoi..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	renvoyer stRapportExcelFeuille
+fin
+
+pour tout sdReqRapportVms
+	nLigne = stRapportExcelFeuille.tabExcel.AjouteLigne()
+	pour nCol = 1 à nColonne
+		sValeur = FormatValeur(tabType[nCol] , {"sdReqRapportVms.Colonne"+nCol,indRubrique})
+		// Si la base de données a été loué on anonymise les informations
+		// On anonymise le rapport
+		si sdReqRapportVms.IdZecible > 0 _et_ taaColonneAnonymise[nCol] = Vrai alors
+			sValeur = cpFonction.Anonymise(sValeur)
+		fin
+		stRapportExcelFeuille.tabExcel[nLigne].Ajoute(sValeur)
+	fin
+fin
+
+stRapportExcelFeuille.Titre 		= "Rapport de performance"
+stRapportExcelFeuille.SousTitre		= "Vms Rapport"
+
+renvoyer stRapportExcelFeuille
+
+
+
+fin:
+sdReqRapportVms.AnnuleDéclaration()
+

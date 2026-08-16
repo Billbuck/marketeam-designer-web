@@ -1,0 +1,14 @@
+CREATE TABLE `clt_mere` (
+	`IdMere` INT(11) NOT NULL,
+	`IdClient` INT(11) NOT NULL,
+	`EstRelationCommerciale` TINYINT(1) NOT NULL DEFAULT '0',
+	`DateHeureCreation` DATETIME NOT NULL,
+	`UserCreation` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	PRIMARY KEY (`IdMere`, `IdClient`) USING BTREE,
+	UNIQUE INDEX `Index 2` (`IdClient`, `IdMere`) USING BTREE,
+	CONSTRAINT `FK_clt_mere_clt_client` FOREIGN KEY (`IdMere`) REFERENCES `clt_client` (`IdClient`) ON UPDATE RESTRICT ON DELETE CASCADE,
+	CONSTRAINT `FK_clt_mere_clt_client_2` FOREIGN KEY (`IdClient`) REFERENCES `clt_client` (`IdClient`) ON UPDATE RESTRICT ON DELETE CASCADE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+;

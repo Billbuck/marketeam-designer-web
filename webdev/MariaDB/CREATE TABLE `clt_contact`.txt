@@ -1,0 +1,42 @@
+CREATE TABLE `clt_contact` (
+	`IdContact` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdClient` INT(11) NULL DEFAULT NULL,
+	`IdGroupeUtilisateur` INT(11) NULL DEFAULT NULL,
+	`IdFonction` INT(11) NULL DEFAULT NULL,
+	`Civilite` VARCHAR(15) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Prenom` VARCHAR(20) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Nom` VARCHAR(20) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Email` VARCHAR(150) NULL DEFAULT NULL COLLATE 'utf8mb4_bin',
+	`Telephone` VARCHAR(14) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Portable` VARCHAR(14) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Password` VARCHAR(100) NULL DEFAULT NULL COLLATE 'utf8mb4_bin',
+	`PageAccueil` CHAR(2) NOT NULL DEFAULT 'DB' COMMENT 'Par défaut le dashboard' COLLATE 'utf8mb4_unicode_ci',
+	`EstAdministrateur` TINYINT(1) NULL DEFAULT NULL,
+	`EstActif` TINYINT(1) NOT NULL DEFAULT '1',
+	`EstValide` TINYINT(1) NOT NULL DEFAULT '1' COMMENT 'Par défaut à 1 mais par la suite il faudrait le mettre à 0',
+	`EstMotPasseTemporaire` TINYINT(1) NOT NULL DEFAULT '1',
+	`DateHeureCreation` DATETIME NULL DEFAULT NULL,
+	`DateHeureModification` DATETIME NULL DEFAULT NULL,
+	`DateHeureSuppression` DATETIME NULL DEFAULT NULL,
+	`LimiteChangementMotPasse` DATETIME NULL DEFAULT NULL,
+	`UserCreation` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`UserModification` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`UserSuppression` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	PRIMARY KEY (`IdContact`) USING BTREE,
+	UNIQUE INDEX `EmailPassword` (`Email`, `Password`) USING BTREE,
+	INDEX `IdSociete` (`IdClient`) USING BTREE,
+	INDEX `Email` (`Email`) USING BTREE,
+	INDEX `IdGroupeUtilisateur` (`IdGroupeUtilisateur`) USING BTREE,
+	INDEX `IdFonction` (`IdFonction`) USING BTREE,
+	INDEX `PrenomNom` (`Prenom`, `Nom`) USING BTREE,
+	INDEX `EmailShortCode` (`Email`) USING BTREE,
+	INDEX `IdClient_EstAdministrateur` (`IdClient`, `EstAdministrateur`) USING BTREE,
+	FULLTEXT INDEX `Prenom_Nom` (`Prenom`, `Nom`),
+	CONSTRAINT `FK Contact / Client` FOREIGN KEY (`IdClient`) REFERENCES `clt_client` (`IdClient`) ON UPDATE CASCADE ON DELETE CASCADE,
+	CONSTRAINT `FK_clt_contact_clt_fonction` FOREIGN KEY (`IdFonction`) REFERENCES `prm_fonction` (`IdFonction`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `FK_clt_contact_prm_groupe_utilisateur` FOREIGN KEY (`IdGroupeUtilisateur`) REFERENCES `prm_groupe_utilisateur` (`IdGroupeUtilisateur`) ON UPDATE RESTRICT ON DELETE SET NULL
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+AUTO_INCREMENT=4
+;

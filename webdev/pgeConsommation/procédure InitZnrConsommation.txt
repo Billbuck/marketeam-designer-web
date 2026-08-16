@@ -1,0 +1,123 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//InitZnrConsommation ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure InitZnrConsommation()
+
+nInd				est un entier
+
+sTexteRequete		est une chaîne
+sdReqConsommation	est une Source de Données
+nTotalOperation		est un entier
+nTotalQuantité		est un entier
+mTotalHT			est un monétaire
+mTotalTTC			est un monétaire
+mTotalResteAPayer	est un monétaire
+sWhere				est une chaîne
+mPériodePayé		est un monétaire
+mPériodeImpayé		est un monétaire
+mPériodeTotal		est un monétaire
+
+
+si cboMois.ValeurMémorisée > 0 alors
+	sWhere = "AND MONTH(DateEnvoiSouhaite) = '" + cboMois.ValeurMémorisée + "'"
+fin
+
+sTexteRequete =
+[
+	SELECT
+		TypeProjet,
+		COUNT(IdOperation) TotalOperation,
+		SUM(MontantNetHT) TotalHT,
+		SUM(MontantTTC) TotalTTC,
+		SUM(NbrDestinataire) TotalQuantité,
+		SUM(ResteAPayer) TotalResteAPayer
+
+	FROM
+		dos_operation
+
+	WHERE
+		Statut >= [%__Statut_Prise_En_Charge_En_Attente__%]
+		AND IdClient = [%cboSociété.ValeurMémorisée%]
+		AND YEAR(DateEnvoiSouhaite) = '[%cboAnnee.ValeurMémorisée%]'
+		[%sWhere%]
+	GROUP BY 
+		TypeProjet
+	ORDER BY 1
+]
+
+
+si pas HExécuteRequêteSQL(sdReqConsommation, ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour
+fin
+
+znrConsommation.SupprimeTout()
+
+pour tout sdReqConsommation
+	mPériodeTotal 	+= sdReqConsommation.TotalTTC
+	mPériodeImpayé	+= sdReqConsommation.TotalResteAPayer
+	mPériodePayé 	+= (sdReqConsommation.TotalTTC - sdReqConsommation.TotalResteAPayer)
+
+	nInd										= znrConsommation.AjouteLigne()
+	znrConsommation[nInd].libTypeOperation		= Partage.LibelleTypeProjet(sdReqConsommation.TypeProjet)
+	znrConsommation[nInd].libNombre			= NumériqueVersChaîne(sdReqConsommation.TotalOperation, "dS")
+	znrConsommation[nInd].libQuantité			= NumériqueVersChaîne(sdReqConsommation.TotalQuantité, "dS")
+	znrConsommation[nInd].libMontantHT			= NumériqueVersChaîne(sdReqConsommation.TotalHT, ",2fS") + " €"
+	znrConsommation[nInd].libMontantTTC		= NumériqueVersChaîne(sdReqConsommation.TotalTTC, ",2fS") + " €"
+	znrConsommation[nInd].libResteAPayer		= NumériqueVersChaîne(sdReqConsommation.TotalResteAPayer, ",2fS") + " €"
+	znrConsommation[nInd].Icone				= cpProjet.IconeTypeProjet(sdReqConsommation.TypeProjet, Vrai)
+
+	nTotalOperation								+= sdReqConsommation.TotalOperation
+	nTotalQuantité								+= sdReqConsommation.TotalQuantité
+	mTotalHT									+= sdReqConsommation.TotalHT
+	mTotalTTC									+= sdReqConsommation.TotalTTC
+	mTotalResteAPayer							+= sdReqConsommation.TotalResteAPayer
+fin
+
+si znrConsommation.Occurrence > 1 alors
+	nInd												= znrConsommation.AjouteLigne()
+	znrConsommation[nInd].libTypeOperation				= "Total"
+	znrConsommation[nInd].libNombre					= NumériqueVersChaîne(nTotalOperation, "dS")
+	znrConsommation[nInd].libQuantité					= NumériqueVersChaîne(nTotalQuantité, "dS")
+	znrConsommation[nInd].libMontantHT					= NumériqueVersChaîne(mTotalHT, ",2fS") + " €"
+	znrConsommation[nInd].libMontantTTC				= NumériqueVersChaîne(mTotalTTC, ",2fS") + " €"
+	znrConsommation[nInd].libResteAPayer				= NumériqueVersChaîne(mTotalResteAPayer, ",2fS") + " €"
+	znrConsommation[nInd].CouleurFond					= HTMLVersRVB(__COULEUR_MARKETEAM_XXS__)
+
+	znrConsommation[nInd].libTypeOperation.Couleur		= HTMLVersRVB(__COULEUR_MARKETEAM_L__)
+	znrConsommation[nInd].libNombre.Couleur			= HTMLVersRVB(__COULEUR_MARKETEAM_L__)
+	znrConsommation[nInd].libQuantité.Couleur			= HTMLVersRVB(__COULEUR_MARKETEAM_L__)
+	znrConsommation[nInd].libMontantHT.Couleur			= HTMLVersRVB(__COULEUR_MARKETEAM_L__)
+	znrConsommation[nInd].libMontantTTC.Couleur		= HTMLVersRVB(__COULEUR_MARKETEAM_L__)
+	znrConsommation[nInd].libResteAPayer.Couleur		= HTMLVersRVB(__COULEUR_MARKETEAM_L__)
+
+	znrConsommation[nInd].libTypeOperation.PoliceGras	= Vrai
+	znrConsommation[nInd].libNombre.PoliceGras			= Vrai
+	znrConsommation[nInd].libQuantité.PoliceGras		= Vrai
+	znrConsommation[nInd].libMontantHT.PoliceGras		= Vrai
+	znrConsommation[nInd].libMontantTTC.PoliceGras		= Vrai
+	znrConsommation[nInd].libResteAPayer.PoliceGras		= Vrai
+
+	znrConsommation[nInd].Icone							= cpProjet.IconeTypeProjet(__OPERATION_MARKETEAM__, Vrai)
+
+fin
+
+celConsommation.Visible  = (znrConsommation.Occurrence > 0)
+
+saiPériodePayé		= mPériodePayé
+saiPériodeImpayé	= mPériodeImpayé
+saiPériodeTotal		= mPériodeTotal
+
+fin:
+HAnnuleDéclaration(sdReqConsommation)
+
+

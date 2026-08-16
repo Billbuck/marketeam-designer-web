@@ -31,6 +31,7 @@ sTexteRequete =
 	    WHERE clt_mere.IdMere = [%Partage.__vcUser.IdClient%]
 	    GROUP BY YEAR(ope_email_notification.DateHeureEnvoi)
 	) t
+	WHERE Annee IS NOT NULL
 	GROUP BY Annee
 	ORDER BY Annee DESC;
 

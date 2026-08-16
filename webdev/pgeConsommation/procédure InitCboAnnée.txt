@@ -1,0 +1,38 @@
+procédure InitCboAnnée()
+
+sTexteRequete est une chaîne
+sdReqAnnée est une Source de Données
+
+sTexteRequete =
+[
+	SELECT DISTINCT
+		YEAR(dos_operation.DateEnvoiSouhaite) Annee
+	FROM
+		dos_operation
+		JOIN clt_mere ON dos_operation.IdClient = clt_mere.IdClient 
+		JOIN clt_client ON dos_operation.IdClient = clt_client.IdClient 
+	WHERE
+		Statut >= [%__Statut_Prise_En_Charge_En_Attente__%]
+		AND clt_mere.IdMere = [%Partage.__vcUser.IdClient%]
+	ORDER BY 1 DESC
+]
+
+
+si pas HExécuteRequêteSQL(sdReqAnnée, ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour
+fin
+
+pour tout sdReqAnnée
+	cboAnnée.Ajoute(sdReqAnnée.Annee + gValeurMémorisée(sdReqAnnée.Annee))
+fin
+
+si cboAnnée..Occurrence = 0 alors
+	cboAnnée.Ajoute(Gauche(DateSys(),4)+gValeurMémorisée(Gauche(DateSys(),4)))
+fin
+
+cboAnnée.SelectPlus(1)
+
+
+fin:
+HAnnuleDéclaration(sdReqAnnée)

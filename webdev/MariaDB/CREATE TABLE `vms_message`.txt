@@ -1,0 +1,31 @@
+CREATE TABLE `vms_message` (
+	`IdMessage` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdPbxMessage` INT(11) NULL DEFAULT NULL,
+	`IdMarque` INT(11) NULL DEFAULT NULL,
+	`IdClient` INT(11) NULL DEFAULT NULL,
+	`IdContact` INT(11) NULL DEFAULT NULL COMMENT 'Si IdContact = NULL alors VMS Créé par Marketeam',
+	`Libelle` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Duree` TINYINT(4) NULL DEFAULT NULL,
+	`EstActif` TINYINT(1) NOT NULL DEFAULT '1',
+	`EstPartage` TINYINT(1) NOT NULL DEFAULT '0',
+	`DateHeureCreation` DATETIME NOT NULL,
+	`DateHeureModification` DATETIME NULL DEFAULT NULL,
+	`UserCreation` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`UserModification` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	PRIMARY KEY (`IdMessage`) USING BTREE,
+	INDEX `IdClient` (`IdClient`) USING BTREE,
+	INDEX `IdContact` (`IdContact`) USING BTREE,
+	INDEX `Libelle` (`Libelle`) USING BTREE,
+	INDEX `IdPbxMessage` (`IdPbxMessage`) USING BTREE,
+	INDEX `EstActif` (`EstActif`) USING BTREE,
+	INDEX `EstPartage` (`EstPartage`) USING BTREE,
+	INDEX `FK_vms_message_clt_marque` (`IdMarque`) USING BTREE,
+	INDEX `IdClient_DateHeureCreation_DateHeureModification` (`IdClient`, `DateHeureCreation`, `DateHeureModification`) USING BTREE,
+	INDEX `IdMarque_DateHeureCreation_DateHeureModification` (`IdMarque`, `DateHeureCreation`, `DateHeureModification`) USING BTREE,
+	CONSTRAINT `FK_vms_message_clt_client` FOREIGN KEY (`IdClient`) REFERENCES `clt_client` (`IdClient`) ON UPDATE RESTRICT ON DELETE CASCADE,
+	CONSTRAINT `FK_vms_message_clt_contact` FOREIGN KEY (`IdContact`) REFERENCES `clt_contact` (`IdContact`) ON UPDATE RESTRICT ON DELETE SET NULL,
+	CONSTRAINT `FK_vms_message_clt_marque` FOREIGN KEY (`IdMarque`) REFERENCES `clt_marque` (`IdMarque`) ON UPDATE NO ACTION ON DELETE CASCADE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+;

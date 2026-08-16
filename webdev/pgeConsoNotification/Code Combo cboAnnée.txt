@@ -2,5 +2,5 @@
 
 InitCboMois()
 InitCboSociete()
-InitCboTypeOperation()
-InitZnrConsommation()
+InitCboContact()
+InitZnrConsoNotification()

@@ -1,0 +1,166 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//ChargeFeuilleExcelSmsRapport (<pIdOperation>)
+//
+// Paramètres :
+//	pIdOperation : <indiquez ici le rôle de pIdOperation>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+//	stEmail (structEmail) : <indiquez ici le rôle de stEmail>
+procédure ChargeFeuilleExcelSmsRapport(pIdOperation)
+
+nLigne					est un entier
+sTexteRequete			est une chaîne
+sSelect					est une chaîne
+sdReqRapportSms			est une Source de Données
+nColonne				est un entier
+stRapportExcelFeuille	est une structRapportExcelFeuille
+sValeur 				est une chaîne
+tabType 				est un tableau de chaînes
+taaColonneAnonymise 	est un tableau associatif de booléens
+nStopPubColonne 		est un entier
+sStopPubValeur 			est une chaîne
+
+// Colonnes sélectionnées par le client pour le rapport
+
+sTexteRequete	= [
+	SELECT
+	dos_operation_rapport.Champ,
+	dos_operation_rapport.Libelle,
+	dos_operation_rapport.Type
+	FROM dos_operation_rapport
+	WHERE dos_operation_rapport.IdOperation = [%pIdOperation%]
+	ORDER BY dos_operation_rapport.Ordre
+]
+
+si pas sdReqRapportSms.ExécuteRequêteSQL(dos_operation_rapport..Connexion,hRequêteSansCorrection,sTexteRequete) alors
+	renvoyer stRapportExcelFeuille
+fin
+
+pour tout sdReqRapportSms
+	nColonne++
+	taaColonneAnonymise[nColonne] = Vrai
+	sSelect += ["," + RC] + "IFNULL(dos_base_ligne." + sdReqRapportSms.Champ + ",'') AS 'Colonne" + nColonne + "'"
+	stRapportExcelFeuille.taaEntête["Fiche client"]++
+	stRapportExcelFeuille.tabColonne.Ajoute(sdReqRapportSms.Libelle)
+	tabType.Ajoute(sdReqRapportSms.Type)
+	stRapportExcelFeuille.tabAlignement.Ajoute(AlignementTypeChamp(sdReqRapportSms.Type))
+fin
+
+
+// On ajoute la colonne Date d'envoi
+nColonne++
+sSelect += ["," + RC]  + "IFNULL(DATE_FORMAT(ope_sms_envoi." + ope_sms_envoi.DateHeureEnvoi..Nom + ", '%d-%m-%Y'), '') AS 'Colonne" + nColonne + "'"
+stRapportExcelFeuille.taaEntête["Diffusion"]++
+stRapportExcelFeuille.tabColonne.Ajoute("Date")
+tabType.Ajoute(__CHAMP_TYPE_DATE_HEURE__)
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+
+// On ajoute la colonne Heure d'envoi
+nColonne++
+sSelect += ["," + RC]  + "IFNULL(DATE_FORMAT(ope_sms_envoi." + ope_sms_envoi.DateHeureEnvoi..Nom + ", '%H:%i:%s'), '') AS 'Colonne" + nColonne + "'"
+stRapportExcelFeuille.taaEntête["Diffusion"]++
+stRapportExcelFeuille.tabColonne.Ajoute("Heure")
+tabType.Ajoute(__CHAMP_TYPE_DATE_HEURE__)
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+
+//		// On ajoute la colonne Heure de réception
+//		nColonne++
+//		sSelect += ["," + RC]  + "IFNULL(DATE_FORMAT(ope_sms_envoi." + ope_sms_envoi.DateHeureReception..Nom + ", '%H:%i:%s'), '') AS 'Colonne" + nColonne + "'"
+//		stRapportExcelFeuille.taaEntête["Diffusion"]++
+//		stRapportExcelFeuille.tabColonne.Ajoute("Réception")
+//		tabType.Ajoute(__CHAMP_TYPE_DATE_HEURE__)
+//		stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+
+// On ajoute la colonne Statut
+nColonne++
+sSelect += ["," + RC]  + "ope_sms_envoi." + ope_sms_envoi.Statut..Nom + " AS 'Colonne" + nColonne + "'"
+stRapportExcelFeuille.taaEntête["Rapport"]++
+stRapportExcelFeuille.tabColonne.Ajoute("Statut")
+tabType.Ajoute(__CHAMP_TYPE_SMS_STATUT__)
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+
+// On ajoute la colonne Opérateur
+nColonne++
+sSelect += ["," + RC]  + "IFNULL(sms_operateur." + sms_operateur.Operateur..Nom + ",'') AS 'Colonne" + nColonne + "'"
+stRapportExcelFeuille.taaEntête["Rapport"]++
+stRapportExcelFeuille.tabColonne.Ajoute("Opérateur")
+tabType.Ajoute(__CHAMP_TYPE_SMS_OPERATEUR__)
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+
+// On ajoute la colonne Taille SMS
+nColonne++
+sSelect += ["," + RC]  + "IFNULL(ope_sms_envoi." + ope_sms_envoi.SmsTaille..Nom + ",'') AS 'Colonne" + nColonne + "'"
+stRapportExcelFeuille.taaEntête["Message"]++
+stRapportExcelFeuille.tabColonne.Ajoute("Taille")
+tabType.Ajoute(__CHAMP_TYPE_ENTIER__)
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+
+// On ajoute la colonne Nombre SMS
+nColonne++
+sSelect += ["," + RC]  + "IFNULL(ope_sms_envoi." + ope_sms_envoi.SmsNombre..Nom + ",'') AS 'Colonne" + nColonne + "'"
+stRapportExcelFeuille.taaEntête["Message"]++
+stRapportExcelFeuille.tabColonne.Ajoute("Nombre")
+tabType.Ajoute(__CHAMP_TYPE_ENTIER__)
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+
+// On ajoute la colonne Date STOP SMS
+nColonne++
+nStopPubColonne = nColonne
+sSelect += ["," + RC]  + "IFNULL(DATE_FORMAT(dos_base_ligne_erreur." + dos_base_ligne_erreur.DateHeureErreur..Nom + ", '%d-%m-%Y %H:%i:%s'), '') AS 'Colonne" + nColonne + "'"
+stRapportExcelFeuille.taaEntête["Stop pub"]++
+stRapportExcelFeuille.tabColonne.Ajoute("Date")
+tabType.Ajoute(__CHAMP_TYPE_TEXTE__)
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+
+
+sTexteRequete	=
+[
+	SELECT
+		dos_base.IdZecible,
+		[%sSelect%]
+	FROM
+		dos_base
+		JOIN dos_base_ligne ON dos_base_ligne.IdBase = dos_base.IdBase
+		JOIN ope_sms_envoi ON ope_sms_envoi.IdBaseLigne = dos_base_ligne.IdBaseLigne
+		LEFT JOIN dos_base_ligne_erreur ON dos_base_ligne_erreur.IdBaseLigne = dos_base_ligne.IdBaseLigne
+		LEFT JOIN sms_operateur ON sms_operateur.PLMN = ope_sms_envoi.Operateur
+	WHERE
+		ope_sms_envoi.IdSms = [%pIdOperation%]
+	GROUP BY
+		ope_sms_envoi.IdBaseLigne
+]
+
+si pas sdReqRapportSms.ExécuteRequêteSQL(ope_sms_envoi..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	renvoyer stRapportExcelFeuille
+fin
+
+
+pour tout sdReqRapportSms
+	sStopPubValeur = {"sdReqRapportSms.Colonne"+nStopPubColonne,indRubrique}
+	nLigne = stRapportExcelFeuille.tabExcel.AjouteLigne()
+	pour nCol = 1 à nColonne
+		sValeur = FormatValeur(tabType[nCol] , {"sdReqRapportSms.Colonne"+nCol,indRubrique})
+		// Si la base de données a été loué on anonymise les informations
+		// On anonymise le rapport sauf les stop pub
+		si sdReqRapportSms.IdZecible > 0 _et_ taaColonneAnonymise[nCol] = Vrai _et_ sStopPubValeur = "" alors
+			sValeur = cpFonction.Anonymise(sValeur)
+		fin
+		stRapportExcelFeuille.tabExcel[nLigne].Ajoute(sValeur)
+	fin
+fin
+
+stRapportExcelFeuille.Titre 		= "Rapport de diffusion"
+stRapportExcelFeuille.SousTitre		= "Sms Rapport"
+
+renvoyer stRapportExcelFeuille
+
+
+
+fin:
+sdReqRapportSms.AnnuleDéclaration()
+

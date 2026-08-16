@@ -1,0 +1,33 @@
+CREATE TABLE `clt_adresse_facturation` (
+	`IdAdresseFacturation` INT(11) NOT NULL AUTO_INCREMENT,
+	`Civilite` VARCHAR(15) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Prenom` VARCHAR(20) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Nom` VARCHAR(20) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Service` VARCHAR(50) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Email` VARCHAR(150) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Siret` CHAR(14) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Naf` CHAR(6) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Societe` VARCHAR(75) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Adr1` VARCHAR(36) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Adr2` VARCHAR(36) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Cdp` CHAR(5) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Ville` VARCHAR(30) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Pays` VARCHAR(40) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`EstActif` TINYINT(1) NOT NULL DEFAULT '1',
+	`EstReferenceObligatoire` TINYINT(1) NOT NULL DEFAULT '0',
+	`ReferenceExpressionReguliere` VARCHAR(200) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`ReferenceExpressionReguliereAide` VARCHAR(500) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`ReferenceLibelle` VARCHAR(30) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Tel` CHAR(14) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Portable` CHAR(14) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`DateHeureCreation` DATETIME NOT NULL,
+	`DateHeureModification` DATETIME NULL DEFAULT NULL,
+	`UserCreation` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`UserModification` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	PRIMARY KEY (`IdAdresseFacturation`) USING BTREE,
+	INDEX `Siret` (`Siret`) USING BTREE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+AUTO_INCREMENT=3
+;

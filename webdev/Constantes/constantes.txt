@@ -689,6 +689,11 @@ constante
 	__RAPPORT_EMAIL_INTERACTIF__								= "REI"
 	__RAPPORT_COURRIER_INTERACTIF__								= "RCI"
 
+	// Rapports de consommation (période filtrée, sans opération associée)
+	__RAPPORT_CONSO_SMS__										= "CSN"
+	__RAPPORT_CONSO_VMS__										= "CVU"
+	__RAPPORT_CONSO_EMAIL__										= "CEN"
+
 
 	__TYPEPRESTATION_BDD__										= 10
 

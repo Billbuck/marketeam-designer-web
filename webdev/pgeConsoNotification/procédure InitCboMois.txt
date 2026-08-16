@@ -45,26 +45,23 @@ fin
 
 cboMois.SupprimeTout()
 
+// « < Mois > » toujours en tête (= toute l'année), comme pgeConsommation.
+// Permet aussi le repli de Init() quand le mois courant n'a pas de consommation.
+cboMois.Ajoute("< Mois >" + gLien(0))
+
 pour tout sdReqMois
 	cboMois.Ajoute(MoisEnLettre(sdReqMois.Mois) + gLien(sdReqMois.Mois))
 fin
 
-si cboMois.Occurrence > 1 alors
-	cboMois.Insère("< Mois >" + gLien(0),1)
-fin
-
-si cboMois..Occurrence = 0 alors
-	cboMois.Ajoute(NomPropre(DateVersMoisEnLettre(dDate)) + gLien(dDate.Mois))
-fin
-
 si cboAnnée.ValeurMémorisée = Gauche(DateSys(),4) alors
 	cboMois = dDate.Mois
+sinon
+	cboMois.SelectPlus(1)
 fin
 
 si cboMois < 0 alors
-	 cboMois.SelectPlus(1)
+	cboMois.SelectPlus(1)
 fin
 
 fin:
 sdReqMois.AnnuleDéclaration()
-

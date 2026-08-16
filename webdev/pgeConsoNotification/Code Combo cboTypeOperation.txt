@@ -1,3 +1,0 @@
-// Code Serveur "A Chaque modification de cboTypeOperation"
-
-InitZnrConsommation()

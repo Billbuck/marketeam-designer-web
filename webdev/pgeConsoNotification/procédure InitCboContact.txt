@@ -1,0 +1,99 @@
+procédure InitCboContact()
+
+nIdContact		est un entier
+sTexteRequete	est une chaîne
+sdReqContact	est une Source de Données
+sWhere			est une chaîne
+
+// Mémorise le contact sélectionné pour le reproposer après rechargement
+nIdContact = cboContact.ValeurMémorisée
+
+si cboMois.ValeurMémorisée > 0 alors
+	sWhere = "AND MONTH(DateHeureEnvoi) = " + cboMois.ValeurMémorisée
+fin
+
+si cboSociété.ValeurMémorisée > 0 alors
+	sWhere += [RC] + "AND clt_client.IdClient = " + cboSociété.ValeurMémorisée
+fin
+
+// Liste des contacts ayant réellement consommé sur la sélection (3 supports).
+// UNION (sans ALL) : dédoublonne un contact présent sur plusieurs supports.
+sTexteRequete =
+[
+	SELECT DISTINCT
+		clt_contact.IdContact,
+		clt_contact.Prenom,
+		clt_contact.Nom
+	FROM
+		ope_sms_notification
+		JOIN clt_contact ON clt_contact.IdContact = ope_sms_notification.IdContact
+		JOIN clt_client ON clt_client.IdClient = ope_sms_notification.IdClient
+		JOIN clt_mere ON clt_mere.IdClient = ope_sms_notification.IdClient
+	WHERE
+		clt_mere.IdMere = [%Partage.__vcUser.IDClient%]
+		AND YEAR(DateHeureEnvoi) = '[%cboAnnée.ValeurMémorisée%]'
+		[%sWhere%]
+	
+	UNION
+	
+	SELECT DISTINCT
+		clt_contact.IdContact,
+		clt_contact.Prenom,
+		clt_contact.Nom
+	FROM
+		ope_vms_unitaire
+		JOIN clt_contact ON clt_contact.IdContact = ope_vms_unitaire.IdContact
+		JOIN clt_client ON clt_client.IdClient = ope_vms_unitaire.IdClient
+		JOIN clt_mere ON clt_mere.IdClient = ope_vms_unitaire.IdClient
+	WHERE
+		clt_mere.IdMere = [%Partage.__vcUser.IDClient%]
+		AND YEAR(DateHeureEnvoi) = '[%cboAnnée.ValeurMémorisée%]'
+		[%sWhere%]
+	
+	UNION
+	
+	SELECT DISTINCT
+		clt_contact.IdContact,
+		clt_contact.Prenom,
+		clt_contact.Nom
+	FROM
+		ope_email_notification
+		JOIN clt_contact ON clt_contact.IdContact = ope_email_notification.IdContact
+		JOIN clt_client ON clt_client.IdClient = ope_email_notification.IdClient
+		JOIN clt_mere ON clt_mere.IdClient = ope_email_notification.IdClient
+	WHERE
+		clt_mere.IdMere = [%Partage.__vcUser.IDClient%]
+		AND YEAR(DateHeureEnvoi) = '[%cboAnnée.ValeurMémorisée%]'
+		[%sWhere%]
+	
+	ORDER BY Nom, Prenom
+]
+
+si pas HExécuteRequêteSQL(sdReqContact, ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour
+fin
+
+cboContact.SupprimeTout()
+
+pour tout sdReqContact
+	cboContact.Ajoute(sdReqContact.Prenom + " " + sdReqContact.Nom + gLien(sdReqContact.IdContact))
+fin
+
+// « < Tous > » uniquement s'il y a plusieurs contacts (même logique que cboSociété) :
+// un contact unique est affiché seul et sélectionné d'office.
+si cboContact.Occurrence > 1 alors
+	cboContact.Insère("< Tous >" + gLien(0),1)
+fin
+
+// Reproposer le contact précédemment sélectionné s'il est toujours dans la liste
+si nIdContact > 0 alors
+	cboContact = nIdContact
+fin
+
+si cboContact < 0 alors
+	cboContact.SelectPlus(1)
+fin
+
+fin:
+HAnnuleDéclaration(sdReqContact)

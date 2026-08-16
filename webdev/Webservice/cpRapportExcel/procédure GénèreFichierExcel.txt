@@ -1,0 +1,385 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] GénèreFichierExcel (<stRapportExcel> est structRapportExcel)
+//
+// Paramètres :
+//	stRapportExcel (structRapportExcel) : <indiquez ici le rôle de taaEntête>
+// Valeur de retour :
+// 	buffer : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+//	tabColonne : <indiquez ici le rôle de tabColonne>
+//	tabExcel : <indiquez ici le rôle de tabExcel>
+// 	tabType : <indiquez ici le rôle de tabType>
+// 	tabAlignement : <indiquez ici le rôle de tabAlignement>
+procédure GénèreFichierExcel(stRapportExcel est une structRapportExcel)
+
+
+nFeuille						est un entier
+sFichier						est un chaîne
+sRepertoire						est une chaîne
+xRapport						est un xlsDocument
+xCadreFin						est un Cadre
+xCadreEpais						est un Cadre
+xPoliceBlack					est une Police
+xPoliceRapport					est une Police
+xPoliceGris						est une Police
+nLigne							est un entier
+nLigneDepart					est un entier
+nColonne						est un entier
+nNbrLignes						est un entier
+nNbrColonnes					est un entier
+nCartoucheHauteur				est un entier
+nCartoucheDebut					est un entier
+nCartoucheFin					est un entier
+nCartoucheLibelleColonneDebut	est un entier
+nCartoucheLibelleColonneFin		est un entier
+nCartoucheValeurColonneDebut	est un entier
+nCartoucheValeurColonneFin		est un entier
+nQuestionLigne					est un entier	// Ligne du titre des questions
+nQuestionDebut					est un entier	// Première ligne des questions
+nQuestionFin					est un entier	// Dernière ligne des questions
+nQuestionCourteColonneDebut		est un entier	// Début de colonne de question courte
+nQuestionCourteColonneFin		est un entier	// Fin de colonne de la question courte
+nQuestionLongueColonneDebut		est un entier	// Début de colonne de question longue
+nQuestionLongueColonneFin		est un entier	// Fin de colonne de la question longue
+nQuestionColonneMin 			est un entier
+nEnteteLigne					est un entier	// Ligne de l'entête
+nColonneLigne					est un entier	// Ligne de l'entête des colonnes
+nRapportDebut					est un entier	// Première ligne du rapport
+nRapportFin						est un entier	// Dernière ligne du rapport
+sCheminFichierExcel				est une chaîne
+stRapportExcelFeuille			est une structRapportExcelFeuille
+tabQuestionLigne				est un tableau de chaîne
+tabExcelLigne					est un tableau de chaîne
+rCoef							est un réel	= 8
+bufExcel 						est un Buffer
+
+taaLargeurColonne				est un tableau associatif d'entiers
+
+sCheminFichierExcel				= fRepDonnées() + ["\"] + "Excel\" + stRapportExcel.TypeOperation + "-xls-rapport" + __XLSX__
+
+xRapport						= xlsOuvre(sCheminFichierExcel)
+
+
+sFichier						= "Rapport" + GénèreMotDePasse(8) + __XLSX__
+sRepertoire						= fRepDonnées() + ["\"]
+
+xCadreFin.Trait					= TraitContinu
+xCadreFin.Couleur				= HTMLVersRVB(__COULEUR_GRIS_M__)
+xCadreFin.Epaisseur				= 1
+
+xCadreEpais.Trait				= TraitContinu
+xCadreEpais.Couleur				= HTMLVersRVB(__COULEUR_GRIS_L__)
+xCadreEpais.Epaisseur			= 1
+
+xPoliceBlack..Nom				= "Calibri"
+xPoliceBlack..Taille			= 11
+xPoliceBlack..Couleur			= HTMLVersRVB(__COULEUR_NOIR__)
+
+xPoliceGris..Nom				= "Calibri"
+xPoliceGris..Taille				= 11
+xPoliceGris..Gras				= Faux
+xPoliceGris..Couleur			= HTMLVersRVB(__COULEUR_GRIS_L__)
+
+xPoliceRapport..Nom				= "Calibri"
+xPoliceRapport..Taille			= 11
+xPoliceRapport..Couleur			= HTMLVersRVB(__COULEUR_GRIS_XL__)
+
+
+pour tout stRapportExcelFeuille de stRapportExcel.tabFeuille
+	nFeuille++
+
+	xRapport..Feuille				= nFeuille
+	xRapport..NomFeuille			= stRapportExcelFeuille.NomFeuille
+
+	VariableRAZ(tabQuestionLigne)
+	VariableRAZ(tabExcelLigne)
+
+	nLigneDepart					= 4
+	nCartoucheHauteur				= 0
+	nQuestionLigne					= 0
+	nQuestionDebut					= 0
+	nQuestionFin					= 0
+	nQuestionCourteColonneDebut		= 0
+	nQuestionCourteColonneFin		= 0
+	nQuestionLongueColonneDebut		= 0
+	nQuestionLongueColonneFin		= 0
+	nQuestionColonneMin				= 0
+	nLigne							= nLigneDepart
+
+	// CARTOUCHE
+	nCartoucheDebut					= nLigne
+	nCartoucheLibelleColonneDebut	= 1
+	nCartoucheLibelleColonneFin		= 1
+	nCartoucheValeurColonneDebut	= 2
+	nCartoucheValeurColonneFin		= 4
+
+	si stRapportExcelFeuille.Titre <> "" alors
+		nCartoucheHauteur++
+		xRapport[nLigne,nCartoucheLibelleColonneDebut]		= "Titre" + ESP + ESP
+		xRapport[nLigne,nCartoucheValeurColonneDebut]		= stRapportExcelFeuille.Titre
+		nLigne++
+	fin
+	si stRapportExcelFeuille.SousTitre <> "" alors
+		nCartoucheHauteur++
+		xRapport[nLigne,nCartoucheLibelleColonneDebut]		= "Sous titre" + ESP + ESP
+		xRapport[nLigne,nCartoucheValeurColonneDebut]		= stRapportExcelFeuille.SousTitre
+		nLigne++
+	fin
+	si stRapportExcel.stCartouche.Société <> "" alors
+		nCartoucheHauteur++
+		xRapport[nLigne,nCartoucheLibelleColonneDebut]		= "Société" + ESP + ESP
+		xRapport[nLigne,nCartoucheValeurColonneDebut]		= stRapportExcel.stCartouche.Société
+		nLigne++
+	fin
+	si stRapportExcel.stCartouche.Contact <> "" alors
+		nCartoucheHauteur++
+		xRapport[nLigne,nCartoucheLibelleColonneDebut]		= "Contact" + ESP + ESP
+		xRapport[nLigne,nCartoucheValeurColonneDebut]		= stRapportExcel.stCartouche.Contact
+		nLigne++
+	fin
+	si stRapportExcel.stCartouche.Dossier <> "" alors
+		nCartoucheHauteur++
+		xRapport[nLigne,nCartoucheLibelleColonneDebut]		= "Dossier" + ESP + ESP
+		xRapport[nLigne,nCartoucheValeurColonneDebut]		= stRapportExcel.stCartouche.Dossier
+		nLigne++
+	fin
+	si stRapportExcel.stCartouche.Designation <> "" alors
+		nCartoucheHauteur++
+		xRapport[nLigne,nCartoucheLibelleColonneDebut]		= "Désignation" + ESP + ESP
+		xRapport[nLigne,nCartoucheValeurColonneDebut]		= stRapportExcel.stCartouche.Designation
+		nLigne++
+	fin
+	si stRapportExcel.stCartouche.MontantHT > 0 alors
+		nCartoucheHauteur++
+		xRapport[nLigne,nCartoucheLibelleColonneDebut]		= "Montant HT" + ESP + ESP
+		xRapport[nLigne,nCartoucheValeurColonneDebut]		= NumériqueVersChaîne(stRapportExcel.stCartouche.MontantHT, ",2fS") + " €"
+		nLigne++
+	fin
+ 	si stRapportExcel.stCartouche.Date <> "" alors
+		nCartoucheHauteur++
+		xRapport[nLigne,nCartoucheLibelleColonneDebut]		= "Date" + ESP + ESP
+		xRapport[nLigne,nCartoucheValeurColonneDebut]		= stRapportExcel.stCartouche.Date
+		nLigne++
+	fin
+	si stRapportExcel.stCartouche.Heure <> "" alors
+		nCartoucheHauteur++
+		xRapport[nLigne,nCartoucheLibelleColonneDebut]		= "Heure" + ESP + ESP
+		xRapport[nLigne,nCartoucheValeurColonneDebut]		= stRapportExcel.stCartouche.Heure
+		nLigne++
+	fin
+	nLigne--
+	nCartoucheFin = nLigne
+
+
+	// QUESTIONS
+	si stRapportExcelFeuille.tabQuestion.Occurrence > 0 alors
+
+		si nCartoucheHauteur > (stRapportExcelFeuille.tabQuestion.Occurrence + 1) alors
+			nLigne = (nCartoucheHauteur - (stRapportExcelFeuille.tabQuestion.Occurrence + 1)) + nLigneDepart
+		sinon
+			nLigne = nLigneDepart
+		fin
+
+		nQuestionColonneMin = nCartoucheValeurColonneFin + 2
+
+
+		nQuestionCourteColonneDebut						= Max(nQuestionColonneMin, stRapportExcelFeuille.telColonneQuestionDebut)
+		nQuestionCourteColonneFin						= Max(nQuestionColonneMin, stRapportExcelFeuille.telColonneQuestionDebut) + 1
+		nQuestionLongueColonneDebut						= Max(nQuestionColonneMin, stRapportExcelFeuille.telColonneQuestionDebut) + 2
+		nQuestionLongueColonneFin						= Max((nQuestionColonneMin + 8), stRapportExcelFeuille.telColonneQuestionFin)
+
+
+		nQuestionLigne									= nLigne
+		xRapport[nLigne,nQuestionCourteColonneDebut]	= stRapportExcelFeuille.LibelleQuestion1
+		xRapport[nLigne,nQuestionLongueColonneDebut]	= stRapportExcelFeuille.LibelleQuestion2
+
+		nLigne++
+		nQuestionDebut	= nLigne
+		pour nInd = 1 _à_ stRapportExcelFeuille.tabQuestion.Occurrence
+			tabQuestionLigne								= stRapportExcelFeuille.tabQuestion[nInd]
+			xRapport[nLigne,nQuestionCourteColonneDebut]	= tabQuestionLigne[1].Remplace(" ",ESP) + ESP + ESP
+			xRapport[nLigne,nQuestionLongueColonneDebut]	= tabQuestionLigne[2]
+			nLigne++
+		fin
+		nLigne--
+		nQuestionFin = nLigne
+	fin
+
+
+	// ENTÊTE DE COLONNE 1
+	si stRapportExcelFeuille.taaEntête.Occurrence > 0 alors
+		nLigne			+= 2
+		nColonne		= 1
+		nEnteteLigne	= nLigne
+		pour tout nTaille, sColonne de stRapportExcelFeuille.taaEntête
+			xRapport[nLigne,nColonne] = sColonne.Remplace(" ",ESP)
+			si nTaille > 1 alors xRapport.FusionneCellule(CelluleExcel(nLigne,nColonne), CelluleExcel(nLigne,(nColonne + nTaille - 1)),fusionCelluleCentrée)
+			xRapport[nLigne,nColonne].AlignementH	= chCentre
+			nColonne += nTaille
+		fin
+	fin
+
+
+	// ENTÊTE DE COLONNE 2
+	si stRapportExcelFeuille.tabColonne.Occurrence > 0 alors
+		nLigne 			++
+		nColonneLigne	= nLigne
+		pour tout sColonne, nColonne de stRapportExcelFeuille.tabColonne
+			taaLargeurColonne[nColonne]				= Max(taaLargeurColonne[nColonne], sColonne.Taille())
+			xRapport[nLigne,nColonne]				= sColonne.Remplace(" ",ESP)
+			xRapport[nLigne,nColonne].AlignementH	= chCentre
+			nColonne++
+		fin
+	fin
+
+
+	// RAPPORT
+	si stRapportExcelFeuille.tabExcel.Occurrence > 0 alors
+		nLigne			++
+		nRapportDebut	= nLigne
+		pour nInd = 1 _à_ stRapportExcelFeuille.tabExcel.Occurrence
+			tabExcelLigne = stRapportExcelFeuille.tabExcel[nInd]
+			pour tout sColonne, nColonne de tabExcelLigne
+				// sColonne								= FormatValeur(stRapportExcelFeuille.tabType[nColonne], sColonne)
+				taaLargeurColonne[nColonne]				= Max(taaLargeurColonne[nColonne], sColonne.Taille())
+				xRapport[nLigne,nColonne]				= sColonne
+				xRapport[nLigne,nColonne].AlignementH	= AlignementExcel(stRapportExcelFeuille.tabAlignement[nColonne])
+				xRapport[nLigne,nColonne].AlignementV	= cvMilieu
+			fin
+			nLigne++
+		fin
+		nLigne--
+		nRapportFin = nLigne
+	fin
+
+	nNbrLignes		= nLigne
+	nNbrColonnes	= stRapportExcelFeuille.tabColonne.Occurrence
+
+
+
+	// Habillage
+	// L'ensemble des colonnes
+
+	pour nLigne = 1 _à_ nNbrLignes
+		xRapport..Ligne[nLigne].Hauteur = 32
+	fin
+
+	pour nColonne = 1 _à_ nNbrColonnes
+		xRapport..Colonne[nColonne].Largeur = Min((Max(8,taaLargeurColonne[nColonne]) * rCoef), 400)
+	fin
+
+	pour nLigne = nCartoucheDebut _à_ nCartoucheFin
+		xRapport[nLigne,nCartoucheLibelleColonneDebut].Police				= xPoliceGris
+		xRapport[nLigne,nCartoucheLibelleColonneDebut].Cadre				= xCadreFin
+		xRapport[nLigne,nCartoucheLibelleColonneDebut].AlignementV			= cvMilieu
+		xRapport[nLigne,nCartoucheLibelleColonneDebut].AlignementH			= chDroite
+		xRapport.FusionneCellule(CelluleExcel(nLigne,nCartoucheLibelleColonneDebut), CelluleExcel(nLigne,nCartoucheLibelleColonneFin),fusionCelluleSimple)
+
+		xRapport[nLigne,nCartoucheValeurColonneDebut].Police				= xPoliceBlack
+		xRapport[nLigne,nCartoucheValeurColonneDebut].Cadre					= xCadreFin
+		xRapport[nLigne,nCartoucheValeurColonneDebut].AlignementV			= cvMilieu
+		xRapport[nLigne,nCartoucheValeurColonneDebut].AlignementH			= chGauche
+		xRapport.FusionneCellule(CelluleExcel(nLigne,nCartoucheValeurColonneDebut), CelluleExcel(nLigne,nCartoucheValeurColonneFin),fusionCelluleSimple)
+	fin
+
+	// QUESTIONS
+	si nQuestionLigne > 0 alors
+		xRapport[nQuestionLigne,nQuestionCourteColonneDebut].Police			= xPoliceBlack
+		xRapport[nQuestionLigne,nQuestionCourteColonneDebut].Cadre			= xCadreFin
+		xRapport[nQuestionLigne,nQuestionCourteColonneDebut].AlignementV	= cvMilieu
+		xRapport[nQuestionLigne,nQuestionCourteColonneDebut].AlignementH	= chCentre
+		xRapport[nQuestionLigne,nQuestionCourteColonneDebut].CouleurFond	= cpProjet.CouleurTypeOperation(stRapportExcel.TypeOperation,"XS") // HTMLVersRVB(__COULEUR_TEL_XS__)
+		xRapport.FusionneCellule(CelluleExcel(nQuestionLigne,nQuestionCourteColonneDebut), CelluleExcel(nQuestionLigne,nQuestionCourteColonneFin),fusionCelluleSimple)
+
+		xRapport[nQuestionLigne,nQuestionLongueColonneDebut].Police			= xPoliceBlack
+		xRapport[nQuestionLigne,nQuestionLongueColonneDebut].Cadre			= xCadreFin
+		xRapport[nQuestionLigne,nQuestionLongueColonneDebut].AlignementV	= cvMilieu
+		xRapport[nQuestionLigne,nQuestionLongueColonneDebut].AlignementH	= chCentre
+		xRapport[nQuestionLigne,nQuestionLongueColonneDebut].CouleurFond	= cpProjet.CouleurTypeOperation(stRapportExcel.TypeOperation,"XS") // HTMLVersRVB(__COULEUR_TEL_XS__)
+		xRapport.FusionneCellule(CelluleExcel(nQuestionLigne,nQuestionLongueColonneDebut), CelluleExcel(nQuestionLigne,nQuestionLongueColonneFin),fusionCelluleSimple)
+
+		pour nLigne = nQuestionDebut _à_ nQuestionFin
+			xRapport[nLigne,nQuestionCourteColonneDebut].Police				= xPoliceGris
+			xRapport[nLigne,nQuestionCourteColonneDebut].Cadre				= xCadreFin
+			xRapport[nLigne,nQuestionCourteColonneDebut].AlignementV		= cvMilieu
+			xRapport[nLigne,nQuestionCourteColonneDebut].AlignementH		= chDroite
+			si EstImpair(nLigne) alors xRapport[nLigne,nQuestionCourteColonneDebut].CouleurFond	= cpProjet.CouleurTypeOperation(stRapportExcel.TypeOperation,"XXS") //HTMLVersRVB(__COULEUR_TEL_XXS__)
+			xRapport.FusionneCellule(CelluleExcel(nLigne,nQuestionCourteColonneDebut), CelluleExcel(nLigne,nQuestionCourteColonneFin),fusionCelluleSimple)
+
+			xRapport[nLigne,nQuestionLongueColonneDebut].Police				= xPoliceBlack
+			xRapport[nLigne,nQuestionLongueColonneDebut].Cadre				= xCadreFin
+			xRapport[nLigne,nQuestionLongueColonneDebut].AlignementV		= cvMilieu
+			xRapport[nLigne,nQuestionLongueColonneDebut].AlignementH		= chGauche
+			xRapport[nLigne,nQuestionLongueColonneDebut].Multiligne			= Vrai
+			si EstImpair(nLigne) alors xRapport[nLigne,nQuestionLongueColonneDebut].CouleurFond	= cpProjet.CouleurTypeOperation(stRapportExcel.TypeOperation,"XXS") // HTMLVersRVB(__COULEUR_TEL_XXS__)
+			xRapport.FusionneCellule(CelluleExcel(nLigne,nQuestionLongueColonneDebut), CelluleExcel(nLigne,nQuestionLongueColonneFin),fusionCelluleSimple)
+		fin
+	fin
+
+	// PREMIERE LIGNE D'ENTETE
+	si nEnteteLigne > 0 alors
+		pour nColonne = 1 _à_ nNbrColonnes
+			xRapport[nEnteteLigne, nColonne].Police				= xPoliceBlack
+			xRapport[nEnteteLigne, nColonne].CouleurFond		= cpProjet.CouleurTypeOperation(stRapportExcel.TypeOperation,"XS") // HTMLVersRVB(__COULEUR_TEL_XS__)
+			xRapport[nEnteteLigne, nColonne].Multiligne			= Vrai
+			xRapport[nEnteteLigne, nColonne].Cadre				= xCadreFin
+			xRapport[nEnteteLigne, nColonne].AlignementV		= cvMilieu
+			xRapport[nEnteteLigne, nColonne].AlignementH		= chCentre
+		fin
+	fin
+
+	// LIGNE D'ENTETE DES COLONNES
+	si nColonneLigne > 0 alors
+		pour nColonne = 1 _à_ nNbrColonnes
+			xRapport[nColonneLigne, nColonne].Police			= xPoliceBlack
+			xRapport[nColonneLigne, nColonne].CouleurFond		= cpProjet.CouleurTypeOperation(stRapportExcel.TypeOperation,"S") // HTMLVersRVB(__COULEUR_TEL_S__)
+			xRapport[nColonneLigne, nColonne].Multiligne		= Vrai
+			xRapport[nColonneLigne, nColonne].Cadre			= xCadreFin
+			xRapport[nColonneLigne, nColonne].AlignementV		= cvMilieu
+			xRapport[nColonneLigne, nColonne].AlignementH		= chCentre
+		fin
+	fin
+
+	// Les lignes du rapport
+	si nRapportDebut > 0 alors
+		pour nLigne = nRapportDebut _à_ nRapportFin
+			pour nColonne = 1 _à_ nNbrColonnes
+				xRapport[nLigne, nColonne].Police				= xPoliceRapport
+				xRapport[nLigne, nColonne].Cadre				= xCadreFin
+				xRapport[nLigne, nColonne].AlignementV			= cvMilieu
+				si EstImpair(nLigne) alors
+					xRapport[nLigne, nColonne].CouleurFond	= cpProjet.CouleurTypeOperation(stRapportExcel.TypeOperation,"XXS") // HTMLVersRVB(__COULEUR_TEL_XXS__)
+				fin
+			fin
+		fin
+	fin
+fin
+
+
+nFeuille++
+pour nFeuille = 5 _à_ nFeuille pas -1
+	xRapport.SupprimeFeuille(nFeuille)
+fin
+
+xRapport.Sauve(sRepertoire + sFichier)
+xRapport.Ferme()
+
+bufExcel = fChargeBuffer(sRepertoire + sFichier)
+
+fSupprime(sRepertoire + sFichier)
+
+renvoyer bufExcel
+
+
+	procédure interne AlignementExcel(local pAlignement)
+		selon pAlignement
+			cas __ALIGNEMENT_GAUCHE__	: renvoyer chGauche
+			cas __ALIGNEMENT_CENTRE__	: renvoyer chCentre
+			cas __ALIGNEMENT_DROITE__	: renvoyer chDroite
+			autre cas					: STOP ; renvoyer chGauche
+		fin
+	fin

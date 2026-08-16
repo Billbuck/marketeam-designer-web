@@ -4,5 +4,14 @@ procédure Init()
 InitCboAnnée()
 InitCboMois()
 InitCboSociete()
-InitCboTypeOperation()
-InitZnrConsommation()
+InitCboContact()
+
+InitZnrConsoNotification()
+
+// Si aucune consommation sur le mois présélectionné, on bascule sur
+// « < Mois > » (toute l'année) et on recharge — même logique que pgeConsommation.
+si znrConsoNotification.Occurrence = 0 alors
+	cboMois.SelectPlus(1)
+	InitCboContact()
+	InitZnrConsoNotification()
+fin

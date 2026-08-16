@@ -1,0 +1,33 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] FormatValeur (<pType>, <pValeur>)
+//
+// Paramètres :
+// 	pType : <indiquez ici le rôle de pType>
+// 	pValeur : <indiquez ici le rôle de pValeur>
+// Valeur de retour :
+// 	Type indéterminé : // 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure FormatValeur(local pType, local pValeur)
+
+
+selon pType
+	cas __CHAMP_TYPE_TEXTE__			: renvoyer pValeur
+	cas	__CHAMP_TYPE_ENTIER__			: renvoyer NumériqueVersChaîne(pValeur, "dS")
+	cas	__CHAMP_TYPE_DECIMAL__			: renvoyer NumériqueVersChaîne(pValeur, ",2fS")
+	cas	__CHAMP_TYPE_MONETAIRE__		: renvoyer NumériqueVersChaîne(pValeur, ",2fS") + " €"
+	cas	__CHAMP_TYPE_DATE__				: renvoyer DateValide(pValeur) ? DateVersChaîne(pValeur, "JJ/MM/AAAA") sinon pValeur
+	cas	__CHAMP_TYPE_HEURE__			: renvoyer HeureValide(pValeur) ? HeureVersChaîne(Droite(pValeur,9),"HH:MM:SS") sinon pValeur
+	cas	__CHAMP_TYPE_DATE_HEURE__		: renvoyer DateHeureValide(pValeur) ? DateHeureVersChaîne(pValeur,"JJ/MM/AAAA HH:MM:SS") sinon pValeur
+	cas	__CHAMP_TYPE_EMAIL__			: renvoyer pValeur
+	cas	__CHAMP_TYPE_TELEPHONE__		: renvoyer cpFonction.Telephone(pValeur,1,".")
+	cas	__CHAMP_TYPE_PORTABLE__			: renvoyer cpFonction.Telephone(pValeur,1,".")
+	cas	__CHAMP_TYPE_CODEPOSTAL__		: renvoyer pValeur
+	cas	__CHAMP_TYPE_SMS_STATUT__		: renvoyer LibelleStatutSms(pValeur)
+	cas	__CHAMP_TYPE_SMS_OPERATEUR__	: renvoyer pValeur
+	autre cas							: STOP; renvoyer pValeur
+fin
+

@@ -1,0 +1,365 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] ChargeFeuilleExcelCallCenterQualificationPartiel (<pIdTel>)
+//
+// Paramètres :
+//	pIdTel : <indiquez ici le rôle de pIdTel>
+// Valeur de retour :
+// 	structRapportExcelFeuille : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+//	pIdEmailEnvoi (entier - valeur par défaut=0) : <indiquez ici le rôle de stEmail>
+procédure ChargeFeuilleExcelCallCenterQualificationPartiel(pIdTel)
+
+nInd 			est un entier
+sValeur 		est une chaîne
+sSelect			est une chaîne
+sFrom			est une chaîne
+sTexteRequete	est une chaîne
+sdReqLead		est une Source de Données
+sdReqReponse	est une Source de Données
+sWhere			est une chaîne
+nLigne 			est un entier
+nColonne 		est un entier
+tabType 		est un tableau de chaînes
+
+stRapportExcelFeuille est une structRapportExcelFeuille
+
+// Création du tableau des réponses
+
+sTexteRequete	= [
+	SELECT 
+		dos_operation_rapport.Champ, 
+		dos_operation_rapport.Libelle,
+		dos_operation_rapport.Type
+	FROM dos_operation_rapport
+	WHERE dos_operation_rapport.IdOperation = [%pIdTel%]
+	ORDER BY dos_operation_rapport.Ordre
+]
+
+si pas sdReqLead.ExécuteRequêteSQL(dos_operation_rapport..Connexion,hRequêteSansCorrection,sTexteRequete) alors
+	STOP
+fin
+
+pour tout sdReqLead
+	nColonne++
+	sSelect += ["," + RC] + "IFNULL(dos_base_ligne." + sdReqLead.Champ + ",'') AS 'Colonne" + nColonne + "'"	// On ajoute les colonnes choisis par le client
+	stRapportExcelFeuille.taaEntête["Fiche client"]++
+	stRapportExcelFeuille.tabColonne.Ajoute(LibellePropre(sdReqLead.Libelle))
+	tabType.Ajoute(sdReqLead.Type)
+	stRapportExcelFeuille.tabAlignement.Ajoute(InterneAlignementTypeChamp(sdReqLead.Type))
+fin
+
+// On ajoute la colonne du numéro composé
+nColonne++
+sSelect += ["," + RC] + "ope_tel_envoi." + ope_tel_envoi.Tel..Nom + " AS 'Colonne" + nColonne + "'"
+stRapportExcelFeuille.taaEntête["Call center"]++
+stRapportExcelFeuille.tabColonne.Ajoute("Composé")
+tabType.Ajoute(__CHAMP_TYPE_TELEPHONE__)
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+
+// On ajoute la colonne tentative
+nColonne++
+sSelect += ["," + RC] + "ope_tel_envoi." + ope_tel_envoi.Tentative..Nom + " AS 'Colonne" + nColonne + "'"
+stRapportExcelFeuille.taaEntête["Call center"]++
+stRapportExcelFeuille.tabColonne.Ajoute("Tentative")
+tabType.Ajoute(__CHAMP_TYPE_ENTIER__)
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+
+// On ajoute la colonne date du lead
+nColonne++
+sSelect += ["," + RC] + "DATE_FORMAT(ope_tel_envoi." + ope_tel_envoi.DateAppel..Nom + ", '%d-%m-%Y') AS 'Colonne" + nColonne + "'"
+stRapportExcelFeuille.taaEntête["Call center"]++
+stRapportExcelFeuille.tabColonne.Ajoute("Date d'appel")
+tabType.Ajoute(__CHAMP_TYPE_TEXTE__)
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+
+// On ajoute la colonne heure du lead
+nColonne++
+sSelect += ["," + RC] + "DATE_FORMAT(ope_tel_envoi." + ope_tel_envoi.HeureDebut..Nom + ", '%H:%i:%s') AS 'Colonne" + nColonne + "'"
+stRapportExcelFeuille.taaEntête["Call center"]++
+stRapportExcelFeuille.tabColonne.Ajoute("Heure d'appel")
+tabType.Ajoute(__CHAMP_TYPE_TEXTE__)
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+
+
+
+sTexteRequete = [
+	SELECT DISTINCT
+		ope_tel_question.IdQuestion,
+		ope_tel_question.Type,
+		COALESCE(NULLIF(ope_tel_question.Resume, ''), ope_tel_question.Question) AS Resume,
+		ope_tel_question.Question
+	FROM
+		ope_tel_question
+	WHERE
+		ope_tel_question.IdTel = [%pIdTel%]
+		AND ope_tel_question.`Type` NOT IN ('[%__TEL_QUESTION_TEXTE__%]','[%__TEL_QUESTION_AGENDA__%]')
+	ORDER BY
+		ope_tel_question.NumeroQuestion
+]
+
+
+
+si pas sdReqLead.ExécuteRequêteSQL(ope_tel_question..Connexion,hRequêteSansCorrection,sTexteRequete) alors
+	STOP
+fin
+
+stRapportExcelFeuille.telColonneQuestionDebut = (nColonne + 1)
+pour tout sdReqLead
+	nInd = stRapportExcelFeuille.tabQuestion.Ajoute()
+	stRapportExcelFeuille.tabQuestion[nInd].Ajoute(SansEspace(Remplace(sdReqLead.Resume,"?","")))
+	stRapportExcelFeuille.tabQuestion[nInd].Ajoute(SansEspace(Remplace(sdReqLead.Question,"?","")))
+
+	selon sdReqLead.Type
+		cas __TEL_QUESTION_SELECTEUR__, __TEL_QUESTION_NOTATION__
+			nColonne++
+			sSelect += ["," + RC] + [
+				IFNULL(
+					MAX(
+						CASE
+						WHEN ope_tel_question.Type IN ('[%__TEL_QUESTION_SELECTEUR__%]', '[%__TEL_QUESTION_NOTATION__%]') AND ope_tel_question.IdQuestion = [%sdReqLead.IdQuestion%] THEN
+						IF(ope_tel_reponse.EstChampSaisie = 1, ope_tel_resultat.ValeurReponse, ope_tel_reponse.Reponse)
+					END
+				),'') AS 'Colonne[%nColonne%]'
+			]
+			stRapportExcelFeuille.taaEntête[LibellePropre(sdReqLead.Resume)]++
+			stRapportExcelFeuille.tabColonne.Ajoute(LibellePropre(sdReqLead.Resume))
+			si sdReqLead.Type = __TEL_QUESTION_SELECTEUR__ alors
+				tabType.Ajoute(__CHAMP_TYPE_TEXTE__)
+				stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+			sinon
+				tabType.Ajoute(__CHAMP_TYPE_ENTIER__)
+				stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+			fin
+
+		cas __TEL_QUESTION_INTERRUPTEUR__
+			sTexteRequete = [
+				SELECT ope_tel_reponse.IdReponse, ope_tel_reponse.Reponse, ope_tel_reponse.EstChampSaisie FROM ope_tel_reponse WHERE IdQuestion = [%sdReqLead.IdQuestion%] ORDER BY  ope_tel_reponse.Ordre
+			]
+
+			si pas sdReqReponse.ExécuteRequêteSQL(ope_tel_reponse..Connexion,hRequêteSansCorrection,sTexteRequete) alors
+				STOP
+			fin
+			pour tout sdReqReponse
+				nColonne++
+				si sdReqReponse.EstChampSaisie = Faux alors
+					sSelect += ["," + RC] + [
+						IFNULL(
+							MAX(
+								CASE
+								WHEN ope_tel_question.Type = '[%__TEL_QUESTION_INTERRUPTEUR__%]' AND ope_tel_question.IdQuestion = [%sdReqLead.IdQuestion%] AND ope_tel_reponse.IdReponse = [%sdReqReponse.IdReponse%] THEN '✔'
+							END
+						),"") AS 'Colonne[%nColonne%]'
+					]
+					stRapportExcelFeuille.taaEntête[LibellePropre(sdReqLead.Resume)]++
+					stRapportExcelFeuille.tabColonne.Ajoute(LibellePropre(sdReqReponse.Reponse))
+					tabType.Ajoute(__CHAMP_TYPE_TEXTE__)
+					stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+
+				sinon
+					sSelect += ["," + RC] + [
+						IFNULL(
+							MAX(
+								CASE
+								WHEN ope_tel_question.Type = '[%__TEL_QUESTION_INTERRUPTEUR__%]' AND ope_tel_question.IdQuestion = [%sdReqLead.IdQuestion%] AND ope_tel_reponse.EstChampSaisie = 1 THEN ope_tel_resultat.ValeurReponse
+							END
+						),'') AS 'Colonne[%nColonne%]'
+					]
+					stRapportExcelFeuille.taaEntête[LibellePropre(sdReqLead.Resume)]++
+					stRapportExcelFeuille.tabColonne.Ajoute(LibellePropre(sdReqReponse.Reponse))
+					tabType.Ajoute(__CHAMP_TYPE_TEXTE__)
+					stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+				fin
+			fin
+
+		cas __TEL_QUESTION_CLASSEMENT__
+			sTexteRequete = [
+				SELECT ope_tel_reponse.IdReponse, ope_tel_reponse.Reponse, ope_tel_reponse.EstChampSaisie FROM ope_tel_reponse WHERE IdQuestion = [%sdReqLead.IdQuestion%] ORDER BY ope_tel_reponse.Ordre
+			]
+
+			si pas sdReqReponse.ExécuteRequêteSQL(ope_tel_reponse..Connexion,hRequêteSansCorrection,sTexteRequete) alors
+				STOP
+			fin
+			pour tout sdReqReponse
+				nColonne++
+				sSelect += ["," + RC] + [
+					IFNULL(
+						MAX(
+							CASE
+							WHEN ope_tel_question.Type = '[%__TEL_QUESTION_CLASSEMENT__%]' AND ope_tel_question.IdQuestion = [%sdReqLead.IdQuestion%] AND ope_tel_reponse.IdReponse = [%sdReqReponse.IdReponse%] THEN
+							SUBSTRING_INDEX(ope_tel_resultat.ValeurReponse, ' ', 1)
+							END
+					),'') AS 'Colonne[%nColonne%]'
+				]
+				stRapportExcelFeuille.taaEntête[LibellePropre(sdReqLead.Resume)]++
+				stRapportExcelFeuille.tabColonne.Ajoute(LibellePropre(sdReqReponse.Reponse))
+				tabType.Ajoute(__CHAMP_TYPE_ENTIER__)
+				stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+			fin
+
+		cas __TEL_QUESTION_FORMULAIRE__
+			sTexteRequete = [
+				SELECT ope_tel_reponse.Reponse FROM ope_tel_reponse WHERE ope_tel_reponse.IdQuestion = [%sdReqLead.IdQuestion%] ORDER BY  ope_tel_reponse.Ordre
+			]
+			si pas sdReqReponse.ExécuteRequêteSQL(ope_tel_reponse..Connexion,hRequêteSansCorrection,sTexteRequete) alors
+				STOP
+			fin
+
+			pour tout sdReqReponse
+				nColonne++
+				sSelect += ["," + RC] + [
+					IFNULL(
+						MAX(
+							CASE
+							WHEN ope_tel_question.Type = '[%__TEL_QUESTION_FORMULAIRE__%]' AND ope_tel_question.IdQuestion = [%sdReqLead.IdQuestion%] AND ope_tel_reponse.Reponse = '[%sdReqReponse.Reponse%]' THEN
+							ope_tel_resultat.ValeurReponse
+						END
+					),'') AS 'Colonne[%nColonne%]'
+				]
+				stRapportExcelFeuille.taaEntête[LibellePropre(sdReqLead.Resume)]++
+				stRapportExcelFeuille.tabColonne.Ajoute(LibellePropre(sdReqReponse.Reponse))
+				tabType.Ajoute(__CHAMP_TYPE_TEXTE__)
+				stRapportExcelFeuille.tabAlignement.Ajoute(InterneAlignementTypeChamp(__CHAMP_TYPE_TEXTE__))
+			fin
+
+		autre cas
+
+	fin
+fin
+
+stRapportExcelFeuille.telColonneQuestionFin = nColonne
+
+sTexteRequete = [
+	SELECT
+		ope_tel_agenda_champ.IdAgendaChamp, ope_tel_agenda_champ.Libelle
+	FROM
+		ope_tel_agenda_champ
+	WHERE
+		ope_tel_agenda_champ.IdTel = [%pIdTel%];
+]
+
+si pas sdReqLead.ExécuteRequêteSQL(ope_tel_agenda_champ..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	STOP
+fin
+
+
+si sdReqLead.LitPremier() alors
+	nColonne++
+	sSelect += ["," + RC] + "IFNULL(DATE_FORMAT(ope_tel_rendez_vous.RdvDate, '%d-%m-%Y'),'') AS 'Colonne" + nColonne + "'"
+	stRapportExcelFeuille.taaEntête["Rendez-Vous"]++
+	stRapportExcelFeuille.tabColonne.Ajoute("Date")
+	tabType.Ajoute(__CHAMP_TYPE_TEXTE__)
+	stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+
+	nColonne++
+	sSelect += ["," + RC] + "IFNULL(DATE_FORMAT(ope_tel_rendez_vous.RdvHeureDebut, '%H:%i'),'') AS 'Colonne" + nColonne + "'"
+	stRapportExcelFeuille.taaEntête["Rendez-Vous"]++
+	stRapportExcelFeuille.tabColonne.Ajoute("Début")
+	tabType.Ajoute(__CHAMP_TYPE_TEXTE__)
+	stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+
+	nColonne++
+	sSelect += ["," + RC] + "IFNULL(DATE_FORMAT(ope_tel_rendez_vous.RdvHeureFin, '%H:%i'),'') AS 'Colonne" + nColonne + "'"
+	stRapportExcelFeuille.taaEntête["Rendez-Vous"]++
+	stRapportExcelFeuille.tabColonne.Ajoute("Fin")
+	tabType.Ajoute(__CHAMP_TYPE_TEXTE__)
+	stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+
+
+	pour tout sdReqLead
+		nColonne++
+		sSelect += ["," + RC] + [
+			MAX(CASE WHEN ope_tel_agenda_champ.Libelle = '[%sdReqLead.Libelle%]' THEN ope_tel_rendez_vous_champ.Valeur ELSE '' END) AS 'Colonne[%nColonne%]'
+		]
+		stRapportExcelFeuille.taaEntête["Rendez-Vous"]++
+		stRapportExcelFeuille.tabColonne.Ajoute(LibellePropre(sdReqLead.Libelle))
+		tabType.Ajoute(__CHAMP_TYPE_TEXTE__)
+		stRapportExcelFeuille.tabAlignement.Ajoute(InterneAlignementTypeChamp(__CHAMP_TYPE_TEXTE__))
+	fin
+
+	sFrom = [
+		LEFT JOIN ope_tel_rendez_vous ON dos_base_ligne.IdBaseLigne = ope_tel_rendez_vous.IdBaseLigne
+		LEFT JOIN ope_tel_rendez_vous_champ ON ope_tel_rendez_vous.IdRendezVous = ope_tel_rendez_vous_champ.IdRendezVous
+		LEFT JOIN ope_tel_agenda_champ ON ope_tel_rendez_vous_champ.IdAgendaChamp = ope_tel_agenda_champ.IdAgendaChamp
+	]
+fin
+
+
+sTexteRequete	=
+[
+	SELECT 
+		[%sSelect%]
+	FROM
+		dos_base_ligne
+		JOIN ope_tel_envoi FORCE INDEX (IdTel_EstFormulaireRempli) ON dos_base_ligne.IdBaseLigne = ope_tel_envoi.IdBaseLigne
+		JOIN ope_tel_resultat ON dos_base_ligne.IdBaseLigne = ope_tel_resultat.IdBaseLigne
+		JOIN ope_tel_reponse ON ope_tel_resultat.IdReponse = ope_tel_reponse.IdReponse
+		JOIN ope_tel_question ON ope_tel_reponse.IdQuestion = ope_tel_question.IdQuestion
+		[%sFrom%]
+	WHERE
+		ope_tel_envoi.IdTel = [%pIdTel%] 
+		AND ope_tel_envoi.EstFormulaireRempli = 0
+		AND ope_tel_envoi.Statut IN ([%__TEL_STATUT_QUALIFICATION_PARTIELLE__%], [%__TEL_STATUT_TERMINE__%])
+		[%sWhere%]
+	GROUP BY
+		dos_base_ligne.IdBaseLigne
+	ORDER BY
+		ope_tel_envoi.DateAppel DESC,
+		ope_tel_envoi.HeureDebut DESC
+]
+
+
+si pas sdReqLead.ExécuteRequêteSQL(ope_tel_envoi..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	STOP
+fin
+
+
+
+pour tout sdReqLead
+	nLigne = stRapportExcelFeuille.tabExcel.AjouteLigne()
+	pour nCol = 1 à nColonne
+		sValeur = FormatValeur(tabType[nCol],{"sdReqLead.Colonne"+nCol,indRubrique})
+		stRapportExcelFeuille.tabExcel[nLigne].Ajoute(sValeur)
+	fin
+fin
+
+stRapportExcelFeuille.Titre 	= "Rapport de performance"
+stRapportExcelFeuille.SousTitre = ""
+
+renvoyer stRapportExcelFeuille
+
+
+fin:
+sdReqLead.AnnuleDéclaration()
+sdReqReponse.AnnuleDéclaration()
+
+procédure interne LibellePropre(pLibelle)
+	sTexte est une chaîne
+	pLibelle = Remplace(pLibelle,"?","")
+	pLibelle = SansEspace(pLibelle)
+	pLibelle = Minuscule(pLibelle)
+	pour toute chaîne sMot de pLibelle séparée par " "
+		sTexte += [" "] + Majuscule(sMot[[1]]) + ChaîneFormate(sMot[[2 à]], ccMinuscule)
+	fin
+	renvoyer sTexte
+fin
+
+procédure interne InterneAlignementTypeChamp(pType)
+
+	selon pType
+		cas __CHAMP_TYPE_TEXTE__		: renvoyer __ALIGNEMENT_GAUCHE__
+		cas	__CHAMP_TYPE_ENTIER__		: renvoyer __ALIGNEMENT_CENTRE__
+		cas __CHAMP_TYPE_DECIMAL__		: renvoyer __ALIGNEMENT_DROITE__
+		cas __CHAMP_TYPE_MONETAIRE__	: renvoyer __ALIGNEMENT_DROITE__
+		cas __CHAMP_TYPE_DATE__			: renvoyer __ALIGNEMENT_CENTRE__
+		cas __CHAMP_TYPE_HEURE__		: renvoyer __ALIGNEMENT_CENTRE__
+		cas __CHAMP_TYPE_EMAIL__		: renvoyer __ALIGNEMENT_GAUCHE__
+		cas __CHAMP_TYPE_TELEPHONE__	: renvoyer __ALIGNEMENT_CENTRE__
+		cas __CHAMP_TYPE_PORTABLE__		: renvoyer __ALIGNEMENT_CENTRE__
+		cas __CHAMP_TYPE_CODEPOSTAL__	: renvoyer __ALIGNEMENT_CENTRE__
+		autre cas						: STOP
+	fin
+fin

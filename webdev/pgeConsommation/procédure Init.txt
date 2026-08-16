@@ -1,0 +1,26 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// Init ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure Init()
+
+InitCboAnnée()
+InitCboMois()
+InitCboSociete()
+
+
+InitZnrConsommation()
+
+si znrConsommation.Occurrence = 0 alors
+	cboMois.SelectPlus(1)
+	InitZnrConsommation()
+fin
+

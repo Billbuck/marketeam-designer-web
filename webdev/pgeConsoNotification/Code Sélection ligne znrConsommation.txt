@@ -1,8 +1,0 @@
-// Code Navigateur "Sélection d'une ligne de znrConsommation"
-
-si _nLignePrecedente > 0 alors
-	znrConsommation[_nLignePrecedente].btnAperçu.Visible = Faux
-fin
-
-_nLignePrecedente = znrConsommation
-znrConsommation[_nLignePrecedente].btnAperçu.Visible = Vrai

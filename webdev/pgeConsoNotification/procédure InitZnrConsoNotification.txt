@@ -1,0 +1,165 @@
+procédure InitZnrConsoNotification()
+
+nInd						est un entier
+
+sTexteRequete			est une chaîne
+sdReqConsommation		est une Source de Données
+nTotalOperation		est un entier
+nTotalQuantité			est un entier
+mTotalHT					est un monétaire
+mTotalTTC				est un monétaire
+mTotalResteAPayer		est un monétaire
+sWhere					est une chaîne
+mPériodePayé			est un monétaire
+mPériodeImpayé			est un monétaire
+mPériodeTotal			est un monétaire
+
+si cboMois.ValeurMémorisée > 0 alors
+	sWhere = "AND MONTH(DateHeureEnvoi) = '" + cboMois.ValeurMémorisée + "'"
+fin
+
+si cboSociété.ValeurMémorisée > 0 alors
+	sWhere += [RC] + "AND clt_client.IdClient = " + cboSociété.ValeurMémorisée
+fin
+
+// IdContact n'existe que dans les tables ope_* (pas dans clt_client / clt_mere) :
+// pas de préfixe de table pour rester valable dans les 3 sous-requêtes.
+si cboContact.ValeurMémorisée > 0 alors
+	sWhere += [RC] + "AND IdContact = " + cboContact.ValeurMémorisée
+fin
+
+// Une ligne agrégée par type de support (SMS / VMS / Email).
+// HAVING COUNT(*) > 0 : pas de ligne à zéro quand un type n'a aucune
+// consommation sur la sélection.
+// Ordre : colonne de tri explicite (SMS, VMS, Email).
+sTexteRequete =
+[
+	SELECT
+	1 Ordre,
+	'[%__OPERATION_SMS_NOTIFICATION__%]' TypeProjet,
+	COUNT(*) TotalOperation,
+	SUM(ope_sms_notification.NbrSmsFacture) TotalQuantité,
+	SUM(ope_sms_notification.MontantHT) TotalHT,
+	SUM(ope_sms_notification.MontantTTC) TotalTTC,
+	SUM(CASE WHEN ope_sms_notification.EstPaye = 0 THEN ope_sms_notification.MontantTTC ELSE 0 END) TotalResteAPayer
+	FROM
+	ope_sms_notification
+	JOIN clt_client ON clt_client.IdClient = ope_sms_notification.IdClient
+	JOIN clt_mere ON clt_mere.IdClient = ope_sms_notification.IdClient
+	WHERE
+	clt_mere.IdMere = [%Partage.__vcUser.IDClient%]
+	AND YEAR(DateHeureEnvoi) = '[%cboAnnée.ValeurMémorisée%]'
+	[%sWhere%]
+	HAVING COUNT(*) > 0
+	
+	UNION ALL
+	
+	SELECT
+	2 Ordre,
+	'[%__OPERATION_VMS_UNITAIRE__%]' TypeProjet,
+	COUNT(*) TotalOperation,
+	COUNT(*) TotalQuantité,
+	SUM(ope_vms_unitaire.MontantHT) TotalHT,
+	SUM(ope_vms_unitaire.MontantTTC) TotalTTC,
+	SUM(CASE WHEN ope_vms_unitaire.EstPaye = 0 THEN ope_vms_unitaire.MontantTTC ELSE 0 END) TotalResteAPayer
+	FROM
+	ope_vms_unitaire
+	JOIN clt_client ON clt_client.IdClient = ope_vms_unitaire.IdClient
+	JOIN clt_mere ON clt_mere.IdClient = ope_vms_unitaire.IdClient
+	WHERE
+	clt_mere.IdMere = [%Partage.__vcUser.IDClient%]
+	AND YEAR(DateHeureEnvoi) = '[%cboAnnée.ValeurMémorisée%]'
+	[%sWhere%]
+	HAVING COUNT(*) > 0
+	
+	UNION ALL
+	
+	SELECT
+	3 Ordre,
+	'[%__OPERATION_EMAIL_NOTIFICATION__%]' TypeProjet,
+	COUNT(*) TotalOperation,
+	COUNT(*) TotalQuantité,
+	SUM(ope_email_notification.MontantHT) TotalHT,
+	SUM(ope_email_notification.MontantTTC) TotalTTC,
+	SUM(CASE WHEN ope_email_notification.EstPaye = 0 THEN ope_email_notification.MontantTTC ELSE 0 END) TotalResteAPayer
+	FROM
+	ope_email_notification
+	JOIN clt_client ON clt_client.IdClient = ope_email_notification.IdClient
+	JOIN clt_mere ON clt_mere.IdClient = ope_email_notification.IdClient
+	WHERE
+	clt_mere.IdMere = [%Partage.__vcUser.IDClient%]
+	AND YEAR(DateHeureEnvoi) = '[%cboAnnée.ValeurMémorisée%]'
+	[%sWhere%]
+	HAVING COUNT(*) > 0
+	
+	ORDER BY Ordre
+]
+
+si pas HExécuteRequêteSQL(sdReqConsommation, ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour
+fin
+
+znrConsoNotification.SupprimeTout()
+
+pour tout sdReqConsommation
+	mPériodeTotal	+= sdReqConsommation.TotalTTC
+	mPériodeImpayé	+= sdReqConsommation.TotalResteAPayer
+	mPériodePayé	+= (sdReqConsommation.TotalTTC - sdReqConsommation.TotalResteAPayer)
+
+	nInd																= znrConsoNotification.AjouteLigne()
+	znrConsoNotification[nInd].attTypeOperation			= sdReqConsommation.TypeProjet
+	znrConsoNotification[nInd].Icone							= cpProjet.IconeTypeProjet(sdReqConsommation.TypeProjet, Vrai)
+	znrConsoNotification[nInd].libTypeOperation			= Partage.LibelleTypeProjet(sdReqConsommation.TypeProjet)
+	znrConsoNotification[nInd].libNombre					= NumériqueVersChaîne(sdReqConsommation.TotalOperation, "dS")
+	znrConsoNotification[nInd].libQuantité					= NumériqueVersChaîne(sdReqConsommation.TotalQuantité, "dS")
+	znrConsoNotification[nInd].libMontantHT				= NumériqueVersChaîne(sdReqConsommation.TotalHT, ",3fS") + " €"
+	znrConsoNotification[nInd].libMontantTTC				= NumériqueVersChaîne(sdReqConsommation.TotalTTC, ",3fS") + " €"
+	znrConsoNotification[nInd].libResteAPayer				= NumériqueVersChaîne(sdReqConsommation.TotalResteAPayer, ",3fS") + " €"
+
+	nTotalOperation										+= sdReqConsommation.TotalOperation
+	nTotalQuantité										+= sdReqConsommation.TotalQuantité
+	mTotalHT											+= sdReqConsommation.TotalHT
+	mTotalTTC											+= sdReqConsommation.TotalTTC
+	mTotalResteAPayer									+= sdReqConsommation.TotalResteAPayer
+fin
+
+// Ligne Total : uniquement si plusieurs types (comme pgeConsommation).
+// Pas d'export sur cette ligne.
+si znrConsoNotification.Occurrence > 1 alors
+	nInd																		= znrConsoNotification.AjouteLigne()
+	znrConsoNotification[nInd].attTypeOperation					= ""
+	znrConsoNotification[nInd].btnExport.Visible					= Faux
+	znrConsoNotification[nInd].libTypeOperation					= "Total"
+	znrConsoNotification[nInd].libNombre							= NumériqueVersChaîne(nTotalOperation, "dS")
+	znrConsoNotification[nInd].libQuantité							= NumériqueVersChaîne(nTotalQuantité, "dS")
+	znrConsoNotification[nInd].libMontantHT						= NumériqueVersChaîne(mTotalHT, ",3fS") + " €"
+	znrConsoNotification[nInd].libMontantTTC						= NumériqueVersChaîne(mTotalTTC, ",3fS") + " €"
+	znrConsoNotification[nInd].libResteAPayer						= NumériqueVersChaîne(mTotalResteAPayer, ",3fS") + " €"
+	znrConsoNotification[nInd].CouleurFond							= HTMLVersRVB(__COULEUR_MARKETEAM_XXS__)
+
+	znrConsoNotification[nInd].libTypeOperation.Couleur		= HTMLVersRVB(__COULEUR_MARKETEAM_L__)
+	znrConsoNotification[nInd].libNombre.Couleur					= HTMLVersRVB(__COULEUR_MARKETEAM_L__)
+	znrConsoNotification[nInd].libQuantité.Couleur				= HTMLVersRVB(__COULEUR_MARKETEAM_L__)
+	znrConsoNotification[nInd].libMontantHT.Couleur				= HTMLVersRVB(__COULEUR_MARKETEAM_L__)
+	znrConsoNotification[nInd].libMontantTTC.Couleur			= HTMLVersRVB(__COULEUR_MARKETEAM_L__)
+	znrConsoNotification[nInd].libResteAPayer.Couleur			= HTMLVersRVB(__COULEUR_MARKETEAM_L__)
+
+	znrConsoNotification[nInd].libTypeOperation.PoliceGras	= Vrai
+	znrConsoNotification[nInd].libNombre.PoliceGras				= Vrai
+	znrConsoNotification[nInd].libQuantité.PoliceGras			= Vrai
+	znrConsoNotification[nInd].libMontantHT.PoliceGras			= Vrai
+	znrConsoNotification[nInd].libMontantTTC.PoliceGras		= Vrai
+	znrConsoNotification[nInd].libResteAPayer.PoliceGras		= Vrai
+
+	znrConsoNotification[nInd].Icone									= cpProjet.IconeTypeProjet(__OPERATION_MARKETEAM__, Vrai)
+fin
+
+dispConsoNotification[2].Visible	= (znrConsoNotification.Occurrence > 0)
+
+saiPériodePayé				= mPériodePayé
+saiPériodeImpayé			= mPériodeImpayé
+saiPériodeTotal			= mPériodeTotal
+
+fin:
+HAnnuleDéclaration(sdReqConsommation)

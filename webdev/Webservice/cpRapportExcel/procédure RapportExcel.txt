@@ -1,0 +1,232 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] RapportExcel (<pParametre>)
+//
+// Paramètres :
+//	pParametre : <indiquez ici le rôle de pParametre>
+// Valeur de retour :
+// 	buffer : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure RapportExcel(pParametre)
+
+sParametre				est une chaîne
+nIdContact				est un entier
+nIdClient				est un entier
+sTypeRapport			est une chaîne
+nIdOperation			est un entier
+sDateHeureFiltre		est une chaîne
+sTexteRequete			est une chaîne
+sdRequeteXls			est une Source de Données
+stRapportExcel			est une structRapportExcel
+stRapportExcelFeuille	est une structRapportExcelFeuille
+sFichier				est une chaîne
+bufExcel				est un Buffer
+
+
+
+sParametre = cpProjet.DecrypteDecode(pParametre)
+
+//fSauveTexte(ComplèteRep(fRepExe())+"Parametre.txt",sParametre)
+
+nIdClient			= sParametre.ExtraitChaîne(1,"|")
+nIdContact			= sParametre.ExtraitChaîne(2,"|")
+sTypeRapport		= sParametre.ExtraitChaîne(3,"|")
+nIdOperation		= sParametre.ExtraitChaîne(4,"|")
+sDateHeureFiltre	= sParametre.ExtraitChaîne(5,"|")
+
+//	A Supprimer
+//	si sDateHeureFiltre = "0" alors sDateHeureFiltre = ""
+
+sTexteRequete = "SELECT clt_client.EstActif FROM clt_client WHERE clt_client.IdClient = " + nIdClient
+si pas sdRequeteXls.ExécuteRequêteSQL(clt_client..Connexion,hRequêteSansCorrection,sTexteRequete) alors fSauveTexte(fRepExe().ComplèteRep()+"Erreur1.txt",HErreurInfo(hErrComplet)) // "Renvoyer Erreur Requête Client"
+si pas sdRequeteXls.LitPremier() alors	fSauveTexte(fRepExe().ComplèteRep()+"Erreur2.txt","LitPremier") // Renvoyer client inconnu
+si sdRequeteXls.EstActif = Faux alors STOP // Renvoyer client inactif
+
+sTexteRequete = "SELECT clt_contact.EstActif FROM clt_contact WHERE clt_contact.IdContact = " + nIdContact
+si pas sdRequeteXls.ExécuteRequêteSQL(clt_contact..Connexion,hRequêteSansCorrection,sTexteRequete) alors fSauveTexte(fRepExe().ComplèteRep()+"Erreur3.txt",HErreurInfo(hErrComplet)) // "Renvoyer Erreur Requête Contact"
+si pas sdRequeteXls.LitPremier() alors	fSauveTexte(fRepExe().ComplèteRep()+"Erreur4.txt","LitPremier") // Renvoyer contact inconnu
+si sdRequeteXls.EstActif = Faux alors STOP // Renvoyer contact inactif
+
+// Les rapports de consommation (__RAPPORT_CONSO_*__) ne sont pas liés à une
+// opération : IdOperation vaut 0 et le 5e paramètre transporte les filtres
+// de la page sous la forme "Année;Mois;IdSociété;IdContact" (0 = tous).
+si nIdOperation > 0 alors
+	sTexteRequete = "SELECT * FROM dos_operation WHERE dos_operation.IdOperation = " + nIdOperation
+	si pas sdRequeteXls.ExécuteRequêteSQL(dos_operation..Connexion,hRequêteSansCorrection,sTexteRequete) alors fSauveTexte(fRepExe().ComplèteRep()+"Erreur5.txt",HErreurInfo(hErrComplet)) // "Renvoyer Erreur Requête Operation"
+	si pas sdRequeteXls.LitPremier() alors	 fSauveTexte(fRepExe().ComplèteRep()+"Erreur6.txt","LitPremier") // Renvoyer opération inconnu
+
+	// ICI : Faire des tests de vérification de l'opération
+
+	stRapportExcel.stCartouche		= ChargeRapportExcelCartouche(nIdOperation)
+	stRapportExcel.TypeOperation	= sdRequeteXls.TypeOperation
+fin
+
+selon sTypeRapport
+
+	cas __RAPPORT_VMS__
+		sFichier								= "Rapport_VMS_" + sdRequeteXls.Dossier + "_" + DateVersChaîne(DateSys(),"JJ-MM-AAAA") + __XLSX__
+		stRapportExcelFeuille					= ChargeFeuilleExcelVmsRapport(nIdOperation)
+		si stRapportExcelFeuille.tabExcel.Occurrence > 0 alors
+			stRapportExcelFeuille.Titre			= "Titre"
+			stRapportExcelFeuille.SousTitre		= "Sous-Titre"
+			stRapportExcelFeuille.NomFeuille	= "Nom de feuille"
+			stRapportExcel.tabFeuille.Ajoute(stRapportExcelFeuille)
+		fin
+
+	cas __RAPPORT_SMS__
+		sFichier 							= "Rapport_SMS_" + sdRequeteXls.Dossier + "_" + DateVersChaîne(DateSys(),"JJ-MM-AAAA") + __XLSX__
+		stRapportExcelFeuille 				= ChargeFeuilleExcelSmsRapport(nIdOperation)
+		si stRapportExcelFeuille.tabExcel.Occurrence > 0 alors
+			stRapportExcelFeuille.Titre			= "Titre"
+			stRapportExcelFeuille.SousTitre		= "Sous-Titre"
+			stRapportExcelFeuille.NomFeuille	= "Nom de feuille"
+			stRapportExcel.tabFeuille.Ajoute(stRapportExcelFeuille)
+		fin
+
+	cas __RAPPORT_SMS_INTERACTIF__
+		sFichier				= "Rapport_SMS_Interactif_" + sdRequeteXls.Dossier + "_" + DateVersChaîne(DateSys(),"JJ-MM-AAAA") + __XLSX__
+		stRapportExcelFeuille = ChargeFeuilleExcelCliquezIciClic(nIdOperation, sDateHeureFiltre)
+		si stRapportExcelFeuille.tabExcel.Occurrence > 0 alors
+			stRapportExcelFeuille.Titre			= "Titre 1"
+			stRapportExcelFeuille.SousTitre		= "Sous-Titre 1"
+			stRapportExcelFeuille.NomFeuille	= "Nom de feuille 1"
+			stRapportExcel.tabFeuille.Ajoute(stRapportExcelFeuille)
+		fin
+
+		stRapportExcelFeuille = ChargeFeuilleExcelCliquezIciLien(nIdOperation, sDateHeureFiltre)
+		si stRapportExcelFeuille.tabExcel.Occurrence > 0 alors
+			stRapportExcelFeuille.Titre			= "Titre 2"
+			stRapportExcelFeuille.SousTitre		= "Sous-Titre 2"
+			stRapportExcelFeuille.NomFeuille	= "Nom de feuille 2"
+			stRapportExcel.tabFeuille.Ajoute(stRapportExcelFeuille)
+		fin
+
+		stRapportExcelFeuille	= ChargeFeuilleExcelCliquezIciVisite(nIdOperation, sDateHeureFiltre)
+		si stRapportExcelFeuille.tabExcel.Occurrence > 0 alors
+			stRapportExcelFeuille.Titre			= "Titre 3"
+			stRapportExcelFeuille.SousTitre		= "Sous-Titre 3"
+			stRapportExcelFeuille.NomFeuille	= "Nom de feuille 3"
+			stRapportExcel.tabFeuille.Ajoute(stRapportExcelFeuille)
+		fin
+
+	cas __RAPPORT_ICI_VISITE__
+		sFichier				= "Rapport_SMS_Visite_" + sdRequeteXls.Dossier + "_" + DateVersChaîne(DateSys(),"JJ-MM-AAAA") + __XLSX__
+		stRapportExcelFeuille	= ChargeFeuilleExcelCliquezIciVisite(nIdOperation, sDateHeureFiltre)
+		si stRapportExcelFeuille.tabExcel.Occurrence > 0 alors
+			stRapportExcelFeuille.Titre			= "Titre"
+			stRapportExcelFeuille.SousTitre		= "Sous-Titre"
+			stRapportExcelFeuille.NomFeuille	= "Nom de feuille"
+			stRapportExcel.tabFeuille.Ajoute(stRapportExcelFeuille)
+		fin
+
+	cas __RAPPORT_ICI_LIEN__
+		sFichier				= "Rapport_SMS_Lien_" + sdRequeteXls.Dossier + "_" + DateVersChaîne(DateSys(),"JJ-MM-AAAA") + __XLSX__
+		stRapportExcelFeuille = ChargeFeuilleExcelCliquezIciLien(nIdOperation, sDateHeureFiltre)
+		si stRapportExcelFeuille.tabExcel.Occurrence > 0 alors
+			stRapportExcelFeuille.Titre			= "Titre"
+			stRapportExcelFeuille.SousTitre		= "Sous-Titre"
+			stRapportExcelFeuille.NomFeuille	= "Nom de feuille"
+			stRapportExcel.tabFeuille.Ajoute(stRapportExcelFeuille)
+		fin
+
+	cas __RAPPORT_ICI_CLIC__
+		sFichier				= "Rapport_SMS_Clic_" + sdRequeteXls.Dossier + "_" + DateVersChaîne(DateSys(),"JJ-MM-AAAA") + __XLSX__
+		stRapportExcelFeuille = ChargeFeuilleExcelCliquezIciClic(nIdOperation, sDateHeureFiltre)
+		si stRapportExcelFeuille.tabExcel.Occurrence > 0 alors
+			stRapportExcelFeuille.Titre			= "Titre"
+			stRapportExcelFeuille.SousTitre		= "Sous-Titre"
+			stRapportExcelFeuille.NomFeuille	= "Nom de feuille"
+			stRapportExcel.tabFeuille.Ajoute(stRapportExcelFeuille)
+		fin
+
+
+	cas __RAPPORT_TEL_LEAD__
+		sFichier				= "Rapport_TEL_Lead_" + sdRequeteXls.Dossier + "_" + DateVersChaîne(DateSys(),"JJ-MM-AAAA") + __XLSX__
+		stRapportExcelFeuille = ChargeFeuilleExcelCallCenterLead(nIdOperation, sDateHeureFiltre)
+		si stRapportExcelFeuille.tabExcel.Occurrence > 0 alors
+			stRapportExcelFeuille.Titre			= "Titre 1"
+			stRapportExcelFeuille.SousTitre		= "Sous-Titre 1"
+			stRapportExcelFeuille.NomFeuille	= "Nom de feuille 1"
+			stRapportExcel.tabFeuille.Ajoute(stRapportExcelFeuille)
+		fin
+		stRapportExcelFeuille = ChargeFeuilleExcelCallCenterQualificationPartiel(nIdOperation)
+		si stRapportExcelFeuille.tabExcel.Occurrence > 0 alors
+			stRapportExcelFeuille.Titre			= "Titre 2"
+			stRapportExcelFeuille.SousTitre		= "Sous-Titre 2"
+			stRapportExcelFeuille.NomFeuille	= "Nom de feuille 2"
+			stRapportExcel.tabFeuille.Ajoute(stRapportExcelFeuille)
+		fin
+
+	cas __RAPPORT_TEL__
+		sFichier				= "Rapport_TEL_" + sdRequeteXls.Dossier + "_" + DateVersChaîne(DateSys(),"JJ-MM-AAAA") + __XLSX__
+		stRapportExcelFeuille	= ChargeFeuilleExcelCallCenterLead(nIdOperation, sDateHeureFiltre)
+		si stRapportExcelFeuille.tabExcel.Occurrence > 0 alors
+			stRapportExcelFeuille.Titre			= "Titre 1"
+			stRapportExcelFeuille.SousTitre		= "Sous-Titre 1"
+			stRapportExcelFeuille.NomFeuille	= "Nom de feuille 1"
+			stRapportExcel.tabFeuille.Ajoute(stRapportExcelFeuille)
+		fin
+		stRapportExcelFeuille = ChargeFeuilleExcelCallCenterQualificationPartiel(nIdOperation)
+		si stRapportExcelFeuille.tabExcel.Occurrence > 0 alors
+			stRapportExcelFeuille.Titre			= "Titre 2"
+			stRapportExcelFeuille.SousTitre		= "Sous-Titre 2"
+			stRapportExcelFeuille.NomFeuille	= "Nom de feuille 2"
+			stRapportExcel.tabFeuille.Ajoute(stRapportExcelFeuille)
+		fin
+
+	cas __RAPPORT_CONSO_SMS__
+		stRapportExcel.TypeOperation	= __OPERATION_SMS_NOTIFICATION__
+		stRapportExcel.stCartouche		= ChargeRapportExcelCartoucheConso("SMS", sDateHeureFiltre)
+		sFichier						= "Conso_Notification_SMS_" + DateVersChaîne(DateSys(),"JJ-MM-AAAA") + __XLSX__
+		stRapportExcelFeuille			= ChargeFeuilleExcelConsoSms(nIdClient, sDateHeureFiltre)
+		si stRapportExcelFeuille.tabExcel.Occurrence > 0 alors
+			stRapportExcelFeuille.Titre			= "Consommation notifications"
+			stRapportExcelFeuille.SousTitre		= "SMS"
+			stRapportExcelFeuille.NomFeuille	= "SMS"
+			stRapportExcel.tabFeuille.Ajoute(stRapportExcelFeuille)
+		fin
+
+	cas __RAPPORT_CONSO_VMS__
+		stRapportExcel.TypeOperation	= __OPERATION_VMS_UNITAIRE__
+		stRapportExcel.stCartouche		= ChargeRapportExcelCartoucheConso("VMS", sDateHeureFiltre)
+		sFichier						= "Conso_Notification_VMS_" + DateVersChaîne(DateSys(),"JJ-MM-AAAA") + __XLSX__
+		stRapportExcelFeuille			= ChargeFeuilleExcelConsoVms(nIdClient, sDateHeureFiltre)
+		si stRapportExcelFeuille.tabExcel.Occurrence > 0 alors
+			stRapportExcelFeuille.Titre			= "Consommation notifications"
+			stRapportExcelFeuille.SousTitre		= "VMS"
+			stRapportExcelFeuille.NomFeuille	= "VMS"
+			stRapportExcel.tabFeuille.Ajoute(stRapportExcelFeuille)
+		fin
+
+	cas __RAPPORT_CONSO_EMAIL__
+		stRapportExcel.TypeOperation	= __OPERATION_EMAIL_NOTIFICATION__
+		stRapportExcel.stCartouche		= ChargeRapportExcelCartoucheConso("Email", sDateHeureFiltre)
+		sFichier						= "Conso_Notification_Email_" + DateVersChaîne(DateSys(),"JJ-MM-AAAA") + __XLSX__
+		stRapportExcelFeuille			= ChargeFeuilleExcelConsoEmail(nIdClient, sDateHeureFiltre)
+		si stRapportExcelFeuille.tabExcel.Occurrence > 0 alors
+			stRapportExcelFeuille.Titre			= "Consommation notifications"
+			stRapportExcelFeuille.SousTitre		= "Email"
+			stRapportExcelFeuille.NomFeuille	= "Email"
+			stRapportExcel.tabFeuille.Ajoute(stRapportExcelFeuille)
+		fin
+
+	autre cas
+
+fin
+
+si stRapportExcel.tabFeuille.Occurrence = 0 alors fSauveTexte(fRepExe().ComplèteRep()+"Erreur7.txt","stRapportExcel.tabFeuille.Occurrence = 0") // "Renvoyer Rapport Vide"
+
+bufExcel = GénèreFichierExcel(stRapportExcel)
+
+WebserviceEcritTypeMIME(typeMimeXLSX)
+WebserviceEcritEntêteHTTP("Content-Type", "application/Excel")
+WebserviceEcritEntêteHTTP("Content-Disposition", "attachment; filename=""" + sFichier + """")
+
+renvoyer bufExcel
+
+
+fin:
+sdRequeteXls.AnnuleDéclaration()

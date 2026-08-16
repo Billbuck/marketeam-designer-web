@@ -1,0 +1,53 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] ChargeRapportExcelCartouche (<pIdOperation>)
+//
+// Paramètres :
+//	pIdOperation : <indiquez ici le rôle de pIdOperation>
+// Valeur de retour :
+// 	structRapportExcelCartouche : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure ChargeRapportExcelCartouche(pIdOperation)
+
+sTexteRequete				est une chaîne
+sdReqCartouche				est une Source de Données
+stRapportExcelCartouche 	est une structRapportExcelCartouche
+
+sTexteRequete = [
+	SELECT
+		clt_client.Societe,
+		CONCAT_WS(' ',clt_contact.Prenom, clt_contact.Nom) contact,
+		dos_operation.Dossier,
+		dos_operation.NomOperation,
+		DATE_FORMAT(dos_operation.DateEnvoiSouhaite, '%d-%m-%Y') AS DateEnvoi,
+		DATE_FORMAT(COALESCE(dos_operation.HeureEnvoiSouhaite, dos_operation.DateHeurePriseEnCharge),'%H:%i:%s') AS HeureEnvoi,
+		dos_operation.MontantNetHT
+	FROM
+		dos_operation
+		JOIN clt_client ON clt_client.IdClient = dos_operation.IdClientFacturation
+		JOIN clt_contact ON clt_contact.IdContact = dos_operation.IdValideur
+	WHERE
+		dos_operation.IdOperation = [%pIdOperation%]
+]
+
+si pas sdReqCartouche.ExécuteRequêteSQL(ope_tel_envoi..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	renvoyer stRapportExcelCartouche
+fin
+
+si sdReqCartouche.LitPremier() alors
+	stRapportExcelCartouche.Société			= sdReqCartouche.Societe
+	stRapportExcelCartouche.Contact			= sdReqCartouche.Contact
+	stRapportExcelCartouche.Designation		= sdReqCartouche.NomOperation
+	stRapportExcelCartouche.Dossier			= sdReqCartouche.Dossier
+	stRapportExcelCartouche.MontantHT		= sdReqCartouche.MontantNetHT
+	stRapportExcelCartouche.Date			= sdReqCartouche.DateEnvoi
+	stRapportExcelCartouche.Heure			= sdReqCartouche.HeureEnvoi
+fin
+
+renvoyer stRapportExcelCartouche
+
+fin:
+sdReqCartouche.AnnuleDéclaration()

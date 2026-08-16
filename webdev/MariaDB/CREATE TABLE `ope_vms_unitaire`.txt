@@ -1,0 +1,38 @@
+CREATE TABLE `ope_vms_unitaire` (
+	`IdVmsUnitaire` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdFactureLigne` INT(11) NULL DEFAULT NULL COMMENT 'Une IdFactureLigne pour tous les Vms de notification du mois',
+	`IdOperation` INT(11) NULL DEFAULT NULL,
+	`IdClient` INT(11) NULL DEFAULT NULL,
+	`IdContact` INT(11) NULL DEFAULT NULL,
+	`IdMessage` INT(11) NULL DEFAULT NULL,
+	`IdNeocom` VARCHAR(50) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`TauxTVA` DECIMAL(4,2) NULL DEFAULT '20.00',
+	`MontantHT` DECIMAL(5,3) NULL DEFAULT '0.000',
+	`MontantTTC` DECIMAL(5,3) NULL DEFAULT '0.000',
+	`EstPayeSurReserveArgent` TINYINT(1) NOT NULL DEFAULT '0',
+	`EstPaye` TINYINT(1) NOT NULL DEFAULT '0',
+	`Statut` INT(11) NOT NULL,
+	`CodeErreur` VARCHAR(20) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`MessageErreur` VARCHAR(200) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Portable` VARCHAR(20) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`NumeroAppelant` VARCHAR(20) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`DateHeureEnvoi` DATETIME NULL DEFAULT NULL,
+	`DateHeureEnregistre` DATETIME NULL DEFAULT NULL,
+	`DateHeureRapport` DATETIME NULL DEFAULT NULL,
+	PRIMARY KEY (`IdVmsUnitaire`) USING BTREE,
+	INDEX `IdClient` (`IdClient`) USING BTREE,
+	INDEX `IdContact` (`IdContact`) USING BTREE,
+	INDEX `IdMessage` (`IdMessage`) USING BTREE,
+	INDEX `IdOperation` (`IdOperation`) USING BTREE,
+	INDEX `EstPayeSurReserveArgent` (`EstPayeSurReserveArgent`) USING BTREE,
+	INDEX `IdFacture` (`IdFactureLigne`) USING BTREE,
+	INDEX `IdNeocom` (`IdNeocom`) USING BTREE,
+	CONSTRAINT `FK_ope_vms_unitaire_clt_client` FOREIGN KEY (`IdClient`) REFERENCES `clt_client` (`IdClient`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `FK_ope_vms_unitaire_clt_contact` FOREIGN KEY (`IdContact`) REFERENCES `clt_contact` (`IdContact`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `FK_ope_vms_unitaire_clt_facture_ligne` FOREIGN KEY (`IdFactureLigne`) REFERENCES `clt_facture_ligne` (`IdFactureLigne`) ON UPDATE NO ACTION ON DELETE NO ACTION,
+	CONSTRAINT `FK_ope_vms_unitaire_vms_message` FOREIGN KEY (`IdMessage`) REFERENCES `vms_message` (`IdMessage`) ON UPDATE SET NULL ON DELETE SET NULL
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+ROW_FORMAT=COMPACT
+;

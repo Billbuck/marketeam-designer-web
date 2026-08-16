@@ -1,0 +1,173 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] ChargeFeuilleExcelCliquezIciLien (<pIdOperation> [, <pIdEmailEnvoi>])
+//
+// Paramètres :
+//	pIdOperation : <indiquez ici le rôle de pIdOperation>
+//	pIdEmailEnvoi (valeur par défaut=0) : < indiquez ici le rôle de pIdEmailEnvoi >
+// Valeur de retour :
+// 	Type indéterminé : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+//	stEmail (structEmail) : <indiquez ici le rôle de stEmail>
+procédure ChargeFeuilleExcelCliquezIciLien(pIdOperation, pDateHeureEmailFiltre = "")
+
+nInd					est un entier
+nLigne					est un entier
+sValeur 				est une chaîne
+sTexteRequete			est une chaîne
+sTexteAudience			est une chaîne
+sTexteClic				est une chaîne
+sSelect					est une chaîne
+sdReqLien				est une Source de Données
+nColonne				est un entier
+sWhere					est une chaîne
+tabType					est un tableau de chaînes
+stRapportExcelFeuille	est une structRapportExcelFeuille
+
+
+// Colonnes sélectionnées par le client pour le rapport
+
+sTexteRequete	= [
+	SELECT 
+	dos_operation_rapport.Champ, 
+	dos_operation_rapport.Libelle,
+	dos_operation_rapport.Type
+	FROM dos_operation_rapport
+	WHERE dos_operation_rapport.IdOperation = [%pIdOperation%]
+	ORDER BY dos_operation_rapport.Ordre
+]
+
+si pas sdReqLien.ExécuteRequêteSQL(dos_operation_rapport..Connexion,hRequêteSansCorrection,sTexteRequete) alors
+	renvoyer stRapportExcelFeuille
+fin
+
+pour tout sdReqLien
+	nColonne++
+	sSelect += ["," + RC] + "dos_base_ligne." + sdReqLien.Champ + " AS 'Colonne" + nColonne + "'"
+	stRapportExcelFeuille.taaEntête["Fiche client"]++
+	stRapportExcelFeuille.tabColonne.Ajoute(sdReqLien.Libelle)
+	tabType.Ajoute(sdReqLien.Type)
+	stRapportExcelFeuille.tabAlignement.Ajoute(AlignementTypeChamp(sdReqLien.Type))
+fin
+
+// On ajoute la colonne date & heure de clic
+nColonne++
+sSelect += ["," + RC]  + "DATE_FORMAT(ope_cliquezici_lien." + ope_cliquezici_lien.DateHeureClic..Nom + ", '%d-%m-%Y %H:%i:%s') AS 'Colonne" + nColonne + "'"
+stRapportExcelFeuille.taaEntête["Clic"]++
+stRapportExcelFeuille.tabColonne.Ajoute("Date & heure")
+tabType.Ajoute(__CHAMP_TYPE_TEXTE__)
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+
+si pDateHeureEmailFiltre = "" alors
+	sWhere	= "IdCliquezIci = " + pIdOperation
+sinon
+	sWhere	= "DateHeureEmailFiltre = '" + pDateHeureEmailFiltre + "'"
+fin
+
+sTexteClic =
+[
+	SELECT 
+		ope_cliquezici_lien.TypeLien,
+		ope_cliquezici_lien.Url,
+		ope_cliquezici_lien.Libelle
+	FROM
+		ope_cliquezici_lien
+	WHERE
+		[%sWhere%]
+	GROUP BY
+		ope_cliquezici_lien.TypeLien,
+		ope_cliquezici_lien.Url,
+		ope_cliquezici_lien.Libelle
+	ORDER BY
+		FIELD(ope_cliquezici_lien.TypeLien, '[%__TRACKING_IMAGE__%]' , '[%__TRACKING_LIEN__%]' , '[%__TRACKING_BANNIERE__%]' , '[%__TRACKING_GRILLE__%]' , '[%__TRACKING_GRATTAGE__' , '[%__TRACKING_SOCIAL__%]' , '[%__TRACKING_SCRIPT__%]' , '[%__TRACKING_CGV__%]'),
+		ope_cliquezici_lien.Libelle	
+]
+
+
+
+si pas sdReqLien.ExécuteRequêteSQL(ope_cliquezici_lien..Connexion, hRequêteSansCorrection, sTexteClic) alors
+	renvoyer stRapportExcelFeuille
+fin
+
+// Pas de valeur alors retour
+si pas sdReqLien.LitPremier() alors
+	renvoyer stRapportExcelFeuille
+fin
+
+stRapportExcelFeuille.LibelleQuestion1 = "Lien"
+stRapportExcelFeuille.LibelleQuestion2 = "Url"
+
+stRapportExcelFeuille.telColonneQuestionDebut = (nColonne + 1)
+pour tout sdReqLien
+	nColonne++
+	// Création du tableau
+	si sdReqLien.TypeLien pas dans(__TRACKING_GRATTAGE__ , __TRACKING_CGV__) alors
+		nInd = stRapportExcelFeuille.tabQuestion.Ajoute()
+		stRapportExcelFeuille.tabQuestion[nInd].Ajoute(LibelleTypeLien(sdReqLien.TypeLien) + " / " + sdReqLien.Libelle)
+		stRapportExcelFeuille.tabQuestion[nInd].Ajoute(sdReqLien.Url)
+	fin
+
+	stRapportExcelFeuille.taaEntête[LibelleTypeLien(sdReqLien.TypeLien)]++
+	stRapportExcelFeuille.tabColonne.Ajoute(sdReqLien.Libelle)
+	tabType.Ajoute(__CHAMP_TYPE_TEXTE__)
+	stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+	sSelect += [","] + RC + [
+		MAX(CASE WHEN ope_cliquezici_lien.TypeLien = '[%sdReqLien.TypeLien%]' AND ope_cliquezici_lien.Libelle = [%cpFonction.Quotes(sdReqLien.Libelle)%] THEN '✔' END) AS 'Colonne[%nColonne%]'
+	]
+fin
+stRapportExcelFeuille.telColonneQuestionFin = nColonne
+
+
+
+sTexteAudience =
+[
+	SELECT
+		[%sSelect%]
+	FROM
+		ope_cliquezici_lien
+		JOIN dos_base_ligne ON dos_base_ligne.IdBaseLigne = ope_cliquezici_lien.IdBaseLigne
+	WHERE
+		[%sWhere%]
+	GROUP BY 
+		dos_base_ligne.IdBaseLigne
+	ORDER BY 
+		ope_cliquezici_lien.DateHeureClic DESC
+]
+
+si pas sdReqLien.ExécuteRequêteSQL( ope_cliquezici_clic..Connexion, hRequêteSansCorrection, sTexteAudience) alors
+	renvoyer stRapportExcelFeuille
+fin
+
+pour tout sdReqLien
+	nLigne = stRapportExcelFeuille.tabExcel.AjouteLigne()
+	pour nCol = 1 à nColonne
+		sValeur = FormatValeur(tabType[nCol],{"sdReqLien.Colonne"+nCol,indRubrique})
+		stRapportExcelFeuille.tabExcel[nLigne].Ajoute(sValeur)
+	fin
+fin
+
+stRapportExcelFeuille.Titre 	= "Rapport de performance"
+stRapportExcelFeuille.SousTitre = "CliquezIci Lead"
+
+renvoyer stRapportExcelFeuille
+
+fin:
+sdReqLien.AnnuleDéclaration()
+
+
+	procédure interne LibelleTypeLien(pType)
+		selon pType
+			cas __TRACKING_LIEN__		: renvoyer "Lien"
+			cas	__TRACKING_IMAGE__		: renvoyer "Image"
+			cas	__TRACKING_BANNIERE__	: renvoyer "Bannière"
+			cas	__TRACKING_GRILLE__		: renvoyer "Grille"
+			cas	__TRACKING_SCRIPT__		: renvoyer "Script"
+			cas	__TRACKING_GRATTAGE__	: renvoyer "Grattage"
+			cas	__TRACKING_SOCIAL__		: renvoyer "Social"
+			cas	__TRACKING_CGV__		: renvoyer "Cgv"
+			autre cas					: renvoyer "Erreur"
+		fin
+	fin

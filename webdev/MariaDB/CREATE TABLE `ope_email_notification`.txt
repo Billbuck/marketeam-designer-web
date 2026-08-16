@@ -1,0 +1,35 @@
+CREATE TABLE `ope_email_notification` (
+	`IdEmailNotification` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdFactureLigne` INT(11) NULL DEFAULT NULL COMMENT 'Une IdFactureLigne pour tous les Email de notification du mois',
+	`IdOperation` INT(11) NULL DEFAULT NULL,
+	`IdClient` INT(11) NULL DEFAULT NULL,
+	`IdContact` INT(11) NULL DEFAULT '0',
+	`Routeur` CHAR(2) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Email` VARCHAR(255) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Sujet` VARCHAR(300) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`ContenuHtml` LONGTEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`ContenuJson` LONGTEXT NULL DEFAULT NULL COLLATE 'utf8mb4_bin',
+	`ContenuTexte` LONGTEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Statut` CHAR(2) NOT NULL DEFAULT '10' COLLATE 'utf8mb4_unicode_ci',
+	`EstOuvert` TINYINT(1) NOT NULL DEFAULT '0',
+	`EstRebond` TINYINT(1) NOT NULL DEFAULT '0',
+	`TypeRebond` VARCHAR(3) NULL DEFAULT NULL COMMENT '| Code | Type                  | Description courte                               | Action recommandée         |\r\n|------|-----------------------|--------------------------------------------------|-----------------------------|\r\n| `TMP` | Soft bounce          | Temporaire : boîte pleine, délai expiré         | Réessayer plus tard         |\r\n| `INV` | Hard bounce – invalide | Adresse inexistante, domaine faux             | Ne plus réessayer, nettoyer |\r\n| `BLK` | Blocage              | Bloqué par filtre antispam (SPF, DKIM, etc.)    | Vérifier config technique   |\r\n| `DNS` | Erreur DNS           | Domaine introuvable / serveur injoignable      | Réessayer ou exclure        |\r\n| `AUT` | Autre                | Erreur inconnue ou indéterminée                | À analyser                  |' COLLATE 'utf8mb4_unicode_ci',
+	`DateHeureNotification` DATETIME NOT NULL DEFAULT current_timestamp(),
+	`DateHeureEnvoi` DATETIME NULL DEFAULT NULL,
+	`DateHeureReception` DATETIME NULL DEFAULT NULL,
+	`DateHeureOuverture` DATETIME NULL DEFAULT NULL,
+	`DateHeureRebond` DATETIME NULL DEFAULT NULL,
+	`Plateforme` VARCHAR(20) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`PrixEmail` DECIMAL(8,3) NOT NULL DEFAULT '0.000',
+	`EstPayeSurReserveArgent` TINYINT(1) NOT NULL DEFAULT '0',
+	`EstPaye` TINYINT(4) NOT NULL DEFAULT '0',
+	`TauxTVA` DECIMAL(4,2) NULL DEFAULT '20.00',
+	`MontantHT` DECIMAL(5,3) NULL DEFAULT '0.000',
+	`MontantTTC` DECIMAL(5,3) NULL DEFAULT '0.000',
+	`MessageErreur` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	PRIMARY KEY (`IdEmailNotification`) USING BTREE,
+	INDEX `EstPayeSurReserveArgent` (`EstPayeSurReserveArgent`) USING BTREE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+;

@@ -1,0 +1,206 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] ChargeFeuilleExcelCliquezIciClic (<pIdOperation> [, <pIdEmailEnvoi>])
+//
+// Paramètres :
+//	pIdOperation : <indiquez ici le rôle de pIdOperation>
+//	pIdEmailEnvoi (valeur par défaut=0) : < indiquez ici le rôle de pIdEmailEnvoi >
+// Valeur de retour :
+// 	Type indéterminé : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+//	stEmail (structEmail) : <indiquez ici le rôle de stEmail>
+procédure ChargeFeuilleExcelCliquezIciClic(pIdOperation, pDateHeureEmailFiltre = "")
+
+nLigne					est un entier
+sValeur 				est une chaîne
+sTexteRequete			est une chaîne
+sTexteAudience			est une chaîne
+sTexteClic				est une chaîne
+sSelect					est une chaîne
+sdReqAudience			est une Source de Données
+sListeField				est une chaîne
+sChampOrderBy			est une chaîne
+nColonne				est un entier
+sWhere					est une chaîne
+tabType					est un tableau de chaînes
+stRapportExcelFeuille	est une structRapportExcelFeuille
+
+// On récupère la liste des offres (Interrupteurs, Combos, Champs de saisie et Optin) pour trier les résultats en sortie.
+sTexteRequete = [
+	SELECT
+		GROUP_CONCAT("\"", COALESCE(ope_cliquezici_offre.Libelle, ope_cliquezici_offre.Offre), "\"") ListeField
+	FROM
+		ope_cliquezici_offre
+		JOIN ope_cliquezici_bloc ON ope_cliquezici_bloc.IdCliquezIciBloc = ope_cliquezici_offre.IdCliquezIciBloc AND ope_cliquezici_bloc.`Type` IN ('[%__BLOC_OFFRE__%]' , '[%__BLOC_FORMULAIRE__%]' , '[%__BLOC_BOUTON__%]')
+	WHERE
+		ope_cliquezici_bloc.IdCliquezIci = [%pIdOperation%]
+	ORDER BY
+		FIELD(ope_cliquezici_bloc.`Type`, '[%__BLOC_OFFRE__%]' , '[%__BLOC_FORMULAIRE__%]' , '[%__BLOC_BOUTON__%]')
+	
+]
+
+si pas sdReqAudience.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	renvoyer stRapportExcelFeuille
+fin
+
+si sdReqAudience.LitPremier() alors
+	sListeField = sdReqAudience.ListeField
+fin
+
+// Si la liste des "libellés des offres" est vide : On trie le résultat par type (Interrupteurs, Combos, Champs de saisie et Optin)
+si sListeField <> "" alors
+	sChampOrderBy = [
+		ORDER BY
+			FIELD(ope_cliquezici_clic_selection.Libelle, [%sListeField%])
+	]
+sinon
+	sChampOrderBy = [
+		ORDER BY
+			FIELD(ope_cliquezici_clic_selection.`Type`, '[%__FORMULAIRE_INTERRUPTEUR__%]', '[%__FORMULAIRE_COMBO__%]','[%__FORMULAIRE_SAISIE__%]','[%__FORMULAIRE_OPTIN__%]','[%__FORMULAIRE_VIDE__%]')
+	]
+fin
+
+
+
+// Colonnes sélectionnées par le client pour le rapport
+
+sTexteRequete	= [
+	SELECT 
+	dos_operation_rapport.Champ, 
+	dos_operation_rapport.Libelle,
+	dos_operation_rapport.Type
+	FROM dos_operation_rapport
+	WHERE dos_operation_rapport.IdOperation = [%pIdOperation%]
+	ORDER BY dos_operation_rapport.Ordre
+]
+
+si pas sdReqAudience.ExécuteRequêteSQL(dos_operation_rapport..Connexion,hRequêteSansCorrection,sTexteRequete) alors
+	renvoyer stRapportExcelFeuille
+fin
+
+pour tout sdReqAudience
+	nColonne++
+	sSelect += ["," + RC] + "bl." + sdReqAudience.Champ + " AS 'Colonne" + nColonne + "'"
+	stRapportExcelFeuille.taaEntête["Fiche client"]++
+	stRapportExcelFeuille.tabColonne.Ajoute(sdReqAudience.Libelle)
+	tabType.Ajoute(sdReqAudience.Type)
+	stRapportExcelFeuille.tabAlignement.Ajoute(AlignementTypeChamp(sdReqAudience.Type))
+fin
+
+// On ajoute la colonne date & heure de clic
+nColonne++
+sSelect += ["," + RC]  + "DATE_FORMAT(clic." + ope_cliquezici_clic.DateHeureClic..Nom + ", '%d-%m-%Y %H:%i:%s') AS 'Colonne" + nColonne + "'"
+stRapportExcelFeuille.taaEntête["Lead"]++
+stRapportExcelFeuille.tabColonne.Ajoute("Clic")
+tabType.Ajoute(__CHAMP_TYPE_TEXTE__)
+stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+
+si pDateHeureEmailFiltre = "" alors
+	sWhere	= "IdCliquezIci = " + pIdOperation
+sinon
+	sWhere	= "DateHeureEmailFiltre = '" + pDateHeureEmailFiltre + "'"
+fin
+
+
+
+
+sTexteClic =
+[
+	SELECT DISTINCT 
+		-- ope_cliquezici_clic_selection.`Type`,
+		-- ope_cliquezici_clic_selection.Libelle
+		COALESCE(ope_cliquezici_clic_selection.`Type`, '[%__FORMULAIRE_VIDE__%]') AS Type,
+		COALESCE(ope_cliquezici_clic_selection.Libelle, 'Validation') AS Libelle
+	FROM
+		ope_cliquezici_clic
+		LEFT JOIN ope_cliquezici_clic_selection ON ope_cliquezici_clic.IdCliquezIciClic = ope_cliquezici_clic_selection.IdCliquezIciClic
+	WHERE
+		[%sWhere%]
+		[%sChampOrderBy%]
+]
+
+
+
+si pas sdReqAudience.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteClic) alors
+	renvoyer stRapportExcelFeuille
+fin
+
+// Pas de valeur alors retour
+si pas sdReqAudience.LitPremier() alors
+	renvoyer stRapportExcelFeuille
+fin
+
+pour tout sdReqAudience
+	nColonne++
+	stRapportExcelFeuille.taaEntête["Lead"]++
+	stRapportExcelFeuille.tabColonne.Ajoute(sdReqAudience.Libelle)
+	tabType.Ajoute(__CHAMP_TYPE_TEXTE__)
+	si sdReqAudience.Libelle <> "Validation" alors
+		stRapportExcelFeuille.tabAlignement.Ajoute(AlignementTypeChamp(sdReqAudience.Type))
+		sSelect += [","] + RC + [
+			COALESCE(MAX(CASE WHEN sel.Libelle = [%cpFonction.Quotes(sdReqAudience.Libelle)%] THEN IF(sel.Valeur IS NULL, '✔' , sel.Valeur) END),'') AS `Colonne[%nColonne%]`
+		]
+	sinon
+		stRapportExcelFeuille.tabAlignement.Ajoute(__ALIGNEMENT_CENTRE__)
+		sSelect += [","] + RC + [
+			COALESCE(MAX(CASE WHEN sel.Libelle IS NULL THEN IF(sel.Valeur IS NULL, '✔' , sel.Valeur) END),'') AS `Colonne[%nColonne%]`
+		]
+	fin
+fin
+
+
+sTexteAudience =
+[
+	SELECT 
+		[%sSelect%]
+	FROM (
+	    SELECT 
+	        IdBaseLigne, 
+	         MAX(IdCliquezIciClic) AS MaxIdCliquezIciClic
+	    FROM 
+	        ope_cliquezici_clic
+	    WHERE 
+	        [%sWhere%]
+	    GROUP BY 
+	    IdBaseLigne    
+	) AS dernierClic
+	JOIN 
+	    ope_cliquezici_clic AS clic 
+	    ON dernierClic.MaxIdCliquezIciClic = clic.IdCliquezIciClic
+	JOIN 
+	    dos_base_ligne AS bl 
+	    ON clic.IdBaseLigne = bl.IdBaseLigne
+	LEFT JOIN 
+	    ope_cliquezici_clic_selection AS sel 
+	    FORCE INDEX (IdCliquezIciClic_Libelle)
+	    ON clic.IdCliquezIciClic = sel.IdCliquezIciClic 
+	    
+	GROUP BY 
+	    bl.IdBaseLigne
+	ORDER BY 
+	    clic.DateHeureClic DESC
+]
+
+si pas sdReqAudience.ExécuteRequêteSQL(ope_cliquezici_clic..Connexion, hRequêteSansCorrection, sTexteAudience) alors
+	renvoyer stRapportExcelFeuille
+fin
+
+pour tout sdReqAudience
+	nLigne = stRapportExcelFeuille.tabExcel.AjouteLigne()
+	pour nCol = 1 à nColonne
+		sValeur = FormatValeur(tabType[nCol],{"sdReqAudience.Colonne"+nCol,indRubrique})
+		stRapportExcelFeuille.tabExcel[nLigne].Ajoute(sValeur)
+	fin
+fin
+
+stRapportExcelFeuille.Titre 	= "Rapport de performance"
+stRapportExcelFeuille.SousTitre = "CliquezIci Lead"
+
+renvoyer stRapportExcelFeuille
+
+fin:
+sdReqAudience.AnnuleDéclaration()
+

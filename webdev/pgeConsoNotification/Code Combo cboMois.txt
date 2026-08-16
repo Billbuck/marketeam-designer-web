@@ -1,5 +1,5 @@
 // Code Serveur "A Chaque modification de cboMois"
 
 InitCboSociete()
-InitCboTypeOperation()
-InitZnrConsommation()
+InitCboContact()
+InitZnrConsoNotification()

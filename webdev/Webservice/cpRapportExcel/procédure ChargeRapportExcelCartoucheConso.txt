@@ -1,0 +1,59 @@
+// Résumé : Cartouche des rapports Excel de consommation (notifications).
+// Syntaxe :
+//[ <Résultat> = ] ChargeRapportExcelCartoucheConso (<pLibelleSupport>, <pFiltre>)
+//
+// Paramètres :
+//	pLibelleSupport : libellé du support ("SMS", "VMS", "Email")
+//	pFiltre : filtres de la page "Année;Mois;IdSociété;IdContact" (0 = tous)
+// Valeur de retour :
+// 	structRapportExcelCartouche
+//
+procédure ChargeRapportExcelCartoucheConso(pLibelleSupport, pFiltre)
+
+sTexteRequete					est une chaîne
+sdReqCartoucheConso			est une Source de Données
+stRapportExcelCartouche		est une structRapportExcelCartouche
+sAnnee							est une chaîne
+nMois								est un entier
+nIdSociete						est un entier
+nIdContactFiltre				est un entier
+
+
+sAnnee										= pFiltre.ExtraitChaîne(1,";")
+nMois											= pFiltre.ExtraitChaîne(2,";")
+nIdSociete									= pFiltre.ExtraitChaîne(3,";")
+nIdContactFiltre							= pFiltre.ExtraitChaîne(4,";")
+
+stRapportExcelCartouche.Designation	= "Consommation notifications " + pLibelleSupport
+
+// Période : mois précis ou année complète
+si nMois > 0 alors
+	stRapportExcelCartouche.Date = EntierVersMoisEnLettre(nMois) + " " + sAnnee
+sinon
+	stRapportExcelCartouche.Date = "Année " + sAnnee
+fin
+
+// Société filtrée ou toutes les sociétés
+si nIdSociete > 0 alors
+	sTexteRequete = "SELECT clt_client.Societe FROM clt_client WHERE clt_client.IdClient = " + nIdSociete
+	si sdReqCartoucheConso.ExécuteRequêteSQL(clt_client..Connexion, hRequêteSansCorrection, sTexteRequete) _et_ sdReqCartoucheConso.LitPremier() alors
+		stRapportExcelCartouche.Société = sdReqCartoucheConso.Societe
+	fin
+sinon
+	stRapportExcelCartouche.Société = "Toutes les sociétés"
+fin
+
+// Contact filtré ou tous les contacts
+si nIdContactFiltre > 0 alors
+	sTexteRequete = "SELECT CONCAT_WS(' ',clt_contact.Prenom, clt_contact.Nom) Contact FROM clt_contact WHERE clt_contact.IdContact = " + nIdContactFiltre
+	si sdReqCartoucheConso.ExécuteRequêteSQL(clt_contact..Connexion, hRequêteSansCorrection, sTexteRequete) _et_ sdReqCartoucheConso.LitPremier() alors
+		stRapportExcelCartouche.Contact = sdReqCartoucheConso.Contact
+	fin
+sinon
+	stRapportExcelCartouche.Contact = "Tous les contacts"
+fin
+
+renvoyer stRapportExcelCartouche
+
+fin:
+sdReqCartoucheConso.AnnuleDéclaration()
