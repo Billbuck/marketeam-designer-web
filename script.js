@@ -4958,6 +4958,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * CORRECTIF (17/08/2026) — Résout la COLONNE PHYSIQUE de la base pour une
+     * clé de champ, quelle que soit sa forme :
+     *   - nom technique ("Champ2")        → renvoyé tel quel
+     *   - clé locale ("LOCAL_<localId>")  → nom technique du champ correspondant
+     * Cas typique : un champ créé dans un MODÈLE (pgeLtrDocument) garde sa clé
+     * LOCAL_xxx dans les combos même après rapprochement avec une colonne de
+     * base à l'ouverture dans le tunnel. Les webservices collections (upload,
+     * liste, vérification) exigent eux le nom physique de la colonne.
+     * Si aucune correspondance (ou champ non rapproché : nom vide), renvoie la
+     * clé inchangée — comportement historique préservé.
+     * @param {string} cle
+     * @returns {string}
+     */
+    function colonnePhysiquePourChamp(cle) {
+        const champ = findChampByKey(String(cle || ''));
+        return (champ && typeof champ.nom === 'string' && champ.nom.trim()) ? champ.nom : String(cle || '');
+    }
+
+    /**
      * Cahier des charges §3 — Test « ce champ est-il absent de la base ? ».
      * Retourne `true` UNIQUEMENT en régime B avec `presenteEnBase === false`.
      * En régime A, retourne toujours `false` (aucune notion d'absent).
@@ -9763,9 +9782,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Trouver la colonne physique pour ce champ de fusion (= champObj.nom)
-        const champs = (documentState && documentState.champsFusion) || mergeFields || [];
-        const champObj = champs.find(c => typeof c === 'object' && c.nom === champFusion);
-        const colonne = (champObj && champObj.nom) || '';
+        // CORRECTIF (17/08/2026) : résolution via findChampByKey — le champ peut
+        // être désigné par son nom technique ("Champ2") OU par sa clé locale
+        // ("LOCAL_xxx", cas d'un champ créé dans un modèle puis rapproché d'une
+        // colonne base dans le tunnel). L'ancienne recherche (c.nom === champFusion)
+        // échouait sur les clés LOCAL_ → « Colonne physique non trouvée » alors
+        // que le champ était bien lié à une colonne de la base.
+        const champObj = findChampByKey(champFusion);
+        const colonne = (champObj && typeof champObj.nom === 'string' && champObj.nom.trim()) ? champObj.nom : '';
         if (!colonne) {
             console.warn('ZIP Upload: Colonne physique non trouvée pour le champ', champFusion);
             return { success: false, message: 'Le champ de fusion sélectionné n\'a pas pu être identifié dans la base de données.' };
@@ -10150,6 +10174,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // CORRECTIF (17/08/2026) : le webservice attend le nom physique de la
+        // colonne — traduire une éventuelle clé LOCAL_xxx (champ né dans un modèle)
+        colonne = colonnePhysiquePourChamp(colonne);
+
         // Afficher immédiatement la combo en état de chargement
         setCollectionLoadingState(true);
 
@@ -10226,6 +10254,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!authConfig || !authConfig.urlCollectionListe) {
             throw new Error('URL webservice non configurée');
         }
+
+        // CORRECTIF (17/08/2026) : le webservice utilise la colonne dans une
+        // requête SQL — traduire une éventuelle clé LOCAL_xxx (champ né dans
+        // un modèle) en nom physique de colonne.
+        colonne = colonnePhysiquePourChamp(colonne);
 
         // Déduire l'URL du webservice "verifie" en remplaçant /liste par /verifie
         // Permet de réutiliser la configuration sans ajouter une nouvelle URL.
