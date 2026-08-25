@@ -1,0 +1,8 @@
+procédure PageMémorise(pPrecedent est un booléen = Faux)
+
+si saisieOk(pPrecedent) alors
+	Valider()
+	renvoyer Vrai
+sinon
+	renvoyer pPrecedent
+fin

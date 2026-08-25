@@ -1,0 +1,14 @@
+CREATE TABLE `ope_cliquezici_clic_selection` (
+	`IdCliquezIciSelection` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdCliquezIciClic` INT(11) NOT NULL,
+	`Type` CHAR(3) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Libelle` VARCHAR(100) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Valeur` VARCHAR(100) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	PRIMARY KEY (`IdCliquezIciSelection`) USING BTREE,
+	INDEX `IdCliquezIciClic` (`IdCliquezIciClic`) USING BTREE,
+	INDEX `IdCliquezIciClic_Libelle` (`IdCliquezIciClic`, `Libelle`) USING BTREE,
+	CONSTRAINT `FK_ope_cliquezici_clic_selection_ope_cliquezici_clic` FOREIGN KEY (`IdCliquezIciClic`) REFERENCES `ope_cliquezici_clic` (`IdCliquezIciClic`) ON UPDATE NO ACTION ON DELETE CASCADE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+;

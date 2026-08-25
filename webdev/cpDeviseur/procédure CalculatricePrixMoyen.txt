@@ -1,0 +1,44 @@
+procédure CalculatricePrixMoyen(pNombreDocument,pQuantite,local pPrixAvantSeuil,local pPrixApresSeuil, local pSeuil, pMode = __MODE_STANDARD__,pArrondi = 2)
+
+nInd est un entier
+mPuDocument est un numérique(6,4)
+mPuTotal est un numérique(6,4)
+
+nQuantiteEnCours est un entier
+moCoefAvantSeuil, moCoefApresSeuil, moCoefSeuil sont des monétaires
+
+selon pMode
+	cas __MODE_STANDARD__
+		moCoefApresSeuil 	= 1
+		moCoefAvantSeuil 	= 1
+		moCoefSeuil 		= 1
+	
+	cas __MODE_LENT__
+		moCoefApresSeuil 	= __moCoefLentApresSeuil
+		moCoefAvantSeuil 	= __moCoefLentAvantSeuil
+		moCoefSeuil 		= __moCoefLentSeuil
+		
+	cas __MODE_EXPRESS__
+		moCoefApresSeuil 	= __moCoefExpressApresSeuil
+		moCoefAvantSeuil 	= __moCoefExpressAvantSeuil
+		moCoefSeuil 		= __moCoefExpressSeuil
+		
+fin
+
+// On modifie les prix et le seuil en fonction du mode de production
+pPrixAvantSeuil 	= pPrixAvantSeuil * moCoefAvantSeuil
+pPrixApresSeuil 	= pPrixApresSeuil * moCoefApresSeuil
+pSeuil 			= pSeuil          * moCoefSeuil
+
+pour nInd = 1 _à_ pNombreDocument
+	nQuantiteEnCours = nInd * pQuantite
+	si nQuantiteEnCours < pSeuil _ou_ pSeuil = 0 alors
+		mPuDocument =  pPrixAvantSeuil
+	sinon
+		mPuDocument = (pSeuil * pPrixAvantSeuil + (nQuantiteEnCours-pSeuil) * pPrixApresSeuil) / nQuantiteEnCours
+	fin
+	mPuTotal += mPuDocument
+	
+fin
+
+renvoyer Arrondi(mPuTotal,pArrondi)

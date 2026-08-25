@@ -1,0 +1,40 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] CalculePrixUnSms (<pMessage> [, <pIdClient> [, <pIdMarque>]])
+//
+// Paramètres :
+//	pMessage : <indiquez ici le rôle de pType>
+//	pIdClient (valeur par défaut=0) : <indiquez ici le rôle de mPrixAvantSeuil>
+//	pIdMarque (valeur par défaut=0) : <indiquez ici le rôle de mPrixApresSeuil>
+// Valeur de retour :
+// 	monétaire : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+//	nTailleSms : <indiquez ici le rôle de pNombreSms>
+//	nNbrSms : <indiquez ici le rôle de pNombreSms>
+//	nNbrCreditUnitaire : <indiquez ici le rôle de pNombreSms>
+//	nNbrCreditSms : <indiquez ici le rôle de pNbrCreditSms>
+procédure CalculePrixUnSms(pMessage)
+
+mPrixSms 		est un monétaire
+sMessage 		est une chaîne
+nTaille 		est un entier
+nNbrCredit 		est un entier
+
+si pMessage <> "" alors
+	sMessage = pMessage
+	sMessage = sMessage.Remplace(RC,Caract(10))
+	
+	nTaille = sMessage.Taille()
+	si cpSms.TestUnicodeSms(sMessage) = Faux alors
+		nNbrCredit = CalculeNbrCreditSms(nTaille,Faux)
+	sinon
+		nNbrCredit = CalculeNbrCreditSms(nTaille,Vrai)
+	fin
+	si nNbrCredit > 8 alors nNbrCredit = 8
+	mPrixSms = Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_SMS__].PrixVenteUnitaire * nNbrCredit
+fin
+
+renvoyer mPrixSms

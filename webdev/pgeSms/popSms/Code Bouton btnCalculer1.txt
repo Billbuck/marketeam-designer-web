@@ -1,0 +1,39 @@
+
+	
+nBarre		est un entier
+nXmin		est un entier	= 5000
+nXmax		est un entier
+nCouleur	est une Couleur
+
+grfSmsTaille.SupprimeTout()
+
+grParamètre(grfSmsTaille,grGraduationsOptimiséesX, Vrai)
+grParamètre(grfSmsTaille,grGraduationsOptimiséesY, Vrai)
+
+pour tout nNombre, sTaille de __stOperation.stOperationSms.taaTailleSms
+	nBarre++
+	selon Val(sTaille)
+		cas <= 160	: nCouleur = HTMLVersRVB(__COULEUR_SMS_M__)
+		cas <= 306	: nCouleur = HTMLVersRVB(__COULEUR_TEL_M__)
+		cas <= 459	: nCouleur = HTMLVersRVB(__COULEUR_TRACT_M__)
+		autre cas	: nCouleur = HTMLVersRVB(__COULEUR_EMAIL_M__)
+	fin
+	
+	grfSmsTaille.AjouteDonnée(1,sTaille,nNombre)
+	grfSmsTaille.CouleurCatégorie(sTaille,nCouleur)
+	grfSmsTaille.EtiquetteCatégorie(sTaille,NumériqueVersChaîne(sTaille, "dS") + " Caractères")
+	nXmin	= Min(nXmin,Val(sTaille))
+	nXmax	= Max(nXmax,Val(sTaille))
+fin
+
+
+//		grfSmsTaille.CouleurSérie(1,__COULEUR_SMS_M__)
+grfSmsTaille.HistoEspacement(0)
+grfSmsTaille.Origine(nXmin,nXmax,grAbscisse)
+grfSmsTaille.AxeVisible(grAbscisse,grVisible)
+grfSmsTaille.AxeVisible(grOrdonnée,grVisible)
+grfSmsTaille.HistoAgrégation(grhaAucun)
+//		grfSmsTaille.AxePosition(grAbscisse,grMinMax)
+//grfSmsTaille.PoliceEtiquette(polEtiquette)	
+
+grfSmsTaille.Dessine()

@@ -1,0 +1,3 @@
+dispMessage[3].Visible	= Faux
+
+Exécute(PageCourante() + ".AfficheBaseChamp",saiPopMessage,"popSms.RetourChampAjoute",_nPositionCurseur)

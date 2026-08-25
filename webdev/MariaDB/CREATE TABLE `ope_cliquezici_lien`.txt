@@ -1,0 +1,27 @@
+CREATE TABLE `ope_cliquezici_lien` (
+	`IdCliquezIciLien` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdCliquezIci` INT(11) NOT NULL,
+	`IdBaseLigne` INT(11) NOT NULL,
+	`Libelle` VARCHAR(256) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`TypeLien` CHAR(3) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Url` VARCHAR(500) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`DateHeureClic` DATETIME NOT NULL,
+	`DateHeureNotification` DATETIME NULL DEFAULT NULL,
+	`DateHeureEmailFiltre` DATETIME NULL DEFAULT NULL,
+	`DateHeureSmsFiltre` DATETIME NULL DEFAULT NULL,
+	`DateHeurePushFiltre` DATETIME NULL DEFAULT NULL,
+	PRIMARY KEY (`IdCliquezIciLien`) USING BTREE,
+	INDEX `IdCliquezIci` (`IdCliquezIci`) USING BTREE,
+	INDEX `IdBaseLigne` (`IdBaseLigne`) USING BTREE,
+	INDEX `IdCliquezIci_IdEmailEnvoi` (`IdCliquezIci`) USING BTREE,
+	INDEX `IdCliquezIci_IdSmsEnvoi` (`IdCliquezIci`) USING BTREE,
+	INDEX `IdCliquezIci_IdPushEnvoi` (`IdCliquezIci`) USING BTREE,
+	INDEX `DateHeureClic` (`DateHeureClic`) USING BTREE,
+	INDEX `DateHeureNotification` (`DateHeureNotification`) USING BTREE,
+	INDEX `DateHeureEmailFiltre` (`DateHeureEmailFiltre`) USING BTREE,
+	INDEX `DateHeureSmsFiltre` (`DateHeureSmsFiltre`) USING BTREE,
+	INDEX `DateHeurePushFiltre` (`DateHeurePushFiltre`) USING BTREE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+;

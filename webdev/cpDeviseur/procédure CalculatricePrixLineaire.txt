@@ -1,0 +1,13 @@
+procédure CalculatricePrixLineaire(pQuantite,pPrixAvantSeuil,pPrixApresSeuil,pSeuil, pArrondi = 2)
+
+mPrixFinal est un monétaire
+
+si pQuantite <= pSeuil alors
+	mPrixFinal = pPrixAvantSeuil
+sinon
+	mPrixFinal = (pSeuil * pPrixAvantSeuil + (pQuantite - pSeuil) * pPrixApresSeuil) / pQuantite
+fin
+
+mPrixFinal = Arrondi(mPrixFinal,pArrondi)
+
+renvoyer mPrixFinal

@@ -1,0 +1,61 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// SaisieMessageOK ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure SaisieMessageOK()
+
+nDeb		est un entier
+nFin		est un entier
+sChamp		est une chaîne
+sMessage	est une chaîne
+
+_bEstPersonnalisé = Faux
+
+sMessage = Remplace(saiPopMessage,RC," ")
+
+// Test des caractères [ ]
+si ChaîneOccurrence(sMessage,"[") <> ChaîneOccurrence(sMessage,"]") alors
+	PopupAfficheMessage("Les caractères [ ] sont réservées à la personnalisation des messages",*,__OPERATION_SMS__,__TOAST_INFORMATION__)
+	renvoyer Faux
+fin
+
+
+// Test des variables [ ]
+si Contient(sMessage,["[","]"]) _et_ ChaîneOccurrence(sMessage,"[") = ChaîneOccurrence(sMessage,"]") alors
+	nDeb = Position(sMessage,"[",nDeb) + 1
+	tantque nDeb > 1
+		nFin = Position(sMessage,"]",nDeb) - 1
+		sChamp = sMessage[[nDeb à nFin]]
+		si sChamp <> Partage.LibelleBaseChamp(__CHAMP_CLIQUEZ_ICI__) alors
+			si __stOperation.taaBaseChamp[sChamp].Vide = Vrai // La variable n'existe pas 
+				PopupAfficheMessage("Le champ " + sChamp + " n'est pas présent dans la base de données, vous ne pouvez pas l'utiliser","Erreur",__OPERATION_SMS__,__TOAST_ANNULATION__)
+				renvoyer Faux
+			sinon
+				_bEstPersonnalisé = Vrai
+			fin
+		fin
+		nDeb = Position(sMessage,"[",nDeb) + 1
+	fin
+fin
+
+
+// Test des variables { }
+si ChaîneOccurrence(sMessage,"{") > 0 _ou_ ChaîneOccurrence(sMessage,"}") > 0 alors
+	si cboSmsModele.ValeurMémorisée > 0 alors
+		PopupAfficheMessage("Vous devez personnaliser le message",*,__OPERATION_SMS__,__TOAST_INFORMATION__)
+	sinon
+		PopupAfficheMessage("Les caractères { } sont réservées à la personnalisation des messages",*,__OPERATION_SMS__,__TOAST_INFORMATION__)
+	fin
+	renvoyer Faux
+fin
+
+
+renvoyer Vrai

@@ -1,0 +1,20 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] PersonnaliseMessage (<pMessage>, <stBaseLigne> est StructBaseLigne)
+//
+// Paramètres :
+// 	pMessage : <indiquez ici le rôle de pMessage>
+//	stBaseLigne (StructBaseLigne) : <indiquez ici le rôle de stBaseLigne>
+// Valeur de retour :
+// 	Type indéterminé : // 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure PersonnaliseMessageSms(local pMessage, stBaseLigne est une StructBaseLigne <utile>)
+
+pour tout stBaseChamp, sLibelle de __stOperation.taaBaseChamp
+	pMessage = Remplace(pMessage,"[" + sLibelle + "]",{"stBaseLigne." + stBaseChamp.Champ,indVariable })
+fin
+
+renvoyer pMessage

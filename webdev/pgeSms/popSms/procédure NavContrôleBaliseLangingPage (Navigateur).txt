@@ -1,0 +1,81 @@
+procédure NavContrôleBaliseLangingPage(local pMessage)
+
+pMessage = Remplace(pMessage,RC,Caract(10))
+sMessageMajuscule	est une chaîne	= Majuscule(pMessage)
+sBalise				est une chaîne	= Majuscule(cpSms.__sLibelleCliquezIci)
+sBaliseMajuscule	est une chaîne	= "[" + Majuscule(cpSms.__sLibelleCliquezIci) + "]"
+
+
+nPosition			est un entier
+sCaractère			est une chaîne
+
+si Contient(sMessageMajuscule,sBaliseMajuscule) alors
+	// On met un espace devant ou après la balise si un caractère est collé à la balise
+	nPosition = Position(sMessageMajuscule,sBaliseMajuscule)
+	tantque nPosition > 0
+		si nPosition > 1 alors
+			sCaractère = sMessageMajuscule[[(nPosition - 1)]]
+			si sCaractère pas dans (Caract(10)," ",":") alors // On autorise le : devant l'Url
+				pMessage			= pMessage[[à (nPosition - 1)]] +" "+ pMessage[[nPosition à]]
+				sMessageMajuscule	= sMessageMajuscule[[à (nPosition - 1)]] +" "+ sMessageMajuscule[[nPosition à]]
+				nPosition++
+				renvoyer pMessage
+			fin
+		fin
+		nPosition += (Taille(sBaliseMajuscule) - 1)
+		si nPosition < Taille(sMessageMajuscule) alors
+			sCaractère = sMessageMajuscule[[(nPosition + 1)]]
+			si sCaractère pas dans (Caract(10)," ") alors
+				pMessage			= pMessage[[à nPosition]] +" "+ pMessage[[(nPosition + 1) à]]
+				sMessageMajuscule	= sMessageMajuscule[[à nPosition]] +" "+ sMessageMajuscule[[(nPosition + 1) à]]
+				nPosition++
+				renvoyer pMessage
+			fin
+		fin
+		nPosition = Position(sMessageMajuscule,sMessageMajuscule,nPosition)
+	fin
+fin	
+
+// On remet en forme la balise si l'on a supprimé le crochet
+nPosition = Position(sMessageMajuscule,sBalise)
+tantque nPosition >= 1
+	si nPosition > 1 alors sCaractère = sMessageMajuscule[[(nPosition - 1)]]
+	selon Vrai
+		cas nPosition = 1 
+			pMessage			= "[" + pMessage
+			sMessageMajuscule	= "[" + sMessageMajuscule
+			nPosition++
+			renvoyer pMessage
+			
+			
+		cas sCaractère <> "["
+			pMessage			= pMessage[[à (nPosition - 1)]] +"["+ pMessage[[nPosition à]]
+			sMessageMajuscule	= sMessageMajuscule[[à (nPosition - 1)]] +"["+ sMessageMajuscule[[nPosition à]]
+			nPosition++
+			renvoyer pMessage
+			
+		autre cas 
+	fin
+	
+	nPosition += (Taille(sBalise) - 1)
+	si nPosition < Taille(sMessageMajuscule) alors sCaractère = sMessageMajuscule[[(nPosition + 1)]]
+	selon Vrai 
+		cas nPosition = Taille(sMessageMajuscule)
+			pMessage			= pMessage +"]"
+			sMessageMajuscule	= sMessageMajuscule + "]"
+			nPosition++
+			renvoyer pMessage
+			
+		cas sCaractère <> "]"
+			pMessage			= pMessage[[à nPosition]] +"]"+ pMessage[[(nPosition + 1) à]]
+			sMessageMajuscule	= sMessageMajuscule[[à nPosition]] +"]"+ sMessageMajuscule[[(nPosition + 1) à]]
+			nPosition++
+			renvoyer pMessage
+			
+		autre cas
+			
+	fin
+	nPosition = Position(sMessageMajuscule,sBalise,nPosition)
+fin
+
+renvoyer pMessage

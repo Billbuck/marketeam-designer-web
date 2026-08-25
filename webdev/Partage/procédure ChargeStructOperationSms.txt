@@ -1,0 +1,39 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] ChargeStructOperationSms (<pIdOperation>)
+//
+// Paramètres :
+//	pIdOperation : < indiquez ici le rôle de pIdOperation >
+
+// Valeur de retour :
+// 	structOperationSms : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+//	pIdDossier : <indiquez ici le rôle de pIdDossier>
+//	taaBaseChamp (tableau associatif (structBaseChamp)) : <indiquez ici le rôle de taaBaseChamp>
+procédure ChargeStructOperationSms(pIdOperation)
+
+sCreditSms est une chaîne ANSI
+
+
+stOperationSms est une structOperationSms
+
+si ope_sms.LitRecherchePremier(IdSms,pIdOperation) alors
+	FichierVersMémoire(stOperationSms,ope_sms)
+//	BddPermuteChampVersLibelle(stOperationSms.Message)
+fin
+
+si ope_sms.CreditSms <> "" alors
+	sCreditSms = ope_sms.CreditSms
+	Désérialise(stOperationSms.taaCreditSms, sCreditSms, psdJSON)
+fin
+
+//si ope_sms.CreditSmsUnicode <> "" ALORS
+//	sCreditSms = ope_sms.CreditSmsUnicode
+//	Désérialise(stOperationSms.taaCreditSmsUnicode, sCreditSms, psdJSON)
+//FIN
+
+renvoyer stOperationSms
+

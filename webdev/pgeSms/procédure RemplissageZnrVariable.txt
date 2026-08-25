@@ -1,0 +1,9 @@
+procédure RemplissageZnrVariable()
+
+nInd est un entier
+// On charge les variables préalablement saisie il n'y a pas de contrôle effectué sur le nom des champs 
+pour toute ligne de znrVariable
+	nInd++
+	attVariable = SansCaractère(ExtraitChaîne(__stOperation.stOperationSms.ModeleVariable,nInd),EOT)
+fin
+

@@ -1,0 +1,40 @@
+procédure MixGestionInterface(local pMessage)
+
+_sEffetCouleurFond					= __COULEUR_SMS_M__
+
+_bEstPersonnalisé					= MixEstMessageChampPersonnalisé(pMessage)
+
+sSaveMontant est une chaîne			= libTrfMontantHT
+libTailleMessageUnitaire			= NumériqueVersChaîne(_nTailleMessage, "d")
+libCaractère						= (_nTailleMessage = 1) ? "Caractère" sinon "Caractères"
+libSmsPrixUnitaire					= Arrondi(_mPrixVenteUnitaireHT,3) +" €"
+
+intAperçu..Visible					= ((intAperçu = 1 _ou_ _bEstPersonnalisé = Vrai) _et_ _bEstBaseCharge = Vrai _et_ Contient(pMessage,["{","}"]) = Faux)
+//btnBaseChamp.Visible				= _bEstBaseCharge = Vrai 
+btnApercu..Visible					= SansEspace(pMessage) <> ""
+
+celPrixUnitaire.Visible				= (pMessage <> "" _et_ _bEstPersonnalisé = Faux _et_  _nTailleMessage > 0)
+celNbrCaractère.Visible				= (pMessage <> "" _et_ _bEstPersonnalisé = Faux _et_  _nTailleMessage > 0)
+libSmsPrixUnitaire					= Arrondi(_mPrixVenteUnitaireHT,3) +" €"
+libTailleMessageUnitaire			= _nTailleMessage	
+
+celPopPrixUnitaire.Visible			= (pMessage <> "" _et_ _bEstPersonnalisé = Faux _et_  _nTailleMessage > 0)
+celPopNbrCaractère.Visible			= (pMessage <> "" _et_ _bEstPersonnalisé = Faux _et_  _nTailleMessage > 0)
+libPopSmsPrixUnitaire				= Arrondi(_mPrixVenteUnitaireHT,3) +" €"
+libPopTailleMessageUnitaire			= _nTailleMessage
+
+btnCalculer.Visible					= (_bEstPersonnalisé = Vrai  _et_ Contient(pMessage,["{","}"]) = Faux)
+
+dispSms[_ban_modele_]..Visible		= pas (cboBibliothèque..Occurrence = 1 _et_ cboSmsModele..Occurrence = 1)
+dispSms[_ban_message_]..Visible		= Vrai
+dispSms[_ban_saisir_]..Visible		= Vrai
+
+celBoutons.Plan						= (intAperçu = 0) ? 1 sinon 2
+
+saiLeFrom..Etat						= (intAperçu = Vrai) ? Grisé sinon Actif
+
+selon Vrai 
+	cas Contient(pMessage,["{","}"])  	: btnMessageSaisir.Libellé = "Personnaliser le message"
+	cas pMessage <> "" 					: btnMessageSaisir.Libellé = "Modifier le message"
+	autre cas 							: btnMessageSaisir.Libellé = "Saisir le message"
+fin

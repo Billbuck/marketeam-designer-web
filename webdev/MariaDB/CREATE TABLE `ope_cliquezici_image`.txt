@@ -1,0 +1,15 @@
+CREATE TABLE `ope_cliquezici_image` (
+	`IdCliquezImage` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdCliquezIciBloc` INT(11) NULL DEFAULT NULL,
+	`IdImage` INT(11) NULL DEFAULT NULL,
+	PRIMARY KEY (`IdCliquezImage`) USING BTREE,
+	INDEX `IdCliquezIciBloc` (`IdCliquezIciBloc`) USING BTREE,
+	INDEX `IdImage` (`IdImage`) USING BTREE,
+	CONSTRAINT `FK_ope_cliquezici_image_ici_image` FOREIGN KEY (`IdImage`) REFERENCES `ici_image` (`IdImage`) ON UPDATE NO ACTION ON DELETE RESTRICT,
+	CONSTRAINT `FK_ope_cliquezici_image_ope_cliquezici_bloc` FOREIGN KEY (`IdCliquezIciBloc`) REFERENCES `ope_cliquezici_bloc` (`IdCliquezIciBloc`) ON UPDATE NO ACTION ON DELETE CASCADE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+ROW_FORMAT=COMPACT
+AUTO_INCREMENT=5
+;

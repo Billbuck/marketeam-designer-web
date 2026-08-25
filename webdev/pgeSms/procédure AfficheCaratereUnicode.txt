@@ -1,0 +1,34 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//AfficheCaratereUnicode ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+// 	pMessage : <indiquez ici le rôle de pMessage>
+procédure AfficheCaratereUnicode()
+
+taaCaractère est un tableau associatif de chaîne Unicode
+//suSBloc est une chaine unicode
+
+T est une chaîne = Caract(34) + Caract(10) + "- @£$¥èéùìòÇØøÅå_^{}[~]|€ÆæßÉ!¤%&'()*+,./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà"
+
+
+pour I = 1 _à_ Taille(saiMessage)
+	si Position(T,saiMessage[[I]]) = 0 alors
+		taaCaractère[saiMessage[[I]]] = Vrai		
+	fin
+fin
+
+si taaCaractère.Occurrence > 0 alors
+	saiMessage = saiMessage + gPoliceGras(Vrai) + gStylo(RougeClair) + " TEST "
+//	pour tout suCaractere, sTest de taaCaractère
+//		suSBloc = " + gPoliceGras(Vrai) + gStylo(RougeClair) + " + suCaractere + " + gStylo(Noir) + gPoliceGras(Faux) + "
+//		saiMessage = remplace(saiMessage, suCaractere, suSBloc)
+//	FIN
+fin

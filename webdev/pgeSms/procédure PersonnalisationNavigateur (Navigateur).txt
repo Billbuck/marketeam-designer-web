@@ -1,0 +1,29 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//PersonnalisationNavigateur ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure PersonnalisationNavigateur()
+
+nInd est un entier
+sMessage est une chaîne
+
+sMessage = _sMessageBrutAvecVariable
+
+
+pour nInd = 1 _à_ znrVariable..Occurrence
+	si znrVariable.attVariable[nInd] <> "" alors
+		sMessage = Remplace(sMessage,"{" + znrVariable.attChamp[nInd] + "}",znrVariable.attVariable[nInd])
+	fin
+fin
+
+saiPopMessage = sMessage
+
+MixGestionInterface(saiMessage)

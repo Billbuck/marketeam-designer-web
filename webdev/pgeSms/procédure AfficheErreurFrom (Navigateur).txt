@@ -1,0 +1,22 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//AfficheErreurFrom (<pCaractère>)
+//
+// Paramètres :
+// 	pCaractère : <indiquez ici le rôle de pCaractère>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure AfficheErreurFrom(pCaractère)
+
+si pCaractère = " " alors
+	libMessageErreur = "L'espace est un caractère interdit"
+sinon
+	libMessageErreur = pCaractère + " est un caractère interdit"
+fin
+
+libMessageErreur.Visible	= Vrai
+

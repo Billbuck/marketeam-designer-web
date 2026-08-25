@@ -1,0 +1,16 @@
+procédure AffichePageSuivante()
+
+si intAperçu = Vrai alors
+	saiMessage = _sCopieMessage
+	CompteurSms(saiMessage,_sMessageFinalisé,Faux,_nTailleMessage,_mPrixVenteUnitaireHT,_nCreditMessage,_mTarifUnitaire,Vrai,_bEstCliquezIci)
+fin
+
+si PageMémorise() alors
+	si __stOperation.EstCliquezIci = Vrai alors
+		PageAffiche(pgeIciChoix)
+	sinon
+		PageAffiche(pgeSmsPlannificateur)
+	fin
+sinon
+	popJaugeProgression.Ferme()
+fin

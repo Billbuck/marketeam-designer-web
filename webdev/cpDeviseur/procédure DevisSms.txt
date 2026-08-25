@@ -1,0 +1,263 @@
+
+procédure DevisSms(stOperation est une structOperation)
+
+nInd 						est un entier
+nLigne 						est un entier
+mRemiseCoupon 				est un monétaire
+mCompensationPrestation 	est un monétaire
+mTotalHTPrestation 			est un monétaire
+sLeFrom						est une chaîne
+bEstPersonnalise			est un booléen
+mFraisFixe					est un monétaire
+mFraisFixeCliquezIci		est un monétaire
+mMinFacturation 			est un monétaire
+mPuVenteSms					est un monétaire
+sType 						est une chaîne
+sLigne						est une chaîne
+mCoutTotalSms 				est un monétaire
+mCoutCliquezIci 			est un monétaire
+
+
+// on supprime les lignes calculées par la calculette
+nInd = stOperation.tabOperationLigne.Cherche(tcLinéaire,"TypeLigneCalcule",__OPERATION_SMS__)
+tantque nInd > 0
+	stOperation.tabOperationLigne.Supprime(nInd)
+	nInd = stOperation.tabOperationLigne.Cherche(tcLinéaire,"TypeLigneCalcule",__OPERATION_SMS__)
+fin
+
+si stOperation.NbrDestinataire = 0 alors
+	stOperation.MontantNetHT 	= 0
+	stOperation.MontantTVA 		= 0
+	stOperation.MontantTTC 		= 0
+	stOperation.RemiseCoupon 	= 0
+	retour
+fin
+
+selon stOperation.TypeOperation
+	cas __OPERATION_SMS__
+		sLeFrom 			= stOperation.stOperationSms.LeFrom
+		bEstPersonnalise	= stOperation.stOperationSms.EstSmsPersonnalise
+		mFraisFixe			= Partage.__vcUser.taaFrais[__OPERATION_SMS__].FraisFixeFacturation
+		mMinFacturation		= Partage.__vcUser.taaFrais[__OPERATION_SMS__].MinimumFacturation
+fin
+
+
+si sLeFrom <> "" alors
+	nLigne = stOperation.tabOperationLigne.Ajoute()
+
+	stOperation.tabOperationLigne[nLigne].TypeLigneCalcule			= __OPERATION_SMS__
+	stOperation.tabOperationLigne[nLigne].Designation 				= "Personnalisation de l'émetteur"
+	stOperation.tabOperationLigne[nLigne].Qte 						= 1
+fin
+
+si bEstPersonnalise = Vrai alors
+	nLigne = stOperation.tabOperationLigne.Ajoute()
+	stOperation.tabOperationLigne[nLigne].TypeLigneCalcule			= __OPERATION_SMS__
+	stOperation.tabOperationLigne[nLigne].Designation 				= "Personnalisation des messages"
+	stOperation.tabOperationLigne[nLigne].Qte 						= 1
+fin
+
+
+si mFraisFixe > 0 alors
+	nLigne																					= stOperation.tabOperationLigne.Ajoute()
+	stOperation.tabOperationLigne[nLigne].TypeLigneCalcule					= __OPERATION_SMS__
+	stOperation.tabOperationLigne[nLigne].Designation							= "Frais fixes prestation"
+	stOperation.tabOperationLigne[nLigne].CodePrestation						= __PRESTATION_FRAIS_FIXES__
+	stOperation.tabOperationLigne[nLigne].Qte										= 1
+	stOperation.tabOperationLigne[nLigne].TailleUnitaire						= 1
+	stOperation.tabOperationLigne[nLigne].PrixUnitaireVenteCalcule			= mFraisFixe
+	stOperation.tabOperationLigne[nLigne].PrixUnitaireVenteMinimum			= CalculePrixVenteMinimum(__PRESTATION_FRAIS_FIXES__,mFraisFixe,0,2)
+	stOperation.tabOperationLigne[nLigne].Total									= mFraisFixe
+	stOperation.tabOperationLigne[nLigne].TauxTva								= cpProjet.__moTauxTva
+fin
+
+// ******************************************* Frais Fixe du cliquezici *****************************************************
+si stOperation.EstCliquezIci = Vrai alors // _ET_ stOperation.stCliquezIci.FraisFixe > 0
+	nLigne = stOperation.tabOperationLigne.Ajoute()
+	stOperation.tabOperationLigne[nLigne].TypeLigneCalcule						= __OPERATION_SMS__
+
+	sType = stOperation.stNouveauCliquezIci.Type
+
+	selon sType //stOperation.stCliquezIci.Type
+		cas __ICI_URL_FIXE__
+			stOperation.tabOperationLigne[nLigne].Designation					= "Redirection web"
+
+		cas __ICI_URL_TRACKING__, __ICI_WEB__
+			stOperation.tabOperationLigne[nLigne].Designation							= sType = __ICI_WEB__ ? "Création d'une landing page" sinon "Frais fixe tracking"
+			stOperation.tabOperationLigne[nLigne].CodePrestation						= __PRESTATION_FRAIS_FIXES__
+			stOperation.tabOperationLigne[nLigne].Qte										= 1
+			stOperation.tabOperationLigne[nLigne].TailleUnitaire						= 1
+			stOperation.tabOperationLigne[nLigne].PrixUnitaireVenteCalcule			= 0
+			stOperation.tabOperationLigne[nLigne].PrixUnitaireVenteMinimum			= 0
+			stOperation.tabOperationLigne[nLigne].Total									= 0
+			stOperation.tabOperationLigne[nLigne].TauxTva								= cpProjet.__moTauxTva
+
+		autres cas
+//			trace(sType)
+	fin
+
+	mFraisFixeCliquezIci 															= stOperation.tabOperationLigne[nLigne].PrixUnitaireVenteCalcule
+fin
+
+
+nTotal est un entier
+// On vérifie que les tables temporaires sont en phase avec le devis
+pour tout nNombre, sCredit de stOperation.stOperationSms.taaCreditSms
+	nTotal += nNombre
+fin
+
+
+si nTotal <> stOperation.NbrDestinataire alors
+	CalculeCoutOperationSms(stOperation)
+fin
+
+
+si stOperation.NbrDestinataire = 0 alors
+	stOperation.MontantNetHT	= 0
+	stOperation.MontantTVA		= 0
+	stOperation.MontantTTC		= 0
+	stOperation.RemiseCoupon	= 0
+	retour
+fin
+
+stOperation.stOperationSms.taaCreditSms.Trie(ttClé+ttCroissant)
+pour tout élément Nombre,NbrCredit de stOperation.stOperationSms.taaCreditSms
+
+	mPuVenteSms = Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_SMS__].PrixVenteUnitaire * Val(NbrCredit)
+
+	selon NbrCredit
+		cas 1 : sLigne = "Sms simple (< 160 caractères)"
+		cas 2 : sLigne = "Sms double (entre 161 et 306 caractères)"
+		cas 3 : sLigne = "Sms triple (entre 307 et 459 caractères)"
+		cas 4 : sLigne = "Sms quadruple (entre 460 et 612 caractères)"
+		cas 5 : sLigne = "Sms quintuple (entre 613 et 765 caractères)"
+		cas 6 : sLigne = "Sms sextuple (entre 766 et 918 caractères)"
+		cas 7 : sLigne = "Sms septuple (entre 919 et 1071 caractères)"
+		cas 8 : sLigne = "Sms octuple (entre 1072 et 1224 caractères)"
+		cas 9 : sLigne = "Sms trop longs ( > 1225 caractères)"
+	fin
+
+	nLigne																= stOperation.tabOperationLigne.Ajoute()
+
+	stOperation.tabOperationLigne[nLigne].TypeLigneCalcule					= __OPERATION_SMS__
+	stOperation.tabOperationLigne[nLigne].Designation							= sLigne
+	stOperation.tabOperationLigne[nLigne].CodePrestation						= __PRESTATION_ROUTAGE_SMS__
+	stOperation.tabOperationLigne[nLigne].Qte										= Nombre
+	stOperation.tabOperationLigne[nLigne].TailleUnitaire						= Val(NbrCredit)
+	stOperation.tabOperationLigne[nLigne].PrixUnitaireAchat					= Val(NbrCredit) * Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_SMS__].PrixAchatUnitaire
+	stOperation.tabOperationLigne[nLigne].PrixUnitaireVenteCalcule			= mPuVenteSms
+	stOperation.tabOperationLigne[nLigne].PrixUnitaireVenteMinimum			= 0
+	stOperation.tabOperationLigne[nLigne].Total									= Arrondi(Nombre * mPuVenteSms,2)
+	stOperation.tabOperationLigne[nLigne].TauxTva								= cpProjet.__moTauxTva
+
+	mCoutTotalSms += stOperation.tabOperationLigne[nLigne].Total
+
+fin
+
+//TableauTrie(stOperation.stOperationSms.taaCreditSmsUnicode,ttClé+ttCroissant)
+//POUR TOUT ELÉMENT Nombre,NbrCredit DE stOperation.stOperationSms.taaCreditSmsUnicode
+//	mPuVenteSms = Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_SMS__].PrixVenteUnitaire * val(NbrCredit)
+//	SELON NbrCredit
+//		CAS 1 : sLigne = "Sms Unicode simple (< 70 caractères)"
+//		CAS 2 : sLigne = "Sms Unicode double (entre 71 et 134 caractères)"
+//		CAS 3 : sLigne = "Sms Unicode triple (entre 135 et 201 caractères)"
+//		CAS 4 : sLigne = "Sms Unicode quadruple (entre 202 et 268 caractères)"
+//		CAS 5 : sLigne = "Sms Unicode quintuple (entre 269 et 335 caractères)"
+//		CAS 6 : sLigne = "Sms Unicode sextuple (entre 336 et 402 caractères)"
+//		CAS 7 : sLigne = "Sms Unicode septuple (entre 403 et 469 caractères)"
+//		CAS 8 : sLigne = "Sms Unicode octuple (entre 470 et 536 caractères)"
+//		CAS 9 : sLigne = "Sms Unicode trop longs (> 537 caractères)"
+//	FIN
+//
+//	nLigne																= Ajoute(stOperation.tabOperationLigne)
+//
+//	stOperation.tabOperationLigne[nLigne].Designation					= sLigne
+//	stOperation.tabOperationLigne[nLigne].TypeLigneCalcule				= stOperation.TypeOperation
+//	stOperation.tabOperationLigne[nLigne].CodePrestation				=  __PRESTATION_ROUTAGE_SMS__
+//	stOperation.tabOperationLigne[nLigne].Qte							= nombre
+//	stOperation.tabOperationLigne[nLigne].PrixUnitaireAchat				= Val(NbrCredit) * Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_SMS__].PrixAchatUnitaire
+//	stOperation.tabOperationLigne[nLigne].PrixUnitaireVenteCalcule		= mPuVenteSms
+//	stOperation.tabOperationLigne[nLigne].Total							= Arrondi(Nombre * mPuVenteSms,2)
+//	stOperation.tabOperationLigne[nLigne].TauxTva						= cpProjet.__moTauxTva
+//	mCoutTotalSms += stOperation.tabOperationLigne[nLigne].Total
+//FIN
+
+
+mPuVenteSms = mCoutTotalSms / stOperation.NbrDestinataire
+
+// Le minimum de facturation se fait sur les frais fixes + la prestation
+mTotalHTPrestation = mFraisFixe + mCoutTotalSms
+
+
+
+si mTotalHTPrestation < mMinFacturation alors
+	mCompensationPrestation = mMinFacturation - mTotalHTPrestation
+fin
+
+si mCompensationPrestation > 0 alors
+	nLigne																					= stOperation.tabOperationLigne.Ajoute()
+	stOperation.tabOperationLigne[nLigne].TypeLigneCalcule					= __OPERATION_SMS__
+	stOperation.tabOperationLigne[nLigne].Designation							= "Compensation minimum de facturation"
+	stOperation.tabOperationLigne[nLigne].CodePrestation						= __PRESTATION_MINIMUM_FACTURATION__
+	stOperation.tabOperationLigne[nLigne].Qte										= 1
+	stOperation.tabOperationLigne[nLigne].TailleUnitaire						= 1
+	stOperation.tabOperationLigne[nLigne].PrixUnitaireVenteCalcule			= mCompensationPrestation
+	stOperation.tabOperationLigne[nLigne].Total									= mCompensationPrestation
+	stOperation.tabOperationLigne[nLigne].TauxTva								= cpProjet.__moTauxTva
+
+	mTotalHTPrestation																	= mMinFacturation
+fin
+
+// ******************************************* Cliquezici *****************************************************
+si stOperation.EstCliquezIci _et_  stOperation.stNouveauCliquezIci.Type <> __ICI_URL_FIXE__ alors
+	nLigne																					= stOperation.tabOperationLigne.Ajoute()
+	stOperation.tabOperationLigne[nLigne].TypeLigneCalcule					= __OPERATION_SMS__
+	stOperation.tabOperationLigne[nLigne].Qte										= stOperation.NbrDestinataire
+	stOperation.tabOperationLigne[nLigne].TailleUnitaire						= 1
+
+	sType																						= stOperation.stNouveauCliquezIci.Type
+
+	si sType dans (__ICI_URL_TRACKING__ ,__ICI_WEB__) alors
+		stOperation.tabOperationLigne[nLigne].Designation							= __ICI_URL_TRACKING__ ? "Tracking Url" sinon "Tracking landing page"
+		stOperation.tabOperationLigne[nLigne].CodePrestation						= __PRESTATION_CLIQUEZICI_WEB__
+		stOperation.tabOperationLigne[nLigne].PrixUnitaireVenteCalcule			= Partage.__vcUser.taaPrestation[__PRESTATION_CLIQUEZICI_WEB__].PrixVenteUnitaire
+		stOperation.tabOperationLigne[nLigne].PrixUnitaireVenteMinimum			= 0
+	fin
+	stOperation.tabOperationLigne[nLigne].Total								= stOperation.tabOperationLigne[nLigne].PrixUnitaireVenteCalcule * stOperation.NbrDestinataire
+	stOperation.tabOperationLigne[nLigne].TauxTva							= cpProjet.__moTauxTva
+
+	mCoutCliquezIci																	= stOperation.tabOperationLigne[nLigne].Total
+fin
+
+mTotalHTPrestation += mFraisFixeCliquezIci + mCoutCliquezIci
+
+//********************************************* COUPON DE REDUCTION **************
+mRemiseCoupon = CalculRemiseCoupon(stOperation)
+
+stOperation.MontantBrutHT 		= mTotalHTPrestation
+
+si mRemiseCoupon < 0
+	nLigne																					= stOperation.tabOperationLigne.Ajoute()
+	stOperation.tabOperationLigne[nLigne].TypeLigneCalcule					= __OPERATION_SMS__
+	stOperation.tabOperationLigne[nLigne].Designation							= "Remise Coupon de réduction"
+	stOperation.tabOperationLigne[nLigne].CodePrestation						= __PRESTATION_REMISE_COUPON__
+	stOperation.tabOperationLigne[nLigne].Qte										= 1
+	stOperation.tabOperationLigne[nLigne].TailleUnitaire						= 1
+	stOperation.tabOperationLigne[nLigne].PrixUnitaireVenteCalcule			= mRemiseCoupon
+	stOperation.tabOperationLigne[nLigne].Total									= mRemiseCoupon
+	stOperation.tabOperationLigne[nLigne].TauxTva								= cpProjet.__moTauxTva
+	mTotalHTPrestation += mRemiseCoupon
+fin
+
+stOperation.RemiseCoupon 		= mRemiseCoupon
+stOperation.MontantNetHT 		= mTotalHTPrestation
+stOperation.MontantTVA			= Arrondi(mTotalHTPrestation * cpProjet.__moTauxTva / 100,2)
+stOperation.MontantTTC			= stOperation.MontantNetHT + stOperation.MontantTVA
+
+
+// Par défaut le prix brut et le prix net = prix calculé
+pour tout stDossierLigne de stOperation.tabOperationLigne avec TypeLigneCalcule = __OPERATION_SMS__
+	stDossierLigne.PrixUnitaireVenteBrut	= stDossierLigne.PrixUnitaireVenteCalcule
+	stDossierLigne.PrixUnitaireVenteNet 	= stDossierLigne.PrixUnitaireVenteCalcule
+fin
+

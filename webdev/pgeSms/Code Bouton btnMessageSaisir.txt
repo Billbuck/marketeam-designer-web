@@ -1,0 +1,23 @@
+// **** Clic sur btnMessageSaisir (onclick navigateur) ( celBoutons ) ****
+popSms.dispMessage[1].Visible = (znrVariable.0ccurrence > 0)
+popSms.dispMessage[3].Visible = Faux
+
+// **** Clic sur btnMessageSaisir ( celBoutons ) (serveur) Rechargement minimal de la page (AJAX) ****
+
+popSms.saiPopMessage = Remplace(saiMessage,RC + __STOP_SMS__,"")
+popSms.saiPopMessage = Remplace(saiMessage,Caract(10) + __STOP_SMS__,"")
+
+si __stOperation.EstCliquezIci = Vrai alors
+	popSms.saiPopMessage	= Remplace(popSms.saiPopMessage,cpSms.__sUrlCliquezIci,"[" + Partage.LibelleBaseChamp(__CHAMP_CLIQUEZ_ICI__) +"]")
+
+	si saiMessage = "" alors
+		popSms.saiPopMessage = Caract(10) + "[" + Partage.LibelleBaseChamp(__CHAMP_CLIQUEZ_ICI__) +"]"
+	fin
+fin
+
+PopupAffiche(popSms,popupHautCentre+popupEpinglée)
+
+// **** Retour de traitement AJAX après le clic sur btnMessageSaisir ( celBoutons ) (navigateur) ****
+
+RepriseSaisie(saiPopMessage)
+MixGestionInterface(saiPopMessage)

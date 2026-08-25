@@ -1,0 +1,29 @@
+// ****  Sortie du champ saiPopMessage (onblur navigateur) ( dispMessage ) ****
+dispMessage[3].Visible = Faux
+
+_nPositionCurseur = PositionCurseur(saiPopMessage.Alias)
+saiPopMessage = NavUnicodeVersGsm(saiPopMessage)
+
+// Contrôle les espaces devant et derrière la balise [Landing Page]
+vsi _bEstCliquezIci alors
+saiPopMessage = NavContrôleBaliseLangingPage (saiPopMessage)
+fin
+cpNavSms .NavCompteurSms (saiPopMessage, sMessageFinalisé,Faux, nTailleMessage, mPrixVenteUnitaireHT,_nCredi
+MixGestionInterface(saiPopMessage)
+
+// **** Touche relâchée dans saiPopMessage (onkeyup navigateur) ( dispMessage ) ****
+
+dispMessage[3].Visible = Faux
+_nPositionCurseur = PositionCurseur(saiPopMessage.Alias)
+saiPopMessage = NavUnicodeVersGsm(saiPopMessage)
+
+// Contrôle les espaces devant et derrière la balise [Landing Page]
+vsi _bEstCliquezIci alors
+saiPopMessage = NavContrôleBaliseLangingPage (saiPopMessage)
+fin
+cpNavSms .NavCompteurSms (saiPopMessage, sMessageFinalisé,Faux, nTailleMessage, mPrixVenteUnitaireHT,_nCredi
+MixGestionInterface(saiPopMessage)
+
+// **** Bouton relâché sur saiPopMessage (onmouseup navigateur) ( dispMessage ) ****
+
+_nPositionCurseur = PositionCurseur(saiPopMessage.Alias)

@@ -1,0 +1,59 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] saisieOk (<pPrecedent>)
+//
+// Paramètres :
+// 	pPrecedent : <indiquez ici le rôle de pPrecedent>
+
+// Valeur de retour :
+// 	booléen : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure saisieOk(pPrecedent)
+
+sMessage est une chaîne
+sChamp est une chaîne, utile
+nInd, nDeb, nFin sont des entiers, utile 
+
+si SansEspace(saiMessage) = "" alors
+	si pPrecedent = Faux alors 
+		PopupAfficheMessage("Vous devez saisir votre message","Erreur",__OPERATION_SMS__,__TOAST_ANNULATION__)
+	fin
+	renvoyer Faux	
+fin
+
+
+
+// Test des caractères [ ]
+si ChaîneOccurrence(saiMessage,"[") <> ChaîneOccurrence(saiMessage,"]") alors
+	si pPrecedent = Faux alors 
+		PopupAfficheMessage("Les caractères [ ] sont réservées à la personnalisation des messages",*,__OPERATION_SMS__,__TOAST_INFORMATION__)
+	fin
+	renvoyer Faux	
+fin
+
+si Val(cboSmsModele..ValeurMémorisée) > 0 alors
+	sMessage = _sCopieMessage
+	pour toute ligne de znrVariable
+		si attVariable = "" alors
+			si pPrecedent = Faux alors 
+				PopupAfficheMessage("Vous devez renseigner la variable """ + attLibelle + """",*,__OPERATION_SMS__,__TOAST_INFORMATION__)
+			fin
+			renvoyer Faux			
+		sinon
+			sMessage = Remplace(sMessage,"{" + attChamp + "}",attVariable)
+		fin
+	fin
+fin
+
+// Test des variables { } 
+si ChaîneOccurrence(saiMessage,"{") > 0 _ou_ ChaîneOccurrence(saiMessage,"}") > 0 alors
+	si pPrecedent = Faux alors 
+		PopupAfficheMessage("Les caractères { } sont réservées à la personnalisation des messages",*,__OPERATION_SMS__,__TOAST_INFORMATION__)
+	fin
+	renvoyer Faux	
+fin
+
+renvoyer Vrai

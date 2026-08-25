@@ -1,0 +1,26 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// Valider ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure Valider()
+
+__stOperation.stOperationSms.IdSmsModele			= cboSmsModele..ValeurMémorisée
+__stOperation.stOperationSms.Message 				= _sMessageFinalisé
+__stOperation.stOperationSms.LeFrom 				= saiLeFrom
+__stOperation.stOperationSms.EstSmsPersonnalise 	= _bEstPersonnalisé
+__stOperation.EstDocumentEnAttente					= (SansEspace(saiMessage) = "")
+
+si cboSmsModele..ValeurMémorisée > 0  
+	__stOperation.stOperationSms.ModeleVariable		= ""
+	pour toute ligne de znrVariable
+		__stOperation.stOperationSms.ModeleVariable += [TAB] + attVariable
+	fin
+fin

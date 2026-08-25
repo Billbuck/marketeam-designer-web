@@ -1,0 +1,1384 @@
+---
+description: Contexte du projet RCS Marketeam — décisions arbitrées, schéma MariaDB, contraintes API Infobip
+alwaysApply: true
+---
+
+# CONTEXTE — Intégration RCS Infobip dans Marketeam
+
+> Document de passation. Il contient l'ensemble des décisions d'architecture arbitrées,
+> les contraintes techniques de l'API RCS d'Infobip et le schéma de base de données validé.
+> À lire intégralement avant toute proposition de code.
+
+**Dernière mise à jour :** 21 août 2026 — 9 tables, gestion complète des agents
+**Source de référence :** spécification OpenAPI 3.1 d'Infobip, canal RCS, version 3.210.0 (générée le 23/07/2026)
+
+---
+
+## 1. Objectif du projet
+
+Ajouter le canal **RCS** à la plateforme SaaS Marketeam, qui gère déjà des campagnes SMS,
+email, courrier postal et VMS.
+
+Marketeam est développé en **WebDev / WLangage (PC SOFT)** avec une base **MariaDB**.
+Le module « Marketeam Designer Web » (éditeur VDP pour le courrier) est en HTML/CSS/JS pur,
+intégré en iframe avec un pont `postMessage` vers la page WebDev parente
+(la page parente écrit dans `gsJsonRecu` via `SetVariableWebDev()`).
+
+---
+
+## 2. Décisions arbitrées — NE PAS REMETTRE EN CAUSE
+
+Ces choix ont été discutés et tranchés. Ils cadrent tout le développement.
+
+### 2.1 Pas de campagnes conversationnelles
+
+Le sender RCS sera configuré chez Infobip avec `billingCategory = NON_CONVERSATIONAL`.
+
+Conséquences directes :
+
+- Le `trafficType` sera **toujours `SINGLE`**. Un seul type de facturation à gérer.
+- **Aucune mise à jour rétroactive des statuts.** L'événement « Conversation Started »,
+  qui peut normalement modifier le type de facturation d'un message *après* réception
+  de son accusé de livraison, ne se déclenchera jamais. Les lignes de log peuvent donc
+  être écrites une fois pour toutes, sans architecture en `UPDATE` différé.
+- Les types de bouton `REPLY` et `REQUEST_LOCATION` sont **interdits** : ce sont
+  précisément les deux qui ouvrent une session conversationnelle facturée.
+  L'interdiction est posée au niveau de l'`ENUM` en base.
+- Le webhook « Conversation Started » n'est pas à implémenter.
+
+⚠️ `billingCategory` doit être fixé **avant** la mise en service du sender chez les
+opérateurs. Après, la modification passe par le chargé de compte Infobip.
+
+### 2.2 Formats supportés
+
+| Format | Statut | Remarque |
+|---|---|---|
+| `CARD` (image + titre + description + boutons) | **Oui** | Format principal recommandé par Infobip |
+| `CAROUSEL` (2 à 10 cartes) | **Oui** | Prévu dès la conception |
+| `TEXT` | Non prévu | Le SMS couvre déjà ce besoin |
+| `FILE` | Non prévu | — |
+| `PROVIDER_TEMPLATE` | Non | Réservé aux marchés à gabarit obligatoire (Inde) |
+
+**Formats de média exposés aux clients : `image/jpeg` et `image/png` uniquement**, même
+si l'API en accepte davantage (voir § 3.3). Raisons : le rendu du GIF animé est
+imprévisible selon les messageries ; la vidéo impose de fournir en plus une vignette
+(`MediaThumbnailUrl`), ce qui double le travail d'upload et de validation ; l'audio et le
+PDF n'ont pas de sens dans une carte marketing. La colonne `MediaContentType` reste un
+`VARCHAR` libre : élargir la liste ne demandera aucun `ALTER TABLE`.
+
+⚠️ La spécification précise que **le support de certains types de contenu varie selon
+l'opérateur mobile**. Tout format ajouté doit être testé sur les quatre opérateurs
+français avant ouverture aux clients.
+
+### 2.3 Pas de chips
+
+Les suggestions de niveau message (les « chips » affichées sous la bulle, 11 maximum)
+**ne sont pas exposées** aux clients de la plateforme. Seuls les boutons **de carte**
+(4 maximum par carte) sont utilisés.
+
+Justification : sur iOS, les chips et les boutons de carte sont fusionnés dans un seul
+groupe (problème documenté par Infobip, sans solution), et leur durée de vie diffère
+entre Android et iOS. Les boutons de carte, eux, persistent dans l'historique de
+conversation sur toutes les plateformes. Un call-to-action doit rester cliquable
+plusieurs jours après l'envoi.
+
+### 2.4 Réglages d'affichage figés
+
+- `cardWidth = "MEDIUM"` et `media.height = "MEDIUM"` en dur, non exposés au client.
+  C'est la seule combinaison qu'Infobip recommande explicitement pour un rendu
+  cohérent entre Android et iOS.
+- `orientation = "VERTICAL"` par défaut (image au-dessus du texte).
+- Les carrousels n'acceptent que des cartes verticales.
+
+### 2.5 Séparation stricte SMS / RCS
+
+Les tables RCS sont **indépendantes** des tables SMS. Pas de table unifiée.
+`ope_rcs` est un frère de `ope_sms`, rattaché à `dos_operation` par le même mécanisme
+de clé primaire partagée.
+
+Le repli SMS est autonome dans `ope_rcs` (colonnes `RepliSms*`), il ne pointe pas
+vers `ope_sms`.
+
+### 2.6 Multi-agents
+
+Marketeam gère **plusieurs agents RCS**, référencés dans la table `rcs_agent`.
+Un agent est rattaché **soit à un client** (`IdClient`), **soit à une marque** (`IdMarque`),
+jamais aux deux, jamais à aucun des deux (contrainte `CHECK` en base).
+
+Chez Infobip, l'agent n'a **pas d'identifiant technique séparé** : le `senderName` est
+lui-même la clé. Tous les endpoints de gestion l'utilisent comme paramètre de chemin
+(`/rcs/1/senders/{senderName}`, `/launch-status`, `/test-numbers`…).
+
+Conséquence : `rcs_agent.SenderName` est **immuable**. Le renommer casserait toutes les
+campagnes et l'historisation. Marketeam ajoute son propre `IdRcsAgent` (INT) pour les
+relations internes, plus léger qu'une clé étrangère sur VARCHAR.
+
+⚠️ Deux champs de l'agent ne sont **pas modifiables après création** chez Infobip :
+`hostingRegion` (mettre `EUROPE`) et, une fois le lancement demandé, `billingCategory`.
+
+⚠️ **Plafond de 10 agents par compte Infobip.** Si le modèle est « un agent par client »,
+la plateforme est bloquée à 10 clients RCS. **À faire relever par le chargé de compte
+avant tout développement de l'écran de gestion.**
+
+⚠️ **La mise en service (« launch ») n'est PAS dans l'API.** Création, modification et
+tests sont automatisables ; la demande de lancement passe obligatoirement par le chargé
+de compte Infobip. Le workflow Marketeam est donc mixte. Voir le mémo
+`MEMO_CREATION_AGENT_RCS.md` pour la procédure complète, les 12 champs obligatoires,
+les 8 statuts et les webhooks associés.
+
+### 2.7 Architecture de l'interface de composition
+
+- **Saisie : WebDev.** Le compositeur RCS est un formulaire, et le carrousel est une
+  structure répétitive → zone répétée avec panneau de détail. Réordonnancement des
+  cartes par boutons monter/descendre, pas de glisser-déposer.
+- **Aperçu temps réel : iframe JavaScript**, en lecture seule. Elle reçoit un JSON et
+  dessine la maquette du téléphone. Pas d'état, pas d'export, `postMessage` dans un
+  seul sens (WebDev → iframe).
+- La mise à jour de l'aperçu se fait par **code navigateur WebDev** sur les événements
+  de saisie, sans aller-retour serveur.
+- Cette iframe est bien plus légère que celle du Designer VDP. Ne pas reproduire
+  l'architecture complète du Designer.
+
+**Avantage collatéral :** l'utilisateur tapant dans des champs WebDev, la session est
+naturellement entretenue. Le problème d'expiration de session rencontré sur le Designer
+VDP (résolu par `SessionHeartBeatActive`) ne se pose pas ici.
+
+⚠️ L'aperçu ne sera jamais 100 % WYSIWYG. Le rendu réel dépend du téléphone, de la
+version d'OS et de la taille de police de l'utilisateur. Prévoir une mention explicite
+« rendu indicatif » dans l'interface.
+
+### 2.8 RCS Interactif
+
+Transposition de l'offre SMS Interactif existante. Un bouton de type « Cliquez ici »
+pointe vers une **landing page** générée par le client via le designer de la plateforme.
+
+**Règles métier actées :**
+
+- Le bouton interactif n'est proposé que si `TypeContenu = 'CARD'`.
+  **Jamais sur un carrousel.**
+- **Un seul bouton interactif par opération**, puisque le tunnel de commande ne permet
+  de créer qu'une seule landing page. Le second bouton de la carte reste libre
+  (`OPEN_URL` vers le site du client, `DIAL_PHONE`, etc.).
+- Choisir ce type de bouton fait basculer la campagne de RCS vers **RCS Interactif** :
+  le tunnel de commande ajoute l'étape de création de la landing page, et la
+  facturation suit la grille de l'offre Interactive.
+
+**Stockage :** le bouton reste un `OPEN_URL` classique côté API. Deux colonnes internes
+à Marketeam le distinguent :
+
+- `ope_rcs_carte_bouton.EstBoutonInteractif` (TINYINT) — l'indicateur
+- `ope_rcs_carte_bouton.IdLandingPage` — le rattachement à la page
+- `ope_rcs.EstRcsInteractif` — indicateur dérivé, redondant mais évite une jointure sur
+  deux niveaux dans le tunnel, les rapports et la facturation
+
+⚠️ **Ne pas ajouter `INTERACTIF` à l'ENUM `TypeBouton`.** Cette colonne correspond
+exactement au champ `type` de l'API Infobip ; casser cette correspondance compliquerait
+la génération du JSON.
+
+⚠️ **Conséquence technique majeure : toute campagne RCS Interactif est forcément
+personnalisée**, quel que soit `EstRcsPersonnalise`. L'URL de la landing page doit
+contenir un identifiant unique par destinataire pour relier une visite à un contact.
+Comme l'API ne fait aucune fusion (voir § 4.3), cela impose **une entrée par destinataire
+dans le tableau `messages`**, même si le reste du message est identique pour tous.
+Le poids du JSON passe de quelques dizaines d'octets à environ 1 Ko par destinataire :
+la taille de lot doit être calculée dynamiquement.
+
+**Tracking :** réutilise les tables existantes du SMS Interactif (ouvertures, clics
+boutons, clics liens). Aucune table landing page spécifique au RCS.
+
+**Contrôles à faire côté WebDev** (la base ne peut pas les garantir : une contrainte
+`CHECK` ne peut pas référencer une autre table) :
+
+- un seul bouton avec `EstBoutonInteractif = 1` par opération
+- bouton interactif interdit si `TypeContenu = 'CAROUSEL'`
+- `IdLandingPage` obligatoire si `EstBoutonInteractif = 1`
+
+---
+
+### 2.9 Repli SMS — règle figée
+
+Le texte de repli SMS est contraint à **un SMS simple standard** :
+
+- **GSM-7 uniquement.** L'Unicode est **interdit**, pas seulement déconseillé.
+- **160 caractères maximum**, soit un seul segment.
+
+Conséquence : `RepliSmsEstUnicode` vaudra toujours 0 et `RepliCreditSmsUnicode` ne sert
+plus. Colonnes conservées pour l'instant — à arbitrer avec Michel (voir § 11).
+
+Le designer doit **bloquer** la saisie au-delà de 160 caractères GSM et signaler tout
+caractère hors alphabet GSM-7 (`ê`, `î`, `ô`, `â`, majuscules accentuées…) en proposant
+un remplacement. Un raccourcisseur d'URL sur un domaine Marketeam est indispensable :
+une URL consomme 40 à 60 caractères sur les 160 disponibles, mention STOP comprise.
+
+Cette règle sécurise aussi la tarification : le repli coûte alors moins cher qu'un RCS,
+et l'incertitude résiduelle joue en faveur de Marketeam (voir § 7.3).
+
+---
+
+### 2.10 Hébergement des médias
+
+Les images des cartes sont hébergées sur l'infrastructure Marketeam et téléchargées par
+chaque destinataire. Sur une campagne de 100 000 envois, cela représente 100 000 requêtes
+concentrées sur la fenêtre de livraison.
+
+**Compression à l'upload.** Marketeam dispose déjà d'un module de conversion JPEG
+compressé utilisé pour les landing pages. Le brancher sur l'upload RCS avec les cibles :
+
+| Format | Ratio | Cible |
+|---|---|---|
+| Carrousel | 4:3 | 960 × 720 px, ~1 Mo max |
+| Carte simple verticale | 3:2 (zone de sécurité 16:9) | ~2 Mo max |
+
+L'API autorise 100 Mo, mais la limite utile est bien plus basse : c'est Marketeam qui
+supporte la bande passante et le pic de charge, et un téléchargement lent fait perdre
+des destinataires avant l'affichage.
+
+**Cache HTTP.** Deux particularités par rapport aux landing pages :
+
+- Les médias RCS sont **immuables** : une image de campagne ne doit jamais changer après
+  l'envoi, sous peine de casser les messages déjà livrés. Cache très agressif possible
+  (`Cache-Control: public, max-age=31536000, immutable`), à condition que le nom de
+  fichier soit unique par campagne.
+- Le trafic est **en pic court**, pas étalé. `mod_deflate` inutile (JPEG déjà compressé),
+  mais `KeepAlive` et `MaxRequestWorkers` à dimensionner.
+
+À terme, envisager de séparer l'hébergement des médias du serveur applicatif, ou de
+passer par un CDN.
+
+---
+
+## 3. Rappels RCS essentiels
+
+### 3.1 Les trois types de facturation
+
+Le type de facturation n'est **pas choisi** : il est calculé automatiquement par
+l'opérateur en fonction du contenu envoyé.
+
+| Type | Conditions | Prix indicatif |
+|---|---|---|
+| **Basic** | Texte seul, **aucun** bouton, **aucun** média, ≤ 160 **octets** | ≈ prix d'un SMS |
+| **Single** | Dès qu'il y a un média, OU un bouton, OU un texte > 160 octets | +20 à 30 % vs SMS |
+| **Conversation A2P / P2A** | Le destinataire répond dans les 24 h | ≈ 2× SMS, échanges illimités 24 h |
+
+**Marketeam sera toujours en `SINGLE`** : présence systématique d'une image et de boutons.
+
+Le seuil de 160 est en **octets UTF-8**, pas en caractères : une lettre accentuée
+compte 2 octets, un emoji 4. Sans importance pour le format `CARD`, mais à connaître.
+
+Il existe une quatrième famille (`RICH` / `RICH_MEDIA`) réservée aux États-Unis.
+Non applicable en France.
+
+### 3.2 Les types de boutons
+
+| Type | Effet | Ouvre une conversation ? | Autorisé Marketeam |
+|---|---|---|---|
+| `OPEN_URL` | Ouvre un lien | Non | **Oui** |
+| `DIAL_PHONE` | Ouvre le composeur | Non | **Oui** |
+| `SHOW_LOCATION` | Ouvre la carte | Non | **Oui** |
+| `CREATE_CALENDAR_EVENT` | Ajoute au calendrier | Non | Non (usage marginal) |
+| `REPLY` | Renvoie un texte | **Oui** | **Interdit** |
+| `REQUEST_LOCATION` | Partage la position | **Oui** | **Interdit** |
+
+Chaque bouton porte un `postbackData` (≤ 2024 caractères) qui **revient dans le webhook
+d'événement au moment du clic**. C'est le mécanisme de suivi des clics.
+
+### 3.3 Limites de l'API
+
+| Élément | Limite |
+|---|---|
+| Titre de carte | 200 caractères |
+| Description de carte | 2 000 caractères |
+| Libellé de bouton | **25 caractères** |
+| `postbackData` | 2 024 caractères |
+| Boutons par carte | 4 |
+| Chips par message | 11 (non utilisées) |
+| Cartes par carrousel | 2 minimum, 10 maximum |
+| Taille du média | 100 Mo (limite API — viser 1 à 2 Mo en pratique) |
+| Formats image | `image/jpeg`, `image/jpg`, `image/png`, `image/gif` |
+| Formats vidéo | `video/mp4`, `video/mpeg`, `video/mpeg4`, `video/m4v`, `video/webm`, `video/h263` |
+| Formats audio | `audio/mp3`, `audio/mpeg`, `audio/mpg`, `audio/aac`, `audio/mp4`, `audio/mp4-latm`, `audio/3gpp`, `audio/ogg`, `application/ogg` |
+| Autre format | `application/pdf` |
+| Taille d'une requête | **10 Mo** |
+| Rétention des logs Infobip | **48 h** (persistance locale obligatoire) |
+| Capability check synchrone | 500 numéros, 1 à 10 recommandé, ~100 req/s |
+| Capability check asynchrone | 10 000 numéros |
+
+⚠️ Les caractères spéciaux (emoji, jeux multi-octets) comptent pour **2 à 4 caractères
+ou plus** dans ces limites. Le compteur de l'interface doit en tenir compte, sinon il
+affichera « 195/200 » sur un message que l'API rejettera.
+
+### 3.4 Contraintes spécifiques au carrousel
+
+**Règle d'homogénéité — c'est le piège principal.**
+
+La hauteur des premières cartes définit la hauteur de **toutes** les cartes. Les cartes
+dont le contenu dépasse sont **tronquées**, en commençant par la description réduite à
+une seule ligne.
+
+Recommandations Infobip à faire respecter par l'interface :
+
+- même ratio d'image et même résolution sur toutes les cartes ;
+- longueurs de texte comparables entre cartes ;
+- même nombre de boutons sur chaque carte.
+
+L'interface WebDev doit afficher un **indicateur d'écart** entre cartes
+(ex. « carte 4 : 180 caractères, la plus courte en fait 40 → risque de troncature »)
+plutôt que de tenter de simuler la troncature dans l'aperçu.
+
+**Ratios d'image :**
+
+| Format | Ratio | Résolution optimale | Poids max |
+|---|---|---|---|
+| Carte simple verticale | 3:2 (zone de sécurité 16:9) | — | — |
+| Carrousel | 4:3 | 960 × 720 px | 1 Mo (image) |
+
+Conseil éditorial de Google à relayer aux clients : la première carte doit être la
+meilleure option, et la raison doit être évidente.
+
+**Facturation :** un carrousel de 10 cartes = **un seul message Single**.
+Même prix qu'une carte unique. Argument commercial fort.
+
+### 3.5 Différences iOS / Android à connaître
+
+- Sur iOS, les suggestions internes et externes à la carte sont **affichées ensemble
+  dans un seul groupe**. Problème documenté par Infobip, aucune solution.
+- Sur iOS avec une taille de police agrandie, le rendu privilégie le titre et les
+  boutons au détriment de la description et de l'image.
+- Recommandation Infobip : 3 lignes maximum de titre + description, 1 bouton d'action.
+- **Tester systématiquement sur un iPhone et un Android** dès la phase de recette
+  (numéros de test à déclarer via `POST /rcs/1/senders/{sender}/test-numbers`).
+
+---
+
+## 4. Intégration API Infobip
+
+### 4.1 Authentification et endpoints
+
+- Header : `Authorization: App <clé>`
+- **Base URL personnalisée** propre au compte Infobip (pas `api.infobip.com`)
+- Scope requis pour l'envoi : `rcs:message:send`
+
+| Usage | Endpoint |
+|---|---|
+| Envoi | `POST /rcs/2/messages` |
+| Capability check synchrone | `POST /rcs/2/capability-check/query` |
+| Capability check asynchrone | `POST /rcs/2/capability-check/notify` |
+| Rapports | `GET /rcs/2/reports` |
+| Logs (48 h) | `GET /rcs/2/logs` |
+| Créer un agent | `POST /rcs/1/senders` |
+| Lister / consulter | `GET /rcs/1/senders` et `/{senderName}` |
+| Modifier un agent | `PUT /rcs/1/senders/{senderName}` — échoue si verrouillé |
+| Statut de lancement | `GET /rcs/1/senders/{senderName}/launch-status` |
+| Opérateurs par pays | `GET /rcs/1/senders/providers` |
+| Paramètres plateforme | `PATCH …/platform-parameters` — modifiables à tout moment |
+| Numéros de test | `GET`/`POST` `/rcs/1/senders/{senderName}/test-numbers` |
+| Relancer un testeur | `PUT …/test-numbers/{testNumber}/refresh` |
+
+⚠️ Les endpoints `/ott/rcs/1/*` sont **dépréciés**. Ne pas les utiliser.
+
+### 4.2 Cycle d'envoi d'une campagne
+
+```
+1. Qualification de la base
+   POST /rcs/2/capability-check/notify   (lots de 10 000 numéros)
+   → webhook de résultat : ENABLED / UNREACHABLE par numéro
+   → alimentation de rcs_envoi.CapaciteRcs
+
+2. Construction du JSON (fusion des champs variables faite côté Marketeam)
+
+3. POST /rcs/2/messages
+   → réponse immédiate : bulkId + messageId + statut PENDING_ACCEPTED
+   → PENDING_ACCEPTED signifie « accepté pour traitement », PAS « livré »
+
+4. Réception des webhooks
+   - accusé de livraison (DLR)  → statut + canal réellement utilisé
+   - accusé de lecture (seen)   → rcs_envoi.DateHeureLu
+   - événement de clic bouton   → rcs_clic
+
+5. Consolidation MariaDB
+```
+
+⚠️ La qualification n'est valable qu'à l'instant T. Un destinataire peut désactiver le
+RCS entre la qualification et l'envoi. **Requalifier avant chaque campagne**, ne pas
+traiter `CapaciteRcs` comme une donnée permanente.
+
+### 4.3 Absence de champs de fusion côté API
+
+**L'API Infobip ne fait aucune fusion.** Elle attend le texte déjà final.
+La personnalisation est réalisée par Marketeam avant l'appel, comme en VDP.
+
+- `destinations` contenant N numéros → **tous reçoivent le même message**.
+- Pour personnaliser, il faut **une entrée par destinataire dans le tableau `messages`**.
+
+Éléments personnalisables : `title`, `description`, `text` de bouton (attention aux
+25 caractères), **`url` de bouton** (lien unique par contact), **`media.file.url`**
+(image générée par destinataire), `smsFailover.text`, `postbackData`, `callbackData`.
+
+**Dimensionnement des lots :** un carrousel de 10 cartes personnalisé pèse 5 à 6 Ko par
+destinataire, contre moins de 1 Ko pour une carte simple. Avec la limite de 10 Mo,
+la taille de lot doit être **calculée dynamiquement** (mesurer le poids du JSON du
+premier destinataire, en déduire le nombre par appel avec marge), et non figée.
+Ordre de grandeur : 500 à 1 000 destinataires par appel.
+
+### 4.4 Exemple de JSON de référence (carte simple)
+
+```json
+{
+  "messages": [
+    {
+      "sender": "MonEnseigne",
+      "destinations": [
+        { "to": "33612345678", "messageId": "MKT-0847-C001234" }
+      ],
+      "content": {
+        "type": "CARD",
+        "orientation": "VERTICAL",
+        "alignment": "LEFT",
+        "content": {
+          "title": "Votre offre exclusive",
+          "description": "Profitez de -30 % sur toute la collection jusqu'au 31 août.",
+          "media": {
+            "file": { "url": "https://cdn.marketeam.fr/camp/0847/visuel.jpg" },
+            "height": "MEDIUM"
+          },
+          "suggestions": [
+            {
+              "type": "OPEN_URL",
+              "text": "Voir l'offre",
+              "postbackData": "BTN_OFFRE",
+              "url": "https://boutique.exemple.fr/offre?c=0847&id=C001234",
+              "application": "BROWSER"
+            },
+            {
+              "type": "OPEN_URL",
+              "text": "Trouver un magasin",
+              "postbackData": "BTN_MAGASIN",
+              "url": "https://boutique.exemple.fr/magasins",
+              "application": "BROWSER"
+            }
+          ]
+        }
+      },
+      "options": {
+        "campaignReferenceId": "MKT-2026-0847",
+        "validityPeriod": { "amount": 24, "timeUnit": "HOURS" },
+        "deliveryTimeWindow": {
+          "days": ["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY"],
+          "from": { "hour": 7, "minute": 0 },
+          "to":   { "hour": 18, "minute": 0 }
+        },
+        "smsFailover": {
+          "sender": "MonEnseigne",
+          "text": "Votre offre : -30 % jusqu'au 31/08. https://boutique.exemple.fr/offre?c=0847 STOP au 36111",
+          "validityPeriod": { "amount": 24, "timeUnit": "HOURS" }
+        }
+      },
+      "webhooks": {
+        "delivery": {
+          "url": "https://api.marketeam.fr/rcs/dlr",
+          "notify": true,
+          "intermediateReport": false,
+          "receiveTriggeredFailoverReports": true
+        },
+        "seen": { "url": "https://api.marketeam.fr/rcs/seen" },
+        "contentType": "application/json",
+        "callbackData": "MKT-2026-0847|C001234"
+      }
+    }
+  ],
+  "options": {
+    "schedule": {
+      "bulkId": "MKT-2026-0847-LOT03",
+      "sendingSpeedLimit": { "amount": 200, "timeUnit": "MINUTE" }
+    }
+  }
+}
+```
+
+**Points d'attention sur ce JSON :**
+
+- Double imbrication `content.content` : le premier décrit le type de message,
+  le second le contenu de la carte. Structure Infobip, déroutante mais normale.
+- `alignment` est **obligatoire** même en orientation `VERTICAL`, où il est sans effet.
+- `deliveryTimeWindow` est exprimé en **UTC**, pas en heure de Paris.
+  9 h–20 h Paris = 7 h–18 h UTC en été, 8 h–19 h UTC en hiver.
+  **La conversion doit être automatique selon la date d'envoi.**
+- `receiveTriggeredFailoverReports: true` est indispensable : c'est ce qui donne un
+  accusé pour chaque étape (RCS échoué **et** SMS de repli), et donc l'information
+  du canal réellement facturé.
+- `messageId` est imposé par Marketeam, ce qui permet de connaître la clé de
+  rapprochement avant même l'envoi.
+
+### 4.5 JSON carrousel — différences
+
+```json
+"content": {
+  "type": "CAROUSEL",
+  "cardWidth": "MEDIUM",
+  "contents": [
+    { "title": "...", "description": "...", "media": { ... }, "suggestions": [ ... ] },
+    { "title": "...", "description": "...", "media": { ... }, "suggestions": [ ... ] }
+  ]
+}
+```
+
+`contents` est un tableau de 2 à 10 objets ayant la même structure que le `content`
+interne d'une carte simple. `cardWidth` est au niveau du carrousel, pas de la carte.
+Pas de bloc `suggestions` au niveau du message (pas de chips — voir § 2.3).
+
+### 4.6 Webhooks à implémenter
+
+| Webhook | Usage | Table alimentée |
+|---|---|---|
+| Accusés de livraison | Statut + canal réel | `rcs_envoi` |
+| Accusés de lecture | Taux de lecture | `rcs_envoi.DateHeureLu` |
+| Événements utilisateur | Clics sur boutons | `rcs_clic` |
+| Résultat capability check | Qualification de base | `rcs_envoi.CapaciteRcs` |
+| Messages entrants (MO) | **Obligatoire** : détection des mots-clés STOP | liste de blocage |
+| Conversation Started | **Non implémenté** (voir § 2.1) | — |
+| `RCS_SENDER_STATUS_UPDATE` | Changement de statut d'agent | `rcs_agent`, `rcs_agent_historique` |
+| `RCS_SENDER_LAUNCH_STATUS_UPDATE` | Avancement opérateur par opérateur | `rcs_agent_operateur` |
+
+⚠️ Les deux webhooks d'agent exigent un **abonnement explicite** au canal RCS avec le
+type d'événement correspondant (`SENDER_STATUS_UPDATE`, `SENDER_LAUNCH_UPDATE`).
+Sans souscription, aucun événement n'est reçu.
+
+⚠️ Même en `NON_CONVERSATIONAL`, un destinataire peut répondre. Le réglage bloque la
+facturation conversationnelle, pas la réception. Le webhook des messages entrants
+reste **obligatoire pour l'opt-out**, qui est une exigence réglementaire en France.
+
+⚠️ **Idempotence obligatoire.** Les webhooks sont rejoués si le serveur met trop de
+temps à répondre. Sans contrôle, les clics sont comptabilisés plusieurs fois.
+
+---
+
+## 5. Schéma de base de données
+
+### 5.1 Vue d'ensemble
+
+```
+rcs_agent                          (clt_client OU clt_marque)
+  ├── rcs_agent_testeur            (numéros de test, 200 max par agent)
+  ├── rcs_agent_operateur          (couverture par pays et par opérateur)
+  └── rcs_agent_historique         (journal du cycle de vie)
+
+dos_operation
+  └── ope_rcs                      (1:1, clé primaire partagée) ── IdRcsAgent → rcs_agent
+        └── ope_rcs_carte          (1 si CARD, 2 à 10 si CAROUSEL) — ordre significatif
+              └── ope_rcs_carte_bouton  (0 à 4)                    — ordre significatif
+
+rcs_envoi                          (1 ligne par destinataire)
+  └── rcs_clic                     (0 à n clics par envoi)
+```
+
+**9 tables. Ordre de création :** `rcs_agent`, `rcs_agent_testeur`,
+`rcs_agent_operateur`, `rcs_agent_historique`, `ope_rcs`, `ope_rcs_carte`,
+`ope_rcs_carte_bouton`, `rcs_envoi`, `rcs_clic`.
+
+### 5.2 `rcs_agent` — les agents RCS
+
+Un agent = une identité de marque déclarée chez Infobip et validée par les opérateurs.
+Rattaché soit à un client, soit à une marque.
+
+⚠️ **Les longueurs de colonne reflètent exactement les limites de l'API de création**
+(`POST /rcs/1/senders`). Ne pas les élargir : un dépassement fait échouer la création.
+
+```sql
+CREATE TABLE `rcs_agent` (
+	`IdRcsAgent` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdContact` INT(11) NULL DEFAULT NULL COMMENT 'Contact client à l''origine de la création',
+	`IdClient` INT(11) NULL DEFAULT NULL COMMENT 'Renseigné si agent rattaché à un client',
+	`IdMarque` INT(11) NULL DEFAULT NULL COMMENT 'Renseigné si agent rattaché à une marque',
+
+	-- Identité (envoyée à Infobip)
+	`SenderName` VARCHAR(40) NOT NULL COMMENT 'Cle technique Infobip. 3-40 car, alphanum + _ et -, au moins une lettre. IMMUABLE' COLLATE 'utf8mb4_unicode_ci',
+	`NomAffichage` VARCHAR(40) NOT NULL COMMENT 'displayName - nom vu sur le telephone' COLLATE 'utf8mb4_unicode_ci',
+	`NomMarque` VARCHAR(100) NOT NULL COMMENT 'brand.brandName' COLLATE 'utf8mb4_unicode_ci',
+	`Description` VARCHAR(100) NOT NULL COMMENT 'Limite API stricte : 100 caracteres' COLLATE 'utf8mb4_unicode_ci',
+	`CategorieFacturation` ENUM('NON_CONVERSATIONAL','CONVERSATIONAL') NOT NULL DEFAULT 'NON_CONVERSATIONAL' COMMENT 'IRREVERSIBLE apres demande de lancement',
+	`CasUsage` ENUM('OTP','TRANSACTIONAL','PROMOTIONAL','MULTI_USE') NOT NULL DEFAULT 'PROMOTIONAL',
+	`RegionHebergement` ENUM('NORTH_AMERICA','EUROPE','ASIA_PACIFIC') NOT NULL DEFAULT 'EUROPE' COMMENT 'IRREVERSIBLE apres creation',
+
+	-- Charte graphique
+	`Couleur` CHAR(7) NOT NULL COMMENT 'Format #RRGGBB - contraste mini 4.5:1 sur blanc' COLLATE 'utf8mb4_unicode_ci',
+	`LogoUrl` VARCHAR(2048) NOT NULL COMMENT 'JPG ou PNG, EXACTEMENT 224x224 px, 51200 octets max' COLLATE 'utf8mb4_unicode_ci',
+	`BanniereUrl` VARCHAR(2048) NOT NULL COMMENT 'JPG ou PNG, EXACTEMENT 1440x448 px, 204800 octets max' COLLATE 'utf8mb4_unicode_ci',
+
+	-- Contacts : au moins un des trois obligatoire, libelle requis avec chacun
+	`ContactTelephone` VARCHAR(20) NULL DEFAULT NULL COMMENT 'E164 avec + ou national 3-20 chiffres' COLLATE 'utf8mb4_unicode_ci',
+	`ContactTelephoneLibelle` VARCHAR(25) NULL DEFAULT NULL COMMENT 'Obligatoire si telephone renseigne' COLLATE 'utf8mb4_unicode_ci',
+	`ContactEmail` VARCHAR(100) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`ContactEmailLibelle` VARCHAR(25) NULL DEFAULT NULL COMMENT 'Obligatoire si email renseigne' COLLATE 'utf8mb4_unicode_ci',
+	`SiteWebUrl` VARCHAR(2048) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`SiteWebLibelle` VARCHAR(25) NULL DEFAULT NULL COMMENT 'Obligatoire si site renseigne' COLLATE 'utf8mb4_unicode_ci',
+
+	-- Pages juridiques : premiere cause de rejet par les operateurs
+	`ConfidentialiteUrl` VARCHAR(2048) NOT NULL COMMENT 'Doit mentionner opt-out, frais, frequence' COLLATE 'utf8mb4_unicode_ci',
+	`ConfidentialiteLibelle` VARCHAR(25) NULL DEFAULT NULL,
+	`CguUrl` VARCHAR(2048) NOT NULL COMMENT 'Doit mentionner non-revente des donnees' COLLATE 'utf8mb4_unicode_ci',
+	`CguLibelle` VARCHAR(25) NULL DEFAULT NULL,
+
+	-- Paramètres plateforme (modifiables à tout moment via PATCH)
+	`PlatformApplicationId` VARCHAR(255) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`PlatformEntityId` VARCHAR(255) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+
+	-- Cycle de vie
+	`Statut` ENUM('BROUILLON_LOCAL','DRAFT','PENDING','READY_FOR_TESTING','PENDING_LAUNCH','SENDER_UPDATE_REQUIRED','LAUNCHED_IN_PROGRESS','LAUNCHED_PARTIAL_SUCCESS','LAUNCHED') NOT NULL DEFAULT 'BROUILLON_LOCAL',
+	`EstVerrouille` TINYINT(1) AS (`Statut` IN ('PENDING','PENDING_LAUNCH','LAUNCHED_IN_PROGRESS','LAUNCHED_PARTIAL_SUCCESS','LAUNCHED')) VIRTUAL,
+	`GoogleAgentId` VARCHAR(100) NULL DEFAULT NULL COMMENT 'Identifiant Google recu par webhook - utile au support' COLLATE 'utf8mb4_unicode_ci',
+	`MotifCorrection` TEXT NULL DEFAULT NULL COMMENT 'Consolide depuis launch-status si SENDER_UPDATE_REQUIRED' COLLATE 'utf8mb4_unicode_ci',
+	`DateHeureCreationInfobip` DATETIME NULL DEFAULT NULL COMMENT 'POST /senders reussi',
+	`DateHeureDemandeLancement` DATETIME NULL DEFAULT NULL COMMENT 'Demande transmise au charge de compte',
+	`DateHeureLancement` DATETIME NULL DEFAULT NULL COMMENT 'Passage en LAUNCHED*',
+	`DateHeureStatut` DATETIME NULL DEFAULT NULL COMMENT 'Dernier changement de statut',
+	`DateHeureSynchro` DATETIME NULL DEFAULT NULL COMMENT 'Derniere synchro avec l API Infobip',
+	`EstActif` TINYINT(1) NOT NULL DEFAULT '0' COMMENT 'Decision Marketeam - autorise la selection en campagne',
+
+	-- Audit
+	`DateHeureCreation` DATETIME NOT NULL,
+	`DateHeureModification` DATETIME NULL DEFAULT NULL,
+	`UserCreation` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`UserModification` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+
+	PRIMARY KEY (`IdRcsAgent`) USING BTREE,
+	UNIQUE INDEX `SenderName` (`SenderName`) USING BTREE,
+	INDEX `IdContact` (`IdContact`) USING BTREE,
+	INDEX `IdClient` (`IdClient`) USING BTREE,
+	INDEX `IdMarque` (`IdMarque`) USING BTREE,
+	INDEX `Statut_EstActif` (`Statut`, `EstActif`) USING BTREE,
+	CONSTRAINT `CK_rcs_agent_proprietaire` CHECK (
+		(`IdClient` IS NOT NULL AND `IdMarque` IS NULL)
+		OR (`IdClient` IS NULL AND `IdMarque` IS NOT NULL)
+	),
+	CONSTRAINT `CK_rcs_agent_contact` CHECK (
+		`ContactTelephone` IS NOT NULL OR `ContactEmail` IS NOT NULL OR `SiteWebUrl` IS NOT NULL
+	),
+	CONSTRAINT `FK_rcs_agent_clt_contact` FOREIGN KEY (`IdContact`) REFERENCES `clt_contact` (`IdContact`) ON UPDATE NO ACTION ON DELETE SET NULL,
+	CONSTRAINT `FK_rcs_agent_clt_client` FOREIGN KEY (`IdClient`) REFERENCES `clt_client` (`IdClient`) ON UPDATE NO ACTION ON DELETE RESTRICT
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+ROW_FORMAT=DYNAMIC;
+```
+
+Clé étrangère vers les marques à ajouter en adaptant le nom de la table
+(**à confirmer avec Michel**) :
+
+```sql
+ALTER TABLE `rcs_agent`
+  ADD CONSTRAINT `FK_rcs_agent_marque`
+  FOREIGN KEY (`IdMarque`) REFERENCES `clt_marque` (`IdMarque`)
+  ON UPDATE NO ACTION ON DELETE RESTRICT;
+```
+
+**Notes de conception :**
+
+- `BROUILLON_LOCAL` est un statut **propre à Marketeam**, ajouté en tête de l'énumération :
+  la fiche est en cours de saisie et n'a pas encore été envoyée à Infobip. Le `DRAFT`
+  d'Infobip ne concerne que les agents créés depuis leur interface web.
+- `EstVerrouille` est une **colonne générée virtuelle** : calculée depuis le statut, sans
+  stockage ni risque de désynchronisation. L'interface l'interroge pour savoir si les
+  champs sont éditables. Si l'analyse WebDev s'en accommode mal, la remplacer par un
+  `TINYINT(1)` ordinaire mis à jour par le gestionnaire de webhooks.
+- `CK_rcs_agent_contact` fait respecter la règle API : au moins un contact parmi
+  téléphone, email ou site. Elle ne peut pas vérifier la présence du **libellé** associé
+  (obligatoire, 25 car. max) — contrôle à faire côté WebDev.
+- `CK_rcs_agent_proprietaire` garantit qu'exactement un propriétaire est renseigné.
+  MariaDB applique réellement les CHECK depuis la 10.2.2.
+- `SenderName` est en index UNIQUE : c'est la clé côté Infobip. Marketeam utilise
+  `IdRcsAgent` (INT) pour ses relations internes, plus léger qu'une FK sur VARCHAR.
+- `EstActif` est **distinct de `Statut`** : le statut vient d'Infobip, `EstActif` est la
+  décision de Marketeam. Un agent peut être `LAUNCHED` sans être ouvert à la sélection.
+- Les listes `phones[]`, `emails[]`, `websites[]` de l'API n'acceptent **qu'un seul
+  élément chacune** — l'aplatissement en colonnes est donc fidèle au modèle Infobip.
+- `IdContact` identifie le **contact côté client** à l'origine de la création. À ne pas
+  confondre avec `UserCreation`, qui identifie l'**opérateur Marketeam** ayant saisi la
+  fiche. `ON DELETE SET NULL` : la suppression d'un contact ne doit jamais entraîner la
+  perte d'un agent, qui représente plusieurs semaines de mise en service.
+- ⚠️ Aucune contrainte ne garantit que `IdContact` appartient bien au client de
+  `IdClient`. **Contrôle côté WebDev** en filtrant la liste des contacts.
+- Les quatre dates du cycle de vie (`CreationInfobip`, `DemandeLancement`, `Lancement`,
+  `Synchro`) permettent de mesurer les délais réels de mise en service, argument utile
+  face au client comme face au chargé de compte Infobip.
+
+### 5.3 `rcs_agent_testeur` — numéros de test
+
+Un agent non lancé ne peut envoyer qu'aux numéros de test **acceptés** par leur
+propriétaire. Voir le mémo `MEMO_CREATION_AGENT_RCS.md` pour la procédure complète.
+
+```sql
+CREATE TABLE `rcs_agent_testeur` (
+	`IdRcsAgentTesteur` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdRcsAgent` INT(11) NOT NULL,
+	`Numero` VARCHAR(20) NOT NULL COMMENT 'Format E164 avec + pour l API testeurs, sans + pour l envoi' COLLATE 'utf8mb4_unicode_ci',
+	`Libelle` VARCHAR(60) NULL DEFAULT NULL COMMENT 'Nom du testeur pour l interface - ex Nicolas iPhone 15' COLLATE 'utf8mb4_unicode_ci',
+	`TypeAppareil` ENUM('INCONNU','IOS','ANDROID') NOT NULL DEFAULT 'INCONNU' COMMENT 'Saisie manuelle - recette : verifier les deux plateformes',
+	`Statut` ENUM('PENDING','WAITING_FOR_TESTER_ACCEPTANCE','APPROVED','EXPIRED') NOT NULL DEFAULT 'PENDING',
+	`EstPrincipal` TINYINT(1) NOT NULL DEFAULT '0' COMMENT 'primary - un numero ne peut etre principal que pour un seul agent',
+	`DateHeureAjout` DATETIME NOT NULL COMMENT 'POST test-numbers',
+	`DateHeureStatut` DATETIME NULL DEFAULT NULL COMMENT 'updatedAt renvoye par Infobip',
+	`DateHeureExpiration` DATETIME NULL DEFAULT NULL COMMENT 'Ajout ou relance + 24h - permet un compte a rebours',
+	`NbRelances` TINYINT(3) UNSIGNED NOT NULL DEFAULT '0' COMMENT 'Nombre d appels a refresh',
+	`DateHeureDerniereRelance` DATETIME NULL DEFAULT NULL,
+	`DateHeureDernierTest` DATETIME NULL DEFAULT NULL COMMENT 'Dernier message de demonstration envoye',
+	`DateHeureCreation` DATETIME NOT NULL,
+	`DateHeureModification` DATETIME NULL DEFAULT NULL,
+	`UserCreation` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`UserModification` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	PRIMARY KEY (`IdRcsAgentTesteur`) USING BTREE,
+	UNIQUE INDEX `IdRcsAgent_Numero` (`IdRcsAgent`, `Numero`) USING BTREE,
+	INDEX `IdRcsAgent_Statut` (`IdRcsAgent`, `Statut`) USING BTREE,
+	INDEX `DateHeureExpiration` (`DateHeureExpiration`) USING BTREE,
+	CONSTRAINT `FK_rcs_agent_testeur_rcs_agent` FOREIGN KEY (`IdRcsAgent`) REFERENCES `rcs_agent` (`IdRcsAgent`) ON UPDATE NO ACTION ON DELETE CASCADE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+ROW_FORMAT=DYNAMIC;
+```
+
+**Notes de conception :**
+
+- ⚠️ **Aucun endpoint de suppression n'existe côté API.** Ne pas prévoir de bouton
+  « Supprimer » : au mieux un masquage local, le numéro restera chez Infobip. Le quota
+  de 200 par agent est un compteur qui ne redescend pas. Garder l'ajout de testeurs sous
+  contrôle des équipes Marketeam, ne pas l'ouvrir librement aux clients.
+- `TypeAppareil` n'existe pas côté API — saisie manuelle. Vu les écarts de rendu iOS /
+  Android (§ 3.5), l'interface doit **alerter quand aucun testeur iPhone n'est validé**.
+- `DateHeureExpiration` (ajout + 24 h) permet un compte à rebours et une relance
+  automatique avant échéance.
+- Limites API : **20 numéros par agent et par jour, 200 au total.**
+
+### 5.4 `rcs_agent_operateur` — couverture de lancement
+
+Le lancement d'un agent se fait **opérateur par opérateur et pays par pays**. Cette table
+met en cache le retour de `GET /rcs/1/senders/{senderName}/launch-status` et du webhook
+`RCS_SENDER_LAUNCH_STATUS_UPDATE`.
+
+```sql
+CREATE TABLE `rcs_agent_operateur` (
+	`IdRcsAgentOperateur` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdRcsAgent` INT(11) NOT NULL,
+	`CodePays` CHAR(2) NOT NULL COMMENT 'ISO 3166-1 alpha-2' COLLATE 'utf8mb4_unicode_ci',
+	`Operateur` VARCHAR(50) NOT NULL COMMENT 'Nom du provider retourne par Infobip' COLLATE 'utf8mb4_unicode_ci',
+	`Statut` ENUM('PENDING','IN_PROGRESS','COMPLETED','REJECTED') NOT NULL DEFAULT 'PENDING',
+	`MotifRejet` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`DateHeureStatut` DATETIME NULL DEFAULT NULL,
+	PRIMARY KEY (`IdRcsAgentOperateur`) USING BTREE,
+	UNIQUE INDEX `IdRcsAgent_CodePays_Operateur` (`IdRcsAgent`, `CodePays`, `Operateur`) USING BTREE,
+	INDEX `IdRcsAgent_Statut` (`IdRcsAgent`, `Statut`) USING BTREE,
+	CONSTRAINT `FK_rcs_agent_operateur_rcs_agent` FOREIGN KEY (`IdRcsAgent`) REFERENCES `rcs_agent` (`IdRcsAgent`) ON UPDATE NO ACTION ON DELETE CASCADE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+ROW_FORMAT=DYNAMIC;
+```
+
+`MotifRejet` est essentiel : c'est lui qui porte le détail de ce que l'opérateur reproche
+à la fiche. Exemple documenté par Infobip : politique de confidentialité ne mentionnant
+pas l'opt-out, la clause sur les frais de messagerie et la fréquence d'envoi ; conditions
+ne précisant pas que les informations ne seront ni vendues, ni louées, ni partagées.
+
+### 5.5 `rcs_agent_historique` — journal du cycle de vie
+
+```sql
+CREATE TABLE `rcs_agent_historique` (
+	`IdRcsAgentHistorique` BIGINT(20) NOT NULL AUTO_INCREMENT,
+	`IdRcsAgent` INT(11) NOT NULL,
+	`TypeEvenement` ENUM('CREATION_LOCALE','CREATION_INFOBIP','MAJ_FICHE','MAJ_STATUT','DEMANDE_LANCEMENT','MAJ_OPERATEUR','CORRECTION_DEMANDEE','TESTEUR_AJOUTE','TESTEUR_APPROUVE','TESTEUR_EXPIRE','TEST_ENVOYE','ACTIVATION','DESACTIVATION') NOT NULL,
+	`StatutAvant` VARCHAR(30) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`StatutApres` VARCHAR(30) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`CodePays` CHAR(2) NULL DEFAULT NULL COMMENT 'Si evenement operateur' COLLATE 'utf8mb4_unicode_ci',
+	`Operateur` VARCHAR(50) NULL DEFAULT NULL COMMENT 'Si evenement operateur' COLLATE 'utf8mb4_unicode_ci',
+	`Detail` TEXT NULL DEFAULT NULL COMMENT 'Motif de rejet, numero concerne, message d erreur' COLLATE 'utf8mb4_unicode_ci',
+	`Source` ENUM('MARKETEAM','WEBHOOK','SYNCHRO') NOT NULL DEFAULT 'MARKETEAM',
+	`DateHeureEvenement` DATETIME NOT NULL,
+	`UserCreation` VARCHAR(35) NULL DEFAULT NULL COMMENT 'NULL si origine webhook' COLLATE 'utf8mb4_unicode_ci',
+	PRIMARY KEY (`IdRcsAgentHistorique`) USING BTREE,
+	INDEX `IdRcsAgent_DateHeureEvenement` (`IdRcsAgent`, `DateHeureEvenement`) USING BTREE,
+	INDEX `TypeEvenement` (`TypeEvenement`) USING BTREE,
+	CONSTRAINT `FK_rcs_agent_historique_rcs_agent` FOREIGN KEY (`IdRcsAgent`) REFERENCES `rcs_agent` (`IdRcsAgent`) ON UPDATE NO ACTION ON DELETE CASCADE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+ROW_FORMAT=DYNAMIC;
+```
+
+**Pourquoi cette table compte.** Le parcours d'un agent n'est **pas linéaire** : plusieurs
+allers-retours possibles entre `PENDING_LAUNCH` et `SENDER_UPDATE_REQUIRED`, sur plusieurs
+semaines, avec des opérateurs qui répondent à des moments différents.
+
+Sans historique, seul l'état courant est conservé — impossible de répondre à « pourquoi
+ça traîne depuis six semaines ? » ni de montrer au client ce qu'on lui avait demandé de
+corriger la fois précédente. Avec, l'interface affiche une frise chronologique, ce qu'un
+client attend légitimement d'un service dont la mise en route prend des semaines.
+
+`Source` distingue ce qui vient des équipes Marketeam, des webhooks Infobip, ou d'une
+resynchronisation manuelle. Précieux quand un statut change sans explication apparente.
+
+### 5.6 `ope_rcs` — paramètres de l'opération
+
+```sql
+CREATE TABLE `ope_rcs` (
+	`IdRcs` INT(11) NOT NULL,
+	`IdRcsModele` INT(11) NULL DEFAULT NULL,
+	`IdRcsAgent` INT(11) NULL DEFAULT NULL COMMENT 'Agent RCS utilisé - voir rcs_agent',
+	`TypeContenu` ENUM('CARD','CAROUSEL') NOT NULL DEFAULT 'CARD',
+	`EstRcsInteractif` TINYINT(1) NOT NULL DEFAULT '0' COMMENT 'Derive de la presence d un bouton interactif - CARD uniquement',
+	`Orientation` ENUM('VERTICAL','HORIZONTAL') NOT NULL DEFAULT 'VERTICAL' COMMENT 'CARD uniquement',
+	`Alignement` ENUM('LEFT','RIGHT') NOT NULL DEFAULT 'LEFT' COMMENT 'CARD + HORIZONTAL uniquement',
+	`LargeurCarte` ENUM('SMALL','MEDIUM') NOT NULL DEFAULT 'MEDIUM' COMMENT 'CAROUSEL uniquement - conserver MEDIUM',
+	`ModeleVariable` VARCHAR(400) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`EstRcsPersonnalise` TINYINT(1) NOT NULL DEFAULT '0',
+	`CampaignReferenceId` VARCHAR(50) NULL DEFAULT NULL COMMENT 'Renvoyé dans tous les webhooks Infobip' COLLATE 'utf8mb4_unicode_ci',
+	`ValiditeDuree` SMALLINT(5) UNSIGNED NULL DEFAULT NULL,
+	`ValiditeUnite` ENUM('SECONDS','MINUTES','HOURS') NULL DEFAULT 'HOURS',
+	`FenetreJours` VARCHAR(60) NULL DEFAULT NULL COMMENT 'MONDAY,TUESDAY... séparés par virgule' COLLATE 'utf8mb4_unicode_ci',
+	`FenetreHeureDebut` TIME NULL DEFAULT NULL COMMENT 'Heure UTC et non heure de Paris',
+	`FenetreHeureFin` TIME NULL DEFAULT NULL COMMENT 'Heure UTC et non heure de Paris',
+	`EstRepliSms` TINYINT(1) NOT NULL DEFAULT '1',
+	`RepliSmsFrom` VARCHAR(11) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`RepliSmsMessage` VARCHAR(1200) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`RepliSmsEstUnicode` TINYINT(1) NOT NULL DEFAULT '0',
+	`RepliCreditSms` VARCHAR(1000) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`RepliCreditSmsUnicode` VARCHAR(1000) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`DateFin` DATE NULL DEFAULT NULL,
+	`HeureFin` TIME NULL DEFAULT NULL,
+	`Cadence` MEDIUMINT(8) UNSIGNED NULL DEFAULT NULL COMMENT 'Calculé par rapport à la cadence',
+	`Paquet` SMALLINT(5) UNSIGNED NULL DEFAULT NULL COMMENT 'Calculé par rapport à la cadence',
+	`Pause` TINYINT(3) UNSIGNED NULL DEFAULT NULL,
+	`DateHeureCreation` DATETIME NOT NULL,
+	`DateHeureModification` DATETIME NULL DEFAULT NULL,
+	`UserCreation` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`UserModification` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	PRIMARY KEY (`IdRcs`) USING BTREE,
+	INDEX `IdRcsModele` (`IdRcsModele`) USING BTREE,
+	INDEX `IdRcsAgent` (`IdRcsAgent`) USING BTREE,
+	CONSTRAINT `FK_ope_rcs_dos_operation` FOREIGN KEY (`IdRcs`) REFERENCES `dos_operation` (`IdOperation`) ON UPDATE RESTRICT ON DELETE CASCADE,
+	CONSTRAINT `FK_ope_rcs_rcs_agent` FOREIGN KEY (`IdRcsAgent`) REFERENCES `rcs_agent` (`IdRcsAgent`) ON UPDATE RESTRICT ON DELETE RESTRICT
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+ROW_FORMAT=COMPACT;
+```
+
+`Cadence` / `Paquet` / `Pause` alimentent `sendingSpeedLimit`.
+Pas de colonne « crédit RCS » : un message Single compte pour 1, quels que soient sa
+longueur, son nombre de cartes ou de boutons. Les colonnes `RepliCreditSms*` ne
+concernent que le repli SMS.
+
+La clé étrangère vers `rcs_modele` reste à poser quand cette table sera créée :
+
+```sql
+ALTER TABLE `ope_rcs`
+  ADD CONSTRAINT `FK_ope_rcs_rcs_modele`
+  FOREIGN KEY (`IdRcsModele`) REFERENCES `rcs_modele` (`IdRcsModele`)
+  ON UPDATE RESTRICT ON DELETE SET NULL;
+```
+
+### 5.7 `ope_rcs_carte`
+
+```sql
+CREATE TABLE `ope_rcs_carte` (
+	`IdRcsCarte` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdRcs` INT(11) NOT NULL,
+	`Ordre` TINYINT(3) UNSIGNED NOT NULL DEFAULT '1' COMMENT 'Position dans le carrousel de 1 à 10',
+	`Titre` VARCHAR(400) NULL DEFAULT NULL COMMENT 'Gabarit - le résultat fusionné doit tenir en 200 car.' COLLATE 'utf8mb4_unicode_ci',
+	`Description` VARCHAR(3000) NULL DEFAULT NULL COMMENT 'Gabarit - le résultat fusionné doit tenir en 2000 car.' COLLATE 'utf8mb4_unicode_ci',
+	`MediaUrl` VARCHAR(2048) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`MediaContentType` VARCHAR(50) NULL DEFAULT NULL COMMENT 'image/jpeg, video/mp4...' COLLATE 'utf8mb4_unicode_ci',
+	`MediaHauteur` ENUM('SHORT','MEDIUM','TALL') NOT NULL DEFAULT 'MEDIUM',
+	`MediaThumbnailUrl` VARCHAR(2048) NULL DEFAULT NULL COMMENT 'Vidéo uniquement' COLLATE 'utf8mb4_unicode_ci',
+	`MediaLargeurPx` SMALLINT(5) UNSIGNED NULL DEFAULT NULL COMMENT 'Contrôle homogénéité du ratio entre cartes',
+	`MediaHauteurPx` SMALLINT(5) UNSIGNED NULL DEFAULT NULL COMMENT 'Contrôle homogénéité du ratio entre cartes',
+	`DateHeureCreation` DATETIME NOT NULL,
+	`DateHeureModification` DATETIME NULL DEFAULT NULL,
+	`UserCreation` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`UserModification` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	PRIMARY KEY (`IdRcsCarte`) USING BTREE,
+	INDEX `IdRcs_Ordre` (`IdRcs`, `Ordre`) USING BTREE,
+	CONSTRAINT `FK_ope_rcs_carte_ope_rcs` FOREIGN KEY (`IdRcs`) REFERENCES `ope_rcs` (`IdRcs`) ON UPDATE RESTRICT ON DELETE CASCADE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+ROW_FORMAT=DYNAMIC;
+```
+
+### 5.8 `ope_rcs_carte_bouton`
+
+```sql
+CREATE TABLE `ope_rcs_carte_bouton` (
+	`IdRcsCarteBouton` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdRcsCarte` INT(11) NOT NULL,
+	`Ordre` TINYINT(3) UNSIGNED NOT NULL DEFAULT '1' COMMENT 'Position dans la carte de 1 à 4',
+	`TypeBouton` ENUM('OPEN_URL','DIAL_PHONE','SHOW_LOCATION') NOT NULL DEFAULT 'OPEN_URL',
+	`EstBoutonInteractif` TINYINT(1) NOT NULL DEFAULT '0' COMMENT 'Bouton Cliquez-ici vers landing page - CARD uniquement, 1 seul par operation',
+	`IdLandingPage` INT(11) NULL DEFAULT NULL COMMENT 'Landing page associee - FK a poser selon la table existante',
+	`Libelle` VARCHAR(60) NULL DEFAULT NULL COMMENT 'Gabarit - le résultat fusionné doit tenir en 25 car.' COLLATE 'utf8mb4_unicode_ci',
+	`PostbackData` VARCHAR(100) NULL DEFAULT NULL COMMENT 'Code de suivi renvoyé au clic' COLLATE 'utf8mb4_unicode_ci',
+	`Url` VARCHAR(2048) NULL DEFAULT NULL COMMENT 'OPEN_URL' COLLATE 'utf8mb4_unicode_ci',
+	`UrlApplication` ENUM('BROWSER','WEBVIEW') NULL DEFAULT 'BROWSER' COMMENT 'OPEN_URL',
+	`UrlWebviewMode` ENUM('FULL','HALF','TALL') NULL DEFAULT NULL COMMENT 'Obligatoire si UrlApplication = WEBVIEW',
+	`Telephone` VARCHAR(20) NULL DEFAULT NULL COMMENT 'DIAL_PHONE - format E164' COLLATE 'utf8mb4_unicode_ci',
+	`Latitude` DECIMAL(9,6) NULL DEFAULT NULL COMMENT 'SHOW_LOCATION',
+	`Longitude` DECIMAL(9,6) NULL DEFAULT NULL COMMENT 'SHOW_LOCATION',
+	`LibelleLieu` VARCHAR(200) NULL DEFAULT NULL COMMENT 'SHOW_LOCATION - 100 car. après fusion' COLLATE 'utf8mb4_unicode_ci',
+	`DateHeureCreation` DATETIME NOT NULL,
+	`DateHeureModification` DATETIME NULL DEFAULT NULL,
+	`UserCreation` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`UserModification` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	PRIMARY KEY (`IdRcsCarteBouton`) USING BTREE,
+	INDEX `IdRcsCarte_Ordre` (`IdRcsCarte`, `Ordre`) USING BTREE,
+	INDEX `IdLandingPage` (`IdLandingPage`) USING BTREE,
+	CONSTRAINT `FK_ope_rcs_carte_bouton_ope_rcs_carte` FOREIGN KEY (`IdRcsCarte`) REFERENCES `ope_rcs_carte` (`IdRcsCarte`) ON UPDATE RESTRICT ON DELETE CASCADE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+ROW_FORMAT=DYNAMIC;
+```
+
+### 5.9 `rcs_envoi` — préparation et suivi des envois
+
+Miroir de `sms_envoi`, avec les colonnes propres au cycle de vie RCS.
+
+```sql
+CREATE TABLE `rcs_envoi` (
+	`IdRcsEnvoi` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdClient` INT(11) NULL DEFAULT NULL,
+	`IdContact` INT(11) NULL DEFAULT NULL,
+	`IdOperation` INT(11) NULL DEFAULT NULL,
+	`TypeOperation` CHAR(3) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`IdFacture` INT(11) NULL DEFAULT NULL,
+	`TypeFacture` CHAR(3) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`IdAbonnement` INT(11) NULL DEFAULT NULL,
+	`TypeAbonnement` CHAR(3) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Variable` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`CodeRcsType` VARCHAR(16) NOT NULL COLLATE 'utf8mb4_unicode_ci',
+	`DateHeureDemande` DATETIME NOT NULL,
+	`DateHeureEnvoi` DATETIME NULL DEFAULT NULL,
+	`Portable` CHAR(20) NOT NULL COLLATE 'utf8mb4_unicode_ci',
+	`CapaciteRcs` ENUM('INCONNU','ENABLED','UNREACHABLE') NOT NULL DEFAULT 'INCONNU',
+	`DateHeureCapacite` DATETIME NULL DEFAULT NULL,
+	`CanalUtilise` ENUM('ATTENTE','RCS','SMS') NOT NULL DEFAULT 'ATTENTE' COMMENT 'Canal réellement facturé - renseigné par le DLR',
+	`BulkId` VARCHAR(64) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`MessageId` VARCHAR(64) NULL DEFAULT NULL COMMENT 'Clé de rapprochement des webhooks' COLLATE 'utf8mb4_unicode_ci',
+	`CallbackData` VARCHAR(200) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`StatutGroupeId` TINYINT(3) UNSIGNED NULL DEFAULT NULL COMMENT '1 PENDING 2 UNDELIVERABLE 3 DELIVERED 4 EXPIRED 5 REJECTED',
+	`StatutGroupeNom` VARCHAR(30) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`StatutId` SMALLINT(5) UNSIGNED NULL DEFAULT NULL,
+	`StatutNom` VARCHAR(50) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`DateHeureStatut` DATETIME NULL DEFAULT NULL COMMENT 'doneAt du DLR',
+	`ErreurId` SMALLINT(5) UNSIGNED NULL DEFAULT NULL,
+	`ErreurNom` VARCHAR(50) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`ErreurPermanente` TINYINT(1) NULL DEFAULT NULL COMMENT 'Si 1 ne pas retenter - candidat liste noire',
+	`DateHeureLu` DATETIME NULL DEFAULT NULL COMMENT 'seenAt - spécifique RCS',
+	`TrafficType` VARCHAR(20) NULL DEFAULT NULL COMMENT 'Doit toujours valoir SINGLE - contrôle de facturation',
+	`PrixUnitaire` DECIMAL(10,5) NULL DEFAULT NULL,
+	`Devise` CHAR(3) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`MccMnc` VARCHAR(10) NULL DEFAULT NULL COMMENT 'Opérateur réel du destinataire' COLLATE 'utf8mb4_unicode_ci',
+	`NbTentatives` TINYINT(3) UNSIGNED NOT NULL DEFAULT '0',
+	PRIMARY KEY (`IdRcsEnvoi`) USING BTREE,
+	UNIQUE INDEX `MessageId` (`MessageId`) USING BTREE,
+	INDEX `CodeRcsType` (`CodeRcsType`) USING BTREE,
+	INDEX `DateHeureDemande` (`DateHeureDemande`) USING BTREE,
+	INDEX `DateHeureEnvoi` (`DateHeureEnvoi`) USING BTREE,
+	INDEX `IdOperation` (`IdOperation`) USING BTREE,
+	INDEX `IdOperation_CodeRcsType` (`IdOperation`, `CodeRcsType`) USING BTREE,
+	INDEX `IdOperation_CanalUtilise` (`IdOperation`, `CanalUtilise`) USING BTREE,
+	INDEX `IdOperation_StatutGroupeId` (`IdOperation`, `StatutGroupeId`) USING BTREE,
+	INDEX `BulkId` (`BulkId`) USING BTREE,
+	INDEX `Portable` (`Portable`) USING BTREE,
+	INDEX `IdFacture` (`IdFacture`) USING BTREE,
+	INDEX `FK_rcs_envoi_clt_contact` (`IdContact`) USING BTREE,
+	INDEX `IdAbonnement` (`IdAbonnement`) USING BTREE,
+	INDEX `IdClient` (`IdClient`) USING BTREE,
+	CONSTRAINT `FK_rcs_envoi_clt_client` FOREIGN KEY (`IdClient`) REFERENCES `clt_client` (`IdClient`) ON UPDATE NO ACTION ON DELETE CASCADE,
+	CONSTRAINT `FK_rcs_envoi_clt_contact` FOREIGN KEY (`IdContact`) REFERENCES `clt_contact` (`IdContact`) ON UPDATE NO ACTION ON DELETE CASCADE,
+	CONSTRAINT `FK_rcs_envoi_clt_facture` FOREIGN KEY (`IdFacture`) REFERENCES `clt_facture` (`IdFacture`) ON UPDATE NO ACTION ON DELETE CASCADE,
+	CONSTRAINT `FK_rcs_envoi_dos_operation` FOREIGN KEY (`IdOperation`) REFERENCES `dos_operation` (`IdOperation`) ON UPDATE NO ACTION ON DELETE CASCADE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+ROW_FORMAT=DYNAMIC;
+```
+
+**Colonne la plus importante : `CanalUtilise`.** Avec le repli SMS automatique, on ne
+sait pas à l'avance qui reçoit quoi — un contact qualifié `ENABLED` peut échouer et
+basculer en SMS. La colonne reste à `ATTENTE` jusqu'au DLR, puis passe à `RCS` ou `SMS`.
+Sans elle, facturation impossible.
+
+**Décision de conception :** le repli SMS reste dans `rcs_envoi` avec
+`CanalUtilise = 'SMS'`, il ne crée pas de ligne dans `sms_envoi`. Raison : le repli est
+exécuté par Infobip dans le même appel API, il est constaté a posteriori par le DLR.
+Contrepartie : le comptage des crédits SMS doit aller chercher ces lignes dans `rcs_envoi`.
+
+`TrafficType` doit toujours valoir `SINGLE`. Toute autre valeur signale une mauvaise
+configuration du sender.
+
+### 5.10 `rcs_clic` — clics sur les boutons de carte
+
+```sql
+CREATE TABLE `rcs_clic` (
+	`IdRcsClic` BIGINT(20) NOT NULL AUTO_INCREMENT,
+	`IdRcsEnvoi` INT(11) NOT NULL,
+	`IdOperation` INT(11) NULL DEFAULT NULL,
+	`IdRcsCarte` INT(11) NULL DEFAULT NULL COMMENT 'Résolu depuis PostbackData',
+	`IdRcsCarteBouton` INT(11) NULL DEFAULT NULL COMMENT 'Résolu depuis PostbackData',
+	`PostbackData` VARCHAR(100) NULL DEFAULT NULL COMMENT 'Valeur brute reçue du webhook' COLLATE 'utf8mb4_unicode_ci',
+	`LibelleBouton` VARCHAR(60) NULL DEFAULT NULL COMMENT 'Libellé au moment du clic - historisé' COLLATE 'utf8mb4_unicode_ci',
+	`TypeBouton` ENUM('OPEN_URL','DIAL_PHONE','SHOW_LOCATION') NULL DEFAULT NULL,
+	`DateHeureClic` DATETIME NOT NULL COMMENT 'receivedAt du webhook',
+	`MessageIdEvenement` VARCHAR(64) NULL DEFAULT NULL COMMENT 'Idempotence - évite les doublons de webhook' COLLATE 'utf8mb4_unicode_ci',
+	PRIMARY KEY (`IdRcsClic`) USING BTREE,
+	UNIQUE INDEX `MessageIdEvenement` (`MessageIdEvenement`) USING BTREE,
+	INDEX `IdRcsEnvoi` (`IdRcsEnvoi`) USING BTREE,
+	INDEX `IdOperation_DateHeureClic` (`IdOperation`, `DateHeureClic`) USING BTREE,
+	INDEX `IdRcsCarteBouton` (`IdRcsCarteBouton`) USING BTREE,
+	CONSTRAINT `FK_rcs_clic_rcs_envoi` FOREIGN KEY (`IdRcsEnvoi`) REFERENCES `rcs_envoi` (`IdRcsEnvoi`) ON UPDATE NO ACTION ON DELETE CASCADE,
+	CONSTRAINT `FK_rcs_clic_ope_rcs_carte` FOREIGN KEY (`IdRcsCarte`) REFERENCES `ope_rcs_carte` (`IdRcsCarte`) ON UPDATE NO ACTION ON DELETE SET NULL,
+	CONSTRAINT `FK_rcs_clic_ope_rcs_carte_bouton` FOREIGN KEY (`IdRcsCarteBouton`) REFERENCES `ope_rcs_carte_bouton` (`IdRcsCarteBouton`) ON UPDATE NO ACTION ON DELETE SET NULL
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+ROW_FORMAT=DYNAMIC;
+```
+
+`ON DELETE SET NULL` sur les clés carte et bouton, **jamais CASCADE** : si le client
+modifie son carrousel après l'envoi, l'historique de clics doit survivre. C'est aussi
+pourquoi `LibelleBouton` et `PostbackData` sont dupliqués ici.
+
+### 5.11 Conventions appliquées
+
+- `ROW_FORMAT=DYNAMIC` sur les tables contenant des `VARCHAR` longues en utf8mb4.
+  En `COMPACT`, InnoDB conserve un préfixe de 768 octets par colonne longue dans la page
+  et la limite de 8126 octets par ligne est vite atteinte. `DYNAMIC` est le défaut de
+  MariaDB depuis la 10.2.
+- **Les longueurs de colonne dépassent volontairement les limites de l'API**
+  (`Titre` 400 pour une limite à 200, `Libelle` 60 pour 25) : ce sont des **gabarits**
+  contenant des champs de fusion. Le contrôle des limites se fait **à la fusion**,
+  pas au stockage.
+- Les index `(IdRcs, Ordre)` et `(IdRcsCarte, Ordre)` ne sont **pas uniques** : les
+  boutons monter/descendre passent par un état transitoire où deux lignes partagent
+  le même ordre.
+- `BIGINT` sur les tables de tracking sans limite naturelle de volume.
+- `ON DELETE RESTRICT` sur `ope_rcs.IdRcsAgent` : un agent ayant servi à des campagnes
+  ne doit pas pouvoir être supprimé.
+
+---
+
+## 6. Règles de validation à implémenter côté WebDev
+
+### 6.1 Contrôles bloquants
+
+- Titre ≤ 200 caractères **après fusion, avec la valeur la plus longue de la base**
+- Description ≤ 2 000 caractères après fusion
+- Libellé de bouton ≤ 25 caractères après fusion
+- Maximum 4 boutons par carte
+- Carrousel : 2 à 10 cartes. Si 1 seule carte → basculer automatiquement en `TypeContenu = CARD`
+- Types `REPLY` et `REQUEST_LOCATION` non proposés
+- URL de média accessible publiquement en HTTPS
+- Texte de repli SMS obligatoire si `EstRepliSms = 1`, **avec le lien en clair** et la
+  mention STOP (le repli n'a plus de bouton)
+- **Repli SMS : GSM-7 obligatoire, 160 caractères maximum, 1 seul segment.**
+  Règle figée (§ 2.9). Blocage dur, pas d'alerte : l'Unicode et le multi-segment
+  sont interdits, sans option de dépassement
+- Bouton interactif : uniquement si `TypeContenu = 'CARD'`, un seul par opération,
+  `IdLandingPage` obligatoire
+
+### 6.2 Contrôles d'alerte (non bloquants)
+
+- Écart de longueur de texte entre cartes d'un carrousel → risque de troncature
+- Ratio d'image différent entre cartes (via `MediaLargeurPx` / `MediaHauteurPx`)
+- Nombre de boutons différent entre cartes
+- Plus de 2 boutons par carte (dégradation du rendu iOS)
+- Description dépassant 3 lignes environ
+
+### 6.3 Comptage des caractères
+
+Deux compteurs distincts et différents :
+
+| Champ | Règle |
+|---|---|
+| Champs RCS | Caractères, mais **emoji et multi-octets comptent 2 à 4** |
+| Repli SMS | Segments GSM 160 car. / Unicode 70 car. — un seul accent fait basculer |
+
+Le calcul des crédits SMS existe déjà pour le module SMS.
+**En faire une procédure WLangage partagée** plutôt que de dupliquer le code : c'est
+le seul point où la séparation SMS/RCS a un coût.
+
+### 6.4 Gestion des valeurs vides
+
+Prévoir un mécanisme de valeur de repli par champ de fusion, sur le modèle de l'option
+« supprimer les lignes vides » du Designer VDP. Éviter les « Bonjour , » quand le
+prénom est absent.
+
+---
+
+## 7. Logique de tarification et de devis
+
+### 7.1 Le problème
+
+Marketeam établit un **devis validé et payé par le client avant l'envoi**. Or le coût
+final dépend du canal réellement utilisé par destinataire, qui n'est pas connu à l'avance.
+
+Distinguer deux choses :
+
+- **Le nombre de segments du repli SMS est connu** dès la saisie du texte. C'est
+  déterministe : 3 segments = 3 × tarif SMS. Aucune incertitude.
+- **La répartition RCS / SMS est inconnue** sans qualification préalable. C'est là,
+  et uniquement là, que se situe le problème.
+
+Exemple sur 10 000 destinataires, RCS à 0,15 € et SMS à 0,07 € le segment :
+
+| Hypothèse | Calcul | Total |
+|---|---|---|
+| Tout en RCS | 10 000 × 0,15 € | 1 500 € |
+| Tout en repli SMS 3 segments | 10 000 × 0,21 € | 2 100 € |
+
+Fourchette de 600 € — inexploitable commercialement.
+
+### 7.2 Solution retenue — qualification avant devis
+
+Le **capability check asynchrone** est déplacé en amont : il est lancé au moment où le
+client charge sa base, **avant l'édition du devis**, et non juste avant l'envoi.
+
+Le devis présente alors deux lignes :
+
+```
+6 200 destinataires RCS         × 0,15 €  =    930,00 €
+3 800 destinataires repli SMS   × 0,07 €  =    266,00 €
+                                   TOTAL   =  1 196,00 €
+```
+
+Incertitude résiduelle : les destinataires qualifiés `ENABLED` qui échouent malgré tout
+à la livraison et basculent en SMS (téléphone changé, RCS désactivé entre-temps, réseau).
+Quelques pourcents, absorbés par la marge.
+
+### 7.3 Règle produit — repli SMS limité à 1 segment
+
+**Décision actée : le repli est un SMS simple standard, GSM-7, 160 caractères maximum.**
+Blocage dur dans le designer, sans possibilité de dépassement (voir § 2.9).
+
+Justification double :
+
+- **Économique.** Le repli coûte alors moins cher qu'un RCS (0,07 € contre 0,15 €).
+  L'incertitude résiduelle joue **en faveur** de Marketeam au lieu de creuser la marge.
+  Permet même de facturer une ligne unique au tarif RCS, repli inclus.
+- **Qualité.** Un repli de 3 segments est un mauvais message : plus d'image, plus de
+  boutons, un pavé de texte que personne ne lit. La contrainte force l'essentiel :
+  une phrase, un lien court, la mention STOP.
+
+Deux prérequis techniques dans le designer :
+
+- Raccourcisseur d'URL sur un domaine Marketeam (une URL consomme 40 à 60 caractères)
+- Détecteur d'accents hors GSM-7 (`ê`, `î`, `ô`, `â`, majuscules accentuées) qui font
+  basculer en Unicode et réduisent la capacité de 160 à 70 caractères
+
+### 7.4 Facturation du RCS Interactif
+
+Une campagne comportant un bouton interactif bascule sur la **grille de l'offre
+Interactive** de Marketeam, comme le SMS Interactif. Le tunnel de commande ajoute
+l'étape de création de la landing page.
+
+`ope_rcs.EstRcsInteractif` sert d'indicateur de bascule tarifaire et évite une jointure
+sur deux niveaux au moment du devis.
+
+**Note :** l'option « repli SMS étendu » envisagée initialement est **abandonnée**.
+Le repli est figé à un segment (§ 2.9), ce qui supprime la variabilité de coût côté
+repli et simplifie le devis.
+
+### 7.5 Point bloquant non résolu
+
+⚠️ **Une tentative RCS échouée est-elle facturée par Infobip en plus du SMS de repli ?**
+
+La documentation ne le précise pas. Si la réponse est oui, le prix de revient d'un
+destinataire en repli double et **toute la grille tarifaire est à revoir**.
+
+Question posée à Infobip. **Ne pas figer la grille tarifaire avant d'avoir la réponse.**
+Voir aussi § 10, questions ouvertes.
+
+### 7.6 Impact sur le modèle de données
+
+- `rcs_envoi.CanalUtilise` est la colonne qui porte la facturation réelle. Elle reste à
+  `ATTENTE` jusqu'au DLR puis passe à `RCS` ou `SMS`.
+- `rcs_envoi.CapaciteRcs` doit être renseignée **avant le devis**, pas seulement avant
+  l'envoi.
+- Prévoir la régularisation entre le devis (prévisionnel, basé sur `CapaciteRcs`) et la
+  facture (réel, basé sur `CanalUtilise`) : écart, avoir, ou absorption selon la
+  politique commerciale retenue.
+
+---
+
+## 8. Reste à faire
+
+### Priorité 1 — Fondations
+
+- [ ] **Faire relever le plafond de 10 agents** auprès du chargé de compte Infobip
+- [ ] Interroger `GET /rcs/1/senders/providers` pour connaître les opérateurs français
+- [ ] Créer le premier agent avec `billingCategory = NON_CONVERSATIONAL`
+      et `hostingRegion = EUROPE` (les deux sont irréversibles)
+- [ ] Demander le lancement auprès du chargé de compte (hors API, plusieurs semaines)
+- [ ] Créer les 9 tables dans l'ordre : `rcs_agent`, `rcs_agent_testeur`,
+      `rcs_agent_operateur`, `rcs_agent_historique`, `ope_rcs`, `ope_rcs_carte`,
+      `ope_rcs_carte_bouton`, `rcs_envoi`, `rcs_clic`
+- [ ] Confirmer le nom de la table des marques et poser la FK `rcs_agent.IdMarque`
+- [ ] Souscrire aux webhooks `SENDER_STATUS_UPDATE` et `SENDER_LAUNCH_UPDATE`
+- [ ] Écran de gestion des agents : création, suivi de statut, frise chronologique
+- [ ] Écran de gestion des testeurs : ajout, statut, relance, alerte si aucun iPhone
+- [ ] Bouton « Tester mon agent » : message de démonstration généré depuis la fiche
+      (logo, couleur, nom d'affichage), envoyé aux testeurs `APPROVED`. Tracé dans
+      `rcs_envoi` avec un `CodeRcsType` dédié, **exclu des statistiques et de la
+      facturation**
+- [ ] Modèles de politique de confidentialité et de CGU conformes à fournir aux clients
+      (première cause de rejet par les opérateurs)
+- [ ] Déclarer les URL de webhook chez Infobip
+- [ ] Récupérer clé API et base URL personnalisée
+
+### Priorité 2 — Composition
+
+- [ ] Formulaire WebDev de composition (carte simple d'abord)
+- [ ] Zone répétée pour le carrousel + boutons monter/descendre
+- [ ] Upload d'image : brancher le module de compression JPEG existant
+      (celui des landing pages) avec contrôle de ratio et de poids
+- [ ] Réglage Apache et cache HTTP pour les médias RCS (voir § 2.10)
+- [ ] Compteurs de caractères tenant compte des multi-octets
+- [ ] Iframe d'aperçu + pont `postMessage` par code navigateur
+
+### Priorité 3 — Envoi
+
+- [ ] Procédure de qualification de base (capability check asynchrone), **lancée avant
+      l'édition du devis** et non juste avant l'envoi (voir § 7.2)
+- [ ] Moteur de devis à deux lignes (RCS / repli SMS) basé sur `CapaciteRcs`
+- [ ] Contrainte dure 160 caractères GSM-7 sur le repli + raccourcisseur d'URL
+- [ ] Détecteur de caractères hors GSM-7 avec proposition de remplacement
+- [ ] Régularisation devis prévisionnel → facture réelle basée sur `CanalUtilise`
+- [ ] Moteur de fusion des champs variables
+- [ ] Construction du JSON depuis les 3 tables de composition
+- [ ] Calcul dynamique de la taille de lot selon le poids du JSON
+- [ ] Procédure d'envoi avec gestion des erreurs et des reprises
+- [ ] Conversion automatique heure de Paris → UTC pour `deliveryTimeWindow`
+
+### Priorité 4 — Retours
+
+- [ ] Réception des webhooks DLR, seen, événements de clic
+- [ ] Gestion de l'idempotence (rejeu des webhooks)
+- [ ] Détection des mots-clés STOP sur les messages entrants (**obligation légale**)
+- [ ] Alimentation de `CanalUtilise` depuis les rapports de repli
+- [ ] Rapports de campagne
+
+### Priorité 5 — RCS Interactif
+
+- [ ] Raccordement des tables de tracking landing page existantes
+      (ajout d'un `IdRcsEnvoi` ou d'un couple `TypeCanal` + `IdEnvoi`)
+- [ ] FK `ope_rcs_carte_bouton.IdLandingPage` vers la table de landing pages existante
+- [ ] Étape landing page dans le tunnel de commande, conditionnée par `EstRcsInteractif`
+- [ ] Génération d'URL personnalisée par destinataire + bascule automatique en mode
+      personnalisé (une entrée `messages` par destinataire)
+
+---
+
+## 9. Pièges connus
+
+1. **`deliveryTimeWindow` est en UTC.** Conversion automatique obligatoire selon la date
+   d'envoi (été/hiver), sinon les messages partiront à 7 h du matin.
+2. **`PENDING_ACCEPTED` ≠ livré.** La réponse HTTP 200 signifie « accepté pour
+   traitement ». La livraison réelle arrive par webhook.
+3. **Les logs Infobip ne sont conservés que 48 h.** Persistance locale obligatoire.
+4. **Les webhooks sont rejoués.** Sans contrôle d'idempotence, les clics sont
+   comptabilisés plusieurs fois et les rapports sont faussés en silence.
+5. **La qualification RCS est périssable.** Requalifier avant chaque campagne.
+6. **Double imbrication `content.content`** dans le JSON de carte.
+7. **`alignment` est obligatoire même en `VERTICAL`**, où il n'a aucun effet.
+8. **Un carrousel personnalisé pèse 5 à 6× plus lourd.** Taille de lot à calculer,
+   pas à figer.
+9. **La troncature en carrousel** est déterminée par les premières cartes. Elle ne peut
+   pas être simulée fiablement dans l'aperçu — la prévenir par des indicateurs d'écart.
+10. **Le sender RCS n'est pas le `LeFrom` du SMS.** Nommages et contraintes différents.
+11. **`SenderName` est immuable.** C'est la clé côté Infobip, pas un simple libellé.
+    Le renommer casserait campagnes et historisation.
+12. **`hostingRegion` et `billingCategory` sont irréversibles** une fois l'agent créé
+    (ou le lancement demandé). À vérifier avant toute création d'agent.
+13. **Un agent `READY_FOR_TESTING` n'envoie qu'aux numéros de test.** Contrôler `Statut`
+    avant d'autoriser une campagne en production.
+14. **Le RCS Interactif force le mode personnalisé.** L'URL unique par destinataire
+    impose une entrée `messages` par contact, quel que soit `EstRcsPersonnalise`.
+    Poids du JSON multiplié, taille de lot à recalculer.
+15. **Le « launch » n'est pas dans l'API.** Création et tests automatisables, mise en
+    service obligatoirement via le chargé de compte.
+16. **Plafond de 10 agents** par compte Infobip, à faire relever.
+17. **Aucun endpoint de suppression de numéro de test.** Le quota de 200 par agent ne
+    redescend jamais.
+18. **Logo 224 × 224 px et bannière 1440 × 448 px sont des résolutions exactes**, pas
+    des maximums. Contraste couleur mini 4,5:1 sur blanc.
+19. **`description` de l'agent : 100 caractères maximum.** Limite très basse, facile à
+    dépasser.
+20. **Chaque contact exige un `label`** de 25 caractères max. Oublier le libellé fait
+    échouer la création.
+21. **Le format du numéro diffère selon l'endpoint** : `+33612345678` pour la gestion
+    des testeurs, `33612345678` (sans `+`) pour l'envoi. Normaliser dans le code.
+22. **L'invitation testeur arrive sur le téléphone**, pas par email, et expire en
+    **24 heures**.
+
+---
+
+## 10. Questions ouvertes — à poser à Infobip
+
+1. **Facturation du repli SMS (BLOQUANT).** Lorsque le repli se déclenche, la tentative
+   RCS échouée est-elle facturée en plus du SMS ? Infobip impose-t-il une limite de
+   taille au texte de repli ? Voir § 7.5 — la grille tarifaire en dépend.
+2. **Le bloc `options.tracking`** (`shortenUrl`, `trackClicks`, `trackingUrl`)
+   s'applique-t-il aux URL des **boutons**, ou uniquement aux URL contenues dans le
+   texte du message ? La documentation ne le précise pas. Le signal fiable et documenté
+   pour les boutons reste le `postbackData` remonté par le webhook d'événement.
+   **À clarifier avant de bâtir le reporting de clics.**
+3. **Nombre de destinataires recommandé par appel** à `POST /rcs/2/messages`
+   (dimensionne la boucle d'envoi WLangage).
+4. **Taux de remontée des accusés de lecture** : certains réglages d'appareil
+   peuvent-ils bloquer le `seenAt` ? Le taux de lecture doit-il être présenté aux
+   clients comme un plancher plutôt que comme une valeur exacte ?
+5. **Couverture réelle en France** par opérateur (Orange, SFR, Bouygues, Free) et
+   niveau de support sur iOS 18+.
+6. **Retrait d'un numéro de test.** Aucun endpoint de suppression n'existe. Comment
+   retirer un numéro devenu obsolète, et le quota de 200 est-il libéré ?
+7. **Relèvement du plafond de 10 agents** : procédure et délai.
+8. **Délai de mise en service** du sender par opérateur.
+
+---
+
+## 11. Ce qu'il faut demander à Michel
+
+Le code des campagnes SMS n'est que partiellement visible dans le projet. Pour aller
+plus loin, demander explicitement :
+
+- `CREATE TABLE` des 3 tables de tracking du SMS Interactif
+  (ouvertures / clics boutons / clics liens) → nécessaire pour proposer les `ALTER TABLE`
+  de raccordement du RCS Interactif
+- `CREATE TABLE` de `dos_operation`, `sms_modele`, `clt_client`, `clt_contact`
+- **Le nom exact de la table des marques** et de sa clé primaire (supposé `clt_marque`
+  / `IdMarque`) → nécessaire pour poser la FK `rcs_agent.IdMarque`
+- La signification exacte de `CodeSmsType` dans `sms_envoi` : est-ce un **code de nature
+  d'envoi** (hypothèse retenue, transposée en `CodeRcsType`) ou un **code de statut** ?
+  Si c'est un statut, les colonnes `StatutGroupeId` / `StatutGroupeNom` de `rcs_envoi`
+  font double emploi et le schéma est à revoir.
+- Les procédures WLangage existantes d'envoi SMS et de réception des webhooks Infobip
+  (le canal SMS utilise déjà Infobip : la mécanique de rapprochement des `messageId`
+  et de traitement des DLR est probablement réutilisable en grande partie)
+- La procédure de calcul des crédits SMS (à partager avec le repli RCS)
+- Le contenu exact des colonnes `CreditSms` et `CreditSmsUnicode` de `ope_sms`
+  (VARCHAR(1000), donc probablement autre chose qu'un simple compteur) → détermine si
+  `RepliCreditSmsUnicode` et `RepliSmsEstUnicode` peuvent être supprimées de `ope_rcs`,
+  le repli étant désormais toujours GSM-7 sur un segment
+- Le nom de la table des landing pages et de sa clé primaire → FK
+  `ope_rcs_carte_bouton.IdLandingPage`
+
+---
+
+## 12. Style de collaboration attendu
+
+- Répondre en **français**.
+- Employer des **termes simples**, expliquer pas à pas, définir le jargon.
+  Michel maîtrise les principes de base du RCS mais souhaite un accompagnement
+  progressif et vulgarisé.
+- Réponses **concises et directes**, sans verbiage.
+- Tout texte rédigé en anglais doit être accompagné d'une **traduction française
+  complète** immédiatement en dessous, sans attendre qu'on le demande.
+- Marketeam Designer Web est en **HTML/CSS/JavaScript**, pas en Python.

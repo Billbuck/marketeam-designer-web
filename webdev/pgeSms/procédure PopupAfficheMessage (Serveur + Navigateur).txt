@@ -1,0 +1,54 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//PopupAfficheMessage (<sMessage> est chaîne [, <sTitre> est chaîne [, <sTypeOperation> est chaîne [, <sTypeAnimation> est chaîne [, <duDuree> est durée]]]])
+//
+// Paramètres :
+//	sMessage (chaîne ANSI) : <indiquez ici le rôle de sMessage>
+//	sTitre (chaîne ANSI - valeur par défaut="Information") : <indiquez ici le rôle de sTitre>
+//	sTypeOperation (chaîne ANSI - valeur par défaut="MKT") : <indiquez ici le rôle de sTypeOperation>
+//	sTypeAnimation (chaîne ANSI - valeur par défaut="INF") : <indiquez ici le rôle de sTypeAnimation>
+//	duDuree (durée - valeur par défaut=0000004000) : <indiquez ici le rôle de duDuree>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure PopupAfficheMessage(local sMessage est une chaîne, local sTitre est une chaîne = "Information", local sTypeOperation est une chaîne = __OPERATION_MARKETEAM__, local sTypeAnimation est une chaîne = __TOAST_INFORMATION__, local duDuree est une Durée = 4 s)
+
+libToastTitre						= sTitre
+libToastMessage						= sMessage
+
+<si Serveur>
+	celToastBandeauGauche.CouleurFond	= Partage.CouleurTypeOperation(sTypeOperation,"M")
+	libToastTitre.Couleur				= Partage.CouleurTypeOperation(sTypeOperation,"XXL")
+<fin>
+
+<si Navigateur>
+	celToastBandeauGauche.CouleurFond	= navCouleurTypeOperation(sTypeOperation,"M")
+	libToastTitre.Couleur				= navCouleurTypeOperation(sTypeOperation,"XXL")
+<fin>
+
+imgPopupToast						= ImageToast()
+saiToastPas							= 25
+saiToastDureeMax					= Arrondi(duDuree.EnMillisecondes / 10,0)
+saiToastDureeEnCours				= 0
+
+PopupAffiche(popMessage,popupHautCentre+popupAnnulable)
+
+	procédure interne ImageToast()
+		sCodeOperation est une chaîne
+
+		selon sTypeOperation
+			cas __OPERATION_COURRIER__, __OPERATION_COURRIER_GESTION__							: sCodeOperation = __OPERATION_COURRIER__
+			cas __OPERATION_TRACTEVA__, __OPERATION_SMARTEVA__									: sCodeOperation = __OPERATION_TRACTEVA__
+			cas __OPERATION_SMS__, __OPERATION_SMS_INTERACTIF__, __OPERATION_SMS_NOTIFICATION__ 	: sCodeOperation = __OPERATION_SMS__
+			autre cas																		: sCodeOperation = sTypeOperation
+		fin
+
+		selon sTypeAnimation
+			cas __TOAST_VALIDATION__	: renvoyer "ext/Boutons/Validation/"	+ sCodeOperation +"-validation.svg"
+			cas __TOAST_ANNULATION__	: renvoyer "ext/Boutons/Fermer/" 		+ sCodeOperation +"-fermer.svg"
+			autre cas 				: renvoyer "ext/Boutons/Information/"	+ sCodeOperation +"-information.svg"
+		fin
+	fin

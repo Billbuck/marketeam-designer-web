@@ -1,0 +1,40 @@
+procédure InitModele()
+
+nInd 			est un entier
+sMessageBrut	est une chaîne
+sBalise			est une chaîne
+nIndiceOuvre 	est un entier
+nIndiceFerme 	est un entier
+
+// Suppression des données en mémoire
+ZoneRépétéeSupprimeTout(znrVariable)
+_sCopieMessage		= ""
+
+si cboSmsModele..ValeurMémorisée > 0 alors
+	si sms_modele.LitRecherchePremier(IdSmsModele,cboSmsModele..ValeurMémorisée) alors
+		sMessageBrut = MessageSmsBrut(sms_modele.Message)
+		pour toute position nIndiceOuvre de "{" dans sMessageBrut
+			nIndiceFerme = Position(sMessageBrut,"}",nIndiceOuvre + 1)
+			si nIndiceFerme < 1 alors continuer
+			sBalise = sMessageBrut[[nIndiceOuvre + 1 à nIndiceFerme -1]]
+			si ZoneRépétéeCherche(attLibelle,sBalise) = -1 alors
+				nInd = ZoneRépétéeAjouteLigne(znrVariable)
+				znrVariable[nInd].attLibelle	= sBalise
+				znrVariable[nInd].attChamp 	= sBalise			
+			fin
+		fin
+		si Contient(sMessageBrut,["{","}"]) alors
+			_sMessageBrutAvecVariable	= sMessageBrut
+			saiPopMessage.Etat			= AffichageSeulement
+		sinon
+			_sMessageBrutAvecVariable	= ""
+			saiPopMessage.Etat			= Actif
+		fin
+	sinon
+		PopupAfficheMessage("Modèle non trouvé","Erreur",__OPERATION_SMS__,__TOAST_ANNULATION__)
+		retour
+	fin
+sinon
+	_sMessageBrutAvecVariable	= ""
+	saiPopMessage.Etat			= Actif
+fin

@@ -1,0 +1,30 @@
+CREATE TABLE `ope_sms` (
+	`IdSms` INT(11) NOT NULL,
+	`IdSmsModele` INT(11) NULL DEFAULT NULL,
+	`LeFrom` VARCHAR(11) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Message` VARCHAR(1200) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`ModeleVariable` VARCHAR(400) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`CreditSms` VARCHAR(1000) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`CreditSmsUnicode` VARCHAR(1000) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`EstSmsPersonnalise` TINYINT(1) NOT NULL DEFAULT '0',
+	`EstSmsFlash` TINYINT(1) NOT NULL DEFAULT '0',
+	`EstSmsUnicode` TINYINT(1) NOT NULL DEFAULT '0',
+	`ForcerSmsCourt` TINYINT(1) NOT NULL DEFAULT '0',
+	`DateFin` DATE NULL DEFAULT NULL,
+	`HeureFin` TIME NULL DEFAULT NULL,
+	`Cadence` MEDIUMINT(8) UNSIGNED NULL DEFAULT NULL COMMENT 'Calculé par rapport à la cadence',
+	`Paquet` SMALLINT(5) UNSIGNED NULL DEFAULT NULL COMMENT 'Calculé par rapport à la cadence',
+	`Pause` TINYINT(3) UNSIGNED NULL DEFAULT NULL,
+	`DateHeureCreation` DATETIME NOT NULL,
+	`DateHeureModification` DATETIME NULL DEFAULT NULL,
+	`UserCreation` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`UserModification` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	PRIMARY KEY (`IdSms`) USING BTREE,
+	INDEX `IdSmsModele` (`IdSmsModele`) USING BTREE,
+	CONSTRAINT `FK_ope_sms_dos_operation` FOREIGN KEY (`IdSms`) REFERENCES `dos_operation` (`IdOperation`) ON UPDATE RESTRICT ON DELETE CASCADE,
+	CONSTRAINT `FK_ope_sms_sms_modele` FOREIGN KEY (`IdSmsModele`) REFERENCES `sms_modele` (`IdSmsModele`) ON UPDATE RESTRICT ON DELETE SET NULL
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+ROW_FORMAT=COMPACT
+;

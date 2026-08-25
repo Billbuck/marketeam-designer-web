@@ -1,0 +1,6 @@
+function PositionCurseur(pSaisie)
+{
+	obj = document.getElementById(pSaisie);
+	start = obj.selectionStart;
+	return start
+}

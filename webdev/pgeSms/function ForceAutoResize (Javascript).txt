@@ -1,0 +1,4 @@
+function ForceAutoResize()
+{
+	$(".autoresize").autogrow();
+}

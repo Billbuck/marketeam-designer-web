@@ -1,0 +1,6 @@
+// **** Code Serveur "A chaque modification de la combo cboBibliothèque"
+
+BibliothèqueValeurMemorisée(cboBibliothèque, _sBibliothèque, _nIdMarque)
+InitCboSmsModele()
+InitModele()
+ChargeModele()

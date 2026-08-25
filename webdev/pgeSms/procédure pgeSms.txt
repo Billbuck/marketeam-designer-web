@@ -1,0 +1,125 @@
+// **** Déclarations globales de pgeSms (serveur) ****
+
+procédure pgeSms(_pIdOperation = 0)
+
+_nIdOperation = _pIdOperation
+
+_sBibliothèque				est une chaîne
+_nIdMarque					est un entier
+
+_nNumFiche					est un entier	<synchronisé navigateur>
+
+_nTailleMessage				est un entier	<synchronisé navigateur>
+_nCreditMessage				est un entier	<synchronisé navigateur>
+_mPrixVenteUnitaireHT		est un monétaire		<synchronisé navigateur>
+_mTarifUnitaire				est un monétaire		<synchronisé navigateur>
+_mCoutTotal					est un monétaire
+_sCopieMessage				est une chaîne <synchronisé navigateur>
+_bEstCliquezIci				est un booléen <synchronisé navigateur>
+_bEstPersonnalisé			est un booléen <synchronisé navigateur>
+_bEstBaseCharge				est un booléen <synchronisé navigateur>
+_nPositionCurseur			est un entier  <synchronisé navigateur>
+_taaColonne					est un tableau associatif <synchronisé navigateur> de chaînes
+//_tabEchantillonBaseLigne	est un tableau <synchronisé navigateur> de StructBaseLigne
+_sMessageBrutAvecVariable	est une chaîne <synchronisé navigateur>
+_sMessageFinalisé			est une chaîne <synchronisé navigateur>
+
+constante
+	_ban_modele_			= 1
+	_ban_emetteur_			= 2
+	_ban_message_			= 3
+	_ban_saisir_		 	= 4
+fin
+
+Tunnel.__taaPageVisitée[PageCourante] = Vrai
+
+libModeleTitrePage = "SMS"
+
+// Procédure qui déclenche un message d'erreur si un caractère interdit est saisie dans le FROM
+// En cas d'erreur cela déclenche la procédure navigateur AfficheErreurFrom
+// Au bout de 3 secondes la procédure FermeErreurFrom est déclenchée
+
+MaPage.HTMLEntête += RC + [
+	<script type="text/javascript">
+	// Variable globale pour stocker l'ID du timeout
+	var closeErrorTimer = null;
+	
+	function nettoyerSaisie(event) {
+	var inputField = event.target;
+	var originalValue = inputField.value;
+	var cleanedValue = originalValue.replace(/[^a-zA-Z0-9]/g, '');
+	var errorChar = '';
+	
+	// Trouver le premier caractère invalide
+	var match = originalValue.match(/[^a-zA-Z0-9]/);
+	if (match) {
+	errorChar = match[0];
+	}
+	
+	if (cleanedValue !== originalValue) {
+	// Mettre à jour la valeur du champ
+	inputField.value = cleanedValue;
+	
+	// Repositionner le curseur à la fin du texte
+	if (inputField.setSelectionRange) {
+	var length = cleanedValue.length;
+	inputField.setSelectionRange(length, length);
+	} else {
+	var range = inputField.createTextRange();
+	range.collapse(true);
+	range.moveEnd('character', cleanedValue.length);
+	range.moveStart('character', cleanedValue.length);
+	range.select();
+	}
+	
+	// Déclencher la procédure AfficheErreurFrom avec le caractère en erreur
+	if (typeof AfficheErreurFrom === "function" && errorChar !== '') {
+	AfficheErreurFrom(errorChar);
+	}
+	
+	// Réinitialiser le timeout si déjà existant
+	if (closeErrorTimer !== null) {
+	clearTimeout(closeErrorTimer);
+	}
+	
+	// Définir un nouveau timeout pour fermer l'erreur après 5 secondes
+	closeErrorTimer = setTimeout(function() {
+	if (typeof FermeErreurFrom === "function") {
+	FermeErreurFrom();
+	}
+	closeErrorTimer = null; // Réinitialiser la variable
+	}, 3000); // 3000 millisecondes = 3 secondes
+	} else {
+	// Déclencher la procédure FermeErreurFrom pour fermer le message d'erreur
+	if (typeof FermeErreurFrom === "function") {
+	FermeErreurFrom();
+	}
+	
+	// Réinitialiser et effacer le timeout si existant
+	if (closeErrorTimer !== null) {
+	clearTimeout(closeErrorTimer);
+	closeErrorTimer = null;
+	}
+	}
+	}
+	
+	// Attacher la fonction à l'événement 'input' du champ
+	document.addEventListener("DOMContentLoaded", function() {
+	var inputField = document.getElementById("[%saiLeFrom.Alias%]");
+	console.log("Champ de saisie trouvé:", inputField);
+	if (inputField) {
+	inputField.addEventListener("input", nettoyerSaisie);
+	console.log("Événement 'input' attaché.");
+	}
+	});
+	</script>
+]
+
+
+// **** Fin d'initialisation de pgeSms (serveur) ****
+Init()
+
+
+// **** Chargement de pgeSms (onload navigateur) ****
+
+MixGestionInterface(saiMessage)

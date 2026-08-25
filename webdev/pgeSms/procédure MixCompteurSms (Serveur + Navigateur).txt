@@ -1,0 +1,59 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] MixCompteurSms (<pMessage>, <pPrixUnitaireSms> [, <pEstStopSms>])
+//
+// Paramètres :
+//	pMessage : <indiquez ici le rôle de pMessage>
+//	pPrixUnitaireSms : <indiquez ici le rôle de pPrixUnitaireSms>
+//	pEstStopSms (valeur par défaut=0) : < indiquez ici le rôle de pEstStopSms >
+
+// Valeur de retour :
+// 	multi-valeur : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+//	pTailleMessage : <indiquez ici le rôle de pTailleMessage>
+//	pPrixMessage : <indiquez ici le rôle de pPrixMessage>
+//	pCreditMessage : <indiquez ici le rôle de pCreditMessage>
+procédure MixCompteurSms(local pMessage, pPrixUnitaireSms, pEstStopSms = Faux)
+
+nTailleMessage	est un entier		= 0
+mPrixMessage	est un numérique	= 0
+nCreditMessage	est un entier		= 0
+
+si pEstStopSms _et_ pas Contient(pMessage,__STOP_SMS__,SansCasse) alors
+	pMessage += RC + __STOP_SMS__
+fin
+
+si pMessage <> "" alors
+	nTailleMessage	= InterneTailleSms()
+	nCreditMessage	= InterneCalculeTailleSms()
+	mPrixMessage	= nCreditMessage * pPrixUnitaireSms
+fin
+
+renvoyer (nTailleMessage, nCreditMessage, mPrixMessage)
+
+	procédure interne InterneTailleSms()
+		pMessage = Remplace(pMessage,RC,Caract(10))
+		renvoyer (Taille(pMessage) + ChaîneOccurrence(pMessage,["€","^","~","|","\"])) //"[","]","{","}", // Les Crochets et accolades ne sont réservés qu'a la personnalisation des messages.()
+	fin
+	
+	procédure interne InterneCalculeTailleSms()
+		nLong	est un entier
+		nMax		est un entier
+		nLimit	est un entier
+		
+		nMax	= 160
+		nLimit	= 153
+		
+		si nTailleMessage <= nMax alors
+			renvoyer 1
+		sinon
+			nLong = PartieEntière(nTailleMessage/nLimit)
+			si PartieDécimale(nTailleMessage/nLimit) > 0 alors
+				nLong++
+			fin
+			renvoyer nLong  
+		fin
+	fin

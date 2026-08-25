@@ -1,0 +1,59 @@
+procédure AjoutModificationOperationSms(stOperation est une structOperation)
+
+sCreditSms			est une chaîne ANSI
+bEstModeCreation	est un booléen	= (stOperation.IdOperation = 0)		// On fait le test maintenant car après l'appel de AjoutModificationOperation l'IdOperation sera renseigné
+
+AjoutModificationOperation(stOperation)  // On ajoute / met à jour les données dans la table dos_operation
+
+si bEstModeCreation alors
+	ope_sms.RAZ()
+	ope_sms.IdSms				= stOperation.IdOperation
+	ope_sms.DateHeureCreation	= DateHeureSys()
+	ope_sms.UserCreation		= Partage.__vcUser.NomUser
+
+sinon
+	si pas ope_sms.LitRecherchePremier(IdSms, stOperation.IdOperation) alors
+		<compile si TypeConfiguration <> Webservice>
+			Info("Erreur positionnement ope_sms")
+		<fin>
+		renvoyer Faux
+	fin
+
+fin
+
+MémoireVersFichier(stOperation.stOperationSms, ope_sms)
+
+
+Sérialise(stOperation.stOperationSms.taaCreditSms, sCreditSms, psdJSON)
+ope_sms.CreditSms					= sCreditSms
+ope_sms.CreditSms.Null				= (sCreditSms = "")
+
+
+ope_sms.Message						= Remplace(ope_sms.Message,RC,Caract(10)) // Au cas ou affaire SEAT 2018
+ope_sms.IdSmsModele..Null			= (ope_sms.IdSmsModele = 0)
+ope_sms.ModeleVariable..Null		= (ope_sms.IdSmsModele = 0)
+ope_sms.DateFin..Null				= (stOperation.stOperationSms.DateFin = "")
+ope_sms.HeureFin..Null				= (stOperation.stOperationSms.HeureFin = "")
+
+
+si bEstModeCreation alors // Création
+	si pas ope_sms.Ajoute() alors
+		<compile si TypeConfiguration <> Webservice>
+			Info("Erreur :",ErreurInfo(errComplet))
+		<fin>
+		renvoyer Faux
+	fin
+sinon	// Modification
+
+	ope_sms.DateHeureModification	= DateHeureSys()
+	ope_sms.UserModification		= Partage.__vcUser.NomUser
+	si pas ope_sms.Modifie() alors
+		<compile si TypeConfiguration <> Webservice>
+			Info("Erreur :",ErreurInfo(errComplet))
+		<fin>
+		renvoyer Faux
+	fin
+fin
+
+renvoyer Vrai
+

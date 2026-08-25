@@ -1,0 +1,14 @@
+procédure CalculeNbrCreditSms(pTaille est un entier,pUnicode = Faux)
+
+nMax est un entier
+nInd est un entier
+
+nMax 	= (pUnicode = Faux) ? 160 sinon 70
+nInd 	= (pUnicode = Faux) ? 153 sinon 67
+
+
+si pTaille <= nMax alors
+	renvoyer 1
+sinon
+	renvoyer ArrondiSupérieur(pTaille/nInd)
+fin

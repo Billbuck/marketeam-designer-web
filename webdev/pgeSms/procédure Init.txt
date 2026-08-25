@@ -1,0 +1,56 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//Init ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure Init()
+
+sOption est une chaîne
+
+
+si __stOperation.EstCliquezIci = Faux alors
+	btnBaseChamp.Visible	= VérifieAccèsFonction(Sms,SmsPersonnalisation)
+	sOption					= "AND sms_modele.Type = '" + __OPERATION_SMS__ + "'"
+sinon
+	btnBaseChamp.Visible	= VérifieAccèsFonction(SmsInteractif,SmsPersonnalisation)
+	sOption					= "AND sms_modele.Type = '" + __OPERATION_SMS_INTERACTIF__ + "'"
+fin
+
+Partage.InitCboBibliothèque(cboBibliothèque,sms_modele..Nom,sms_modele.IdSmsModele..Nom, __stOperation.stOperationSms.IdSmsModele, Faux, Vrai, sOption)
+BibliothèqueValeurMemorisée(cboBibliothèque, _sBibliothèque, _nIdMarque)
+
+InitCboSmsModele(__stOperation.stOperationSms.IdSmsModele)
+InitModele()
+RemplissageZnrVariable()
+saiLeFrom						= __stOperation.stOperationSms.LeFrom
+saiMessage						= __stOperation.stOperationSms.Message
+
+_bEstCliquezIci 				= __stOperation.EstCliquezIci
+_bEstBaseCharge 				= EstBaseChargée()
+_mTarifUnitaire 				= Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_SMS__].PrixVenteUnitaire
+
+
+procédure interne EstBaseChargée()
+	pour tout stBase de __stOperation.tabBase
+		si stBase.EstSupprime = Faux alors
+			renvoyer Vrai
+		fin
+	fin
+	renvoyer Faux
+fin
+
+CompteurSms(saiMessage,_sMessageFinalisé,Faux,_nTailleMessage,_mPrixVenteUnitaireHT,_nCreditMessage,_mTarifUnitaire,Vrai,_bEstCliquezIci)
+
+MixGestionInterface(saiMessage)
+
+si VérifieAccèsFonction(Sms,SmsPersonnalisation) alors
+	// Si la comboChampsDisponible est vide pas de personnalisation
+	// A FAIRE gérer la suppression du bouton des variables
+fin

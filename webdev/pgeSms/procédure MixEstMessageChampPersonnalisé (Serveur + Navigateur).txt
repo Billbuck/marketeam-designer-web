@@ -1,0 +1,20 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] MixEstMessageChampPersonnalisé (<pMessage>)
+//
+// Paramètres :
+//	pMessage : <indiquez ici le rôle de pMessage>
+
+// Valeur de retour :
+// 	booléen : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure MixEstMessageChampPersonnalisé(local pMessage)
+
+// On retire la balise Cliquez-Ici
+pMessage = Remplace(pMessage,"[" + cpSms.__sLibelleCliquezIci + "]","")
+pMessage = Remplace(pMessage,cpSms.__sUrlCliquezIci,"")
+
+renvoyer (Contient(pMessage,"[") _et_ Contient(pMessage,"]"))

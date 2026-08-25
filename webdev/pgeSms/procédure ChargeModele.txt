@@ -1,0 +1,20 @@
+procédure ChargeModele()
+
+si cboSmsModele.ValeurMémorisée > 0 _et_ sms_modele.LitRecherchePremier(IdSmsModele,cboSmsModele.ValeurMémorisée) alors
+	saiLeFrom					= sms_modele.LeFrom
+	saiMessage					= sms_modele.Message
+	_sMessageBrutAvecVariable	= MessageSmsBrut(sms_modele.Message)
+sinon
+	saiLeFrom					= ""
+	saiMessage					= ""
+	_sMessageBrutAvecVariable	= ""
+fin
+
+_bEstPersonnalisé							= MixEstMessageChampPersonnalisé(saiMessage)
+
+__stOperation.stOperationSms.IdSmsModele	= cboSmsModele.ValeurMémorisée
+__stOperation.stOperationSms.LeFrom			= saiLeFrom
+__stOperation.stOperationSms.Message		= saiMessage
+
+CompteurSms(saiMessage,_sMessageFinalisé,Faux,_nTailleMessage,_mPrixVenteUnitaireHT,_nCreditMessage,_mTarifUnitaire,Vrai,_bEstCliquezIci)
+MixGestionInterface(saiMessage)

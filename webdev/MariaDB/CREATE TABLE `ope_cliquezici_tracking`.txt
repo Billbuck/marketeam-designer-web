@@ -1,0 +1,36 @@
+CREATE TABLE `ope_cliquezici_tracking` (
+	`IdCliquezIciTracking` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdBaseLigne` INT(11) NOT NULL,
+	`IdCliquezIci` INT(11) NULL DEFAULT NULL,
+	`DateHeureClic` TIMESTAMP NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+	`Plateforme` VARCHAR(20) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`AdresseIP` VARCHAR(15) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Connexion` VARCHAR(50) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Operateur` VARCHAR(50) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`CodePostal` VARCHAR(20) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Ville` VARCHAR(50) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Region` VARCHAR(50) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Pays` VARCHAR(50) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Continent` VARCHAR(50) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Longitude` DOUBLE NULL DEFAULT NULL,
+	`Latitude` DOUBLE NULL DEFAULT NULL,
+	`Utilisateur` VARCHAR(50) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`DateHeureNotification` DATETIME NULL DEFAULT NULL,
+	`DateHeureEmailFiltre` DATETIME NULL DEFAULT NULL,
+	`DateHeureSmsFiltre` DATETIME NULL DEFAULT NULL,
+	`DateHeurePushFiltre` DATETIME NULL DEFAULT NULL,
+	PRIMARY KEY (`IdCliquezIciTracking`) USING BTREE,
+	INDEX `IdDemandeSms` (`IdBaseLigne`) USING BTREE,
+	INDEX `IdCliquezIci` (`IdCliquezIci`) USING BTREE,
+	INDEX `IdCliquezIci_IdEmailEnvoi` (`IdCliquezIci`) USING BTREE,
+	INDEX `IdCliquezIci_IdSmsEnvoi` (`IdCliquezIci`) USING BTREE,
+	INDEX `IdCliquezIci_IdPushEnvoi` (`IdCliquezIci`) USING BTREE,
+	INDEX `DateHeureNotification` (`DateHeureNotification`) USING BTREE,
+	INDEX `DateHeureEmailFiltre` (`DateHeureEmailFiltre`) USING BTREE,
+	INDEX `DateHeureSmsFiltre` (`DateHeureSmsFiltre`) USING BTREE,
+	INDEX `DateHeurePushFiltre` (`DateHeurePushFiltre`) USING BTREE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+ROW_FORMAT=COMPACT
+;

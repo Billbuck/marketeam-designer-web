@@ -1,0 +1,55 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] CalculePrixVenteMinimum (<pCodePrestation>, <pPrixVenteCalcule> [, <pPrixAchat> [, <pArrondi>]])
+//
+// Paramètres :
+//	pCodePrestation : <indiquez ici le rôle de PCodePrestation>
+//	pPrixVenteCalcule : <indiquez ici le rôle de pPrixVenteCalcule>
+//	pPrixAchat (valeur par défaut=0) : <indiquez ici le rôle de pPrixVenteApresSeuil>
+//	pArrondi (valeur par défaut=2) : < indiquez ici le rôle de pArrondi >
+// Valeur de retour :
+// 	variant : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure CalculePrixVenteMinimum(pCodePrestation,pPrixVenteCalcule, pPrixAchat = 0, pArrondi = 2 )
+
+rCoef est un réel
+
+rCoef = 0.20
+
+selon pCodePrestation
+	cas __PRESTATION_ADRESSAGE_COULEUR__		: rCoef = 0.10
+	cas __PRESTATION_ADRESSAGE_NOIR__			: rCoef = 0.10
+	cas __PRESTATION_AFFRANCHISSEMENT__
+	cas __PRESTATION_ALLIAGE__					: rCoef = 0.05
+	cas __PRESTATION_FRAIS_FIXES__				: rCoef = 0.50
+	cas __PRESTATION_IMPRESSION_LASER__			: rCoef = 0.15
+	cas __PRESTATION_IMPRESSION_OFFSET__		: rCoef = 0.05
+	cas __PRESTATION_MINIMUM_FACTURATION__
+	cas __PRESTATION_PACKAGE_COURRIER__
+	cas __PRESTATION_REMISE_COUPON__
+	cas __PRESTATION_ROUTAGE_COURRIER__			: rCoef = 0.15
+	cas __PRESTATION_ROUTAGE_EMAIL__			: rCoef = 0.10
+	cas __PRESTATION_ROUTAGE_SMS__				: rCoef = 0.05
+	cas __PRESTATION_ROUTAGE_RCS__				: rCoef = 0.05
+	cas __PRESTATION_ROUTAGE_VMS__				: rCoef = 0.05
+	cas __PRESTATION_COLISAGE__					: rCoef = 0.10
+	cas __PRESTATION_TRANSPORT__				: rCoef = 0.10
+	cas __PRESTATION_ADREXO__					: rCoef = 0.00
+	cas __PRESTATION_CLIQUEZICI_TRACKING__		: rCoef = 0.10
+	cas __PRESTATION_CLIQUEZICI_WEB__			: rCoef = 0.10
+
+	autre cas :
+		<compile si TypeConfiguration <> Webservice>
+			ToastAffiche("Le coefficient de remise maximum n'est pas renseigné pour le code prestation : " + pCodePrestation + RC +...
+			"Le coefficient de base (" + rCoef + ") à été appliqué !" + RC + ...
+			"Voir le code de la procédure CalculPrixVenteMinimuim",toastLong,cvMilieu,chCentre,RougeClair)
+		<fin>
+
+fin
+
+renvoyer Arrondi(pPrixVenteCalcule - ((pPrixVenteCalcule - pPrixAchat) * rCoef), pArrondi)
+
+

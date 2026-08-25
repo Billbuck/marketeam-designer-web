@@ -1,0 +1,17 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// RetourChampAjoute ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure RetourChampAjoute()
+
+_bEstPersonnalisé = MixEstMessageChampPersonnalisé(saiPopMessage)
+
+MixGestionInterface(saiPopMessage)

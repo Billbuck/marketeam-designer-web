@@ -1,0 +1,10 @@
+// **** Clic sur btnFichePrecedente ( celBoutons ) (serveur) Rechargement minimal de la page (AJAX) ****
+
+FichePrecedente()
+
+// **** Retour de traitement AJAX après le clic sur btnFichePrecedente ( celBoutons ) (navigateur) ****
+
+sMessagePersonnalisé est une chaîne
+
+NavCompteurSms(saiMessage,sMessagePersonnalisé,Faux,_nTailleMessage,_mPrixVenteUnitaireHT,_nCreditMessage,_mTarifUnitaire,Vrai,_bEstCliquezIci)
+MixGestionInterface(saiMessage)

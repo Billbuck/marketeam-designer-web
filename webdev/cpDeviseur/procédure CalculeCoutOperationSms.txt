@@ -1,0 +1,254 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// CalculeCoutOperationRcs ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure CalculeCoutOperationSms(stOperation est une structOperation)
+
+
+sTexteRequete				est une chaîne
+sdReqCoutSms				est une Source de Données
+sSelect						est une chaîne
+sLeMessage					est une chaîne
+sWhereBase					est une chaîne
+sFiltreBase					est une chaîne
+nCreditMessage				est un entier
+mPrixMessage				est un monétaire
+mPrixTotal					est un monétaire
+bEstPersonnalisé			est un booléen
+nTailleMessage				est un entier
+nTotalCaractèreSpeciaux	est un entier
+nTotal						est un entier
+sListeIdBase				est une chaîne
+taaBaseChamp				est un tableau associatif de structBaseChamp	= stOperation.taaBaseChamp
+
+sLeMessage					= stOperation.stOperationSms.Message.Remplace(RC,Caract(10))
+
+bEstPersonnalisé			= (Contient(sLeMessage.Remplace("[" + Partage.LibelleBaseChamp(__CHAMP_CLIQUEZ_ICI__) + "]",""),"[") _ou_ Contient(sLeMessage.Remplace("[" + Partage.LibelleBaseChamp(__CHAMP_CLIQUEZ_ICI__) + "]",""),"]"))
+
+nTotalCaractèreSpeciaux	= sLeMessage.Occurrence(["€","^","~","|","\"])
+
+pour tout stBase de stOperation.tabBase
+	si stBase.EstSupprime = Faux alors
+		si stBase.EstAjoute = Vrai alors // La base vient d'être rajouté dans le tunnel
+			si stBase.IdFiltre = 0 alors
+				sWhereBase += [" OR "] + "(clt_base_ligne.IdBase = " + stBase.IdBaseClient +")"
+			sinon
+				sFiltreBase = GenereRequeteFiltreClientBase(stBase.IdBaseClient,stBase.IdFiltre)
+				sWhereBase += [" OR "] + "(" + sFiltreBase +")"
+			fin
+		sinon							// La base est présente dans l'opération
+			sListeIdBase += [","] + stBase.IdBase
+		fin
+	fin
+fin
+
+// Pas encore de base de données
+si sWhereBase = "" _et_ sListeIdBase = "" alors
+	stOperation.NbrDestinataire	= 2000
+	stOperation.stOperationSms.taaCreditSms.SupprimeTout()
+	stOperation.stOperationSms.taaTailleSms.SupprimeTout()
+	stOperation.stOperationSms.TailleMax								= 0
+
+	nTailleMessage																= cpSms.TailleSms(sLeMessage,Faux)
+	nCreditMessage																= cpSms.CalculeTailleSms(nTailleMessage,Faux)
+	mPrixMessage																= Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_SMS__].PrixVenteUnitaire * nCreditMessage
+	mPrixTotal																	= mPrixMessage * stOperation.NbrDestinataire
+	stOperation.stOperationSms.taaCreditSms[nCreditMessage]		= stOperation.NbrDestinataire
+	stOperation.stOperationSms.taaTailleSms[nTailleMessage]		= stOperation.NbrDestinataire
+	stOperation.stOperationSms.TailleMax								= nTailleMessage
+
+	renvoyer mPrixTotal
+fin
+
+
+si bEstPersonnalisé = Vrai alors
+	sSelect			= RemplissageDesBalises(sLeMessage, stOperation.EstCliquezIci) + " TailleDuMessage"
+
+	selon Vrai
+		cas sWhereBase <> "" _et_ sListeIdBase <> ""
+			sTexteRequete	=
+			[
+				SELECT
+				COUNT(z.Portable) Total, 
+				[%sSelect%]
+				FROM
+				(SELECT * FROM
+				(
+				SELECT Reference,Societe,Enseigne,contact,Civilite,Nom,Prenom,Adresse1,Adresse2,Adresse3,Adresse4,CodePostal,Ville,Pays,Tel,Portable,Email,CodeAlliage,Champ1,Champ2,Champ3,Champ4,Champ5,Champ6,Champ7,Champ8,Champ9,Champ10,Champ11,Champ12,Champ13,Champ14,Champ15,Champ16,Champ17,Champ18,Champ19,Champ20,Champ21,Champ22,Champ23,Champ24,Champ25,Champ26,Champ27,Champ28,Champ29,Champ30,Sexe,Profil 
+				FROM clt_base_ligne WHERE ([%sWhereBase%]) AND Portable IS NOT NULL AND StopPub = 0
+				UNION
+				SELECT Reference,Societe,Enseigne,contact,Civilite,Nom,Prenom,Adresse1,Adresse2,Adresse3,Adresse4,CodePostal,Ville,Pays,Tel,Portable,Email,CodeAlliage,Champ1,Champ2,Champ3,Champ4,Champ5,Champ6,Champ7,Champ8,Champ9,Champ10,Champ11,Champ12,Champ13,Champ14,Champ15,Champ16,Champ17,Champ18,Champ19,Champ20,Champ21,Champ22,Champ23,Champ24,Champ25,Champ26,Champ27,Champ28,Champ29,Champ30,Sexe,Profil 
+				FROM dos_base_ligne 
+				WHERE IdBase IN ([%sListeIdBase%]) AND Portable IS NOT NULL)
+				) AS t
+				GROUP BY t.Portable) AS z
+				GROUP BY TailleDuMessage
+			]
+
+		cas sWhereBase <> ""
+			sTexteRequete	=
+			[
+				SELECT
+				COUNT(z.Portable) Total, 
+				[%sSelect%]
+				FROM
+				(SELECT * FROM clt_base_ligne WHERE ([%sWhereBase%]) AND Portable IS NOT NULL AND StopPub = 0 GROUP BY Portable) AS z
+				GROUP BY TailleDuMessage
+			]
+
+		cas sListeIdBase <> ""
+			sTexteRequete	=
+			[
+				SELECT
+				COUNT(z.Portable) Total, 
+				[%sSelect%]
+				FROM
+				(SELECT * FROM dos_base_ligne WHERE IdBase IN ([%sListeIdBase%]) AND Portable IS NOT NULL GROUP BY Portable) AS z
+				GROUP BY TailleDuMessage
+			]
+
+		autre cas
+
+	fin
+
+
+	si pas sdReqCoutSms.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+		<compile si TypeConfiguration <> Webservice>
+			Info("Erreur requête CalculeCoutOperationSms 1")
+		<fin>
+		renvoyer mPrixTotal
+	fin
+
+	stOperation.stOperationSms.taaCreditSms.SupprimeTout()
+	stOperation.stOperationSms.taaTailleSms.SupprimeTout()
+	stOperation.stOperationSms.TailleMax = 0
+
+	pour tout sdReqCoutSms
+		nTotal				+= sdReqCoutSms.Total
+		nCreditMessage		= cpSms.CalculeTailleSms((sdReqCoutSms.TailleDuMessage),Faux)
+		mPrixMessage		= Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_SMS__].PrixVenteUnitaire * nCreditMessage
+		mPrixTotal			+= mPrixMessage * sdReqCoutSms.Total
+		stOperation.stOperationSms.taaCreditSms[nCreditMessage] += sdReqCoutSms.Total
+		stOperation.stOperationSms.taaTailleSms[sdReqCoutSms.TailleDuMessage]		= sdReqCoutSms.Total
+		stOperation.stOperationSms.TailleMax													= Max(stOperation.stOperationSms.TailleMax, sdReqCoutSms.TailleDuMessage)
+	fin
+	stOperation.stOperationSms.taaTailleSms.Trie(ttClé)
+sinon
+
+	selon Vrai
+		cas sWhereBase <> "" _et_ sListeIdBase <> ""
+			sTexteRequete	=
+			[
+				SELECT 
+				COUNT(DISTINCT z.Portable) Total
+				FROM
+				(
+				SELECT clt_base_ligne.Portable	FROM clt_base_ligne WHERE  ([%sWhereBase%]) AND clt_base_ligne.Portable IS NOT NULL AND StopPub = 0
+				UNION
+				SELECT dos_base_ligne.Portable	FROM dos_base_ligne WHERE  IdBase IN ([%sListeIdBase%]) AND dos_base_ligne.Portable IS NOT NULL
+				) AS z
+			]
+
+		cas sWhereBase <> ""
+			sTexteRequete	=
+			[
+				SELECT 
+				COUNT(DISTINCT Portable) Total
+				FROM
+				clt_base_ligne 
+				WHERE  ([%sWhereBase%]) AND Portable IS NOT NULL AND StopPub = 0
+			]
+
+
+
+		cas sListeIdBase <> ""
+			sTexteRequete	=
+			[
+				SELECT 
+				COUNT(DISTINCT Portable) Total
+				FROM
+				dos_base_ligne 
+				WHERE IdBase IN ([%sListeIdBase%]) AND Portable IS NOT NULL
+			]
+
+
+		autre cas
+
+	fin
+
+	si pas sdReqCoutSms.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+		<compile si TypeConfiguration <> Webservice>
+			Info("Erreur requête CalculeCoutOperationSms 2")
+		<fin>
+		renvoyer mPrixTotal
+	fin
+
+	nTailleMessage = sLeMessage.Taille() + nTotalCaractèreSpeciaux
+
+	stOperation.stOperationSms.taaCreditSms.SupprimeTout()
+	stOperation.stOperationSms.taaTailleSms.SupprimeTout()
+	stOperation.stOperationSms.TailleMax = 0
+
+	sdReqCoutSms.LitPremier(hSansRafraîchir)
+	si pas sdReqCoutSms.EnDehors() alors
+		nTotal						= sdReqCoutSms.Total
+		nCreditMessage				= cpSms.CalculeTailleSms((nTailleMessage + nTotalCaractèreSpeciaux),Faux)
+		mPrixMessage				= Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_SMS__].PrixVenteUnitaire * nCreditMessage
+		mPrixTotal					+= mPrixMessage * sdReqCoutSms.Total
+		stOperation.stOperationSms.taaCreditSms[nCreditMessage] += sdReqCoutSms.Total
+		stOperation.stOperationSms.taaTailleSms[(nTailleMessage + nTotalCaractèreSpeciaux)]	= sdReqCoutSms.Total
+		stOperation.stOperationSms.TailleMax																= (nTailleMessage + nTotalCaractèreSpeciaux)
+	fin
+
+fin
+
+
+stOperation.NbrDestinataire = nTotal
+
+
+
+renvoyer mPrixTotal
+
+fin:
+sdReqCoutSms.AnnuleDéclaration()
+
+
+
+	procédure interne RemplissageDesBalises(sMessage, pEstCliquezIci)
+
+		sListeChamps	est une chaîne
+		sSelectRetour	est une chaîne
+
+		pour tout stBaseChamp, sLibelle de taaBaseChamp
+			si Contient(sMessage,"[" + sLibelle + "]") alors
+				sListeChamps += [","] + sLibelle
+			fin
+		fin
+
+		sSelectRetour = "'" + Remplace(sMessage,"'","''") + "'"
+
+		pour toute chaînes sLibelle de sListeChamps séparée par ","
+			sSelectRetour = "REPLACE(" + sSelectRetour + ",'[" + sLibelle + "]', IFNULL(" + taaBaseChamp[sLibelle].Champ + ",''))"
+		fin
+
+		si pEstCliquezIci alors
+			si Contient(sMessage,"[" + __CHAMP_CLIQUEZ_ICI__ + "]") alors
+				//				sSelectRetour = "REPLACE(" + sSelectRetour + ",'[" + __CHAMP_CLIQUEZ_ICI__ + "]', IFNULL(" + __CHAMP_CLIQUEZ_ICI__ + ",'XXXXXX'))"
+				sSelectRetour = "REPLACE(" + sSelectRetour + ",'[" + __CHAMP_CLIQUEZ_ICI__ + "]', 'XXXXXX')"
+			fin
+		fin
+
+
+		sSelectRetour = "RetourneTailleSms(" +sSelectRetour +")"
+
+		renvoyer sSelectRetour
+	fin
+

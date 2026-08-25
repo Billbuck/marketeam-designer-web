@@ -1,0 +1,24 @@
+CREATE TABLE `ope_sms_envoi` (
+	`IdBaseLigne` INT(11) NOT NULL,
+	`IdSms` INT(11) NOT NULL,
+	`Statut` CHAR(2) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`StatutKannel` CHAR(2) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`StatutOperateur` CHAR(4) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Operateur` CHAR(5) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Routeur` CHAR(2) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`PrixUnitaireFacture` DECIMAL(6,4) NULL DEFAULT NULL,
+	`NbrSmsFacture` TINYINT(1) NULL DEFAULT NULL,
+	`SmsTaille` SMALLINT(6) NULL DEFAULT NULL,
+	`SmsNombre` TINYINT(4) NULL DEFAULT NULL,
+	`DateHeureEnvoi` DATETIME NULL DEFAULT NULL,
+	`DateHeurePriseEnCharge` DATETIME NULL DEFAULT NULL,
+	`DateHeureReception` DATETIME NULL DEFAULT NULL,
+	PRIMARY KEY (`IdSms`, `IdBaseLigne`) USING BTREE,
+	INDEX `Statut` (`Statut`) USING BTREE,
+	INDEX `IdBaseLigne` (`IdBaseLigne`) USING BTREE,
+	INDEX `IdSms` (`IdSms`) USING BTREE,
+	CONSTRAINT `FK_ope_sms_envoi_dos_operation` FOREIGN KEY (`IdSms`) REFERENCES `dos_operation` (`IdOperation`) ON UPDATE NO ACTION ON DELETE CASCADE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+;

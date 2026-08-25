@@ -1,0 +1,17 @@
+CREATE TABLE `ope_cliquezici_offre` (
+	`IdCliquezIciOffre` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdCliquezIciBloc` INT(11) NOT NULL,
+	`IdOffre` INT(11) NULL DEFAULT NULL,
+	`TypeOffre` VARCHAR(1) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Libelle` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Offre` VARCHAR(500) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	PRIMARY KEY (`IdCliquezIciOffre`) USING BTREE,
+	INDEX `IdCliquezIciBloc` (`IdCliquezIciBloc`) USING BTREE,
+	INDEX `IdOffre` (`IdOffre`) USING BTREE,
+	CONSTRAINT `FK_ope_cliquezici_offre_ici_offre` FOREIGN KEY (`IdOffre`) REFERENCES `ici_offre` (`IdOffre`) ON UPDATE NO ACTION ON DELETE SET NULL,
+	CONSTRAINT `FK_ope_cliquezici_offre_ope_cliquezici_bloc` FOREIGN KEY (`IdCliquezIciBloc`) REFERENCES `ope_cliquezici_bloc` (`IdCliquezIciBloc`) ON UPDATE NO ACTION ON DELETE CASCADE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+AUTO_INCREMENT=4
+;

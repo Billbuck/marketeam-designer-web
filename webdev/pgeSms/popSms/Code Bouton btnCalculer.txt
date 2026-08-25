@@ -1,0 +1,63 @@
+nInd		est un entier
+sMessage	est une chaîne
+sLibelle	est une chaîne
+nTotal		est un entier
+
+sMessage = Remplace(saiPopMessage,"[" + Partage.LibelleBaseChamp(__CHAMP_CLIQUEZ_ICI__) + "]","clic.info/XXXXXX")
+sMessage += RC + __STOP_SMS__
+sMessage = Remplace(sMessage,RC,Caract(10))
+
+__stOperation.stOperationSms.Message	= sMessage
+cpDeviseur.CalculeCoutOperationSms(__stOperation)
+cpDeviseur.DevisSms(__stOperation)
+znrSmsNombre.SupprimeTout()
+
+nInd							= znrSmsNombre.AjouteLigne()
+znrSmsNombre[nInd].libTaille	= "Taille max"
+znrSmsNombre[nInd].libTotal		= __stOperation.stOperationSms.TailleMax
+znrSmsNombre[nInd].libUnite		= "Caractères"
+
+selon __stOperation.stOperationSms.TailleMax
+	cas <= 160	: jgeJauge1.BorneMax = 160
+	cas <= 306	: jgeJauge1.BorneMax = 306
+	cas <= 459	: jgeJauge1.BorneMax = 459
+	autre cas	: jgeJauge1.BorneMax = 612
+fin
+
+jgeJauge1 = __stOperation.stOperationSms.TailleMax
+
+pour tout nNombre, sCredit de __stOperation.stOperationSms.taaCreditSms
+	nInd = znrSmsNombre.AjouteLigne()
+	nTotal += nNombre
+	selon sCredit
+		cas 1 : sLibelle = "Sms simple (< 160 caractères)"
+		cas 2 : sLibelle = "Sms double (entre 161 et 306 caractères)" 
+		cas 3 : sLibelle = "Sms triple (entre 307 et 459 caractères)"
+		cas 4 : sLibelle = "Sms quadruple (entre 460 et 612 caractères)"
+		cas 5 : sLibelle = "Sms quintuple (entre 613 et 765 caractères)"
+		cas 6 : sLibelle = "Sms sextuple (entre 766 et 918 caractères)"
+		cas 7 : sLibelle = "Sms septuple (entre 919 et 1071 caractères)"
+		cas 8 : sLibelle = "Sms octuple (entre 1072 et 1224 caractères)"
+		cas 9 : sLibelle = "Sms trop longs ( > 1225 caractères)"
+	fin
+	
+	znrSmsNombre[nInd].libTaille	= sLibelle
+	znrSmsNombre[nInd].libTotal		= NumériqueVersChaîne(nNombre, "dS")
+	znrSmsNombre[nInd].libUnite		= Partage.LibelleTypeProjet(__OPERATION_SMS__,Vrai)
+fin
+
+si znrSmsNombre.Occurrence > 2 alors
+	nInd							= znrSmsNombre.AjouteLigne()
+	znrSmsNombre[nInd].libTaille	= "Total"
+	znrSmsNombre[nInd].libTotal		= NumériqueVersChaîne(nTotal, "dS")
+	znrSmsNombre[nInd].libUnite		= Partage.LibelleTypeProjet(__OPERATION_SMS__,Vrai)
+fin
+
+nInd							= znrSmsNombre.AjouteLigne()
+znrSmsNombre[nInd].libTaille	= "Montant HT"
+znrSmsNombre[nInd].libTotal		= NumériqueVersChaîne(__stOperation.MontantNetHT, ",2fS")
+znrSmsNombre[nInd].libUnite		= "€"
+
+dispMessage[3].Visible			= Vrai
+
+btnCalculer1.Visible = (__stOperation.stOperationSms.taaTailleSms.Occurrence > 1)

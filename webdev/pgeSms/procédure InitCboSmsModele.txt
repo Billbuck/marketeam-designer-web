@@ -1,0 +1,66 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//InitCboSmsModele ( [<pIdSmsModele>])
+//
+// Paramètres :
+// 	pIdSmsModele (valeur par défaut=0) : < indiquez ici le rôle de pIdSmsModele >
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+//	pIdSmsModele (valeur par défaut=0) :< indiquez ici le rôle de nIdModele >
+procédure InitCboSmsModele(pIdSmsModele = 0)
+
+sTexteRequete	est une chaîne
+sdReqSmsModele	est une Source de Données
+sWhere			est une chaîne
+
+si __stOperation.EstCliquezIci = Faux alors
+	sWhere = "sms_modele.Type = '[%__OPERATION_SMS__%]'"
+sinon
+	sWhere = "sms_modele.Type = '[%__OPERATION_SMS_INTERACTIF__%]'"
+fin
+
+si _sBibliothèque = BibliothèqueMarque.Valeur alors
+	sWhere += [RC] + "AND sms_modele.IdMarque = " + _nIdMarque
+fin
+
+Partage.FiltreBibliothèque(_sBibliothèque, sms_modele..Nom, sWhere, Vrai)
+
+sTexteRequete =
+[
+	SELECT
+		IdSmsModele, 
+		IdContact,
+		Libelle,	
+		LeFrom,	
+		Message
+	FROM 
+		sms_modele
+	WHERE 
+		
+		[%sWhere%]
+	ORDER BY IdSmsModele DESC
+]
+
+cboSmsModele.SupprimeTout()
+
+cboSmsModele.Ajoute("< Choisir un modèle >" + gLien(0))
+
+si pas HExécuteRequêteSQL(sdReqSmsModele, sms_modele..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour	
+fin
+
+pour tout sdReqSmsModele 
+	ListeAjoute(cboSmsModele,sdReqSmsModele.Libelle + gLien(sdReqSmsModele.IdSmsModele))
+fin
+
+	
+cboSmsModele = pIdSmsModele
+
+
+fin:
+HAnnuleDéclaration(sdReqSmsModele)
