@@ -1,0 +1,10 @@
+procédure TypeFichierImage(pTypeImage)
+
+	selon pTypeImage
+		cas __ICI_IMAGE__ 				: renvoyer __DOC_ICI_IMAGE__
+		cas __ICI_VIDEO__ 				: renvoyer __DOC_ICI_VIDEO__
+		cas __ICI_GRATTAGE__			: renvoyer __DOC_ICI_GRATTAGE__
+		cas __ICI_FOND__				: renvoyer __DOC_ICI_FOND__
+		cas __ICI_BOUTON__				: renvoyer __DOC_ICI_BOUTON__
+		autre cas						: renvoyer "ERREUR"
+	fin

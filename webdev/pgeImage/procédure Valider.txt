@@ -1,0 +1,344 @@
+procédure Valider()
+
+nIdMarquePrecedent 	est un entier
+nIdClientPrecedent 	est un entier
+sRepertoireNouveau		est une chaîne
+sRepertoirePrecedent	est une chaîne
+sBibliothequePrecedent 	est une chaîne
+sRepImgUpload			est une chaîne
+sRepImgNouveau			est une chaîne
+sRepImgPrecedent		est une chaîne
+sTypePrecedente			est une chaîne
+sExtensionPrecedente	est une chaîne
+
+retour = Vrai
+
+
+cpConnexion.gcnxBaseChronodirect.TransactionDébut()
+
+
+si _pIdImage = 0 alors
+	ici_image.RAZ()
+	selon _sBibliothèque
+		cas BibliothèquePersonnelle.Valeur
+			ici_image.IdClient				= Partage.__vcUser.IDClient
+			ici_image.IdContact				= Partage.__vcUser.IDContact
+			ici_image.IdMarque.Null 		= Vrai
+
+		cas BibliothèqueMarque.Valeur
+			ici_image.IdClient.Null 		= Vrai
+			ici_image.IdContact.Null 		= Vrai
+			ici_image.IdMarque				= _nIdMarque
+
+		cas BibliothèqueMarketeam.Valeur
+			ici_image.IdClient.Null			= Vrai
+			ici_image.IdContact.Null		= Vrai
+			ici_image.IdMarque.Null			= Vrai
+	fin
+	ici_image.IdCategorie				= cboCatégorie.ValeurMémorisée
+	ici_image.DateHeureCreation			= DateHeureSys()
+	ici_image.Nom						= saiNomImage
+	ici_image.UserCreation				= Partage.__vcUser.NomUser
+	ici_image.EstActif					= intEstActive
+	ici_image.Largeur					= _nImage1Largeur
+	ici_image.Hauteur					= _nImage1Hauteur
+	selon cboTypeImage.ValeurMémorisée
+		cas __ICI_IMAGE__		: ici_image.TypeFichier 	= Minuscule(Remplace(_sImageExtension,".",""))
+		cas __ICI_VIDEO__		: ici_image.TypeFichier 	= Minuscule(Remplace(_sVideoExtension,".",""))
+		cas __ICI_GRATTAGE__	: ici_image.TypeFichier 	= Minuscule(Remplace(_sGrattageExtension,".",""))
+		autre cas
+	fin
+
+	ici_image.EstPartage				= _nIdMarque = 0 ? intEstPartagée sinon Vrai
+	ici_image.Type						= cboTypeImage.ValeurMémorisée
+	ici_image.DateDebutValidite		= saiDateDebutValidité
+	ici_image.DateFinValidite			= saiDateFinValidité
+	ici_image.DateDebutValidite.Null	= pas DateValide(saiDateDebutValidité)
+	ici_image.DateFinValidite.Null		= pas DateValide(saiDateFinValidité)
+	si cboTypeImage.ValeurMémorisée = __ICI_YOUTUBE__ alors
+		ici_image.UrlImage				= saiCodeYoutube
+	sinon
+		ici_image.UrlImage				= saiUrl
+		ici_image.UrlImage.Null		= (saiUrl = "")
+	fin
+
+	si pas ici_image.Ajoute() alors STOP; retour Faux
+
+	_pIdImage = ici_image.IdImage
+	selon cboTypeImage.ValeurMémorisée
+		cas __ICI_IMAGE__
+			sRepImgUpload		= cpProjet.__sRepRacine + cpProjet.__sRepUpload + "\" +_sImageFichierGénéré
+			selon _sBibliothèque
+				cas BibliothèquePersonnelle.Valeur 	: sRepertoireNouveau	= cpProjet.CheminClient(Partage.__vcUser.IDClient,__OPERATION_CLIQUEZICI__, __REP_IMAGE__)
+				cas BibliothèqueMarque.Valeur		: sRepertoireNouveau	= cpProjet.CheminMarque(_nIdMarque,__OPERATION_CLIQUEZICI__, __REP_IMAGE__)
+				cas BibliothèqueMarketeam.Valeur 	: sRepertoireNouveau	= cpProjet.CheminMarketeam(__OPERATION_CLIQUEZICI__, __REP_IMAGE__)
+			fin
+			sRepImgNouveau		= sRepertoireNouveau + TypeFichierImage(cboTypeImage.ValeurMémorisée) + ici_image.IdImage + _sImageExtension
+			si pas fDéplaceFichier(sRepImgUpload, sRepImgNouveau) retour Faux
+
+		cas __ICI_VIDEO__
+			sRepImgUpload		= cpProjet.__sRepRacine + cpProjet.__sRepUpload + "\" +_sVideoFichierGénéré
+			selon _sBibliothèque
+				cas BibliothèquePersonnelle.Valeur 	: sRepertoireNouveau	= cpProjet.CheminClient(Partage.__vcUser.IDClient,__OPERATION_CLIQUEZICI__, __REP_VIDEO__)
+				cas BibliothèqueMarque.Valeur		: sRepertoireNouveau	= cpProjet.CheminMarque(_nIdMarque,__OPERATION_CLIQUEZICI__, __REP_VIDEO__)
+				cas BibliothèqueMarketeam.Valeur 	: sRepertoireNouveau	= cpProjet.CheminMarketeam(__OPERATION_CLIQUEZICI__, __REP_VIDEO__)
+			fin
+			sRepImgNouveau		= sRepertoireNouveau + TypeFichierImage(cboTypeImage.ValeurMémorisée) + ici_image.IdImage + _sVideoExtension
+			si pas fDéplaceFichier(sRepImgUpload, sRepImgNouveau) retour Faux
+
+		cas __ICI_GRATTAGE__
+			sRepImgUpload		= cpProjet.__sRepRacine + cpProjet.__sRepUpload + "\" +_sDessusFichierGénéré
+			selon _sBibliothèque
+				cas BibliothèquePersonnelle.Valeur 	: sRepertoireNouveau	= cpProjet.CheminClient(Partage.__vcUser.IDClient,__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+				cas BibliothèqueMarque.Valeur		: sRepertoireNouveau	= cpProjet.CheminMarque(_nIdMarque,__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+				cas BibliothèqueMarketeam.Valeur 	: sRepertoireNouveau	= cpProjet.CheminMarketeam(__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+			fin
+			sRepImgNouveau		= sRepertoireNouveau + TypeFichierImage(cboTypeImage.ValeurMémorisée) + ici_image.IdImage + "-dessus" + _sGrattageExtension
+			si pas fDéplaceFichier(sRepImgUpload, sRepImgNouveau) alors retour Faux
+
+			sRepImgUpload		= cpProjet.__sRepRacine + cpProjet.__sRepUpload + "\" +_sDessousFichierGénéré
+			selon _sBibliothèque
+				cas BibliothèquePersonnelle.Valeur 	: sRepertoireNouveau	= cpProjet.CheminClient(Partage.__vcUser.IDClient,__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+				cas BibliothèqueMarque.Valeur		: sRepertoireNouveau	= cpProjet.CheminMarque(_nIdMarque,__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+				cas BibliothèqueMarketeam.Valeur 	: sRepertoireNouveau	= cpProjet.CheminMarketeam(__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+			fin
+			sRepImgNouveau		= sRepertoireNouveau + TypeFichierImage(cboTypeImage.ValeurMémorisée) + ici_image.IdImage + "-dessous" + _sGrattageExtension
+			si pas fDéplaceFichier(sRepImgUpload, sRepImgNouveau) alors retour Faux
+
+		autre cas
+	fin
+sinon
+	si pas ici_image.LitRecherchePremier(IdImage,_pIdImage) alors retour Faux
+
+	sTypePrecedente					= ici_image.Type
+	sExtensionPrecedente				= "." + ici_image.TypeFichier
+	nIdMarquePrecedent					= ici_image.IdMarque
+	nIdClientPrecedent					= ici_image.IdClient
+	selon Vrai
+		cas nIdClientPrecedent > 0 	: sBibliothequePrecedent = BibliothèquePersonnelle.Valeur
+		cas nIdMarquePrecedent > 0 	: sBibliothequePrecedent = BibliothèqueMarque.Valeur
+		autre cas					: sBibliothequePrecedent = BibliothèqueMarketeam.Valeur
+	fin
+
+	ici_image.IdCategorie				= cboCatégorie.ValeurMémorisée
+	selon _sBibliothèque
+		cas BibliothèquePersonnelle.Valeur
+			ici_image.IdClient				= Partage.__vcUser.IDClient
+			ici_image.IdContact				= Partage.__vcUser.IDContact
+			ici_image.IdMarque.Null			= Vrai
+
+		cas BibliothèqueMarque.Valeur
+			ici_image.IdClient.Null			= Vrai
+			ici_image.IdContact.Null		= Vrai
+			ici_image.IdMarque				= _nIdMarque
+
+		cas BibliothèqueMarketeam.Valeur
+			ici_image.IdClient.Null			= Vrai
+			ici_image.IdContact.Null		= Vrai
+			ici_image.IdMarque.Null			= Vrai
+	fin
+
+	ici_image.EstPartage				= _nIdMarque = 0 ? intEstPartagée sinon Vrai
+	ici_image.DateHeureModification		= DateHeureSys()
+	ici_image.Nom						= saiNomImage
+	ici_image.UserModification			= Partage.__vcUser.NomUser
+	ici_image.EstActif					= _nIdMarque = 0 ? intEstActive sinon Vrai
+	ici_image.Largeur					= _nImage1Largeur
+	ici_image.Hauteur					= _nImage1Hauteur
+	selon cboTypeImage.ValeurMémorisée
+		cas __ICI_IMAGE__ 		: ici_image.TypeFichier = Minuscule(Remplace(_sImageExtension,".",""))
+		cas __ICI_VIDEO__		: ici_image.TypeFichier = Minuscule(Remplace(_sVideoExtension,".",""))
+		cas __ICI_GRATTAGE__	: ici_image.TypeFichier = Minuscule(Remplace(_sGrattageExtension,".",""))
+		autre cas
+	fin
+	ici_image.Type						= cboTypeImage.ValeurMémorisée
+	ici_image.DateDebutValidite			= saiDateDebutValidité
+	ici_image.DateFinValidite			= saiDateFinValidité
+	ici_image.DateDebutValidite.Null	= pas DateValide(saiDateDebutValidité)
+	ici_image.DateFinValidite.Null		= pas DateValide(saiDateFinValidité)
+	si cboTypeImage.ValeurMémorisée 	= __ICI_YOUTUBE__ alors
+		ici_image.UrlImage				= saiCodeYoutube
+	sinon
+		ici_image.UrlImage				= saiUrl
+		ici_image.UrlImage.Null		= (saiUrl = "")
+	fin
+
+	si pas ici_image.Modifie() alors retour Faux
+
+	si cboTypeImage.ValeurMémorisée <> sTypePrecedente alors
+		selon sTypePrecedente
+			cas __ICI_IMAGE__
+				si _sImageFichierGénéré <> "" alors
+					selon _sBibliothèque
+						cas BibliothèquePersonnelle.Valeur 	: sRepertoirePrecedent	= cpProjet.CheminClient(Partage.__vcUser.IDClient,__OPERATION_CLIQUEZICI__, __REP_IMAGE__)
+						cas BibliothèqueMarque.Valeur		: sRepertoirePrecedent	= cpProjet.CheminMarque(_nIdMarque,__OPERATION_CLIQUEZICI__, __REP_IMAGE__)
+						cas BibliothèqueMarketeam.Valeur 	: sRepertoirePrecedent	= cpProjet.CheminMarketeam(__OPERATION_CLIQUEZICI__, __REP_IMAGE__)
+					fin
+					sRepImgPrecedent		= sRepertoirePrecedent + TypeFichierImage(sTypePrecedente) + ici_image.IdImage + "." + sExtensionPrecedente
+					si fFichierExiste(sRepImgPrecedent) _et_ pas fSupprime(sRepImgPrecedent,frLectureSeule) alors retour Faux
+				fin
+
+			cas __ICI_VIDEO__
+				si _sVideoFichierGénéré <> "" alors
+					selon _sBibliothèque
+						cas BibliothèquePersonnelle.Valeur 	: sRepertoirePrecedent	= cpProjet.CheminClient(Partage.__vcUser.IDClient,__OPERATION_CLIQUEZICI__, __REP_VIDEO__)
+						cas BibliothèqueMarque.Valeur		: sRepertoirePrecedent	= cpProjet.CheminMarque(_nIdMarque,__OPERATION_CLIQUEZICI__, __REP_VIDEO__)
+						cas BibliothèqueMarketeam.Valeur 	: sRepertoirePrecedent	= cpProjet.CheminMarketeam(__OPERATION_CLIQUEZICI__, __REP_VIDEO__)
+					fin
+					sRepImgPrecedent		= sRepertoirePrecedent + TypeFichierImage(sTypePrecedente) + ici_image.IdImage + "." + sExtensionPrecedente
+					si fFichierExiste(sRepImgPrecedent) _et_ pas fSupprime(sRepImgPrecedent,frLectureSeule) alors retour Faux
+				fin
+
+			cas __ICI_GRATTAGE__
+				si _sDessusFichierGénéré <> "" alors
+					selon _sBibliothèque
+						cas BibliothèquePersonnelle.Valeur 	: sRepertoirePrecedent	= cpProjet.CheminClient(Partage.__vcUser.IDClient,__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+						cas BibliothèqueMarque.Valeur		: sRepertoirePrecedent	= cpProjet.CheminMarque(_nIdMarque,__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+						cas BibliothèqueMarketeam.Valeur 	: sRepertoirePrecedent	= cpProjet.CheminMarketeam(__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+					fin
+
+					sRepImgPrecedent		= sRepertoirePrecedent + TypeFichierImage(sTypePrecedente) + ici_image.IdImage + "-dessus." + sExtensionPrecedente
+					si fFichierExiste(sRepImgPrecedent) _et_ pas fSupprime(sRepImgPrecedent,frLectureSeule) alors retour Faux
+				fin
+
+				si _sDessousFichierGénéré <> "" alors
+					selon _sBibliothèque
+						cas BibliothèquePersonnelle.Valeur 	: sRepertoirePrecedent	= cpProjet.CheminClient(Partage.__vcUser.IDClient,__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+						cas BibliothèqueMarque.Valeur		: sRepertoirePrecedent	= cpProjet.CheminMarque(_nIdMarque,__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+						cas BibliothèqueMarketeam.Valeur 	: sRepertoirePrecedent	= cpProjet.CheminMarketeam(__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+					fin
+					sRepImgPrecedent		= sRepertoirePrecedent + TypeFichierImage(sTypePrecedente) + ici_image.IdImage + "-dessous." + sExtensionPrecedente
+					si fFichierExiste(sRepImgPrecedent) _et_ pas fSupprime(sRepImgPrecedent,frLectureSeule) alors retour Faux
+				fin
+			autre cas
+		fin
+	fin
+
+	selon cboTypeImage.ValeurMémorisée
+		cas __ICI_IMAGE__
+			si _sImageFichierGénéré <> "" alors
+				sRepImgUpload		= cpProjet.__sRepRacine + cpProjet.__sRepUpload + "\" +_sImageFichierGénéré
+				selon _sBibliothèque
+					cas BibliothèquePersonnelle.Valeur 	: sRepertoireNouveau	= cpProjet.CheminClient(Partage.__vcUser.IDClient,__OPERATION_CLIQUEZICI__, __REP_IMAGE__)
+					cas BibliothèqueMarque.Valeur		: sRepertoireNouveau	= cpProjet.CheminMarque(_nIdMarque,__OPERATION_CLIQUEZICI__, __REP_IMAGE__)
+					cas BibliothèqueMarketeam.Valeur 	: sRepertoireNouveau	= cpProjet.CheminMarketeam(__OPERATION_CLIQUEZICI__, __REP_IMAGE__)
+				fin
+				sRepImgNouveau		= sRepertoireNouveau + TypeFichierImage(cboTypeImage.ValeurMémorisée) + ici_image.IdImage + _sImageExtension
+				si pas fDéplaceFichier(sRepImgUpload, sRepImgNouveau) retour Faux
+			sinon
+				si _sBibliothèque <> sBibliothequePrecedent alors
+					selon Vrai
+						cas nIdClientPrecedent > 0	: sRepertoirePrecedent	= cpProjet.CheminClient(nIdClientPrecedent,__OPERATION_CLIQUEZICI__, __REP_IMAGE__)
+						cas nIdMarquePrecedent > 0 	: sRepertoirePrecedent	= cpProjet.CheminMarque(nIdMarquePrecedent,__OPERATION_CLIQUEZICI__, __REP_IMAGE__)
+						autre cas					: sRepertoirePrecedent	= cpProjet.CheminMarketeam(__OPERATION_CLIQUEZICI__, __REP_IMAGE__)
+
+					fin
+					selon _sBibliothèque
+						cas BibliothèquePersonnelle.Valeur 	: sRepertoireNouveau	= cpProjet.CheminClient(Partage.__vcUser.IDClient,__OPERATION_CLIQUEZICI__, __REP_IMAGE__)
+						cas BibliothèqueMarque.Valeur		: sRepertoireNouveau	= cpProjet.CheminMarque(_nIdMarque,__OPERATION_CLIQUEZICI__, __REP_IMAGE__)
+						cas BibliothèqueMarketeam.Valeur 	: sRepertoireNouveau	= cpProjet.CheminMarketeam(__OPERATION_CLIQUEZICI__, __REP_IMAGE__)
+					fin
+
+					sRepImgPrecedent		= sRepertoirePrecedent + TypeFichierImage(cboTypeImage.ValeurMémorisée) + ici_image.IdImage + sExtensionPrecedente
+					sRepImgNouveau			= sRepertoireNouveau + TypeFichierImage(cboTypeImage.ValeurMémorisée) + ici_image.IdImage + sExtensionPrecedente
+					si pas fFichierExiste(sRepImgPrecedent) alors retour Faux
+					si pas fDéplaceFichier(sRepImgPrecedent, sRepImgNouveau) alors retour Faux
+				fin
+			fin
+
+		cas __ICI_VIDEO__
+			si _sVideoFichierGénéré <> "" alors
+				sRepImgUpload		= cpProjet.__sRepRacine + cpProjet.__sRepUpload + "\" +_sVideoFichierGénéré
+				selon _sBibliothèque
+					cas BibliothèquePersonnelle.Valeur 	: sRepertoireNouveau	= cpProjet.CheminClient(Partage.__vcUser.IDClient,__OPERATION_CLIQUEZICI__, __REP_VIDEO__)
+					cas BibliothèqueMarque.Valeur		: sRepertoireNouveau	= cpProjet.CheminMarque(_nIdMarque,__OPERATION_CLIQUEZICI__, __REP_VIDEO__)
+					cas BibliothèqueMarketeam.Valeur 	: sRepertoireNouveau	= cpProjet.CheminMarketeam(__OPERATION_CLIQUEZICI__, __REP_VIDEO__)
+				fin
+				sRepImgNouveau		= sRepertoireNouveau + TypeFichierImage(cboTypeImage.ValeurMémorisée) + ici_image.IdImage + _sVideoExtension
+				si pas fDéplaceFichier(sRepImgUpload, sRepImgNouveau) retour Faux
+			sinon
+				si _sBibliothèque <> sBibliothequePrecedent alors
+					selon Vrai
+						cas nIdClientPrecedent > 0	: sRepertoirePrecedent	= cpProjet.CheminClient(nIdClientPrecedent,__OPERATION_CLIQUEZICI__, __REP_VIDEO__)
+						cas nIdMarquePrecedent > 0 	: sRepertoirePrecedent	= cpProjet.CheminMarque(nIdMarquePrecedent,__OPERATION_CLIQUEZICI__, __REP_VIDEO__)
+						autre cas					: sRepertoirePrecedent	= cpProjet.CheminMarketeam(__OPERATION_CLIQUEZICI__, __REP_VIDEO__)
+
+					fin
+					selon _sBibliothèque
+						cas BibliothèquePersonnelle.Valeur 	: sRepertoireNouveau	= cpProjet.CheminClient(Partage.__vcUser.IDClient,__OPERATION_CLIQUEZICI__, __REP_VIDEO__)
+						cas BibliothèqueMarque.Valeur		: sRepertoireNouveau	= cpProjet.CheminMarque(_nIdMarque,__OPERATION_CLIQUEZICI__, __REP_VIDEO__)
+						cas BibliothèqueMarketeam.Valeur 	: sRepertoireNouveau	= cpProjet.CheminMarketeam(__OPERATION_CLIQUEZICI__, __REP_VIDEO__)
+					fin
+					sRepImgPrecedent		= sRepertoirePrecedent + TypeFichierImage(cboTypeImage.ValeurMémorisée) + ici_image.IdImage + sExtensionPrecedente
+					sRepImgNouveau			= sRepertoireNouveau + TypeFichierImage(cboTypeImage.ValeurMémorisée) + ici_image.IdImage + sExtensionPrecedente
+					si pas fFichierExiste(sRepImgPrecedent) _ou_ pas fDéplaceFichier(sRepImgPrecedent, sRepImgNouveau) retour Faux
+				fin
+			fin
+
+		cas __ICI_GRATTAGE__
+			si _sDessusFichierGénéré <> "" alors
+				sRepImgUpload		= cpProjet.__sRepRacine + cpProjet.__sRepUpload + "\" +_sDessusFichierGénéré
+				selon _sBibliothèque
+					cas BibliothèquePersonnelle.Valeur 	: sRepertoireNouveau	= cpProjet.CheminClient(Partage.__vcUser.IDClient,__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+					cas BibliothèqueMarque.Valeur		: sRepertoireNouveau	= cpProjet.CheminMarque(_nIdMarque,__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+					cas BibliothèqueMarketeam.Valeur 	: sRepertoireNouveau	= cpProjet.CheminMarketeam(__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+				fin
+				sRepImgNouveau		= sRepertoireNouveau + TypeFichierImage(cboTypeImage.ValeurMémorisée) + ici_image.IdImage + "-dessus" + _sGrattageExtension
+				si pas fDéplaceFichier(sRepImgUpload, sRepImgNouveau) alors retour Faux
+			sinon
+				si _sBibliothèque <> sBibliothequePrecedent alors
+					selon Vrai
+						cas nIdClientPrecedent > 0	: sRepertoirePrecedent	= cpProjet.CheminClient(nIdClientPrecedent,__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+						cas nIdMarquePrecedent > 0 	: sRepertoirePrecedent	= cpProjet.CheminMarque(nIdMarquePrecedent,__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+						autre cas					: sRepertoirePrecedent	= cpProjet.CheminMarketeam(__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+
+					fin
+					selon _sBibliothèque
+						cas BibliothèquePersonnelle.Valeur 	: sRepertoireNouveau	= cpProjet.CheminClient(Partage.__vcUser.IDClient,__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+						cas BibliothèqueMarque.Valeur		: sRepertoireNouveau	= cpProjet.CheminMarque(_nIdMarque,__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+						cas BibliothèqueMarketeam.Valeur 	: sRepertoireNouveau	= cpProjet.CheminMarketeam(__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+					fin
+					sRepImgPrecedent		= sRepertoirePrecedent + TypeFichierImage(cboTypeImage.ValeurMémorisée) + ici_image.IdImage + "-dessus" + sExtensionPrecedente
+					sRepImgNouveau			= sRepertoireNouveau + TypeFichierImage(cboTypeImage.ValeurMémorisée) + ici_image.IdImage + "-dessus" + sExtensionPrecedente
+					si pas fFichierExiste(sRepImgPrecedent) _ou_ pas fDéplaceFichier(sRepImgPrecedent, sRepImgNouveau) retour Faux
+				fin
+			fin
+
+			si _sDessousFichierGénéré <> "" alors
+				sRepImgUpload		= cpProjet.__sRepRacine + cpProjet.__sRepUpload + "\" +_sDessousFichierGénéré
+				selon _sBibliothèque
+					cas BibliothèquePersonnelle.Valeur 	: sRepertoireNouveau	= cpProjet.CheminClient(Partage.__vcUser.IDClient,__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+					cas BibliothèqueMarque.Valeur		: sRepertoireNouveau	= cpProjet.CheminMarque(_nIdMarque,__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+					cas BibliothèqueMarketeam.Valeur 	: sRepertoireNouveau	= cpProjet.CheminMarketeam(__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+				fin
+				sRepImgNouveau		= sRepertoireNouveau + TypeFichierImage(cboTypeImage.ValeurMémorisée) + ici_image.IdImage + "-dessous" + _sGrattageExtension
+				si pas fDéplaceFichier(sRepImgUpload, sRepImgNouveau) alors retour Faux
+			sinon
+				si _sBibliothèque <> sBibliothequePrecedent alors
+					selon Vrai
+						cas nIdClientPrecedent > 0	: sRepertoirePrecedent	= cpProjet.CheminClient(nIdClientPrecedent,__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+						cas nIdMarquePrecedent > 0 	: sRepertoirePrecedent	= cpProjet.CheminMarque(nIdMarquePrecedent,__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+						autre cas					: sRepertoirePrecedent	= cpProjet.CheminMarketeam(__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+
+					fin
+					selon _sBibliothèque
+						cas BibliothèquePersonnelle.Valeur 	: sRepertoireNouveau	= cpProjet.CheminClient(Partage.__vcUser.IDClient,__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+						cas BibliothèqueMarque.Valeur		: sRepertoireNouveau	= cpProjet.CheminMarque(_nIdMarque,__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+						cas BibliothèqueMarketeam.Valeur 	: sRepertoireNouveau	= cpProjet.CheminMarketeam(__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__)
+					fin
+					sRepImgPrecedent		= sRepertoirePrecedent + TypeFichierImage(cboTypeImage.ValeurMémorisée) + ici_image.IdImage + "-dessous" + sExtensionPrecedente
+					sRepImgNouveau			= sRepertoireNouveau + TypeFichierImage(cboTypeImage.ValeurMémorisée) + ici_image.IdImage + "-dessous" + sExtensionPrecedente
+					si pas fFichierExiste(sRepImgPrecedent) _ou_ pas fDéplaceFichier(sRepImgPrecedent, sRepImgNouveau) retour Faux
+				fin
+			fin
+
+		autre cas
+	fin
+fin
+
+
+si retour = Vrai alors
+	cpConnexion.gcnxBaseChronodirect.TransactionFin()
+sinon
+	cpConnexion.gcnxBaseChronodirect.TransactionAnnule()
+fin

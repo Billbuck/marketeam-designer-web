@@ -1,0 +1,23 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// AfficheVideo ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure AfficheVideo(pCheminVideo)
+
+sCodeVideo est une chaîne = [
+	<video width=100% height=auto autoplay LOOP>
+	<source src="[%pCheminVideo%]" type="video/mp4">
+	Désolé, votre navigateur ne supporte pas les vidéos intégrées.
+	</video>
+]
+
+
+renvoyer sCodeVideo

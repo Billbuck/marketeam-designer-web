@@ -1,0 +1,1 @@
+btnAjouteCategorie.Visible = (cboCatégorie.ValeurMémorisée = 0)

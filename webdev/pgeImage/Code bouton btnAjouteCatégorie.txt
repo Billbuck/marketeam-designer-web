@@ -1,0 +1,7 @@
+nIdCategorie est un entier
+
+nIdCategorie = PageAfficheDialogue(pgeCategorie, 0, _sBibliothèque, _nIdMarque)
+
+si nIdCategorie > 0 alors
+	InitCboCategorie(nIdCategorie)
+fin

@@ -1,0 +1,37 @@
+// **** Initialisation de uplImageDessus (serveur)
+
+uplImageDessus.TypeFichiers = "Fichiers" + TAB + "*.jpg;*.jpeg;*.png;*.gif;*.bmp;*.svg;*.webp;*.pcd;*.pcx;*.psd;*.tga;*.tif;*.avif"
+
+
+// **** A chaque modification de la liste des fichiers sélectionnés dans uplImageDessus ( dispImage ) (navigateur)
+
+// Si le champ contient un fichier : lance l'envoi du fichier
+si MoiMême..Occurrence > 0 alors
+	nTaille		est un entier système		= UploadTailleFichier(MoiMême, 1)
+	sTaille		est une chaîne				= TailleVersChaîne(nTaille)
+
+si _bConversionAutomatique = Vrai _ou_ nTaille < _nImageUploadTailleMax alors
+	_sNomFichierUpload	= MoiMême[1]
+	saiNomImage			= cpNavigateur.NavPremiereLettreMajuscule(ExtraitChaîne(_sNomFichierUpload,1,"."))
+	jgeUploadDessus.Visible	= Vrai
+	UploadLance(uplImageDessus)
+sinon
+	PopupAfficheMessage("La taille de votre fichier (" + NumériqueVersChaîne((nTaille / 1024), "dS") + " Ko) est trop grande" +RC+ "La taille maximale est de " + (_nImageUploadTailleMax/1024) + " Ko","Fichier trop grand",__OPERATION_MARKETEAM__,__TOAST_INFORMATION__,8 s)
+	retour
+fin
+
+fin
+// **** Progression du transfert de uplImageDessus ( dispImage ) (navigateur)
+
+jgeUploadDessus.BorneMax 	= UploadTaille(MoiMême)
+jgeUploadDessus				= UploadTailleEnvoyée(MoiMême)
+
+// **** Réception des fichiers uploadés de uplImageDessus ( dispImage ) (serveur)
+
+ImportImageDessus()
+
+
+// **** Après réception des fichiers uploadés de uplImageDessus ( dispImage ) (navigateur)
+
+jgeUploadDessus		= 0
+btnValider.Visible	= Vrai

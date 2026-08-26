@@ -1,0 +1,7 @@
+si SaisieOk() alors
+	si Valider() alors
+		PageFermeDialogue(_pIdImage, cboTypeImage.ValeurMémorisée, cboCatégorie.ValeurMémorisée)
+	sinon
+		Info("Erreur", ErreurInfo(errComplet))
+	fin
+fin

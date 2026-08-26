@@ -1,0 +1,91 @@
+procédure ImportImageDessous()
+
+sRepertoireUpload	est une chaîne
+sImageUpload		est une chaîne
+sRepImgUpload		est une chaîne
+imgUpload			est une WL.Image
+
+
+sRepertoireUpload	= cpProjet.__sRepRacine + ["\"] + cpProjet.__sRepUpload
+imgImageDessous			= ""
+libRésolutionDessous	= ""
+
+
+// On supprime l'ancien fichier
+si _sDessousFichierGénéré <> "" alors
+	si fFichierExiste(sRepertoireUpload +"\"+ _sDessousFichierGénéré) alors
+		fSupprime(sRepertoireUpload +"\"+ _sDessousFichierGénéré)
+	fin
+fin
+
+_sDessousFichierGénéré	= GénèreMotDePasse(16)
+sImageUpload			= UploadCopieFichier(uplImageDessous, sRepertoireUpload, _sDessousFichierGénéré)
+_sDessousFichierGénéré  += fExtraitChemin(sImageUpload,fExtension)
+_sGrattageExtension		= Minuscule(fExtraitChemin(_sDessousFichierGénéré,fExtension))
+
+sRepImgUpload			= sRepertoireUpload + "\" + _sDessousFichierGénéré
+
+si Contient(_sGrattageExtension,"svg",MotComplet+SansCasse) alors
+	imgImageDessous		= sRepImgUpload
+	libRésolutionDessous= ""
+	_nImage2Largeur		= 0
+	_nImage2Hauteur		= 0
+
+sinon
+	imgUpload			= sRepImgUpload
+	_nImage2Hauteur		= imgUpload.Hauteur
+	_nImage2Largeur		= imgUpload.Largeur
+
+	si _bConversionAutomatique = Vrai _et_ (_nImage2Hauteur > _nImageUploadHauteurMax _ou_ _nImage2Largeur > _nImageUploadLargeurMax _ou_ _nImage2Largeur < _nImageUploadLargeurMin) alors
+		si RedimentionneImage(sRepImgUpload,sRepertoireUpload) alors
+			imgUpload			= sRepImgUpload
+			_nImage2Hauteur		= imgUpload.Hauteur
+			_nImage2Largeur		= imgUpload.Largeur
+			PopupAfficheMessage("Conversion de l'image réussie","Conversion",__OPERATION_MARKETEAM__,__TOAST_INFORMATION__,2 s)
+		sinon
+			PopupAfficheMessage("Échec de conversion" + RC + sRepImgUpload,"Conversion",__OPERATION_MARKETEAM__,__TOAST_ANNULATION__,15 s)
+			retour
+		fin
+	fin
+
+	selon Vrai
+		cas _nImage2Hauteur > _nImageUploadHauteurMax _et_ _nImage2Largeur > _nImageUploadLargeurMax
+			PopupAfficheMessage("La largeur ("+ _nImage2Hauteur + " px) et la hauteur (" + _nImage2Hauteur + " px) de votre image sont hors norme" + RC + "Largeur Maximum : " + _nImageUploadLargeurMax + " px" +RC + "Hauteur Maximum : " + _nImageUploadHauteurMax + " px","Format d'image incorrect",__OPERATION_MARKETEAM__,__TOAST_ANNULATION__, 15 s)
+			imgUpload				= ""
+			saiNomImage				= ""
+			libRésolutionDessous	= ""
+			_bGrattageDessousChargé = Faux
+
+		cas _nImage2Largeur < _nImageUploadLargeurMin
+			PopupAfficheMessage("La largeur de votre image ("+ _nImage2Largeur + " px) est hors norme" + RC + "Largeur Minimum : " + _nImageUploadLargeurMin + " px","Format d'image incorrect",__OPERATION_MARKETEAM__,__TOAST_ANNULATION__, 15 s)
+			imgUpload				= ""
+			saiNomImage				= ""
+			libRésolutionDessous	= ""
+			_bGrattageDessousChargé = Faux
+
+		cas _nImage2Largeur > _nImageUploadLargeurMax
+			PopupAfficheMessage("La largeur de votre image ("+ _nImage2Largeur + " px) est hors norme" + RC + "Largeur Maximum : " + _nImageUploadLargeurMax + " px","Format d'image incorrect",__OPERATION_MARKETEAM__,__TOAST_ANNULATION__, 15 s)
+			imgUpload				= ""
+			saiNomImage				= ""
+			libRésolutionDessous	= ""
+			_bGrattageDessousChargé = Faux
+
+		cas _nImage2Hauteur > _nImageUploadHauteurMax
+			PopupAfficheMessage("La hauteur de votre image ("+ _nImage2Hauteur + " px) est hors norme" + RC + "Hauteur Maximum : " + _nImageUploadHauteurMax + " px","Format d'image incorrect",__OPERATION_MARKETEAM__,__TOAST_ANNULATION__, 15 s)
+			imgUpload				= ""
+			saiNomImage				= ""
+			libRésolutionDessous	= ""
+			_bGrattageDessousChargé = Faux
+
+		autre cas
+			imgImageDessous			= imgUpload
+			libRésolutionDessous	= "Image dessous : " + NumériqueVersChaîne(_nImage2Largeur, "dS") +" px x " + NumériqueVersChaîne(_nImage2Hauteur, "dS") +" px"
+			_bGrattageDessousChargé = Vrai
+	fin
+fin
+
+
+
+GrattageGestionAffichage()
+
+

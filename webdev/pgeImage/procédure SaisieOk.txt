@@ -1,0 +1,73 @@
+procédure SaisieOk()
+
+si cboCatégorie.ValeurMémorisée = 0 alors
+	PopupAfficheMessage("Sélectionnez la catégorie",*,__OPERATION_MARKETEAM__,__TOAST_INFORMATION__)
+	renvoyer Faux
+fin
+
+si cboTypeImage.ValeurMémorisée = "" alors
+	PopupAfficheMessage("Sélectionnez le type d'image",*,__OPERATION_MARKETEAM__,__TOAST_INFORMATION__)
+	renvoyer Faux
+fin
+
+si cboTypeImage.ValeurMémorisée = __ICI_YOUTUBE__ _et_ SansEspace(saiCodeYoutube) = "" alors
+	PopupAfficheMessage("Saisir le code YouTube",*,__OPERATION_MARKETEAM__,__TOAST_INFORMATION__)
+	renvoyer Faux
+fin
+
+si SansEspace(saiNomImage) = "" alors
+	PopupAfficheMessage("Saisir le nom de l'image",*,__OPERATION_MARKETEAM__,__TOAST_INFORMATION__)
+	renvoyer Faux
+fin
+
+si saiDateDebutValidité <> "" _et_ pas DateValide(saiDateDebutValidité)  alors
+	PopupAfficheMessage("La date de début de validité est invalide","Erreur",__OPERATION_MARKETEAM__,__TOAST_ANNULATION__)
+	renvoyer Faux
+fin
+
+si saiDateFinValidité <> "" _et_ pas DateValide(saiDateFinValidité)  alors
+	PopupAfficheMessage("La date de fin de validité est invalide","Erreur",__OPERATION_MARKETEAM__,__TOAST_ANNULATION__)
+	renvoyer Faux
+fin
+
+si DateValide(saiDateDebutValidité) _et_ DateValide(saiDateFinValidité) _et_ saiDateFinValidité < saiDateDebutValidité alors
+	PopupAfficheMessage("La date de fin est antérieur à la date de début","Erreur",__OPERATION_MARKETEAM__,__TOAST_ANNULATION__)
+	renvoyer Faux
+fin
+
+selon cboTypeImage.ValeurMémorisée
+	cas __ICI_IMAGE__
+		si _bImageChargé = Faux alors
+			PopupAfficheMessage("Sélectionner l'image","Erreur",__OPERATION_MARKETEAM__,__TOAST_ANNULATION__)
+			renvoyer Faux
+		fin
+
+	cas __ICI_YOUTUBE__
+		si _YoutubeChargé = Faux alors
+			PopupAfficheMessage("Sélectionner la vidéo Youtube","Erreur",__OPERATION_MARKETEAM__,__TOAST_ANNULATION__)
+			renvoyer Faux
+		fin
+
+	cas __ICI_VIDEO__
+		si _VidéoChargé = Faux alors
+			PopupAfficheMessage("Sélectionner la vidéo","Erreur",__OPERATION_MARKETEAM__,__TOAST_ANNULATION__)
+			renvoyer Faux
+		fin
+
+	cas __ICI_GRATTAGE__
+		si _bGrattageDessusChargé = Faux alors
+			PopupAfficheMessage("Sélectionner l'image du dessus","Erreur",__OPERATION_MARKETEAM__,__TOAST_ANNULATION__)
+			renvoyer Faux
+		fin
+		si _bGrattageDessousChargé = Faux alors
+			PopupAfficheMessage("Sélectionner l'image du dessous","Erreur",__OPERATION_MARKETEAM__,__TOAST_ANNULATION__)
+			renvoyer Faux
+		fin
+		si (_nImage1Largeur <> _nImage2Largeur _ou_ _nImage1Hauteur <> _nImage2Hauteur) alors
+			PopupAfficheMessage("L'image du dessous doit avoir la même résolution de l'image du dessus","Erreur",__OPERATION_MARKETEAM__,__TOAST_ANNULATION__)
+			renvoyer Faux
+		fin
+fin
+
+renvoyer Vrai
+

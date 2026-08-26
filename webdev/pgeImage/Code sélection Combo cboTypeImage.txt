@@ -1,0 +1,29 @@
+_bGrattageDessusChargé				= Faux
+_bGrattageDessousChargé				= Faux
+
+dispImage[#ImageBouton].Visible 	= (cboTypeImage.ValeurMémorisée = __ICI_IMAGE__)
+dispImage[#YoutubeBouton].Visible 	= (cboTypeImage.ValeurMémorisée = __ICI_YOUTUBE__)
+dispImage[#VideoBouton].Visible 	= (cboTypeImage.ValeurMémorisée = __ICI_VIDEO__)
+dispImage[#GrattageBouton].Visible	= (cboTypeImage.ValeurMémorisée = __ICI_GRATTAGE__)
+
+grpConversionAutomatique.Visible	= cboTypeImage.ValeurMémorisée dans (__ICI_IMAGE__ , __ICI_GRATTAGE__)
+
+dispImage[#Image].Visible			= Faux
+dispImage[#Youtube].Visible		= Faux
+dispImage[#Video].Visible			= Faux
+dispImage[#Grattage].Visible		= Faux
+
+celGrattageBoutonDessus.Visible		= Vrai
+celGrattageBoutonDessous.Visible	= Faux
+celGrattageDessus.Visible			= Faux
+celGrattageDessous.Visible			= Faux
+
+
+
+selon cboTypeImage.ValeurMémorisée
+	cas __ICI_IMAGE__		: libTitreNom = "Nom de l'image"
+	cas __ICI_VIDEO__		: libTitreNom = "Nom de la vidéo"
+	cas __ICI_YOUTUBE__		: libTitreNom = "Nom de la vidéo"
+	cas __ICI_GRATTAGE__	: libTitreNom = "Nom des images"
+	autre cas				: libTitreNom = "Nom de l'image"
+fin

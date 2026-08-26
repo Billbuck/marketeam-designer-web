@@ -1,0 +1,78 @@
+// **** Déclarations globales de pgeImage (serveur)
+
+procédure pgeImage(_pIdImage = 0, _pTypeImage = "", _pIdCategorie = 0)
+
+_sUnivers = __OPERATION_WEB__
+
+_sBibliothèque			est une chaîne
+_nIdMarque 				est un entier
+
+_sNomFichierUpload		est une chaîne	<synchronisé navigateur>
+_sImageFichierGénéré	est une chaîne
+_sVideoFichierGénéré	est une chaîne
+_sDessusFichierGénéré	est une chaîne
+_sDessousFichierGénéré	est une chaîne
+_sImageExtension		est une chaîne
+_sVideoExtension		est une chaîne
+_sGrattageExtension		est une chaîne
+_nImage1Largeur			est un entier
+_nImage1Hauteur			est un entier
+_nImage2Largeur			est un entier
+_nImage2Hauteur			est un entier
+_nImageUploadTailleMax	est un entier	<synchronisé navigateur>
+_nImageUploadLargeurMin	est un entier
+_nImageUploadLargeurMax	est un entier
+_nImageUploadHauteurMax	est un entier
+_nVideoUploadTailleMax	est un entier	<synchronisé navigateur>
+_bConversionAutomatique	est un booléen 	<synchronisé navigateur>
+
+
+_bImageChargé			est un booléen
+_bGrattageDessusChargé 	est un booléen
+_bGrattageDessousChargé est un booléen
+_YoutubeChargé 			est un booléen
+_VidéoChargé 			est un booléen
+
+_bConversionAutomatique	= Vrai
+_bMenuGrisé 			= Vrai
+
+constante
+	#ImageBouton 	= 4
+	#Image 			= 5
+	#YoutubeBouton 	= 6
+	#Youtube 		= 7
+	#VideoBouton	= 8
+	#Video			= 9
+	#GrattageBouton	= 10
+	#GrattageAlerte	= 11
+	#Grattage		= 12
+fin
+
+// **** Fin d'initialisation de pgeImage (serveur)
+
+Init()
+
+
+// **** Fermeture de pgeImage (serveur)
+
+// On supprime les anciens fichiers générés
+si _sImageFichierGénéré <> "" alors
+	si fFichierExiste(cpProjet.__sRepRacine + cpProjet.__sRepUpload +"\"+ _sImageFichierGénéré) alors
+		fSupprime(cpProjet.__sRepRacine + cpProjet.__sRepUpload +"\"+ _sImageFichierGénéré)
+	fin
+fin
+si _sVideoFichierGénéré <> "" alors
+	si fFichierExiste(cpProjet.__sRepRacine + cpProjet.__sRepUpload +"\"+ _sVideoFichierGénéré) alors
+		fSupprime(cpProjet.__sRepRacine + cpProjet.__sRepUpload +"\"+ _sVideoFichierGénéré)
+	fin
+fin
+si _sDessusFichierGénéré <> "" alors
+	si fFichierExiste(cpProjet.__sRepRacine + cpProjet.__sRepUpload +"\"+ _sDessusFichierGénéré) alors
+		fSupprime(cpProjet.__sRepRacine + cpProjet.__sRepUpload +"\"+ _sDessusFichierGénéré)
+	fin
+fin
+si _sDessousFichierGénéré <> "" alors
+	si fFichierExiste(cpProjet.__sRepRacine + cpProjet.__sRepUpload +"\"+ _sDessousFichierGénéré) alors
+		fSupprime(cpProjet.__sRepRacine + cpProjet.__sRepUpload +"\"+ _sDessousFichierGénéré)
+	fin
+fin

@@ -1,0 +1,30 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] RedimentionneImage (<pFichier>, <pRepertoire>)
+//
+// Paramètres :
+//	pFichier : <indiquez ici le rôle de sPFichier>
+// 	pRepertoire : <indiquez ici le rôle de pRepertoire>
+
+// Valeur de retour :
+// 	booléen : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure RedimentionneImage(pFichier, pRepertoire)
+
+sImageMagick		est une chaîne
+sLigneDeCommande	est une chaîne
+
+sImageMagick = INILit("IMAGEMAGICK","CHEMIN","",NomFichierIni())
+
+sLigneDeCommande = [
+	"[%sImageMagick%]" "[%pFichier%]" -density 72 -resize 900x "[%pFichier%]"
+]
+
+si pas LanceAppli(sLigneDeCommande,exeIconise,exeBloquant,pRepertoire) alors
+	renvoyer Faux
+fin
+
+renvoyer Vrai

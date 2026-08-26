@@ -1,0 +1,30 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//GrattageGestionAffichage ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure GrattageGestionAffichage()
+
+
+dispImage[#GrattageBouton].Visible	= (_bGrattageDessusChargé = Faux _ou_ _bGrattageDessousChargé = Faux)
+dispImage[#Grattage].Visible		= (_bGrattageDessusChargé = Vrai _ou_ _bGrattageDessousChargé = Vrai)
+
+celGrattageBoutonDessus.Visible		= (_bGrattageDessusChargé = Faux)
+celGrattageDessus.Visible			= (_bGrattageDessusChargé = Vrai)
+
+celGrattageBoutonDessous.Visible	= (_bGrattageDessusChargé = Vrai _et_ _bGrattageDessousChargé = Faux)
+celGrattageDessous.Visible			= (_bGrattageDessousChargé = Vrai)
+
+si _bGrattageDessusChargé = Vrai _et_ _bGrattageDessousChargé = Vrai _et_ (_nImage1Largeur <> _nImage2Largeur _ou_ _nImage1Hauteur <> _nImage2Hauteur) alors
+	dispImage[#GrattageAlerte].Visible = Vrai
+	libAlerte = "La résolution de l'image du dessus ([%_nImage1Largeur%] px x [%_nImage1Hauteur%] px) et différente celle de l'image du dessous ([%_nImage2Largeur%] px x [%_nImage2Hauteur%] px)"
+sinon
+	dispImage[#GrattageAlerte].Visible = Faux
+fin

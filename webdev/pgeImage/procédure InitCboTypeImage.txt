@@ -1,0 +1,14 @@
+procédure InitCboTypeImage(pTypeImage = "")
+
+cboTypeImage.Ajoute("< Sélectionner >" + gLien(""))
+cboTypeImage.Ajoute(Partage.LibelleTypeImage(__ICI_IMAGE__) 	+ gLien(__ICI_IMAGE__))
+cboTypeImage.Ajoute(Partage.LibelleTypeImage(__ICI_VIDEO__) 	+ gLien(__ICI_VIDEO__))
+cboTypeImage.Ajoute(Partage.LibelleTypeImage(__ICI_YOUTUBE__) 	+ gLien(__ICI_YOUTUBE__))
+cboTypeImage.Ajoute(Partage.LibelleTypeImage(__ICI_GRATTAGE__)	+ gLien(__ICI_GRATTAGE__))
+
+cboTypeImage = pTypeImage
+
+si pTypeImage <> "" alors
+	cboTypeImage.ExécuteTraitement(trtSélection)
+fin
+

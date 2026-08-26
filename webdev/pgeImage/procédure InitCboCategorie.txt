@@ -1,0 +1,61 @@
+procédure InitCboCategorie(pIdCategorie = 0)
+
+
+sTexteRequete	est une chaîne
+sdReqCategorie	est une Source de Données
+sWhere 			est une chaîne
+
+selon _sBibliothèque
+	cas BibliothèquePersonnelle.Valeur
+		sWhere = [
+			ici_categorie.IdClient = [%Partage.__vcUser.IDClient%]
+			AND ici_categorie.IdMarque IS NULL
+		]
+	cas BibliothèqueMarque.Valeur
+		sWhere = [
+			ici_categorie.IdMarque = [%_nIdMarque%]
+			AND ici_categorie.IdClient IS NULL
+		]
+	cas BibliothèqueMarketeam.Valeur
+		sWhere = [
+			ici_categorie.IdClient IS NULL
+			AND ici_categorie.IdMarque IS NULL
+		]
+
+	autre cas
+
+fin
+
+
+sTexteRequete =
+[
+SELECT
+	ici_categorie.IdCategorie,
+	ici_categorie.Libelle
+FROM
+	ici_categorie
+WHERE
+	[%sWhere%]
+ORDER BY 
+	ici_categorie.Libelle
+]
+
+si pas sdReqCategorie.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour
+fin
+
+cboCatégorie.SupprimeTout()
+
+cboCatégorie.Ajoute("< Sélectionner >" + gLien(0))
+
+pour tout sdReqCategorie
+	cboCatégorie.Ajoute(sdReqCategorie.Libelle + gLien(sdReqCategorie.IdCategorie))
+fin
+
+cboCatégorie = pIdCategorie
+
+btnAjouteCategorie.Visible = (pIdCategorie = 0)
+
+fin:
+sdReqCategorie.AnnuleDéclaration()

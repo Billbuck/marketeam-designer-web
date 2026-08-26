@@ -1,0 +1,28 @@
+procédure ImportVideo()
+
+sRepertoireUpload	est une chaîne
+sVideoUpload		est une chaîne
+sRepVideoUpload		est une chaîne
+
+sRepertoireUpload	= cpProjet.__sRepRacine + ["\"] + cpProjet.__sRepUpload
+
+
+// On supprime l'ancien fichier
+si _sVideoFichierGénéré <> "" alors
+	si fFichierExiste(sRepertoireUpload +"\"+ _sVideoFichierGénéré) alors
+		fSupprime(sRepertoireUpload +"\"+ _sVideoFichierGénéré)
+	fin
+fin
+
+_sVideoFichierGénéré 	= GénèreMotDePasse(16)
+sVideoUpload			= UploadCopieFichier(uplVideo, sRepertoireUpload, _sVideoFichierGénéré)
+_sVideoFichierGénéré	+= fExtraitChemin(sVideoUpload,fExtension)
+_sVideoExtension		= Minuscule(fExtraitChemin(_sVideoFichierGénéré,fExtension))
+
+sRepVideoUpload			= "\" + RépertoireWeb() + ["\"] + cpProjet.__sRepUpload + ["\"] + _sVideoFichierGénéré
+
+htmVideo = AfficheVideo(sRepVideoUpload)
+
+_VidéoChargé						= Vrai
+dispImage[#VideoBouton].Visible	= Faux
+dispImage[#Video].Visible 			= Vrai

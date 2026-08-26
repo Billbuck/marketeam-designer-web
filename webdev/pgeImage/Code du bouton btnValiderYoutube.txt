@@ -1,0 +1,24 @@
+nPos est un entier
+
+selon Vrai
+	cas Contient(saiCodeYoutube,"=")
+		nPos			= Position(saiCodeYoutube,"=",0) + 1
+		saiCodeYoutube	= saiCodeYoutube[[nPos à]]
+
+	cas Contient(saiCodeYoutube,"/")
+		nPos = Position(saiCodeYoutube,"/",0)
+		tantque nPos > 0
+			nPos++
+			saiCodeYoutube	= saiCodeYoutube[[nPos à]]
+			nPos			= Position(saiCodeYoutube,"/",nPos)
+		fin
+
+	autre cas
+
+fin
+
+htmYoutube = VideoYouTube(saiCodeYoutube,Vrai,Faux,Faux)
+
+_YoutubeChargé						= Vrai
+dispImage[#YoutubeBouton].Visible	= Faux
+dispImage[#Youtube].Visible 		= Vrai

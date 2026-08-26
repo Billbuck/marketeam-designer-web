@@ -1,0 +1,38 @@
+// **** Initialisation de uplVideo (serveur)
+
+uplVideo.TypeFichiers = "Fichiers" + TAB + "*.mp4"
+
+
+// **** A chaque modification de la liste des fichiers sélectionnés dans uplVideo ( dispImage ) (navigateur)
+
+// Si le champ contient un fichier : lance l'envoi du fichier
+si MoiMême..Occurrence > 0 alors
+	nTaille		est un entier système		= UploadTailleFichier(MoiMême, 1)
+	sTaille		est une chaîne				= TailleVersChaîne(nTaille)
+	
+si nTaille < _nVideoUploadTailleMax alors
+	_sNomFichierUpload	= MoiMême[1]
+	saiNomImage			= cpNavigateur.NavPremiereLettreMajuscule(ExtraitChaîne(_sNomFichierUpload,1,"."))
+	jgeUploadVideo.Visible	= Vrai
+	UploadLance(uplVideo)
+sinon
+	PopupAfficheMessage("La taille de votre fichier (" + NumériqueVersChaîne((nTaille / 1024), "dS") + " Ko) est trop grande" +RC+ "La taille maximale est de " + (_nVideoUploadTailleMax/1024) + " Ko","Fichier trop grand",__OPERATION_MARKETEAM__,__TOAST_INFORMATION__,8 s)
+	retour
+fin
+	
+fin
+
+// **** Progression du transfert de uplVideo ( dispImage ) (navigateur)
+
+jgeUploadVideo.BorneMax 	= UploadTaille(MoiMême)
+jgeUploadVideo				= UploadTailleEnvoyée(MoiMême)
+
+// **** Réception des fichiers uploadés de uplVideo ( dispImage ) (serveur)
+
+ImportVideo()
+
+
+// **** Après réception des fichiers uploadés de uplVideo ( dispImage ) (navigateur)
+
+jgeUploadVideo.Visible	= Faux
+btnValider.Visible	= Vrai

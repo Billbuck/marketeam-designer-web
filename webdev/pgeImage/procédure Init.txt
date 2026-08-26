@@ -1,0 +1,95 @@
+procédure Init()
+
+sRepertoireClient	est une chaîne
+
+_nImageUploadTailleMax	= cpFonction.ValeurParametre("ImageUploadTailleMax",prm_parametre.ValNumerique.Nom)
+_nImageUploadLargeurMin	= cpFonction.ValeurParametre("ImageUploadLargeurMin",prm_parametre.ValNumerique.Nom)
+_nImageUploadLargeurMax	= cpFonction.ValeurParametre("ImageUploadLargeurMax",prm_parametre.ValNumerique.Nom)
+_nImageUploadHauteurMax	= cpFonction.ValeurParametre("ImageUploadHauteurMax",prm_parametre.ValNumerique.Nom)
+_nVideoUploadTailleMax	= cpFonction.ValeurParametre("VideoUploadTailleMax",prm_parametre.ValNumerique.Nom)
+
+_nImageUploadTailleMax 	= _nImageUploadTailleMax * 1024 // On passe de Kilos octets en Octets
+_nVideoUploadTailleMax 	= _nVideoUploadTailleMax * 1024 // On passe de Kilos octets en Octets
+
+grpPartage.Visible = Partage.__vcUser.Partage
+
+si _pIdImage > 0 alors
+	si ici_image.LitRecherchePremier(IdImage,_pIdImage) alors
+		_nIdMarque = ici_image.IdMarque
+		Partage.InitCboBibliothèque(cboBibliothèque, ici_image..Nom, ici_image.IdImage..Nom, _pIdImage, Faux, Faux, "")
+		BibliothèqueValeurMemorisée(cboBibliothèque, _sBibliothèque, _nIdMarque)
+
+
+		libTitre = "Modifier une image, une vidéo"
+
+		InitCboTypeImage(ici_image.Type)
+		InitCboCategorie(ici_image.IdCategorie)
+		saiNomImage				= ici_image.Nom
+		saiDateDebutValidité	= ici_image.DateDebutValidite
+		saiDateFinValidité		= ici_image.DateFinValidite
+		intEstActive			= ici_image.EstActif
+		intEstPartagée			= ici_image.EstPartage
+		_nImage1Largeur			= ici_image.Largeur
+		_nImage2Largeur			= ici_image.Largeur
+		_nImage1Hauteur			= ici_image.Hauteur
+		_nImage2Hauteur			= ici_image.Hauteur
+
+
+		selon ici_image.Type
+			cas __ICI_IMAGE__
+				_bImageChargé					= Vrai
+				saiUrl							= ici_image.UrlImage
+				_sImageExtension				= ici_image.TypeFichier
+				selon _sBibliothèque
+					cas BibliothèquePersonnelle.Valeur 	: sRepertoireClient	= cpProjet.CheminClient(Partage.__vcUser.IDClient,__OPERATION_CLIQUEZICI__,__REP_IMAGE__, Faux)
+					cas BibliothèqueMarque.Valeur		: sRepertoireClient	= cpProjet.CheminMarque(_nIdMarque,__OPERATION_CLIQUEZICI__,__REP_IMAGE__, Faux)
+					cas BibliothèqueMarketeam.Valeur	: sRepertoireClient	= cpProjet.CheminMarketeam(__OPERATION_CLIQUEZICI__,__REP_IMAGE__, Faux)
+				fin
+				imgImage						= sRepertoireClient + TypeFichierImage(ici_image.Type) + ici_image.IdImage + "." + ici_image.TypeFichier + "?t=" + DateHeureSys()
+				dispImage[#Image].Visible		= Vrai
+
+			cas __ICI_YOUTUBE__
+				_YoutubeChargé					= Vrai
+				saiCodeYoutube					= ici_image.UrlImage
+				htmYoutube						= VideoYouTube(saiCodeYoutube,Vrai,Faux,Faux)
+				dispImage[#Youtube].Visible	= Vrai
+
+			cas __ICI_VIDEO__
+				_VidéoChargé					= Vrai
+				_sVideoExtension				= ici_image.TypeFichier
+				selon _sBibliothèque
+					cas BibliothèquePersonnelle.Valeur 	: sRepertoireClient	= cpProjet.CheminClient(Partage.__vcUser.IDClient,__OPERATION_CLIQUEZICI__,__REP_VIDEO__, Faux)
+					cas BibliothèqueMarque.Valeur		: sRepertoireClient	= cpProjet.CheminMarque(_nIdMarque,__OPERATION_CLIQUEZICI__,__REP_VIDEO__, Faux)
+					cas BibliothèqueMarketeam.Valeur	: sRepertoireClient	= cpProjet.CheminMarketeam(__OPERATION_CLIQUEZICI__,__REP_VIDEO__, Faux)
+				fin
+				htmVideo						= AfficheVideo(sRepertoireClient + TypeFichierImage(ici_image.Type) + ici_image.IdImage + "." + ici_image.TypeFichier)
+				dispImage[#Video].Visible		= Vrai
+
+
+			cas __ICI_GRATTAGE__
+				_bGrattageDessusChargé			= Vrai
+				_bGrattageDessousChargé			= Vrai
+				_sGrattageExtension				= ici_image.TypeFichier
+				selon _sBibliothèque
+					cas BibliothèquePersonnelle.Valeur 	: sRepertoireClient	= cpProjet.CheminClient(Partage.__vcUser.IDClient,__OPERATION_CLIQUEZICI__,__REP_GRATTAGE__, Faux)
+					cas BibliothèqueMarque.Valeur		: sRepertoireClient	= cpProjet.CheminMarque(_nIdMarque,__OPERATION_CLIQUEZICI__,__REP_GRATTAGE__, Faux)
+					cas BibliothèqueMarketeam.Valeur	: sRepertoireClient	= cpProjet.CheminMarketeam(__OPERATION_CLIQUEZICI__,__REP_GRATTAGE__, Faux)
+				fin
+				imgImageDessus					= sRepertoireClient + TypeFichierImage(ici_image.Type) + ici_image.IdImage + "-dessus." + ici_image.TypeFichier + "?t=" + DateHeureSys()
+				imgImageDessous					= sRepertoireClient + TypeFichierImage(ici_image.Type) + ici_image.IdImage + "-dessous." + ici_image.TypeFichier + "?t=" + DateHeureSys()
+				dispImage[#Grattage].Visible	= Vrai
+
+			autres cas
+
+		fin
+	fin
+sinon
+	Partage.InitCboBibliothèque(cboBibliothèque, ici_image..Nom, ici_image.IdImage..Nom, 0, Faux, Faux, "")
+	BibliothèqueValeurMemorisée(cboBibliothèque, _sBibliothèque, _nIdMarque)
+
+	libTitre = "Importer une image, une vidéo"
+	InitCboTypeImage(_pTypeImage)
+	InitCboCategorie(_pIdCategorie)
+	cboTypeImage.Etat = _pTypeImage <> "" ? Inactif sinon Actif
+fin
+
