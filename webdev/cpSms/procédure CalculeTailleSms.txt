@@ -1,0 +1,21 @@
+procédure CalculeTailleSms(local pTaille, local pUnicode)
+
+nLong	est un entier
+
+nMax	est un entier
+nLimit	est un entier
+
+nMax	= (pUnicode = Faux) ? 160 sinon 70
+nLimit	= (pUnicode = Faux) ? 153 sinon 67
+
+
+si pTaille <= nMax alors
+	renvoyer 1
+sinon
+	nLong = PartieEntière(pTaille/nLimit)
+	si PartieDécimale(pTaille/nLimit) > 0 alors
+		nLong++
+	fin
+	renvoyer nLong
+fin
+

@@ -1,0 +1,71 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] CalculeNbrDestinataires (<stOperation> est structOperation)
+//
+// Paramètres :
+//	stOperation (structOperation) : <indiquez ici le rôle de stOperation>
+// Valeur de retour :
+// 	Type indéterminé : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure CalculeNbrDestinataires(stOperation est une structOperation)
+
+bEstFixe 			est un booléen
+bEstPortable		est un booléen
+bEstActif		    est un booléen
+bEstInactif		    est un booléen
+bEstIndeterminé     est un booléen
+sListeTelephone		est une chaîne
+sListeProfil		est une chaîne
+nNbrAppelTotal		est un entier
+
+selon stOperation.TypeOperation
+	cas __OPERATION_SMS__
+
+		cpDeviseur.CalculeCoutOperationSms(stOperation)
+		renvoyer stOperation.NbrDestinataire
+
+	cas __OPERATION_RCS__
+		stOperation.NbrDestinataire = 2000
+		renvoyer stOperation.NbrDestinataire
+
+	cas __OPERATION_TEL__
+
+		CalculeTelTrancheHoraire(stOperation)
+
+		pour tout stTelTrancheHoraire de stOperation.stOperationCallCenter.tabTrancheHoraire
+			bEstFixe 		= Max(bEstFixe,stTelTrancheHoraire.Fixe)
+			bEstPortable	= Max(bEstPortable,stTelTrancheHoraire.Portable)
+			bEstActif		= Max(bEstActif,stTelTrancheHoraire.Actif)
+			bEstInactif		= Max(bEstInactif,stTelTrancheHoraire.Inactif)
+			bEstIndeterminé	= Max(bEstIndeterminé,stTelTrancheHoraire.Indetermine)
+		fin
+
+		si bEstFixe 		alors sListeTelephone 	+= __TEL_FIXE__
+		si bEstPortable		alors sListeTelephone 	+= __TEL_PORTABLE__
+		si bEstActif 		alors sListeProfil 		+= __TEL_PROFIL_ACTIF__
+		si bEstInactif 		alors sListeProfil 		+= __TEL_PROFIL_INACTIF__
+		si bEstIndeterminé 	alors sListeProfil 		+= __TEL_PROFIL_NON_DETERMINE__
+
+
+		pour tout stTelProfil de stOperation.stOperationCallCenter.tabProfil
+			si Contient(sListeTelephone,stTelProfil.Telephone) _et_ Contient(sListeProfil,stTelProfil.Profil) alors
+				nNbrAppelTotal		+= stTelProfil.NbrDestinataire
+			fin
+		fin
+
+		renvoyer nNbrAppelTotal
+
+	cas __OPERATION_VMS__		: renvoyer cpDeviseur.CalculeNbrDestinataireVms(stOperation)
+
+	cas __OPERATION_COURRIER__	: renvoyer cpDeviseur.CalculeNombreDestinataireCourrier(stOperation)
+
+	cas __OPERATION_EMAIL__ 	: renvoyer stOperation.NbrDestinataire
+
+	autres cas 					: renvoyer stOperation.NbrDestinataire
+
+fin
+
+

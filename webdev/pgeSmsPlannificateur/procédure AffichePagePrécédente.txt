@@ -1,0 +1,13 @@
+procédure AffichePagePrécédente()
+
+si PageMémorise(Vrai) alors
+	si __stOperation.EstCliquezIci = Faux alors
+		PageAffiche(pgeSms)
+	sinon
+		si __stOperation.stNouveauCliquezIci.Type = __ICI_WEB__ alors
+			PageAffiche(pgeIciPage)
+		sinon
+			PageAffiche(pgeIciChoix)
+		fin
+	fin
+fin

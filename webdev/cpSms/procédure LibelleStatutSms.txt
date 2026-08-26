@@ -1,0 +1,29 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] LibelleStatutSms (<pStatutSms>)
+//
+// Paramètres :
+//	pStatutSms : <indiquez ici le rôle de pStatutSms>
+// Valeur de retour :
+// 	chaîne ANSI : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure LibelleStatutSms(pStatutSms)
+
+selon pStatutSms
+	cas __SMS_STATUT_ENREGISTREE__			: renvoyer "EN ATTENTE"
+	cas __SMS_STATUT_ERREUR_ENVOI__			: renvoyer "ERREUR"
+	cas __SMS_STATUT_ENVOYE__				: renvoyer "ENVOYÉ"
+	cas __SMS_STATUT_SENT_ERROR__			: renvoyer "ERREUR ENVOI"
+	cas __SMS_STATUT_INVALID_NUMBER__		: renvoyer "NUMÉRO INVALIDE"
+	cas __SMS_STATUT_STOP_PUB__ 			: renvoyer "STOP PUB"
+	cas __SMS_STATUT_NOT_SENT__				: renvoyer "HORS LIGNE"
+	cas __SMS_STATUT_REJECTED__				: renvoyer "REJETÉ"
+	cas __SMS_STATUT_AUTRE_ERREUR__ 		: renvoyer "ERREUR LIVRAISON"
+	cas __SMS_STATUT_NOT_DELIVERED__		: renvoyer "NON DÉLIVRÉ"
+	cas __SMS_STATUT_REQUETE_XML__			: renvoyer "ERREUR XML"
+	cas __SMS_STATUT_DELIVERED__			: renvoyer "DÉLIVRÉ"
+	autre cas								: renvoyer "ERREUR"
+fin

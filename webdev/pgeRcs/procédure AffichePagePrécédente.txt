@@ -1,0 +1,5 @@
+procédure AffichePagePrécédente()
+
+si PageMémorise(Vrai) alors
+	PageAffiche(pgeBaseDonnees)
+fin

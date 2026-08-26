@@ -38,12 +38,16 @@ si __stOperation.TypeOperation = __OPERATION_SMS__ alors
 	AjouteProgressBar("SMS","pgeSms")
 fin
 
+si __stOperation.TypeOperation = __OPERATION_RCS__ alors
+	AjouteProgressBar("RCS","pgeRcs")
+fin
+
 si __stOperation.TypeOperation = __OPERATION_VMS__ alors
 	AjouteProgressBar("VMS","pgeVms")
 fin
 
 
-si __stOperation.TypeOperation = __OPERATION_SMS__ _et_ __stOperation.EstCliquezIci = Faux alors
+si __stOperation.TypeOperation dans (__OPERATION_SMS__, __OPERATION_RCS__) _et_ __stOperation.EstCliquezIci = Faux alors
 	AjouteProgressBar("PLANIFICATEUR","pgeSmsPlannificateur")
 fin
 
@@ -76,7 +80,7 @@ si __stOperation.stNouveauCliquezIci.Type = __ICI_WEB__ alors
 	AjouteProgressBar("LANDING PAGE","pgeIciPage")
 fin
 
-si __stOperation.TypeOperation = __OPERATION_SMS__ _et_ __stOperation.EstCliquezIci = Vrai alors
+si __stOperation.TypeOperation dans (__OPERATION_SMS__, __OPERATION_RCS__) _et_ __stOperation.EstCliquezIci = Vrai alors
 	AjouteProgressBar("PLANIFICATEUR","pgeSmsPlannificateur")
 fin
 

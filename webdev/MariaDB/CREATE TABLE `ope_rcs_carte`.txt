@@ -1,0 +1,24 @@
+CREATE TABLE `ope_rcs_carte` (
+	`IdRcsCarte` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdRcs` INT(11) NOT NULL,
+	`Ordre` TINYINT(3) UNSIGNED NOT NULL DEFAULT '1' COMMENT 'Position dans le carrousel de 1 à 10',
+	`Titre` VARCHAR(400) NULL DEFAULT NULL COMMENT 'Gabarit - le résultat fusionné doit tenir en 200 car.' COLLATE 'utf8mb4_unicode_ci',
+	`Description` VARCHAR(3000) NULL DEFAULT NULL COMMENT 'Gabarit - le résultat fusionné doit tenir en 2000 car.' COLLATE 'utf8mb4_unicode_ci',
+	`MediaUrl` VARCHAR(2048) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`MediaContentType` VARCHAR(50) NULL DEFAULT NULL COMMENT 'image/jpeg, video/mp4...' COLLATE 'utf8mb4_unicode_ci',
+	`MediaHauteur` ENUM('SHORT','MEDIUM','TALL') NOT NULL DEFAULT 'MEDIUM' COLLATE 'utf8mb4_unicode_ci',
+	`MediaThumbnailUrl` VARCHAR(2048) NULL DEFAULT NULL COMMENT 'Vidéo uniquement' COLLATE 'utf8mb4_unicode_ci',
+	`MediaLargeurPx` SMALLINT(5) UNSIGNED NULL DEFAULT NULL COMMENT 'Contrôle homogénéité du ratio entre cartes',
+	`MediaHauteurPx` SMALLINT(5) UNSIGNED NULL DEFAULT NULL COMMENT 'Contrôle homogénéité du ratio entre cartes',
+	`DateHeureCreation` DATETIME NOT NULL,
+	`DateHeureModification` DATETIME NULL DEFAULT NULL,
+	`UserCreation` VARCHAR(35) NOT NULL COLLATE 'utf8mb4_unicode_ci',
+	`UserModification` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	PRIMARY KEY (`IdRcsCarte`) USING BTREE,
+	INDEX `IdRcs_Ordre` (`IdRcs`, `Ordre`) USING BTREE,
+	CONSTRAINT `FK_ope_rcs_carte_ope_rcs` FOREIGN KEY (`IdRcs`) REFERENCES `ope_rcs` (`IdRcs`) ON UPDATE RESTRICT ON DELETE CASCADE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+ROW_FORMAT=DYNAMIC
+;

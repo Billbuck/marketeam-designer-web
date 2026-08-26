@@ -12,17 +12,17 @@
 //
 procédure InitZnrRapport()
 
-nInd			est un entier
-nNbr			est un entier
-nPos			est un entier
-bContact		est un booléen
+nInd				est un entier
+nNbr				est un entier
+nPos				est un entier
+bContact			est un booléen
 bCivPreNom		est un booléen
 bObligatoire	est un booléen
 taaBaseChamp	est un tableau associatif de structBaseChamp
 
 znrRapport.SupprimeTout()
 
-si __stOperation.TypeOperation dans (__OPERATION_SMS__,__OPERATION_TEL__,__OPERATION_VMS__,__OPERATION_EMAIL__) alors
+si __stOperation.TypeOperation dans (__OPERATION_SMS__,__OPERATION_RCS__,__OPERATION_TEL__,__OPERATION_VMS__,__OPERATION_EMAIL__) alors
 	pour tout stBase de __stOperation.tabBase
 		si stBase.EstSupprime = Faux alors
 			nNbr++
@@ -41,6 +41,7 @@ si __stOperation.TypeOperation dans (__OPERATION_SMS__,__OPERATION_TEL__,__OPERA
 		si __stOperation.tabRapport.Occurrence = 0 alors
 			selon __stOperation.TypeOperation
 				cas __OPERATION_SMS__	: __stOperation.tabRapport.Ajoute([__CHAMP_PORTABLE__,"SMS",__CHAMP_TYPE_PORTABLE__,99,Vrai])
+				cas __OPERATION_RCS__	: __stOperation.tabRapport.Ajoute([__CHAMP_PORTABLE__,"RCS",__CHAMP_TYPE_PORTABLE__,99,Vrai])
 				cas __OPERATION_EMAIL__ : __stOperation.tabRapport.Ajoute([[__CHAMP_EMAIL__,"EMAIL",__CHAMP_TYPE_EMAIL__,99,Vrai]])
 				cas __OPERATION_VMS__ 	: __stOperation.tabRapport.Ajoute([__CHAMP_PORTABLE__,"VMS",__CHAMP_TYPE_PORTABLE__,99,Vrai])
 				cas __OPERATION_TEL__
@@ -65,11 +66,11 @@ si __stOperation.TypeOperation dans (__OPERATION_SMS__,__OPERATION_TEL__,__OPERA
 		si taaBaseChamp.Occurrence > 0 alors
 			pour tout stBaseChamp, sLibelle de taaBaseChamp
 				si stBaseChamp.Pointer = nNbr alors
-					bObligatoire							= ChampObligatoire(stBaseChamp.Champ)
-					nInd									= znrRapport.AjouteLigne()
-					znrRapport[nInd].attChamp				= stBaseChamp.Champ
+					bObligatoire									= ChampObligatoire(stBaseChamp.Champ)
+					nInd												= znrRapport.AjouteLigne()
+					znrRapport[nInd].attChamp					= stBaseChamp.Champ
 					znrRapport[nInd].attLibelle				= sLibelle
-					znrRapport[nInd].attType				= stBaseChamp.Type
+					znrRapport[nInd].attType					= stBaseChamp.Type
 					znrRapport[nInd].intRapport[1].Libellé	= sLibelle
 					selon stBaseChamp.Champ
 						cas __CHAMP_CIVILITE__	: znrRapport[nInd].attEtat = (bContact = Vrai) 		? Grisé sinon Actif
@@ -95,12 +96,13 @@ fin
 dispBaseDonnées[5].Visible = (znrRapport.Occurrence > 0)
 
 
-procédure interne ChampObligatoire(pChamp)
-	selon __stOperation.TypeOperation
-		cas __OPERATION_SMS__ 		: renvoyer (pChamp = __CHAMP_PORTABLE__)
-		cas __OPERATION_EMAIL__		: renvoyer (pChamp = __CHAMP_EMAIL__)
-		cas __OPERATION_TEL__		: renvoyer (pChamp dans (__CHAMP_PORTABLE__, __CHAMP_TEL__))
-		cas __OPERATION_VMS__		: renvoyer (pChamp = __CHAMP_PORTABLE__)
-		autre cas 					: renvoyer Faux
+	procédure interne ChampObligatoire(pChamp)
+		selon __stOperation.TypeOperation
+			cas __OPERATION_SMS__		: renvoyer (pChamp = __CHAMP_PORTABLE__)
+			cas __OPERATION_RCS__		: renvoyer (pChamp = __CHAMP_PORTABLE__)
+			cas __OPERATION_EMAIL__		: renvoyer (pChamp = __CHAMP_EMAIL__)
+			cas __OPERATION_TEL__		: renvoyer (pChamp dans (__CHAMP_PORTABLE__, __CHAMP_TEL__))
+			cas __OPERATION_VMS__		: renvoyer (pChamp = __CHAMP_PORTABLE__)
+			autre cas 						: renvoyer Faux
+		fin
 	fin
-fin

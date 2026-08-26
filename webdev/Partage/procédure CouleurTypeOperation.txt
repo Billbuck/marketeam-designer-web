@@ -1,0 +1,140 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] CouleurTypeOperation (<pType> [, <pNiveau>])
+//
+// Paramètres :
+//	pType : <indiquez ici le rôle de pType>
+// 	pNiveau (valeur par défaut="M") : < indiquez ici le rôle de pNiveau >
+// Valeur de retour :
+// 	entier : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+//	pDossier : <indiquez ici le rôle de pDossier>
+//	pLigne : <indiquez ici le rôle de pLigne>
+procédure CouleurTypeOperation(pType, pNiveau = "M")
+
+
+nCouleur est un entier
+
+selon pType
+	cas __OPERATION_COURRIER__ , __OPERATION_RNVP__
+		selon Majuscule(pNiveau)
+			cas "XXS"		: nCouleur = HTMLVersRVB(__COULEUR_COURRIER_XXS__)
+			cas "XS"		: nCouleur = HTMLVersRVB(__COULEUR_COURRIER_XS__)
+			cas "S"			: nCouleur = HTMLVersRVB(__COULEUR_COURRIER_S__)
+			cas "M"			: nCouleur = HTMLVersRVB(__COULEUR_COURRIER_M__)
+			cas "L" 		: nCouleur = HTMLVersRVB(__COULEUR_COURRIER_L__)
+			cas "XL"		: nCouleur = HTMLVersRVB(__COULEUR_COURRIER_XL__)
+			cas "XXL"		: nCouleur = HTMLVersRVB(__COULEUR_COURRIER_XXL__)
+		fin
+
+	cas __OPERATION_TRACTEVA__
+		selon Majuscule(pNiveau)
+			cas "XXS"		: nCouleur = HTMLVersRVB(__COULEUR_TRACT_XXS__)
+			cas "XS"		: nCouleur = HTMLVersRVB(__COULEUR_TRACT_XS__)
+			cas "S"			: nCouleur = HTMLVersRVB(__COULEUR_TRACT_S__)
+			cas "M"			: nCouleur = HTMLVersRVB(__COULEUR_TRACT_M__)
+			cas "L" 		: nCouleur = HTMLVersRVB(__COULEUR_TRACT_L__)
+			cas "XL"		: nCouleur = HTMLVersRVB(__COULEUR_TRACT_XL__)
+			cas "XXL"		: nCouleur = HTMLVersRVB(__COULEUR_TRACT_XXL__)
+		fin
+
+	cas __OPERATION_SMARTEVA__
+		selon Majuscule(pNiveau)
+			cas "XXS"		: nCouleur = HTMLVersRVB(__COULEUR_TRACT_XXS__)
+			cas "XS"		: nCouleur = HTMLVersRVB(__COULEUR_TRACT_XS__)
+			cas "S"			: nCouleur = HTMLVersRVB(__COULEUR_TRACT_S__)
+			cas "M"			: nCouleur = HTMLVersRVB(__COULEUR_TRACT_M__)
+			cas "L" 		: nCouleur = HTMLVersRVB(__COULEUR_TRACT_L__)
+			cas "XL"		: nCouleur = HTMLVersRVB(__COULEUR_TRACT_XL__)
+			cas "XXL"		: nCouleur = HTMLVersRVB(__COULEUR_TRACT_XXL__)
+		fin
+
+	cas __OPERATION_SMS__, __OPERATION_SMS_NOTIFICATION__, __OPERATION_SMS_INTERACTIF__, __OPERATION_RCS__, __OPERATION_RCS_INTERACTIF__
+		selon Majuscule(pNiveau)
+			cas "XXS"		: nCouleur = HTMLVersRVB(__COULEUR_SMS_XXS__)
+			cas "XS"		: nCouleur = HTMLVersRVB(__COULEUR_SMS_XS__)
+			cas "S"			: nCouleur = HTMLVersRVB(__COULEUR_SMS_S__)
+			cas "M"			: nCouleur = HTMLVersRVB(__COULEUR_SMS_M__)
+			cas "L" 		: nCouleur = HTMLVersRVB(__COULEUR_SMS_L__)
+			cas "XL"		: nCouleur = HTMLVersRVB(__COULEUR_SMS_XL__)
+			cas "XXL"		: nCouleur = HTMLVersRVB(__COULEUR_SMS_XXL__)
+		fin
+
+	cas __OPERATION_VMS__
+		selon Majuscule(pNiveau)
+			cas "XXS"		: nCouleur = HTMLVersRVB(__COULEUR_VMS_XXS__)
+			cas "XS"		: nCouleur = HTMLVersRVB(__COULEUR_VMS_XS__)
+			cas "S"			: nCouleur = HTMLVersRVB(__COULEUR_VMS_S__)
+			cas "M"			: nCouleur = HTMLVersRVB(__COULEUR_VMS_M__)
+			cas "L" 		: nCouleur = HTMLVersRVB(__COULEUR_VMS_L__)
+			cas "XL"		: nCouleur = HTMLVersRVB(__COULEUR_VMS_XL__)
+			cas "XXL"		: nCouleur = HTMLVersRVB(__COULEUR_VMS_XXL__)
+		fin
+
+	cas __OPERATION_EMAIL__
+		selon Majuscule(pNiveau)
+			cas "XXS"		: nCouleur = HTMLVersRVB(__COULEUR_EMAIL_XXS__)
+			cas "XS"		: nCouleur = HTMLVersRVB(__COULEUR_EMAIL_XS__)
+			cas "S"			: nCouleur = HTMLVersRVB(__COULEUR_EMAIL_S__)
+			cas "M"			: nCouleur = HTMLVersRVB(__COULEUR_EMAIL_M__)
+			cas "L" 		: nCouleur = HTMLVersRVB(__COULEUR_EMAIL_L__)
+			cas "XL"		: nCouleur = HTMLVersRVB(__COULEUR_EMAIL_XL__)
+			cas "XXL"		: nCouleur = HTMLVersRVB(__COULEUR_EMAIL_XXL__)
+		fin
+
+	cas __OPERATION_COURRIER_GESTION__
+		selon Majuscule(pNiveau)
+			cas "XXS"		: nCouleur = HTMLVersRVB(__COULEUR_COURRIER_XXS__)
+			cas "XS"		: nCouleur = HTMLVersRVB(__COULEUR_COURRIER_XS__)
+			cas "S"			: nCouleur = HTMLVersRVB(__COULEUR_COURRIER_S__)
+			cas "M"			: nCouleur = HTMLVersRVB(__COULEUR_COURRIER_M__)
+			cas "L" 		: nCouleur = HTMLVersRVB(__COULEUR_COURRIER_L__)
+			cas "XL"		: nCouleur = HTMLVersRVB(__COULEUR_COURRIER_XL__)
+			cas "XXL"		: nCouleur = HTMLVersRVB(__COULEUR_COURRIER_XXL__)
+		fin
+
+
+	cas __OPERATION_TEL__ , __OPERATION_BLOCTEL__
+		selon Majuscule(pNiveau)
+			cas "XXS"		: nCouleur = HTMLVersRVB(__COULEUR_TEL_XXS__)
+			cas "XS"		: nCouleur = HTMLVersRVB(__COULEUR_TEL_XS__)
+			cas "S"			: nCouleur = HTMLVersRVB(__COULEUR_TEL_S__)
+			cas "M"			: nCouleur = HTMLVersRVB(__COULEUR_TEL_M__)
+			cas "L" 		: nCouleur = HTMLVersRVB(__COULEUR_TEL_L__)
+			cas "XL"		: nCouleur = HTMLVersRVB(__COULEUR_TEL_XL__)
+			cas "XXL"		: nCouleur = HTMLVersRVB(__COULEUR_TEL_XXL__)
+			autre cas		: nCouleur = HTMLVersRVB(__COULEUR_KINGCALL__)
+		fin
+
+	cas __OPERATION_BASE_DE_DONNEES__
+		selon Majuscule(pNiveau)
+			cas "XXS"		: nCouleur = HTMLVersRVB(__COULEUR_BDD_XXS__)
+			cas "XS"		: nCouleur = HTMLVersRVB(__COULEUR_BDD_XS__)
+			cas "S"			: nCouleur = HTMLVersRVB(__COULEUR_BDD_S__)
+			cas "M"			: nCouleur = HTMLVersRVB(__COULEUR_BDD_M__)
+			cas "L" 		: nCouleur = HTMLVersRVB(__COULEUR_BDD_L__)
+			cas "XL"		: nCouleur = HTMLVersRVB(__COULEUR_BDD_XL__)
+			cas "XXL"		: nCouleur = HTMLVersRVB(__COULEUR_BDD_XXL__)
+			autre cas		: nCouleur = HTMLVersRVB(__COULEUR_KINGCALL__)
+		fin
+
+	autres cas
+		selon Majuscule(pNiveau)
+			cas "XXS"		: nCouleur = HTMLVersRVB(__COULEUR_MARKETEAM_XXS__)
+			cas "XS"		: nCouleur = HTMLVersRVB(__COULEUR_MARKETEAM_XS__)
+			cas "S"			: nCouleur = HTMLVersRVB(__COULEUR_MARKETEAM_S__)
+			cas "M"			: nCouleur = HTMLVersRVB(__COULEUR_MARKETEAM_M__)
+			cas "L" 		: nCouleur = HTMLVersRVB(__COULEUR_MARKETEAM_L__)
+			cas "XL"		: nCouleur = HTMLVersRVB(__COULEUR_MARKETEAM_XL__)
+			cas "XXL"		: nCouleur = HTMLVersRVB(__COULEUR_MARKETEAM_XXL__)
+			autre cas		: nCouleur = HTMLVersRVB(__COULEUR_KINGCALL__)
+		fin
+
+fin
+
+
+
+renvoyer nCouleur

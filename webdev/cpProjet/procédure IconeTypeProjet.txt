@@ -1,0 +1,72 @@
+procédure IconeTypeProjet(local pTypeProjet, pEstMarketeam = Faux)
+
+sCheminIcone est une chaîne
+
+
+
+si pEstMarketeam = Faux alors
+	selon pTypeProjet
+		cas __OPERATION_COURRIER__										: sCheminIcone = "ext/Icones Supports/ltr-icone" + __SVG__
+		cas __OPERATION_COURRIER_INTERACTIF__							: sCheminIcone = "ext/Icones Supports/lti-icone" + __SVG__
+		cas __OPERATION_TRACTEVA__										: sCheminIcone = "ext/Icones Supports/tra-icone" + __SVG__
+		cas __OPERATION_SMARTEVA__										: sCheminIcone = "ext/Icones Supports/sma-icone" + __SVG__
+		cas __OPERATION_SMS__											: sCheminIcone = "ext/Icones Supports/sms-icone" + __SVG__
+		cas __OPERATION_SMS_NOTIFICATION__								: sCheminIcone = "ext/Icones Supports/sms-icone" + __SVG__
+		cas __OPERATION_SMS_WEBSERVICE__								: sCheminIcone = "ext/Icones Supports/sms-icone" + __SVG__
+		cas __OPERATION_SMS_INTERACTIF__								: sCheminIcone = "ext/Icones Supports/smi-icone" + __SVG__
+		cas __OPERATION_RCS__											: sCheminIcone = "ext/Icones Supports/rcs-icone" + __SVG__
+		cas __OPERATION_RCS_INTERACTIF__								: sCheminIcone = "ext/Icones Supports/rci-icone" + __SVG__
+		cas __OPERATION_VMS__											: sCheminIcone = "ext/Icones Supports/vms-icone" + __SVG__
+		cas __OPERATION_VMS_UNITAIRE__									: sCheminIcone = "ext/Icones Supports/vms-icone" + __SVG__
+		cas __OPERATION_TEL__											: sCheminIcone = "ext/Icones Supports/tel-icone" + __SVG__
+		cas __OPERATION_EMAIL__											: sCheminIcone = "ext/Icones Supports/eml-icone" + __SVG__
+		cas __OPERATION_EMAIL_NOTIFICATION__							: sCheminIcone = "ext/Icones Supports/eml-icone" + __SVG__
+		cas __OPERATION_RNVP__, __OPERATION_BLOCTEL__					: sCheminIcone = "ext/Icones Supports/bdd-icone" + __SVG__
+		cas __OPERATION_COURRIER_GESTION__								: sCheminIcone = "ext/Icones Supports/gst-icone" + __SVG__
+		cas __OPERATION_MARKETEAM__										: sCheminIcone = "ext/Icones Supports/mkt-icone" + __SVG__
+		autre cas														: sCheminIcone = "ext/Icones Supports/mkt-icone" + __SVG__
+	fin
+sinon
+	selon pTypeProjet
+		cas __OPERATION_COURRIER__										: sCheminIcone = "ext/treeview/treeview-ltr" + __SVG__
+		cas __OPERATION_COURRIER_INTERACTIF__							: sCheminIcone = "ext/treeview/treeview-lti" + __SVG__
+		cas __OPERATION_TRACTEVA__										: sCheminIcone = "ext/treeview/treeview-tra" + __SVG__
+		cas __OPERATION_SMARTEVA__										: sCheminIcone = "ext/treeview/treeview-sma" + __SVG__
+		cas __OPERATION_SMS__											: sCheminIcone = "ext/treeview/treeview-sms" + __SVG__
+		cas __OPERATION_SMS_NOTIFICATION__								: sCheminIcone = "ext/treeview/treeview-smn" + __SVG__
+		cas __OPERATION_SMS_WEBSERVICE__								: sCheminIcone = "ext/treeview/treeview-smn" + __SVG__
+		cas __OPERATION_SMS_INTERACTIF__								: sCheminIcone = "ext/treeview/treeview-smi" + __SVG__
+		cas __OPERATION_RCS__											: sCheminIcone = "ext/treeview/treeview-rcs" + __SVG__
+		cas __OPERATION_RCS_INTERACTIF__								: sCheminIcone = "ext/treeview/treeview-rci" + __SVG__
+		cas __OPERATION_VMS__											: sCheminIcone = "ext/treeview/treeview-vms" + __SVG__
+		cas __OPERATION_VMS_UNITAIRE__									: sCheminIcone = "ext/treeview/treeview-vms" + __SVG__
+		cas __OPERATION_TEL__											: sCheminIcone = "ext/treeview/treeview-tel" + __SVG__
+		cas __OPERATION_EMAIL__											: sCheminIcone = "ext/treeview/treeview-eml" + __SVG__
+		cas __OPERATION_EMAIL_NOTIFICATION__							: sCheminIcone = "ext/treeview/treeview-eml" + __SVG__
+		cas __OPERATION_RNVP__, __OPERATION_BLOCTEL__					: sCheminIcone = "ext/treeview/treeview-bdd" + __SVG__
+		cas __OPERATION_COURRIER_GESTION__								: sCheminIcone = "ext/treeview/treeview-ltr" + __SVG__
+		cas __OPERATION_MARKETEAM__										: sCheminIcone = "ext/treeview/treeview-mkt" + __SVG__
+		cas __RESERVE_ARGENT__											: sCheminIcone = "ext/treeview/treeview-reserve" + __SVG__
+		cas __RESERVE_AUGMENTATION__									: sCheminIcone = "ext/treeview/treeview-rsv-up" + __SVG__
+		cas __RESERVE_AFFECTATION__										: sCheminIcone = "ext/treeview/treeview-rsv-up" + __SVG__
+		cas __RESERVE_CADEAU__											: sCheminIcone = "ext/treeview/treeview-rsv-cadeau" + __SVG__
+		cas __RESERVE_RETRAIT__											: sCheminIcone = "ext/treeview/treeview-rsv-down" + __SVG__
+		cas __RESERVE_SUPPRESSION_OPERATION__							: sCheminIcone = "ext/treeview/treeview-rsv-up" + __SVG__
+		cas __ABONNEMENT_FONCTION__										: sCheminIcone = "ext/treeview/treeview-abo" + __SVG__
+		cas __ABONNEMENT_FONCTION_RENOUVELLEMENT__						: sCheminIcone = "ext/treeview/treeview-abo" + __SVG__
+		cas __ABONNEMENT_FONCTION_HISTORIQUE__							: sCheminIcone = "ext/treeview/treeview-abo" + __SVG__
+		cas __ABONNEMENT_PRESTATION__									: sCheminIcone = "ext/treeview/treeview-abo" + __SVG__
+		cas __ABONNEMENT_PRESTATION_RENOUVELLEMENT__					: sCheminIcone = "ext/treeview/treeview-abo" + __SVG__
+		cas __ABONNEMENT_PRESTATION_HISTORIQUE__						: sCheminIcone = "ext/treeview/treeview-abo" + __SVG__
+		cas __FACTURE_OPERATION__										: sCheminIcone = "ext/treeview/treeview-mkt" + __SVG__
+		cas __FACTURE_ABONNEMENT_FONCTION__								: sCheminIcone = "ext/treeview/treeview-abo" + __SVG__
+		cas __FACTURE_ABONNEMENT_PRESTATION__							: sCheminIcone = "ext/treeview/treeview-abo" + __SVG__
+		cas __FACTURE_RESERVE_ARGENT__									: sCheminIcone = "ext/treeview/treeview-reserve" + __SVG__
+		cas __FACTURE_NOTIFICATION__									: sCheminIcone = "ext/treeview/treeview-notification" + __SVG__
+		cas __FACTURE_MIXE__											: sCheminIcone = "ext/treeview/treeview-mkt" + __SVG__
+		autre cas														: sCheminIcone = "ext/treeview/treeview-mkt" + __SVG__
+	fin
+fin
+
+renvoyer sCheminIcone
+

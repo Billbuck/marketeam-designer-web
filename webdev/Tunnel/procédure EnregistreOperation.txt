@@ -6,6 +6,7 @@ bEstOperationEnregistre est un booléen
 selon __stOperation.TypeOperation
 
 	cas __OPERATION_SMS__		: bEstOperationEnregistre = AjoutModificationOperationSms(__stOperation)
+	cas __OPERATION_RCS__		: bEstOperationEnregistre = AjoutModificationOperationRcs(__stOperation)
 	cas __OPERATION_VMS__		: bEstOperationEnregistre = AjoutModificationOperationVms(__stOperation)
 	cas __OPERATION_EMAIL__		: bEstOperationEnregistre = AjoutModificationOperationEmail(__stOperation)
 		

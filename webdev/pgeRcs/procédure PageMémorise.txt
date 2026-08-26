@@ -1,0 +1,3 @@
+procédure PageMémorise(pPrecedent est un booléen = Faux)
+
+renvoyer Vrai

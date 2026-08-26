@@ -1,0 +1,3 @@
+procédure InitSms()
+
+__sUrlCliquezIci		= ValeurParametre("Url_CliquezIci",prm_parametre.ValChaine..Nom)

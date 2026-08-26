@@ -1,0 +1,48 @@
+// Résumé : Charge la structure RCS d'une opération (ope_rcs + cartes + boutons)
+// Syntaxe :
+//[ <Résultat> = ] ChargeStructOperationRcs (<pIdOperation>)
+//
+// Paramètres :
+//	pIdOperation : identifiant de l'opération (= IdRcs)
+// Valeur de retour :
+// 	structOperationRcs
+procédure ChargeStructOperationRcs(pIdOperation)
+
+sCreditSms		est une chaîne
+nIndCarte		est un entier
+stOperationRcs	est une structOperationRcs
+stCarte			est une structOperationRcsCarte
+stBouton		est une structOperationRcsBouton
+
+
+si ope_rcs.LitRecherchePremier(IdRcs, pIdOperation) alors
+	FichierVersMémoire(stOperationRcs, ope_rcs)
+
+	si ope_rcs.RepliCreditSms <> "" alors
+		sCreditSms = ope_rcs.RepliCreditSms
+		Désérialise(stOperationRcs.taaRepliCreditSms, sCreditSms, psdJSON)
+	fin
+
+	pour tout ope_rcs_carte avec IdRcs = pIdOperation
+		stCarte.tabBouton.SupprimeTout()
+		FichierVersMémoire(stCarte, ope_rcs_carte)
+		stOperationRcs.tabCarte.Ajoute(stCarte)
+	fin
+
+	// Une seule lecture : commun si IdRcsCarte vide, sinon bouton de la carte
+	pour tout ope_rcs_bouton avec IdRcs = pIdOperation
+		FichierVersMémoire(stBouton, ope_rcs_bouton)
+		si ope_rcs_bouton.IdRcsCarte = 0 alors
+			stOperationRcs.tabBoutonCommun.Ajoute(stBouton)
+		sinon
+			pour nIndCarte = 1 _à_ stOperationRcs.tabCarte..Occurrence
+				si stOperationRcs.tabCarte[nIndCarte].IdRcsCarte = ope_rcs_bouton.IdRcsCarte alors
+					stOperationRcs.tabCarte[nIndCarte].tabBouton.Ajoute(stBouton)
+					sortir
+				fin
+			fin
+		fin
+	fin
+fin
+
+renvoyer stOperationRcs

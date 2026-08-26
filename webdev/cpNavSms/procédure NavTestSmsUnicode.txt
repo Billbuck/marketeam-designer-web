@@ -1,0 +1,27 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] NavTestSmsUnicode (<pMessage>)
+//
+// Paramètres :
+//	pMessage : <indiquez ici le rôle de pMessage>
+
+// Valeur de retour :
+// 	booléen : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+//	pSms : <indiquez ici le rôle de pSms>
+procédure NavTestSmsUnicode(local pMessage)
+
+pMessage = Remplace(pMessage, RC, Caract(10))
+
+T est une chaîne = Caract(34) + Caract(10) + "- @£$¥èéùìòÇØøÅå_^{}[~]|€ÆæßÉ!¤%&'()*+,./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà"
+
+pour I = 1 _à_ Taille(pMessage)
+	si Position(T,pMessage[[I]]) = 0 alors
+		renvoyer Vrai
+	fin
+fin
+
+renvoyer Faux

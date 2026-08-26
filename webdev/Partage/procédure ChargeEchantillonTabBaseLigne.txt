@@ -1,23 +1,24 @@
 // Résumé : <indiquez ici ce que fait la procédure>
 procédure ChargeEchantillonTabBaseLigne(stOperation est une structOperation)
 
-sTexteRequete			est une chaîne
-sdReqEchantillon		est une Source de Données
-sWhereBase				est une chaîne
-sFiltre					est une chaîne
-sListeIdBase			est une chaîne
-sConditionType			est une chaîne	// << NOUVEAU
+sTexteRequete				est une chaîne
+sdReqEchantillon			est une Source de Données
+sWhereBase					est une chaîne
+sFiltre						est une chaîne
+sListeIdBase				est une chaîne
+sConditionType				est une chaîne	// << NOUVEAU
 tabBaseEchantillon		est un tableau de StructBaseLigne
-stBaseEchantillon		est une StructBaseLigne
+stBaseEchantillon			est une StructBaseLigne
 
 // -------------------------------------------------------
 // Condition SQL selon le type d'opération
 // -------------------------------------------------------
 selon stOperation.TypeOperation
-	cas __OPERATION_SMS__ :		sConditionType = "Portable IS NOT NULL"
-	cas __OPERATION_VMS__ :		sConditionType = "Portable IS NOT NULL"
-	cas __OPERATION_EMAIL__ :	sConditionType = "Email IS NOT NULL"
-	cas __OPERATION_TEL__ :		sConditionType = "Tel IS NOT NULL OR Portable IS NOT NULL"
+	cas __OPERATION_SMS__		: sConditionType = "Portable IS NOT NULL"
+	cas __OPERATION_RCS__ 		: sConditionType = "Portable IS NOT NULL"
+	cas __OPERATION_VMS__ 		: sConditionType = "Portable IS NOT NULL"
+	cas __OPERATION_EMAIL__ 	: sConditionType = "Email IS NOT NULL"
+	cas __OPERATION_TEL__ 		: sConditionType = "Tel IS NOT NULL OR Portable IS NOT NULL"
 	cas __OPERATION_COURRIER__ :
 		sConditionType = "(Adresse1 IS NOT NULL OR Adresse2 IS NOT NULL OR Adresse3 IS NOT NULL OR Adresse4 IS NOT NULL) AND (CodePostal IS NOT NULL AND Ville IS NOT NULL)"
 	autre cas

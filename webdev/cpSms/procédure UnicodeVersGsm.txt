@@ -1,0 +1,25 @@
+procédure UnicodeVersGsm(local suMessage est une chaîne)
+
+sCopie		est une chaîne
+sCaractère	est une chaîne
+sSansAccent	est une chaîne
+bErreur 	est un booléen
+
+pour I = 1 _à_ suMessage.Taille()
+	sCaractère = suMessage[[I]]
+	sSansAccent = sCaractère.SansAccent()
+	selon Vrai
+		cas cpSms.__tabCaracteresSmsStandard.Cherche(tcLinéaire,sCaractère) > 0
+			sCopie += sCaractère
+		cas cpSms.__taaCaracteresSubstitution[sCaractère]..Vide = Faux
+			sCopie += cpSms.__taaCaracteresSubstitution[sCaractère]
+		cas cpSms.__tabCaracteresSmsStandard.Cherche(tcLinéaire,sSansAccent) > 0
+			sCopie += sSansAccent
+		autres cas
+			bErreur = Vrai
+			sCopie 	+= "?"
+	fin
+fin
+
+renvoyer (sCopie, bErreur)
+

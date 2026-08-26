@@ -1,0 +1,63 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// InitTitreOperation ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure InitTitreOperation()
+
+selon __stOperation.TypeOperation
+	cas __OPERATION_COURRIER__
+		si __stOperation.EstCliquezIci = 0 alors
+			libTitre						= "Opération Courrier"
+			imgTypeOperation			= "ext/courrier-icone" + __SVG__
+		sinon
+			libTitre						= "Opération Courrier Interactif"
+			imgTypeOperation			= "ext/courrier-interactif-icone" + __SVG__
+		fin
+
+	cas __OPERATION_TRACTEVA__
+		libTitre							= "Opération Tract"
+		imgTypeOperation				= "ext/tract-icone" + __SVG__
+
+	cas __OPERATION_SMARTEVA__
+		libTitre							= "Opération tract sous enveloppe"
+		imgTypeOperation				= "ext/tract-sous-enveloppe-icone" + __SVG__
+
+	cas __OPERATION_SMS__
+		si __stOperation.EstCliquezIci = 0 alors
+			libTitre						= "Opération Sms"
+			imgTypeOperation			= "ext/sms-icone" + __SVG__
+		sinon
+			libTitre						= "Opération Sms Interactif"
+			imgTypeOperation			= "ext/sms-interactif-icone" + __SVG__
+		fin
+
+	cas __OPERATION_RCS__
+		si __stOperation.EstCliquezIci = 0 alors
+			libTitre						= "Opération Rcs"
+			imgTypeOperation			= "ext/rcs-icone" + __SVG__
+		sinon
+			libTitre						= "Opération Rcs Interactif"
+			imgTypeOperation			= "ext/rcs-interactif-icone" + __SVG__
+		fin
+
+	cas __OPERATION_VMS__
+		libTitre							= "Opération Vms"
+		imgTypeOperation				= "ext/vms-icone" + __SVG__
+
+	cas __OPERATION_TEL__
+		libTitre							= "Opération Call Center"
+		imgTypeOperation				= "ext/callcenter-icone" + __SVG__
+
+	cas __OPERATION_EMAIL__
+		libTitre							= "Opération Email"
+		imgTypeOperation				= "ext/email-icone" + __SVG__
+
+fin

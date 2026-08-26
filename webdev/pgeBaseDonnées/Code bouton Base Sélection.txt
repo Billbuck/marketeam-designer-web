@@ -3,6 +3,7 @@ sOption est une chaîne
 selon __stOperation.TypeOperation
 	cas __OPERATION_COURRIER__	: sOption = "AND clt_base.NbrAdresse > 0"
 	cas __OPERATION_SMS__ 		: sOption = "AND clt_base.NbrSms > 0"
+	cas __OPERATION_RCS__ 		: sOption = "AND clt_base.NbrSms > 0"
 	cas __OPERATION_VMS__ 		: sOption = "AND clt_base.NbrSms > 0"
 	cas __OPERATION_TEL__ 		: sOption = "AND clt_base.NbrTel > 0"
 	cas __OPERATION_EMAIL__ 	: sOption = "AND clt_base.NbrEmail > 0"
@@ -22,3 +23,4 @@ dispBase[3].Visible = Faux
 dispBase[4].Visible = Faux
 InitSaisieAssitéeBaseDeDonnées()
 PopupAffiche(popBasesDeDonnées,popupEpinglée+popupHautCentre+popupAnnulable)
+

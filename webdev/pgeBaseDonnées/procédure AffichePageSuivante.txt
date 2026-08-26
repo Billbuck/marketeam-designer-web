@@ -1,0 +1,20 @@
+procédure AffichePageSuivante()
+
+si PageMémorise() alors
+	selon __stOperation.TypeOperation
+		cas __OPERATION_COURRIER__
+			si __stOperation.stOperationLettre.IdPackage = 0	 alors
+				PageAffiche(pgeMctContenant)
+			sinon
+				PageAffiche(pgeMctContenu)
+			fin
+		cas __OPERATION_SMS__		: PageAffiche(pgeSms)
+		cas __OPERATION_RCS__		: PageAffiche(pgeRcs)
+		cas __OPERATION_VMS__		: PageAffiche(pgeVms)
+		cas __OPERATION_EMAIL__		: PageAffiche(pgeEmail)
+		cas __OPERATION_TEL__		: PageAffiche(pgeTelParametre)
+		autres cas
+	fin
+sinon
+	popJaugeProgression.Ferme()
+fin

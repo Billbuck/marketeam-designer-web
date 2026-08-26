@@ -1,0 +1,21 @@
+procédure NavUnicodeVersGsm(local pMessage)
+
+sCopie		est une chaîne
+sCaractère	est une chaîne
+
+pMessage = Remplace(pMessage,RC,Caract(10))
+
+pour I = 1 _à_ Taille(pMessage)
+	sCaractère	= pMessage[[I]]
+	selon Vrai
+		cas cpSms.__tabCaracteresSmsStandard.Cherche(tcLinéaire,sCaractère) > 0
+			sCopie += sCaractère
+		cas cpSms.__taaCaracteresSubstitution[sCaractère]..Vide = Faux
+			sCopie += cpSms.__taaCaracteresSubstitution[sCaractère]
+		autres cas
+			sCopie += "?"
+	fin
+fin
+
+renvoyer sCopie
+

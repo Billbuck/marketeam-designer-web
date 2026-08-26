@@ -1,0 +1,17 @@
+CREATE TABLE `rcs_agent_operateur` (
+	`IdRcsAgentOperateur` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdRcsAgent` INT(11) NOT NULL,
+	`CodePays` CHAR(2) NOT NULL COMMENT 'ISO 3166-1 alpha-2' COLLATE 'utf8mb4_unicode_ci',
+	`Operateur` VARCHAR(50) NOT NULL COMMENT 'Nom du provider retourne par Infobip' COLLATE 'utf8mb4_unicode_ci',
+	`Statut` ENUM('PENDING','IN_PROGRESS','COMPLETED','REJECTED') NOT NULL DEFAULT 'PENDING' COLLATE 'utf8mb4_unicode_ci',
+	`MotifRejet` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`DateHeureStatut` DATETIME NULL DEFAULT NULL,
+	PRIMARY KEY (`IdRcsAgentOperateur`) USING BTREE,
+	UNIQUE INDEX `IdRcsAgent_CodePays_Operateur` (`IdRcsAgent`, `CodePays`, `Operateur`) USING BTREE,
+	INDEX `IdRcsAgent_Statut` (`IdRcsAgent`, `Statut`) USING BTREE,
+	CONSTRAINT `FK_rcs_agent_operateur_rcs_agent` FOREIGN KEY (`IdRcsAgent`) REFERENCES `rcs_agent` (`IdRcsAgent`) ON UPDATE NO ACTION ON DELETE CASCADE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+ROW_FORMAT=DYNAMIC
+;

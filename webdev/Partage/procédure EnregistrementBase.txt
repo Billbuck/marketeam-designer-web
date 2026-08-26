@@ -19,16 +19,17 @@
 //	pNomJauge : <indiquez ici le rôle de pNomJauge>
 procédure EnregistrementBase(stOperation est une structOperation)
 
-sTexteRequete						est une chaîne
+sTexteRequete							est une chaîne
 sdReqEnregistrement					est une Source de Données
-sFiltre								est une chaîne
-stBase								est une StructBase
-sWhere								est une chaîne
-sListeInsert						est une chaîne
-sListeSelect						est une chaîne
+sFiltre									est une chaîne
+stBase									est une StructBase
+sWhere									est une chaîne
+sListeInsert							est une chaîne
+sListeSelect							est une chaîne
 
 selon stOperation.TypeOperation
 	cas __OPERATION_SMS__			: sWhere = "AND Portable IS NOT NULL AND StopPub = 0"
+	cas __OPERATION_RCS__			: sWhere = "AND Portable IS NOT NULL AND StopPub = 0"
 	cas __OPERATION_VMS__			: sWhere = "AND Portable IS NOT NULL"
 	cas __OPERATION_COURRIER__		: sWhere = "AND (Adresse1 IS NOT NULL OR Adresse2 IS NOT NULL) AND CodePostal IS NOT NULL AND Ville IS NOT NULL"
 	cas __OPERATION_EMAIL__			: sWhere = "AND Email IS NOT NULL"
@@ -42,29 +43,29 @@ pour tout stBase de stOperation.tabBase
 	selon Vrai
 		cas stBase.EstAjoute = Vrai // Création
 
-		 	dos_base.RAZ()
-		 	MémoireVersFichier(stBase,dos_base)
-			dos_base.IdOperation			= stOperation.IdOperation
+			dos_base.RAZ()
+			MémoireVersFichier(stBase,dos_base)
+			dos_base.IdOperation					= stOperation.IdOperation
 			dos_base.IdBaseClient..Null		= (stBase.IdBaseClient = 0)
-			dos_base.IdFiltre..Null			= (stBase.IdFiltre = 0)
-			dos_base.DateHeureCreation		= DateHeureSys()
-			dos_base.UserCreation			= Partage.__vcUser.NomUser
-		 	si dos_base.Ajoute() alors
+			dos_base.IdFiltre..Null				= (stBase.IdFiltre = 0)
+			dos_base.DateHeureCreation			= DateHeureSys()
+			dos_base.UserCreation				= Partage.__vcUser.NomUser
+			si dos_base.Ajoute() alors
 				stBase.IdBase = dos_base.IdBase
-		 	sinon
+			sinon
 				<compile si TypeConfiguration <> Webservice>
 					Info("Erreur ajout base")
 				<fin>
-		 		renvoyer Faux
-		 	fin
+				renvoyer Faux
+			fin
 
 			pour tout stBaseChamp, sLibelle de stBase.taaBaseChamp
 				dos_base_champ.RAZ()
 				dos_base_champ.IdBase	= stBase.IdBase
 				dos_base_champ.Libelle	= sLibelle
-				dos_base_champ.Champ	= stBaseChamp.Champ
+				dos_base_champ.Champ		= stBaseChamp.Champ
 				dos_base_champ.Type		= stBaseChamp.Type
-				dos_base_champ.Ordre	= stBaseChamp.Ordre
+				dos_base_champ.Ordre		= stBaseChamp.Ordre
 				si pas dos_base_champ.Ajoute() alors
 					<compile si TypeConfiguration <> Webservice>
 						Info("Erreur ajout dos_base_champ")
@@ -77,16 +78,16 @@ pour tout stBase de stOperation.tabBase
 				sFiltre = " AND (" + GenereRequeteFiltreClientBase(stBase.IdBaseClient,stBase.IdFiltre) +")"
 			fin
 
-		 	sListeInsert = ""
-		 	sListeSelect = ""
-		 	pour tout stBaseChamp, sLibelle de stOperation.taaBaseChamp
-		 		si stBase.taaBaseChamp[sLibelle]..Existe alors
+			sListeInsert		= ""
+			sListeSelect		= ""
+			pour tout stBaseChamp, sLibelle de stOperation.taaBaseChamp
+				si stBase.taaBaseChamp[sLibelle]..Existe alors
 					sListeInsert += [","] + stBaseChamp.Champ
 					sListeSelect += [","] + stBase.taaBaseChamp[sLibelle].Champ
-		 		fin
-		 	fin
-		 	sListeInsert += [","] + "Sexe,Profil"
-		 	sListeSelect += [","] + "Sexe,Profil"
+				fin
+			fin
+			sListeInsert += [","] + "Sexe,Profil"
+			sListeSelect += [","] + "Sexe,Profil"
 
 			sTexteRequete =
 			[

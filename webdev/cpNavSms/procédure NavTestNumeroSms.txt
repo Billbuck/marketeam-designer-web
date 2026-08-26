@@ -1,0 +1,40 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] NavTestNumeroSms (<pSms>)
+//
+// Paramètres :
+//	pSms : <indiquez ici le rôle de pSms>
+
+// Valeur de retour :
+// 	booléen : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure NavTestNumeroSms(pSms)
+
+sSms est une chaîne = Remplace(pSms,".","")
+
+nAsc est une entier
+sNumero est une chaîne
+
+pour I = 1 _à_ Taille(sSms)
+	nAsc = Asc(sSms[[I]])
+	si nAsc = 48 à 57  alors
+		sNumero += sSms[[I]]
+	fin
+fin
+
+si sNumero[[à 2]] = "33" alors 
+	sNumero = "0" + Droite(sNumero,Taille(sNumero)-2)
+fin
+
+si Taille(sNumero) = 9 _et_ sNumero[[1]] <> "0" alors
+	sNumero = "0" + sNumero
+fin
+
+si Taille(sNumero) = 10 _et_ (sNumero[[2]] = "6" _ou_ sNumero[[2]] = "7") alors
+	renvoyer Vrai
+sinon
+	renvoyer Faux
+fin

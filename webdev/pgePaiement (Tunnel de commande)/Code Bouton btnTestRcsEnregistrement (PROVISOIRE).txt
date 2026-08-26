@@ -1,0 +1,346 @@
+// **** Clic serveur — PROVISOIRE, à supprimer ensuite ****
+// Bouton : btnTestRcsEnregistrement, page pgePaiement
+// Ne touche pas à l'opération du tunnel. Crée sa propre opération de test.
+
+sRapport			est une chaîne
+sNomTest			est une chaîne
+nIdTest				est un entier
+nIdCarte1			est un entier
+nIdCarte2			est un entier
+nIdBouton1			est un entier
+nIdBouton2			est un entier
+nIdBoutonCarte2		est un entier
+nIdBoutonCommun		est un entier
+nIndCarte			est un entier
+bEtapeOk			est un booléen
+stTest				est une structOperation
+stLu				est une structOperation
+stCarte				est une structOperationRcsCarte
+stBouton			est une structOperationRcsBouton
+
+
+sNomTest = "TEST RCS " + DateHeureSys() + " - à supprimer"
+
+si __stOperation.IdClient = 0 _ou_ __stOperation.IdContact = 0 alors
+	Info("Test RCS impossible : ouvrez cette page depuis le tunnel, avec un client déjà choisi (comme pour un SMS).")
+	retour
+fin
+
+// ─── Étape 1 — Création ───────────────────────────────────────────────────
+stTest.IdClient					= __stOperation.IdClient
+stTest.IdContact				= __stOperation.IdContact
+stTest.IdClientFacturation		= __stOperation.IdClientFacturation
+stTest.IdAdresseFacturation		= __stOperation.IdAdresseFacturation
+stTest.IdValideur				= __stOperation.IdValideur
+si stTest.IdValideur = 0 alors stTest.IdValideur = __stOperation.IdContact
+stTest.TypeOperation			= __OPERATION_RCS__
+stTest.TypeProjet				= __OPERATION_RCS__
+stTest.NomOperation				= sNomTest
+stTest.Designation				= sNomTest
+
+stCarte.IdRcsCarte	= 0
+stCarte.Ordre		= 1
+stCarte.Titre		= "Carte test 1"
+stBouton			= FabriqueBoutonTest(1, "Bouton A")
+stCarte.tabBouton.Ajoute(stBouton)
+stBouton			= FabriqueBoutonTest(2, "Bouton B")
+stCarte.tabBouton.Ajoute(stBouton)
+stTest.stOperationRcs.tabCarte.Ajoute(stCarte)
+
+si pas Partage.AjoutModificationOperationRcs(stTest) _ou_ stTest.IdOperation = 0 alors
+	AjouteEtape(1, "Création", Faux, "l'enregistrement a échoué")
+	nIdTest = stTest.IdOperation
+sinon
+	nIdTest	= stTest.IdOperation
+	stLu	= Partage.ChargeStructOperation(nIdTest)
+	nIndCarte = IndiceCarteParTitre(stLu, "Carte test 1")
+	bEtapeOk = (stLu.TypeOperation = __OPERATION_RCS__)
+	bEtapeOk = bEtapeOk _et_ (stLu.stOperationRcs.tabCarte..Occurrence = 1)
+	bEtapeOk = bEtapeOk _et_ (nIndCarte > 0)
+	si nIndCarte > 0 alors
+		nIdCarte1 = stLu.stOperationRcs.tabCarte[nIndCarte].IdRcsCarte
+		bEtapeOk = bEtapeOk _et_ (stLu.stOperationRcs.tabCarte[nIndCarte].tabBouton..Occurrence = 2)
+		si stLu.stOperationRcs.tabCarte[nIndCarte].tabBouton..Occurrence >= 2 alors
+			nIdBouton1	= stLu.stOperationRcs.tabCarte[nIndCarte].tabBouton[1].IdRcsBouton
+			nIdBouton2	= stLu.stOperationRcs.tabCarte[nIndCarte].tabBouton[2].IdRcsBouton
+		fin
+		bEtapeOk = bEtapeOk _et_ (nIdCarte1 > 0) _et_ (nIdBouton1 > 0) _et_ (nIdBouton2 > 0)
+	fin
+	si bEtapeOk alors
+		AjouteEtape(1, "Création", Vrai, "IdOperation " + nIdTest)
+		stTest = stLu
+	sinon
+		AjouteEtape(1, "Création", Faux, DetailEcartRelecture(stLu))
+	fin
+fin
+
+// ─── Étape 2 — Relecture ──────────────────────────────────────────────────
+si nIdTest > 0 _et_ nIdCarte1 > 0 alors
+	stLu = Partage.ChargeStructOperation(nIdTest)
+	nIndCarte = IndiceCarteParId(stLu, nIdCarte1)
+	bEtapeOk = (stLu.TypeOperation = __OPERATION_RCS__)
+	bEtapeOk = bEtapeOk _et_ (stLu.stOperationRcs.tabCarte..Occurrence = 1)
+	bEtapeOk = bEtapeOk _et_ (nIndCarte > 0)
+	si nIndCarte > 0 alors
+		bEtapeOk = bEtapeOk _et_ (stLu.stOperationRcs.tabCarte[nIndCarte].Titre = "Carte test 1")
+		bEtapeOk = bEtapeOk _et_ (stLu.stOperationRcs.tabCarte[nIndCarte].tabBouton..Occurrence = 2)
+	fin
+	si bEtapeOk alors
+		AjouteEtape(2, "Relecture", Vrai, "")
+		stTest = stLu
+	sinon
+		AjouteEtape(2, "Relecture", Faux, DetailEcartRelecture(stLu))
+	fin
+fin
+
+// ─── Étape 3 — Numéros conservés ──────────────────────────────────────────
+si nIdTest > 0 _et_ nIdCarte1 > 0 alors
+	nIndCarte = IndiceCarteParId(stTest, nIdCarte1)
+	si nIndCarte = 0 alors
+		AjouteEtape(3, "Numéros conservés", Faux, "carte " + nIdCarte1 + " introuvable avant modification")
+	sinon
+		stTest.stOperationRcs.tabCarte[nIndCarte].Titre = "Carte test 1 modifiée"
+		si pas Partage.AjoutModificationOperationRcs(stTest) alors
+			AjouteEtape(3, "Numéros conservés", Faux, "l'enregistrement a échoué")
+		sinon
+			stLu = Partage.ChargeStructOperation(nIdTest)
+			nIndCarte = IndiceCarteParId(stLu, nIdCarte1)
+			bEtapeOk = (stLu.stOperationRcs.tabCarte..Occurrence = 1)
+			bEtapeOk = bEtapeOk _et_ (nIndCarte > 0)
+			si nIndCarte > 0 alors
+				bEtapeOk = bEtapeOk _et_ (stLu.stOperationRcs.tabCarte[nIndCarte].IdRcsCarte = nIdCarte1)
+				bEtapeOk = bEtapeOk _et_ (stLu.stOperationRcs.tabCarte[nIndCarte].Titre = "Carte test 1 modifiée")
+				bEtapeOk = bEtapeOk _et_ (stLu.stOperationRcs.tabCarte[nIndCarte].tabBouton..Occurrence = 2)
+				si stLu.stOperationRcs.tabCarte[nIndCarte].tabBouton..Occurrence >= 2 alors
+					bEtapeOk = bEtapeOk _et_ (stLu.stOperationRcs.tabCarte[nIndCarte].tabBouton[1].IdRcsBouton = nIdBouton1)
+					bEtapeOk = bEtapeOk _et_ (stLu.stOperationRcs.tabCarte[nIndCarte].tabBouton[2].IdRcsBouton = nIdBouton2)
+				fin
+			fin
+			si bEtapeOk alors
+				AjouteEtape(3, "Numéros conservés", Vrai, "carte " + nIdCarte1 + ", boutons " + nIdBouton1 + " et " + nIdBouton2)
+				stTest = stLu
+			sinon
+				AjouteEtape(3, "Numéros conservés", Faux, DetailEcartNumeros(stLu, nIdCarte1, nIdBouton1, nIdBouton2))
+			fin
+		fin
+	fin
+fin
+
+// ─── Étape 4 — Ajout d'une carte ──────────────────────────────────────────
+si nIdTest > 0 _et_ nIdCarte1 > 0 alors
+	stCarte.tabBouton.SupprimeTout()
+	stCarte.IdRcsCarte	= 0
+	stCarte.Ordre		= 2
+	stCarte.Titre		= "Carte test 2"
+	stBouton			= FabriqueBoutonTest(1, "Bouton C")
+	stCarte.tabBouton.Ajoute(stBouton)
+	stTest.stOperationRcs.tabCarte.Ajoute(stCarte)
+
+	si pas Partage.AjoutModificationOperationRcs(stTest) alors
+		AjouteEtape(4, "Ajout d'une carte", Faux, "l'enregistrement a échoué")
+	sinon
+		stLu = Partage.ChargeStructOperation(nIdTest)
+		nIndCarte = IndiceCarteParTitre(stLu, "Carte test 2")
+		bEtapeOk = (stLu.stOperationRcs.tabCarte..Occurrence = 2)
+		bEtapeOk = bEtapeOk _et_ (IndiceCarteParId(stLu, nIdCarte1) > 0)
+		bEtapeOk = bEtapeOk _et_ (nIndCarte > 0)
+		si nIndCarte > 0 alors
+			nIdCarte2 = stLu.stOperationRcs.tabCarte[nIndCarte].IdRcsCarte
+			si stLu.stOperationRcs.tabCarte[nIndCarte].tabBouton..Occurrence >= 1 alors
+				nIdBoutonCarte2 = stLu.stOperationRcs.tabCarte[nIndCarte].tabBouton[1].IdRcsBouton
+			fin
+			bEtapeOk = bEtapeOk _et_ (nIdCarte2 > 0) _et_ (nIdBoutonCarte2 > 0)
+		fin
+		si bEtapeOk alors
+			AjouteEtape(4, "Ajout d'une carte", Vrai, "2 cartes, la première garde le n° " + nIdCarte1)
+			stTest = stLu
+		sinon
+			AjouteEtape(4, "Ajout d'une carte", Faux, "attendu 2 cartes et première carte n° " + nIdCarte1 + ", trouvé " + stLu.stOperationRcs.tabCarte..Occurrence + " carte(s)")
+		fin
+	fin
+fin
+
+// ─── Étape 5 — Suppression des boutons d'une carte ────────────────────────
+si nIdTest > 0 _et_ nIdCarte1 > 0 _et_ nIdCarte2 > 0 alors
+	nIndCarte = IndiceCarteParId(stTest, nIdCarte1)
+	si nIndCarte = 0 alors
+		AjouteEtape(5, "Suppression d'un bouton", Faux, "carte " + nIdCarte1 + " introuvable")
+	sinon
+		stTest.stOperationRcs.tabCarte[nIndCarte].tabBouton.SupprimeTout()
+		si pas Partage.AjoutModificationOperationRcs(stTest) alors
+			AjouteEtape(5, "Suppression d'un bouton", Faux, "l'enregistrement a échoué")
+		sinon
+			stLu = Partage.ChargeStructOperation(nIdTest)
+			nIndCarte = IndiceCarteParId(stLu, nIdCarte1)
+			bEtapeOk = (stLu.stOperationRcs.tabCarte..Occurrence = 2)
+			bEtapeOk = bEtapeOk _et_ (nIndCarte > 0)
+			si nIndCarte > 0 alors
+				bEtapeOk = bEtapeOk _et_ (stLu.stOperationRcs.tabCarte[nIndCarte].IdRcsCarte = nIdCarte1)
+				bEtapeOk = bEtapeOk _et_ (stLu.stOperationRcs.tabCarte[nIndCarte].tabBouton..Occurrence = 0)
+			fin
+			bEtapeOk = bEtapeOk _et_ (IndiceCarteParId(stLu, nIdCarte2) > 0)
+			si bEtapeOk alors
+				AjouteEtape(5, "Suppression d'un bouton", Vrai, "carte " + nIdCarte1 + " sans bouton, numéro conservé")
+				stTest = stLu
+			sinon
+				si nIndCarte > 0 alors
+					AjouteEtape(5, "Suppression d'un bouton", Faux, "attendu 0 bouton sur la carte " + nIdCarte1 + ", trouvé " + stLu.stOperationRcs.tabCarte[nIndCarte].tabBouton..Occurrence)
+				sinon
+					AjouteEtape(5, "Suppression d'un bouton", Faux, "la carte " + nIdCarte1 + " a disparu")
+				fin
+			fin
+		fin
+	fin
+fin
+
+// ─── Étape 6 — Ajout d'un bouton commun ───────────────────────────────────
+si nIdTest > 0 _et_ nIdBoutonCarte2 > 0 alors
+	stBouton = FabriqueBoutonTest(1, "Bouton commun")
+	stTest.stOperationRcs.tabBoutonCommun.Ajoute(stBouton)
+	si pas Partage.AjoutModificationOperationRcs(stTest) alors
+		AjouteEtape(6, "Ajout d'un bouton commun", Faux, "l'enregistrement a échoué")
+	sinon
+		stLu = Partage.ChargeStructOperation(nIdTest)
+		bEtapeOk = (stLu.stOperationRcs.tabBoutonCommun..Occurrence = 1)
+		bEtapeOk = bEtapeOk _et_ (IndiceCarteParId(stLu, nIdCarte1) > 0)
+		bEtapeOk = bEtapeOk _et_ (IndiceCarteParId(stLu, nIdCarte2) > 0)
+		si stLu.stOperationRcs.tabBoutonCommun..Occurrence >= 1 alors
+			nIdBoutonCommun = stLu.stOperationRcs.tabBoutonCommun[1].IdRcsBouton
+			bEtapeOk = bEtapeOk _et_ (nIdBoutonCommun > 0)
+		fin
+		nIndCarte = IndiceCarteParId(stLu, nIdCarte2)
+		si nIndCarte > 0 _et_ stLu.stOperationRcs.tabCarte[nIndCarte].tabBouton..Occurrence >= 1 alors
+			bEtapeOk = bEtapeOk _et_ (stLu.stOperationRcs.tabCarte[nIndCarte].tabBouton[1].IdRcsBouton = nIdBoutonCarte2)
+		sinon
+			bEtapeOk = Faux
+		fin
+		si nIdBoutonCommun > 0 alors
+			si ope_rcs_bouton.LitRecherchePremier(IdRcsBouton, nIdBoutonCommun) alors
+				bEtapeOk = bEtapeOk _et_ (ope_rcs_bouton.IdRcsCarte = 0)
+			sinon
+				bEtapeOk = Faux
+			fin
+		fin
+		si bEtapeOk alors
+			AjouteEtape(6, "Ajout d'un bouton commun", Vrai, "bouton " + nIdBoutonCommun + " sans carte, bouton de carte " + nIdBoutonCarte2 + " inchangé")
+			stTest = stLu
+		sinon
+			AjouteEtape(6, "Ajout d'un bouton commun", Faux, "attendu 1 bouton commun sans carte et bouton de carte n° " + nIdBoutonCarte2 + " inchangé")
+		fin
+	fin
+fin
+
+// ─── Étape 7 — Tout vider (cartes uniquement) ─────────────────────────────
+si nIdTest > 0 alors
+	stTest.stOperationRcs.tabCarte.SupprimeTout()
+	si pas Partage.AjoutModificationOperationRcs(stTest) alors
+		AjouteEtape(7, "Tout vider", Faux, "l'enregistrement a échoué")
+	sinon
+		stLu = Partage.ChargeStructOperation(nIdTest)
+		bEtapeOk = (stLu.stOperationRcs.tabCarte..Occurrence = 0)
+		bEtapeOk = bEtapeOk _et_ ope_rcs.LitRecherchePremier(IdRcs, nIdTest)
+		si nIdBoutonCommun > 0 alors
+			bEtapeOk = bEtapeOk _et_ (stLu.stOperationRcs.tabBoutonCommun..Occurrence = 1)
+			si stLu.stOperationRcs.tabBoutonCommun..Occurrence >= 1 alors
+				bEtapeOk = bEtapeOk _et_ (stLu.stOperationRcs.tabBoutonCommun[1].IdRcsBouton = nIdBoutonCommun)
+			fin
+		fin
+		si bEtapeOk alors
+			AjouteEtape(7, "Tout vider", Vrai, "plus de carte, bouton commun " + nIdBoutonCommun + " conservé, fiche RCS n° " + nIdTest + " toujours là")
+		sinon
+			si stLu.stOperationRcs.tabCarte..Occurrence > 0 alors
+				AjouteEtape(7, "Tout vider", Faux, "attendu 0 carte, trouvé " + stLu.stOperationRcs.tabCarte..Occurrence)
+			sinon
+				si stLu.stOperationRcs.tabBoutonCommun..Occurrence = 0 _et_ nIdBoutonCommun > 0 alors
+					AjouteEtape(7, "Tout vider", Faux, "le bouton commun " + nIdBoutonCommun + " a disparu, il aurait dû rester")
+				sinon
+					AjouteEtape(7, "Tout vider", Faux, "la fiche RCS a disparu, elle aurait dû rester")
+				fin
+			fin
+		fin
+	fin
+fin
+
+// ─── Étape 8 — Nettoyage ──────────────────────────────────────────────────
+si nIdTest > 0 alors
+	si dos_operation.LitRecherchePremier(IdOperation, nIdTest) alors
+		si dos_operation.NomOperation = sNomTest _et_ dos_operation.TypeOperation = __OPERATION_RCS__ alors
+			si dos_operation.Supprime() alors
+				AjouteEtape(8, "Nettoyage", Vrai, "opération " + nIdTest + " supprimée")
+			sinon
+				AjouteEtape(8, "Nettoyage", Faux, "supprimez à la main l'opération n° " + nIdTest + " (nom : " + sNomTest + ")")
+			fin
+		sinon
+			AjouteEtape(8, "Nettoyage", Faux, "sécurité : le nom ne correspond pas, rien n'a été effacé. Supprimez à la main l'opération n° " + nIdTest)
+		fin
+	sinon
+		AjouteEtape(8, "Nettoyage", Faux, "opération n° " + nIdTest + " introuvable")
+	fin
+fin
+
+Info(sRapport)
+Trace(sRapport)
+
+
+	procédure interne AjouteEtape(pNumero est un entier, pLibelle est une chaîne, pOk est un booléen, pDetail est une chaîne)
+		sRapport += "Étape " + pNumero + " — " + pLibelle + " "
+		si pOk alors
+			sRapport += "OK"
+		sinon
+			sRapport += "ÉCHEC"
+		fin
+		si pDetail <> "" alors sRapport += "  (" + pDetail + ")"
+		sRapport += RC
+	fin
+
+	procédure interne FabriqueBoutonTest(pOrdre est un entier, pLibelle est une chaîne)
+		stBoutonNeuf est une structOperationRcsBouton
+		stBoutonNeuf.IdRcsBouton	= 0
+		stBoutonNeuf.Ordre			= pOrdre
+		stBoutonNeuf.TypeBouton		= "OPEN_URL"
+		stBoutonNeuf.Libelle		= pLibelle
+		renvoyer stBoutonNeuf
+	fin
+
+	procédure interne IndiceCarteParId(pStLu est une structOperation, pIdCarte est un entier)
+		nIndCherche est un entier
+		pour nIndCherche = 1 _à_ pStLu.stOperationRcs.tabCarte..Occurrence
+			si pStLu.stOperationRcs.tabCarte[nIndCherche].IdRcsCarte = pIdCarte alors
+				renvoyer nIndCherche
+			fin
+		fin
+		renvoyer 0
+	fin
+
+	procédure interne IndiceCarteParTitre(pStLu est une structOperation, pTitre est une chaîne)
+		nIndChercheTitre est un entier
+		pour nIndChercheTitre = 1 _à_ pStLu.stOperationRcs.tabCarte..Occurrence
+			si pStLu.stOperationRcs.tabCarte[nIndChercheTitre].Titre = pTitre alors
+				renvoyer nIndChercheTitre
+			fin
+		fin
+		renvoyer 0
+	fin
+
+	procédure interne DetailEcartRelecture(pStLu est une structOperation)
+		sDetail est une chaîne = "attendu 1 carte « Carte test 1 » avec 2 boutons"
+		sDetail += ", trouvé " + pStLu.stOperationRcs.tabCarte..Occurrence + " carte(s)"
+		si pStLu.stOperationRcs.tabCarte..Occurrence >= 1 alors
+			sDetail += ", titre « " + pStLu.stOperationRcs.tabCarte[1].Titre + " », "
+			sDetail += pStLu.stOperationRcs.tabCarte[1].tabBouton..Occurrence + " bouton(s)"
+		fin
+		renvoyer sDetail
+	fin
+
+	procédure interne DetailEcartNumeros(pStLu est une structOperation, pIdCarte est un entier, pIdBoutonA est un entier, pIdBoutonB est un entier)
+		sDetail est une chaîne = "attendu carte " + pIdCarte + " et boutons " + pIdBoutonA + " / " + pIdBoutonB
+		si pStLu.stOperationRcs.tabCarte..Occurrence >= 1 alors
+			sDetail += ", trouvé carte " + pStLu.stOperationRcs.tabCarte[1].IdRcsCarte
+			si pStLu.stOperationRcs.tabCarte[1].tabBouton..Occurrence >= 1 alors
+				sDetail += ", bouton " + pStLu.stOperationRcs.tabCarte[1].tabBouton[1].IdRcsBouton
+			fin
+		sinon
+			sDetail += ", trouvé 0 carte"
+		fin
+		renvoyer sDetail
+	fin

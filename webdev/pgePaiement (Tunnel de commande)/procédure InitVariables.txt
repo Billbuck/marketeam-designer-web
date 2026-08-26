@@ -59,7 +59,7 @@ selon __stOperation.TypeOperation
 			cas __OPERATION_TRACTEVA__ : Tunnel.__vcTunnel.dBorneMinCalendrier = ProchaineLundiOuvré(7)
 		fin
 
-	cas __OPERATION_SMS__
+	cas __OPERATION_SMS__, __OPERATION_RCS__
 
 		dhImmediate = CalculeDateHeureOuvrée(DateHeureSys(),0,"0800","1300","1300","2100",Vrai)
 		Tunnel.__vcTunnel.dBorneMinCalendrier = dhImmediate..PartieDate

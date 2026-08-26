@@ -315,6 +315,7 @@ constante
 	__OPERATION_SMARTEVA__										= "STV"
 	__OPERATION_TRACTEVA__										= "TRA"
 	__OPERATION_SMS__											= "SMS"
+	__OPERATION_RCS__											= "RCS"
 	__OPERATION_SMS_NOTIFICATION__								= "SMN"
 	__OPERATION_SMS_WEBSERVICE__								= "SWS"
 	__OPERATION_SMS_INTERACTIF__								= "SMI"

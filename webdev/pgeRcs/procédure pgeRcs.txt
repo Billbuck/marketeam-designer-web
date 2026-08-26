@@ -1,0 +1,13 @@
+// **** Déclarations globales de pgeRcs (serveur) ****
+
+procédure pgeRcs(_pIdOperation = 0)
+
+_nIdOperation = _pIdOperation
+
+Tunnel.__taaPageVisitée[PageCourante] = Vrai
+
+libModeleTitrePage = "RCS"
+
+
+// **** Fin d'initialisation de pgeRcs (serveur) ****
+Init()

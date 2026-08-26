@@ -1,0 +1,42 @@
+CREATE TABLE `ope_rcs` (
+	`IdRcs` INT(11) NOT NULL,
+	`IdRcsModele` INT(11) NULL DEFAULT NULL,
+	`IdRcsAgent` INT(11) NULL DEFAULT NULL COMMENT 'Agent RCS utilisé - voir rcs_agent',
+	`TypeContenu` ENUM('CARD','CAROUSEL') NOT NULL DEFAULT 'CARD' COLLATE 'utf8mb4_unicode_ci',
+	`Orientation` ENUM('VERTICAL','HORIZONTAL') NOT NULL DEFAULT 'VERTICAL' COMMENT 'CARD uniquement' COLLATE 'utf8mb4_unicode_ci',
+	`Alignement` ENUM('LEFT','RIGHT') NOT NULL DEFAULT 'LEFT' COMMENT 'CARD + HORIZONTAL uniquement' COLLATE 'utf8mb4_unicode_ci',
+	`LargeurCarte` ENUM('SMALL','MEDIUM') NOT NULL DEFAULT 'MEDIUM' COMMENT 'CAROUSEL uniquement - conserver MEDIUM' COLLATE 'utf8mb4_unicode_ci',
+	`ModeleVariable` VARCHAR(400) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`EstRcsPersonnalise` TINYINT(1) NOT NULL DEFAULT '0',
+	`CampaignReferenceId` VARCHAR(50) NULL DEFAULT NULL COMMENT 'Renvoyé dans tous les webhooks Infobip' COLLATE 'utf8mb4_unicode_ci',
+	`ValiditeDuree` SMALLINT(5) UNSIGNED NULL DEFAULT NULL,
+	`ValiditeUnite` ENUM('SECONDS','MINUTES','HOURS') NULL DEFAULT 'HOURS' COLLATE 'utf8mb4_unicode_ci',
+	`FenetreJours` VARCHAR(60) NULL DEFAULT NULL COMMENT 'MONDAY,TUESDAY... séparés par virgule' COLLATE 'utf8mb4_unicode_ci',
+	`FenetreHeureDebut` TIME NULL DEFAULT NULL COMMENT 'Heure UTC et non heure de Paris',
+	`FenetreHeureFin` TIME NULL DEFAULT NULL COMMENT 'Heure UTC et non heure de Paris',
+	`EstRepliSms` TINYINT(1) NOT NULL DEFAULT '1',
+	`RepliSmsFrom` VARCHAR(11) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`RepliSmsMessage` VARCHAR(1200) NULL DEFAULT NULL COMMENT 'GSM-7, 1 à 3 segments' COLLATE 'utf8mb4_unicode_ci',
+	`RepliCreditSms` VARCHAR(1000) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`DateFin` DATE NULL DEFAULT NULL,
+	`HeureFin` TIME NULL DEFAULT NULL,
+	`Cadence` MEDIUMINT(8) UNSIGNED NULL DEFAULT NULL COMMENT 'Calculé par rapport à la cadence',
+	`Paquet` SMALLINT(5) UNSIGNED NULL DEFAULT NULL COMMENT 'Calculé par rapport à la cadence',
+	`Pause` TINYINT(3) UNSIGNED NULL DEFAULT NULL,
+	`NbrDestinataireRcs` INT(11) NULL DEFAULT NULL COMMENT 'Qualification ENABLED',
+	`NbrDestinataireRepliSms` INT(11) NULL DEFAULT NULL COMMENT 'Qualification UNREACHABLE',
+	`DateHeureQualification` DATETIME NULL DEFAULT NULL COMMENT 'Date de la qualification figée pour le devis',
+	`DateHeureCreation` DATETIME NOT NULL,
+	`DateHeureModification` DATETIME NULL DEFAULT NULL,
+	`UserCreation` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`UserModification` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	PRIMARY KEY (`IdRcs`) USING BTREE,
+	INDEX `IdRcsModele` (`IdRcsModele`) USING BTREE,
+	INDEX `IdRcsAgent` (`IdRcsAgent`) USING BTREE,
+	CONSTRAINT `FK_ope_rcs_dos_operation` FOREIGN KEY (`IdRcs`) REFERENCES `dos_operation` (`IdOperation`) ON UPDATE RESTRICT ON DELETE CASCADE,
+	CONSTRAINT `FK_ope_rcs_rcs_agent` FOREIGN KEY (`IdRcsAgent`) REFERENCES `rcs_agent` (`IdRcsAgent`) ON UPDATE RESTRICT ON DELETE RESTRICT
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+ROW_FORMAT=COMPACT
+;

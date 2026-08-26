@@ -1,0 +1,214 @@
+procédure AjoutModificationOperationRcs(stOperation est une structOperation)
+
+sCreditSms			est une chaîne
+sListeCarte			est une chaîne
+sListeBouton		est une chaîne
+sTexteRequete		est une chaîne
+sdReqRcs				est une Source de Données
+bEstModeCreation	est un booléen	= (stOperation.IdOperation = 0)		// On fait le test maintenant car après l'appel de AjoutModificationOperation l'IdOperation sera renseigné
+nIndCarte			est un entier
+nIndBouton			est un entier
+
+
+AjoutModificationOperation(stOperation)  // On ajoute / met à jour les données dans la table dos_operation
+
+si bEstModeCreation alors
+	ope_rcs.RAZ()
+	ope_rcs.IdRcs					= stOperation.IdOperation
+	ope_rcs.DateHeureCreation	= DateHeureSys()
+	ope_rcs.UserCreation			= Partage.__vcUser.NomUser
+
+sinon
+	si pas ope_rcs.LitRecherchePremier(IdRcs, stOperation.IdOperation) alors
+		<compile si TypeConfiguration <> Webservice>
+			Info("Erreur positionnement ope_rcs")
+		<fin>
+		renvoyer Faux
+	fin
+
+fin
+
+MémoireVersFichier(stOperation.stOperationRcs, ope_rcs)
+
+Sérialise(stOperation.stOperationRcs.taaRepliCreditSms, sCreditSms, psdJSON)
+ope_rcs.RepliCreditSms						= sCreditSms
+ope_rcs.RepliCreditSms.Null				= (sCreditSms = "")
+
+ope_rcs.RepliSmsMessage						= Remplace(ope_rcs.RepliSmsMessage, RC, Caract(10))
+si ope_rcs.TypeContenu = "" alors ope_rcs.TypeContenu = "CARD"
+si ope_rcs.Orientation = "" alors ope_rcs.Orientation = "VERTICAL"
+si ope_rcs.Alignement = "" alors ope_rcs.Alignement = "LEFT"
+si ope_rcs.LargeurCarte = "" alors ope_rcs.LargeurCarte = "MEDIUM"
+ope_rcs.IdRcsModele..Null					= (ope_rcs.IdRcsModele = 0)
+ope_rcs.IdRcsAgent..Null					= (ope_rcs.IdRcsAgent = 0)
+ope_rcs.ModeleVariable..Null				= (ope_rcs.ModeleVariable = "")
+ope_rcs.CampaignReferenceId..Null		= (ope_rcs.CampaignReferenceId = "")
+ope_rcs.ValiditeDuree..Null				= (ope_rcs.ValiditeDuree = 0)
+ope_rcs.DateFin..Null						= (stOperation.stOperationRcs.DateFin = "")
+ope_rcs.HeureFin..Null						= (stOperation.stOperationRcs.HeureFin = "")
+ope_rcs.FenetreHeureDebut..Null			= (pas HeureValide(stOperation.stOperationRcs.FenetreHeureDebut))
+ope_rcs.FenetreHeureFin..Null				= (pas HeureValide(stOperation.stOperationRcs.FenetreHeureFin))
+ope_rcs.DateHeureQualification..Null	= (pas DateHeureValide(stOperation.stOperationRcs.DateHeureQualification))
+
+
+si bEstModeCreation alors
+	si pas ope_rcs.Ajoute() alors
+		<compile si TypeConfiguration <> Webservice>
+			Info("Erreur :", ErreurInfo(errComplet))
+		<fin>
+		renvoyer Faux
+	fin
+sinon
+	ope_rcs.DateHeureModification	= DateHeureSys()
+	ope_rcs.UserModification		= Partage.__vcUser.NomUser
+	si pas ope_rcs.Modifie() alors
+		<compile si TypeConfiguration <> Webservice>
+			Info("Erreur :", ErreurInfo(errComplet))
+		<fin>
+		renvoyer Faux
+	fin
+fin
+
+
+// Cartes d'abord (pour disposer des IdRcsCarte), puis tous les boutons
+pour tout stCarte de stOperation.stOperationRcs.tabCarte
+	nIndCarte++
+	si stCarte.Ordre = 0 alors stCarte.Ordre = nIndCarte
+
+	si stCarte.IdRcsCarte = 0 alors
+		ope_rcs_carte.RAZ()
+		ope_rcs_carte.IdRcs						= stOperation.IdOperation
+		ope_rcs_carte.DateHeureCreation		= DateHeureSys()
+		ope_rcs_carte.UserCreation				= Partage.__vcUser.NomUser
+	sinon
+		si pas ope_rcs_carte.LitRecherchePremier(IdRcsCarte, stCarte.IdRcsCarte) alors
+			<compile si TypeConfiguration <> Webservice>
+				Info("Erreur positionnement ope_rcs_carte")
+			<fin>
+			renvoyer Faux
+		fin
+	fin
+
+	MémoireVersFichier(stCarte, ope_rcs_carte)
+	ope_rcs_carte.IdRcs = stOperation.IdOperation
+	si ope_rcs_carte.MediaHauteur = "" alors ope_rcs_carte.MediaHauteur = "MEDIUM"
+
+	si stCarte.IdRcsCarte = 0 alors
+		si pas ope_rcs_carte.Ajoute() alors
+			<compile si TypeConfiguration <> Webservice>
+				Info("Erreur :", ErreurInfo(errComplet))
+			<fin>
+			renvoyer Faux
+		fin
+		stCarte.IdRcsCarte = ope_rcs_carte.IdRcsCarte
+	sinon
+		ope_rcs_carte.DateHeureModification	= DateHeureSys()
+		ope_rcs_carte.UserModification		= Partage.__vcUser.NomUser
+		si pas ope_rcs_carte.Modifie() alors
+			<compile si TypeConfiguration <> Webservice>
+				Info("Erreur :", ErreurInfo(errComplet))
+			<fin>
+			renvoyer Faux
+		fin
+	fin
+
+	sListeCarte += [","] + stCarte.IdRcsCarte
+
+	nIndBouton = 0
+	pour tout stBouton de stCarte.tabBouton
+		nIndBouton++
+		si stBouton.Ordre = 0 alors stBouton.Ordre = nIndBouton
+		si pas EnregistreUnBoutonRcs(stBouton, stCarte.IdRcsCarte, stOperation.IdOperation) alors
+			renvoyer Faux
+		fin
+	fin
+fin
+
+nIndBouton = 0
+pour tout stBouton de stOperation.stOperationRcs.tabBoutonCommun
+	nIndBouton++
+	si stBouton.Ordre = 0 alors stBouton.Ordre = nIndBouton
+	si pas EnregistreUnBoutonRcs(stBouton, 0, stOperation.IdOperation) alors
+		renvoyer Faux
+	fin
+fin
+
+
+si sListeBouton <> "" alors
+	sTexteRequete = ChaîneConstruit("DELETE FROM ope_rcs_bouton WHERE IdRcs = %1 AND IdRcsBouton NOT IN (%2)", stOperation.IdOperation, sListeBouton)
+sinon
+	sTexteRequete = ChaîneConstruit("DELETE FROM ope_rcs_bouton WHERE IdRcs = %1", stOperation.IdOperation)
+fin
+si pas sdReqRcs.ExécuteRequêteSQL(ope_rcs_bouton..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	<compile si TypeConfiguration <> Webservice>
+		Info("Erreur requête AjoutModificationOperationRcs boutons")
+	<fin>
+	renvoyer Faux
+fin
+
+si sListeCarte <> "" alors
+	sTexteRequete = ChaîneConstruit("DELETE FROM ope_rcs_carte WHERE IdRcs = %1 AND IdRcsCarte NOT IN (%2)", stOperation.IdOperation, sListeCarte)
+sinon
+	sTexteRequete = ChaîneConstruit("DELETE FROM ope_rcs_carte WHERE IdRcs = %1", stOperation.IdOperation)
+fin
+si pas sdReqRcs.ExécuteRequêteSQL(ope_rcs_carte..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	<compile si TypeConfiguration <> Webservice>
+		Info("Erreur requête AjoutModificationOperationRcs cartes")
+	<fin>
+	renvoyer Faux
+fin
+
+renvoyer Vrai
+
+	procédure interne EnregistreUnBoutonRcs(pStBoutonRcs est une structOperationRcsBouton, pIdCarteRattachement est un entier, pIdOperation est un entier)
+		si pStBoutonRcs.IdRcsBouton = 0 alors
+			ope_rcs_bouton.RAZ()
+			ope_rcs_bouton.IdRcs						= pIdOperation
+			ope_rcs_bouton.DateHeureCreation		= DateHeureSys()
+			ope_rcs_bouton.UserCreation			= Partage.__vcUser.NomUser
+		sinon
+			si pas ope_rcs_bouton.LitRecherchePremier(IdRcsBouton, pStBoutonRcs.IdRcsBouton) alors
+				<compile si TypeConfiguration <> Webservice>
+					Info("Erreur positionnement ope_rcs_bouton")
+				<fin>
+				renvoyer Faux
+			fin
+		fin
+
+		MémoireVersFichier(pStBoutonRcs, ope_rcs_bouton)
+		ope_rcs_bouton.IdRcs = pIdOperation
+		si pIdCarteRattachement = 0 alors
+			ope_rcs_bouton.IdRcsCarte..Null = Vrai
+		sinon
+			ope_rcs_bouton.IdRcsCarte			= pIdCarteRattachement
+			ope_rcs_bouton.IdRcsCarte..Null	= Faux
+		fin
+		si ope_rcs_bouton.TypeBouton = "" alors ope_rcs_bouton.TypeBouton = "OPEN_URL"
+		ope_rcs_bouton.UrlApplication..Null	= (ope_rcs_bouton.UrlApplication = "")
+		ope_rcs_bouton.UrlWebviewMode..Null	= (ope_rcs_bouton.UrlWebviewMode = "")
+
+		si pStBoutonRcs.IdRcsBouton = 0 alors
+			si pas ope_rcs_bouton.Ajoute() alors
+				<compile si TypeConfiguration <> Webservice>
+					Info("Erreur :", ErreurInfo(errComplet))
+				<fin>
+				renvoyer Faux
+			fin
+			pStBoutonRcs.IdRcsBouton = ope_rcs_bouton.IdRcsBouton
+		sinon
+			ope_rcs_bouton.DateHeureModification	= DateHeureSys()
+			ope_rcs_bouton.UserModification			= Partage.__vcUser.NomUser
+			si pas ope_rcs_bouton.Modifie() alors
+				<compile si TypeConfiguration <> Webservice>
+					Info("Erreur :", ErreurInfo(errComplet))
+				<fin>
+				renvoyer Faux
+			fin
+		fin
+
+		sListeBouton += [","] + pStBoutonRcs.IdRcsBouton
+		renvoyer Vrai
+	fin
+
+fin:
+sdReqRcs.AnnuleDéclaration()

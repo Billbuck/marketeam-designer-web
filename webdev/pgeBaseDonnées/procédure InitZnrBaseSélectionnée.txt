@@ -18,23 +18,24 @@ znrBaseSélectionnée.SupprimeTout()
 
 pour tout stBase de __stOperation.tabBase
 	si stBase.EstSupprime = 0 alors
-		nInd											= ZoneRépétéeAjouteLigne(znrBaseSélectionnée)
-		znrBaseSélectionnée[nInd].attIdBase				= stBase.IdBase
-		znrBaseSélectionnée[nInd].attIdBaseClient		= stBase.IdBaseClient
-		znrBaseSélectionnée[nInd].attIdFiltre			= stBase.IdFiltre
-		znrBaseSélectionnée[nInd].attIdZecible			= stBase.IdZecible
-		znrBaseSélectionnée[nInd].saiFichier			= stBase.Nom
+		nInd															= ZoneRépétéeAjouteLigne(znrBaseSélectionnée)
+		znrBaseSélectionnée[nInd].attIdBase					= stBase.IdBase
+		znrBaseSélectionnée[nInd].attIdBaseClient			= stBase.IdBaseClient
+		znrBaseSélectionnée[nInd].attIdFiltre				= stBase.IdFiltre
+		znrBaseSélectionnée[nInd].attIdZecible				= stBase.IdZecible
+		znrBaseSélectionnée[nInd].saiFichier				= stBase.Nom
 		znrBaseSélectionnée[nInd].btnBddAperçu.Visible	= (stBase.IdZecible = 0)
 		selon Vrai
 			cas stBase.IdFiltre > 0
 				si clt_base_filtre.LitRecherchePremier(IdFiltre,stBase.IdFiltre) alors
 					selon __stOperation.TypeOperation
 						cas __OPERATION_SMS__		: znrBaseSélectionnée[nInd].saiTotal = NumériqueVersChaîne(clt_base_filtre.NbrSms, "dS") + " " + Partage.LibelleTypeProjet(__stOperation.TypeOperation,Faux)
+						cas __OPERATION_RCS__		: znrBaseSélectionnée[nInd].saiTotal = NumériqueVersChaîne(clt_base_filtre.NbrSms, "dS") + " " + Partage.LibelleTypeProjet(__stOperation.TypeOperation,Faux)
 						cas __OPERATION_VMS__		: znrBaseSélectionnée[nInd].saiTotal = NumériqueVersChaîne(clt_base_filtre.NbrSms, "dS") + " " + Partage.LibelleTypeProjet(__stOperation.TypeOperation,Faux)
 						cas __OPERATION_TEL__		: znrBaseSélectionnée[nInd].saiTotal = NumériqueVersChaîne(clt_base_filtre.NbrTel, "dS") + " " + Partage.LibelleTypeProjet(__stOperation.TypeOperation,Faux)
 						cas __OPERATION_EMAIL__		: znrBaseSélectionnée[nInd].saiTotal = NumériqueVersChaîne(clt_base_filtre.NbrEmail, "dS") + " " + Partage.LibelleTypeProjet(__stOperation.TypeOperation,Faux)
 						cas __OPERATION_COURRIER__	: znrBaseSélectionnée[nInd].saiTotal = NumériqueVersChaîne(clt_base_filtre.NbrAdresse, "dS") + " " + Partage.LibelleTypeProjet(__stOperation.TypeOperation,Faux)
-						autre cas					: znrBaseSélectionnée[nInd].saiTotal = "???"
+						autre cas						: znrBaseSélectionnée[nInd].saiTotal = "???"
 					fin
 					znrBaseSélectionnée[nInd].saiFiltre	= clt_base_filtre.Nom
 				fin
@@ -43,11 +44,12 @@ pour tout stBase de __stOperation.tabBase
 				si clt_base.LitRecherchePremier(IdBase,stBase.IdBaseClient) alors
 					selon __stOperation.TypeOperation
 						cas __OPERATION_SMS__		: znrBaseSélectionnée[nInd].saiTotal = NumériqueVersChaîne(clt_base.NbrSms, "dS") + " " + Partage.LibelleTypeProjet(__stOperation.TypeOperation,Faux)
+						cas __OPERATION_RCS__		: znrBaseSélectionnée[nInd].saiTotal = NumériqueVersChaîne(clt_base.NbrSms, "dS") + " " + Partage.LibelleTypeProjet(__stOperation.TypeOperation,Faux)
 						cas __OPERATION_VMS__		: znrBaseSélectionnée[nInd].saiTotal = NumériqueVersChaîne(clt_base.NbrSms, "dS") + " " + Partage.LibelleTypeProjet(__stOperation.TypeOperation,Faux)
 						cas __OPERATION_TEL__		: znrBaseSélectionnée[nInd].saiTotal = NumériqueVersChaîne(clt_base.NbrTel, "dS") + " " + Partage.LibelleTypeProjet(__stOperation.TypeOperation,Faux)
 						cas __OPERATION_EMAIL__		: znrBaseSélectionnée[nInd].saiTotal = NumériqueVersChaîne(clt_base.NbrEmail, "dS") + " " + Partage.LibelleTypeProjet(__stOperation.TypeOperation,Faux)
 						cas __OPERATION_COURRIER__	: znrBaseSélectionnée[nInd].saiTotal = NumériqueVersChaîne(clt_base.NbrAdresse, "dS") + " " + Partage.LibelleTypeProjet(__stOperation.TypeOperation,Faux)
-						autre cas					: znrBaseSélectionnée[nInd].saiTotal = "???"
+						autre cas						: znrBaseSélectionnée[nInd].saiTotal = "???"
 					fin
 				fin
 

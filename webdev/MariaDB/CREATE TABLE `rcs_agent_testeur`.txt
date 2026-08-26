@@ -1,0 +1,28 @@
+CREATE TABLE `rcs_agent_testeur` (
+	`IdRcsAgentTesteur` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdRcsAgent` INT(11) NOT NULL,
+	`Numero` VARCHAR(20) NOT NULL COMMENT 'Format E164 avec + pour l API testeurs, sans + pour l envoi' COLLATE 'utf8mb4_unicode_ci',
+	`Libelle` VARCHAR(60) NULL DEFAULT NULL COMMENT 'Nom du testeur pour l interface - ex Nicolas iPhone 15' COLLATE 'utf8mb4_unicode_ci',
+	`TypeAppareil` ENUM('INCONNU','IOS','ANDROID') NOT NULL DEFAULT 'INCONNU' COMMENT 'Recette : verifier les deux plateformes' COLLATE 'utf8mb4_unicode_ci',
+	`Statut` ENUM('PENDING','WAITING_FOR_TESTER_ACCEPTANCE','APPROVED','EXPIRED') NOT NULL DEFAULT 'PENDING' COLLATE 'utf8mb4_unicode_ci',
+	`EstPrincipal` TINYINT(1) NOT NULL DEFAULT '0' COMMENT 'primary - un numero ne peut etre principal que pour un seul agent',
+	`DateHeureAjout` DATETIME NOT NULL COMMENT 'POST test-numbers',
+	`DateHeureStatut` DATETIME NULL DEFAULT NULL COMMENT 'updatedAt renvoye par Infobip',
+	`DateHeureExpiration` DATETIME NULL DEFAULT NULL COMMENT 'Ajout ou relance + 24h - permet un compte a rebours',
+	`NbRelances` TINYINT(3) UNSIGNED NOT NULL DEFAULT '0' COMMENT 'Nombre d appels a refresh',
+	`DateHeureDerniereRelance` DATETIME NULL DEFAULT NULL,
+	`DateHeureDernierTest` DATETIME NULL DEFAULT NULL COMMENT 'Dernier message de demonstration envoye',
+	`DateHeureCreation` DATETIME NOT NULL,
+	`DateHeureModification` DATETIME NULL DEFAULT NULL,
+	`UserCreation` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`UserModification` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	PRIMARY KEY (`IdRcsAgentTesteur`) USING BTREE,
+	UNIQUE INDEX `IdRcsAgent_Numero` (`IdRcsAgent`, `Numero`) USING BTREE,
+	INDEX `IdRcsAgent_Statut` (`IdRcsAgent`, `Statut`) USING BTREE,
+	INDEX `DateHeureExpiration` (`DateHeureExpiration`) USING BTREE,
+	CONSTRAINT `FK_rcs_agent_testeur_rcs_agent` FOREIGN KEY (`IdRcsAgent`) REFERENCES `rcs_agent` (`IdRcsAgent`) ON UPDATE NO ACTION ON DELETE CASCADE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+ROW_FORMAT=DYNAMIC
+;

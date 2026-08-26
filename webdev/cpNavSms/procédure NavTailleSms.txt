@@ -1,0 +1,25 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] NavTailleSms (<pMessage>, <pEstUnicode>)
+//
+// Paramètres :
+//	pMessage : <indiquez ici le rôle de pMessage>
+//	pEstUnicode : <indiquez ici le rôle de pEstUnicode>
+// Valeur de retour :
+// 	Type indéterminé : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+// 	pEstCliquezIci : <indiquez ici le rôle de pEstCliquezIci>
+// 	pEstStopSms : <indiquez ici le rôle de pEstStopSms>
+//	pUnicode : <indiquez ici le rôle de pUnicode>
+procédure NavTailleSms(local pMessage, pEstUnicode)
+
+pMessage = Remplace(pMessage,RC,Caract(10))
+
+si pEstUnicode = Vrai alors
+	renvoyer (Taille(pMessage))
+sinon
+	renvoyer (Taille(pMessage) + ChaîneOccurrence(pMessage,["€","^","~","|","\"])) //"[","]","{","}", // Les Crochets et accolades ne sont réservés qu'a la personnalisation des messages.
+fin	

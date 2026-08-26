@@ -1,0 +1,37 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//CompteurSms (<pMessage>, <pMessageFinalisé>, <bEstUnicode> est booléen, <nTailleMessage> est entier, <mPrixMessage> est monétaire, <nCreditMessage> est entier, <mPrixUnitaireSms> est monétaire, <bEstStopSms> est booléen, <bEstCliquezIci> est booléen)
+//
+// Paramètres :
+//	pMessage : <indiquez ici le rôle de pMessage>
+//	pMessageFinalisé : <indiquez ici le rôle de pEstUnicode>
+//	bEstUnicode (booléen) : <indiquez ici le rôle de pTailleMessage>
+//	nTailleMessage (entier) : <indiquez ici le rôle de pPrixMessage>
+//	mPrixMessage (monétaire) : <indiquez ici le rôle de pCreditMessage>
+//	nCreditMessage (entier) : <indiquez ici le rôle de pPrixUnitaireSms>
+//	mPrixUnitaireSms (monétaire) : <indiquez ici le rôle de mPrixUnitaireSms>
+//	bEstStopSms (booléen) : <indiquez ici le rôle de bEstStopSms>
+//	bEstCliquezIci (booléen) : <indiquez ici le rôle de bEstCliquezIci>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+//	sContenu (chaîne ANSI) : <indiquez ici le rôle de sContenu>
+procédure CompteurSms(local pMessage, pMessageFinalisé,  bEstUnicode est un booléen, nTailleMessage est un entier, mPrixMessage est un monétaire, nCreditMessage est un entier, mPrixUnitaireSms est un monétaire, bEstStopSms est un booléen, bEstCliquezIci est un booléen)
+
+
+sMessageBrut		est une chaîne
+nTailleMessage		= 0
+mPrixMessage		= 0
+nCreditMessage		= 0
+                	
+sMessageBrut		= MessageSmsBrut(pMessage)
+pMessageFinalisé	= MessageSmsFinalisé(sMessageBrut, bEstCliquezIci, bEstStopSms)
+
+si sMessageBrut <> "" alors
+	nTailleMessage 	= TailleSms(pMessageFinalisé, bEstUnicode)
+	nCreditMessage	= CalculeTailleSms(nTailleMessage, bEstUnicode)
+	mPrixMessage	= nCreditMessage * mPrixUnitaireSms
+fin

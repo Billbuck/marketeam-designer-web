@@ -1,0 +1,39 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//NavCompteurSms (<pMessage>, <pMessageFinalisé>, <bEstUnicode> est booléen, <nTailleMessage> est entier, <mPrixMessage> est numérique, <nCreditMessage> est entier, <mPrixUnitaireSms> est monétaire, <bEstStopSms> est booléen, <bEstCliquezIci> est booléen)
+//
+// Paramètres :
+//	pMessage : <indiquez ici le rôle de pMessage>
+//	pMessageFinalisé : <indiquez ici le rôle de pMessageFinalisé>
+//	bEstUnicode (booléen) : <indiquez ici le rôle de bEstUnicode>
+//	nTailleMessage (entier) : <indiquez ici le rôle de pTailleMessage>
+//	mPrixMessage (numérique) : <indiquez ici le rôle de pPrixMessage>
+//	nCreditMessage (entier) : <indiquez ici le rôle de pCreditMessage>
+//	mPrixUnitaireSms (monétaire) : <indiquez ici le rôle de pPuPremierSms>
+//	bEstStopSms (booléen) : < indiquez ici le rôle de pEstStopSms >
+//	bEstCliquezIci (booléen) : <indiquez ici le rôle de bEstCliquezIci>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+//	pPuSmsSuivant : <indiquez ici le rôle de pPuSmsSuivant>
+//	pEstUnicode : <indiquez ici le rôle de pEstUnicode>
+//	pEstCliquezIci (valeur par défaut=0) : < indiquez ici le rôle de pEstCliquezIci >
+procédure NavCompteurSms(local pMessage, pMessageFinalisé, bEstUnicode est un booléen, nTailleMessage est un entier, mPrixMessage est un numérique, nCreditMessage est un entier, mPrixUnitaireSms est un numérique, bEstStopSms est un booléen, bEstCliquezIci est un booléen)
+
+sMessageBrut		est une chaîne
+nTailleMessage		= 0
+mPrixMessage		= 0
+nCreditMessage		= 0
+
+sMessageBrut		= NavMessageSmsBrut(pMessage)
+pMessageFinalisé	= NavMessageSmsFinalisé(sMessageBrut,bEstCliquezIci,bEstStopSms)
+
+
+si sMessageBrut <> "" alors
+	nTailleMessage 	= NavTailleSms(pMessageFinalisé, bEstUnicode)
+	nCreditMessage	= NavCalculeTailleSms(nTailleMessage, bEstUnicode)
+	mPrixMessage	= nCreditMessage * mPrixUnitaireSms
+fin

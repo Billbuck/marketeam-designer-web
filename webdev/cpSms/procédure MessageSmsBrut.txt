@@ -1,0 +1,13 @@
+procédure MessageSmsBrut(local pMessage)
+
+pMessage = Remplace(pMessage, RC, Caract(10))
+
+// Le Stop SMS         
+pMessage = Remplace(pMessage, Caract(10) + __STOP_SMS__,"")
+pMessage = Remplace(pMessage, " " + __STOP_SMS__,"")
+pMessage = Remplace(pMessage, __STOP_SMS__,"")
+
+// L'Url cliquez-ici
+pMessage = Remplace(pMessage, cpSms.__sUrlCliquezIci,"[" + cpSms.__sLibelleCliquezIci +"]",SansCasse)
+
+renvoyer pMessage

@@ -1,9 +1,9 @@
 procédure GestionAffichage()
 
-sListeIdBase		est une chaîne
-sWhere				est une chaîne
-nTotalPersonnelle	est un entier
-nTotalPartagée		est un entier
+sListeIdBase			est une chaîne
+sWhere					est une chaîne
+nTotalPersonnelle		est un entier
+nTotalPartagée			est un entier
 nTotalMarketeam		est un entier
 
 _sEffetAnimation	= ""
@@ -27,7 +27,8 @@ si sListeIdBase <> "" alors sWhere	= "AND IdBase NOT IN (" + sListeIdBase + ")"
 
 selon __stOperation.TypeOperation
 	cas __OPERATION_COURRIER__ 		: sWhere += [RC] + "AND NbrAdresse > 0"
-	cas __OPERATION_SMS__				: sWhere += [RC] + "AND NbrSms > 0"
+	cas __OPERATION_SMS__				: sWhere += [RC] + "AND NbrSms > 0" 
+	cas __OPERATION_RCS__				: sWhere += [RC] + "AND NbrSms > 0"
 	cas __OPERATION_EMAIL__				: sWhere += [RC] + "AND NbrEmail > 0"
 	cas __OPERATION_TEL__				: sWhere += [RC] + "AND NbrTel > 0"
 	cas __OPERATION_VMS__				: sWhere += [RC] + "AND NbrSms > 0"

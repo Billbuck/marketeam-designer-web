@@ -179,7 +179,6 @@ Les paramètres de la campagne. Frère de `ope_sms`, rattaché à `dos_operation
 | `IdRcsModele` | INT | — | Modèle réutilisable (table à créer) |
 | `IdRcsAgent` | INT | — | Agent utilisé → alimente `sender` dans le JSON |
 | `TypeContenu` | ENUM | ↗ | `CARD` ou `CAROUSEL` |
-| `EstRcsInteractif` | TINYINT(1) | — | Dérivé : présence d'un bouton vers landing page. Pilote le tunnel et la facturation |
 | `Orientation` | ENUM | ↗ | `VERTICAL` (image au-dessus) ou `HORIZONTAL` (image sur le côté). CARD seulement |
 | `Alignement` | ENUM | ↗ | Côté de l'image en horizontal. **Obligatoire même en vertical**, où il est sans effet |
 | `LargeurCarte` | ENUM | ↗ | `SMALL` / `MEDIUM`. Carrousel seulement, s'applique à **toutes** les cartes. Figé sur MEDIUM |
@@ -193,15 +192,16 @@ Les paramètres de la campagne. Frère de `ope_sms`, rattaché à `dos_operation
 | `FenetreHeureFin` | TIME | ↗ | Fermeture du créneau. **⚠️ En UTC** |
 | `EstRepliSms` | TINYINT(1) | — | Active le bloc `smsFailover` |
 | `RepliSmsFrom` | VARCHAR(11) | ↗ | Expéditeur du SMS de repli (11 car. max, norme SMS) |
-| `RepliSmsMessage` | VARCHAR(1200) | ↗ | Texte du repli. **GSM-7, 160 car. max, 1 segment.** Doit contenir le lien en clair + STOP |
-| `RepliSmsEstUnicode` | TINYINT(1) | — | Toujours 0 depuis la règle du segment unique |
-| `RepliCreditSms` | VARCHAR(1000) | — | Calcul des crédits SMS (repris de `ope_sms`) |
-| `RepliCreditSmsUnicode` | VARCHAR(1000) | — | Sans objet depuis la règle du segment unique |
+| `RepliSmsMessage` | VARCHAR(1200) | ↗ | Texte du repli. **GSM-7, 1 à 3 segments.** Doit contenir le lien en clair + STOP |
+| `RepliCreditSms` | VARCHAR(1000) | — | JSON de `taaRepliCreditSms` (repris de `ope_sms.CreditSms`) |
 | `DateFin` | DATE | — | Fin de l'opération, gestion Marketeam |
 | `HeureFin` | TIME | — | Fin de l'opération, gestion Marketeam |
 | `Cadence` | MEDIUMINT | ↗ | Débit d'envoi → alimente `sendingSpeedLimit` |
 | `Paquet` | SMALLINT | ↗ | Taille de lot, calculée d'après la cadence |
 | `Pause` | TINYINT | ↗ | Temporisation entre lots |
+| `NbrDestinataireRcs` | INT | — | Qualification `ENABLED`. Figé pour le devis payé |
+| `NbrDestinataireRepliSms` | INT | — | Qualification `UNREACHABLE`. Total de contrôle des paliers de repli |
+| `DateHeureQualification` | DATETIME | — | Quand la base a été qualifiée. Vide = pas encore qualifié |
 
 > **Pas de colonne « crédit RCS »** : un message Single compte pour 1, quels que soient sa
 > longueur, son nombre de cartes ou de boutons.

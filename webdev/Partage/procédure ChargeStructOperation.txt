@@ -46,6 +46,7 @@ si dos_operation.LitRecherchePremier(IdOperation, pIdOperation) alors
 		cas __OPERATION_TRACTEVA__	: stOperation.stOperationLettre		= ChargeStructOperationTract(pIdOperation)
 		cas __OPERATION_SMARTEVA__	: stOperation.stOperationLettre		= ChargeStructOperationTract(pIdOperation)
 		cas __OPERATION_SMS__		: stOperation.stOperationSms 		= ChargeStructOperationSms(pIdOperation)
+		cas __OPERATION_RCS__		: stOperation.stOperationRcs 		= ChargeStructOperationRcs(pIdOperation)
 		cas __OPERATION_VMS__		: stOperation.stOperationVms 		= ChargeStructOperationVms(pIdOperation)
 		cas __OPERATION_TEL__		: stOperation.stOperationCallCenter	= ChargeStructOperationCallCenter(pIdOperation)
 		cas __OPERATION_EMAIL__		: //stOperation.stOperationEmail = ChargeTabStructOperationEmail(pIdDossier,pIdOperation)

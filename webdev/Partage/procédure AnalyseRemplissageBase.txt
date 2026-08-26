@@ -89,12 +89,12 @@ fin
 
 // Condition par type d'opération (miroir de ChargeEchantillonTabBaseLigne)
 selon stOperation.TypeOperation
-	cas __OPERATION_SMS__ :		sConditionType = "Portable IS NOT NULL"
-	cas __OPERATION_VMS__ :		sConditionType = "Portable IS NOT NULL"
-	cas __OPERATION_EMAIL__ :	sConditionType = "Email IS NOT NULL"
-	cas __OPERATION_TEL__ :		sConditionType = "Tel IS NOT NULL OR Portable IS NOT NULL"
-	cas __OPERATION_COURRIER__ :
-		sConditionType = "(Adresse1 IS NOT NULL OR Adresse2 IS NOT NULL OR Adresse3 IS NOT NULL OR Adresse4 IS NOT NULL) AND (CodePostal IS NOT NULL AND Ville IS NOT NULL)"
+	cas __OPERATION_SMS__			: sConditionType = "Portable IS NOT NULL"
+	cas __OPERATION_RCS__ 			: sConditionType = "Portable IS NOT NULL"
+	cas __OPERATION_VMS__ 			: sConditionType = "Portable IS NOT NULL"
+	cas __OPERATION_EMAIL__ 		: sConditionType = "Email IS NOT NULL"
+	cas __OPERATION_TEL__ 			: sConditionType = "Tel IS NOT NULL OR Portable IS NOT NULL"
+	cas __OPERATION_COURRIER__		: sConditionType = "(Adresse1 IS NOT NULL OR Adresse2 IS NOT NULL OR Adresse3 IS NOT NULL OR Adresse4 IS NOT NULL) AND (CodePostal IS NOT NULL AND Ville IS NOT NULL)"
 	autre cas
 		sConditionType = "1=1"
 fin

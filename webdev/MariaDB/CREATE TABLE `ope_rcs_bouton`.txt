@@ -1,0 +1,30 @@
+CREATE TABLE `ope_rcs_bouton` (
+	`IdRcsBouton` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdRcs` INT(11) NOT NULL COMMENT 'Toujours renseigne. Bouton commun = IdRcsCarte NULL',
+	`IdRcsCarte` INT(11) NULL DEFAULT NULL COMMENT 'NULL = bouton commun au message ; NOT NULL = bouton de cette carte',
+	`Ordre` TINYINT(3) UNSIGNED NOT NULL DEFAULT '1' COMMENT 'Carte : 1 a 4. Commun : 1 a 11',
+	`TypeBouton` ENUM('OPEN_URL','DIAL_PHONE','SHOW_LOCATION') NOT NULL DEFAULT 'OPEN_URL' COLLATE 'utf8mb4_unicode_ci',
+	`EstBoutonInteractif` TINYINT(1) NOT NULL DEFAULT '0' COMMENT 'Cliquez-ici. Max 1 par carte, max 1 parmi les communs. Tous vers la meme landing',
+	`Libelle` VARCHAR(60) NULL DEFAULT NULL COMMENT 'Gabarit - le résultat fusionné doit tenir en 25 car.' COLLATE 'utf8mb4_unicode_ci',
+	`PostbackData` VARCHAR(100) NULL DEFAULT NULL COMMENT 'Code de suivi renvoyé au clic' COLLATE 'utf8mb4_unicode_ci',
+	`Url` VARCHAR(2048) NULL DEFAULT NULL COMMENT 'OPEN_URL' COLLATE 'utf8mb4_unicode_ci',
+	`UrlApplication` ENUM('BROWSER','WEBVIEW') NULL DEFAULT 'BROWSER' COMMENT 'OPEN_URL' COLLATE 'utf8mb4_unicode_ci',
+	`UrlWebviewMode` ENUM('FULL','HALF','TALL') NULL DEFAULT NULL COMMENT 'Obligatoire si UrlApplication = WEBVIEW' COLLATE 'utf8mb4_unicode_ci',
+	`Telephone` VARCHAR(20) NULL DEFAULT NULL COMMENT 'DIAL_PHONE - format E164' COLLATE 'utf8mb4_unicode_ci',
+	`Latitude` DECIMAL(9,6) NULL DEFAULT NULL COMMENT 'SHOW_LOCATION',
+	`Longitude` DECIMAL(9,6) NULL DEFAULT NULL COMMENT 'SHOW_LOCATION',
+	`LibelleLieu` VARCHAR(200) NULL DEFAULT NULL COMMENT 'SHOW_LOCATION - 100 car. après fusion' COLLATE 'utf8mb4_unicode_ci',
+	`DateHeureCreation` DATETIME NOT NULL,
+	`DateHeureModification` DATETIME NULL DEFAULT NULL,
+	`UserCreation` VARCHAR(35) NOT NULL COLLATE 'utf8mb4_unicode_ci',
+	`UserModification` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	PRIMARY KEY (`IdRcsBouton`) USING BTREE,
+	INDEX `IdRcs_IdRcsCarte_Ordre` (`IdRcs`, `IdRcsCarte`, `Ordre`) USING BTREE,
+	INDEX `IdRcsCarte_Ordre` (`IdRcsCarte`, `Ordre`) USING BTREE,
+	CONSTRAINT `FK_ope_rcs_bouton_ope_rcs` FOREIGN KEY (`IdRcs`) REFERENCES `ope_rcs` (`IdRcs`) ON UPDATE RESTRICT ON DELETE CASCADE,
+	CONSTRAINT `FK_ope_rcs_bouton_ope_rcs_carte` FOREIGN KEY (`IdRcsCarte`) REFERENCES `ope_rcs_carte` (`IdRcsCarte`) ON UPDATE RESTRICT ON DELETE CASCADE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+ROW_FORMAT=DYNAMIC
+;

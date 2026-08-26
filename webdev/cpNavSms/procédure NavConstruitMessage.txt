@@ -1,0 +1,12 @@
+procédure NavConstruitMessage(local pMessage, pEstCliquezIci, pEstStopSms)
+
+
+si pEstCliquezIci = Vrai alors
+	pMessage += cpSms.__sUrlCliquezIci
+fin
+
+si pEstStopSms alors
+	pMessage += __STOP_SMS__
+fin
+
+renvoyer pMessage

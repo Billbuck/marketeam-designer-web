@@ -1,0 +1,6 @@
+procédure NavAinsiVersGsm(local pMessage)
+
+pMessage = Remplace(pMessage,"…","...")
+pMessage = Remplace(pMessage,"’","'")
+
+renvoyer pMessage

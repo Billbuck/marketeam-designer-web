@@ -1,0 +1,40 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] LibelleTypeProjet (<pTypeProjet> [, <pEstSingulier> est booléen])
+//
+// Paramètres :
+//	pTypeProjet : <indiquez ici le rôle de pType>
+//	pEstSingulier (booléen - valeur par défaut=1) : <indiquez ici le rôle de pEstSingulier>
+// Valeur de retour :
+// 	Type indéterminé : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure LibelleTypeProjet(pTypeProjet, pEstSingulier est un booléen = Vrai)
+
+selon pTypeProjet
+	cas __OPERATION_COURRIER__							: renvoyer pEstSingulier = Vrai ? "Courrier" 							sinon "Courriers"
+	cas __OPERATION_COURRIER_INTERACTIF__			: renvoyer pEstSingulier = Vrai ? "Courrier interactif" 				sinon "Courriers interactifs"
+	cas __OPERATION_EMAIL__ 							: renvoyer pEstSingulier = Vrai ? "Email" 								sinon "Emails"
+	cas __OPERATION_EMAIL_INTERACTIF__				: renvoyer pEstSingulier = Vrai ? "Email interactif" 					sinon "Emails interactifs"
+	cas __OPERATION_SMARTEVA__							: renvoyer pEstSingulier = Vrai ? "Tract sous enveloppe" 			sinon "Tracts sous enveloppe"
+	cas __OPERATION_SMS__								: renvoyer "Sms"
+	cas __OPERATION_SMS_INTERACTIF__					: renvoyer pEstSingulier = Vrai ? "Sms interactif"	 					sinon "Sms interactifs"
+	cas __OPERATION_RCS__								: renvoyer "Rcs"
+	cas __OPERATION_RCS_INTERACTIF__					: renvoyer pEstSingulier = Vrai ? "Rcs interactif"	 					sinon "Rcs interactifs"
+	cas __OPERATION_VMS__								: renvoyer "Vms"
+	cas __OPERATION_SMS_NOTIFICATION__				: renvoyer pEstSingulier = Vrai ? "Sms de notification" 				sinon "Sms"
+	cas __OPERATION_SMS_WEBSERVICE__					: renvoyer pEstSingulier = Vrai ? "Sms webservice" 					sinon "Sms"
+	cas __OPERATION_CLIQUEZICI__						: renvoyer pEstSingulier = Vrai ? "Sms interactif"	 					sinon "Sms interactifs"
+	cas __OPERATION_TRACTEVA__							: renvoyer pEstSingulier = Vrai ? "Tract" 								sinon "Tracts"
+	cas __OPERATION_TEL__								: renvoyer pEstSingulier = Vrai ? "Call Center"							sinon "Appels"
+	cas __OPERATION_RNVP__								: renvoyer pEstSingulier = Vrai ? "Traitement RNVP"					sinon "Adresses"
+	cas __OPERATION_BASE_DE_DONNEES__				: renvoyer pEstSingulier = Vrai ? "Location de bases de données"	sinon "Locations"
+	cas __OPERATION_BLOCTEL__							: renvoyer pEstSingulier = Vrai ? "Traitement Bloctel"				sinon "Adresses"
+	cas __OPERATION_COURRIER_GESTION__				: renvoyer pEstSingulier = Vrai ? "Courrier de gestion"				sinon "Lettres"
+	cas __OPERATION_VMS_UNITAIRE__					: renvoyer "Vms unitaire"
+	cas __OPERATION_EMAIL_NOTIFICATION__			: renvoyer "Email de notification"
+	cas __OPERATION_MARKETEAM__						: renvoyer "Marketeam"
+	autre cas												: STOP; Trace(pTypeProjet) ; renvoyer "A faire par Michel"
+fin

@@ -1,0 +1,25 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] TestUnicodeSms (<pSms>)
+//
+// Paramètres :
+//	pSms : <indiquez ici le rôle de pSms>
+// Valeur de retour :
+// 	booléen : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure TestUnicodeSms(local pSms)
+
+si pSms = "" alors renvoyer Faux
+
+pSms = Remplace(pSms,RC,Caract(10))
+
+pSms = Remplace(pSms,cpSms.__tabCaracteresSmsStandard,"")
+
+si Taille(pSms) > 0 alors
+	renvoyer Vrai
+sinon
+	renvoyer Faux
+fin

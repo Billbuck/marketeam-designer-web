@@ -1,0 +1,10 @@
+procédure AffichePagePrécédente()
+
+si PageMémorise(Vrai) alors
+	selon __stOperation.TypeOperation
+		cas __OPERATION_SMS__, __OPERATION_SMS_INTERACTIF__ 						: PageAffiche(pgeSms)
+		cas __OPERATION_COURRIER__, __OPERATION_COURRIER_INTERACTIF__			: PageAffiche(pgeMctContenu)
+		autre cas
+	fin
+
+fin

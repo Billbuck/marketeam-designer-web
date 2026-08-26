@@ -2246,6 +2246,69 @@ structOperationSms est une Structure
 	TailleMax							est un entier
 fin
 
+structOperationRcsBouton est une Structure
+	IdRcsBouton							est un entier
+	Ordre								est un entier
+	TypeBouton							est une chaîne			// OPEN_URL, DIAL_PHONE, SHOW_LOCATION
+	EstBoutonInteractif					est un booléen			// ce bouton ouvre la landing Cliquez ici
+	Libelle								est une chaîne
+	PostbackData						est une chaîne
+	Url									est une chaîne			// vide si bouton interactif (URL posée à l'envoi)
+	UrlApplication						est une chaîne			// BROWSER ou WEBVIEW
+	UrlWebviewMode						est une chaîne			// FULL, HALF, TALL
+	Telephone							est une chaîne
+	Latitude							est un numérique(9,6)
+	Longitude							est un numérique(9,6)
+	LibelleLieu							est une chaîne
+fin
+
+structOperationRcsCarte est une Structure
+	IdRcsCarte							est un entier
+	Ordre								est un entier
+	Titre								est une chaîne
+	Description							est une chaîne
+	MediaUrl							est une chaîne
+	MediaContentType					est une chaîne
+	MediaHauteur						est une chaîne			// figé MEDIUM
+	MediaLargeurPx						est un entier
+	MediaHauteurPx						est un entier
+	tabBouton							est un tableau de structOperationRcsBouton
+fin
+
+structOperationRcs est une Structure
+	IdRcsModele							est un entier
+	IdRcsAgent							est un entier
+	TypeContenu							est une chaîne			// CARD ou CAROUSEL
+	Orientation							est une chaîne			// figé VERTICAL
+	Alignement							est une chaîne			// obligatoire pour l'API, sans effet en vertical
+	LargeurCarte						est une chaîne			// figé MEDIUM, carrousel seulement
+	ModeleVariable						est une chaîne
+	EstRcsPersonnalise					est un booléen
+	CampaignReferenceId					est une chaîne
+	ValiditeDuree						est un entier
+	ValiditeUnite						est une chaîne
+	FenetreJours						est une chaîne
+	FenetreHeureDebut					est une Heure
+	FenetreHeureFin						est une Heure
+	EstRepliSms							est un booléen
+	RepliSmsFrom						est une chaîne
+	RepliSmsMessage						est une chaîne
+	DateFin								est une Date
+	HeureFin							est une Heure
+	Cadence								est un entier
+	Paquet								est un entier
+	Pause								est un entier
+	PrixAchat							est un numérique(6,3)
+	NbrDestinataireRcs					est un entier			// qualification ENABLED
+	NbrDestinataireRepliSms				est un entier			// qualification UNREACHABLE
+	DateHeureQualification				est une DateHeure		// fige le devis ; vide = pas encore qualifié
+	taaRepliCreditSms					est un tableau associatif d'entiers	// Cle = crédit , Valeur = nombre
+	taaRepliTailleSms					est un tableau associatif d'entiers	// Cle = taille , Valeur = nombre
+	RepliTailleMax						est un entier
+	tabCarte							est un tableau de structOperationRcsCarte
+	tabBoutonCommun						est un tableau de structOperationRcsBouton	// IdRcsCarte NULL en base
+fin
+
 structOperationVms est une Structure
 	IdMessage							est un entier
 	NumeroAppelant						est une chaîne
@@ -2747,6 +2810,7 @@ structOperation est une Structure
 
 	stOperationLettre						est une StructOperationLettre, sérialise = faux	// structure COMMUNE Courrier + Tract (unification 15/07/2026, ex-stOperationTract supprimée)
 	stOperationSms							est une structOperationSms
+	stOperationRcs							est une structOperationRcs
 	stOperationVms							est une structOperationVms, sérialise = faux
 	stOperationEmail						est une structOperationEmail, sérialise = faux
 	stOperationCallCenter					est une structOperationCallCenter, sérialise = faux
