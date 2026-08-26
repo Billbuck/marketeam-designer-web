@@ -1,0 +1,4 @@
+# Binaires hors code — exclus pour garder GitHub léger (synchro Claude)
+Fichiers Divers/*.cdr
+outils/polices_test/
+webdev/pgeLtrContenu/*.pdf
