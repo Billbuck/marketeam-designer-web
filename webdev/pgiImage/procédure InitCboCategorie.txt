@@ -1,0 +1,52 @@
+procédure InitCboCategorie()
+
+sTexteRequete	est une chaîne
+sdReqCategorie	est une Source de Données
+sWhere			est une chaîne
+
+si _sBibliothèque = BibliothèqueMarque.Valeur alors
+	sWhere = "AND ici_image.IdMarque = " + _nIdMarque
+fin
+
+FiltreBibliothèque(_sBibliothèque, ici_image..Nom, sWhere, Vrai)
+
+sTexteRequete =
+[
+SELECT DISTINCT
+	ici_categorie.IdCategorie,
+	ici_categorie.Libelle
+FROM
+	ici_categorie
+	JOIN ici_image ON ici_image.IdCategorie = ici_categorie.IdCategorie AND ici_image.Type = '[%__ICI_IMAGE__%]'
+WHERE
+	1=1
+	[%sWhere%]
+ORDER BY 
+	ici_categorie.Libelle
+]
+
+
+
+si pas sdReqCategorie.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour
+fin
+
+cboCategorie.SupprimeTout()
+
+
+sdReqCategorie.LitPremier(hSansRafraîchir)
+tantque pas sdReqCategorie.EnDehors()
+	cboCategorie.Ajoute(sdReqCategorie.Libelle + gLien(sdReqCategorie.IdCategorie))
+	sdReqCategorie.LitSuivant()
+fin
+
+si cboCategorie.Occurrence <> 1
+	cboCategorie.Insère("< Catégorie >" + gLien(0),1)
+fin
+
+cboCategorie.SelectPlus(1)
+
+
+fin:
+sdReqCategorie.AnnuleDéclaration()

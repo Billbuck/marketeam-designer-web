@@ -1,0 +1,12 @@
+procédure InitPopupStyle()
+
+InitCboAlignementImage(popBlocStyle.cboAlignementImage)
+
+popBlocStyle.cboAlignementImage	= _stProprieteImage.AlignHorizontal
+
+saiMargeHorizontale = _stProprieteImage.MargeHorizontal
+saiMargeVerticale	= _stProprieteImage.MargeVertical
+
+cpCliquezici.AppliqueCouleur(saiCouleurFond, _stProprieteImage.BlocFondCouleur, Faux)
+
+popBlocStyle.SauvePersonnalisation()

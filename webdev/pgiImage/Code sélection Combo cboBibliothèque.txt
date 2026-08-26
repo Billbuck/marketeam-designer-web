@@ -1,0 +1,22 @@
+// **** Sortie avec modification de cboBibliothèque (onchange navigateur) ( popImage ) (navigateur)
+
+selon PageCourante()
+	cas "PGEICIPAGE"		: pgeIciPage.AffichePopupProgression("Chargement en cours",pgeIciPage._sTypeOperation)
+	cas "PGEICIMODELE"		: pgeIciModele.AffichePopupProgression("Chargement en cours",__OPERATION_MARKETEAM__)
+	cas "PGEICILANDINGPAGE"	: pgeIciLandingPage.AffichePopupProgression("Chargement en cours",__OPERATION_MARKETEAM__)
+	autre cas
+fin
+
+// **** A chaque modification de cboBibliothèque ( popImage ) (serveur)
+BibliothèqueValeurMemorisée(cboBibliothèque, _sBibliothèque, _nIdMarque)
+InitCboCategorie()
+InitZnrImage ()
+
+// **** Retour de traitement AJAX après chaque modification de cboBibliothèque ( popImage ) (navigateur)
+
+selon PageCourante()
+	cas "PGEICIPAGE"		: pgeIciPage.popJaugeProgression.Ferme()
+	cas "PGEICIMODELE"		: pgeIciModele.popJaugeProgression.Ferme()
+	cas "PGEICILANDINGPAGE"	: pgeIciLandingPage.popJaugeProgression.Ferme()
+	autre cas
+fin

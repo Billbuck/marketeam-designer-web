@@ -1,0 +1,9 @@
+procédure SelectionImage(pCheminRelatif = attCheminRelatif, pCheminPhysique = attCheminPhysique, pImage = znrImage.attImage, pIdImage = znrImage.attIdImage, pUrlImage = znrImage.attUrlImage, pNomImage = znrImage.attNom)
+
+
+_sImageCheminRelatif		= pCheminRelatif  + ["/"] + fExtraitChemin(pImage,fFichier+fExtension)
+_sImageCheminPhysique		= pCheminPhysique + ["\"] + fExtraitChemin(pImage,fFichier+fExtension)
+_stValeurImage.IdImage		= pIdImage
+_stValeurImage.Libelle		= pNomImage
+_stValeurImage.Lien			= pUrlImage
+ztrApercuImage				= piPage.ApercuImage(_sImageCheminRelatif, _sImageCheminPhysique, ztrApercuImage.Largeur, _stProprieteImage.HauteurMax, _stProprieteImage.AlignHorizontal, _stProprieteImage.BlocFondCouleur)

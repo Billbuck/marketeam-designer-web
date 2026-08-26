@@ -1,0 +1,163 @@
+procédure InitZnrImage()
+
+sWhere					est une chaîne
+sTexteRequete			est une chaîne
+sListeIciImageChargé	est une chaîne
+sdReqImage				est une Source de Données
+stIciImage				est une piPage.structIciImage
+nInd					est un entier
+sCheminPhysique			est une chaîne
+sCheminRelatif			est une chaîne
+sImageSource			est une chaîne
+
+popImage.znrImage.SupprimeTout()
+
+
+pour tout stIciImage de piPage._tabIciImage
+	sListeIciImageChargé += [","] + stIciImage.IdImage
+fin
+
+si _stValeurImage.IdImage > 0 alors
+	sListeIciImageChargé += [","] + _stValeurImage.IdImage
+fin
+
+
+si sListeIciImageChargé <> "" alors
+	sWhere = [
+	AND ici_image.IdImage NOT IN ([%sListeIciImageChargé%])
+	]
+fin
+
+si cboCategorie.ValeurMémorisée > 0 alors
+	sWhere += [RC] + [
+	AND ici_image.IdCategorie = [%cboCatégorie.ValeurMémorisée%]
+	]
+fin
+
+si _sBibliothèque = BibliothèqueMarque.Valeur alors
+	sWhere += [RC] + "AND ici_image.IdMarque = " + _nIdMarque
+fin
+
+si saiRecherche <> "" alors
+	sWhere += [RC] + "AND ici_image.Nom LIKE '%" + saiRecherche + "%'"
+fin
+
+FiltreBibliothèque(_sBibliothèque, ici_image..Nom, sWhere, Vrai)
+
+
+sTexteRequete =
+[
+	SELECT
+		ici_image.IdMarque,
+		ici_image.IdClient,
+		ici_image.IdImage,
+		ici_image.Type,
+		ici_image.IdCategorie,
+		ici_image.TypeFichier,
+		ici_image.Nom,
+		ici_image.IdClient,
+		ici_image.UrlImage
+	FROM
+		ici_image
+	WHERE
+		ici_image.EstActif = 1
+		AND ici_image.Type = '[%__ICI_IMAGE__%]'
+		[%sWhere%]
+	ORDER BY
+		IdImage DESC
+]
+
+
+si pas HExécuteRequêteSQL(sdReqImage, ici_image..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour
+fin
+
+pour tout sdReqImage
+	VariableRAZ(stIciImage)
+
+	selon Vrai
+		cas sdReqImage.IdMarque > 0
+			sCheminPhysique		= cpProjet.CheminMarque(sdReqImage.IdMarque,__OPERATION_CLIQUEZICI__,__REP_IMAGE__,Vrai)
+			sCheminRelatif		= cpProjet.CheminMarque(sdReqImage.IdMarque,__OPERATION_CLIQUEZICI__,__REP_IMAGE__,Faux)
+
+		cas sdReqImage.IDClient > 0
+			sCheminPhysique		= cpProjet.CheminClient(sdReqImage.IDClient,__OPERATION_CLIQUEZICI__,__REP_IMAGE__,Vrai)
+			sCheminRelatif		= cpProjet.CheminClient(sdReqImage.IDClient,__OPERATION_CLIQUEZICI__,__REP_IMAGE__,Faux)
+
+		autre cas
+			sCheminPhysique		= cpProjet.CheminMarketeam(__OPERATION_CLIQUEZICI__,__REP_IMAGE__,Vrai)
+			sCheminRelatif		= cpProjet.CheminMarketeam(__OPERATION_CLIQUEZICI__,__REP_IMAGE__,Faux)
+	fin
+
+	sImageSource				= __DOC_ICI_IMAGE__ + sdReqImage.IdImage + "." + sdReqImage.TypeFichier
+
+	stIciImage.Nom				= sdReqImage.Nom
+	stIciImage.IdImage			= sdReqImage.IdImage
+	stIciImage.IdClient			= sdReqImage.IdClient
+	stIciImage.IdMarque			= sdReqImage.IdMarque
+	stIciImage.IdCategorie		= sdReqImage.IdCategorie
+	stIciImage.Type				= sdReqImage.Type
+	stIciImage.Url				= sdReqImage.UrlImage
+	stIciImage.CheminPhysique	= sCheminPhysique
+	stIciImage.CheminRelatif	= sCheminRelatif
+	stIciImage.CheminImage		= sCheminRelatif + sImageSource
+
+	piPage._tabIciImage.Ajoute(stIciImage)
+fin
+
+pour tout stIciImage de piPage._tabIciImage
+	si EvalueCondition() alors
+		nInd												= popImage.znrImage.AjouteLigne()
+
+		popImage.znrImage[nInd].attIdImage					= stIciImage.IdImage
+		popImage.znrImage[nInd].attNom						= stIciImage.Nom
+		popImage.znrImage[nInd].attBtnSuppressionVisible	= (stIciImage.IdClient = Partage.__vcUser.IDClient) // EstClient
+
+		popImage.znrImage[nInd].attCheminPhysique			= stIciImage.CheminPhysique
+		popImage.znrImage[nInd].attCheminRelatif			= stIciImage.CheminRelatif
+		popImage.znrImage[nInd].attImage					= stIciImage.CheminImage
+		popImage.znrImage[nInd].attUrlImage					= stIciImage.Url
+	fin
+fin
+
+	procédure interne EvalueCondition() : booléen
+
+		// Filtre sur les images déjà utilisée
+		si _stValeurImage.IdImage > 0 alors
+			si stIciImage.IdImage = _stValeurImage.IdImage alors
+				renvoyer Faux
+			fin
+		fin
+
+		// Filtre sur la catégorie si une catégorie est sélectionnée
+		si cboCategorie.ValeurMémorisée > 0 alors
+			si stIciImage.IdCategorie <> cboCategorie.ValeurMémorisée alors
+				renvoyer Faux
+			fin
+		fin
+
+		// Filtre sur la bibliothèque Marque
+		si _sBibliothèque = BibliothèqueMarque.Valeur alors
+			si stIciImage.IdMarque <> _nIdMarque alors
+				renvoyer Faux
+			fin
+		fin
+
+		si saiRecherche <> "" alors
+			si pas stIciImage.Nom.Contient(saiRecherche,SansCasse) alors
+				renvoyer Faux
+			fin
+		fin
+
+		// TODO : Ajouter ici d'autres critères si nécessaire
+
+		renvoyer Vrai
+	fin
+
+fin:
+
+sdReqImage.AnnuleDéclaration()
+
+
+
