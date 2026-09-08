@@ -1,0 +1,12 @@
+function InsereTexteChamp(sIdChamp, sTexte, sIdCompteur, nMax)
+{
+	var champ = document.getElementById(sIdChamp);
+	if (champ == null) return;
+	var deb = champ.selectionStart, fin = champ.selectionEnd, v = champ.value;
+	champ.value = v.substring(0, deb) + sTexte + v.substring(fin);
+	var pos = deb + sTexte.length;
+	champ.focus();
+	champ.setSelectionRange(pos, pos);
+	var cpt = document.getElementById(sIdCompteur);
+	if (cpt != null) cpt.textContent = champ.value.length + ' / ' + nMax;
+}

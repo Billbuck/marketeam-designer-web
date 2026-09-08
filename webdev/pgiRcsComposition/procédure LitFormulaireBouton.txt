@@ -1,0 +1,26 @@
+procédure LitFormulaireBouton()
+
+stParam est une structRcsBoutonParametres
+
+stParam.Telephone				= SansEspace(saiBoutonTelephone)
+stParam.Message				= saiBoutonMessage
+stParam.Email					= SansEspace(saiBoutonEmail)
+stParam.EmailObjet			= saiBoutonEmailObjet
+stParam.EmailMessage			= saiBoutonEmailMessage
+stParam.Confirmation			= saiBoutonConfirmation
+stParam.Url						= SansEspace(saiBoutonUrl)
+stParam.Latitude				= SansEspace(saiBoutonLatitude)
+stParam.Longitude				= SansEspace(saiBoutonLongitude)
+stParam.Lieu					= saiBoutonLieu
+stParam.Adresse				= saiBoutonAdresse
+stParam.AgendaTitre			= saiBoutonAgendaTitre
+stParam.AgendaDate			= saiBoutonAgendaDate
+stParam.AgendaHeureDebut	= saiBoutonAgendaHeureDebut
+stParam.AgendaHeureFin		= saiBoutonAgendaHeureFin
+stParam.AgendaLieu			= saiBoutonAgendaLieu
+stParam.AgendaDescription	= saiBoutonAgendaDescription
+stParam.UrlAppStore			= SansEspace(saiBoutonUrlAppStore)
+stParam.UrlPlayStore			= SansEspace(saiBoutonUrlPlayStore)
+stParam.Compte					= SansEspace(Remplace(saiBoutonCompte, "@", ""))
+
+renvoyer stParam

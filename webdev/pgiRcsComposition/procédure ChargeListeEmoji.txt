@@ -1,0 +1,30 @@
+procédure ChargeListeEmoji()
+
+sTexteRequete	est une chaîne
+sdReqEmoji		est une Source de Données
+sJson				est une chaîne
+sLigne			est une chaîne
+
+sTexteRequete = [
+	SELECT prm_emoji.Code, prm_emoji.Libelle, prm_emoji.Categorie, prm_emoji.CodePoints, prm_emoji.SequenceJson
+	FROM prm_emoji
+	WHERE prm_emoji.EstActif = 1
+	AND (prm_emoji.IdClient IS NULL OR prm_emoji.IdClient = [%Partage.__vcUser.IDClient%])
+	ORDER BY prm_emoji.Categorie, prm_emoji.Ordre
+]
+
+_taaEmojiLongueur.SupprimeTout()
+
+si sdReqEmoji.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	pour tout sdReqEmoji
+		sLigne = "{""c"":""" + sdReqEmoji.Code + """,""l"":""" + Remplace(sdReqEmoji.Libelle, """", "\""") + """,""g"":""" + sdReqEmoji.Categorie + """,""p"":""" + sdReqEmoji.CodePoints + """}"
+		sJson += [","] + sLigne
+
+		// Une séquence \uXXXX par unité de longueur
+		_taaEmojiLongueur[sdReqEmoji.Code] = ChaîneOccurrence(sdReqEmoji.SequenceJson, "\u")
+	fin
+fin
+
+_sListeEmojiJson = "[" + sJson + "]"
+
+sdReqEmoji.AnnuleDéclaration()

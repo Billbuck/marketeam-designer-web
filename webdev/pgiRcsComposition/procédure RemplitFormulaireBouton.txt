@@ -1,0 +1,22 @@
+procédure RemplitFormulaireBouton(pstParam est une structRcsBoutonParametres)
+
+saiBoutonTelephone			= pstParam.Telephone
+saiBoutonMessage				= pstParam.Message
+saiBoutonEmail					= pstParam.Email
+saiBoutonEmailObjet			= pstParam.EmailObjet
+saiBoutonEmailMessage		= pstParam.EmailMessage
+saiBoutonConfirmation		= pstParam.Confirmation
+saiBoutonUrl					= pstParam.Url
+saiBoutonLatitude				= pstParam.Latitude
+saiBoutonLongitude			= pstParam.Longitude
+saiBoutonLieu					= pstParam.Lieu
+saiBoutonAdresse				= pstParam.Adresse
+saiBoutonAgendaTitre			= pstParam.AgendaTitre
+saiBoutonAgendaDate			= pstParam.AgendaDate
+saiBoutonAgendaHeureDebut	= pstParam.AgendaHeureDebut
+saiBoutonAgendaHeureFin		= pstParam.AgendaHeureFin
+saiBoutonAgendaLieu			= pstParam.AgendaLieu
+saiBoutonAgendaDescription	= pstParam.AgendaDescription
+saiBoutonUrlAppStore			= pstParam.UrlAppStore
+saiBoutonUrlPlayStore		= pstParam.UrlPlayStore
+saiBoutonCompte				= pstParam.Compte

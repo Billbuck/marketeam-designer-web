@@ -9,7 +9,8 @@ sMessage = Remplace(sMessage,RC,Caract(10))
 
 __stOperation.stOperationSms.Message	= sMessage
 cpDeviseur.CalculeCoutOperationSms(__stOperation)
-cpDeviseur.DevisSms(__stOperation)
+SynchroniseRepliRcs()
+TunnelCalculeTarif()
 znrSmsNombre.SupprimeTout()
 
 nInd							= znrSmsNombre.AjouteLigne()
@@ -31,7 +32,7 @@ pour tout nNombre, sCredit de __stOperation.stOperationSms.taaCreditSms
 	nTotal += nNombre
 	selon sCredit
 		cas 1 : sLibelle = "Sms simple (< 160 caractères)"
-		cas 2 : sLibelle = "Sms double (entre 161 et 306 caractères)" 
+		cas 2 : sLibelle = "Sms double (entre 161 et 306 caractères)"
 		cas 3 : sLibelle = "Sms triple (entre 307 et 459 caractères)"
 		cas 4 : sLibelle = "Sms quadruple (entre 460 et 612 caractères)"
 		cas 5 : sLibelle = "Sms quintuple (entre 613 et 765 caractères)"
@@ -40,7 +41,7 @@ pour tout nNombre, sCredit de __stOperation.stOperationSms.taaCreditSms
 		cas 8 : sLibelle = "Sms octuple (entre 1072 et 1224 caractères)"
 		cas 9 : sLibelle = "Sms trop longs ( > 1225 caractères)"
 	fin
-	
+
 	znrSmsNombre[nInd].libTaille	= sLibelle
 	znrSmsNombre[nInd].libTotal		= NumériqueVersChaîne(nNombre, "dS")
 	znrSmsNombre[nInd].libUnite		= Partage.LibelleTypeProjet(__OPERATION_SMS__,Vrai)

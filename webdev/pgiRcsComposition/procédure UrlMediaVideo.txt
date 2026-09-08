@@ -1,0 +1,3 @@
+procédure UrlMediaVideo(pIdImage, pIdClient, pIdMarque, pExtension)
+
+renvoyer CheminRepMedia(pIdClient, pIdMarque, __REP_VIDEO__) + __DOC_RCS_VIDEO__ + pIdImage + "." + pExtension

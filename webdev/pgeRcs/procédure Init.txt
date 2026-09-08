@@ -1,1 +1,21 @@
 procédure Init()
+
+tabChamp		est un tableau de chaînes
+sLibelle		est une chaîne
+stChamp		est une structBaseChamp
+
+
+// La bibliothèque se positionne sur celle de l'agent déjà choisi, s'il y en a un
+Partage.InitCboBibliothèque(cboBibliothèque, rcs_agent..Nom, rcs_agent.IdRcsAgent..Nom, __stOperation.stOperationRcs.IdRcsAgent, Faux, Faux, "")
+BibliothèqueValeurMemorisée(cboBibliothèque, _sBibliothèque, _nIdMarque)
+
+InitCboAgent()
+cboAgent = __stOperation.stOperationRcs.IdRcsAgent
+MajBoutonsContexte()
+
+pour tout élément stChamp, sLibelle de __stOperation.taaBaseChamp
+	tabChamp.Ajoute(sLibelle)
+fin
+
+pinRcsComposition.Charge(__stOperation.stOperationRcs, __stOperation.stOperationRcs.IdRcsAgent)
+// pinRcsComposition.ChargeChamps(tabChamp)

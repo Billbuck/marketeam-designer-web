@@ -1,0 +1,3 @@
+procédure RafraichitEmojisCartes()
+
+ConvertitCodesDansZone(znrRcsCarte..Alias)

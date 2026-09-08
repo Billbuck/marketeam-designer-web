@@ -1,0 +1,81 @@
+function AfficheSelecteurEmoji(sIdChamp, sIdCompteur, nMax, sIdBouton)
+{
+	var champ = document.getElementById(sIdChamp);
+	if (champ == null || !window.g_tabEmoji) return;
+
+	var idPanneau = sIdChamp + '_emoji';
+	var panneau   = document.getElementById(idPanneau);
+	if (panneau != null) { panneau.remove(); return; }
+
+	var bouton = document.getElementById(sIdBouton);
+
+	var insere = function (texte)
+	{
+		var deb = champ.selectionStart, fin = champ.selectionEnd, v = champ.value;
+		champ.value = v.substring(0, deb) + texte + v.substring(fin);
+		var pos = deb + texte.length;
+		champ.focus();
+		champ.setSelectionRange(pos, pos);
+		var cpt = document.getElementById(sIdCompteur);
+		if (cpt != null) cpt.textContent = champ.value.length + ' / ' + nMax;
+	};
+
+	panneau = document.createElement('div');
+	panneau.id = idPanneau;
+	panneau.style.cssText = 'position:absolute;z-index:100000;background:#fff;border:1px solid #CDD3D8;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.18);padding:8px 10px;width:330px;max-height:280px;overflow-y:auto;font-family:Arial,sans-serif;';
+
+	// Fermeture : clic en dehors, ou touche Échap
+	var fermer = function ()
+	{
+		panneau.remove();
+		document.removeEventListener('mousedown', surClic);
+		document.removeEventListener('keydown', surTouche);
+	};
+	var surClic = function (ev)
+	{
+		if (panneau.contains(ev.target)) return;
+		if (bouton != null && bouton.contains(ev.target)) return;
+		fermer();
+	};
+	var surTouche = function (ev)
+	{
+		if (ev.key === 'Escape') fermer();
+	};
+
+	var cat = null;
+	for (var i = 0; i < window.g_tabEmoji.length; i++)
+	{
+		var e = window.g_tabEmoji[i];
+		if (e.g !== cat)
+		{
+			cat = e.g;
+			var t = document.createElement('div');
+			t.textContent = cat;
+			t.style.cssText = 'font-size:10px;color:#7A858C;text-transform:uppercase;letter-spacing:.06em;margin:8px 0 3px;';
+			panneau.appendChild(t);
+		}
+		var b = document.createElement('span');
+		b.textContent = e.ch;
+		b.title = e.l;
+		b.style.cssText = 'display:inline-block;font-size:22px;line-height:1;padding:5px;cursor:pointer;border-radius:4px;';
+		b.onmouseover = function () { this.style.background = '#EAF6EB'; };
+		b.onmouseout  = function () { this.style.background = ''; };
+		b.onclick = (function (ch)
+		{
+			return function () { insere(ch); fermer(); };
+		})(e.ch);
+		panneau.appendChild(b);
+	}
+
+	var r = champ.getBoundingClientRect();
+	panneau.style.left = (r.left + window.scrollX) + 'px';
+	panneau.style.top  = (r.bottom + window.scrollY + 4) + 'px';
+	document.body.appendChild(panneau);
+
+	// On attend la fin du clic d'ouverture avant d'écouter, sinon il fermerait le panneau
+	setTimeout(function ()
+	{
+		document.addEventListener('mousedown', surClic);
+		document.addEventListener('keydown', surTouche);
+	}, 0);
+}

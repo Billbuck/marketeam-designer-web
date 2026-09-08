@@ -1,0 +1,69 @@
+procédure ConstruitBouton(pstBouton est une structOperationRcsBouton, pstParam est une structRcsBoutonParametres)
+
+sAction est une chaîne = pstBouton.SousType
+
+// Valeurs par défaut, écrasées ensuite selon l'action
+pstBouton.TypeBouton				= __RCS_BOUTON_OPEN_URL__
+pstBouton.UrlApplication		= __RCS_URL_BROWSER__
+pstBouton.UrlWebviewMode		= ""
+pstBouton.EstBoutonInteractif	= Faux
+pstBouton.Url						= ""
+pstBouton.Telephone				= ""
+pstBouton.Latitude				= 0
+pstBouton.Longitude				= 0
+pstBouton.LibelleLieu			= ""
+
+selon sAction
+	cas __RCS_ACTION_APPEL__
+		pstBouton.TypeBouton		= __RCS_BOUTON_DIAL_PHONE__
+		pstBouton.Telephone		= NumeroInternational(pstParam.Telephone)
+
+	cas __RCS_ACTION_EMAIL__
+		pstBouton.Url = "mailto:" + pstParam.Email
+		si pstParam.EmailObjet <> "" alors pstBouton.Url += "?subject=" + URLEncode(pstParam.EmailObjet)
+		si pstParam.EmailMessage <> "" alors
+			pstBouton.Url += (Position(pstBouton.Url, "?") > 0 ? "&" sinon "?") + "body=" + URLEncode(pstParam.EmailMessage)
+		fin
+
+	cas __RCS_ACTION_WHATSAPP__
+		pstBouton.Url = "https://wa.me/" + Remplace(NumeroInternational(pstParam.Telephone), "+", "")
+		si pstParam.Message <> "" alors pstBouton.Url += "?text=" + URLEncode(pstParam.Message)
+
+	cas __RCS_ACTION_SMS__
+		pstBouton.Url = "sms:" + NumeroInternational(pstParam.Telephone)
+		si pstParam.Message <> "" alors pstBouton.Url += "?body=" + URLEncode(pstParam.Message)
+
+	cas __RCS_ACTION_REACTION__
+		// L'adresse est construite à l'envoi, elle dépend de IdRcsBouton
+		pstBouton.UrlApplication	= __RCS_URL_WEBVIEW__
+		pstBouton.UrlWebviewMode	= __RCS_WEBVIEW_HALF__
+
+	cas __RCS_ACTION_LIEN__, __RCS_ACTION_RDV__, __RCS_ACTION_AVIS__, __RCS_ACTION_DOCUMENT__, __RCS_ACTION_FACEBOOK__, __RCS_ACTION_YOUTUBE__, __RCS_ACTION_LINKEDIN__
+		pstBouton.Url = pstParam.Url
+		AppliqueOuverture(pstBouton)
+
+	cas __RCS_ACTION_LANDING__
+		// L'adresse est construite à l'envoi, personnalisée par destinataire
+		pstBouton.EstBoutonInteractif = Vrai
+
+	cas __RCS_ACTION_CARTE__
+		pstBouton.TypeBouton		= __RCS_BOUTON_SHOW_LOCATION__
+		pstBouton.Latitude		= Val(Remplace(pstParam.Latitude, ",", "."))
+		pstBouton.Longitude		= Val(Remplace(pstParam.Longitude, ",", "."))
+		pstBouton.LibelleLieu	= pstParam.Lieu
+
+	cas __RCS_ACTION_ITINERAIRE__
+		pstBouton.Url = "https://www.google.com/maps/dir/?api=1&destination=" + URLEncode(pstParam.Adresse)
+
+	cas __RCS_ACTION_AGENDA__
+		pstBouton.Url = ConstruitUrlAgenda(pstParam)
+
+	cas __RCS_ACTION_APPLICATION__
+		// L'adresse est construite à l'envoi : page Marketeam qui redirige vers le bon store
+
+	cas __RCS_ACTION_INSTAGRAM__
+		pstBouton.Url = "https://www.instagram.com/" + pstParam.Compte
+
+	cas __RCS_ACTION_TIKTOK__
+		pstBouton.Url = "https://www.tiktok.com/@" + pstParam.Compte
+fin

@@ -1,0 +1,11 @@
+procédure RecalculeUrlMedias()
+
+nInd est un entier
+
+pour nInd = 1 _à_ _stOperationRcs.tabCarte..Occurrence
+	si _stOperationRcs.tabCarte[nInd].IdImage > 0 _et_ _stOperationRcs.tabCarte[nInd].MediaThumbnailUrl = "" alors
+		si ici_image.LitRecherchePremier(IdImage, _stOperationRcs.tabCarte[nInd].IdImage) alors
+			_stOperationRcs.tabCarte[nInd].MediaUrl = UrlMediaImage(ici_image.IdImage, ici_image.IdClient, ici_image.IdMarque)
+		fin
+	fin
+fin

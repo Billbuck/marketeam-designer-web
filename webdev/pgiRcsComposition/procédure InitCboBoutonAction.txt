@@ -1,0 +1,40 @@
+procédure InitCboBoutonAction(pRubrique)
+
+ListeSupprimeTout(cboBoutonAction)
+
+selon pRubrique
+	cas __RCS_RUBRIQUE_CONTACT__
+		cboBoutonAction.Ajoute("Appeler un numéro" + gLien(__RCS_ACTION_APPEL__))
+		cboBoutonAction.Ajoute("Envoyer un email" + gLien(__RCS_ACTION_EMAIL__))
+		cboBoutonAction.Ajoute("Écrire sur WhatsApp" + gLien(__RCS_ACTION_WHATSAPP__))
+		cboBoutonAction.Ajoute("Envoyer un SMS" + gLien(__RCS_ACTION_SMS__))
+
+	cas __RCS_RUBRIQUE_REACTION__
+		cboBoutonAction.Ajoute("Enregistrer une réaction" + gLien(__RCS_ACTION_REACTION__))
+
+	cas __RCS_RUBRIQUE_WEB__
+		cboBoutonAction.Ajoute("Ouvrir un lien" + gLien(__RCS_ACTION_LIEN__))
+		cboBoutonAction.Ajoute("Prendre rendez-vous" + gLien(__RCS_ACTION_RDV__))
+		cboBoutonAction.Ajoute("Laisser un avis" + gLien(__RCS_ACTION_AVIS__))
+		cboBoutonAction.Ajoute("Télécharger un document" + gLien(__RCS_ACTION_DOCUMENT__))
+
+	cas __RCS_RUBRIQUE_LANDING__
+		cboBoutonAction.Ajoute("Ma landing page interactive" + gLien(__RCS_ACTION_LANDING__))
+
+	cas __RCS_RUBRIQUE_LOCALISATION__
+		cboBoutonAction.Ajoute("Voir sur la carte" + gLien(__RCS_ACTION_CARTE__))
+		cboBoutonAction.Ajoute("Itinéraire vers une adresse" + gLien(__RCS_ACTION_ITINERAIRE__))
+
+	cas __RCS_RUBRIQUE_AGENDA__
+		cboBoutonAction.Ajoute("Ajouter à mon agenda" + gLien(__RCS_ACTION_AGENDA__))
+
+	cas __RCS_RUBRIQUE_RESEAUX__
+		cboBoutonAction.Ajoute("Télécharger l'application" + gLien(__RCS_ACTION_APPLICATION__))
+		cboBoutonAction.Ajoute("Instagram" + gLien(__RCS_ACTION_INSTAGRAM__))
+		cboBoutonAction.Ajoute("Facebook" + gLien(__RCS_ACTION_FACEBOOK__))
+		cboBoutonAction.Ajoute("TikTok" + gLien(__RCS_ACTION_TIKTOK__))
+		cboBoutonAction.Ajoute("YouTube" + gLien(__RCS_ACTION_YOUTUBE__))
+		cboBoutonAction.Ajoute("LinkedIn" + gLien(__RCS_ACTION_LINKEDIN__))
+fin
+
+cboBoutonAction.SelectPlus(1)

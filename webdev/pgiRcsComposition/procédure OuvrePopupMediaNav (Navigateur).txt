@@ -1,0 +1,4 @@
+procédure OuvrePopupMediaNav()
+
+GriseCarte(popRcsCarte..Alias, Vrai)
+PopupAffiche(popRcsMedia, popupHautCentre)

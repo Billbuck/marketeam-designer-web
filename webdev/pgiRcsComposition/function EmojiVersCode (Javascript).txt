@@ -1,0 +1,11 @@
+function EmojiVersCode(s)
+{
+	if (!window.g_mapEmojiCode) return s;
+	var cles = Object.keys(window.g_mapEmojiCode).sort(function (a, b) { return b.length - a.length; });
+	for (var i = 0; i < cles.length; i++)
+	{
+		var ch = cles[i];
+		if (s.indexOf(ch) >= 0) s = s.split(ch).join(':' + window.g_mapEmojiCode[ch] + ':');
+	}
+	return s;
+}

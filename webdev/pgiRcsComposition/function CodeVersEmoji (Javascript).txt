@@ -1,0 +1,8 @@
+function CodeVersEmoji(s)
+{
+	if (!window.g_mapCodeEmoji) return s;
+	return s.replace(/:([a-z0-9_]+):/g, function (m, code)
+	{
+		return (window.g_mapCodeEmoji[code] !== undefined) ? window.g_mapCodeEmoji[code] : m;
+	});
+}

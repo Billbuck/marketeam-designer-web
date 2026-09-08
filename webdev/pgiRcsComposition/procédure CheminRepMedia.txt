@@ -1,0 +1,7 @@
+procédure CheminRepMedia(pIdClient, pIdMarque, pTypeRepertoire)
+
+selon Vrai
+	cas pIdClient > 0	: renvoyer cpProjet.CheminClient(pIdClient, __OPERATION_RCS__, pTypeRepertoire, Faux)
+	cas pIdMarque > 0	: renvoyer cpProjet.CheminMarque(pIdMarque, __OPERATION_RCS__, pTypeRepertoire, Faux)
+	autre cas			: renvoyer cpProjet.CheminMarketeam(__OPERATION_RCS__, pTypeRepertoire, Faux)
+fin

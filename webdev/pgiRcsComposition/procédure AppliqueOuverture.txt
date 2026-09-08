@@ -1,0 +1,16 @@
+procédure AppliqueOuverture(pstBouton est une structOperationRcsBouton)
+
+selon selBoutonOuverture
+	cas 2
+		pstBouton.UrlApplication	= __RCS_URL_WEBVIEW__
+		pstBouton.UrlWebviewMode	= "FULL"
+	cas 3
+		pstBouton.UrlApplication	= __RCS_URL_WEBVIEW__
+		pstBouton.UrlWebviewMode	= "TALL"
+	cas 4
+		pstBouton.UrlApplication	= __RCS_URL_WEBVIEW__
+		pstBouton.UrlWebviewMode	= __RCS_WEBVIEW_HALF__
+	autre cas
+		pstBouton.UrlApplication	= __RCS_URL_BROWSER__
+		pstBouton.UrlWebviewMode	= ""
+fin

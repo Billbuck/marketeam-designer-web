@@ -1,0 +1,6 @@
+procédure NotifieHote()
+
+selon PageCourante()
+	cas "PGERCS"			: pgeRcs.ContenuModifie()
+	autre cas
+fin

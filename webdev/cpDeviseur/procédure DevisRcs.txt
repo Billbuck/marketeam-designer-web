@@ -16,10 +16,7 @@ sType								est une chaîne
 sLigne							est une chaîne
 mCoutTotalRcs					est un monétaire
 mCoutCliquezIci				est un monétaire
-sMessageFinalise				est une chaîne
 nTailleRepli					est un entier
-nCreditRepli					est un entier
-mPrixRepli						est un monétaire
 nNbrSegmentRepli				est un entier
 nNbrCarte						est un entier
 
@@ -30,6 +27,15 @@ tantque nInd > 0
 	stOperation.tabOperationLigne.Supprime(nInd)
 	nInd = stOperation.tabOperationLigne.Cherche(tcLinéaire,"TypeLigneCalcule",__OPERATION_RCS__)
 fin
+
+// on supprime les lignes calculées par la calculette
+nInd = stOperation.tabOperationLigne.Cherche(tcLinéaire,"TypeLigneCalcule",__OPERATION_SMS__)
+tantque nInd > 0
+	stOperation.tabOperationLigne.Supprime(nInd)
+	nInd = stOperation.tabOperationLigne.Cherche(tcLinéaire,"TypeLigneCalcule",__OPERATION_SMS__)
+fin
+
+
 
 si stOperation.NbrDestinataire = 0 alors
 	stOperation.MontantNetHT	= 0
@@ -125,15 +131,27 @@ si stOperation.stOperationRcs.EstRepliSms _et_ stOperation.stOperationRcs.NbrDes
 	si stOperation.stOperationRcs.RepliTailleMax > 0 alors
 		nNbrSegmentRepli = cpSms.CalculeTailleSms(stOperation.stOperationRcs.RepliTailleMax, Faux)
 	sinon
-		cpSms.CompteurSms(stOperation.stOperationRcs.RepliSmsMessage, sMessageFinalise, Faux, nTailleRepli, mPrixRepli, nCreditRepli, Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_SMS__].PrixVenteUnitaire, Vrai, stOperation.EstCliquezIci)
-		nNbrSegmentRepli = nCreditRepli
+		nTailleRepli		= cpSms.TailleSms(stOperation.stOperationRcs.RepliSmsMessage, Faux)
+		nNbrSegmentRepli	= cpSms.CalculeTailleSms(nTailleRepli, Faux)
+	fin
+
+	selon nNbrSegmentRepli
+		cas 1 : sLigne = "Sms de repli simple (< 160 caractères)"
+		cas 2 : sLigne = "Sms de repli double (entre 161 et 306 caractères)"
+		cas 3 : sLigne = "Sms de repli triple (entre 307 et 459 caractères)"
+		cas 4 : sLigne = "Sms de repli quadruple (entre 460 et 612 caractères)"
+		cas 5 : sLigne = "Sms de repli quintuple (entre 613 et 765 caractères)"
+		cas 6 : sLigne = "Sms de repli sextuple (entre 766 et 918 caractères)"
+		cas 7 : sLigne = "Sms de repli septuple (entre 919 et 1071 caractères)"
+		cas 8 : sLigne = "Sms de repli octuple (entre 1072 et 1224 caractères)"
+		cas 9 : sLigne = "Sms de repli trop longs ( > 1225 caractères)"
 	fin
 
 	mPuVenteRepli																			= Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_SMS__].PrixVenteUnitaire * nNbrSegmentRepli
 
 	nLigne																					= stOperation.tabOperationLigne.Ajoute()
 	stOperation.tabOperationLigne[nLigne].TypeLigneCalcule					= __OPERATION_RCS__
-	stOperation.tabOperationLigne[nLigne].Designation							= "SMS de repli (" + nNbrSegmentRepli + " segments)"
+	stOperation.tabOperationLigne[nLigne].Designation							= sLigne
 	stOperation.tabOperationLigne[nLigne].CodePrestation						= __PRESTATION_ROUTAGE_SMS__
 	stOperation.tabOperationLigne[nLigne].Qte										= stOperation.stOperationRcs.NbrDestinataireRepliSms
 	stOperation.tabOperationLigne[nLigne].TailleUnitaire						= nNbrSegmentRepli
@@ -170,7 +188,7 @@ si mCompensationPrestation > 0 alors
 fin
 
 // ******************************************* Cliquezici *****************************************************
-si stOperation.EstCliquezIci _et_  stOperation.stNouveauCliquezIci.Type <> __ICI_URL_FIXE__ alors
+si stOperation.EstCliquezIci alors
 	nLigne																					= stOperation.tabOperationLigne.Ajoute()
 	stOperation.tabOperationLigne[nLigne].TypeLigneCalcule					= __OPERATION_RCS__
 	stOperation.tabOperationLigne[nLigne].Qte										= stOperation.NbrDestinataire
@@ -178,8 +196,8 @@ si stOperation.EstCliquezIci _et_  stOperation.stNouveauCliquezIci.Type <> __ICI
 
 	sType																						= stOperation.stNouveauCliquezIci.Type
 
-	si sType dans (__ICI_URL_TRACKING__ ,__ICI_WEB__) alors
-		stOperation.tabOperationLigne[nLigne].Designation							= __ICI_URL_TRACKING__ ? "Tracking Url" sinon "Tracking landing page"
+	si sType dans (__ICI_URL_FIXE__, __ICI_URL_TRACKING__, __ICI_WEB__) alors
+		stOperation.tabOperationLigne[nLigne].Designation							= sType = __ICI_WEB__ ? "Tracking landing page" sinon "Tracking Url"
 		stOperation.tabOperationLigne[nLigne].CodePrestation						= __PRESTATION_CLIQUEZICI_WEB__
 		stOperation.tabOperationLigne[nLigne].PrixUnitaireVenteCalcule			= Partage.__vcUser.taaPrestation[__PRESTATION_CLIQUEZICI_WEB__].PrixVenteUnitaire
 		stOperation.tabOperationLigne[nLigne].PrixUnitaireVenteMinimum			= 0

@@ -1,0 +1,17 @@
+// Longueur d'un libellé telle que la verra Infobip :
+// chaque :code: compte pour la longueur réelle de son emoji.
+procédure LongueurTexteEmoji(pLibelle)
+
+nLongueur		est un entier	= Taille(pLibelle)
+sCode				est une chaîne
+nLongueurEmoji	est un entier
+nOcc				est un entier
+
+pour tout élément nLongueurEmoji, sCode de _taaEmojiLongueur
+	nOcc = ChaîneOccurrence(pLibelle, ":" + sCode + ":")
+	si nOcc > 0 alors
+		nLongueur += nOcc * (nLongueurEmoji - Taille(":" + sCode + ":"))
+	fin
+fin
+
+renvoyer nLongueur

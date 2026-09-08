@@ -1,0 +1,25 @@
+procédure LibelleAction(pAction)
+
+selon pAction
+	cas __RCS_ACTION_APPEL__			: renvoyer "Appel"
+	cas __RCS_ACTION_EMAIL__			: renvoyer "Email"
+	cas __RCS_ACTION_WHATSAPP__		: renvoyer "WhatsApp"
+	cas __RCS_ACTION_SMS__				: renvoyer "SMS"
+	cas __RCS_ACTION_REACTION__		: renvoyer "Réaction"
+	cas __RCS_ACTION_LIEN__				: renvoyer "Lien"
+	cas __RCS_ACTION_RDV__				: renvoyer "Rendez-vous"
+	cas __RCS_ACTION_AVIS__				: renvoyer "Avis"
+	cas __RCS_ACTION_DOCUMENT__		: renvoyer "Document"
+	cas __RCS_ACTION_LANDING__			: renvoyer "Landing page"
+	cas __RCS_ACTION_CARTE__			: renvoyer "Carte"
+	cas __RCS_ACTION_ITINERAIRE__		: renvoyer "Itinéraire"
+	cas __RCS_ACTION_AGENDA__			: renvoyer "Agenda"
+	cas __RCS_ACTION_APPLICATION__	: renvoyer "Application"
+	cas __RCS_ACTION_INSTAGRAM__		: renvoyer "Instagram"
+	cas __RCS_ACTION_FACEBOOK__		: renvoyer "Facebook"
+	cas __RCS_ACTION_TIKTOK__			: renvoyer "TikTok"
+	cas __RCS_ACTION_YOUTUBE__			: renvoyer "YouTube"
+	cas __RCS_ACTION_LINKEDIN__		: renvoyer "LinkedIn"
+fin
+
+renvoyer pAction

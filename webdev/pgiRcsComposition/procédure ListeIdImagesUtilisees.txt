@@ -1,0 +1,18 @@
+// Liste des IdImage déjà utilisés, séparés par des virgules. Chaîne vide si aucun.
+procédure ListeIdImagesUtilisees()
+
+sListe	est une chaîne
+nInd		est un entier
+
+pour nInd = 1 _à_ _stOperationRcs.tabCarte..Occurrence
+	si nInd = _nIndiceCarteEdite alors continuer
+	si _stOperationRcs.tabCarte[nInd].IdImage > 0 alors
+		sListe += [","] + _stOperationRcs.tabCarte[nInd].IdImage
+	fin
+fin
+
+si _stCarteEdite.IdImage > 0 alors
+	sListe += [","] + _stCarteEdite.IdImage
+fin
+
+renvoyer sListe

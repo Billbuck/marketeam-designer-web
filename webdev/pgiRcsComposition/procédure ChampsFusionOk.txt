@@ -1,0 +1,28 @@
+procédure ChampsFusionOk(pTexte, pNomZone)
+
+sTexte	est une chaîne	= Remplace(pTexte, RC, " ")
+sChamp	est une chaîne
+nDeb		est un entier
+nFin		est un entier
+
+si ChaîneOccurrence(sTexte, "[") <> ChaîneOccurrence(sTexte, "]") alors
+	AfficheMessage("Les caractères [ ] sont réservés à la personnalisation — " + pNomZone + ".", "Personnalisation")
+	renvoyer Faux
+fin
+
+// Hors tunnel, pas de base : on ne peut pas contrôler les noms
+si _tabChamp..Occurrence = 0 alors renvoyer Vrai
+
+nDeb = Position(sTexte, "[")
+tantque nDeb > 0
+	nFin = Position(sTexte, "]", nDeb)
+	si nFin = 0 alors sortir
+	sChamp = Milieu(sTexte, nDeb + 1, nFin - nDeb - 1)
+	si TableauCherche(_tabChamp, tcLinéaire, sChamp) = -1 alors
+		AfficheMessage("Le champ [" + sChamp + "] n'existe pas dans votre base de données — " + pNomZone + ".", "Personnalisation")
+		renvoyer Faux
+	fin
+	nDeb = Position(sTexte, "[", nFin)
+fin
+
+renvoyer Vrai

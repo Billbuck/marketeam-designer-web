@@ -1,0 +1,80 @@
+procédure AfficheMedias()
+
+sTexteRequete	est une chaîne
+sdReqMedia		est une Source de Données
+sWhere			est une chaîne
+sExclus			est une chaîne
+sTypes			est une chaîne
+nInd				est un entier
+
+// Filtre sur le type
+selon selMediaType
+	cas 2		: sTypes = "'" + __ICI_RCS_IMAGE__ + "'"
+	cas 3		: sTypes = "'" + __ICI_RCS_VIDEO__ + "'"
+	autre cas	: sTypes = "'" + __ICI_RCS_IMAGE__ + "','" + __ICI_RCS_VIDEO__ + "'"
+fin
+
+// En carrousel, jamais de vidéo
+si _stOperationRcs.TypeContenu = __RCS_CONTENU_CARROUSEL__ alors sTypes = "'" + __ICI_RCS_IMAGE__ + "'"
+
+// Filtre bibliothèque, catégorie, recherche
+Partage.FiltreBibliothèque(_sMediaBibliotheque, ici_image..Nom, sWhere, Vrai)
+
+si cboMediaCategorie.ValeurMémorisée > 0 alors
+	sWhere += " AND ici_image.IdCategorie = " + cboMediaCategorie.ValeurMémorisée
+fin
+
+si SansEspace(saiMediaRecherche) <> "" alors
+	sWhere += " AND ici_image.Nom LIKE '%" + Remplace(saiMediaRecherche, "'", "''") + "%'"
+fin
+
+// Images déjà utilisées dans les autres cartes
+sExclus = ListeIdImagesUtilisees()
+si sExclus <> "" alors
+	sWhere += " AND ici_image.IdImage NOT IN (" + sExclus + ")"
+fin
+
+sTexteRequete = [
+	SELECT
+	ici_image.IdImage, ici_image.Nom, ici_image.Type, ici_image.TypeFichier,
+	ici_image.IdClient, ici_image.IdMarque
+	FROM ici_image
+	WHERE ici_image.EstActif = 1
+	AND ici_image.Type IN ([%sTypes%])
+	AND (ici_image.DateDebutValidite IS NULL OR ici_image.DateDebutValidite <= CURDATE())
+	AND (ici_image.DateFinValidite IS NULL OR ici_image.DateFinValidite >= CURDATE())
+	[%sWhere%]
+	ORDER BY ici_image.Nom
+]
+
+znrMedia.SupprimeTout()
+
+si pas sdReqMedia.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	libMediaInfo = "Erreur de lecture des médias"
+	retour
+fin
+
+pour tout sdReqMedia
+	nInd++
+	znrMedia.Ajoute()
+	znrMedia[nInd].attIdImage		= sdReqMedia.IdImage
+	znrMedia[nInd].attType			= sdReqMedia.Type
+	znrMedia[nInd].libZnrMediaNom	= sdReqMedia.Nom
+
+	si sdReqMedia.Type = __ICI_RCS_VIDEO__ alors
+		znrMedia[nInd].attCheminRelatif = UrlVignetteVideo(sdReqMedia.IdImage, sdReqMedia.IdClient, sdReqMedia.IdMarque)
+	sinon
+		znrMedia[nInd].attCheminRelatif = UrlMediaImage(sdReqMedia.IdImage, sdReqMedia.IdClient, sdReqMedia.IdMarque)
+	fin
+
+	znrMedia[nInd].imgZnrMedia = znrMedia[nInd].attCheminRelatif
+fin
+
+si nInd > 0 alors
+	SelectionneMedia(1)
+sinon
+	libMediaInfo			= "Aucun média"
+	btnMediaChoisir.Etat	= Grisé
+fin
+
+sdReqMedia.AnnuleDéclaration()

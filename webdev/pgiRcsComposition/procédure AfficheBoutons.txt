@@ -1,0 +1,25 @@
+procédure AfficheBoutons(pIndice = 1)
+
+nInd	est un entier
+nNb	est un entier	= _stCarteEdite.tabBouton..Occurrence
+
+znrCarteBouton.SupprimeTout()
+
+pour tout stRcsBouton, nInd de _stCarteEdite.tabBouton sur Ordre
+	znrCarteBouton.Ajoute()
+	znrCarteBouton[nInd].attIndice								= nInd
+	znrCarteBouton[nInd].libZnrBoutonLibelle					= stRcsBouton.Libelle
+	znrCarteBouton[nInd].libZnrBoutonType						= LibelleCibleBouton(stRcsBouton)
+	znrCarteBouton[nInd].btnZnrBoutonMonter.Visible			= (nInd = pIndice _et_ nInd > 1)
+	znrCarteBouton[nInd].btnZnrBoutonDescendre.Visible		= (nInd = pIndice _et_ nInd < nNb)
+	znrCarteBouton[nInd].btnZnrBoutonModifier.Visible		= (nInd = pIndice)
+	znrCarteBouton[nInd].btnZnrBoutonSupprimer.Visible		= (nInd = pIndice)
+fin
+
+si znrCarteBouton.Occurrence > 0 alors
+	znrCarteBouton.SelectPlus(pIndice)
+fin
+
+libCarteBouton										= "Boutons — " + nNb + " sur " + __RCS_MAX_BOUTONS_CARTE__
+dispRcsCarte[#AfficheBouton].Visible		= nNb > 0
+dispRcsCarte[#AjouterBouton].Visible		= (nNb < __RCS_MAX_BOUTONS_CARTE__)

@@ -1,0 +1,7 @@
+procédure AfficheMessage(local sMessage est une chaîne, local sTitre est une chaîne = "Information", local sTypeAnimation est une chaîne = __TOAST_INFORMATION__, local duDuree est une Durée = 2 s)
+
+selon PageCourante()
+	cas "PGERCSMODELE"	: pgeRcsModele.PopupAfficheMessage(sMessage, sTitre, __OPERATION_RCS__, sTypeAnimation, duDuree)
+	cas "PGERCS"			: pgeRcs.PopupAfficheMessage(sMessage, sTitre, __OPERATION_RCS__, sTypeAnimation, duDuree)
+	autre cas
+fin

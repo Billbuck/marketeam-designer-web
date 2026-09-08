@@ -1,0 +1,11 @@
+procédure RubriqueDeAction(pAction)
+
+selon pAction
+	cas __RCS_ACTION_APPEL__, __RCS_ACTION_EMAIL__, __RCS_ACTION_WHATSAPP__, __RCS_ACTION_SMS__	: renvoyer __RCS_RUBRIQUE_CONTACT__
+	cas __RCS_ACTION_REACTION__																						: renvoyer __RCS_RUBRIQUE_REACTION__
+	cas __RCS_ACTION_LIEN__, __RCS_ACTION_RDV__, __RCS_ACTION_AVIS__, __RCS_ACTION_DOCUMENT__ 	: renvoyer __RCS_RUBRIQUE_WEB__
+	cas __RCS_ACTION_LANDING__																							: renvoyer __RCS_RUBRIQUE_LANDING__
+	cas __RCS_ACTION_CARTE__, __RCS_ACTION_ITINERAIRE__														: renvoyer __RCS_RUBRIQUE_LOCALISATION__
+	cas __RCS_ACTION_AGENDA__																							: renvoyer __RCS_RUBRIQUE_AGENDA__
+	autre cas																												: renvoyer __RCS_RUBRIQUE_RESEAUX__
+fin

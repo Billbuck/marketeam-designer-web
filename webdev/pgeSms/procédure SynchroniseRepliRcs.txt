@@ -1,0 +1,25 @@
+procédure SynchroniseRepliRcs()
+
+si __stOperation.TypeOperation <> __OPERATION_RCS__ alors retour
+
+si selRepliSms = 1 alors
+	__stOperation.stOperationRcs.EstRepliSms					= Vrai
+	__stOperation.stOperationRcs.RepliSmsFrom					= __stOperation.stOperationSms.LeFrom
+	__stOperation.stOperationRcs.RepliSmsMessage				= __stOperation.stOperationSms.Message
+	__stOperation.stOperationRcs.RepliIdSmsModele			= __stOperation.stOperationSms.IdSmsModele
+	__stOperation.stOperationRcs.RepliModeleVariable		= __stOperation.stOperationSms.ModeleVariable
+	__stOperation.stOperationRcs.EstRepliSmsPersonnalise	= __stOperation.stOperationSms.EstSmsPersonnalise
+	__stOperation.stOperationRcs.RepliTailleMax				= __stOperation.stOperationSms.TailleMax
+	__stOperation.stOperationRcs.taaRepliCreditSms			= __stOperation.stOperationSms.taaCreditSms
+	__stOperation.stOperationRcs.taaRepliTailleSms			= __stOperation.stOperationSms.taaTailleSms
+sinon
+	__stOperation.stOperationRcs.EstRepliSms					= Faux
+	__stOperation.stOperationRcs.RepliSmsFrom					= ""
+	__stOperation.stOperationRcs.RepliSmsMessage				= ""
+	__stOperation.stOperationRcs.RepliIdSmsModele			= 0
+	__stOperation.stOperationRcs.RepliModeleVariable		= ""
+	__stOperation.stOperationRcs.EstRepliSmsPersonnalise	= Faux
+	__stOperation.stOperationRcs.RepliTailleMax				= 0
+	__stOperation.stOperationRcs.taaRepliCreditSms.SupprimeTout()
+	__stOperation.stOperationRcs.taaRepliTailleSms.SupprimeTout()
+fin

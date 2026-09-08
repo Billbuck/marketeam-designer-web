@@ -1,0 +1,16 @@
+procédure ConstruitUrlAgenda(pstParam est une structRcsBoutonParametres)
+
+sUrl		est une chaîne
+sDebut	est une chaîne
+sFin		est une chaîne
+
+sDebut	= DateVersChaîne(pstParam.AgendaDate, "AAAAMMJJ") + "T" + HeureVersChaîne(pstParam.AgendaHeureDebut, "HHMMSS")
+sFin		= DateVersChaîne(pstParam.AgendaDate, "AAAAMMJJ") + "T" + HeureVersChaîne(pstParam.AgendaHeureFin, "HHMMSS")
+
+sUrl		= "https://calendar.google.com/calendar/render?action=TEMPLATE"
+sUrl += "&text=" + URLEncode(pstParam.AgendaTitre)
+sUrl += "&dates=" + sDebut + "/" + sFin
+si pstParam.AgendaLieu <> "" alors sUrl += "&location=" + URLEncode(pstParam.AgendaLieu)
+si pstParam.AgendaDescription <> "" alors sUrl += "&details=" + URLEncode(pstParam.AgendaDescription)
+
+renvoyer sUrl

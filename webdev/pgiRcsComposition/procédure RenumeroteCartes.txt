@@ -1,0 +1,7 @@
+procédure RenumeroteCartes()
+
+nInd est un entier
+
+pour nInd = 1 _à_ _stOperationRcs.tabCarte.Occurrence
+	_stOperationRcs.tabCarte[nInd].Ordre = nInd
+fin

@@ -1,0 +1,3 @@
+procédure MajApercu()
+
+htmRcsAperçu = Partage.HtmlApercuRcs(_stOperationRcs, _nIdRcsAgent, htmRcsAperçu..Largeur, "apCompo")

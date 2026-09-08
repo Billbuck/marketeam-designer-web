@@ -1,0 +1,21 @@
+function ConvertitCodesDansZone(sIdZone)
+{
+
+	var zone = document.getElementById(sIdZone);
+	if (zone == null) zone = document.querySelector('[id$="' + sIdZone + '"]');
+	if (zone == null || !window.g_mapCodeEmoji) return;
+
+	var marcheur = document.createTreeWalker(zone, NodeFilter.SHOW_TEXT, null, false);
+	var noeuds   = [];
+	while (marcheur.nextNode()) noeuds.push(marcheur.currentNode);
+
+	for (var i = 0; i < noeuds.length; i++)
+	{
+		var n = noeuds[i];
+		if (n.nodeValue.indexOf(':') < 0) continue;
+		n.nodeValue = n.nodeValue.replace(/:([a-z0-9_]+):/g, function (m, code)
+		{
+			return (window.g_mapCodeEmoji[code] !== undefined) ? window.g_mapCodeEmoji[code] : m;
+		});
+	}
+}

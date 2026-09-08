@@ -36,6 +36,7 @@ si SaisieMessageOK() alors
 	__stOperation.stOperationSms.Message = _sMessageFinalisé
 	mCoutTotal					= CalculeCoutOperationSms(__stOperation)
 	libTrfMontantHT				= NumériqueVersChaîne(mCoutTotal, ",2fS") +" €"
+	SynchroniseRepliRcs()
 	TunnelCalculeTarif()
 	MixGestionInterface(saiMessage)
 	TunnelAfficheInformationsBandeauDroit()

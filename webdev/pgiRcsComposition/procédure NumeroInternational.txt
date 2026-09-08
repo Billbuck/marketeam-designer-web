@@ -1,0 +1,14 @@
+// Transforme 06 12 34 56 78 en +33612345678
+procédure NumeroInternational(pNumero)
+
+sNum est une chaîne = pNumero
+
+sNum	= Remplace(sNum, " ", "")
+sNum	= Remplace(sNum, ".", "")
+sNum	= Remplace(sNum, "-", "")
+
+si Gauche(sNum, 2) = "00" alors sNum = "+" + Milieu(sNum, 3)
+si Gauche(sNum, 1) = "0" alors sNum = "+33" + Milieu(sNum, 2)
+si Gauche(sNum, 1) <> "+" alors sNum = "+" + sNum
+
+renvoyer sNum

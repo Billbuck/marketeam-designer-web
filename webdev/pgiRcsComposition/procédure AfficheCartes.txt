@@ -1,0 +1,64 @@
+procédure AfficheCartes(pIndice = 1)
+
+nInd				est un entier
+nBtn 				est un entier
+nNb				est un entier	= _stOperationRcs.tabCarte..Occurrence
+sMessage 		est une chaîne
+
+
+sMessage = libZnrMessage
+
+
+znrRcsCarte.SupprimeTout()
+
+
+pour tout stCarte de _stOperationRcs.tabCarte sur Ordre
+	nInd = znrRcsCarte.AjouteLigne()
+	znrRcsCarte[nInd].attIndice					= nInd
+	znrRcsCarte[nInd].libZnrMessage				= ChaîneConstruit(sMessage, TexteVersHTML(stCarte.Titre), TexteVersHTML(stCarte.Description))
+
+
+	si stCarte.MediaThumbnailUrl <> "" alors
+		znrRcsCarte[nInd].imgZnrImage = stCarte.MediaThumbnailUrl
+	sinon
+		znrRcsCarte[nInd].imgZnrImage = stCarte.MediaUrl
+	fin
+
+
+	pour tout stBouton, nBtn de stCarte.tabBouton
+		selon nBtn
+			cas 1 		: znrRcsCarte[nInd].libBouton1.Visible = Vrai ; znrRcsCarte[nInd].libBouton1 = stBouton.Libelle
+			cas 2 		: znrRcsCarte[nInd].libBouton2.Visible = Vrai ; znrRcsCarte[nInd].libBouton2 = stBouton.Libelle
+			cas 3 		: znrRcsCarte[nInd].libBouton3.Visible = Vrai ; znrRcsCarte[nInd].libBouton3 = stBouton.Libelle
+			cas 4 		: znrRcsCarte[nInd].libBouton4.Visible = Vrai ; znrRcsCarte[nInd].libBouton4 = stBouton.Libelle
+			autre cas	:
+		fin
+	fin
+
+	pour nBtn = (stCarte.tabBouton.Occurrence + 1) _à_ 4
+		selon nBtn
+			cas 1 		: znrRcsCarte[nInd].libBouton1.Visible = Faux
+			cas 2 		: znrRcsCarte[nInd].libBouton2.Visible = Faux
+			cas 3 		: znrRcsCarte[nInd].libBouton3.Visible = Faux
+			cas 4 		: znrRcsCarte[nInd].libBouton4.Visible = Faux
+			autre cas	:
+		fin
+	fin
+
+	znrRcsCarte[nInd].btnZnrModifier.Visible	= (nInd = pIndice)
+	znrRcsCarte[nInd].btnZnrDupliquer.Visible	= (nInd = pIndice)
+	znrRcsCarte[nInd].btnZnrSupprimer.Visible	= (nInd = pIndice)
+	znrRcsCarte[nInd].btnZnrMonter.Visible		= (nInd = pIndice _et_ nInd > 1)
+	znrRcsCarte[nInd].btnZnrDescendre.Visible	= (nInd = pIndice _et_ nInd < nNb)
+
+fin
+
+si znrRcsCarte.Occurrence > 0 alors
+	znrRcsCarte.SelectPlus(pIndice)
+fin
+
+dispRcsZnrCarte[1].Visible = (nNb > 0)
+
+MajCompteurCartes()
+MajApercu()
+NotifieHote()

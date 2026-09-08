@@ -1,0 +1,38 @@
+procédure AfficheMediaCarte()
+
+sRepPhysique est une chaîne
+
+si _stCarteEdite.IdImage = 0 alors
+	imgCarteMedia.Visible	= Faux
+	libCarteMediaInfo			= "Aucun média"
+	retour
+fin
+
+imgCarteMedia.Visible = Vrai
+
+si _stCarteEdite.IdImage = 0 alors
+	imgCarteMedia		= ""
+	libCarteMediaInfo	= "Aucun média"
+	retour
+fin
+
+si pas ici_image.LitRecherchePremier(IdImage, _stCarteEdite.IdImage) alors
+	imgCarteMedia		= ""
+	libCarteMediaInfo	= "Média introuvable"
+	retour
+fin
+
+si _stCarteEdite.MediaThumbnailUrl <> "" alors
+	sRepPhysique		= CheminRepMediaPhysique(ici_image.IdClient, ici_image.IdMarque, __REP_VIDEO__)
+	imgCarteMedia		= sRepPhysique + __DOC_RCS_VIGNETTE_CARD__ + _stCarteEdite.IdImage + __JPG__
+	libCarteMediaInfo	= "Vidéo"
+sinon
+	sRepPhysique		= CheminRepMediaPhysique(ici_image.IdClient, ici_image.IdMarque, __REP_IMAGE__)
+	si _stOperationRcs.TypeContenu = __RCS_CONTENU_CARROUSEL__ alors
+		imgCarteMedia		= sRepPhysique + __DOC_RCS_IMAGE_SLDR__ + _stCarteEdite.IdImage + __JPG__
+		libCarteMediaInfo	= "Image · 4:3"
+	sinon
+		imgCarteMedia		= sRepPhysique + __DOC_RCS_IMAGE_CARD__ + _stCarteEdite.IdImage + __JPG__
+		libCarteMediaInfo	= "Image · 3:2"
+	fin
+fin

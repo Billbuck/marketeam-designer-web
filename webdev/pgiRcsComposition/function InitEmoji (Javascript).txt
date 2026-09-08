@@ -1,0 +1,15 @@
+function InitEmoji(sJson)
+{
+	window.g_tabEmoji      = JSON.parse(sJson);
+	window.g_mapCodeEmoji  = {};
+	window.g_mapEmojiCode  = {};
+
+	for (var i = 0; i < g_tabEmoji.length; i++)
+	{
+		var e   = g_tabEmoji[i];
+		var cps = e.p.split(' ').map(function (h) { return parseInt(h, 16); });
+		e.ch = String.fromCodePoint.apply(null, cps);
+		g_mapCodeEmoji[e.c]  = e.ch;
+		g_mapEmojiCode[e.ch] = e.c;
+	}
+}

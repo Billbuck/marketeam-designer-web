@@ -1,0 +1,12 @@
+procédure InitCboBoutonRubrique()
+
+ListeSupprimeTout(cboBoutonRubrique)
+cboBoutonRubrique.Ajoute("Contact" + gLien(__RCS_RUBRIQUE_CONTACT__))
+cboBoutonRubrique.Ajoute("Réaction" + gLien(__RCS_RUBRIQUE_REACTION__))
+cboBoutonRubrique.Ajoute("Web" + gLien(__RCS_RUBRIQUE_WEB__))
+cboBoutonRubrique.Ajoute("Landing page Marketeam" + gLien(__RCS_RUBRIQUE_LANDING__))
+cboBoutonRubrique.Ajoute("Localisation" + gLien(__RCS_RUBRIQUE_LOCALISATION__))
+cboBoutonRubrique.Ajoute("Agenda" + gLien(__RCS_RUBRIQUE_AGENDA__))
+cboBoutonRubrique.Ajoute("Application et réseaux sociaux" + gLien(__RCS_RUBRIQUE_RESEAUX__))
+
+cboBoutonRubrique.SelectPlus(1)

@@ -1,0 +1,68 @@
+procédure MajZonesBouton()
+
+sAction	est une chaîne	= cboBoutonAction.ValeurMémorisée
+nZone		est un entier
+
+pour nZone = #Telephone _à_ #Ouverture
+	dispRcsBouton[nZone].Visible = Faux
+fin
+
+selon sAction
+	cas __RCS_ACTION_APPEL__
+		dispRcsBouton[#Telephone].Visible		= Vrai
+		libBoutonAide								= "Le tap compose directement le numéro."
+
+	cas __RCS_ACTION_EMAIL__
+		dispRcsBouton[#Email].Visible	= Vrai
+		libBoutonAide						= "Le tap ouvre la messagerie du destinataire avec ces éléments déjà remplis."
+
+	cas __RCS_ACTION_WHATSAPP__
+		dispRcsBouton[#Telephone].Visible	= Vrai
+		dispRcsBouton[#Message].Visible		= Vrai
+		libBoutonAide								= "Le tap ouvre WhatsApp sur votre numéro, avec ce message prêt à envoyer."
+
+	cas __RCS_ACTION_SMS__
+		dispRcsBouton[#Telephone].Visible	= Vrai
+		dispRcsBouton[#Message].Visible		= Vrai
+		libBoutonAide								= "Le tap ouvre l'application SMS avec ce message prêt à envoyer."
+
+	cas __RCS_ACTION_REACTION__
+		dispRcsBouton[#Reaction].Visible	= Vrai
+		libBoutonAide							= "Le clic est enregistré et ce message s'affiche dans un volet, sans quitter la conversation."
+
+	cas __RCS_ACTION_LIEN__, __RCS_ACTION_RDV__, __RCS_ACTION_AVIS__, __RCS_ACTION_DOCUMENT__
+		dispRcsBouton[#Url].Visible			= Vrai
+		dispRcsBouton[#Ouverture].Visible	= Vrai
+		libBoutonAide								= "Le tap ouvre cette adresse selon le mode choisi."
+
+	cas __RCS_ACTION_FACEBOOK__, __RCS_ACTION_YOUTUBE__, __RCS_ACTION_LINKEDIN__
+		dispRcsBouton[#Url].Visible		= Vrai
+		libBoutonAide						= "Le tap ouvre l'application si elle est installée, le site sinon."
+
+	cas __RCS_ACTION_LANDING__
+		dispRcsBouton[#LandingPage].Visible	= Vrai
+		dispRcsBouton[#Ouverture].Visible	= Vrai
+		libBoutonAide								= "L'adresse est générée automatiquement pour chaque destinataire."
+
+	cas __RCS_ACTION_CARTE__
+		dispRcsBouton[#Carte].Visible	= Vrai
+		libBoutonAide						= "Le tap ouvre l'application Plans ou Maps sur ce point."
+
+	cas __RCS_ACTION_ITINERAIRE__
+		dispRcsBouton[#Adresse].Visible	= Vrai
+		libBoutonAide							= "Le tap ouvre Google Maps avec l'itinéraire vers cette adresse."
+
+	cas __RCS_ACTION_AGENDA__
+		dispRcsBouton[#Agenda].Visible		= Vrai
+		libBoutonAide							= "Le tap ouvre l'agenda du destinataire avec l'événement pré-rempli."
+
+	cas __RCS_ACTION_APPLICATION__
+		dispRcsBouton[#Application].Visible	= Vrai
+		libBoutonAide								= "Le tap ouvre le store correspondant au téléphone du destinataire."
+
+	cas __RCS_ACTION_INSTAGRAM__, __RCS_ACTION_TIKTOK__
+		dispRcsBouton[#Compte].Visible		= Vrai
+		libBoutonAide							= "Saisissez le nom du compte, avec ou sans @."
+
+	autre cas : STOP ; Trace("sAction" = sAction)
+fin

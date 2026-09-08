@@ -1,39 +1,39 @@
-// **** Déclarations globales de pgeSms (serveur) ****
-
 procédure pgeSms(_pIdOperation = 0)
 
 _nIdOperation = _pIdOperation
 
-_sBibliothèque				est une chaîne
-_nIdMarque					est un entier
+_sBibliothèque					est une chaîne
+_nIdMarque						est un entier
 
-_nNumFiche					est un entier	<synchronisé navigateur>
+_nNumFiche						est un entier					<synchronisé navigateur>
 
-_nTailleMessage				est un entier	<synchronisé navigateur>
-_nCreditMessage				est un entier	<synchronisé navigateur>
-_mPrixVenteUnitaireHT		est un monétaire		<synchronisé navigateur>
-_mTarifUnitaire				est un monétaire		<synchronisé navigateur>
-_mCoutTotal					est un monétaire
-_sCopieMessage				est une chaîne <synchronisé navigateur>
-_bEstCliquezIci				est un booléen <synchronisé navigateur>
-_bEstPersonnalisé			est un booléen <synchronisé navigateur>
-_bEstBaseCharge				est un booléen <synchronisé navigateur>
-_nPositionCurseur			est un entier  <synchronisé navigateur>
-_taaColonne					est un tableau associatif <synchronisé navigateur> de chaînes
+_nTailleMessage				est un entier					<synchronisé navigateur>
+_nCreditMessage				est un entier					<synchronisé navigateur>
+_mPrixVenteUnitaireHT		est un monétaire				<synchronisé navigateur>
+_mTarifUnitaire				est un monétaire				<synchronisé navigateur>
+_mCoutTotal						est un monétaire
+_sCopieMessage					est une chaîne					<synchronisé navigateur>
+_bEstCliquezIci				est un booléen					<synchronisé navigateur>
+_bEstPersonnalisé				est un booléen					<synchronisé navigateur>
+_bEstBaseCharge				est un booléen					<synchronisé navigateur>
+_nPositionCurseur				est un entier					<synchronisé navigateur>
+_taaColonne						est un tableau associatif	<synchronisé navigateur> de chaînes
 //_tabEchantillonBaseLigne	est un tableau <synchronisé navigateur> de StructBaseLigne
-_sMessageBrutAvecVariable	est une chaîne <synchronisé navigateur>
-_sMessageFinalisé			est une chaîne <synchronisé navigateur>
+_sMessageBrutAvecVariable	est une chaîne					<synchronisé navigateur>
+_sMessageFinalisé				est une chaîne					<synchronisé navigateur>
+
 
 constante
-	_ban_modele_			= 1
-	_ban_emetteur_			= 2
-	_ban_message_			= 3
-	_ban_saisir_		 	= 4
+	_ban_rcs_  				= 1
+	_ban_modele_			= 2
+	_ban_emetteur_			= 3
+	_ban_message_			= 4
+	_ban_saisir_		 	= 5
 fin
 
 Tunnel.__taaPageVisitée[PageCourante] = Vrai
 
-libModeleTitrePage = "SMS"
+libModeleTitrePage = (__stOperation.TypeOperation = __OPERATION_RCS__ ? "REPLI SMS" sinon "SMS")
 
 // Procédure qui déclenche un message d'erreur si un caractère interdit est saisie dans le FROM
 // En cas d'erreur cela déclenche la procédure navigateur AfficheErreurFrom
@@ -114,6 +114,8 @@ MaPage.HTMLEntête += RC + [
 	});
 	</script>
 ]
+
+
 
 
 // **** Fin d'initialisation de pgeSms (serveur) ****

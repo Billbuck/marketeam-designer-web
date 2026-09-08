@@ -1,0 +1,9 @@
+procédure TypeMimeVideoRcs(pExtension)
+
+selon Minuscule(pExtension)
+	cas "mp4", "m4v"	: renvoyer "video/mp4"
+	cas "webm"			: renvoyer "video/webm"
+	cas "3gp"			: renvoyer "video/3gpp"
+fin
+
+renvoyer "video/mp4"

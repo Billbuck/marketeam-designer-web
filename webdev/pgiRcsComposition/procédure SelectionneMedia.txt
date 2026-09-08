@@ -1,0 +1,17 @@
+procédure SelectionneMedia(pLigne)
+
+si pLigne < 1 _ou_ pLigne > znrMedia..Occurrence alors retour
+
+_nMediaSelIdImage	= znrMedia[pLigne].attIdImage
+_sMediaSelType		= znrMedia[pLigne].attType
+_sMediaSelNom		= znrMedia[pLigne].libZnrMediaNom
+
+si ici_image.LitRecherchePremier(IdImage, _nMediaSelIdImage) alors
+	_nMediaSelIdClient	= ici_image.IdClient
+	_nMediaSelIdMarque	= ici_image.IdMarque
+	_sMediaSelExtension	= ici_image.TypeFichier
+fin
+
+znrMedia					= pLigne
+libMediaInfo			= znrMedia..Occurrence + " média" + (znrMedia..Occurrence > 1 ? "s" sinon "") + " · " + _sMediaSelNom + " sélectionné"
+btnMediaChoisir.Etat	= Actif

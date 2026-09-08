@@ -1,0 +1,3 @@
+procédure Recupere()
+
+renvoyer _stOperationRcs

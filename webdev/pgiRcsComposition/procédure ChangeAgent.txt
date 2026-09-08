@@ -1,0 +1,4 @@
+procédure ChangeAgent(pIdRcsAgent)
+
+_nIdRcsAgent = pIdRcsAgent
+MajApercu()

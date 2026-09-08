@@ -15,45 +15,59 @@ procédure saisieOk(pPrecedent)
 
 sMessage est une chaîne
 sChamp est une chaîne, utile
-nInd, nDeb, nFin sont des entiers, utile 
+nInd, nDeb, nFin sont des entiers, utile
+
+
+si __stOperation.TypeOperation = __OPERATION_RCS__ alors
+	// Pas de repli demandé : rien à contrôler
+	si selRepliSms = 2 alors renvoyer Vrai
+
+	// Le repli est limité à trois segments
+	si _nCreditMessage > 3 alors
+		si pPrecedent = Faux alors
+			PopupAfficheMessage("Le SMS de repli ne peut pas dépasser 3 segments.", "Erreur", __OPERATION_RCS__, __TOAST_ANNULATION__)
+		fin
+		renvoyer Faux
+	fin
+fin
 
 si SansEspace(saiMessage) = "" alors
-	si pPrecedent = Faux alors 
+	si pPrecedent = Faux alors
 		PopupAfficheMessage("Vous devez saisir votre message","Erreur",__OPERATION_SMS__,__TOAST_ANNULATION__)
 	fin
-	renvoyer Faux	
+	renvoyer Faux
 fin
 
 
 
 // Test des caractères [ ]
 si ChaîneOccurrence(saiMessage,"[") <> ChaîneOccurrence(saiMessage,"]") alors
-	si pPrecedent = Faux alors 
+	si pPrecedent = Faux alors
 		PopupAfficheMessage("Les caractères [ ] sont réservées à la personnalisation des messages",*,__OPERATION_SMS__,__TOAST_INFORMATION__)
 	fin
-	renvoyer Faux	
+	renvoyer Faux
 fin
 
 si Val(cboSmsModele..ValeurMémorisée) > 0 alors
 	sMessage = _sCopieMessage
 	pour toute ligne de znrVariable
 		si attVariable = "" alors
-			si pPrecedent = Faux alors 
+			si pPrecedent = Faux alors
 				PopupAfficheMessage("Vous devez renseigner la variable """ + attLibelle + """",*,__OPERATION_SMS__,__TOAST_INFORMATION__)
 			fin
-			renvoyer Faux			
+			renvoyer Faux
 		sinon
 			sMessage = Remplace(sMessage,"{" + attChamp + "}",attVariable)
 		fin
 	fin
 fin
 
-// Test des variables { } 
+// Test des variables { }
 si ChaîneOccurrence(saiMessage,"{") > 0 _ou_ ChaîneOccurrence(saiMessage,"}") > 0 alors
-	si pPrecedent = Faux alors 
+	si pPrecedent = Faux alors
 		PopupAfficheMessage("Les caractères { } sont réservées à la personnalisation des messages",*,__OPERATION_SMS__,__TOAST_INFORMATION__)
 	fin
-	renvoyer Faux	
+	renvoyer Faux
 fin
 
 renvoyer Vrai

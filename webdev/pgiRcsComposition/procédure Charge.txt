@@ -1,0 +1,10 @@
+procédure Charge(pstOperationRcs est une structOperationRcs, pIdRcsAgent est un entier)
+
+_stOperationRcs	= pstOperationRcs
+_nIdRcsAgent		= pIdRcsAgent
+
+si _stOperationRcs.TypeContenu = "" alors _stOperationRcs.TypeContenu = __RCS_CONTENU_CARD__
+
+selTypeMessage = (_stOperationRcs.TypeContenu = __RCS_CONTENU_CARD__ ? 1 sinon 2)
+
+AfficheCartes()

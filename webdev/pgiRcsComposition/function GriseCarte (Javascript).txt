@@ -1,0 +1,8 @@
+function GriseCarte(sIdCarte, bGrise)
+{
+	var el = document.getElementById(sIdCarte);
+	if (el == null) return;
+	el.style.pointerEvents = bGrise ? 'none' : '';
+	el.style.opacity       = bGrise ? '0.70' : '';
+	el.style.filter        = bGrise ? 'grayscale(1) brightness(0.80)' : '';
+}

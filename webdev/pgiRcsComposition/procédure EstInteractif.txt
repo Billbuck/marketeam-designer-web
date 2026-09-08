@@ -1,0 +1,15 @@
+procédure EstInteractif()
+
+nInd est un entier
+
+pour nInd = 1 _à_ _stOperationRcs.tabCarte..Occurrence
+	pour tout stBouton de _stOperationRcs.tabCarte[nInd].tabBouton
+		si stBouton.EstBoutonInteractif alors renvoyer Vrai
+	fin
+fin
+
+pour tout stBoutonCommun de _stOperationRcs.tabBoutonCommun
+	si stBoutonCommun.EstBoutonInteractif alors renvoyer Vrai
+fin
+
+renvoyer Faux

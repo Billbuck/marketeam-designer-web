@@ -1,0 +1,4 @@
+procédure FermePopupMediaNav()
+
+PopupFerme(popRcsMedia)
+GriseCarte(popRcsCarte..Alias, Faux)

@@ -1,0 +1,25 @@
+procédure SuggereLibelleBouton()
+
+selon cboBoutonAction.ValeurMémorisée
+	cas __RCS_ACTION_APPEL__			: saiBoutonLibelle = "Nous appeler"
+	cas __RCS_ACTION_EMAIL__			: saiBoutonLibelle = "Nous écrire"
+	cas __RCS_ACTION_WHATSAPP__		: saiBoutonLibelle = "WhatsApp"
+	cas __RCS_ACTION_SMS__				: saiBoutonLibelle = "Envoyer un SMS"
+	cas __RCS_ACTION_REACTION__		: saiBoutonLibelle = "Ça m'intéresse"
+	cas __RCS_ACTION_LIEN__				: saiBoutonLibelle = "En savoir plus"
+	cas __RCS_ACTION_RDV__				: saiBoutonLibelle = "Prendre rendez-vous"
+	cas __RCS_ACTION_AVIS__				: saiBoutonLibelle = "Donner mon avis"
+	cas __RCS_ACTION_DOCUMENT__		: saiBoutonLibelle = "Télécharger"
+	cas __RCS_ACTION_LANDING__			: saiBoutonLibelle = "Découvrir l'offre"
+	cas __RCS_ACTION_CARTE__			: saiBoutonLibelle = "Nous trouver"
+	cas __RCS_ACTION_ITINERAIRE__		: saiBoutonLibelle = "Itinéraire"
+	cas __RCS_ACTION_AGENDA__			: saiBoutonLibelle = "Ajouter à l'agenda"
+	cas __RCS_ACTION_APPLICATION__	: saiBoutonLibelle = "Télécharger l'app"
+	cas __RCS_ACTION_INSTAGRAM__		: saiBoutonLibelle = "Instagram"
+	cas __RCS_ACTION_FACEBOOK__		: saiBoutonLibelle = "Facebook"
+	cas __RCS_ACTION_TIKTOK__			: saiBoutonLibelle = "TikTok"
+	cas __RCS_ACTION_YOUTUBE__			: saiBoutonLibelle = "Voir la vidéo"
+	cas __RCS_ACTION_LINKEDIN__		: saiBoutonLibelle = "LinkedIn"
+fin
+
+libBoutonLibelleCpt = Taille(saiBoutonLibelle) + " / " + __RCS_MAX_LIBELLE_BOUTON__

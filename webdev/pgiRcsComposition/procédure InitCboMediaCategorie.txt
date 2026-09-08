@@ -1,0 +1,34 @@
+procédure InitCboMediaCategorie()
+
+sTexteRequete	est une chaîne
+sdReqCategorie	est une Source de Données
+sWhere			est une chaîne
+
+selon _sMediaBibliotheque
+	cas BibliothèquePersonnelle.Valeur
+		sWhere = "ici_categorie.IdClient = " + Partage.__vcUser.IDClient + " AND ici_categorie.IdMarque IS NULL"
+	cas BibliothèqueMarque.Valeur
+		sWhere = "ici_categorie.IdMarque = " + _nMediaIdMarque + " AND ici_categorie.IdClient IS NULL"
+	cas BibliothèqueMarketeam.Valeur
+		sWhere = "ici_categorie.IdClient IS NULL AND ici_categorie.IdMarque IS NULL"
+fin
+
+sTexteRequete = [
+	SELECT ici_categorie.IdCategorie, ici_categorie.Libelle
+	FROM ici_categorie
+	WHERE [%sWhere%]
+	ORDER BY ici_categorie.Libelle
+]
+
+ListeSupprimeTout(cboMediaCategorie)
+cboMediaCategorie.Ajoute("< Toutes >" + gLien(0))
+
+si sdReqCategorie.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	pour tout sdReqCategorie
+		cboMediaCategorie.Ajoute(sdReqCategorie.Libelle + gLien(sdReqCategorie.IdCategorie))
+	fin
+fin
+
+cboMediaCategorie = 0
+
+sdReqCategorie.AnnuleDéclaration()

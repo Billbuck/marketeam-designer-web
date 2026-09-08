@@ -1,0 +1,16 @@
+procédure OuvrePopupMedia()
+
+_nMediaSelIdImage = 0
+
+Partage.InitCboBibliothèque(cboMediaBibliotheque, ici_image..Nom, ici_image.IdImage..Nom, 0, Faux, Vrai, "")
+BibliothèqueValeurMemorisée(cboMediaBibliotheque, _sMediaBibliotheque, _nMediaIdMarque)
+
+InitCboMediaCategorie()
+
+saiMediaRecherche			= ""
+selMediaType				= 1
+
+// La vidéo n'est proposée qu'en carte simple, et si le paramètre l'autorise
+selMediaType[3].Visible	= (_bRcsVideo _et_ _stOperationRcs.TypeContenu = __RCS_CONTENU_CARD__)
+
+AfficheMedias()

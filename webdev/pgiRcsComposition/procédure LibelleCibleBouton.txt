@@ -1,0 +1,14 @@
+procédure LibelleCibleBouton(pstBouton est une structOperationRcsBouton)
+
+sLibelle est une chaîne = LibelleAction(pstBouton.SousType)
+
+selon pstBouton.SousType
+	cas __RCS_ACTION_APPEL__, __RCS_ACTION_WHATSAPP__, __RCS_ACTION_SMS__
+		renvoyer sLibelle + " · " + pstBouton.Telephone
+	cas __RCS_ACTION_LANDING__, __RCS_ACTION_REACTION__, __RCS_ACTION_APPLICATION__
+		renvoyer sLibelle
+	cas __RCS_ACTION_CARTE__
+		renvoyer sLibelle + " · " + pstBouton.LibelleLieu
+	autre cas
+		renvoyer sLibelle + " · " + pstBouton.Url
+fin

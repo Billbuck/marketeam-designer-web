@@ -1,0 +1,28 @@
+procédure OuvrePopupCarte(pIndice)
+
+stVide est une structOperationRcsCarte
+
+_nIndiceCarteEdite	= pIndice
+_nIndiceBoutonEdite	= 0
+
+si pIndice = 0 alors
+	_stCarteEdite					= stVide
+	_stCarteEdite.IdRcsCarte	= 0
+	_stCarteEdite.MediaHauteur	= __RCS_MEDIA_HAUTEUR__
+	libTitrePopupChamps			= "Nouvelle carte"
+sinon
+	_stCarteEdite			= _stOperationRcs.tabCarte[pIndice]
+	libTitrePopupChamps	= "Carte " + pIndice + " sur " + _stOperationRcs.tabCarte..Occurrence
+fin
+
+saiCarteTitre				= _stCarteEdite.Titre
+saiCarteDescription		= _stCarteEdite.Description
+libCarteTitreCpt			= Taille(saiCarteTitre) + " / " + __RCS_MAX_TITRE__
+libCarteDescriptionCpt	= Taille(saiCarteDescription) + " / " + __RCS_MAX_DESCRIPTION__
+
+AfficheMediaCarte()
+
+btnCarteTitreChamp.Visible				= (__stOperation.taaBaseChamp..Occurrence > 0)
+btnCarteDescriptionChamp.Visible		= (__stOperation.taaBaseChamp..Occurrence > 0)
+
+AfficheBoutons()

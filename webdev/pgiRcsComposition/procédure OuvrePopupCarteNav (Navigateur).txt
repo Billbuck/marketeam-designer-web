@@ -1,0 +1,9 @@
+procédure OuvrePopupCarteNav()
+
+saiCarteTitre				= CodeVersEmoji(saiCarteTitre)
+saiCarteDescription		= CodeVersEmoji(saiCarteDescription)
+libCarteTitreCpt			= Taille(saiCarteTitre) + " / " + __RCS_MAX_TITRE__
+libCarteDescriptionCpt	= Taille(saiCarteDescription) + " / " + __RCS_MAX_DESCRIPTION__
+
+RafraichitEmojisBoutons()
+PopupAffiche(popRcsCarte, popupHautCentre)

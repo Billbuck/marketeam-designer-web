@@ -1,0 +1,5 @@
+procédure UrlMediaImage(pIdImage, pIdClient, pIdMarque)
+
+sPrefixe est une chaîne = (_stOperationRcs.TypeContenu = __RCS_CONTENU_CARROUSEL__ ? __DOC_RCS_IMAGE_SLDR__ sinon __DOC_RCS_IMAGE_CARD__)
+
+renvoyer CheminRepMedia(pIdClient, pIdMarque, __REP_IMAGE__) + sPrefixe + pIdImage + __JPG__

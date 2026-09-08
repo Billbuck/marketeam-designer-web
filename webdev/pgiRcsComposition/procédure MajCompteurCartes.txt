@@ -1,0 +1,11 @@
+procédure MajCompteurCartes()
+
+nNb est un entier = _stOperationRcs.tabCarte..Occurrence
+
+si _stOperationRcs.TypeContenu = __RCS_CONTENU_CARROUSEL__ alors
+	libRcsCarte					= "Cartes du carrousel — " + nNb + " sur " + __RCS_MAX_CARTES__
+	btnCarteAjoute.Visible	= (nNb < __RCS_MAX_CARTES__)
+sinon
+	libRcsCarte					= "Carte"
+	btnCarteAjoute.Visible	= (nNb = 0)
+fin

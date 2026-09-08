@@ -1,0 +1,41 @@
+procédure ContenuModifie()
+
+bInteractif	est un booléen	= pinRcsComposition.EstInteractif()
+sUrl			est une chaîne	= cpSms.__sUrlCliquezIci
+sMessage		est une chaîne	= Remplace(__stOperation.stOperationRcs.RepliSmsMessage, RC, Caract(10))
+
+si bInteractif = __stOperation.EstCliquezIci alors retour
+
+si bInteractif = Vrai _et_ __stOperation.stNouveauCliquezIci.Type = "" alors
+	__stOperation.stNouveauCliquezIci.Type = __ICI_WEB__
+fin
+
+__stOperation.EstCliquezIci	= bInteractif
+__stOperation.TypeProjet		= (bInteractif ? __OPERATION_RCS_INTERACTIF__ sinon __OPERATION_RCS__)
+
+si sMessage <> "" alors
+	si bInteractif alors
+		// L'URL prend place sur la ligne qui précède le STOP
+		si pas Contient(sMessage, sUrl, SansCasse) alors
+			si Contient(sMessage, Caract(10) + __STOP_SMS__) alors
+				sMessage = Remplace(sMessage, Caract(10) + __STOP_SMS__, Caract(10) + sUrl + Caract(10) + __STOP_SMS__)
+			sinon
+				sMessage += Caract(10) + sUrl
+			fin
+		fin
+	sinon
+		// On retire l'URL, quelle que soit sa position — même logique que MessageSmsBrut pour le STOP
+		sMessage	= Remplace(sMessage, Caract(10) + sUrl, "", SansCasse)
+		sMessage	= Remplace(sMessage, " " + sUrl, "", SansCasse)
+		sMessage	= Remplace(sMessage, sUrl, "", SansCasse)
+	fin
+fin
+
+__stOperation.stOperationRcs.RepliSmsMessage			= sMessage
+__stOperation.stOperationRcs.RepliIdSmsModele		= 0
+__stOperation.stOperationRcs.RepliModeleVariable	= ""
+
+InitTitreOperation()
+InitProgressBar()
+TunnelCalculeTarif()
+TunnelAfficheInformationsBandeauDroit()

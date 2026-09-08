@@ -14,6 +14,16 @@ procédure Init()
 
 sOption est une chaîne
 
+si __stOperation.TypeOperation = __OPERATION_RCS__ alors
+	__stOperation.stOperationSms.LeFrom					= __stOperation.stOperationRcs.RepliSmsFrom
+	__stOperation.stOperationSms.Message				= __stOperation.stOperationRcs.RepliSmsMessage
+	__stOperation.stOperationSms.IdSmsModele			= __stOperation.stOperationRcs.RepliIdSmsModele
+	__stOperation.stOperationSms.ModeleVariable		= __stOperation.stOperationRcs.RepliModeleVariable
+
+	selRepliSms													= __stOperation.stOperationRcs.EstRepliSms ? 1 sinon 2
+sinon
+	selRepliSms													= 2
+fin
 
 si __stOperation.EstCliquezIci = Faux alors
 	btnBaseChamp.Visible	= VérifieAccèsFonction(Sms,SmsPersonnalisation)

@@ -1,0 +1,9 @@
+procédure OptionModifiee(IndiceOptionModifiee)
+
+__stOperation.stOperationRcs.EstRepliSms = (IndiceOptionModifiee = Vrai)
+
+SynchroniseRepliRcs()
+TunnelCalculeTarif()
+TunnelAfficheInformationsBandeauDroit()
+
+MixGestionInterface(saiMessage)
