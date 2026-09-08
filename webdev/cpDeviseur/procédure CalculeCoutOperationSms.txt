@@ -1,15 +1,22 @@
 // Résumé : <indiquez ici ce que fait la procédure>
 // Syntaxe :
-// CalculeCoutOperationRcs ()
+//[ <Résultat> = ] CalculeCoutOperationSms (<stOperation> est structOperation)
 //
 // Paramètres :
-//	Aucun
+//	stOperation (structOperation) : <indiquez ici le rôle de pMessage>
+
 // Valeur de retour :
-// 	Aucune
+// 	monétaire : <indiquez ici le rôle de la valeur de retour>
 //
 // Exemple :
-// <Indiquez ici un exemple d'utilisation>
+// Indiquez ici un exemple d'utilisation.
 //
+//	stOperation (structOperation) : <indiquez ici le rôle de pMessage>
+//	pLeFrom (valeur par défaut=0) : <indiquez ici le rôle de pStopSms>
+//	pCoutTotal : <indiquez ici le rôle de pCoutTotal>
+//	tp (TâcheParallèle - valeur par défaut="") : <indiquez ici le rôle de tp>
+//	pForceComptage (valeur par défaut=0) : < indiquez ici le rôle de pForceComptage >
+//	taaBaseChamp (tableau associatif (structBaseChamp)) : <indiquez ici le rôle de taaBaseChamp>
 procédure CalculeCoutOperationSms(stOperation est une structOperation)
 
 
@@ -29,9 +36,9 @@ nTotal						est un entier
 sListeIdBase				est une chaîne
 taaBaseChamp				est un tableau associatif de structBaseChamp	= stOperation.taaBaseChamp
 
-sLeMessage					= stOperation.stOperationSms.Message.Remplace(RC,Caract(10))
+sLeMessage				= stOperation.stOperationSms.Message.Remplace(RC,Caract(10))
 
-bEstPersonnalisé			= (Contient(sLeMessage.Remplace("[" + Partage.LibelleBaseChamp(__CHAMP_CLIQUEZ_ICI__) + "]",""),"[") _ou_ Contient(sLeMessage.Remplace("[" + Partage.LibelleBaseChamp(__CHAMP_CLIQUEZ_ICI__) + "]",""),"]"))
+bEstPersonnalisé		= (Contient(sLeMessage.Remplace("[" + Partage.LibelleBaseChamp(__CHAMP_CLIQUEZ_ICI__) + "]",""),"[") _ou_ Contient(sLeMessage.Remplace("[" + Partage.LibelleBaseChamp(__CHAMP_CLIQUEZ_ICI__) + "]",""),"]"))
 
 nTotalCaractèreSpeciaux	= sLeMessage.Occurrence(["€","^","~","|","\"])
 
@@ -52,18 +59,46 @@ fin
 
 // Pas encore de base de données
 si sWhereBase = "" _et_ sListeIdBase = "" alors
-	stOperation.NbrDestinataire	= 2000
+	si stOperation.NbrDestinataire	= 0 alors
+		selon stOperation.TypeOperation
+			cas __OPERATION_SMS__
+				stOperation.NbrDestinataire	= 2000
+
+			cas __OPERATION_RCS__
+				nTaux				est un entier								= cpFonction.ValeurParametre("Rcs_TauxCouverture", prm_parametre.ValNumerique.Nom)
+				nNbrRcs			est un entier								= 2000 * nTaux / 100
+				nNbrRepliSms	est un entier								= 2000 - nNbrRcs
+				stOperation.NbrDestinataire								= 2000
+				stOperation.stOperationRcs.NbrDestinataireRcs		= nNbrRcs
+				stOperation.stOperationRcs.NbrDestinataireRepliSms	= nNbrRepliSms
+
+			autre cas
+		fin
+		STOP
+	fin
 	stOperation.stOperationSms.taaCreditSms.SupprimeTout()
 	stOperation.stOperationSms.taaTailleSms.SupprimeTout()
-	stOperation.stOperationSms.TailleMax								= 0
+	stOperation.stOperationSms.TailleMax = 0
 
-	nTailleMessage																= cpSms.TailleSms(sLeMessage,Faux)
-	nCreditMessage																= cpSms.CalculeTailleSms(nTailleMessage,Faux)
-	mPrixMessage																= Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_SMS__].PrixVenteUnitaire * nCreditMessage
-	mPrixTotal																	= mPrixMessage * stOperation.NbrDestinataire
-	stOperation.stOperationSms.taaCreditSms[nCreditMessage]		= stOperation.NbrDestinataire
-	stOperation.stOperationSms.taaTailleSms[nTailleMessage]		= stOperation.NbrDestinataire
-	stOperation.stOperationSms.TailleMax								= nTailleMessage
+	nTailleMessage		= cpSms.TailleSms(sLeMessage,Faux)
+	nCreditMessage		= cpSms.CalculeTailleSms(nTailleMessage,Faux)
+	mPrixMessage		= Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_SMS__].PrixVenteUnitaire * nCreditMessage
+	selon stOperation.TypeOperation
+		cas __OPERATION_SMS__
+			mPrixTotal																	= mPrixMessage * stOperation.NbrDestinataire
+			stOperation.stOperationSms.taaCreditSms[nCreditMessage]		= stOperation.NbrDestinataire
+			stOperation.stOperationSms.taaTailleSms[nTailleMessage]		= stOperation.NbrDestinataire
+			stOperation.stOperationSms.TailleMax								= nTailleMessage
+
+		cas __OPERATION_RCS__
+			mPrixTotal																	= mPrixMessage * stOperation.stOperationRcs.NbrDestinataireRepliSms
+			stOperation.stOperationSms.taaCreditSms[nCreditMessage]		= stOperation.stOperationRcs.NbrDestinataireRepliSms
+			stOperation.stOperationSms.taaTailleSms[nTailleMessage]		= stOperation.stOperationRcs.NbrDestinataireRepliSms
+			stOperation.stOperationSms.TailleMax								= nTailleMessage
+
+		autre cas
+
+	fin
 
 	renvoyer mPrixTotal
 fin
@@ -76,43 +111,43 @@ si bEstPersonnalisé = Vrai alors
 		cas sWhereBase <> "" _et_ sListeIdBase <> ""
 			sTexteRequete	=
 			[
-				SELECT
-				COUNT(z.Portable) Total, 
-				[%sSelect%]
-				FROM
+			SELECT
+			COUNT(z.Portable) Total, 
+			[%sSelect%]
+			FROM
 				(SELECT * FROM
-				(
-				SELECT Reference,Societe,Enseigne,contact,Civilite,Nom,Prenom,Adresse1,Adresse2,Adresse3,Adresse4,CodePostal,Ville,Pays,Tel,Portable,Email,CodeAlliage,Champ1,Champ2,Champ3,Champ4,Champ5,Champ6,Champ7,Champ8,Champ9,Champ10,Champ11,Champ12,Champ13,Champ14,Champ15,Champ16,Champ17,Champ18,Champ19,Champ20,Champ21,Champ22,Champ23,Champ24,Champ25,Champ26,Champ27,Champ28,Champ29,Champ30,Sexe,Profil 
-				FROM clt_base_ligne WHERE ([%sWhereBase%]) AND Portable IS NOT NULL AND StopPub = 0
-				UNION
-				SELECT Reference,Societe,Enseigne,contact,Civilite,Nom,Prenom,Adresse1,Adresse2,Adresse3,Adresse4,CodePostal,Ville,Pays,Tel,Portable,Email,CodeAlliage,Champ1,Champ2,Champ3,Champ4,Champ5,Champ6,Champ7,Champ8,Champ9,Champ10,Champ11,Champ12,Champ13,Champ14,Champ15,Champ16,Champ17,Champ18,Champ19,Champ20,Champ21,Champ22,Champ23,Champ24,Champ25,Champ26,Champ27,Champ28,Champ29,Champ30,Sexe,Profil 
-				FROM dos_base_ligne 
-				WHERE IdBase IN ([%sListeIdBase%]) AND Portable IS NOT NULL)
-				) AS t
+					(
+					SELECT Reference,Societe,Enseigne,contact,Civilite,Nom,Prenom,Adresse1,Adresse2,Adresse3,Adresse4,CodePostal,Ville,Pays,Tel,Portable,Email,CodeAlliage,Champ1,Champ2,Champ3,Champ4,Champ5,Champ6,Champ7,Champ8,Champ9,Champ10,Champ11,Champ12,Champ13,Champ14,Champ15,Champ16,Champ17,Champ18,Champ19,Champ20,Champ21,Champ22,Champ23,Champ24,Champ25,Champ26,Champ27,Champ28,Champ29,Champ30,Sexe,Profil 
+					FROM clt_base_ligne WHERE ([%sWhereBase%]) AND Portable IS NOT NULL AND StopPub = 0
+					UNION
+					SELECT Reference,Societe,Enseigne,contact,Civilite,Nom,Prenom,Adresse1,Adresse2,Adresse3,Adresse4,CodePostal,Ville,Pays,Tel,Portable,Email,CodeAlliage,Champ1,Champ2,Champ3,Champ4,Champ5,Champ6,Champ7,Champ8,Champ9,Champ10,Champ11,Champ12,Champ13,Champ14,Champ15,Champ16,Champ17,Champ18,Champ19,Champ20,Champ21,Champ22,Champ23,Champ24,Champ25,Champ26,Champ27,Champ28,Champ29,Champ30,Sexe,Profil 
+					FROM dos_base_ligne 
+					WHERE IdBase IN ([%sListeIdBase%]) AND Portable IS NOT NULL)
+					) AS t
 				GROUP BY t.Portable) AS z
-				GROUP BY TailleDuMessage
+			GROUP BY TailleDuMessage
 			]
 
 		cas sWhereBase <> ""
 			sTexteRequete	=
 			[
-				SELECT
-				COUNT(z.Portable) Total, 
+			SELECT
+			COUNT(z.Portable) Total, 
 				[%sSelect%]
-				FROM
+			FROM
 				(SELECT * FROM clt_base_ligne WHERE ([%sWhereBase%]) AND Portable IS NOT NULL AND StopPub = 0 GROUP BY Portable) AS z
-				GROUP BY TailleDuMessage
+			GROUP BY TailleDuMessage
 			]
 
 		cas sListeIdBase <> ""
 			sTexteRequete	=
 			[
-				SELECT
-				COUNT(z.Portable) Total, 
+			SELECT
+			COUNT(z.Portable) Total, 
 				[%sSelect%]
-				FROM
+			FROM
 				(SELECT * FROM dos_base_ligne WHERE IdBase IN ([%sListeIdBase%]) AND Portable IS NOT NULL GROUP BY Portable) AS z
-				GROUP BY TailleDuMessage
+			GROUP BY TailleDuMessage
 			]
 
 		autre cas
@@ -137,8 +172,8 @@ si bEstPersonnalisé = Vrai alors
 		mPrixMessage		= Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_SMS__].PrixVenteUnitaire * nCreditMessage
 		mPrixTotal			+= mPrixMessage * sdReqCoutSms.Total
 		stOperation.stOperationSms.taaCreditSms[nCreditMessage] += sdReqCoutSms.Total
-		stOperation.stOperationSms.taaTailleSms[sdReqCoutSms.TailleDuMessage]		= sdReqCoutSms.Total
-		stOperation.stOperationSms.TailleMax													= Max(stOperation.stOperationSms.TailleMax, sdReqCoutSms.TailleDuMessage)
+		stOperation.stOperationSms.taaTailleSms[sdReqCoutSms.TailleDuMessage] = sdReqCoutSms.Total
+		stOperation.stOperationSms.TailleMax = Max(stOperation.stOperationSms.TailleMax, sdReqCoutSms.TailleDuMessage)
 	fin
 	stOperation.stOperationSms.taaTailleSms.Trie(ttClé)
 sinon
@@ -151,9 +186,9 @@ sinon
 				COUNT(DISTINCT z.Portable) Total
 				FROM
 				(
-				SELECT clt_base_ligne.Portable	FROM clt_base_ligne WHERE  ([%sWhereBase%]) AND clt_base_ligne.Portable IS NOT NULL AND StopPub = 0
-				UNION
-				SELECT dos_base_ligne.Portable	FROM dos_base_ligne WHERE  IdBase IN ([%sListeIdBase%]) AND dos_base_ligne.Portable IS NOT NULL
+					SELECT clt_base_ligne.Portable	FROM clt_base_ligne WHERE  ([%sWhereBase%]) AND clt_base_ligne.Portable IS NOT NULL AND StopPub = 0
+					UNION
+					SELECT dos_base_ligne.Portable	FROM dos_base_ligne WHERE  IdBase IN ([%sListeIdBase%]) AND dos_base_ligne.Portable IS NOT NULL
 				) AS z
 			]
 
@@ -204,8 +239,8 @@ sinon
 		mPrixMessage				= Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_SMS__].PrixVenteUnitaire * nCreditMessage
 		mPrixTotal					+= mPrixMessage * sdReqCoutSms.Total
 		stOperation.stOperationSms.taaCreditSms[nCreditMessage] += sdReqCoutSms.Total
-		stOperation.stOperationSms.taaTailleSms[(nTailleMessage + nTotalCaractèreSpeciaux)]	= sdReqCoutSms.Total
-		stOperation.stOperationSms.TailleMax																= (nTailleMessage + nTotalCaractèreSpeciaux)
+		stOperation.stOperationSms.taaTailleSms[(nTailleMessage + nTotalCaractèreSpeciaux)] = sdReqCoutSms.Total
+		stOperation.stOperationSms.TailleMax					 = (nTailleMessage + nTotalCaractèreSpeciaux)
 	fin
 
 fin
@@ -241,7 +276,7 @@ sdReqCoutSms.AnnuleDéclaration()
 
 		si pEstCliquezIci alors
 			si Contient(sMessage,"[" + __CHAMP_CLIQUEZ_ICI__ + "]") alors
-				//				sSelectRetour = "REPLACE(" + sSelectRetour + ",'[" + __CHAMP_CLIQUEZ_ICI__ + "]', IFNULL(" + __CHAMP_CLIQUEZ_ICI__ + ",'XXXXXX'))"
+//				sSelectRetour = "REPLACE(" + sSelectRetour + ",'[" + __CHAMP_CLIQUEZ_ICI__ + "]', IFNULL(" + __CHAMP_CLIQUEZ_ICI__ + ",'XXXXXX'))"
 				sSelectRetour = "REPLACE(" + sSelectRetour + ",'[" + __CHAMP_CLIQUEZ_ICI__ + "]', 'XXXXXX')"
 			fin
 		fin
@@ -251,4 +286,3 @@ sdReqCoutSms.AnnuleDéclaration()
 
 		renvoyer sSelectRetour
 	fin
-

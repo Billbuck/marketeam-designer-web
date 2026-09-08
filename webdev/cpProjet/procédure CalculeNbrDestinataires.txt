@@ -12,14 +12,14 @@
 //
 procédure CalculeNbrDestinataires(stOperation est une structOperation)
 
-bEstFixe 			est un booléen
-bEstPortable		est un booléen
-bEstActif		    est un booléen
-bEstInactif		    est un booléen
-bEstIndeterminé     est un booléen
+bEstFixe					est un booléen
+bEstPortable			est un booléen
+bEstActif				est un booléen
+bEstInactif				est un booléen
+bEstIndeterminé		est un booléen
 sListeTelephone		est une chaîne
-sListeProfil		est une chaîne
-nNbrAppelTotal		est un entier
+sListeProfil			est une chaîne
+nNbrAppelTotal			est un entier
 
 selon stOperation.TypeOperation
 	cas __OPERATION_SMS__
@@ -28,7 +28,8 @@ selon stOperation.TypeOperation
 		renvoyer stOperation.NbrDestinataire
 
 	cas __OPERATION_RCS__
-		stOperation.NbrDestinataire = 2000
+		stOperation.stOperationSms.Message = stOperation.stOperationRcs.RepliSmsMessage
+		cpDeviseur.CalculeCoutOperationSms(stOperation)
 		cpDeviseur.RepartitionRcs(stOperation)
 		renvoyer stOperation.NbrDestinataire
 
@@ -37,10 +38,10 @@ selon stOperation.TypeOperation
 		CalculeTelTrancheHoraire(stOperation)
 
 		pour tout stTelTrancheHoraire de stOperation.stOperationCallCenter.tabTrancheHoraire
-			bEstFixe 		= Max(bEstFixe,stTelTrancheHoraire.Fixe)
-			bEstPortable	= Max(bEstPortable,stTelTrancheHoraire.Portable)
-			bEstActif		= Max(bEstActif,stTelTrancheHoraire.Actif)
-			bEstInactif		= Max(bEstInactif,stTelTrancheHoraire.Inactif)
+			bEstFixe				= Max(bEstFixe,stTelTrancheHoraire.Fixe)
+			bEstPortable		= Max(bEstPortable,stTelTrancheHoraire.Portable)
+			bEstActif			= Max(bEstActif,stTelTrancheHoraire.Actif)
+			bEstInactif			= Max(bEstInactif,stTelTrancheHoraire.Inactif)
 			bEstIndeterminé	= Max(bEstIndeterminé,stTelTrancheHoraire.Indetermine)
 		fin
 

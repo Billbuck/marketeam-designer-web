@@ -18,9 +18,24 @@ __stOperation.stOperationSms.LeFrom 				= saiLeFrom
 __stOperation.stOperationSms.EstSmsPersonnalise 	= _bEstPersonnalisé
 __stOperation.EstDocumentEnAttente					= (SansEspace(saiMessage) = "")
 
-si cboSmsModele..ValeurMémorisée > 0  
+si cboSmsModele..ValeurMémorisée > 0
 	__stOperation.stOperationSms.ModeleVariable		= ""
 	pour toute ligne de znrVariable
 		__stOperation.stOperationSms.ModeleVariable += [TAB] + attVariable
 	fin
 fin
+
+si __stOperation.TypeOperation = __OPERATION_RCS__ alors
+	__stOperation.stOperationRcs.EstRepliSms					= intRepliSms
+	__stOperation.stOperationRcs.RepliSmsFrom					= __stOperation.stOperationSms.LeFrom
+	__stOperation.stOperationRcs.RepliSmsMessage				= __stOperation.stOperationSms.Message
+	__stOperation.stOperationRcs.RepliIdSmsModele			= __stOperation.stOperationSms.IdSmsModele
+	__stOperation.stOperationRcs.RepliModeleVariable		= __stOperation.stOperationSms.ModeleVariable
+	__stOperation.stOperationRcs.EstRepliSmsPersonnalise	= __stOperation.stOperationSms.EstSmsPersonnalise
+	__stOperation.stOperationRcs.RepliTailleMax				= __stOperation.stOperationSms.TailleMax
+	__stOperation.stOperationRcs.taaRepliCreditSms			= __stOperation.stOperationSms.taaCreditSms
+	__stOperation.stOperationRcs.taaRepliTailleSms			= __stOperation.stOperationSms.taaTailleSms
+	// Le contenu de l'opération, ce sont les cartes — pas le repli
+	__stOperation.EstDocumentEnAttente							= (__stOperation.stOperationRcs.tabCarte..Occurrence = 0)
+fin
+

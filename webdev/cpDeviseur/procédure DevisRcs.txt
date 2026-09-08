@@ -1,27 +1,27 @@
 
 procédure DevisRcs(stOperation est une structOperation)
 
-nInd 						est un entier
-nLigne 						est un entier
-mRemiseCoupon 				est un monétaire
-mCompensationPrestation 	est un monétaire
-mTotalHTPrestation 			est un monétaire
-bEstPersonnalise			est un booléen
-mFraisFixe					est un monétaire
-mFraisFixeCliquezIci		est un monétaire
-mMinFacturation 			est un monétaire
-mPuVenteRcs					est un monétaire
-mPuVenteRepli				est un monétaire
-sType 						est une chaîne
-sLigne						est une chaîne
-mCoutTotalRcs 				est un monétaire
-mCoutCliquezIci 			est un monétaire
-sMessageFinalise			est une chaîne
-nTailleRepli				est un entier
-nCreditRepli				est un entier
-mPrixRepli					est un monétaire
-nNbrSegmentRepli			est un entier
-nNbrCarte					est un entier
+nInd								est un entier
+nLigne							est un entier
+mRemiseCoupon					est un monétaire
+mCompensationPrestation		est un monétaire
+mTotalHTPrestation			est un monétaire
+bEstPersonnalise				est un booléen
+mFraisFixe						est un monétaire
+mFraisFixeCliquezIci			est un monétaire
+mMinFacturation				est un monétaire
+mPuVenteRcs						est un monétaire
+mPuVenteRepli					est un monétaire
+sType								est une chaîne
+sLigne							est une chaîne
+mCoutTotalRcs					est un monétaire
+mCoutCliquezIci				est un monétaire
+sMessageFinalise				est une chaîne
+nTailleRepli					est un entier
+nCreditRepli					est un entier
+mPrixRepli						est un monétaire
+nNbrSegmentRepli				est un entier
+nNbrCarte						est un entier
 
 
 // on supprime les lignes calculées par la calculette
@@ -32,23 +32,23 @@ tantque nInd > 0
 fin
 
 si stOperation.NbrDestinataire = 0 alors
-	stOperation.MontantNetHT 	= 0
-	stOperation.MontantTVA 		= 0
-	stOperation.MontantTTC 		= 0
-	stOperation.RemiseCoupon 	= 0
+	stOperation.MontantNetHT	= 0
+	stOperation.MontantTVA		= 0
+	stOperation.MontantTTC		= 0
+	stOperation.RemiseCoupon	= 0
 	retour
 fin
 
-bEstPersonnalise	= stOperation.stOperationRcs.EstRcsPersonnalise
-mFraisFixe			= Partage.__vcUser.taaFrais[__OPERATION_RCS__].FraisFixeFacturation
+bEstPersonnalise		= stOperation.stOperationRcs.EstRcsPersonnalise
+mFraisFixe				= Partage.__vcUser.taaFrais[__OPERATION_RCS__].FraisFixeFacturation
 mMinFacturation		= Partage.__vcUser.taaFrais[__OPERATION_RCS__].MinimumFacturation
 
 
 si bEstPersonnalise = Vrai alors
-	nLigne = stOperation.tabOperationLigne.Ajoute()
+	nLigne																			= stOperation.tabOperationLigne.Ajoute()
 	stOperation.tabOperationLigne[nLigne].TypeLigneCalcule			= __OPERATION_RCS__
-	stOperation.tabOperationLigne[nLigne].Designation 				= "Personnalisation des messages"
-	stOperation.tabOperationLigne[nLigne].Qte 						= 1
+	stOperation.tabOperationLigne[nLigne].Designation					= "Personnalisation des messages"
+	stOperation.tabOperationLigne[nLigne].Qte								= 1
 fin
 
 
@@ -67,10 +67,10 @@ fin
 
 // ******************************************* Frais Fixe du cliquezici *****************************************************
 si stOperation.EstCliquezIci = Vrai alors
-	nLigne = stOperation.tabOperationLigne.Ajoute()
+	nLigne																						= stOperation.tabOperationLigne.Ajoute()
 	stOperation.tabOperationLigne[nLigne].TypeLigneCalcule						= __OPERATION_RCS__
 
-	sType = stOperation.stNouveauCliquezIci.Type
+	sType																							= stOperation.stNouveauCliquezIci.Type
 
 	selon sType
 		cas __ICI_URL_FIXE__
@@ -103,9 +103,9 @@ si stOperation.stOperationRcs.NbrDestinataireRcs > 0 alors
 		sLigne = "Message RCS carte"
 	fin
 
-	mPuVenteRcs = Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_RCS__].PrixVenteUnitaire
+	mPuVenteRcs																				= Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_RCS__].PrixVenteUnitaire
 
-	nLigne																= stOperation.tabOperationLigne.Ajoute()
+	nLigne																					= stOperation.tabOperationLigne.Ajoute()
 	stOperation.tabOperationLigne[nLigne].TypeLigneCalcule					= __OPERATION_RCS__
 	stOperation.tabOperationLigne[nLigne].Designation							= sLigne
 	stOperation.tabOperationLigne[nLigne].CodePrestation						= __PRESTATION_ROUTAGE_RCS__
@@ -129,9 +129,9 @@ si stOperation.stOperationRcs.EstRepliSms _et_ stOperation.stOperationRcs.NbrDes
 		nNbrSegmentRepli = nCreditRepli
 	fin
 
-	mPuVenteRepli = Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_SMS__].PrixVenteUnitaire * nNbrSegmentRepli
+	mPuVenteRepli																			= Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_SMS__].PrixVenteUnitaire * nNbrSegmentRepli
 
-	nLigne																= stOperation.tabOperationLigne.Ajoute()
+	nLigne																					= stOperation.tabOperationLigne.Ajoute()
 	stOperation.tabOperationLigne[nLigne].TypeLigneCalcule					= __OPERATION_RCS__
 	stOperation.tabOperationLigne[nLigne].Designation							= "SMS de repli (" + nNbrSegmentRepli + " segments)"
 	stOperation.tabOperationLigne[nLigne].CodePrestation						= __PRESTATION_ROUTAGE_SMS__
@@ -193,9 +193,9 @@ fin
 mTotalHTPrestation += mFraisFixeCliquezIci + mCoutCliquezIci
 
 //********************************************* COUPON DE REDUCTION **************
-mRemiseCoupon = CalculRemiseCoupon(stOperation)
+mRemiseCoupon						= CalculRemiseCoupon(stOperation)
 
-stOperation.MontantBrutHT 		= mTotalHTPrestation
+stOperation.MontantBrutHT		= mTotalHTPrestation
 
 si mRemiseCoupon < 0
 	nLigne																					= stOperation.tabOperationLigne.Ajoute()
@@ -210,8 +210,8 @@ si mRemiseCoupon < 0
 	mTotalHTPrestation += mRemiseCoupon
 fin
 
-stOperation.RemiseCoupon 		= mRemiseCoupon
-stOperation.MontantNetHT 		= mTotalHTPrestation
+stOperation.RemiseCoupon		= mRemiseCoupon
+stOperation.MontantNetHT		= mTotalHTPrestation
 stOperation.MontantTVA			= Arrondi(mTotalHTPrestation * cpProjet.__moTauxTva / 100,2)
 stOperation.MontantTTC			= stOperation.MontantNetHT + stOperation.MontantTVA
 
@@ -219,5 +219,5 @@ stOperation.MontantTTC			= stOperation.MontantNetHT + stOperation.MontantTVA
 // Par défaut le prix brut et le prix net = prix calculé
 pour tout stDossierLigne de stOperation.tabOperationLigne avec TypeLigneCalcule = __OPERATION_RCS__
 	stDossierLigne.PrixUnitaireVenteBrut	= stDossierLigne.PrixUnitaireVenteCalcule
-	stDossierLigne.PrixUnitaireVenteNet 	= stDossierLigne.PrixUnitaireVenteCalcule
+	stDossierLigne.PrixUnitaireVenteNet		= stDossierLigne.PrixUnitaireVenteCalcule
 fin

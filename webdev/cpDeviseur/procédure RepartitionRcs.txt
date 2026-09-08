@@ -1,10 +1,10 @@
-// Résumé : Répartit les destinataires entre RCS et repli SMS (provisoire : tout en RCS)
-// Syntaxe :
-// RepartitionRcs (<stOperation>)
-//
-// Paramètres :
-//	stOperation : opération RCS
 procédure RepartitionRcs(stOperation est une structOperation)
 
-stOperation.stOperationRcs.NbrDestinataireRcs			= stOperation.NbrDestinataire
-stOperation.stOperationRcs.NbrDestinataireRepliSms		= 0
+nTaux est un entier = cpFonction.ValeurParametre("Rcs_TauxCouverture", prm_parametre.ValNumerique.Nom)
+
+// Base qualifiée : les compteurs viennent de la qualification, on n'y touche pas
+si DateHeureValide(stOperation.stOperationRcs.DateHeureQualification) alors retour
+
+// Sinon, estimation par le taux — sans base comme avec une base non qualifiée
+stOperation.stOperationRcs.NbrDestinataireRcs		= Arrondi(stOperation.NbrDestinataire * nTaux / 100, 0)
+stOperation.stOperationRcs.NbrDestinataireRepliSms	= stOperation.NbrDestinataire - stOperation.stOperationRcs.NbrDestinataireRcs

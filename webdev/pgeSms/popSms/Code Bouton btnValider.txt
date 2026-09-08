@@ -25,7 +25,7 @@ si nTailleMessage <> _nTailleMessage _ou_ sMessage <> _sMessageFinalisé _ou_ nC
 	Trace("Message Navigateur : ", sMessage, "Message serveur ", _sMessageFinalisé)
 	Trace("Crédit Navigateur : ", nCreditMessage, "Crédit serveur ", _nCreditMessage)
 	Trace("Prix Navigateur : ", mPrixMessage, "Prix serveur ", _mPrixVenteUnitaireHT)
-	
+
 	PopupAfficheMessage("Problème de concordance entre navigateur et serveur","Erreur",__OPERATION_SMS__,__TOAST_INFORMATION__)
 	retour
 fin
@@ -36,8 +36,9 @@ si SaisieMessageOK() alors
 	__stOperation.stOperationSms.Message = _sMessageFinalisé
 	mCoutTotal					= CalculeCoutOperationSms(__stOperation)
 	libTrfMontantHT				= NumériqueVersChaîne(mCoutTotal, ",2fS") +" €"
-	cpDeviseur.DevisSms(__stOperation)
+	TunnelCalculeTarif()
 	MixGestionInterface(saiMessage)
 	TunnelAfficheInformationsBandeauDroit()
 	PopupFerme(popSms)
 fin
+

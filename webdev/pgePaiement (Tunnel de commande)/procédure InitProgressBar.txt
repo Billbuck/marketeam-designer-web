@@ -3,16 +3,16 @@ procédure InitProgressBar()
 nInd						est un entier
 nEtape					est un entier
 nPageEnCours			est un entier
-sClassOn				est une chaîne
+sClassOn					est une chaîne
 sClassOFF				est une chaîne
 
-structStep est une Structure
+structStep				est une Structure
 	Bouton			est une chaîne
 	Libelle			est une chaîne
-	Etat			est un entier
+	Etat				est un entier
 	CouleurFond		est une chaîne
-	Position		est un entier
-	Page			est une chaîne
+	Position			est un entier
+	Page				est une chaîne
 	ClassHtml		est une chaîne
 fin
 
@@ -40,6 +40,7 @@ fin
 
 si __stOperation.TypeOperation = __OPERATION_RCS__ alors
 	AjouteProgressBar("RCS","pgeRcs")
+	AjouteProgressBar("REPLI SMS","pgeSms")
 fin
 
 si __stOperation.TypeOperation = __OPERATION_VMS__ alors
@@ -174,8 +175,8 @@ fin
 		nEtape++
 		VariableRAZ(stStep)
 		stStep.Bouton			= "btnStep" + nEtape
-		stStep.Libelle 		= pTexte
-		stStep.Page 			= Majuscule(pPage)
+		stStep.Libelle			= pTexte
+		stStep.Page				= Majuscule(pPage)
 		si Majuscule(pPage)	= PageCourante() alors
 			nPageEnCours 		= nEtape
 		fin

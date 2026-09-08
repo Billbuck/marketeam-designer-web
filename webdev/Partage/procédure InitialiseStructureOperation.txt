@@ -137,9 +137,13 @@ selon pType
 		stOperation.tabRapport.Ajoute([__CHAMP_PORTABLE__,"SMS",__CHAMP_TYPE_PORTABLE__,99,Vrai])
 
 	cas __OPERATION_RCS__
+		nTaux est un entier = cpFonction.ValeurParametre("Rcs_TauxCouverture", prm_parametre.ValNumerique.Nom)
+		nNbrRcs est un entier										= 2000 * nTaux / 100
+		nNbrRepliSms est un entier 								= 2000 - nNbrRcs
 		stOperation.NbrDestinataire								= 2000
-		stOperation.stOperationRcs.NbrDestinataireRcs		= 1300
-		stOperation.stOperationRcs.NbrDestinataireRepliSms	= 700
+		stOperation.stOperationRcs.NbrDestinataireRcs		= nNbrRcs
+		stOperation.stOperationRcs.NbrDestinataireRepliSms	= nNbrRepliSms
+		stOperation.stOperationRcs.EstRepliSms 				= Vrai
 		stOperation.SupprimeDoublons								= Vrai
 		stOperation.DateEnvoiSouhaite								= ""
 		stOperation.HeureEnvoiSouhaite							= "9999"
