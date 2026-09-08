@@ -137,11 +137,13 @@ selon pType
 		stOperation.tabRapport.Ajoute([__CHAMP_PORTABLE__,"SMS",__CHAMP_TYPE_PORTABLE__,99,Vrai])
 
 	cas __OPERATION_RCS__
-		stOperation.NbrDestinataire					= 2000
-		stOperation.SupprimeDoublons					= Vrai
-		stOperation.DateEnvoiSouhaite					= ""
-		stOperation.HeureEnvoiSouhaite				= "9999"
-		stOperation.stOperationRcs.PrixAchat		= Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_RCS__].PrixAchatUnitaire
+		stOperation.NbrDestinataire								= 2000
+		stOperation.stOperationRcs.NbrDestinataireRcs		= 1300
+		stOperation.stOperationRcs.NbrDestinataireRepliSms	= 700
+		stOperation.SupprimeDoublons								= Vrai
+		stOperation.DateEnvoiSouhaite								= ""
+		stOperation.HeureEnvoiSouhaite							= "9999"
+		stOperation.stOperationRcs.PrixAchat					= Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_RCS__].PrixAchatUnitaire
 		stOperation.tabRapport.Ajoute([__CHAMP_PORTABLE__,"RCS",__CHAMP_TYPE_PORTABLE__,99,Vrai])
 
 	cas __OPERATION_VMS__
