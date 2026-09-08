@@ -1,0 +1,172 @@
+
+procédure InitialiseStructureOperation(stOperation est une structOperation, pIdClient, pIdContact, pType, pEstCliquezIci = Faux, pIdPackage = 0, pIdCampagne = 0)
+
+
+JoursAppel				est un entier
+dhEnvoi					est une DateHeure
+dhEnvoieSouhaite		est une DateHeure
+dhLimiteValidation		est une DateHeure
+dhEnvoieSouhaite		= DateHeureSys()
+dhLimiteValidation		= dhEnvoieSouhaite
+
+dhEnvoieSouhaite..Jour 		+= 7
+dhLimiteValidation..Jour 	+= 7
+
+VariableRAZ(stOperation)
+
+stOperation.IdClient 								= pIdClient
+stOperation.IdClientFacturation 					= 0
+stOperation.IdContact		 						= pIdContact
+stOperation.IdOperation 							= 0
+stOperation.IdValideur								= Partage.__vcUser.IDContact
+stOperation.EstModifiableParUnTiers 				= Vrai
+stOperation.EstVisibleParUnTiers 					= Vrai
+stOperation.EstDossierInternet						= Vrai
+stOperation.EstBrouillon							= Faux
+stOperation.EstVisibleParLeClient					= Faux
+stOperation.StatutDossier							= __Statut_Enregistrée__
+stOperation.NomOperation							= "Opération " + Partage.LibelleTypeProjet(pType) + " du " + DateVersChaîne(DateSys())
+stOperation.Designation								= "Dossier du " + DateVersChaîne(DateSys())
+stOperation.CodeTemp								= Partage.__vcUser.IDContact +"-"+DateHeureSys()
+stOperation.TypeOperation	 						= pType
+stOperation.TypeProjet								= Partage.TypeProjet(pType,pEstCliquezIci)
+stOperation.NbrDestinataire 						= 0
+stOperation.EstBaseEnAttente 						= Vrai
+stOperation.EstCliquezIci 							= pEstCliquezIci
+stOperation.EstLocationBase							= Faux
+stOperation.EstDocumentEnAttente					= Vrai
+stOperation.TauxTva									= cpProjet.__moTauxTva
+
+stOperation.stNouveauCliquezIci.Type 				= (pEstCliquezIci = Vrai) ? __ICI_WEB__ sinon __ICI_URL_FIXE__
+stOperation.stNouveauCliquezIci.EmailLeadType		= "lead"
+
+selon pType
+	cas __OPERATION_COURRIER__
+		stOperation.NbrDestinataire											= 2000
+		stOperation.DateEnvoiSouhaite											= "" 	//ProchaineLundiOuvré()
+		stOperation.HeureEnvoiSouhaite										= "9999"
+		stOperation.DateHeureCheckRemplissage								= DateHeureSys()
+		stOperation.SupprimeDoublons											= Faux
+
+		stOperation.stOperationLettre.IdPackage							= pIdPackage
+		stOperation.stOperationLettre.IdCampagne							= pIdCampagne
+		stOperation.stOperationLettre.EstMarketing						= Vrai
+		stOperation.stOperationLettre.EstEnveloppeFenetre				= Faux
+		stOperation.stOperationLettre.EstAlliage							= Faux
+		stOperation.stOperationLettre.EstAlliageClient					= Faux
+		stOperation.stOperationLettre.stEnveloppe.RepertoireTravail	= cpProjet.__sMarketeamRepRacine + cpProjet.__sRepUpload + "\"
+
+	cas __OPERATION_TRACTEVA__, __OPERATION_SMARTEVA__
+		stOperation.NbrDestinataire											= 5000
+		stOperation.SupprimeDoublons											= Faux
+		dhEnvoi																		= DateHeureSys()
+		dhEnvoi..Jour																+= 21
+		stOperation.DateEnvoiSouhaite											= "" // PremierJourDeLaSemaine(dhEnvoi..PartieDate)
+		stOperation.HeureEnvoiSouhaite										= "9999"
+		stOperation.EstLocationBase											= Faux
+
+		stOperation.stOperationLettre.IdPackage								= pIdPackage
+		stOperation.stOperationLettre.IdCampagne							= pIdCampagne
+
+		// On utilise le Modèle par défaut ou "Invitation Personnelle"
+		si pType = __OPERATION_SMARTEVA__ alors
+			stOperation.stOperationLettre.stEnveloppe.RepertoireTravail	= cpProjet.__sMarketeamRepRacine + cpProjet.__sRepUpload + "\"
+
+//			SI ltr_adressage_client.LitRecherchePremier(Defaut,[Partage.__vcUser.IdClient,__OPERATION_SMARTEVA__,Vrai]) ALORS
+//				SI prm_police.LitRecherchePremier(IdPolice,ltr_adressage_client.IdPolice) ALORS
+//					stOperation.stOperationTract.stAdressageNoir.IdAdressageClient 				= ltr_adressage_client.IdAdressageClient
+//					stOperation.stOperationTract.stAdressageNoir.TexteAdressageExpediteur		= ltr_adressage_client.Adressage
+//					stOperation.stOperationTract.stAdressageNoir.PoliceTaille					= ltr_adressage_client.PoliceTaille
+//					stOperation.stOperationTract.stAdressageNoir.PoliceCaractere				= prm_police.Police
+//					stOperation.stOperationTract.stAdressageNoir.IdPolice						= prm_police.IdPolice
+//					stOperation.stOperationTract.stAdressageNoir.PoliceCouleur					= __POLICE_NOIR__
+//				FIN
+//			SINON
+//				stOperation.stOperationTract.stAdressageNoir.TexteAdressageExpediteur			= "Invitation Personnelle"
+//				stOperation.stOperationTract.stAdressageNoir.PoliceTaille						= cpFonction.ValeurParametre("PoliceSmartevaTaille",prm_parametre.ValNumerique..Nom)
+//				stOperation.stOperationTract.stAdressageNoir.PoliceCaractere					= cpFonction.ValeurParametre("PoliceSmartevaDefaut",prm_parametre.ValChaine..Nom)
+//				stOperation.stOperationTract.stAdressageNoir.IdPolice							= cpFonction.ValeurParametre("PoliceSmartevaDefaut",prm_parametre.ValNumerique..Nom)
+//				stOperation.stOperationTract.stAdressageNoir.PoliceCouleur						= __POLICE_NOIR__
+//			FIN
+		fin
+
+
+	cas __OPERATION_EMAIL__
+		stOperation.NbrDestinataire				= 5000
+		stOperation.SupprimeDoublons 			= Vrai
+		stOperation.stOperationEmail.Corps		= "<font color=""#FFFFFF"">&nbsp</font>"
+		stOperation.tabRapport.Ajoute([[__CHAMP_EMAIL__,"EMAIL",__CHAMP_TYPE_EMAIL__,99,Vrai]])
+
+	cas __OPERATION_TEL__
+		stOperation.NbrDestinataire				= 1000
+		stOperation.SupprimeDoublons			= Vrai
+		stOperation.tabRapport.Ajoute([__CHAMP_PORTABLE__,"SMS",__CHAMP_TYPE_PORTABLE__,99,Vrai])
+		stOperation.tabRapport.Ajoute([__CHAMP_TEL__,"TÉLÉPHONE",__CHAMP_TYPE_TELEPHONE__,99,Vrai])
+
+
+		JoursAppel[1] 							= Vrai // Lundi
+		JoursAppel[2] 							= Vrai // Mardi
+		JoursAppel[3] 							= Vrai // Mercredi
+		JoursAppel[4] 							= Vrai // Jeudi
+		JoursAppel[5] 							= Vrai // Vendredi
+		JoursAppel[6] 							= Vrai // samedi
+		JoursAppel[7] 							= Faux // Dimanche
+
+		stOperation.stOperationCallCenter.JoursAppel				= JoursAppel				// DU LUNDI AU SAMEDI
+		stOperation.stOperationCallCenter.UsePortable 				= Vrai						// ON UTILISE LES PORTABLES
+		stOperation.stOperationCallCenter.UseFixe					= Vrai						// ON UTILISE LES FIXES
+		stOperation.stOperationCallCenter.ModeTrancheHoraire		= __TEL_MODE_AUTOMATIQUE__	// ON EST ENMODE AUTOMATIQUE PAR DEFAUT
+		stOperation.stOperationCallCenter.UsePriorite				= __TEL_PORTABLE__ 			// ON UTILISE LES PORTABLES EN PRIORITE
+		stOperation.stOperationCallCenter.DecalageAgenda			= 0
+		stOperation.stOperationCallCenter.EstMessageRepondeur		= Faux
+		stOperation.stOperationCallCenter.EstTransfertAppel			= Faux
+		stOperation.stOperationCallCenter.EstSmsConfirmation		= Faux
+		stOperation.stOperationCallCenter.EstSmsRappel				= Faux
+
+
+
+		FichierVersMémoire(stOperation.stOperationCallCenter.tabTrancheHoraire, tel_tranche_horaire)
+
+	cas __OPERATION_SMS__
+		stOperation.NbrDestinataire					= 2000
+		stOperation.SupprimeDoublons 				= Vrai
+		stOperation.DateEnvoiSouhaite				= ""
+		stOperation.HeureEnvoiSouhaite				= "9999"
+		stOperation.stOperationSms.LeFrom 			= ""
+		stOperation.stOperationSms.PrixAchat 		= Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_SMS__].PrixAchatUnitaire
+		stOperation.tabRapport.Ajoute([__CHAMP_PORTABLE__,"SMS",__CHAMP_TYPE_PORTABLE__,99,Vrai])
+
+	cas __OPERATION_RCS__
+		stOperation.NbrDestinataire					= 2000
+		stOperation.SupprimeDoublons					= Vrai
+		stOperation.DateEnvoiSouhaite					= ""
+		stOperation.HeureEnvoiSouhaite				= "9999"
+		stOperation.stOperationRcs.PrixAchat		= Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_RCS__].PrixAchatUnitaire
+		stOperation.tabRapport.Ajoute([__CHAMP_PORTABLE__,"RCS",__CHAMP_TYPE_PORTABLE__,99,Vrai])
+
+	cas __OPERATION_VMS__
+		stOperation.NbrDestinataire					= 1000
+		stOperation.SupprimeDoublons 				= Vrai
+		stOperation.DateEnvoiSouhaite				= ""
+		stOperation.HeureEnvoiSouhaite				= "9999"
+		stOperation.stOperationVms.PrixAchat 		= Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_VMS__].PrixAchatUnitaire
+		stOperation.tabRapport.Ajoute([__CHAMP_PORTABLE__,"VMS",__CHAMP_TYPE_PORTABLE__,99,Vrai])
+
+
+	autre cas
+	//	trace("Cas non reconnu : " + pType)
+
+
+fin
+
+	procédure interne ProchaineLundiOuvré()
+		dDateArrivée est une Date = DateSys()
+		dDateArrivée..Jour += 7
+		tantque dDateArrivée.VersJour() <> 1 _ou_ JourFérié(dDateArrivée)
+			dDateArrivée..Jour += 1
+		fin
+
+		renvoyer dDateArrivée
+	fin
+
+
