@@ -1,0 +1,39 @@
+procédure TunnelCalculeTarif()
+
+selon __stOperation.TypeOperation
+	cas __OPERATION_COURRIER__
+		
+		VérificationEnveloppeEtDocumentClient()
+
+		si Tunnel.__vcTunnel.nIdTimbreTarif = 0 
+			cpDeviseur.CalculMontantTimbre(__stOperation.NbrDestinataire,__stOperation.stOperationLettre)
+			cpDeviseur.CalculePeriodeDistribution(__stOperation.DateEnvoiSouhaite)
+		fin
+
+		si CalculCombinaisonPosteva(__stOperation) alors
+			ChargeDistributionPosteva(__stOperation)
+		fin
+			
+	cas __OPERATION_TRACTEVA__
+		si CalculCombinaisonTracteva(__stOperation) alors
+			ChargeDistributionTracteva(__stOperation)
+		fin
+		
+	cas __OPERATION_SMARTEVA__
+		si CalculCombinaisonSmarteva(__stOperation) alors
+			ChargeDistributionSmarteva(__stOperation)
+		fin
+		
+	cas __OPERATION_SMS__
+		cpDeviseur.DevisSms(__stOperation)
+
+	cas __OPERATION_VMS__
+		cpDeviseur.DevisVms(__stOperation)
+		
+	cas __OPERATION_TEL__
+		cpDeviseur.DevisCallcenter(__stOperation)
+		
+	autre cas
+		
+fin
+

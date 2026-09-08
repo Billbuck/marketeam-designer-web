@@ -1,0 +1,44 @@
+// Résumé : Charge la structure RCS d'un modèle (rcs_modele + cartes + boutons)
+// Syntaxe :
+//[ <Résultat> = ] ChargeStructRcsModele (<pIdRcsModele>)
+//
+// Paramètres :
+//	pIdRcsModele : identifiant du modèle
+// Valeur de retour :
+// 	structOperationRcs
+procédure ChargeStructRcsModele(pIdRcsModele)
+
+nIndCarte		est un entier
+stOperationRcs	est une structOperationRcs
+stCarte			est une structOperationRcsCarte
+stBouton		est une structOperationRcsBouton
+
+
+si rcs_modele.LitRecherchePremier(IdRcsModele, pIdRcsModele) alors
+	FichierVersMémoire(stOperationRcs, rcs_modele)
+
+	pour tout rcs_modele_carte avec IdRcsModele = pIdRcsModele
+		stCarte.tabBouton.SupprimeTout()
+		FichierVersMémoire(stCarte, rcs_modele_carte)
+		stCarte.IdRcsCarte = rcs_modele_carte.IdRcsModeleCarte
+		stOperationRcs.tabCarte.Ajoute(stCarte)
+	fin
+
+	// Une seule lecture : commun si IdRcsModeleCarte vide, sinon bouton de la carte
+	pour tout rcs_modele_bouton avec IdRcsModele = pIdRcsModele
+		FichierVersMémoire(stBouton, rcs_modele_bouton)
+		stBouton.IdRcsBouton = rcs_modele_bouton.IdRcsModeleBouton
+		si rcs_modele_bouton.IdRcsModeleCarte = 0 alors
+			stOperationRcs.tabBoutonCommun.Ajoute(stBouton)
+		sinon
+			pour nIndCarte = 1 _à_ stOperationRcs.tabCarte..Occurrence
+				si stOperationRcs.tabCarte[nIndCarte].IdRcsCarte = rcs_modele_bouton.IdRcsModeleCarte alors
+					stOperationRcs.tabCarte[nIndCarte].tabBouton.Ajoute(stBouton)
+					sortir
+				fin
+			fin
+		fin
+	fin
+fin
+
+renvoyer stOperationRcs

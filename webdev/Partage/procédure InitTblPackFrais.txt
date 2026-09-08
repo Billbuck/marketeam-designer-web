@@ -1,0 +1,46 @@
+procédure InitTblPackFrais(pIdClient, pIdPackPrestation)
+
+stFrais				est une structFrais
+sTexteRequete		est une chaîne
+sdReqPackFrais		est une Source de Données
+taaFrais			est un tableau associatif de structFrais
+
+sTexteRequete =
+[
+	SELECT
+		s.CodeSupport,
+		s.Libelle,
+		f.FraisFixeFacturation,
+		f.MinimumFacturation
+	FROM
+		(SELECT z.IdPackSupportFrais, z.CodeSupport
+		FROM (
+			SELECT IdPackSupportFrais, CodeSupport FROM pck_pack_support_frais WHERE IdClient = [%pIdClient%]
+			UNION
+			SELECT IdPackSupportFrais, CodeSupport FROM pck_pack_support_frais WHERE IdPackPrestation = [%pIdPackPrestation%]
+			) AS z
+	GROUP BY z.CodeSupport) AS t
+		INNER JOIN pck_pack_support_frais f ON t.IdPackSupportFrais = f.IdPackSupportFrais
+		INNER JOIN pck_support s ON s.CodeSupport = t.CodeSupport
+	ORDER BY
+		t.CodeSupport
+]
+
+si pas sdReqPackFrais.ExécuteRequêteSQL(pck_prestation..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	<compile si Configuration <> "Webservice">
+		Info("Erreur requête")
+	<fin>
+	renvoyer taaFrais
+fin
+
+sdReqPackFrais.LitPremier(hSansRafraîchir)
+tantque pas sdReqPackFrais.EnDehors()
+	FichierVersMémoire(stFrais, sdReqPackFrais)
+	taaFrais[sdReqPackFrais.CodeSupport] = stFrais
+	sdReqPackFrais.LitSuivant()
+fin
+
+renvoyer taaFrais
+
+fin:
+sdReqPackFrais.AnnuleDéclaration()

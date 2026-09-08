@@ -660,11 +660,11 @@ fin
 structWsBaseDeDonnées est une Structure
 	IdBase				est un entier
 	TypeFichier			est une chaîne ANSI
-	Encodage			est une chaîne ANSI	// "UTF8" / "AINSI" — détecté UNE fois à l'import (cf. DétecteEncodageFichier 09/07/2026)
+	Encodage				est une chaîne ANSI						// "UTF8" / "AINSI" — détecté UNE fois à l'import (cf. DétecteEncodageFichier 09/07/2026)
 	stMapping 			est une structWsBddMapping				<sérialise = "Mapping">
 	taaColonne			est un tableau associatif				<sérialise = "Colonnes"> d'entiers
-	tabImportChamp		est un tableau							<sérialise = "Champs"> de structWsBddChamp
-	stInformations		est une structWsBddInformations			<sérialise = "Informations">
+	tabImportChamp		est un tableau								<sérialise = "Champs"> de structWsBddChamp
+	stInformations		est une structWsBddInformations		<sérialise = "Informations">
 fin
 
 
@@ -2042,8 +2042,8 @@ structDocument est une Structure
 	tabImageBat								est un tableau de structDocumentImage	// JPG BAT (rendu PSMD via API PSM)
 	JsonDesignerData						est une chaîne									// Bloc "data" JSON retourné par le Designer du document
 	EstPersonnaliseDesigner				est un booléen									// Vrai = l'utilisateur a personnalisé via le Designer
+	EstBatGenereAvecRapprochement		est un booléen
 	DateHeureDesigner						est une DateHeure								// Date/heure dernière sauvegarde Designer
-	EstBatGenereAvecRapprochement		est un booléen									// Vrai = le dernier BAT généré contient le datamatrix de rapprochement (comparé à QrRequis pour la visibilité de btnRegenererBAT)
 	CheminPsmdTemp							est une chaîne									// Chemin physique complet du fichier PSMD production (avec fond perdu + SRA)
 	CheminPsmdBat							est une chaîne									// Chemin physique complet du fichier PSMD BAT (format fini, sans fond perdu ni SRA)
 	NomFichierPsmd							est une chaîne									// Nom du fichier PSMD (sans répertoire)
@@ -2130,7 +2130,6 @@ fin
 
 
 
-
 structRnvp est une Structure
 	IdRnvp									est un entier
 	Statut									est une chaîne
@@ -2202,6 +2201,7 @@ structOperationLigne est une Structure
 	CodePrestation							est une chaîne
 	Designation								est une chaîne
 	Qte										est un entier
+	TailleUnitaire    					est un entier
 	PrixUnitaireAchat						est un numérique(6,4)
 	PrixUnitaireVenteCalcule				est un numérique(6,3)		// Issu de la calculette
 	PrixUnitaireVenteMinimum				est un numérique(6,3)		// Calculé entre le prix calculette et le prix après seuil
@@ -2246,28 +2246,56 @@ structOperationSms est une Structure
 	TailleMax							est un entier
 fin
 
-structOperationRcsBouton est une Structure
-	IdRcsBouton							est un entier
-	Ordre								est un entier
-	TypeBouton							est une chaîne			// OPEN_URL, DIAL_PHONE, SHOW_LOCATION
-	EstBoutonInteractif					est un booléen			// ce bouton ouvre la landing Cliquez ici
-	Libelle								est une chaîne
-	PostbackData						est une chaîne
-	Url									est une chaîne			// vide si bouton interactif (URL posée à l'envoi)
-	UrlApplication						est une chaîne			// BROWSER ou WEBVIEW
-	UrlWebviewMode						est une chaîne			// FULL, HALF, TALL
+
+structRcsBoutonParametres est une Structure
 	Telephone							est une chaîne
-	Latitude							est un numérique(9,6)
-	Longitude							est un numérique(9,6)
-	LibelleLieu							est une chaîne
+	Message								est une chaîne
+	Email									est une chaîne
+	EmailObjet							est une chaîne
+	EmailMessage						est une chaîne
+	Confirmation						est une chaîne
+	Url									est une chaîne
+	Latitude								est une chaîne
+	Longitude							est une chaîne
+	Lieu									est une chaîne
+	Adresse								est une chaîne
+	AgendaTitre							est une chaîne
+	AgendaDate							est une Date
+	AgendaHeureDebut					est une Heure
+	AgendaHeureFin						est une Heure
+	AgendaLieu							est une chaîne
+	AgendaDescription					est une chaîne
+	UrlAppStore							est une chaîne
+	UrlPlayStore						est une chaîne
+	Compte								est une chaîne
+fin
+
+structOperationRcsBouton est une Structure
+	IdRcsBouton								est un entier
+	Ordre										est un entier
+	TypeBouton								est une chaîne			// OPEN_URL, DIAL_PHONE, SHOW_LOCATION
+	EstBoutonInteractif					est un booléen			// ce bouton ouvre la landing Cliquez ici
+	Libelle									est une chaîne
+	SousType									est une chaîne
+	Parametres								est une chaîne
+	PostbackData							est une chaîne
+	Url										est une chaîne			// vide si bouton interactif (URL posée à l'envoi)
+	UrlApplication							est une chaîne			// BROWSER ou WEBVIEW
+	UrlWebviewMode							est une chaîne			// FULL, HALF, TALL
+	Telephone								est une chaîne
+	Latitude									est un numérique(9,6)
+	Longitude								est un numérique(9,6)
+	LibelleLieu								est une chaîne
 fin
 
 structOperationRcsCarte est une Structure
 	IdRcsCarte							est un entier
-	Ordre								est un entier
-	Titre								est une chaîne
+	IdImage								est un entier
+	Ordre									est un entier
+	Titre									est une chaîne
 	Description							est une chaîne
-	MediaUrl							est une chaîne
+	MediaUrl								est une chaîne
+	MediaThumbnailUrl					est une chaîne
 	MediaContentType					est une chaîne
 	MediaHauteur						est une chaîne			// figé MEDIUM
 	MediaLargeurPx						est un entier
@@ -2276,38 +2304,42 @@ structOperationRcsCarte est une Structure
 fin
 
 structOperationRcs est une Structure
-	IdRcsModele							est un entier
-	IdRcsAgent							est un entier
-	TypeContenu							est une chaîne			// CARD ou CAROUSEL
-	Orientation							est une chaîne			// figé VERTICAL
-	Alignement							est une chaîne			// obligatoire pour l'API, sans effet en vertical
-	LargeurCarte						est une chaîne			// figé MEDIUM, carrousel seulement
-	ModeleVariable						est une chaîne
+	IdRcsModele								est un entier
+	IdRcsAgent								est un entier
+	TypeContenu								est une chaîne											// CARD ou CAROUSEL
+	Orientation								est une chaîne											// figé VERTICAL
+	Alignement								est une chaîne											// obligatoire pour l'API, sans effet en vertical
+	LargeurCarte							est une chaîne											// figé MEDIUM, carrousel seulement
+	ModeleVariable							est une chaîne
 	EstRcsPersonnalise					est un booléen
 	CampaignReferenceId					est une chaîne
-	ValiditeDuree						est un entier
-	ValiditeUnite						est une chaîne
-	FenetreJours						est une chaîne
-	FenetreHeureDebut					est une Heure
+	ValiditeDuree							est un entier
+	ValiditeUnite							est une chaîne
+	FenetreJours							est une chaîne
+	FenetreHeureDebut						est une Heure
 	FenetreHeureFin						est une Heure
-	EstRepliSms							est un booléen
-	RepliSmsFrom						est une chaîne
+	EstRepliSms								est un booléen
+	RepliSmsFrom							est une chaîne
 	RepliSmsMessage						est une chaîne
-	DateFin								est une Date
-	HeureFin							est une Heure
-	Cadence								est un entier
-	Paquet								est un entier
-	Pause								est un entier
-	PrixAchat							est un numérique(6,3)
-	NbrDestinataireRcs					est un entier			// qualification ENABLED
-	NbrDestinataireRepliSms				est un entier			// qualification UNREACHABLE
-	DateHeureQualification				est une DateHeure		// fige le devis ; vide = pas encore qualifié
-	taaRepliCreditSms					est un tableau associatif d'entiers	// Cle = crédit , Valeur = nombre
-	taaRepliTailleSms					est un tableau associatif d'entiers	// Cle = taille , Valeur = nombre
-	RepliTailleMax						est un entier
-	tabCarte							est un tableau de structOperationRcsCarte
+	RepliIdSmsModele						est entier
+	RepliModeleVariable					est chaîne
+	EstRepliSmsPersonnalise				est booléen
+	DateFin									est une Date
+	HeureFin									est une Heure
+	Cadence									est un entier
+	Paquet									est un entier
+	Pause										est un entier
+	PrixAchat								est un numérique(6,3)
+	NbrDestinataireRcs					est un entier											// qualification ENABLED
+	NbrDestinataireRepliSms				est un entier											// qualification UNREACHABLE
+	DateHeureQualification				est une DateHeure										// fige le devis ; vide = pas encore qualifié
+	taaRepliCreditSms						est un tableau associatif d'entiers				// Cle = crédit , Valeur = nombre
+	taaRepliTailleSms						est un tableau associatif d'entiers				// Cle = taille , Valeur = nombre
+	RepliTailleMax							est un entier
+	tabCarte									est un tableau de structOperationRcsCarte
 	tabBoutonCommun						est un tableau de structOperationRcsBouton	// IdRcsCarte NULL en base
 fin
+
 
 structOperationVms est une Structure
 	IdMessage							est un entier
@@ -2760,8 +2792,8 @@ structOperation est une Structure
 	DateHeureModification					est une DateHeure
 	UserCreation							est une chaîne
 	UserModification						est une chaîne
-	CodeTemp								est une chaîne	// Code unique en attendant la création de l’opération pour la création des fichiers temporaires
-	CodeTest								est une chaîne	// Code non devinable de l'URL de test du QR interactif : cliquez.info/!<CodeTest> (CDC QR interactif V2 16/07/2026)
+	CodeTemp								est une chaîne		// Code unique en attendant la création de l’opération pour la création des fichiers temporaires
+	CodeTest 							est une chaîne 	// Code non devinable de l'URL de test du QR interactif : cliquez.info/!<CodeTest> (CDC QR interactif V2 16/07/2026)
 	IdCoupon								est un entier
 	TypeCoupon								est une chaîne
 	NomOperation							est une chaîne
@@ -2808,9 +2840,9 @@ structOperation est une Structure
 
 	stNouveauCliquezIci						est une structNouveauCliquezIci, sérialise = faux
 
-	stOperationLettre						est une StructOperationLettre, sérialise = faux	// structure COMMUNE Courrier + Tract (unification 15/07/2026, ex-stOperationTract supprimée)
+	stOperationLettre						est une StructOperationLettre, sérialise = faux
 	stOperationSms							est une structOperationSms
-	stOperationRcs							est une structOperationRcs
+	stOperationRcs 						est une structOperationRcs
 	stOperationVms							est une structOperationVms, sérialise = faux
 	stOperationEmail						est une structOperationEmail, sérialise = faux
 	stOperationCallCenter					est une structOperationCallCenter, sérialise = faux
@@ -4711,9 +4743,6 @@ fin
 structDesignerAuth est une Structure
 	IdClient						est un entier						<sérialise = "idClient">
 	IdContact					est un entier						<sérialise = "idContact">
-	// SÉCURITÉ (28/07/2026) : membre SecretKey SUPPRIMÉ — la clé secrète ne
-	// doit jamais être envoyée au navigateur. La signature est fournie à la
-	// demande par cpDesigner.AjaxDonneJetonWebservice.
 	UrlWebservice				est une chaîne						<sérialise = "urlWebservice">
 	UrlCollectionListe		est une chaîne						<sérialise = "urlCollectionListe">
 	UrlPoliceAjout				est une chaîne						<sérialise = "urlPoliceAjout">

@@ -1,0 +1,72 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] IdentificationAutomatique (<nIdContact>, <nIdClient> [, <nIdOperation> [, <sEmail> [, <nIdLettreGestionDepot> est entier]]])
+//
+// Paramètres :
+//	nIdContact : <indiquez ici le rôle de pIdContact>
+//	nIdClient : <indiquez ici le rôle de pIdClient>
+//	nIdOperation (valeur par défaut=0) : <indiquez ici le rôle de pIdOperation>
+//	sEmail (valeur par défaut="") : <indiquez ici le rôle de pEmail>
+//	nIdLettreGestionDepot (entier - valeur par défaut=0) : < indiquez ici le rôle de nIdLettreGestionDepot >
+// Valeur de retour :
+// 	booléen : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+//	pIdDossier : <indiquez ici le rôle de pIdDossier>
+//	nIdDossierValidation (valeur par défaut=0) : <indiquez ici le rôle de pIdDemandeValidation>
+//	nIdDossier (valeur par défaut=0) : < indiquez ici le rôle de nIdDossier >
+procédure IdentificationAutomatique(nIdContact, nIdClient, nIdOperation=0, sEmail="", nIdLettreGestionDepot est un entier=0)
+
+
+si nIdContact = 0 ou nIdClient = 0 alors
+	renvoyer Faux
+fin
+
+
+si pas clt_contact.LitRecherchePremier(IdContact, nIdContact) _ou_ clt_contact.IdClient <> nIdClient alors
+	renvoyer Faux
+sinon
+	si clt_contact.EstActif = Faux alors
+		renvoyer Faux
+	fin
+fin
+
+si sEmail <> "" _et_ clt_contact.Email <> sEmail alors
+	renvoyer Faux
+fin
+
+
+si pas clt_client.LitRecherchePremier(IdClient, nIdClient) alors
+	renvoyer Faux
+sinon
+	si clt_client.EstActif = Faux alors
+		renvoyer Faux
+	fin
+fin
+
+si nIdOperation <> 0 alors
+
+	si pas dos_operation.LitRecherchePremier(IdOperation, nIdOperation)
+		renvoyer Faux
+	fin
+
+	si  (dos_operation.IdContact <> nIdContact _et_ dos_operation.IdValideur <> nIdContact) alors
+		renvoyer Faux
+	fin
+fin
+
+si nIdLettreGestionDepot <> 0 alors
+	HLitRecherchePremier(ope_lettre_gestion_depot, IdLettreGestionDepot, nIdLettreGestionDepot)
+	si pas HTrouve(ope_lettre_gestion_depot) alors
+		renvoyer Faux
+	fin
+
+	si ope_lettre_gestion_depot.Statut <> __DEPOT_STATUT_VALIDATION_EN_ATTENTE__ alors
+		renvoyer Faux
+	fin
+fin
+
+// Si on arrive là c'est que c'est bon !!!!
+renvoyer ChargeDonnéesUtilisateur(nIdClient, nIdContact)

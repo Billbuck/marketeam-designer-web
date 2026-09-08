@@ -1,0 +1,17 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// InitDroitAdministrateur ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure InitDroitAdministrateur()
+
+pour tout prm_droit
+	Partage.__vcUser.taaDroit[prm_droit.CodeDroit] = Vrai
+fin

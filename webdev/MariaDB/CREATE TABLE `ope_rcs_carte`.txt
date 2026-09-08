@@ -2,6 +2,7 @@ CREATE TABLE `ope_rcs_carte` (
 	`IdRcsCarte` INT(11) NOT NULL AUTO_INCREMENT,
 	`IdRcs` INT(11) NOT NULL,
 	`Ordre` TINYINT(3) UNSIGNED NOT NULL DEFAULT '1' COMMENT 'Position dans le carrousel de 1 à 10',
+	`IdImage` INT(11) NULL DEFAULT NULL COMMENT 'Media choisi dans ici_image - permet de recalculer le derive',
 	`Titre` VARCHAR(400) NULL DEFAULT NULL COMMENT 'Gabarit - le résultat fusionné doit tenir en 200 car.' COLLATE 'utf8mb4_unicode_ci',
 	`Description` VARCHAR(3000) NULL DEFAULT NULL COMMENT 'Gabarit - le résultat fusionné doit tenir en 2000 car.' COLLATE 'utf8mb4_unicode_ci',
 	`MediaUrl` VARCHAR(2048) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
@@ -16,9 +17,12 @@ CREATE TABLE `ope_rcs_carte` (
 	`UserModification` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
 	PRIMARY KEY (`IdRcsCarte`) USING BTREE,
 	INDEX `IdRcs_Ordre` (`IdRcs`, `Ordre`) USING BTREE,
+	INDEX `IdImage` (`IdImage`) USING BTREE,
+	CONSTRAINT `FK_ope_rcs_carte_ici_image` FOREIGN KEY (`IdImage`) REFERENCES `ici_image` (`IdImage`) ON UPDATE RESTRICT ON DELETE SET NULL,
 	CONSTRAINT `FK_ope_rcs_carte_ope_rcs` FOREIGN KEY (`IdRcs`) REFERENCES `ope_rcs` (`IdRcs`) ON UPDATE RESTRICT ON DELETE CASCADE
 )
 COLLATE='utf8mb4_unicode_ci'
 ENGINE=InnoDB
 ROW_FORMAT=DYNAMIC
+AUTO_INCREMENT=5
 ;

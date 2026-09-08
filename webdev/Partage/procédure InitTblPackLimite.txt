@@ -1,0 +1,48 @@
+procédure InitTblPackLimite(pIdClient, pIdPackFonction)
+
+stLimite			est une structLimite
+sTexteRequete		est une chaîne
+sdReqPackLimite		est une Source de Données
+taaLimite			est un tableau associatif de structLimite
+
+sTexteRequete =
+[
+	SELECT
+		s.CodeLimite,
+		s.Libelle,
+		f.LimiteMin,
+		f.LimiteMax,
+		f.LimiteVal
+	FROM
+		(SELECT z.IdPackFonctionLimite, z.CodeLimite
+		FROM (
+			SELECT IdPackFonctionLimite, CodeLimite FROM pck_pack_fonction_limite WHERE IdClient = [%pIdClient%]
+			UNION
+			SELECT IdPackFonctionLimite, CodeLimite FROM pck_pack_fonction_limite WHERE IdPackFonction = [%pIdPackFonction%]
+			) AS z
+	GROUP BY z.CodeLimite) AS t
+		INNER JOIN pck_pack_fonction_limite f ON t.IdPackFonctionLimite = f.IdPackFonctionLimite
+		INNER JOIN pck_limite s ON s.CodeLimite = t.CodeLimite
+	ORDER BY
+		t.CodeLimite
+]
+
+si pas sdReqPackLimite.ExécuteRequêteSQL(pck_limite..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	<compile si Configuration <> "Webservice">
+		Info("Erreur requête")
+	<fin>
+	renvoyer taaLimite
+fin
+
+sdReqPackLimite.LitPremier(hSansRafraîchir)
+tantque pas sdReqPackLimite.EnDehors()
+	FichierVersMémoire(stLimite, sdReqPackLimite)
+	taaLimite[sdReqPackLimite.CodeLimite] = stLimite
+	sdReqPackLimite.LitSuivant()
+fin
+
+renvoyer taaLimite
+
+fin:
+sdReqPackLimite.AnnuleDéclaration()
+

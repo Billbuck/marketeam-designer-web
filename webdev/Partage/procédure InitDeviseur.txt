@@ -1,0 +1,25 @@
+procédure InitDeviseur()
+
+__nSeuilMinimumOffset					= cpFonction.ValeurParametre("Minimum_Offset", prm_parametre.ValNumerique..Nom)
+__moCoefExpressApresSeuil				= cpFonction.ValeurParametre("Coef_Express_Apres_Seuil", prm_parametre.ValNumerique..Nom)
+__moCoefExpressAvantSeuil				= cpFonction.ValeurParametre("Coef_Express_Avant_Seuil", prm_parametre.ValNumerique..Nom)
+__moCoefExpressSeuil					= cpFonction.ValeurParametre("Coef_Express_Seuil", prm_parametre.ValNumerique..Nom)
+__moCoefLentApresSeuil					= cpFonction.ValeurParametre("Coef_Lent_Apres_Seuil", prm_parametre.ValNumerique..Nom)
+__moCoefLentAvantSeuil					= cpFonction.ValeurParametre("Coef_Lent_Avant_Seuil", prm_parametre.ValNumerique..Nom)
+__moCoefLentSeuil						= cpFonction.ValeurParametre("Coef_Lent_Seuil", prm_parametre.ValNumerique..Nom)
+__nNbJourDelaiLent						= cpFonction.ValeurParametre("Nb_Jour_Delai_Lent", prm_parametre.ValNumerique..Nom)
+__nNbJourExpressOffset					= cpFonction.ValeurParametre("Nb_Jour_Express_Offset", prm_parametre.ValNumerique..Nom)
+__moRemiseOffset						= cpFonction.ValeurParametre("RemiseSaxoprint", prm_parametre.ValNumerique..Nom)
+__nNbrDocParCartonTracteva				= cpFonction.ValeurParametre("NbrDocParCartonTracteva",prm_parametre.ValNumerique..Nom)
+__nNbrDocParCartonSmarteva				= cpFonction.ValeurParametre("NbrDocParCartonSmarteva",prm_parametre.ValNumerique..Nom)
+__rUpsPrixAchatKg						= cpFonction.ValeurParametre("Ups_PrixAchat_Kg",prm_parametre.ValNumerique..Nom)
+__moPrixAchatMinutePortable				= cpFonction.ValeurParametre("Callcenter_PrixAchatMinutePortable",prm_parametre.ValNumerique..Nom)
+
+pour tout tel_tranche_horaire sur IdTrancheHoraire
+	__taaTelTrancheHoraire[tel_tranche_horaire.IdTrancheHoraire] = tel_tranche_horaire
+fin
+
+pour tout tel_type_script  sur IdTypeScript
+	__taaTelTypeScript[tel_type_script.IdTypeScript] = tel_type_script
+fin
+

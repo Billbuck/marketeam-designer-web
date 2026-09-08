@@ -76,6 +76,7 @@ constante
 	#DROIT_ACCÈS_COURRIER_DE_GESTION							= "GST_DROIT"
 	#DROIT_ACCÈS_EMAIL											= "EML_DROIT"
 	#DROIT_ACCÈS_SMS											= "SMS_DROIT"
+	#DROIT_ACCÈS_RCS												= "RCS_DROIT"
 	#DROIT_ACCÈS_TRACT											= "TTB_DROIT"
 	#DROIT_ACCÈS_VMS											= "VMS_DROIT"
 	#DROIT_GESTION_DES_COUPONS									= "PRM_COUPON"
@@ -315,10 +316,11 @@ constante
 	__OPERATION_SMARTEVA__										= "STV"
 	__OPERATION_TRACTEVA__										= "TRA"
 	__OPERATION_SMS__											= "SMS"
-	__OPERATION_RCS__											= "RCS"
 	__OPERATION_SMS_NOTIFICATION__								= "SMN"
 	__OPERATION_SMS_WEBSERVICE__								= "SWS"
 	__OPERATION_SMS_INTERACTIF__								= "SMI"
+	__OPERATION_RCS__												= "RCS"
+	__OPERATION_RCS_INTERACTIF__								= "RCI"
 	__OPERATION_VMS__											= "VMS"
 	__OPERATION_VMS_UNITAIRE__									= "VMU"
 	__OPERATION_EMAIL__											= "EML"
@@ -428,7 +430,65 @@ constante
 	__DOC_ICI_VIDEO__											= "IciVid"
 	__DOC_ICI_FOND__											= "IciFon"
 	__DOC_ICI_GRATTAGE__										= "IciGra"
-	__DOC_ICI_BOUTON__											= "IciBtn"
+	__DOC_ICI_BOUTON__										= "IciBtn"
+//	__DOC_RCS_IMAGE__											= "RcsImg"
+//	__DOC_RCS_VIDEO__											= "RcsVid"
+
+	__RCS_CARTE__ 												= "CARD"
+	__RCS_CARROUSEL__ 										= "SLDR"
+
+	__RCS_CONTENU_CARD__										= "CARD"
+	__RCS_CONTENU_CAROUSEL__								= "CAROUSEL"
+	__RCS_MAX_CARTES__										= 10
+	__RCS_MEDIA_HAUTEUR__									= "MEDIUM"
+	__RCS_MAX_BOUTONS_CARTE__								= 4
+	__RCS_MAX_TITRE__											= 200
+	__RCS_MAX_DESCRIPTION__									= 2000
+	__RCS_MAX_LIBELLE_BOUTON__								= 25
+	__RCS_BOUTON_OPEN_URL__									= "OPEN_URL"
+	__RCS_BOUTON_DIAL_PHONE__								= "DIAL_PHONE"
+	__RCS_URL_BROWSER__										= "BROWSER"
+
+	// Rubriques
+	__RCS_RUBRIQUE_CONTACT__								= "CONTACT"
+	__RCS_RUBRIQUE_REACTION__								= "REACTION"
+	__RCS_RUBRIQUE_WEB__										= "WEB"
+	__RCS_RUBRIQUE_LANDING__								= "LANDING"
+	__RCS_RUBRIQUE_LOCALISATION__							= "LOCALISATION"
+	__RCS_RUBRIQUE_AGENDA__									= "AGENDA"
+	__RCS_RUBRIQUE_RESEAUX__								= "RESEAUX"
+
+	// Actions (valeurs de la colonne SousType)
+	__RCS_ACTION_APPEL__										= "APPEL"
+	__RCS_ACTION_EMAIL__										= "EMAIL"
+	__RCS_ACTION_WHATSAPP__									= "WHATSAPP"
+	__RCS_ACTION_SMS__										= "SMS"
+	__RCS_ACTION_REACTION__									= "REACTION"
+	__RCS_ACTION_LIEN__										= "LIEN"
+	__RCS_ACTION_RDV__										= "RDV"
+	__RCS_ACTION_AVIS__										= "AVIS"
+	__RCS_ACTION_DOCUMENT__									= "DOCUMENT"
+	__RCS_ACTION_LANDING__									= "LANDING"
+	__RCS_ACTION_CARTE__										= "CARTE"
+	__RCS_ACTION_ITINERAIRE__								= "ITINERAIRE"
+	__RCS_ACTION_AGENDA__									= "AGENDA"
+	__RCS_ACTION_APPLICATION__								= "APPLICATION"
+	__RCS_ACTION_INSTAGRAM__								= "INSTAGRAM"
+	__RCS_ACTION_FACEBOOK__									= "FACEBOOK"
+	__RCS_ACTION_TIKTOK__									= "TIKTOK"
+	__RCS_ACTION_YOUTUBE__									= "YOUTUBE"
+	__RCS_ACTION_LINKEDIN__									= "LINKEDIN"
+
+	// Valeurs API
+	__RCS_BOUTON_SHOW_LOCATION__							= "SHOW_LOCATION"
+	__RCS_URL_WEBVIEW__										= "WEBVIEW"
+	__RCS_WEBVIEW_HALF__										= "HALF"
+
+	__DOC_RCS_IMAGE_CARD__									= "RcsImgCard"
+	__DOC_RCS_IMAGE_SLDR__									= "RcsImgSldr"
+	__DOC_RCS_VIDEO__											= "RcsVid"
+	__DOC_RCS_VIGNETTE_CARD__								= "RcsVgnCard"
+	__DOC_RCS_VIGNETTE_SLDR__								= "RcsVgnSldr"
 
 	__DOC_DEVIS_OPERATION__										= "DevOpe"		// Devis
 	__DOC_DEVIS_DOSSIER__										= "DevDos"		// Devis
@@ -496,12 +556,14 @@ constante
 	__ICI_IMAGE__												= "IMG"
 	__ICI_BANNIERE__											= "BAN"
 	__ICI_FOND__												= "FON"
-	__ICI_YOUTUBE__												= "YTB"
+	__ICI_YOUTUBE__											= "YTB"
 	__ICI_VIDEO__												= "VID"
 	__ICI_BOUTON__												= "BTN"
 	__ICI_GRATTAGE__											= "GRT"
 	__ICI_OFFRE__												= "OFF"
 	__ICI_CGV__													= "CGV"
+	__ICI_RCS_IMAGE__											= "RCI"
+	__ICI_RCS_VIDEO__											= "RCV"
 	__ICI_URL_FIXE__											= "F"
 	__ICI_URL_TRACKING__										= "T"
 	__ICI_WEB__													= "W"
@@ -631,6 +693,7 @@ constante
 	__PRESTATION_ROUTAGE_EMAIL__								= "ROUTAGE_EMAIL"
 	__PRESTATION_ROUTAGE_SMARTEVA__								= "ROUTAGE_SMARTEVA"
 	__PRESTATION_ROUTAGE_SMS__									= "ROUTAGE_SMS"
+	__PRESTATION_ROUTAGE_RCS__									= "ROUTAGE_RCS"
 	__PRESTATION_ROUTAGE_TRACTEVA__								= "ROUTAGE_TRACTEVA"
 	__PRESTATION_ROUTAGE_VMS__									= "ROUTAGE_VMS"
 	__PRESTATION_TEL_FIXE__										= "TEL_FIXE"
@@ -688,13 +751,10 @@ constante
 	__RAPPORT_TEL_LEAD__										= "RTL"
 	__RAPPORT_EMAIL__											= "REL"
 	__RAPPORT_EMAIL_INTERACTIF__								= "REI"
-	__RAPPORT_COURRIER_INTERACTIF__								= "RCI"
-
-	// Rapports de consommation (période filtrée, sans opération associée)
+	__RAPPORT_COURRIER_INTERACTIF__							= "RCI"
 	__RAPPORT_CONSO_SMS__										= "CSN"
 	__RAPPORT_CONSO_VMS__										= "CVU"
 	__RAPPORT_CONSO_EMAIL__										= "CEN"
-
 
 	__TYPEPRESTATION_BDD__										= 10
 
@@ -736,7 +796,7 @@ constante
 //	JAUNE
 	__COULEUR_COURRIER_XXS__									= "#FFFEF7"
 	__COULEUR_COURRIER_XS__										= "#FFFCEB"
-	__COULEUR_COURRIER_S__										= "#FCF4C2"
+	__COULEUR_COURRIER_S__										= "#F7DF78"
 	__COULEUR_COURRIER_M__										= "#F1CA2D"
 	__COULEUR_COURRIER_L__										= "#EAB400"
 	__COULEUR_COURRIER_XL__										= "#DA9900"
@@ -978,9 +1038,9 @@ constante
 	__CHAMP_TYPE_CODEPOSTAL__									= "CDP"
 	__CHAMP_TYPE_IMAGE__										= "IMG"
 	__CHAMP_TYPE_URL__											= "URL"
+	__CHAMP_TYPE_CODE_BARRES__									= "CDB"
 	__CHAMP_TYPE_ALLIAGE__										= "ALG"
 	__CHAMP_TYPE_COORDONNEE__									= "COO"
-	__CHAMP_TYPE_CODE_BARRES__									= "CDB"
 
 	__CHAMP_TYPE_DATE_HEURE__									= "DTH"
 	__CHAMP_TYPE_SMS_STATUT__									= "SST"

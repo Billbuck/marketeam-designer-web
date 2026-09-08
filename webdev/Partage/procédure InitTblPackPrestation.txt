@@ -1,0 +1,53 @@
+procédure InitTblPackPrestation(pIdClient, pIdPackPrestation)
+
+stPrestation		est une structPrestation
+sTexteRequete		est une chaîne
+sdReqPackPrestation	est une Source de Données
+taaPrestation 		est un tableau associatif de structPrestation
+
+
+sTexteRequete =
+[
+	SELECT
+		p.CodePrestation,
+		p.LibellePrestation,
+		p.PrixAchatUnitaire,
+		p.PrixAchatHoraire,
+		p.PrixAchatCalcule,
+		p.EstEligibleCoupon,
+		ROUND(p.PrixAchatUnitaire * m.CoefficientMarge / 100,3) PrixVenteUnitaire,
+		ROUND(p.PrixAchatHoraire * m.CoefficientMarge / 100,2) PrixVenteHoraire,
+		p.TypePriseEnChargeCoupon,
+		m.CoefficientMarge
+	FROM
+		(SELECT z.IdPackPrestationMarge, z.CodePrestation
+		FROM (
+			SELECT m.IdPackPrestationMarge, m.CodePrestation FROM pck_pack_prestation_marge m WHERE m.IdClient = [%pIdClient%]
+			UNION
+			SELECT m.IdPackPrestationMarge, m.CodePrestation FROM pck_pack_prestation_marge m WHERE m.IdPackPrestation = [%pIdPackPrestation%]
+			) AS z
+	GROUP BY z.CodePrestation) AS t
+		INNER JOIN pck_pack_prestation_marge m ON t.IdPackPrestationMarge = m.IdPackPrestationMarge
+		INNER JOIN pck_prestation p ON p.CodePrestation = t.CodePrestation
+	ORDER BY
+		t.CodePrestation
+]
+
+si pas sdReqPackPrestation.ExécuteRequêteSQL(pck_prestation..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	<compile si Configuration <> "Webservice">
+		Info("Erreur requête")
+	<fin>
+	renvoyer taaPrestation
+fin
+
+sdReqPackPrestation.LitPremier(hSansRafraîchir)
+tantque pas sdReqPackPrestation.EnDehors()
+	FichierVersMémoire(stPrestation, sdReqPackPrestation)
+	taaPrestation[sdReqPackPrestation.CodePrestation] = stPrestation
+	sdReqPackPrestation.LitSuivant()
+fin
+
+renvoyer taaPrestation
+
+fin:
+sdReqPackPrestation.AnnuleDéclaration()

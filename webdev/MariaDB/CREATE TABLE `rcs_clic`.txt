@@ -13,10 +13,10 @@ CREATE TABLE `rcs_clic` (
 	UNIQUE INDEX `MessageIdEvenement` (`MessageIdEvenement`) USING BTREE,
 	INDEX `IdRcsEnvoi` (`IdRcsEnvoi`) USING BTREE,
 	INDEX `IdOperation_DateHeureClic` (`IdOperation`, `DateHeureClic`) USING BTREE,
-	INDEX `IdRcsBouton` (`IdRcsBouton`) USING BTREE,
 	INDEX `FK_rcs_clic_ope_rcs_carte` (`IdRcsCarte`) USING BTREE,
-	CONSTRAINT `FK_rcs_clic_ope_rcs_carte` FOREIGN KEY (`IdRcsCarte`) REFERENCES `ope_rcs_carte` (`IdRcsCarte`) ON UPDATE NO ACTION ON DELETE SET NULL,
+	INDEX `IdRcsBouton` (`IdRcsBouton`) USING BTREE,
 	CONSTRAINT `FK_rcs_clic_ope_rcs_bouton` FOREIGN KEY (`IdRcsBouton`) REFERENCES `ope_rcs_bouton` (`IdRcsBouton`) ON UPDATE NO ACTION ON DELETE SET NULL,
+	CONSTRAINT `FK_rcs_clic_ope_rcs_carte` FOREIGN KEY (`IdRcsCarte`) REFERENCES `ope_rcs_carte` (`IdRcsCarte`) ON UPDATE NO ACTION ON DELETE SET NULL,
 	CONSTRAINT `FK_rcs_clic_rcs_envoi` FOREIGN KEY (`IdRcsEnvoi`) REFERENCES `rcs_envoi` (`IdRcsEnvoi`) ON UPDATE NO ACTION ON DELETE CASCADE
 )
 COLLATE='utf8mb4_unicode_ci'

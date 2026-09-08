@@ -1,0 +1,463 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//ChargeDonnéesUtilisateur ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+// 	pIdClient (valeur par défaut=0) : < indiquez ici le rôle de pIdClient >
+// 	pIdContact (valeur par défaut=0) : < indiquez ici le rôle de pIdContact >
+procédure ChargeDonnéesUtilisateur(local pIdClient, local pIdContact)
+
+// Attention, avant d'appeler cette procédure on doit être positionné sur le contact et le client correspondant
+
+sTexteMere				est une chaîne
+sTextePartage			est une chaîne
+sdReqMere				est une Source de Données
+stAdresseFacturation 	est une structAdresseFacturation
+nNbJourDélaiExpiration	est un entier
+
+si pas clt_client.LitRecherchePremier(IdClient, pIdClient) _ou_ pas clt_contact.LitRecherchePremier(IdContact, pIdContact) alors
+	renvoyer Faux
+fin
+
+Partage.__vcUser.IDClient		= clt_client.IdClient
+Partage.__vcUser.IdClientPack	= clt_client.IdClientPack
+
+nNbJourDélaiExpiration	= cpFonction.ValeurParametre("AbonnementNombreDeJourDelaiExpiration",prm_parametre.ValNumerique.Nom)
+
+sTexteMere =
+[
+SELECT
+	clt_mere.IdMere
+FROM
+	clt_mere
+	JOIN clt_client ON clt_client.IdClient = clt_mere.IdClient AND clt_client.EstActif = 1
+WHERE
+	clt_mere.IdClient = [%Partage.__vcUser.IDClient%]
+	AND clt_mere.IdMere <> [%Partage.__vcUser.IDClient%]
+	AND clt_mere.EstRelationCommerciale = 1
+]
+
+
+si pas sdReqMere.ExécuteRequêteSQL(clt_client..Connexion, hRequêteSansCorrection, sTexteMere) alors
+	// Trace("Erreur requête","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteMere)
+	renvoyer Faux
+fin
+
+
+
+si sdReqMere.LitPremier(hSansRafraîchir) alors
+	Partage.__vcUser.IdMere = sdReqMere.IdMere
+sinon
+	// Si le client n'a pas de mère alors la mère c'est lui même
+	Partage.__vcUser.IdMere = Partage.__vcUser.IDClient
+fin
+
+
+sTextePartage =
+[
+SELECT
+	COUNT(clt_mere.IdClient) Total
+FROM
+	clt_mere
+	JOIN clt_client ON clt_client.IdClient = clt_mere.IdClient AND clt_client.EstActif = 1
+WHERE
+	clt_mere.IdClient <> [%Partage.__vcUser.IDClient%]
+	AND clt_mere.IdMere = [%Partage.__vcUser.IDClient%]
+	AND clt_mere.EstRelationCommerciale = 1
+]
+
+si Partage.__vcUser.IDClient  = Partage.__vcUser.IdMere alors
+	si pas sdReqMere.ExécuteRequêteSQL(clt_client..Connexion, hRequêteSansCorrection, sTextePartage) alors
+		// Trace("Erreur requête","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTextePartage)
+		renvoyer Faux
+	fin
+
+	sdReqMere.LitPremier()
+	si pas sdReqMere.EnDehors() alors
+		Partage.__vcUser.Partage = (sdReqMere.Total > 0 _et_ clt_contact.EstAdministrateur)
+	fin
+fin
+
+si pas PackFonctionClient() alors
+	renvoyer Faux
+fin
+
+si pas PackPrestationClient() alors
+	renvoyer Faux
+fin
+
+Partage.__vcUser.Société						= clt_client.Societe
+Partage.__vcUser.Enseigne						= clt_client.Enseigne
+Partage.__vcUser.IDContact						= clt_contact.IdContact
+Partage.__vcUser.NomUser						= clt_contact.Prenom[[1]] +". "  + clt_contact.Nom
+
+// POUR TESTER L'API COMME UN CLIENT LANDA
+
+si clt_contact_apikey.LitRecherchePremier(IdClient_IdContact, [pIdClient, pIdContact]) alors
+	Partage.__vcUser.ApiKey = clt_contact_apikey.ApiKeyCrypte256
+
+	// Chargement du token en cours
+	ChargeToken()
+fin
+
+
+// POUR TESTER L'API COMME UN CLIENT LANDA
+
+Partage.__vcUser.EstMere						= EstMere()
+
+Partage.__vcUser.PageAccueil					= clt_contact.PageAccueil
+
+Partage.__vcUser.stCoordonnées.Civilite			= clt_contact.Civilite
+Partage.__vcUser.stCoordonnées.Prénom			= clt_contact.Prenom
+Partage.__vcUser.stCoordonnées.Nom				= clt_contact.Nom
+Partage.__vcUser.stCoordonnées.Adresse1			= clt_client.Adr1
+Partage.__vcUser.stCoordonnées.Adresse2			= clt_client.Adr2
+Partage.__vcUser.stCoordonnées.CodePostal		= clt_client.Cdp
+Partage.__vcUser.stCoordonnées.Ville			= clt_client.Ville
+Partage.__vcUser.stCoordonnées.Société			= clt_client.Societe
+Partage.__vcUser.EstChronodirect				= clt_client.EstChronodirect
+Partage.__vcUser.EstFacturationDetaille			= clt_client.EstFacturationDetaillee
+Partage.__vcUser.EstFacturationRegroupe			= clt_client.EstFacturationRegroupee
+
+Partage.__vcUser.EstEnCompte					= (clt_client.EstFacturationMensuelle = 1) // SI EstFacturationMensuelle = 2 alors Règlement à réception de facture refusé
+
+
+Partage.__vcUser.stCoordonnées.Contact			= clt_contact.Civilite +[" "]+ clt_contact.Prenom +[" "]+ clt_contact.Nom
+Partage.__vcUser.stCoordonnées.Email			= clt_contact.Email
+Partage.__vcUser.stCoordonnées.Tel				= clt_contact.Telephone
+Partage.__vcUser.stCoordonnées.Portable		= clt_contact.Portable
+
+Partage.__vcUser.EstAdministrateur				= clt_contact.EstAdministrateur
+
+Partage.__vcUser.EstValidé						= clt_contact.EstValide
+
+Partage.__vcUser.EstEligibleDestineoDecouverte	= (DateValide(clt_client.FinEligibiliteDestineoDecouverte) _et_ clt_client.FinEligibiliteDestineoDecouverte < DateSys())
+
+
+
+Partage.__vcUser.EstEnPrelevement				= ClientEnPrelevement()
+Partage.__vcUser.EstVirement					= PackFonctionAutoriseVirement()
+Partage.__vcUser.EstCheque						= PackFonctionAutoriseCheque()
+
+si Partage.__vcUser.IdClientPack > 0 alors // C'est la mère qui paye (la mère est l'entreprise qui supporte le pack)
+	Partage.__vcUser.EstEnPrelevement			= ClientEnPrelevement()
+	Partage.__vcUser.EstEnCompte				= ClientEnCompte() // SI EstFacturationMensuelle = 2 alors Règlement à réception de facture refusé
+sinon
+	Partage.__vcUser.IdClientPack				= Partage.__vcUser.IDClient // Je paye
+fin
+
+// Adresse de facturation établissement
+si clt_client_adresse_facturation.LitRecherchePremier(IdClient_EstAdresseClient,[Partage.__vcUser.IDClient,1]) alors
+	si clt_adresse_facturation.LitRecherchePremier(IdAdresseFacturation,clt_client_adresse_facturation.IdAdresseFacturation) alors
+		VariableRAZ(stAdresseFacturation)
+		stAdresseFacturation.IdAdresseFacturation				= clt_adresse_facturation.IdAdresseFacturation
+		stAdresseFacturation.Siret								= clt_adresse_facturation.Siret
+		stAdresseFacturation.EstReferenceObligatoire			= clt_adresse_facturation.EstReferenceObligatoire
+		stAdresseFacturation.ReferenceLibelle					= clt_adresse_facturation.ReferenceLibelle
+		stAdresseFacturation.ReferenceExpressionReguliere		= clt_adresse_facturation.ReferenceExpressionReguliere
+		stAdresseFacturation.ReferenceExpressionReguliereAide	= clt_adresse_facturation.ReferenceExpressionReguliereAide
+		Partage.__vcUser.stAdresseFacturationEtablissement 		= stAdresseFacturation
+	fin
+fin
+
+// Adresse de facturation centralisée
+si clt_client_adresse_facturation.LitRecherchePremier(IdClient_EstAdresseClient,[Partage.__vcUser.IDClient,0]) alors
+	si clt_adresse_facturation.LitRecherchePremier(IdAdresseFacturation, clt_client_adresse_facturation.IdAdresseFacturation) alors
+		VariableRAZ(stAdresseFacturation)
+		stAdresseFacturation.IdAdresseFacturation				= clt_adresse_facturation.IdAdresseFacturation
+		stAdresseFacturation.Siret								= clt_adresse_facturation.Siret
+		stAdresseFacturation.EstReferenceObligatoire			= clt_adresse_facturation.EstReferenceObligatoire
+		stAdresseFacturation.ReferenceLibelle					= clt_adresse_facturation.ReferenceLibelle
+		stAdresseFacturation.ReferenceExpressionReguliere		= clt_adresse_facturation.ReferenceExpressionReguliere
+		stAdresseFacturation.ReferenceExpressionReguliereAide	= clt_adresse_facturation.ReferenceExpressionReguliereAide
+		Partage.__vcUser.stAdresseFacturationCentralisée		= stAdresseFacturation
+	fin
+fin
+
+// Adresse de facturation du client pack
+si clt_client_adresse_facturation.LitRecherchePremier(IdClient_EstAdresseClient,[Partage.__vcUser.IdClientPack,1]) alors
+	si clt_adresse_facturation.LitRecherchePremier(IdAdresseFacturation, clt_client_adresse_facturation.IdAdresseFacturation) alors
+		VariableRAZ(stAdresseFacturation)
+		stAdresseFacturation.IdAdresseFacturation				= clt_adresse_facturation.IdAdresseFacturation
+		stAdresseFacturation.Siret								= clt_adresse_facturation.Siret
+		stAdresseFacturation.EstReferenceObligatoire			= clt_adresse_facturation.EstReferenceObligatoire
+		stAdresseFacturation.ReferenceLibelle					= clt_adresse_facturation.ReferenceLibelle
+		stAdresseFacturation.ReferenceExpressionReguliere		= clt_adresse_facturation.ReferenceExpressionReguliere
+		stAdresseFacturation.ReferenceExpressionReguliereAide	= clt_adresse_facturation.ReferenceExpressionReguliereAide
+		Partage.__vcUser.stAdresseFacturationPack				= stAdresseFacturation
+	fin
+fin
+
+
+Partage.StatutAbonnementVcUser()
+
+si pas Partage.__vcUser.EstAdministrateur alors
+	InitDroit(clt_contact.IdGroupeUtilisateur)
+sinon
+	InitDroitAdministrateur()
+fin
+
+si pas ChargeServiceUtilisateur() alors
+	renvoyer Faux
+fin
+
+Partage.__vcUser.taaLimite		= InitTblPackLimite(Partage.__vcUser.IDClient, Partage.__vcUser.IdPackFonction)
+Partage.__vcUser.taaPrestation	= InitTblPackPrestation(Partage.__vcUser.IDClient, Partage.__vcUser.IdPackPrestation)
+Partage.__vcUser.taaFrais		= InitTblPackFrais(Partage.__vcUser.IDClient, Partage.__vcUser.IdPackPrestation)
+
+// Pour prendre en compte les tarifs et les frais du pack de l'utilisateur
+
+cpDeviseur.InitDeviseur()
+
+renvoyer Vrai
+
+fin:
+sdReqMere.AnnuleDéclaration()
+
+	procédure interne ChargeToken()
+		sTexteRequete	est une chaîne
+		sdReqToken	est une Source de Données
+
+		sTexteRequete =
+		[
+			SELECT
+				wbs_token.AccessToken,
+				wbs_token.RefreshToken,
+				wbs_token.DateHeureExpiration
+			FROM
+				wbs_token
+			WHERE
+				wbs_token.IdClient = [%Partage.__vcUser.IDClient%]
+				AND wbs_token.IdContact = [%Partage.__vcUser.IDContact%]
+			LIMIT 1
+		]
+
+		si pas sdReqToken.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+			<compile si Configuration <> "Webservice">
+				Info("Erreur requête")
+			<fin>
+		fin
+
+		si sdReqToken.LitPremier() alors
+			Partage.__vcUser.TokenAccess		= sdReqToken.AccessToken
+			Partage.__vcUser.TokenRefresh		= sdReqToken.RefreshToken
+			Partage.__vcUser.TokenExpiration	= sdReqToken.DateHeureExpiration
+		fin
+
+		fin:
+		sdReqToken.AnnuleDéclaration()
+	fin
+
+
+	procédure interne EstMere()
+			sTexteRequete	est une chaîne
+			sdReqEstMere	est une Source de Données
+
+			sTexteRequete =
+			[
+				SELECT
+					clt_mere.IdClient
+				FROM
+					clt_mere
+					JOIN clt_client ON clt_client.IdClient = clt_mere.IdClient
+				WHERE
+					clt_client.EstActif = 1
+					AND clt_mere.IdMere = [%Partage.__vcUser.IDClient%]
+					AND (clt_mere.IdMere <> clt_mere.IdClient OR clt_client.IdClientPack IS NULL)
+				LIMIT 1
+			]
+
+			si pas sdReqEstMere.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+				<compile si Configuration <> "Webservice">
+					Info("Erreur requête")
+				<fin>
+				renvoyer Faux
+			fin
+
+			renvoyer sdReqEstMere.LitPremier()
+
+		fin:
+		sdReqEstMere.AnnuleDéclaration()
+	fin
+
+	procédure interne PackFonctionAutoriseVirement()
+		si pck_pack_fonction.LitRecherchePremier(IdPackFonction, Partage.__vcUser.IdPackFonction) alors
+			renvoyer pck_pack_fonction.Virement
+		fin
+		renvoyer 0
+	fin
+
+	procédure interne PackFonctionAutoriseCheque()
+		si pck_pack_fonction.LitRecherchePremier(IdPackFonction, Partage.__vcUser.IdPackFonction) alors
+			renvoyer pck_pack_fonction.Cheque
+		fin
+		renvoyer 0
+	fin
+
+
+procédure interne ClientEnCompte()
+		sTexteRequete	est une chaîne
+		sdReqEnCompte	est une Source de Données
+
+		sTexteRequete =
+		[
+			SELECT
+				clt_client.EstFacturationMensuelle
+			FROM
+				clt_client
+			WHERE
+				clt_client.IdClient = [%Partage.__vcUser.IdClientPack%]
+		]
+
+		si pas sdReqEnCompte.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+			<compile si Configuration <> "Webservice">
+				Info("Erreur requête")
+			<fin>
+			renvoyer Faux
+		fin
+
+		sdReqEnCompte.LitPremier(hSansRafraîchir)
+		si pas sdReqEnCompte.EnDehors() alors
+			renvoyer sdReqEnCompte.EstFacturationMensuelle
+		sinon
+			renvoyer Faux
+		fin
+
+	fin:
+	sdReqEnCompte.AnnuleDéclaration()
+fin
+
+
+
+
+
+
+
+procédure interne ClientEnPrelevement()
+
+	sTexteRequete		est une chaîne
+	sdReqPrelevement	est une Source de Données
+
+	sTexteRequete =
+	[
+		SELECT
+			IdPrelevement,
+			(SELECT f.Prelevement FROM pck_pack_fonction f WHERE f.IdPackFonction = [%Partage.__vcUser.IdPackFonction%]) EstDansLePackFonction
+		FROM
+			clt_prelevement p
+		WHERE
+			p.IdClient =  [%Partage.__vcUser.IDClient%]
+			AND p.EstActif = 1
+		ORDER BY
+			p.EstDefaut DESC
+		LIMIT 1
+	]
+
+	si pas sdReqPrelevement.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+		<compile si Configuration <> "Webservice">
+			Info("Erreur requête")
+		<fin>
+		renvoyer Faux
+	fin
+
+	sdReqPrelevement.LitPremier(hSansRafraîchir)
+	si pas sdReqPrelevement.EnDehors() alors
+		renvoyer sdReqPrelevement.EstDansLePackFonction
+	sinon
+		renvoyer Faux
+	fin
+
+	fin:
+	sdReqPrelevement.AnnuleDéclaration()
+fin
+
+
+	procédure interne PackFonctionClient()
+		sTexteRequete		est une chaîne
+		sdReqPackFonction	est une Source de Données
+		sCurdate			est une chaîne
+
+		si cpConnexion.__sConnexion	= __CNX_PROD__ alors
+			sCurdate = "CURDATE()"
+		sinon
+			sCurdate = "'" + DateSys()	+ "'"
+		fin
+
+		sTexteRequete =
+		[
+			SELECT
+			clt_abonnement_fonction.IdPackFonction,
+			clt_abonnement_fonction.TypeAbonnement
+			FROM
+			clt_abonnement_fonction
+			WHERE
+			(clt_abonnement_fonction.IdClient = [%Partage.__vcUser.IDClient%] OR clt_abonnement_fonction.IdClient = [%Partage.__vcUser.IdClientPack%])
+			AND DATE_ADD(clt_abonnement_fonction.DateFin,INTERVAL [%nNbJourDélaiExpiration%] DAY) > [%sCurdate%]
+		]
+
+		si pas sdReqPackFonction.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+			<compile si Configuration <> "Webservice">
+				Info("Erreur requête")
+			<fin>
+			renvoyer Faux
+		fin
+
+		si sdReqPackFonction.LitPremier(hSansRafraîchir) alors
+			Partage.__vcUser.IdPackFonction			= sdReqPackFonction.IdPackFonction
+			Partage.__vcUser.TypeAbonnementFonction	= sdReqPackFonction.TypeAbonnement
+			renvoyer Vrai
+		sinon
+			renvoyer Faux
+		fin
+		fin:
+		sdReqPackFonction.AnnuleDéclaration()
+	fin
+
+	procédure interne PackPrestationClient()
+		sTexteRequete		est une chaîne
+		sdReqPackPrestation	est une Source de Données
+		sCurdate			est une chaîne
+
+		si cpConnexion.__sConnexion	= __CNX_PROD__ alors
+			sCurdate = "CURDATE()"
+		sinon
+			sCurdate = "'" + DateSys()	+ "'"
+		fin
+
+
+		sTexteRequete =
+		[
+			SELECT
+			clt_abonnement_prestation.IdPackPrestation,
+			clt_abonnement_prestation.TypeAbonnement
+			FROM
+			clt_abonnement_prestation
+			WHERE
+			(clt_abonnement_prestation.IdClient = [%Partage.__vcUser.IDClient%] OR clt_abonnement_prestation.IdClient = [%Partage.__vcUser.IdClientPack%])
+			AND DATE_ADD(clt_abonnement_prestation.DateFin,INTERVAL [%nNbJourDélaiExpiration%] DAY) > [%sCurdate%]
+		]
+
+		si pas sdReqPackPrestation.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+			<compile si Configuration <> "Webservice">
+				Info("Erreur requête")
+			<fin>
+			renvoyer Faux
+		fin
+
+		si sdReqPackPrestation.LitPremier(hSansRafraîchir) alors
+			Partage.__vcUser.IdPackPrestation			= sdReqPackPrestation.IdPackPrestation
+			Partage.__vcUser.TypeAbonnementPrestation	= sdReqPackPrestation.TypeAbonnement
+			renvoyer Vrai
+		sinon
+			renvoyer Faux
+		fin
+		fin:
+		sdReqPackPrestation.AnnuleDéclaration()
+	fin

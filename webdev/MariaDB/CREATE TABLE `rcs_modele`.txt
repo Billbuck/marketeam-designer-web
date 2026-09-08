@@ -1,0 +1,39 @@
+CREATE TABLE `rcs_modele` (
+	`IdRcsModele` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdClient` INT(11) NULL DEFAULT NULL,
+	`IdMarque` INT(11) NULL DEFAULT NULL,
+	`IdContact` INT(11) NULL DEFAULT NULL COMMENT 'Si IdContact = NULL alors modele cree par Marketeam',
+	`IdRcsAgent` INT(11) NOT NULL COMMENT 'Agent proprietaire - obligatoire',
+	`Type` CHAR(3) NULL DEFAULT NULL COMMENT 'RCS ou RCI selon la presence d un bouton interactif' COLLATE 'utf8mb4_unicode_ci',
+	`Libelle` VARCHAR(100) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`EstPartage` TINYINT(1) NOT NULL DEFAULT '0',
+	`EstActif` TINYINT(1) NOT NULL DEFAULT '1',
+	`TypeContenu` ENUM('CARD','CAROUSEL') NOT NULL DEFAULT 'CARD' COLLATE 'utf8mb4_unicode_ci',
+	`Orientation` ENUM('VERTICAL','HORIZONTAL') NOT NULL DEFAULT 'VERTICAL' COMMENT 'CARD uniquement' COLLATE 'utf8mb4_unicode_ci',
+	`Alignement` ENUM('LEFT','RIGHT') NOT NULL DEFAULT 'LEFT' COMMENT 'CARD + HORIZONTAL uniquement' COLLATE 'utf8mb4_unicode_ci',
+	`LargeurCarte` ENUM('SMALL','MEDIUM') NOT NULL DEFAULT 'MEDIUM' COMMENT 'CAROUSEL uniquement' COLLATE 'utf8mb4_unicode_ci',
+	`EstRepliSms` TINYINT(1) NOT NULL DEFAULT '1',
+	`RepliSmsFrom` VARCHAR(11) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`RepliSmsMessage` VARCHAR(1200) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`DateHeureCreation` DATETIME NOT NULL,
+	`DateHeureModification` DATETIME NULL DEFAULT NULL,
+	`UserCreation` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`UserModification` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	PRIMARY KEY (`IdRcsModele`) USING BTREE,
+	INDEX `Libelle` (`Libelle`) USING BTREE,
+	INDEX `IdClient` (`IdClient`) USING BTREE,
+	INDEX `IdMarque` (`IdMarque`) USING BTREE,
+	INDEX `IdContact` (`IdContact`) USING BTREE,
+	INDEX `EstPartage` (`EstPartage`) USING BTREE,
+	INDEX `Type_EstActif` (`Type`, `EstActif`) USING BTREE,
+	INDEX `IdRcsAgent` (`IdRcsAgent`) USING BTREE,
+	CONSTRAINT `FK_rcs_modele_clt_client` FOREIGN KEY (`IdClient`) REFERENCES `clt_client` (`IdClient`) ON UPDATE RESTRICT ON DELETE CASCADE,
+	CONSTRAINT `FK_rcs_modele_clt_contact` FOREIGN KEY (`IdContact`) REFERENCES `clt_contact` (`IdContact`) ON UPDATE RESTRICT ON DELETE SET NULL,
+	CONSTRAINT `FK_rcs_modele_clt_marque` FOREIGN KEY (`IdMarque`) REFERENCES `clt_marque` (`IdMarque`) ON UPDATE RESTRICT ON DELETE CASCADE,
+	CONSTRAINT `FK_rcs_modele_rcs_agent` FOREIGN KEY (`IdRcsAgent`) REFERENCES `rcs_agent` (`IdRcsAgent`) ON UPDATE RESTRICT ON DELETE RESTRICT,
+	CONSTRAINT `CK_rcs_modele_proprietaire` CHECK (`IdClient` is not null and `IdMarque` is null or `IdClient` is null and `IdMarque` is not null)
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+ROW_FORMAT=DYNAMIC
+;

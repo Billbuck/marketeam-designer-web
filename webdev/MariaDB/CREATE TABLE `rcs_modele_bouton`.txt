@@ -1,0 +1,31 @@
+CREATE TABLE `rcs_modele_bouton` (
+	`IdRcsModeleBouton` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdRcsModele` INT(11) NOT NULL COMMENT 'Toujours renseigne',
+	`IdRcsModeleCarte` INT(11) NULL DEFAULT NULL COMMENT 'NULL = bouton commun au message',
+	`Ordre` TINYINT(3) UNSIGNED NOT NULL DEFAULT '1' COMMENT 'Carte : 1 a 4. Commun : 1 a 11',
+	`TypeBouton` ENUM('OPEN_URL','DIAL_PHONE','SHOW_LOCATION') NOT NULL DEFAULT 'OPEN_URL' COLLATE 'utf8mb4_unicode_ci',
+	`SousType` VARCHAR(20) NULL DEFAULT NULL COMMENT 'Action affichee au client' COLLATE 'utf8mb4_unicode_ci',
+	`EstBoutonInteractif` TINYINT(1) NOT NULL DEFAULT '0' COMMENT 'Max 1 par carte, max 1 parmi les communs',
+	`Libelle` VARCHAR(60) NULL DEFAULT NULL COMMENT 'Gabarit - 25 car. apres fusion' COLLATE 'utf8mb4_unicode_ci',
+	`Url` VARCHAR(2048) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`UrlApplication` ENUM('BROWSER','WEBVIEW') NULL DEFAULT 'BROWSER' COLLATE 'utf8mb4_unicode_ci',
+	`UrlWebviewMode` ENUM('FULL','HALF','TALL') NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Telephone` VARCHAR(20) NULL DEFAULT NULL COMMENT 'Format E164' COLLATE 'utf8mb4_unicode_ci',
+	`Latitude` DECIMAL(9,6) NULL DEFAULT NULL,
+	`Longitude` DECIMAL(9,6) NULL DEFAULT NULL,
+	`LibelleLieu` VARCHAR(200) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Parametres` VARCHAR(2000) NULL DEFAULT NULL COMMENT 'JSON des champs saisis' COLLATE 'utf8mb4_unicode_ci',
+	`DateHeureCreation` DATETIME NOT NULL,
+	`DateHeureModification` DATETIME NULL DEFAULT NULL,
+	`UserCreation` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`UserModification` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	PRIMARY KEY (`IdRcsModeleBouton`) USING BTREE,
+	INDEX `IdRcsModele_IdRcsModeleCarte_Ordre` (`IdRcsModele`, `IdRcsModeleCarte`, `Ordre`) USING BTREE,
+	INDEX `IdRcsModeleCarte_Ordre` (`IdRcsModeleCarte`, `Ordre`) USING BTREE,
+	CONSTRAINT `FK_rcs_modele_bouton_rcs_modele` FOREIGN KEY (`IdRcsModele`) REFERENCES `rcs_modele` (`IdRcsModele`) ON UPDATE RESTRICT ON DELETE CASCADE,
+	CONSTRAINT `FK_rcs_modele_bouton_rcs_modele_carte` FOREIGN KEY (`IdRcsModeleCarte`) REFERENCES `rcs_modele_carte` (`IdRcsModeleCarte`) ON UPDATE RESTRICT ON DELETE CASCADE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+ROW_FORMAT=DYNAMIC
+;

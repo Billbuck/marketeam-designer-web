@@ -29,6 +29,7 @@ selon stOperation.TypeOperation
 
 	cas __OPERATION_RCS__
 		stOperation.NbrDestinataire = 2000
+		cpDeviseur.RepartitionRcs(stOperation)
 		renvoyer stOperation.NbrDestinataire
 
 	cas __OPERATION_TEL__

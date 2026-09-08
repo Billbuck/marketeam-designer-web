@@ -1,0 +1,164 @@
+// Résumé : Crée ou met à jour un modèle RCS (en-tête + cartes + boutons)
+// Syntaxe :
+//[ <Résultat> = ] AjoutModificationRcsModele (<pIdRcsModele>, <pLibelle>, <pIdClient>, <pIdMarque>, <pIdContact>, <pIdRcsAgent>, <pEstPartage>, <pEstActif>, <stOperationRcs>)
+//
+// Paramètres :
+//	pIdRcsModele : 0 = création, sinon identifiant à modifier (renseigné en sortie si création)
+//	pLibelle, pIdClient, pIdMarque, pIdContact, pIdRcsAgent, pEstPartage, pEstActif : en-tête du modèle
+//	stOperationRcs : contenu (cartes, boutons, repli SMS, type de contenu)
+// Valeur de retour :
+// 	entier : identifiant du modèle, 0 si échec
+procédure AjoutModificationRcsModele(pIdRcsModele est un entier, pLibelle est une chaîne, pIdClient est un entier, pIdMarque est un entier, pIdContact est un entier, pIdRcsAgent est un entier, pEstPartage est un booléen, pEstActif est un booléen, stOperationRcs est une structOperationRcs)
+
+sTexteRequete		est une chaîne
+sdReqRcs				est une Source de Données
+bEstModeCreation	est un booléen	= (pIdRcsModele = 0)
+bEstInteractif		est un booléen	= Faux
+
+
+pour tout stCarteType de stOperationRcs.tabCarte
+	pour tout stBoutonType de stCarteType.tabBouton
+		si stBoutonType.EstBoutonInteractif alors bEstInteractif = Vrai
+	fin
+fin
+pour tout stBoutonType de stOperationRcs.tabBoutonCommun
+	si stBoutonType.EstBoutonInteractif alors bEstInteractif = Vrai
+fin
+
+
+si bEstModeCreation alors
+	rcs_modele.RAZ()
+	rcs_modele.DateHeureCreation	= DateHeureSys()
+	rcs_modele.UserCreation			= Partage.__vcUser.NomUser
+
+sinon
+	si pas rcs_modele.LitRecherchePremier(IdRcsModele, pIdRcsModele) alors
+		<compile si TypeConfiguration <> Webservice>
+			Info("Erreur positionnement rcs_modele")
+		<fin>
+		renvoyer 0
+	fin
+
+fin
+
+MémoireVersFichier(stOperationRcs, rcs_modele)
+
+rcs_modele.Libelle					= pLibelle
+rcs_modele.Libelle..Null			= (pLibelle = "")
+rcs_modele.IdClient					= pIdClient
+rcs_modele.IdClient..Null			= (pIdClient = 0)
+rcs_modele.IdMarque					= pIdMarque
+rcs_modele.IdMarque..Null			= (pIdMarque = 0)
+rcs_modele.IdContact					= pIdContact
+rcs_modele.IdContact..Null			= (pIdContact = 0)
+rcs_modele.IdRcsAgent				= pIdRcsAgent
+rcs_modele.EstPartage				= pEstPartage
+rcs_modele.EstActif					= pEstActif
+rcs_modele.Type						= (bEstInteractif ? __OPERATION_RCS_INTERACTIF__ sinon __OPERATION_RCS__)
+
+si rcs_modele.TypeContenu = "" alors rcs_modele.TypeContenu = "CARD"
+si rcs_modele.Orientation = "" alors rcs_modele.Orientation = "VERTICAL"
+si rcs_modele.Alignement = "" alors rcs_modele.Alignement = "LEFT"
+si rcs_modele.LargeurCarte = "" alors rcs_modele.LargeurCarte = "MEDIUM"
+
+
+si bEstModeCreation alors
+	si pas rcs_modele.Ajoute() alors
+		<compile si TypeConfiguration <> Webservice>
+			Info("Erreur :", ErreurInfo(errComplet))
+		<fin>
+		renvoyer 0
+	fin
+	pIdRcsModele						= rcs_modele.IdRcsModele
+	stOperationRcs.IdRcsModele		= pIdRcsModele
+sinon
+	rcs_modele.DateHeureModification		= DateHeureSys()
+	rcs_modele.UserModification			= Partage.__vcUser.NomUser
+	si pas rcs_modele.Modifie() alors
+		<compile si TypeConfiguration <> Webservice>
+			Info("Erreur :", ErreurInfo(errComplet))
+		<fin>
+		renvoyer 0
+	fin
+fin
+
+
+// On remplace tout : suppression puis réécriture dans l'ordre
+sTexteRequete = ChaîneConstruit("DELETE FROM rcs_modele_bouton WHERE IdRcsModele = %1", pIdRcsModele)
+si pas sdReqRcs.ExécuteRequêteSQL(rcs_modele_bouton..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	<compile si TypeConfiguration <> Webservice>
+		Info("Erreur requête AjoutModificationRcsModele boutons")
+	<fin>
+	renvoyer 0
+fin
+sTexteRequete = ChaîneConstruit("DELETE FROM rcs_modele_carte WHERE IdRcsModele = %1", pIdRcsModele)
+si pas sdReqRcs.ExécuteRequêteSQL(rcs_modele_carte..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	<compile si TypeConfiguration <> Webservice>
+		Info("Erreur requête AjoutModificationRcsModele cartes")
+	<fin>
+	renvoyer 0
+fin
+
+pour tout stCarte de stOperationRcs.tabCarte sur Ordre
+	rcs_modele_carte.RAZ()
+	rcs_modele_carte.DateHeureCreation		= DateHeureSys()
+	rcs_modele_carte.UserCreation				= Partage.__vcUser.NomUser
+	MémoireVersFichier(stCarte, rcs_modele_carte)
+	rcs_modele_carte.IdRcsModele			= pIdRcsModele
+	si rcs_modele_carte.MediaHauteur = "" alors rcs_modele_carte.MediaHauteur = "MEDIUM"
+	rcs_modele_carte.IdImage..Null				= (rcs_modele_carte.IdImage = 0)
+	rcs_modele_carte.MediaThumbnailUrl..Null	= (rcs_modele_carte.MediaThumbnailUrl = "")
+
+	si pas rcs_modele_carte.Ajoute() alors
+		<compile si TypeConfiguration <> Webservice>
+			Info("Erreur :", ErreurInfo(errComplet))
+		<fin>
+		renvoyer 0
+	fin
+	stCarte.IdRcsCarte = rcs_modele_carte.IdRcsModeleCarte
+
+	pour tout stBouton de stCarte.tabBouton sur Ordre
+		si pas EnregistreUnBoutonRcsModele(stBouton, stCarte.IdRcsCarte, pIdRcsModele) alors
+			renvoyer 0
+		fin
+	fin
+fin
+
+pour tout stBouton de stOperationRcs.tabBoutonCommun sur Ordre
+	si pas EnregistreUnBoutonRcsModele(stBouton, 0, pIdRcsModele) alors
+		renvoyer 0
+	fin
+fin
+
+renvoyer pIdRcsModele
+
+	procédure interne EnregistreUnBoutonRcsModele(pStBoutonRcs est une structOperationRcsBouton, pIdCarteRattachement est un entier, pIdModeleRcs est un entier)
+		rcs_modele_bouton.RAZ()
+		rcs_modele_bouton.DateHeureCreation		= DateHeureSys()
+		rcs_modele_bouton.UserCreation			= Partage.__vcUser.NomUser
+		MémoireVersFichier(pStBoutonRcs, rcs_modele_bouton)
+		rcs_modele_bouton.IdRcsModele			= pIdModeleRcs
+		si pIdCarteRattachement = 0 alors
+			rcs_modele_bouton.IdRcsModeleCarte..Null = Vrai
+		sinon
+			rcs_modele_bouton.IdRcsModeleCarte			= pIdCarteRattachement
+			rcs_modele_bouton.IdRcsModeleCarte..Null	= Faux
+		fin
+		si rcs_modele_bouton.TypeBouton = "" alors rcs_modele_bouton.TypeBouton = "OPEN_URL"
+		rcs_modele_bouton.UrlApplication..Null	= (rcs_modele_bouton.UrlApplication = "")
+		rcs_modele_bouton.UrlWebviewMode..Null	= (rcs_modele_bouton.UrlWebviewMode = "")
+		rcs_modele_bouton.SousType..Null			= (rcs_modele_bouton.SousType = "")
+		rcs_modele_bouton.Parametres..Null		= (rcs_modele_bouton.Parametres = "")
+
+		si pas rcs_modele_bouton.Ajoute() alors
+			<compile si TypeConfiguration <> Webservice>
+				Info("Erreur :", ErreurInfo(errComplet))
+			<fin>
+			renvoyer Faux
+		fin
+		pStBoutonRcs.IdRcsBouton = rcs_modele_bouton.IdRcsModeleBouton
+		renvoyer Vrai
+	fin
+
+fin:
+sdReqRcs.AnnuleDéclaration()

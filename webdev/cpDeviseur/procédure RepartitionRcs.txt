@@ -1,0 +1,10 @@
+// Résumé : Répartit les destinataires entre RCS et repli SMS (provisoire : tout en RCS)
+// Syntaxe :
+// RepartitionRcs (<stOperation>)
+//
+// Paramètres :
+//	stOperation : opération RCS
+procédure RepartitionRcs(stOperation est une structOperation)
+
+stOperation.stOperationRcs.NbrDestinataireRcs			= stOperation.NbrDestinataire
+stOperation.stOperationRcs.NbrDestinataireRepliSms		= 0

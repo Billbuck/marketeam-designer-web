@@ -1,0 +1,223 @@
+
+procédure DevisRcs(stOperation est une structOperation)
+
+nInd 						est un entier
+nLigne 						est un entier
+mRemiseCoupon 				est un monétaire
+mCompensationPrestation 	est un monétaire
+mTotalHTPrestation 			est un monétaire
+bEstPersonnalise			est un booléen
+mFraisFixe					est un monétaire
+mFraisFixeCliquezIci		est un monétaire
+mMinFacturation 			est un monétaire
+mPuVenteRcs					est un monétaire
+mPuVenteRepli				est un monétaire
+sType 						est une chaîne
+sLigne						est une chaîne
+mCoutTotalRcs 				est un monétaire
+mCoutCliquezIci 			est un monétaire
+sMessageFinalise			est une chaîne
+nTailleRepli				est un entier
+nCreditRepli				est un entier
+mPrixRepli					est un monétaire
+nNbrSegmentRepli			est un entier
+nNbrCarte					est un entier
+
+
+// on supprime les lignes calculées par la calculette
+nInd = stOperation.tabOperationLigne.Cherche(tcLinéaire,"TypeLigneCalcule",__OPERATION_RCS__)
+tantque nInd > 0
+	stOperation.tabOperationLigne.Supprime(nInd)
+	nInd = stOperation.tabOperationLigne.Cherche(tcLinéaire,"TypeLigneCalcule",__OPERATION_RCS__)
+fin
+
+si stOperation.NbrDestinataire = 0 alors
+	stOperation.MontantNetHT 	= 0
+	stOperation.MontantTVA 		= 0
+	stOperation.MontantTTC 		= 0
+	stOperation.RemiseCoupon 	= 0
+	retour
+fin
+
+bEstPersonnalise	= stOperation.stOperationRcs.EstRcsPersonnalise
+mFraisFixe			= Partage.__vcUser.taaFrais[__OPERATION_RCS__].FraisFixeFacturation
+mMinFacturation		= Partage.__vcUser.taaFrais[__OPERATION_RCS__].MinimumFacturation
+
+
+si bEstPersonnalise = Vrai alors
+	nLigne = stOperation.tabOperationLigne.Ajoute()
+	stOperation.tabOperationLigne[nLigne].TypeLigneCalcule			= __OPERATION_RCS__
+	stOperation.tabOperationLigne[nLigne].Designation 				= "Personnalisation des messages"
+	stOperation.tabOperationLigne[nLigne].Qte 						= 1
+fin
+
+
+si mFraisFixe > 0 alors
+	nLigne																					= stOperation.tabOperationLigne.Ajoute()
+	stOperation.tabOperationLigne[nLigne].TypeLigneCalcule					= __OPERATION_RCS__
+	stOperation.tabOperationLigne[nLigne].Designation							= "Frais fixes prestation"
+	stOperation.tabOperationLigne[nLigne].CodePrestation						= __PRESTATION_FRAIS_FIXES__
+	stOperation.tabOperationLigne[nLigne].Qte										= 1
+	stOperation.tabOperationLigne[nLigne].TailleUnitaire						= 1
+	stOperation.tabOperationLigne[nLigne].PrixUnitaireVenteCalcule			= mFraisFixe
+	stOperation.tabOperationLigne[nLigne].PrixUnitaireVenteMinimum			= CalculePrixVenteMinimum(__PRESTATION_FRAIS_FIXES__,mFraisFixe,0,2)
+	stOperation.tabOperationLigne[nLigne].Total									= mFraisFixe
+	stOperation.tabOperationLigne[nLigne].TauxTva								= cpProjet.__moTauxTva
+fin
+
+// ******************************************* Frais Fixe du cliquezici *****************************************************
+si stOperation.EstCliquezIci = Vrai alors
+	nLigne = stOperation.tabOperationLigne.Ajoute()
+	stOperation.tabOperationLigne[nLigne].TypeLigneCalcule						= __OPERATION_RCS__
+
+	sType = stOperation.stNouveauCliquezIci.Type
+
+	selon sType
+		cas __ICI_URL_FIXE__
+			stOperation.tabOperationLigne[nLigne].Designation					= "Redirection web"
+
+		cas __ICI_URL_TRACKING__, __ICI_WEB__
+			stOperation.tabOperationLigne[nLigne].Designation							= sType = __ICI_WEB__ ? "Création d'une landing page" sinon "Frais fixe tracking"
+			stOperation.tabOperationLigne[nLigne].CodePrestation						= __PRESTATION_FRAIS_FIXES__
+			stOperation.tabOperationLigne[nLigne].Qte										= 1
+			stOperation.tabOperationLigne[nLigne].TailleUnitaire						= 1
+			stOperation.tabOperationLigne[nLigne].PrixUnitaireVenteCalcule			= 0
+			stOperation.tabOperationLigne[nLigne].PrixUnitaireVenteMinimum			= 0
+			stOperation.tabOperationLigne[nLigne].Total									= 0
+			stOperation.tabOperationLigne[nLigne].TauxTva								= cpProjet.__moTauxTva
+
+		autres cas
+	fin
+
+	mFraisFixeCliquezIci 															= stOperation.tabOperationLigne[nLigne].PrixUnitaireVenteCalcule
+fin
+
+
+RepartitionRcs(stOperation)
+
+si stOperation.stOperationRcs.NbrDestinataireRcs > 0 alors
+	nNbrCarte = stOperation.stOperationRcs.tabCarte..Occurrence
+	si stOperation.stOperationRcs.TypeContenu = "CAROUSEL" alors
+		sLigne = "Message RCS carrousel (" + nNbrCarte + " cartes)"
+	sinon
+		sLigne = "Message RCS carte"
+	fin
+
+	mPuVenteRcs = Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_RCS__].PrixVenteUnitaire
+
+	nLigne																= stOperation.tabOperationLigne.Ajoute()
+	stOperation.tabOperationLigne[nLigne].TypeLigneCalcule					= __OPERATION_RCS__
+	stOperation.tabOperationLigne[nLigne].Designation							= sLigne
+	stOperation.tabOperationLigne[nLigne].CodePrestation						= __PRESTATION_ROUTAGE_RCS__
+	stOperation.tabOperationLigne[nLigne].Qte										= stOperation.stOperationRcs.NbrDestinataireRcs
+	stOperation.tabOperationLigne[nLigne].TailleUnitaire						= 1
+	stOperation.tabOperationLigne[nLigne].PrixUnitaireAchat					= Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_RCS__].PrixAchatUnitaire
+	stOperation.tabOperationLigne[nLigne].PrixUnitaireVenteCalcule			= mPuVenteRcs
+	stOperation.tabOperationLigne[nLigne].PrixUnitaireVenteMinimum			= 0
+	stOperation.tabOperationLigne[nLigne].Total									= Arrondi(stOperation.stOperationRcs.NbrDestinataireRcs * mPuVenteRcs,2)
+	stOperation.tabOperationLigne[nLigne].TauxTva								= cpProjet.__moTauxTva
+
+	mCoutTotalRcs += stOperation.tabOperationLigne[nLigne].Total
+fin
+
+si stOperation.stOperationRcs.EstRepliSms _et_ stOperation.stOperationRcs.NbrDestinataireRepliSms > 0 alors
+	// Pire cas si RepliTailleMax a déjà été calculé (personnalisation) ; sinon CompteurSms sur le texte de repli
+	si stOperation.stOperationRcs.RepliTailleMax > 0 alors
+		nNbrSegmentRepli = cpSms.CalculeTailleSms(stOperation.stOperationRcs.RepliTailleMax, Faux)
+	sinon
+		cpSms.CompteurSms(stOperation.stOperationRcs.RepliSmsMessage, sMessageFinalise, Faux, nTailleRepli, mPrixRepli, nCreditRepli, Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_SMS__].PrixVenteUnitaire, Vrai, stOperation.EstCliquezIci)
+		nNbrSegmentRepli = nCreditRepli
+	fin
+
+	mPuVenteRepli = Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_SMS__].PrixVenteUnitaire * nNbrSegmentRepli
+
+	nLigne																= stOperation.tabOperationLigne.Ajoute()
+	stOperation.tabOperationLigne[nLigne].TypeLigneCalcule					= __OPERATION_RCS__
+	stOperation.tabOperationLigne[nLigne].Designation							= "SMS de repli (" + nNbrSegmentRepli + " segments)"
+	stOperation.tabOperationLigne[nLigne].CodePrestation						= __PRESTATION_ROUTAGE_SMS__
+	stOperation.tabOperationLigne[nLigne].Qte										= stOperation.stOperationRcs.NbrDestinataireRepliSms
+	stOperation.tabOperationLigne[nLigne].TailleUnitaire						= nNbrSegmentRepli
+	stOperation.tabOperationLigne[nLigne].PrixUnitaireAchat					= nNbrSegmentRepli * Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_SMS__].PrixAchatUnitaire
+	stOperation.tabOperationLigne[nLigne].PrixUnitaireVenteCalcule			= mPuVenteRepli
+	stOperation.tabOperationLigne[nLigne].PrixUnitaireVenteMinimum			= 0
+	stOperation.tabOperationLigne[nLigne].Total									= Arrondi(stOperation.stOperationRcs.NbrDestinataireRepliSms * mPuVenteRepli,2)
+	stOperation.tabOperationLigne[nLigne].TauxTva								= cpProjet.__moTauxTva
+
+	mCoutTotalRcs += stOperation.tabOperationLigne[nLigne].Total
+fin
+
+
+// Le minimum de facturation se fait sur les frais fixes + la prestation
+mTotalHTPrestation = mFraisFixe + mCoutTotalRcs
+
+
+si mTotalHTPrestation < mMinFacturation alors
+	mCompensationPrestation = mMinFacturation - mTotalHTPrestation
+fin
+
+si mCompensationPrestation > 0 alors
+	nLigne																					= stOperation.tabOperationLigne.Ajoute()
+	stOperation.tabOperationLigne[nLigne].TypeLigneCalcule					= __OPERATION_RCS__
+	stOperation.tabOperationLigne[nLigne].Designation							= "Compensation minimum de facturation"
+	stOperation.tabOperationLigne[nLigne].CodePrestation						= __PRESTATION_MINIMUM_FACTURATION__
+	stOperation.tabOperationLigne[nLigne].Qte										= 1
+	stOperation.tabOperationLigne[nLigne].TailleUnitaire						= 1
+	stOperation.tabOperationLigne[nLigne].PrixUnitaireVenteCalcule			= mCompensationPrestation
+	stOperation.tabOperationLigne[nLigne].Total									= mCompensationPrestation
+	stOperation.tabOperationLigne[nLigne].TauxTva								= cpProjet.__moTauxTva
+
+	mTotalHTPrestation																	= mMinFacturation
+fin
+
+// ******************************************* Cliquezici *****************************************************
+si stOperation.EstCliquezIci _et_  stOperation.stNouveauCliquezIci.Type <> __ICI_URL_FIXE__ alors
+	nLigne																					= stOperation.tabOperationLigne.Ajoute()
+	stOperation.tabOperationLigne[nLigne].TypeLigneCalcule					= __OPERATION_RCS__
+	stOperation.tabOperationLigne[nLigne].Qte										= stOperation.NbrDestinataire
+	stOperation.tabOperationLigne[nLigne].TailleUnitaire						= 1
+
+	sType																						= stOperation.stNouveauCliquezIci.Type
+
+	si sType dans (__ICI_URL_TRACKING__ ,__ICI_WEB__) alors
+		stOperation.tabOperationLigne[nLigne].Designation							= __ICI_URL_TRACKING__ ? "Tracking Url" sinon "Tracking landing page"
+		stOperation.tabOperationLigne[nLigne].CodePrestation						= __PRESTATION_CLIQUEZICI_WEB__
+		stOperation.tabOperationLigne[nLigne].PrixUnitaireVenteCalcule			= Partage.__vcUser.taaPrestation[__PRESTATION_CLIQUEZICI_WEB__].PrixVenteUnitaire
+		stOperation.tabOperationLigne[nLigne].PrixUnitaireVenteMinimum			= 0
+	fin
+	stOperation.tabOperationLigne[nLigne].Total								= stOperation.tabOperationLigne[nLigne].PrixUnitaireVenteCalcule * stOperation.NbrDestinataire
+	stOperation.tabOperationLigne[nLigne].TauxTva							= cpProjet.__moTauxTva
+
+	mCoutCliquezIci																	= stOperation.tabOperationLigne[nLigne].Total
+fin
+
+mTotalHTPrestation += mFraisFixeCliquezIci + mCoutCliquezIci
+
+//********************************************* COUPON DE REDUCTION **************
+mRemiseCoupon = CalculRemiseCoupon(stOperation)
+
+stOperation.MontantBrutHT 		= mTotalHTPrestation
+
+si mRemiseCoupon < 0
+	nLigne																					= stOperation.tabOperationLigne.Ajoute()
+	stOperation.tabOperationLigne[nLigne].TypeLigneCalcule					= __OPERATION_RCS__
+	stOperation.tabOperationLigne[nLigne].Designation							= "Remise Coupon de réduction"
+	stOperation.tabOperationLigne[nLigne].CodePrestation						= __PRESTATION_REMISE_COUPON__
+	stOperation.tabOperationLigne[nLigne].Qte										= 1
+	stOperation.tabOperationLigne[nLigne].TailleUnitaire						= 1
+	stOperation.tabOperationLigne[nLigne].PrixUnitaireVenteCalcule			= mRemiseCoupon
+	stOperation.tabOperationLigne[nLigne].Total									= mRemiseCoupon
+	stOperation.tabOperationLigne[nLigne].TauxTva								= cpProjet.__moTauxTva
+	mTotalHTPrestation += mRemiseCoupon
+fin
+
+stOperation.RemiseCoupon 		= mRemiseCoupon
+stOperation.MontantNetHT 		= mTotalHTPrestation
+stOperation.MontantTVA			= Arrondi(mTotalHTPrestation * cpProjet.__moTauxTva / 100,2)
+stOperation.MontantTTC			= stOperation.MontantNetHT + stOperation.MontantTVA
+
+
+// Par défaut le prix brut et le prix net = prix calculé
+pour tout stDossierLigne de stOperation.tabOperationLigne avec TypeLigneCalcule = __OPERATION_RCS__
+	stDossierLigne.PrixUnitaireVenteBrut	= stDossierLigne.PrixUnitaireVenteCalcule
+	stDossierLigne.PrixUnitaireVenteNet 	= stDossierLigne.PrixUnitaireVenteCalcule
+fin

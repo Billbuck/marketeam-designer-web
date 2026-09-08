@@ -1,0 +1,22 @@
+procédure TunnelAfficheInformationsBandeauDroit()
+
+
+sSaveMontant est une chaîne
+
+
+sSaveMontant 				= libTrfMontantHT
+
+// MONTANT HT
+si __stOperation.MontantNetHT > 0 alors
+	grpTunnelMontantHT..Visible 					= Vrai
+	libTrfMontantHT 						= NumériqueVersChaîne(__stOperation.MontantNetHT, ",2fS") + " €"
+fin
+
+_sEffetAnimation = ""
+_sEffetAnimation +=	[", "] + (saiOperationNbrDestinataire 	<> __stOperation.NbrDestinataire) ? "#" + saiOperationNbrDestinataire..Alias sinon ""
+_sEffetAnimation +=	[", "] + (sSaveMontant <> "" _et_ libTrfMontantHT <> sSaveMontant) ? "#tz" + libTrfMontantHT..Alias sinon ""
+
+_sEffetCouleurFond					= RVBVersHTML(Partage.CouleurTypeOperation(__stOperation.TypeOperation,"M"))
+
+saiOperationNbrDestinataire 		= __stOperation.NbrDestinataire
+saiOperationNbrDestinataire..Etat	= (__stOperation.tabBase..Occurrence = 0 _et_ __stOperation.stOperationLettre.IdEtude = 0) ? Actif sinon AffichageSeulement
