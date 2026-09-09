@@ -24,6 +24,15 @@ JoursAppel[6] = Vrai // samedi
 JoursAppel[7] = Faux // Dimanche
 
 
+// Adaptateur RCS : la page travaille sur stOperationSms, la vérité est dans stOperationRcs
+si __stOperation.TypeOperation = __OPERATION_RCS__ alors
+	__stOperation.stOperationSms.DateFin		= __stOperation.stOperationRcs.DateFin
+	__stOperation.stOperationSms.HeureFin		= __stOperation.stOperationRcs.HeureFin
+	__stOperation.stOperationSms.Cadence		= __stOperation.stOperationRcs.Cadence
+	__stOperation.stOperationSms.Paquet			= __stOperation.stOperationRcs.Paquet
+	__stOperation.stOperationSms.Pause			= __stOperation.stOperationRcs.Pause
+fin
+
 // On réinitialise les valeurs en cas dépassement de date et d'horaire
 
 si __stOperation.IdOperation > 0 _et_ __stOperation.EstEnvoiImmediat = Vrai _et_ __stOperation.DateEnvoiSouhaite <> DateSys() alors

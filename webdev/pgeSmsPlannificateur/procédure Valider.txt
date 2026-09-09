@@ -32,13 +32,13 @@ fin
 __stOperation.stOperationSms.Cadence 			= _stCalendrier.Cadence
 
 si _stCalendrier.Cadence > 0 alors
-	
+
 	nCadenceMin = 5
 	nCadenceMax = 25
 	pour nCadencePause = nCadenceMin _à_ nCadenceMax
 		tabPause.Ajoute(PartieDécimale(Arrondi(_stCalendrier.Cadence/(3600/nCadencePause),2))*100)
 	fin
-	
+
 	nCadencePause	= tabPause.Cherche(tcLinéaire,Min(tabPause)) + (nCadenceMin - 1)
 	nCadencePaquet	= _stCalendrier.Cadence/(3600/nCadencePause)
 	__stOperation.stOperationSms.DateFin		= _stCalendrier.DateFinSouhaite
@@ -52,3 +52,11 @@ sinon
 	__stOperation.stOperationSms.Pause			= 0
 fin
 
+// Adaptateur RCS : on recopie le résultat dans stOperationRcs (enregistré dans ope_rcs)
+si __stOperation.TypeOperation = __OPERATION_RCS__ alors
+	__stOperation.stOperationRcs.DateFin		= __stOperation.stOperationSms.DateFin
+	__stOperation.stOperationRcs.HeureFin		= __stOperation.stOperationSms.HeureFin
+	__stOperation.stOperationRcs.Cadence		= __stOperation.stOperationSms.Cadence
+	__stOperation.stOperationRcs.Paquet			= __stOperation.stOperationSms.Paquet
+	__stOperation.stOperationRcs.Pause			= __stOperation.stOperationSms.Pause
+fin
