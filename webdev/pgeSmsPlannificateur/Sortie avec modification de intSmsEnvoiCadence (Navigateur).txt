@@ -1,0 +1,19 @@
+// ** Sortie avec modification de intSmsEnvoiCadence (onchange navigateur) ( dispSms ) (navigateur)
+
+si intSmsEnvoiCadence = Vrai alors
+	navCadenceVersDateHeure()
+	grpDateFin..Visible 					= Vrai
+sinon
+	cboDateFin.SupprimeTout()
+	cboHeureFin.SupprimeTout()
+	_stCalendrier.EstCadence				= Faux
+	_stCalendrier.DateFinSouhaite			= ""
+	_stCalendrier.HeureFinSouhaite			= ""
+	_stCalendrier.Cadence					= 0
+	grpDateFin..Visible						= Faux
+fin
+
+navGestionInterface()
+
+navCalendrierAffichePeriode()
+
