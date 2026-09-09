@@ -1,0 +1,86 @@
+procédure ConstruitJsonMessage(stOperationRcs est une structOperationRcs, pSenderName, pPortable, pMessageId, taaValeurChamp est un tableau associatif de chaînes, pCodeLanding, bEstTest)
+
+sJson			est une chaîne
+sPortable		est une chaîne
+sContent		est une chaîne
+sCarte			est une chaîne
+sChips			est une chaîne
+sOptions		est une chaîne
+nValidite		est un entier
+sUnite			est une chaîne
+sRepli			est une chaîne
+sFrom			est une chaîne
+nInd			est un entier
+
+
+sPortable = Remplace(Remplace(SansEspace(pPortable), "+", ""), " ", "")
+
+sJson = "{"
+sJson += """sender"":""" + EncodeAsciiJson(pSenderName) + """"
+sJson += ",""destinations"":[{""to"":""" + EncodeAsciiJson(sPortable) + """,""messageId"":""" + EncodeAsciiJson(pMessageId) + """}]"
+
+si stOperationRcs.TypeContenu = __RCS_CONTENU_CAROUSEL__ alors
+	sContent = "{""type"":""CAROUSEL"""
+	sContent += ",""cardWidth"":""" + EncodeAsciiJson((stOperationRcs.LargeurCarte = "") ? "MEDIUM" sinon stOperationRcs.LargeurCarte) + """"
+	sContent += ",""contents"":["
+	pour nInd = 1 _à_ stOperationRcs.tabCarte..Occurrence
+		sCarte = ConstruitJsonCarte(stOperationRcs.tabCarte[nInd], taaValeurChamp, pCodeLanding, bEstTest)
+		sContent += (nInd > 1 ? "," sinon "") + sCarte
+	fin
+	sContent += "]"
+sinon
+	sContent = "{""type"":""CARD"""
+	sContent += ",""orientation"":""" + EncodeAsciiJson((stOperationRcs.Orientation = "") ? "VERTICAL" sinon stOperationRcs.Orientation) + """"
+	sContent += ",""alignment"":""" + EncodeAsciiJson((stOperationRcs.Alignement = "") ? "LEFT" sinon stOperationRcs.Alignement) + """"
+	si stOperationRcs.tabCarte..Occurrence > 0 alors
+		sContent += ",""content"":" + ConstruitJsonCarte(stOperationRcs.tabCarte[1], taaValeurChamp, pCodeLanding, bEstTest)
+	sinon
+		sContent += ",""content"":{}"
+		Trace("cpRcs : message sans carte")
+	fin
+fin
+
+sChips = ConstruitJsonSuggestions(stOperationRcs.tabBoutonCommun, 0, __RCS_MAX_BOUTONS_MESSAGE__, taaValeurChamp, pCodeLanding, bEstTest)
+si sChips <> "" alors
+	sContent += ",""suggestions"":" + sChips
+fin
+sContent += "}"
+
+sJson += ",""content"":" + sContent
+
+nValidite	= stOperationRcs.ValiditeDuree
+sUnite		= stOperationRcs.ValiditeUnite
+si nValidite <= 0 alors nValidite = __nValiditeHeures
+si sUnite = "" alors sUnite = "HOURS"
+
+sOptions = "{""validityPeriod"":{""amount"":" + nValidite + ",""timeUnit"":""" + EncodeAsciiJson(sUnite) + """}"
+si stOperationRcs.CampaignReferenceId <> "" alors
+	sOptions += ",""campaignReferenceId"":""" + EncodeAsciiJson(stOperationRcs.CampaignReferenceId) + """"
+fin
+
+si stOperationRcs.EstRepliSms alors
+	sRepli	= FusionneTexte(stOperationRcs.RepliSmsMessage, taaValeurChamp)
+	sFrom	= stOperationRcs.RepliSmsFrom
+	si SansEspace(sRepli) <> "" _et_ SansEspace(sFrom) <> "" alors
+		sOptions += ",""smsFailover"":{"
+		sOptions += """sender"":""" + EncodeAsciiJson(sFrom) + """"
+		sOptions += ",""text"":""" + EncodeAsciiJson(sRepli) + """"
+		sOptions += ",""validityPeriod"":{""amount"":" + nValidite + ",""timeUnit"":""" + EncodeAsciiJson(sUnite) + """}"
+		sOptions += "}"
+	sinon
+		Trace("cpRcs : repli SMS demandé mais From ou texte vide")
+	fin
+fin
+sOptions += "}"
+
+sJson += ",""options"":" + sOptions
+
+si __sUrlWebhook <> "" alors
+	sJson += ",""webhooks"":{"
+	sJson += """delivery"":{""url"":""" + EncodeAsciiJson(__sUrlWebhook) + """}"
+	sJson += ",""seen"":{""url"":""" + EncodeAsciiJson(__sUrlWebhook) + """}"
+	sJson += "}"
+fin
+
+sJson += "}"
+renvoyer sJson

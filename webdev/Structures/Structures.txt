@@ -2340,6 +2340,16 @@ structOperationRcs est une Structure
 	tabBoutonCommun						est un tableau de structOperationRcsBouton	// IdRcsCarte NULL en base
 fin
 
+structRcsEnvoiResultat est une Structure
+	MessageId							est une chaîne
+	Destination							est une chaîne
+	StatutGroupeId						est un entier
+	StatutGroupeNom						est une chaîne
+	StatutId							est un entier
+	StatutNom							est une chaîne
+	BulkId								est une chaîne
+fin
+
 
 structOperationVms est une Structure
 	IdMessage							est un entier

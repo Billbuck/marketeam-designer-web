@@ -1,0 +1,17 @@
+procédure UrlLanding(pCodeLanding, bEstTest)
+
+sGabarit	est une chaîne = __sUrlCliquezIci
+sCode		est une chaîne
+sUrl		est une chaîne
+
+
+si sGabarit = "" alors renvoyer ""
+
+sCode	= (bEstTest ? "@" + pCodeLanding sinon pCodeLanding)
+sUrl	= Remplace(sGabarit, "[Code]", sCode)
+
+si Position(sUrl, "http://", SansCasse) <> 1 _et_ Position(sUrl, "https://", SansCasse) <> 1 alors
+	sUrl = "https://" + sUrl
+fin
+
+renvoyer sUrl

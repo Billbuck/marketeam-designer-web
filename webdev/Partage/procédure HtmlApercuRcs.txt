@@ -1,0 +1,81 @@
+// Aperçu HTML d'un message RCS. Autonome : tous les styles sont en ligne.
+// pLargeurPx : largeur du champ HTML qui l'accueille — pilote l'échelle
+// pIdHtml    : identifiant unique, pour que plusieurs aperçus coexistent dans une page
+procédure HtmlApercuRcs(pstOperationRcs est une structOperationRcs, pIdRcsAgent est un entier, pLargeurPx est un entier, pIdHtml est une chaîne)
+
+sHtml				est une chaîne
+sNomAgent			est une chaîne
+sLogoAgent		est une chaîne
+sIdCarrousel		est une chaîne		= pIdHtml + "_c"
+nBase				est un entier		= pLargeurPx / 27
+bCarrousel		est un booléen		= (pstOperationRcs.TypeContenu = __RCS_CONTENU_CARROUSEL__)
+nInd				est un entier
+
+si nBase < 8 alors nBase = 8
+
+// ─── Agent ───
+si pIdRcsAgent > 0 _et_ rcs_agent.LitRecherchePremier(IdRcsAgent, pIdRcsAgent) alors
+	sNomAgent	= rcs_agent.NomAffichage
+	sLogoAgent	= rcs_agent.LogoUrl
+sinon
+	sNomAgent	= "Votre marque"
+fin
+
+sHtml = [
+	<div id="[%pIdHtml%]" style="font-size:[%nBase%]px;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#EEF1F3;border-radius:1.2em;padding:.9em;box-sizing:border-box;width:100%;color:#1B2430;">
+	<div style="display:flex;align-items:center;gap:.5em;margin-bottom:.8em;">
+]
+
+si sLogoAgent <> "" alors
+	sHtml += [
+		<img src="[%sLogoAgent%]" alt="" style="width:2.2em;height:2.2em;border-radius:50%;object-fit:cover;background:#fff;">
+	]
+sinon
+	sHtml += [
+		<span style="display:inline-block;width:2.2em;height:2.2em;border-radius:50%;background:#C5CDD2;"></span>
+	]
+fin
+
+sHtml += [
+	<span style="font-weight:600;font-size:.95em;">[%TexteVersHtmlRcs(sNomAgent)%]</span>
+	<span style="display:inline-flex;align-items:center;justify-content:center;width:1.1em;height:1.1em;border-radius:50%;background:#1A73E8;color:#fff;font-size:.75em;font-weight:700;">&#10003;</span>
+	</div>
+]
+
+// ─── Cartes ───
+si bCarrousel alors
+	sHtml += [
+		<div style="position:relative;">
+		<div id="[%sIdCarrousel%]" style="display:flex;gap:.6em;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;padding-bottom:.3em;">
+	]
+	pour nInd = 1 _à_ pstOperationRcs.tabCarte..Occurrence
+		sHtml += HtmlCarteRcs(pstOperationRcs.tabCarte[nInd], Vrai)
+	fin
+	sHtml += [
+		</div>
+		<span onclick="var c=document.getElementById('[%sIdCarrousel%]');c.scrollBy({left:-c.clientWidth*0.8,behavior:'smooth'})" style="position:absolute;left:-.3em;top:40%;width:1.8em;height:1.8em;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1em;line-height:1;user-select:none;">&#8249;</span>
+		<span onclick="var c=document.getElementById('[%sIdCarrousel%]');c.scrollBy({left:c.clientWidth*0.8,behavior:'smooth'})" style="position:absolute;right:-.3em;top:40%;width:1.8em;height:1.8em;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1em;line-height:1;user-select:none;">&#8250;</span>
+		</div>
+	]
+sinon
+	si pstOperationRcs.tabCarte..Occurrence > 0 alors
+		sHtml += HtmlCarteRcs(pstOperationRcs.tabCarte[1], Faux)
+	fin
+fin
+
+// ─── Boutons communs ───
+si pstOperationRcs.tabBoutonCommun..Occurrence > 0 alors
+	sHtml += [
+		<div style="display:flex;flex-wrap:wrap;gap:.4em;margin-top:.7em;">
+	]
+	pour nInd = 1 _à_ pstOperationRcs.tabBoutonCommun..Occurrence
+		sHtml += [
+			<span style="background:#fff;border:1px solid #D5DBE0;border-radius:1.2em;padding:.4em .9em;font-size:.85em;color:#1A73E8;font-weight:600;">[%TexteVersHtmlRcs(pstOperationRcs.tabBoutonCommun[nInd].Libelle)%]</span>
+		]
+	fin
+	sHtml += "</div>"
+fin
+
+sHtml += "</div>"
+
+renvoyer sHtml

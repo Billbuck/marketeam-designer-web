@@ -1,0 +1,61 @@
+procédure InitCpRcs()
+
+sVal		est une chaîne
+sRequete	est une chaîne
+sdEmoji	est une Source de Données
+nI			est un entier
+nJ			est un entier
+sTmp		est une chaîne
+
+
+__sUrlInfobip			= ValeurParametreLue("Rcs_Infobip_Url")
+__sApiKey				= ValeurParametreLue("Rcs_Infobip_ApiKey")
+__sUrlMediaPublique	= ValeurParametreLue("Rcs_Media_UrlPublique")
+__sUrlWebhook			= ValeurParametreLue("Rcs_Webhook_Url")
+__sUrlCliquezIci		= ValeurParametreLue("Url_CliquezIci")
+__sUrlBouton			= ValeurParametreLue("Rcs_Bouton_Url")
+
+sVal = cpFonction.ValeurParametre("Rcs_Validite_Heures", prm_parametre.ValNumerique.Nom)
+__nValiditeHeures = Val(sVal)
+si __nValiditeHeures <= 0 alors __nValiditeHeures = 48
+
+si Droite(__sUrlInfobip, 1) = "/" alors
+	__sUrlInfobip = Gauche(__sUrlInfobip, Taille(__sUrlInfobip) - 1)
+fin
+
+__taaEmojiSequence.SupprimeTout()
+__tabEmojiCode.SupprimeTout()
+
+sRequete = [
+	SELECT prm_emoji.Code, prm_emoji.SequenceJson
+	FROM prm_emoji
+	WHERE prm_emoji.EstActif = 1
+]
+
+si sdEmoji.ExécuteRequêteSQL(prm_emoji..Connexion, hRequêteSansCorrection, sRequete) alors
+	pour tout sdEmoji
+		si sdEmoji.Code <> "" _et_ sdEmoji.SequenceJson <> "" alors
+			__taaEmojiSequence[sdEmoji.Code] = sdEmoji.SequenceJson
+			__tabEmojiCode.Ajoute(sdEmoji.Code)
+		fin
+	fin
+fin
+sdEmoji.AnnuleDéclaration()
+
+// Plus long d'abord : :smile: ne doit pas manger :smiley:
+pour nI = 1 _à_ __tabEmojiCode..Occurrence - 1
+	pour nJ = nI + 1 _à_ __tabEmojiCode..Occurrence
+		si Taille(__tabEmojiCode[nJ]) > Taille(__tabEmojiCode[nI]) alors
+			sTmp = __tabEmojiCode[nI]
+			__tabEmojiCode[nI] = __tabEmojiCode[nJ]
+			__tabEmojiCode[nJ] = sTmp
+		fin
+	fin
+fin
+
+
+	procédure interne ValeurParametreLue(pCleCdb)
+		sRetourCdb est une chaîne = cpFonction.ValeurParametre(pCleCdb, prm_parametre.ValChaine.Nom)
+		si sRetourCdb = "Erreur" alors sRetourCdb = ""
+		renvoyer sRetourCdb
+	fin

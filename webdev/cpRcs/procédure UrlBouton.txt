@@ -1,0 +1,10 @@
+procédure UrlBouton(pIdRcsBouton, pCode)
+
+sUrl est une chaîne = __sUrlBouton
+
+si sUrl = "" alors renvoyer ""
+
+sUrl = Remplace(sUrl, "[IdRcsBouton]", pIdRcsBouton)
+sUrl = Remplace(sUrl, "[Code]", pCode)
+
+renvoyer sUrl

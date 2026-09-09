@@ -1,0 +1,10 @@
+procédure FusionneTexte(pTexte, taaValeurChamp est un tableau associatif de chaînes)
+
+sLibelle	est une chaîne
+sValeur	est une chaîne
+
+pour tout sValeur, sLibelle de taaValeurChamp
+	pTexte = Remplace(pTexte, "[" + sLibelle + "]", sValeur)
+fin
+
+renvoyer pTexte

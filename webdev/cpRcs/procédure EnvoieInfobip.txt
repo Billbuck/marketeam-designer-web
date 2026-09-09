@@ -1,0 +1,62 @@
+procédure EnvoieInfobip(sJsonPaquet, tabResultat est un tableau de structRcsEnvoiResultat)
+
+requete		est un httpRequête
+reponse		est un httpRéponse
+jRep			est un JSON
+nInd			est un entier
+nLigne		est un entier
+sBulk		est une chaîne
+bJsonOk		est un booléen
+
+
+tabResultat.SupprimeTout()
+
+si __sUrlInfobip = "" _ou_ __sApiKey = "" alors
+	Trace("cpRcs EnvoieInfobip : URL ou clé API manquante")
+	renvoyer Faux
+fin
+
+requete.URL						= __sUrlInfobip + "/rcs/2/messages"
+requete.Méthode					= httpPost
+requete.ContentType				= typeMimeJSON
+requete.EnTête["Authorization"]	= "App " + __sApiKey
+requete.Timeout					= 60s
+requete.Contenu					= sJsonPaquet
+
+reponse = HTTPEnvoie(requete)
+
+si ErreurDétectée alors
+	Trace("cpRcs EnvoieInfobip : " + ErreurInfo())
+	renvoyer Faux
+fin
+
+si reponse.CodeEtat <> 200 _et_ reponse.CodeEtat <> 201 alors
+	Trace("cpRcs EnvoieInfobip HTTP " + reponse.CodeEtat + " " + reponse.Contenu)
+	renvoyer Faux
+fin
+
+bJsonOk = Vrai
+quand exception dans
+	jRep = reponse.Contenu
+faire
+	bJsonOk = Faux
+fin
+si bJsonOk = Faux alors
+	Trace("cpRcs EnvoieInfobip : JSON réponse illisible " + reponse.Contenu)
+	renvoyer Faux
+fin
+
+sBulk = jRep.bulkId
+
+pour nInd = 1 _à_ jRep.messages..Occurrence
+	nLigne = tabResultat.Ajoute()
+	tabResultat[nLigne].BulkId				= sBulk
+	tabResultat[nLigne].MessageId			= jRep.messages[nInd].messageId
+	tabResultat[nLigne].Destination			= jRep.messages[nInd].destination
+	tabResultat[nLigne].StatutGroupeId		= Val(jRep.messages[nInd].status.groupId)
+	tabResultat[nLigne].StatutGroupeNom	= jRep.messages[nInd].status.groupName
+	tabResultat[nLigne].StatutId			= Val(jRep.messages[nInd].status.id)
+	tabResultat[nLigne].StatutNom			= jRep.messages[nInd].status.name
+fin
+
+renvoyer Vrai

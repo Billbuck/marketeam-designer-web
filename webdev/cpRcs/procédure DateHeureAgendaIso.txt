@@ -1,0 +1,13 @@
+procédure DateHeureAgendaIso(pDate est une Date, pHeure est une Heure)
+
+sJour	est une chaîne
+sHeure	est une chaîne
+
+
+si pas DateValide(pDate) alors renvoyer ""
+
+sJour	= DateVersChaîne(pDate, "AAAA-MM-JJ")
+sHeure	= HeureVersChaîne(pHeure, "HH:MM:SS")
+si sHeure = "" alors sHeure = "00:00:00"
+
+renvoyer sJour + "T" + sHeure + DecalageHoraireParis(pDate)

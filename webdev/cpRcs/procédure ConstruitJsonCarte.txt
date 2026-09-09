@@ -1,0 +1,39 @@
+procédure ConstruitJsonCarte(stCarte est une structOperationRcsCarte, taaValeurChamp est un tableau associatif de chaînes, pCodeLanding, bEstTest)
+
+sJson			est une chaîne
+sTitre			est une chaîne
+sDescription	est une chaîne
+sMedia			est une chaîne
+sVignette		est une chaîne
+sHauteur		est une chaîne
+sSuggestions	est une chaîne
+
+
+sTitre			= FusionneTexte(stCarte.Titre, taaValeurChamp)
+sDescription	= FusionneTexte(stCarte.Description, taaValeurChamp)
+sMedia			= UrlMediaPublique(stCarte.MediaUrl)
+sVignette		= UrlMediaPublique(stCarte.MediaThumbnailUrl)
+sHauteur		= stCarte.MediaHauteur
+si sHauteur = "" alors sHauteur = "MEDIUM"
+
+sJson = "{"
+sJson += """title"":""" + EncodeAsciiJson(sTitre) + """"
+sJson += ",""description"":""" + EncodeAsciiJson(sDescription) + """"
+
+si sMedia <> "" alors
+	sJson += ",""media"":{"
+	sJson += """file"":{""url"":""" + EncodeAsciiJson(sMedia) + """}"
+	si sVignette <> "" alors
+		sJson += ",""thumbnail"":{""url"":""" + EncodeAsciiJson(sVignette) + """}"
+	fin
+	sJson += ",""height"":""" + EncodeAsciiJson(sHauteur) + """"
+	sJson += "}"
+fin
+
+sSuggestions = ConstruitJsonSuggestions(stCarte.tabBouton, stCarte.IdRcsCarte, __RCS_MAX_BOUTONS_CARTE__, taaValeurChamp, pCodeLanding, bEstTest)
+si sSuggestions <> "" alors
+	sJson += ",""suggestions"":" + sSuggestions
+fin
+
+sJson += "}"
+renvoyer sJson

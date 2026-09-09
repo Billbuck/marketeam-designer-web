@@ -1,0 +1,13 @@
+procédure ConstruitJsonPaquet(tabJsonMessage est un tableau de chaînes)
+
+sJson	est une chaîne
+nInd	est un entier
+
+
+sJson = "{""messages"":["
+pour nInd = 1 _à_ tabJsonMessage..Occurrence
+	sJson += (nInd > 1 ? "," sinon "") + tabJsonMessage[nInd]
+fin
+sJson += "]}"
+
+renvoyer sJson

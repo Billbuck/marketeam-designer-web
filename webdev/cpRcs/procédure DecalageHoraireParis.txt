@@ -1,0 +1,30 @@
+procédure DecalageHoraireParis(pDate est une Date)
+
+dDernierMars	est une Date
+dDernierOct		est une Date
+
+
+si pas DateValide(pDate) alors renvoyer "+01:00"
+
+dDernierMars	= DernierDimancheDuMois(pDate..Année, 3)
+dDernierOct		= DernierDimancheDuMois(pDate..Année, 10)
+
+si pDate >= dDernierMars _et_ pDate < dDernierOct alors
+	renvoyer "+02:00"
+sinon
+	renvoyer "+01:00"
+fin
+
+
+	procédure interne DernierDimancheDuMois(pAnneeCdb, pMoisCdb)
+		dCoursCdb est une Date
+
+		dCoursCdb..Année	= pAnneeCdb
+		dCoursCdb..Mois	= pMoisCdb
+		dCoursCdb..Jour	= 1
+		dCoursCdb			= DernierJourDuMois(dCoursCdb)
+		tantque DateVersJour(dCoursCdb) <> 7
+			dCoursCdb..Jour--
+		fin
+		renvoyer dCoursCdb
+	fin

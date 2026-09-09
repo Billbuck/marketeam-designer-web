@@ -1,0 +1,17 @@
+// ** Déclaration de cpRcs
+
+__sUrlInfobip				est une chaîne
+__sApiKey					est une chaîne
+__nValiditeHeures			est un entier
+__sUrlMediaPublique		est une chaîne
+__sUrlWebhook				est une chaîne
+__sUrlCliquezIci			est une chaîne
+__sUrlBouton				est une chaîne
+
+__taaEmojiSequence		est un tableau associatif de chaînes		// Clé = code sans ":", valeur = SequenceJson (\uXXXX)
+__tabEmojiCode			est un tableau de chaînes					// Codes triés du plus long au plus court
+
+
+// ******************************************************************************************************************************************************************
+// ****  NE PAS OUBLIER D'APPELER InitCpRcs DANS LE CODE D'INIT DU PROJET (site ET batchRcs) ***********************************************************************
+// ******************************************************************************************************************************************************************

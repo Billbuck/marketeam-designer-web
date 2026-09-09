@@ -1,0 +1,28 @@
+procédure ConstruitJsonSuggestions(tabBouton est un tableau de structOperationRcsBouton, pIdRcsCarte, pMax, taaValeurChamp est un tableau associatif de chaînes, pCodeLanding, bEstTest)
+
+sJson		est une chaîne
+sUn			est une chaîne
+nAjoute		est un entier
+nIgnore		est un entier
+
+
+pour tout stBoutonJson de tabBouton sur Ordre
+	sUn = ConstruitJsonBouton(stBoutonJson, pIdRcsCarte, taaValeurChamp, pCodeLanding, bEstTest)
+	si sUn = "" alors continuer
+
+	si nAjoute >= pMax alors
+		nIgnore++
+		continuer
+	fin
+
+	sJson += [","] + sUn
+	nAjoute++
+fin
+
+si nIgnore > 0 alors
+	Trace("cpRcs : " + nIgnore + " suggestion(s) ignorée(s), limite " + pMax)
+fin
+
+si nAjoute = 0 alors renvoyer ""
+
+renvoyer "[" + sJson + "]"

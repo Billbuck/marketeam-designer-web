@@ -442,6 +442,7 @@ constante
 	__RCS_MAX_CARTES__										= 10
 	__RCS_MEDIA_HAUTEUR__									= "MEDIUM"
 	__RCS_MAX_BOUTONS_CARTE__								= 4
+	__RCS_MAX_BOUTONS_MESSAGE__							= 11
 	__RCS_MAX_TITRE__											= 200
 	__RCS_MAX_DESCRIPTION__									= 2000
 	__RCS_MAX_LIBELLE_BOUTON__								= 25

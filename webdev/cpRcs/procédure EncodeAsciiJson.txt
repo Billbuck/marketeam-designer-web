@@ -1,0 +1,66 @@
+procédure EncodeAsciiJson(pTexte)
+
+sSortie		est une chaîne
+suTexte		est une chaîne Unicode = pTexte
+nInd			est un entier
+nCode		est un entier
+sCar			est une chaîne Unicode
+sCodeEmoji	est une chaîne
+nSurrog		est un entier
+
+
+pour nInd = 1 _à_ suTexte.Taille()
+	sCar = suTexte[[nInd]]
+	nCode = Asc(sCar)
+	selon nCode
+		cas 34
+			sSortie += "\"""
+		cas 92
+			sSortie += "\\"
+		cas 8
+			sSortie += "\b"
+		cas 9
+			sSortie += "\t"
+		cas 10
+			sSortie += "\n"
+		cas 12
+			sSortie += "\f"
+		cas 13
+			sSortie += "\r"
+		cas 32 à 126
+			sSortie += sCar
+		autres cas
+			si nCode < 32 _ou_ (nCode >= 127 _et_ nCode <= 65535) alors
+				sSortie += "\u" + Hex4Json(nCode)
+			sinon si nCode > 65535 alors
+				nSurrog = nCode - 65536
+				sSortie += "\u" + Hex4Json(55296 + Entier(nSurrog / 1024))
+				sSortie += "\u" + Hex4Json(56320 + nSurrog MOD 1024)
+			sinon
+				sSortie += "\u" + Hex4Json(nCode)
+			fin
+	fin
+fin
+
+pour tout sCodeEmoji de __tabEmojiCode
+	sSortie = Remplace(sSortie, ":" + sCodeEmoji + ":", __taaEmojiSequence[sCodeEmoji])
+fin
+
+renvoyer sSortie
+
+
+	procédure interne Hex4Json(pValeurCdb)
+		sDigitsCdb	est une chaîne = "0123456789abcdef"
+		nValCdb		est un entier = pValeurCdb
+		sResCdb		est une chaîne
+		nDigCdb		est un entier
+		nResteCdb	est un entier
+
+		si nValCdb < 0 alors nValCdb = 0
+		pour nDigCdb = 1 _à_ 4
+			nResteCdb = nValCdb MOD 16
+			sResCdb = sDigitsCdb[[nResteCdb + 1]] + sResCdb
+			nValCdb = Entier(nValCdb / 16)
+		fin
+		renvoyer sResCdb
+	fin
