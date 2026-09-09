@@ -1,0 +1,70 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//navGestionInterface ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure navGestionInterface()
+
+sListeAnimation est une chaîne
+sSaveMontant,sSaveDateEnvoi, sSaveHeureEnvoi, sSaveCadence sont des chaînes
+
+sSaveMontant 		= libTrfMontantHT
+//		sSaveDateEnvoi		= libDateEnvoi
+//		sSaveHeureEnvoi		= libHeureEnvoi
+//		sSaveCadence		= libCadence
+
+dispSms[1]..Visible					= DateValide(_stCalendrier.DateEnvoiSouhaite)
+dispSms[2]..Visible					= DateValide(_stCalendrier.DateEnvoiSouhaite) _et_ _stCalendrier.EstBaseDeDonnéesChargé = Vrai
+
+
+intSmsImmediat..Visible 			= DateValide(_stCalendrier.DateEnvoiSouhaite) _et_ navSmsImmediatPossible()
+
+
+libSmsDateEnvoi						= DateVersChaîne(_stCalendrier.DateEnvoiSouhaite,"Jjjj J mmmm AAAA")
+saiSmsHeureDebut					= (_stCalendrier.EstEnvoiImmediat = Faux) ? _stCalendrier.HeureEnvoiSouhaite sinon HeureSys()
+intSmsImmediat						= _stCalendrier.EstEnvoiImmediat
+intSmsEnvoiCadence					= (_stCalendrier.EstCadence = Vrai)
+//		celCadence..Visible					= (_stCalendrier.EstCadence = vrai)
+libSmsCadence						= NumériqueVersChaîne(_stCalendrier.Cadence, "dS") + " sms /  heure"
+
+saiSmsHeureDebut..Etat   			= (_stCalendrier.EstEnvoiImmediat = Vrai) ? AffichageSeulement sinon Actif
+grpDateFin..Visible					= (_stCalendrier.EstCadence = Vrai)
+
+
+libSmsHeureDebutInvalide..Visible 	= _stCalendrier.EstEnvoiImmediat = Faux _et_ pas navSmsHeurePossible()
+
+
+
+//	  ///////////////////////////////////////
+//	 ///  B A N D E A U    D R O I T E   ///
+//	///////////////////////////////////////
+
+//		celDateEnvoi..Visible				= DateValide(_stCalendrier.DateEnvoiSouhaite)
+//		celHeureEnvoi..Visible				= DateValide(_stCalendrier.DateEnvoiSouhaite)
+//		celCadence..Visible					= _stCalendrier.EstCadence
+//
+//		libDateEnvoi 						= DateVersChaîne(_stCalendrier.DateEnvoiSouhaite,"jjjj J mmmm AAAA")
+//		libHeureEnvoi						= (_stCalendrier.EstEnvoiImmediat = Faux) ?  HeureVersChaîne(_stCalendrier.HeureEnvoiSouhaite,"HH:MM") sinon "Immédiat"
+//		libCadence							= NumériqueVersChaîne(_stCalendrier.Cadence, "dS") + " sms /  heure"
+
+si _stCalendrier.EstEnvoiImmediat = Faux _et_ _nTimerImmediat > 0 alors
+	FinTimer(_nTimerImmediat)
+	_nTimerImmediat = 0
+fin
+
+sListeAnimation +=	[", "] + (saiOperationNbrDestinataire 	<> _stCalendrier.NbrDestinataire)								? "#"   + saiOperationNbrDestinataire..Alias   sinon ""
+//		sListeAnimation +=  [", "] + (sSaveDateEnvoi	 			<> "" _ET_ libDateEnvoi <> sSaveDateEnvoi)						? "#tz" + libDateEnvoi..Alias SINON ""
+//		sListeAnimation +=  [", "] + (sSaveHeureEnvoi	 			<> "" _ET_ libHeureEnvoi <> sSaveHeureEnvoi)					? "#tz" + libHeureEnvoi..Alias SINON ""
+//		sListeAnimation +=  [", "] + (sSaveCadence		 			<> "" _ET_ libCadence <> sSaveCadence)							? "#tz" + libCadence..Alias SINON ""
+
+_sEffetCouleurFond	= __COULEUR_SMS_M__
+_sEffetAnimation 	= sListeAnimation
+
+effet(_sEffetAnimation,_sEffetCouleurFond,__FLASH_COULEUR2__,__FLASH_BOUCLE__,__FLASH_DELAY__,__FLASH_DUREE1__,__FLASH_DUREE2__,__FLASH_EFFET1__,__FLASH_EFFET2__)

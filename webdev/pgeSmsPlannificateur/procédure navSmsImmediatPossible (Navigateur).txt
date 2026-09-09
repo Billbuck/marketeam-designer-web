@@ -1,0 +1,23 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] navSmsImmediatPossible ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	booléen : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure navSmsImmediatPossible()
+
+hHeureSys est une Heure = HeureSys()
+hHeureSys..Minute += 10
+
+
+si navSmsDatePossible(DateSys()) = Faux _ou_ navSmsHeurePossible(DateSys(),HeureVersChaîne(hHeureSys,"HHMM")) = Faux alors	
+	renvoyer Faux
+fin
+
+renvoyer Vrai

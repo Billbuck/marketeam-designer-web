@@ -1,0 +1,100 @@
+procédure navCadenceVersDateHeure()
+
+
+nInd est un entier
+sCadenceDate, sCadenceHeure sont des chaînes
+
+
+// on vient d'ouvrir la page ou l'on vient de changer la date de début ou l'heure de début
+
+// on génère le tableau des cadence
+navInitTaaCadence()
+navInitCboDateFin()
+navInitCboHeureFin()
+
+//Trace("_stCalendrier.Cadence",_stCalendrier.Cadence)
+//
+//Trace("cboDateFin[cboDateFin]",cboDateFin[cboDateFin])
+//Trace("cboHeureFin[cboHeureFin]",cboHeureFin[cboHeureFin])
+
+si _stCalendrier.Cadence = 0 alors
+	_stCalendrier.Cadence = _taaCadence[cboDateFin[cboDateFin]][cboHeureFin[cboHeureFin]]
+fin
+
+//Trace("_stCalendrier.Cadence",_stCalendrier.Cadence)
+
+
+// Si les combos Date et Heure de fin ne sont pas remplies c'est qu'il est impossible de cadencer 
+
+si cboDateFin..Occurrence  = 0 _ou_ cboHeureFin..Occurrence = 0 alors
+	_stCalendrier.Cadence			= 0
+	_stCalendrier.DateFinSouhaite	= ""
+	_stCalendrier.HeureFinSouhaite	= ""
+	_stCalendrier.EstCadence 		= Faux
+//	Trace("Retour 1")
+	retour
+fin
+// on recherche la date et l'heure  par rapport à la cadence
+
+//Trace("_stCalendrier.Cadence",_stCalendrier.Cadence)
+
+
+//POUR TOUT taaHeureFin, sDate DE _taaCadence
+//	POUR TOUT nCadence, sHeure DE taaHeureFin
+//		Trace("sDate",sDate,"sHeure",sHeure,"nCadence",nCadence)
+//	FIN
+//FIN
+
+
+pour tout taaHeureFin, sDate de _taaCadence
+	pour tout nCadence, sHeure de taaHeureFin
+//		Trace("sDate",sDate,"sHeure",sHeure,"nCadence",nCadence)
+		si nCadence <= _stCalendrier.Cadence alors
+			sCadenceDate = sDate
+			sCadenceHeure = sHeure
+//			Trace("Sélection")
+//			Trace("sDate",sDate,"sHeure",sHeure,"nCadence",nCadence)
+			sortir
+		fin
+	fin
+	si sCadenceDate <> "" alors
+		sortir
+	fin
+fin
+
+//Trace("sCadenceDate",sCadenceDate,"sCadenceHeure",sCadenceHeure)
+
+si sCadenceDate = "" alors
+	// on a pas trouvé la date et l'heure compatible
+	_stCalendrier.Cadence			= 0
+	_stCalendrier.DateFinSouhaite	= ""
+	_stCalendrier.HeureFinSouhaite	= ""
+	_stCalendrier.EstCadence 		= Faux
+//	Trace("Retour 2")
+	retour
+	
+fin
+
+si sCadenceDate <> "" alors	
+	nInd = cboDateFin.Cherche(sCadenceDate)
+	si nInd > 0 alors
+//		Trace("cboDateFin.SelectPlus(nInd)",nInd)
+		cboDateFin.SelectPlus(nInd)
+	fin
+	
+	navInitCboHeureFin()
+	
+	nInd = cboHeureFin.Cherche(sCadenceHeure)
+	si nInd > 0 alors
+//		Trace("cboHeureFin.SelectPlus(nInd)",nInd)
+		cboHeureFin.SelectPlus(nInd)
+	fin	
+sinon
+	cboDateFin.SelectPlus(1)
+	cboHeureFin.SelectPlus(1)
+fin
+
+_stCalendrier.Cadence			= _taaCadence[cboDateFin[cboDateFin]][cboHeureFin[cboHeureFin]]
+_stCalendrier.DateFinSouhaite	= ChaîneVersDate(cboDateFin[cboDateFin],"jjjj J mmmm AAAA")
+_stCalendrier.HeureFinSouhaite	= ChaîneVersHeure(cboHeureFin[cboHeureFin],"HH:MM")
+_stCalendrier.EstCadence 		= Vrai

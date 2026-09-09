@@ -1,0 +1,39 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] navSmsHeurePossible ( [<dDate> est date [, <sHeure> est chaîne]])
+//
+// Paramètres :
+//	dDate (date) : <indiquez ici le rôle de pDate>
+//	sHeure (chaîne ANSI) : <indiquez ici le rôle de pHeure>
+// Valeur de retour :
+// 	booléen : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure navSmsHeurePossible(pDate est une Date = _stCalendrier.DateEnvoiSouhaite, pHeure est une chaîne = _stCalendrier.HeureEnvoiSouhaite)
+
+nRetour est un entier
+
+hHeure est une Heure
+hHeureSys est une Heure = HeureSys()
+hHeureSys..Minute += 5
+
+pHeure = Gauche(pHeure,4)
+
+hHeure = ChaîneVersHeure(pHeure,"HHMM")
+
+
+selon Vrai
+	cas pHeure = ""												: nRetour = 1
+	cas navHeureValide(pHeure) = Faux							: nRetour = 2 
+	cas _stCalendrier.Cadence = 0 _et_ hHeure > "194500000"		: nRetour = 3 
+	cas _stCalendrier.Cadence > 0 _et_ hHeure > "194500000"		: nRetour = 4 
+	cas _stCalendrier.Cadence = 0 _et_ hHeure < "080000000"		: nRetour = 5 
+	cas _stCalendrier.Cadence > 0 _et_ hHeure < "090000000"		: nRetour = 6 
+	cas pDate = DateSys() _et_ hHeure < hHeureSys				: nRetour = 7 
+	autres cas 													: nRetour = 0 
+fin
+
+renvoyer (nRetour = 0)
+

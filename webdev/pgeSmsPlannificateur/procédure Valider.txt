@@ -1,0 +1,54 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//Valider ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure Valider()
+
+nCadencePause est un entier
+nCadencePaquet est un entier
+hHeureLimite est une Heure = HeureSys()
+tabPause est un tableau d'entiers
+nCadenceMin, nCadenceMax sont des entiers
+
+
+hHeureLimite..Minute += 30
+
+si __stOperation.EstEnvoiImmediat = Faux alors
+	__stOperation.DateHeureLimitePriseEnCharge 	= __stOperation.DateEnvoiSouhaite + __stOperation.HeureEnvoiSouhaite
+	__stOperation.DateHeureLimiteValidation		= __stOperation.DateEnvoiSouhaite + __stOperation.HeureEnvoiSouhaite
+sinon
+	__stOperation.DateHeureLimitePriseEnCharge	= __stOperation.DateEnvoiSouhaite + hHeureLimite
+	__stOperation.DateHeureLimiteValidation		= __stOperation.DateEnvoiSouhaite + hHeureLimite
+fin
+
+__stOperation.stOperationSms.Cadence 			= _stCalendrier.Cadence
+
+si _stCalendrier.Cadence > 0 alors
+	
+	nCadenceMin = 5
+	nCadenceMax = 25
+	pour nCadencePause = nCadenceMin _à_ nCadenceMax
+		tabPause.Ajoute(PartieDécimale(Arrondi(_stCalendrier.Cadence/(3600/nCadencePause),2))*100)
+	fin
+	
+	nCadencePause	= tabPause.Cherche(tcLinéaire,Min(tabPause)) + (nCadenceMin - 1)
+	nCadencePaquet	= _stCalendrier.Cadence/(3600/nCadencePause)
+	__stOperation.stOperationSms.DateFin		= _stCalendrier.DateFinSouhaite
+	__stOperation.stOperationSms.HeureFin		= _stCalendrier.HeureFinSouhaite
+	__stOperation.stOperationSms.Paquet			= nCadencePaquet
+	__stOperation.stOperationSms.Pause			= nCadencePause
+sinon
+	__stOperation.stOperationSms.DateFin		= ""
+	__stOperation.stOperationSms.HeureFin		= ""
+	__stOperation.stOperationSms.Paquet			= 0
+	__stOperation.stOperationSms.Pause			= 0
+fin
+

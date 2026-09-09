@@ -1,0 +1,72 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//Init ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure Init()
+
+dDateMin est une Date
+JoursAppel est un entier
+
+JoursAppel[1] = Vrai // Lundi
+JoursAppel[2] = Vrai // Mardi
+JoursAppel[3] = Vrai // Mercredi
+JoursAppel[4] = Vrai // Jeudi
+JoursAppel[5] = Vrai // Vendredi
+JoursAppel[6] = Vrai // samedi
+JoursAppel[7] = Faux // Dimanche
+
+
+// On réinitialise les valeurs en cas dépassement de date et d'horaire
+
+si __stOperation.IdOperation > 0 _et_ __stOperation.EstEnvoiImmediat = Vrai _et_ __stOperation.DateEnvoiSouhaite <> DateSys() alors
+	__stOperation.DateEnvoiSouhaite = DateSys()
+	//__stOperation.stOperationSms.Cadence = 0
+fin
+
+si pas VerifiePlannification() alors			
+	__stOperation.DateEnvoiSouhaite 			= ""
+	__stOperation.HeureEnvoiSouhaite			= "1000"
+	__stOperation.EstEnvoiImmediat				= Faux
+	__stOperation.DateHeureLimitePriseEnCharge	= ""
+	__stOperation.DateHeureLimiteValidation		= ""
+	__stOperation.stOperationSms.Cadence		= 0
+fin
+
+libSmsDateEnvoi							= DateVersChaîne(__stOperation.DateEnvoiSouhaite,"Jjjj J mmmm AAAA")
+saiSmsHeureDebut 						= __stOperation.HeureEnvoiSouhaite
+saiSmsHeureDebut..Etat   				= (_stCalendrier.EstEnvoiImmediat = Vrai) ? AffichageSeulement sinon Actif
+
+
+_stCalendrier.NbrDestinataire			= __stOperation.NbrDestinataire
+// On met le booleen EstBaseDeDonnéesChargé à 0 si l'utilisateur n'a pas accès au cadencement
+_stCalendrier.EstBaseDeDonnéesChargé	= Tunnel.BaseDeDonnéesChargée(__stOperation) _et_ VérifieAccèsFonction(TypeOperationVersCodeSupport(__stOperation.TypeOperation,__stOperation.EstCliquezIci),Cadencement) 
+_stCalendrier.TypeOperation				= __stOperation.TypeOperation
+_stCalendrier.DateEnvoiSouhaite			= __stOperation.DateEnvoiSouhaite
+_stCalendrier.HeureEnvoiSouhaite		= __stOperation.HeureEnvoiSouhaite
+_stCalendrier.EstEnvoiImmediat			= __stOperation.EstEnvoiImmediat
+_stCalendrier.Cadence					= __stOperation.stOperationSms.Cadence
+_stCalendrier.EstCadence				= (__stOperation.stOperationSms.Cadence > 0)
+_stCalendrier.JoursAppel			 	= JoursAppel
+
+
+
+si pas DateValide(__stOperation.DateEnvoiSouhaite) alors
+	_stCalendrier.NumMoisEnCours	= 1
+sinon
+	_stCalendrier.NumMoisEnCours	= (__stOperation.DateEnvoiSouhaite..Mois - MoisEnCours()) < 0 ? (__stOperation.DateEnvoiSouhaite..Mois - MoisEnCours() + 12) sinon Max(1,(__stOperation.DateEnvoiSouhaite..Mois - MoisEnCours()))
+	
+fin
+
+dDateMin = cpFonction.CalculeDateSuivante(DateSys(),0,_stCalendrier.JoursAppel)
+
+CalendrierRemplissage(dDateMin)
+
+

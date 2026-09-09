@@ -1,0 +1,33 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] navHeureValide (<pHeure> est chaîne)
+//
+// Paramètres :
+//	pHeure (chaîne ANSI) : <indiquez ici le rôle de pHeure>
+// Valeur de retour :
+// 	booléen : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure navHeureValide(local pHeure est une chaîne)
+
+sHeure est une chaîne
+sMinute est une chaîne
+
+si Taille(pHeure) < 4 alors
+	renvoyer Faux
+fin
+
+sHeure 	= pHeure[1 à 2]
+sMinute	= pHeure[3 à 4]
+
+selon Vrai
+	cas sHeure[1] pas dans ("0","1","2") 								: renvoyer Faux
+	cas sHeure[2] pas dans ("0","1","2","3","4","5","6","7","8","9")	: renvoyer Faux
+	cas sMinute[1] pas dans ("0","1","2","3","4","5","6","7","8","9") 	: renvoyer Faux
+	cas sMinute[2] pas dans ("0","1","2","3","4","5","6","7","8","9")	: renvoyer Faux
+	cas Val(sHeure) > 23												: renvoyer Faux
+	cas Val(sMinute) > 59												: renvoyer Faux
+	autre cas															: renvoyer Vrai
+fin

@@ -1,0 +1,25 @@
+
+// ** Sortie avec modification de saiSmsHeureDebut (onchange navigateur) ( dispSms ) (navigateur)
+
+
+si navHeureValide(saiSmsHeureDebut) alors
+	_stCalendrier.HeureEnvoiSouhaite = saiSmsHeureDebut
+
+	si navVerifiePlannification() alors
+		si _stCalendrier.EstCadence = Vrai alors
+			_stCalendrier.Cadence = 0
+			navCadenceVersDateHeure()
+		fin
+		navCalendrierAffichePeriode()
+		navGestionInterface()
+	sinon
+		RepriseSaisie(saiSmsHeureDebut)
+	fin
+sinon
+	RepriseSaisie(saiSmsHeureDebut)
+fin
+
+si _stCalendrier.EstCadence alors
+	effet("#tz" + cboHeureFin..Alias,__COULEUR_SMS_M__,__FLASH_COULEUR2__,__FLASH_BOUCLE__,__FLASH_DELAY__,__FLASH_DUREE1__,__FLASH_DUREE2__,__FLASH_EFFET1__,__FLASH_EFFET2__)
+	effet("#tz" + libSmsCadence..Alias,__COULEUR_SMS_M__,__FLASH_COULEUR2__,__FLASH_BOUCLE__,__FLASH_DELAY__,__FLASH_DUREE1__,__FLASH_DUREE2__,__FLASH_EFFET1__,__FLASH_EFFET2__)
+fin

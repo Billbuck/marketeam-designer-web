@@ -1,0 +1,23 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//navTimerImmediat ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure navTimerImmediat()
+
+saiSmsHeureDebut = Gauche(HeureSys(),4)
+
+si _stCalendrier.EstCadence = Vrai alors
+	navCadenceVersDateHeure()
+fin
+
+navCalendrierAffichePeriode()
+navGestionInterface()
+

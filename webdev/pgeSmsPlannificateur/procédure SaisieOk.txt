@@ -1,0 +1,46 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] SaisieOk (<pPrecedent>)
+//
+// Paramètres :
+// 	pPrecedent : <indiquez ici le rôle de pPrecedent>
+
+// Valeur de retour :
+// 	booléen : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure SaisieOk(pPrecedent)
+
+__stOperation.DateEnvoiSouhaite				= _stCalendrier.DateEnvoiSouhaite
+__stOperation.EstEnvoiImmediat				= _stCalendrier.EstEnvoiImmediat
+__stOperation.HeureEnvoiSouhaite			= _stCalendrier.HeureEnvoiSouhaite
+__stOperation.DateHeureLimitePriseEnCharge 	= ""
+__stOperation.DateHeureLimiteValidation		= ""
+
+si pas SmsDatePossible(__stOperation.DateEnvoiSouhaite) alors
+	si pPrecedent = Faux alors 
+		PopupAfficheMessage("Date de programmation impossible","Erreur",__OPERATION_SMS__,__TOAST_ANNULATION__)
+	fin
+	renvoyer Faux
+fin
+
+si __stOperation.EstEnvoiImmediat = Vrai alors
+	si pas SmsImmediatPossible() alors
+		si pPrecedent = Faux alors 
+			PopupAfficheMessage("Envoi immédiat impossible","Erreur",__OPERATION_SMS__,__TOAST_ANNULATION__)
+		fin
+		renvoyer Faux
+	fin
+sinon
+	si pas SmsHeurePossible(__stOperation.DateEnvoiSouhaite,__stOperation.HeureEnvoiSouhaite) alors
+		si pPrecedent = Faux alors 
+			PopupAfficheMessage("Heure de programmation impossible","Erreur",__OPERATION_SMS__,__TOAST_ANNULATION__)
+		fin
+		renvoyer Faux
+	fin
+fin
+
+renvoyer Vrai
+

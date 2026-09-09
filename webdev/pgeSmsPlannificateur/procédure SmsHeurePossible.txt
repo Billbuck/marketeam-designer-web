@@ -1,0 +1,16 @@
+procédure SmsHeurePossible(pDate = __stOperation.DateEnvoiSouhaite,pHeure = __stOperation.HeureEnvoiSouhaite)
+
+hHeureSys est une Heure = HeureSys()
+hHeureSys..Minute += 5
+
+selon Vrai
+	cas pHeure = Null													: renvoyer Faux
+	cas pas HeureValide(pHeure)											: renvoyer Faux
+	cas __stOperation.stOperationSms.Cadence = 0 _et_ pHeure > "2100"	: renvoyer Faux
+	cas __stOperation.stOperationSms.Cadence > 0 _et_ pHeure > "2000"	: renvoyer Faux
+	cas __stOperation.stOperationSms.Cadence = 0 _et_ pHeure < "0800"	: renvoyer Faux
+	cas __stOperation.stOperationSms.Cadence > 0 _et_ pHeure < "0900"	: renvoyer Faux
+	cas pDate = DateSys() _et_ pHeure < hHeureSys	 					: renvoyer Faux
+	autres cas 															: renvoyer Vrai
+fin
+

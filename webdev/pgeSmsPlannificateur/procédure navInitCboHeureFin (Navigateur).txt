@@ -1,0 +1,22 @@
+procédure navInitCboHeureFin()
+
+nInd est un entier
+sHeure est une chaîne
+
+cboHeureFin.SupprimeTout()
+
+pour tout nCadence, sHeure de _taaCadence[cboDateFin[cboDateFin]]
+	cboHeureFin.Ajoute(sHeure)
+fin
+
+si _stCalendrier.HeureFinSouhaite <> "" alors
+	sHeure = HeureVersChaîne(_stCalendrier.HeureFinSouhaite,"HH:MM")
+	nInd = cboHeureFin.Cherche(sHeure)
+	si nInd > 0 alors
+		cboHeureFin.SelectPlus(nInd)
+	sinon
+		cboHeureFin.SelectPlus(1)
+	fin
+sinon
+	cboHeureFin.SelectPlus(1)
+fin

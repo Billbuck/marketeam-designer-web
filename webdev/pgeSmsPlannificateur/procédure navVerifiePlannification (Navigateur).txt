@@ -1,0 +1,29 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] navVerifiePlannification ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	booléen : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure navVerifiePlannification()
+
+
+
+si pas navSmsDatePossible() alors
+	renvoyer Faux
+fin
+
+si _stCalendrier.EstEnvoiImmediat = Faux _et_ navSmsHeurePossible() = Faux alors
+	renvoyer Faux
+fin
+
+si _stCalendrier.EstEnvoiImmediat = Vrai _et_ navSmsImmediatPossible() = Faux alors
+	renvoyer Faux
+fin
+
+renvoyer Vrai

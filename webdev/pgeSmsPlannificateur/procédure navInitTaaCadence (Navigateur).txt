@@ -1,0 +1,109 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//NavCalculeCadenceV1 ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure navInitTaaCadence()
+
+
+nCadenceHoraire est un entier
+dDateDebut, dDateFin sont des Dates
+hHeureDebut, hHeureFin sont des Heures
+h2030, h0900, h0930 sont des Heures
+
+nJour est un entier
+
+h2030 = "2030"
+h0900 = "0900"
+h0930 = "0930"
+
+nJour[1] = Vrai
+nJour[2] = Vrai
+nJour[3] = Vrai
+nJour[4] = Vrai
+nJour[5] = Vrai
+nJour[6] = Vrai
+nJour[7] = Faux
+
+
+
+_taaCadence.SupprimeTout()
+
+dDateDebut 	= _stCalendrier.DateEnvoiSouhaite
+
+dDateFin = dDateDebut
+
+
+si _stCalendrier.EstEnvoiImmediat = Vrai alors
+	hHeureDebut = Gauche(HeureSys(),4)
+	hHeureFin = hHeureDebut
+	hHeureFin += 15 min
+sinon
+	hHeureDebut = _stCalendrier.HeureEnvoiSouhaite
+	hHeureFin = hHeureDebut
+	hHeureFin += 15 min
+fin
+
+tantque hHeureFin..Minute <> 0 _et_ hHeureFin..Minute <> 30
+	hHeureFin += 1 min
+fin
+
+nCadencePrecedente est un entier
+
+boucle
+	nCadenceHoraire = CalculeCadence()
+	
+	selon nCadenceHoraire
+		cas > 90 000
+		cas < 90 		: sortir
+		autre cas
+			si nCadenceHoraire = nCadencePrecedente alors sortir // On s’arrête quand on à plus de précision
+			nCadencePrecedente = nCadenceHoraire
+			si _taaCadence[DateVersChaîne(dDateFin,"jjjj J mmmm AAAA")]..Vide alors
+				_taaCadence.Insère(DateVersChaîne(dDateFin,"jjjj J mmmm AAAA"))
+			fin
+			_taaCadence[DateVersChaîne(dDateFin,"jjjj J mmmm AAAA")][HeureVersChaîne(hHeureFin,"HH:MM")] = nCadenceHoraire
+	fin
+	
+	hHeureFin += 30 min
+	
+	si hHeureFin > h2030 alors
+		dDateFin  = navCalculeDateSuivante(dDateFin,1,nJour)
+		hHeureFin = h0930
+	fin
+fin
+
+
+
+
+	procédure interne CalculeCadence()
+	nInd est un entier
+	duDurée est une Durée
+	nDurée est un entier
+	nCadenceInterne est un entier
+	dDate est une Date
+	dDate = dDateDebut
+	
+	tantque dDate <= dDateFin
+		nInd++ 
+		selon Vrai
+			cas dDate = dDateFin	: duDurée += (nInd = 1) ? (hHeureFin - hHeureDebut) sinon hHeureFin - h0900
+			cas nInd = 1			: duDurée += (h2030 - hHeureDebut)
+			autre cas				: duDurée += (h2030 - h0900)
+		fin
+		dDate = navCalculeDateSuivante(dDate,1,nJour)
+	fin
+	
+	nDurée = duDurée..EnMinutes
+	si nDurée > 0 alors
+		nCadenceInterne = Arrondi(Arrondi(_stCalendrier.NbrDestinataire / nDurée,2) * 60,0)
+	fin
+	renvoyer nCadenceInterne
+	fin

@@ -1,0 +1,64 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//DateHeureVersCadence ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure DateHeureVersCadence()
+
+nInd est un entier
+duDurée est une Durée
+nCadence est un entier
+dDateEnCours est une Date 
+dDateFin est une Date
+hHeureEnvoi est une Heure = HeureSys()
+hHeureFin est une Heure
+h20, h09 sont des Heures
+
+nJour est un entier
+
+h20 = "2000"
+h09 = "0900"
+
+nJour[1] = Vrai
+nJour[2] = Vrai
+nJour[3] = Vrai
+nJour[4] = Vrai
+nJour[5] = Vrai
+nJour[6] = Vrai
+nJour[7] = Faux
+
+si _stCalendrier.EstEnvoiImmediat = Faux alors
+	hHeureEnvoi = _stCalendrier.HeureEnvoiSouhaite
+sinon
+	hHeureEnvoi..Minute += 10
+fin
+
+si DateValide(_stCalendrier.DateEnvoiSouhaite) _et_ DateValide(_stCalendrier.DateFinSouhaite) _et_ (_stCalendrier.EstEnvoiImmediat = Faux _et_ HeureValide(_stCalendrier.HeureEnvoiSouhaite) _ou_ _stCalendrier.EstEnvoiImmediat = Vrai) _et_ HeureValide(_stCalendrier.HeureFinSouhaite) alors
+	dDateEnCours 	= _stCalendrier.DateEnvoiSouhaite
+	dDateFin		= _stCalendrier.DateFinSouhaite
+  	hHeureFin		= _stCalendrier.HeureFinSouhaite
+  	
+	tantque dDateEnCours <= dDateFin
+		nInd++ 
+		selon Vrai
+			cas dDateEnCours = dDateFin	: duDurée += (nInd = 1) ? (hHeureFin - hHeureEnvoi) sinon hHeureFin - h09
+			cas nInd = 1				: duDurée += (h20 - hHeureEnvoi)
+			autre cas					: duDurée += (h20 - h09)
+		fin
+		dDateEnCours = cpFonction.CalculeDateSuivante(dDateEnCours,1,nJour)
+	fin
+	
+	si duDurée > 0 alors
+		nCadence = Arrondi(ArrondiSupérieur(__stOperation.NbrDestinataire / duDurée..EnMinutes,2) * 60,0)
+	fin
+fin
+
+_stCalendrier.Cadence = nCadence
+

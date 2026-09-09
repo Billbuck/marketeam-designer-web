@@ -1,0 +1,26 @@
+procédure navInitCboDateFin()
+
+nInd est un entier
+sDate est une chaîne
+
+cboDateFin.SupprimeTout()
+
+pour tout taaHeureFin, sDate de _taaCadence
+	cboDateFin.Ajoute(sDate)
+fin
+
+
+si _stCalendrier.DateFinSouhaite <> "" alors
+	sDate = DateVersChaîne(_stCalendrier.DateFinSouhaite,"jjjj J mmmm AAAA")
+	nInd = cboDateFin.Cherche(sDate)
+	si nInd > 0 alors
+		cboDateFin.SelectPlus(nInd)
+	sinon
+		cboDateFin.SelectPlus(1)
+	fin
+sinon
+	cboDateFin.SelectPlus(1)
+fin
+
+_sCboDateFin = cboDateFin[cboDateFin]
+

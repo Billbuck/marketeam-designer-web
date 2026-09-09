@@ -1,0 +1,95 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//NavCalculeCadenceV2 ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure NavCalculeCadenceV2()
+
+
+nCadenceHoraire est un entier
+dhDebut, dhFin sont des DateHeures
+
+h20, h09 sont des Heures
+
+nJour est un entier
+
+h20 = "2000"
+h09 = "0900"
+
+nJour[1] = Vrai
+nJour[2] = Vrai
+nJour[3] = Vrai
+nJour[4] = Vrai
+nJour[5] = Vrai
+nJour[6] = Vrai
+nJour[7] = Faux
+
+
+
+_taaCadence.SupprimeTout()
+
+
+si _stCalendrier.EstEnvoiImmediat = Vrai alors
+	dhDebut 	= _stCalendrier.DateEnvoiSouhaite + Gauche(HeureSys(),4)
+sinon
+	dhDebut 	= _stCalendrier.DateEnvoiSouhaite + _stCalendrier.HeureEnvoiSouhaite
+fin
+
+nCadenceHoraire = 240
+
+dhFin = CalculeCadence()
+
+Diff est une chaîne = DateHeureDifférence(dhDebut,dhFin)
+duDurée1 est une Durée = ChaîneVersDurée(Diff, duréeCentième)
+
+tantque duDurée1 > 30 min
+
+	si _taaCadence[DateVersChaîne(dhFin..PartieDate,"JJMMAAAA")]..Vide alors
+		_taaCadence.Insère(DateVersChaîne(dhFin..PartieDate,"JJMMAAAA"))
+	fin
+	_taaCadence[DateVersChaîne(dhFin..PartieDate,"JJMMAAAA")][HeureVersChaîne(dhFin..PartieHeure,"HHMM")] = nCadenceHoraire
+	
+	nCadenceHoraire += 240
+	dhFin = CalculeCadence()
+	
+	Diff  		= DateHeureDifférence(dhDebut,dhFin)
+	duDurée1	= ChaîneVersDurée(Diff, duréeCentième)
+fin
+
+//trace(_taaCadence..Occurrence)
+
+pour tout taaHeureFin, sDate de _taaCadence
+//	Trace("Date = ",sDate)
+	pour tout nCadence, sHeure de taaHeureFin
+//		Trace("Heure = ",sHeure, "Cadence = ",nCadence)
+	fin
+fin
+	
+	
+
+	procédure interne CalculeCadence()
+		nCadence15Minutes est un entier = nCadenceHoraire/4
+		dhFin = dhDebut
+		nQte est un entier = nCadence15Minutes
+		
+		tantque nQte <= _stCalendrier.NbrDestinataire
+		
+			dhFin..Minute += 15 min
+			si dhFin..PartieHeure > h20 alors
+				dhFin..PartieDate = navCalculeDateSuivante(dhFin..PartieDate,1,nJour)
+				dhFin..PartieHeure = h09
+			fin
+			nQte += nCadence15Minutes
+		fin
+		
+		renvoyer dhFin
+		
+		
+	fin

@@ -1,0 +1,8 @@
+procédure AffichePageSuivante()
+
+
+si PageMémorise() alors
+	PageAffiche(pgeDevis)
+sinon
+	popJaugeProgression.Ferme()
+fin

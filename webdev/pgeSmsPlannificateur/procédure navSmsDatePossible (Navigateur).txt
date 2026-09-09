@@ -1,0 +1,20 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] navSmsDatePossible ( [<pDate>])
+//
+// Paramètres :
+// 	pDate : <indiquez ici le rôle de pDate>
+// Valeur de retour :
+// 	booléen : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure navSmsDatePossible(pDate = _stCalendrier.DateEnvoiSouhaite)
+
+selon Vrai
+	cas pas DateValide(pDate) 						: renvoyer Faux
+	cas pDate < DateSys() 							: renvoyer Faux
+	cas cpFonction.__taaJoursFeriés[pDate] = Vrai 	: renvoyer Faux
+	autres cas 										: renvoyer Vrai
+fin

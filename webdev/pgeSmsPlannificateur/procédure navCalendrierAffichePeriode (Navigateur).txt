@@ -1,0 +1,90 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//navCalendrierAffichePeriode ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+//	sDateSurvol (chaîne ANSI - valeur par défaut="") : <indiquez ici le rôle de sPDateSurvol>
+procédure navCalendrierAffichePeriode() 
+
+nInd est un entier
+nZnr est un entier
+nDateDebut, nDateFin sont des entiers
+dDate est une Date 
+
+navCalendrierAffiche()
+
+si pas DateValide(_stCalendrier.DateEnvoiSouhaite) alors
+	retour
+fin
+	
+si DateValide(_stCalendrier.DateEnvoiSouhaite) = Vrai alors
+	si DateValide(_stCalendrier.DateFinSouhaite) = Faux alors
+		// Affichage de la date d'envoi souhaité
+		CouleurCalendrier(_stCalendrier.DateEnvoiSouhaite,__COULEUR_SMS_M__,Blanc,__OPERATION_SMS__)
+	sinon
+		// Affichage de la periode de cadence sms
+		nDateDebut	= DateVersEntier(_stCalendrier.DateEnvoiSouhaite)
+		nDateFin 	= DateVersEntier(_stCalendrier.DateFinSouhaite)
+		
+		pour nInd = nDateDebut _à_ nDateFin
+			dDate = EntierVersDate(nInd)
+			CouleurCalendrier(dDate,__COULEUR_SMS_M__,Blanc,__OPERATION_SMS__)
+		fin
+	fin
+fin
+
+
+procédure interne CouleurCalendrier(pDate, pCouleurFond, pCouleur = RVB(0,0,0), pType = "")
+	sZoneRepetee est une chaîne
+	nPos est un entier
+	(sZoneRepetee,nPos) = RechercheCalendrier(pType, pDate)
+	
+	selon sZoneRepetee
+		cas znrCalendrier..Nom
+			znrCalendrier[nPos].attLibJourCouleur 			= pCouleur	
+			znrCalendrier[nPos].attLibJourFond 				= pCouleurFond
+			
+		cas znrCalendrierSuivant..Nom
+			znrCalendrierSuivant[nPos].attLibJourCouleur 	= pCouleur	
+			znrCalendrierSuivant[nPos].attLibJourFond 		= pCouleurFond
+			
+		autres cas
+			
+	fin
+fin
+
+procédure interne RechercheCalendrier(pMode,pDate)
+	
+	selon pMode 
+	
+		cas ""
+			nZnr = 	ZoneRépétéeCherche(znrCalendrier.attDate,pDate)
+			si nZnr > 0 alors
+				renvoyer(znrCalendrier..Nom,nZnr)
+			sinon
+				nZnr = ZoneRépétéeCherche(znrCalendrierSuivant.attDate,pDate)
+				si nZnr > 0 alors
+					renvoyer(znrCalendrierSuivant..Nom,nZnr)
+				fin
+			fin
+			
+		autres cas 
+			nZnr = 	ZoneRépétéeCherche(znrCalendrier.attDateOperation,pDate)
+			si nZnr > 0 alors
+				renvoyer(znrCalendrier..Nom,nZnr)
+			sinon
+				nZnr = ZoneRépétéeCherche(znrCalendrierSuivant.attDateOperation,pDate)
+				si nZnr > 0 alors
+					renvoyer(znrCalendrierSuivant..Nom,nZnr)
+				fin
+			fin
+			
+	fin
+fin

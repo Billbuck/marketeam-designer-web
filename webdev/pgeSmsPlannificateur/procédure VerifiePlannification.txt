@@ -1,0 +1,24 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] VerifiePlannification ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	booléen : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure VerifiePlannification()
+
+si pas SmsDatePossible() alors
+	__stOperation.HeureEnvoiSouhaite 	= ""
+	__stOperation.EstEnvoiImmediat 		= Faux
+	renvoyer Faux
+fin
+
+selon __stOperation.EstEnvoiImmediat
+	cas Faux : renvoyer SmsHeurePossible()
+	cas Vrai : renvoyer SmsImmediatPossible()
+fin

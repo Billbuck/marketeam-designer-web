@@ -1,0 +1,17 @@
+// ** Entrée dans le champ cboDateFin (onfocus navigateur) ( dispSms )
+
+_sCboDateFin = cboDateFin[cboDateFin]
+
+
+
+// ** Clic sur cboDateFin (onclick navigateur) ( dispSms )
+
+si cboDateFin[cboDateFin] <> _sCboDateFin alors
+	_sCboDateFin = cboDateFin[cboDateFin]
+	navInitCboHeureFin()
+	_stCalendrier.DateFinSouhaite		= ChaîneVersDate(cboDateFin[cboDateFin],"jjjj J mmmm AAAA")
+	_stCalendrier.HeureFinSouhaite		= ChaîneVersHeure(cboHeureFin[cboHeureFin],"HH:MM")
+	_stCalendrier.Cadence 				= _taaCadence[cboDateFin[cboDateFin]][cboHeureFin[cboHeureFin]]	
+	navCalendrierAffichePeriode()
+	navGestionInterface()
+fin

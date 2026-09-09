@@ -1,0 +1,10 @@
+procédure SmsDatePossible(pDate = __stOperation.DateEnvoiSouhaite)
+
+selon Vrai
+	cas pas DateValide(pDate) 			: renvoyer Faux
+	cas pDate < DateSys() 				: renvoyer Faux
+	cas DateVersJour(pDate) = 7			: renvoyer Faux
+	cas JourFérié(pDate) 				: renvoyer Faux
+	autres cas 							: renvoyer Vrai
+fin
+

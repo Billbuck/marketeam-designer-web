@@ -1,0 +1,63 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//navCalendrierAffiche ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+//	pMode (valeur par défaut="S") : <indiquez ici le rôle de pMode>
+//	bRafraichir (booléen - valeur par défaut=0) : <indiquez ici le rôle de pRafraichir>
+procédure navCalendrierAffiche()
+
+
+nInd est un entier
+nZnr est un entier
+
+stDateCalendrier est une structDateCalendrier
+
+
+ZoneRépétéeSupprimeTout(znrCalendrier)	
+ZoneRépétéeSupprimeTout(znrCalendrierSuivant)	
+
+
+pour I = (_stCalendrier.NumMoisEnCours) _à_ (_stCalendrier.NumMoisEnCours+1)
+	nZnr++
+	selon nZnr
+		cas 1 
+			libLibellé = _stCalendrier.tabMois[I].Libelle
+			pour tout stDateCalendrier de _stCalendrier.tabMois[I].tabDateCalendrier
+				nInd = ZoneRépétéeAjouteLigne(znrCalendrier)
+				znrCalendrier[nInd].attDate 					= stDateCalendrier.Date
+				znrCalendrier[nInd].attDateCallCenter			= stDateCalendrier.DateCallCenter
+				znrCalendrier[nInd].attDateOperation			= stDateCalendrier.DateOperation
+				znrCalendrier[nInd].attDateDistribution			= stDateCalendrier.DateDistribution
+				znrCalendrier[nInd].attLibJour					= stDateCalendrier.Libelle
+				znrCalendrier[nInd].attFond						= stDateCalendrier.CelFond
+				znrCalendrier[nInd].attLibJourCouleur			= stDateCalendrier.LibCouleur
+				znrCalendrier[nInd].attLibJourFond				= stDateCalendrier.LibFond
+				znrCalendrier[nInd].attPoliceTaille				= 10
+			fin
+			
+		cas 2
+			libSuivant = _stCalendrier.tabMois[I].Libelle
+			pour tout stDateCalendrier de _stCalendrier.tabMois[I].tabDateCalendrier
+				nInd = ZoneRépétéeAjouteLigne(znrCalendrierSuivant)
+				znrCalendrierSuivant[nInd].attDate 				= stDateCalendrier.Date
+				znrCalendrierSuivant[nInd].attDateCallCenter	= stDateCalendrier.DateCallCenter
+				znrCalendrierSuivant[nInd].attDateOperation		= stDateCalendrier.DateOperation
+				znrCalendrierSuivant[nInd].attDateDistribution	= stDateCalendrier.DateDistribution
+				znrCalendrierSuivant[nInd].attLibJour			= stDateCalendrier.Libelle
+				znrCalendrierSuivant[nInd].attFond				= stDateCalendrier.CelFond
+				znrCalendrierSuivant[nInd].attLibJourCouleur	= stDateCalendrier.LibCouleur
+				znrCalendrierSuivant[nInd].attLibJourFond		= stDateCalendrier.LibFond
+				znrCalendrierSuivant[nInd].attPoliceTaille		= 10
+			fin
+	fin
+fin
+
+

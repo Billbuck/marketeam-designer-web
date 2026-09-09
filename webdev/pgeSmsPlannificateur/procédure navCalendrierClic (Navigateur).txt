@@ -1,0 +1,40 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//navCalendrierClic (<pAttDateOperation>)
+//
+// Paramètres :
+// 	pAttDateOperation : <indiquez ici le rôle de pAttDateOperation>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure navCalendrierClic(pAttDateOperation)
+
+dDateSélectionnée est une Date
+hHeureSuivante est une Heure
+hHeureSuivante = HeureSys()[[à 4]]
+hHeureSuivante..Heure++
+hHeureSuivante..Minute = 0
+
+si DateValide(pAttDateOperation) alors
+	
+	dDateSélectionnée = pAttDateOperation
+	
+	_stCalendrier.DateEnvoiSouhaite = dDateSélectionnée
+	_stCalendrier.EstEnvoiImmediat	= (_stCalendrier.EstEnvoiImmediat = Vrai _et_ ChaîneVersDate(_stCalendrier.DateEnvoiSouhaite,"AAAAMMJJ") = DateSys())
+	
+	si _stCalendrier.EstEnvoiImmediat = Faux _et_ navSmsHeurePossible(dDateSélectionnée,_stCalendrier.HeureEnvoiSouhaite)  = Faux alors
+		_stCalendrier.HeureEnvoiSouhaite = hHeureSuivante
+	fin
+
+	
+	// pas on cadence et que la date sélectionnée est > date de fin de la cadence !
+	si _stCalendrier.EstCadence = Vrai alors
+		navCadenceVersDateHeure()
+	fin
+	
+	navCalendrierAffichePeriode()
+	navGestionInterface()
+fin

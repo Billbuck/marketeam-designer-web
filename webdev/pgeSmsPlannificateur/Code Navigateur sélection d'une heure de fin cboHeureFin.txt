@@ -1,0 +1,14 @@
+// ** Entrée dans le champ cboHeureFin (onfocus navigateur) ( dispSms )
+
+_sCboHeureFin = cboHeureFin[cboHeureFin]
+
+
+
+// ** Clic sur cboHeureFin (onclick navigateur) ( dispSms )
+
+si cboHeureFin[cboHeureFin] <> _sCboHeureFin alors
+	_sCboHeureFin = cboHeureFin[cboHeureFin]
+	_stCalendrier.HeureFinSouhaite		= ChaîneVersHeure(cboHeureFin[cboHeureFin],"HH:MM")
+	_stCalendrier.Cadence 				= _taaCadence[cboDateFin[cboDateFin]][cboHeureFin[cboHeureFin]]	
+	navGestionInterface()
+fin

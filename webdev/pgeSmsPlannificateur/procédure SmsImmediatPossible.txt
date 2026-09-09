@@ -1,0 +1,10 @@
+procédure SmsImmediatPossible()
+
+hHeureSys est une Heure = HeureSys()
+hHeureSys..Minute += 10
+
+si SmsDatePossible(DateSys()) = Faux _ou_ SmsHeurePossible(DateSys(),hHeureSys) = Faux alors
+	renvoyer Faux
+fin
+
+renvoyer Vrai

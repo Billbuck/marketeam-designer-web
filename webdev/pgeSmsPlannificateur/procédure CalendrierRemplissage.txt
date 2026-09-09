@@ -1,0 +1,103 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//CalendrierRemplissage ( [<dDateMin> est date [, <dDateFin> est date]])
+//
+// Paramètres :
+//	dDateMin (date - valeur par défaut="") : <indiquez ici le rôle de pDateEnvoiSouhaite>
+//	dDateFin (date - valeur par défaut="") : <indiquez ici le rôle de pDateFinCampagne>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+// 	stOperation : <indiquez ici le rôle de stOperation>
+//	pBorneMinCalendrier (date) : <indiquez ici le rôle de pBorneMinCalendrier>
+//	pDateDébutCampagne (date - valeur par défaut="") : <indiquez ici le rôle de pDateDébutCampagne>
+procédure CalendrierRemplissage(dDateMin est une Date = "", dDateFin est un Date = "")
+
+
+nRvbEntete est un entier
+nRvbWeekend est un entier
+nRvbImpossible est un entier
+nRvbNoir est un entier
+nRvbBlanc est un entier
+
+
+dMoisEnCours est une Date
+nJour est un entier
+dDateCalcul est une Date
+stDateCalendrier est une structDateCalendrier
+stMois est une structMois
+
+nRvbEntete 			= RVB(248,248,248)
+nRvbWeekend 		= RVB(240,240,240)
+nRvbImpossible		= RVB(180,180,180)
+nRvbNoir			= RVB(0, 0, 0)
+nRvbBlanc			= RVB(255, 255, 255)
+
+
+si pas DateValide(dDateMin) alors
+	dDateMin = DateSys()
+	dDateMin..Jour += HeureSys() > 18 ? 2 sinon 1
+fin
+
+si pas DateValide(dDateFin) alors
+	dDateFin = DateSys()
+	dDateFin..Mois += 6
+fin
+
+//dMoisEnCours = dDateMin
+dMoisEnCours = DateSys()
+
+
+SupprimeTout(_stCalendrier.tabMois)
+
+
+pour I = 1 à 12
+	
+	VariableRAZ(stMois)
+	// Libelle du mois 	
+	stMois.Libelle = DateVersChaîne(dMoisEnCours,"Mmmm AAAA")
+	// On crée l'entête
+	pour J = 1 à 7
+		VariableRAZ(stDateCalendrier)
+		stDateCalendrier.Libelle	= EntierVersJourSemaine(J)
+		stDateCalendrier.CelFond	= RVBVersHTML(nRvbEntete)
+		stDateCalendrier.LibCouleur	= RVBVersHTML(GrisFoncé)
+		Ajoute(stMois.tabDateCalendrier,stDateCalendrier)
+	fin
+	nJour = 0
+	pour K = 1 à 42
+		VariableRAZ(stDateCalendrier)
+		si K >= DateVersJour(PremierJourDuMois(dMoisEnCours)) _et_ nJour < Val(Droite(DernierJourDuMois(dMoisEnCours),2)) alors
+			nJour++
+			dDateCalcul = DateVersChaîne(dMoisEnCours,"AAAAMM") + NumériqueVersChaîne(nJour, "02d")
+			stDateCalendrier.Date 					= dDateCalcul
+			stDateCalendrier.Libelle				= nJour
+			stDateCalendrier.DateOperation			= (_stCalendrier.JoursAppel[DateVersJour(dDateCalcul)] = Vrai _et_ JourFérié(dDateCalcul) = Faux _et_ dDateCalcul >= dDateMin _et_ dDateCalcul <= dDateFin) ? dDateCalcul sinon ""
+			stDateCalendrier.CelFond			 	= (_stCalendrier.JoursAppel[DateVersJour(dDateCalcul)] = Vrai _et_ JourFérié(dDateCalcul) = Faux) ? RVBVersHTML(nRvbBlanc) sinon RVBVersHTML(nRvbWeekend)
+			stDateCalendrier.LibCouleur				= (_stCalendrier.JoursAppel[DateVersJour(dDateCalcul)] = Vrai _et_ JourFérié(dDateCalcul) = Faux _et_ dDateCalcul >= dDateMin _et_ dDateCalcul <= dDateFin) ? RVBVersHTML(nRvbNoir) sinon RVBVersHTML(nRvbImpossible)
+		sinon
+			stDateCalendrier.Date 					= ""
+			stDateCalendrier.DateOperation			= ""
+			stDateCalendrier.DateCallCenter			= ""
+		fin
+		Ajoute(stMois.tabDateCalendrier,stDateCalendrier)	
+	fin
+	Ajoute(_stCalendrier.tabMois,stMois)
+	dMoisEnCours..Mois++
+fin
+
+
+	procédure interne EntierVersJourSemaine(N)
+	selon N
+		cas 1 	: renvoyer "L"
+		cas 2,3	: renvoyer "M"
+		cas 4	: renvoyer "J"
+		cas 5	: renvoyer "V"
+		cas 6	: renvoyer "S"
+		cas 7	: renvoyer "D"
+	fin
+	fin
+

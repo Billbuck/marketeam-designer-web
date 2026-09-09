@@ -1,0 +1,39 @@
+
+// ** Déclarations globales de pgeSmsPlannificateur (serveur)
+
+procédure MaPage()
+
+_stCalendrier est une structCalendrier <synchronisé navigateur>
+
+_nTimerImmediat est un entier <synchronisé navigateur>
+
+Tunnel.__taaPageVisitée[PageCourante] = Vrai
+
+libModeleTitrePage = "Date de diffusion"
+
+
+// ** Fin d'initialisation de pgeSmsPlannificateur (serveur)
+
+Init()
+
+
+
+// ** Chargement de pgeSmsPlannificateur (onload navigateur)
+
+navCalendrierAffichePeriode()
+
+_sCboDateFin est une chaîne // pour mémoriser la valeur de la cboDateFin
+_sCboHeureFin est une chaîne // pour mémoriser la valeur de la cboHeureFin
+
+_taaCadence est un tableau associatif de tableau associatif d'entiers
+
+si _stCalendrier.EstEnvoiImmediat = Vrai alors
+	_nTimerImmediat = Timer(navTimerImmediat,10 s)
+fin
+
+si _stCalendrier.EstCadence = Vrai alors
+	navCadenceVersDateHeure()
+fin
+
+navGestionInterface()
+
