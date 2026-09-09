@@ -1,0 +1,37 @@
+// ** Déclarations globales de fenBatchKannel
+
+_tabTache			est un tableau de TâchesParallèles
+_nCadenceHoraireMax	est un entier
+
+MaFenêtre..Plan = 1
+
+
+StructCadence est une Structure
+	IdSms		 	est une chaîne
+	Dossier			est une chaîne
+	EstCadence		est un booléen
+	Cadence			est un entier
+	Paquet			est un entier
+	Pause 			est un entier
+fin
+
+_tabCadence est un tableau de StructCadence
+
+RelanceOperationDemarrage()
+
+// ** Fin d'initialisation de fenBatchKannel
+
+intRoutageModeProd		= __bEstRoutageModeProd
+intWebserviceModeProd	= __bEstWebserviceModeProd
+
+_nCadenceHoraireMax 		= cpFonction.ValeurParametre("Rcs_Cadence_Horaire_Max",prm_parametre.ValNumerique..Nom)
+saiCadenceHoraireMax 	= _nCadenceHoraireMax
+BTN_Valider.Visible	= Faux
+BTN_Annuler.Visible	= Faux
+
+libConnexion = cpConnexion.gcnxBaseChronodirect..BaseDeDonnées
+TâcheParallèleParamètre(tppNombreMaximalThread,16)
+
+// ** Fermeture de fenBatchKannel
+TâcheParallèleDemandeAnnulation(_tabTache)
+ExeTermine(ExeDonnePID())
