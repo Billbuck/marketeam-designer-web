@@ -1,66 +1,64 @@
 procédure EncodeAsciiJson(pTexte)
 
 sSortie		est une chaîne
-suTexte		est une chaîne Unicode = pTexte
+suTexte		est une chaîne UNICODE = pTexte
+sCar			est une chaîne UNICODE
 nInd			est un entier
 nCode		est un entier
-sCar			est une chaîne Unicode
-sCodeEmoji	est une chaîne
 nSurrog		est un entier
+sCodeEmoji	est une chaîne
 
 
-pour nInd = 1 _à_ suTexte.Taille()
-	sCar = suTexte[[nInd]]
-	nCode = Asc(sCar)
-	selon nCode
-		cas 34
-			sSortie += "\"""
-		cas 92
-			sSortie += "\\"
-		cas 8
-			sSortie += "\b"
-		cas 9
-			sSortie += "\t"
-		cas 10
-			sSortie += "\n"
-		cas 12
-			sSortie += "\f"
-		cas 13
-			sSortie += "\r"
-		cas 32 à 126
-			sSortie += sCar
-		autres cas
-			si nCode < 32 _ou_ (nCode >= 127 _et_ nCode <= 65535) alors
-				sSortie += "\u" + Hex4Json(nCode)
-			sinon si nCode > 65535 alors
-				nSurrog = nCode - 65536
-				sSortie += "\u" + Hex4Json(55296 + Entier(nSurrog / 1024))
-				sSortie += "\u" + Hex4Json(56320 + nSurrog MOD 1024)
-			sinon
-				sSortie += "\u" + Hex4Json(nCode)
-			fin
+	// Procédure interne : toujours AVANT sa première utilisation
+	procédure interne Hex4Json(pValeur)
+		sDigits	est une chaîne = "0123456789abcdef"
+		nVal		est un entier = pValeur
+		sRes		est une chaîne
+		nReste	est un entier
+		nBoucle	est un entier
+
+		si nVal < 0 alors nVal = 0
+		pour nBoucle = 1 _à_ 4
+			nReste	= modulo(nVal, 16)
+			sRes		= sDigits[[nReste + 1]] + sRes
+			nVal		= PartieEntière(nVal / 16)
+		fin
+		renvoyer sRes
+	fin
+
+
+pour nInd = 1 _à_ Taille(suTexte)
+	sCar	= suTexte[[nInd]]
+	nCode	= Asc(sCar)
+
+	si nCode = 34 alors
+		sSortie += "\"""
+	sinon si nCode = 92 alors
+		sSortie += "\\"
+	sinon si nCode = 8 alors
+		sSortie += "\b"
+	sinon si nCode = 9 alors
+		sSortie += "\t"
+	sinon si nCode = 10 alors
+		sSortie += "\n"
+	sinon si nCode = 12 alors
+		sSortie += "\f"
+	sinon si nCode = 13 alors
+		sSortie += "\r"
+	sinon si nCode >= 32 _et_ nCode <= 126 alors
+		sSortie += sCar
+	sinon si nCode > 65535 alors
+		nSurrog	= nCode - 65536
+		sSortie	+= "\u" + Hex4Json(55296 + PartieEntière(nSurrog / 1024))
+		sSortie	+= "\u" + Hex4Json(56320 + modulo(nSurrog, 1024))
+	sinon
+		sSortie += "\u" + Hex4Json(nCode)
 	fin
 fin
 
+// Emojis :code: → séquence \uXXXX chargée par InitCpRcs
 pour tout sCodeEmoji de __tabEmojiCode
 	sSortie = Remplace(sSortie, ":" + sCodeEmoji + ":", __taaEmojiSequence[sCodeEmoji])
 fin
 
 renvoyer sSortie
-
-
-	procédure interne Hex4Json(pValeurCdb)
-		sDigitsCdb	est une chaîne = "0123456789abcdef"
-		nValCdb		est un entier = pValeurCdb
-		sResCdb		est une chaîne
-		nDigCdb		est un entier
-		nResteCdb	est un entier
-
-		si nValCdb < 0 alors nValCdb = 0
-		pour nDigCdb = 1 _à_ 4
-			nResteCdb = nValCdb MOD 16
-			sResCdb = sDigitsCdb[[nResteCdb + 1]] + sResCdb
-			nValCdb = Entier(nValCdb / 16)
-		fin
-		renvoyer sResCdb
-	fin

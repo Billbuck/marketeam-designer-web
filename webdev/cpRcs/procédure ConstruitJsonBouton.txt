@@ -1,28 +1,28 @@
 procédure ConstruitJsonBouton(stBouton est une structOperationRcsBouton, pIdRcsCarte, taaValeurChamp est un tableau associatif de chaînes, pCodeLanding, bEstTest)
 
-sJson			est une chaîne
-sLibelle		est une chaîne
+sJson				est une chaîne
+sLibelle			est une chaîne
 sPostback		est une chaîne
-sUrl			est une chaîne
+sUrl				est une chaîne
 sTelephone		est une chaîne
 sLabel			est une chaîne
 sTypeJson		est une chaîne
 sApplication	est une chaîne
-sWebview		est une chaîne
+sWebview			est une chaîne
 jParam			est un JSON
 sTitre			est une chaîne
 sDescription	est une chaîne
-sDate			est une chaîne
-sHeureDebut	est une chaîne
+sDate				est une chaîne
+sHeureDebut		est une chaîne
 sHeureFin		est une chaîne
-dAgenda		est une Date
+dAgenda			est une Date
 hDebut			est une Heure
-hFin			est une Heure
+hFin				est une Heure
 sDebutIso		est une chaîne
-sFinIso		est une chaîne
-sLat			est une chaîne
-sLon			est une chaîne
-bJsonOk		est un booléen
+sFinIso			est une chaîne
+sLat				est une chaîne
+sLon				est une chaîne
+bJsonOk			est un booléen
 
 
 sLibelle	= FusionneTexte(stBouton.Libelle, taaValeurChamp)
@@ -35,8 +35,8 @@ sPostback = pIdRcsCarte + "-" + stBouton.IdRcsBouton
 
 selon stBouton.SousType
 	cas __RCS_ACTION_AGENDA__
-		sTypeJson = "CREATE_CALENDAR_EVENT"
-		bJsonOk = Vrai
+		sTypeJson		= "CREATE_CALENDAR_EVENT"
+		bJsonOk		= Vrai
 		quand exception dans
 			jParam = stBouton.Parametres
 		faire
@@ -56,12 +56,12 @@ selon stBouton.SousType
 			Trace("cpRcs : bouton agenda " + stBouton.IdRcsBouton + " ignoré (date)")
 			renvoyer ""
 		fin
-		sHeureDebut	= Gauche(jParam.AgendaHeureDebut, 8)
+		sHeureDebut		= Gauche(jParam.AgendaHeureDebut, 8)
 		sHeureFin		= Gauche(jParam.AgendaHeureFin, 8)
 		hDebut			= ChaîneVersHeure(sHeureDebut, "HH:MM:SS")
-		hFin			= ChaîneVersHeure(sHeureFin, "HH:MM:SS")
+		hFin				= ChaîneVersHeure(sHeureFin, "HH:MM:SS")
 		sDebutIso		= DateHeureAgendaIso(dAgenda, hDebut)
-		sFinIso		= DateHeureAgendaIso(dAgenda, hFin)
+		sFinIso			= DateHeureAgendaIso(dAgenda, hFin)
 		si sDebutIso = "" _ou_ sFinIso = "" alors
 			Trace("cpRcs : bouton agenda " + stBouton.IdRcsBouton + " ignoré (horaire)")
 			renvoyer ""
@@ -88,21 +88,21 @@ selon stBouton.SousType
 
 	cas __RCS_ACTION_LANDING__
 		sTypeJson		= __RCS_BOUTON_OPEN_URL__
-		sUrl			= UrlLanding(pCodeLanding, bEstTest)
+		sUrl				= UrlLanding(pCodeLanding, bEstTest)
 		sApplication	= __RCS_URL_BROWSER__
-		sWebview		= ""
+		sWebview			= ""
 
 	cas __RCS_ACTION_REACTION__
 		sTypeJson		= __RCS_BOUTON_OPEN_URL__
-		sUrl			= UrlBouton(stBouton.IdRcsBouton, pCodeLanding)
+		sUrl				= UrlBouton(stBouton.IdRcsBouton, pCodeLanding)
 		sApplication	= __RCS_URL_WEBVIEW__
-		sWebview		= __RCS_WEBVIEW_HALF__
+		sWebview			= __RCS_WEBVIEW_HALF__
 
 	cas __RCS_ACTION_APPLICATION__, __RCS_ACTION_EMAIL__, __RCS_ACTION_SMS__
 		sTypeJson		= __RCS_BOUTON_OPEN_URL__
-		sUrl			= UrlBouton(stBouton.IdRcsBouton, pCodeLanding)
+		sUrl				= UrlBouton(stBouton.IdRcsBouton, pCodeLanding)
 		sApplication	= __RCS_URL_BROWSER__
-		sWebview		= ""
+		sWebview			= ""
 
 	cas __RCS_ACTION_APPEL__
 		sTypeJson	= __RCS_BOUTON_DIAL_PHONE__
@@ -124,9 +124,9 @@ selon stBouton.SousType
 	cas __RCS_ACTION_CARTE__
 		sTypeJson	= __RCS_BOUTON_SHOW_LOCATION__
 		sLabel		= FusionneTexte(stBouton.LibelleLieu, taaValeurChamp)
-		sLat		= Remplace(NumériqueVersChaîne(stBouton.Latitude, "6.6f"), ",", ".")
-		sLon		= Remplace(NumériqueVersChaîne(stBouton.Longitude, "6.6f"), ",", ".")
-		sJson = "{"
+		sLat			= Remplace(NumériqueVersChaîne(stBouton.Latitude, "6.6f"), ",", ".")
+		sLon			= Remplace(NumériqueVersChaîne(stBouton.Longitude, "6.6f"), ",", ".")
+		sJson			= "{"
 		sJson += """text"":""" + EncodeAsciiJson(sLibelle) + """"
 		sJson += ",""postbackData"":""" + EncodeAsciiJson(sPostback) + """"
 		sJson += ",""type"":""SHOW_LOCATION"""
@@ -158,9 +158,9 @@ selon stBouton.SousType
 
 		si sTypeJson = __RCS_BOUTON_SHOW_LOCATION__ alors
 			sLabel	= FusionneTexte(stBouton.LibelleLieu, taaValeurChamp)
-			sLat	= Remplace(NumériqueVersChaîne(stBouton.Latitude, "6.6f"), ",", ".")
-			sLon	= Remplace(NumériqueVersChaîne(stBouton.Longitude, "6.6f"), ",", ".")
-			sJson = "{"
+			sLat		= Remplace(NumériqueVersChaîne(stBouton.Latitude, "6.6f"), ",", ".")
+			sLon		= Remplace(NumériqueVersChaîne(stBouton.Longitude, "6.6f"), ",", ".")
+			sJson		= "{"
 			sJson += """text"":""" + EncodeAsciiJson(sLibelle) + """"
 			sJson += ",""postbackData"":""" + EncodeAsciiJson(sPostback) + """"
 			sJson += ",""type"":""SHOW_LOCATION"""
@@ -173,9 +173,9 @@ selon stBouton.SousType
 			renvoyer sJson
 		fin
 
-		sUrl			= FusionneTexte(stBouton.Url, taaValeurChamp)
+		sUrl				= FusionneTexte(stBouton.Url, taaValeurChamp)
 		sApplication	= stBouton.UrlApplication
-		sWebview		= stBouton.UrlWebviewMode
+		sWebview			= stBouton.UrlWebviewMode
 		si sApplication = "" alors sApplication = __RCS_URL_BROWSER__
 fin
 
@@ -200,7 +200,7 @@ renvoyer sJson
 
 
 	procédure interne EstUrlHttpHttps(pUrlCdb)
-		si Position(pUrlCdb, "https://", SansCasse) = 1 alors renvoyer Vrai
-		si Position(pUrlCdb, "http://", SansCasse) = 1 alors renvoyer Vrai
+		si Position(pUrlCdb, "https://", 1, SansCasse) = 1 alors renvoyer Vrai
+		si Position(pUrlCdb, "http://", 1, SansCasse) = 1 alors renvoyer Vrai
 		renvoyer Faux
 	fin

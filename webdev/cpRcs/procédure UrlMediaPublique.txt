@@ -1,7 +1,7 @@
 procédure UrlMediaPublique(pMediaUrl)
 
-sSrc		est une chaîne = SansEspace(cpProjet.__sHttpMarketeam)
-sDst		est une chaîne = SansEspace(__sUrlMediaPublique)
+sSrc		est une chaîne	= SansEspace(cpProjet.__sHttpMarketeam)
+sDst		est une chaîne	= SansEspace(__sUrlMediaPublique)
 sReste	est une chaîne
 
 
@@ -10,7 +10,7 @@ si SansEspace(pMediaUrl) = "" alors renvoyer ""
 si Droite(sSrc, 1) = "/" alors sSrc = Gauche(sSrc, Taille(sSrc) - 1)
 si Droite(sDst, 1) = "/" alors sDst = Gauche(sDst, Taille(sDst) - 1)
 
-si sSrc <> "" _et_ Position(pMediaUrl, sSrc, SansCasse) = 1 alors
+si sSrc <> "" _et_ Position(pMediaUrl, sSrc, 1, SansCasse) = 1 alors
 	sReste = Droite(pMediaUrl, Taille(pMediaUrl) - Taille(sSrc))
 	si sDst = "" alors renvoyer pMediaUrl
 	renvoyer sDst + sReste
