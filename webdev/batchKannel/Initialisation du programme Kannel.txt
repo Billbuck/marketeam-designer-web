@@ -19,7 +19,7 @@ __sEnteteSms est une chaîne ANSI =
 	<SMS>
 	<authentication>
 	<username>chronod</username>
-	<password>sjk945j</password>
+	<password>XXXX</password>
 	</authentication>
 	%1
 	</SMS>
