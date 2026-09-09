@@ -437,8 +437,8 @@ constante
 	__RCS_CARTE__ 												= "CARD"
 	__RCS_CARROUSEL__ 										= "SLDR"
 
-	__RCS_CONTENU_CARD__										= "CARD"
-	__RCS_CONTENU_CAROUSEL__								= "CAROUSEL"
+	__RCS_CONTENU_CARD__										= "CARTE"
+	__RCS_CONTENU_CARROUSEL__								= "CARROUSEL"
 	__RCS_MAX_CARTES__										= 10
 	__RCS_MEDIA_HAUTEUR__									= "MEDIUM"
 	__RCS_MAX_BOUTONS_CARTE__								= 4
