@@ -1,0 +1,34 @@
+procédure NbrSmsRestant(pIdSms)
+
+
+
+sTexteRequete est une chaîne
+sdReqNbrSmsRestant est une Source de Données
+
+sTexteRequete =
+[
+	SELECT
+	cOUNT(IdBaseLigne) NbrRestant
+	from
+	ope_sms_envoi
+	WHERE
+	IdSms = %1 AND
+	Statut = '%2'
+]
+
+sTexteRequete = ChaîneConstruit(sTexteRequete,pIdSms,__SMS_STATUT_ENREGISTREE__)
+
+si pas HExécuteRequêteSQL(sdReqNbrSmsRestant, ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	renvoyer 0
+fin
+
+HLitPremier(sdReqNbrSmsRestant,hSansRafraîchir)
+si pas HEnDehors(sdReqNbrSmsRestant) alors
+	renvoyer sdReqNbrSmsRestant.NbrRestant	
+fin
+
+renvoyer 0
+
+fin:
+HAnnuleDéclaration(sdReqNbrSmsRestant)

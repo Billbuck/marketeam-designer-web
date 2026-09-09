@@ -1,0 +1,41 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] CalculeQuantitePause (<pIdSms>)
+//
+// Paramètres :
+// 	pIdSms : <indiquez ici le rôle de pIdSms>
+// Valeur de retour :
+// 	entier : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure CalculeQuantitePause(local pIdSms)
+
+nInd			est un entier
+nNbrOperation	est un entier
+nPaquetFixe		est un entier	// les paquets d'envoi toutes les 15 s liées aux opérations cadencés
+nPaquet			est un entier
+nCadenceMax		est un entier
+nCadence		est un entier
+
+nInd = _tabCadence.Cherche(tcLinéaire,"IdSms",pIdSms)
+
+si nInd > 0 alors
+	si _tabCadence[nInd].EstCadence = Vrai alors
+		renvoyer _tabCadence[nInd].Paquet
+	sinon
+		pour tout stCadence de _tabCadence
+			si stCadence.EstCadence = Vrai alors
+				nPaquetFixe += ArrondiSupérieur(stCadence.Paquet/stCadence.Pause*15,0)
+			sinon
+				nNbrOperation++
+			fin
+		fin
+		nCadenceMax 				= Arrondi(_nCadenceHoraireMax/240,0)
+		nCadence					= Max(0,(nCadenceMax - nPaquetFixe))// On retire à la cadence max le total des paquets fixe
+		nPaquet 					= Max(1,Arrondi(nCadence/nNbrOperation,0))
+		_tabCadence[nInd].Paquet	= nPaquet
+		renvoyer nPaquet
+	fin
+fin

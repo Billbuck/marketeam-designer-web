@@ -1,0 +1,58 @@
+
+structWsOperationSms est une Structure
+	DateHeurePriseEnCharge 	est une DateHeure // Va faire office de référence pour les relances en cas de plantage
+	IdClient				est un entier
+	IdContact				est un entier
+	MessageType				est un entier
+	EstSmsUnicode			est un booléen
+	ReferenceClient 		est une chaîne
+	Societe					est une chaîne
+	Contact					est une chaîne
+	Total					est un entier
+	tabIdSmsWebservice		est un tableau d'entiers
+fin
+
+
+__sEnteteSms est une chaîne ANSI =
+[
+	XML= 
+	<SMS>
+	<authentication>
+	<username>chronod</username>
+	<password>sjk945j</password>
+	</authentication>
+	%1
+	</SMS>
+]
+
+
+__sMessageSms est une chaîne ANSI =
+[
+	<message> 
+	<validityperiod>48:00</validityperiod>
+	<appid>%1</appid>
+	<sender>%2</sender>
+	<text>%3</text>
+	<binary>%4</binary>
+	<type>longsms</type>
+	<datacoding>%5</datacoding>
+	<recipients>
+	%6
+	</recipients> 
+	</message>
+]
+
+__sBaliseGSM est une chaîne ANSI =
+[
+	<gsm messageid="%1">%2</gsm>
+]
+
+__sUrlKannel est une chaîne = cpFonction.ValeurParametre("UrlKannel")
+
+
+__bEstRoutageModeProd 		est un booléen = INILit("PARAMETRES","EstRoutageModeProd","0",ComplèteRep(fRepExe()) + "CnxMySql.ini")
+__bEstWebserviceModeProd	est un booléen = INILit("PARAMETRES","EstWebserviceModeProd","0",ComplèteRep(fRepExe()) + "CnxMySql.ini")
+
+cpProjet.InitProjet()
+cpSms.InitSms()
+

@@ -1,0 +1,18 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// InitProjet ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure InitProjet()
+
+
+cpProjet.__sRepRacine		= cpFonction.ValeurParametre("rep_racine_marketeam")
+
+cpProjet.__sRepUpload		= cpFonction.ValeurParametre("repweb_uploads",prm_parametre.ValChaine..Nom)

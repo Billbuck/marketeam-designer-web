@@ -1,0 +1,48 @@
+procédure RelanceOperationDemarrage()
+
+sTexteRequete	est une chaîne
+sdReqDemarrage	est une Source de Données
+
+
+sTexteRequete =
+[
+	UPDATE
+		dos_operation
+	SET
+		dos_operation.Statut = '[%__Statut_Prise_En_Charge__%]'
+	WHERE
+		dos_operation.Statut = '[%__Statut_Distribution_En_Cours__%]'
+		AND dos_operation.TypeOperation = '[%__OPERATION_SMS__%]' 
+		AND dos_operation.DateEnvoiSouhaite = CURDATE() 
+		AND EXISTS (SELECT ope_sms_envoi.IdBaseLigne FROM ope_sms_envoi WHERE ope_sms_envoi.IdSms = dos_operation.IdOperation AND ope_sms_envoi.Statut = '[%__SMS_STATUT_ENREGISTREE__%]' LIMIT 1)
+]
+
+
+si pas sdReqDemarrage.ExécuteRequêteSQL(dos_operation..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour
+fin
+
+
+
+sTexteRequete =
+[
+	UPDATE
+	wbs_sms_envoi
+	SET
+	wbs_sms_envoi.Statut = '[%__SMS_STATUT_ENREGISTREE__%]',
+	wbs_sms_envoi.DateHeurePriseEnCharge = NULL
+	WHERE
+	wbs_sms_envoi.Statut = '[%__SMS_STATUT_PRISE_EN_CHARGE__%]'
+	AND wbs_sms_envoi.DateHeurePriseEnCharge IS NOT NULL
+	AND wbs_sms_envoi.DateHeureEnvoi IS NULL
+]
+
+si pas sdReqDemarrage.ExécuteRequêteSQL(wbs_sms_envoi..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour
+fin
+
+
+fin:
+sdReqDemarrage.AnnuleDéclaration()

@@ -1,0 +1,188 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//TacheParalleleWebservice (<pLigne>, <stWsOperationSms> est structWsOperationSms)
+//
+// Paramètres :
+// 	pLigne : <indiquez ici le rôle de pLigne>
+//	stWsOperationSms (structWsOperationSms) : <indiquez ici le rôle de stWsOperationSms>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure TacheParalleleWebservice(pLigne, stWsOperationSms est une structWsOperationSms)
+
+nPause							est un entier
+sTexteRequete					est une chaîne
+sTexteRequeteWebservice			est une chaîne
+sTexteUpdate					est une chaîne
+sdReqWebservice					est une Source de Données
+sdReqUpdate						est une Source de Données
+nQuantite						est un entier
+nCompteur						est un entier
+nTotalEnvoyé					est un entier
+nPaquet							est un entier
+sRouteur						est une chaîne
+sMessage						est une chaîne
+sPortable						est une chaîne
+nIdDernierIdSmsWebservice		est un entier
+sListeIdSmsWebserviceOk			est une chaîne
+sListeIdSmsWebserviceErreur		est une chaîne	// Liste des SMsEnvoi traités pour mettre à jour la date d'envoi en une seule fois
+
+
+// Requête de sélection
+sTexteRequete = [
+	SELECT 
+	wbs_sms_envoi.IdSmsWebservice,
+	wbs_sms_envoi.LeFrom,
+	wbs_sms_envoi.Message,
+	wbs_sms_envoi.Portable 
+	FROM wbs_sms_envoi 
+	WHERE 
+	wbs_sms_envoi.Statut = '[%__SMS_STATUT_PRISE_EN_CHARGE__%]'
+	AND wbs_sms_envoi.DateHeureEnvoi IS NULL
+	AND wbs_sms_envoi.IdSmsWebservice > %1
+	AND wbs_sms_envoi.DateHeurePriseEnCharge = '%2' 
+	LIMIT %3
+]
+
+
+
+// pour éviter un lancement en dehors des plages autorisées
+//	**********************************************************
+nPause 		= CaluleDureePause(DateHeureVersChaîne(stWsOperationSms.DateHeurePriseEnCharge), Vrai)
+ExécuteThreadPrincipal(AfficheStatut,pLigne,stWsOperationSms.DateHeurePriseEnCharge,Vrai,nPause)
+ThreadPause(nPause)
+nQuantite	= CalculeQuantitePause(DateHeureVersChaîne(stWsOperationSms.DateHeurePriseEnCharge))
+ExécuteThreadPrincipal(AfficheStatut,pLigne,DateHeureVersChaîne(stWsOperationSms.DateHeurePriseEnCharge),Faux)
+//dhDebut = DateHeureSys()
+//	**********************************************************
+
+sTexteRequeteWebservice = ChaîneConstruit(sTexteRequete, nIdDernierIdSmsWebservice, stWsOperationSms.DateHeurePriseEnCharge, nQuantite)
+
+si pas HExécuteRequêteSQL(sdReqWebservice, wbs_sms_envoi..Connexion, hRequêteSansCorrection, sTexteRequeteWebservice) alors
+	Trace("Erreur requête Mailing personnalisé " , sTexteRequete , HErreurInfo(hErrComplet))
+	retour
+fin
+
+sdReqWebservice.LitPremier(hSansRafraîchir)
+
+tantque pas sdReqWebservice.EnDehors()
+	nCompteur			= 0
+	nPaquet++
+	si EstPair(pLigne) alors
+		sRouteur = EstPair(nPaquet) ? __ROUTEUR_CMTELECOM__ sinon __ROUTEUR_INFOBIP__
+	sinon
+		sRouteur = EstImpair(nPaquet) ? __ROUTEUR_CMTELECOM__ sinon __ROUTEUR_INFOBIP__
+	fin
+
+	pour tout sdReqWebservice
+		nIdDernierIdSmsWebservice = sdReqWebservice.IdSmsWebservice
+		nTotalEnvoyé++
+		nCompteur++
+
+		SectionCritiqueDébut("UnicodeVersGsm")
+		sMessage	= UnicodeVersGsm(sdReqWebservice.Message)
+		SectionCritiqueFin("UnicodeVersGsm")
+
+		sPortable	= sdReqWebservice.Portable
+
+		si __bEstWebserviceModeProd = Faux alors
+			sListeIdSmsWebserviceOk += [","] + sdReqWebservice.IdSmsWebservice
+		sinon
+			// Préparer les conditions pour la colonne Statut
+			SectionCritiqueDébut("EnvoiRequeteWebservice")
+			si EnvoiRequeteWebservice(sdReqWebservice.IdSmsWebservice, sdReqWebservice.LeFrom, sMessage, sPortable, stWsOperationSms.EstSmsUnicode, stWsOperationSms.MessageType, sRouteur) alors
+				sListeIdSmsWebserviceOk += [","] + sdReqWebservice.IdSmsWebservice
+			sinon
+				sListeIdSmsWebserviceErreur += [","] + sdReqWebservice.IdSmsWebservice
+			fin
+			SectionCritiqueFin("EnvoiRequeteWebservice")
+		fin
+	fin
+
+	ExécuteThreadPrincipal(MiseAJourJauge, pLigne, nCompteur)
+
+	si __bEstWebserviceModeProd = Faux alors
+		sTexteUpdate = [
+			UPDATE wbs_sms_envoi
+			SET
+			wbs_sms_envoi.DateHeureEnvoi		= NOW(),
+			wbs_sms_envoi.DateHeureReception	= NOW(), 
+			wbs_sms_envoi.Statut				= '[%__SMS_STATUT_DELIVERED__%]',
+			wbs_sms_envoi.Routeur				= '[%sRouteur%]'
+			WHERE wbs_sms_envoi.IdSmsWebservice IN ([%sListeIdSmsWebserviceOk%])
+		]
+		si pas sdReqUpdate.ExécuteRequêteSQL(wbs_sms_envoi..Connexion, hRequêteSansCorrection, sTexteUpdate) alors
+			Trace("Erreur requête Date Update " , sTexteRequete , HErreurInfo(hErrComplet))
+			retour
+		fin
+	sinon
+		si sListeIdSmsWebserviceOk <> "" alors
+			sTexteUpdate = [
+				UPDATE wbs_sms_envoi
+				SET
+				wbs_sms_envoi.DateHeureEnvoi	= NOW(),
+				wbs_sms_envoi.Routeur 			= '[%sRouteur%]',
+				wbs_sms_envoi.Statut 			= IF(wbs_sms_envoi.Statut > '[%__SMS_STATUT_ENVOYE__%]', wbs_sms_envoi.Statut, '[%__SMS_STATUT_ENVOYE__%]')
+				WHERE IdSmsWebservice IN ([%sListeIdSmsWebserviceOK%])
+			]
+
+			// Exécuter la mise à jour en une seule fois
+			si pas sdReqUpdate.ExécuteRequêteSQL(wbs_sms_envoi..Connexion, hRequêteSansCorrection, sTexteUpdate) alors
+				Info("Erreur requête mise à jour", sTexteUpdate)
+				retour
+			fin
+		fin
+
+		si sListeIdSmsWebserviceErreur <> "" alors
+			sTexteUpdate = [
+				UPDATE wbs_sms_envoi
+				SET
+				wbs_sms_envoi.DateHeureEnvoi	= NOW(),
+				wbs_sms_envoi.Routeur 			= '[%sRouteur%]',
+				wbs_sms_envoi.Statut 			= '[%__SMS_STATUT_ERREUR_ENVOI__%]'
+				WHERE Iwbs_sms_envoi.dSmsWebservice IN ([%sListeIdSmsWebserviceErreur%])
+			]
+
+			// Exécuter la mise à jour en une seule fois
+			si pas sdReqUpdate.ExécuteRequêteSQL(wbs_sms_envoi..Connexion, hRequêteSansCorrection, sTexteUpdate) alors
+				Info("Erreur requête mise à jour", sTexteUpdate)
+				retour
+			fin
+		fin
+
+
+	fin
+
+
+	sListeIdSmsWebserviceOk		= ""
+	sListeIdSmsWebserviceErreur	= ""
+
+	si nTotalEnvoyé >= stWsOperationSms.Total alors sortir
+
+	//	**********************************************************
+	nPause = CaluleDureePause(DateHeureVersChaîne(stWsOperationSms.DateHeurePriseEnCharge), Faux)
+	ExécuteThreadPrincipal(AfficheStatut,pLigne,DateHeureVersChaîne(stWsOperationSms.DateHeurePriseEnCharge),Vrai,nPause)
+	ThreadPause(nPause)
+	nQuantite = CalculeQuantitePause(DateHeureVersChaîne(stWsOperationSms.DateHeurePriseEnCharge))
+	ExécuteThreadPrincipal(AfficheStatut,pLigne,DateHeureVersChaîne(stWsOperationSms.DateHeurePriseEnCharge),Faux)
+	//	**********************************************************
+
+	sTexteRequeteWebservice = ChaîneConstruit(sTexteRequete, nIdDernierIdSmsWebservice, stWsOperationSms.DateHeurePriseEnCharge, nQuantite)
+
+	si pas sdReqWebservice.ExécuteRequêteSQL(ope_sms_envoi..Connexion, hRequêteSansCorrection, sTexteRequeteWebservice) alors
+		Trace("Erreur requête Mailing personnalisé " , sTexteRequete , HErreurInfo(hErrComplet))
+		retour
+	sinon
+		sdReqWebservice.LitPremier(hSansRafraîchir)
+	fin
+
+fin
+
+
+fin:
+
+sdReqWebservice.AnnuleDéclaration()
+sdReqUpdate.AnnuleDéclaration()

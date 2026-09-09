@@ -1,0 +1,16 @@
+procédure LogErreurNotification(pTypeErreur, pIdSmsNotification, pNumero, pOperateur, pMessageErreur)
+
+nInd est un entier
+
+BTN_Erreur..Visible = Vrai
+nInd = TableAjouteLigne(tblErreur)
+
+tblErreur[nInd].colDate				= DateSys()
+tblErreur[nInd].colHeure			= HeureSys()
+tblErreur[nInd].colErreur			= pTypeErreur
+tblErreur[nInd].colIdOperation		= 0
+tblErreur[nInd].colIdBaseLigne		= pIdSmsNotification
+tblErreur[nInd].colPortable			= pNumero
+tblErreur[nInd].colOperateur		= pOperateur
+tblErreur[nInd].colMessageErreur	= pMessageErreur
+

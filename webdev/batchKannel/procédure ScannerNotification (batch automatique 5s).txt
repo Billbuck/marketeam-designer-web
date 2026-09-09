@@ -1,0 +1,108 @@
+
+// Paramètres d’automatisme de la procédure :
+
+// - Type d’automatisme : Timer/Procédure différée.
+// - Nombre d’exécutions : infini.
+// - Espacement entre les appels : 5 secondes (00:00:05:00 au format HH:MM:SS:CC).
+// - Comportement lors des appels suivants de la procédure : déclencher un nouveau timer.
+// - Mode de démarrage : démarrage automatique après le code d’initialisation de la fenêtre, avec un délai de 5 secondes (00:00:05:00).
+
+// La procédure est donc configurée pour démarrer automatiquement 5 secondes après le code d’initialisation de la fenêtre, puis se répéter toutes les 5 secondes, sans limite du nombre d’exécutions. Les appels suivants de la procédure déclenchent un nouveau timer.
+
+
+procédure ScannerNotification()
+
+nInd						est un entier
+sTexteRequete				est une chaîne
+sdReqNotification			est une Source de Données
+sdReqUpdateNotification		est une Source de Données
+sTexteRequeteUpdate			est une chaîne
+sTexteRequeteErreurEnvoi	est une chaîne
+sPortable					est une chaîne
+sRouteur					est une chaîne
+
+sTexteRequete =
+[
+	SELECT
+		ope_sms_notification.IdSmsNotification,
+		clt_client.Societe,
+		concat_ws(' ',clt_contact.Civilite,clt_contact.Prenom,clt_contact.Nom) contact,
+		ope_sms_notification.IdOperation,
+		ope_sms_notification.Portable,
+		ope_sms_notification.LeFrom, 
+		ope_sms_notification.Message,
+		ope_sms_notification.EstSmsUnicode
+	FROM
+		ope_sms_notification 
+		LEFT JOIN clt_contact ON ope_sms_notification.IdContact = clt_contact.IdContact 
+		LEFT JOIN clt_client ON ope_sms_notification.IdClient = clt_client.IdClient
+	WHERE
+		ope_sms_notification.DateHeureEnvoi IS NULL AND
+		ope_sms_notification.Statut = '[%__SMS_STATUT_ENREGISTREE__%]'
+]
+
+// retirer dans sTesxteRequete "ope_sms_notification.Statut IS NULL" après correction de l'enregistrement d'une notification ou actuellement le statut initial est NULL au lieu de __SMS_STATUT_ENREGISTREE__
+
+sTexteRequeteUpdate =
+[
+	UPDATE 
+		ope_sms_notification 
+	SET 
+		DateHeureEnvoi='%1',
+		Statut = IF(ope_sms_notification.Statut > '%2',ope_sms_notification.Statut, '%2'),
+		Routeur = '%3'
+	WHERE
+		IdSmsNotification = %4 
+]
+
+sTexteRequeteErreurEnvoi =
+[
+	UPDATE 
+		ope_sms_notification
+	SET 
+		DateHeureEnvoi='%1',
+		Statut = '%2',
+		Routeur = '%3'
+	WHERE
+		IdSmsNotification=%4 AND
+		Statut = '%5'
+]
+
+si pas sdReqNotification.ExécuteRequêteSQL(ope_sms_notification..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête ScannerNotification" , sTexteRequete , HErreurInfo(hErrComplet))
+	retour
+fin
+
+pour tout sdReqNotification
+	nInd = tblNotification.AjouteLigne()
+
+	sPortable = sdReqNotification.Portable
+//	sMessage = remplace(sdReqNotification.Message,RC,Caract(10))
+
+//	sRouteur = EstIMPair(nInd) ? __ROUTEUR_CMTELECOM__ SINON __ROUTEUR_INFOBIP__
+	sRouteur = EstPair(nInd) ? __ROUTEUR_CMTELECOM__ sinon __ROUTEUR_INFOBIP__
+
+// (pIdSmsNotification, pFrom, pMessage, pNumero, pEstUnicode, pOperateur)
+
+	si EnvoiRequeteNotification(sdReqNotification.IdSmsNotification, sdReqNotification.LeFrom, sdReqNotification.Message, sPortable, sdReqNotification.EstSmsUnicode, sRouteur) alors
+		sTexteRequete = ChaîneConstruit(sTexteRequeteUpdate, DateHeureSys()[[ à 14]], __SMS_STATUT_ENVOYE__, sRouteur, sdReqNotification.IdSmsNotification)
+	sinon
+		sTexteRequete = ChaîneConstruit(sTexteRequeteErreurEnvoi, DateHeureSys()[[ à 14]], __SMS_STATUT_SENT_ERROR__, sRouteur, sdReqNotification.IdSmsNotification, __SMS_STATUT_ENREGISTREE__)
+	fin
+
+	si pas sdReqUpdateNotification.ExécuteRequêteSQL(ope_sms_notification..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+		Trace("Erreur requête ScannerNotification" , sTexteRequete , HErreurInfo(hErrComplet))
+//		RETOUR
+	fin
+
+
+	tblNotification[nInd].COL_Societe		= sdReqNotification.Societe
+	tblNotification[nInd].COL_Contact		= sdReqNotification.Contact
+	tblNotification[nInd].COL_Portable		= sdReqNotification.Portable
+	tblNotification[nInd].COL_Date 			= DateHeureSys()
+fin
+
+
+fin:
+sdReqNotification.AnnuleDéclaration()
+sdReqUpdateNotification.AnnuleDéclaration()

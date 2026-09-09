@@ -1,0 +1,102 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] EnvoiRequeteInfobip (<pXml>, <pIdSms>)
+//
+// Paramètres :
+//	pXml : <indiquez ici le rôle de pXml>
+//	pIdSms : <indiquez ici le rôle de pIdProgrammation>
+// Valeur de retour :
+// 	booléen : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure EnvoiRequeteNotification(pIdSmsNotification, pFrom, pMessage, pNumero, pEstUnicode, pOperateur)
+
+nInd						est un entier, utile
+sUsername, sPassword, sUrl	sont des chaînes
+sLeFrom						est une chaîne
+sReponseKannel				est une chaîne
+sParamRetourIB				est une chaîne
+sParamRetourCM				est une chaîne
+
+sParamRetourIB = Remplace([
+?sms=%p&date=%t&status=%d&detail=%#smpp#message-state#
+&Mode=Notification
+&routeur=[%__ROUTEUR_INFOBIP__%]
+&IdSmsNotification=[%pIdSmsNotification%]
+&EstUnicode=[%pEstUnicode%]
+&price=%#smpp#ib-price#&operator=%#smpp#ib-operator#"
+],RC,"")
+
+sParamRetourCM = Remplace([
+?sms=%p&date=%t&status=%d&detail=%#smpp#dlr_err#
+&Mode=Notification
+&routeur=[%__ROUTEUR_CMTELECOM__%]
+&IdSmsNotification=[%pIdSmsNotification%]
+&EstUnicode=[%pEstUnicode%]
+&operator=%#smpp#operator#"
+],RC,"")
+
+
+HTTPCréeFormulaire("kannel")
+selon pOperateur
+	cas __ROUTEUR_INFOBIP__
+		sUsername 	= "ib-notification"
+		sPassword 	= "pwd"
+		sUrl 		= _sUrlKannelRetour + sParamRetourIB
+//		sUrl 		= _sUrlKannelRetour + "?sms=%p&date=%t&status=%d&detail=%#smpp#message-state#&routeur="+__ROUTEUR_INFOBIP__+"&IdSms="+pIdSms+"&IdBaseLigne="+pIdBaseLigne+"&EstNotification="+pEstNotification+"&price=%#smpp#ib-price#&operator=%#smpp#ib-operator#"
+
+		pMessage = Remplace(pMessage,"36XXX",__IB_SHORTCODE_38691_NOTIFICATION__)
+		sLeFrom 	= (pFrom = "") ? __IB_SHORTCODE_38691_NOTIFICATION__ sinon ChaîneVersUTF8(pFrom)
+
+
+	cas __ROUTEUR_CMTELECOM__
+		sUsername 	= "cm-notification"
+		sPassword 	= "pwd"
+		sUrl 		=  _sUrlKannelRetour + sParamRetourCM
+//		sUrl 		=  _sUrlKannelRetour + "?sms=%p&date=%t&status=%d&detail=%#smpp#dlr_err#&routeur="+__ROUTEUR_CMTELECOM__+"&IdSms="+pIdSms+"&IdBaseLigne="+pIdBaseLigne+"&EstNotification="+pEstNotification+"&operator=%#smpp#operator#"
+
+		// GESTION DU STOP PUB
+		pMessage = Remplace(pMessage,"36XXX",__CM_SHORTCODE_38141_NOTIFICATION__)
+		sLeFrom 	= (pFrom = "") ? __CM_SHORTCODE_38141_NOTIFICATION__ sinon ChaîneVersUTF8(pFrom)
+
+	autre cas
+		renvoyer Faux
+fin
+
+
+HTTPAjouteParamètre("kannel","username",sUsername)
+HTTPAjouteParamètre("kannel","password",sPassword)
+HTTPAjouteParamètre("kannel","to", "+" + pNumero)
+HTTPAjouteParamètre("kannel","text",ChaîneVersUTF8(pMessage))
+HTTPAjouteParamètre("kannel","from",sLeFrom)
+HTTPAjouteParamètre("kannel","dlr-mask","23")
+HTTPAjouteParamètre("kannel","charset","UTF-8")
+HTTPAjouteParamètre("kannel","coding",(pEstUnicode = Faux) ? "0" sinon "2")
+HTTPAjouteParamètre("kannel","dlr-url",sUrl)
+
+
+// On attend au maximum 5 minutes
+HTTPTimeOut(6000)
+
+si HTTPEnvoieFormulaire("kannel",__sUrlKannel,httpGet) alors
+
+	sReponseKannel = HTTPDonneRésultat(httpEntête)
+
+	si Contient(sReponseKannel,"Accepted",SansCasse) alors
+		renvoyer Vrai
+	sinon
+	 	ExécuteThreadPrincipal(LogErreurNotification,"Erreur Réponse Kannel",pIdSmsNotification,pNumero,pOperateur,sReponseKannel)
+		renvoyer Faux
+	fin
+
+sinon
+
+	ExécuteThreadPrincipal(LogErreurNotification,"Erreur délai de réponse Kannel",pIdSmsNotification, pNumero,pOperateur,ErreurInfo())
+
+	renvoyer Faux
+
+fin
+
+

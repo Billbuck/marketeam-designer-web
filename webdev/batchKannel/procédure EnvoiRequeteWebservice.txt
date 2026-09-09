@@ -1,0 +1,119 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] EnvoiRequeteInfobip (<pXml>, <pIdSms>)
+//
+// Paramètres :
+//	pXml : <indiquez ici le rôle de pXml>
+//	pIdSms : <indiquez ici le rôle de pIdProgrammation>
+// Valeur de retour :
+// 	booléen : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure EnvoiRequeteWebservice(local pIdSmsWebservice, local pFrom, local pMessage, local pNumero, local pEstUnicode, local pMessageType, local pOperateur)
+
+nInd						est un entier, utile
+sUsername, sPassword, sUrl	sont des chaînes
+sLeFrom						est une chaîne
+sReponseKannel				est une chaîne
+sParamRetourIB		 		est une chaîne
+sParamRetourCM		 		est une chaîne
+
+sParamRetourIB = Remplace([
+?sms=%p&date=%t&status=%d&detail=%#smpp#message-state#
+&Mode=Webservice
+&routeur=[%__ROUTEUR_INFOBIP__%]
+&IdSmsWebservice=[%pIdSmsWebservice%]
+&MessageType=[%(pMessageType="M") ? "Marketing" sinon "Notification"%]
+&EstUnicode=[%pEstUnicode%]
+&price=%#smpp#ib-price#&operator=%#smpp#ib-operator#"
+],RC,"")
+
+sParamRetourCM = Remplace([
+?sms=%p&date=%t&status=%d&detail=%#smpp#dlr_err#
+&Mode=Webservice
+&routeur=[%__ROUTEUR_CMTELECOM__%]
+&IdSmsWebservice=[%pIdSmsWebservice%]
+&MessageType=[%(pMessageType="M") ? "Marketing" sinon "Notification"%]
+&EstUnicode=[%pEstUnicode%]
+&operator=%#smpp#operator#"
+],RC,"")
+
+si pMessageType = "M" _et_ (EnModeTest() _ou_ cpConnexion.__sConnexion = __CNX_DEV__) alors
+	renvoyer Vrai
+fin
+
+
+HTTPCréeFormulaire("kannel")
+selon pOperateur
+	cas __ROUTEUR_INFOBIP__
+		sUsername 	= (pMessageType = "M") ? "ib-marketing" sinon "ib-notification"
+		sPassword 	= "pwd"
+		sUrl 		= _sUrlKannelRetour + sParamRetourIB
+//		sUrl 		= _sUrlKannelRetour + "?sms=%p&date=%t&status=%d&detail=%#smpp#message-state#&routeur="+__ROUTEUR_INFOBIP__+"&IdSms="+pIdSms+"&IdBaseLigne="+pIdBaseLigne+"&EstNotification="+pEstNotification+"&price=%#smpp#ib-price#&operator=%#smpp#ib-operator#"
+
+		// GESTION DU STOP PUB
+		si pMessageType = "M" alors
+			pMessage 	= Remplace(pMessage,"36XXX",__IB_SHORTCODE_36173_MARKETING__)
+			sLeFrom 	= (pFrom = "") ? __IB_SHORTCODE_36173_MARKETING__ sinon ChaîneVersUTF8(pFrom)
+		sinon
+			pMessage = Remplace(pMessage,"36XXX",__IB_SHORTCODE_38691_NOTIFICATION__)
+			sLeFrom 	= (pFrom = "") ? __IB_SHORTCODE_38691_NOTIFICATION__ sinon ChaîneVersUTF8(pFrom)
+		fin
+
+
+	cas __ROUTEUR_CMTELECOM__
+		sUsername 	= (pMessageType = "M") ? "cm-marketing" sinon "cm-notification"
+		sPassword 	= "pwd"
+		sUrl 		=  _sUrlKannelRetour + sParamRetourCM
+//		sUrl 		=  _sUrlKannelRetour + "?sms=%p&date=%t&status=%d&detail=%#smpp#dlr_err#&routeur="+__ROUTEUR_CMTELECOM__+"&IdSms="+pIdSms+"&IdBaseLigne="+pIdBaseLigne+"&EstNotification="+pEstNotification+"&operator=%#smpp#operator#"
+
+		// GESTION DU STOP PUB
+		si pMessageType = "M" alors
+			pMessage = Remplace(pMessage,"36XXX",__CM_SHORTCODE_36047_MARKETING__)
+			sLeFrom 	= (pFrom = "") ? __CM_SHORTCODE_36047_MARKETING__ sinon ChaîneVersUTF8(pFrom)
+		sinon
+			pMessage = Remplace(pMessage,"36XXX",__CM_SHORTCODE_38082_NOTIFICATION__)
+			sLeFrom 	= (pFrom = "") ? __CM_SHORTCODE_38082_NOTIFICATION__ sinon ChaîneVersUTF8(pFrom)
+		fin
+
+	autre cas
+		renvoyer Faux
+fin
+
+
+HTTPAjouteParamètre("kannel","username",sUsername)
+HTTPAjouteParamètre("kannel","password",sPassword)
+HTTPAjouteParamètre("kannel","to", "+" + pNumero)
+HTTPAjouteParamètre("kannel","text",ChaîneVersUTF8(pMessage))
+HTTPAjouteParamètre("kannel","from",sLeFrom)
+HTTPAjouteParamètre("kannel","dlr-mask","23")
+HTTPAjouteParamètre("kannel","charset","UTF-8")
+HTTPAjouteParamètre("kannel","coding",(pEstUnicode = Faux) ? "0" sinon "2")
+HTTPAjouteParamètre("kannel","dlr-url",sUrl)
+
+
+// On attend au maximum 5 minutes
+HTTPTimeOut(60000)
+
+si HTTPEnvoieFormulaire("kannel",__sUrlKannel,httpGet) alors
+
+	sReponseKannel = HTTPDonneRésultat(httpEntête)
+
+	si Contient(sReponseKannel,"Accepted",SansCasse) alors
+		renvoyer Vrai
+	sinon
+	 	ExécuteThreadPrincipal(LogErreurWebService, "Erreur Réponse Kannel", pIdSmsWebservice, pNumero, pOperateur, sReponseKannel)
+		renvoyer Faux
+	fin
+
+sinon
+
+	ExécuteThreadPrincipal(LogErreurWebService, "Erreur délai de réponse Kannel", pIdSmsWebservice, pNumero, pOperateur,ErreurInfo())
+
+	renvoyer Faux
+
+fin
+
+

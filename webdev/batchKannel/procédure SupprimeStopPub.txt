@@ -1,0 +1,44 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//SupprimeStopPub (<pIdSms>)
+//
+// Paramètres :
+//	pIdSms : <indiquez ici le rôle de pIdSmsProgrammation>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure SupprimeStopPub(pIdSms, pIdClient)
+
+sTexteRequete	est une chaîne
+sdReqStopPub	est une Source de Données
+
+sTexteRequete =
+[
+	UPDATE ope_sms_envoi
+	JOIN dos_base_ligne ON ope_sms_envoi.IdBaseLigne = dos_base_ligne.IdBaseLigne
+	JOIN dos_base_ligne_erreur ON dos_base_ligne.Portable = dos_base_ligne_erreur.Portable
+	SET 
+	  ope_sms_envoi.Statut = '[%__SMS_STATUT_STOP_PUB__%]',
+	  ope_sms_envoi.DateHeureEnvoi = NOW()
+	WHERE 
+	  ope_sms_envoi.IdSms = [%pIdSms%]
+	  AND (
+	    dos_base_ligne_erreur.TypeErreur IN ('[%__ERREUR_STOP_PUB__%]', '[%__ERREUR_STOP_PUB_OPERATEUR__%]')
+	    OR (
+	      dos_base_ligne_erreur.TypeErreur = '[%__ERREUR_STOP_PUB_CLIENT__%]'
+	      AND dos_base_ligne_erreur.IdClient = [%pIdClient%]
+	    )
+	  );
+]
+
+
+si pas sdReqStopPub.ExécuteRequêteSQL(ope_sms_envoi..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur SupprimeStopPub " , sTexteRequete , ErreurInfo(errComplet))
+fin
+
+
+fin:
+sdReqStopPub.AnnuleDéclaration()

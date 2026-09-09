@@ -1,0 +1,35 @@
+procédure CaluleDureePause(local pIdSms, local pStart est un booléen) //pDebut est une dateheure, pCadencePause)
+
+dhProchainEnvoi	est une DateHeure
+dProchainJour	est une Date
+nDureePause		est un entier
+duPause			est une Durée
+dhDebut			est une DateHeure	= DateHeureSys()
+nInd			est un entier
+nPause			est un entier
+
+nInd = _tabCadence.Cherche(tcLinéaire,"IdSms",pIdSms)
+si nInd > 0 alors
+	si _tabCadence[nInd].EstCadence = Vrai alors
+		nPause = _tabCadence[nInd].Pause
+	sinon
+		nPause = (pStart = Faux) ? 15 sinon 0
+	fin
+fin
+
+si cpConnexion.__sConnexion <> __CNX_DEV__ _et_ (HeureSys() > "2030" _ou_ HeureSys() < "0900" _ou_ DateVersJour(DateSys()) = 7) alors
+//	dProchainJour	= ExécuteThreadPrincipal(cpFonction.CalculeDateOuvrée,datesys(),1,Vrai)
+	dProchainJour	= cpFonction.CalculeDateOuvrée(DateSys(),1,Vrai)
+	dhProchainEnvoi	= dProchainJour + "0900"
+	duPause			= ChaîneVersDurée(DateHeureDifférence(DateHeureSys(),dhProchainEnvoi),duréeCentième)
+sinon
+	dhProchainEnvoi 			= dhDebut
+	dhProchainEnvoi..Seconde 	+= nPause
+	duPause 					= ChaîneVersDurée(DateHeureDifférence(dhDebut,dhProchainEnvoi),duréeCentième)
+fin
+
+nDureePause = duPause..EnMillisecondes / 10
+
+renvoyer nDureePause
+
+

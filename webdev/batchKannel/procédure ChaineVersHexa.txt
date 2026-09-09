@@ -1,0 +1,17 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] ChaineVersHexa (<pChaine> est chaîne UNICODE)
+//
+// Paramètres :
+//	pChaine (chaîne UNICODE) : <indiquez ici le rôle de pChaine>
+// Valeur de retour :
+// 	variant : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure ChaineVersHexa(pChaine est une chaîne Unicode)
+
+
+renvoyer Remplace(BufferVersHexa(pChaine,2),[" ",RC],"")
+

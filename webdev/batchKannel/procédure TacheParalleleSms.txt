@@ -1,0 +1,237 @@
+procédure TacheParalleleSms(pLigne, pIdSms, pMessage, pLeFrom, pSelect, pEstPersonnalise, pEstCliquezIci)
+
+
+sTexteRequetePourOperation		est une chaîne
+sTexteRequeteOperation			est une chaîne
+
+sTexteRequetePourUpdate			est une chaîne
+sTexteRequeteUpdate				est une chaîne
+
+sTexteRequetePourUpdateTest		est une chaîne
+sTexteRequeteUpdateTest			est une chaîne
+
+sTexteRequetePourErreurEnvoi	est une chaîne
+sTexteRequeteErreurEnvoi		est une chaîne
+
+sdReqEnvoi						est une Source de Données
+sdReqDate						est une Source de Données
+nCompteur						est un entier
+sListeIdBaseLigne				est une chaîne	// Liste des SMsEnvoi traités pour mettre à jour la date d'envoi en une seule fois
+sListeIdBaseLigneEnErreur		est une chaîne	// Liste des SMsEnvoi traités pour mettre à jour la date d'envoi en une seule fois
+nIdDernierIdBaseLigne			est un entier
+nPause							est un entier
+sMessage						est une chaîne
+sPortable						est une chaîne
+nPaquet							est un entier
+nTotalEnvoyé					est un entier
+nTotalErreur					est un entier
+sRouteur						est une chaîne
+nQuantite						est un entier
+taaBaseChamp					est un tableau associatif de structBaseChamp
+
+SectionCritiqueDébut("ChargeTaaDosBaseChamp")
+taaBaseChamp = ChargeTaaDosBaseChamp(pIdSms)
+SectionCritiqueFin("ChargeTaaDosBaseChamp")
+
+sTexteRequetePourOperation =
+[
+	SELECT
+	dos_base_ligne.IdBaseLigne,
+	%1
+	Portable Sms
+	FROM
+	dos_base_ligne, ope_sms_envoi
+	WHERE ope_sms_envoi.IdSms = %2 AND
+	dos_base_ligne.IdBaseLigne = ope_sms_envoi.IdBaseLigne AND
+	dos_base_ligne.IdBaseLigne > %3 AND
+	ope_sms_envoi.Statut='%4'
+	ORDER BY dos_base_ligne.IdBaseLigne
+	LIMIT %5
+]
+
+sTexteRequetePourUpdate =
+[
+	UPDATE LOW_PRIORITY
+	ope_sms_envoi 
+	SET 
+	DateHeureEnvoi='%1',
+	Statut = IF(ope_sms_envoi.Statut > '%4',ope_sms_envoi.Statut, '%4'),
+	Routeur = '%5'
+	WHERE
+	IdSms = %2 AND 
+	IdBaseLigne IN(%3);
+]
+
+sTexteRequetePourErreurEnvoi =
+[
+	UPDATE LOW_PRIORITY
+	ope_sms_envoi
+	SET 
+	DateHeureEnvoi='%5',
+	Statut = '%1',
+	Routeur = '%6'
+	WHERE
+	IdSms = %2 AND 
+	IdBaseLigne IN(%3) AND
+	Statut = '%4';
+	
+	UPDATE LOW_PRIORITY
+	dos_operation
+	SET dos_operation.NbrErreur = (dos_operation.NbrErreur + %7)
+	WHERE
+	dos_operation.IdOperation = %2
+
+]
+
+sTexteRequetePourUpdateTest =
+[
+	UPDATE LOW_PRIORITY
+	ope_sms_envoi
+	SET
+	ope_sms_envoi.DateHeureEnvoi = NOW(),
+	ope_sms_envoi.DateHeurePriseEnCharge = NOW(),
+	ope_sms_envoi.DateHeureReception = NOW(),
+	ope_sms_envoi.Statut = '[%__SMS_STATUT_DELIVERED__%]',
+	ope_sms_envoi.Routeur = 'DV',
+	ope_sms_envoi.Operateur	= 'DEV'
+	WHERE
+	IdSms = [%pIdSms%] AND
+	IdBaseLigne IN(%1);
+	
+	UPDATE LOW_PRIORITY
+	dos_operation
+	SET 
+	dos_operation.NbrDiffusion 	= (dos_operation.NbrDiffusion + %2),
+	dos_operation.NbrDelivre	= (dos_operation.NbrDelivre + %2)
+	WHERE
+	dos_operation.IdOperation = [%pIdSms%]
+]
+
+
+
+si pEstPersonnalise = Vrai alors
+	SectionCritiqueDébut("Remplissage")
+	pSelect = RemplissageDesBalises(pMessage, pEstCliquezIci, taaBaseChamp) + " LeMessageAEnvoyer,"
+	SectionCritiqueFin("Remplissage")
+fin
+
+
+
+//dhDebut = DateHeureSys()
+
+// pour éviter un lancement en dehors des plages autorisées
+//	**********************************************************
+nPause 		= CaluleDureePause(pIdSms, Vrai)
+ExécuteThreadPrincipal(AfficheStatut,pLigne,pIdSms,Vrai,nPause)
+ThreadPause(nPause)
+nQuantite	= CalculeQuantitePause(pIdSms)
+ExécuteThreadPrincipal(AfficheStatut,pLigne,pIdSms,Faux)
+//dhDebut = DateHeureSys()
+//	**********************************************************
+
+
+sTexteRequeteOperation = ChaîneConstruit(sTexteRequetePourOperation, pSelect, pIdSms, nIdDernierIdBaseLigne, __SMS_STATUT_ENREGISTREE__, nQuantite)
+
+
+si pas sdReqEnvoi.ExécuteRequêteSQL(ope_sms_envoi..Connexion, hRequêteSansCorrection, sTexteRequeteOperation) alors
+	Trace("Erreur requête Mailing personnalisé " , sTexteRequeteOperation , HErreurInfo(hErrComplet))
+	retour
+fin
+
+sdReqEnvoi.LitPremier()
+
+tantque pas sdReqEnvoi.EnDehors()
+	nCompteur		= 0
+	nTotalEnvoyé		= 0
+	nTotalErreur		= 0
+	nPaquet++
+	si EstPair(pLigne) alors
+		sRouteur = EstPair(nPaquet) ? __ROUTEUR_CMTELECOM__ sinon __ROUTEUR_INFOBIP__
+	sinon
+		sRouteur = EstImpair(nPaquet) ? __ROUTEUR_CMTELECOM__ sinon __ROUTEUR_INFOBIP__
+	fin
+
+	pour tout sdReqEnvoi
+		nIdDernierIdBaseLigne = sdReqEnvoi.IdBaseLigne
+		nCompteur++
+
+		si pEstPersonnalise = Vrai alors
+			sMessage = sdReqEnvoi.LeMessageAEnvoyer
+		sinon
+			sMessage = pMessage
+		fin
+
+		sMessage = UnicodeVersGsm(sMessage)
+
+		sPortable = sdReqEnvoi.SMS
+
+		si __bEstRoutageModeProd = Faux alors
+			sListeIdBaseLigne += [","] + sdReqEnvoi.IdBaseLigne
+			nTotalEnvoyé++
+		sinon
+			SectionCritiqueDébut("EnvoiRequeteKannel")
+			si EnvoiRequeteKannel(pIdSms, sdReqEnvoi.IdBaseLigne, pLeFrom, sMessage, sPortable, sRouteur) alors
+				nTotalEnvoyé++
+				sListeIdBaseLigne += [","] + sdReqEnvoi.IdBaseLigne
+			sinon
+				nTotalErreur++
+				sListeIdBaseLigneEnErreur += [","] + sdReqEnvoi.IdBaseLigne
+			fin
+			SectionCritiqueFin("EnvoiRequeteKannel")
+		fin
+	fin
+
+
+	ExécuteThreadPrincipal(MiseAJourJauge,pLigne, nCompteur)
+
+	si __bEstRoutageModeProd = Faux alors
+		sTexteRequeteUpdateTest = ChaîneConstruit(sTexteRequetePourUpdateTest, sListeIdBaseLigne, nTotalEnvoyé)
+		si pas sdReqDate.ExécuteRequêteSQL(ope_sms_envoi..Connexion, hRequêteSansCorrection, sTexteRequeteUpdateTest) alors
+			Trace("Erreur requête Date Update " , sTexteRequeteUpdateTest , HErreurInfo(hErrComplet))
+			retour
+		fin
+	sinon
+		si sListeIdBaseLigne <> "" alors
+			sTexteRequeteUpdate = ChaîneConstruit(sTexteRequetePourUpdate,DateHeureSys()[[à 14]],pIdSms, sListeIdBaseLigne, __SMS_STATUT_ENVOYE__,sRouteur, nTotalEnvoyé)
+			si pas sdReqDate.ExécuteRequêteSQL(ope_sms_envoi..Connexion, hRequêteSansCorrection, sTexteRequeteUpdate) alors
+				Trace("Erreur requête Date Update " , sTexteRequeteUpdate , HErreurInfo(hErrComplet))
+				retour
+			fin
+		fin
+
+		si sListeIdBaseLigneEnErreur <> "" alors
+			sTexteRequeteErreurEnvoi = ChaîneConstruit(sTexteRequetePourErreurEnvoi,__SMS_STATUT_ERREUR_ENVOI__,pIdSms, sListeIdBaseLigneEnErreur, __SMS_STATUT_ENREGISTREE__,DateHeureSys()[[à 14]],sRouteur, nTotalErreur)
+			si pas sdReqDate.ExécuteRequêteSQL(ope_sms_envoi..Connexion, hRequêteSansCorrection, sTexteRequeteErreurEnvoi) alors
+				Trace("Erreur requête sTexteRequeteErreurEnvoi" , sTexteRequeteErreurEnvoi , HErreurInfo(hErrComplet))
+				retour
+			fin
+		fin
+	fin
+
+
+	sListeIdBaseLigne 			= ""
+	sListeIdBaseLigneEnErreur	= ""
+
+//	**********************************************************
+	nPause = CaluleDureePause(pIdSms, Faux)
+	ExécuteThreadPrincipal(AfficheStatut,pLigne,pIdSms,Vrai,nPause)
+	ThreadPause(nPause)
+	nQuantite	= CalculeQuantitePause(pIdSms)
+	ExécuteThreadPrincipal(AfficheStatut,pLigne,pIdSms,Faux)
+//	**********************************************************
+
+	sTexteRequeteOperation = ChaîneConstruit(sTexteRequetePourOperation, pSelect, pIdSms, nIdDernierIdBaseLigne, __SMS_STATUT_ENREGISTREE__, nQuantite)
+
+	si pas sdReqEnvoi.ExécuteRequêteSQL(ope_sms_envoi..Connexion, hRequêteSansCorrection, sTexteRequeteOperation) alors
+		Trace("Erreur requête Mailing personnalisé " , sTexteRequeteOperation , HErreurInfo(hErrComplet))
+		retour
+	sinon
+		sdReqEnvoi.LitPremier()
+	fin
+
+fin
+
+
+fin:
+sdReqEnvoi.AnnuleDéclaration()
+sdReqDate.AnnuleDéclaration()

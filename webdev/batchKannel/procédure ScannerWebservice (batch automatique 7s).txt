@@ -1,0 +1,156 @@
+
+// Paramètres d’automatisme de la procédure :
+
+// - Type d’automatisme : Timer/Procédure différée.
+// - Nombre d’exécutions : infini.
+// - Espacement entre les appels : 10 secondes (00:00:10:00 au format HH:MM:SS:CC).
+// - Comportement lors des appels suivants de la procédure : ignorer le timer et exécuter immédiatement la procédure.
+// - Mode de démarrage : démarrage automatique après le code d’initialisation de la fenêtre, avec un délai de 7 secondes (00:00:07:00).
+
+procédure ScannerWebservice()
+
+// Variables
+nInd 				est un entier
+sTexteRequete		est une chaîne
+sdReqWbs			est une Source de Données
+sdReqMaj			est une Source de Données
+stWsOperationSms 	est une structWsOperationSms
+dhPrisEnCharge		est une DateHeure = DateHeureSys()
+stCadence			est une StructCadence
+dhNow 				est une chaîne = DateHeureVersChaîne(DateHeureSys(),"AAAAMMJJHHmmSS")
+
+// Étape 1 : Marquage des STOP PUB avant toute sélection, si MessageType = 'M' (Marketing)
+sTexteRequete = [
+	UPDATE wbs_sms_envoi
+		JOIN dos_base_ligne_erreur ON dos_base_ligne_erreur.Portable = wbs_sms_envoi.Portable
+	SET 
+		wbs_sms_envoi.Statut = '[%__SMS_STATUT_STOP_PUB__%]',
+		wbs_sms_envoi.DateHeureEnvoi = NOW()
+	WHERE 
+		wbs_sms_envoi.Statut = '[%__SMS_STATUT_ENREGISTREE__%]'
+		AND wbs_sms_envoi.DateHeurePriseEnCharge IS NULL
+		AND wbs_sms_envoi.DateHeureEnvoiSouhaite <= '[%dhNow%]'
+		AND wbs_sms_envoi.MessageType = 'M'
+		AND (
+			dos_base_ligne_erreur.TypeErreur IN ('[%__ERREUR_STOP_PUB__%]', '[%__ERREUR_STOP_PUB_OPERATEUR__%]')
+			OR (
+			dos_base_ligne_erreur.TypeErreur = '[%__ERREUR_STOP_PUB_CLIENT__%]'
+			AND dos_base_ligne_erreur.IdClient = wbs_sms_envoi.IdClient
+			)
+		)
+]
+
+si pas sdReqMaj.ExécuteRequêteSQL(wbs_sms_envoi.Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur lors du filtrage STOP PUB")
+	retour
+fin
+
+// Étape 2 : Sélection des SMS valides à traiter
+sTexteRequete = [
+	SELECT
+		wbs_sms_envoi.IdClient,
+		wbs_sms_envoi.IdContact,
+		wbs_sms_envoi.MessageType,
+		wbs_sms_envoi.EstSmsUnicode,
+		wbs_sms_envoi.ReferenceClient,
+		clt_client.Societe,
+		CONCAT_WS(' ', clt_contact.Civilite, clt_contact.Prenom, clt_contact.Nom) AS contact,
+		GROUP_CONCAT(wbs_sms_envoi.IdSmsWebservice) ListeIdSmsWebservice,
+		SUM(wbs_sms_envoi.MontantHT) TotalHT,
+		COUNT(wbs_sms_envoi.IdSmsWebservice) Total
+	FROM
+		wbs_sms_envoi
+		JOIN clt_client ON wbs_sms_envoi.IdClient = clt_client.IdClient
+		JOIN clt_contact ON wbs_sms_envoi.IdContact = clt_contact.IdContact
+	WHERE
+		wbs_sms_envoi.Statut = '[%__SMS_STATUT_ENREGISTREE__%]'
+		AND wbs_sms_envoi.DateHeurePriseEnCharge IS NULL
+		AND wbs_sms_envoi.DateHeureEnvoiSouhaite <= '[%dhNow%]'
+	GROUP BY
+		wbs_sms_envoi.IdClient,
+		wbs_sms_envoi.IdContact,
+		wbs_sms_envoi.MessageType,
+		wbs_sms_envoi.EstSmsUnicode,
+		wbs_sms_envoi.ReferenceClient
+]
+
+// Exécution de la requête de sélection
+si pas sdReqWbs.ExécuteRequêteSQL(wbs_sms_envoi.Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur Requête")
+	retour
+fin
+
+// Étape 3 : Traitement des enregistrements
+pour tout sdReqWbs
+	dhPrisEnCharge.Seconde++
+	VariableRAZ(stWsOperationSms)
+	stWsOperationSms.DateHeurePriseEnCharge	= dhPrisEnCharge
+	stWsOperationSms.IdClient				= sdReqWbs.IdClient
+	stWsOperationSms.IdContact				= sdReqWbs.IdContact
+	stWsOperationSms.Societe				= sdReqWbs.Societe
+	stWsOperationSms.Contact				= sdReqWbs.Contact
+	stWsOperationSms.EstSmsUnicode			= sdReqWbs.EstSmsUnicode
+	stWsOperationSms.ReferenceClient		= sdReqWbs.ReferenceClient
+	stWsOperationSms.MessageType			= sdReqWbs.MessageType
+	stWsOperationSms.Total					= sdReqWbs.Total
+	ChaîneVersTableau(sdReqWbs.ListeIdSmsWebservice, stWsOperationSms.tabIdSmsWebservice, ",")
+
+	sTexteRequete = [
+ 		UPDATE wbs_sms_envoi
+		SET DateHeurePriseEnCharge = '[%dhPrisEnCharge[[A 14]]%]',
+		Statut = '[%__SMS_STATUT_PRISE_EN_CHARGE__%]'
+		WHERE IdSmsWebservice IN ([%sdReqWbs.ListeIdSmsWebservice%])
+	]
+
+	// Exécution de la requête d'update
+	si pas sdReqMaj.ExécuteRequêteSQL(wbs_sms_envoi.Connexion, hRequêteSansCorrection, sTexteRequete) alors
+		Info("Erreur Requête")
+		retour
+	fin
+
+	VariableRAZ(stCadence)
+
+	stCadence.IdSms			= DateHeureVersChaîne(dhPrisEnCharge)
+	stCadence.Dossier		= "Webservice"
+	stCadence.EstCadence	= 0
+	stCadence.Cadence		= 0
+	stCadence.Paquet		= 0
+	stCadence.Pause			= 0
+
+	_tabCadence.Ajoute(stCadence)
+
+	nInd									= tblKannel.AjouteLigne()
+
+	tblKannel[nInd].COL_Contact			= sdReqWbs.Contact
+	tblKannel[nInd].COL_Date				= DateHeureSys()
+	tblKannel[nInd].COL_Dossier			= "Webservice"
+	tblKannel[nInd].COL_Societe			= sdReqWbs.Societe
+	tblKannel[nInd].COL_Cadence			= 0
+	tblKannel[nInd].COL_Paquet				= 0
+	tblKannel[nInd].COL_Pause				= 0
+	tblKannel[nInd].COL_TotalHT			= sdReqWbs.TotalHT
+	tblKannel[nInd].COL_Commandé			= sdReqWbs.Total
+	tblKannel[nInd].COL_Jauge..BorneMax	= sdReqWbs.Total
+	tblKannel[nInd].COL_Envoyé				= sdReqWbs.Total
+	tblKannel[nInd].COL_Statut				= "En cours"
+
+	soit Tache = TâcheParallèleExécute(TacheParalleleWebservice,(nInd, stWsOperationSms))
+	TâcheParallèleExécuteAprès(Tache,TacheWebserviceTerminée,(nInd, DateHeureVersChaîne(dhPrisEnCharge)),tpoThreadPrincipal)
+
+	Ajoute(_tabTache,Tache)
+fin
+
+fin:
+sdReqWbs.AnnuleDéclaration()
+sdReqMaj.AnnuleDéclaration()
+
+	procédure interne TacheWebserviceTerminée(pLigne, pPrisEnCharge)
+		nPos est un entier
+		nPos = _tabCadence.Cherche(tcLinéaire,"IdSms",pPrisEnCharge)
+		si nPos > 0 alors
+			_tabCadence.Supprime(nPos)
+		fin
+		tblKannel[pLigne].COL_Statut		= "Terminée"
+		tblKannel[pLigne].COL_Reprise		= DateHeureSys()
+		tblKannel[pLigne].COL_Jauge		= 0
+	fin

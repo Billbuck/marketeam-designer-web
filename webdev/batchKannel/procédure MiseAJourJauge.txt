@@ -1,0 +1,5 @@
+procédure MiseAJourJauge(local pLigne, local nCompteur)
+
+tblKannel[pLigne].COL_Jauge += nCompteur
+tblKannel[pLigne].COL_Jauge..TexteJauge = tblKannel[pLigne].COL_Jauge
+//FenRepeint(FEN_Programmation)

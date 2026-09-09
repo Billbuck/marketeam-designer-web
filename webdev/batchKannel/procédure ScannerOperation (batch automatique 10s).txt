@@ -1,0 +1,131 @@
+
+// Paramètres d’automatisme de la procédure :
+
+// - Type d’automatisme : Timer/Procédure différée.
+// - Nombre d’exécutions : infini.
+// - Espacement entre les appels : 1 minute (00:01:00:00 au format HH:MM:SS:CC).
+// - Comportement lors des appels suivants de la procédure : ignorer le timer et exécuter immédiatement la procédure.
+// - Mode de démarrage : démarrage automatique après le code d’initialisation de la fenêtre, avec un délai de 10 secondes (00:00:10:00).
+
+
+procédure ScannerOperation()
+
+nInd				est un entier
+sTexteRequete		est une chaîne
+sdReqProg			est une Source de Données
+sMessage			est une chaîne Unicode
+sLeFrom				est une chaîne
+bEstPersonnalisé	est un booléen
+bEstCliquezIci		est un booléen
+sSelect				est une chaîne
+nNbrRestant			est un entier
+stCadence			est une StructCadence
+
+sTexteRequete =
+[
+	SELECT 
+		dos_operation.Statut,
+		dos_operation.TypeOperation,
+		dos_operation.Dossier,
+		dos_operation.IdOperation IdSms,
+		dos_operation.IdClientFacturation IdClient,
+		ope_sms.Cadence,
+		ope_sms.Paquet,
+		ope_sms.Pause,
+		clt_client.Societe,
+		CONCAT_WS(' ',clt_contact.Civilite,clt_contact.Prenom,clt_contact.Nom) contact,
+		dos_operation.NbrDestinataire,
+		dos_operation.MontantNetHT
+	FROM 
+		dos_operation
+		JOIN ope_sms ON dos_operation.IdOperation = ope_sms.IdSms
+		JOIN clt_client ON dos_operation.IdClient = clt_client.IdClient
+		JOIN clt_contact ON dos_operation.IdContact = clt_contact.IdContact
+	WHERE
+		dos_operation.TypeOperation = '[%__OPERATION_SMS__%]' AND
+		dos_operation.Statut = '[%__Statut_Prise_En_Charge__%]' AND
+		(((ope_sms.Cadence IS NULL OR ope_sms.Cadence = 0) AND dos_operation.DateEnvoiSouhaite = CURDATE()) OR ope_sms.Cadence > 0)
+]
+
+si pas sdReqProg.ExécuteRequêteSQL(dos_operation..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête Scanner" , sTexteRequete , HErreurInfo(hErrComplet))
+	retour
+fin
+
+
+pour tout sdReqProg
+	// On met à jour le statut de la programmation
+	si dos_operation.LitRecherchePremier(IdOperation, sdReqProg.IdSms) alors
+		dos_operation.Statut 					= __Statut_Distribution_En_Cours__
+		dos_operation.DateHeureModification 	= DateHeureSys()
+		dos_operation.UserModification		 	= "BatchDistributionEnCours"
+		si dos_operation.Modifie() alors
+			si ope_sms.LitRecherchePremier(IdSms, sdReqProg.IdSms) alors
+				sMessage			= ope_sms.Message
+				sLeFrom				= ope_sms.LeFrom
+				bEstPersonnalisé	= (dos_operation.EstCliquezIci) ? Vrai sinon ope_sms.EstSmsPersonnalise
+				bEstCliquezIci		= dos_operation.EstCliquezIci
+
+			fin
+		sinon
+			Erreur(HErreurInfo(hErrComplet))
+			retour
+		fin
+	fin
+
+	// On enlève les stop pub
+	SupprimeStopPub(sdReqProg.IdSms, sdReqProg.IdClient)
+
+	VariableRAZ(stCadence)
+
+	stCadence.IdSms	 	= sdReqProg.IdSms
+	stCadence.Dossier		= sdReqProg.Dossier
+	stCadence.EstCadence	= (sdReqProg.Cadence > 0)
+	stCadence.Cadence		= sdReqProg.Cadence
+	stCadence.Paquet		= sdReqProg.Paquet
+	stCadence.Pause		= (sdReqProg.Pause > 0) ? sdReqProg.Pause sinon 15
+
+	_tabCadence.Ajoute(stCadence)
+
+	nInd = tblKannel.AjouteLigne()
+
+	nNbrRestant 						= NbrSmsRestant(sdReqProg.IdSms)
+
+	tblKannel[nInd].COL_Contact  		= sdReqProg.Contact
+	tblKannel[nInd].COL_Date  			= DateHeureSys()
+	tblKannel[nInd].COL_Dossier 		= sdReqProg.Dossier
+	tblKannel[nInd].COL_Societe  		= sdReqProg.Societe
+	tblKannel[nInd].COL_Cadence  		= sdReqProg.Cadence
+	tblKannel[nInd].COL_Paquet  		= sdReqProg.Paquet
+	tblKannel[nInd].COL_Pause  		= sdReqProg.Pause
+	tblKannel[nInd].COL_TotalHT  		= sdReqProg.MontantNetHT
+	tblKannel[nInd].COL_Commandé  		= sdReqProg.NbrDestinataire
+	tblKannel[nInd].COL_Jauge..BorneMax = nNbrRestant
+	tblKannel[nInd].COL_Envoyé			= nNbrRestant
+	tblKannel[nInd].COL_Statut			= "En cours"
+
+
+	soit Tache = TâcheParallèleExécute(TacheParalleleSms,(nInd, sdReqProg.IdSms, sMessage, sLeFrom, sSelect, bEstPersonnalisé, bEstCliquezIci),tpoCopieComplèteContexteHFSQL)
+	TâcheParallèleExécuteAprès(Tache,TacheSmsterminée,(nInd, sdReqProg.IdSms),tpoThreadPrincipal)
+
+	Ajoute(_tabTache,Tache)
+
+fin
+
+	procédure interne TacheSmsterminée(pLigne, pIdSms)
+		nPos est un entier
+		nPos = _tabCadence.Cherche(tcLinéaire,"IdSms",pIdSms)
+		si nPos > 0 alors
+			_tabCadence.Supprime(nPos)
+		fin
+		tblKannel[pLigne].COL_Statut		= "Terminée"
+		tblKannel[pLigne].COL_Reprise		= DateHeureSys()
+		tblKannel[pLigne].COL_Jauge		= 0
+	fin
+
+fin:
+sdReqProg.AnnuleDéclaration()
+
+
+
+

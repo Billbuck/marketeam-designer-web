@@ -1,0 +1,27 @@
+procédure AfficheStatut(local pLigne, local pIdSms, local pEstEnPause, local pDuree=0)
+
+dhReprise est une DateHeure
+nInd est un entier
+nPaquet est un entier
+nPause est un entier
+
+nInd = _tabCadence.Cherche(tcLinéaire,"IdSms",pIdSms)
+si nInd > 0 alors
+	nPaquet = _tabCadence[nInd].Paquet
+	nPause 	= _tabCadence[nInd].Pause
+fin
+
+si pEstEnPause = Faux alors
+	tblKannel[pLigne].COL_Statut 	= "En cours"
+	tblKannel[pLigne].COL_Reprise 	= ""
+	tblKannel[pLigne].COL_Paquet	= nPaquet
+	tblKannel[pLigne].COL_Pause	= nPause
+sinon
+	dhReprise = DateHeureSys()
+	dhReprise..Seconde += pDuree/100
+
+	tblKannel[pLigne].COL_Statut 	= "En pause"
+	tblKannel[pLigne].COL_Reprise 	= dhReprise
+	tblKannel[pLigne].COL_Paquet	= nPaquet
+	tblKannel[pLigne].COL_Pause	= nPause
+fin

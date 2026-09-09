@@ -1,0 +1,56 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] EnvoiUnSms (<pPortable>, <pLeFrom>, <pLeMessageAEnvoyer>, <pIdTest>)
+//
+// Paramètres :
+//	pPortable : <indiquez ici le rôle de pPortable>
+//	pLeFrom : <indiquez ici le rôle de pLeFrom>
+//	pLeMessageAEnvoyer : <indiquez ici le rôle de pLeMessageAEnvoyer>
+//	pIdTest : <indiquez ici le rôle de pIdTest>
+// Valeur de retour :
+// 	chaîne ANSI : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure EnvoiUnSms(pPortable,pLeFrom,pLeMessageAEnvoyer, pIdTest)
+
+sXML est une chaîne ANSI
+RapportXml est un xmlDocument
+sStatut est une chaîne
+
+// On prépare la ligne du n° de téléphone
+sXML = ChaîneConstruit(__sBaliseGSM, pIdTest,  pPortable)
+
+// On prépare la ligne du message
+si cpSms.TestUnicodeSms(pLeMessageAEnvoyer) = Vrai alors
+	sXML = ChaîneConstruit(__sMessageSms,"Notification",  pLeFrom,"", ChaineVersHexa(pLeMessageAEnvoyer),"8",sXML)
+sinon
+	sXML = ChaîneConstruit(__sMessageSms,"Notification",  pLeFrom, URLEncode(ChaîneVersUTF8(Remplace(Remplace(Remplace(pLeMessageAEnvoyer,RC,Caract(10)),"&","&amp;"),"<","&lt;"))),"","0",sXML)
+fin
+
+// On fusionne l'en-tête avec le message qui est présent une seule fois dans ce cas
+sXML = ChaîneConstruit(__sEnteteSms, sXML)
+
+si HTTPRequête("http://api.infobip.com/api/v3/sendsms/xml","","",sXML," content=""text/html; charset=utf-8""") alors
+	RapportXml = XMLOuvre(HTTPDonneRésultat(httpRésultat), depuisChaîne)
+	
+	
+	
+	selon Abs(Val(RapportXml..NoeudRacine[1]..NoeudFils[1]..NoeudFils[1]..Texte))
+		
+		cas	0 		: sStatut = __SMS_STATUT_ENVOYE__
+		cas 13 		: sStatut = __SMS_STATUT_INVALID_NUMBER__
+		autre cas 	: sStatut = __SMS_STATUT_SENT_ERROR__
+	fin
+	
+	renvoyer sStatut
+fin
+
+renvoyer __SMS_STATUT_REQUETE_XML__
+
+
+
+
+
+
