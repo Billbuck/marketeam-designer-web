@@ -1,0 +1,214 @@
+
+// Paramètres d’automatisme de la procédure :
+
+// - Type d’automatisme : Timer/Procédure différée.
+// - Nombre d’exécutions : infini.
+// - Espacement entre les appels : 5 secondes (00:00:05:00 au format HH:MM:SS:CC).
+// - Comportement lors des appels suivants de la procédure : déclencher un nouveau timer.
+// - Mode de démarrage : démarrage automatique après le code d’initialisation de la fenêtre, avec un délai de 5 secondes (00:00:05:00).
+
+
+// Résumé : Traite la file des envois unitaires RCS (ope_rcs_unitaire).
+// Une seule tentative par ligne : DateHeureEnvoi est renseignée dans tous les cas,
+// la ligne ne repasse donc jamais dans le scanner.
+// Mode simulation (__bEstRoutageModeProd = Faux) : pas d'appel Infobip,
+// la ligne passe à envoyée avec MessageId = SIMUL-Id ; ContenuJson est toujours écrit.
+procédure ScannerUnitaire()
+
+nIdRcsUnitaire			est un entier
+sTexteRequete			est une chaîne
+sTexteRequeteUpdate		est une chaîne
+sTexteRequetePourProd	est une chaîne
+sTexteRequetePourSimul	est une chaîne
+sTexteRequetePourErreur	est une chaîne
+sdReqUnitaire			est une Source de Données
+sdReqUpdate				est une Source de Données
+stOperationRcs			est une structOperationRcs
+taaValeurChamp			est un tableau associatif de chaînes
+sCode					est une chaîne
+sCodeLanding			est une chaîne
+bEstTest				est un booléen
+sMessageId				est une chaîne
+sJsonMessage			est une chaîne
+sJsonPaquet				est une chaîne
+tabJsonMessage			est un tableau de chaînes
+tabResultat				est un tableau de structRcsEnvoiResultat
+bOk						est un booléen
+
+sTexteRequete =
+[
+	SELECT
+		ope_rcs_unitaire.IdRcsUnitaire,
+		ope_rcs_unitaire.IdOperation,
+		IFNULL(ope_rcs_unitaire.IdBaseLigne, 0) IdBaseLigne,
+		ope_rcs_unitaire.Portable,
+		IFNULL(ope_rcs_unitaire.CodeLanding, '') CodeLanding,
+		dos_operation.Dossier,
+		clt_client.Societe,
+		CONCAT_WS(' ', clt_contact.Civilite, clt_contact.Prenom, clt_contact.Nom) contact,
+		IFNULL(rcs_agent.SenderName, '') SenderName
+	FROM
+		ope_rcs_unitaire
+		LEFT JOIN dos_operation ON dos_operation.IdOperation = ope_rcs_unitaire.IdOperation
+		LEFT JOIN clt_client ON clt_client.IdClient = ope_rcs_unitaire.IdClient
+		LEFT JOIN clt_contact ON clt_contact.IdContact = ope_rcs_unitaire.IdContact
+		LEFT JOIN rcs_agent ON rcs_agent.IdRcsAgent = ope_rcs_unitaire.IdRcsAgent
+	WHERE
+		ope_rcs_unitaire.DateHeureEnvoi IS NULL AND
+		ope_rcs_unitaire.Statut = '[%__SMS_STATUT_ENREGISTREE__%]'
+	ORDER BY
+		ope_rcs_unitaire.IdRcsUnitaire
+]
+
+// Succès en production : retour Infobip complet
+// %1 date - %2 messageId - %3 bulkId - %4 groupeId - %5 groupeNom - %6 statutId - %7 statutNom - %8 json - %9 id
+sTexteRequetePourProd =
+[
+	UPDATE
+		ope_rcs_unitaire
+	SET
+		Statut = IF(Statut > '[%__SMS_STATUT_ENVOYE__%]', Statut, '[%__SMS_STATUT_ENVOYE__%]'),
+		DateHeureEnvoi = '%1',
+		MessageId = '%2',
+		BulkId = '%3',
+		StatutGroupeId = %4,
+		StatutGroupeNom = '%5',
+		StatutId = %6,
+		StatutNom = '%7',
+		ContenuJson = '%8'
+	WHERE
+		IdRcsUnitaire = %9
+]
+
+// Succès en simulation : pas de retour Infobip, le JSON est conservé pour contrôle
+// %1 date - %2 messageId - %3 json - %4 id
+sTexteRequetePourSimul =
+[
+	UPDATE
+		ope_rcs_unitaire
+	SET
+		Statut = '[%__SMS_STATUT_ENVOYE__%]',
+		DateHeureEnvoi = '%1',
+		MessageId = '%2',
+		ContenuJson = '%3'
+	WHERE
+		IdRcsUnitaire = %4
+]
+
+// Échec : une seule tentative, jamais de relance
+// %1 date - %2 json - %3 id
+sTexteRequetePourErreur =
+[
+	UPDATE
+		ope_rcs_unitaire
+	SET
+		Statut = '[%__SMS_STATUT_ERREUR_ENVOI__%]',
+		DateHeureEnvoi = '%1',
+		ContenuJson = '%2'
+	WHERE
+		IdRcsUnitaire = %3 AND
+		Statut = '[%__SMS_STATUT_ENREGISTREE__%]'
+]
+
+	// Échappe une chaîne pour insertion SQL : le JSON contient des \uXXXX,
+	// il faut doubler les antislashs avant les apostrophes
+	procédure interne EchappeSql(local pTexteSql)
+		pTexteSql = Remplace(pTexteSql, "\", "\\")
+		pTexteSql = Remplace(pTexteSql, "'", "''")
+		renvoyer pTexteSql
+	fin
+
+	// Passe la ligne en erreur d'envoi (statut 15)
+	procédure interne MajLigneErreur(pIdUnitaireErr, pJsonErr)
+		sReqErr est une chaîne
+		sReqErr = ChaîneConstruit(sTexteRequetePourErreur, DateHeureSys()[[à 14]], EchappeSql(pJsonErr), pIdUnitaireErr)
+		si pas sdReqUpdate.ExécuteRequêteSQL(ope_rcs_unitaire..Connexion, hRequêteSansCorrection, sReqErr) alors
+			Trace("Erreur requête ScannerUnitaire update erreur", sReqErr, HErreurInfo(hErrComplet))
+		fin
+	fin
+
+	// Ajoute la ligne traitée dans le tableau de la fenêtre
+	procédure interne AjouteLigneUnitaire(pStatutLigne, pMessageIdLigne)
+		nIndLigne est un entier
+		nIndLigne = tblRcsUnitaire.AjouteLigne()
+		tblRcsUnitaire[nIndLigne].COL_Date		= DateHeureSys()
+		tblRcsUnitaire[nIndLigne].COL_Dossier	= sdReqUnitaire.Dossier
+		tblRcsUnitaire[nIndLigne].COL_Societe	= sdReqUnitaire.Societe
+		tblRcsUnitaire[nIndLigne].COL_Contact	= sdReqUnitaire.Contact
+		tblRcsUnitaire[nIndLigne].COL_Portable	= sdReqUnitaire.Portable
+		tblRcsUnitaire[nIndLigne].COL_Statut	= pStatutLigne
+		tblRcsUnitaire[nIndLigne].COL_MessageId	= pMessageIdLigne
+	fin
+
+
+si pas sdReqUnitaire.ExécuteRequêteSQL(ope_rcs_unitaire..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête ScannerUnitaire", sTexteRequete, HErreurInfo(hErrComplet))
+	retour
+fin
+
+pour tout sdReqUnitaire
+	nIdRcsUnitaire = sdReqUnitaire.IdRcsUnitaire
+
+	// 1 - Contrôle : agent introuvable
+	si sdReqUnitaire.SenderName = "" alors
+		Trace("ScannerUnitaire : agent RCS introuvable (envoi unitaire " + nIdRcsUnitaire + ")")
+		MajLigneErreur(nIdRcsUnitaire, "")
+		AjouteLigneUnitaire("Erreur : agent introuvable", "")
+		continuer
+	fin
+
+	// 2 - Chargement de la structure de l'opération (ope_rcs + cartes + boutons)
+	stOperationRcs = Partage.ChargeStructOperationRcs(sdReqUnitaire.IdOperation)
+	si stOperationRcs.tabCarte..Occurrence = 0 alors
+		Trace("ScannerUnitaire : opération " + sdReqUnitaire.IdOperation + " sans carte (envoi unitaire " + nIdRcsUnitaire + ")")
+		MajLigneErreur(nIdRcsUnitaire, "")
+		AjouteLigneUnitaire("Erreur : opération sans carte", "")
+		continuer
+	fin
+
+	// 3 - Valeurs de fusion du destinataire (tableau vide si l'opération n'a pas de base)
+	si pas ChargeValeursFusion(sdReqUnitaire.IdOperation, sdReqUnitaire.IdBaseLigne, taaValeurChamp, sCode) alors
+		Trace("ScannerUnitaire : échec lecture des valeurs de fusion (envoi unitaire " + nIdRcsUnitaire + ")")
+		MajLigneErreur(nIdRcsUnitaire, "")
+		AjouteLigneUnitaire("Erreur : valeurs de fusion", "")
+		continuer
+	fin
+
+	// 4 - Construction du JSON Infobip (un paquet = un seul message)
+	bEstTest		= (sdReqUnitaire.CodeLanding <> "")
+	sCodeLanding	= bEstTest ? sdReqUnitaire.CodeLanding sinon sCode
+	sMessageId		= (__bEstRoutageModeProd = Faux) ? "SIMUL-" + nIdRcsUnitaire sinon "U" + nIdRcsUnitaire
+
+	sJsonMessage = cpRcs.ConstruitJsonMessage(stOperationRcs, sdReqUnitaire.SenderName, sdReqUnitaire.Portable, sMessageId, taaValeurChamp, sCodeLanding, bEstTest)
+	tabJsonMessage.SupprimeTout()
+	tabJsonMessage.Ajoute(sJsonMessage)
+	sJsonPaquet = cpRcs.ConstruitJsonPaquet(tabJsonMessage)
+
+	// 5 - Envoi ou simulation
+	si __bEstRoutageModeProd = Faux alors
+		sTexteRequeteUpdate = ChaîneConstruit(sTexteRequetePourSimul, DateHeureSys()[[à 14]], sMessageId, EchappeSql(sJsonPaquet), nIdRcsUnitaire)
+		si pas sdReqUpdate.ExécuteRequêteSQL(ope_rcs_unitaire..Connexion, hRequêteSansCorrection, sTexteRequeteUpdate) alors
+			Trace("Erreur requête ScannerUnitaire update simulation", sTexteRequeteUpdate, HErreurInfo(hErrComplet))
+		fin
+		AjouteLigneUnitaire("Simulation", sMessageId)
+	sinon
+		tabResultat.SupprimeTout()
+		bOk = cpRcs.EnvoieInfobip(sJsonPaquet, tabResultat)
+		si bOk _et_ tabResultat..Occurrence > 0 alors
+			sTexteRequeteUpdate = ChaîneConstruit(sTexteRequetePourProd, DateHeureSys()[[à 14]], tabResultat[1].MessageId, tabResultat[1].BulkId, tabResultat[1].StatutGroupeId, tabResultat[1].StatutGroupeNom, tabResultat[1].StatutId, tabResultat[1].StatutNom, EchappeSql(sJsonPaquet), nIdRcsUnitaire)
+			si pas sdReqUpdate.ExécuteRequêteSQL(ope_rcs_unitaire..Connexion, hRequêteSansCorrection, sTexteRequeteUpdate) alors
+				Trace("Erreur requête ScannerUnitaire update envoi", sTexteRequeteUpdate, HErreurInfo(hErrComplet))
+			fin
+			AjouteLigneUnitaire("Envoyée (" + tabResultat[1].StatutGroupeNom + ")", tabResultat[1].MessageId)
+		sinon
+			Trace("ScannerUnitaire : échec envoi Infobip (envoi unitaire " + nIdRcsUnitaire + ")")
+			MajLigneErreur(nIdRcsUnitaire, sJsonPaquet)
+			AjouteLigneUnitaire("Erreur envoi Infobip", sMessageId)
+		fin
+	fin
+fin
+
+
+fin:
+sdReqUnitaire.AnnuleDéclaration()
+sdReqUpdate.AnnuleDéclaration()

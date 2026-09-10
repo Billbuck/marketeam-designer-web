@@ -1,0 +1,146 @@
+procédure EnregistrementProgrammationSms(stOperation)
+
+
+sTexteRequete			est une chaîne
+sdReqSms				est une Source de Données
+sSelect					est une chaîne
+sLeMessage				est une chaîne
+bEstPersonnalisé		est un booléen
+sListeIdBase			est une chaîne
+nSmsTaille				est un entier
+nSmsNombre				est un entier
+
+sLeMessage				= Remplace(stOperation.stOperationSms.Message,RC,Caract(10))
+sLeMessage				= sLeMessage.Remplace("\","\\")
+
+bEstPersonnalisé		= (Contient(sLeMessage.Remplace("[" + Partage.LibelleBaseChamp(__CHAMP_CLIQUEZ_ICI__) + "]",""),"[") _ou_ Contient(sLeMessage.Remplace("[" + Partage.LibelleBaseChamp(__CHAMP_CLIQUEZ_ICI__) + "]",""),"]"))
+
+pour tout stBase de stOperation.tabBase
+	sListeIdBase += [","] + stBase.IdBase
+fin
+
+sTexteRequete = "DELETE FROM ope_sms_envoi WHERE IdSms = " + stOperation.IdOperation
+
+si pas sdReqSms.ExécuteRequêteSQL(ope_sms_envoi..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	<compile si TypeConfiguration <> Webservice>
+		Info("Erreur requête EnregistrementProgrammationSms 1 : " + HErreurInfo(hErrComplet))
+	<fin>
+	retour
+fin
+
+si bEstPersonnalisé = Vrai alors
+	sSelect			= RemplissageDesBalises(sLeMessage, stOperation.EstCliquezIci, stOperation.taaBaseChamp) + " TailleDuMessage"
+
+	sTexteRequete	=
+	[
+	INSERT INTO ope_sms_envoi (IdSms, IdBaseLigne, SmsTaille, SmsNombre, Statut)
+	SELECT [%stOperation.IdOperation%] 
+	, t.IdBaseLigne
+	, t.TailleDuMessage SmsTaille
+	, CalculNombreSms(t.TailleDuMessage) SmsNombre
+	,  '[%__SMS_STATUT_ENREGISTREE__%]' Statut
+	FROM
+	(SELECT
+		z.IdBaseligne,
+		[%sSelect%]
+	FROM
+		(SELECT * FROM dos_base_ligne WHERE IdBase IN ([%sListeIdBase%]) AND Portable IS NOT NULL GROUP BY Portable) AS z
+	) as t
+	]
+
+
+sinon
+
+	sTexteRequete = [
+	SELECT RetourneTailleSms([%Quotes(sLeMessage)%]) SmsTaille
+	]
+
+	si pas sdReqSms.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+		<compile si TypeConfiguration <> Webservice>
+			Info("Erreur requête EnregistrementProgrammationSms 2")
+		<fin>
+		retour
+	fin
+
+	sdReqSms.LitPremier(hSansRafraîchir)
+	si pas sdReqSms.EnDehors() alors
+		nSmsTaille = sdReqSms.SmsTaille
+	fin
+
+	sTexteRequete = [
+	SELECT CalculNombreSms([%nSmsTaille%]) SmsNombre
+	]
+
+	si pas sdReqSms.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+		<compile si TypeConfiguration <> Webservice>
+			Info("Erreur requête EnregistrementProgrammationSms 3")
+		<fin>
+		retour
+	fin
+
+	sdReqSms.LitPremier(hSansRafraîchir)
+	si pas sdReqSms.EnDehors() alors
+		nSmsNombre = sdReqSms.SmsNombre
+	fin
+
+
+	sTexteRequete	=
+	[
+	INSERT INTO ope_sms_envoi (IdSms, IdBaseLigne, SmsTaille, SmsNombre, Statut)
+	SELECT [%stOperation.IdOperation%] 
+	, t.IdBaseLigne
+	, [%nSmsTaille%] SmsTaille
+	, [%nSmsNombre%] SmsNombre
+	,  '[%__SMS_STATUT_ENREGISTREE__%]' Statut
+	FROM
+	(SELECT
+		z.IdBaseLigne
+	FROM
+		(SELECT * FROM dos_base_ligne WHERE IdBase IN ([%sListeIdBase%]) AND Portable IS NOT NULL GROUP BY Portable) AS z
+	) AS t
+	]
+
+fin
+
+si pas sdReqSms.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	<compile si TypeConfiguration <> Webservice>
+		 Info("Erreur requête")
+	<fin>
+	retour
+fin
+
+
+
+fin:
+sdReqSms.AnnuleDéclaration()
+
+
+
+	procédure interne RemplissageDesBalises(sMessage, pEstCliquezIci, taaBaseChamp)
+
+		sListeChamps	est une chaîne
+		sSelectRetour	est une chaîne
+
+		pour tout stBaseChamp, sLibelle de taaBaseChamp
+			si Contient(sMessage,"[" + sLibelle + "]") alors
+				sListeChamps += [","] + sLibelle
+			fin
+		fin
+
+		sSelectRetour = "'" + Remplace(sMessage,"'","''") + "'"
+
+		pour toute chaînes sLibelle de sListeChamps séparée par ","
+			sSelectRetour = "REPLACE(" + sSelectRetour + ",'[" + sLibelle + "]', IFNULL(" + taaBaseChamp[sLibelle].Champ + ",''))"
+		fin
+
+		si pEstCliquezIci alors
+			si Contient(sMessage,"[" + __CHAMP_CLIQUEZ_ICI__ + "]") alors
+				sSelectRetour = "REPLACE(" + sSelectRetour + ",'[" + __CHAMP_CLIQUEZ_ICI__ + "]', IFNULL(" + __CHAMP_CLIQUEZ_ICI__ + ",'XXXXXX'))"
+			fin
+		fin
+
+
+		sSelectRetour = "RetourneTailleSms(" +sSelectRetour +")"
+
+		renvoyer sSelectRetour
+	fin

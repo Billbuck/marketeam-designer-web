@@ -1,0 +1,92 @@
+// Résumé : Charge les valeurs de personnalisation d'UN destinataire (dos_base_ligne)
+// pour la fusion des champs [Libellé] par cpRcs.FusionneTexte.
+// Syntaxe :
+//[ <Résultat> = ] ChargeValeursFusion (<pIdOperation>, <pIdBaseLigne>, <taaValeurChamp>, <sCode>)
+//
+// Paramètres :
+//	pIdOperation : opération concernée (pour trouver la base et ses champs)
+//	pIdBaseLigne : enregistrement de dos_base_ligne à lire - si 0, premier enregistrement de la base
+//	taaValeurChamp : rempli par la procédure - Libellé -> valeur du destinataire
+//	sCode : rempli par la procédure - dos_base_ligne.Code (code Cliquez-ici du destinataire)
+// Valeur de retour :
+// 	booléen : Faux uniquement sur erreur SQL.
+//	Une opération sans base n'est PAS une erreur : tableau vide, code vide, renvoie Vrai
+//	(test non personnalisé).
+procédure ChargeValeursFusion(pIdOperation, pIdBaseLigne, taaValeurChamp est un tableau associatif de chaînes, sCode)
+
+sTexteRequete		est une chaîne
+sSelect				est une chaîne
+sdReqFusion			est une Source de Données
+taaBaseChamp		est un tableau associatif de structBaseChamp
+stBaseChamp			est une structBaseChamp
+sLibelle			est une chaîne
+
+taaValeurChamp.SupprimeTout()
+sCode = ""
+
+// Correspondance Libellé -> nom de colonne de dos_base_ligne
+taaBaseChamp = ChargeTaaDosBaseChamp(pIdOperation)
+
+si taaBaseChamp..Occurrence = 0 alors
+	// Opération sans base : test non personnalisé, ce n'est pas une erreur
+	renvoyer Vrai
+fin
+
+// Liste des colonnes à lire : le Code (Cliquez-ici) + les colonnes des champs de la base
+sSelect = "dos_base_ligne.Code"
+pour tout stBaseChamp, sLibelle de taaBaseChamp
+	sSelect += ", dos_base_ligne." + stBaseChamp.Champ
+fin
+
+si pIdBaseLigne > 0 alors
+	sTexteRequete =
+	[
+		SELECT
+			%1
+		FROM
+			dos_base_ligne
+		WHERE
+			dos_base_ligne.IdBaseLigne = %2
+	]
+	sTexteRequete = ChaîneConstruit(sTexteRequete, sSelect, pIdBaseLigne)
+sinon
+	sTexteRequete =
+	[
+		SELECT
+			%1
+		FROM
+			dos_base_ligne
+			JOIN dos_base ON dos_base.IdBase = dos_base_ligne.IdBase
+		WHERE
+			dos_base.IdOperation = %2
+		ORDER BY
+			dos_base_ligne.IdBaseLigne
+		LIMIT 1
+	]
+	sTexteRequete = ChaîneConstruit(sTexteRequete, sSelect, pIdOperation)
+fin
+
+si pas sdReqFusion.ExécuteRequêteSQL(clt_client..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête ChargeValeursFusion", sTexteRequete, HErreurInfo(hErrComplet))
+	renvoyer Faux
+fin
+
+sdReqFusion.LitPremier()
+si sdReqFusion.EnDehors() alors
+	// Base sans enregistrement : pas de personnalisation, ce n'est pas une erreur
+	renvoyer Vrai
+fin
+
+sCode = sdReqFusion.Code
+
+pour tout stBaseChamp, sLibelle de taaBaseChamp
+	taaValeurChamp[sLibelle] = {"sdReqFusion." + stBaseChamp.Champ, indRubrique}
+fin
+
+// Balise [Code] : permet la fusion du lien Cliquez-ici dans un repli SMS
+taaValeurChamp[__CHAMP_CLIQUEZ_ICI__] = sCode
+
+renvoyer Vrai
+
+fin:
+sdReqFusion.AnnuleDéclaration()

@@ -1,0 +1,55 @@
+// Résumé : Charge la correspondance Libellé -> colonne de dos_base_ligne pour une opération.
+// Copie conforme de la procédure du même nom de batchKannel.
+// Syntaxe :
+//[ <Résultat> = ] ChargeTaaDosBaseChamp (<pIdOperation>)
+//
+// Paramètres :
+//	pIdOperation : opération concernée
+// Valeur de retour :
+// 	tableau associatif de structBaseChamp : clé = Libellé du champ
+//
+procédure ChargeTaaDosBaseChamp(local pIdOperation)
+
+
+sTexteRequete		est une chaîne
+sdReqDosBaseChamp	est une Source de Données
+stBaseChamp			est une structBaseChamp
+taaBaseChamp		est un tableau associatif de structBaseChamp
+
+sTexteRequete =
+[
+SELECT
+	Champ,
+	Libelle,
+	Ordre,
+	Type
+FROM 
+	dos_base_champ
+	join dos_base on dos_base.IdBase = dos_base_champ.IdBase
+WHERE 
+	dos_base.IdOperation = [%pIdOperation%]
+ORDER BY 
+	Ordre
+]
+
+
+si pas sdReqDosBaseChamp.ExécuteRequêteSQL(clt_client..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+	renvoyer Faux
+fin
+
+
+sdReqDosBaseChamp.LitPremier(hSansRafraîchir)
+tantque pas sdReqDosBaseChamp.EnDehors()
+	VariableRAZ(stBaseChamp)
+	stBaseChamp.Champ	= sdReqDosBaseChamp.Champ
+	stBaseChamp.Ordre	= sdReqDosBaseChamp.Ordre
+	stBaseChamp.Type	= sdReqDosBaseChamp.Type
+	taaBaseChamp[sdReqDosBaseChamp.Libelle] = stBaseChamp
+	sdReqDosBaseChamp.LitSuivant()
+fin
+
+renvoyer taaBaseChamp
+
+fin:
+sdReqDosBaseChamp.AnnuleDéclaration()

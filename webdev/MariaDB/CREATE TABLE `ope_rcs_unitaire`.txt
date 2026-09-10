@@ -2,6 +2,7 @@ CREATE TABLE `ope_rcs_unitaire` (
 	`IdRcsUnitaire` INT(11) NOT NULL AUTO_INCREMENT,
 	`IdOperation` INT(11) NOT NULL COMMENT 'Un envoi unitaire appartient toujours à une opération',
 	`IdBaseLigne` INT(11) NULL DEFAULT NULL COMMENT 'Enregistrement de dos_base_ligne pour les champs de fusion - NULL = premier enregistrement de la base',
+	`CodeLanding` VARCHAR(10) NULL DEFAULT NULL COMMENT 'Code de test tmp_structure de la landing page - si renseigné bEstTest, sinon Code du destinataire' COLLATE 'utf8mb4_unicode_ci',
 	`IdRcsAgent` INT(11) NOT NULL COMMENT 'Agent RCS utilisé - voir rcs_agent',
 	`IdClient` INT(11) NULL DEFAULT NULL,
 	`IdContact` INT(11) NULL DEFAULT NULL,
