@@ -1,0 +1,44 @@
+// Résumé : Passe en statut Stop Pub les destinataires d'une opération RCS présents
+// dans dos_base_ligne_erreur (stop pub global, opérateur, ou client de l'opération).
+// Copie de la version Kannel adaptée à ope_rcs_envoi.
+// Syntaxe :
+//SupprimeStopPub (<pIdRcs>, <pIdClient>)
+//
+// Paramètres :
+//	pIdRcs : opération concernée
+//	pIdClient : client de facturation (stop pub propres au client)
+// Valeur de retour :
+// 	Aucune
+//
+procédure SupprimeStopPub(pIdRcs, pIdClient)
+
+sTexteRequete	est une chaîne
+sdReqStopPub	est une Source de Données
+
+sTexteRequete =
+[
+	UPDATE ope_rcs_envoi
+	JOIN dos_base_ligne ON ope_rcs_envoi.IdBaseLigne = dos_base_ligne.IdBaseLigne
+	JOIN dos_base_ligne_erreur ON dos_base_ligne.Portable = dos_base_ligne_erreur.Portable
+	SET 
+	  ope_rcs_envoi.Statut = '[%__SMS_STATUT_STOP_PUB__%]',
+	  ope_rcs_envoi.DateHeureEnvoi = NOW()
+	WHERE 
+	  ope_rcs_envoi.IdRcs = [%pIdRcs%]
+	  AND (
+	    dos_base_ligne_erreur.TypeErreur IN ('[%__ERREUR_STOP_PUB__%]', '[%__ERREUR_STOP_PUB_OPERATEUR__%]')
+	    OR (
+	      dos_base_ligne_erreur.TypeErreur = '[%__ERREUR_STOP_PUB_CLIENT__%]'
+	      AND dos_base_ligne_erreur.IdClient = [%pIdClient%]
+	    )
+	  );
+]
+
+
+si pas sdReqStopPub.ExécuteRequêteSQL(ope_rcs_envoi..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur SupprimeStopPub " , sTexteRequete , ErreurInfo(errComplet))
+fin
+
+
+fin:
+sdReqStopPub.AnnuleDéclaration()

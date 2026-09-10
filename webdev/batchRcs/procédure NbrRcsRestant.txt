@@ -1,0 +1,37 @@
+// Résumé : Nombre de destinataires restant à envoyer pour une opération RCS
+// (lignes de ope_rcs_envoi au statut enregistrée). Calquée sur NbrSmsRestant.
+// Petite déviation signalée : Trace au lieu de Info sur erreur SQL
+// (pas de boîte de dialogue bloquante dans le batch).
+procédure NbrRcsRestant(pIdRcs)
+
+
+sTexteRequete est une chaîne
+sdReqNbrRcsRestant est une Source de Données
+
+sTexteRequete =
+[
+	SELECT
+	COUNT(IdBaseLigne) NbrRestant
+	FROM
+	ope_rcs_envoi
+	WHERE
+	IdRcs = %1 AND
+	Statut = '%2'
+]
+
+sTexteRequete = ChaîneConstruit(sTexteRequete,pIdRcs,__SMS_STATUT_ENREGISTREE__)
+
+si pas HExécuteRequêteSQL(sdReqNbrRcsRestant, ope_rcs_envoi..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête NbrRcsRestant", sTexteRequete, HErreurInfo(hErrComplet))
+	renvoyer 0
+fin
+
+HLitPremier(sdReqNbrRcsRestant,hSansRafraîchir)
+si pas HEnDehors(sdReqNbrRcsRestant) alors
+	renvoyer sdReqNbrRcsRestant.NbrRestant	
+fin
+
+renvoyer 0
+
+fin:
+HAnnuleDéclaration(sdReqNbrRcsRestant)

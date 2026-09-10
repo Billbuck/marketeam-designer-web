@@ -1,0 +1,6 @@
+// Résumé : Avance la jauge d'une opération dans tblRcs, copie de la version Kannel.
+// Appelée depuis TacheParalleleRcs via ExécuteThreadPrincipal après chaque paquet.
+procédure MiseAJourJauge(local pLigne, local nCompteur)
+
+tblRcs[pLigne].COL_Jauge += nCompteur
+tblRcs[pLigne].COL_Jauge..TexteJauge = tblRcs[pLigne].COL_Jauge

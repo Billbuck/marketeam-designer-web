@@ -2,6 +2,9 @@
 
 _tabTache			est un tableau de TâchesParallèles
 _nCadenceHoraireMax	est un entier
+_nRcsValiditeHeures	est un entier
+_sRcsFenetreDebut	est une chaîne
+_sRcsFenetreFin		est une chaîne
 
 MaFenêtre..Plan = 1
 
@@ -17,6 +20,10 @@ fin
 
 _tabCadence est un tableau de StructCadence
 
+// Opérations déjà signalées par une Trace (agent inactif, validité insuffisante),
+// pour ne pas répéter la même trace toutes les 10 secondes
+_tabOperationSignalee est un tableau d'entiers
+
 RelanceOperationDemarrage()
 
 // ** Fin d'initialisation de fenBatchKannel
@@ -26,6 +33,15 @@ intWebserviceModeProd	= __bEstWebserviceModeProd
 
 _nCadenceHoraireMax 		= cpFonction.ValeurParametre("Rcs_Cadence_Horaire_Max",prm_parametre.ValNumerique..Nom)
 saiCadenceHoraireMax 	= _nCadenceHoraireMax
+
+_nRcsValiditeHeures	= cpFonction.ValeurParametre("Rcs_Validite_Heures",prm_parametre.ValNumerique..Nom)
+si _nRcsValiditeHeures <= 0 alors _nRcsValiditeHeures = 48
+
+// Plage horaire d'envoi, normalisée en HHMM pour comparaison avec HeureSys()
+_sRcsFenetreDebut	= Remplace(cpFonction.ValeurParametre("Rcs_Fenetre_HeureDebut",prm_parametre.ValChaine..Nom), ":", "")
+_sRcsFenetreFin		= Remplace(cpFonction.ValeurParametre("Rcs_Fenetre_HeureFin",prm_parametre.ValChaine..Nom), ":", "")
+si _sRcsFenetreDebut = "" alors _sRcsFenetreDebut = "0800"
+si _sRcsFenetreFin = "" alors _sRcsFenetreFin = "2000"
 BTN_Valider.Visible	= Faux
 BTN_Annuler.Visible	= Faux
 

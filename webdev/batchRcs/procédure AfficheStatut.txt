@@ -1,0 +1,30 @@
+// Résumé : Affichage du statut d'une opération dans tblRcs (En cours / En pause + reprise),
+// copie de la version Kannel adaptée au tableau tblRcs.
+// Appelée depuis TacheParalleleRcs via ExécuteThreadPrincipal.
+procédure AfficheStatut(local pLigne, local pIdRcs, local pEstEnPause, local pDuree=0)
+
+dhReprise est une DateHeure
+nInd est un entier
+nPaquet est un entier
+nPause est un entier
+
+nInd = _tabCadence.Cherche(tcLinéaire,"IdSms",pIdRcs)
+si nInd > 0 alors
+	nPaquet = _tabCadence[nInd].Paquet
+	nPause 	= _tabCadence[nInd].Pause
+fin
+
+si pEstEnPause = Faux alors
+	tblRcs[pLigne].COL_Statut 	= "En cours"
+	tblRcs[pLigne].COL_Reprise 	= ""
+	tblRcs[pLigne].COL_Paquet	= nPaquet
+	tblRcs[pLigne].COL_Pause	= nPause
+sinon
+	dhReprise = DateHeureSys()
+	dhReprise..Seconde += pDuree/100
+
+	tblRcs[pLigne].COL_Statut 	= "En pause"
+	tblRcs[pLigne].COL_Reprise 	= dhReprise
+	tblRcs[pLigne].COL_Paquet	= nPaquet
+	tblRcs[pLigne].COL_Pause	= nPause
+fin

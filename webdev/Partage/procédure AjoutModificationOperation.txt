@@ -160,6 +160,7 @@ si stOperation.tabBase..Occurrence > 0 alors
 	si EnregistrementBase(stOperation) alors
 		selon stOperation.TypeOperation
 			cas __OPERATION_SMS__		: EnregistrementProgrammationSms(stOperation)
+			cas __OPERATION_RCS__		: EnregistrementProgrammationRcs(stOperation)
 			cas __OPERATION_VMS__		: EnregistrementProgrammationVms(stOperation)
 			cas __OPERATION_EMAIL__ 	: EnregistrementProgrammationEmail(stOperation)
 			cas __OPERATION_TEL__		: EnregistrementProgrammationTel(stOperation)

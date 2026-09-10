@@ -1,0 +1,37 @@
+// Résumé : Durée de pause avant le prochain paquet, calquée sur la version Kannel.
+// Seule différence : la plage horaire d'envoi n'est plus codée en dur (9h00-20h30)
+// mais lue dans prm_parametre (Rcs_Fenetre_HeureDebut / Rcs_Fenetre_HeureFin,
+// normalisées en HHMM dans l'initialisation de la fenêtre).
+// La règle du dimanche (report au prochain jour ouvré) est conservée telle quelle.
+procédure CaluleDureePause(local pIdRcs, local pStart est un booléen)
+
+dhProchainEnvoi	est une DateHeure
+dProchainJour	est une Date
+nDureePause		est un entier
+duPause			est une Durée
+dhDebut			est une DateHeure	= DateHeureSys()
+nInd			est un entier
+nPause			est un entier
+
+nInd = _tabCadence.Cherche(tcLinéaire,"IdSms",pIdRcs)
+si nInd > 0 alors
+	si _tabCadence[nInd].EstCadence = Vrai alors
+		nPause = _tabCadence[nInd].Pause
+	sinon
+		nPause = (pStart = Faux) ? 15 sinon 0
+	fin
+fin
+
+si cpConnexion.__sConnexion <> __CNX_DEV__ _et_ (HeureSys() > _sRcsFenetreFin _ou_ HeureSys() < _sRcsFenetreDebut _ou_ DateVersJour(DateSys()) = 7) alors
+	dProchainJour	= cpFonction.CalculeDateOuvrée(DateSys(),1,Vrai)
+	dhProchainEnvoi	= dProchainJour + _sRcsFenetreDebut
+	duPause			= ChaîneVersDurée(DateHeureDifférence(DateHeureSys(),dhProchainEnvoi),duréeCentième)
+sinon
+	dhProchainEnvoi 			= dhDebut
+	dhProchainEnvoi..Seconde 	+= nPause
+	duPause 					= ChaîneVersDurée(DateHeureDifférence(dhDebut,dhProchainEnvoi),duréeCentième)
+fin
+
+nDureePause = duPause..EnMillisecondes / 10
+
+renvoyer nDureePause

@@ -1,14 +1,14 @@
 // Résumé : Charge la correspondance Libellé -> colonne de dos_base_ligne pour une opération.
-// Copie conforme de la procédure du même nom de batchKannel.
+// Copie de ChargeTaaDosBaseChamp de batchKannel, renommée pour la collection cpBatchRcs.
 // Syntaxe :
-//[ <Résultat> = ] ChargeTaaDosBaseChamp (<pIdOperation>)
+//[ <Résultat> = ] ChargeTaaDosBaseChampOperation (<pIdOperation>)
 //
 // Paramètres :
 //	pIdOperation : opération concernée
 // Valeur de retour :
 // 	tableau associatif de structBaseChamp : clé = Libellé du champ
 //
-procédure ChargeTaaDosBaseChamp(local pIdOperation)
+procédure ChargeTaaDosBaseChampOperation(local pIdOperation)
 
 
 sTexteRequete		est une chaîne

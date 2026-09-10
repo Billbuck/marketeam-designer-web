@@ -1,0 +1,149 @@
+
+// Paramètres d’automatisme de la procédure :
+
+// - Type d’automatisme : Timer/Procédure différée.
+// - Nombre d’exécutions : infini.
+// - Espacement entre les appels : 10 secondes (00:00:10:00 au format HH:MM:SS:CC).
+// - Comportement lors des appels suivants de la procédure : ignorer le timer et exécuter immédiatement la procédure.
+// - Mode de démarrage : démarrage automatique après le code d’initialisation de la fenêtre, avec un délai de 10 secondes (00:00:10:00).
+
+
+// Résumé : Détecte les opérations RCS prises en charge et lance une tâche parallèle
+// d'envoi par opération (TacheParalleleRcs), comme le ScannerOperation de Kannel.
+// Contrôles préalables : agent actif, validité suffisante pour les opérations cadencées.
+procédure ScannerOperation()
+
+nInd				est un entier
+nIdRcs				est un entier
+sTexteRequete		est une chaîne
+sdReqProg			est une Source de Données
+nNbrRestant			est un entier
+stCadence			est une StructCadence
+
+sTexteRequete =
+[
+	SELECT 
+		dos_operation.Statut,
+		dos_operation.TypeOperation,
+		dos_operation.Dossier,
+		dos_operation.IdOperation IdRcs,
+		dos_operation.IdClientFacturation IdClient,
+		ope_rcs.Cadence,
+		ope_rcs.Paquet,
+		ope_rcs.Pause,
+		ope_rcs.IdRcsAgent,
+		IFNULL(rcs_agent.EstActif, 0) EstActif,
+		IFNULL(rcs_agent.SenderName, '') SenderName,
+		clt_client.Societe,
+		CONCAT_WS(' ',clt_contact.Civilite,clt_contact.Prenom,clt_contact.Nom) contact,
+		dos_operation.NbrDestinataire,
+		dos_operation.MontantNetHT
+	FROM 
+		dos_operation
+		JOIN ope_rcs ON dos_operation.IdOperation = ope_rcs.IdRcs
+		LEFT JOIN rcs_agent ON rcs_agent.IdRcsAgent = ope_rcs.IdRcsAgent
+		JOIN clt_client ON dos_operation.IdClient = clt_client.IdClient
+		JOIN clt_contact ON dos_operation.IdContact = clt_contact.IdContact
+	WHERE
+		dos_operation.TypeOperation = '[%__OPERATION_RCS__%]' AND
+		dos_operation.Statut = '[%__Statut_Prise_En_Charge__%]' AND
+		(((ope_rcs.Cadence IS NULL OR ope_rcs.Cadence = 0) AND dos_operation.DateEnvoiSouhaite = CURDATE()) OR ope_rcs.Cadence > 0)
+]
+
+	// Trace une seule fois par opération et par session du batch
+	// (sinon la même trace reviendrait toutes les 10 secondes)
+	procédure interne TraceUneFois(pIdRcsTrace, pMessageTrace)
+		si _tabOperationSignalee.Cherche(tcLinéaire, pIdRcsTrace) <= 0 alors
+			Trace(pMessageTrace)
+			_tabOperationSignalee.Ajoute(pIdRcsTrace)
+		fin
+	fin
+
+	// Fin de la tâche parallèle d'une opération - strictement calquée sur TacheSmsterminée :
+	// pas de changement de statut de dos_operation, pas de compteurs
+	procédure interne TacheRcsTerminee(pLigneFin, pIdRcsFin)
+		nPos est un entier
+		nPos = _tabCadence.Cherche(tcLinéaire,"IdSms",pIdRcsFin)
+		si nPos > 0 alors
+			_tabCadence.Supprime(nPos)
+		fin
+		tblRcs[pLigneFin].COL_Statut	= "Terminée"
+		tblRcs[pLigneFin].COL_Reprise	= DateHeureSys()
+		tblRcs[pLigneFin].COL_Jauge		= 0
+	fin
+
+
+si pas sdReqProg.ExécuteRequêteSQL(dos_operation..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête ScannerOperation" , sTexteRequete , HErreurInfo(hErrComplet))
+	retour
+fin
+
+
+pour tout sdReqProg
+	nIdRcs = sdReqProg.IdRcs
+
+	// (a) Agent inactif ou introuvable : l'opération est laissée en prise en charge
+	si sdReqProg.EstActif = 0 alors
+		TraceUneFois(nIdRcs, "ScannerOperation : agent RCS inactif ou introuvable, opération " + nIdRcs + " laissée en prise en charge")
+		continuer
+	fin
+
+	nNbrRestant = NbrRcsRestant(nIdRcs)
+
+	// (b) Validité : une opération cadencée doit pouvoir partir dans la durée de validité des messages
+	// (Cadence en messages par heure ; au-delà, les derniers messages expireraient chez Infobip)
+	si sdReqProg.Cadence > 0 _et_ sdReqProg.Cadence * _nRcsValiditeHeures < nNbrRestant alors
+		TraceUneFois(nIdRcs, "ScannerOperation : validité insuffisante pour l'opération " + nIdRcs + " (" + nNbrRestant + " restants à " + sdReqProg.Cadence + "/h pour " + _nRcsValiditeHeures + " h de validité)")
+		continuer
+	fin
+
+	// (c) Prise en main : passage en distribution en cours
+	si dos_operation.LitRecherchePremier(IdOperation, nIdRcs) alors
+		dos_operation.Statut 					= __Statut_Distribution_En_Cours__
+		dos_operation.DateHeureModification 	= DateHeureSys()
+		dos_operation.UserModification		 	= "BatchDistributionEnCours"
+		si pas dos_operation.Modifie() alors
+			Trace("ScannerOperation : échec passage en distribution de l'opération " + nIdRcs, HErreurInfo(hErrComplet))
+			continuer
+		fin
+	fin
+
+	// On enlève les stop pub
+	SupprimeStopPub(nIdRcs, sdReqProg.IdClient)
+
+	VariableRAZ(stCadence)
+
+	stCadence.IdSms	 	= nIdRcs
+	stCadence.Dossier	= sdReqProg.Dossier
+	stCadence.EstCadence	= (sdReqProg.Cadence > 0)
+	stCadence.Cadence	= sdReqProg.Cadence
+	stCadence.Paquet	= Max(1, sdReqProg.Paquet)
+	stCadence.Pause		= (sdReqProg.Pause > 0) ? sdReqProg.Pause sinon 15
+
+	_tabCadence.Ajoute(stCadence)
+
+	nInd = tblRcs.AjouteLigne()
+
+	tblRcs[nInd].COL_Contact  		= sdReqProg.Contact
+	tblRcs[nInd].COL_Date  			= DateHeureSys()
+	tblRcs[nInd].COL_Dossier 		= sdReqProg.Dossier
+	tblRcs[nInd].COL_Societe  		= sdReqProg.Societe
+	tblRcs[nInd].COL_Cadence  		= sdReqProg.Cadence
+	tblRcs[nInd].COL_Paquet  		= stCadence.Paquet
+	tblRcs[nInd].COL_Pause  		= stCadence.Pause
+	tblRcs[nInd].COL_TotalHT  		= sdReqProg.MontantNetHT
+	tblRcs[nInd].COL_Commandé  		= sdReqProg.NbrDestinataire
+	tblRcs[nInd].COL_Jauge..BorneMax = nNbrRestant
+	tblRcs[nInd].COL_Envoyé			= nNbrRestant
+	tblRcs[nInd].COL_Statut			= "En cours"
+
+	soit Tache = TâcheParallèleExécute(TacheParalleleRcs,(nInd, nIdRcs),tpoCopieComplèteContexteHFSQL)
+	TâcheParallèleExécuteAprès(Tache,TacheRcsTerminee,(nInd, nIdRcs),tpoThreadPrincipal)
+
+	Ajoute(_tabTache,Tache)
+
+fin
+
+
+fin:
+sdReqProg.AnnuleDéclaration()

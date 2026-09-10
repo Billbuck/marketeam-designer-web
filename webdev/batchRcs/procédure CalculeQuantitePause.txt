@@ -1,0 +1,34 @@
+// Résumé : Quantité de messages du prochain paquet, copie conforme de la version Kannel.
+// Opération cadencée : paquet fixe posé par ScannerOperation (Max(1, Paquet)).
+// Opération non cadencée : part restante de la cadence horaire maximale
+// (_nCadenceHoraireMax lue dans Rcs_Cadence_Horaire_Max), répartie entre les
+// opérations non cadencées en cours, après déduction des paquets fixes.
+procédure CalculeQuantitePause(local pIdRcs)
+
+nInd			est un entier
+nNbrOperation	est un entier
+nPaquetFixe		est un entier	// les paquets d'envoi toutes les 15 s liées aux opérations cadencés
+nPaquet			est un entier
+nCadenceMax		est un entier
+nCadence		est un entier
+
+nInd = _tabCadence.Cherche(tcLinéaire,"IdSms",pIdRcs)
+
+si nInd > 0 alors
+	si _tabCadence[nInd].EstCadence = Vrai alors
+		renvoyer _tabCadence[nInd].Paquet
+	sinon
+		pour tout stCadence de _tabCadence
+			si stCadence.EstCadence = Vrai alors
+				nPaquetFixe += ArrondiSupérieur(stCadence.Paquet/stCadence.Pause*15,0)
+			sinon
+				nNbrOperation++
+			fin
+		fin
+		nCadenceMax 				= Arrondi(_nCadenceHoraireMax/240,0)
+		nCadence					= Max(0,(nCadenceMax - nPaquetFixe))// On retire à la cadence max le total des paquets fixe
+		nPaquet 					= Max(1,Arrondi(nCadence/nNbrOperation,0))
+		_tabCadence[nInd].Paquet	= nPaquet
+		renvoyer nPaquet
+	fin
+fin

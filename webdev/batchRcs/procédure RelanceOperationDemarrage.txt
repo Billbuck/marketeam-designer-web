@@ -1,0 +1,36 @@
+// Résumé : Au démarrage du batch, remet en prise en charge les opérations RCS
+// interrompues en pleine distribution (arrêt du batch, plantage).
+// Différences avec la version Kannel :
+// - PAS de condition « DateEnvoiSouhaite = aujourd'hui » : une opération RCS
+//   interrompue est reprise quelle que soit sa date ;
+// - le EXISTS couvre aussi les lignes en erreur d'envoi relançables
+//   (NbTentatives < 2), sinon une opération interrompue pendant la phase de
+//   relance resterait bloquée en distribution en cours ;
+// - pas de traitement webservice (propre au SMS).
+procédure RelanceOperationDemarrage()
+
+sTexteRequete	est une chaîne
+sdReqDemarrage	est une Source de Données
+
+
+sTexteRequete =
+[
+	UPDATE
+		dos_operation
+	SET
+		dos_operation.Statut = '[%__Statut_Prise_En_Charge__%]'
+	WHERE
+		dos_operation.Statut = '[%__Statut_Distribution_En_Cours__%]'
+		AND dos_operation.TypeOperation = '[%__OPERATION_RCS__%]' 
+		AND EXISTS (SELECT ope_rcs_envoi.IdBaseLigne FROM ope_rcs_envoi WHERE ope_rcs_envoi.IdRcs = dos_operation.IdOperation AND (ope_rcs_envoi.Statut = '[%__SMS_STATUT_ENREGISTREE__%]' OR (ope_rcs_envoi.Statut = '[%__SMS_STATUT_ERREUR_ENVOI__%]' AND ope_rcs_envoi.NbTentatives < 2)) LIMIT 1)
+]
+
+
+si pas sdReqDemarrage.ExécuteRequêteSQL(dos_operation..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête RelanceOperationDemarrage : " + HErreurInfo(hErrComplet))
+	retour
+fin
+
+
+fin:
+sdReqDemarrage.AnnuleDéclaration()

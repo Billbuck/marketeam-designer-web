@@ -25,7 +25,7 @@ taaValeurChamp.SupprimeTout()
 sCode = ""
 
 // Correspondance Libellé -> nom de colonne de dos_base_ligne
-taaBaseChamp = ChargeTaaDosBaseChamp(pIdOperation)
+taaBaseChamp = ChargeTaaDosBaseChampOperation(pIdOperation)
 
 si taaBaseChamp..Occurrence = 0 alors
 	// Opération sans base : test non personnalisé, ce n'est pas une erreur

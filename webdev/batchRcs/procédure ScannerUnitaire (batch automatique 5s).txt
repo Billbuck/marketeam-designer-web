@@ -167,7 +167,7 @@ pour tout sdReqUnitaire
 	fin
 
 	// 3 - Valeurs de fusion du destinataire (tableau vide si l'opération n'a pas de base)
-	si pas ChargeValeursFusion(sdReqUnitaire.IdOperation, sdReqUnitaire.IdBaseLigne, taaValeurChamp, sCode) alors
+	si pas cpBatchRcs.ChargeValeursFusion(sdReqUnitaire.IdOperation, sdReqUnitaire.IdBaseLigne, taaValeurChamp, sCode) alors
 		Trace("ScannerUnitaire : échec lecture des valeurs de fusion (envoi unitaire " + nIdRcsUnitaire + ")")
 		MajLigneErreur(nIdRcsUnitaire, "")
 		AjouteLigneUnitaire("Erreur : valeurs de fusion", "")

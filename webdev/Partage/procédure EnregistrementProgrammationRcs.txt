@@ -1,0 +1,47 @@
+// Résumé : Vide puis remplit ope_rcs_envoi à l'enregistrement d'une opération RCS :
+// une ligne par portable distinct des bases de l'opération, statut enregistrée.
+// Calquée sur EnregistrementProgrammationSms, sans calcul de taille ni de nombre de SMS
+// (un RCS compte pour 1 quel que soit son contenu ; le nombre de segments du repli SMS
+// sera renseigné par le DLR si le repli est utilisé).
+// L'envoi est fait par l'application batchRcs, qui lit ope_rcs_envoi au statut enregistrée.
+procédure EnregistrementProgrammationRcs(stOperation)
+
+
+sTexteRequete			est une chaîne
+sdReqRcs				est une Source de Données
+sListeIdBase			est une chaîne
+
+pour tout stBase de stOperation.tabBase
+	sListeIdBase += [","] + stBase.IdBase
+fin
+
+sTexteRequete = "DELETE FROM ope_rcs_envoi WHERE IdRcs = " + stOperation.IdOperation
+
+si pas sdReqRcs.ExécuteRequêteSQL(ope_rcs_envoi..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	<compile si TypeConfiguration <> Webservice>
+		Info("Erreur requête EnregistrementProgrammationRcs 1 : " + HErreurInfo(hErrComplet))
+	<fin>
+	retour
+fin
+
+// Même sélection des destinataires que le SMS : un seul enregistrement par Portable, Portable non vide
+sTexteRequete	=
+[
+INSERT INTO ope_rcs_envoi (IdRcs, IdBaseLigne, Statut)
+SELECT [%stOperation.IdOperation%] 
+, z.IdBaseLigne
+, '[%__SMS_STATUT_ENREGISTREE__%]' Statut
+FROM
+(SELECT * FROM dos_base_ligne WHERE IdBase IN ([%sListeIdBase%]) AND Portable IS NOT NULL GROUP BY Portable) AS z
+]
+
+si pas sdReqRcs.ExécuteRequêteSQL(ope_rcs_envoi..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	<compile si TypeConfiguration <> Webservice>
+		Info("Erreur requête EnregistrementProgrammationRcs 2 : " + HErreurInfo(hErrComplet))
+	<fin>
+	retour
+fin
+
+
+fin:
+sdReqRcs.AnnuleDéclaration()

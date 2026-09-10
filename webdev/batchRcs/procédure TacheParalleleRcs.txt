@@ -1,0 +1,368 @@
+// Résumé : Tâche parallèle d'envoi d'UNE opération RCS, calquée sur TacheParalleleSms.
+// Différence structurelle avec Kannel : le SMS part destinataire par destinataire (HTTP unitaire),
+// le RCS part par PAQUET (un seul appel Infobip pour tout le lot, fusion faite en WLangage).
+// Déroulé : chargements initiaux une seule fois, puis boucle par paquets avec la mécanique
+// de curseur de Kannel (IdBaseLigne > dernier lu, LIMIT quantité, pauses entre paquets).
+// Relance : à l'épuisement des lignes enregistrées, un second passage reprend les erreurs
+// d'envoi avec NbTentatives < 2, soit exactement une relance.
+procédure TacheParalleleRcs(pLigne, pIdRcs)
+
+
+sTexteRequetePourLot		est une chaîne
+sTexteRequeteLot			est une chaîne
+sTexteRequetePourUpdate		est une chaîne
+sTexteRequetePourErreur		est une chaîne
+sTexteRequetePourSimul		est une chaîne
+sTexteRequetePourJson		est une chaîne
+sTexteRequete				est une chaîne
+
+sdReqEnvoi					est une Source de Données
+sdReqMaj					est une Source de Données
+
+stOperationRcs				est une structOperationRcs
+sSenderName					est une chaîne
+taaBaseChamp				est un tableau associatif de structBaseChamp
+taaValeurChamp				est un tableau associatif de chaînes
+stBaseChamp					est une structBaseChamp
+sLibelle					est une chaîne
+sSelectChamp				est une chaîne
+bDebugJson					est un booléen
+
+nIdDernierIdBaseLigne		est un entier
+bModeRelance				est un booléen
+sStatutOrigine				est une chaîne
+nQuantite					est un entier
+nPause						est un entier
+nCompteur					est un entier
+nPaquet						est un entier
+nTotalEnvoyé				est un entier
+nTotalErreur				est un entier
+
+sMessageId					est une chaîne
+sJsonMessage				est une chaîne
+sJsonPaquet					est une chaîne
+tabJsonMessage				est un tableau de chaînes
+tabIdBaseLigneLot			est un tableau d'entiers
+tabResultat					est un tableau de structRcsEnvoiResultat
+stResultatOk				est une structRcsEnvoiResultat
+stResultatErreur			est une structRcsEnvoiResultat
+bResultatOk					est un booléen
+bResultatErreur				est un booléen
+sListeIdBaseLigne			est une chaîne
+sListeIdBaseLigneEnErreur	est une chaîne
+nIdBaseLigneResultat		est un entier
+nIndResultat				est un entier
+nIndLot						est un entier
+bOk							est un booléen
+
+
+// ************************************************************
+// Chargements initiaux - une seule fois par opération
+// ************************************************************
+
+stOperationRcs = Partage.ChargeStructOperationRcs(pIdRcs)
+si stOperationRcs.tabCarte..Occurrence = 0 alors
+	Trace("TacheParalleleRcs : opération " + pIdRcs + " sans carte, envoi abandonné")
+	retour
+fin
+
+si rcs_agent.LitRecherchePremier(IdRcsAgent, stOperationRcs.IdRcsAgent) alors
+	sSenderName = rcs_agent.SenderName
+fin
+si sSenderName = "" alors
+	Trace("TacheParalleleRcs : agent RCS introuvable pour l'opération " + pIdRcs)
+	retour
+fin
+
+SectionCritiqueDébut("ChargeTaaDosBaseChampOperation")
+taaBaseChamp = cpBatchRcs.ChargeTaaDosBaseChampOperation(pIdRcs)
+SectionCritiqueFin("ChargeTaaDosBaseChampOperation")
+
+bDebugJson = (cpFonction.ValeurParametre("Rcs_DebugJson", prm_parametre.ValNumerique..Nom) = 1)
+
+// Colonnes de dos_base_ligne à lire pour la fusion
+pour tout stBaseChamp, sLibelle de taaBaseChamp
+	sSelectChamp += ", dos_base_ligne." + stBaseChamp.Champ
+fin
+
+// ************************************************************
+// Gabarits des requêtes
+// ************************************************************
+
+// %1 colonnes de fusion - %2 IdRcs - %3 curseur - %4 condition de statut - %5 quantité
+sTexteRequetePourLot =
+[
+	SELECT
+	dos_base_ligne.IdBaseLigne,
+	IFNULL(dos_base_ligne.Code, '') Code,
+	dos_base_ligne.Portable%1
+	FROM
+	dos_base_ligne, ope_rcs_envoi
+	WHERE ope_rcs_envoi.IdRcs = %2 AND
+	dos_base_ligne.IdBaseLigne = ope_rcs_envoi.IdBaseLigne AND
+	dos_base_ligne.IdBaseLigne > %3 AND
+	%4
+	ORDER BY dos_base_ligne.IdBaseLigne
+	LIMIT %5
+]
+
+// Destinataires acceptés par Infobip (groupe PENDING) - valeurs du premier résultat du groupe
+// %1 date - %2 IdRcs - %3 liste IdBaseLigne - %4 statut - %5 bulkId - %6 groupeId - %7 groupeNom - %8 statutId - %9 statutNom
+sTexteRequetePourUpdate =
+[
+	UPDATE LOW_PRIORITY
+	ope_rcs_envoi 
+	SET 
+	DateHeureEnvoi = '%1',
+	Statut = IF(ope_rcs_envoi.Statut > '%4', ope_rcs_envoi.Statut, '%4'),
+	MessageId = CONCAT(IdRcs, '-', IdBaseLigne),
+	BulkId = '%5',
+	StatutGroupeId = %6,
+	StatutGroupeNom = '%7',
+	StatutId = %8,
+	StatutNom = '%9'
+	WHERE
+	IdRcs = %2 AND 
+	IdBaseLigne IN(%3);
+]
+
+// Destinataires rejetés ou échec HTTP du paquet - une seule relance (NbTentatives)
+// %1 statut erreur - %2 IdRcs - %3 liste IdBaseLigne - %4 statut d'origine - %5 date - %6 nombre d'erreurs
+sTexteRequetePourErreur =
+[
+	UPDATE LOW_PRIORITY
+	ope_rcs_envoi
+	SET 
+	DateHeureEnvoi = '%5',
+	Statut = '%1',
+	NbTentatives = NbTentatives + 1
+	WHERE
+	IdRcs = %2 AND 
+	IdBaseLigne IN(%3) AND
+	Statut = '%4';
+	
+	UPDATE LOW_PRIORITY
+	dos_operation
+	SET dos_operation.NbrErreur = (dos_operation.NbrErreur + %6)
+	WHERE
+	dos_operation.IdOperation = %2
+
+]
+
+// Mode simulation - calqué sur la requête UpdateTest de Kannel
+// %1 liste IdBaseLigne - %2 nombre envoyés
+sTexteRequetePourSimul =
+[
+	UPDATE LOW_PRIORITY
+	ope_rcs_envoi
+	SET
+	ope_rcs_envoi.DateHeureEnvoi = NOW(),
+	ope_rcs_envoi.DateHeurePriseEnCharge = NOW(),
+	ope_rcs_envoi.DateHeureReception = NOW(),
+	ope_rcs_envoi.Statut = '[%__SMS_STATUT_DELIVERED__%]',
+	ope_rcs_envoi.MessageId = CONCAT('SIMUL-', IdRcs, '-', IdBaseLigne)
+	WHERE
+	IdRcs = [%pIdRcs%] AND
+	IdBaseLigne IN(%1);
+	
+	UPDATE LOW_PRIORITY
+	dos_operation
+	SET 
+	dos_operation.NbrDiffusion 	= (dos_operation.NbrDiffusion + %2),
+	dos_operation.NbrDelivre	= (dos_operation.NbrDelivre + %2)
+	WHERE
+	dos_operation.IdOperation = [%pIdRcs%]
+]
+
+// Débogage : JSON du destinataire - %1 json - %2 IdRcs - %3 IdBaseLigne
+sTexteRequetePourJson =
+[
+	UPDATE LOW_PRIORITY
+	ope_rcs_envoi
+	SET ContenuJson = '%1'
+	WHERE IdRcs = %2 AND IdBaseLigne = %3
+]
+
+// ************************************************************
+// Procédures internes
+// ************************************************************
+
+	// Échappe une chaîne pour insertion SQL : le JSON contient des \uXXXX,
+	// il faut doubler les antislashs avant les apostrophes
+	procédure interne EchappeSql(local pTexteSql)
+		pTexteSql = Remplace(pTexteSql, "\", "\\")
+		pTexteSql = Remplace(pTexteSql, "'", "''")
+		renvoyer pTexteSql
+	fin
+
+	// Rcs_DebugJson = 1 : écrit le JSON de chaque destinataire du lot,
+	// une requête par ligne - acceptable en débogage seulement
+	procédure interne EcritContenuJsonLot()
+		nIndJson	est un entier
+		sReqJson	est une chaîne
+		pour nIndJson = 1 _à_ tabIdBaseLigneLot..Occurrence
+			sReqJson = ChaîneConstruit(sTexteRequetePourJson, EchappeSql(tabJsonMessage[nIndJson]), pIdRcs, tabIdBaseLigneLot[nIndJson])
+			si pas sdReqMaj.ExécuteRequêteSQL(ope_rcs_envoi..Connexion, hRequêteSansCorrection, sReqJson) alors
+				Trace("Erreur requête ContenuJson TacheParalleleRcs", sReqJson, HErreurInfo(hErrComplet))
+			fin
+		fin
+	fin
+
+	// Lit le prochain paquet de destinataires.
+	// Renvoie Faux quand il n'y a plus rien à traiter (ou sur erreur SQL).
+	// À l'épuisement des lignes enregistrées, bascule en mode relance :
+	// curseur remis à zéro, sélection des erreurs d'envoi avec NbTentatives < 2.
+	procédure interne LitLot()
+		sConditionStatut est une chaîne
+		tantque Vrai
+			si bModeRelance alors
+				sConditionStatut = "ope_rcs_envoi.Statut = '" + __SMS_STATUT_ERREUR_ENVOI__ + "' AND ope_rcs_envoi.NbTentatives < 2"
+			sinon
+				sConditionStatut = "ope_rcs_envoi.Statut = '" + __SMS_STATUT_ENREGISTREE__ + "'"
+			fin
+			sTexteRequeteLot = ChaîneConstruit(sTexteRequetePourLot, sSelectChamp, pIdRcs, nIdDernierIdBaseLigne, sConditionStatut, nQuantite)
+			si pas sdReqEnvoi.ExécuteRequêteSQL(ope_rcs_envoi..Connexion, hRequêteSansCorrection, sTexteRequeteLot) alors
+				Trace("Erreur requête lot TacheParalleleRcs", sTexteRequeteLot, HErreurInfo(hErrComplet))
+				renvoyer Faux
+			fin
+			sdReqEnvoi.LitPremier()
+			si pas sdReqEnvoi.EnDehors() alors renvoyer Vrai
+			si bModeRelance alors renvoyer Faux
+			bModeRelance = Vrai
+			nIdDernierIdBaseLigne = 0
+		fin
+	fin
+
+
+// ************************************************************
+// Boucle d'envoi par paquets
+// ************************************************************
+
+// pour éviter un lancement en dehors des plages autorisées
+//	**********************************************************
+nPause 		= CaluleDureePause(pIdRcs, Vrai)
+ExécuteThreadPrincipal(AfficheStatut,pLigne,pIdRcs,Vrai,nPause)
+ThreadPause(nPause)
+nQuantite	= CalculeQuantitePause(pIdRcs)
+ExécuteThreadPrincipal(AfficheStatut,pLigne,pIdRcs,Faux)
+//	**********************************************************
+
+tantque LitLot()
+	nCompteur		= 0
+	nTotalEnvoyé	= 0
+	nTotalErreur	= 0
+	nPaquet++
+	tabJsonMessage.SupprimeTout()
+	tabIdBaseLigneLot.SupprimeTout()
+	sListeIdBaseLigne			= ""
+	sListeIdBaseLigneEnErreur	= ""
+	sStatutOrigine = bModeRelance ? __SMS_STATUT_ERREUR_ENVOI__ sinon __SMS_STATUT_ENREGISTREE__
+
+	// Construction d'un message par destinataire (fusion en WLangage)
+	pour tout sdReqEnvoi
+		nIdDernierIdBaseLigne = sdReqEnvoi.IdBaseLigne
+		nCompteur++
+
+		pour tout stBaseChamp, sLibelle de taaBaseChamp
+			taaValeurChamp[sLibelle] = {"sdReqEnvoi." + stBaseChamp.Champ, indRubrique}
+		fin
+		taaValeurChamp[__CHAMP_CLIQUEZ_ICI__] = sdReqEnvoi.Code
+
+		sMessageId		= ChaîneConstruit("%1-%2", pIdRcs, sdReqEnvoi.IdBaseLigne)
+		sJsonMessage	= cpRcs.ConstruitJsonMessage(stOperationRcs, sSenderName, sdReqEnvoi.Portable, sMessageId, taaValeurChamp, sdReqEnvoi.Code, Faux)
+
+		tabJsonMessage.Ajoute(sJsonMessage)
+		tabIdBaseLigneLot.Ajoute(sdReqEnvoi.IdBaseLigne)
+	fin
+
+	si __bEstRoutageModeProd = Faux alors
+		// Mode simulation : pas d'appel Infobip, lignes passées en délivré
+		pour nIndLot = 1 _à_ tabIdBaseLigneLot..Occurrence
+			sListeIdBaseLigne += [","] + tabIdBaseLigneLot[nIndLot]
+		fin
+		nTotalEnvoyé = nCompteur
+		sTexteRequete = ChaîneConstruit(sTexteRequetePourSimul, sListeIdBaseLigne, nTotalEnvoyé)
+		si pas sdReqMaj.ExécuteRequêteSQL(ope_rcs_envoi..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+			Trace("Erreur requête simulation TacheParalleleRcs", sTexteRequete, HErreurInfo(hErrComplet))
+		fin
+		si bDebugJson alors EcritContenuJsonLot()
+	sinon
+		// Un seul appel Infobip pour tout le paquet
+		sJsonPaquet = cpRcs.ConstruitJsonPaquet(tabJsonMessage)
+		tabResultat.SupprimeTout()
+
+		SectionCritiqueDébut("EnvoieInfobip")
+		bOk = cpRcs.EnvoieInfobip(sJsonPaquet, tabResultat)
+		SectionCritiqueFin("EnvoieInfobip")
+
+		si bOk alors
+			// Dépouillement : l'IdBaseLigne est extrait du MessageId (IdRcs-IdBaseLigne)
+			// Groupes de statut Infobip : 1 PENDING 2 UNDELIVERABLE 3 DELIVERED 4 EXPIRED 5 REJECTED
+			bResultatOk		= Faux
+			bResultatErreur	= Faux
+			pour nIndResultat = 1 _à_ tabResultat..Occurrence
+				nIdBaseLigneResultat = Val(ExtraitChaîne(tabResultat[nIndResultat].MessageId, 2, "-"))
+				si tabResultat[nIndResultat].StatutGroupeId = 1 alors
+					sListeIdBaseLigne += [","] + nIdBaseLigneResultat
+					nTotalEnvoyé++
+					si bResultatOk = Faux alors
+						stResultatOk	= tabResultat[nIndResultat]
+						bResultatOk		= Vrai
+					fin
+				sinon
+					sListeIdBaseLigneEnErreur += [","] + nIdBaseLigneResultat
+					nTotalErreur++
+					si bResultatErreur = Faux alors
+						stResultatErreur	= tabResultat[nIndResultat]
+						bResultatErreur		= Vrai
+					fin
+				fin
+			fin
+
+			si sListeIdBaseLigne <> "" alors
+				sTexteRequete = ChaîneConstruit(sTexteRequetePourUpdate, DateHeureSys()[[à 14]], pIdRcs, sListeIdBaseLigne, __SMS_STATUT_ENVOYE__, stResultatOk.BulkId, stResultatOk.StatutGroupeId, stResultatOk.StatutGroupeNom, stResultatOk.StatutId, stResultatOk.StatutNom)
+				si pas sdReqMaj.ExécuteRequêteSQL(ope_rcs_envoi..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+					Trace("Erreur requête update TacheParalleleRcs", sTexteRequete, HErreurInfo(hErrComplet))
+				fin
+			fin
+
+			si sListeIdBaseLigneEnErreur <> "" alors
+				Trace("TacheParalleleRcs : " + nTotalErreur + " destinataire(s) rejeté(s) par Infobip, opération " + pIdRcs + " (" + stResultatErreur.StatutGroupeNom + " " + stResultatErreur.StatutNom + ")")
+				sTexteRequete = ChaîneConstruit(sTexteRequetePourErreur, __SMS_STATUT_ERREUR_ENVOI__, pIdRcs, sListeIdBaseLigneEnErreur, sStatutOrigine, DateHeureSys()[[à 14]], nTotalErreur)
+				si pas sdReqMaj.ExécuteRequêteSQL(ope_rcs_envoi..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+					Trace("Erreur requête erreur TacheParalleleRcs", sTexteRequete, HErreurInfo(hErrComplet))
+				fin
+			fin
+		sinon
+			// Échec HTTP : tout le paquet passe en erreur d'envoi
+			Trace("TacheParalleleRcs : échec envoi Infobip, opération " + pIdRcs + ", paquet " + nPaquet + " (" + nCompteur + " destinataires)")
+			pour nIndLot = 1 _à_ tabIdBaseLigneLot..Occurrence
+				sListeIdBaseLigneEnErreur += [","] + tabIdBaseLigneLot[nIndLot]
+			fin
+			nTotalErreur = nCompteur
+			sTexteRequete = ChaîneConstruit(sTexteRequetePourErreur, __SMS_STATUT_ERREUR_ENVOI__, pIdRcs, sListeIdBaseLigneEnErreur, sStatutOrigine, DateHeureSys()[[à 14]], nTotalErreur)
+			si pas sdReqMaj.ExécuteRequêteSQL(ope_rcs_envoi..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+				Trace("Erreur requête erreur TacheParalleleRcs", sTexteRequete, HErreurInfo(hErrComplet))
+			fin
+		fin
+
+		si bDebugJson alors EcritContenuJsonLot()
+	fin
+
+	ExécuteThreadPrincipal(MiseAJourJauge,pLigne, nCompteur)
+
+	// pause entre paquets + nouvelle quantité
+	//	**********************************************************
+	nPause = CaluleDureePause(pIdRcs, Faux)
+	ExécuteThreadPrincipal(AfficheStatut,pLigne,pIdRcs,Vrai,nPause)
+	ThreadPause(nPause)
+	nQuantite	= CalculeQuantitePause(pIdRcs)
+	ExécuteThreadPrincipal(AfficheStatut,pLigne,pIdRcs,Faux)
+	//	**********************************************************
+
+fin
+
+
+fin:
+sdReqEnvoi.AnnuleDéclaration()
+sdReqMaj.AnnuleDéclaration()
