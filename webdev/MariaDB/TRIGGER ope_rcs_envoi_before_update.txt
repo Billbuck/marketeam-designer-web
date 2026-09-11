@@ -1,0 +1,42 @@
+-- ================================================================================
+-- ⚠️ PROPOSITION — le code du trigger SMS (ope_sms_envoi_before_update) n'a pas
+-- été fourni. Ce trigger est rédigé d'après sa description :
+--   - NbrDiffusion à la sortie du statut 10
+--   - NbrDelivre sur 90
+--   - NbrStop sur 42
+--   - NbrErreur si statut > 20
+-- AVANT EXÉCUTION : comparer avec le trigger SMS réel
+--   SHOW CREATE TRIGGER ope_sms_envoi_before_update;
+-- et corriger si les conditions diffèrent (en particulier NbrErreur : ici les
+-- statuts 42 et 90 sont exclus, et l'incrément n'a lieu qu'au changement de statut).
+-- ================================================================================
+
+DELIMITER //
+
+CREATE TRIGGER `ope_rcs_envoi_before_update`
+BEFORE UPDATE ON `ope_rcs_envoi`
+FOR EACH ROW
+BEGIN
+	-- Sortie du statut 10 (enregistrée) : le message part en diffusion
+	IF OLD.Statut = '10' AND NEW.Statut <> '10' THEN
+		UPDATE dos_operation SET NbrDiffusion = NbrDiffusion + 1 WHERE IdOperation = NEW.IdRcs;
+	END IF;
+
+	-- Passage à 90 (délivré)
+	IF NEW.Statut = '90' AND (OLD.Statut IS NULL OR OLD.Statut <> '90') THEN
+		UPDATE dos_operation SET NbrDelivre = NbrDelivre + 1 WHERE IdOperation = NEW.IdRcs;
+	END IF;
+
+	-- Passage à 42 (stop pub)
+	IF NEW.Statut = '42' AND (OLD.Statut IS NULL OR OLD.Statut <> '42') THEN
+		UPDATE dos_operation SET NbrStop = NbrStop + 1 WHERE IdOperation = NEW.IdRcs;
+	END IF;
+
+	-- Passage à un statut d'erreur (> 20, hors 42 et 90)
+	IF NEW.Statut > '20' AND NEW.Statut NOT IN ('42','90')
+		AND (OLD.Statut IS NULL OR NEW.Statut <> OLD.Statut) THEN
+		UPDATE dos_operation SET NbrErreur = NbrErreur + 1 WHERE IdOperation = NEW.IdRcs;
+	END IF;
+END//
+
+DELIMITER ;

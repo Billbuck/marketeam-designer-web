@@ -1,0 +1,28 @@
+// Résumé : Renvoie le jeton des webhooks RCS (paramètre Rcs_Webhook_Cle de prm_parametre).
+// Lu une seule fois par requête (mise en cache dans __sRcsWebhookCle), à la demande :
+// les pages SMS et email ne paient pas cette lecture.
+// Renvoie chaîne vide si le paramètre est absent ou illisible : les pages RCS
+// répondent alors 403 (sécurité par défaut, jamais de webhook accepté sans jeton).
+procédure RcsWebhookCle()
+
+sdReqCle		est une Source de Données
+sTexteRequete	est une chaîne
+
+
+si __sRcsWebhookCle <> "" alors renvoyer __sRcsWebhookCle
+
+sTexteRequete =
+[
+	SELECT prm_parametre.ValChaine
+	FROM prm_parametre
+	WHERE prm_parametre.ClefRecherche = 'Rcs_Webhook_Cle'
+]
+
+si sdReqCle.ExécuteRequêteSQL(__cnxKannel, hRequêteSansCorrection, sTexteRequete) alors
+	si sdReqCle.LitPremier() alors
+		__sRcsWebhookCle = sdReqCle.ValChaine
+	fin
+fin
+sdReqCle.AnnuleDéclaration()
+
+renvoyer __sRcsWebhookCle

@@ -1,0 +1,15 @@
+__cnxKannel est une Connexion
+
+__sConnexion est une chaîne
+__sRepExe est une chaîne 
+
+__bLogRapport est un booléen
+__bLogReponse est un booléen
+__bLogRcs est un booléen
+
+__sRcsWebhookCle est une chaîne		// Jeton des webhooks RCS - lu dans prm_parametre (Rcs_Webhook_Cle) par RcsWebhookCle()
+
+
+si pas ConnexionBaseDeDonnées() alors
+	// A FAIRE : Traitement des erreurs
+fin

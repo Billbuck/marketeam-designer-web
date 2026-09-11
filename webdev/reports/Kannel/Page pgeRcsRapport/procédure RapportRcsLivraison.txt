@@ -1,0 +1,162 @@
+// Résumé : Traite UN accusé de livraison RCS (un élément de results[]).
+// Aiguillage par messageId : préfixe "U" → ope_rcs_unitaire (IdRcsUnitaire),
+// sinon "IdRcs-IdBaseLigne" → ope_rcs_envoi (clé primaire composée).
+// Aucun SELECT préalable : un seul UPDATE par rapport, par clé primaire (idempotent).
+//
+// Mapping des statuts Marketeam (validé) :
+//   groupe 1 PENDING       → statut inchangé (les autres colonnes sont mises à jour)
+//   groupe 2 UNDELIVERABLE → __SMS_STATUT_NOT_DELIVERED__ (80)
+//   groupe 3 DELIVERED     → __SMS_STATUT_DELIVERED__ (90)
+//   groupe 4 EXPIRED       → __SMS_STATUT_NOT_SENT__ (50) - même choix que le SMS pour MESSAGE_EXPIRED
+//   groupe 5 REJECTED      → __SMS_STATUT_REJECTED__ (60)
+// Jamais de rétrogradation : Statut = IF(Statut > 'xx', Statut, 'xx').
+//
+// Les compteurs de dos_operation ne sont PAS touchés ici :
+// c'est le trigger MariaDB ope_rcs_envoi_before_update qui les alimente.
+//
+// Pas d'écriture dans dos_base_ligne_erreur : un numéro non joignable en RCS
+// reste joignable en SMS (ce sera le rôle de la qualification).
+procédure RapportRcsLivraison(vRapport est un Variant)
+
+sdReqLivraison		est une Source de Données
+sTexteRequete		est une chaîne
+sSet				est une chaîne
+sMessageId			est une chaîne
+sStatut				est une chaîne
+sCanal				est une chaîne
+sGroupeNom			est une chaîne
+sStatutNom			est une chaîne
+sErreurNom			est une chaîne
+sMccMnc				est une chaîne
+sPrix				est une chaîne
+sDevise				est une chaîne
+sPriseEnCharge		est une chaîne
+sReception			est une chaîne
+nGroupeId			est un entier
+nStatutId			est un entier
+nErreurId			est un entier
+nErreurPermanente	est un entier
+nMessageCount		est un entier
+nIdRcs				est un entier
+nIdBaseLigne		est un entier
+nIdRcsUnitaire		est un entier
+
+
+	// Échappe une chaîne pour insertion SQL
+	procédure interne EchappeSqlCdb(local pTexteCdb)
+		pTexteCdb = Remplace(pTexteCdb, "\", "\\")
+		pTexteCdb = Remplace(pTexteCdb, "'", "''")
+		renvoyer pTexteCdb
+	fin
+
+
+sMessageId = vRapport.messageId
+si sMessageId = "" alors
+	EnregistreErreurRcs("RapportRcsLivraison : messageId absent", VariantVersJSON(vRapport))
+	retour
+fin
+
+// Statuts Infobip
+nGroupeId	= Val(vRapport.status.groupId)
+nStatutId	= Val(vRapport.status.id)
+sGroupeNom	= vRapport.status.groupName
+sStatutNom	= vRapport.status.name
+
+selon nGroupeId
+	cas 3			: sStatut = __SMS_STATUT_DELIVERED__
+	cas 2			: sStatut = __SMS_STATUT_NOT_DELIVERED__
+	cas 4			: sStatut = __SMS_STATUT_NOT_SENT__
+	cas 5			: sStatut = __SMS_STATUT_REJECTED__
+	autre cas	: sStatut = ""		// 1 PENDING : statut Marketeam inchangé
+fin
+
+// Dates Infobip (ISO avec fuseau) → 14 caractères AAAAMMJJHHMMSS, comme la page email
+si vRapport.sentAt..Membre <> Null alors
+	sPriseEnCharge = Gauche(Remplace(vRapport.sentAt, ["-","T",":","+"], ""), 14)
+fin
+si vRapport.doneAt..Membre <> Null alors
+	sReception = Gauche(Remplace(vRapport.doneAt, ["-","T",":","+"], ""), 14)
+fin
+
+// Canal réellement utilisé (repli SMS automatique Infobip)
+si vRapport.channel..Membre <> Null alors sCanal = vRapport.channel
+nMessageCount = Val(vRapport.messageCount)
+
+// Prix opérateur
+si vRapport.price..Membre <> Null alors
+	sPrix	= Remplace("" + vRapport.price.pricePerMessage, ",", ".")
+	sDevise	= vRapport.price.currency
+fin
+
+si vRapport.mccMnc..Membre <> Null alors sMccMnc = vRapport.mccMnc
+
+// Erreur
+si vRapport.error..Membre <> Null alors
+	nErreurId			= Val(vRapport.error.id)
+	sErreurNom			= vRapport.error.name
+	nErreurPermanente	= (vRapport.error.permanent = Vrai ? 1 sinon 0)
+fin
+
+// Construction du SET, commun aux deux tables
+sSet = "StatutGroupeId = " + nGroupeId
+sSet += ", StatutGroupeNom = '" + EchappeSqlCdb(sGroupeNom) + "'"
+sSet += ", StatutId = " + nStatutId
+sSet += ", StatutNom = '" + EchappeSqlCdb(sStatutNom) + "'"
+
+si vRapport.error..Membre <> Null alors
+	sSet += ", ErreurId = " + nErreurId
+	sSet += ", ErreurNom = '" + EchappeSqlCdb(sErreurNom) + "'"
+	sSet += ", ErreurPermanente = " + nErreurPermanente
+fin
+
+si sMccMnc <> "" alors sSet += ", MccMnc = '" + EchappeSqlCdb(sMccMnc) + "'"
+
+si sPrix <> "" alors
+	sSet += ", PrixUnitaire = " + sPrix
+	si sDevise <> "" alors sSet += ", Devise = '" + EchappeSqlCdb(sDevise) + "'"
+fin
+
+si sCanal = "RCS" _ou_ sCanal = "SMS" alors
+	sSet += ", CanalUtilise = '" + sCanal + "'"
+	// Nombre de segments seulement si le repli SMS a été utilisé
+	si sCanal = "SMS" _et_ nMessageCount > 0 alors sSet += ", SmsNombre = " + nMessageCount
+fin
+
+si sPriseEnCharge <> "" alors sSet += ", DateHeurePriseEnCharge = '" + sPriseEnCharge + "'"
+
+// doneAt seulement si le message est dans un état terminal (2, 3, 4, 5)
+si nGroupeId >= 2 _et_ nGroupeId <= 5 _et_ sReception <> "" alors
+	sSet += ", DateHeureReception = '" + sReception + "'"
+fin
+
+// Statut Marketeam, sans rétrogradation (codes à 2 chiffres : comparaison texte valide)
+si sStatut <> "" alors
+	sSet += ", Statut = IF(Statut > '" + sStatut + "', Statut, '" + sStatut + "')"
+fin
+
+// Aiguillage par messageId
+si Gauche(sMessageId, 1) = "U" alors
+	nIdRcsUnitaire = Val(sMessageId[[2 à]])
+	si nIdRcsUnitaire <= 0 alors
+		EnregistreErreurRcs("RapportRcsLivraison : messageId unitaire invalide " + sMessageId, VariantVersJSON(vRapport))
+		retour
+	fin
+	sTexteRequete = "UPDATE ope_rcs_unitaire SET " + sSet + " WHERE IdRcsUnitaire = " + nIdRcsUnitaire
+sinon
+	nIdRcs			= Val(ExtraitChaîne(sMessageId, 1, "-"))
+	nIdBaseLigne	= Val(ExtraitChaîne(sMessageId, 2, "-"))
+	si nIdRcs <= 0 _ou_ nIdBaseLigne <= 0 alors
+		EnregistreErreurRcs("RapportRcsLivraison : messageId invalide " + sMessageId, VariantVersJSON(vRapport))
+		retour
+	fin
+	sTexteRequete = "UPDATE ope_rcs_envoi SET " + sSet + " WHERE IdRcs = " + nIdRcs + " AND IdBaseLigne = " + nIdBaseLigne
+fin
+
+si pas sdReqLivraison.ExécuteRequêteSQL(cpKannel.__cnxKannel, hRequêteSansCorrection, sTexteRequete) alors
+	EnregistreErreurRcs("RapportRcsLivraison UPDATE", sTexteRequete)
+	retour
+fin
+
+
+fin:
+sdReqLivraison.AnnuleDéclaration()

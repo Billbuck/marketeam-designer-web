@@ -1,0 +1,15 @@
+CREATE TABLE `ope_sms_reponse` (
+	`IdReponse` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdBaseLigne` INT(11) NULL DEFAULT NULL,
+	`IdSmsNotification` INT(11) NULL DEFAULT NULL,
+	`Reponse` VARCHAR(300) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`DateHeure` DATETIME NOT NULL,
+	`DateHeureEnvoi` DATETIME NULL DEFAULT NULL,
+	PRIMARY KEY (`IdReponse`) USING BTREE,
+	INDEX `IdBaseLigne` (`IdBaseLigne`) USING BTREE,
+	INDEX `IdSmsNotification` (`IdSmsNotification`) USING BTREE,
+	INDEX `DateHeureEnvoi` (`DateHeureEnvoi`) USING BTREE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+;

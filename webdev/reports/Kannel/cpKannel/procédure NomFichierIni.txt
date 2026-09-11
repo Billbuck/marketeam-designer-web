@@ -1,0 +1,23 @@
+procédure NomFichierIni()
+
+<compile si TypeConfiguration=ApplicationWindows>
+	__sRepExe = Majuscule(ComplèteRep(fRepExe()))
+<fin>
+
+<compile si TypeConfiguration=Site>
+	__sRepExe = Majuscule(ComplèteRep(fRepExe()))
+	si EnModeAWP() _et_ EnModeTest() alors
+		__sRepExe = ComplèteRep(fRepParent(fRepWeb()))
+		si fRépertoireExiste(__sRepExe+[fSep()]+"EXE\") alors 
+			__sRepExe += [fSep()]+"EXE\"   // Simule un mode test dans le répertoire EXE
+		fin
+	fin
+<fin>
+
+<compile si TypeConfiguration=Webservice>
+	__sRepExe = ComplèteRep(fRepParent(fRepExe())) 
+<fin>
+
+
+
+renvoyer __sRepExe + "CnxMySql.ini"

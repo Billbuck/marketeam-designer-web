@@ -1,0 +1,9 @@
+-- Idempotence de la confirmation STOP (pgeRcsEntrant) :
+-- MessageIdEvenement = id Infobip du message entrant déclencheur.
+-- L'index UNIQUE rend l'INSERT IGNORE idempotent en une seule requête :
+-- un webhook rejoué ne crée jamais de seconde confirmation.
+-- NULL pour toutes les autres lignes (plusieurs NULL autorisés par un index UNIQUE MariaDB).
+
+ALTER TABLE `ope_rcs_unitaire`
+	ADD COLUMN `MessageIdEvenement` VARCHAR(64) NULL DEFAULT NULL COMMENT 'Id Infobip du message entrant declencheur (confirmation STOP) - idempotence' AFTER `MessageId`,
+	ADD UNIQUE INDEX `MessageIdEvenement` (`MessageIdEvenement`);

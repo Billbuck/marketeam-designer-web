@@ -42,6 +42,7 @@ sTexteRequete =
 		ope_rcs_unitaire.IdOperation,
 		IFNULL(ope_rcs_unitaire.IdBaseLigne, 0) IdBaseLigne,
 		ope_rcs_unitaire.Portable,
+		IFNULL(ope_rcs_unitaire.Message, '') Message,
 		IFNULL(ope_rcs_unitaire.CodeLanding, '') CodeLanding,
 		dos_operation.Dossier,
 		clt_client.Societe,
@@ -157,29 +158,36 @@ pour tout sdReqUnitaire
 		continuer
 	fin
 
-	// 2 - Chargement de la structure de l'opération (ope_rcs + cartes + boutons)
-	stOperationRcs = Partage.ChargeStructOperationRcs(sdReqUnitaire.IdOperation)
-	si stOperationRcs.tabCarte..Occurrence = 0 alors
-		Trace("ScannerUnitaire : opération " + sdReqUnitaire.IdOperation + " sans carte (envoi unitaire " + nIdRcsUnitaire + ")")
-		MajLigneErreur(nIdRcsUnitaire, "")
-		AjouteLigneUnitaire("Erreur : opération sans carte", "")
-		continuer
+	sMessageId = (__bEstRoutageModeProd = Faux) ? "SIMUL-" + nIdRcsUnitaire sinon "U" + nIdRcsUnitaire
+
+	si sdReqUnitaire.Message <> "" alors
+		// 2 - RCS texte (confirmation STOP, notification) : pas de structure d'opération,
+		// pas de fusion, pas de repli SMS. Seul l'agent est nécessaire (déjà contrôlé en 1).
+		sJsonMessage = cpRcs.ConstruitJsonMessageTexte(sdReqUnitaire.SenderName, sdReqUnitaire.Portable, sMessageId, sdReqUnitaire.Message)
+	sinon
+		// 2 - Chargement de la structure de l'opération (ope_rcs + cartes + boutons)
+		stOperationRcs = Partage.ChargeStructOperationRcs(sdReqUnitaire.IdOperation)
+		si stOperationRcs.tabCarte..Occurrence = 0 alors
+			Trace("ScannerUnitaire : opération " + sdReqUnitaire.IdOperation + " sans carte (envoi unitaire " + nIdRcsUnitaire + ")")
+			MajLigneErreur(nIdRcsUnitaire, "")
+			AjouteLigneUnitaire("Erreur : opération sans carte", "")
+			continuer
+		fin
+
+		// 3 - Valeurs de fusion du destinataire (tableau vide si l'opération n'a pas de base)
+		si pas cpBatchRcs.ChargeValeursFusion(sdReqUnitaire.IdOperation, sdReqUnitaire.IdBaseLigne, taaValeurChamp, sCode) alors
+			Trace("ScannerUnitaire : échec lecture des valeurs de fusion (envoi unitaire " + nIdRcsUnitaire + ")")
+			MajLigneErreur(nIdRcsUnitaire, "")
+			AjouteLigneUnitaire("Erreur : valeurs de fusion", "")
+			continuer
+		fin
+
+		// 4 - Construction du JSON Infobip (un paquet = un seul message)
+		bEstTest		= (sdReqUnitaire.CodeLanding <> "")
+		sCodeLanding	= bEstTest ? sdReqUnitaire.CodeLanding sinon sCode
+
+		sJsonMessage = cpRcs.ConstruitJsonMessage(stOperationRcs, sdReqUnitaire.SenderName, sdReqUnitaire.Portable, sMessageId, taaValeurChamp, sCodeLanding, bEstTest)
 	fin
-
-	// 3 - Valeurs de fusion du destinataire (tableau vide si l'opération n'a pas de base)
-	si pas cpBatchRcs.ChargeValeursFusion(sdReqUnitaire.IdOperation, sdReqUnitaire.IdBaseLigne, taaValeurChamp, sCode) alors
-		Trace("ScannerUnitaire : échec lecture des valeurs de fusion (envoi unitaire " + nIdRcsUnitaire + ")")
-		MajLigneErreur(nIdRcsUnitaire, "")
-		AjouteLigneUnitaire("Erreur : valeurs de fusion", "")
-		continuer
-	fin
-
-	// 4 - Construction du JSON Infobip (un paquet = un seul message)
-	bEstTest		= (sdReqUnitaire.CodeLanding <> "")
-	sCodeLanding	= bEstTest ? sdReqUnitaire.CodeLanding sinon sCode
-	sMessageId		= (__bEstRoutageModeProd = Faux) ? "SIMUL-" + nIdRcsUnitaire sinon "U" + nIdRcsUnitaire
-
-	sJsonMessage = cpRcs.ConstruitJsonMessage(stOperationRcs, sdReqUnitaire.SenderName, sdReqUnitaire.Portable, sMessageId, taaValeurChamp, sCodeLanding, bEstTest)
 	tabJsonMessage.SupprimeTout()
 	tabJsonMessage.Ajoute(sJsonMessage)
 	sJsonPaquet = cpRcs.ConstruitJsonPaquet(tabJsonMessage)

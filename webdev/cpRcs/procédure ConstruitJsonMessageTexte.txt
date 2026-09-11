@@ -1,0 +1,39 @@
+// Résumé : Construit le JSON Infobip d'UN message RCS texte simple (confirmation STOP, notification).
+// Même enveloppe que ConstruitJsonMessage (sender, destinations, options, webhooks),
+// mais content = { "type": "TEXT", "text": ... }, sans repli SMS.
+// Un texte court sans bouton ni média est facturé Basic par l'opérateur (prix proche du SMS).
+// Syntaxe :
+// sJson = ConstruitJsonMessageTexte(sSenderName, sPortable, sMessageId, sTexte)
+//
+// Paramètres :
+// 	pSenderName : agent RCS (rcs_agent.SenderName)
+// 	pPortable : numéro du destinataire (normalisé sans + ni espace ici même)
+// 	pMessageId : identifiant Marketeam du message ("U" + IdRcsUnitaire)
+// 	pTexte : texte final du message (déjà fusionné s'il y a lieu)
+// Valeur de retour :
+// 	chaîne : JSON du message, à insérer dans un paquet via ConstruitJsonPaquet
+procédure ConstruitJsonMessageTexte(pSenderName, pPortable, pMessageId, pTexte)
+
+sJson		est une chaîne
+sPortable	est une chaîne
+
+
+sPortable = Remplace(Remplace(SansEspace(pPortable), "+", ""), " ", "")
+
+sJson = "{"
+sJson += """sender"":""" + EncodeAsciiJson(pSenderName) + """"
+sJson += ",""destinations"":[{""to"":""" + EncodeAsciiJson(sPortable) + """,""messageId"":""" + EncodeAsciiJson(pMessageId) + """}]"
+
+sJson += ",""content"":{""type"":""TEXT"",""text"":""" + EncodeAsciiJson(pTexte) + """}"
+
+sJson += ",""options"":{""validityPeriod"":{""amount"":" + __nValiditeHeures + ",""timeUnit"":""HOURS""}}"
+
+si __sUrlWebhook <> "" alors
+	sJson += ",""webhooks"":{"
+	sJson += """delivery"":{""url"":""" + EncodeAsciiJson(__sUrlWebhook) + """}"
+	sJson += ",""seen"":{""url"":""" + EncodeAsciiJson(__sUrlWebhook) + """}"
+	sJson += "}"
+fin
+
+sJson += "}"
+renvoyer sJson

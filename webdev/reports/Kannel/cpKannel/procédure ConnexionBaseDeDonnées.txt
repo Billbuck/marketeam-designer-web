@@ -1,0 +1,32 @@
+procédure ConnexionBaseDeDonnées()
+
+
+sNomFichier est une chaîne
+
+
+sNomFichier = NomFichierIni()
+
+
+__bLogRapport							= INILit("PARAMETRES","LOG_RAPPORT","0",sNomFichier)
+__bLogReponse							= INILit("PARAMETRES","LOG_REPONSE","1",sNomFichier)
+__bLogRcs								= INILit("PARAMETRES","LOG_RCS","0",sNomFichier)
+                                		
+__cnxKannel..BaseDeDonnées				= INILit("BDD_CHRONODIRECT","BASE","",sNomFichier)
+__cnxKannel..Utilisateur 				= INILit("BDD_CHRONODIRECT","USER","",sNomFichier)
+__cnxKannel..MotDePasse 				= INILit("BDD_CHRONODIRECT","MDP","",sNomFichier)
+__cnxKannel..Serveur 					= INILit("BDD_CHRONODIRECT","SERVEUR","",sNomFichier)
+__cnxKannel..Provider					= hAccèsNatifMariaDB
+
+
+si pas HOuvreConnexion(__cnxKannel) alors
+	Erreur(ErreurInfo(errComplet))
+	renvoyer Faux	
+fin
+
+si pas HChangeConnexion("*", __cnxKannel) alors
+	Erreur(ErreurInfo(errComplet))
+	renvoyer Faux	
+fin
+
+
+renvoyer Vrai

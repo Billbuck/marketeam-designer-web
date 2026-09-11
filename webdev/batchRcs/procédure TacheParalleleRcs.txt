@@ -127,6 +127,8 @@ sTexteRequetePourUpdate =
 ]
 
 // Destinataires rejetés ou échec HTTP du paquet - une seule relance (NbTentatives)
+// L'incrément de NbrErreur reste ici : le statut 15 (erreur d'envoi) n'est pas couvert
+// par le trigger ope_rcs_envoi_before_update, qui ne compte que les statuts > 20.
 // %1 statut erreur - %2 IdRcs - %3 liste IdBaseLigne - %4 statut d'origine - %5 date - %6 nombre d'erreurs
 sTexteRequetePourErreur =
 [
@@ -150,7 +152,9 @@ sTexteRequetePourErreur =
 ]
 
 // Mode simulation - calqué sur la requête UpdateTest de Kannel
-// %1 liste IdBaseLigne - %2 nombre envoyés
+// NbrDiffusion et NbrDelivre ne sont plus incrémentés ici : le trigger MariaDB
+// ope_rcs_envoi_before_update les alimente au changement de statut (10 → 90).
+// %1 liste IdBaseLigne
 sTexteRequetePourSimul =
 [
 	UPDATE LOW_PRIORITY
@@ -163,15 +167,7 @@ sTexteRequetePourSimul =
 	ope_rcs_envoi.MessageId = CONCAT('SIMUL-', IdRcs, '-', IdBaseLigne)
 	WHERE
 	IdRcs = [%pIdRcs%] AND
-	IdBaseLigne IN(%1);
-	
-	UPDATE LOW_PRIORITY
-	dos_operation
-	SET 
-	dos_operation.NbrDiffusion 	= (dos_operation.NbrDiffusion + %2),
-	dos_operation.NbrDelivre	= (dos_operation.NbrDelivre + %2)
-	WHERE
-	dos_operation.IdOperation = [%pIdRcs%]
+	IdBaseLigne IN(%1)
 ]
 
 // Débogage : JSON du destinataire - %1 json - %2 IdRcs - %3 IdBaseLigne
@@ -281,7 +277,7 @@ tantque LitLot()
 			sListeIdBaseLigne += [","] + tabIdBaseLigneLot[nIndLot]
 		fin
 		nTotalEnvoyé = nCompteur
-		sTexteRequete = ChaîneConstruit(sTexteRequetePourSimul, sListeIdBaseLigne, nTotalEnvoyé)
+		sTexteRequete = ChaîneConstruit(sTexteRequetePourSimul, sListeIdBaseLigne)
 		si pas sdReqMaj.ExécuteRequêteSQL(ope_rcs_envoi..Connexion, hRequêteSansCorrection, sTexteRequete) alors
 			Trace("Erreur requête simulation TacheParalleleRcs", sTexteRequete, HErreurInfo(hErrComplet))
 		fin

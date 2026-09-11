@@ -1,0 +1,13 @@
+// Résumé : Journalise une erreur ou un cas non résolu du webhook des entrants RCS.
+// Une seule écriture fichier par erreur (le fichier n'est ouvert qu'une fois).
+procédure EnregistreErreurRcsEntrant(pTitre, pRequete)
+
+sLigne est une chaîne
+
+sLigne = RC + DateHeureVersChaîne(DateHeureSys(), "JJ/MM/AAAA HH:mm:SS")
+sLigne += RC + pTitre
+sLigne += RC + pRequete
+sLigne += RC + ErreurInfo(errComplet)
+sLigne += RC + "------------------------------------------------------------------------------------------------"
+
+fAjouteTexte(fRepDonnées() + "\RcsErreurEntrant.txt", sLigne)

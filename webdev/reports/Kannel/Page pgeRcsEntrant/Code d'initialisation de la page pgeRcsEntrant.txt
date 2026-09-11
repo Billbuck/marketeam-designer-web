@@ -1,0 +1,46 @@
+// Code d'initialisation de la page pgeRcsEntrant
+//
+// Webhook Infobip RCS : messages entrants (MO), en POST JSON { "results": [ ... ] }.
+// Types traités :
+//   SUGGESTION → clic sur un bouton (postbackData = "IdRcsCarte-IdRcsBouton", 0 = bouton commun) → ope_rcs_clic
+//   TEXT       → mot-clé STOP (liste partagée EstMotCleStop) → dos_base_ligne_erreur + confirmation
+//                RCS texte facturée dans ope_rcs_unitaire ; autre texte → ope_rcs_reponse
+//   FILE       → ope_rcs_reponse (Texte = URL ou description)
+//   LOCATION   → ope_rcs_reponse (Texte = latitude,longitude)
+//
+// La page répond toujours 200 une fois le traitement fait (comportement par défaut) :
+// Infobip rejoue sinon jusqu'à 20 fois. Idempotence par index unique MessageIdEvenement
+// (ope_rcs_clic, ope_rcs_reponse, ope_rcs_unitaire) + INSERT IGNORE.
+//
+// Sécurité : même jeton k que pgeRcsRapport (paramètre Rcs_Webhook_Cle).
+
+sCle			est une chaîne
+sParamBuffer	est une chaîne
+vReponse		est un Variant
+nInd			est un entier
+
+
+sCle = PageParamètre("k")
+
+si sCle = "" _ou_ sCle <> cpKannel.RcsWebhookCle() alors
+	PageEcritCodeHTTP(403)
+	retour
+fin
+
+sParamBuffer = PageParamètre(paramBuffer)
+
+si cpKannel.__bLogRcs = Vrai alors
+	fAjouteTexte(fRepDonnées() + "\RcsLogEntrant_" + DateSys() + ".txt", RC + DateHeureVersChaîne(DateHeureSys(),"JJ/MM/AAAA HH:mm:SS") + RC + sParamBuffer + RC + "-----------------------------------------------------------")
+fin
+
+vReponse = JSONVersVariant(sParamBuffer)
+
+si vReponse.results..Membre = Null alors
+	// Structure inattendue : le JSON brut est sauvegardé pour analyse
+	fSauveTexte(fRepDonnées() + "\RcsEntrantInattendu_" + DateSys() + "_" + HeureSys() + ".txt", sParamBuffer)
+	retour
+fin
+
+pour nInd = 1 _à_ vReponse.results..Occurrence
+	TraiteEntrant(vReponse.results[nInd])
+fin

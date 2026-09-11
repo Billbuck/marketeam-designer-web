@@ -8,7 +8,6 @@ sTexteIdOperation								est une chaîne
 sTexteInsertOpeSmsReponseFromInconnu	est une chaîne
 bEstNotification								est un booléen
 sRouteur											est une chaîne
-tabStop											est un tableau de chaîne
 sPortable										est une chaîne
 sReponse											est une chaîne
 sDate												est une chaîne
@@ -79,13 +78,13 @@ selon sLeFrom
 fin
 
 
-tabStop = ["stop","stoo","stp","stip","stpp","srop","sto0","ntm","syop","stom","spot","qtop","sotp","stpo","stoop","stooop","stoooop","stio","st0p","no sms","plus de sms","fdp","nique","nike","merde","fou","fous","voleur","voleurs","branleur","geule","gueule","pute","putes","mere","meres","putain","connard","connards","merde","merdes","pub","publicite","publicites","publicitaire","unsubscribe","harcelement","spam","rgpd","lachez","caca","branle","branler","enculer","enculee","enculez","fuck","foutre","foutez","escroc","escrocs","Escroquerie","Escroqueries","oubliez","oublier","oublie","tranquille","rayer","arret","arreter","arrete","jamais","arretez","desinscrire","desinscription","supprimez","supprimer","sortir","retirer","rayer","rayez","retirez","enlevez","enlever","desabonnement","desabonnez","desabonner"]
-
+// Liste des mots-clés STOP : extraite dans la procédure globale EstMotCleStop,
+// partagée avec le RCS (pgeRcsEntrant), comportement inchangé.
 
 si sPortable <> "" alors
 
 	selon Vrai
-		cas Contient(sReponse,tabStop,MotComplet+SansCasse) _et_ bEstNotification = Faux
+		cas EstMotCleStop(sReponse) _et_ bEstNotification = Faux
 
 			sTexteInsertDosBaseLigneErreur =
 			[

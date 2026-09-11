@@ -1,0 +1,49 @@
+// Code d'initialisation de la page pgeRcsRapport
+//
+// Webhook Infobip RCS : accusés de livraison (delivery) ET accusés de lecture (seen)
+// arrivent sur la même URL, en POST JSON { "results": [ ... ] }.
+// Un élément avec "seenAt" est un accusé de lecture, sinon c'est un accusé de livraison.
+//
+// Infobip rejoue le rapport tant qu'il ne reçoit pas HTTP 200 (jusqu'à 20 tentatives) :
+// la page répond 200 dès que le traitement est fait (comportement par défaut d'une page AWP)
+// et chaque écriture est idempotente (UPDATE par clé primaire, DateHeureLu posée une seule fois).
+//
+// Sécurité : paramètre d'URL k comparé au paramètre Rcs_Webhook_Cle (prm_parametre).
+// Jeton absent ou faux → HTTP 403 et fin, sans lecture du corps.
+
+sCle			est une chaîne
+sParamBuffer	est une chaîne
+vReponse		est un Variant
+vResultat		est un Variant
+nInd			est un entier
+
+
+sCle = PageParamètre("k")
+
+si sCle = "" _ou_ sCle <> cpKannel.RcsWebhookCle() alors
+	PageEcritCodeHTTP(403)
+	retour
+fin
+
+sParamBuffer = PageParamètre(paramBuffer)
+
+si cpKannel.__bLogRcs = Vrai alors
+	fAjouteTexte(fRepDonnées() + "\RcsLogRapport_" + DateSys() + ".txt", RC + DateHeureVersChaîne(DateHeureSys(),"JJ/MM/AAAA HH:mm:SS") + RC + sParamBuffer + RC + "-----------------------------------------------------------")
+fin
+
+vReponse = JSONVersVariant(sParamBuffer)
+
+si vReponse.results..Membre = Null alors
+	// Structure inattendue : le JSON brut est sauvegardé pour analyse
+	fSauveTexte(fRepDonnées() + "\RcsRapportInattendu_" + DateSys() + "_" + HeureSys() + ".txt", sParamBuffer)
+	retour
+fin
+
+pour nInd = 1 _à_ vReponse.results..Occurrence
+	vResultat = vReponse.results[nInd]
+	si vResultat.seenAt..Membre <> Null alors
+		RapportRcsLecture(vResultat)
+	sinon
+		RapportRcsLivraison(vResultat)
+	fin
+fin

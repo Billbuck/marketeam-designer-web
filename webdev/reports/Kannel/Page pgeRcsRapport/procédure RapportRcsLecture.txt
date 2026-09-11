@@ -1,0 +1,52 @@
+// Résumé : Traite UN accusé de lecture RCS (un élément de results[] contenant seenAt).
+// Format Infobip : { "messageId", "from", "to", "sentAt", "seenAt" }.
+// DateHeureLu est posée UNE SEULE FOIS (WHERE DateHeureLu IS NULL) :
+// un webhook rejoué ne modifie rien, la première date de lecture est conservée.
+procédure RapportRcsLecture(vRapport est un Variant)
+
+sdReqLecture	est une Source de Données
+sTexteRequete	est une chaîne
+sMessageId		est une chaîne
+sLu				est une chaîne
+nIdRcs			est un entier
+nIdBaseLigne	est un entier
+nIdRcsUnitaire	est un entier
+
+
+sMessageId = vRapport.messageId
+si sMessageId = "" alors
+	EnregistreErreurRcs("RapportRcsLecture : messageId absent", VariantVersJSON(vRapport))
+	retour
+fin
+
+sLu = Gauche(Remplace(vRapport.seenAt, ["-","T",":","+"], ""), 14)
+si sLu = "" alors
+	EnregistreErreurRcs("RapportRcsLecture : seenAt vide " + sMessageId, VariantVersJSON(vRapport))
+	retour
+fin
+
+si Gauche(sMessageId, 1) = "U" alors
+	nIdRcsUnitaire = Val(sMessageId[[2 à]])
+	si nIdRcsUnitaire <= 0 alors
+		EnregistreErreurRcs("RapportRcsLecture : messageId unitaire invalide " + sMessageId, VariantVersJSON(vRapport))
+		retour
+	fin
+	sTexteRequete = "UPDATE ope_rcs_unitaire SET DateHeureLu = '" + sLu + "' WHERE IdRcsUnitaire = " + nIdRcsUnitaire + " AND DateHeureLu IS NULL"
+sinon
+	nIdRcs			= Val(ExtraitChaîne(sMessageId, 1, "-"))
+	nIdBaseLigne	= Val(ExtraitChaîne(sMessageId, 2, "-"))
+	si nIdRcs <= 0 _ou_ nIdBaseLigne <= 0 alors
+		EnregistreErreurRcs("RapportRcsLecture : messageId invalide " + sMessageId, VariantVersJSON(vRapport))
+		retour
+	fin
+	sTexteRequete = "UPDATE ope_rcs_envoi SET DateHeureLu = '" + sLu + "' WHERE IdRcs = " + nIdRcs + " AND IdBaseLigne = " + nIdBaseLigne + " AND DateHeureLu IS NULL"
+fin
+
+si pas sdReqLecture.ExécuteRequêteSQL(cpKannel.__cnxKannel, hRequêteSansCorrection, sTexteRequete) alors
+	EnregistreErreurRcs("RapportRcsLecture UPDATE", sTexteRequete)
+	retour
+fin
+
+
+fin:
+sdReqLecture.AnnuleDéclaration()

@@ -1,0 +1,17 @@
+// Résumé : Détecte un mot-clé STOP (désabonnement) dans un texte reçu d'un destinataire.
+// Liste extraite de pgeKannelReponse.Traitement pour être partagée entre le SMS
+// (pgeKannelReponse) et le RCS (pgeRcsEntrant), sans changer le comportement SMS.
+// Syntaxe :
+// bStop = EstMotCleStop(sTexte)
+//
+// Paramètres :
+// 	pTexte : texte reçu du destinataire
+// Valeur de retour :
+// 	booléen : Vrai si le texte contient un mot-clé de désabonnement
+procédure EstMotCleStop(pTexte)
+
+tabStop est un tableau de chaîne
+
+tabStop = ["stop","stoo","stp","stip","stpp","srop","sto0","ntm","syop","stom","spot","qtop","sotp","stpo","stoop","stooop","stoooop","stio","st0p","no sms","plus de sms","fdp","nique","nike","merde","fou","fous","voleur","voleurs","branleur","geule","gueule","pute","putes","mere","meres","putain","connard","connards","merde","merdes","pub","publicite","publicites","publicitaire","unsubscribe","harcelement","spam","rgpd","lachez","caca","branle","branler","enculer","enculee","enculez","fuck","foutre","foutez","escroc","escrocs","Escroquerie","Escroqueries","oubliez","oublier","oublie","tranquille","rayer","arret","arreter","arrete","jamais","arretez","desinscrire","desinscription","supprimez","supprimer","sortir","retirer","rayer","rayez","retirez","enlevez","enlever","desabonnement","desabonnez","desabonner"]
+
+renvoyer Contient(pTexte, tabStop, MotComplet + SansCasse)

@@ -1,0 +1,13 @@
+// Résumé : Journalise une erreur de traitement d'un webhook RCS (rapports de livraison / lecture).
+// Une seule écriture fichier par erreur (le fichier n'est ouvert qu'une fois).
+procédure EnregistreErreurRcs(pTitre, pRequete)
+
+sLigne est une chaîne
+
+sLigne = RC + DateHeureVersChaîne(DateHeureSys(), "JJ/MM/AAAA HH:mm:SS")
+sLigne += RC + pTitre
+sLigne += RC + pRequete
+sLigne += RC + ErreurInfo(errComplet)
+sLigne += RC + "------------------------------------------------------------------------------------------------"
+
+fAjouteTexte(fRepDonnées() + "\RcsErreurRapport.txt", sLigne)

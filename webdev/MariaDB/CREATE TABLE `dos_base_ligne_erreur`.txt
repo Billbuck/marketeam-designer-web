@@ -1,0 +1,24 @@
+CREATE TABLE `dos_base_ligne_erreur` (
+	`IdBaseLigneErreur` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdBaseLigne` INT(11) NULL DEFAULT NULL,
+	`IdOperation` INT(11) NULL DEFAULT NULL,
+	`IdClient` INT(11) NULL DEFAULT NULL,
+	`TypeErreur` CHAR(3) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Portable` CHAR(11) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`DateHeureErreur` DATETIME NULL DEFAULT NULL,
+	PRIMARY KEY (`IdBaseLigneErreur`) USING BTREE,
+	UNIQUE INDEX `Portable` (`Portable`) USING BTREE,
+	INDEX `IdClient` (`IdClient`) USING BTREE,
+	INDEX `IdBaseLigne` (`IdBaseLigne`) USING BTREE,
+	INDEX `DateHeureErreur` (`DateHeureErreur`) USING BTREE,
+	INDEX `TypeErreur` (`TypeErreur`) USING BTREE,
+	INDEX `TypeErreur_Portable` (`TypeErreur`, `Portable`) USING BTREE,
+	INDEX `IdOperation` (`IdOperation`) USING BTREE,
+	CONSTRAINT `FK_dos_base_ligne_erreur_clt_client` FOREIGN KEY (`IdClient`) REFERENCES `clt_client` (`IdClient`) ON UPDATE NO ACTION ON DELETE SET NULL,
+	CONSTRAINT `FK_dos_base_ligne_erreur_dos_base_ligne` FOREIGN KEY (`IdBaseLigne`) REFERENCES `dos_base_ligne` (`IdBaseLigne`) ON UPDATE NO ACTION ON DELETE SET NULL,
+	CONSTRAINT `FK_dos_base_ligne_erreur_dos_operation` FOREIGN KEY (`IdOperation`) REFERENCES `dos_operation` (`IdOperation`) ON UPDATE NO ACTION ON DELETE SET NULL
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+AUTO_INCREMENT=1209175
+;
