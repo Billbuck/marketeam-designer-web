@@ -1,13 +1,15 @@
 CREATE TABLE `ope_rcs_unitaire` (
 	`IdRcsUnitaire` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdFactureLigne` INT(11) NULL DEFAULT NULL COMMENT 'Une IdFactureLigne pour tous les RCS unitaires factures du mois',
 	`IdOperation` INT(11) NOT NULL COMMENT 'Un envoi unitaire appartient toujours à une opération',
 	`IdBaseLigne` INT(11) NULL DEFAULT NULL COMMENT 'Enregistrement de dos_base_ligne pour les champs de fusion - NULL = premier enregistrement de la base',
-	`CodeLanding` VARCHAR(10) NULL DEFAULT NULL COMMENT 'Code de test tmp_structure de la landing page - si renseigné bEstTest, sinon Code du destinataire' COLLATE 'utf8mb4_unicode_ci',
+	`CodeLanding` VARCHAR(10) NULL DEFAULT NULL COMMENT 'Code de landing de test (tmp_structure) - vide = code du destinataire' COLLATE 'utf8mb4_unicode_ci',
 	`IdRcsAgent` INT(11) NOT NULL COMMENT 'Agent RCS utilisé - voir rcs_agent',
 	`IdClient` INT(11) NULL DEFAULT NULL,
 	`IdContact` INT(11) NULL DEFAULT NULL,
 	`Origine` VARCHAR(4) NOT NULL DEFAULT 'TST' COMMENT 'Constantes __SMS_ORIGINE_* - TST = test' COLLATE 'utf8mb4_unicode_ci',
 	`Portable` VARCHAR(20) NOT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Message` VARCHAR(2000) NULL DEFAULT NULL COMMENT 'RCS texte (confirmation STOP, notification) - NULL = contenu de l operation' COLLATE 'utf8mb4_unicode_ci',
 	`Statut` CHAR(2) NULL DEFAULT NULL COMMENT 'Codes Marketeam communs au SMS (__SMS_STATUT_*) - une seule tentative' COLLATE 'utf8mb4_unicode_ci',
 	`CanalUtilise` ENUM('ATTENTE','RCS','SMS') NOT NULL DEFAULT 'ATTENTE' COMMENT 'Canal réellement utilisé - renseigné par le DLR' COLLATE 'utf8mb4_unicode_ci',
 	`BulkId` VARCHAR(64) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
@@ -23,6 +25,12 @@ CREATE TABLE `ope_rcs_unitaire` (
 	`PrixUnitaire` DECIMAL(10,5) NULL DEFAULT NULL COMMENT 'Coût Infobip - les tests ne sont pas facturés au client',
 	`Devise` CHAR(3) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
 	`SmsNombre` TINYINT(4) NULL DEFAULT NULL COMMENT 'Nombre de segments si le repli SMS a été utilisé',
+	`EstPaye` TINYINT(1) NOT NULL DEFAULT '0',
+	`EstPayeSurReserveArgent` TINYINT(1) NOT NULL DEFAULT '0',
+	`TauxTVA` DECIMAL(4,2) NULL DEFAULT '20.00',
+	`PrixUnitaireFacture` DECIMAL(6,4) NULL DEFAULT NULL COMMENT 'Prix de vente unitaire pour 1 RCS',
+	`MontantHT` DECIMAL(5,3) NULL DEFAULT '0.000',
+	`MontantTTC` DECIMAL(5,3) NULL DEFAULT '0.000',
 	`DateHeureEnvoi` DATETIME NULL DEFAULT NULL COMMENT 'Envoi par batchRcs',
 	`DateHeurePriseEnCharge` DATETIME NULL DEFAULT NULL COMMENT 'Acceptation par Infobip',
 	`DateHeureReception` DATETIME NULL DEFAULT NULL COMMENT 'doneAt du DLR',
@@ -38,12 +46,15 @@ CREATE TABLE `ope_rcs_unitaire` (
 	INDEX `Portable` (`Portable`) USING BTREE,
 	INDEX `IdClient` (`IdClient`) USING BTREE,
 	INDEX `IdContact` (`IdContact`) USING BTREE,
-	CONSTRAINT `FK_ope_rcs_unitaire_dos_operation` FOREIGN KEY (`IdOperation`) REFERENCES `dos_operation` (`IdOperation`) ON UPDATE NO ACTION ON DELETE CASCADE,
-	CONSTRAINT `FK_ope_rcs_unitaire_rcs_agent` FOREIGN KEY (`IdRcsAgent`) REFERENCES `rcs_agent` (`IdRcsAgent`) ON UPDATE NO ACTION ON DELETE RESTRICT,
+	INDEX `IdFactureLigne` (`IdFactureLigne`) USING BTREE,
+	INDEX `EstPayeSurReserveArgent` (`EstPayeSurReserveArgent`) USING BTREE,
 	CONSTRAINT `FK_ope_rcs_unitaire_clt_client` FOREIGN KEY (`IdClient`) REFERENCES `clt_client` (`IdClient`) ON UPDATE NO ACTION ON DELETE NO ACTION,
-	CONSTRAINT `FK_ope_rcs_unitaire_clt_contact` FOREIGN KEY (`IdContact`) REFERENCES `clt_contact` (`IdContact`) ON UPDATE NO ACTION ON DELETE NO ACTION
+	CONSTRAINT `FK_ope_rcs_unitaire_clt_contact` FOREIGN KEY (`IdContact`) REFERENCES `clt_contact` (`IdContact`) ON UPDATE NO ACTION ON DELETE NO ACTION,
+	CONSTRAINT `FK_ope_rcs_unitaire_dos_operation` FOREIGN KEY (`IdOperation`) REFERENCES `dos_operation` (`IdOperation`) ON UPDATE NO ACTION ON DELETE CASCADE,
+	CONSTRAINT `FK_ope_rcs_unitaire_rcs_agent` FOREIGN KEY (`IdRcsAgent`) REFERENCES `rcs_agent` (`IdRcsAgent`) ON UPDATE NO ACTION ON DELETE RESTRICT
 )
 COLLATE='utf8mb4_unicode_ci'
 ENGINE=InnoDB
 ROW_FORMAT=DYNAMIC
+AUTO_INCREMENT=14
 ;

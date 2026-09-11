@@ -35,6 +35,7 @@ CREATE TABLE `rcs_agent` (
 	`DateHeureStatut` DATETIME NULL DEFAULT NULL COMMENT 'Dernier changement de statut',
 	`DateHeureSynchro` DATETIME NULL DEFAULT NULL COMMENT 'Derniere synchro avec l API Infobip',
 	`EstActif` TINYINT(1) NOT NULL DEFAULT '0' COMMENT 'Decision Marketeam - autorise la selection en campagne',
+	`EstPartage` TINYINT(1) NOT NULL DEFAULT '0',
 	`DateHeureCreation` DATETIME NOT NULL,
 	`DateHeureModification` DATETIME NULL DEFAULT NULL,
 	`UserCreation` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
@@ -53,4 +54,5 @@ CREATE TABLE `rcs_agent` (
 COLLATE='utf8mb4_unicode_ci'
 ENGINE=InnoDB
 ROW_FORMAT=DYNAMIC
+AUTO_INCREMENT=2
 ;

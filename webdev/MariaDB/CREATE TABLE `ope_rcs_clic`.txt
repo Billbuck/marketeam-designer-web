@@ -18,9 +18,9 @@ CREATE TABLE `ope_rcs_clic` (
 	INDEX `IdRcsCarte` (`IdRcsCarte`) USING BTREE,
 	INDEX `IdRcsBouton` (`IdRcsBouton`) USING BTREE,
 	CONSTRAINT `FK_ope_rcs_clic_dos_operation` FOREIGN KEY (`IdOperation`) REFERENCES `dos_operation` (`IdOperation`) ON UPDATE NO ACTION ON DELETE CASCADE,
-	CONSTRAINT `FK_ope_rcs_clic_ope_rcs_unitaire` FOREIGN KEY (`IdRcsUnitaire`) REFERENCES `ope_rcs_unitaire` (`IdRcsUnitaire`) ON UPDATE NO ACTION ON DELETE CASCADE,
-	CONSTRAINT `FK_ope_rcs_clic_ope_rcs_carte` FOREIGN KEY (`IdRcsCarte`) REFERENCES `ope_rcs_carte` (`IdRcsCarte`) ON UPDATE NO ACTION ON DELETE SET NULL,
 	CONSTRAINT `FK_ope_rcs_clic_ope_rcs_bouton` FOREIGN KEY (`IdRcsBouton`) REFERENCES `ope_rcs_bouton` (`IdRcsBouton`) ON UPDATE NO ACTION ON DELETE SET NULL,
+	CONSTRAINT `FK_ope_rcs_clic_ope_rcs_carte` FOREIGN KEY (`IdRcsCarte`) REFERENCES `ope_rcs_carte` (`IdRcsCarte`) ON UPDATE NO ACTION ON DELETE SET NULL,
+	CONSTRAINT `FK_ope_rcs_clic_ope_rcs_unitaire` FOREIGN KEY (`IdRcsUnitaire`) REFERENCES `ope_rcs_unitaire` (`IdRcsUnitaire`) ON UPDATE NO ACTION ON DELETE CASCADE,
 	CONSTRAINT `CK_ope_rcs_clic_source` CHECK (`IdBaseLigne` is not null or `IdRcsUnitaire` is not null)
 )
 COLLATE='utf8mb4_unicode_ci'

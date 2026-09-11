@@ -8,13 +8,10 @@ CREATE TABLE `rcs_modele` (
 	`Libelle` VARCHAR(100) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
 	`EstPartage` TINYINT(1) NOT NULL DEFAULT '0',
 	`EstActif` TINYINT(1) NOT NULL DEFAULT '1',
-	`TypeContenu` ENUM('CARD','CAROUSEL') NOT NULL DEFAULT 'CARD' COLLATE 'utf8mb4_unicode_ci',
-	`Orientation` ENUM('VERTICAL','HORIZONTAL') NOT NULL DEFAULT 'VERTICAL' COMMENT 'CARD uniquement' COLLATE 'utf8mb4_unicode_ci',
-	`Alignement` ENUM('LEFT','RIGHT') NOT NULL DEFAULT 'LEFT' COMMENT 'CARD + HORIZONTAL uniquement' COLLATE 'utf8mb4_unicode_ci',
-	`LargeurCarte` ENUM('SMALL','MEDIUM') NOT NULL DEFAULT 'MEDIUM' COMMENT 'CAROUSEL uniquement' COLLATE 'utf8mb4_unicode_ci',
-	`EstRepliSms` TINYINT(1) NOT NULL DEFAULT '1',
-	`RepliSmsFrom` VARCHAR(11) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
-	`RepliSmsMessage` VARCHAR(1200) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`TypeContenu` ENUM('CARTE','CARROUSEL') NOT NULL DEFAULT 'CARTE' COLLATE 'utf8mb4_unicode_ci',
+	`Orientation` ENUM('VERTICAL','HORIZONTAL') NOT NULL DEFAULT 'VERTICAL' COMMENT 'CARTE uniquement' COLLATE 'utf8mb4_unicode_ci',
+	`Alignement` ENUM('LEFT','RIGHT') NOT NULL DEFAULT 'LEFT' COMMENT 'CARTE + HORIZONTAL uniquement' COLLATE 'utf8mb4_unicode_ci',
+	`LargeurCarte` ENUM('SMALL','MEDIUM') NOT NULL DEFAULT 'MEDIUM' COMMENT 'CARROUSEL uniquement' COLLATE 'utf8mb4_unicode_ci',
 	`DateHeureCreation` DATETIME NOT NULL,
 	`DateHeureModification` DATETIME NULL DEFAULT NULL,
 	`UserCreation` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
@@ -36,4 +33,5 @@ CREATE TABLE `rcs_modele` (
 COLLATE='utf8mb4_unicode_ci'
 ENGINE=InnoDB
 ROW_FORMAT=DYNAMIC
+AUTO_INCREMENT=5
 ;
