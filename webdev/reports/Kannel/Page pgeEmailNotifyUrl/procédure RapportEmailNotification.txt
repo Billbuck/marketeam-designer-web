@@ -1,0 +1,39 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//RapportEmailNotification (<sParamBuffer>)
+//
+// Paramètres :
+// 	sParamBuffer : <indiquez ici le rôle de sParamBuffer>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure RapportEmailNotification(sParamBuffer)
+
+vReponse est un Variant //stResults est une structResultsRapportEmailInfobip
+vRapport est un Variant 
+
+sFichier est une chaîne
+
+//sFichier = ComplèteRep(fRepWeb()) + "Buffer Notification Email - " + dateheuresys() + ".txt"
+//fSauveTexte(sFichier,sParamBuffer)
+
+
+//sParamBuffer = [
+//{"results":[{"bulkId":"2","price":{"pricePerMessage":0.000500,"currency":"EUR"},"status":{"id":5,"groupId":3,"groupName":"DELIVERED","name":"DELIVERED_TO_HANDSET","description":"Message delivered to handset"},"error":{"id":0,"name":"NO_ERROR","description":"No Error","groupId":0,"groupName":"OK","permanent":false},"messageId":"xs9v1mvtdmk85nbuyaxn","doneAt":"2018-03-26T14:42:58.825+0200","smsCount":1,"sentAt":"2018-03-26T14:42:55.200+0200","to":"michel@chronodirect.com"}]}
+//]
+
+vReponse = JSONVersVariant(sParamBuffer)
+
+si vReponse.results..Membre <> Null alors
+	pour I = 1 _à_ vReponse.results..Occurrence
+		vRapport = vReponse.results[I]
+		RapportEmission(vRapport)
+	fin
+sinon
+	sFichier = ComplèteRep(fRepWeb()) + "Reponse Notification Email - " + DateHeureSys() + ".txt"
+	fSauveTexte(sFichier,VariantVersJSON(vReponse))
+fin
+

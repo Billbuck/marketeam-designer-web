@@ -1,0 +1,12 @@
+procédure EnregistreErreur(pRequete)
+
+sContenu est une chaîne = [
+	[%DateVersChaîne(DateSys()) + " " + HeureVersChaîne(HeureSys())%]
+	[%SysEnvironnement("QUERY_STRING")%]
+	[%pRequete%]
+	[%ErreurInfo(errComplet)%]
+]
+
+
+fAjouteTexte(fRepDonnées()+ ["\"] + "EmailInfobipErreur.txt", sContenu)
+

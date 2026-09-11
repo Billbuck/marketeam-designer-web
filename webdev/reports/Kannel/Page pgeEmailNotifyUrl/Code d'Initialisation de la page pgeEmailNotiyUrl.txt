@@ -1,0 +1,7 @@
+// Code d'Initialisation de la page pgeEmailNotiyUrl
+
+sParamBuffer est une chaîne
+
+sParamBuffer = PageParamètre(paramBuffer)
+
+RapportEmailNotification(sParamBuffer)

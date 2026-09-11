@@ -1,0 +1,63 @@
+// Code d'initialisation de la page pgeKannelRapport
+
+
+sDateHeure 			est une chaîne
+sPrice 				est une chaîne
+sDetail				est une chaîne
+nDetailOperateur	est un entier
+sRouteur			est une chaîne
+sPortable			est une chaîne
+sMode				est une chaîne
+stRapportKannel 	est une structRapportKannel
+jsonRapport 		est une chaîne ANSI
+
+sMode 		= PageParamètre("Mode",paramSansDécodage)
+sRouteur 	= PageParamètre("Routeur",paramSansDécodage)
+sPortable 	= Remplace(PageParamètre("Sms",paramSansDécodage),"%2B","")
+sDetail		= PageParamètre("Detail",paramSansDécodage)
+sPrice 		= PageParamètre("Price",paramSansDécodage)
+sDateHeure	= Remplace(PageParamètre("Date",paramSansDécodage),["-","+",":"],"")
+
+selon sRouteur
+	cas	__ROUTEUR_INFOBIP__ 	: nDetailOperateur	= HexaVersEntier(ExtraitChaîne(sDetail,3,"%") + ExtraitChaîne(sDetail,4,"%"))
+	cas __ROUTEUR_CMTELECOM__	: nDetailOperateur	= sDetail
+fin
+
+stRapportKannel.DateHeure	= sDateHeure
+stRapportKannel.Statut		= PageParamètre("Status",paramSansDécodage)
+stRapportKannel.Detail		= nDetailOperateur
+stRapportKannel.Mode			= sMode
+stRapportKannel.Operateur	= ExtraitChaîne(PageParamètre("Operator",paramSansDécodage),1,"%")
+stRapportKannel.Routeur		= sRouteur
+stRapportKannel.Portable	= sPortable
+stRapportKannel.Price		= Val(sPrice)/10000
+
+selon sMode
+	cas "Operation"
+		stRapportKannel.stOperation.IdSms 					= PageParamètre("IdSms",paramSansDécodage)
+		stRapportKannel.stOperation.IdBaseLigne				= PageParamètre("IdBaseLigne",paramSansDécodage)
+
+	cas "Notification"
+		stRapportKannel.stNotification.IdSmsNotification	= PageParamètre("IdSmsNotification",paramSansDécodage)
+		stRapportKannel.stNotification.EstUnicode			= PageParamètre("EstUnicode",paramSansDécodage)
+
+	cas "Webservice"
+		stRapportKannel.stWebservice.IdSmsWebservice		= PageParamètre("IdSmsWebservice",paramSansDécodage)
+		stRapportKannel.stWebservice.MessageType			= PageParamètre("MessageTYpe",paramSansDécodage)
+		stRapportKannel.stWebservice.EstUnicode				= PageParamètre("EstUnicode",paramSansDécodage)
+
+	autre cas
+
+fin
+
+si cpKannel.__bLogRapport = Vrai alors
+	Sérialise(stRapportKannel, jsonRapport, psdJSON)
+	fSauveTexte(fRepDonnées() + "\stRapportKannel_"+ DateSys() +"_"+ HeureSys() +".txt",SysEnvironnement("QUERY_STRING") +RC+RC+ jsonRapport)
+fin
+
+selon sMode
+	cas "Operation"		: RapportEmissionOperation(stRapportKannel)
+	cas "Notification"	: RapportEmissionNotification(stRapportKannel)
+	cas "Webservice"		: RapportEmissionWebservice(stRapportKannel)
+fin
+

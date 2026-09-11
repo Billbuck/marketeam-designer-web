@@ -1,0 +1,40 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//RapportEmailTracking (<sParamBuffer>)
+//
+// Paramètres :
+// 	sParamBuffer : <indiquez ici le rôle de sParamBuffer>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure RapportEmailTracking(sParamBuffer)
+
+
+vReponse est un Variant 
+sFichier est une chaîne
+
+//sFichier = ComplèteRep(fRepWeb()) + "Buffer Tracking Email - " + DateHeureSys() + ".txt"
+//fSauveTexte(sFichier,sParamBuffer)
+
+vReponse = JSONVersVariant(sParamBuffer)
+
+si vReponse.notificationType..Membre <> Null alors
+	selon vReponse.notificationType
+		cas "OPENED"	: TrackingEmail(vReponse.notificationType, vReponse.messageId, vReponse.sendDateTime)
+		cas "CLICKED"	: TrackingEmail(vReponse.notificationType, vReponse.messageId, vReponse.sendDateTime, vReponse.url)
+		autre cas
+			sFichier = ComplèteRep(fRepWeb()) + "Erreur TYPE - Tracking Email - " + DateHeureSys() + ".txt"
+			fSauveTexte(sFichier,sParamBuffer)
+	fin
+sinon
+	sFichier = ComplèteRep(fRepWeb()) + "ErreurJSON - Tracking Email - " + DateHeureSys() + ".txt"
+	fSauveTexte(sFichier,sParamBuffer)
+fin
+
+
+
+// {"notificationType":"OPENED","domain":"mail.chronoemail.com","accountId":229605,"recipient":"michel@chronodirect.com","sendDateTime":1522161900341,"messageId":"524z1tjqyvcf47pzl3y4"}
+// {"notificationType":"CLICKED","domain":"mail.chronoemail.com","accountId":229605,"recipient":"michel@chronodirect.com","url":"https://www.infiniti.fr","sendDateTime":1522161900341,"messageId":"524z1tjqyvcf47pzl3y4"}

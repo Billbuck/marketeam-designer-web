@@ -1,0 +1,49 @@
+procédure RapportEmissionWebservice(stRapportKannel est une structRapportKannel)
+
+sStatut						est une chaîne
+sTexteRequete				est une chaîne
+sdReqRapportWebservice		est une Source de Données
+
+
+sStatut			= MatchingStatus(stRapportKannel.Statut, stRapportKannel.Detail, stRapportKannel.Routeur)
+
+sTexteRequete	=
+[
+	UPDATE LOW_PRIORITY 
+		wbs_sms_envoi
+	SET 
+		wbs_sms_envoi.Statut = '[%sStatut%]', 
+		wbs_sms_envoi.StatutKannel = '[%stRapportKannel.Statut%]', 
+		wbs_sms_envoi.StatutOperateur = '[%stRapportKannel.Detail%]', 
+		wbs_sms_envoi.Operateur = '[%stRapportKannel.Operateur%]', 
+		wbs_sms_envoi.PrixUnitaireFacture = [%stRapportKannel.Price%], 
+		wbs_sms_envoi.DateHeureReception = '[%stRapportKannel.DateHeure%]' 
+	WHERE 
+		wbs_sms_envoi.IdSmsWebservice = [%stRapportKannel.stWebservice.IdSmsWebservice%];
+]
+
+
+si pas sdReqRapportWebservice.ExécuteRequêteSQL(cpKannel.__cnxKannel, hRequêteSansCorrection, sTexteRequete) alors
+	EnregistreErreurRequete("RapportEmissionWebservice UPDATE", sTexteRequete)
+	retour
+fin
+
+
+si stRapportKannel.Detail dans (__IB_STATUT_BLACKLISTED_DESTINATIONADDRESS__, __CM_STATUT_BLACKLISTED_PERMANENTLY__) alors
+	sTexteRequete =
+	[
+		INSERT IGNORE dos_base_ligne_erreur (TypeErreur, Portable, DateHeureErreur)
+		VALUES('[%__ERREUR_STOP_PUB_OPERATEUR__%]', '[%stRapportKannel.Portable%]', NOW()) 
+	]
+fin
+
+si pas sdReqRapportWebservice.ExécuteRequêteSQL(cpKannel.__cnxKannel, hRequêteSansCorrection, sTexteRequete) alors
+	EnregistreErreurRequete("RapportEmissionWebservice INSERT", sTexteRequete)
+	retour
+fin
+
+
+
+
+fin:
+sdReqRapportWebservice.AnnuleDéclaration()

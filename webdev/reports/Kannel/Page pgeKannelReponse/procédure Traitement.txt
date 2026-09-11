@@ -1,0 +1,328 @@
+procédure Traitement()
+
+sdReqReponse									est une Source de Données
+sTexteInsertDosBaseLigneErreur			est une chaîne
+sTexteInsertOpeSmsReponseMarketing		est une chaîne
+sTexteInsertOpeSmsReponseNotification	est une chaîne
+sTexteIdOperation								est une chaîne
+sTexteInsertOpeSmsReponseFromInconnu	est une chaîne
+bEstNotification								est un booléen
+sRouteur											est une chaîne
+tabStop											est un tableau de chaîne
+sPortable										est une chaîne
+sReponse											est une chaîne
+sDate												est une chaîne
+sLeFrom											est une chaîne
+sQueryString									est une chaîne
+
+sQueryString = SysEnvironnement("QUERY_STRING")
+
+
+sPortable 	= Remplace(PageParamètre("Sms"),"+","")
+sDate 		= Remplace(PageParamètre("Date"),["-",":"," "],"")
+sReponse 	= Remplace(PageParamètre("Reponse"),"'","''")
+sLeFrom 	= PageParamètre("ShortCode")
+
+//	fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + sQueryString)
+//	fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + sPortable)
+//	fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + sDate)
+//	fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + sLeFrom)
+//	fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + sReponse)
+//	fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + "-----------------------------------------------------------")
+
+
+si cpKannel.__bLogReponse = Vrai alors
+	fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + DateHeureVersChaîne(DateHeureSys(),"JJ/MM/AAAA HH:mm:SS"))
+	fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + sQueryString)
+	fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + sPortable)
+	fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + sDate)
+	fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + sLeFrom)
+	fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + sReponse)
+	fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + "-----------------------------------------------------------")
+fin
+
+
+si SansEspace(sReponse) = "" alors
+	retour
+fin
+
+
+selon sLeFrom
+
+	cas __IB_SHORTCODE_36173_MARKETING__		: bEstNotification = Faux; sRouteur = __ROUTEUR_INFOBIP__
+	cas __IB_SHORTCODE_36199_MARKETING__		: bEstNotification = Faux; sRouteur = __ROUTEUR_INFOBIP__
+
+	cas __IB_SHORTCODE_38691_NOTIFICATION__		: bEstNotification = Vrai; sRouteur = __ROUTEUR_INFOBIP__
+
+	cas __CM_SHORTCODE_36047_MARKETING__		: bEstNotification = Faux; sRouteur = __ROUTEUR_CMTELECOM__
+	cas __CM_SHORTCODE_36955_MARKETING__	   	: bEstNotification = Faux; sRouteur = __ROUTEUR_CMTELECOM__
+	cas __CM_SHORTCODE_36027_MARKETING__	   	: bEstNotification = Faux; sRouteur = __ROUTEUR_CMTELECOM__
+	cas __CM_SHORTCODE_36064_MARKETING__	   	: bEstNotification = Faux; sRouteur = __ROUTEUR_CMTELECOM__
+	cas __CM_SHORTCODE_36065_MARKETING__	   	: bEstNotification = Faux; sRouteur = __ROUTEUR_CMTELECOM__
+	cas __CM_SHORTCODE_36067_MARKETING__	   	: bEstNotification = Faux; sRouteur = __ROUTEUR_CMTELECOM__
+	cas __CM_SHORTCODE_36068_MARKETING__	   	: bEstNotification = Faux; sRouteur = __ROUTEUR_CMTELECOM__
+	cas __CM_SHORTCODE_36070_MARKETING__	   	: bEstNotification = Faux; sRouteur = __ROUTEUR_CMTELECOM__
+	cas __CM_SHORTCODE_36979_MARKETING__	   	: bEstNotification = Faux; sRouteur = __ROUTEUR_CMTELECOM__
+
+	cas __CM_SHORTCODE_38082_NOTIFICATION__		: bEstNotification = Vrai; sRouteur = __ROUTEUR_CMTELECOM__
+	cas __CM_SHORTCODE_38093_NOTIFICATION__		: bEstNotification = Vrai; sRouteur = __ROUTEUR_CMTELECOM__
+	cas __CM_SHORTCODE_38094_NOTIFICATION__		: bEstNotification = Vrai; sRouteur = __ROUTEUR_CMTELECOM__
+	cas __CM_SHORTCODE_38095_NOTIFICATION__		: bEstNotification = Vrai; sRouteur = __ROUTEUR_CMTELECOM__
+	cas __CM_SHORTCODE_38034_NOTIFICATION__		: bEstNotification = Vrai; sRouteur = __ROUTEUR_CMTELECOM__
+	cas __CM_SHORTCODE_38035_NOTIFICATION__		: bEstNotification = Vrai; sRouteur = __ROUTEUR_CMTELECOM__
+	cas __CM_SHORTCODE_38141_NOTIFICATION__		: bEstNotification = Vrai; sRouteur = __ROUTEUR_CMTELECOM__
+	cas __CM_SHORTCODE_38051_NOTIFICATION__		: bEstNotification = Vrai; sRouteur = __ROUTEUR_CMTELECOM__
+	cas __CM_SHORTCODE_38959_NOTIFICATION__		: bEstNotification = Vrai; sRouteur = __ROUTEUR_CMTELECOM__
+
+	autres cas 									: bEstNotification = Faux; sRouteur = ""
+
+fin
+
+
+tabStop = ["stop","stoo","stp","stip","stpp","srop","sto0","ntm","syop","stom","spot","qtop","sotp","stpo","stoop","stooop","stoooop","stio","st0p","no sms","plus de sms","fdp","nique","nike","merde","fou","fous","voleur","voleurs","branleur","geule","gueule","pute","putes","mere","meres","putain","connard","connards","merde","merdes","pub","publicite","publicites","publicitaire","unsubscribe","harcelement","spam","rgpd","lachez","caca","branle","branler","enculer","enculee","enculez","fuck","foutre","foutez","escroc","escrocs","Escroquerie","Escroqueries","oubliez","oublier","oublie","tranquille","rayer","arret","arreter","arrete","jamais","arretez","desinscrire","desinscription","supprimez","supprimer","sortir","retirer","rayer","rayez","retirez","enlevez","enlever","desabonnement","desabonnez","desabonner"]
+
+
+si sPortable <> "" alors
+
+	selon Vrai
+		cas Contient(sReponse,tabStop,MotComplet+SansCasse) _et_ bEstNotification = Faux
+
+			sTexteInsertDosBaseLigneErreur =
+			[
+				INSERT IGNORE INTO dos_base_ligne_erreur (IdBaseLigne, IdClient, IdOperation, TypeErreur, DateHeureErreur, Portable)
+
+				SELECT
+					dos_base_ligne.IdBaseLigne,
+					dos_operation.IdClientFacturation AS IdClient,
+					dos_operation.IdOperation,
+					'[%__ERREUR_STOP_PUB__%]' AS TypeErreur,
+					NOW() AS DateHeureErreur,
+					dos_base_ligne.Portable
+				FROM
+					dos_base_ligne
+					JOIN dos_base ON dos_base.IdBase = dos_base_ligne.IdBase
+					JOIN dos_operation ON dos_base.IdOperation = dos_operation.IdOperation
+				WHERE
+					dos_operation.Statut > '[%__Statut_Prise_En_Charge__%]'
+					AND dos_base_ligne.Portable = '[%sPortable%]'
+					AND dos_operation.DateHeurePriseEnCharge >= DATE_SUB(CURDATE(), INTERVAL 3 DAY)
+				ORDER BY
+					dos_operation.DateHeurePriseEnCharge DESC
+				LIMIT 1
+			]
+
+			si cpKannel.__bLogReponse = Vrai alors
+				fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + DateHeureVersChaîne(DateHeureSys(),"JJ/MM/AAAA HH:mm:SS"))
+				fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + "Requete sTexteInsertDosBaseLigneErreur = ")
+				fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + sTexteInsertDosBaseLigneErreur)
+				fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + "-----------------------------------------------------------")
+			fin
+
+			si pas sdReqReponse.ExécuteRequêteSQL(cpKannel.__cnxKannel, hRequêteSansCorrection, sTexteInsertDosBaseLigneErreur) alors
+				EnregistreErreur("sTexteInsertDosBaseLigneErreur", sTexteInsertDosBaseLigneErreur)
+				retour
+			fin
+
+
+			// Pour tout SMS stop pub reçu on facture un SMS de notification
+			// On recherche le numéro de portable pour la dernière opération en cours
+
+			sTexteIdOperation =
+			[
+				INSERT IGNORE INTO ope_sms_notification (IdOperation, IdClient, IdContact, TauxTVA, MontantHT, MontantTTC, Statut, StatutKannel, StatutOperateur, Routeur, LeFrom, Origine, Portable, MESSAGE, EstSmsUnicode, EstPaye, NbrSmsFacture, DateHeureEnvoi, DateHeureReception)
+
+				SELECT
+					dos_operation.IdOperation,
+					dos_operation.IdClient,
+					dos_operation.IdContact,
+					dos_operation_ligne.TauxTVA TauxTVA,
+					dos_operation_ligne.PrixUnitaireVenteBrut / GREATEST(dos_operation_ligne.TailleUnitaire, 1) MontantHT,	
+					(dos_operation_ligne.PrixUnitaireVenteBrut / GREATEST(dos_operation_ligne.TailleUnitaire, 1)) * (1 + dos_operation_ligne.TauxTVA / 100) MontantTTC,
+					'[%__SMS_STATUT_DELIVERED__%]' Statut,
+					'1' StatutKannel,
+					'0' StatutOperateur,
+					'[%sRouteur%]' Routeur,
+					'[%sLeFrom%]' LeFrom,
+					'[%__ERREUR_STOP_PUB__%]' Origine,
+					'[%sPortable%]' Portable,
+					'Confirmation STOP SMS' MESSAGE,
+					0 EstSmsUnicode,
+					0 EstPaye,
+					1 NbrSmsFacture,
+					'[%sDate%]' DateHeureEnvoi,
+					NOW() DateHeureReception
+
+				FROM
+					dos_base_ligne
+					JOIN dos_base ON dos_base.IdBase = dos_base_ligne.IdBase
+					JOIN dos_operation ON dos_base.IdOperation = dos_operation.IdOperation
+					JOIN clt_client ON dos_operation.IdClient = clt_client.IdClient
+					JOIN dos_operation_ligne ON dos_operation_ligne.IdOperation = dos_operation.IdOperation AND dos_operation_ligne.CodePrestation = '[%__PRESTATION_ROUTAGE_SMS__%]'
+				WHERE
+					dos_operation.Statut > '[%__Statut_Prise_En_Charge__%]'
+					AND dos_base_ligne.Portable = '[%sPortable%]'
+					AND dos_operation.DateHeurePriseEnCharge >= DATE_SUB(CURDATE(), INTERVAL 3 DAY)
+				ORDER BY
+					dos_operation.DateHeurePriseEnCharge DESC
+				LIMIT 1
+			]
+
+			si cpKannel.__bLogReponse = Vrai alors
+				fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + DateHeureVersChaîne(DateHeureSys(),"JJ/MM/AAAA HH:mm:SS"))
+				fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + "Requete sTexteIdOperation = ")
+				fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + sTexteIdOperation)
+				fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + "-----------------------------------------------------------")
+			fin
+
+			si pas sdReqReponse.ExécuteRequêteSQL(cpKannel.__cnxKannel, hRequêteSansCorrection, sTexteIdOperation) alors
+				EnregistreErreur("sTexteIdOperation", sTexteIdOperation)
+				retour
+			fin
+
+		autre cas // on stock la réponse pour l'opération
+			si sRouteur = "" alors // On ne connait pas l'origine (Notification ou Marketing) car le from est personnalisé
+
+				sTexteInsertOpeSmsReponseFromInconnu =
+				[
+					INSERT IGNORE INTO ope_sms_reponse (IdSmsNotification, IdBaseLigne, Reponse, DateHeure)
+
+					SELECT
+						z.IdSmsNotification,
+						z.IdBaseLigne,
+						'[%sReponse%]' Reponse,
+						NOW() DateHeure
+
+					FROM
+						(
+						SELECT
+						NULL IdSmsNotification,
+						l.IdBaseLigne,
+						o.DateHeurePriseEnCharge DateHeure
+						FROM
+							dos_base_ligne l
+							JOIN dos_base b ON b.IdBase = l.IdBase
+							JOIN dos_operation o ON b.IdOperation = o.IdOperation
+						WHERE
+							o.Statut > '[%__Statut_Prise_En_Charge__%]'
+							AND l.Portable = '[%sPortable%]'
+							AND o.DateHeurePriseEnCharge >= DATE_SUB(CURDATE(), INTERVAL 3 DAY)
+
+						UNION
+
+						SELECT
+							IdSmsNotification,
+							NULL IdBaseLigne,
+							DateHeureEnvoi DateHeure
+						FROM
+							ope_sms_notification
+						WHERE
+							Portable = '[%sPortable%]'
+							AND Statut = '[%__SMS_STATUT_DELIVERED__%]'
+							AND Origine = 'WEB'
+							AND DateHeureEnvoi >= DATE_SUB(NOW(), INTERVAL 1 DAY)
+						) AS z
+					ORDER BY
+						z.DateHeure DESC
+					LIMIT 1
+				]
+
+
+				si cpKannel.__bLogReponse = Vrai alors
+					fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + DateHeureVersChaîne(DateHeureSys(),"JJ/MM/AAAA HH:mm:SS"))
+					fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + "Requete sTexteInsertOpeSmsReponseFromInconnu = ")
+					fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + sTexteInsertOpeSmsReponseFromInconnu)
+					fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + "-----------------------------------------------------------")
+				fin
+
+				si pas sdReqReponse.ExécuteRequêteSQL(cpKannel.__cnxKannel, hRequêteSansCorrection, sTexteInsertOpeSmsReponseFromInconnu) alors
+					EnregistreErreur("sTexteInsertOpeSmsReponseFromInconnu", sTexteInsertOpeSmsReponseFromInconnu)
+				fin
+
+
+			sinon
+				si bEstNotification = Faux alors
+
+					sTexteInsertOpeSmsReponseMarketing =
+					[
+						INSERT IGNORE INTO ope_sms_reponse (IdBaseLigne, Reponse, DateHeure)
+
+						SELECT
+							l.IdBaseLigne,
+							'[%sReponse%]' Reponse,
+							NOW() DateHeure
+ 						FROM
+							dos_base_ligne l
+							JOIN dos_base b ON b.IdBase = l.IdBase
+							JOIN dos_operation o ON b.IdOperation = o.IdOperation
+						WHERE
+							o.Statut > '[%__Statut_Prise_En_Charge__%]'
+							AND l.Portable = '[%sPortable%]'
+							AND o.DateEnvoiSouhaite >= DATE_SUB(CURDATE(), INTERVAL 3 DAY)
+						ORDER BY
+							o.DateHeurePriseEnCharge DESC
+						LIMIT 1
+					]
+
+					si cpKannel.__bLogReponse = Vrai alors
+						fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + DateHeureVersChaîne(DateHeureSys(),"JJ/MM/AAAA HH:mm:SS"))
+						fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + "Requête sTexteInsertOpeSmsReponseMarketing = ")
+						fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + sTexteInsertOpeSmsReponseMarketing)
+						fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + "-----------------------------------------------------------")
+					fin
+
+					si pas sdReqReponse.ExécuteRequêteSQL(cpKannel.__cnxKannel, hRequêteSansCorrection, sTexteInsertOpeSmsReponseMarketing) alors
+						EnregistreErreur("sTexteInsertOpeSmsReponseMarketing", sTexteInsertOpeSmsReponseMarketing)
+					fin
+				sinon
+
+					sTexteInsertOpeSmsReponseNotification =
+					[
+						INSERT IGNORE INTO ope_sms_reponse (IdSmsNotification, Reponse, DateHeure)
+
+						SELECT
+							IdSmsNotification,
+							'[%sReponse%]' Reponse,
+							DateHeureEnvoi DateHeure
+						FROM
+							ope_sms_notification
+						WHERE
+							Portable = '[%sPortable%]'
+							AND Statut = '[%__SMS_STATUT_DELIVERED__%]'
+							AND Origine = 'WEB'
+							AND DateHeureEnvoi >= DATE_SUB(NOW(), INTERVAL 1 DAY)
+						ORDER BY
+							DateHeureEnvoi DESC
+						LIMIT 1
+					]
+					si cpKannel.__bLogReponse = Vrai alors
+						fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + DateHeureVersChaîne(DateHeureSys(),"JJ/MM/AAAA HH:mm:SS"))
+						fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + "Requête sTexteInsertOpeSmsReponseNotification = ")
+						fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + sTexteInsertOpeSmsReponseNotification)
+						fAjouteTexte(fRepDonnées()+"\QueryString.txt",RC + "-----------------------------------------------------------")
+					fin
+
+					si pas sdReqReponse.ExécuteRequêteSQL(cpKannel.__cnxKannel, hRequêteSansCorrection, sTexteInsertOpeSmsReponseNotification) alors
+						EnregistreErreur("sTexteInsertOpeSmsReponseNotification", sTexteInsertOpeSmsReponseNotification)
+					fin
+				fin
+
+			fin
+
+	fin
+fin
+
+
+
+
+fin:
+sdReqReponse.AnnuleDéclaration()
+
+procédure interne EnregistreErreur(pTitre, pRequete)
+	fAjouteTexte(fRepDonnées() + "\KannelErreurReponse.txt", RC +  DateHeureVersChaîne(DateHeureSys(),"JJ/MM/AAAA HH:mm:SS"))
+	fAjouteTexte(fRepDonnées() + "\KannelErreurReponse.txt", RC +  pTitre)
+	fAjouteTexte(fRepDonnées() + "\KannelErreurReponse.txt", RC +  pRequete)
+	fAjouteTexte(fRepDonnées() + "\KannelErreurReponse.txt", RC +  ErreurInfo(errComplet))
+	fAjouteTexte(fRepDonnées() + "\KannelErreurReponse.txt", RC +  "------------------------------------------------------------------------------------------------")
+fin
+
+

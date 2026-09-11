@@ -1,0 +1,71 @@
+procédure EmailMatchingStatus(pIdGroup,pIdErreur)
+
+selon pIdGroup
+	cas 0
+		selon pIdErreur
+			cas __IB_STATUT_NO_ERROR__									: renvoyer __EMAIL_STATUT_NO_ERROR__
+			autre cas													: renvoyer __EMAIL_STATUT_AUTRE_ERREUR__
+				                                            			
+		fin                                                 			
+		                                                    			
+	cas 1                                                   			
+		selon pIdErreur                                     			
+			cas __IB_STATUT_PENDING_WAITING_DELIVERY__					: renvoyer __EMAIL_STATUT_EN_ATTENTE_RECEPTION__
+			cas __IB_STATUT_PENDING_ENROUTE__							: renvoyer __EMAIL_STATUT_EN_ATTENTE_LIVRAISON__
+			cas __IB_STATUT_PENDING_ACCEPTED__							: renvoyer __EMAIL_STATUT_EN_ATTENTE_CONFIRMATION__
+			autre cas													: renvoyer __EMAIL_STATUT_AUTRE_ERREUR__
+				
+		fin
+		
+	cas 2
+		selon pIdErreur
+			cas	__IB_STATUT_UNDELIVERABLE_REJECTED_OPERATOR__			: renvoyer __EMAIL_STATUT_REJECTED__
+			cas	__IB_STATUT_UNDELIVERABLE_NOT_DELIVERED__				: renvoyer __EMAIL_STATUT_NOT_DELIVERED__
+			autre cas													: renvoyer __EMAIL_STATUT_AUTRE_ERREUR__
+				
+		fin
+		
+	cas 3
+		selon pIdErreur
+			cas	__IB_STATUT_DELIVERED_TO_OPERATOR__						: renvoyer __EMAIL_STATUT_DELIVERED_TO_OPERATOR__
+			cas	__IB_STATUT_DELIVERED_TO_HANDSET__						: renvoyer __EMAIL_STATUT_DELIVERED_TO_HANDSET__
+			autre cas													: renvoyer __EMAIL_STATUT_AUTRE_ERREUR__
+				
+		fin
+		
+	cas 4
+		selon pIdErreur
+			cas	__IB_STATUT_EXPIRED_EXPIRED__							: renvoyer __EMAIL_STATUT_EXPIRED__
+			cas	__IB_STATUT_EXPIRED_DLR_UNKNOWN__						: renvoyer __EMAIL_STATUT_EXPIRED_DLR_UNKNOWN__    
+			autre cas                                                   : renvoyer __EMAIL_STATUT_AUTRE_ERREUR__
+				
+		fin
+		
+	cas 5
+		selon pIdErreur
+			cas __IB_STATUT_REJECTED_NETWORK__							: renvoyer __EMAIL_STATUT_REJECTED_NETWORK__						
+			cas __IB_STATUT_REJECTED_PREFIX_MISSING__					: renvoyer __EMAIL_STATUT_REJECTED_PREFIX_MISSING__				          
+			cas __IB_STATUT_REJECTED_DND__								: renvoyer __EMAIL_STATUT_REJECTED_DND__							   
+			cas __IB_STATUT_REJECTED_SOURCE__							: renvoyer __EMAIL_STATUT_REJECTED_SOURCE__						   
+			cas __IB_STATUT_REJECTED_NOT_ENOUGH_CREDITS__				: renvoyer __EMAIL_STATUT_REJECTED_NOT_ENOUGH_CREDITS__			   
+			cas __IB_STATUT_REJECTED_SENDER__							: renvoyer __EMAIL_STATUT_REJECTED_SENDER__						   
+			cas __IB_STATUT_REJECTED_DESTINATION__						: renvoyer __EMAIL_STATUT_REJECTED_DESTINATION__					   
+			cas __IB_STATUT_REJECTED_PREPAID_PACKAGE_EXPIRED__			: renvoyer __EMAIL_STATUT_REJECTED__
+			cas __IB_STATUT_REJECTED_DESTINATION_NOT_REGISTERED__		: renvoyer __EMAIL_STATUT_REJECTED__	   
+			cas __IB_STATUT_REJECTED_ROUTE_NOT_AVAILABLE__				: renvoyer __EMAIL_STATUT_REJECTED__			   
+			cas __IB_STATUT_REJECTED_FLOODING_FILTER__					: renvoyer __EMAIL_STATUT_REJECTED__				   
+			cas __IB_STATUT_REJECTED_SYSTEM_ERROR__						: renvoyer __EMAIL_STATUT_REJECTED__					   
+			cas __IB_STATUT_REJECTED_DUPLICATE_MESSAGE_ID__				: renvoyer __EMAIL_STATUT_REJECTED__			   
+			cas __IB_STATUT_REJECTED_INVALID_UDH__						: renvoyer __EMAIL_STATUT_REJECTED__					   
+			cas __IB_STATUT_REJECTED_MESSAGE_TOO_LONG__					: renvoyer __EMAIL_STATUT_REJECTED__				   
+			cas __IB_STATUT_MISSING_TO__								: renvoyer __EMAIL_STATUT_REJECTED__							   
+			cas __IB_STATUT_REJECTED_INVALID_DESTINATION__				: renvoyer __EMAIL_STATUT_REJECTED_INVALID_DESTINATION__			   
+			autre cas                                                   : renvoyer __EMAIL_STATUT_AUTRE_ERREUR__
+				
+		fin
+		
+fin
+
+
+
+

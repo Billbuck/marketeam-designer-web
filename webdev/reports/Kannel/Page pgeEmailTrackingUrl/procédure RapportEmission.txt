@@ -1,0 +1,77 @@
+procédure RapportEmission(pRapport est un Variant) //pDateHeureKannel,pStatutKannel,pDetailOperateur,pIdSms,pIdBaseLigne,pEstNotification,pOperateur,pRouteur,pPrice)
+
+sStatut est une chaîne
+
+
+sTexteRequete est une chaîne
+sTexteRequeteUpdateEmailEnvoi est une chaîne
+sTexteRequeteUpdateEmailNotification est une chaîne
+sdReqRapportKannel est une Source de Données
+nIdBaseLigne est un entier
+nIdEmailNotification est un entier
+sDateHeureReception est une chaîne
+sDateHeurePriseEnCharge est une chaîne
+
+mPrixUnitaireFacture est un monétaire
+
+
+sTexteRequeteUpdateEmailNotification =
+[
+	UPDATE LOW_PRIORITY ope_email_notification SET Statut='%1', IdOperateur='%2', PrixUnitaireFacture = %3, DateHeureReception='%4', DateHeurePriseEnCharge = '%5', JsonOperateur = '%6' WHERE IdSmsNotification='%7'
+]
+
+sTexteRequeteUpdateEmailEnvoi =
+[
+	UPDATE LOW_PRIORITY ope_email_envoi SET Statut='%1', IdOperateur='%2', PrixUnitaireFacture = %3, DateHeureReception='%4', DateHeurePriseEnCharge = '%5', JsonOperateur = '%6' WHERE IdBaseLigne='%7'
+]
+
+
+
+sStatut 					= EmailMatchingStatus(pRapport.status.groupId, pRapport.status.id)
+mPrixUnitaireFacture 		= pRapport.price.pricePerMessage
+nIdBaseLigne				= ExtraitChaîne(pRapport.bulkId,1,"|")
+nIdEmailNotification		= ExtraitChaîne(pRapport.bulkId,2,"|")
+sDateHeurePriseEnCharge		= Gauche(Remplace(pRapport.sentAt,["-","T",":","+",],""),14)
+sDateHeureReception			= Gauche(Remplace(pRapport.doneAt,["-","T",":","+",],""),14)
+
+si nIdEmailNotification > 0
+	sTexteRequete = ChaîneConstruit(sTexteRequeteUpdateEmailNotification,sStatut,pRapport.messageId,mPrixUnitaireFacture,sDateHeureReception,sDateHeurePriseEnCharge,pRapport,nIdEmailNotification)
+
+sinon
+	sTexteRequete = ChaîneConstruit(sTexteRequeteUpdateEmailEnvoi,sStatut,pRapport.messageId,mPrixUnitaireFacture,sDateHeureReception,sDateHeurePriseEnCharge,VariantVersJSON(pRapport),nIdBaseLigne)
+fin
+
+si pas HExécuteRequêteSQL(sdReqRapportKannel, cpKannel.__cnxKannel, hRequêteSansCorrection, sTexteRequete) alors
+	EnregistreErreur(sTexteRequete)
+	retour
+fin
+
+
+fin:
+sdReqRapportKannel.AnnuleDéclaration()
+
+
+
+//	nIdBaseLigne 		= vReponse.results[I].bulkid
+//
+//	mPrixUnitaire 		= vReponse.results[I].price.pricePerMessage
+//
+//	nStatutId			= vReponse.results[I].status.id
+//	nStatutIdGroup		= vReponse.results[I].status.groupId
+//	sStatutGroupName	= vReponse.results[I].status.groupName
+//	sStatutName			= vReponse.results[I].status.name
+//	sStatutDescription	= vReponse.results[I].status.description
+//
+//	nErrorId			= vReponse.results[I].error.id
+//	nErrorIdGroup		= vReponse.results[I].error.groupId
+//	sErrorGroupName		= vReponse.results[I].error.groupName
+//	sErrorName			= vReponse.results[I].error.name
+//	sErrorDescription	= vReponse.results[I].error.description
+//
+//	sMessageId			= vReponse.results[I].messageId
+//
+//	dhDoneAt			= gauche(remplace(vReponse.results[I].doneAt,["-","T",":","+",],""),14)
+//	dhSentAt			= Gauche(Remplace(vReponse.results[I].sentAt,["-","T",":","+",],""),14)
+//
+//	sEmail				= vReponse.results[I].to
+

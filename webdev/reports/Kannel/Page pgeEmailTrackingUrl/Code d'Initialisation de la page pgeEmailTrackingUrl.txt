@@ -1,0 +1,7 @@
+// Code d'Initialisation de la page pgeEmailTrackingUrl
+
+sParamBuffer est une chaîne
+
+sParamBuffer = PageParamètre(paramBuffer)
+
+RapportEmailTracking(sParamBuffer)

@@ -1,0 +1,32 @@
+// Initialisation de Kannel
+
+structRapportKannelOperation est une Structure
+	IdSms				est un entier
+	IdBaseLigne			est un entier
+fin
+
+structRapportKannelNotification est une Structure
+	IdSmsNotification	est un entier
+	EstUnicode			est un booléen
+fin
+
+structRapportKannelWebservice est une Structure
+	IdSmsWebservice		est un entier
+	MessageType			est une chaîne
+	EstUnicode			est un booléen
+fin
+
+
+structRapportKannel est une Structure
+	DateHeure			est une chaîne
+	Mode 				est une chaîne
+	Operateur			est un entier
+	Routeur				est une chaîne
+	Portable 			est une chaîne
+	Statut				est un entier
+	Detail				est un entier
+	Price				est un monétaire
+	stOperation 		est une structRapportKannelOperation
+	stNotification 		est une structRapportKannelNotification
+	stWebservice 		est une structRapportKannelWebservice
+fin

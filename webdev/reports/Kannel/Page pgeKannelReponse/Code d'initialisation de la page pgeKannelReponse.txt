@@ -1,0 +1,3 @@
+// Code d'initialisation de la page pgeKannelReponse 
+
+Traitement()

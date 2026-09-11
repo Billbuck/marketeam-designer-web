@@ -1,0 +1,14 @@
+procédure EnregistreErreur(pRequete)
+
+nIDFichier est un entier
+soit sFichier	= ComplèteRep(fRepWeb())+ "EmailInfobipErreur.txt"
+// Ouverture du fichier
+nIDFichier = fOuvre(sFichier, foAjout + foCréationSiInexistant)
+si nIDFichier <> -1 alors
+	
+	fEcritLigne(nIDFichier,DateVersChaîne(DateSys()) + " " + HeureVersChaîne(HeureSys()) + RC + SysEnvironnement("QUERY_STRING") + RC + pRequete + RC + ErreurInfo(errComplet) + RC + "*****************************************************************************************************")
+	
+	// Fermeture du fichier
+	fFerme(nIDFichier)
+fin
+

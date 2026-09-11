@@ -1,0 +1,45 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//TrackingEmail (<pType>, <pIdOperateur>, <pDateHeureOpen> [, <pUrl>])
+//
+// Paramètres :
+//	pType : <indiquez ici le rôle de pType>
+//	pIdOperateur : <indiquez ici le rôle de pIdOperateur>
+//	pDateHeureOpen : <indiquez ici le rôle de pDateHeureOpen>
+//	pUrl (valeur par défaut="") : <indiquez ici le rôle de pUrl>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+//	pIdOperateur : <indiquez ici le rôle de pmessageId>
+//	pJson : <indiquez ici le rôle de pJson>
+procédure TrackingEmail(pType,pIdOperateur,pDateHeureOpen <utile>, pUrl = "NULL")
+
+
+sTexteRequete est une chaîne
+sdReqTrackingClic est une Source de Données
+sDateHeureTracking est une chaîne = DateHeureSys[[à 14]]
+
+si pUrl <> "NULL" alors
+	pUrl = ChaîneConstruit("'%1'",pUrl)
+fin
+
+
+sTexteRequete =
+[
+	INSERT LOW_PRIORITY INTO ope_email_tracking (IdBaseLigne, Type, Lien)
+	SELECT ope_email_envoi.IdBaseLigne, '%2', %3 FROM ope_email_envoi WHERE ope_email_envoi.IdOperateur = '%1'
+]
+
+sTexteRequete = ChaîneConstruit(sTexteRequete,pIdOperateur, pType, pUrl)
+
+si pas HExécuteRequêteSQL(sdReqTrackingClic, cpKannel.__cnxKannel, hRequêteSansCorrection, sTexteRequete) alors
+	EnregistreErreur(sTexteRequete)
+	retour
+fin
+
+
+fin:
+sdReqTrackingClic.AnnuleDéclaration()

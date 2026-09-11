@@ -1,0 +1,9 @@
+procédure EnregistreErreurRequete(pTitre, pRequete)
+
+
+fAjouteTexte(fRepDonnées() + "\KannelErreurRapport.txt", RC + DateHeureVersChaîne(DateHeureSys(),"Jjj JJ mmm AAAA - HH:mm:SS:CCC"))
+fAjouteTexte(fRepDonnées() + "\KannelErreurRapport.txt", RC + SysEnvironnement("QUERY_STRING"))
+fAjouteTexte(fRepDonnées() + "\KannelErreurRapport.txt", RC + pTitre)
+fAjouteTexte(fRepDonnées() + "\KannelErreurRapport.txt", RC + pRequete)
+fAjouteTexte(fRepDonnées() + "\KannelErreurRapport.txt", RC + ErreurInfo(errComplet))
+fAjouteTexte(fRepDonnées() + "\KannelErreurRapport.txt", RC + "------------------------------------------------------------------------------------------------")
