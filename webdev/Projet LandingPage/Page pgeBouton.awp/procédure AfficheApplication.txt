@@ -1,0 +1,45 @@
+// Résumé : action APPLICATION — redirige vers le store de la plateforme :
+// iPhone/iPad -> UrlAppStore, Android -> UrlPlayStore (ScriptAffiche).
+// Autre plateforme, ou URL du store manquante : carte avec un bouton par
+// store renseigné. Les deux URL vides -> page neutre.
+procédure AfficheApplication(jParam)
+
+sUrlApp		est une chaîne	= jParam.UrlAppStore
+sUrlPlay		est une chaîne	= jParam.UrlPlayStore
+sContenu		est une chaîne
+
+
+si pas EstUrlHttp(sUrlApp) alors sUrlApp = ""
+si pas EstUrlHttp(sUrlPlay) alors sUrlPlay = ""
+
+selon NavigateurPlateforme()
+	cas NavigateurPlateformeiPhone, NavigateurPlateformeiPad
+		si sUrlApp <> "" alors
+			ScriptAffiche(sUrlApp)
+			retour
+		fin
+
+	cas NavigateurPlateformeAndroid
+		si sUrlPlay <> "" alors
+			ScriptAffiche(sUrlPlay)
+			retour
+		fin
+
+	autre cas
+fin
+
+// Plateforme non identifiée ou URL du store manquante : carte avec les liens
+si sUrlApp = "" _et_ sUrlPlay = "" alors
+	PageNeutre()
+	retour
+fin
+
+sContenu = "<p>T&eacute;l&eacute;chargez l&rsquo;application :</p>"
+si sUrlApp <> "" alors
+	sContenu += "<a class=""bouton"" href=""" + Remplace(sUrlApp, """", "%22") + """>App Store (iPhone)</a>"
+fin
+si sUrlPlay <> "" alors
+	sContenu += "<a class=""bouton"" href=""" + Remplace(sUrlPlay, """", "%22") + """>Google Play (Android)</a>"
+fin
+
+AfficheCarteAgent(sContenu)

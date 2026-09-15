@@ -1,0 +1,7 @@
+// Constantes à ajouter à la collection de constantes du projet LandingPage
+// pour la page pgeBouton (mêmes valeurs que dans le projet principal).
+// __RCS_ACTION_REACTION__ y est déjà : ne pas la dupliquer.
+
+__RCS_ACTION_APPLICATION__	= "APPLICATION"
+__RCS_ACTION_EMAIL__			= "EMAIL"
+__RCS_ACTION_SMS__			= "SMS"

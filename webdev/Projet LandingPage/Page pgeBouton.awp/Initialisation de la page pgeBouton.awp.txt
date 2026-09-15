@@ -1,0 +1,112 @@
+// ** Déclarations globales de pgeBouton (serveur)
+//
+// Page publique : https://cliquez.info/pgeBouton.awp?P1=<IdRcsBouton>&P2=<Code>
+// Destination des boutons RCS dont l'action ne peut pas être envoyée telle quelle
+// à Infobip (qui n'accepte que des liens http/https) : REACTION, APPLICATION,
+// EMAIL, SMS. L'URL est construite à l'envoi par cpRcs.UrlBouton (gabarit
+// Rcs_Bouton_Url de prm_parametre).
+//
+// P1 = IdRcsBouton (ope_rcs_bouton)
+// P2 = code du destinataire (dos_base_ligne.Code) ; vide ou commençant par
+//      « @ » = test, aucune personnalisation.
+//
+// Le clic est déjà tracé dans ope_rcs_clic par le webhook Infobip :
+// cette page ne fait AUCUNE écriture en base.
+// Tout cas invalide (P1 faux, bouton inconnu, SousType non géré, Parametres
+// illisibles) affiche la page neutre, jamais un message d'erreur.
+
+_stBaseLigne			est une StructBaseLigne
+_taaBaseChamp			est un tableau associatif de structBaseChamp
+_bDestinataireConnu	est un booléen
+
+_sAgentNom				est une chaîne
+_sAgentCouleur			est une chaîne
+_sAgentLogo				est une chaîne
+
+
+// ** Fin d'initialisation de pgeBouton (serveur)
+
+nIdRcsBouton	est un entier	= Val(PageParamètre("P1"))
+sCode				est une chaîne	= PageParamètre("P2")
+
+sTexteRequete	est une chaîne
+sdReqBouton		est une Source de Données
+jParam			est un JSON
+bJsonOk			est un booléen
+nIdRcs			est un entier
+sSousType		est une chaîne
+sParametres		est une chaîne
+
+
+si nIdRcsBouton <= 0 alors
+	PageNeutre()
+	retour
+fin
+
+sTexteRequete =
+[
+	SELECT
+	IFNULL(ope_rcs_bouton.SousType, '') SousType,
+	IFNULL(ope_rcs_bouton.Parametres, '') Parametres,
+	ope_rcs_bouton.IdRcs,
+	IFNULL(rcs_agent.NomAffichage, '') NomAffichage,
+	IFNULL(rcs_agent.Couleur, '') Couleur,
+	IFNULL(rcs_agent.LogoUrl, '') LogoUrl
+	FROM
+	ope_rcs_bouton
+	JOIN ope_rcs ON ope_rcs.IdRcs = ope_rcs_bouton.IdRcs
+	LEFT JOIN rcs_agent ON rcs_agent.IdRcsAgent = ope_rcs.IdRcsAgent
+	WHERE
+	ope_rcs_bouton.IdRcsBouton = [%nIdRcsBouton%]
+]
+
+si pas sdReqBouton.ExécuteRequêteSQL(dos_base..Connexion, hRequêteSansCorrection, sTexteRequete) _ou_ pas sdReqBouton.LitPremier() alors
+	PageNeutre()
+	retour
+fin
+
+nIdRcs			= sdReqBouton.IdRcs
+sSousType		= sdReqBouton.SousType
+sParametres		= sdReqBouton.Parametres
+_sAgentNom		= sdReqBouton.NomAffichage
+_sAgentCouleur	= sdReqBouton.Couleur
+_sAgentLogo		= sdReqBouton.LogoUrl
+
+// Paramètres du bouton : JSON sérialisé par la composition (structRcsBoutonParametres).
+// Désérialisé dans un JSON local, comme cpRcs.ConstruitJsonBouton : pas besoin
+// de la structure dans ce projet.
+bJsonOk = Vrai
+quand exception dans
+	jParam = sParametres
+faire
+	bJsonOk = Faux
+fin
+si bJsonOk = Faux _ou_ sParametres = "" alors
+	PageNeutre()
+	retour
+fin
+
+// Destinataire (P2) : personnalisation seulement si le code est réel
+// (vide ou commençant par « @ » = test) et si la ligne appartient bien
+// à l'opération du bouton (cohérence P1 / P2)
+si sCode <> "" _et_ Gauche(sCode, 1) <> "@" alors
+	si dos_base_ligne.LitRecherchePremier(Code, sCode) alors
+		si dos_base.LitRecherchePremier(IdBase, dos_base_ligne.IdBase) _et_ dos_base.IdOperation = nIdRcs alors
+			FichierVersMémoire(_stBaseLigne, dos_base_ligne)
+			_taaBaseChamp			= ChargeTaaDosBaseChamp(nIdRcs)
+			_bDestinataireConnu	= Vrai
+		fin
+	fin
+fin
+
+selon sSousType
+	cas __RCS_ACTION_REACTION__		: AfficheReaction(jParam)
+	cas __RCS_ACTION_APPLICATION__	: AfficheApplication(jParam)
+	cas __RCS_ACTION_EMAIL__			: AfficheEmail(jParam)
+	cas __RCS_ACTION_SMS__				: AfficheSms(jParam)
+	autres cas							: PageNeutre()	// BOT et types futurs
+fin
+
+
+fin:
+sdReqBouton.AnnuleDéclaration()

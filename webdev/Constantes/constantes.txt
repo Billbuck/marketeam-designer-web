@@ -531,7 +531,7 @@ constante
 //	__REP_BANNIERE__											= "Bannieres"
 	__REP_IMAGE__												= "Images"
 	__REP_COLLECTION__											= "Collections"
-	__REP_VIDEO__												= "Vidéos"
+	__REP_VIDEO__												= "Videos"
 	__REP_FOND__												= "Fonds"
 	__REP_GRATTAGE__											= "Grattages"
 	__REP_BOUTON__												= "Boutons"

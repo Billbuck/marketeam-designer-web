@@ -1,0 +1,18 @@
+// Résumé : action REACTION — carte de confirmation affichée en webview
+// demi-écran sur le téléphone. Texte = Parametres.Confirmation, fusionné avec
+// les champs du destinataire s'il est connu (P2 = code réel), affiché tel quel
+// sinon. Texte de repli générique si la confirmation est vide (une carte
+// blanche serait comprise comme une erreur).
+procédure AfficheReaction(jParam)
+
+sTexte		est une chaîne	= jParam.Confirmation
+sContenu		est une chaîne
+
+
+si _bDestinataireConnu alors sTexte = PersonnaliseTexte(sTexte)
+si SansEspace(sTexte) = "" alors sTexte = "Votre réponse a bien été prise en compte."
+
+sContenu = "<div class=""coche"">&#10003;</div>"
+sContenu += "<p>" + TexteVersHTML(sTexte) + "</p>"
+
+AfficheCarteAgent(sContenu)

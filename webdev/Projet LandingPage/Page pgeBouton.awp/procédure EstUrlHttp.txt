@@ -1,0 +1,9 @@
+// Résumé : Vrai si l'URL commence par http:// ou https:// (même contrôle que
+// cpRcs.ConstruitJsonBouton). Toute URL lue en base passe par ce contrôle
+// avant d'être injectée dans un attribut HTML ou une redirection.
+procédure EstUrlHttp(pUrl)
+
+si Position(pUrl, "https://", 1, SansCasse) = 1 alors renvoyer Vrai
+si Position(pUrl, "http://", 1, SansCasse) = 1 alors renvoyer Vrai
+
+renvoyer Faux

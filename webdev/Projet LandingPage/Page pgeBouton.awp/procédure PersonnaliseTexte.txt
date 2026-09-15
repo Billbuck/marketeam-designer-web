@@ -1,0 +1,32 @@
+// Résumé : remplace les balises [Libellé] du texte par les valeurs du
+// destinataire (_stBaseLigne + _taaBaseChamp, chargés à l'initialisation).
+// Copie de la procédure interne Personnalisation de PersonnaliseChamps
+// (page Index), adaptée aux globales de pgeBouton — même formatage par type.
+// Si le destinataire n'est pas connu (P2 vide ou code de test « @ »),
+// le texte est renvoyé tel quel.
+procédure PersonnaliseTexte(local pTexte)
+
+sValeur est une chaîne
+
+si pas _bDestinataireConnu alors renvoyer pTexte
+
+si ChaîneOccurrence(pTexte,["[","]"]) >= 2 alors
+	pour tout stBaseChamp, sLibelle de _taaBaseChamp
+		sValeur = ""
+		selon stBaseChamp.Type
+			cas __CHAMP_TYPE_TEXTE__		: sValeur = {"_stBaseLigne." + stBaseChamp.Champ,indVariable }
+			cas __CHAMP_TYPE_ENTIER__ 		: sValeur = NumériqueVersChaîne({"_stBaseLigne." + stBaseChamp.Champ,indVariable }, "dS")
+			cas __CHAMP_TYPE_DECIMAL__ 	: sValeur = NumériqueVersChaîne({"_stBaseLigne." + stBaseChamp.Champ,indVariable }, ",2fS")
+			cas __CHAMP_TYPE_MONETAIRE__ 	: sValeur = NumériqueVersChaîne({"_stBaseLigne." + stBaseChamp.Champ,indVariable }, ",2fS") + " €"
+			cas __CHAMP_TYPE_DATE__ 		: sValeur = ChaîneVersDate({"_stBaseLigne." + stBaseChamp.Champ,indVariable },"JJ/MM/AAAA")
+			cas __CHAMP_TYPE_EMAIL__		: sValeur = {"_stBaseLigne." + stBaseChamp.Champ,indVariable }
+			cas __CHAMP_TYPE_TELEPHONE__	: sValeur = Telephone({"_stBaseLigne." + stBaseChamp.Champ,indVariable },1," ")
+			cas __CHAMP_TYPE_PORTABLE__	: sValeur = Telephone({"_stBaseLigne." + stBaseChamp.Champ,indVariable },1," ")
+			cas __CHAMP_TYPE_CODEPOSTAL__	: sValeur = {"_stBaseLigne." + stBaseChamp.Champ,indVariable }
+			autres cas 							: sValeur = {"_stBaseLigne." + stBaseChamp.Champ,indVariable }
+		fin
+		pTexte = Remplace(pTexte,"[" + sLibelle + "]",sValeur)
+	fin
+fin
+
+renvoyer pTexte

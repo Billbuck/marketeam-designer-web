@@ -1,0 +1,47 @@
+// Résumé : action EMAIL — carte qui ouvre automatiquement la messagerie du
+// téléphone (mailto:) avec destinataire, objet et corps pré-remplis, plus un
+// bouton visible « Ouvrir ma messagerie » en secours : les navigateurs mobiles
+// ne suivent pas toujours une redirection automatique vers mailto:.
+// Objet et corps fusionnés avec les champs du destinataire s'il est connu.
+// Encodage : texte converti en UTF-8 avant URLEncode (projet ANSI, même
+// mécanique que batchKannel.EnvoiUnSms), sinon les accents sont illisibles
+// dans l'application mail.
+procédure AfficheEmail(jParam)
+
+sEmail		est une chaîne	= SansEspace(jParam.Email)
+sObjet		est une chaîne	= jParam.EmailObjet
+sMessage		est une chaîne	= jParam.EmailMessage
+sUrl			est une chaîne
+sContenu		est une chaîne
+sScript		est une chaîne
+
+
+si sEmail = "" _ou_ pas Contient(sEmail, "@") alors
+	PageNeutre()
+	retour
+fin
+
+si _bDestinataireConnu alors
+	sObjet	= PersonnaliseTexte(sObjet)
+	sMessage	= PersonnaliseTexte(sMessage)
+fin
+
+sUrl = "mailto:" + sEmail
+si sObjet <> "" alors sUrl += "?subject=" + URLEncode(ChaîneVersUTF8(sObjet))
+si sMessage <> "" alors
+	sUrl += (Contient(sUrl, "?") ? "&" sinon "?") + "body=" + URLEncode(ChaîneVersUTF8(sMessage))
+fin
+
+// L'URL est injectée dans un attribut href (guillemets) et dans une chaîne
+// JavaScript (apostrophes) : les deux caractères sont neutralisés
+sUrl = Remplace(sUrl, "'", "%27")
+sUrl = Remplace(sUrl, """", "%22")
+
+sContenu = "<p>Votre messagerie va s&rsquo;ouvrir automatiquement.<br>Si rien ne se passe, appuyez sur le bouton :</p>"
+sContenu += "<a class=""bouton"" href=""" + sUrl + """>Ouvrir ma messagerie</a>"
+sContenu += "<div class=""indice"">Destinataire : " + TexteVersHTML(sEmail) + "</div>"
+
+// Petit délai pour laisser la carte s'afficher avant l'ouverture de la messagerie
+sScript = "<script>setTimeout(function(){ window.location.href = '" + sUrl + "'; }, 600);</script>"
+
+AfficheCarteAgent(sContenu, sScript)

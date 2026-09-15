@@ -1,0 +1,46 @@
+// Résumé : action SMS — carte qui ouvre automatiquement l'application SMS du
+// téléphone (sms:) avec numéro et message pré-remplis, plus un bouton visible
+// « Envoyer le SMS » en secours.
+// Syntaxe du corps selon la plateforme : iPhone/iPad -> sms:<num>&body=…,
+// autres -> sms:<num>?body=… .
+// Numéro converti au format international avec + par cpProjet.Telephone
+// (format 2 = 33XXXXXXXXX). Message fusionné si le destinataire est connu.
+procédure AfficheSms(jParam)
+
+sTelephone	est une chaîne	= Telephone(jParam.Telephone, 2)
+sMessage		est une chaîne	= jParam.Message
+sUrl			est une chaîne
+sSeparateur	est une chaîne
+sContenu		est une chaîne
+sScript		est une chaîne
+
+
+si sTelephone = "" alors
+	PageNeutre()
+	retour
+fin
+sTelephone = "+" + sTelephone
+
+si _bDestinataireConnu alors sMessage = PersonnaliseTexte(sMessage)
+
+selon NavigateurPlateforme()
+	cas NavigateurPlateformeiPhone, NavigateurPlateformeiPad	: sSeparateur = "&"
+	autre cas																	: sSeparateur = "?"
+fin
+
+sUrl = "sms:" + sTelephone
+si sMessage <> "" alors sUrl += sSeparateur + "body=" + URLEncode(ChaîneVersUTF8(sMessage))
+
+// L'URL est injectée dans un attribut href (guillemets) et dans une chaîne
+// JavaScript (apostrophes) : les deux caractères sont neutralisés
+sUrl = Remplace(sUrl, "'", "%27")
+sUrl = Remplace(sUrl, """", "%22")
+
+sContenu = "<p>Votre application SMS va s&rsquo;ouvrir automatiquement.<br>Si rien ne se passe, appuyez sur le bouton :</p>"
+sContenu += "<a class=""bouton"" href=""" + sUrl + """>Envoyer le SMS</a>"
+sContenu += "<div class=""indice"">Num&eacute;ro : " + TexteVersHTML(sTelephone) + "</div>"
+
+// Petit délai pour laisser la carte s'afficher avant l'ouverture de l'application
+sScript = "<script>setTimeout(function(){ window.location.href = '" + sUrl + "'; }, 600);</script>"
+
+AfficheCarteAgent(sContenu, sScript)

@@ -1,0 +1,12 @@
+// Résumé : page neutre affichée quand le bouton est introuvable, non géré ou
+// que ses paramètres sont illisibles. Même contenu que la page d'accueil
+// d'Index : jamais de message d'erreur visible.
+procédure PageNeutre()
+
+ZTR_Rendu = [
+	<!DOCTYPE html>
+	<html>
+	<head><title>Bienvenue sur cliquez.info</title></head>
+	<body><p>Ce domaine héberge des pages personnalisées de la Plateforme Marketeam.</p></body>
+	</html>
+]

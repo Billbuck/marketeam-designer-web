@@ -1,0 +1,83 @@
+// Résumé : coquille HTML commune des pages bouton : carte blanche centrée
+// (modèle AfficheLandingEnConstruction d'Index), bandeau haut à la couleur de
+// l'agent RCS, logo rond, nom d'affichage, puis le contenu propre à chaque
+// action. HTML autonome (aucune dépendance à cpLandingPage), responsive.
+// La page REACTION s'ouvre en webview demi-écran sur le téléphone : la carte
+// doit rester compacte.
+//
+// Paramètres :
+//		pContenuHtml : HTML déjà échappé, inséré dans le corps de la carte
+//		pScriptHtml  : bloc <script> optionnel inséré avant </body>
+//		               (ouverture automatique mailto: / sms:)
+procédure AfficheCarteAgent(pContenuHtml, pScriptHtml = "")
+
+sCouleur		est une chaîne	= _sAgentCouleur
+sEnteteHtml	est une chaîne
+sLogoHtml	est une chaîne
+sTitreHtml	est une chaîne
+sHtml			est une chaîne
+
+
+	// #RRGGBB strict, sinon gris neutre : la couleur est injectée dans le CSS,
+	// aucune autre forme n'est acceptée
+	procédure interne EstCouleurHexCdb(pCouleurCdb)
+		nIndCdb est un entier
+		si Taille(pCouleurCdb) <> 7 _ou_ Gauche(pCouleurCdb, 1) <> "#" alors renvoyer Faux
+		pour nIndCdb = 2 _à_ 7
+			si pas Contient("0123456789ABCDEFabcdef", pCouleurCdb[[nIndCdb]]) alors renvoyer Faux
+		fin
+		renvoyer Vrai
+	fin
+
+
+si pas EstCouleurHexCdb(sCouleur) alors sCouleur = "#4A5568"
+
+si EstUrlHttp(_sAgentLogo) alors
+	sLogoHtml = "<img class=""logo"" src=""" + Remplace(_sAgentLogo, """", "%22") + """ alt="""">"
+fin
+
+si sLogoHtml <> "" _ou_ _sAgentNom <> "" alors
+	sEnteteHtml = "<div class=""entete"">" + sLogoHtml + "<span class=""nom"">" + TexteVersHTML(_sAgentNom) + "</span></div>"
+fin
+
+sTitreHtml = (_sAgentNom <> "" ? TexteVersHTML(_sAgentNom) sinon "cliquez.info")
+
+sHtml =
+[
+	<!DOCTYPE html>
+	<html lang="fr">
+	<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>[%sTitreHtml%]</title>
+	<style>
+	body { font-family: Arial, Helvetica, sans-serif; background:#f0f2f5; margin:0;
+	display:flex; align-items:flex-start; justify-content:center; min-height:100vh; }
+	.carte { background:#fff; border-radius:14px; overflow:hidden; max-width:420px; width:100%;
+	margin:16px; box-shadow:0 2px 12px rgba(0,0,0,.12); }
+	.entete { background:[%sCouleur%]; color:#fff; padding:14px 20px;
+	display:flex; align-items:center; gap:12px; }
+	.entete img.logo { width:44px; height:44px; border-radius:50%; background:#fff; object-fit:cover; }
+	.entete .nom { font-size:17px; font-weight:bold; }
+	.contenu { padding:24px 20px; text-align:center; }
+	.contenu p { font-size:15px; color:#444; line-height:1.6; margin:0 0 16px; }
+	.coche { width:56px; height:56px; border-radius:50%; background:[%sCouleur%]; color:#fff;
+	font-size:30px; line-height:56px; margin:0 auto 16px; }
+	a.bouton { display:block; background:[%sCouleur%]; color:#fff; text-decoration:none;
+	font-size:16px; font-weight:bold; padding:14px 18px; border-radius:10px; margin:10px 0; }
+	.indice { font-size:12px; color:#999; margin-top:14px; word-break:break-all; }
+	</style>
+	</head>
+	<body>
+	<div class="carte">
+	[%sEnteteHtml%]
+	<div class="contenu">
+	[%pContenuHtml%]
+	</div>
+	</div>
+	[%pScriptHtml%]
+	</body>
+	</html>
+]
+
+ZTR_Rendu = sHtml
