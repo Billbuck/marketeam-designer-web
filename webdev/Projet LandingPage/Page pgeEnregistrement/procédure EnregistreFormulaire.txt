@@ -1,0 +1,99 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] EnregistreFormulaire (<tabDonnees> est tableau (structChampFormulaire))
+//
+// Paramètres :
+//	tabDonnees (tableau (structChampFormulaire)) : <indiquez ici le rôle de tabDonnees>
+// Valeur de retour :
+// 	booléen : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+//	NomUser : <indiquez ici le rôle de NomUser>
+//	sLeMessage : <indiquez ici le rôle de sLeMessage>
+//	sType (valeur par défaut="Nouveau") : < indiquez ici le rôle de sType >
+// 	pMode : <indiquez ici le rôle de pMode>
+//	pListeReponse : <indiquez ici le rôle de pListeReponse>
+procédure EnregistreFormulaire(tabDonnees  est un tableau de structChampFormulaire)
+
+stChampFormulaire	est une structChampFormulaire
+sReponse			est une chaîne
+sTexteRequete		est une chaîne
+sdReqFormulaire		est une Source de Données
+sValues 			est une chaîne
+bValeur				est un booléen
+sValeur				est une chaîne
+nInd 				est un entier
+
+pour tout stChampFormulaire de tabDonnees
+	selon stChampFormulaire.TypeChamp
+		cas __FORMULAIRE_INTERRUPTEUR__
+			si stChampFormulaire.ValeurChamp = Vrai alors
+				sReponse += [RC] + "- " + Remplace(SansEspace(stChampFormulaire.LibelleChamp),"'","''")
+				sValues += [","] + "(@IdCliquezIciClic,'" + stChampFormulaire.TypeChamp +"','"+ Remplace(SansEspace(stChampFormulaire.LibelleChamp),"'","''") +"',NULL)"
+			fin
+
+		cas __FORMULAIRE_COMBO__
+			si pas Contient(stChampFormulaire.ValeurChamp,"<") et pas Contient(stChampFormulaire.ValeurChamp,">") alors
+				sReponse += [RC] + Remplace(SansEspace(stChampFormulaire.LibelleChamp),"'","''") + [" : "] + Remplace(SansEspace(stChampFormulaire.ValeurChamp),"'","''")
+				sValues += [","] + "(@IdCliquezIciClic,'" + stChampFormulaire.TypeChamp +"','"+ Remplace(SansEspace(stChampFormulaire.LibelleChamp),"'","''")  +"','"+ Remplace(SansEspace(stChampFormulaire.ValeurChamp),"'","''") +"')"
+			fin
+
+		cas __FORMULAIRE_SAISIE__
+			si SansEspace(stChampFormulaire.ValeurChamp) <> "" alors
+				sReponse += [RC] + Remplace(SansEspace(stChampFormulaire.LibelleChamp),"'","''") + [" : "] + Remplace(SansEspace(stChampFormulaire.ValeurChamp),"'","''")
+				sValues += [","] + "(@IdCliquezIciClic,'" + stChampFormulaire.TypeChamp +"','"+ Remplace(SansEspace(stChampFormulaire.LibelleChamp),"'","''")  +"','"+ Remplace(SansEspace(stChampFormulaire.ValeurChamp),"'","''") +"')"
+			fin
+
+		cas __FORMULAIRE_OPTIN__
+			si pas Contient(stChampFormulaire.ValeurChamp,TAB) alors
+				sReponse += [RC] + Remplace(SansEspace(stChampFormulaire.LibelleChamp),"'","''") + [" : "] + Remplace(SansEspace(stChampFormulaire.ValeurChamp),"'","''")
+				sValues += [","] + "(@IdCliquezIciClic,'" + stChampFormulaire.TypeChamp +"','"+ Remplace(SansEspace(stChampFormulaire.LibelleChamp),"'","''")  +"','"+ Remplace(SansEspace(stChampFormulaire.ValeurChamp),"'","''") +"')"
+			sinon
+				nInd = 0
+				pour toute chaîne sOptin de stChampFormulaire.ValeurChamp
+					nInd++
+					si nInd > 1 alors
+						sValeur	= ExtraitChaîne(sOptin,1,":")
+						bValeur	= ExtraitChaîne(sOptin,2,":")
+						si bValeur = Vrai alors
+							sReponse += [RC] + Remplace(SansEspace(sValeur),"'","''")
+							sValues += [","] + "(@IdCliquezIciClic,'" + stChampFormulaire.TypeChamp +"','" + Remplace(SansEspace(sValeur),"'","''") +"',NULL)"
+						fin
+					fin
+				fin
+			fin
+
+		autre cas
+			sReponse += [RC] + "Erreur de Type : " + stChampFormulaire.TypeChamp
+	fin
+fin
+
+
+
+ComptabiliseClic() // A maintenir au dessus
+
+sTexteRequete =
+[
+	INSERT INTO ope_cliquezici_clic(IdCliquezIci,IdBaseLigne,DateHeureClic,CasesCochees)
+	VALUES ([%_stIciReponse.IdCliquezIci%], [%_stIciReponse.IdBaseLigne%], NOW(), '[%sReponse%]');
+	
+	SET @IdCliquezIciClic = LAST_INSERT_ID();
+	
+	INSERT INTO ope_cliquezici_clic_selection(IdCliquezIciClic,Type,Libelle,Valeur)
+	VALUES [%sValues%];
+	
+]
+
+
+si pas sdReqFormulaire.ExécuteRequêteSQL(clt_client..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+	renvoyer Faux
+fin
+
+
+renvoyer Vrai
+
+fin:
+sdReqFormulaire.AnnuleDéclaration()

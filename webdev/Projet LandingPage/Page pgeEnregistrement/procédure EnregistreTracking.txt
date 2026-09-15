@@ -1,0 +1,27 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] EnregistreTracking ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	booléen : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure EnregistreTracking()
+
+
+ope_cliquezici_lien.RAZ()
+ope_cliquezici_lien.DateHeureClic	= DateHeureSys()
+ope_cliquezici_lien.IdBaseLigne		= _stIciReponse.IdBaseLigne
+ope_cliquezici_lien.IdCliquezIci	= _stIciReponse.IdCliquezIci
+ope_cliquezici_lien.TypeLien		= _stIciReponse.tabChamp[1].TypeChamp
+ope_cliquezici_lien.Libelle			= _stIciReponse.tabChamp[1].LibelleChamp
+ope_cliquezici_lien.Url				= _stIciReponse.tabChamp[1].ValeurChamp
+si ope_cliquezici_lien.Ajoute() _et_ (_stIciReponse.tabChamp[1].ValeurChamp = "" _ou_ _stIciReponse.tabChamp[1].ValeurChamp = "#") alors
+	renvoyer Vrai
+sinon
+	renvoyer Faux
+fin

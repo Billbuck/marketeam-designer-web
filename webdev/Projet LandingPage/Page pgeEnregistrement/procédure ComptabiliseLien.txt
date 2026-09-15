@@ -1,0 +1,28 @@
+procédure ComptabiliseLien()
+
+sTexteRequete	est une chaîne
+sdReqLien		est une Source de Données
+
+
+si pas ope_cliquezici_lien.LitRecherchePremier(IdBaseLigne,_stIciReponse.IdBaseLigne) alors
+	sTexteRequete =
+	[
+	UPDATE LOW_PRIORITY dos_operation SET 
+	dos_operation.NbrInteractionUnique = (dos_operation.NbrInteractionUnique + 1),
+	dos_operation.NbrInteraction = (dos_operation.NbrInteraction + 1)
+	WHERE dos_operation.IdOperation = [%_stIciReponse.IdCliquezIci%]
+	]
+	
+sinon
+	sTexteRequete =
+	[
+	UPDATE LOW_PRIORITY dos_operation SET
+	dos_operation.NbrInteraction = (dos_operation.NbrInteraction + 1)
+	WHERE dos_operation.IdOperation = [%_stIciReponse.IdCliquezIci%]
+	]
+fin
+
+sdReqLien.ExécuteRequêteSQL(dos_operation..Connexion, hRequêteSansCorrection, sTexteRequete)
+
+fin:
+sdReqLien.AnnuleDéclaration()

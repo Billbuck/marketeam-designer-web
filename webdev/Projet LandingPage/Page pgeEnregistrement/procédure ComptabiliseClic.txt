@@ -1,0 +1,28 @@
+procédure ComptabiliseClic()
+
+sTexteRequete	est une chaîne
+sdReqLead		est une Source de Données
+
+
+si pas ope_cliquezici_clic.LitRecherchePremier(IdBaseLigne,_stIciReponse.IdBaseLigne) alors
+	sTexteRequete =
+	[
+	UPDATE LOW_PRIORITY dos_operation SET
+	dos_operation.NbrLeadUnique = (dos_operation.NbrLeadUnique + 1),
+	dos_operation.NbrLead = (dos_operation.NbrLead + 1)
+	WHERE dos_operation.IdOperation = [%_stIciReponse.IdCliquezIci%]
+	]
+	
+sinon
+	sTexteRequete =
+	[
+	UPDATE LOW_PRIORITY dos_operation SET 
+	dos_operation.NbrLead = (dos_operation.NbrLead + 1)
+	WHERE dos_operation.IdOperation = [%_stIciReponse.IdCliquezIci%]
+	]
+fin
+
+sdReqLead.ExécuteRequêteSQL(dos_operation..Connexion, hRequêteSansCorrection, sTexteRequete)
+
+fin:
+sdReqLead.AnnuleDéclaration()

@@ -1,0 +1,95 @@
+// ** Déclaration globales de pgeEnregistrement
+
+_stIciReponse est une structIciReponse
+
+
+
+// ** Fin d'initialisation de pgeEnregistrement
+
+sReponseHtml		est une chaîne Unicode
+stChampFormulaire 	est une structChampFormulaire
+sInterrupteur		est une chaîne
+sCombo				est une chaîne
+sOption				est une chaîne
+sFormulaire			est une chaîne
+sBoutonValeur		est une chaîne
+stValeurBouton		est une structIciBlocValeurBouton
+
+sBufferReception est une chaîne
+
+sBufferReception = PageParamètre(paramBuffer)
+
+
+Désérialise(_stIciReponse,sBufferReception,psdJSON)
+
+si ope_cliquezici_bloc.LitRecherchePremier(IdCliquezIci_Type,[_stIciReponse.IdCliquezIci,__BLOC_BOUTON__]) alors
+	sBoutonValeur = ope_cliquezici_bloc.Valeur
+	Désérialise(stValeurBouton, sBoutonValeur, psdJSON)
+fin
+
+
+
+selon _stIciReponse.TypeEnregistrement
+	cas __TRACKING__
+		si _stIciReponse.IdBaseLigne > 0 _et_ _stIciReponse.IdCliquezIci > 0 alors
+			ComptabiliseLien()
+
+			si EnregistreTracking() alors
+				ChaîneAffiche(ChaîneVersUTF8("Votre demande a bien été prise en compte"))
+			sinon
+				ChaîneAffiche("")
+			fin
+		fin
+
+	cas __FORMULAIRE__
+		sReponseHtml = "<B>VOUS ÊTES EN MODE TEST </B><BR><BR>"
+
+		pour tout stChampFormulaire de _stIciReponse.tabChamp
+			selon stChampFormulaire.TypeChamp
+				cas __FORMULAIRE_INTERRUPTEUR__
+					si stChampFormulaire.ValeurChamp = Vrai alors
+						sInterrupteur += ["<BR>"] + "<B>- " + stChampFormulaire.LibelleChamp + "</B>"
+					fin
+
+				cas __FORMULAIRE_COMBO__
+					si pas Contient(stChampFormulaire.ValeurChamp,"<") _et_ pas Contient(stChampFormulaire.ValeurChamp,">") alors
+						sCombo += ["<BR>"] + "- " + stChampFormulaire.LibelleChamp + " : " + "<B>" + stChampFormulaire.ValeurChamp + "</B>"
+					fin
+
+				cas __FORMULAIRE_SAISIE__
+					si stChampFormulaire.ValeurChamp <> "" alors
+						sFormulaire += ["<BR>"] + "- " + stChampFormulaire.LibelleChamp + " : " + "<B>" + stChampFormulaire.ValeurChamp + "</B>"
+					fin
+
+				cas __FORMULAIRE_OPTIN__
+					sOption += ["<BR>"] + "- " + stChampFormulaire.LibelleChamp + " : " + "<B>" + stChampFormulaire.ValeurChamp + "</B>"
+
+				autre cas
+					sReponseHtml += ["<BR>"] + "Erreur de Type : " + stChampFormulaire.TypeChamp
+			fin
+		fin
+
+
+		si sInterrupteur 	<> "" alors sReponseHtml += ["<BR><BR>"] + "<U>Vous avez choisi :</U><BR><BR>" + sInterrupteur
+		si sCombo 			<> "" alors sReponseHtml += ["<BR><BR>"] + "<U>Vous avez sélectionné :</U><BR><BR>" + sCombo
+		si sFormulaire 		<> "" alors sReponseHtml += ["<BR><BR>"] + "<U>Vous avez saisi :</U><BR><BR>" + sFormulaire
+		si sOption 			<> "" alors sReponseHtml += ["<BR><BR>"] + "<U>Vous avez coché :</U><BR><BR>" + sOption
+
+		si _stIciReponse.IdBaseLigne = 0 _ou_ _stIciReponse.IdCliquezIci = 0 alors
+			ChaîneAffiche(ChaîneVersUTF8(sReponseHtml))
+		sinon
+			si EnregistreFormulaire(_stIciReponse.tabChamp) alors
+				si stValeurBouton.MessageConfirmation <> "" alors
+					ChaîneAffiche(ChaîneVersUTF8(stValeurBouton.MessageConfirmation))
+				sinon
+					ChaîneAffiche(ChaîneVersUTF8("Votre demande a bien été prise en compte"))
+				fin
+
+			sinon
+				ChaîneAffiche(ChaîneVersUTF8("Votre demande n'a pu être prise en compte"))
+			fin
+		fin
+
+	autre cas
+
+fin
