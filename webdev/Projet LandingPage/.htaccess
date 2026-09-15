@@ -1,0 +1,9 @@
+Options +FollowSymLinks
+RewriteEngine on
+RewriteBase /LANDINGPAGE_WEB/FR
+# RewriteRule   ^([^.]+)$ index.awp?P1=$1 [L]
+# RewriteRule   ^([A-Za-z0-9\@]{1,5})$ index.awp?P1=$1 [L]
+RewriteRule   ^([A-Za-z0-9\@\!]{1,12})$ index.awp?P1=$1 [L]
+
+
+
