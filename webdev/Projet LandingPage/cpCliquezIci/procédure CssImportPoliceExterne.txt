@@ -1,0 +1,66 @@
+procédure CssImportPoliceExterne(pIdPolice)
+
+
+sCss			est une chaîne
+sCheminFichier	est une chaîne
+sTexteRequete	est une chaîne
+sdReqIciPolice	est une Source de Données
+
+sTexteRequete =
+[
+SELECT
+	CONCAT('F',LPAD(ici_police_famille.IdFamille, 6, '0')) CodeFamille,		
+	CONCAT('P',LPAD(ici_police.IdPolice, 6, '0')) CodePolice,
+	CONCAT('V',LPAD(ici_police_version.IdVersion, 6, '0')) CodeVersion,
+	ici_police.NomPolice,
+	ici_police_version.NomVersion,
+	ici_police_version.Weight,
+	ici_police_version.Style,
+	ici_police_famille.IdMarque,
+	ici_police_famille.IdClient
+FROM
+	ici_police 
+	JOIN ici_police_famille ON ici_police_famille.IdFamille = ici_police.IdFamille
+	JOIN ici_police_version ON ici_police_version.IdPolice = ici_police.IdPolice
+WHERE
+	ici_police.IdPolice = [%pIdPolice%]
+ORDER BY 
+	FIELD(ici_police_version.Weight, '400', '500', '300', '600', '200', '700', '100', '800')
+]
+
+
+
+si pas sdReqIciPolice.ExécuteRequêteSQL(ici_police..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	renvoyer "/* !!!!! Erreur requête récupération police externe '[% pIdPolice %]' !!!!! */"
+fin
+
+pour tout sdReqIciPolice
+	selon Vrai
+		cas sdReqIciPolice.IdMarque > 0 : sCheminFichier = cpProjet.CheminMarque(sdReqIciPolice.IdMarque,__OPERATION_CLIQUEZICI__,__REP_POLICE__,Faux) + sdReqIciPolice.CodeFamille + "/" + sdReqIciPolice.CodePolice + "/" + sdReqIciPolice.CodeVersion + "/" + sdReqIciPolice.NomVersion
+		cas sdReqIciPolice.IdClient > 0	: sCheminFichier = cpProjet.CheminClient(sdReqIciPolice.IdClient,__OPERATION_CLIQUEZICI__,__REP_POLICE__,Faux) + sdReqIciPolice.CodeFamille + "/" + sdReqIciPolice.CodePolice + "/" + sdReqIciPolice.CodeVersion + "/" + sdReqIciPolice.NomVersion
+		autres cas 						: sCheminFichier = cpProjet.CheminMarketeam(__OPERATION_CLIQUEZICI__,__REP_POLICE__,Faux) + sdReqIciPolice.CodeFamille + "/" + sdReqIciPolice.CodePolice + "/" + sdReqIciPolice.CodeVersion + "/" + sdReqIciPolice.NomVersion
+	fin
+
+	sCss += [
+
+		@font-face 
+		{	
+			font-family: 	'[%sdReqIciPolice.NomPolice%]';
+			font-style: 	[%sdReqIciPolice.Style%];
+			font-weight: 	[%sdReqIciPolice.Weight%]; 
+			src: 			url("[%sCheminFichier%].woff2") format('woff2'),
+							url("[%sCheminFichier%].ttf") format('truetype'),
+							url("[%sCheminFichier%].eot") format('embedded-opentype'), 
+							url("[%sCheminFichier%].svg") format('svg');
+		}
+		
+	]
+
+fin
+
+
+
+renvoyer sCss
+
+fin:
+HAnnuleDéclaration(sdReqIciPolice)

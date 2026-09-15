@@ -1,0 +1,152 @@
+procédure CreationHTMLRoue(sPropriete est une chaîne, sValeur est une chaîne, pLargeurL, pLargeurM, pLargeurS )
+
+
+
+stProprieteHTML		est une structIciBlocProprieteHtml
+stValeurHTML		est une structIciBlocValeurHtml
+sCodeHTML			est une chaîne
+sCodeCss			est une chaîne
+sBlocCSS			est une chaîne
+
+Désérialise(stProprieteHTML,sPropriete,psdJSON)
+Désérialise(stValeurHTML,sValeur,psdJSON)
+
+stValeurHTML.CodeHtml = [
+<div class="wheel-container">
+  <canvas id="wheel" width="400" height="400"></canvas>
+  <button id="spin-btn">TOURNER</button>
+  <div id="result"></div>
+</div>
+]
+
+stValeurHTML.CodeCss = [
+.countdown {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: Arial;
+  background: linear-gradient(45deg, red, blue);
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.time-section {
+  margin: 0 10px;
+  text-align: center;
+}
+
+.time-group {
+  display: inline-block;
+}
+
+.time-value {
+  font-size: 2.5em;
+  font-weight: bold;
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 10px;
+  border-radius: 5px;
+  min-width: 70px;
+}
+
+.time-label {
+  font-size: 0.8em;
+  color: #ffffff;
+  text-transform: uppercase;
+  margin-top: 5px;
+}
+
+@media (max-width: $TailleM) {
+  .countdown {
+    flex-wrap: wrap;
+  }
+  
+  .time-section {
+    margin: 10px;
+  }
+}
+
+@media (max-width: $TailleS) {
+  .time-value {
+    font-size: 2em;
+    min-width: 60px;
+  }
+  
+  .time-label {
+    font-size: 0.7em;
+  }
+}
+]
+
+stValeurHTML.CodeJavascript = [
+function CreationHTML() {
+  const endDate = new Date("2025-01-01T00:00:00").getTime();
+  
+  function updateCountdown() {
+    const now = new Date().getTime();
+    const timeLeft = endDate - now;
+    
+    const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+    
+    document.getElementById("days").innerText = days.toString().padStart(2, '0');
+    document.getElementById("hours").innerText = hours.toString().padStart(2, '0');
+    document.getElementById("minutes").innerText = minutes.toString().padStart(2, '0');
+    document.getElementById("seconds").innerText = seconds.toString().padStart(2, '0');
+    
+    if (timeLeft < 0) {
+      clearInterval(interval);
+      document.getElementById("countdown").innerHTML = "Le compte à rebours est terminé!";
+    }
+  }
+  
+  updateCountdown();
+  const interval = setInterval(updateCountdown, 1000);
+}
+
+startCountdown();
+]
+
+si stValeurHTML.CodeCss <> "" alors
+	
+	// Traitement du CSS
+	sCodeCss	= stValeurHTML.CodeCss
+//	sCodeCss	= Remplace(sCodeCss, "$primaryColor", module.Styles.Couleurs.Primaire)
+//	sCodeCss	= Remplace(sCodeCss, "$secondaryColor", module.Styles.Couleurs.Secondaire)
+//	sCodeCss	= Remplace(sCodeCss, "$textColor", module.Styles.Couleurs.Texte)
+//	sCodeCss	= Remplace(sCodeCss, "$fontFamily", Modulo.Styles.FontFamily)
+	
+	// Ajout des règles responsive
+	sCodeCss += [
+		@media (max-width: [%pLargeurL%]) {
+		.html-module { width: 100%; max-width: [%pLargeurL%]; }
+		}
+		@media (max-width: [%pLargeurM%]) {
+		.html-module { width: 100%; max-width: [%pLargeurM%]; }
+		}
+		@media (max-width: [%pLargeurS%]) {
+		.html-module { width: 100%; max-width: [%pLargeurS%]; }
+		}
+	]
+	
+	sBlocCSS = [
+	<style>[%stValeurHTML.CodeCss%]</style>
+	]
+fin
+
+// Génération du HTML
+sCodeHTML = [
+	<div class="html-module">
+	[%stValeurHTML.CodeHtml%]
+	[%sBlocCSS%]
+	</div>
+]
+
+si stValeurHTML.CodeJavascript <> "" alors
+	_tabCodeJS.Ajoute(stValeurHTML.CodeJavascript)
+fin
+
+renvoyer sCodeHTML

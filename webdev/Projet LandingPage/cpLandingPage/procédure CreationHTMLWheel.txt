@@ -1,0 +1,217 @@
+procédure CreationHTMLWheel(sPropriete est une chaîne, sValeur est une chaîne, pLargeurL, pLargeurM, pLargeurS )
+
+
+
+stProprieteHTML		est une structIciBlocProprieteHtml
+stValeurHTML		est une structIciBlocValeurHtml
+sCodeHTML			est une chaîne
+sCodeCss			est une chaîne
+sBlocCSS			est une chaîne
+
+Désérialise(stProprieteHTML,sPropriete,psdJSON)
+Désérialise(stValeurHTML,sValeur,psdJSON)
+
+stValeurHTML.CodeHtml = [
+<div class="wheel-container">
+  <canvas id="wheel" width="400" height="400"></canvas>
+  <button id="spin-btn">TOURNER</button>
+  <div id="result"></div>
+</div>
+]
+
+stValeurHTML.CodeCss = [
+.wheel-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: $fontFamily;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+#wheel {
+  max-width: 100%;
+  height: auto;
+}
+
+#spin-btn {
+  margin-top: 20px;
+  padding: 10px 20px;
+  font-size: 18px;
+  background-color: $primaryColor;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+#spin-btn:hover {
+  background-color: $secondaryColor;
+}
+
+#result {
+  margin-top: 20px;
+  font-size: 24px;
+  font-weight: bold;
+  text-align: center;
+}
+
+@media (max-width: $TailleM) {
+  #wheel {
+    width: 300px;
+    height: 300px;
+  }
+}
+
+@media (max-width: $TailleS) {
+  #wheel {
+    width: 250px;
+    height: 250px;
+  }
+  
+  #spin-btn {
+    font-size: 16px;
+  }
+  
+  #result {
+    font-size: 20px;
+  }
+}
+]
+
+stValeurHTML.CodeJavascript = [
+	const wheel = document.getElementById('wheel');
+	const spinBtn = document.getElementById('spin-btn');
+	const result = document.getElementById('result');
+	
+	// Configurer les segments de la roue
+	const segments = [
+	{color: "#FF6B6B", label: "10% de réduction"},
+	{color: "#4ECDC4", label: "Livraison gratuite"},
+	{color: "#45B7D1", label: "5€ de réduction"},
+	{color: "#F7DC6F", label: "Cadeau surprise"},
+	{color: "#B8E986", label: "15% de réduction"},
+	{color: "#FF8C94", label: "2ème article à -50%"},
+	{color: "#97C1A9", label: "Échantillon gratuit"},
+	{color: "#FCB7AF", label: "Tentez à nouveau"}];
+
+const totalSegments	= segments.length;
+const arcSize		= 2 * Math.PI / totalSegments;
+const ctx			= wheel.getContext('2d');
+const wheelRadius	= wheel.width / 2;
+const centerX		= wheelRadius;
+const centerY		= wheelRadius;
+
+// Dessiner la roue
+function CreationHTML1() {
+	ctx.clearRect(0, 0, wheel.width, wheel.height);
+	
+	for (let i = 0; i < totalSegments; i++) {
+			const angle = i * arcSize;
+			ctx.beginPath();
+			ctx.moveTo(centerX, centerY);
+			ctx.arc(centerX, centerY, wheelRadius, angle, angle + arcSize);
+			ctx.lineTo(centerX, centerY);
+			ctx.fillStyle = segments[i].color;
+			ctx.fill();
+			
+			// Ajouter le texte
+			ctx.save();
+			ctx.translate(centerX, centerY);
+			ctx.rotate(angle + arcSize / 2);
+			ctx.textAlign	= "right";
+			ctx.fillStyle	= "#fff";
+			ctx.font		= "bold 12px Arial";
+			ctx.fillText(segments[i].label, wheelRadius - 10, 5);
+			ctx.restore();
+		}
+	}
+	
+	// Animation de la rotation
+	function rotateWheel(duration, stopAngle) {
+		let startTime = null;
+		const startAngle = 0;
+		
+		function animate(currentTime) {
+			if (!startTime) startTime = currentTime;
+			const elapsedTime	= currentTime - startTime;
+			
+			const progress		= Math.min(elapsedTime / duration, 1);
+			const currentAngle	= easeOut(progress) * (stopAngle - startAngle) + startAngle;
+			
+			ctx.save();
+			ctx.translate(centerX, centerY);
+			ctx.rotate(currentAngle);
+			ctx.translate(-centerX, -centerY);
+			drawWheel();
+			ctx.restore();
+			
+			if (progress < 1) {
+					requestAnimationFrame(animate);
+					} else {
+					const winningIndex = Math.floor(((stopAngle % (2 * Math.PI)) / arcSize) % totalSegments);
+					result.textContent = `Vous avez gagné : ${segments[winningIndex].label}`;
+					spinBtn.disabled = false;
+				}
+			}
+			
+			requestAnimationFrame(animate);
+		}
+		
+		function easeOut(t) {
+			return 1 - Math.pow(1 - t, 5);
+		}
+		
+		// Gérer le clic sur le bouton
+		spinBtn.addEventListener('click', () => {
+			spinBtn.disabled = true;
+			result.textContent = 'Bonne chance !';
+			const stopAngle = Math.random() * 2 * Math.PI * 5 + 4 * Math.PI; // 2-5 tours complets
+			rotateWheel(5000, stopAngle);
+		});
+		
+		// Initialiser la roue
+		drawWheel();
+]
+
+si stValeurHTML.CodeCss <> "" alors
+	
+	// Traitement du CSS
+	sCodeCss	= stValeurHTML.CodeCss
+//	sCodeCss	= Remplace(sCodeCss, "$primaryColor", module.Styles.Couleurs.Primaire)
+//	sCodeCss	= Remplace(sCodeCss, "$secondaryColor", module.Styles.Couleurs.Secondaire)
+//	sCodeCss	= Remplace(sCodeCss, "$textColor", module.Styles.Couleurs.Texte)
+//	sCodeCss	= Remplace(sCodeCss, "$fontFamily", Modulo.Styles.FontFamily)
+	
+	// Ajout des règles responsive
+	sCodeCss += [
+		@media (max-width: [%pLargeurL%]) {
+		.html-module { width: 100%; max-width: [%pLargeurL%]; }
+		}
+		@media (max-width: [%pLargeurM%]) {
+		.html-module { width: 100%; max-width: [%pLargeurM%]; }
+		}
+		@media (max-width: [%pLargeurS%]) {
+		.html-module { width: 100%; max-width: [%pLargeurS%]; }
+		}
+	]
+	
+	sBlocCSS = [
+	<style>[%stValeurHTML.CodeCss%]</style>
+	]
+fin
+
+// Génération du HTML
+sCodeHTML = [
+	<div class="html-module">
+	[%stValeurHTML.CodeHtml%]
+	[%sBlocCSS%]
+	</div>
+]
+
+si stValeurHTML.CodeJavascript <> "" alors
+	_tabCodeJS.Ajoute(stValeurHTML.CodeJavascript)
+fin
+
+renvoyer sCodeHTML

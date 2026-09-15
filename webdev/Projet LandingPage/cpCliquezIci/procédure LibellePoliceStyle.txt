@@ -1,0 +1,27 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//LibellePoliceStyle (<pCode>)
+//
+// Paramètres :
+// 	pCode : <indiquez ici le rôle de pCode>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure LibellePoliceStyle(pCode)
+
+
+selon pCode
+	cas 100 : renvoyer "Thin" 		
+	cas 200 : renvoyer "Extra-Light" 
+	cas 300 : renvoyer "Light" 		
+	cas 400 : renvoyer "Regular" 	
+	cas 500 : renvoyer "Medium" 		
+	cas 600 : renvoyer "Semi-Bold" 	
+	cas 700 : renvoyer "Bold" 		
+	cas 800 : renvoyer "Extra-Bold" 	
+	cas 900 : renvoyer "Black" 		
+	autre cas : STOP
+fin

@@ -1,0 +1,33 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//AppliqueCouleur (<pChamp> est champ, <pCouleur> est chaîne, <pTransparentInterdit> est booléen)
+//
+// Paramètres :
+//	pChamp (champ) : <indiquez ici le rôle de pChampSaisie>
+//	pCouleur (chaîne ANSI) : <indiquez ici le rôle de pCouleur>
+//	pTransparentInterdit (booléen) : <indiquez ici le rôle de bPTransparentInterdit>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure AppliqueCouleur(pChamp est un Champ , pCouleur est une chaîne, pTransparentInterdit est un booléen)
+
+
+si Majuscule(pCouleur) pas dans (__COULEUR_TRANSPARENT__, "#", "") alors
+	pChamp					= pCouleur
+	pChamp.Couleur			= CouleurTexteAutomatique(pCouleur)
+	pChamp.CouleurFond		= HTMLVersRVB(pCouleur)
+	pChamp.ClasseHTML		= "CouleurDrop"
+	si pTransparentInterdit = Vrai alors
+		pChamp.ClasseHTML	+= RC + "TransparentInterdit"
+	fin
+sinon
+	pChamp					= __COULEUR_TRANSPARENT__
+	pChamp.Couleur			= HTMLVersRVB(__COULEUR_NOIR__)
+	pChamp.CouleurFond		= HTMLVersRVB(__COULEUR_BLANC__)
+	pChamp.ClasseHTML		= "CouleurDrop" + RC + "checkerboard"
+fin
+
+

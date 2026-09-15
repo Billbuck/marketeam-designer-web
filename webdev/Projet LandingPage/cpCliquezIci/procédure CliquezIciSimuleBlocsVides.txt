@@ -1,0 +1,279 @@
+procédure CliquezIciSimuleBlocsVides(local stNouveauCliquezIci est une structNouveauCliquezIci, pbSimulePourTheme = Faux)
+
+nIndex							est un entier
+stBloc							est une structIciBloc
+stIciThemeProprieteDefaut		est une structIciThemeProprieteDefaut
+stIciThemeProprieteTexte		est une structIciThemeProprieteTexte
+stIciThemeProprieteLien			est une structIciThemeProprieteLien
+stIciThemeProprieteFormulaire	est une structIciThemeProprieteFormulaire
+stProprieteTexte				est une structIciBlocProprieteTexte
+stProprieteLien					est une structIciBlocProprieteLien
+stProprieteOffre				est une structIciBlocProprieteOffre
+stProprieteAdresse				est une structIciBlocProprieteAdresse
+stValeurTexte					est une structIciBlocValeurTexte
+stValeurTexteDefilant			est une structIciBlocValeurTexteDefilant
+stValeurLien					est une structIciBlocValeurLien
+stValeurOffre					est une structIciBlocValeurOffre
+stLigneOffre					est une structIciBlocLigneOffre
+stValeurFormulaire				est une structIciBlocValeurFormulaire
+stProprieteBouton				est une structIciBlocProprieteBouton
+stValeurBouton					est une structIciBlocValeurBouton
+stProprieteSocial				est une structIciBlocProprieteSocial
+stValeurSocial					est une structIciBlocValeurSocial
+stValeurAdresse					est une structIciBlocValeurAdresse
+stValeurCountdown				est une structIciBlocValeurCountdown
+sLigneAdresse					est une chaîne
+taaStyle						est un tableau associatif de structIciThemeStyleTexte
+stIciThemeStyleTexte			est un structIciThemeStyleTexte
+tabStyleLien					est un tableau de structIciThemeStyleLien
+stIciThemeStyleLien				est un structIciThemeStyleLien
+
+
+Désérialise(stIciThemeProprieteDefaut, stNouveauCliquezIci.stTheme.ProprieteDefaut,psdJSON)
+
+Désérialise(stIciThemeProprieteTexte, stNouveauCliquezIci.stTheme.ProprieteTexte,psdJSON)
+taaStyle = stIciThemeProprieteTexte.TaaStyle
+
+Désérialise(stIciThemeProprieteLien, stNouveauCliquezIci.stTheme.ProprieteLien,psdJSON)
+tabStyleLien = stIciThemeProprieteLien.tabStyle
+
+si pbSimulePourTheme = Faux _et_ stNouveauCliquezIci.tabBloc.Occurrence = 0 alors
+	pbSimulePourTheme = Vrai
+fin
+
+
+si pbSimulePourTheme alors
+	// on créé des blocs pour avoir un aperçu des différents paramètres du thème
+
+	// Styles de texte
+	pour tout stIciThemeStyleTexte, sPoliceCode de taaStyle
+		VariableRAZ(stBloc)
+		stBloc.Type								= __BLOC_TEXTE__
+		stBloc.Libelle							= "Texte" + nIndex
+		stValeurTexte.Texte						= "Taille : " + sPoliceCode
+		stProprieteTexte.PoliceCouleur			= stIciThemeProprieteDefaut.LibelleCouleur
+		stProprieteTexte.PoliceFamille			= stIciThemeProprieteDefaut.PoliceFamille
+		stProprieteTexte.PoliceTailleL			= taaStyle[sPoliceCode].PoliceTailleL
+		stProprieteTexte.PoliceTailleM			= taaStyle[sPoliceCode].PoliceTailleM
+		stProprieteTexte.PoliceTailleS			= taaStyle[sPoliceCode].PoliceTailleS
+		stProprieteTexte.PoliceStyle			= __STYLE_REGULAR__
+		stProprieteTexte.AlignHorizontal		= __ALIGNEMENT_GAUCHE__
+		stProprieteTexte.BlocFondCouleur		= stIciThemeProprieteDefaut.BlocFondCouleur
+		stProprieteTexte.PaddingTop				= stIciThemeProprieteDefaut.MargeVerticaleEntreBloc
+		stProprieteTexte.PaddingBottom			= stIciThemeProprieteDefaut.MargeVerticaleEntreBloc
+		Sérialise(stProprieteTexte,stBloc.Propriete, psdJSON)
+		Sérialise(stValeurTexte,stBloc.Valeur, psdJSON)
+		Ajoute(stNouveauCliquezIci.tabBloc,stBloc)
+	fin
+
+	// Offre
+	VariableRAZ(stBloc)
+	stBloc.Type 								= __BLOC_OFFRE__
+	stValeurOffre.LibelleQuestion				= "Vous souhaitez :"
+	stProprieteOffre.QuestionPoliceCode			= M.Nom
+	stProprieteOffre.QuestionAlignHorizontal	= __ALIGNEMENT_GAUCHE__
+	stProprieteOffre.QuestionPoliceCouleur		= stIciThemeProprieteDefaut.LibelleCouleur
+	stProprieteOffre.QuestionPoliceFamille		= stIciThemeProprieteDefaut.PoliceFamille
+	stProprieteOffre.QuestionPoliceStyle		= __STYLE_REGULAR__
+
+	Sérialise(stProprieteOffre,stBloc.Propriete,psdJSON)
+	Sérialise(stValeurOffre,stBloc.Valeur,psdJSON)
+	Ajoute(stNouveauCliquezIci.tabBloc,stBloc)
+
+	// Liens
+	pour tout stIciThemeStyleLien, nIndex de tabStyleLien
+		VariableRAZ(stBloc)
+		stBloc.Type								= __BLOC_LIEN__
+		stBloc.Libelle							= "Lien" + nIndex
+		stProprieteLien.Style					= nIndex
+		stProprieteLien.AlignHorizontal			= __ALIGNEMENT_CENTRE__
+		stValeurLien.Libellé					= "Lien" + tabStyleLien[nIndex].NomStyle
+		stValeurLien.Lien						= "#"
+		stProprieteLien.BlocFondCouleur			= "#"
+		Sérialise(stProprieteLien,stBloc.Propriete, psdJSON)
+		Sérialise(stValeurLien,stBloc.Valeur, psdJSON)
+		Ajoute(stNouveauCliquezIci.tabBloc,stBloc)
+	fin
+
+	// Formulaire
+	VariableRAZ(stBloc)
+	stBloc.Type 									= __BLOC_FORMULAIRE__
+	stIciThemeProprieteFormulaire.SaisieFondCouleur			= "#"
+	Sérialise(stIciThemeProprieteFormulaire,stBloc.Propriete,psdJSON)
+	Sérialise(stValeurFormulaire,stBloc.Valeur,psdJSON)
+	Ajoute(stNouveauCliquezIci.tabBloc,stBloc)
+
+	// Validation
+	VariableRAZ(stBloc)
+	stBloc.Type									= __BLOC_BOUTON__
+	stValeurBouton.Libelle						= "Valider"
+	Sérialise(stProprieteBouton,stBloc.Propriete,psdJSON)
+	Sérialise(stValeurBouton,stBloc.Valeur,psdJSON)
+	Ajoute(stNouveauCliquezIci.tabBloc,stBloc)
+
+	// Réseau sociaux
+	VariableRAZ(stBloc)
+	stBloc.Type									= __BLOC_SOCIAL__
+	Sérialise(stProprieteSocial,stBloc.Propriete,psdJSON)
+	Sérialise(stValeurSocial,stBloc.Valeur,psdJSON)
+	Ajoute(stNouveauCliquezIci.tabBloc,stBloc)
+
+fin
+
+nIndex = 0
+pour tout stBloc de stNouveauCliquezIci.tabBloc
+
+	nIndex++
+
+
+	selon stBloc.Type
+
+		cas __BLOC_TEXTE__
+			Désérialise(stValeurTexte,stBloc.Valeur,psdJSON)
+			si stValeurTexte.Texte = "" alors
+				stValeurTexte.Texte = "Votre texte ici"
+				Sérialise(stValeurTexte,stNouveauCliquezIci.tabBloc[nIndex].Valeur,psdJSON)
+			fin
+
+		cas __BLOC_TEXTE_DEFILANT__
+			Désérialise(stValeurTexteDefilant,stBloc.Valeur,psdJSON)
+			si stValeurTexteDefilant.tabTexte.Occurrence = 1 _et_ stValeurTexteDefilant.tabTexte[1] = "" alors
+				ChaîneVersTableau("Message 1,Message 2,Message 3",stValeurTexteDefilant.tabTexte,",")
+				Sérialise(stValeurTexteDefilant,stNouveauCliquezIci.tabBloc[nIndex].Valeur,psdJSON)
+			fin
+
+
+		cas __BLOC_IMAGE__
+
+		cas __BLOC_BANNIERE__
+
+		cas __BLOC_GRATTAGE__
+
+		cas __BLOC_OFFRE__
+			Désérialise(stValeurOffre,stBloc.Valeur,psdJSON)
+			si stValeurOffre.tabOffre..Occurrence = 0 alors
+				// 3 offres à interrupteur
+				pour i=1 _à_ 3
+					VariableRAZ(stLigneOffre)
+					stLigneOffre.TypeOffre	= __OFFRE_INTERRUPTEUR__
+					stLigneOffre.Libelle	= ""
+					stLigneOffre.TabValeur.Ajoute("Ici votre offre " + i)
+					stValeurOffre.tabOffre.Ajoute(stLigneOffre)
+				fin
+				// 1 combo
+				VariableRAZ(stLigneOffre)
+				stLigneOffre.TypeOffre	= __OFFRE_COMBO__
+				stLigneOffre.Libelle	= "Votre choix"
+				pour i=1 _à_ 3
+					stLigneOffre.TabValeur.Ajoute("Ici votre offre " + i)
+				fin
+				stValeurOffre.tabOffre.Ajoute(stLigneOffre)
+			fin
+			Sérialise(stValeurOffre,stNouveauCliquezIci.tabBloc[nIndex].Valeur,psdJSON)
+
+		cas __BLOC_HTML__
+
+		cas __BLOC_YOUTUBE__
+
+		cas __BLOC_BOUTON__
+
+		cas __BLOC_FORMULAIRE__
+			Désérialise(stValeurFormulaire,stBloc.Valeur,psdJSON)
+			si stValeurFormulaire.TabLibelle..Occurrence = 0 alors
+				stValeurFormulaire.TabLibelle.Ajoute("Nom")
+				stValeurFormulaire.TabIndication.Ajoute("Votre nom")
+				stValeurFormulaire.TabValeur.Ajoute("")
+				stValeurFormulaire.TabType.Ajoute(__TXT__)
+				stValeurFormulaire.TabObligatoire.Ajoute(Vrai)
+				stValeurFormulaire.TabLibelle.Ajoute("Prénom")
+				stValeurFormulaire.TabIndication.Ajoute("Votre prénom")
+				stValeurFormulaire.TabValeur.Ajoute("")
+				stValeurFormulaire.TabType.Ajoute(__TXT__)
+				stValeurFormulaire.TabObligatoire.Ajoute(Vrai)
+				stValeurFormulaire.TabLibelle.Ajoute("Email")
+				stValeurFormulaire.TabIndication.Ajoute("Votre adresse email")
+				stValeurFormulaire.TabValeur.Ajoute("")
+				stValeurFormulaire.TabType.Ajoute(__TYPE_EMAIL__)
+				stValeurFormulaire.TabObligatoire.Ajoute(Faux)
+				stValeurFormulaire.TabLibelle.Ajoute("Mobile")
+				stValeurFormulaire.TabIndication.Ajoute("Votre n° de mobile")
+				stValeurFormulaire.TabValeur.Ajoute("")
+				stValeurFormulaire.TabType.Ajoute(__TYPE_TELEPHONE__)
+				stValeurFormulaire.TabObligatoire.Ajoute(Faux)
+				stValeurFormulaire.TabLibelle.Ajoute("Ville")
+				stValeurFormulaire.TabIndication.Ajoute("Votre ville")
+				stValeurFormulaire.TabValeur.Ajoute("")
+				stValeurFormulaire.TabType.Ajoute(__TXT__)
+				stValeurFormulaire.TabObligatoire.Ajoute(Faux)
+			fin
+			Sérialise(stValeurFormulaire,stNouveauCliquezIci.tabBloc[nIndex].Valeur,psdJSON)
+
+
+		cas __BLOC_ADRESSE__
+
+			Désérialise(stProprieteAdresse,stBloc.Propriete,psdJSON)
+			Désérialise(stValeurAdresse,stBloc.Valeur,psdJSON)
+			si stValeurAdresse.TabValeur.Occurrence = 0 alors
+				pour tout sLibelle, nLigne de stValeurAdresse.TabLibelle
+					si stValeurAdresse.TabActif[nLigne] = Vrai alors
+						selon Vrai
+							cas Contient(sLibelle,["Société", "Point de vente"],SansCasse+MotComplet) 	: sLigneAdresse += [RC] + "Point de vente"
+							cas Contient(sLibelle,"Adresse 1",MotComplet+SansCasse)					: sLigneAdresse += [RC] + "Votre adresse"
+							cas Contient(sLibelle,"Adresse 2",MotComplet+SansCasse)					: sLigneAdresse += [RC] + "Complément adresse"
+							cas Contient(sLibelle,"Adresse 3",MotComplet+SansCasse)					: sLigneAdresse += [RC] + "Code Postal + Ville"
+							cas Contient(sLibelle,"Tel",SansCasse)										: sLigneAdresse += [RC] + "Tel: XX.XX.XX.XX.XX"
+							cas Contient(sLibelle,"Mail",SansCasse)									: sLigneAdresse += [RC] + "email@votre-societe.com"
+							cas Contient(sLibelle,"Web",SansCasse)										: sLigneAdresse += [RC] + "www.votre-societe.com"
+							autre cas																	: sLigneAdresse += [RC] + sLibelle
+						fin
+					fin
+				fin
+				stValeurAdresse.TabValeur.Ajoute(sLigneAdresse)
+				stValeurAdresse.TabValeur.Ajoute(sLigneAdresse)
+				Sérialise(stValeurAdresse,stNouveauCliquezIci.tabBloc[nIndex].Valeur,psdJSON)
+			fin
+
+		cas	__BLOC_SOCIAL__
+			Désérialise(stValeurSocial,stBloc.Valeur,psdJSON)
+			si stValeurSocial.TabType.Occurrence = 1 _et_ stValeurSocial.TabLien[1] = "" alors
+				stValeurSocial.TabType.Ajoute(__SOCIAL_FACEBOOK__)
+				stValeurSocial.TabLien.Ajoute("#")
+				stValeurSocial.TabType.Ajoute(__SOCIAL_LINKEDIN__)
+				stValeurSocial.TabLien.Ajoute("#")
+				stValeurSocial.TabType.Ajoute(__SOCIAL_INSTAGRAM__)
+				stValeurSocial.TabLien.Ajoute("#")
+				stValeurSocial.TabType.Ajoute(__SOCIAL_SITE_WEB__)
+				stValeurSocial.TabLien.Ajoute("#")
+				stValeurSocial.TabType.Ajoute(__SOCIAL_TIKTOK__)
+				stValeurSocial.TabLien.Ajoute("#")
+			fin
+			Sérialise(stValeurSocial,stNouveauCliquezIci.tabBloc[nIndex].Valeur,psdJSON)
+
+		cas __BLOC_LIEN__
+
+		cas __BLOC_COUNTDOWN__
+			Désérialise(stValeurCountdown,stBloc.Valeur,psdJSON)
+			si pas DateHeureValide(stValeurCountdown.DateHeureFin) alors
+				stValeurCountdown.DateHeureFin = DernierJourDeLAnnée(DateSys())
+				Sérialise(stValeurCountdown,stBloc.Valeur,psdJSON)
+			fin
+
+
+		cas __BLOC_SEPARATEUR__
+
+		cas __BLOC_GRILLE__
+
+		cas __BLOC_CARTE__
+
+		cas __BLOC_CGV__
+
+		cas __BLOC_VIDEO__
+
+		cas __BLOC_SCRIPT__
+
+		autres cas : STOP
+	fin
+
+fin
+
+renvoyer stNouveauCliquezIci

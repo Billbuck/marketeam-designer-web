@@ -1,0 +1,85 @@
+procédure CreationTexte(pNumBloc, pPropriete, pValeur, pLargeurL, pLargeurM, pLargeurS)
+
+sCodeHTML 				est une chaîne
+sTexteAvecMiseEnForme	est une chaîne
+sLibelleBloc			est une chaîne
+sStylePersonnalisé		est une chaîne
+
+stProprieteTexte		est une structIciBlocProprieteTexte
+stValeurTexte			est une structIciBlocValeurTexte
+
+Désérialise(stProprieteTexte, pPropriete,psdJSON)
+Désérialise(stValeurTexte, pValeur,psdJSON)
+
+
+sLibelleBloc = "texte-" + pNumBloc
+
+
+sStylePersonnalisé = [
+<style>
+
+	.[%sLibelleBloc%]	{
+		background-color:	[%stProprieteTexte.BlocFondCouleur%] !important;
+		min-height: 		[%stProprieteTexte.PoliceTailleL%]px !important;
+		display:            flex;
+		align-items:        center;
+		justify-content:	[%DonneAlignementHorizontal(stProprieteTexte.AlignHorizontal,"flex")%];;
+		padding-top:        [%stProprieteTexte.PaddingTop%]px !important;  	 /* Surcharge le padding vertical si nécessaire */
+		padding-bottom:     [%stProprieteTexte.PaddingBottom%]px !important;   /* Surcharge le padding vertical si nécessaire */
+	}
+	
+	.[%sLibelleBloc%] .text-wrapper	{
+		text-align:			[%DonneAlignementHorizontal(stProprieteTexte.AlignHorizontal)%];
+		max-width: 			100%;
+	}
+	
+	.[%sLibelleBloc%], .[%sLibelleBloc%] a {
+		font-family: 		'[%stProprieteTexte.PoliceFamille%]' !important;
+		color: 		 		[%stProprieteTexte.PoliceCouleur%] !important;
+		font-size:   		[%stProprieteTexte.PoliceTailleL%]px !important;
+		font-weight: 		[%stProprieteTexte.PoliceStyle%] !important;
+		font-style:  		"normal" !important;
+	}
+
+
+	@media only screen and (max-width : [%pLargeurM%]px) {
+		.[%sLibelleBloc%], .[%sLibelleBloc%] a {
+			font-size:			[%stProprieteTexte.PoliceTailleM%]px !important;
+			min-height: 		[%stProprieteTexte.PoliceTailleM%]px !important;
+			padding-top:        [%Arrondi(stProprieteTexte.PaddingTop * pLargeurM / pLargeurL)%]px !important;  	 /* Surcharge le padding vertical si nécessaire */
+			padding-bottom:     [%Arrondi(stProprieteTexte.PaddingBottom * pLargeurM / pLargeurL)%]px !important;   /* Surcharge le padding vertical si nécessaire */
+		}
+	}
+
+
+	@media only screen and (max-width : [%pLargeurS%]px) {
+		.[%sLibelleBloc%], .[%sLibelleBloc%] a {
+			font-size:			[%stProprieteTexte.PoliceTailleS%]px !important;
+			min-height: 		[%stProprieteTexte.PoliceTailleS%]px !important; 
+			padding-top:        [%Arrondi(stProprieteTexte.PaddingTop * pLargeurS / pLargeurL)%]px !important;  	 /* Surcharge le padding vertical si nécessaire */
+			padding-bottom:     [%Arrondi(stProprieteTexte.PaddingBottom * pLargeurS / pLargeurL)%]px !important;   /* Surcharge le padding vertical si nécessaire */
+		}
+	}
+
+</style>
+]
+
+sTexteAvecMiseEnForme = stValeurTexte.Texte
+sTexteAvecMiseEnForme = Remplace(sTexteAvecMiseEnForme, "[g]", "<b>")
+sTexteAvecMiseEnForme = Remplace(sTexteAvecMiseEnForme, "[/g]", "</b>")
+sTexteAvecMiseEnForme = Remplace(sTexteAvecMiseEnForme, "[i]", "<em>")
+sTexteAvecMiseEnForme = Remplace(sTexteAvecMiseEnForme, "[/i]", "</em>")
+sTexteAvecMiseEnForme = Remplace(sTexteAvecMiseEnForme, "[s]", "<u>")
+sTexteAvecMiseEnForme = Remplace(sTexteAvecMiseEnForme, "[/s]", "</u>")
+sTexteAvecMiseEnForme = Remplace(sTexteAvecMiseEnForme, RC, "<br>")
+
+sCodeHTML = [
+	<div class="bloc-container [%sLibelleBloc%]">
+		<div class="text-wrapper">
+			[%sTexteAvecMiseEnForme%]
+		</div>
+	</div>
+	[%sStylePersonnalisé%]
+]
+
+renvoyer sCodeHTML

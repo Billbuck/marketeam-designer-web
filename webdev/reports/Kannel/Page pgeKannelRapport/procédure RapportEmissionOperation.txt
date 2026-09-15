@@ -1,26 +1,26 @@
 procédure RapportEmissionOperation(stRapportKannel est une structRapportKannel)
 
-sStatut					est une chaîne
-sTexteRequete			est une chaîne
+sStatut						est une chaîne
+sTexteRequete				est une chaîne
 sdReqRapportOperation	est une Source de Données
 
 
-sStatut = MatchingStatus(stRapportKannel.Statut,stRapportKannel.Detail, stRapportKannel.Routeur)
+sStatut			= MatchingStatus(stRapportKannel.Statut,stRapportKannel.Detail, stRapportKannel.Routeur)
 
-sTexteRequete =
+sTexteRequete	=
 [
-	UPDATE LOW_PRIORITY 
+	UPDATE
 	ope_sms_envoi
 	SET 
-		Statut='[%sStatut%]', 
-		StatutKannel='[%stRapportKannel.Statut%]', 
-		StatutOperateur='[%stRapportKannel.Detail%]', 
-		Operateur='[%stRapportKannel.Operateur%]', 
-		PrixUnitaireFacture = [%stRapportKannel.Price%], 
-		DateHeureReception='[%stRapportKannel.DateHeure%]' 
+	Statut='[%sStatut%]', 
+	StatutKannel='[%stRapportKannel.Statut%]', 
+	StatutOperateur='[%stRapportKannel.Detail%]', 
+	Operateur='[%stRapportKannel.Operateur%]', 
+	PrixUnitaireFacture = [%stRapportKannel.Price%], 
+	DateHeureReception='[%stRapportKannel.DateHeure%]' 
 	WHERE 
-		IdSms = [%stRapportKannel.stOperation.IdSms%] 
-		AND IdBaseLigne = [%stRapportKannel.stOperation.IdBaseLigne%];
+	IdSms = [%stRapportKannel.stOperation.IdSms%] 
+	AND IdBaseLigne = [%stRapportKannel.stOperation.IdBaseLigne%];
 ]
 
 si pas sdReqRapportOperation.ExécuteRequêteSQL(cpKannel.__cnxKannel, hRequêteSansCorrection, sTexteRequete) alors
@@ -28,20 +28,19 @@ si pas sdReqRapportOperation.ExécuteRequêteSQL(cpKannel.__cnxKannel, hRequête
 	retour
 fin
 
-
+// Liste noire opérateur : l'INSERT n'est exécuté QUE dans ce cas
+// (avant, l'exécution était hors du si et rejouait l'UPDATE à chaque rapport)
 si stRapportKannel.Detail dans (__IB_STATUT_BLACKLISTED_DESTINATIONADDRESS__, __CM_STATUT_BLACKLISTED_PERMANENTLY__) alors
 	sTexteRequete =
 	[
 		INSERT IGNORE dos_base_ligne_erreur (TypeErreur, Portable, DateHeureErreur)
 		VALUES('[%__ERREUR_STOP_PUB_OPERATEUR__%]', '[%stRapportKannel.Portable%]', NOW()) 
 	]
+	si pas sdReqRapportOperation.ExécuteRequêteSQL(cpKannel.__cnxKannel, hRequêteSansCorrection, sTexteRequete) alors
+		EnregistreErreurRequete("RapportEmissionOperation INSERT", sTexteRequete)
+		retour
+	fin
 fin
-
-si pas sdReqRapportOperation.ExécuteRequêteSQL(cpKannel.__cnxKannel, hRequêteSansCorrection, sTexteRequete) alors
-	EnregistreErreurRequete("RapportEmissionOperation INSERT", sTexteRequete)
-	retour
-fin
-
 
 
 fin:

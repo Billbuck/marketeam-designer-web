@@ -1,0 +1,16 @@
+function RenvoiOptin() {
+    // Initialisation de la chaîne de sortie avec l'état de l'interrupteur principal
+    var optinStr = "Optin:" + ($("#optin_0").prop('checked') ? "1" : "0");
+
+    // Traitement des interrupteurs secondaires
+    $('.optin-option').each(function() {
+        // Récupère le libellé associé à chaque interrupteur secondaire
+        var label = $(this).find('label').text().trim();
+        // Récupère l'état de l'interrupteur (1 pour coché, 0 pour non coché)
+        var state = $(this).find('input').prop('checked') ? "1" : "0";
+        // Ajoute le libellé et l'état à la chaîne de sortie, séparés par deux points et une tabulation pour les séparer
+        optinStr += "\t" + label + ":" + state;
+    });
+
+    return optinStr;
+}

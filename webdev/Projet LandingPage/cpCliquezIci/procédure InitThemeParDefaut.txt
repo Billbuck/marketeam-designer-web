@@ -1,0 +1,246 @@
+procédure InitThemeParDefaut(pNomTheme, pIdClient)
+
+
+stIciTheme									est un structIciTheme
+stIciThemeStyle								est un structIciThemeStyleTexte
+stIciThemeStyleLien							est un structIciThemeStyleLien
+stIciThemePolice							est un structIciThemePolice
+stIciThemeProprieteDefaut					est un structIciThemeProprieteDefaut
+stIciThemeProprieteTexte					est un structIciThemeProprieteTexte
+stIciThemeProprieteCombo					est un structIciThemeProprieteCombo
+stIciThemeProprieteInterrupteur				est un structIciThemeProprieteInterrupteur
+stIciThemeProprieteLien						est un structIciThemeProprieteLien
+stIciThemeProprieteBouton					est un structIciThemeProprieteBouton
+stIciThemeProprieteFormulaire				est un structIciThemeProprieteFormulaire
+
+taaTaillePolice								est un tableau associatif de tableau associatif d'entiers
+
+taaTaillePolice = cpCliquezici.CalculeTaillePolice(20,14,50,9)
+
+// Palette de couleurs
+stIciThemeProprieteDefaut.ListeCouleurDefaut	= __COULEUR_TRANSPARENT__ + [TAB] + __COULEUR_BLANC__ + [TAB] + __COULEUR_GRIS_XXS__ + [TAB] + __COULEUR_GRIS_XS__ + [TAB] + __COULEUR_GRIS_S__ +[TAB]+ __COULEUR_GRIS_M__ +[TAB]+ __COULEUR_GRIS_L__  + [TAB] + __COULEUR_GRIS_XL__ + [TAB] + __COULEUR_NOIR__
+stIciThemeProprieteDefaut.ListeCouleurClient 	= ChargeListeCouleurClient(pIdClient)
+
+// Police par défaut
+stIciThemePolice.Nom 		= "Arial"
+stIciThemePolice.Type 		= "W"
+stIciThemePolice.tabStyle.Ajoute(400)
+stIciThemePolice.tabStyle.Ajoute(700)
+
+TableauAjoute(stIciThemeProprieteDefaut.tabPolices, stIciThemePolice)
+
+// Style par défaut
+stIciThemeProprieteDefaut.MargeVerticaleEntreChamp			= 10
+stIciThemeProprieteDefaut.MargeHorizontaleBloc				= 30
+stIciThemeProprieteDefaut.MargeVerticaleEntreBloc			= 10
+stIciThemeProprieteDefaut.PageFondCouleur					= __COULEUR_GRIS_XXS__
+stIciThemeProprieteDefaut.BlocFondCouleur					= __COULEUR_TRANSPARENT__			// Tous les blocs de la page
+stIciThemeProprieteDefaut.AlignementFormulaire				= __ALIGNEMENT_25_libelle_75_champ__
+
+stIciThemeProprieteDefaut.FondBlocCouleur					= __COULEUR_TRANSPARENT__			// 1 Bloc
+// Style des libellés
+stIciThemeProprieteDefaut.PoliceFamille						= "Arial"
+stIciThemeProprieteDefaut.LibelleCouleur					= __COULEUR_NOIR__
+stIciThemeProprieteDefaut.SaisieCouleur						= __COULEUR_NOIR__
+
+// Style des champs
+stIciThemeProprieteDefaut.ChampFondCouleur					= __COULEUR_GRIS_XXS__
+
+
+// Style des bordure de champ
+stIciThemeProprieteDefaut.BordureCouleur					= __COULEUR_GRIS_S__
+stIciThemeProprieteDefaut.BordureArrondi					= 0
+stIciThemeProprieteDefaut.BordureEpaisseur					= 1
+
+
+// Styles des textes
+stIciThemeStyle.PoliceCode									= XXXL..Nom
+stIciThemeStyle.PoliceLibelle								= XXXL..Valeur
+stIciThemeStyle.PoliceTailleL								= taaTaillePolice[XXXL.Nom]["L"]
+stIciThemeStyle.PoliceTailleM								= taaTaillePolice[XXXL.Nom]["M"]
+stIciThemeStyle.PoliceTailleS								= taaTaillePolice[XXXL.Nom]["S"]
+stIciThemeProprieteTexte.TaaStyle[XXXL..Nom] = stIciThemeStyle
+
+
+stIciThemeStyle.PoliceCode									= XXL..Nom
+stIciThemeStyle.PoliceLibelle								= XXL..Valeur
+stIciThemeStyle.PoliceTailleL								= taaTaillePolice[XXL.Nom]["L"]
+stIciThemeStyle.PoliceTailleM								= taaTaillePolice[XXL.Nom]["M"]
+stIciThemeStyle.PoliceTailleS								= taaTaillePolice[XXL.Nom]["S"]
+stIciThemeProprieteTexte.TaaStyle[XXL..Nom] = stIciThemeStyle
+
+
+
+stIciThemeStyle.PoliceCode									= XL..Nom
+stIciThemeStyle.PoliceLibelle								= XL..Valeur
+stIciThemeStyle.PoliceTailleL								= taaTaillePolice[XL.Nom]["L"]
+stIciThemeStyle.PoliceTailleM								= taaTaillePolice[XL.Nom]["M"]
+stIciThemeStyle.PoliceTailleS								= taaTaillePolice[XL.Nom]["S"]
+stIciThemeProprieteTexte.TaaStyle[XL..Nom] = stIciThemeStyle
+
+
+stIciThemeStyle.PoliceCode									= L..Nom
+stIciThemeStyle.PoliceLibelle								= L..Valeur
+stIciThemeStyle.PoliceTailleL								= taaTaillePolice[L.Nom]["L"]
+stIciThemeStyle.PoliceTailleM								= taaTaillePolice[L.Nom]["M"]
+stIciThemeStyle.PoliceTailleS								= taaTaillePolice[L.Nom]["S"]
+stIciThemeProprieteTexte.TaaStyle[L..Nom] = stIciThemeStyle
+
+
+stIciThemeStyle.PoliceCode									= M..Nom
+stIciThemeStyle.PoliceLibelle								= M..Valeur
+stIciThemeStyle.PoliceTailleL								= taaTaillePolice[M.Nom]["L"]
+stIciThemeStyle.PoliceTailleM								= taaTaillePolice[M.Nom]["M"]
+stIciThemeStyle.PoliceTailleS								= taaTaillePolice[M.Nom]["S"]
+stIciThemeProprieteTexte.TaaStyle[M..Nom] = stIciThemeStyle
+
+
+stIciThemeStyle.PoliceCode									= S..Nom
+stIciThemeStyle.PoliceLibelle								= S..Valeur
+stIciThemeStyle.PoliceTailleL								= taaTaillePolice[S.Nom]["L"]
+stIciThemeStyle.PoliceTailleM								= taaTaillePolice[S.Nom]["M"]
+stIciThemeStyle.PoliceTailleS								= taaTaillePolice[S.Nom]["S"]
+stIciThemeProprieteTexte.TaaStyle[S..Nom] = stIciThemeStyle
+
+
+stIciThemeStyle.PoliceCode									= XS..Nom
+stIciThemeStyle.PoliceLibelle								= XS..Valeur
+stIciThemeStyle.PoliceTailleL								= taaTaillePolice[XS.Nom]["L"]
+stIciThemeStyle.PoliceTailleM								= taaTaillePolice[XS.Nom]["M"]
+stIciThemeStyle.PoliceTailleS								= taaTaillePolice[XS.Nom]["S"]
+stIciThemeProprieteTexte.TaaStyle[XS..Nom] = stIciThemeStyle
+
+
+stIciThemeStyle.PoliceCode									= XXS..Nom
+stIciThemeStyle.PoliceLibelle								= XXS..Valeur
+stIciThemeStyle.PoliceTailleL								= taaTaillePolice[XXS.Nom]["L"]
+stIciThemeStyle.PoliceTailleM								= taaTaillePolice[XXS.Nom]["M"]
+stIciThemeStyle.PoliceTailleS								= taaTaillePolice[XXS.Nom]["S"]
+stIciThemeProprieteTexte.TaaStyle[XXS..Nom] = stIciThemeStyle
+
+
+stIciThemeStyle.PoliceCode									= XXXS..Nom
+stIciThemeStyle.PoliceLibelle								= XXXS..Valeur
+stIciThemeStyle.PoliceTailleL								= taaTaillePolice[XXXS.Nom]["L"]
+stIciThemeStyle.PoliceTailleM								= taaTaillePolice[XXXS.Nom]["M"]
+stIciThemeStyle.PoliceTailleS								= taaTaillePolice[XXXS.Nom]["S"]
+stIciThemeProprieteTexte.TaaStyle[XXXS..Nom] = stIciThemeStyle
+
+
+// Style des combos et listes
+stIciThemeProprieteCombo.BordureArrondi						= stIciThemeProprieteDefaut.BordureArrondi
+stIciThemeProprieteCombo.BordureEpaisseur					= stIciThemeProprieteDefaut.BordureEpaisseur
+stIciThemeProprieteCombo.BordureCouleur						= stIciThemeProprieteDefaut.BordureCouleur
+stIciThemeProprieteCombo.FlecheCouleur						= __COULEUR_NOIR__
+stIciThemeProprieteCombo.FlecheTaille						= 50
+stIciThemeProprieteCombo.MargeInterneVerticale				= 6
+
+stIciThemeProprieteCombo.LibellePoliceCode					= M.Nom
+stIciThemeProprieteCombo.LibellePoliceCouleur				= stIciThemeProprieteDefaut.LibelleCouleur
+stIciThemeProprieteCombo.LibellePoliceStyle					= __STYLE_REGULAR__
+stIciThemeProprieteCombo.LibellePoliceFamille				= stIciThemeProprieteDefaut.PoliceFamille
+stIciThemeProprieteCombo.SaisiePoliceCouleur				= stIciThemeProprieteDefaut.SaisieCouleur
+stIciThemeProprieteCombo.SaisiePoliceStyle					= __STYLE_REGULAR__
+stIciThemeProprieteCombo.SaisiePoliceFamille				= stIciThemeProprieteDefaut.PoliceFamille
+stIciThemeProprieteCombo.SaisieAlignementHorizontal			= __ALIGNEMENT_GAUCHE__
+stIciThemeProprieteCombo.SaisiePoliceCode					= M.Nom
+stIciThemeProprieteCombo.LibellePosition					= __POSITION_EXTERIEUR__
+stIciThemeProprieteCombo.SaisieFondCouleur					= stIciThemeProprieteDefaut.ChampFondCouleur
+
+// Style Formulaire
+stIciThemeProprieteFormulaire.BlocFondCouleur				= stIciThemeProprieteDefaut.FondBlocCouleur
+stIciThemeProprieteFormulaire.LibellePoliceFamille			= stIciThemeProprieteDefaut.PoliceFamille
+stIciThemeProprieteFormulaire.LibellePoliceCode				= M.Nom
+stIciThemeProprieteFormulaire.LibellePoliceCouleur			= stIciThemeProprieteDefaut.LibelleCouleur
+stIciThemeProprieteFormulaire.LibellePoliceStyle			= __STYLE_REGULAR__
+stIciThemeProprieteFormulaire.LibelleAlignementHorizontal	= __ALIGNEMENT_GAUCHE__
+stIciThemeProprieteFormulaire.SaisiePoliceFamille			= stIciThemeProprieteDefaut.PoliceFamille
+stIciThemeProprieteFormulaire.SaisiePoliceCode				= M.Nom
+stIciThemeProprieteFormulaire.SaisiePoliceCouleur			= stIciThemeProprieteDefaut.SaisieCouleur
+stIciThemeProprieteFormulaire.SaisieFondCouleur				= stIciThemeProprieteDefaut.ChampFondCouleur
+stIciThemeProprieteFormulaire.SaisiePoliceStyle				= __STYLE_REGULAR__
+stIciThemeProprieteFormulaire.SaisieAlignementHorizontal	= __ALIGNEMENT_GAUCHE__
+stIciThemeProprieteFormulaire.MargeInterneVerticale			= 8
+stIciThemeProprieteFormulaire.BordureEpaisseur				= stIciThemeProprieteDefaut.BordureEpaisseur
+stIciThemeProprieteFormulaire.BordureArrondi				= stIciThemeProprieteDefaut.BordureArrondi
+stIciThemeProprieteFormulaire.BordureCouleur				= stIciThemeProprieteDefaut.BordureCouleur
+
+// Style des interrupteurs
+stIciThemeProprieteInterrupteur.CocheCouleurCoché			= __COULEUR_NOIR__
+stIciThemeProprieteInterrupteur.CocheCouleurNonCoché		= __COULEUR_NOIR__
+stIciThemeProprieteInterrupteur.CocheTaille					= 32
+stIciThemeProprieteInterrupteur.MargeGauche					= 15
+stIciThemeProprieteInterrupteur.MargeDroite					= 12
+stIciThemeProprieteInterrupteur.PoliceFamille				= stIciThemeProprieteDefaut.PoliceFamille
+stIciThemeProprieteInterrupteur.PoliceStyle					= __STYLE_REGULAR__
+stIciThemeProprieteInterrupteur.PoliceCouleurCoché			= __COULEUR_NOIR__
+stIciThemeProprieteInterrupteur.PoliceCouleurNonCoché		= __COULEUR_NOIR__
+stIciThemeProprieteInterrupteur.PoliceCode					= M.Nom
+stIciThemeProprieteInterrupteur.CocheModele					= 1
+
+
+// Style des liens
+stIciThemeStyleLien.NomStyle								= "Style 1"
+stIciThemeStyleLien.PoliceFamille							= stIciThemeProprieteDefaut.PoliceFamille
+stIciThemeStyleLien.PoliceCode								= M.Nom
+stIciThemeStyleLien.PoliceStyle								= __STYLE_REGULAR__
+stIciThemeStyleLien.PoliceCouleur							= __COULEUR_NOIR__
+stIciThemeStyleLien.PoliceSouligne							= Vrai
+stIciThemeStyleLien.PoliceFondCouleur						= __COULEUR_TRANSPARENT__
+stIciThemeStyleLien.BordureArrondi							= 0
+stIciThemeStyleLien.BordureCouleur							= stIciThemeProprieteDefaut.BordureCouleur
+stIciThemeStyleLien.BordureEpaisseur						= 0
+stIciThemeStyleLien.MargeInterneHorizontal					= 0
+stIciThemeStyleLien.MargeInterneVertical					= 10
+stIciThemeStyleLien.AlignHorizontal							= __ALIGNEMENT_GAUCHE__
+
+stIciThemeProprieteLien.tabStyle.Ajoute(stIciThemeStyleLien)
+
+stIciThemeStyleLien.NomStyle								= "Style 2"
+stIciThemeStyleLien.PoliceFamille							= stIciThemeProprieteDefaut.PoliceFamille
+stIciThemeStyleLien.PoliceCode								= M.Nom
+stIciThemeStyleLien.PoliceStyle								= __STYLE_REGULAR__
+stIciThemeStyleLien.PoliceSouligne							= Faux
+stIciThemeStyleLien.PoliceCouleur							= "#FFFFFF"
+stIciThemeStyleLien.PoliceFondCouleur						= __COULEUR_NOIR__
+stIciThemeStyleLien.BordureArrondi							= 10
+stIciThemeStyleLien.BordureCouleur							= stIciThemeProprieteDefaut.BordureCouleur
+stIciThemeStyleLien.BordureEpaisseur						= 0
+stIciThemeStyleLien.MargeInterneHorizontal					= 30
+stIciThemeStyleLien.MargeInterneVertical					= 5
+stIciThemeStyleLien.AlignHorizontal							= __ALIGNEMENT_CENTRE__
+stIciThemeProprieteLien.tabStyle.Ajoute(stIciThemeStyleLien)
+
+
+// Style du bouton
+stIciThemeProprieteBouton.PoliceFamille					= stIciThemeProprieteDefaut.PoliceFamille
+stIciThemeProprieteBouton.PoliceStyle					= __STYLE_REGULAR__
+stIciThemeProprieteBouton.PoliceCode					= L.Nom
+stIciThemeProprieteBouton.MargeExterneVertical			= 0
+stIciThemeProprieteBouton.MargeExterneHorizontal		= 0
+stIciThemeProprieteBouton.MargeInterneVertical			= 10
+stIciThemeProprieteBouton.MargeInterneHorizontal		= 50
+stIciThemeProprieteBouton.BoutonFondCouleur				= __COULEUR_NOIR__
+stIciThemeProprieteBouton.BlocFondCouleur				= __COULEUR_TRANSPARENT__
+stIciThemeProprieteBouton.PoliceCouleur					= "#FFFFFF"
+stIciThemeProprieteBouton.BordureArrondi				= 10
+stIciThemeProprieteBouton.BordureCouleur				= stIciThemeProprieteDefaut.BordureCouleur
+stIciThemeProprieteBouton.BordureEpaisseur				= 0
+
+
+
+// Ajout du thème
+stIciTheme.NomTheme								= pNomTheme
+stIciTheme.LargeurL								= 900
+stIciTheme.LargeurM								= 700
+stIciTheme.LargeurS								= 400
+
+Sérialise(stIciThemeProprieteDefaut,stIciTheme.ProprieteDefaut,psdJSON)
+Sérialise(stIciThemeProprieteTexte,stIciTheme.ProprieteTexte,psdJSON)
+Sérialise(stIciThemeProprieteCombo,stIciTheme.ProprieteCombo,psdJSON)
+Sérialise(stIciThemeProprieteInterrupteur,stIciTheme.ProprieteInterrupteur,psdJSON)
+Sérialise(stIciThemeProprieteLien,stIciTheme.ProprieteLien,psdJSON)
+Sérialise(stIciThemeProprieteBouton,stIciTheme.ProprieteBouton,psdJSON)
+Sérialise(stIciThemeProprieteFormulaire,stIciTheme.ProprieteFormulaire,psdJSON)
+
+renvoyer stIciTheme

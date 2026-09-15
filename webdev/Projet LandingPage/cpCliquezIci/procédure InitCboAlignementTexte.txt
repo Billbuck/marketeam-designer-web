@@ -1,0 +1,9 @@
+procédure InitCboAlignementTexte(pChampCbo est un Champ)
+
+ListeSupprimeTout(pChampCbo)
+ListeAjoute(pChampCbo,"Non défini"	+ gLien(__ALIGNEMENT_INDEFINI__))
+ListeAjoute(pChampCbo,"Gauche" 		+ gLien(__ALIGNEMENT_GAUCHE__))
+ListeAjoute(pChampCbo,"Centre" 		+ gLien(__ALIGNEMENT_CENTRE__))
+ListeAjoute(pChampCbo,"Droite" 		+ gLien(__ALIGNEMENT_DROITE__))
+ListeAjoute(pChampCbo,"Justifié" 	+ gLien(__ALIGNEMENT_JUSTIFIE__))
+ListeSelectPlus(pChampCbo,1)	

@@ -1,0 +1,6 @@
+procédure InitProjet()
+
+__sRepRacine 		= ValeurParametre("rep_racine_marketeam", prm_parametre.ValChaine.Nom) + ["\"]
+__sHttpMarketeam	= ValeurParametre("http_marketeam", prm_parametre.ValChaine.Nom) + ["/"]
+__sFindIpUrl		= ValeurParametre("FindIp_Api_Url", prm_parametre.ValChaine.Nom)
+__sFindIpKey		= ValeurParametre("FindIp_Api_Key", prm_parametre.ValChaine.Nom)

@@ -1,44 +1,51 @@
-procédure RapportEmission(pRapport est un Variant) //pDateHeureKannel,pStatutKannel,pDetailOperateur,pIdSms,pIdBaseLigne,pEstNotification,pOperateur,pRouteur,pPrice)
+procédure RapportEmission(pRapport est un Variant)
 
-sStatut est une chaîne
-
-
-sTexteRequete est une chaîne
-sTexteRequeteUpdateEmailEnvoi est une chaîne
-sTexteRequeteUpdateEmailNotification est une chaîne
-sdReqRapportKannel est une Source de Données
-nIdBaseLigne est un entier
-nIdEmailNotification est un entier
-sDateHeureReception est une chaîne
-sDateHeurePriseEnCharge est une chaîne
-
-mPrixUnitaireFacture est un monétaire
+sStatut											est une chaîne
+sTexteRequete									est une chaîne
+sTexteRequeteUpdateEmailEnvoi				est une chaîne
+sTexteRequeteUpdateEmailNotification	est une chaîne
+sdReqRapportKannel							est une Source de Données
+sJsonRapport									est une chaîne
+nIdBaseLigne									est un entier
+nIdEmailNotification							est un entier
+sDateHeureReception							est une chaîne
+sDateHeurePriseEnCharge						est une chaîne
+mPrixUnitaireFacture							est un monétaire
 
 
+	// Échappe une chaîne pour insertion SQL (antislashs puis apostrophes)
+	procédure interne EchappeSqlCdb(local pTexteCdb)
+		pTexteCdb		= Remplace(pTexteCdb, "\", "\\")
+		pTexteCdb		= Remplace(pTexteCdb, "'", "''")
+		renvoyer pTexteCdb
+	fin
+
+
+// ope_email_notification n'a ni IdOperateur, ni PrixUnitaireFacture, ni JsonOperateur :
+// on ne met à jour que ce qui existe (à compléter dans le chantier email)
 sTexteRequeteUpdateEmailNotification =
 [
-	UPDATE LOW_PRIORITY ope_email_notification SET Statut='%1', IdOperateur='%2', PrixUnitaireFacture = %3, DateHeureReception='%4', DateHeurePriseEnCharge = '%5', JsonOperateur = '%6' WHERE IdSmsNotification='%7'
+	UPDATE ope_email_notification SET Statut='%1', DateHeureReception='%2' WHERE IdEmailNotification=%3
 ]
 
 sTexteRequeteUpdateEmailEnvoi =
 [
-	UPDATE LOW_PRIORITY ope_email_envoi SET Statut='%1', IdOperateur='%2', PrixUnitaireFacture = %3, DateHeureReception='%4', DateHeurePriseEnCharge = '%5', JsonOperateur = '%6' WHERE IdBaseLigne='%7'
+	UPDATE ope_email_envoi SET Statut='%1', IdOperateur='%2', PrixUnitaireFacture = %3, DateHeureReception='%4', DateHeurePriseEnCharge = '%5', JsonOperateur = '%6' WHERE IdBaseLigne=%7
 ]
 
 
+sStatut							= EmailMatchingStatus(pRapport.status.groupId, pRapport.status.id)
+mPrixUnitaireFacture			= pRapport.price.pricePerMessage
+nIdBaseLigne					= Val(ExtraitChaîne(pRapport.bulkId,1,"|"))
+nIdEmailNotification			= Val(ExtraitChaîne(pRapport.bulkId,2,"|"))
+sDateHeurePriseEnCharge		= Gauche(Remplace(pRapport.sentAt,["-","T",":","+"],""),14)
+sDateHeureReception			= Gauche(Remplace(pRapport.doneAt,["-","T",":","+"],""),14)
+sJsonRapport					= EchappeSqlCdb(VariantVersJSON(pRapport))
 
-sStatut 					= EmailMatchingStatus(pRapport.status.groupId, pRapport.status.id)
-mPrixUnitaireFacture 		= pRapport.price.pricePerMessage
-nIdBaseLigne				= ExtraitChaîne(pRapport.bulkId,1,"|")
-nIdEmailNotification		= ExtraitChaîne(pRapport.bulkId,2,"|")
-sDateHeurePriseEnCharge		= Gauche(Remplace(pRapport.sentAt,["-","T",":","+",],""),14)
-sDateHeureReception			= Gauche(Remplace(pRapport.doneAt,["-","T",":","+",],""),14)
-
-si nIdEmailNotification > 0
-	sTexteRequete = ChaîneConstruit(sTexteRequeteUpdateEmailNotification,sStatut,pRapport.messageId,mPrixUnitaireFacture,sDateHeureReception,sDateHeurePriseEnCharge,pRapport,nIdEmailNotification)
-
+si nIdEmailNotification > 0 alors
+	sTexteRequete = ChaîneConstruit(sTexteRequeteUpdateEmailNotification, sStatut, sDateHeureReception, nIdEmailNotification)
 sinon
-	sTexteRequete = ChaîneConstruit(sTexteRequeteUpdateEmailEnvoi,sStatut,pRapport.messageId,mPrixUnitaireFacture,sDateHeureReception,sDateHeurePriseEnCharge,VariantVersJSON(pRapport),nIdBaseLigne)
+	sTexteRequete = ChaîneConstruit(sTexteRequeteUpdateEmailEnvoi, sStatut, EchappeSqlCdb(pRapport.messageId), mPrixUnitaireFacture, sDateHeureReception, sDateHeurePriseEnCharge, sJsonRapport, nIdBaseLigne)
 fin
 
 si pas HExécuteRequêteSQL(sdReqRapportKannel, cpKannel.__cnxKannel, hRequêteSansCorrection, sTexteRequete) alors
@@ -49,29 +56,3 @@ fin
 
 fin:
 sdReqRapportKannel.AnnuleDéclaration()
-
-
-
-//	nIdBaseLigne 		= vReponse.results[I].bulkid
-//
-//	mPrixUnitaire 		= vReponse.results[I].price.pricePerMessage
-//
-//	nStatutId			= vReponse.results[I].status.id
-//	nStatutIdGroup		= vReponse.results[I].status.groupId
-//	sStatutGroupName	= vReponse.results[I].status.groupName
-//	sStatutName			= vReponse.results[I].status.name
-//	sStatutDescription	= vReponse.results[I].status.description
-//
-//	nErrorId			= vReponse.results[I].error.id
-//	nErrorIdGroup		= vReponse.results[I].error.groupId
-//	sErrorGroupName		= vReponse.results[I].error.groupName
-//	sErrorName			= vReponse.results[I].error.name
-//	sErrorDescription	= vReponse.results[I].error.description
-//
-//	sMessageId			= vReponse.results[I].messageId
-//
-//	dhDoneAt			= gauche(remplace(vReponse.results[I].doneAt,["-","T",":","+",],""),14)
-//	dhSentAt			= Gauche(Remplace(vReponse.results[I].sentAt,["-","T",":","+",],""),14)
-//
-//	sEmail				= vReponse.results[I].to
-

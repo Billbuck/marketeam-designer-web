@@ -1,0 +1,28 @@
+procédure TrackingComptabilise(stTracking est une structIciTracking)
+
+sTexteRequete	est une chaîne
+sdReqTracking	est une Source de Données
+
+
+si pas ope_cliquezici_tracking.LitRecherchePremier(IdBaseLigne, stTracking.IdBaseLigne) alors
+	sTexteRequete =
+	[
+	UPDATE LOW_PRIORITY dos_operation SET 
+	dos_operation.NbrAudienceUnique = (dos_operation.NbrAudienceUnique + 1),
+	dos_operation.NbrAudience = (dos_operation.NbrAudience + 1)
+	WHERE dos_operation.IdOperation = [%stTracking.IdCliquezIci%]
+	]
+	
+sinon
+	sTexteRequete =
+	[
+	UPDATE LOW_PRIORITY dos_operation SET 
+	dos_operation.NbrAudience = (dos_operation.NbrAudience + 1)
+	WHERE dos_operation.IdOperation = [%stTracking.IdCliquezIci%]
+	]
+fin
+
+sdReqTracking.ExécuteRequêteSQL(dos_operation..Connexion, hRequêteSansCorrection, sTexteRequete)
+
+fin:
+sdReqTracking.AnnuleDéclaration()

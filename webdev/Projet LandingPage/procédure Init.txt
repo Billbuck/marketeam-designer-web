@@ -1,0 +1,37 @@
+procédure Init()
+
+//sApiKeyGoogle est une chaine = "AIzaSyBYsrYKpQysTWSd6h8couqOD1XdH_ceSlk"
+sApiKeyGoogle est une chaîne = "AIzaSyDn0lL_xwrcNfKrkSESxkCSsRY1KmDkcpE"
+
+// Création de l'entête de la page
+sEntete est une chaîne = [
+	<head>
+	<meta name="viewport" content="initial-scale=1.0">
+	
+	<link rel="stylesheet" type="text/css" href="/[%RépertoireWeb%]/css/jquery.toast.min.css" />
+	<link rel="stylesheet" type="text/css" href="/[%RépertoireWeb%]/css/slick.css"/>
+	<link rel="stylesheet" type="text/css" href="/[%RépertoireWeb%]/css/slick-theme.css"/>
+	<link rel="stylesheet" type="text/css" href="/[%RépertoireWeb%]/css/jquery.selectBoxIt.css" />
+	<link rel="stylesheet" type="text/css" href="/[%RépertoireWeb%]/css/flip.min.css" />
+
+  	<script type="text/javascript" src="/[%RépertoireWeb%]/js/jquery-3.6.0.min.js"></script>
+	<script type="text/javascript" src="/[%RépertoireWeb%]/js/jquery-ui.min.js"></script>
+	<script type="text/javascript" src="/[%RépertoireWeb%]/js/jquery.toast.min.js"></script>	
+	<script type="text/javascript" src="/[%RépertoireWeb%]/js/jquery.inputmask.min.js"></script>
+	<script type="text/javascript" src="/[%RépertoireWeb%]/js/slick.min.js"></script>
+	<script type="text/javascript" src="/[%RépertoireWeb%]/js/flip.min.js"></script>
+	<script type="text/javascript" src="/[%RépertoireWeb%]/js/jquery.selectBoxIt.min.js"></script>
+	<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=[%sApiKeyGoogle%]&libraries=places"></script>
+	<script type="text/javascript" src="https://use.fontawesome.com/33bbe26e9a.js"></script>
+]
+
+MaPage..HTMLEntête += sEntete + RC
+
+ConstructionRendu(_stNouveauCliquezIci.stTheme.LargeurL,_stNouveauCliquezIci.stTheme.LargeurM,_stNouveauCliquezIci.stTheme.LargeurS)
+
+//	<script type="text/javascript" src="/[%REPERTOIREWEB%]/js/jquery-1.8.3.min.js"></script>
+
+//<script type="text/javascript" src="/[%RépertoireWeb%]/js/jquery-1.8.3.min.js"></script>
+//<script type="text/javascript" src="/[%RépertoireWeb%]/js/jquery-3.6.0.min.js"></script>
+
+//	<script type="text/javascript" src="/[%REPERTOIREWEB%]/js/wScratchPad.js"></script>

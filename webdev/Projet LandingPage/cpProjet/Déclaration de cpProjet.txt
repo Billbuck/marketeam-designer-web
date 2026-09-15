@@ -1,0 +1,5 @@
+__sRepRacine		est une chaîne
+__sHttpMarketeam	est une chaîne
+__sFindIpKey		est une chaîne
+__sFindIpUrl		est une chaîne
+

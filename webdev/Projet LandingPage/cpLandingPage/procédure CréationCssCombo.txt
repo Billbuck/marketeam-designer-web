@@ -1,0 +1,324 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] CréationCssCombo (<nLargeurL> est entier, <nLargeurM> est entier, <nLargeurS> est entier, <stTheme> est structIciTheme)
+//
+// Paramètres :
+//	nLargeurL (entier) : <indiquez ici le rôle de nLargeurL>
+//	nLargeurM (entier) : <indiquez ici le rôle de nLargeurM>
+//	nLargeurS (entier) : <indiquez ici le rôle de nLargeurS>
+//	stTheme (structIciTheme) : <indiquez ici le rôle de stTheme>
+// Valeur de retour :
+// 	chaîne ANSI : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure CréationCssCombo(nLargeurL est un entier, nLargeurM est un entier, nLargeurS entier, stTheme est un structIciTheme)
+
+sCss									est une chaîne
+sLargeurLibelle							est une chaîne
+sLargeurChamp							est une chaîne
+
+stIciThemeProprieteDefaut				est une structIciThemeProprieteDefaut
+stIciThemeProprieteCombo				est une structIciThemeProprieteCombo
+stIciThemeProprieteTexte				est une structIciThemeProprieteTexte
+
+Désérialise(stIciThemeProprieteTexte,		stTheme.ProprieteTexte,psdJSON)
+Désérialise(stIciThemeProprieteDefaut,		stTheme.ProprieteDefaut,psdJSON)
+Désérialise(stIciThemeProprieteCombo,	 	stTheme.ProprieteCombo,psdJSON)
+
+// Traitement alignement dans formulaire
+selon stIciThemeProprieteDefaut.AlignementFormulaire
+	cas __ALIGNEMENT_20_libelle_80_champ__
+		sLargeurLibelle	= "20%"
+		sLargeurChamp	= "80%"
+
+	cas __ALIGNEMENT_25_libelle_75_champ__
+		sLargeurLibelle	= "25%"
+		sLargeurChamp	= "75%"
+
+	cas	__ALIGNEMENT_30_libelle_70_champ__
+		sLargeurLibelle	= "30%"
+		sLargeurChamp	= "70%"
+
+	cas	__ALIGNEMENT_35_libelle_65_champ__
+		sLargeurLibelle	= "35%"
+		sLargeurChamp	= "75%"
+
+	autre cas
+		sLargeurLibelle	= "30%"
+		sLargeurChamp	= "70%"
+fin
+
+stIciThemeProprieteCombo.FlecheCouleur	= Remplace(stIciThemeProprieteCombo.FlecheCouleur,"#","%23")
+
+
+
+sCss = [
+	
+	
+	.combo {
+		display: 						flex;
+		align-items: 					flex-start;
+		position: 						relative;
+		padding-top: 					[%stIciThemeProprieteDefaut.MargeVerticaleEntreChamp%]px;
+		padding-bottom: 				[%stIciThemeProprieteDefaut.MargeVerticaleEntreChamp%]px;
+	}
+	
+	.combo div {
+		display: 						inline-block;
+		vertical-align: 				middle;
+	}
+	
+	.combo div.lib-champ {
+		width: 							[%sLargeurLibelle%];
+		padding-right: 					0;
+		box-sizing: 					border-box;
+	}
+	
+	.combo div.champ {
+		width: 							[%sLargeurChamp%] !important;
+		box-sizing: 					border-box;
+	}
+	
+	.combo label {
+		width: 							100%;
+		padding-right: 					0;
+		box-sizing: 					border-box;
+	
+		display: 						block;
+		font-family: 					'[%stIciThemeProprieteCombo.LibellePoliceFamille%]';
+		font-size: 						[%stIciThemeProprieteTexte.TaaStyle[stIciThemeProprieteCombo.LibellePoliceCode].PoliceTailleL%]px;
+		font-weight: 					[%stIciThemeProprieteCombo.LibellePoliceStyle%];
+		font-style: 					normal;
+		text-align: 					[%DonneAlignementHorizontal(stIciThemeProprieteCombo.LibelleAlignementHorizontal)%];
+		color: 							[%stIciThemeProprieteCombo.LibellePoliceCouleur%]; 
+		width: 							100%;
+	}
+	
+	.selectboxit-container {
+		width: 							100% !important;
+		box-sizing: 					border-box;
+	}
+	
+	.label_combo {
+		color: 							[%stIciThemeProprieteCombo.LibellePoliceCouleur%];
+		font-family: 					'[%stIciThemeProprieteCombo.LibellePoliceFamille%]';
+		font-size: 						[%stIciThemeProprieteTexte.TaaStyle[stIciThemeProprieteCombo.LibellePoliceCode].PoliceTailleL%]px;
+		font-weight: 					[%stIciThemeProprieteCombo.LibellePoliceStyle%];
+		font-style: 					normal;
+		text-align: 					[%DonneAlignementHorizontal(stIciThemeProprieteCombo.LibelleAlignementHorizontal)%];
+		display: 						inline-block;
+		width: 							[%sLargeurLibelle%];
+	}
+	
+	.combo .selectboxit-container .selectboxit {
+		width: 							calc(100% - [% 2 * stIciThemeProprieteCombo.BordureEpaisseur %]px) !important;
+	}
+	
+	.selectboxit-options.selectboxit-list {
+		min-width: 						100% !important;
+	}
+	
+	.selectboxit-container .selectboxit {
+		border-radius: 					[%stIciThemeProprieteCombo.BordureArrondi%]px;
+		background-color: 				[%stIciThemeProprieteCombo.SaisieFondCouleur%];
+		color: 							[%stIciThemeProprieteCombo.SaisiePoliceCouleur%];
+		border-color:					[%stIciThemeProprieteCombo.BordureCouleur%];
+		border-width: 					[%stIciThemeProprieteCombo.BordureEpaisseur%]px;
+		border-style: 					solid;
+		width: 							calc(100% - 2px) !important;
+		display: 						flex;
+		align-items: 					center;
+	}
+	
+	.selectboxit-container .selectboxit-options {
+		position: 						relative !important;
+	}
+	
+	.selectboxit-option, .selectboxit-optgroup-header { text-indent: 0; }
+	.selectboxit-list > .selectboxit-focus > .selectboxit-option-anchor { display: block; }
+	
+	.selectboxit-container .selectboxit .selectboxit-text, .selectboxit-container span,  .selectboxit-container .selectboxit-options a {
+		height: 						auto;
+		padding-top: 					[%stIciThemeProprieteCombo.MargeInterneVerticale%]px;
+		padding-bottom: 				[%stIciThemeProprieteCombo.MargeInterneVerticale%]px;
+		color: 							[%stIciThemeProprieteCombo.SaisiePoliceCouleur%];
+		font-family: 					'[%stIciThemeProprieteCombo.SaisiePoliceFamille%]';
+		font-size: 						[%stIciThemeProprieteTexte.TaaStyle[stIciThemeProprieteCombo.SaisiePoliceCode].PoliceTailleL%]px;
+		font-weight: 					[%stIciThemeProprieteCombo.SaisiePoliceStyle%];
+		font-style: 					normal;
+		text-align: 					[%DonneAlignementHorizontal(stIciThemeProprieteCombo.SaisieAlignementHorizontal)%];
+		display: 						flex;
+		align-items: 					center;
+	}
+	
+	.selectboxit-container .selectboxit .selectboxit-text {
+		flex: 							1;
+		width: 							calc(100% - [% stIciThemeProprieteCombo.MargeInterneVerticale + 2*stIciThemeProprieteCombo.BordureEpaisseur + 10 %]px);
+	}
+	
+	.selectboxit-btn {
+		background-color: 				[%stIciThemeProprieteCombo.SaisieFondCouleur%];
+		border-width: 					[%stIciThemeProprieteCombo.BordureEpaisseur%]px;
+		border-color: 					[%stIciThemeProprieteCombo.BordureCouleur%];
+	}
+	
+	.selectboxit-btn.selectboxit-enabled:hover, .selectboxit-btn.selectboxit-enabled:focus, .selectboxit-btn.selectboxit-enabled:active {
+		border-color: 					[%stIciThemeProprieteCombo.BordureCouleur%];
+		color: 							#333333;
+		text-decoration: 				none;
+		background-position: 			0 -15px;
+	}
+	
+	.selectboxit-arrow-container {
+		border-left: 					1px solid [%stIciThemeProprieteCombo.BordureCouleur%];
+		height: 						100%;
+		width: 							[%stIciThemeProprieteCombo.FlecheTaille%]px;
+		display: 						flex;
+		align-items: 					center;
+		justify-content: 				center;
+		position: 						absolute;
+		right: 							0;
+		top: 							0;
+		bottom: 						0;
+		background-image: 				url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='[%stIciThemeProprieteCombo.FlecheCouleur%]' d='M10.293 3.293L6 7.586 1.707 3.293A1 1 0 00.293 4.707l5 5a1 1 0 001.414 0l5-5a1 1 0 10-1.414-1.414z'/%3E%3C/svg%3E");
+		background-repeat: 				no-repeat;
+		background-position: 			center;
+		background-size: 				[%stIciThemeProprieteCombo.FlecheTaille * 0.6%]px;
+	}
+	
+	.selectboxit-default-arrow {
+		display: 						none;
+		width: 							0;
+		height: 						0;
+		border: 						none;
+	}
+	
+	.selectboxit-list {
+		background-color: 				[%stIciThemeProprieteCombo.SaisieFondCouleur%];
+		border: 						[%stIciThemeProprieteCombo.BordureEpaisseur%]px solid [%stIciThemeProprieteCombo.BordureCouleur%];
+		-webkit-box-shadow: 			0 5px 10px rgba(0, 0, 0, 0.2);
+		-moz-box-shadow: 				0 5px 10px rgba(0, 0, 0, 0.2);
+		box-shadow:						0 5px 10px rgba(0, 0, 0, 0.2);
+		min-width: 						100% !important;
+		max-height: 					300px !important;
+	}
+	
+	.selectboxit-list .selectboxit-option-anchor {
+		color: 							[%stIciThemeProprieteCombo.SaisiePoliceCouleur%];
+		font-family: 					'[%stIciThemeProprieteCombo.SaisiePoliceFamille%]';
+		font-size: 						[%stIciThemeProprieteTexte.TaaStyle[stIciThemeProprieteCombo.SaisiePoliceCode].PoliceTailleL%]px;
+		text-decoration: 				none;
+	}
+	
+	.selectboxit-list > .selectboxit-focus > .selectboxit-option-anchor {
+		color: 							#ffffff;
+		background-color: 				[%stIciThemeProprieteDefaut.BordureCouleur%];
+	}
+	
+	.selectboxit-list > .selectboxit-disabled > .selectboxit-option-anchor {
+		color: 							#999999;
+	}
+	
+	.selectboxit-options .selectboxit-option-anchor {
+		padding-left: 					10px;
+		padding-right: 					5px;
+	}
+	
+	
+	.combo .lib-champ {
+		margin-bottom: 					0;
+	}
+	
+	.combo .champ {
+		position: 						relative;
+	}
+	
+	.combo-label-left {
+		display: 						flex;
+		align-items: 					flex-start;
+	}
+	
+	.combo-label-left .lib-champ {
+		flex: 							0 0 auto;
+		padding-right: 					[%stIciThemeProprieteCombo.MargeInterneVerticale%]px;
+		padding-top: 					[%stIciThemeProprieteCombo.MargeInterneVerticale%]px;
+		display: 						block;
+	}
+	
+	.combo-label-left .champ {
+		flex: 							1 1 auto;
+	}
+	
+	.combo-label-left .selectboxit-container {
+		align-self:						center;
+	}
+	
+	@media all and (max-width:[%nLargeurM%]px) {
+	
+		/* ------------- sur tablette et mobile on force le libellé au dessus du champ -------------" */
+		.combo label, .selectboxit-container, .combo div.lib-champ, .combo div.champ {
+			width: 						100% !important;
+		}
+		.combo-label-left {
+			flex-direction: 			column;
+		}
+		
+		.combo .lib-champ {
+			margin-bottom: 				[%Arrondi(stIciThemeProprieteCombo.MargeInterneVerticale * nLargeurM / nLargeurL)%]px;
+		}
+		/* ------------- sur tablette et mobile on force le libellé au dessus du champ -------------" */
+	
+		.combo {
+			padding-top: 				[%Arrondi(stIciThemeProprieteDefaut.MargeVerticaleEntreChamp * nLargeurM / nLargeurL)%]px !important;
+			padding-bottom: 			[%Arrondi(stIciThemeProprieteDefaut.MargeVerticaleEntreChamp * nLargeurM / nLargeurL)%]px !important;
+		}
+
+		.selectboxit-arrow-container {
+			width: 						[%Arrondi(stIciThemeProprieteCombo.FlecheTaille * nLargeurM / nLargeurL)%]px;
+			background-size: 			[%Arrondi(stIciThemeProprieteCombo.FlecheTaille * nLargeurM / nLargeurL) * 0.6%]px;
+		}
+		
+		.combo label {
+			font-size: 					[%stIciThemeProprieteTexte.TaaStyle[stIciThemeProprieteCombo.LibellePoliceCode].PoliceTailleM%]px;
+		}
+		
+		.selectboxit-container .selectboxit .selectboxit-text, .selectboxit-container span, .selectboxit-container .selectboxit-options a { 
+			font-size: 					[%stIciThemeProprieteTexte.TaaStyle[stIciThemeProprieteCombo.SaisiePoliceCode].PoliceTailleM%]px;
+			padding-top: 				[%Arrondi(stIciThemeProprieteCombo.MargeInterneVerticale * nLargeurM / nLargeurL)%]px;
+			padding-bottom: 			[%Arrondi(stIciThemeProprieteCombo.MargeInterneVerticale * nLargeurM / nLargeurL)%]px;
+		}
+		
+		
+	}
+	
+	@media all and (max-width:[%nLargeurS%]px) {
+	
+		.combo {
+			padding-top: 				[%Arrondi(stIciThemeProprieteDefaut.MargeVerticaleEntreChamp * nLargeurS / nLargeurL)%]px !important;
+			padding-bottom: 			[%Arrondi(stIciThemeProprieteDefaut.MargeVerticaleEntreChamp * nLargeurS / nLargeurL)%]px !important;
+		}
+		
+		.selectboxit-arrow-container {
+			width: 						[%Arrondi(stIciThemeProprieteCombo.FlecheTaille * nLargeurS / nLargeurL)%]px;
+			background-size: 			[%Arrondi(stIciThemeProprieteCombo.FlecheTaille * nLargeurS / nLargeurL) * 0.6%]px;
+		}
+		
+		.combo label {
+			font-size: 					[%stIciThemeProprieteTexte.TaaStyle[stIciThemeProprieteCombo.LibellePoliceCode].PoliceTailleS%]px;
+		}
+		
+		.selectboxit-container .selectboxit .selectboxit-text, .selectboxit-container span, .selectboxit-container .selectboxit-options a {
+			font-size: 					[%stIciThemeProprieteTexte.TaaStyle[stIciThemeProprieteCombo.SaisiePoliceCode].PoliceTailleS%]px;
+			padding-top: 				[%Arrondi(stIciThemeProprieteCombo.MargeInterneVerticale * nLargeurS / nLargeurL)%]px;
+			padding-bottom: 			[%Arrondi(stIciThemeProprieteCombo.MargeInterneVerticale * nLargeurS / nLargeurL)%]px;    
+		}
+		
+		.combo .lib-champ {
+			margin-bottom: 				[%Arrondi(stIciThemeProprieteCombo.MargeInterneVerticale * nLargeurS / nLargeurL)%]px;
+		}
+	}
+]
+
+renvoyer sCss

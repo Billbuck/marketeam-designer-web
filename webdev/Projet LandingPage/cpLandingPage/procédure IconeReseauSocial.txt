@@ -1,0 +1,29 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//IconeReseauSocial (<pCode> est chaîne, <pCouleur> est chaîne)
+//
+// Paramètres :
+//	pCode (chaîne ANSI) : <indiquez ici le rôle de pCode>
+//	pCouleur (chaîne ANSI) : <indiquez ici le rôle de pCouleur>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure IconeReseauSocial(pCode est une chaîne, pCouleur est une chaîne)
+
+sSvg est une chaîne
+sCouleur est une chaîne
+
+//sCouleur = remplace(pCouleur,"#","%23")
+sCouleur = pCouleur
+
+si ici_reseau_social.LitRecherchePremier(Code,pCode) alors
+	sSvg = ici_reseau_social.Svg
+	sSvg = Remplace(sSvg,"black",sCouleur,MotComplet+SansCasse)
+fin
+
+sSvg = Remplace(sSvg,RC,"")
+
+renvoyer sSvg

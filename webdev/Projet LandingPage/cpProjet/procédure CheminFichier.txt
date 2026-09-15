@@ -1,0 +1,57 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] CheminFichier (<pIdOperation> [, <pTypeRepertoire> [, <pEstRepertoirePhysique>]])
+//
+// Paramètres :
+//	pIdOperation : <indiquez ici le rôle de pDosssier>
+//	pTypeRepertoire (valeur par défaut="") : <indiquez ici le rôle de pTypeRepertoire>
+//	pEstRepertoirePhysique (valeur par défaut=1) : < indiquez ici le rôle de "\" >
+// Valeur de retour :
+// 	Type indéterminé : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+//	pNumOperation : <indiquez ici le rôle de pNumOperation>
+//	pDateDossier (date) : <indiquez ici le rôle de pDateDossier>
+//	pIdDossier : <indiquez ici le rôle de pIdDossier>
+//	pIdDossier : < indiquez ici le rôle de pEstRepertoireOperation >
+//	pEstRepertoireLocal (valeur par défaut=1) : < indiquez ici le rôle de pEstRepertoireLocal >
+procédure CheminFichier(pIdOperation, pTypeRepertoire = "", pEstRepertoirePhysique  = Vrai) //, pEstRepertoireLocal = Vrai)
+
+
+sCheminFichier est une chaîne
+
+sRepFichier est une chaîne 
+
+selon cpConnexion.__sConnexion
+	cas __CNX_DEV__	: sRepFichier = "FichiersDev"
+	cas __CNX_TEST__	: sRepFichier = "FichiersTest"
+	cas __CNX_PROD__	: sRepFichier = "Fichiers"
+fin
+
+//selon ProjetInfo(piConfiguration)
+//	cas "MarketeamDev" 	: sRepFichier = "FichiersDev"
+//	cas "MarketeamTest" : sRepFichier = "FichiersTest"
+//	cas "MarketeamProd"	: sRepFichier = "Fichiers"
+//	autres cas 			: sRepFichier = "Fichiers"
+//FIN
+
+
+si dos_operation.LitRecherchePremier(IdOperation,pIdOperation) alors
+	sCheminFichier = sRepFichier + "\" + dos_operation.DateHeureCreation..Année +"\"+ Majuscule(DateVersMoisEnLettre(dos_operation.DateHeureCreation..PartieDate)) +"\"+ dos_operation.Dossier + "\"+ ((pTypeRepertoire <>"") ? pTypeRepertoire +"\" sinon "")
+	
+	si pEstRepertoirePhysique alors
+		si fRepCrée(ComplèteRep(__sRepRacine) + sCheminFichier) = Vrai alors // Pour les liens externes il ne faut surtout pas essayer de créer le répertoire
+			renvoyer ComplèteRep(__sRepRacine) + sCheminFichier
+		sinon
+			renvoyer ""
+		fin
+	sinon
+		renvoyer __sHttpMarketeam +["/"]+ Remplace(sCheminFichier,"\","/")
+	fin
+fin
+
+renvoyer ""
+
+

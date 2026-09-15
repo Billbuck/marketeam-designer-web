@@ -15,50 +15,50 @@
 // la ligne passe à envoyée avec MessageId = SIMUL-Id ; ContenuJson est toujours écrit.
 procédure ScannerUnitaire()
 
-nIdRcsUnitaire			est un entier
-sTexteRequete			est une chaîne
+nIdRcsUnitaire				est un entier
+sTexteRequete				est une chaîne
 sTexteRequeteUpdate		est une chaîne
 sTexteRequetePourProd	est une chaîne
 sTexteRequetePourSimul	est une chaîne
 sTexteRequetePourErreur	est une chaîne
-sdReqUnitaire			est une Source de Données
-sdReqUpdate				est une Source de Données
-stOperationRcs			est une structOperationRcs
-taaValeurChamp			est un tableau associatif de chaînes
-sCode					est une chaîne
-sCodeLanding			est une chaîne
-bEstTest				est un booléen
-sMessageId				est une chaîne
-sJsonMessage			est une chaîne
-sJsonPaquet				est une chaîne
-tabJsonMessage			est un tableau de chaînes
-tabResultat				est un tableau de structRcsEnvoiResultat
-bOk						est un booléen
+sdReqUnitaire				est une Source de Données
+sdReqUpdate					est une Source de Données
+stOperationRcs				est une structOperationRcs
+taaValeurChamp				est un tableau associatif de chaînes
+sCode							est une chaîne
+sCodeLanding				est une chaîne
+bEstTest						est un booléen
+sMessageId					est une chaîne
+sJsonMessage				est une chaîne
+sJsonPaquet					est une chaîne
+tabJsonMessage				est un tableau de chaînes
+tabResultat					est un tableau de structRcsEnvoiResultat
+bOk							est un booléen
 
 sTexteRequete =
 [
 	SELECT
-		ope_rcs_unitaire.IdRcsUnitaire,
-		ope_rcs_unitaire.IdOperation,
-		IFNULL(ope_rcs_unitaire.IdBaseLigne, 0) IdBaseLigne,
-		ope_rcs_unitaire.Portable,
-		IFNULL(ope_rcs_unitaire.Message, '') Message,
-		IFNULL(ope_rcs_unitaire.CodeLanding, '') CodeLanding,
-		dos_operation.Dossier,
-		clt_client.Societe,
-		CONCAT_WS(' ', clt_contact.Civilite, clt_contact.Prenom, clt_contact.Nom) contact,
-		IFNULL(rcs_agent.SenderName, '') SenderName
+	ope_rcs_unitaire.IdRcsUnitaire,
+	ope_rcs_unitaire.IdOperation,
+	IFNULL(ope_rcs_unitaire.IdBaseLigne, 0) IdBaseLigne,
+	ope_rcs_unitaire.Portable,
+	IFNULL(ope_rcs_unitaire.Message, '') Message,
+	IFNULL(ope_rcs_unitaire.CodeLanding, '') CodeLanding,
+	dos_operation.Dossier,
+	clt_client.Societe,
+	CONCAT_WS(' ', clt_contact.Civilite, clt_contact.Prenom, clt_contact.Nom) contact,
+	IFNULL(rcs_agent.SenderName, '') SenderName
 	FROM
-		ope_rcs_unitaire
-		LEFT JOIN dos_operation ON dos_operation.IdOperation = ope_rcs_unitaire.IdOperation
-		LEFT JOIN clt_client ON clt_client.IdClient = ope_rcs_unitaire.IdClient
-		LEFT JOIN clt_contact ON clt_contact.IdContact = ope_rcs_unitaire.IdContact
-		LEFT JOIN rcs_agent ON rcs_agent.IdRcsAgent = ope_rcs_unitaire.IdRcsAgent
+	ope_rcs_unitaire
+	LEFT JOIN dos_operation ON dos_operation.IdOperation = ope_rcs_unitaire.IdOperation
+	LEFT JOIN clt_client ON clt_client.IdClient = ope_rcs_unitaire.IdClient
+	LEFT JOIN clt_contact ON clt_contact.IdContact = ope_rcs_unitaire.IdContact
+	LEFT JOIN rcs_agent ON rcs_agent.IdRcsAgent = ope_rcs_unitaire.IdRcsAgent
 	WHERE
-		ope_rcs_unitaire.DateHeureEnvoi IS NULL AND
-		ope_rcs_unitaire.Statut = '[%__SMS_STATUT_ENREGISTREE__%]'
+	ope_rcs_unitaire.DateHeureEnvoi IS NULL AND
+	ope_rcs_unitaire.Statut = '[%__SMS_STATUT_ENREGISTREE__%]'
 	ORDER BY
-		ope_rcs_unitaire.IdRcsUnitaire
+	ope_rcs_unitaire.IdRcsUnitaire
 ]
 
 // Succès en production : retour Infobip complet
@@ -66,19 +66,19 @@ sTexteRequete =
 sTexteRequetePourProd =
 [
 	UPDATE
-		ope_rcs_unitaire
+	ope_rcs_unitaire
 	SET
-		Statut = IF(Statut > '[%__SMS_STATUT_ENVOYE__%]', Statut, '[%__SMS_STATUT_ENVOYE__%]'),
-		DateHeureEnvoi = '%1',
-		MessageId = '%2',
-		BulkId = '%3',
-		StatutGroupeId = %4,
-		StatutGroupeNom = '%5',
-		StatutId = %6,
-		StatutNom = '%7',
-		ContenuJson = '%8'
+	Statut = IF(Statut > '[%__SMS_STATUT_ENVOYE__%]', Statut, '[%__SMS_STATUT_ENVOYE__%]'),
+	DateHeureEnvoi = '%1',
+	MessageId = '%2',
+	BulkId = '%3',
+	StatutGroupeId = %4,
+	StatutGroupeNom = '%5',
+	StatutId = %6,
+	StatutNom = '%7',
+	ContenuJson = '%8'
 	WHERE
-		IdRcsUnitaire = %9
+	IdRcsUnitaire = %9
 ]
 
 // Succès en simulation : pas de retour Infobip, le JSON est conservé pour contrôle
@@ -86,14 +86,14 @@ sTexteRequetePourProd =
 sTexteRequetePourSimul =
 [
 	UPDATE
-		ope_rcs_unitaire
+	ope_rcs_unitaire
 	SET
-		Statut = '[%__SMS_STATUT_ENVOYE__%]',
-		DateHeureEnvoi = '%1',
-		MessageId = '%2',
-		ContenuJson = '%3'
+	Statut = '[%__SMS_STATUT_ENVOYE__%]',
+	DateHeureEnvoi = '%1',
+	MessageId = '%2',
+	ContenuJson = '%3'
 	WHERE
-		IdRcsUnitaire = %4
+	IdRcsUnitaire = %4
 ]
 
 // Échec : une seule tentative, jamais de relance
@@ -101,21 +101,21 @@ sTexteRequetePourSimul =
 sTexteRequetePourErreur =
 [
 	UPDATE
-		ope_rcs_unitaire
+	ope_rcs_unitaire
 	SET
-		Statut = '[%__SMS_STATUT_ERREUR_ENVOI__%]',
-		DateHeureEnvoi = '%1',
-		ContenuJson = '%2'
+	Statut = '[%__SMS_STATUT_ERREUR_ENVOI__%]',
+	DateHeureEnvoi = '%1',
+	ContenuJson = '%2'
 	WHERE
-		IdRcsUnitaire = %3 AND
-		Statut = '[%__SMS_STATUT_ENREGISTREE__%]'
+	IdRcsUnitaire = %3 AND
+	Statut = '[%__SMS_STATUT_ENREGISTREE__%]'
 ]
 
-	// Échappe une chaîne pour insertion SQL : le JSON contient des \uXXXX,
+// Échappe une chaîne pour insertion SQL : le JSON contient des \uXXXX,
 	// il faut doubler les antislashs avant les apostrophes
 	procédure interne EchappeSql(local pTexteSql)
-		pTexteSql = Remplace(pTexteSql, "\", "\\")
-		pTexteSql = Remplace(pTexteSql, "'", "''")
+		pTexteSql		= Remplace(pTexteSql, "\", "\\")
+		pTexteSql		= Remplace(pTexteSql, "'", "''")
 		renvoyer pTexteSql
 	fin
 
@@ -131,13 +131,13 @@ sTexteRequetePourErreur =
 	// Ajoute la ligne traitée dans le tableau de la fenêtre
 	procédure interne AjouteLigneUnitaire(pStatutLigne, pMessageIdLigne)
 		nIndLigne est un entier
-		nIndLigne = tblRcsUnitaire.AjouteLigne()
-		tblRcsUnitaire[nIndLigne].COL_Date		= DateHeureSys()
-		tblRcsUnitaire[nIndLigne].COL_Dossier	= sdReqUnitaire.Dossier
-		tblRcsUnitaire[nIndLigne].COL_Societe	= sdReqUnitaire.Societe
-		tblRcsUnitaire[nIndLigne].COL_Contact	= sdReqUnitaire.Contact
-		tblRcsUnitaire[nIndLigne].COL_Portable	= sdReqUnitaire.Portable
-		tblRcsUnitaire[nIndLigne].COL_Statut	= pStatutLigne
+		nIndLigne											= tblRcsUnitaire.AjouteLigne()
+		tblRcsUnitaire[nIndLigne].COL_Date			= DateHeureSys()
+		tblRcsUnitaire[nIndLigne].COL_Dossier		= sdReqUnitaire.Dossier
+		tblRcsUnitaire[nIndLigne].COL_Societe		= sdReqUnitaire.Societe
+		tblRcsUnitaire[nIndLigne].COL_Contact		= sdReqUnitaire.Contact
+		tblRcsUnitaire[nIndLigne].COL_Portable		= sdReqUnitaire.Portable
+		tblRcsUnitaire[nIndLigne].COL_Statut		= pStatutLigne
 		tblRcsUnitaire[nIndLigne].COL_MessageId	= pMessageIdLigne
 	fin
 
@@ -175,7 +175,7 @@ pour tout sdReqUnitaire
 		fin
 
 		// 3 - Valeurs de fusion du destinataire (tableau vide si l'opération n'a pas de base)
-		si pas cpBatchRcs.ChargeValeursFusion(sdReqUnitaire.IdOperation, sdReqUnitaire.IdBaseLigne, taaValeurChamp, sCode) alors
+		si pas cpRcs.ChargeValeursFusion(sdReqUnitaire.IdOperation, sdReqUnitaire.IdBaseLigne, taaValeurChamp, sCode) alors
 			Trace("ScannerUnitaire : échec lecture des valeurs de fusion (envoi unitaire " + nIdRcsUnitaire + ")")
 			MajLigneErreur(nIdRcsUnitaire, "")
 			AjouteLigneUnitaire("Erreur : valeurs de fusion", "")
@@ -183,10 +183,10 @@ pour tout sdReqUnitaire
 		fin
 
 		// 4 - Construction du JSON Infobip (un paquet = un seul message)
-		bEstTest		= (sdReqUnitaire.CodeLanding <> "")
+		bEstTest			= (sdReqUnitaire.CodeLanding <> "")
 		sCodeLanding	= bEstTest ? sdReqUnitaire.CodeLanding sinon sCode
 
-		sJsonMessage = cpRcs.ConstruitJsonMessage(stOperationRcs, sdReqUnitaire.SenderName, sdReqUnitaire.Portable, sMessageId, taaValeurChamp, sCodeLanding, bEstTest)
+		sJsonMessage	= cpRcs.ConstruitJsonMessage(stOperationRcs, sdReqUnitaire.SenderName, sdReqUnitaire.Portable, sMessageId, taaValeurChamp, sCodeLanding, bEstTest)
 	fin
 	tabJsonMessage.SupprimeTout()
 	tabJsonMessage.Ajoute(sJsonMessage)

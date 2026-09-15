@@ -1,0 +1,326 @@
+procédure CreationGrille(nNumBloc est un entier, stNouveauCliquezIci est une structNouveauCliquezIci, pPropriete est une chaîne, pValeur est une chaîne, pLargeurM = 700, pLargeurS = 400)
+sCodeHTML				est une chaîne
+sCodeJS					est une chaîne
+sClasseHtml				est une chaîne
+sProprieteTexte			est une chaîne
+stThemeProprieteLien 	est une structIciThemeProprieteLien
+stThemeStyleLien 		est une structIciThemeStyleLien
+stProprieteTexte		est une structIciBlocProprieteTexte
+stThemeProprieteTexte	est une structIciThemeProprieteTexte
+stProprieteGrille		est une structIciBlocProprieteGrille
+stValeurGrille			est une structIciBlocValeurGrille
+sImage					est une chaîne
+sBoutonLien				est une chaîne
+sCouleurScrollBar		est une chaîne
+sLienUrl 				est une chaîne
+
+Désérialise(stProprieteGrille, pPropriete, psdJSON)
+Désérialise(stValeurGrille, pValeur, psdJSON)
+Désérialise(stThemeProprieteTexte, stNouveauCliquezIci.stTheme.ProprieteTexte, psdJSON)
+Désérialise(stThemeProprieteLien, stNouveauCliquezIci.stTheme.ProprieteLien,psdJSON)
+
+stThemeStyleLien = stThemeProprieteLien.tabStyle[stProprieteGrille.LienStyle]
+
+selon Vrai
+	cas stThemeStyleLien.PoliceCouleur 		pas dans ("#FFFFFF","#000000")	: sCouleurScrollBar = stThemeStyleLien.PoliceCouleur
+	cas stThemeStyleLien.PoliceFondCouleur 	pas dans ("#FFFFFF","#000000")	: sCouleurScrollBar = stThemeStyleLien.PoliceFondCouleur
+	autre cas																: sCouleurScrollBar = "#CCCCCC"
+fin
+
+stProprieteTexte.PoliceCouleur		= stProprieteGrille.TextePoliceCouleur
+stProprieteTexte.PoliceStyle		= stProprieteGrille.TextePoliceStyle
+stProprieteTexte.PoliceFamille		= stProprieteGrille.TextePoliceFamille
+stProprieteTexte.AlignHorizontal	= stProprieteGrille.TexteAlignementHorizontal
+stProprieteTexte.PoliceTailleL		= stThemeProprieteTexte.TaaStyle[stProprieteGrille.TextePoliceCode].PoliceTailleL
+stProprieteTexte.PoliceTailleM		= stThemeProprieteTexte.TaaStyle[stProprieteGrille.TextePoliceCode].PoliceTailleM
+stProprieteTexte.PoliceTailleS		= stThemeProprieteTexte.TaaStyle[stProprieteGrille.TextePoliceCode].PoliceTailleS
+
+Sérialise(stProprieteTexte, sProprieteTexte, psdJSON)
+
+sClasseHtml	= "bloc-" + nNumBloc
+
+sCodeHTML	= [
+	<div class="[%sClasseHtml%] grid-container">
+]
+
+selon Vrai
+	cas stValeurGrille.tabIdImage..Occurrence > 0
+		pour nInd = 1 _à_ stValeurGrille.tabIdImage..Occurrence
+			si ici_image.LitRecherchePremier(IdImage, stValeurGrille.tabIdImage[nInd]) alors
+				selon Vrai
+					cas ici_image.IdMarque > 0	: sImage = CheminMarque(ici_image.IdMarque, __OPERATION_CLIQUEZICI__, __REP_IMAGE__, Faux) + __DOC_ICI_IMAGE__ + ici_image.IdImage + "." + ici_image.TypeFichier
+					cas ici_image.IdClient > 0	: sImage = CheminClient(ici_image.IdClient, __OPERATION_CLIQUEZICI__, __REP_IMAGE__, Faux) + __DOC_ICI_IMAGE__ + ici_image.IdImage + "." + ici_image.TypeFichier
+					autre cas					: sImage = CheminMarketeam(__OPERATION_CLIQUEZICI__, __REP_IMAGE__, Faux) + __DOC_ICI_IMAGE__ + ici_image.IdImage + "." + ici_image.TypeFichier
+				fin
+			sinon
+				Info("Erreur Image grille non trouvée")
+			fin
+
+			si stValeurGrille.tabLien[nInd] <> "" alors
+				selon Vrai
+					cas Contient(stValeurGrille.tabLien[nInd], "https") 	: sLienUrl = stValeurGrille.tabLien[nInd]
+					cas Contient(stValeurGrille.tabLien[nInd], "http") 	: sLienUrl = stValeurGrille.tabLien[nInd]
+					autre cas												: sLienUrl = "https://"+stValeurGrille.tabLien[nInd]
+				fin
+
+				sBoutonLien = [
+					<p class="bouton-lien" style="text-align: [%DonneAlignementHorizontal(stProprieteGrille.LienAlignHorizontal)%]; margin-top: [%stProprieteGrille.LienMargeSuperieur%]px;">
+						<a href="[%sLienUrl%]" target="_new" class="lien-grille" libelle="[%stValeurGrille.tabLibelle[nInd]%]">
+						[%stValeurGrille.LibelleLien%]
+						</a>
+					</p>
+				]
+
+			fin
+
+
+			sCodeHTML += [
+				<div class="grid-item">
+					<div class="flip-card">
+						<div class="flip-card-inner">
+							<div class="flip-card-front">
+								<img src="[%sImage%]" onload="adjustCardHeight(this)">
+							</div>
+							<div class="flip-card-back">
+								<div class="back-content lien[%stProprieteGrille.LienStyle%]" >
+									<p class="grille-block-title">
+										[%Remplace(stValeurGrille.tabDescription[nInd], RC, "<br>")%]
+									</p>
+									[%sBoutonLien%]
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			]
+		fin
+
+	autre cas
+		sImage = cpProjet.__sHttpMarketeam + "image-vide.png"
+		sCodeHTML += "<div><img src=""" + sImage + """ /></div>"
+		sCodeHTML += "<div><img src=""" + sImage + """ /></div>"
+fin
+
+
+
+sCodeHTML += [
+	</div>
+	
+	<style>
+		:root {
+			--GrilleColonne: [%stProprieteGrille.NbColonne%];
+		}
+		
+		body {
+			font-family: Arial, sans-serif;
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+		
+		.grid-container {
+			background: [%stProprieteGrille.BlocFondCouleur%];
+			display: grid;
+			grid-template-columns: repeat(var(--GrilleColonne), 1fr);
+			gap: [%stProprieteGrille.GrilleEspacement%]px;
+			padding: 0px;
+			list-style: none;
+			padding-left: 0;
+			margin: 0;
+		}
+		
+		.grid-item {
+			perspective: 1000px;
+			position: relative;
+			width: 100%;
+			/*padding-bottom: 100%;*/
+			height: auto;
+		}
+		
+		.flip-card {
+			width: 100%;
+			height: 100%;
+			transform-style: preserve-3d;
+			transition: transform 0.6s;
+			position: absolute;
+			top: 0;
+			left: 0;
+		}
+		
+		.flip-card-inner {
+			position: relative;
+			width: 100%;
+			height: 100%;
+			transform-style: preserve-3d;
+			transform: rotateY(0deg);
+			transition: transform 0.6s;
+		}
+		
+		.flip-card:hover .flip-card-inner {
+			transform: rotateY(180deg);
+		}
+		
+		.flip-card-front, .flip-card-back {
+			position: absolute;
+			width: 100%;
+			height: 100%;
+			backface-visibility: hidden;
+		}
+		
+		.flip-card-front {
+			transform: rotateY(0deg);
+		}
+		
+		.flip-card-back {
+			transform: rotateY(180deg);
+			background: [%stProprieteGrille.VersoFondCouleur%];
+			display: flex;
+			flex-direction: column;
+			align-items: flex-start;
+			box-sizing: border-box;
+			z-index: 10;
+		}
+		
+		.back-content {
+			width: 100%;
+			background: [%stProprieteGrille.VersoFondCouleur%];
+			padding: 8px 20px 4px 20px;
+			box-sizing: border-box;
+			display: flex;
+			flex-direction: column;
+			align-items: flex-start;
+			overflow: auto;
+			scrollbar-width: thin; /* For Firefox */
+			scrollbar-color: [%sCouleurScrollBar%] transparent; /* For Firefox */
+		}
+		
+		/* For Webkit browsers (Chrome, Safari) */
+		.back-content::-webkit-scrollbar {
+			width: 5px;
+		}
+		
+		.back-content::-webkit-scrollbar-track {
+			background: transparent;
+		}
+		
+		.back-content::-webkit-scrollbar-thumb {
+			background-color: transparent;
+		}
+		
+		.back-content:hover::-webkit-scrollbar-thumb {
+			background-color: [%sCouleurScrollBar%];
+		}
+		
+		.grille-block-title {
+			color: [%stProprieteTexte.PoliceCouleur%];
+			font-family: '[%stProprieteTexte.PoliceFamille%]';
+			font-size: [%stProprieteTexte.PoliceTailleL%]px;
+			font-weight: [%stProprieteTexte.PoliceStyle%];
+			text-align: [%DonneAlignementHorizontal(stProprieteGrille.TexteAlignementHorizontal,"html")%];
+			margin-top: 10px;
+			margin-bottom: 10px;
+			box-sizing: border-box;
+			overflow-wrap: break-word;
+		}
+		
+		.bouton-lien {
+			text-align: center;
+			width: 100%;
+			display: block;
+			margin-top: auto;
+			box-sizing: border-box;
+		}
+		
+		img {
+			width: 100%;
+			height: auto;
+			display: block;
+		}
+		
+		@media all and (max-width: [%pLargeurM%]px) {
+			.grille-block-title {
+				font-size: [%stProprieteTexte.PoliceTailleM%]px;
+			}
+		}
+		
+		@media all and (max-width: [%pLargeurS%]px) {
+			.grille-block-title {
+				font-size: [%stProprieteTexte.PoliceTailleS%]px;
+			}
+		}
+	</style>
+]
+
+
+sCodeJS = [
+
+	function adjustCardHeight(img) {
+		const card = img.closest('.grid-item');
+			if (card) {
+				card.style.height = img.clientHeight + 'px'; // Ajuste la hauteur de la carte à celle de l'image
+			}
+	}
+	
+	function adjustCardHeights() {
+	    const images = document.querySelectorAll('.grid-item img');
+	    images.forEach(img => {
+	        if (img.complete) {
+	            adjustCardHeight(img);
+	        } else {
+	            img.onload = () => adjustCardHeight(img);
+	        }
+	    });
+	}
+	
+	document.addEventListener("DOMContentLoaded", function() {
+	    const NbrColonne = getComputedStyle(document.documentElement).getPropertyValue('--GrilleColonne');
+	    const gridItems = document.querySelectorAll('.grid-item');
+	    const numColonne = parseInt(NbrColonne);
+	    gridItems.forEach((item, index) => {
+	        const rowIndex = Math.floor(index / numColonne);
+	        item.style.zIndex = gridItems.length - rowIndex;
+	    });
+	
+
+	    const gridContainer = document.querySelector('.grid-container');
+	    gridContainer.style.height = 'auto'; // Permet à container d'ajuster la hauteur basée sur le contenu
+
+		adjustCardHeights(); // Ajuste les hauteurs initiales
+	
+	    // Ajuste la taille de la police dynamiquement
+	    const adjustFontSize = () => {
+	        const backContents = document.querySelectorAll('.back-content');
+	        backContents.forEach(backContent => {
+	            const gridItem = backContent.closest('.grid-item');
+	            if (!gridItem) return; // Vérifie que l'élément gridItem existe
+	
+	            const buttonLink = backContent.querySelector('.bouton-lien');
+	            if (!buttonLink) return; // Vérifie que l'élément bouton-lien existe
+	
+	            const linkHeight = buttonLink.offsetHeight;
+	            const availableHeight = gridItem.offsetHeight - linkHeight - 40; // 40 for padding
+	            const textElement = backContent.querySelector('.grille-block-title');
+	            if (!textElement) return; // Vérifie que l'élément grille-block-title existe
+	
+	            const maxFontSize = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--initial-font-size'), 10) || [%stProprieteTexte.PoliceTailleL%];
+	            let fontSize = maxFontSize;
+	            textElement.style.fontSize = fontSize + 'px'; // Reset to max font size
+	            while (textElement.scrollHeight > availableHeight && fontSize > 10) {
+	                fontSize -= 1;
+	                textElement.style.fontSize = fontSize + 'px';
+	            }
+	        });
+	    };
+	    
+	    adjustFontSize();
+	    
+		window.addEventListener('resize', () => {
+			adjustCardHeights(); // Ajuste les hauteurs lors du redimensionnement
+			adjustFontSize();
+		});
+	});
+]
+
+_tabCodeJS.Ajoute(sCodeJS)
+
+renvoyer sCodeHTML

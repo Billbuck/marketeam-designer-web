@@ -1,0 +1,9 @@
+procédure ChargeBaseLigne(pIdBaseLigne)
+
+stBaseLigne est une StructBaseLigne
+
+si dos_base_ligne.LitRecherchePremier(IdBaseLigne,pIdBaseLigne) alors
+	FichierVersMémoire(stBaseLigne,dos_base_ligne)
+fin
+
+renvoyer stBaseLigne

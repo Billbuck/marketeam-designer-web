@@ -1,0 +1,20 @@
+procédure CouleurTexteAutomatique(sCouleurHtmlFond est une chaîne = "", pCouleurRvbFond est un entier = 0)
+
+nCouleur est une Couleur
+
+si Majuscule(sCouleurHtmlFond) dans (__COULEUR_TRANSPARENT__,"#") alors
+	renvoyer __COULEUR_NOIR__
+sinon
+	si sCouleurHtmlFond <> "" alors
+		nCouleur = HTMLVersRVB(sCouleurHtmlFond)
+	sinon
+		nCouleur = pCouleurRvbFond
+	fin
+
+
+	si 0.3*(nCouleur.Rouge) + 0.59*(nCouleur.Vert) + 0.11*(nCouleur.Bleu) < 128
+		renvoyer HTMLVersRVB(__COULEUR_BLANC__)
+	sinon
+		renvoyer HTMLVersRVB(__COULEUR_NOIR__)
+	fin
+fin

@@ -1,0 +1,26 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] LibelleTypeOperation (<pTypeOperation> [, <pEstSingulier> est booléen])
+//
+// Paramètres :
+//	pTypeOperation : <indiquez ici le rôle de pType>
+//	pEstSingulier (booléen - valeur par défaut=1) : <indiquez ici le rôle de pEstSingulier>
+// Valeur de retour :
+// 	Type indéterminé : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure RepertoireTypeOperation(pTypeOperation)
+
+selon pTypeOperation
+	cas __OPERATION_COURRIER__			: renvoyer "Courrier"
+	cas __OPERATION_EMAIL__ 			: renvoyer "Email"
+	cas __OPERATION_SMARTEVA__			: renvoyer "Tract"
+	cas __OPERATION_SMS__				: renvoyer "Sms"
+	cas __OPERATION_VMS__				: renvoyer "Vms"
+	cas __OPERATION_CLIQUEZICI__		: renvoyer "CliquezIci"
+	cas __OPERATION_TRACTEVA__			: renvoyer "Tract"
+	cas __OPERATION_TEL__				: renvoyer "Tel"
+	autre cas							: STOP ; Trace(pTypeOperation) ; renvoyer "Autre"	
+fin

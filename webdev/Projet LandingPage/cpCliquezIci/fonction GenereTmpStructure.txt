@@ -1,0 +1,45 @@
+fonction GenereTmpStructure(stNouveauCliquezIci est une structNouveauCliquezIci, pIdOperation, bRenvoiCode est un booléen = Faux)
+
+sStructCliquezIci	est une chaîne
+sTexteRequete		est une chaîne
+sdReqCode			est une Source de Données
+
+Sérialise(stNouveauCliquezIci,sStructCliquezIci,psdJSON)
+tmp_structure.RAZ()
+MémoireVersFichier(stNouveauCliquezIci.stTheme, tmp_structure)
+tmp_structure.IdStructure		= stNouveauCliquezIci.IdStructure
+tmp_structure.IdOperation		= pIdOperation
+tmp_structure.IdClient			= stNouveauCliquezIci.IdClient
+tmp_structure.IdMarque			= stNouveauCliquezIci.IdMarque
+tmp_structure.UrlClient			= stNouveauCliquezIci.UrlClient
+tmp_structure.IdOperation.Null	= (pIdOperation = 0)
+tmp_structure.UrlClient.Null	= (stNouveauCliquezIci.UrlClient = "")
+
+si tmp_structure.Ajoute() alors
+	sTexteRequete = "UPDATE tmp_structure SET code = base62(IdStructure) WHERE IdStructure = " + tmp_structure.IdStructure
+	si pas sdReqCode.ExécuteRequêteSQL(tmp_structure..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+		Info("Erreur requête")
+		renvoyer ""
+	fin
+
+	pour tout stBloc de stNouveauCliquezIci.tabBloc
+		tmp_structure_bloc.RAZ()
+		MémoireVersFichier(stBloc, tmp_structure_bloc)
+		tmp_structure_bloc.IdStructure = tmp_structure.IdStructure
+		tmp_structure_bloc.Ajoute()
+	fin
+	
+	si bRenvoiCode = Vrai alors
+		si tmp_structure.LitRecherchePremier(IdStructure,tmp_structure.IdStructure) alors
+			renvoyer tmp_structure.Code
+		fin
+	sinon
+		renvoyer tmp_structure.IdStructure
+	fin
+fin
+
+renvoyer ""
+
+
+fin:
+sdReqCode.AnnuleDéclaration()

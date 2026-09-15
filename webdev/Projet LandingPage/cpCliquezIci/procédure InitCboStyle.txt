@@ -1,0 +1,24 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//InitCboStyle (<pCombo> est champ [, <pPersonnalisé> est booléen])
+//
+// Paramètres :
+//	pCombo (champ) : <indiquez ici le rôle de pCombo>
+//	pPersonnalisé (booléen - valeur par défaut=0) : <indiquez ici le rôle de bPPersonnalisé>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure InitCboStyle(pCombo est un Champ, pPersonnalisé est un booléen = Faux)
+
+pCombo.SupprimeTout()
+
+si pPersonnalisé = Vrai alors
+	ListeAjoute(pCombo, "Personnalisé" + gLien(""))
+fin
+
+pour tout Option de eStyleTexte
+	ListeAjoute(pCombo, Option..Valeur + gLien(Option..Nom))
+fin

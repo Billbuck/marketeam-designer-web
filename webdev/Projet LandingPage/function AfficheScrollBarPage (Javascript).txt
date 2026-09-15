@@ -1,0 +1,8 @@
+function AfficheScrollBarPage(bAffiche)
+{
+	if (bAffiche == true) {
+		$("body").css("overflow-y","auto")
+	} else {
+		$("body").css("overflow-y","hidden")
+	}
+}

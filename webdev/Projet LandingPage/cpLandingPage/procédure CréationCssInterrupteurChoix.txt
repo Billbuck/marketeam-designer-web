@@ -1,0 +1,156 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] CréationCssInterrupteurChoix (<nLargeurL> est entier, <nLargeurM> est entier, <nLargeurS> est entier, <stTheme> est structIciTheme)
+//
+// Paramètres :
+//	nLargeurL (entier) : <indiquez ici le rôle de nLargeurL>
+//	nLargeurM (entier) : <indiquez ici le rôle de nLargeurM>
+//	nLargeurS (entier) : <indiquez ici le rôle de nLargeurS>
+//	stTheme (structIciTheme) : <indiquez ici le rôle de stTheme>
+// Valeur de retour :
+// 	chaîne ANSI : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure CréationCssInterrupteurChoix(nLargeurL est un entier, nLargeurM est un entier, nLargeurS entier, stTheme est un structIciTheme)
+
+sCss									est une chaîne
+
+stIciThemeProprieteDefaut				est une structIciThemeProprieteDefaut
+stIciThemeProprieteInterrupteur			est une structIciThemeProprieteInterrupteur
+stIciThemeProprieteTexte				est une structIciThemeProprieteTexte
+
+nTailleCocheL							est un entier
+nTailleCocheM							est un entier
+nTailleCocheS							est un entier
+
+Désérialise(stIciThemeProprieteTexte,           stTheme.ProprieteTexte,psdJSON)
+Désérialise(stIciThemeProprieteDefaut,           stTheme.ProprieteDefaut,psdJSON)
+Désérialise(stIciThemeProprieteInterrupteur,     stTheme.ProprieteInterrupteur,psdJSON)
+
+nTailleCocheL	= stIciThemeProprieteInterrupteur.CocheTaille
+nTailleCocheM	= Arrondi(stIciThemeProprieteInterrupteur.CocheTaille * nLargeurM / nLargeurL) + 4
+nTailleCocheS	= Arrondi(stIciThemeProprieteInterrupteur.CocheTaille * nLargeurS / nLargeurL) + 8
+
+//	stIciThemeProprieteInterrupteur.CocheCouleurCoché
+//	stIciThemeProprieteInterrupteur.CocheCouleurNonCoché
+//	stIciThemeProprieteInterrupteur.PoliceCouleurCoché
+//	stIciThemeProprieteInterrupteur.PoliceCouleurNonCoché
+
+// Checkbox
+sCss			= [
+	
+	.cochechoix {
+	display:            inline-block;
+	width:              100%;
+	clear:              both;
+	padding-top:        [%stIciThemeProprieteDefaut.MargeVerticaleEntreChamp%]px !important;
+	padding-bottom:     [%stIciThemeProprieteDefaut.MargeVerticaleEntreChamp%]px !important;
+	}
+	
+	/* Paramètres du libellé de la coche */
+	.cochechoix label {
+	display:            block;
+	position:           relative;
+	cursor:             pointer;
+	padding-left:       [% stIciThemeProprieteInterrupteur.MargeGauche + nTailleCocheL + stIciThemeProprieteInterrupteur.MargeDroite%]px;
+	line-height:        [%nTailleCocheL%]px;
+	font-family:        '[%stIciThemeProprieteInterrupteur.PoliceFamille%]';
+	font-size:          [%stIciThemeProprieteTexte.TaaStyle[stIciThemeProprieteInterrupteur.PoliceCode].PoliceTailleL%]px;
+	font-weight:        [%stIciThemeProprieteInterrupteur.PoliceStyle%];
+	color:              [%stIciThemeProprieteInterrupteur.PoliceCouleurNonCoché%];
+	transition:         color 0.5s ease;
+	}
+	
+	/* Ajout de la couleur du libellé lorsqu'elle est cochée */
+	.cochechoix [type="checkbox"]:checked + label {
+	color: [%stIciThemeProprieteInterrupteur.PoliceCouleurCoché%];
+	}
+	
+	/* On cache la coche système */
+	.cochechoix [type="checkbox"] {
+	position:           absolute;
+	opacity:            0;
+	left:               10px;
+	z-index:            -1;
+	}
+	
+	/* Conteneur pour le fondu */
+	.cochechoix [type="checkbox"] + label:before,
+	.cochechoix [type="checkbox"] + label:after {
+	content: '';
+	position:           absolute;
+	top:                50%;
+	transform:          translateY(-50%);
+	left:               [% stIciThemeProprieteInterrupteur.MargeGauche%]px;
+	width:              [%nTailleCocheL%]px;
+	height:             [%nTailleCocheL%]px;
+	background-size:    cover;
+	transition:         opacity 0.5s ease;
+	}
+	
+	/* Image "non cochée" */
+	.cochechoix [type="checkbox"] + label:before {
+	background: url('[%FaitCheckBox(stIciThemeProprieteInterrupteur.CocheModele, Faux, stIciThemeProprieteInterrupteur.CocheCouleurNonCoché)%]');
+	opacity:            1;
+	z-index:            1;
+	}
+	
+	/* Image "cochée" */
+	.cochechoix [type="checkbox"] + label:after {
+	background: url('[%FaitCheckBox(stIciThemeProprieteInterrupteur.CocheModele, Vrai, stIciThemeProprieteInterrupteur.CocheCouleurCoché)%]');
+	opacity:            0;
+	z-index:            2;
+	}
+	
+	/* Transition lors du changement d'état */
+	.cochechoix [type="checkbox"]:checked + label:before {
+	opacity: 0;
+	}
+	
+	.cochechoix [type="checkbox"]:checked + label:after {
+	opacity: 1;
+	}
+	
+	/* Media Query pour Taille M */
+	@media all and (max-width:[%nLargeurM%]px) {
+	.cochechoix {
+	padding-top:    [%Arrondi(stIciThemeProprieteDefaut.MargeVerticaleEntreChamp * nLargeurM / nLargeurL)%]px !important;
+	padding-bottom: [%Arrondi(stIciThemeProprieteDefaut.MargeVerticaleEntreChamp * nLargeurM / nLargeurL)%]px !important;
+	}
+	.cochechoix label {
+	padding-left:   [% stIciThemeProprieteInterrupteur.MargeGauche + nTailleCocheM + stIciThemeProprieteInterrupteur.MargeDroite%]px;
+	line-height:    [%nTailleCocheM%]px;
+	font-size:      [%stIciThemeProprieteTexte.TaaStyle[stIciThemeProprieteInterrupteur.PoliceCode].PoliceTailleM%]px;
+	}
+	.cochechoix [type="checkbox"] + label:before,
+	.cochechoix [type="checkbox"] + label:after {
+	left:           [% stIciThemeProprieteInterrupteur.MargeGauche%]px;
+	width:          [%nTailleCocheM%]px;
+	height:         [%nTailleCocheM%]px;
+	}
+	}
+	
+	/* Media Query pour Taille S */
+	@media all and (max-width:[%nLargeurS%]px) {
+	.cochechoix {
+	padding-top:    [%Arrondi(stIciThemeProprieteDefaut.MargeVerticaleEntreChamp * nLargeurS / nLargeurL)%]px !important;
+	padding-bottom: [%Arrondi(stIciThemeProprieteDefaut.MargeVerticaleEntreChamp * nLargeurS / nLargeurL)%]px !important;
+	}
+	.cochechoix label {
+	padding-left:   [% stIciThemeProprieteInterrupteur.MargeGauche + nTailleCocheS + stIciThemeProprieteInterrupteur.MargeDroite%]px;
+	line-height:    [%nTailleCocheS%]px;
+	font-size:      [%stIciThemeProprieteTexte.TaaStyle[stIciThemeProprieteInterrupteur.PoliceCode].PoliceTailleS%]px;
+	}
+	.cochechoix [type="checkbox"] + label:before,
+	.cochechoix [type="checkbox"] + label:after {
+	left:           [% stIciThemeProprieteInterrupteur.MargeGauche%]px;
+	width:          [%nTailleCocheS%]px;
+	height:         [%nTailleCocheS%]px;
+	}
+	}
+	
+]
+
+renvoyer sCss

@@ -1,0 +1,26 @@
+procédure DonneLargeurHauteur(nLargeurPage est un entier,sCheminBlocImage est une chaîne,nHauteurMax est un entier)
+
+nHauteurCalc	est un entier
+nLargeurCalc	est un entier
+sInfoImage		est une chaîne
+sFormat			est une chaîne
+nHauteurImg		est un entier
+nLargeurImg		est un entier
+
+sInfoImage	= InfoBitmap(sCheminBlocImage)
+sFormat		= ExtraitChaîne(sInfoImage, 1)
+nLargeurImg	= Val(ExtraitChaîne(sInfoImage, 2))
+nHauteurImg	= Val(ExtraitChaîne(sInfoImage, 3))
+
+nLargeurImg	= (nLargeurImg > 0) ? nLargeurImg sinon 360
+nHauteurImg	= (nHauteurImg > 0) ? nHauteurImg sinon 360
+
+si sFormat = "SVG" alors
+	nHauteurCalc	= (nLargeurPage * nHauteurMax / 100)																																							
+	nLargeurCalc	= nLargeurPage
+sinon
+	nLargeurCalc	= Min(nLargeurImg, (nLargeurPage * nHauteurMax) / 100)
+	nHauteurCalc	= nHauteurImg * (nLargeurCalc / nLargeurImg)
+fin
+
+renvoyer (nLargeurCalc,nHauteurCalc)

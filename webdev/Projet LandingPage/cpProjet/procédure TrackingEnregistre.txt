@@ -1,0 +1,52 @@
+procédure TrackingEnregistre(stTracking est une structIciTracking)
+
+sTexteRequete			est une chaîne
+sdReqTracking			est une Source de Données
+//		FindIp 					est une restRequête
+//		FindIpReponse			est une restRéponse
+//		jsonFindIp				est un json // <description = "FindIp">
+//		
+//		FindIp.URL				= ChaîneConstruit(__sFindIpUrl,stTracking.AdresseIP,__sFindIpKey)
+//		//FindIp.DuréeNonRéponse	= 2 s
+//		
+//		
+//		FindIpReponse = RESTEnvoie(FindIp)
+//		SI pas ErreurDétectée ALORS
+//			jsonFindIp = FindIpReponse.Contenu
+//			stTracking.Latitude		= jsonFindIp.Location.Latitude
+//			stTracking.Longitude	= jsonFindIp.Location.Longitude
+//			stTracking.Continent	= SansEspace(jsonFindIp.Continent.Names.fr) <> "0"			? jsonFindIp.Continent.Names.fr 		SINON jsonFindIp.Continent.Names.en	
+//			stTracking.Region		= SansEspace(jsonFindIp.Subdivisions[1].Names.fr) <> "0"	? jsonFindIp.Subdivisions[1].Names.fr	SINON jsonFindIp.Subdivisions[1].Names.en
+//			stTracking.Pays			= SansEspace(jsonFindIp.Country.Names.fr) <> "0" 			? jsonFindIp.Country.Names.fr			sinon jsonFindIp.Country.Names.en 
+//			stTracking.Ville		= SansEspace(jsonFindIp.City.Names.fr) <> "0" 				? jsonFindIp.City.Names.fr				sinon jsonFindIp.City.Names.en
+//			stTracking.CodePostal	= jsonFindIp.Postal.Code
+//			stTracking.Operateur	= jsonFindIp.Traits.Autonomous_system_organization
+//			stTracking.Utilisateur	= jsonFindIp.Traits.User_type
+//			stTracking.Connexion	= jsonFindIp.Traits.Connection_type
+//			
+//			sTexteRequete =
+//			[
+//			INSERT INTO ope_cliquezici_tracking (IdBaseLigne, IdCliquezIci, Plateforme, AdresseIP, Latitude, Longitude, Continent, Region, Pays, Ville, CodePostal, Operateur, Utilisateur, Connexion)
+//			VALUES ([%stTracking.IdBaseLigne%], [%stTracking.IdCliquezIci%], '[%stTracking.Plateforme%]', '[%stTracking.AdresseIP%]', [%stTracking.Latitude%], [%stTracking.Longitude%], '[%stTracking.Continent%]', '[%stTracking.Region%]', '[%stTracking.Pays%]', '[%stTracking.Ville%]', '[%stTracking.CodePostal%]', '[%stTracking.Operateur%]', '[%stTracking.Utilisateur%]', '[%stTracking.Connexion%]')
+//			]
+//			
+//		sinon
+	sTexteRequete =
+	[
+	INSERT INTO ope_cliquezici_tracking (IdBaseLigne, IdCliquezIci, Plateforme, AdresseIp)
+	VALUES ([%stTracking.IdBaseLigne%], [%stTracking.IdCliquezIci%], '[%stTracking.Plateforme%]', '[%stTracking.AdresseIP%]')
+	]
+	
+//		FIN
+
+
+si pas HExécuteRequêteSQL(sdReqTracking, dos_base..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête Tracking")
+	retour               
+fin
+
+
+
+
+fin:
+HAnnuleDéclaration(sdReqTracking)

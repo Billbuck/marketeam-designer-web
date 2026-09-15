@@ -1,0 +1,42 @@
+procédure InitCboEpaisseurTexte(pCboStyle est un Champ, local cboPoliceFamille, local tabPolices est un tableau de structIciThemePolice)
+
+ChargeComboStyle(pCboStyle, cboPoliceFamille)
+
+pCboStyle = __STYLE_REGULAR__
+
+
+
+	procédure interne ChargeComboStyle(pCombo est un Champ, pPoliceFamille)
+		
+		nInd		est un entier
+		tabStyle	est un tableau d'entiers
+		
+		pCombo.SupprimeTout()
+		
+		si pPoliceFamille <> -1 alors
+			nInd		= tabPolices.Cherche(tcLinéaire,"Nom",pPoliceFamille)
+			tabStyle	= tabPolices[nInd].tabStyle
+			
+			si tabStyle.Cherche(tcLinéaire,100) > 0 alors pCombo.Ajoute(LibellePoliceStyle(__STYLE_THIN__) 		+ gLien(__STYLE_THIN__))
+			si tabStyle.Cherche(tcLinéaire,200) > 0 alors pCombo.Ajoute(LibellePoliceStyle(__STYLE_EXTRA_LIGHT__)	+ gLien(__STYLE_EXTRA_LIGHT__))
+			si tabStyle.Cherche(tcLinéaire,300) > 0 alors pCombo.Ajoute(LibellePoliceStyle(__STYLE_LIGHT__)		+ gLien(__STYLE_LIGHT__))
+			si tabStyle.Cherche(tcLinéaire,400) > 0 alors pCombo.Ajoute(LibellePoliceStyle(__STYLE_REGULAR__)		+ gLien(__STYLE_REGULAR__))
+			si tabStyle.Cherche(tcLinéaire,500) > 0 alors pCombo.Ajoute(LibellePoliceStyle(__STYLE_MEDIUM__)		+ gLien(__STYLE_MEDIUM__))
+			si tabStyle.Cherche(tcLinéaire,600) > 0 alors pCombo.Ajoute(LibellePoliceStyle(__STYLE_SEMI_BOLD__)	+ gLien(__STYLE_SEMI_BOLD__))
+			si tabStyle.Cherche(tcLinéaire,700) > 0 alors pCombo.Ajoute(LibellePoliceStyle(__STYLE_BOLD__)			+ gLien(__STYLE_BOLD__))
+			si tabStyle.Cherche(tcLinéaire,800) > 0 alors pCombo.Ajoute(LibellePoliceStyle(__STYLE_EXTRA_BOLD__)	+ gLien(__STYLE_EXTRA_BOLD__))
+			si tabStyle.Cherche(tcLinéaire,900) > 0 alors pCombo.Ajoute(LibellePoliceStyle(__STYLE_BLACK__)		+ gLien(__STYLE_BLACK__))
+		sinon
+			pCombo.Ajoute(LibellePoliceStyle(__STYLE_THIN__) 		+ gLien(__STYLE_THIN__))
+			pCombo.Ajoute(LibellePoliceStyle(__STYLE_EXTRA_LIGHT__)	+ gLien(__STYLE_EXTRA_LIGHT__))
+			pCombo.Ajoute(LibellePoliceStyle(__STYLE_LIGHT__)		+ gLien(__STYLE_LIGHT__))
+			pCombo.Ajoute(LibellePoliceStyle(__STYLE_REGULAR__)		+ gLien(__STYLE_REGULAR__))
+			pCombo.Ajoute(LibellePoliceStyle(__STYLE_MEDIUM__)		+ gLien(__STYLE_MEDIUM__))
+			pCombo.Ajoute(LibellePoliceStyle(__STYLE_SEMI_BOLD__)	+ gLien(__STYLE_SEMI_BOLD__))
+			pCombo.Ajoute(LibellePoliceStyle(__STYLE_BOLD__)		+ gLien(__STYLE_BOLD__))
+			pCombo.Ajoute(LibellePoliceStyle(__STYLE_EXTRA_BOLD__)	+ gLien(__STYLE_EXTRA_BOLD__))
+			pCombo.Ajoute(LibellePoliceStyle(__STYLE_BLACK__)		+ gLien(__STYLE_BLACK__))
+		fin
+		
+		pCombo = __STYLE_REGULAR__
+	fin

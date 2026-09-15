@@ -1,0 +1,10 @@
+// ** Initialisation de LandingPage
+
+__stTheme			est un structIciTheme
+__sStyleScript		est une chaîne
+
+
+
+cpProjet.InitProjet()
+
+

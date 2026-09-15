@@ -1,0 +1,37 @@
+procédure FaitTexteCGV(stValeurCgv est une structIciBlocValeurCgv)
+
+sTexteRequete		est une chaîne
+sdReqCgv			est une Source de Données
+sTexteCgv			est une chaîne
+sListeIdCgv 		est une chaîne
+
+pour tout nIdCgv de stValeurCgv.TabIdCgv
+	sListeIdCgv += [","] + nIdCgv
+fin
+
+si sListeIdCgv = "" alors renvoyer ""
+
+sTexteRequete =
+[
+SELECT 
+	ici_cgv.Titre,
+	ici_cgv.Cgv
+FROM
+	ici_cgv
+WHERE
+	ici_cgv.IdCgv IN ([%sListeIdCgv%])
+]
+
+si pas HExécuteRequêteSQL(sdReqCgv, ope_cliquezici..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête CGV")
+	renvoyer ""
+fin
+
+pour tout sdReqCgv
+	sTexteCgv += "<p><b>" + sdReqCgv.Titre + "</b></p><p>" + Remplace(sdReqCgv.Cgv, RC, "<br>") + "</p><br><br>"
+fin
+
+renvoyer sTexteCgv
+
+fin:
+HAnnuleDéclaration(sdReqCgv)

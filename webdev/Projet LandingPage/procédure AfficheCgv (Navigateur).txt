@@ -1,0 +1,4 @@
+procédure AfficheCgv()
+
+AfficheScrollBarPage(Faux)
+PopupAffiche(POPUP_CGV)

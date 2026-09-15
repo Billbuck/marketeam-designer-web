@@ -1,0 +1,11 @@
+constante
+	__TOAST_INFO__			= 1
+	__TOAST_ERREUR__		= 2
+	__TOAST_SUCCES__		= 3
+	__TOAST_AVERTISSEMENT__	= 4
+fin
+
+//_taaStyleCss 	est un tableau de chaine
+_StyleCss 		est une chaîne
+//_tabCodeHTML 	est un tableau de chaine
+_tabCodeJS		est un tableau de chaîne

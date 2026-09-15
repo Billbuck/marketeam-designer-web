@@ -1,0 +1,128 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//CréationCssFormulaire (<nLargeurL> est entier, <nLargeurM> est entier, <nLargeurS> est entier, <stTheme> est structIciTheme)
+//
+// Paramètres :
+//	nLargeurL (entier) : <indiquez ici le rôle de nLargeurL>
+//	nLargeurM (entier) : <indiquez ici le rôle de nLargeurM>
+//	nLargeurS (entier) : <indiquez ici le rôle de nLargeurS>
+//	stTheme (structIciTheme) : <indiquez ici le rôle de stTheme>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure CréationCssFormulaire(nLargeurL est un entier, nLargeurM est un entier, nLargeurS est un entier, stTheme est un structIciTheme)
+sCss									est une chaîne
+sLargeurLibelle							est une chaîne
+sLargeurChamp							est une chaîne
+
+stIciThemeProprieteDefaut				est une structIciThemeProprieteDefaut
+stIciThemeProprieteFormulaire			est une structIciThemeProprieteFormulaire
+stIciThemeProprieteTexte				est une structIciThemeProprieteTexte
+
+Désérialise(stIciThemeProprieteTexte,		stTheme.ProprieteTexte, psdJSON)
+Désérialise(stIciThemeProprieteDefaut,		stTheme.ProprieteDefaut, psdJSON)
+Désérialise(stIciThemeProprieteFormulaire,	stTheme.ProprieteFormulaire, psdJSON)
+
+// Traitement alignement dans formulaire
+selon stIciThemeProprieteDefaut.AlignementFormulaire
+	cas __ALIGNEMENT_20_libelle_80_champ__
+		sLargeurLibelle	= "20%"
+		sLargeurChamp	= "80%"
+	cas __ALIGNEMENT_25_libelle_75_champ__
+		sLargeurLibelle	= "25%"
+		sLargeurChamp	= "75%"
+	cas __ALIGNEMENT_30_libelle_70_champ__
+		sLargeurLibelle	= "30%"
+		sLargeurChamp	= "70%"
+	cas __ALIGNEMENT_35_libelle_65_champ__
+		sLargeurLibelle	= "35%"
+		sLargeurChamp	= "65%"
+	autre cas
+		sLargeurLibelle	= "30%"
+		sLargeurChamp	= "70%"
+fin
+
+sCss = [
+	.formulaire {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	padding-top: [%stIciThemeProprieteDefaut.MargeVerticaleEntreChamp%]px;
+	padding-bottom: [%stIciThemeProprieteDefaut.MargeVerticaleEntreChamp%]px;
+	}
+	
+	.formulaire div.lib-champ {
+	width: [%sLargeurLibelle%];
+	padding-right: 0;
+	box-sizing: border-box;
+	}
+	
+	.formulaire div.champ {
+	flex: 1;
+	width: [%sLargeurChamp%] !important;
+	}
+	
+	.formulaire label {    
+	font-family: '[%stIciThemeProprieteFormulaire.LibellePoliceFamille%]';
+	font-size: [%stIciThemeProprieteTexte.TaaStyle[stIciThemeProprieteFormulaire.LibellePoliceCode].PoliceTailleL%]px;
+	font-weight: [%stIciThemeProprieteFormulaire.LibellePoliceStyle%];
+	font-style: normal;
+	text-align: [%DonneAlignementHorizontal(stIciThemeProprieteFormulaire.LibelleAlignementHorizontal, "html")%];
+	color: [%stIciThemeProprieteFormulaire.LibellePoliceCouleur%];    
+	display: block;
+	}
+	
+	.formulaire input, .formulaire textarea {
+	width: 100%;
+	background-color: [%stIciThemeProprieteFormulaire.SaisieFondCouleur%];
+	color: [%stIciThemeProprieteFormulaire.SaisiePoliceCouleur%];
+	font-family: '[%stIciThemeProprieteFormulaire.SaisiePoliceFamille%]';
+	font-size: [%stIciThemeProprieteTexte.TaaStyle[stIciThemeProprieteFormulaire.SaisiePoliceCode].PoliceTailleL%]px;
+	font-weight: [%stIciThemeProprieteFormulaire.SaisiePoliceStyle%];
+	font-style: normal;
+	text-align: [%DonneAlignementHorizontal(stIciThemeProprieteFormulaire.SaisieAlignementHorizontal)%];
+	padding: [%stIciThemeProprieteFormulaire.MargeInterneVerticale%]px 5px [%stIciThemeProprieteFormulaire.MargeInterneVerticale%]px 10px;
+	border: [%stIciThemeProprieteFormulaire.BordureEpaisseur%]px solid [%stIciThemeProprieteFormulaire.BordureCouleur%];
+	border-radius: [%stIciThemeProprieteFormulaire.BordureArrondi%]px;
+	line-height: normal;
+	}
+	
+	@media all and (max-width:[%nLargeurM%]px) {
+	.formulaire {
+	flex-direction: column;
+	}
+	
+	.formulaire div.lib-champ, .formulaire div.champ {
+	width: 100% !important;
+	}
+	
+	.formulaire label {
+	font-size: [%stIciThemeProprieteTexte.TaaStyle[stIciThemeProprieteFormulaire.LibellePoliceCode].PoliceTailleM%]px;
+	padding-bottom: [%stIciThemeProprieteFormulaire.MargeInterneVerticale%]px;
+	}
+	
+	.formulaire input, .formulaire textarea {
+	font-size: [%stIciThemeProprieteTexte.TaaStyle[stIciThemeProprieteFormulaire.SaisiePoliceCode].PoliceTailleM%]px;
+	padding-top: [%Arrondi(stIciThemeProprieteFormulaire.MargeInterneVerticale * nLargeurM / nLargeurL)%]px !important;
+	padding-bottom: [%Arrondi(stIciThemeProprieteFormulaire.MargeInterneVerticale * nLargeurM / nLargeurL)%]px !important;
+	}
+	}
+	
+	@media all and (max-width:[%nLargeurS%]px) {
+	.formulaire label {
+	font-size: [%stIciThemeProprieteTexte.TaaStyle[stIciThemeProprieteFormulaire.LibellePoliceCode].PoliceTailleS%]px;
+	padding-bottom: [%Arrondi(stIciThemeProprieteFormulaire.MargeInterneVerticale * nLargeurS / nLargeurL)%]px !important;
+	}
+	
+	.formulaire input, .formulaire textarea {
+	font-size: [%stIciThemeProprieteTexte.TaaStyle[stIciThemeProprieteFormulaire.SaisiePoliceCode].PoliceTailleS%]px;
+	padding-top: [%Arrondi(stIciThemeProprieteFormulaire.MargeInterneVerticale * nLargeurS / nLargeurL)%]px !important;
+	padding-bottom: [%Arrondi(stIciThemeProprieteFormulaire.MargeInterneVerticale * nLargeurS / nLargeurL)%]px !important;
+	}
+	}
+]
+
+renvoyer sCss

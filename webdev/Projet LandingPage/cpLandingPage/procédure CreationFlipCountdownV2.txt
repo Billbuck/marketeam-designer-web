@@ -1,0 +1,152 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] CreationFlipCountdownV2 (<pNumBloc>, <pPropriete>, <pValeur>, <pLargeurL>, <pLargeurM>, <pLargeurS>)
+//
+// Paramètres :
+//	pNumBloc : <indiquez ici le rôle de pBloc>
+//	pPropriete : <indiquez ici le rôle de stNouveauCliquezIci>
+//	pValeur : <indiquez ici le rôle de pValeur>
+//	pLargeurL : <indiquez ici le rôle de pLargeurL>
+//	pLargeurM : <indiquez ici le rôle de pLargeurM>
+//	pLargeurS : <indiquez ici le rôle de pLargeurS>
+// Valeur de retour :
+// 	chaîne ANSI : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure CreationFlipCountdownV2(pNumBloc <utile>, pPropriete, pValeur, pLargeurL <utile>, pLargeurM <utile>, pLargeurS <utile>)
+
+sStyle			est une chaîne
+sHtml			est une chaîne
+sScript			est une chaîne
+sCodeHTML		est une chaîne 
+sDateHeureFin	est une chaîne
+
+stProprieteCountdown est une structIciBlocProprieteCountdown
+stValeurCountdown est une structIciBlocValeurCountdown
+
+Désérialise(stProprieteCountdown, pPropriete,psdJSON)
+Désérialise(stValeurCountdown, pValeur,psdJSON)
+
+sDateHeureFin = DateHeureVersChaîne(stValeurCountdown.DateHeureFin,maskDateInternet)
+
+
+sStyle = [
+
+<style>
+	/* Styles généraux pour le compteur */
+	.tick {
+	font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; /* Police de caractère */
+	color: #ffffff; /* Couleur des libellés */
+	}
+	
+	/* Personnalisation des panneaux (volets) */
+	.tick .tick-flip-panel {
+	font-size: 60px; /* Taille de la police */
+	font-weight: bold; /* Graisse de la police */
+	color: #000000; /* Couleur de la police */
+	background-color: #3498db; /* Couleur de fond des volets */
+	border-radius: 10px; /* Forme arrondie des volets */
+	padding: 5px 10px; /* Espacement à l'intérieur de chaque bloc */
+	}
+	
+	/* Espacement entre les blocs */
+	.tick .tick-group {
+	margin-right: 10px; /* Écartement entre les blocs */
+	}
+	
+	/* Styles pour les libellés sous les blocs */
+	.tick .tick-label {
+	font-size: 16px; /* Taille de la police des libellés */
+	font-family: 'Arial', sans-serif; /* Police des libellés */
+	color: #fff; /* Couleur des libellés */
+	margin-top: 5px; /* Écartement entre les blocs et les libellés */
+	}
+	
+	/* Suppression de la mention publicitaire */
+	.tick .tick-branding {
+	display: none; /* Retirer la mention publicitaire */
+	}
+	
+	/* Condition pour ne pas afficher les jours si la valeur est à "0" */
+	.tick .tick-group-days[data-value="0"] {
+	display: none;
+	}
+	
+</style>
+]
+
+sHtml = [
+<div class="tick" data-did-init="handleTickInit">
+	<div data-repeat="true" data-layout="horizontal fit" data-transform="preset(d, h, m, s) -> delay">
+		<div class="tick-group">
+			<div data-key="value" data-repeat="true" data-transform="pad(00) -> split -> delay">
+				<span data-view="flip"></span>
+			</div>
+			<span data-key="label" data-view="text" class="tick-label"></span>
+		</div>
+	</div>
+</div>
+
+<div Class="tick-onended-message" style="display:none">
+	<p>Time'S up</p>
+</div>
+]
+
+sScript = [
+
+function handleTickInit(tick) {
+	
+	var locale = {
+		YEAR_PLURAL: 'Années',
+		YEAR_SINGULAR: 'Année',
+		MONTH_PLURAL: 'Mois',
+		MONTH_SINGULAR: 'Mois',
+		WEEK_PLURAL: 'Semaines',
+		WEEK_SINGULAR: 'Semaine',
+		DAY_PLURAL: 'Jours',
+		DAY_SINGULAR: 'Jour',
+		HOUR_PLURAL: 'Heures',
+		HOUR_SINGULAR: 'Heure',
+		MINUTE_PLURAL: 'Minutes',
+		MINUTE_SINGULAR: 'Minute',
+		SECOND_PLURAL: 'Secondes',
+		SECOND_SINGULAR: 'Seconde',
+		MILLISECOND_PLURAL: 'Millisecondes',
+		MILLISECOND_SINGULAR: 'Milliseconde'
+	};
+	
+	for (var key in locale) {
+		if (!locale.hasOwnProperty(key)) { continue; }
+		tick.setConstant(key, locale[key]);
+	}
+			
+	// create the countdown counter
+	var counter	= Tick.count.down('[%sDateHeureFin%]');
+	
+	counter.onupdate	= function(value) {
+		tick.value = value;
+	};
+			
+	counter.onended = function() {
+		// redirect, uncomment the next line
+		// window.location = 'my-location.html'
+		
+		// hide counter, uncomment the next line
+		tick.root.style.display = 'none';
+		
+		// show message, uncomment the next line
+		document.querySelector('.tick-onended-message').style.display = '';
+	};
+}
+]
+
+sCodeHTML = [
+	[%sHtml%]
+	[%sStyle%]
+]
+
+_tabCodeJS.Ajoute(sScript)
+
+renvoyer sCodeHTML

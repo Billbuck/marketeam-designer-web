@@ -1,0 +1,157 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] CréationCssOptinOption (<nLargeurL> est entier, <nLargeurM> est entier, <nLargeurS> est entier, <stTheme> est structIciTheme)
+//
+// Paramètres :
+//	nLargeurL (entier) : <indiquez ici le rôle de nLargeurL>
+//	nLargeurM (entier) : <indiquez ici le rôle de nLargeurM>
+//	nLargeurS (entier) : <indiquez ici le rôle de nLargeurS>
+//	stTheme (structIciTheme) : <indiquez ici le rôle de stTheme>
+// Valeur de retour :
+// 	chaîne ANSI : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure CréationCssOptinOption(stNouveauCliquezici est une structNouveauCliquezIci, stProprieteBouton est une structIciBlocProprieteBouton)
+
+sCss									est une chaîne
+
+nDécalage								est un entier
+
+nLargeurL								est un entier	= stNouveauCliquezici.stTheme.LargeurL
+nLargeurM								est un entier	= stNouveauCliquezici.stTheme.LargeurM
+nLargeurS								est un entier	= stNouveauCliquezici.stTheme.LargeurS
+
+nTailleCocheL							est un entier
+nTailleCocheM							est un entier
+nTailleCocheS							est un entier
+
+rRatioOptinOption						est un réel
+
+stIciThemeProprieteDefaut				est une structIciThemeProprieteDefaut
+stIciThemeProprieteInterrupteur			est une structIciThemeProprieteInterrupteur
+stIciThemeProprieteTexte				est une structIciThemeProprieteTexte
+
+Désérialise(stIciThemeProprieteTexte,			stNouveauCliquezici.stTheme.ProprieteTexte,psdJSON)
+Désérialise(stIciThemeProprieteDefaut,			stNouveauCliquezici.stTheme.ProprieteDefaut,psdJSON)
+Désérialise(stIciThemeProprieteInterrupteur, 	stNouveauCliquezici.stTheme.ProprieteInterrupteur,psdJSON)
+
+rRatioOptinOption = stIciThemeProprieteTexte.TaaStyle[stProprieteBouton.OptinPropositionPoliceCode].PoliceTailleL / stIciThemeProprieteTexte.TaaStyle[stProprieteBouton.OptinMessagePoliceCode].PoliceTailleL
+
+// la taille de la coche est calculé entre la taille du texte du message par rapport à la taille du texte des options
+nTailleCocheL 	= stProprieteBouton.OptinCocheTaille * rRatioOptinOption
+nTailleCocheM 	= Arrondi(stProprieteBouton.OptinCocheTaille * rRatioOptinOption * nLargeurM / nLargeurL) + 4
+nTailleCocheS 	= Arrondi(stProprieteBouton.OptinCocheTaille * rRatioOptinOption * nLargeurS / nLargeurL) + 8
+
+nDécalage		= stProprieteBouton.OptinCocheTaille
+
+// Checkbox
+sCss = [
+	
+	.optionVisible {
+	display: block !important;
+	}
+	
+	.optin-option {
+	display: 			inline-block;
+	width:				100%;
+	clear:				both;
+	padding-top: 		[%Min(stIciThemeProprieteDefaut.MargeVerticaleEntreChamp,10)%]px !important;
+	padding-bottom: 	[%Min(stIciThemeProprieteDefaut.MargeVerticaleEntreChamp,10)%]px !important;
+	}
+	
+	/* Paramètres du libellé de la coche */
+	.optin-option label {
+	display: 			block;
+	position: 			relative;
+	cursor:				pointer;
+	/* position du libellé*/    
+	padding-left:		[% nDécalage + stIciThemeProprieteInterrupteur.MargeGauche + nTailleCocheL + stIciThemeProprieteInterrupteur.MargeDroite%]px; /* Espace initial pour la coche, peut être surchargé */
+	line-height:		[%nTailleCocheL%]px; 
+	font-family: 		'[%stProprieteBouton.OptinPoliceFamille%]';
+	font-size: 			[%stIciThemeProprieteTexte.TaaStyle[stProprieteBouton.OptinPropositionPoliceCode].PoliceTailleL%]px;
+	font-weight: 		[%stIciThemeProprieteInterrupteur.PoliceStyle%];
+	color: 				[%stProprieteBouton.OptinTexteCouleur%];
+	}
+	
+	/* On cache la coche système */
+	.optin-option [type="checkbox"] {
+	position: 			absolute;
+	opacity: 			0; /* Rend la checkbox réelle invisible tout en restant accessible */
+	left: 				10px; /* avant : -9999px  --- Position par défaut, ajustée selon les styles spécifiques */
+	z-index: 			-1;
+	}
+	
+	
+	/* Paramètres de la coche */
+	.optin-option [type="checkbox"] + label:before {
+	content: ''; 
+	position: 			absolute;
+	top: 				50%;
+	transform: 			translateY(-50%);
+
+	/* position de la coche*/    
+	left:				[% nDécalage + stIciThemeProprieteInterrupteur.MargeGauche%]px;
+	width: 				[%nTailleCocheL%]px; 
+	height: 			[%nTailleCocheL%]px; 
+
+	/* style de la coche off */
+	background:			url('[%FaitCheckBox(stProprieteBouton.OptinCocheModele, Faux, stProprieteBouton.OptinCocheCouleurNonCoché)%]') no-repeat center center / cover;
+
+	transition: 		background 0.5s ease; /* Transition pour l'effet de fond lors du changement */
+	}
+	
+	.optin-option [type="checkbox"]:checked + label:before {
+	/* style de la coche on */
+	background: 		url('[%FaitCheckBox(stProprieteBouton.OptinCocheModele, Vrai, stProprieteBouton.OptinCocheCouleurCoché)%]') no-repeat center center / cover;
+	}
+	
+	
+	/*Media Query pour Taille M*/
+	@media all and (max-width:[%nLargeurM%]px) {
+	
+	.optin-option {
+	padding-top: 		[%Arrondi(Min(stIciThemeProprieteDefaut.MargeVerticaleEntreChamp,10) * nLargeurM / nLargeurL)%]px !important;
+	padding-bottom: 	[%Arrondi(Min(stIciThemeProprieteDefaut.MargeVerticaleEntreChamp,10) * nLargeurM / nLargeurL)%]px !important;
+	}
+	
+	.optin-option label {
+	padding-left: 		[% nDécalage + stIciThemeProprieteInterrupteur.MargeGauche + nTailleCocheM + stIciThemeProprieteInterrupteur.MargeDroite%]px; /* Espace ajusté pour la coche en taille M */
+	line-height: 		[%nTailleCocheM%]px; /* Hauteur de ligne ajustée pour la coche en taille M */
+	font-size: 			[%stIciThemeProprieteTexte.TaaStyle[stProprieteBouton.OptinPropositionPoliceCode].PoliceTailleM%]px; /* Taille de police ajustée pour les écrans M */
+	}
+	
+	.optin-option [type="checkbox"] + label:before {
+	left: 				[% nDécalage + stIciThemeProprieteInterrupteur.MargeGauche%]px; /* Position horizontale ajustée pour la coche en taille M */
+	width: 				[%nTailleCocheM%]px; /* Largeur de la coche ajustée pour taille M */
+	height: 			[%nTailleCocheM%]px; /* Hauteur de la coche ajustée pour taille M */
+	}
+	}
+
+	/*Media Query pour Taille S*/
+	@media all and (max-width:[%nLargeurS%]px) {
+	
+	.optin-option {
+	padding-top: 		[%Arrondi(Min(stIciThemeProprieteDefaut.MargeVerticaleEntreChamp,10) * nLargeurS / nLargeurL)%]px !important;
+	padding-bottom: 	[%Arrondi(Min(stIciThemeProprieteDefaut.MargeVerticaleEntreChamp,10) * nLargeurS / nLargeurL)%]px !important;
+	}
+	
+	.optin-option label {
+	padding-left: 		[% nDécalage + stIciThemeProprieteInterrupteur.MargeGauche + nTailleCocheS + stIciThemeProprieteInterrupteur.MargeDroite%]px; /* Espace ajusté pour la coche en taille S */
+	line-height: 		[%nTailleCocheS%]px; /* Hauteur de ligne ajustée pour la coche en taille S */
+	font-size: 			[%stIciThemeProprieteTexte.TaaStyle[stProprieteBouton.OptinPropositionPoliceCode].PoliceTailleS%]px; /* Taille de police ajustée pour les écrans S */
+	}
+	
+	.optin-option [type="checkbox"] + label:before {
+	left: 				[% nDécalage + stIciThemeProprieteInterrupteur.MargeGauche%]px; /* Position horizontale ajustée pour la coche en taille S */
+	width: 				[%nTailleCocheS%]px; /* Largeur de la coche ajustée pour taille S */
+	height:				[%nTailleCocheS%]px; /* Hauteur de la coche ajustée pour taille S */
+	}
+	}
+	
+
+]
+
+
+renvoyer sCss

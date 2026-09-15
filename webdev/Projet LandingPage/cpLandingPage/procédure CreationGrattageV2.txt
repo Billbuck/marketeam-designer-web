@@ -1,0 +1,144 @@
+procédure CreationGrattageV2(pPropriete est une chaîne, pValeur est une chaîne, pLargeurL)
+
+// Variables locales
+sCodeHTML			est une chaîne
+sCodeJS				est une chaîne
+sStyleCss			est une chaîne
+sRepertoire			est une chaîne
+sUrlImageDessus		est une chaîne
+sUrlImageDessous	est une chaîne
+sFormat				est une chaîne
+nHauteurImg			est un entier
+nLargeurImg			est un entier
+sLargeurCalc		est une chaîne
+sHauteurCalc		est une chaîne
+
+stProprieteGrattage	est une structIciBlocProprieteGrattage
+stValeurGrattage	est une structIciBlocValeurGrattage
+
+// Désérialisation des propriétés et valeurs
+Désérialise(stProprieteGrattage, pPropriete, psdJSON)
+Désérialise(stValeurGrattage, pValeur, psdJSON)
+
+// Vérification de l'existence des images
+si stValeurGrattage.IdImage > 0 alors
+	si ici_image.LitRecherchePremier(IdImage, stValeurGrattage.IdImage) alors
+		// Récupération des propriétés de l'image
+		sFormat		= Majuscule(ici_image.TypeFichier)
+		nLargeurImg	= ici_image.Largeur
+		nHauteurImg	= ici_image.Hauteur
+
+		// Construction du répertoire en fonction du contexte
+		selon Vrai
+			cas ici_image.IdMarque > 0
+				sRepertoire = CheminMarque(ici_image.IdMarque, __OPERATION_CLIQUEZICI__, __REP_GRATTAGE__, Faux)
+			cas ici_image.IdClient > 0
+				sRepertoire = CheminClient(ici_image.IdClient, __OPERATION_CLIQUEZICI__, __REP_GRATTAGE__, Faux)
+			autre cas
+				sRepertoire = CheminMarketeam(__OPERATION_CLIQUEZICI__, __REP_GRATTAGE__, Faux)
+		fin
+
+		// Construction des URLs des images
+		sUrlImageDessus		= sRepertoire + __DOC_ICI_GRATTAGE__ + ici_image.IdImage + "-dessus." + ici_image.TypeFichier
+		sUrlImageDessous	= sRepertoire + __DOC_ICI_GRATTAGE__ + ici_image.IdImage + "-dessous." + ici_image.TypeFichier
+	fin
+fin
+
+// Calcul des dimensions en fonction des images
+(sLargeurCalc, sHauteurCalc) = CalculLargeurHauteur(pLargeurL)
+
+// Styles CSS pour ScratchCard.js
+sStyleCss = [
+	.bloc-container.grattage {
+	padding: 15px 30px !important;
+	text-align: center;
+	}
+	.scratch-container {
+	width: "[%sLargeurCalc%]";
+	height: "[%sHauteurCalc%]";
+	margin: 0 auto;
+	position: relative;
+	}
+	.scratch-container canvas {
+	width: 100%;
+	height: 100%;
+	}
+	.scratch-container img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	}
+]
+
+// Code HTML du module
+sCodeHTML = [
+	<div class="bloc-container grattage">
+	<div id="scratch-container" class="scratch-container">
+	<canvas id="scratch-canvas"></canvas>
+	<img src="[%sUrlImageDessous%]" alt="Image de fond">
+	</div>
+	</div>
+	<style>
+	[%sStyleCss%]
+	</style>
+]
+
+// Code JavaScript pour ScratchCard.js
+sCodeJS = [
+document.addEventListener("DOMContentLoaded", CreationGrattageV2() {
+    if (typeof ScratchCard === "undefined") {
+        console.error("La librairie ScratchCard n'est pas disponible.");
+        return;
+    }
+    
+    const scratchCard = new ScratchCard("#scratch-container", {
+        // Remplacer cette ligne
+        // scratchType: ScratchCard.SCRATCH_TYPE.CIRCLE || "circle", 
+        // par :
+        scratchType: "circle",  // ou "CIRCLE"
+        
+        containerWidth: parseInt("[%sLargeurCalc%]", 10),
+        containerHeight: parseInt("[%sHauteurCalc%]", 10),
+        imageForwardSrc: "[%sUrlImageDessus%]",   // Image du dessus
+        imageBackgroundSrc: "[%sUrlImageDessous%]", // Image révélée
+        clearZoneRadius: 30,
+        percentToFinish: 50,
+        callback: () => {
+            console.log("Grattage terminé !");
+            alert("Félicitations, vous avez terminé !");
+        }
+    });
+    
+    scratchCard.init().catch(error => {
+        console.error("Erreur lors de l'initialisation de ScratchCard :", error);
+    });
+});
+
+]
+
+// Ajout du code JavaScript au tableau
+TableauAjoute(_tabCodeJS, sCodeJS)
+
+// Retour du code HTML
+renvoyer sCodeHTML
+
+	// PROCÉDURE INTERNE CalculLargeurHauteur
+	procédure interne CalculLargeurHauteur(pLargeurPage)
+
+		nHauteurCalc	est un entier
+		nHauteurMax		est un entier	= 100
+
+		si nLargeurImg = 0 alors nLargeurImg = 1
+		si nHauteurImg = 0 alors nHauteurImg = 1
+
+		si sFormat = "SVG" alors
+			sHauteurCalc	= (pLargeurPage * nHauteurMax / 100) + "px"
+			sLargeurCalc	= "auto"
+		sinon
+			nHauteurCalc	= Min(nHauteurImg, pLargeurPage * nHauteurMax / 100, pLargeurPage * nHauteurImg / nLargeurImg)
+			sHauteurCalc	= nHauteurCalc + "px"
+			sLargeurCalc	= Min(nLargeurImg, (nLargeurImg / nHauteurImg) * nHauteurCalc) + "px"
+		fin
+
+		renvoyer (sLargeurCalc, sHauteurCalc)
+	fin

@@ -1,0 +1,359 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] CréationBouton (<stNouveauCliquezIci> est structNouveauCliquezIci, <pPropriete> est chaîne, <pValeur> est chaîne, <nIdCliquezIci> est entier, <pIdBaseligne> est entier, <pTabIdVariablePost> est tableau (chaîne), <pTabLibVariablePost> est tableau (chaîne))
+//
+// Paramètres :
+//	stNouveauCliquezIci (structNouveauCliquezIci) : <indiquez ici le rôle de stNouveauCliquezIci>
+//	pPropriete (chaîne ANSI) : <indiquez ici le rôle de pPropriete>
+//	pValeur (chaîne ANSI) : <indiquez ici le rôle de pValeur>
+//	nIdCliquezIci (entier) : <indiquez ici le rôle de nIdCliquezIci>
+//	pIdBaseligne (entier) : <indiquez ici le rôle de pIdBaseligne>
+//	pTabIdVariablePost (tableau (chaîne ANSI)) : <indiquez ici le rôle de pTabIdVariablePost>
+//	pTabLibVariablePost (tableau (chaîne ANSI)) : <indiquez ici le rôle de pTabLibVariablePost>
+// Valeur de retour :
+// 	chaîne ANSI : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+//	pLargeurL : <indiquez ici le rôle de pLargeurL>
+//	pLargeurM : <indiquez ici le rôle de pLargeurM>
+//	pLargeurS : <indiquez ici le rôle de pLargeurS>
+procédure CréationBouton(stNouveauCliquezIci est une structNouveauCliquezIci, pPropriete est une chaîne, pValeur est une chaîne, nIdCliquezIci est un entier,  pIdBaseligne est un entier, pTabIdVariablePost est un tableau de chaînes, pTabLibVariablePost est un tableau de chaînes)
+
+
+nPLargeurL 					est un entier = stNouveauCliquezIci.stTheme.LargeurL
+nLargeurM 					est un entier = stNouveauCliquezIci.stTheme.LargeurM
+nLargeurS 					est un entier = stNouveauCliquezIci.stTheme.LargeurS
+sCodeHTML					est une chaîne
+stProprieteBouton			est une structIciBlocProprieteBouton
+stValeurBouton				est une structIciBlocValeurBouton
+stIciThemeProprieteDefaut	est une structIciThemeProprieteDefaut
+stIciThemeProprieteTexte	est une structIciThemeProprieteTexte
+
+stThemeProprieteBouton		est une structIciThemeProprieteBouton
+sOptinPrincipale			est une chaîne
+sOptinOption				est une chaîne
+sBtnDepliage				est une chaîne
+nIdOption					est un entier
+sPageEnregistrement			est une chaîne
+sPostData					est une chaîne
+
+stIciReponse				est une structIciReponse
+
+stChamp						est une structChampFormulaire
+
+Désérialise(stProprieteBouton,pPropriete,psdJSON)
+Désérialise(stValeurBouton,pValeur,psdJSON)
+Désérialise(stIciThemeProprieteDefaut,stNouveauCliquezIci.stTheme.ProprieteDefaut,psdJSON)
+Désérialise(stThemeProprieteBouton,stNouveauCliquezIci.stTheme.ProprieteBouton,psdJSON)
+Désérialise(stIciThemeProprieteTexte, stNouveauCliquezIci.stTheme.ProprieteTexte,psdJSON)
+
+
+
+sPageEnregistrement = stValeurBouton.PageEnregistrement
+si sPageEnregistrement = "" alors sPageEnregistrement = "pgeEnregistrement.awp"
+si pas Contient(Minuscule(sPageEnregistrement),".awp") alors sPageEnregistrement += ".awp"
+
+// Avec optin ?
+si stValeurBouton.TextePrincipal <> "" _et_ stValeurBouton.TypeOptin > 1 alors
+
+	// optin avec options
+	si stValeurBouton.TypeOptin = 3 alors
+
+		// Génération des options
+		pour tout sOption de stValeurBouton.tabOption
+			nIdOption++
+			sOptinOption += [
+				<div class="bloc-container interrupteur optin optin-option" style="[%(stProprieteBouton.PopupGroupeDepliable) ? "display: none" sinon ""%]; background-color: [%stProprieteBouton.OptinFondCouleur%] !important">
+				<input name="optin-option" id="optin_[%nIdOption%]" type="checkbox">
+				<label for="optin_[%nIdOption%]"><span>[%sOption%]</span></label>
+				</div>
+			]
+		fin
+
+		// Gestion du groupe pliable
+		<compile si TypeConfiguration=Site>
+			si stProprieteBouton.PopupGroupeDepliable alors
+				sBtnDepliage = [
+					<a href="#" style="float:right; width:30px; height: 30px; display: block; border: none; background: url(/[%RépertoireWeb()%]/ext/information.svg) no-repeat center center;" onclick="AfficheOption(); return false;"></a>
+				]
+			fin
+		<fin>
+
+		// Règle de comportement au clic des optin
+		sOptinOption += RC + [
+			<script>
+			// Permet de sélectionner/déselectionner toutes les options en fonction de l'optin principal
+			$("#optin_0").change(function() {
+			$('input[name="optin-option"]').prop('checked', $(this).is(':checked'));
+			});
+			
+			$('input[name="optin-option"]').change(function() {
+			if ($(this).is(':checked') == true) {
+			// Coche l'optin principal si on coche une des options
+			$("#optin_0").prop('checked', true);
+			} else {
+			// Décoche l'optin principal si aucune des options n'est cochée
+			$("#optin_0").prop('checked', false);
+			$('input[name="optin-option"]').each(function () {
+			if (this.checked) {
+			$("#optin_0").prop('checked', true);
+			}
+			});
+			}
+			});
+			</script>
+		]
+	fin
+	// optin principal
+
+	sCss est une chaîne
+
+	sCss += RC + CréationCssOptinPrincipale(stNouveauCliquezIci, stProprieteBouton)
+	sCss += RC + CréationCssOptinOption(stNouveauCliquezIci, stProprieteBouton)
+
+	sCodeHTML = [
+ 	<style>
+		[%sCss%]
+	</style> 	
+	]
+
+
+	sOptinPrincipale = Remplace(stValeurBouton.TextePrincipal, "a href","a target=""_blank"" href")
+	sCodeHTML += [
+		<div class="bloc-container interrupteur optin optin-principale" style="background-color: [%stProprieteBouton.OptinFondCouleur%] !important">
+		<input name="optin" id="optin_0" type="checkbox">
+		<label for="optin_0">
+		[%sBtnDepliage%]
+		<span>[%sOptinPrincipale%]</span>
+		</label>
+		</div>
+		[%sOptinOption%]
+	]
+
+	// Ajout de la variable OPTIN dans les tableaux de paramètre
+	pTabLibVariablePost.Ajoute("OPTIN")
+	pTabIdVariablePost.Ajoute("RenvoiOptin()")
+fin
+
+
+stIciReponse.IdCliquezIci			= nIdCliquezIci
+stIciReponse.IdBaseLigne			= pIdBaseligne
+stIciReponse.TypeEnregistrement		= __FORMULAIRE__
+
+
+
+pour nIdVar=1 _à_ pTabIdVariablePost..Occurrence
+	VariableRAZ(stChamp)
+	stChamp.TypeChamp		= TypeChamp(pTabIdVariablePost[nIdVar])
+	stChamp.LibelleChamp	= pTabLibVariablePost[nIdVar] //remplace(pTabLibVariablePost[nIdVar],"'","")
+	stChamp.ValeurChamp		= pTabIdVariablePost[nIdVar] + TypeValeur(pTabIdVariablePost[nIdVar])
+	stIciReponse.tabChamp.Ajoute(stChamp)
+fin
+
+sTemp est une chaîne
+Sérialise(stIciReponse,sTemp,psdJSON+psdMiseEnForme)
+
+sLigne est une chaîne
+
+pour toute chaîne sLigne de sTemp séparée par RC
+	si Contient(sLigne,"ValeurChamp"":") alors
+		sLigne	= Remplace(sLigne,""":""",""":")
+		sLigne	= sLigne[[à (Taille(sLigne)-1)]]
+	fin
+	sPostData += [RC] + sLigne
+fin
+
+
+
+
+
+<compile si TypeConfiguration=Site>
+
+	sCodeHTML += [
+		<style>
+
+			/* Taille texte Toast */
+			.jq-toast-single {
+				font-family:	'[%stProprieteBouton.PopupPoliceFamille%]';
+	    		font-size: 		[%stIciThemeProprieteTexte.TaaStyle[stProprieteBouton.PopupMessagePoliceCode].PoliceTailleL%]px; !important;
+	    		line-height: 	120%;
+	    	}
+
+			/* Taille titre Toast */
+			.jq-toast-single h2 {
+		   		 font-size: [%stIciThemeProprieteTexte.TaaStyle[stProprieteBouton.PopupTitrePoliceCode].PoliceTailleL%]px; !important;
+	   		}
+	   		 
+	   		 @media only screen and (max-width : [%nLargeurM%]px) {
+			/* Taille texte Toast */
+			.jq-toast-single {
+	    		font-size: 		[%stIciThemeProprieteTexte.TaaStyle[stProprieteBouton.PopupMessagePoliceCode].PoliceTailleM%]px; !important;
+	    	}
+
+			/* Taille titre Toast */
+			.jq-toast-single h2 {
+		   		 font-size: [%stIciThemeProprieteTexte.TaaStyle[stProprieteBouton.PopupTitrePoliceCode].PoliceTailleM%]px; !important;
+	   		 }
+
+	   		 @media only screen and (max-width : [%nLargeurS%]px) {
+			/* Taille texte Toast */
+			.jq-toast-single {
+	    		font-size: 		[%stIciThemeProprieteTexte.TaaStyle[stProprieteBouton.PopupMessagePoliceCode].PoliceTailleS%]px; !important;
+	    	}
+
+			/* Taille titre Toast */
+			.jq-toast-single h2 {
+		   		 font-size: [%stIciThemeProprieteTexte.TaaStyle[stProprieteBouton.PopupTitrePoliceCode].PoliceTailleS%]px; !important;
+	   		 }
+
+		}
+		</style>
+		]
+
+		sCodeHTML += RC + [
+			
+		<div class="bloc-container bouton" style="text-align:center; background-color: [%stThemeProprieteBouton.BlocFondCouleur%] !important">
+		
+		<button id="btnValider">[%stValeurBouton.Libelle%]</button>
+		</div>
+		
+		<script>
+		$(document).ready(function() {
+		// Quand l'interrupteur principal change d'état
+		$("#optin_0").change(function() {
+		// Coche ou décoche tous les interrupteurs secondaires en fonction de l'état de l'interrupteur principal
+		$('input[name="optin-option"]').prop('checked', $(this).is(':checked'));
+		});
+		
+		// Quand un interrupteur secondaire change d'état
+		$('input[name="optin-option"]').change(function() {
+		// Si au moins un interrupteur secondaire est coché, coche l'interrupteur principal
+		if ($('input[name="optin-option"]:checked').length > 0) {
+		$("#optin_0").prop('checked', true);
+		} else {
+		// Si aucun interrupteur secondaire n'est coché, décoche l'interrupteur principal
+		$("#optin_0").prop('checked', false);
+		}
+		});
+		});
+		</script>
+		
+		<script>
+		
+		var etatInitial = {};
+		$(".cochechoix input, .combo select").each(function() {
+		if (this.type === "checkbox") {
+		etatInitial[this.id] = this.checked; // Pour les interrupteurs, utilise 'checked'
+		} else {
+		etatInitial[this.id] = $(this).val(); // Pour les combos, utilise 'value'
+		}
+		});
+		
+		function comparerEtatActuelAvecInitial() {
+		var estDifferent = false;
+		$(".cochechoix input, .combo select").each(function() {
+		if (this.type === "checkbox") {
+		if (etatInitial[this.id] !== this.checked) { // Compare 'checked' pour les interrupteurs
+		estDifferent = true;
+		}
+		} else {
+		if (etatInitial[this.id] !== $(this).val()) { // Compare 'value' pour les combos
+		estDifferent = true;
+		}
+		}
+		});
+		return estDifferent;
+		}
+		
+		// Surveille les changements sur les cases à cocher et les combos
+		$(".cochechoix input, .combo select").change(function() {
+		if (comparerEtatActuelAvecInitial()) {
+		// Si différent, réactive le bouton
+		$("#btnValider").prop('disabled', false); // Réactive le bouton
+		}
+		});
+		
+		$("#btnValider").click(function(e){
+		e.preventDefault();
+		var Message = ControleSaisie([%index._bPasControleCaseACocher%]);		
+		if ( Message != "") { JoliToast(Message,[%__TOAST_ERREUR__%],'[%stProprieteBouton.PopupCouleurTexteErreur%]','[%stProprieteBouton.PopupCouleurFondErreur%]'); e.preventDefault(); return false; }
+		
+		if ( Message == "") {
+		
+		$(this).prop('disabled', true); // Désactive le bouton
+		
+		$.ajax({
+		url : '/[%RépertoireWeb%]/FR/[%sPageEnregistrement%]',
+		type : 'POST',
+		data : JSON.stringify([%sPostData%]),
+		contentType : 'application/json',
+		
+		success : function(code_html, statut){
+		console.log(code_html);
+		JoliToast(code_html,[%__TOAST_SUCCES__%],'[%stProprieteBouton.PopupCouleurTexteConfirmation%]','[%stProprieteBouton.PopupCouleurFondConfirmation%]',5);
+		
+		$(".cochechoix input, .combo select").each(function() {
+		if (this.type === "checkbox") {
+		etatInitial[this.id] = this.checked; // Met à jour 'checked' pour les interrupteurs
+		} else {
+		etatInitial[this.id] = $(this).val(); // Met à jour 'value' pour les combos
+		}
+		});
+		
+		},
+		
+		error : function(resultat, statut, erreur){
+		console.log("Erreur AJAX : ", status, error);
+		console.log("Détails de l'erreur : ", resultat.responseText);
+		JoliToast(resultat,[%__TOAST_ERREUR__%],'[%stProprieteBouton.PopupCouleurTexteErreur%]','[%stProprieteBouton.PopupCouleurFondErreur%]');
+		$("#btnValider").prop('disabled', false); // Réactive le bouton
+		}
+		});
+		
+		} else {
+		JoliToast(Message,[%__TOAST_ERREUR__%],'[%stProprieteBouton.PopupCouleurTexteErreur%]','[%stProprieteBouton.PopupCouleurFondErreur%]');
+		$("#btnValider").prop('disabled', false); // Réactive le bouton en cas d'erreur
+		}
+		});
+		</script>
+	]
+
+<fin>
+
+
+renvoyer sCodeHTML
+
+	procédure interne TypeValeur(pIdVar)
+
+		selon Vrai
+			cas Contient(pIdVar,"interrupteur") = Vrai
+				renvoyer ".checked"
+				//			renvoyer ".checked.toString()  : ""false"""
+
+			cas Contient(pIdVar,"Optin") = Vrai _ou_ EstNumérique(pIdVar)
+				renvoyer ""
+
+			autre cas
+				//			renvoyer [
+				//			.value.replace(/"/g, '\\"')
+				//			]
+				renvoyer ".value"
+		fin
+
+	fin
+
+	procédure interne TypeChamp(pIdVar)
+
+		selon Vrai
+			cas Contient(pIdVar,"interrupteur") = Vrai						: renvoyer __FORMULAIRE_INTERRUPTEUR__
+			cas Contient(pIdVar,"Optin") = Vrai _ou_ EstNumérique(pIdVar)	: renvoyer __FORMULAIRE_OPTIN__
+			cas Contient(pIdVar,"BlocCombo") = Vrai							: renvoyer __FORMULAIRE_COMBO__
+			cas Contient(pIdVar,"input") = Vrai								: renvoyer __FORMULAIRE_SAISIE__
+			autre cas														: STOP ; renvoyer "inconnu"
+		fin
+
+	fin
+
+

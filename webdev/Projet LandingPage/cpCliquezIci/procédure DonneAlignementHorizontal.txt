@@ -1,0 +1,23 @@
+procédure DonneAlignementHorizontal(pCodeAlignement ,pType="html")
+
+sAlignement est une chaîne
+
+si pType = "html" alors
+	selon pCodeAlignement
+		cas __ALIGNEMENT_INDEFINI__	: sAlignement = "inherit"
+		cas __ALIGNEMENT_GAUCHE__	: sAlignement = "left"
+		cas __ALIGNEMENT_DROITE__	: sAlignement = "right"
+		cas __ALIGNEMENT_CENTRE__	: sAlignement = "center"
+		cas __ALIGNEMENT_JUSTIFIE__	: sAlignement = "justify"
+		autres cas 					: sAlignement = "inherit"
+	fin
+sinon
+	selon pCodeAlignement
+		cas __ALIGNEMENT_GAUCHE__	: sAlignement = "flex-start"
+		cas __ALIGNEMENT_DROITE__	: sAlignement = "flex-enf"
+		cas __ALIGNEMENT_CENTRE__	: sAlignement = "center"
+		autres cas 					: sAlignement = "flex-start"
+	fin
+fin
+
+renvoyer sAlignement

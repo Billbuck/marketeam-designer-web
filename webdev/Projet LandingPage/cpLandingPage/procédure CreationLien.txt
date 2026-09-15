@@ -1,0 +1,56 @@
+procédure CreationLien(pPropriete est une chaîne, pValeur est une chaîne, pThemeLienPropriete est une chaîne)
+
+sCodeHTML				est une chaîne
+stProprieteLien			est une structIciBlocProprieteLien
+stValeurLien			est une structIciBlocValeurLien
+stIciThemeProprieteLien	est une structIciThemeProprieteLien
+stIciThemeStyleLien		est une structIciThemeStyleLien
+sCouleurFond			est une chaîne
+
+
+si pThemeLienPropriete <> "" alors
+	Désérialise(stIciThemeProprieteLien,pThemeLienPropriete,psdJSON)
+fin
+
+
+si pValeur <> "" alors Désérialise(stValeurLien,pValeur,psdJSON)
+
+si pPropriete<>"" 	alors
+	Désérialise(stProprieteLien,pPropriete,psdJSON)
+fin
+
+si stProprieteLien.Style > 0 _et_ stProprieteLien.Style <= stIciThemeProprieteLien.tabStyle.Occurrence alors
+	stIciThemeStyleLien = stIciThemeProprieteLien.tabStyle[stProprieteLien.Style]
+fin
+
+si stValeurLien.Libellé= "" alors renvoyer ""
+
+
+si stProprieteLien.AlignHorizontal <> "" alors
+	sCouleurFond = [
+		style="background-color:[%stProprieteLien.BlocFondCouleur%]; text-align:[%DonneAlignementHorizontal(stProprieteLien.AlignHorizontal,"html")%]; margin: [%stProprieteLien.MargeExterneVertical%]px [%stProprieteLien.MargeExterneHorizontal%]px;"
+	]
+sinon
+	sCouleurFond = [
+		style="background-color:[%stProprieteLien.BlocFondCouleur%]; text-align:[%DonneAlignementHorizontal(stIciThemeStyleLien.AlignHorizontal,"html")%]; margin: [%stProprieteLien.MargeExterneVertical%]px [%stProprieteLien.MargeExterneHorizontal%]px;"
+	]
+fin
+
+
+
+si stValeurLien.TypeLien <> 4 alors
+	sCodeHTML = [
+		<div class="bloc-container link lien[%stProprieteLien.Style%]" [%sCouleurFond%]>
+		<a href="[%stValeurLien.Lien%]" target="_new" style="font-family:'[%stIciThemeStyleLien.PoliceFamille%]'">[%stValeurLien.Libellé%]</a>
+		</div>
+	]
+sinon
+	// Pour le type 4, le lien déclenche une popup
+	sCodeHTML = [
+		<div class="bloc-container link lien[%stProprieteLien.Style%]" [%sCouleurFond%]>
+		<a href="#" onclick="$.toast({text: '[%stValeurLien.Lien%]', position: 'mid-center', loaderBg: '#9EC600', hideAfter: 3500, stack: 6}); return false;" style="font-family:'[%stIciThemeStyleLien.PoliceFamille%]'">[%stValeurLien.Libellé%]</a>
+		</div>
+	]
+fin
+
+renvoyer sCodeHTML

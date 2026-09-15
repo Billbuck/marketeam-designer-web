@@ -1,0 +1,5 @@
+function AfficheOption()
+{
+	$(".optin-option").toggleClass("optionVisible");
+	event.stopPropagation();
+}
