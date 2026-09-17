@@ -1,0 +1,10 @@
+// ** Déclarations globales de popupApercuSMS (Serveur)
+
+procédure MaPage(_bEstApercuSms, _bEstApercuWeb, _stOperationSms est une structOperationSms = Null, _stCliquezIci est une structNouveauCliquezIci = Null,_pIdOperation = 0)
+
+__sSmartLien est une chaîne
+
+
+// ** Fin d'initialisation de popupApercuSMS (Serveur)
+
+AperçuSms()

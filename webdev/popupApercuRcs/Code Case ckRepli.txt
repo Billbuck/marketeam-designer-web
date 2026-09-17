@@ -1,0 +1,9 @@
+// Case à cocher ckRepli « Afficher le repli SMS » — Clic (Serveur)
+// Cochée : l'écran affiche le SMS de repli (mode sms).
+// Décochée : retour au dernier mode Android / iPhone choisi.
+
+si ckRepli alors
+	ChargeEcran("sms")
+sinon
+	ChargeEcran(__sModeEcran)
+fin

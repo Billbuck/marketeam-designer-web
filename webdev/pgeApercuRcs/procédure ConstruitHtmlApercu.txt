@@ -1,0 +1,362 @@
+// Résumé : Construit le HTML complet de l'écran d'aperçu RCS
+// Syntaxe :
+//[ <Résultat> = ] ConstruitHtmlApercu (<pJson>, <pMode>)
+//
+// Paramètres :
+//	pJson : JSON d'aperçu (Partage.ConstruitJsonApercuRcs), 100 % ASCII
+//	pMode : android | iphone | sms
+// Valeur de retour :
+// 	chaîne : document HTML complet (CSS + JavaScript inline)
+//
+// Le HTML/CSS/JS est repris de la maquette validée
+// docs/maquettes/maquette-apercu-rcs.html, avec ces adaptations :
+//	- cadre du téléphone et barre de contrôle retirés (fournis par la popup),
+//	  l'écran occupe 100 % de l'iFrame ;
+//	- données depuis le JSON injecté (%%DONNEES%%) et mode depuis %%MODE%% ;
+//	- type CARTE géré (carte unique pleine largeur, sans pile ni carrousel) ;
+//	- vraies images des cartes (placeholder gris si aucune) ;
+//	- codes :xxx: convertis en emoji à l'affichage (table donnees.emojis) ;
+//	- balises [Libellé] affichées telles quelles (pas de personnalisation) ;
+//	- actions réelles : LIEN et sous-types à URL → volet + ouverture réelle ;
+//	  LANDING → volet + landing de test ; REACTION (h50), APPLICATION, EMAIL,
+//	  SMS (h75) → la vraie page Bouton.awp dans une iframe du volet ;
+//	  APPEL, AGENDA, ITINERAIRE, CARTE, WHATSAPP → bulle d'information ;
+//	- mode sms : From + message dans la bulle verte, lien Cliquez ici
+//	  rendu cliquable comme dans popupApercuSms.
+//
+// Les caractères hors Windows-1252 (icônes) sont écrits en entités HTML
+// (&#x2197;) ou en échappements JavaScript (\u2197) : le source reste ANSI.
+// La conversion UTF-8 de l'ensemble est faite par l'appelant (ChaîneVersUTF8).
+procédure ConstruitHtmlApercu(pJson, pMode)
+
+sHtml est une chaîne
+
+// ------------------------------------------------------------------
+// Document + CSS
+// ------------------------------------------------------------------
+sHtml = [
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Apercu RCS</title>
+<style>
+  :root { --txt:#1f2328; --muted:#6b7280; --line:#e5e7eb; --agent:#4a5568; }
+  html, body { margin:0; height:100%; }
+  body { font-family:-apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background:#fff; color:var(--txt); }
+  .ecran { position:absolute; inset:0; display:flex; flex-direction:column; background:#fff; overflow:hidden; }
+  .statut { height:34px; flex:none; display:flex; align-items:center; justify-content:space-between; padding:0 18px; font-size:13px; font-weight:600; }
+  .entete { display:flex; align-items:center; gap:10px; padding:6px 14px 10px; border-bottom:1px solid var(--line); flex:none; }
+  .logo { width:34px; height:34px; border-radius:50%; background:var(--agent); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:15px; flex:none; overflow:hidden; }
+  .logo img { width:100%; height:100%; object-fit:cover; display:block; }
+  .nomagent { font-size:15px; font-weight:600; display:flex; align-items:center; gap:6px; }
+  .verif { width:14px; height:14px; border-radius:50%; background:#1a73e8; color:#fff; font-size:10px; display:inline-flex; align-items:center; justify-content:center; }
+  .conv { flex:1; overflow-y:auto; padding:14px 12px 20px; }
+  .heure { text-align:center; font-size:11px; color:var(--muted); margin:0 0 10px; }
+  .carte { background:#fff; border:1px solid var(--line); border-radius:16px; overflow:hidden; width:100%; }
+  .media { background:#c9d3df; display:flex; align-items:center; justify-content:center; color:#4a5568; font-size:13px; overflow:hidden; flex:none; }
+  .media img { width:100%; height:100%; object-fit:cover; display:block; }
+  .media.h-short { height:112px; } .media.h-medium { height:168px; } .media.h-tall { height:264px; }
+  .corps { padding:12px 14px 6px; }
+  .titre { font-size:15px; font-weight:600; margin:0 0 4px; }
+  .texte { font-size:13.5px; color:#374151; line-height:1.4; margin:0 0 6px; white-space:pre-line; }
+  .btns { border-top:1px solid var(--line); }
+  .btn { display:flex; align-items:center; gap:8px; padding:11px 14px; font-size:14px; color:#1a73e8; border-top:1px solid var(--line); cursor:pointer; user-select:none; }
+  .btn:first-child { border-top:0; }
+  .btn:active { background:#f3f4f6; }
+  .btn .ic { width:18px; text-align:center; font-size:15px; }
+  .chips { display:flex; gap:8px; overflow-x:auto; padding:10px 2px 4px; scrollbar-width:none; }
+  .chips::-webkit-scrollbar { display:none; }
+  .chip { flex:none; border:1px solid #cbd0d6; border-radius:20px; padding:8px 14px; font-size:13.5px; color:#1a73e8; background:#fff; cursor:pointer; white-space:nowrap; }
+  .chip:active { background:#eef2f7; }
+  /* Android : carrousel horizontal */
+  .carrousel-android { display:flex; gap:10px; overflow-x:auto; scroll-snap-type:x mandatory; padding:2px 0 6px; scrollbar-width:none; cursor:grab; }
+  .carrousel-android::-webkit-scrollbar { display:none; }
+  .carrousel-android:active { cursor:grabbing; }
+  .carrousel-android .carte { flex:none; width:250px; scroll-snap-align:start; user-select:none; }
+  /* iPhone : pile de cartes */
+  .pile { position:relative; height:456px; padding-top:48px; }
+  .pile .carte { position:absolute; left:0; right:0; top:48px; height:400px; display:flex; flex-direction:column; transition:transform .35s ease, opacity .35s ease; background:#fff; pointer-events:none; }
+  .pile .carte.devant { pointer-events:auto; cursor:grab; user-select:none; }
+  .pile .carte.devant:active { cursor:grabbing; }
+  .pile .carte.devant .ios-options { cursor:pointer; }
+  .pile .carte .corps { flex:1; overflow:hidden; }
+  .ios-options { display:flex; align-items:center; justify-content:center; gap:6px; padding:11px; font-size:15px; color:#0a84ff; border-top:1px solid var(--line); cursor:pointer; user-select:none; }
+  .pile-nav { display:flex; justify-content:center; gap:6px; margin-top:8px; }
+  .pile-nav span { width:7px; height:7px; border-radius:50%; background:#cbd0d6; }
+  .pile-nav span.on { background:#0a84ff; }
+  .aide { text-align:center; font-size:11px; color:var(--muted); margin-top:6px; }
+  /* Volets et bulles */
+  .voile { position:absolute; inset:0; background:rgba(0,0,0,.35); display:none; align-items:flex-end; z-index:5; }
+  .voile.on { display:flex; }
+  .volet { width:100%; background:#fff; border-radius:20px 20px 0 0; overflow:hidden; display:flex; flex-direction:column; animation:monte .25s ease; }
+  @keyframes monte { from { transform:translateY(40px); opacity:.6; } to { transform:none; opacity:1; } }
+  .volet.h50 { height:50%; } .volet.h75 { height:75%; } .volet.h100 { height:100%; border-radius:0; }
+  .volet iframe { border:0; flex:1; width:100%; }
+  .poignee { width:40px; height:5px; border-radius:3px; background:#cbd0d6; margin:8px auto 4px; flex:none; }
+  .adresse { display:flex; align-items:center; gap:8px; padding:8px 12px; background:#f3f4f6; font-size:12px; color:#374151; flex:none; }
+  .adresse span { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .fermer { border:0; background:transparent; font-size:18px; cursor:pointer; color:#374151; }
+  .listeopt { padding:6px 0 14px; }
+  .listeopt .btn { color:#0a84ff; font-size:16px; padding:13px 20px; }
+  .toast { position:absolute; left:20px; right:20px; bottom:70px; background:#1f2328; color:#fff; padding:12px 14px; border-radius:12px; font-size:13px; line-height:1.4; display:none; z-index:6; }
+  .toast.on { display:block; }
+  .webpage { flex:1; padding:16px; font-size:13px; color:#374151; }
+  /* Mode sms : repli */
+  .sms-bulle { background:#34c759; color:#fff; border-radius:18px 18px 18px 4px; padding:10px 14px; font-size:13.5px; line-height:1.45; max-width:85%; white-space:pre-line; word-break:break-word; }
+  .sms-bulle a, .sms-lien { color:#fff; text-decoration:underline; cursor:pointer; }
+  .sms-logo { background:#8e8e93; }
+</style>
+</head>
+<body>
+<div class="ecran">
+  <div class="statut"><span id="heure"></span><span>5G &#x25AE;&#x25AE;&#x25AE;</span></div>
+  <div class="entete" id="entete"></div>
+  <div class="conv" id="conv"></div>
+  <div class="voile" id="voile" onclick="if(event.target===this) fermeVolet()"><div class="volet" id="volet"></div></div>
+  <div class="toast" id="toast"></div>
+</div>
+]
+
+// ------------------------------------------------------------------
+// Moteur JavaScript (adapté de la maquette validée)
+// ------------------------------------------------------------------
+sHtml += [
+<script>
+const donnees = %%DONNEES%%;
+const mode = "%%MODE%%";
+const icones = { LIEN:"\u2197", LANDING:"\u2197", REACTION:"\u2713", APPEL:"\u260E",
+  AGENDA:"\u25A6", ITINERAIRE:"\u27A4", CARTE:"\u27A4", APPLICATION:"\u25A3",
+  EMAIL:"\u2709", SMS:"\u2709", WHATSAPP:"\u2197" };
+let pileIndex = 0;
+
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+// Codes :xxx: convertis en emoji (table fournie par le serveur)
+function emo(s) {
+  s = String(s == null ? "" : s);
+  if (!donnees.emojis) return s;
+  return s.replace(/:([0-9a-z_+-]+):/gi, (m, code) => donnees.emojis[code] !== undefined ? donnees.emojis[code] : m);
+}
+
+function texteHtml(s) { return emo(esc(s)); }
+
+function icone(b) { return icones[b.sousType] || "\u2197"; }
+
+function urlBouton(b) { return String(donnees.urls.bouton || "").replace("[IdRcsBouton]", b.id); }
+
+function heureCourante() {
+  const d = new Date();
+  return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+}
+
+function renduEntete() {
+  const e = document.getElementById("entete");
+  const a = donnees.agent || {};
+  document.documentElement.style.setProperty("--agent", a.couleur || "#4a5568");
+  let logo;
+  if (a.logo) logo = `<div class="logo"><img src="${esc(a.logo)}" alt=""></div>`;
+  else logo = `<div class="logo">${esc(String(a.nom || "?").charAt(0).toUpperCase())}</div>`;
+  e.innerHTML = logo + `<div class="nomagent">${texteHtml(a.nom)} <span class="verif">&#x2713;</span></div>`;
+}
+
+function carteHtml(c, i) {
+  let h = `<div class="carte" data-i="${i}">`;
+  const ht = "h-" + String(c.mediaHauteur || "MEDIUM").toLowerCase();
+  if (c.mediaUrl) h += `<div class="media ${ht}"><img src="${esc(c.mediaUrl)}" alt=""></div>`;
+  else h += `<div class="media ${ht}">Image</div>`;
+  h += `<div class="corps">`;
+  if (c.titre) h += `<p class="titre">${texteHtml(c.titre)}</p>`;
+  if (c.texte) h += `<p class="texte">${texteHtml(c.texte)}</p>`;
+  h += `</div>`;
+  const btns = c.boutons || [];
+  if (mode === "android") {
+    if (btns.length) h += `<div class="btns">` + btns.map((b, j) => `<div class="btn" onclick="action(${i},${j})"><span class="ic">${icone(b)}</span>${texteHtml(b.libelle)}</div>`).join("") + `</div>`;
+  } else if (btns.length === 1) {
+    h += `<div class="ios-options" onclick="action(${i},0)">${texteHtml(btns[0].libelle)}</div>`;
+  } else if (btns.length > 1) {
+    h += `<div class="ios-options" onclick="ouvreOptions(${i})">Options <span style="font-size:12px">&#x25BE;</span></div>`;
+  }
+  return h + `</div>`;
+}
+
+function rendu() {
+  renduEntete();
+  document.getElementById("heure").textContent = heureCourante();
+  const conv = document.getElementById("conv");
+  const cartes = donnees.cartes || [];
+  const estCarrousel = donnees.type === "CARROUSEL" && cartes.length > 1;
+  let h = `<p class="heure">Aujourd'hui ${heureCourante()}</p>`;
+  if (!estCarrousel) {
+    if (cartes.length) h += carteHtml(cartes[0], 0);
+  } else if (mode === "android") {
+    h += `<div class="carrousel-android">` + cartes.map(carteHtml).join("") + `</div>`;
+  } else {
+    h += `<div class="pile" id="pile">` + cartes.map(carteHtml).join("") + `</div>`;
+    h += `<div class="pile-nav" id="pileNav">` + cartes.map((c, i) => `<span class="${i === pileIndex ? "on" : ""}"></span>`).join("") + `</div>`;
+    h += `<p class="aide">Glissez la carte pour voir la suivante</p>`;
+  }
+  const communs = donnees.boutonsCommuns || [];
+  if (communs.length) h += `<div class="chips">` + communs.map((b, j) => `<span class="chip" onclick="action(-1,${j})">${texteHtml(b.libelle)}</span>`).join("") + `</div>`;
+  conv.innerHTML = h;
+  if (estCarrousel) { if (mode === "iphone") { placePile(); initSwipe(); } else { initGlisseAndroid(); } }
+}
+
+function initGlisseAndroid() {
+  const bande = document.querySelector(".carrousel-android");
+  if (!bande) return;
+  let x0 = null, scroll0 = 0, bouge = false;
+  bande.addEventListener("pointerdown", e => { x0 = e.clientX; scroll0 = bande.scrollLeft; bouge = false; bande.style.scrollSnapType = "none"; });
+  bande.addEventListener("pointermove", e => {
+    if (x0 === null) return;
+    const dx = e.clientX - x0;
+    if (Math.abs(dx) > 6) bouge = true;
+    bande.scrollLeft = scroll0 - dx;
+  });
+  const fin = () => {
+    if (x0 === null) return;
+    x0 = null;
+    const largeur = 260;
+    const cible = Math.round(bande.scrollLeft / largeur) * largeur;
+    bande.scrollTo({ left: cible, behavior: "smooth" });
+    setTimeout(() => { bande.style.scrollSnapType = "x mandatory"; }, 350);
+  };
+  bande.addEventListener("pointerup", fin);
+  bande.addEventListener("pointerleave", fin);
+  bande.addEventListener("click", e => { if (bouge) { e.stopPropagation(); e.preventDefault(); } }, true);
+}
+
+function placePile() {
+  const cartes = document.querySelectorAll("#pile .carte");
+  const n = cartes.length;
+  cartes.forEach(c => {
+    const i = +c.dataset.i;
+    const rang = (i - pileIndex + n) % n;
+    c.style.zIndex = n - rang;
+    c.style.transform = `translateY(${-rang * 16}px) scale(${1 - rang * 0.05})`;
+    c.style.opacity = rang > 3 ? 0 : 1;
+    c.classList.toggle("devant", rang === 0);
+  });
+  document.querySelectorAll("#pileNav span").forEach((s, i) => s.classList.toggle("on", i === pileIndex));
+}
+
+function initSwipe() {
+  const pile = document.getElementById("pile");
+  let x0 = null;
+  pile.addEventListener("pointerdown", e => { x0 = e.clientX; });
+  pile.addEventListener("pointerup", e => {
+    if (x0 === null) return;
+    const dx = e.clientX - x0; x0 = null;
+    if (Math.abs(dx) < 40) return;
+    const top = pile.querySelector(`.carte[data-i="${pileIndex}"]`);
+    top.style.transform = `translateX(${dx < 0 ? -420 : 420}px) rotate(${dx < 0 ? -8 : 8}deg)`;
+    setTimeout(() => { pileIndex = (pileIndex + 1) % donnees.cartes.length; placePile(); }, 300);
+  });
+}
+
+function ouvreOptions(i) {
+  const c = donnees.cartes[i];
+  const html = `<div class="poignee"></div><div class="listeopt">` +
+    c.boutons.map((b, j) => `<div class="btn" onclick="action(${i},${j})"><span class="ic">${icone(b)}</span>${texteHtml(b.libelle)}</div>`).join("") +
+    `<div class="btn" style="color:#6b7280" onclick="fermeVolet()">Annuler</div></div>`;
+  ouvreVolet(html, "h50");
+}
+
+function ouvreVolet(html, taille) {
+  const v = document.getElementById("volet");
+  v.className = "volet " + taille;
+  v.innerHTML = html;
+  document.getElementById("voile").classList.add("on");
+}
+function fermeVolet() { document.getElementById("voile").classList.remove("on"); }
+
+function toast(txt) {
+  const t = document.getElementById("toast");
+  t.textContent = txt; t.classList.add("on");
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), 3200);
+}
+
+function voletLien(u, note, libelle) {
+  return `<div class="poignee"></div><div class="adresse"><span>${esc(u)}</span><button class="fermer" onclick="fermeVolet()" aria-label="Fermer">&#x2715;</button></div>
+    <div class="webpage"><p>${note}</p><p><a href="${esc(u)}" target="_blank" rel="noopener">${libelle} &#x2197;</a></p></div>`;
+}
+
+function voletIframe(u) {
+  return `<div class="poignee"></div><div class="adresse"><span>${esc(u)}</span><button class="fermer" onclick="fermeVolet()" aria-label="Fermer">&#x2715;</button></div>
+    <iframe src="${esc(u)}"></iframe>`;
+}
+
+function action(i, j) {
+  const b = i < 0 ? donnees.boutonsCommuns[j] : donnees.cartes[i].boutons[j];
+  fermeVolet();
+  const surTel = mode === "iphone" ? "l'iPhone" : "l'Android";
+  switch (b.sousType) {
+    case "LIEN":
+      ouvreVolet(voletLien(b.url || "", "Le navigateur du téléphone ouvre cette adresse.", "Ouvrir réellement dans un nouvel onglet"), "h100");
+      break;
+    case "LANDING":
+      ouvreVolet(voletLien(donnees.urls.landing || "", "Landing page de test du destinataire (code @test).", "Ouvrir la landing page"), "h100");
+      break;
+    case "REACTION":
+      ouvreVolet(voletIframe(urlBouton(b)), "h50");
+      break;
+    case "APPLICATION":
+    case "EMAIL":
+    case "SMS":
+      ouvreVolet(voletIframe(urlBouton(b)), "h75");
+      break;
+    case "APPEL":
+      toast(`Sur ${surTel} : le composeur s'ouvre avec le ${b.telephone || ""}.`);
+      break;
+    case "AGENDA": {
+      const a = b.agenda || {};
+      toast(`Sur ${surTel} : l'agenda s'ouvre avec l'événement « ${emo(a.titre || "")} — ${a.date || ""} de ${a.debut || ""} à ${a.fin || ""} ».`);
+      break; }
+    case "ITINERAIRE":
+      toast(`Sur ${surTel} : Plans / Google Maps s'ouvre avec l'itinéraire vers ${emo(b.adresse || "")}.`);
+      break;
+    case "CARTE":
+      toast(`Sur ${surTel} : la carte s'ouvre sur ${emo(b.lieu || ((b.latitude || "") + ", " + (b.longitude || "")))}.`);
+      break;
+    case "WHATSAPP":
+      toast(`Sur ${surTel} : WhatsApp s'ouvre sur la conversation${b.url ? " (" + b.url + ")" : ""}.`);
+      break;
+    default:
+      // Sous-type non cité : comportement LIEN si une URL est présente
+      if (b.url) ouvreVolet(voletLien(b.url, "Le navigateur du téléphone ouvre cette adresse.", "Ouvrir réellement dans un nouvel onglet"), "h100");
+      else toast(`Ce bouton (${b.sousType || "?"}) s'exécute sur le téléphone.`);
+  }
+}
+
+// Mode sms : From + message dans la bulle verte, comme popupApercuSms
+function renduSms() {
+  const r = donnees.repli || {};
+  const e = document.getElementById("entete");
+  e.innerHTML = `<div class="logo sms-logo">${esc(String(r.from || "?").charAt(0).toUpperCase())}</div><div class="nomagent">${esc(r.from)}</div>`;
+  document.getElementById("heure").textContent = heureCourante();
+  let brut = String(r.message || "");
+  const gab = (donnees.urls && donnees.urls.cliquezIci) || "";
+  let lien = "";
+  if (gab && brut.indexOf(gab) >= 0) {
+    const affiche = esc(gab.replace("[Code]", "Test"));
+    if (donnees.urls.landing) lien = `<a href="${esc(donnees.urls.landing)}" target="_blank" rel="noopener">${affiche}</a>`;
+    else lien = `<span class="sms-lien">${affiche}</span>`;
+    brut = brut.split(gab).join("\u0001");
+  }
+  let msg = esc(brut);
+  if (lien) msg = msg.split("\u0001").join(lien);
+  msg = emo(msg);
+  document.getElementById("conv").innerHTML = `<p class="heure">Aujourd'hui ${heureCourante()}</p><div class="sms-bulle">${msg}</div>`;
+}
+
+if (mode === "sms") renduSms(); else rendu();
+</script>
+</body>
+</html>
+]
+
+sHtml = Remplace(sHtml, "%%DONNEES%%", pJson)
+sHtml = Remplace(sHtml, "%%MODE%%", pMode)
+
+renvoyer sHtml

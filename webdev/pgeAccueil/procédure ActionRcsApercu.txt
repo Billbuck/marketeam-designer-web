@@ -1,0 +1,13 @@
+// Résumé : Ouvre l'aperçu RCS d'une opération (popup calquée sur ActionSmsApercu)
+// Syntaxe :
+//ActionRcsApercu (<pIdOperation>)
+//
+// Paramètres :
+//	pIdOperation : identifiant de l'opération RCS (= IdRcs)
+procédure ActionRcsApercu(pIdOperation)
+
+stOperationRcs est une structOperationRcs
+
+stOperationRcs = ChargeStructOperationRcs(pIdOperation)
+
+PopupAffichePage(popupApercuRcs,(stOperationRcs,pIdOperation),popupAnnulable+popupEpinglée+popupCentre)

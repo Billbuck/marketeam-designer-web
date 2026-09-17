@@ -1,0 +1,6 @@
+// Bouton btnAndroid — Clic (Serveur)
+// Bascule l'aperçu en mode Android ; décoche le repli SMS si nécessaire.
+
+__sModeEcran = "android"
+ckRepli = Faux
+ChargeEcran(__sModeEcran)

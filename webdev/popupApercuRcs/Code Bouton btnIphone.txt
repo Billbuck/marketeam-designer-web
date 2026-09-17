@@ -1,0 +1,6 @@
+// Bouton btnIphone — Clic (Serveur)
+// Bascule l'aperçu en mode iPhone ; décoche le repli SMS si nécessaire.
+
+__sModeEcran = "iphone"
+ckRepli = Faux
+ChargeEcran(__sModeEcran)

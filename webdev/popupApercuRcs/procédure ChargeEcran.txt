@@ -1,0 +1,38 @@
+// Résumé : Recharge l'iFrame de l'aperçu RCS dans le mode demandé
+// Syntaxe :
+//ChargeEcran (<pMode>)
+//
+// Paramètres :
+//	pMode : android | iphone | sms
+//
+// Pose le mode dans la globale de projet gsApercuRcsMode puis recharge
+// ifrEcran sur pgeApercuRcs. Le paramètre r= (horodatage) sert uniquement
+// de cache-buster : sans lui, le navigateur pourrait ne pas recharger
+// l'iFrame puisque l'URL de la page dynamique ne change pas.
+procédure ChargeEcran(pMode)
+
+sUrlEcran est une chaîne
+
+gsApercuRcsMode = pMode
+
+sUrlEcran = PageAdresse(pgeApercuRcs)
+si Position(sUrlEcran, "?", 1) > 0 alors
+	sUrlEcran += "&r=" + DateHeureSys()
+sinon
+	sUrlEcran += "?r=" + DateHeureSys()
+fin
+
+ifrEcran..URL = sUrlEcran
+
+// État du sélecteur : le bouton du mode affiché est grisé
+si pMode = "android" alors
+	btnAndroid..Etat	= Grisé
+	btnIphone..Etat	= Actif
+sinon si pMode = "iphone" alors
+	btnAndroid..Etat	= Actif
+	btnIphone..Etat	= Grisé
+sinon
+	// Mode sms : les deux boutons restent utilisables
+	btnAndroid..Etat	= Actif
+	btnIphone..Etat	= Actif
+fin

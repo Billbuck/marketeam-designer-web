@@ -1,0 +1,325 @@
+// Résumé : Construit le JSON d'aperçu d'une opération RCS (page pgeApercuRcs)
+// Syntaxe :
+//[ <Résultat> = ] ConstruitJsonApercuRcs (<stOperationRcs>, <pIdOperation>)
+//
+// Paramètres :
+//	stOperationRcs : structure de l'opération (ChargeStructOperationRcs)
+//	pIdOperation : identifiant de l'opération (= IdRcs)
+// Valeur de retour :
+// 	chaîne : JSON 100 % ASCII (caractères hors ASCII en séquence \uXXXX)
+//
+// Contenu : agent {nom, couleur, logo}, type, largeur, cartes[], boutonsCommuns[],
+// repli {from, message} (si EstRepliSms), urls {bouton, landing, cliquezIci},
+// emojis {code: caractère} depuis prm_emoji.
+// Les codes :xxx: restent TELS QUELS dans les textes : c'est le JavaScript de
+// l'aperçu qui les convertit à l'affichage grâce à la table emojis.
+// Aucune personnalisation : les balises [Libellé] sont affichées telles quelles.
+procédure ConstruitJsonApercuRcs(stOperationRcs est une structOperationRcs, pIdOperation)
+
+sJson					est une chaîne
+sAgentNom			est une chaîne
+sAgentCouleur		est une chaîne
+sAgentLogo			est une chaîne
+sUrlBoutonGabarit	est une chaîne
+sUrlCliquezIci		est une chaîne
+sUrlLanding			est une chaîne
+sUrlIci				est une chaîne
+sEmojis				est une chaîne
+sLargeur				est une chaîne
+sTexteRequete		est une chaîne
+bLandingExiste		est un booléen
+nInd					est un entier
+nIdTmpStructure	est un entier
+stCliquezIci		est une structNouveauCliquezIci
+sdReqAgent			est une Source de Données
+sdReqEmoji			est une Source de Données
+
+
+	// Procédure interne : toujours AVANT sa première utilisation
+	procédure interne Hex4Json(pValeurHex)
+		sDigitsHex	est une chaîne = "0123456789abcdef"
+		nValHex		est un entier = pValeurHex
+		sResHex		est une chaîne
+		nResteHex	est un entier
+		nBoucleHex	est un entier
+
+		si nValHex < 0 alors nValHex = 0
+		pour nBoucleHex = 1 _à_ 4
+			nResteHex	= modulo(nValHex, 16)
+			sResHex		= sDigitsHex[[nResteHex + 1]] + sResHex
+			nValHex		= PartieEntière(nValHex / 16)
+		fin
+		renvoyer sResHex
+	fin
+
+
+	// Échappement JSON 100 % ASCII (même logique que cpRcs.EncodeAsciiJson,
+	// SANS la conversion des codes :xxx: — ils restent pour le JavaScript)
+	procédure interne EncodeJson(pTexteEnc)
+		sSortieEnc	est une chaîne
+		suTexteEnc	est une chaîne UNICODE = pTexteEnc
+		sCarEnc		est une chaîne UNICODE
+		nIndEnc		est un entier
+		nCodeEnc		est un entier
+		nSurrogEnc	est un entier
+
+		pour nIndEnc = 1 _à_ Taille(suTexteEnc)
+			sCarEnc	= suTexteEnc[[nIndEnc]]
+			nCodeEnc	= Asc(sCarEnc)
+
+			si nCodeEnc = 34 alors
+				sSortieEnc += "\"""
+			sinon si nCodeEnc = 92 alors
+				sSortieEnc += "\\"
+			sinon si nCodeEnc = 8 alors
+				sSortieEnc += "\b"
+			sinon si nCodeEnc = 9 alors
+				sSortieEnc += "\t"
+			sinon si nCodeEnc = 10 alors
+				sSortieEnc += "\n"
+			sinon si nCodeEnc = 12 alors
+				sSortieEnc += "\f"
+			sinon si nCodeEnc = 13 alors
+				sSortieEnc += "\r"
+			sinon si nCodeEnc >= 32 _et_ nCodeEnc <= 126 alors
+				sSortieEnc += sCarEnc
+			sinon si nCodeEnc > 65535 alors
+				nSurrogEnc	= nCodeEnc - 65536
+				sSortieEnc	+= "\u" + Hex4Json(55296 + PartieEntière(nSurrogEnc / 1024))
+				sSortieEnc	+= "\u" + Hex4Json(56320 + modulo(nSurrogEnc, 1024))
+			sinon
+				sSortieEnc += "\u" + Hex4Json(nCodeEnc)
+			fin
+		fin
+
+		renvoyer sSortieEnc
+	fin
+
+
+	// JSON d'un bouton (de carte ou commun)
+	procédure interne JsonBouton(stBoutonCdb est une structOperationRcsBouton)
+		sJbCdb		est une chaîne
+		stParamCdb	est une structRcsBoutonParametres
+		sUrlCdb		est une chaîne
+		sTelCdb		est une chaîne
+		sLieuCdb		est une chaîne
+		sLatCdb		est une chaîne
+		sLongCdb		est une chaîne
+		sMessageCdb	est une chaîne
+		sDateCdb		est une chaîne
+
+		si stBoutonCdb.Parametres <> "" alors
+			Désérialise(stParamCdb, stBoutonCdb.Parametres, psdJSON)
+		fin
+
+		// URL : celle du bouton d'abord, celle des paramètres ensuite,
+		// compte WhatsApp en dernier recours
+		sUrlCdb = stBoutonCdb.Url
+		si sUrlCdb = "" alors sUrlCdb = stParamCdb.Url
+		si sUrlCdb = "" _et_ stBoutonCdb.SousType = __RCS_ACTION_WHATSAPP__ _et_ stParamCdb.Compte <> "" alors
+			sUrlCdb = "https://wa.me/" + stParamCdb.Compte
+		fin
+
+		sTelCdb = stBoutonCdb.Telephone
+		si sTelCdb = "" alors sTelCdb = stParamCdb.Telephone
+
+		sLieuCdb = stParamCdb.Lieu
+		si sLieuCdb = "" alors sLieuCdb = stBoutonCdb.LibelleLieu
+
+		sLatCdb = stParamCdb.Latitude
+		si sLatCdb = "" _et_ stBoutonCdb.Latitude <> 0 alors
+			sLatCdb = Remplace("" + stBoutonCdb.Latitude, ",", ".")
+		fin
+		sLongCdb = stParamCdb.Longitude
+		si sLongCdb = "" _et_ stBoutonCdb.Longitude <> 0 alors
+			sLongCdb = Remplace("" + stBoutonCdb.Longitude, ",", ".")
+		fin
+
+		si stBoutonCdb.SousType = __RCS_ACTION_EMAIL__ alors
+			sMessageCdb = stParamCdb.EmailMessage
+		sinon
+			sMessageCdb = stParamCdb.Message
+		fin
+
+		// Seuls les champs renseignés sont écrits (le JS teste leur présence)
+		sJbCdb = "{""id"":" + stBoutonCdb.IdRcsBouton
+		sJbCdb += ",""libelle"":""" + EncodeJson(stBoutonCdb.Libelle) + """"
+		sJbCdb += ",""sousType"":""" + EncodeJson(stBoutonCdb.SousType) + """"
+		si sUrlCdb <> "" alors sJbCdb += ",""url"":""" + EncodeJson(sUrlCdb) + """"
+		si sTelCdb <> "" alors sJbCdb += ",""telephone"":""" + EncodeJson(sTelCdb) + """"
+		si stParamCdb.Email <> "" alors sJbCdb += ",""email"":""" + EncodeJson(stParamCdb.Email) + """"
+		si stParamCdb.EmailObjet <> "" alors sJbCdb += ",""objet"":""" + EncodeJson(stParamCdb.EmailObjet) + """"
+		si sMessageCdb <> "" alors sJbCdb += ",""message"":""" + EncodeJson(sMessageCdb) + """"
+
+		si stBoutonCdb.SousType = __RCS_ACTION_AGENDA__ alors
+			sDateCdb = ""
+			si stParamCdb.AgendaDate <> "" _et_ stParamCdb.AgendaDate <> "00000000" alors
+				sDateCdb = DateVersChaîne(stParamCdb.AgendaDate, "JJ/MM/AAAA")
+			fin
+			sJbCdb += ",""agenda"":{""titre"":""" + EncodeJson(stParamCdb.AgendaTitre) + """"
+			sJbCdb += ",""date"":""" + sDateCdb + """"
+			sJbCdb += ",""debut"":""" + HeureVersChaîne(stParamCdb.AgendaHeureDebut, "HH:MM") + """"
+			sJbCdb += ",""fin"":""" + HeureVersChaîne(stParamCdb.AgendaHeureFin, "HH:MM") + """"
+			sJbCdb += ",""description"":""" + EncodeJson(stParamCdb.AgendaDescription) + """}"
+		fin
+
+		si stParamCdb.Adresse <> "" alors sJbCdb += ",""adresse"":""" + EncodeJson(stParamCdb.Adresse) + """"
+		si sLieuCdb <> "" alors sJbCdb += ",""lieu"":""" + EncodeJson(sLieuCdb) + """"
+		si sLatCdb <> "" alors sJbCdb += ",""latitude"":""" + EncodeJson(sLatCdb) + """"
+		si sLongCdb <> "" alors sJbCdb += ",""longitude"":""" + EncodeJson(sLongCdb) + """"
+		si stParamCdb.UrlAppStore <> "" alors sJbCdb += ",""urlAppStore"":""" + EncodeJson(stParamCdb.UrlAppStore) + """"
+		si stParamCdb.UrlPlayStore <> "" alors sJbCdb += ",""urlPlayStore"":""" + EncodeJson(stParamCdb.UrlPlayStore) + """"
+
+		sJbCdb += "}"
+		renvoyer sJbCdb
+	fin
+
+
+	// JSON d'une carte
+	procédure interne JsonCarte(stCarteCdb est une structOperationRcsCarte)
+		sJcCdb		est une chaîne
+		nIndBtnCdb	est un entier
+
+		sJcCdb = "{""titre"":""" + EncodeJson(stCarteCdb.Titre) + """"
+		sJcCdb += ",""texte"":""" + EncodeJson(stCarteCdb.Description) + """"
+		si stCarteCdb.MediaUrl <> "" alors
+			// URL de la base telle quelle : le site de développement sert lui-même ses médias
+			sJcCdb += ",""mediaUrl"":""" + EncodeJson(stCarteCdb.MediaUrl) + """"
+			sJcCdb += ",""mediaType"":""" + EncodeJson(stCarteCdb.MediaContentType) + """"
+		fin
+		sJcCdb += ",""mediaHauteur"":""" + EncodeJson(stCarteCdb.MediaHauteur) + """"
+		sJcCdb += ",""boutons"":["
+		pour nIndBtnCdb = 1 _à_ stCarteCdb.tabBouton..Occurrence
+			si nIndBtnCdb > 1 alors sJcCdb += ","
+			sJcCdb += JsonBouton(stCarteCdb.tabBouton[nIndBtnCdb])
+		fin
+		sJcCdb += "]}"
+		renvoyer sJcCdb
+	fin
+
+
+// ------------------------------------------------------------------
+// 1) Agent : nom d'affichage, couleur, logo
+// ------------------------------------------------------------------
+sAgentNom		= ""
+sAgentCouleur	= ""
+sAgentLogo		= ""
+
+si stOperationRcs.IdRcsAgent > 0 alors
+	sTexteRequete = [
+		SELECT
+		IFNULL(rcs_agent.NomAffichage, '') NomAffichage,
+		IFNULL(rcs_agent.Couleur, '') Couleur,
+		IFNULL(rcs_agent.LogoUrl, '') LogoUrl
+		FROM
+		rcs_agent
+		WHERE
+		rcs_agent.IdRcsAgent = 
+	] + stOperationRcs.IdRcsAgent
+
+	si sdReqAgent.ExécuteRequêteSQL(rcs_agent..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+		pour tout sdReqAgent
+			sAgentNom		= sdReqAgent.NomAffichage
+			sAgentCouleur	= sdReqAgent.Couleur
+			sAgentLogo		= sdReqAgent.LogoUrl
+		fin
+	fin
+	sdReqAgent.AnnuleDéclaration()
+fin
+
+si sAgentNom = "" alors sAgentNom = "Agent RCS"
+si sAgentCouleur = "" alors sAgentCouleur = "#4a5568"
+
+// ------------------------------------------------------------------
+// 2) Emojis : codes :xxx: → séquence \uXXXX (prm_emoji.SequenceJson,
+//    déjà au format JSON : insérée telle quelle)
+// ------------------------------------------------------------------
+sTexteRequete = [
+	SELECT prm_emoji.Code, prm_emoji.SequenceJson
+	FROM prm_emoji
+	WHERE prm_emoji.EstActif = 1
+]
+
+si sdReqEmoji.ExécuteRequêteSQL(prm_emoji..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	pour tout sdReqEmoji
+		si sdReqEmoji.Code <> "" _et_ sdReqEmoji.SequenceJson <> "" alors
+			si sEmojis <> "" alors sEmojis += ","
+			sEmojis += """" + EncodeJson(sdReqEmoji.Code) + """:""" + sdReqEmoji.SequenceJson + """"
+		fin
+	fin
+fin
+sdReqEmoji.AnnuleDéclaration()
+
+// ------------------------------------------------------------------
+// 3) URLs : gabarit de la page Bouton.awp ([Code] figé à @test,
+//    [IdRcsBouton] remplacé par le JavaScript), gabarit Cliquez ici
+//    (pour rendre cliquable le lien du repli SMS)
+// ------------------------------------------------------------------
+sUrlBoutonGabarit = cpFonction.ValeurParametre("Rcs_Bouton_Url", prm_parametre.ValChaine..Nom)
+si sUrlBoutonGabarit = "Erreur" alors sUrlBoutonGabarit = ""
+sUrlBoutonGabarit = Remplace(sUrlBoutonGabarit, "[Code]", "@test")
+
+sUrlCliquezIci = cpFonction.ValeurParametre("Url_CliquezIci", prm_parametre.ValChaine..Nom)
+si sUrlCliquezIci = "Erreur" alors sUrlCliquezIci = ""
+
+// ------------------------------------------------------------------
+// 4) Landing de test : uniquement si un bouton landing existe
+//    (même mécanique que AperçuSms : structure temporaire + Url_ICI)
+// ------------------------------------------------------------------
+pour tout stBoutonParcours de stOperationRcs.tabBoutonCommun
+	si stBoutonParcours.EstBoutonInteractif _ou_ stBoutonParcours.SousType = __RCS_ACTION_LANDING__ alors bLandingExiste = Vrai
+fin
+pour tout stCarteParcours de stOperationRcs.tabCarte
+	pour tout stBoutonCarteParcours de stCarteParcours.tabBouton
+		si stBoutonCarteParcours.EstBoutonInteractif _ou_ stBoutonCarteParcours.SousType = __RCS_ACTION_LANDING__ alors bLandingExiste = Vrai
+	fin
+fin
+
+si bLandingExiste alors
+	stCliquezIci = ChargeNouveauCliquezIci(Operation, pIdOperation)
+	si stCliquezIci.Type = __ICI_WEB__ alors
+		sUrlIci = cpFonction.ValeurParametre("Url_ICI", prm_parametre.ValChaine..Nom)
+		si sUrlIci = "Erreur" alors sUrlIci = ""
+		nIdTmpStructure	= GenereTmpStructure(stCliquezIci, pIdOperation)
+		sUrlLanding			= sUrlIci + "FR/index.awp?P1=0&P2=" + nIdTmpStructure
+	sinon
+		sUrlLanding = ["https://"] + stCliquezIci.UrlClient
+	fin
+fin
+
+// ------------------------------------------------------------------
+// 5) Assemblage du JSON
+// ------------------------------------------------------------------
+sLargeur = stOperationRcs.LargeurCarte
+si sLargeur = "" alors sLargeur = "MEDIUM"
+
+sJson = "{""agent"":{""nom"":""" + EncodeJson(sAgentNom) + """,""couleur"":""" + EncodeJson(sAgentCouleur) + """,""logo"":""" + EncodeJson(sAgentLogo) + """}"
+sJson += ",""type"":""" + EncodeJson(stOperationRcs.TypeContenu) + """"
+sJson += ",""largeur"":""" + EncodeJson(sLargeur) + """"
+
+sJson += ",""cartes"":["
+pour nInd = 1 _à_ stOperationRcs.tabCarte..Occurrence
+	si nInd > 1 alors sJson += ","
+	sJson += JsonCarte(stOperationRcs.tabCarte[nInd])
+fin
+sJson += "]"
+
+sJson += ",""boutonsCommuns"":["
+pour nInd = 1 _à_ stOperationRcs.tabBoutonCommun..Occurrence
+	si nInd > 1 alors sJson += ","
+	sJson += JsonBouton(stOperationRcs.tabBoutonCommun[nInd])
+fin
+sJson += "]"
+
+si stOperationRcs.EstRepliSms alors
+	sJson += ",""repli"":{""from"":""" + EncodeJson(stOperationRcs.RepliSmsFrom) + """,""message"":""" + EncodeJson(stOperationRcs.RepliSmsMessage) + """}"
+fin
+
+sJson += ",""urls"":{""bouton"":""" + EncodeJson(sUrlBoutonGabarit) + """"
+sJson += ",""landing"":""" + EncodeJson(sUrlLanding) + """"
+sJson += ",""cliquezIci"":""" + EncodeJson(sUrlCliquezIci) + """}"
+
+sJson += ",""emojis"":{" + sEmojis + "}"
+sJson += "}"
+
+renvoyer sJson
