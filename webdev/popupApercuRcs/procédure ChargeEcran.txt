@@ -1,28 +1,32 @@
-// Résumé : Recharge l'iFrame de l'aperçu RCS dans le mode demandé
+// Résumé : Reconstruit l'écran d'aperçu RCS dans le mode demandé
 // Syntaxe :
 //ChargeEcran (<pMode>)
 //
 // Paramètres :
 //	pMode : android | iphone | sms
 //
-// Pose le mode dans la globale de projet gsApercuRcsMode puis recharge
-// ifrEcran sur pgeApercuRcs. Le paramètre r= (horodatage) sert uniquement
-// de cache-buster : sans lui, le navigateur pourrait ne pas recharger
-// l'iFrame puisque l'URL de la page dynamique ne change pas.
+// Construit le document HTML complet de l'écran (ConstruitHtmlApercu,
+// procédure locale) puis le pose dans ztrEcran..LibelléHTML sous forme
+// d'un iframe alimenté par l'attribut srcdoc : le JavaScript du document
+// s'exécute dans l'iframe, sans page ni adresse.
+//
+// Échappement pour l'attribut HTML : & EN PREMIER (sinon il doublerait
+// les échappements suivants), puis " < >. Le navigateur dé-échappe une
+// fois en lisant l'attribut : le document interne retrouve exactement
+// le HTML d'origine, entités comprises.
 procédure ChargeEcran(pMode)
 
-sUrlEcran est une chaîne
+sHtmlEcran		est une chaîne
+sHtmlEchappe	est une chaîne
 
-gsApercuRcsMode = pMode
+sHtmlEcran = ConstruitHtmlApercu(__sJsonApercu, pMode)
 
-sUrlEcran = PageAdresse(pgeApercuRcs)
-si Position(sUrlEcran, "?", 1) > 0 alors
-	sUrlEcran += "&r=" + DateHeureSys()
-sinon
-	sUrlEcran += "?r=" + DateHeureSys()
-fin
+sHtmlEchappe = Remplace(sHtmlEcran, "&", "&amp;")
+sHtmlEchappe = Remplace(sHtmlEchappe, """", "&quot;")
+sHtmlEchappe = Remplace(sHtmlEchappe, "<", "&lt;")
+sHtmlEchappe = Remplace(sHtmlEchappe, ">", "&gt;")
 
-ifrEcran..URL = sUrlEcran
+ztrEcran..LibelléHTML = "<iframe style=""width:100%;height:100%;border:0;display:block"" srcdoc=""" + sHtmlEchappe + """></iframe>"
 
 // État du sélecteur : le bouton du mode affiché est grisé
 si pMode = "android" alors

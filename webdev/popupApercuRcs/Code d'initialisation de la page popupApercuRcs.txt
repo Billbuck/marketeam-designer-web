@@ -3,22 +3,24 @@
 // Popup d'aperçu RCS, calquée sur popupApercuSms : même image de fond
 // (smartphone), un sélecteur Android / iPhone (deux boutons), une case
 // « Afficher le repli SMS » (visible seulement si EstRepliSms) et un
-// iFrame ifrEcran couvrant la zone d'écran du téléphone, qui charge la
-// page dynamique pgeApercuRcs.
+// champ HTML ztrEcran couvrant la zone d'écran du téléphone.
 //
-// Le JSON d'aperçu est construit UNE seule fois ici et posé dans la
-// globale de projet gsApercuRcsJson ; le mode courant est posé dans
-// gsApercuRcsMode avant chaque rechargement de l'iFrame (ChargeEcran).
+// Aucune page ni adresse : ChargeEcran pose dans ztrEcran..LibelléHTML
+// un iframe alimenté par l'attribut srcdoc (le JavaScript s'y exécute
+// normalement). Le JSON d'aperçu est calculé UNE seule fois ici et gardé
+// dans la globale de page __sJsonApercu ; le HTML de l'écran est
+// reconstruit à chaque changement de mode (procédure locale
+// ConstruitHtmlApercu).
 
 procédure MaPage(_stOperationRcs est une structOperationRcs = Null, _pIdOperation = 0)
 
-__sModeEcran est une chaîne = "android"		// dernier mode Android / iPhone choisi
+__sModeEcran	est une chaîne = "android"	// dernier mode Android / iPhone choisi
+__sJsonApercu	est une chaîne						// JSON d'aperçu, calculé une seule fois
 
 
 // ** Fin d'initialisation de popupApercuRcs (Serveur)
 
-// Le JSON est construit une seule fois pour toute la durée de la popup
-gsApercuRcsJson = ConstruitJsonApercuRcs(_stOperationRcs, _pIdOperation)
+__sJsonApercu = ConstruitJsonApercuRcs(_stOperationRcs, _pIdOperation)
 
 // La case « Afficher le repli SMS » n'est visible que si le repli existe
 ckRepli..Visible	= _stOperationRcs.EstRepliSms

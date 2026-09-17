@@ -6,7 +6,11 @@
 //	pJson : JSON d'aperçu (Partage.ConstruitJsonApercuRcs), 100 % ASCII
 //	pMode : android | iphone | sms
 // Valeur de retour :
-// 	chaîne : document HTML complet (CSS + JavaScript inline)
+// 	chaîne : document HTML complet (CSS + JavaScript inline), destiné à
+// 	l'attribut srcdoc de l'iframe posé par ChargeEcran (l'échappement
+// 	pour l'attribut est fait par l'appelant)
+//
+// Procédure locale de popupApercuRcs.
 //
 // Le HTML/CSS/JS est repris de la maquette validée
 // docs/maquettes/maquette-apercu-rcs.html, avec ces adaptations :
@@ -26,7 +30,9 @@
 //
 // Les caractères hors Windows-1252 (icônes) sont écrits en entités HTML
 // (&#x2197;) ou en échappements JavaScript (\u2197) : le source reste ANSI.
-// La conversion UTF-8 de l'ensemble est faite par l'appelant (ChaîneVersUTF8).
+// L'encodage de sortie est géré par WebDev au rendu du LibelléHTML ;
+// la <meta charset> interne est ignorée par un iframe srcdoc (il hérite
+// de l'encodage de la page) et conservée car inoffensive.
 procédure ConstruitHtmlApercu(pJson, pMode)
 
 sHtml est une chaîne

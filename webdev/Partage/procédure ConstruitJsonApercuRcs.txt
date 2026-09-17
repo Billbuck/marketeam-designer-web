@@ -1,4 +1,4 @@
-// Résumé : Construit le JSON d'aperçu d'une opération RCS (page pgeApercuRcs)
+// Résumé : Construit le JSON d'aperçu d'une opération RCS (popupApercuRcs)
 // Syntaxe :
 //[ <Résultat> = ] ConstruitJsonApercuRcs (<stOperationRcs>, <pIdOperation>)
 //

@@ -1,0 +1,6 @@
+-- Suppression du paramètre Rcs_Apercu_Cle (clé du jeton d'accès de
+-- l'ancienne page AWP pgeApercuRcs, abandonnée : l'aperçu RCS est
+-- désormais rendu par un iframe srcdoc dans popupApercuRcs, sans URL).
+-- À exécuter uniquement si l'INSERT avait été passé.
+
+DELETE FROM prm_parametre WHERE ClefRecherche = 'Rcs_Apercu_Cle';
