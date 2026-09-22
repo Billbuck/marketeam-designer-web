@@ -1,0 +1,1 @@
+AfficheSelecteurEmoji(saiBoutonLibelle..Alias, libBoutonLibelleCpt..Alias, __RCS_MAX_LIBELLE_BOUTON__)

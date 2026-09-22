@@ -1,0 +1,3 @@
+InitCboBoutonAction(cboBoutonRubrique.ValeurMémorisée)
+MajZonesBouton()
+SuggereLibelleBouton()

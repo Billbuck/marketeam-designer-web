@@ -43,8 +43,10 @@ selon sAction
 		AppliqueOuverture(pstBouton)
 
 	cas __RCS_ACTION_LANDING__
-		// L'adresse est construite à l'envoi, personnalisée par destinataire
+		// L'adresse est construite à l'envoi, personnalisée par destinataire.
+		// Le mode d'ouverture est choisi comme pour un lien (navigateur ou volet).
 		pstBouton.EstBoutonInteractif = Vrai
+		AppliqueOuverture(pstBouton)
 
 	cas __RCS_ACTION_CARTE__
 		pstBouton.TypeBouton		= __RCS_BOUTON_SHOW_LOCATION__

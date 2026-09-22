@@ -1,0 +1,4 @@
+procédure FermePopupBoutonNav()
+
+PopupFerme(popRcsBouton)
+pgiRcsComposition.GriseCarte(popRcsCarte..Alias, Faux) 

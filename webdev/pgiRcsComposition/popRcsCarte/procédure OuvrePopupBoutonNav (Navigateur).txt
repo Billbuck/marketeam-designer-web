@@ -1,0 +1,6 @@
+procédure OuvrePopupBoutonNav()
+
+GriseCarte(popRcsCarte..Alias, Vrai)
+saiBoutonLibelle		= CodeVersEmoji(saiBoutonLibelle)
+libBoutonLibelleCpt	= Taille(saiBoutonLibelle) + " / " + __RCS_MAX_LIBELLE_BOUTON__
+PopupAffiche(popRcsBouton, popupHautCentre)

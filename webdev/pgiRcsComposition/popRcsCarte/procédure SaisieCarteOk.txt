@@ -1,0 +1,21 @@
+procédure SaisieCarteOk()
+
+si SansEspace(saiCarteTitre) = "" alors
+	AfficheMessage("Saisissez un titre.", "Carte")
+	renvoyer Faux
+fin
+
+si LongueurTexteEmoji(saiCarteTitre) > __RCS_MAX_TITRE__ alors
+	AfficheMessage("Le titre dépasse " + __RCS_MAX_TITRE__ + " caractères.", "Carte")
+	renvoyer Faux
+fin
+
+si LongueurTexteEmoji(saiCarteDescription) > __RCS_MAX_DESCRIPTION__ alors
+	AfficheMessage("La description dépasse " + __RCS_MAX_DESCRIPTION__ + " caractères.", "Carte")
+	renvoyer Faux
+fin
+
+si pas ChampsFusionOk(saiCarteTitre, "titre") alors renvoyer Faux
+si pas ChampsFusionOk(saiCarteDescription, "description") alors renvoyer Faux
+
+renvoyer Vrai

@@ -1,0 +1,1 @@
+AfficheSelecteurEmoji(saiCarteTitre..Alias, libCarteTitreCpt..Alias, __RCS_MAX_TITRE__)

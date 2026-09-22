@@ -1,0 +1,7 @@
+// Code Clic (Serveur) 
+
+OuvrePopupBouton(znrCarteBouton[znrCarteBouton].attIndice)
+
+// Code Retour de traitement Ajax (Navigateur)
+
+OuvrePopupBoutonNav()

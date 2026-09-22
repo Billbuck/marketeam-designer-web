@@ -1,0 +1,32 @@
+// Code Clic (Navigateur)
+
+saiCarteTitre			= EmojiVersCode(saiCarteTitre)
+saiCarteDescription	= EmojiVersCode(saiCarteDescription)
+
+// Code Clic (Serveur)
+
+_bPopupCarteAFermer = Faux
+
+si pas popRcsCarte.SaisieCarteOk() alors retour
+
+_stCarteEdite.Titre			= saiCarteTitre
+_stCarteEdite.Description	= saiCarteDescription
+
+si _nIndiceCarteEdite = 0 alors
+	_stOperationRcs.tabCarte.Ajoute(_stCarteEdite)
+	_nIndiceCarteEdite = _stOperationRcs.tabCarte.Occurrence
+sinon
+	_stOperationRcs.tabCarte[_nIndiceCarteEdite] = _stCarteEdite
+fin
+
+RenumeroteCartes()
+AfficheCartes(_nIndiceCarteEdite)
+
+_bPopupCarteAFermer = Vrai
+
+// Code Retour de traitement Ajax (Navigateur)
+
+si _bPopupCarteAFermer alors
+	PopupFerme(popRcsCarte)
+	RafraichitEmojisCartes()
+fin

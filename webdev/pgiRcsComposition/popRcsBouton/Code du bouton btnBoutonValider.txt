@@ -1,0 +1,56 @@
+// Code Clic (Navigateur)
+
+saiBoutonLibelle = EmojiVersCode(saiBoutonLibelle)
+
+// Code Clic (Serveur)
+
+stBouton		est une structOperationRcsBouton
+stParam		est une structRcsBoutonParametres
+nInd			est un entier
+
+_bPopupBoutonAFermer = Faux
+
+si pas popRcsBouton.SaisieBoutonOk() alors retour
+
+si _nIndiceBoutonEdite = 0 alors
+	stBouton.IdRcsBouton = 0
+sinon
+	stBouton = _stCarteEdite.tabBouton[_nIndiceBoutonEdite]
+fin
+
+stBouton.SousType	= cboBoutonAction.ValeurMémorisée
+stBouton.Libelle	= saiBoutonLibelle
+
+stParam				= LitFormulaireBouton()
+Sérialise(stParam, stBouton.Parametres, psdJSON)
+
+ConstruitBouton(stBouton, stParam)
+
+// Un seul bouton interactif par carte
+si stBouton.EstBoutonInteractif alors
+	pour nInd = 1 _à_ _stCarteEdite.tabBouton..Occurrence
+		_stCarteEdite.tabBouton[nInd].EstBoutonInteractif = Faux
+	fin
+fin
+
+si _nIndiceBoutonEdite = 0 alors
+	_stCarteEdite.tabBouton.Ajoute(stBouton)
+	_nIndiceBoutonEdite = _stCarteEdite.tabBouton.Occurrence
+sinon
+	_stCarteEdite.tabBouton[_nIndiceBoutonEdite] = stBouton
+fin
+
+AfficheBoutons(_nIndiceBoutonEdite)
+
+_bPopupBoutonAFermer = Vrai
+
+
+// Code Retour de traitement Ajax (Navigateur)
+
+si _bPopupBoutonAFermer alors
+	FermePopupBoutonNav()
+	RafraichitEmojisBoutons()
+sinon
+	saiBoutonLibelle		= CodeVersEmoji(saiBoutonLibelle)
+	libBoutonLibelleCpt	= Taille(saiBoutonLibelle) + " / " + __RCS_MAX_LIBELLE_BOUTON__
+fin

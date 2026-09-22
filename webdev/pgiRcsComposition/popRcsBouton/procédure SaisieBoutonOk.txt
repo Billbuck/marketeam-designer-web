@@ -1,0 +1,120 @@
+procédure SaisieBoutonOk()
+
+sAction est une chaîne = cboBoutonAction.ValeurMémorisée
+
+si SansEspace(saiBoutonLibelle) = "" alors
+	AfficheMessage("Saisissez le libellé du bouton.", "Bouton")
+	renvoyer Faux
+fin
+
+//si Taille(saiBoutonLibelle) > __RCS_MAX_LIBELLE_BOUTON__ alors
+si LongueurTexteEmoji(saiBoutonLibelle) > __RCS_MAX_LIBELLE_BOUTON__ alors
+	AfficheMessage("Le libellé dépasse " + __RCS_MAX_LIBELLE_BOUTON__ + " caractères.", "Bouton")
+	renvoyer Faux
+fin
+
+selon sAction
+	cas __RCS_ACTION_APPEL__, __RCS_ACTION_WHATSAPP__, __RCS_ACTION_SMS__
+		si pas TelephoneValide(saiBoutonTelephone) alors
+			AfficheMessage("Saisissez le numéro de téléphone.", "Bouton")
+			renvoyer Faux
+		fin
+
+	cas __RCS_ACTION_EMAIL__
+		si pas EmailValide(saiBoutonEmail) alors
+			AfficheMessage("Saisissez une adresse email valide.", "Bouton")
+			renvoyer Faux
+		fin
+
+	cas __RCS_ACTION_REACTION__
+		si SansEspace(saiBoutonConfirmation) = "" alors
+			AfficheMessage("Saisissez le message de confirmation.", "Bouton")
+			renvoyer Faux
+		fin
+
+	cas __RCS_ACTION_LIEN__, __RCS_ACTION_RDV__, __RCS_ACTION_AVIS__, __RCS_ACTION_DOCUMENT__, __RCS_ACTION_FACEBOOK__, __RCS_ACTION_YOUTUBE__, __RCS_ACTION_LINKEDIN__
+		si pas UrlValide(saiBoutonUrl) alors
+			AfficheMessage("L'adresse doit commencer par http:// ou https://, sans espace.", "Bouton")
+			renvoyer Faux
+		fin
+
+	cas __RCS_ACTION_CARTE__
+		si saiBoutonLatitude < -90 _ou_ saiBoutonLatitude > 90 _ou_ saiBoutonLongitude < -180 _ou_ saiBoutonLongitude > 180 alors
+			AfficheMessage("Coordonnées hors limites : latitude entre -90 et 90, longitude entre -180 et 180.", "Bouton")
+			renvoyer Faux
+		fin
+
+	cas __RCS_ACTION_ITINERAIRE__
+		si SansEspace(saiBoutonAdresse) = "" alors
+			AfficheMessage("Saisissez l'adresse de destination.", "Bouton")
+			renvoyer Faux
+		fin
+
+	cas __RCS_ACTION_AGENDA__
+		si SansEspace(saiBoutonAgendaTitre) = "" _ou_ pas DateValide(saiBoutonAgendaDate) alors
+			AfficheMessage("Saisissez le titre et la date de l'événement.", "Bouton")
+			renvoyer Faux
+		fin
+		si saiBoutonAgendaDate < DateSys() alors
+			AfficheMessage("La date de l'événement est déjà passée.", "Bouton")
+			renvoyer Faux
+		fin
+		si saiBoutonAgendaHeureFin <> "" _et_ saiBoutonAgendaHeureFin <= saiBoutonAgendaHeureDebut alors
+			AfficheMessage("L'heure de fin doit être après l'heure de début.", "Bouton")
+			renvoyer Faux
+		fin
+
+	cas __RCS_ACTION_APPLICATION__
+		si saiBoutonUrlAppStore <> "" _et_ pas Contient(saiBoutonUrlAppStore, "apps.apple.com") alors
+			AfficheMessage("Le lien App Store doit pointer sur apps.apple.com.", "Bouton")
+			renvoyer Faux
+		fin
+		si saiBoutonUrlPlayStore <> "" _et_ pas Contient(saiBoutonUrlPlayStore, "play.google.com") alors
+			AfficheMessage("Le lien Play Store doit pointer sur play.google.com.", "Bouton")
+			renvoyer Faux
+		fin
+		si saiBoutonUrlAppStore = "" _et_ saiBoutonUrlPlayStore = "" alors
+			AfficheMessage("Saisissez au moins un lien de store.", "Bouton")
+			renvoyer Faux
+		fin
+
+	cas __RCS_ACTION_INSTAGRAM__, __RCS_ACTION_TIKTOK__
+		si pas CompteValide(saiBoutonCompte) alors
+			AfficheMessage("Le nom de compte ne peut contenir que des lettres, chiffres, points et tirets bas.", "Bouton")
+			renvoyer Faux
+		fin
+fin
+
+renvoyer Vrai
+
+
+procédure interne UrlValide(pUrl)
+	sUrl est une chaîne = SansEspace(pUrl)
+
+	si Position(sUrl, " ") > 0 alors renvoyer Faux
+	si Gauche(Minuscule(sUrl), 7) <> "http://" _et_ Gauche(Minuscule(sUrl), 8) <> "https://" alors renvoyer Faux
+	si Taille(sUrl) <= 12 alors renvoyer Faux		// "https://www." seul, non complété
+
+	renvoyer Vrai
+fin
+
+procédure interne EmailValide(pEmail)
+	renvoyer VérifieExpressionRégulière(SansEspace(pEmail), "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
+fin
+
+procédure interne TelephoneValide(pNumero)
+
+	sNum est une chaîne = NumeroInternational(pNumero)
+
+	// Un + suivi de 8 à 15 chiffres, norme E.164
+	renvoyer VérifieExpressionRégulière(sNum, "\+[0-9]{8,15}")
+fin
+
+procédure interne CompteValide(pCompte)
+
+	sCompte est une chaîne = Remplace(SansEspace(pCompte), "@", "")
+
+	si sCompte = "" alors renvoyer Faux
+
+	renvoyer VérifieExpressionRégulière(sCompte, "[A-Za-z0-9._]{1,30}")
+fin

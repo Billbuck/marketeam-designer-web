@@ -1,0 +1,16 @@
+// Code Clic (Serveur)
+
+nIndice		est un entier	= znrCarteBouton[znrCarteBouton].attIndice
+stBouton	est une structOperationRcsBouton
+
+si nIndice <= 1 alors retour
+
+stBouton								= _stCarteEdite.tabBouton[nIndice]
+_stCarteEdite.tabBouton[nIndice]		= _stCarteEdite.tabBouton[nIndice - 1]
+_stCarteEdite.tabBouton[nIndice - 1]	= stBouton
+
+AfficheBoutons((nIndice - 1))
+
+// Code retour de traitement Ajax (Navigateur)
+
+RafraichitEmojisBoutons()

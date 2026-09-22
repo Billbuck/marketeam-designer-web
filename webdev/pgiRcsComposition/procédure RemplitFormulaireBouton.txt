@@ -1,4 +1,7 @@
-procédure RemplitFormulaireBouton(pstParam est une structRcsBoutonParametres)
+// pstBouton : bouton en cours d'édition. S'il est fourni, le sélecteur
+// de mode d'ouverture est replacé sur la valeur enregistrée.
+// popRcsBouton doit appeler RemplitFormulaireBouton(stParam, stBouton).
+procédure RemplitFormulaireBouton(pstParam est une structRcsBoutonParametres, local pstBouton est une structOperationRcsBouton = Null)
 
 saiBoutonTelephone			= pstParam.Telephone
 saiBoutonMessage				= pstParam.Message
@@ -20,3 +23,24 @@ saiBoutonAgendaDescription	= pstParam.AgendaDescription
 saiBoutonUrlAppStore			= pstParam.UrlAppStore
 saiBoutonUrlPlayStore		= pstParam.UrlPlayStore
 saiBoutonCompte				= pstParam.Compte
+
+si pstBouton <> Null alors
+	PositionneOuverture()
+fin
+
+
+procédure interne PositionneOuverture()
+
+	selBoutonOuverture = 1
+
+	si pstBouton.UrlApplication = __RCS_URL_WEBVIEW__ alors
+		selon pstBouton.UrlWebviewMode
+			cas "FULL"
+				selBoutonOuverture = 2
+			cas "TALL"
+				selBoutonOuverture = 3
+			cas __RCS_WEBVIEW_HALF__
+				selBoutonOuverture = 4
+		fin
+	fin
+fin

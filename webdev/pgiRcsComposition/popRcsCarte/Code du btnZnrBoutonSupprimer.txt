@@ -1,0 +1,4 @@
+// Code Clic (Serveur)
+
+_stCarteEdite.tabBouton.Supprime(znrCarteBouton[znrCarteBouton].attIndice)
+AfficheBoutons()
