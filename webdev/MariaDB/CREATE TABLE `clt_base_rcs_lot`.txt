@@ -1,0 +1,19 @@
+CREATE TABLE `clt_base_rcs_lot` (
+	`IdBaseRcsLot` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdBase` INT(11) NOT NULL,
+	`BulkId` VARCHAR(64) NULL DEFAULT NULL COMMENT 'bulkId Infobip du capability check' COLLATE 'utf8mb4_unicode_ci',
+	`NbrEnvoye` INT(10) UNSIGNED NOT NULL DEFAULT '0',
+	`NbrRecu` INT(10) UNSIGNED NOT NULL DEFAULT '0',
+	`Statut` ENUM('ENVOYE','TERMINE','ERREUR') NOT NULL DEFAULT 'ENVOYE' COLLATE 'utf8mb4_unicode_ci',
+	`Erreur` VARCHAR(500) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`DateHeureEnvoi` DATETIME NOT NULL DEFAULT current_timestamp(),
+	`DateHeureFin` DATETIME NULL DEFAULT NULL,
+	PRIMARY KEY (`IdBaseRcsLot`) USING BTREE,
+	UNIQUE INDEX `BulkId` (`BulkId`) USING BTREE,
+	INDEX `IdBase` (`IdBase`) USING BTREE,
+	CONSTRAINT `FK_clt_base_rcs_lot_clt_base` FOREIGN KEY (`IdBase`) REFERENCES `clt_base` (`IdBase`) ON UPDATE RESTRICT ON DELETE CASCADE
+)
+COMMENT='Lots de qualification RCS envoyes a Infobip (10 000 numeros max par lot)'
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+;

@@ -483,7 +483,17 @@ constante
 	// Valeurs API
 	__RCS_BOUTON_SHOW_LOCATION__							= "SHOW_LOCATION"
 	__RCS_URL_WEBVIEW__										= "WEBVIEW"
-	__RCS_WEBVIEW_HALF__										= "HALF"
+	__RCS_WEBVIEW_HALF__										= "HALF"		// demi-écran
+	__RCS_WEBVIEW_TALL__										= "TALL"		// trois quarts d'écran
+	__RCS_WEBVIEW_FULL__										= "FULL" 	// plein écran
+
+	// Qualification RCS des bases clients (clt_base.StatutRcs)
+	__BASE_RCS_NON__											= "NON"
+	__BASE_RCS_A_TRAITER__									= "A_TRAITER"
+	__BASE_RCS_EN_COURS__									= "EN_COURS"
+	__BASE_RCS_TRAITE__										= "TRAITE"
+	__BASE_RCS_ERREUR__										= "ERREUR"
+
 
 	__DOC_RCS_IMAGE_CARD__									= "RcsImgCard"
 	__DOC_RCS_IMAGE_SLDR__									= "RcsImgSldr"

@@ -1,0 +1,57 @@
+// Code d'initialisation de la page pgeRcsCapacite
+//
+// Webhook Infobip RCS : résultats du capability check (qualification des
+// bases clients), en POST JSON. Un résultat par numéro :
+//   { "capabilityCheckResult": { "bulkId", "messageId", "phoneNumber", "code" } }
+// code = ENABLED (RCS) ; tout autre code (UNREACHABLE, REJECTED_NETWORK,
+// REJECTED_ROUTE_NOT_AVAILABLE, REQUEST_FAILED, PROCESSING_ERROR,
+// INVALID_DESTINATION_ADDRESS, UNKNOWN_CODE...) = SMS seul.
+// Un tableau { "results": [ ... ] } est aussi accepté au cas où Infobip
+// regroupe les notifications.
+//
+// La page répond toujours 200 une fois le traitement fait (Infobip rejoue
+// sinon jusqu'à 20 fois). Idempotence : NbrRecu n'est incrémenté que si
+// l'UPDATE de clt_base_ligne a réellement modifié une ligne (ROW_COUNT),
+// un résultat rejoué ne recompte donc pas.
+//
+// Sécurité : même jeton k que pgeRcsRapport (paramètre Rcs_Webhook_Cle).
+
+sCle				est une chaîne
+sParamBuffer	est une chaîne
+vReponse			est un Variant
+vResultat		est un Variant
+nInd				est un entier
+
+
+sCle = PageParamètre("k")
+
+si sCle = "" _ou_ sCle <> cpKannel.RcsWebhookCle() alors
+	PageEcritCodeHTTP(403)
+	retour
+fin
+
+sParamBuffer = PageParamètre(paramBuffer)
+
+si cpKannel.__bLogRcs = Vrai alors
+	fAjouteTexte(fRepDonnées() + "\RcsLogCapacite_" + DateSys() + ".txt", RC + DateHeureVersChaîne(DateHeureSys(),"JJ/MM/AAAA HH:mm:SS") + RC + sParamBuffer + RC + "-----------------------------------------------------------")
+fin
+
+vReponse = JSONVersVariant(sParamBuffer)
+
+si vReponse.capabilityCheckResult..Membre <> Null alors
+	// Forme unitaire documentée : un résultat par POST
+	TraiteCapacite(vReponse.capabilityCheckResult)
+sinon si vReponse.results..Membre <> Null alors
+	// Forme groupée : un tableau de résultats
+	pour nInd = 1 _à_ vReponse.results..Occurrence
+		vResultat = vReponse.results[nInd]
+		si vResultat.capabilityCheckResult..Membre <> Null alors
+			TraiteCapacite(vResultat.capabilityCheckResult)
+		sinon
+			TraiteCapacite(vResultat)
+		fin
+	fin
+sinon
+	// Structure inattendue : le JSON brut est sauvegardé pour analyse
+	fSauveTexte(fRepDonnées() + "\RcsCapaciteInattendu_" + DateSys() + "_" + HeureSys() + ".txt", sParamBuffer)
+fin

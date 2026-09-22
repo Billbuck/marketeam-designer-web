@@ -1,0 +1,39 @@
+// Résumé : Demande la qualification RCS d'une base (entrée de menu « Analyse RCS »)
+// Syntaxe :
+//ActionAnalyseRcs (<pInd>)
+//
+// Paramètres :
+//	pInd : indice de la ligne dans znrBddHeberge
+//
+// Passe la base en A_TRAITER : c'est le batch RCS (ScannerQualification)
+// qui fera l'appel Infobip. Gratuit, sans opération ni facturation.
+procédure ActionAnalyseRcs(pInd)
+
+nIdBase			est un entier	= znrBddHeberge[pInd].attIdBase
+sUser				est une chaîne	= Remplace(Partage.__vcUser.NomUser, "'", "''")
+sTexteRequete	est une chaîne
+sdReqRcs			est une Source de Données
+
+// UPDATE conditionnel : un double clic ou un second onglet ne relance pas
+// une analyse déjà demandée ou en cours
+sTexteRequete = [
+	UPDATE clt_base SET
+	StatutRcs = '[%__BASE_RCS_A_TRAITER__%]',
+	DateHeureModification = NOW(),
+	UserModification = '[%sUser%]'
+	WHERE
+	clt_base.IdBase = [%nIdBase%]
+	AND clt_base.StatutRcs IN ('[%__BASE_RCS_NON__%]','[%__BASE_RCS_TRAITE__%]','[%__BASE_RCS_ERREUR__%]')
+]
+
+si pas sdReqRcs.ExécuteRequêteSQL(clt_base..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour
+fin
+
+// Rafraîchissement de la ligne à l'écran
+znrBddHeberge[pInd].libBddRcs				= "RCS : analyse demandée"
+znrBddHeberge[pInd].attBddAnalyseRcs	= Faux
+
+fin :
+sdReqRcs.AnnuleDéclaration()

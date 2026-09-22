@@ -23,6 +23,10 @@ CREATE TABLE `clt_base` (
 	`UserCreation` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
 	`UserModification` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
 	`EstBlocmailTraite` TINYINT(1) NOT NULL DEFAULT '0' COMMENT '1 = base issue d’un traitement Blocmail',
+	`StatutRcs` ENUM('NON','A_TRAITER','EN_COURS','TRAITE','ERREUR') NOT NULL DEFAULT 'NON' COMMENT 'Qualification RCS de la base (capability check Infobip)' COLLATE 'utf8mb4_unicode_ci',
+	`DateHeureRcs` DATETIME NULL DEFAULT NULL COMMENT 'Fin de la derniere qualification RCS',
+	`NbrRcs` INT(10) UNSIGNED NULL DEFAULT NULL COMMENT 'Portables joignables en RCS',
+	`NbrSmsSeul` INT(10) UNSIGNED NULL DEFAULT NULL COMMENT 'Portables joignables en SMS seulement',
 	PRIMARY KEY (`IdBase`) USING BTREE,
 	INDEX `IdClient` (`IdClient`) USING BTREE,
 	INDEX `IdContact` (`IdContact`) USING BTREE,
@@ -33,6 +37,7 @@ CREATE TABLE `clt_base` (
 	INDEX `EstActif` (`EstActif`) USING BTREE,
 	INDEX `IdBase_IdClient` (`IdBase`, `IdClient`) USING BTREE,
 	INDEX `FK_clt_base_ope_blocmail` (`IdBlocmail`) USING BTREE,
+	INDEX `StatutRcs` (`StatutRcs`) USING BTREE,
 	CONSTRAINT `FK_clt_base_clt_client` FOREIGN KEY (`IdClient`) REFERENCES `clt_client` (`IdClient`) ON UPDATE RESTRICT ON DELETE CASCADE,
 	CONSTRAINT `FK_clt_base_clt_contact` FOREIGN KEY (`IdContact`) REFERENCES `clt_contact` (`IdContact`) ON UPDATE RESTRICT ON DELETE CASCADE,
 	CONSTRAINT `FK_clt_base_clt_marque` FOREIGN KEY (`IdMarque`) REFERENCES `clt_marque` (`IdMarque`) ON UPDATE NO ACTION ON DELETE NO ACTION,
@@ -43,5 +48,5 @@ CREATE TABLE `clt_base` (
 COMMENT='bases de données annuaire des clients'
 COLLATE='utf8mb4_unicode_ci'
 ENGINE=InnoDB
-AUTO_INCREMENT=2694
+AUTO_INCREMENT=65
 ;

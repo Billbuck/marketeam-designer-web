@@ -1,0 +1,312 @@
+
+// Paramètres d'automatisme de la procédure :
+
+// - Type d'automatisme : Timer/Procédure différée.
+// - Nombre d'exécutions : infini.
+// - Espacement entre les appels : 30 secondes (00:00:30:00 au format HH:MM:SS:CC).
+// - Comportement lors des appels suivants de la procédure : ignorer le timer et exécuter immédiatement la procédure.
+// - Mode de démarrage : démarrage automatique après le code d'initialisation de la fenêtre, avec un délai de 30 secondes (00:00:30:00).
+
+
+// Résumé : Qualification RCS des bases clients (capability check Infobip, gratuit).
+// Pour chaque clt_base en A_TRAITER : passage EN_COURS, remise à NULL de
+// clt_base_ligne.EstRcs (requalification propre), purge des lots de la
+// qualification précédente, extraction des portables distincts, envoi par
+// paquets de Rcs_Capacite_TailleLot à /rcs/2/capability-check/notify
+// (cpRcs.EnvoieCapabilityCheck), un clt_base_rcs_lot par paquet.
+// Les résultats reviennent par webhook sur la page pgeRcsCapacite (reports),
+// qui met à jour EstRcs, les compteurs de lots et consolide la base.
+//
+// Sécurité de fin (Infobip ne renvoie pas toujours 100 % des numéros) :
+//	- base EN_COURS dont le dernier lot date de plus de 2 h → TRAITE avec
+//	  les compteurs disponibles + Trace ;
+//	- base EN_COURS sans aucun lot depuis plus de 2 h (échec avant le
+//	  premier envoi) → ERREUR + Trace.
+//
+// Traitement inline (pas de tâche parallèle) : une base de 100 000 lignes
+// représente 10 appels HTTP ; l'automatisme « ignorer le timer si occupé »
+// absorbe les traitements longs.
+procédure ScannerQualification()
+
+nTailleLot		est un entier
+sSender			est une chaîne
+sNotifyUrl		est une chaîne
+sCleWebhook		est une chaîne
+nIdBase			est un entier
+sNomBase			est une chaîne
+sSociete			est une chaîne
+sTexteRequete	est une chaîne
+sdReqBase		est une Source de Données
+sdReqAgent		est une Source de Données
+sdReqPortable	est une Source de Données
+sdReqMaj			est une Source de Données
+sdReqEcheance	est une Source de Données
+tabNumeros		est un tableau de chaînes
+nNbrPortable	est un entier
+nNbrLot			est un entier
+bErreurBase		est un booléen
+
+
+	// Normalisation d'un portable pour Infobip : sans espace ni +,
+	// 06XXXXXXXX → 336XXXXXXXX (les bases sont déjà en 33X, ceinture)
+	procédure interne NormalisePortableQualif(pNumeroCdb)
+		sNumCdb est une chaîne = SansEspace(pNumeroCdb)
+		sNumCdb = Remplace(sNumCdb, " ", "")
+		sNumCdb = Remplace(sNumCdb, "+", "")
+		si Gauche(sNumCdb, 1) = "0" _et_ Taille(sNumCdb) = 10 alors
+			sNumCdb = "33" + Milieu(sNumCdb, 2)
+		fin
+		renvoyer sNumCdb
+	fin
+
+
+	// Échappement SQL minimal (apostrophes)
+	procédure interne EchappeSqlQualif(pTexteCdb)
+		renvoyer Remplace(pTexteCdb, "'", "''")
+	fin
+
+
+	// Changement de statut d'une base (sans compteurs)
+	procédure interne MajStatutBaseQualif(pIdBaseCdb, pStatutCdb)
+		sReqCdb	est une chaîne
+		sdMajCdb	est une Source de Données
+
+		sReqCdb = [
+			UPDATE clt_base SET
+			StatutRcs = '[%pStatutCdb%]',
+			DateHeureModification = NOW(),
+			UserModification = 'batchRcs'
+			WHERE clt_base.IdBase = [%pIdBaseCdb%]
+		]
+		si pas sdMajCdb.ExécuteRequêteSQL(clt_base..Connexion, hRequêteSansCorrection, sReqCdb) alors
+			Trace("ScannerQualification : erreur UPDATE statut base " + pIdBaseCdb, HErreurInfo(hErrComplet))
+		fin
+		sdMajCdb.AnnuleDéclaration()
+	fin
+
+
+	// Consolidation d'une base : statut TRAITE + compteurs depuis clt_base_ligne
+	procédure interne ConsolideBaseQualif(pIdBaseCdb)
+		sReqCdb	est une chaîne
+		sdMajCdb	est une Source de Données
+
+		sReqCdb = [
+			UPDATE clt_base SET
+			StatutRcs = '[%__BASE_RCS_TRAITE__%]',
+			DateHeureRcs = NOW(),
+			DateHeureModification = NOW(),
+			UserModification = 'batchRcs',
+			NbrRcs = (SELECT COUNT(*) FROM clt_base_ligne WHERE clt_base_ligne.IdBase = [%pIdBaseCdb%] AND clt_base_ligne.EstRcs = 1),
+			NbrSmsSeul = (SELECT COUNT(*) FROM clt_base_ligne WHERE clt_base_ligne.IdBase = [%pIdBaseCdb%] AND clt_base_ligne.EstRcs = 0)
+			WHERE clt_base.IdBase = [%pIdBaseCdb%]
+			AND clt_base.StatutRcs = '[%__BASE_RCS_EN_COURS__%]'
+		]
+		si pas sdMajCdb.ExécuteRequêteSQL(clt_base..Connexion, hRequêteSansCorrection, sReqCdb) alors
+			Trace("ScannerQualification : erreur consolidation base " + pIdBaseCdb, HErreurInfo(hErrComplet))
+		fin
+		sdMajCdb.AnnuleDéclaration()
+	fin
+
+
+	// Envoi d'un paquet de numéros à Infobip et enregistrement du lot.
+	// Utilise sSender et sNotifyUrl de la procédure hôte.
+	// Renvoie Faux en cas d'échec (lot ERREUR inséré, message conservé).
+	procédure interne EnvoieLotQualif(pIdBaseCdb, tabNumerosCdb est un tableau de chaînes)
+		sReqCdb	est une chaîne
+		sdLotCdb	est une Source de Données
+		sBulkCdb	est une chaîne
+		sErrCdb	est une chaîne
+
+		si cpRcs.EnvoieCapabilityCheck(sSender, tabNumerosCdb, sNotifyUrl, sBulkCdb, sErrCdb) alors
+			sReqCdb = [
+				INSERT INTO clt_base_rcs_lot (IdBase, BulkId, NbrEnvoye, Statut)
+				VALUES ([%pIdBaseCdb%], '[%EchappeSqlQualif(sBulkCdb)%]', [%tabNumerosCdb..Occurrence%], 'ENVOYE')
+			]
+			si pas sdLotCdb.ExécuteRequêteSQL(clt_base_rcs_lot..Connexion, hRequêteSansCorrection, sReqCdb) alors
+				Trace("ScannerQualification : erreur INSERT lot base " + pIdBaseCdb, HErreurInfo(hErrComplet))
+			fin
+			sdLotCdb.AnnuleDéclaration()
+			renvoyer Vrai
+		fin
+
+		// Échec HTTP : lot en erreur, message conservé (500 caractères max)
+		sErrCdb = Gauche(sErrCdb, 500)
+		sReqCdb = [
+			INSERT INTO clt_base_rcs_lot (IdBase, NbrEnvoye, Statut, Erreur)
+			VALUES ([%pIdBaseCdb%], [%tabNumerosCdb..Occurrence%], 'ERREUR', '[%EchappeSqlQualif(sErrCdb)%]')
+		]
+		si pas sdLotCdb.ExécuteRequêteSQL(clt_base_rcs_lot..Connexion, hRequêteSansCorrection, sReqCdb) alors
+			Trace("ScannerQualification : erreur INSERT lot erreur base " + pIdBaseCdb, HErreurInfo(hErrComplet))
+		fin
+		sdLotCdb.AnnuleDéclaration()
+		Trace("ScannerQualification : échec capability check base " + pIdBaseCdb + " : " + sErrCdb)
+		renvoyer Faux
+	fin
+
+
+// ------------------------------------------------------------------
+// 1) Bases en attente de qualification
+// ------------------------------------------------------------------
+sTexteRequete = [
+	SELECT
+	clt_base.IdBase,
+	IFNULL(clt_base.Nom, '') Nom,
+	IFNULL(clt_client.Societe, '') Societe
+	FROM
+	clt_base
+	LEFT JOIN clt_client ON clt_client.IdClient = clt_base.IdClient
+	WHERE
+	clt_base.StatutRcs = '[%__BASE_RCS_A_TRAITER__%]'
+]
+
+si pas sdReqBase.ExécuteRequêteSQL(clt_base..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête ScannerQualification", sTexteRequete, HErreurInfo(hErrComplet))
+	retour
+fin
+
+si sdReqBase.LitPremier(hSansRafraîchir) alors
+
+	// Agent RCS actif (le premier) et paramètres, lus seulement s'il y a du travail
+	sTexteRequete = [
+		SELECT rcs_agent.SenderName
+		FROM rcs_agent
+		WHERE rcs_agent.EstActif = 1
+		ORDER BY rcs_agent.IdRcsAgent
+		LIMIT 1
+	]
+	si sdReqAgent.ExécuteRequêteSQL(rcs_agent..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+		si sdReqAgent.LitPremier() alors sSender = sdReqAgent.SenderName
+	fin
+	sdReqAgent.AnnuleDéclaration()
+
+	nTailleLot = cpFonction.ValeurParametre("Rcs_Capacite_TailleLot", prm_parametre.ValNumerique..Nom)
+	si nTailleLot <= 0 _ou_ nTailleLot > 10000 alors nTailleLot = 10000
+
+	sNotifyUrl	= cpFonction.ValeurParametre("Rcs_Capacite_Webhook_Url", prm_parametre.ValChaine..Nom)
+	sCleWebhook	= cpFonction.ValeurParametre("Rcs_Webhook_Cle", prm_parametre.ValChaine..Nom)
+	si sNotifyUrl = "Erreur" alors sNotifyUrl = ""
+	si sCleWebhook = "Erreur" alors sCleWebhook = ""
+	sNotifyUrl += sCleWebhook
+
+	si sSender = "" _ou_ sNotifyUrl = "" alors
+		Trace("ScannerQualification : agent RCS actif ou Rcs_Capacite_Webhook_Url manquant, bases laissées en attente")
+	sinon
+
+		pour tout sdReqBase
+			nIdBase			= sdReqBase.IdBase
+			sNomBase			= sdReqBase.Nom
+			sSociete			= sdReqBase.Societe
+			bErreurBase		= Faux
+			nNbrPortable	= 0
+			nNbrLot			= 0
+			tabNumeros.SupprimeTout()
+
+			// (a) Prise en main
+			MajStatutBaseQualif(nIdBase, __BASE_RCS_EN_COURS__)
+
+			// (b) Requalification propre : résultats précédents effacés,
+			// lots de la qualification précédente purgés (la table décrit
+			// la qualification en cours, pas un journal)
+			sTexteRequete = "UPDATE clt_base_ligne SET EstRcs = NULL WHERE IdBase = " + nIdBase
+			si pas sdReqMaj.ExécuteRequêteSQL(clt_base_ligne..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+				Trace("ScannerQualification : erreur remise à NULL EstRcs base " + nIdBase, HErreurInfo(hErrComplet))
+			fin
+			sTexteRequete = "DELETE FROM clt_base_rcs_lot WHERE IdBase = " + nIdBase
+			si pas sdReqMaj.ExécuteRequêteSQL(clt_base_rcs_lot..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+				Trace("ScannerQualification : erreur purge des lots base " + nIdBase, HErreurInfo(hErrComplet))
+			fin
+			sdReqMaj.AnnuleDéclaration()
+
+			// (c) Extraction des portables distincts et envoi par paquets
+			sTexteRequete = [
+				SELECT DISTINCT clt_base_ligne.Portable
+				FROM clt_base_ligne
+				WHERE clt_base_ligne.IdBase = [%nIdBase%]
+				AND clt_base_ligne.Portable IS NOT NULL
+				AND clt_base_ligne.Portable <> ''
+			]
+			si pas sdReqPortable.ExécuteRequêteSQL(clt_base_ligne..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+				Trace("ScannerQualification : erreur extraction portables base " + nIdBase, HErreurInfo(hErrComplet))
+				MajStatutBaseQualif(nIdBase, __BASE_RCS_ERREUR__)
+				continuer
+			fin
+
+			pour tout sdReqPortable
+				tabNumeros.Ajoute(NormalisePortableQualif(sdReqPortable.Portable))
+				nNbrPortable++
+
+				si tabNumeros..Occurrence >= nTailleLot alors
+					si pas EnvoieLotQualif(nIdBase, tabNumeros) alors
+						bErreurBase = Vrai
+						sortir
+					fin
+					nNbrLot++
+					tabNumeros.SupprimeTout()
+				fin
+			fin
+			sdReqPortable.AnnuleDéclaration()
+
+			// Dernier paquet incomplet
+			si bErreurBase = Faux _et_ tabNumeros..Occurrence > 0 alors
+				si EnvoieLotQualif(nIdBase, tabNumeros) alors
+					nNbrLot++
+					tabNumeros.SupprimeTout()
+				sinon
+					bErreurBase = Vrai
+				fin
+			fin
+
+			// (d) Issue
+			si bErreurBase alors
+				MajStatutBaseQualif(nIdBase, __BASE_RCS_ERREUR__)
+				tblQualification.AjouteLigne(DateHeureSys(), sNomBase, sSociete, nNbrPortable, nNbrLot, "Erreur d'envoi")
+			sinon si nNbrLot = 0 alors
+				// Aucun portable : base traitée à vide (compteurs 0)
+				ConsolideBaseQualif(nIdBase)
+				Trace("ScannerQualification : base " + nIdBase + " sans portable, traitée à vide")
+				tblQualification.AjouteLigne(DateHeureSys(), sNomBase, sSociete, 0, 0, "Aucun portable")
+			sinon
+				tblQualification.AjouteLigne(DateHeureSys(), sNomBase, sSociete, nNbrPortable, nNbrLot, "Envoyé - attente retours")
+			fin
+		fin
+
+	fin
+fin
+sdReqBase.AnnuleDéclaration()
+
+// ------------------------------------------------------------------
+// 2) Échéance 2 h : bases EN_COURS dont le dernier lot est trop ancien
+//    → TRAITE avec les compteurs disponibles
+// ------------------------------------------------------------------
+sTexteRequete = [
+	SELECT clt_base.IdBase, IFNULL(clt_base.Nom, '') Nom
+	FROM clt_base
+	WHERE clt_base.StatutRcs = '[%__BASE_RCS_EN_COURS__%]'
+	AND EXISTS (SELECT 1 FROM clt_base_rcs_lot WHERE clt_base_rcs_lot.IdBase = clt_base.IdBase)
+	AND (SELECT MAX(clt_base_rcs_lot.DateHeureEnvoi) FROM clt_base_rcs_lot WHERE clt_base_rcs_lot.IdBase = clt_base.IdBase) < NOW() - INTERVAL 2 HOUR
+]
+
+si sdReqEcheance.ExécuteRequêteSQL(clt_base..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	pour tout sdReqEcheance
+		Trace("ScannerQualification : échéance 2 h, base " + sdReqEcheance.IdBase + " (" + sdReqEcheance.Nom + ") consolidée avec les résultats disponibles")
+		ConsolideBaseQualif(sdReqEcheance.IdBase)
+	fin
+fin
+sdReqEcheance.AnnuleDéclaration()
+
+// Bases EN_COURS sans aucun lot depuis plus de 2 h : échec avant le premier envoi
+sTexteRequete = [
+	SELECT clt_base.IdBase, IFNULL(clt_base.Nom, '') Nom
+	FROM clt_base
+	WHERE clt_base.StatutRcs = '[%__BASE_RCS_EN_COURS__%]'
+	AND NOT EXISTS (SELECT 1 FROM clt_base_rcs_lot WHERE clt_base_rcs_lot.IdBase = clt_base.IdBase)
+	AND clt_base.DateHeureModification < NOW() - INTERVAL 2 HOUR
+]
+
+si sdReqEcheance.ExécuteRequêteSQL(clt_base..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	pour tout sdReqEcheance
+		Trace("ScannerQualification : base " + sdReqEcheance.IdBase + " (" + sdReqEcheance.Nom + ") EN_COURS sans lot depuis 2 h, passée en erreur")
+		MajStatutBaseQualif(sdReqEcheance.IdBase, __BASE_RCS_ERREUR__)
+	fin
+fin
+sdReqEcheance.AnnuleDéclaration()

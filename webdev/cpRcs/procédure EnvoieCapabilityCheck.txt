@@ -1,0 +1,93 @@
+// Résumé : Envoie un capability check asynchrone à Infobip (qualification RCS)
+// Syntaxe :
+//[ <Résultat> = ] EnvoieCapabilityCheck (<pSenderName>, <tabNumeros>, <pNotifyUrl>, <sBulkId>, <sErreur>)
+//
+// Paramètres :
+//	pSenderName : agent RCS (rcs_agent.SenderName)
+//	tabNumeros : numéros au format international sans + (33670299592), 10 000 max
+//	pNotifyUrl : URL de retour des résultats (page pgeRcsCapacite, jeton compris)
+//	sBulkId : en sortie, bulkId renvoyé par Infobip
+//	sErreur : en sortie, message d'erreur si échec
+// Valeur de retour :
+// 	booléen : Vrai si le lot est accepté par Infobip
+//
+// POST {Rcs_Infobip_Url}/rcs/2/capability-check/notify — même en-tête
+// Authorization que l'envoi de messages (EnvoieInfobip). Les résultats
+// arrivent ensuite par webhook, un par numéro, sur pNotifyUrl.
+procédure EnvoieCapabilityCheck(pSenderName, tabNumeros est un tableau de chaînes, pNotifyUrl, sBulkId, sErreur)
+
+requete		est un httpRequête
+reponse		est un httpRéponse
+jRep			est un JSON
+sJson			est une chaîne
+nInd			est un entier
+bJsonOk		est un booléen
+
+
+sBulkId	= ""
+sErreur	= ""
+
+si __sUrlInfobip = "" _ou_ __sApiKey = "" alors
+	sErreur = "URL ou clé API manquante (InitCpRcs non appelé ?)"
+	Trace("cpRcs EnvoieCapabilityCheck : " + sErreur)
+	renvoyer Faux
+fin
+
+si tabNumeros..Occurrence = 0 alors
+	sErreur = "Aucun numéro à vérifier"
+	renvoyer Faux
+fin
+
+sJson = "{""sender"":""" + EncodeAsciiJson(pSenderName) + """"
+sJson += ",""phoneNumbers"":["
+pour nInd = 1 _à_ tabNumeros..Occurrence
+	si nInd > 1 alors sJson += ","
+	sJson += """" + EncodeAsciiJson(tabNumeros[nInd]) + """"
+fin
+sJson += "]"
+sJson += ",""notifyUrl"":""" + EncodeAsciiJson(pNotifyUrl) + """"
+sJson += ",""notifyContentType"":""application/json"""
+sJson += "}"
+
+requete.URL								= __sUrlInfobip + "/rcs/2/capability-check/notify"
+requete.Méthode						= httpPost
+requete.ContentType					= typeMimeJSON
+requete.Entête["Authorization"]	= "App " + __sApiKey
+requete.Timeout						= 60s
+requete.Contenu						= sJson
+
+reponse									= HTTPEnvoie(requete)
+
+si ErreurDétectée alors
+	sErreur = ErreurInfo()
+	Trace("cpRcs EnvoieCapabilityCheck : " + sErreur)
+	renvoyer Faux
+fin
+
+si reponse.CodeEtat <> 200 _et_ reponse.CodeEtat <> 201 alors
+	sErreur = "HTTP " + reponse.CodeEtat + " " + reponse.Contenu
+	Trace("cpRcs EnvoieCapabilityCheck : " + sErreur)
+	renvoyer Faux
+fin
+
+bJsonOk = Vrai
+quand exception dans
+	jRep = reponse.Contenu
+faire
+	bJsonOk = Faux
+fin
+si bJsonOk = Faux alors
+	sErreur = "JSON réponse illisible : " + reponse.Contenu
+	Trace("cpRcs EnvoieCapabilityCheck : " + sErreur)
+	renvoyer Faux
+fin
+
+sBulkId = jRep.bulkId
+
+si sBulkId = "" alors
+	sErreur = "bulkId absent de la réponse : " + reponse.Contenu
+	Trace("cpRcs EnvoieCapabilityCheck : " + sErreur)
+	renvoyer Faux
+fin
+
+renvoyer Vrai

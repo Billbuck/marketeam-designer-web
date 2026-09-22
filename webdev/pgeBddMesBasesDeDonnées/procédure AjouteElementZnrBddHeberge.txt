@@ -44,3 +44,21 @@ znrBddHeberge[nInd].attFiltreSupprimer				= Faux
 
 znrBddHeberge[nInd].attTypeStopPub					= ""
 
+// Qualification RCS (capability check) : entrée de menu et badge
+// L'analyse est proposée si la base a des portables et n'est pas déjà
+// en attente ou en cours de traitement
+znrBddHeberge[nInd].attBddAnalyseRcs				= (_sdReqBddHeberge.NbrSms > 0 _et_ (_sdReqBddHeberge.StatutRcs = __BASE_RCS_NON__ _ou_ _sdReqBddHeberge.StatutRcs = __BASE_RCS_TRAITE__ _ou_ _sdReqBddHeberge.StatutRcs = __BASE_RCS_ERREUR__))
+
+selon _sdReqBddHeberge.StatutRcs
+	cas __BASE_RCS_A_TRAITER__
+		znrBddHeberge[nInd].libBddRcs = "RCS : analyse demandée"
+	cas __BASE_RCS_EN_COURS__
+		znrBddHeberge[nInd].libBddRcs = "Analyse RCS en cours..."
+	cas __BASE_RCS_TRAITE__
+		znrBddHeberge[nInd].libBddRcs = "RCS : " + NumériqueVersChaîne(_sdReqBddHeberge.NbrRcs, "dS") + " — SMS : " + NumériqueVersChaîne(_sdReqBddHeberge.NbrSmsSeul, "dS") + " (" + DateVersChaîne(Gauche(_sdReqBddHeberge.DateHeureRcs, 8), "JJ/MM/AAAA") + ")"
+	cas __BASE_RCS_ERREUR__
+		znrBddHeberge[nInd].libBddRcs = "RCS : erreur d'analyse"
+	autre cas
+		znrBddHeberge[nInd].libBddRcs = ""
+fin
+

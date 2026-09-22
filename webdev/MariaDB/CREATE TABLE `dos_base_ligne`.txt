@@ -1,6 +1,8 @@
-CREATE TABLE `clt_base_ligne` (
+CREATE TABLE `dos_base_ligne` (
 	`IdBaseLigne` INT(11) NOT NULL AUTO_INCREMENT,
+	`Code` VARCHAR(5) NULL DEFAULT NULL COLLATE 'utf8mb4_bin',
 	`IdBase` INT(11) NOT NULL,
+	`Sequentiel` INT(11) NULL DEFAULT NULL,
 	`Reference` VARCHAR(100) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
 	`Societe` VARCHAR(100) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
 	`Enseigne` VARCHAR(100) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
@@ -19,7 +21,6 @@ CREATE TABLE `clt_base_ligne` (
 	`Portable` VARCHAR(20) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
 	`Email` VARCHAR(255) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
 	`CodeAlliage` VARCHAR(100) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
-	`Code` VARCHAR(5) NULL DEFAULT NULL COLLATE 'utf8mb4_bin',
 	`Champ1` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
 	`Champ2` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
 	`Champ3` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
@@ -52,18 +53,14 @@ CREATE TABLE `clt_base_ligne` (
 	`Champ30` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
 	`Sexe` CHAR(1) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
 	`Profil` CHAR(1) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
-	`StopPub` TINYINT(1) NOT NULL DEFAULT '0',
-	`EstRcs` TINYINT(1) NULL DEFAULT NULL COMMENT 'NULL = inconnu, 1 = RCS, 0 = SMS seul',
+	`EstRcs` TINYINT(1) NULL DEFAULT NULL COMMENT 'Recopie de clt_base_ligne.EstRcs a l injection',
 	PRIMARY KEY (`IdBaseLigne`) USING BTREE,
 	INDEX `IdBase` (`IdBase`) USING BTREE,
-	INDEX `idx_base_portable` (`IdBase`, `Portable`) USING BTREE,
-	INDEX `idx_base_tel` (`IdBase`, `Tel`) USING BTREE,
-	INDEX `idx_base_email` (`IdBase`, `Email`) USING BTREE,
-	INDEX `idx_base_societe` (`IdBase`, `Societe`) USING BTREE,
-	INDEX `idx_base_contact` (`IdBase`, `Contact`) USING BTREE,
-	CONSTRAINT `clt_base_ligne_ibfk_1` FOREIGN KEY (`IdBase`) REFERENCES `clt_base` (`IdBase`) ON UPDATE RESTRICT ON DELETE CASCADE
+	INDEX `Code` (`Code`) USING BTREE,
+	INDEX `Portable` (`Portable`) USING BTREE,
+	INDEX `Sequentiel` (`Sequentiel`) USING BTREE
 )
 COLLATE='utf8mb4_unicode_ci'
 ENGINE=InnoDB
-AUTO_INCREMENT=1727619
+AUTO_INCREMENT=94029
 ;
