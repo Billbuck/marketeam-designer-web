@@ -1,11 +1,11 @@
 procédure ConstruitJsonCarte(stCarte est une structOperationRcsCarte, taaValeurChamp est un tableau associatif de chaînes, pCodeLanding, bEstTest)
 
-sJson			est une chaîne
+sJson				est une chaîne
 sTitre			est une chaîne
 sDescription	est une chaîne
 sMedia			est une chaîne
 sVignette		est une chaîne
-sHauteur		est une chaîne
+sHauteur			est une chaîne
 sSuggestions	est une chaîne
 
 
@@ -13,12 +13,15 @@ sTitre			= FusionneTexte(stCarte.Titre, taaValeurChamp)
 sDescription	= FusionneTexte(stCarte.Description, taaValeurChamp)
 sMedia			= UrlMediaPublique(stCarte.MediaUrl)
 sVignette		= UrlMediaPublique(stCarte.MediaThumbnailUrl)
-sHauteur		= stCarte.MediaHauteur
+sHauteur			= stCarte.MediaHauteur
 si sHauteur = "" alors sHauteur = "MEDIUM"
 
 sJson = "{"
+// Titre et description sont facultatifs pour Infobip, mais jamais vides ("" refusé)
 sJson += """title"":""" + EncodeAsciiJson(sTitre) + """"
-sJson += ",""description"":""" + EncodeAsciiJson(sDescription) + """"
+si SansEspace(sDescription) <> "" alors
+	sJson += ",""description"":""" + EncodeAsciiJson(sDescription) + """"
+fin
 
 si sMedia <> "" alors
 	sJson += ",""media"":{"

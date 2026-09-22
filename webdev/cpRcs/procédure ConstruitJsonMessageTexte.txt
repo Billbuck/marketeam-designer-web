@@ -1,32 +1,29 @@
-// Résumé : Construit le JSON Infobip d'UN message RCS texte simple (confirmation STOP, notification).
+// Résumé : Construit le JSON Infobip d'UN message RCS texte simple (confirmation STOP, notification, test).
 // Même enveloppe que ConstruitJsonMessage (sender, destinations, options, webhooks),
-// mais content = { "type": "TEXT", "text": ... }, sans repli SMS.
-// Un texte court sans bouton ni média est facturé Basic par l'opérateur (prix proche du SMS).
+// mais content = { "type": "TEXT", "text": ... }. Repli SMS optionnel (pTexteRepli), sans expéditeur :
+// Infobip applique l'expéditeur par défaut du compte.
 // Syntaxe :
-// sJson = ConstruitJsonMessageTexte(sSenderName, sPortable, sMessageId, sTexte)
-//
-// Paramètres :
-// 	pSenderName : agent RCS (rcs_agent.SenderName)
-// 	pPortable : numéro du destinataire (normalisé sans + ni espace ici même)
-// 	pMessageId : identifiant Marketeam du message ("U" + IdRcsUnitaire)
-// 	pTexte : texte final du message (déjà fusionné s'il y a lieu)
-// Valeur de retour :
-// 	chaîne : JSON du message, à insérer dans un paquet via ConstruitJsonPaquet
-procédure ConstruitJsonMessageTexte(pSenderName, pPortable, pMessageId, pTexte)
+// sJson = ConstruitJsonMessageTexte(sSenderName, sPortable, sMessageId, sTexte [, sTexteRepli])
+procédure ConstruitJsonMessageTexte(pSenderName, pPortable, pMessageId, pTexte, pTexteRepli = "")
 
-sJson		est une chaîne
+sJson			est une chaîne
 sPortable	est une chaîne
 
 
-sPortable = Remplace(Remplace(SansEspace(pPortable), "+", ""), " ", "")
+sPortable		= Remplace(Remplace(SansEspace(pPortable), "+", ""), " ", "")
 
-sJson = "{"
+sJson			= "{"
 sJson += """sender"":""" + EncodeAsciiJson(pSenderName) + """"
 sJson += ",""destinations"":[{""to"":""" + EncodeAsciiJson(sPortable) + """,""messageId"":""" + EncodeAsciiJson(pMessageId) + """}]"
 
 sJson += ",""content"":{""type"":""TEXT"",""text"":""" + EncodeAsciiJson(pTexte) + """}"
 
-sJson += ",""options"":{""validityPeriod"":{""amount"":" + __nValiditeHeures + ",""timeUnit"":""HOURS""}}"
+sJson += ",""options"":{""validityPeriod"":{""amount"":" + __nValiditeHeures + ",""timeUnit"":""HOURS""}"
+si SansEspace(pTexteRepli) <> "" alors
+	sJson += ",""smsFailover"":{""text"":""" + EncodeAsciiJson(pTexteRepli) + """"
+	sJson += ",""validityPeriod"":{""amount"":" + __nValiditeHeures + ",""timeUnit"":""HOURS""}}"
+fin
+sJson += "}"
 
 si __sUrlWebhook <> "" alors
 	sJson += ",""webhooks"":{"

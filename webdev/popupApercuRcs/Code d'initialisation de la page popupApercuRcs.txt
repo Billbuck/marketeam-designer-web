@@ -1,9 +1,10 @@
 // ** Déclarations globales de popupApercuRcs (Serveur)
 //
-// Popup d'aperçu RCS, calquée sur popupApercuSms : même image de fond
-// (smartphone), un sélecteur Android / iPhone (deux boutons), une case
-// « Afficher le repli SMS » (visible seulement si EstRepliSms) et un
-// champ HTML ztrEcran couvrant la zone d'écran du téléphone.
+// Popup d'aperçu RCS : un sélecteur Android / iPhone (deux boutons),
+// une case « Afficher le repli SMS » (visible seulement si EstRepliSms)
+// et un champ HTML ztrEcran de 380 x 780 px. Pas d'image de fond : le
+// cadre du téléphone est dessiné en CSS par le moteur d'aperçu
+// (ConstruitHtmlApercu), avec ses variantes iPhone / Android.
 //
 // Aucune page ni adresse : ChargeEcran pose dans ztrEcran..LibelléHTML
 // un iframe alimenté par l'attribut srcdoc (le JavaScript s'y exécute

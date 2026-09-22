@@ -15,8 +15,8 @@ __sUrlWebhook			= ValeurParametreLue("Rcs_Webhook_Url")
 __sUrlCliquezIci		= ValeurParametreLue("Url_CliquezIci")
 __sUrlBouton			= ValeurParametreLue("Rcs_Bouton_Url")
 
-sVal = cpFonction.ValeurParametre("Rcs_Validite_Heures", prm_parametre.ValNumerique.Nom)
-__nValiditeHeures = Val(sVal)
+sVal						= cpFonction.ValeurParametre("Rcs_Validite_Heures", prm_parametre.ValNumerique.Nom)
+__nValiditeHeures		= Val(sVal)
 si __nValiditeHeures <= 0 alors __nValiditeHeures = 48
 
 si Droite(__sUrlInfobip, 1) = "/" alors
@@ -46,9 +46,9 @@ sdEmoji.AnnuleDéclaration()
 pour nI = 1 _à_ __tabEmojiCode..Occurrence - 1
 	pour nJ = nI + 1 _à_ __tabEmojiCode..Occurrence
 		si Taille(__tabEmojiCode[nJ]) > Taille(__tabEmojiCode[nI]) alors
-			sTmp = __tabEmojiCode[nI]
-			__tabEmojiCode[nI] = __tabEmojiCode[nJ]
-			__tabEmojiCode[nJ] = sTmp
+			sTmp						= __tabEmojiCode[nI]
+			__tabEmojiCode[nI]		= __tabEmojiCode[nJ]
+			__tabEmojiCode[nJ]		= sTmp
 		fin
 	fin
 fin

@@ -1,4 +1,4 @@
-procédure FusionneTexte(pTexte, taaValeurChamp est un tableau associatif de chaînes)
+procédure FusionneTexte(local pTexte, taaValeurChamp est un tableau associatif de chaînes)
 
 sLibelle	est une chaîne
 sValeur	est une chaîne

@@ -8,7 +8,10 @@
 // Construit le document HTML complet de l'écran (ConstruitHtmlApercu,
 // procédure locale) puis le pose dans ztrEcran..LibelléHTML sous forme
 // d'un iframe alimenté par l'attribut srcdoc : le JavaScript du document
-// s'exécute dans l'iframe, sans page ni adresse.
+// s'exécute dans l'iframe, sans page ni adresse. L'iframe prend la
+// taille du champ (ztrEcran..Largeur / ..Hauteur) et reste transparent :
+// le cadre du téléphone est dessiné en CSS par le document lui-même.
+// En mode sms, le cadre reste celui du dernier mode Android / iPhone.
 //
 // Échappement pour l'attribut HTML : & EN PREMIER (sinon il doublerait
 // les échappements suivants), puis " < >. Le navigateur dé-échappe une
@@ -18,25 +21,16 @@ procédure ChargeEcran(pMode)
 
 sHtmlEcran		est une chaîne
 sHtmlEchappe	est une chaîne
+sModeCadre		est une chaîne	= pMode
 
-sHtmlEcran = ConstruitHtmlApercu(__sJsonApercu, pMode)
+si pMode = "sms" alors sModeCadre = __sModeEcran
 
-sHtmlEchappe = Remplace(sHtmlEcran, "&", "&amp;")
-sHtmlEchappe = Remplace(sHtmlEchappe, """", "&quot;")
-sHtmlEchappe = Remplace(sHtmlEchappe, "<", "&lt;")
-sHtmlEchappe = Remplace(sHtmlEchappe, ">", "&gt;")
+sHtmlEcran					= ConstruitHtmlApercu(__sJsonApercu, pMode, sModeCadre)
 
-ztrEcran..LibelléHTML = "<iframe style=""width:100%;height:100%;border:0;display:block"" srcdoc=""" + sHtmlEchappe + """></iframe>"
+sHtmlEchappe					= Remplace(sHtmlEcran, "&", "&amp;")
+sHtmlEchappe					= Remplace(sHtmlEchappe, """", "&quot;")
+sHtmlEchappe					= Remplace(sHtmlEchappe, "<", "&lt;")
+sHtmlEchappe					= Remplace(sHtmlEchappe, ">", "&gt;")
 
-// État du sélecteur : le bouton du mode affiché est grisé
-si pMode = "android" alors
-	btnAndroid..Etat	= Grisé
-	btnIphone..Etat	= Actif
-sinon si pMode = "iphone" alors
-	btnAndroid..Etat	= Actif
-	btnIphone..Etat	= Grisé
-sinon
-	// Mode sms : les deux boutons restent utilisables
-	btnAndroid..Etat	= Actif
-	btnIphone..Etat	= Actif
-fin
+ztrEcran..LibelléHTML		= "<iframe style=""width:" + ztrEcran..Largeur + "px;height:" + ztrEcran..Hauteur + "px;border:0;display:block;background:transparent"" allowtransparency=""true"" srcdoc=""" + sHtmlEchappe + """></iframe>"
+

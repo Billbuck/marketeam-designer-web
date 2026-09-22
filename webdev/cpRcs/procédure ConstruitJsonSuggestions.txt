@@ -1,6 +1,6 @@
 procédure ConstruitJsonSuggestions(tabBouton est un tableau de structOperationRcsBouton, pIdRcsCarte, pMax, taaValeurChamp est un tableau associatif de chaînes, pCodeLanding, bEstTest)
 
-sJson		est une chaîne
+sJson			est une chaîne
 sUn			est une chaîne
 nAjoute		est un entier
 nIgnore		est un entier

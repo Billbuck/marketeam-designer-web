@@ -1,18 +1,18 @@
 procédure EncodeAsciiJson(pTexte)
 
 sSortie		est une chaîne
-suTexte		est une chaîne UNICODE = pTexte
-sCar			est une chaîne UNICODE
+suTexte		est une chaîne Unicode	= pTexte
+sCar			est une chaîne Unicode
 nInd			est un entier
-nCode		est un entier
+nCode			est un entier
 nSurrog		est un entier
 sCodeEmoji	est une chaîne
 
 
 	// Procédure interne : toujours AVANT sa première utilisation
 	procédure interne Hex4Json(pValeur)
-		sDigits	est une chaîne = "0123456789abcdef"
-		nVal		est un entier = pValeur
+		sDigits	est une chaîne	= "0123456789abcdef"
+		nVal		est un entier	= pValeur
 		sRes		est une chaîne
 		nReste	est un entier
 		nBoucle	est un entier

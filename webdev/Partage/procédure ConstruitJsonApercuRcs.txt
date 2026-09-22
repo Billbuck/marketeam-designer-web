@@ -183,9 +183,12 @@ sdReqEmoji			est une Source de Données
 		sJcCdb = "{""titre"":""" + EncodeJson(stCarteCdb.Titre) + """"
 		sJcCdb += ",""texte"":""" + EncodeJson(stCarteCdb.Description) + """"
 		si stCarteCdb.MediaUrl <> "" alors
-			// URL de la base telle quelle : le site de développement sert lui-même ses médias
+			// URL de la base telles quelles : le site de développement sert lui-même ses médias
 			sJcCdb += ",""mediaUrl"":""" + EncodeJson(stCarteCdb.MediaUrl) + """"
 			sJcCdb += ",""mediaType"":""" + EncodeJson(stCarteCdb.MediaContentType) + """"
+			si stCarteCdb.MediaThumbnailUrl <> "" alors
+				sJcCdb += ",""mediaThumbnailUrl"":""" + EncodeJson(stCarteCdb.MediaThumbnailUrl) + """"
+			fin
 		fin
 		sJcCdb += ",""mediaHauteur"":""" + EncodeJson(stCarteCdb.MediaHauteur) + """"
 		sJcCdb += ",""boutons"":["

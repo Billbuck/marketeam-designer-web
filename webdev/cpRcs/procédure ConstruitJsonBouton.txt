@@ -89,20 +89,28 @@ selon stBouton.SousType
 	cas __RCS_ACTION_LANDING__
 		sTypeJson		= __RCS_BOUTON_OPEN_URL__
 		sUrl				= UrlLanding(pCodeLanding, bEstTest)
-		sApplication	= __RCS_URL_BROWSER__
-		sWebview			= ""
+		sApplication	= stBouton.UrlApplication
+		sWebview			= stBouton.UrlWebviewMode
+		si sApplication = "" alors sApplication = __RCS_URL_BROWSER__
 
 	cas __RCS_ACTION_REACTION__
 		sTypeJson		= __RCS_BOUTON_OPEN_URL__
 		sUrl				= UrlBouton(stBouton.IdRcsBouton, pCodeLanding)
 		sApplication	= __RCS_URL_WEBVIEW__
-		sWebview			= __RCS_WEBVIEW_HALF__
+		sWebview			= __RCS_WEBVIEW_TALL__
 
-	cas __RCS_ACTION_APPLICATION__, __RCS_ACTION_EMAIL__, __RCS_ACTION_SMS__
+	cas __RCS_ACTION_APPLICATION__, __RCS_ACTION_SMS__
+		sTypeJson		= __RCS_BOUTON_OPEN_URL__
+		sUrl				= UrlBouton(stBouton.IdRcsBouton, pCodeLanding)
+		sApplication	= __RCS_URL_WEBVIEW__
+		sWebview			= __RCS_WEBVIEW_TALL__
+
+	cas __RCS_ACTION_EMAIL__
 		sTypeJson		= __RCS_BOUTON_OPEN_URL__
 		sUrl				= UrlBouton(stBouton.IdRcsBouton, pCodeLanding)
 		sApplication	= __RCS_URL_BROWSER__
 		sWebview			= ""
+
 
 	cas __RCS_ACTION_APPEL__
 		sTypeJson	= __RCS_BOUTON_DIAL_PHONE__

@@ -5,7 +5,7 @@ reponse		est un httpRéponse
 jRep			est un JSON
 nInd			est un entier
 nLigne		est un entier
-sBulk		est une chaîne
+sBulk			est une chaîne
 bJsonOk		est un booléen
 
 
@@ -16,14 +16,14 @@ si __sUrlInfobip = "" _ou_ __sApiKey = "" alors
 	renvoyer Faux
 fin
 
-requete.URL						= __sUrlInfobip + "/rcs/2/messages"
-requete.Méthode					= httpPost
-requete.ContentType				= typeMimeJSON
-requete.EnTête["Authorization"]	= "App " + __sApiKey
-requete.Timeout					= 60s
-requete.Contenu					= sJsonPaquet
+requete.URL								= __sUrlInfobip + "/rcs/2/messages"
+requete.Méthode						= httpPost
+requete.ContentType					= typeMimeJSON
+requete.Entête["Authorization"]	= "App " + __sApiKey
+requete.Timeout						= 60s
+requete.Contenu						= sJsonPaquet
 
-reponse = HTTPEnvoie(requete)
+reponse									= HTTPEnvoie(requete)
 
 si ErreurDétectée alors
 	Trace("cpRcs EnvoieInfobip : " + ErreurInfo())
@@ -49,14 +49,14 @@ fin
 sBulk = jRep.bulkId
 
 pour nInd = 1 _à_ jRep.messages..Occurrence
-	nLigne = tabResultat.Ajoute()
-	tabResultat[nLigne].BulkId				= sBulk
-	tabResultat[nLigne].MessageId			= jRep.messages[nInd].messageId
+	nLigne											= tabResultat.Ajoute()
+	tabResultat[nLigne].BulkId					= sBulk
+	tabResultat[nLigne].MessageId				= jRep.messages[nInd].messageId
 	tabResultat[nLigne].Destination			= jRep.messages[nInd].destination
 	tabResultat[nLigne].StatutGroupeId		= Val(jRep.messages[nInd].status.groupId)
-	tabResultat[nLigne].StatutGroupeNom	= jRep.messages[nInd].status.groupName
-	tabResultat[nLigne].StatutId			= Val(jRep.messages[nInd].status.id)
-	tabResultat[nLigne].StatutNom			= jRep.messages[nInd].status.name
+	tabResultat[nLigne].StatutGroupeNom		= jRep.messages[nInd].status.groupName
+	tabResultat[nLigne].StatutId				= Val(jRep.messages[nInd].status.id)
+	tabResultat[nLigne].StatutNom				= jRep.messages[nInd].status.name
 fin
 
 renvoyer Vrai
