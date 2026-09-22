@@ -1,0 +1,27 @@
+procédure InitProjet()
+
+
+sRepertoireCléPrivée est une chaîne
+
+__sRepRacine 					= cpFonction.ValeurParametre("rep_racine_marketeam",prm_parametre.ValChaine..Nom)
+__sHttpMarketeam				= cpFonction.ValeurParametre("http_marketeam",prm_parametre.ValChaine..Nom)
+
+__sRepUpload					= cpFonction.ValeurParametre("repweb_uploads",prm_parametre.ValChaine..Nom)
+
+__moTauxTva						= cpFonction.ValeurParametre("Taux_TVA", prm_parametre.ValNumerique..Nom)
+
+__sRepBloctel					= cpConnexion.__sRepExe + ["\"] + cpFonction.ValeurParametre("rep_Bloctel",prm_parametre.ValChaine..Nom)
+__sRepBloctelEntrée				= __sRepBloctel + ["\"]+ cpFonction.ValeurParametre("rep_Bloctel_Entrée",prm_parametre.ValChaine..Nom)
+__sRepBloctelSortie				= __sRepBloctel + ["\"]+ cpFonction.ValeurParametre("rep_Bloctel_Sortie",prm_parametre.ValChaine..Nom)
+
+sRepertoireCléPrivée			= cpFonction.ValeurParametre("Bloctel_sftp_repertoire_clé_privée",prm_parametre.ValChaine..Nom)
+
+__sBloctelSftpHôte				= cpFonction.ValeurParametre("Bloctel_sftp_hôte",prm_parametre.ValChaine..Nom)
+__sBloctelSftpIdentifiant		= cpFonction.ValeurParametre("Bloctel_sftp_identifiant",prm_parametre.ValChaine..Nom)
+__nBloctelSftpPort				= cpFonction.ValeurParametre("Bloctel_sftp_port",prm_parametre.ValNumerique..Nom)
+__sBloctelSftpMotDePasse		= cpFonction.ValeurParametre("Bloctel_sftp_mot_de_passe",prm_parametre.ValChaine..Nom)
+__sBloctelSftpFichierCléPrivée			= cpConnexion.__sRepExe + ["\"] + sRepertoireCléPrivée + ["\"] + cpFonction.ValeurParametre("Bloctel_sftp_fichier_clé_privée",prm_parametre.ValChaine..Nom)
+
+fRepCrée(__sRepBloctel)
+fRepCrée(__sRepBloctelEntrée)
+fRepCrée(__sRepBloctelSortie)

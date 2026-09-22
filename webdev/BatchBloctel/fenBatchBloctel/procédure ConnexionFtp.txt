@@ -1,0 +1,23 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// ConnexionFtp ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure ConnexionFtp()
+
+__nIdSftp = FTPConnecte("sftp://" + cpProjet.__sBloctelSftpHôte,cpProjet.__sBloctelSftpIdentifiant,"",cpProjet.__nBloctelSftpPort, ftpModeActif,5,cpProjet.__sBloctelSftpFichierCléPrivée,"")
+
+tantque __nIdSftp = -1
+	Trace("Erreur de connexion FTP")
+	Multitâche(10 s)
+	__nIdSftp = FTPConnecte("sftp://" + cpProjet.__sBloctelSftpHôte,cpProjet.__sBloctelSftpIdentifiant,"",cpProjet.__nBloctelSftpPort, ftpModeActif,5,cpProjet.__sBloctelSftpFichierCléPrivée,"")
+fin
+
+Trace("Connexion FTP OK")

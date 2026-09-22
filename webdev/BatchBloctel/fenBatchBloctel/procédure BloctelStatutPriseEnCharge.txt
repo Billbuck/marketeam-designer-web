@@ -1,0 +1,78 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] BloctelStatutPriseEnCharge (<pIdBloctel>, <pIdBaseSource>, <pIdFiltreSource>)
+//
+// Paramètres :
+//	pIdBloctel : <indiquez ici le rôle de pIdBloctel>
+//	pIdBaseSource : <indiquez ici le rôle de pIdBase>
+// 	pIdFiltreSource : <indiquez ici le rôle de pIdFiltreSource>
+
+// Valeur de retour :
+// 	multi-valeur : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+//	pIdBase : <indiquez ici le rôle de pIdBase>
+//	pFichier : <indiquez ici le rôle de pNIdBloctel>
+// 	pFichier : <indiquez ici le rôle de pFichier>
+
+procédure BloctelStatutPriseEnCharge(pIdBloctel, pIdBaseSource, pIdFiltreSource)
+
+sTexteRequete	est une chaîne
+sdReqFichier	est une Source de Données
+sLigne			est une chaîne
+sFichier 		est une chaîne = "Fichier_" + pIdBloctel + "_" + DateHeureSys()
+sFiltre			est une chaîne
+
+si pIdFiltreSource > 0 alors
+	sFiltre = cpProjet.GenereRequeteFiltreClientBase(pIdBaseSource, pIdFiltreSource)
+sinon
+	sFiltre = "clt_base_ligne.IdBase = " + pIdBaseSource
+fin
+
+sTexteRequete =
+[
+	SELECT
+	clt_base_ligne.IdBaseLigne,
+	clt_base_ligne.Tel,
+	clt_base_ligne.Portable
+	FROM
+	clt_base_ligne
+	WHERE
+	(clt_base_ligne.Tel is not null or clt_base_ligne.Portable is not null)
+	and [%sFiltre%]
+]
+
+si pas sdReqFichier.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	renvoyer ("","")
+fin
+
+sdReqFichier.LitPremier(hSansRafraîchir)
+tantque pas sdReqFichier.EnDehors()
+	si sdReqFichier.Tel <> "" alors
+		sLigne += [RC] + "0" + sdReqFichier.Tel[[3 à]] +TAB+ sdReqFichier.IdBaseLigne +"_TEL"
+	fin
+	si sdReqFichier.Portable <> "" alors
+		sLigne += [RC] + "0" + sdReqFichier.Portable[[3 à]] +TAB+  sdReqFichier.IdBaseLigne +"_GSM"
+	fin
+	sdReqFichier.LitSuivant()
+fin
+
+si sLigne <> "" alors
+	si fSauveTexte(cpProjet.__sRepBloctelEntrée + ["\"] + sFichier + __TXT__, sLigne) alors
+		si ope_bloctel.LitRecherchePremier(IdBloctel,pIdBloctel) alors
+			ope_bloctel.Statut 			= __STATUT_BLOCTEL_FICHIER_CREE__
+			ope_bloctel.FichierEntree		= sFichier
+			si ope_bloctel.Modifie() alors
+				renvoyer (ope_bloctel.Statut, ope_bloctel.FichierEntree)
+			fin
+		fin
+	fin
+fin
+
+renvoyer ("","")
+
+fin:
+sdReqFichier.AnnuleDéclaration()

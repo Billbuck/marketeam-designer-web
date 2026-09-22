@@ -1,0 +1,66 @@
+// Procédure automatique :
+// La procédure est exécutée automatiquement, après le code d'initialisation de la fenêtre, avec un différé de 1 seconde
+// Elle sera répétée en boucle, en attendant 1 minute entre chaque appel
+// Chaque appel suivant exécute une seule fois la procédure, sans timer
+//
+
+procédure Traitement()
+
+sTexteRequete	est une chaîne
+sdReqTraitement	est une Source de Données
+sRepEnCours		est une chaîne
+
+sTexteRequete =
+[
+SELECT	
+	ope_bloctel.IdBloctel,
+	ope_bloctel.IdOperation,
+	ope_bloctel.IdBaseClient,
+	ope_bloctel.IdBaseSource,
+	ope_bloctel.IdFiltreSource,
+	ope_bloctel.FichierEntree,
+	ope_bloctel.FichierSortie,
+	ope_bloctel.Statut,
+	ope_bloctel.PrecedentStatut,
+	clt_base.IdBase,
+	clt_client.Societe,
+	CONCAT(clt_contact.Prenom,' ',clt_contact.Nom) Contact,
+	dos_operation.Dossier
+FROM
+	ope_bloctel
+	JOIN clt_base on clt_base.IdBase = ope_bloctel.IdBaseClient
+	JOIN clt_client on clt_client.IdClient = ope_bloctel.IdClient
+	JOIN clt_contact on clt_contact.IdContact = ope_bloctel.IdContact
+	JOIN dos_operation on dos_operation.IdOperation = ope_bloctel.IdOperation
+WHERE
+	ope_bloctel.Statut IN ('[%__STATUT_BLOCTEL_EN_ATTENTE__%]','[%__STATUT_BLOCTEL_PRISE_EN_CHARGE__%]','[%__STATUT_BLOCTEL_FICHIER_CREE__%]','[%__STATUT_BLOCTEL_FICHIER_DEPOSE__%]','[%__STATUT_BLOCTEL_EN_COURS_DE_TRAITEMENT__%]','[%__STATUT_BLOCTEL_TRAITE__%]')
+]
+
+
+si pas HExécuteRequêteSQL(sdReqTraitement, ope_bloctel..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête")
+	retour
+fin
+
+libDateBatch = DateHeureVersChaîne(DateHeureSys(),"Jjj JJ Mmm HH:mm:SS")
+
+// On vérifie que la connexion SFTP est toujours OK
+sRepEnCours = FTPRepEnCours(__nIdSftp)
+si sRepEnCours = ""
+	ConnexionFtp()
+fin
+
+si sdReqTraitement.LitPremier(hSansRafraîchir) alors
+
+	pour tout sdReqTraitement
+		BloctelTraitement(sdReqTraitement)
+	fin
+
+	// Au cas ou on redémarre le batch et que l'on a zappé la prise en charge
+	BloctelFichierOut()
+
+fin
+
+
+fin:
+HAnnuleDéclaration(sdReqTraitement)

@@ -1,0 +1,137 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] BloctelStatutTraite (<pIdOperation>, <pIdBloctel>, <pIdBaseClient>, <pFichier>)
+//
+// Paramètres :
+//	pIdOperation : <indiquez ici le rôle de pIdOpeation>
+//	pIdBloctel : <indiquez ici le rôle de pIdBloctel>
+//	pIdBaseClient : <indiquez ici le rôle de pIdBaseClient>
+//	pFichier : <indiquez ici le rôle de pFichier>
+
+// Valeur de retour :
+// 	chaîne ANSI : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+// 	pIdBaseSource : <indiquez ici le rôle de pIdBaseSource>
+procédure BloctelStatutTraite(pIdOperation, pIdBloctel, pIdBaseClient, pFichier)
+
+bErreur			est un booléen	= Vrai
+ZipBloctel		est une zipArchive
+nIdFichier		est un entier
+sLigne			est une chaîne
+nIdBaseLigne	est un entier
+sType			est une chaîne
+sReference		est une chaîne
+sNumero			est une chaîne
+sResultat		est une chaîne
+sTexteRequete	est une chaîne
+sdReqInsert		est une Source de Données
+sTéléphone		est une chaîne
+sPortable		est une chaîne
+nNbrTelephone	est un entier
+nNbrPortable	est un entier
+
+structBloctel est une Structure
+	Telephone	est une chaîne
+	Portable		est une chaîne
+fin
+
+stBloctel est une structBloctel
+
+taaBloctel est un tableau associatif de structBloctel
+
+si FTPRécupèreFichier(__nIdSftp, "/OUT/" + pFichier + __ZIP__, cpProjet.__sRepBloctelSortie + ["\"] + pFichier + __ZIP__) alors
+	si zipOuvre(ZipBloctel, cpProjet.__sRepBloctelSortie + ["\"] + pFichier + __ZIP__) = 0 alors
+		si zipExtraitTout(ZipBloctel, cpProjet.__sRepBloctelSortie) = 0 alors
+			nIdFichier = fOuvre(cpProjet.__sRepBloctelSortie + ["\"] + "retour_" + pFichier + __TXT__)
+			sLigne = fLitLigne(nIdFichier)
+			tantque sLigne <> EOT
+				sResultat = ExtraitChaîne(sLigne,3)
+				si sResultat = "OK" alors
+					sReference		= ExtraitChaîne(sLigne,2)
+					sNumero			= ExtraitChaîne(sLigne,1)
+					nIdBaseLigne		= ExtraitChaîne(sReference,1,"_")
+					sType			= ExtraitChaîne(sReference,2,"_")
+					
+					si taaBloctel[nIdBaseLigne]..Existe alors
+						selon sType
+							cas "TEL" : taaBloctel[nIdBaseLigne].Téléphone 	= "33" + sNumero[[2 à]]	; nNbrTelephone++
+							cas "GSM" : taaBloctel[nIdBaseLigne].Portable		= "33" + sNumero[[2 à]]	; nNbrPortable++
+						fin
+					sinon
+						VariableRAZ(stBloctel)
+						selon sType
+							cas "TEL" : stBloctel.Téléphone 	= "33" + sNumero[[2 à]]	; nNbrTelephone++
+							cas "GSM" : stBloctel.Portable	= "33" + sNumero[[2 à]]	; nNbrPortable++
+						fin
+						taaBloctel[nIdBaseLigne] = stBloctel
+					fin
+				fin
+				sLigne = fLitLigne(nIdFichier)
+			fin
+			
+			fFerme(nIdFichier)
+			
+			// Au cas ou l'on repasse par là
+			cpFonction.SupprimeEnregistrement(clt_base_ligne..Nom,"IdBase = " + pIdBaseClient)
+			
+			pour tout stBloctel, sIdBaseLigne de taaBloctel
+				
+				sTéléphone	= stBloctel.Téléphone		= "" ? "NULL" sinon stBloctel.Téléphone
+				sPortable	= stBloctel.Portable		= "" ? "NULL" sinon stBloctel.Portable
+				
+				sTexteRequete =
+				[
+					INSERT INTO clt_base_ligne (IdBase, Societe, Enseigne, Civilite, Prenom, Nom, contact, Adresse1, Adresse2, Adresse3, Adresse4, CodePostal, Ville, Pays, Tel, Portable, Fax, Email,CodeAlliage,Champ1,Champ2,Champ3,Champ4,Champ5,Champ6,Champ7,Champ8,Champ9,Champ10,Champ11,Champ12,Champ13,Champ14,Champ15,Champ16,Champ17,Champ18,Champ19,Champ20,Sexe,Profil)
+					SELECT [%pIdBaseClient%], Societe, Enseigne, Civilite, Prenom, Nom, contact, Adresse1, Adresse2, Adresse3, Adresse4, CodePostal, Ville, Pays, [%sTéléphone%], [%sPortable%], Fax,Email, CodeAlliage,Champ1,Champ2,Champ3,Champ4,Champ5,Champ6,Champ7,Champ8,Champ9,Champ10,Champ11,Champ12,Champ13,Champ14,Champ15,Champ16,Champ17,Champ18,Champ19,Champ20,Sexe,Profil
+					FROM
+					clt_base_ligne
+					WHERE
+					clt_base_ligne.IdBaseLigne = ([%sIdBaseLigne%])
+				]
+				
+				si pas sdReqInsert.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+					Info("Erreur requête")
+					renvoyer ""               
+				fin
+			fin
+		
+			// On supprime les fichiers 
+			FTPSupprimeFichier(__nIdSftp,"/OUT/" + pFichier + __ZIP__)
+			fSupprime(cpProjet.__sRepBloctelSortie + ["\"] + pFichier + __TXT__)
+			fSupprime(cpProjet.__sRepBloctelSortie + ["\"] + "rapport_" + pFichier + __TXT__)
+			fSupprime(cpProjet.__sRepBloctelSortie + ["\"] + "retour_" + pFichier + __TXT__)
+
+			si ope_bloctel.LitRecherchePremier(IdBloctel,pIdBloctel) alors
+				ope_bloctel.DateHeureFinTraitement		= DateHeureSys()
+				ope_bloctel.Statut					= __STATUT_BLOCTEL_TERMINE__
+				ope_bloctel.NbrTelephoneSortie		= nNbrTelephone
+				ope_bloctel.NbrPortableSortie			= nNbrPortable
+				si ope_bloctel.Modifie() alors
+					si cpProjet.CalculeTotauxClientBase(pIdBaseClient) alors
+						si clt_base.LitRecherchePremier(IdBase,pIdBaseClient) alors
+							clt_base.EstActif = Vrai
+							si clt_base.Modifie() alors
+								si dos_operation.LitRecherchePremier(IdOperation, pIdOperation) alors
+									dos_operation.EstTerminee = Vrai
+									si dos_operation.Modifie() alors
+										renvoyer __STATUT_BLOCTEL_TERMINE__
+									fin
+								fin
+							fin
+						fin
+					fin
+				fin
+			fin
+		fin
+	fin
+	
+fin
+
+renvoyer ""
+
+
+fin:
+sdReqInsert.AnnuleDéclaration()

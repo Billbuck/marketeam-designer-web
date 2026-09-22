@@ -1,0 +1,25 @@
+procédure TotauxFiltreZnrBddHeberge(pIdBddClient,pIdBddFiltre,pZnrLigne)
+
+selon Vrai
+	cas pIdBddFiltre > 0
+		si clt_base_filtre.LitRecherchePremier(IdFiltre,pIdBddFiltre) alors
+			znrBddHeberge[pZnrLigne].libBddTotal			= clt_base_filtre.NbrTotal > 0 	? NumériqueVersChaîne(clt_base_filtre.NbrTotal, "dS") 		sinon "-"
+			znrBddHeberge[pZnrLigne].libBddTotalAdresse		= clt_base_filtre.NbrAdresse > 0 	? NumériqueVersChaîne(clt_base_filtre.NbrAdresse, "dS") 		sinon "-"
+			znrBddHeberge[pZnrLigne].libBddTotalTel		= clt_base_filtre.NbrTel > 0 		? NumériqueVersChaîne(clt_base_filtre.NbrTel, "dS") 		sinon "-"
+			znrBddHeberge[pZnrLigne].libBddTotalSms		= clt_base_filtre.NbrSms > 0 		? NumériqueVersChaîne(clt_base_filtre.NbrSms, "dS") 		sinon "-"
+			znrBddHeberge[pZnrLigne].libBddTotalEmail		= clt_base_filtre.NbrEmail > 0		? NumériqueVersChaîne(clt_base_filtre.NbrEmail, "dS") 		sinon "-"
+		fin
+	
+	cas pIdBddClient > 0
+		si clt_base.LitRecherchePremier(IdBase,pIdBddClient) alors
+			znrBddHeberge[pZnrLigne].libBddTotal			= clt_base.NbrTotal > 0 			? NumériqueVersChaîne(clt_base.NbrTotal, "dS") 				sinon "-"
+			znrBddHeberge[pZnrLigne].libBddTotalAdresse		= clt_base.NbrAdresse > 0 		? NumériqueVersChaîne(clt_base.NbrAdresse, "dS") 			sinon "-"
+			znrBddHeberge[pZnrLigne].libBddTotalTel		= clt_base.NbrTel > 0 			? NumériqueVersChaîne(clt_base.NbrTel, "dS") 				sinon "-"
+			znrBddHeberge[pZnrLigne].libBddTotalSms		= clt_base.NbrSms > 0 			? NumériqueVersChaîne(clt_base.NbrSms, "dS") 				sinon "-"
+			znrBddHeberge[pZnrLigne].libBddTotalEmail		= clt_base.NbrEmail > 0			? NumériqueVersChaîne(clt_base.NbrEmail, "dS") 				sinon "-"
+		fin
+
+	autre cas
+		
+fin
+

@@ -1,0 +1,4 @@
+// ** Initialisation de BatchBloctel
+__taaBaseChamp est un tableau associatif de structBaseChamp
+
+InitProjet()

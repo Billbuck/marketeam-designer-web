@@ -1,0 +1,33 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] BloctelStatutFichierDeposé (<pIdOperation>, <pIdBloctel>, <pFichier>)
+//
+// Paramètres :
+// 	pIdOperation : <indiquez ici le rôle de pIdOperation>
+//	pIdBloctel : <indiquez ici le rôle de pIdBloctel>
+//	pFichier : <indiquez ici le rôle de pFichier>
+// Valeur de retour :
+// 	Type indéterminé : // 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure BloctelStatutFichierDeposé(pIdOperation, pIdBloctel, pFichier)
+
+si pas FTPFichierExiste(__nIdSftp, "/IN/" + pFichier + __TXT__) alors
+	// Le fichier a été prise en charge
+	si ope_bloctel.LitRecherchePremier(IdBloctel,pIdBloctel) alors
+		ope_bloctel.DateHeurePriseEnCharge = DateHeureSys()
+		ope_bloctel.Statut				 = __STATUT_BLOCTEL_EN_COURS_DE_TRAITEMENT__
+		si ope_bloctel.Modifie() alors
+			si dos_operation.LitRecherchePremier(IdOperation,pIdOperation) alors
+				dos_operation.Statut = __Statut_Bdd_En_Cours__
+				si dos_operation.Modifie() alors
+					renvoyer __STATUT_BLOCTEL_EN_COURS_DE_TRAITEMENT__
+				fin
+			fin
+		fin
+	fin
+fin
+
+renvoyer ""

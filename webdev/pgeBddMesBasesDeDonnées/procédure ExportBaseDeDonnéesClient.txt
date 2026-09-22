@@ -1,0 +1,417 @@
+procédure ExportBaseDeDonnéesClient(pIdClient, pIdBddClient, pIdBddFiltre, pIdBloctel, pTypeStopPub)
+
+
+nInd					est un entier
+sFiltre					est une chaîne
+sTexteRequete			est une chaîne
+sdReqExportBddHeberge	est une Source de Données
+nLigne					est un entier
+xRapport				est un xlsDocument(xlsVersionXlsx)
+sFichier				est un chaîne 
+sRepertoire				est une chaîne 
+xCadre					est un Cadre
+xPolice					est une Police
+taaBaseChamp			est un tableau associatif de structBaseChamp
+sListeChamp				est une chaîne
+sSelect					est une chaîne
+
+
+popAction.__sRepertoire = ""
+popAction.__sFichier	= ""
+
+si clt_base.LitRecherchePremier(IdBase,pIdBddClient) alors
+	sFichier = clt_base.Nom + __XLSX__
+sinon
+	sFichier = "Export Fichier Client " + GénèreMotDePasse(8) + __XLSX__
+fin
+
+
+
+
+sRepertoire = cpProjet.__sRepRacine + cpProjet.__sRepUpload + ["\"] 
+
+nLigne = 1
+
+xlsAjouteFeuille(xRapport,"Export base client")
+
+xCadre.Trait		= TraitContinu
+xCadre.Couleur		= GrisClair
+xCadre.Epaisseur	= 1
+
+xPolice..Nom		= "News Gothic MT"
+xPolice..Taille		= 10
+xPolice..Gras		= Vrai
+xPolice..Couleur	= Noir
+
+
+si pTypeStopPub = "" alors
+	taaBaseChamp = Partage.ChargeTaaCltBaseChamp(pIdBddClient)
+	
+	si pIdBddFiltre > 0 alors
+		sFiltre = " AND (" + GenereRequeteFiltreClientBase(pIdBddClient,pIdBddFiltre) +")"
+	fin
+
+	nInd = 0
+	pour tout stBaseChamp, sLibelle de taaBaseChamp
+		si pIdBloctel = 0 _ou_ stBaseChamp.Type pas dans (__CHAMP_TYPE_PORTABLE__,__CHAMP_TYPE_TELEPHONE__) _ou_ (Partage.__vcUser.stCoordonnées.Prénom = "Michel" _et_ Partage.__vcUser.stCoordonnées.Nom = "ATTALI") alors
+			nInd++
+			selon stBaseChamp.Type
+				cas __CHAMP_TYPE_DECIMAL__, __CHAMP_TYPE_ENTIER__, __CHAMP_TYPE_MONETAIRE__ 		: xRapport..Colonne[nInd].CelluleDéfaut..AlignementH = chDroite
+				cas __CHAMP_TYPE_CODEPOSTAL__, __CHAMP_TYPE_PORTABLE__,__CHAMP_TYPE_TELEPHONE__ 	: xRapport..Colonne[nInd].CelluleDéfaut..AlignementH = chCentre
+				autre cas																			: xRapport..Colonne[nInd].CelluleDéfaut..AlignementH = chGauche
+			fin
+			sListeChamp += [","] + stBaseChamp.Champ
+			xRapport..Colonne[nInd].CelluleDéfaut..AlignementV	= cvMilieu
+			xRapport[nLigne,nInd]								= sLibelle
+			xRapport..Cellule[nLigne,nInd]..Cadre				= xCadre
+			xRapport..Cellule[nLigne,nInd]..CouleurFond			= HTMLVersRVB(__COULEUR_BDD_XS__)
+			xRapport..Cellule[nLigne,nInd]..Police				= xPolice
+		fin
+	fin
+
+	si sListeChamp <> "" alors
+		
+		
+		xPolice..Couleur					= Noir
+		xPolice..Gras						= Faux
+		
+		sTexteRequete						=
+		[
+			SELECT
+				[%sListeChamp%]
+			FROM 
+				clt_base_ligne
+			WHERE
+				IdBase = [%pIdBddClient%]
+				[%sFiltre%]
+		]
+		
+		
+		si pas HExécuteRequêteSQL(sdReqExportBddHeberge, clt_base_ligne..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+			Info("Erreur requête")
+			retour	
+		fin
+		
+		// Les Valeurs
+		pour tout sdReqExportBddHeberge 
+			nLigne++	
+			nInd = 0
+
+			xRapport..Ligne[nLigne]..Hauteur	= 30
+			
+			pour tout stBaseChamp, sLibelle de taaBaseChamp
+				si pIdBloctel = 0 _ou_ stBaseChamp.Type pas dans (__CHAMP_TYPE_PORTABLE__,__CHAMP_TYPE_TELEPHONE__) _ou_ (Partage.__vcUser.stCoordonnées.Prénom = "Michel" _et_ Partage.__vcUser.stCoordonnées.Nom = "ATTALI")   alors
+					nInd++ 
+					xRapport[nLigne,nInd]					= {"sdReqExportBddHeberge." + stBaseChamp.Champ,indVariable}
+					xRapport..Cellule[nLigne,nInd]..Police	= xPolice
+					xRapport..Cellule[nLigne,nInd]..Cadre	= xCadre
+					si EstImpair(nLigne) alors
+						xRapport..Cellule[nLigne,nInd]..CouleurFond = HTMLVersRVB(__COULEUR_BDD_XXS__)
+					fin
+				fin
+			fin
+		fin
+	fin
+sinon
+	
+	nInd = 0
+	// Dossier 
+	nInd++
+	xRapport..Colonne[nInd].CelluleDéfaut..AlignementH = chCentre
+	xRapport..Colonne[nInd].CelluleDéfaut..AlignementV	= cvMilieu
+	xRapport..Colonne[nInd].Largeur						= 120
+	xRapport[nLigne,nInd]								= "Dossier"
+	xRapport..Cellule[nLigne,nInd]..Cadre				= xCadre
+	xRapport..Cellule[nLigne,nInd]..CouleurFond			= HTMLVersRVB(__COULEUR_BDD_XS__)
+	xRapport..Cellule[nLigne,nInd]..Police				= xPolice
+	sSelect = "dos_operation.Dossier"
+	
+	// Nom Opération 
+	nInd++
+	xRapport..Colonne[nInd].CelluleDéfaut..AlignementH	= chGauche
+	xRapport..Colonne[nInd].CelluleDéfaut..AlignementV	= cvMilieu
+	xRapport..Colonne[nInd].Largeur						= 500
+	xRapport[nLigne,nInd]								= "Nom opération"
+	xRapport..Cellule[nLigne,nInd]..Cadre				= xCadre
+	xRapport..Cellule[nLigne,nInd]..CouleurFond			= HTMLVersRVB(__COULEUR_BDD_XS__)
+	xRapport..Cellule[nLigne,nInd]..Police				= xPolice
+	sSelect += "," + RC + "dos_operation.NomOperation"
+	
+	
+	selon pTypeStopPub
+		cas __ERREUR_STOP_PUB__
+			
+			// Portable
+			nInd++
+			xRapport..Colonne[nInd].CelluleDéfaut..AlignementH	= chCentre
+			xRapport..Colonne[nInd].CelluleDéfaut..AlignementV	= cvMilieu
+			xRapport..Colonne[nInd].Largeur						= 200
+			xRapport[nLigne,nInd]								= "Portable"
+			xRapport..Cellule[nLigne,nInd]..Cadre				= xCadre
+			xRapport..Cellule[nLigne,nInd]..CouleurFond			= HTMLVersRVB(__COULEUR_BDD_XS__)
+			xRapport..Cellule[nLigne,nInd]..Police				= xPolice
+			sSelect += "," + RC + "COALESCE(CONCAT('0',SUBSTRING(dos_base_ligne.Portable,3,1),'.',substring(dos_base_ligne.Portable,4,2),'.',substring(dos_base_ligne.Portable,6,2),'.',substring(dos_base_ligne.Portable,8,2),'.',substring(dos_base_ligne.Portable,10,2)),'') Portable"
+			
+		cas __ERREUR_STOP_TEL__ 
+
+			// Portable
+			nInd++
+			xRapport..Colonne[nInd].CelluleDéfaut..AlignementH	= chCentre
+			xRapport..Colonne[nInd].CelluleDéfaut..AlignementV	= cvMilieu
+			xRapport..Colonne[nInd].Largeur						= 200
+			xRapport[nLigne,nInd]								= "Portable"
+			xRapport..Cellule[nLigne,nInd]..Cadre				= xCadre
+			xRapport..Cellule[nLigne,nInd]..CouleurFond			= HTMLVersRVB(__COULEUR_BDD_XS__)
+			xRapport..Cellule[nLigne,nInd]..Police				= xPolice
+			sSelect += "," + RC + "COALESCE(CONCAT('0',SUBSTRING(dos_base_ligne.Portable,3,1),'.',substring(dos_base_ligne.Portable,4,2),'.',substring(dos_base_ligne.Portable,6,2),'.',substring(dos_base_ligne.Portable,8,2),'.',substring(dos_base_ligne.Portable,10,2)),'') Portable"
+			
+			// Tel
+			nInd++
+			xRapport..Colonne[nInd].CelluleDéfaut..AlignementH	= chCentre
+			xRapport..Colonne[nInd].CelluleDéfaut..AlignementV	= cvMilieu
+			xRapport..Colonne[nInd].Largeur						= 200
+			xRapport[nLigne,nInd]								= "Tel"
+			xRapport..Cellule[nLigne,nInd]..Cadre				= xCadre
+			xRapport..Cellule[nLigne,nInd]..CouleurFond			= HTMLVersRVB(__COULEUR_BDD_XS__)
+			xRapport..Cellule[nLigne,nInd]..Police				= xPolice
+			sSelect += "," + RC + "COALESCE(CONCAT('0',SUBSTRING(dos_base_ligne.Tel,3,1),'.',substring(dos_base_ligne.Tel,4,2),'.',substring(dos_base_ligne.Tel,6,2),'.',substring(dos_base_ligne.Tel,8,2),'.',substring(dos_base_ligne.Tel,10,2)),'') Tel"
+			
+		cas __ERREUR_STOP_EMAIL__
+			// Portable
+			nInd++
+			xRapport..Colonne[nInd].CelluleDéfaut..AlignementH	= chGauche
+			xRapport..Colonne[nInd].CelluleDéfaut..AlignementV	= cvMilieu
+			xRapport..Colonne[nInd].Largeur						= 500
+			xRapport[nLigne,nInd]								= "Email"
+			xRapport..Cellule[nLigne,nInd]..Cadre				= xCadre
+			xRapport..Cellule[nLigne,nInd]..CouleurFond			= HTMLVersRVB(__COULEUR_BDD_XS__)
+			xRapport..Cellule[nLigne,nInd]..Police				= xPolice
+			sSelect += "," + RC + "IFNULL (dos_base_ligne.Email,'')"
+			
+			
+		cas __ERREUR_ALLIAGE__	 	
+		
+			// Contact
+			nInd++
+			xRapport..Colonne[nInd].CelluleDéfaut..AlignementH	= chGauche
+			xRapport..Colonne[nInd].CelluleDéfaut..AlignementV	= cvMilieu
+			xRapport..Colonne[nInd].Largeur						= 400
+			xRapport[nLigne,nInd]								= "Contact"
+			xRapport..Cellule[nLigne,nInd]..Cadre				= xCadre
+			xRapport..Cellule[nLigne,nInd]..CouleurFond			= HTMLVersRVB(__COULEUR_BDD_XS__)
+			xRapport..Cellule[nLigne,nInd]..Police				= xPolice
+			sSelect += "," + RC + "IFNULL (dos_base_ligne.Email,'') Email"
+			
+			// Adresse 1
+			nInd++
+			xRapport..Colonne[nInd].CelluleDéfaut..AlignementH	= chGauche
+			xRapport..Colonne[nInd].CelluleDéfaut..AlignementV	= cvMilieu
+			xRapport..Colonne[nInd].Largeur						= 400
+			xRapport[nLigne,nInd]								= "Adresse 1"
+			xRapport..Cellule[nLigne,nInd]..Cadre				= xCadre
+			xRapport..Cellule[nLigne,nInd]..CouleurFond			= HTMLVersRVB(__COULEUR_BDD_XS__)
+			xRapport..Cellule[nLigne,nInd]..Police				= xPolice
+			sSelect += "," + RC + "IFNULL (dos_base_ligne.Adresse1,'') Adresse1"
+
+			// Adresse 2
+			nInd++
+			xRapport..Colonne[nInd].CelluleDéfaut..AlignementH	= chGauche
+			xRapport..Colonne[nInd].CelluleDéfaut..AlignementV	= cvMilieu
+			xRapport..Colonne[nInd].Largeur						= 400
+			xRapport[nLigne,nInd]								= "Adresse 2"
+			xRapport..Cellule[nLigne,nInd]..Cadre				= xCadre
+			xRapport..Cellule[nLigne,nInd]..CouleurFond			= HTMLVersRVB(__COULEUR_BDD_XS__)
+			xRapport..Cellule[nLigne,nInd]..Police				= xPolice
+			sSelect += "," + RC + "IFNULL (dos_base_ligne.Adresse2,'') Adresse2"
+			
+			// Adresse 3
+			nInd++
+			xRapport..Colonne[nInd].CelluleDéfaut..AlignementH	= chGauche
+			xRapport..Colonne[nInd].CelluleDéfaut..AlignementV	= cvMilieu
+			xRapport..Colonne[nInd].Largeur						= 400
+			xRapport[nLigne,nInd]								= "Adresse 3"
+			xRapport..Cellule[nLigne,nInd]..Cadre				= xCadre
+			xRapport..Cellule[nLigne,nInd]..CouleurFond			= HTMLVersRVB(__COULEUR_BDD_XS__)
+			xRapport..Cellule[nLigne,nInd]..Police				= xPolice
+			sSelect += "," + RC + "IFNULL (dos_base_ligne.Adresse3,'') Adresse3"
+			
+			// Adresse 4
+			nInd++
+			xRapport..Colonne[nInd].CelluleDéfaut..AlignementH	= chGauche
+			xRapport..Colonne[nInd].CelluleDéfaut..AlignementV	= cvMilieu
+			xRapport..Colonne[nInd].Largeur						= 400
+			xRapport[nLigne,nInd]								= "Adresse 4"
+			xRapport..Cellule[nLigne,nInd]..Cadre				= xCadre
+			xRapport..Cellule[nLigne,nInd]..CouleurFond			= HTMLVersRVB(__COULEUR_BDD_XS__)
+			xRapport..Cellule[nLigne,nInd]..Police				= xPolice
+			sSelect += "," + RC + "IFNULL (dos_base_ligne.Adresse4,'') Adresse4"
+			
+			// Code postal
+			nInd++
+			xRapport..Colonne[nInd].CelluleDéfaut..AlignementH	= chGauche
+			xRapport..Colonne[nInd].CelluleDéfaut..AlignementV	= cvMilieu
+			xRapport..Colonne[nInd].Largeur						= 400
+			xRapport[nLigne,nInd]								= "Code postal"
+			xRapport..Cellule[nLigne,nInd]..Cadre				= xCadre
+			xRapport..Cellule[nLigne,nInd]..CouleurFond			= HTMLVersRVB(__COULEUR_BDD_XS__)
+			xRapport..Cellule[nLigne,nInd]..Police				= xPolice
+			sSelect += "," + RC + "IFNULL (dos_base_ligne.CodePostal,'') CodePostal"
+			
+			// Ville
+			nInd++
+			xRapport..Colonne[nInd].CelluleDéfaut..AlignementH	= chGauche
+			xRapport..Colonne[nInd].CelluleDéfaut..AlignementV	= cvMilieu
+			xRapport..Colonne[nInd].Largeur						= 400
+			xRapport[nLigne,nInd]								= "Ville"
+			xRapport..Cellule[nLigne,nInd]..Cadre				= xCadre
+			xRapport..Cellule[nLigne,nInd]..CouleurFond			= HTMLVersRVB(__COULEUR_BDD_XS__)
+			xRapport..Cellule[nLigne,nInd]..Police				= xPolice
+			sSelect += "," + RC + "IFNULL (dos_base_ligne.Ville,'') Ville"
+			
+		autre cas					: STOP
+	fin
+	
+	
+	sTexteRequete = [
+		SELECT
+			[%sSelect%]
+		FROM
+			dos_operation 
+			JOIN dos_base ON dos_base.IdOperation = dos_operation.IdOperation
+			JOIN dos_base_ligne ON dos_base_ligne.IdBase = dos_base.IdBase
+			JOIN dos_base_ligne_erreur ON dos_base_ligne_erreur.IdBaseLigne = dos_base_ligne.IdBaseLigne
+		WHERE
+			dos_operation.IdClient = [%pIdClient%]
+			AND	dos_base_ligne_erreur.TypeErreur = '[%pTypeStopPub%]'
+	]
+
+	si pas HExécuteRequêteSQL(sdReqExportBddHeberge, clt_base_ligne..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+		Info("Erreur requête")
+		retour	
+	fin
+	
+	// Les Valeurs
+	pour tout sdReqExportBddHeberge 
+		nLigne++	
+		nInd = 0
+		xRapport..Ligne[nLigne]..Hauteur	= 30
+
+		
+
+		// Dossier
+		nInd++ 
+		xRapport[nLigne,nInd]						= sdReqExportBddHeberge.Dossier
+		xRapport..Cellule[nLigne,nInd]..Police		= xPolice
+		xRapport..Cellule[nLigne,nInd]..Cadre		= xCadre
+		xRapport..Cellule[nLigne,nInd]..CouleurFond	= EstImpair(nLigne) ? HTMLVersRVB(__COULEUR_BDD_XXS__) sinon Blanc
+		
+		// Nom opération
+		nInd++ 
+		xRapport[nLigne,nInd]						= sdReqExportBddHeberge.NomOperation
+		xRapport..Cellule[nLigne,nInd]..Police		= xPolice
+		xRapport..Cellule[nLigne,nInd]..Cadre		= xCadre
+		xRapport..Cellule[nLigne,nInd]..CouleurFond	= EstImpair(nLigne) ? HTMLVersRVB(__COULEUR_BDD_XXS__) sinon Blanc
+		
+		selon pTypeStopPub
+			cas __ERREUR_STOP_PUB__
+				
+				// Portable
+				nInd++ 
+				xRapport[nLigne,nInd]						= sdReqExportBddHeberge.Portable
+				xRapport..Cellule[nLigne,nInd]..Police		= xPolice
+				xRapport..Cellule[nLigne,nInd]..Cadre		= xCadre
+				xRapport..Cellule[nLigne,nInd]..CouleurFond	= EstImpair(nLigne) ? HTMLVersRVB(__COULEUR_BDD_XXS__) sinon Blanc
+				
+			cas __ERREUR_STOP_TEL__ 
+				
+				// Portable
+				nInd++
+				xRapport[nLigne,nInd]						= sdReqExportBddHeberge.Portable
+				xRapport..Cellule[nLigne,nInd]..Police		= xPolice
+				xRapport..Cellule[nLigne,nInd]..Cadre		= xCadre
+				xRapport..Cellule[nLigne,nInd]..CouleurFond	= EstImpair(nLigne) ? HTMLVersRVB(__COULEUR_BDD_XXS__) sinon Blanc
+				
+				// Tel
+				nInd++
+				xRapport[nLigne,nInd]						= sdReqExportBddHeberge.Tel
+				xRapport..Cellule[nLigne,nInd]..Police		= xPolice
+				xRapport..Cellule[nLigne,nInd]..Cadre		= xCadre
+				xRapport..Cellule[nLigne,nInd]..CouleurFond	= EstImpair(nLigne) ? HTMLVersRVB(__COULEUR_BDD_XXS__) sinon Blanc
+				
+			cas __ERREUR_STOP_EMAIL__
+				// Portable
+				nInd++
+				xRapport[nLigne,nInd]						= sdReqExportBddHeberge.Email
+				xRapport..Cellule[nLigne,nInd]..Police		= xPolice
+				xRapport..Cellule[nLigne,nInd]..Cadre		= xCadre
+				xRapport..Cellule[nLigne,nInd]..CouleurFond	= EstImpair(nLigne) ? HTMLVersRVB(__COULEUR_BDD_XXS__) sinon Blanc
+				
+				
+			cas __ERREUR_ALLIAGE__	 	
+				
+				// Contact
+				nInd++
+				xRapport[nLigne,nInd]						= sdReqExportBddHeberge.Contact
+				xRapport..Cellule[nLigne,nInd]..Police		= xPolice
+				xRapport..Cellule[nLigne,nInd]..Cadre		= xCadre
+				xRapport..Cellule[nLigne,nInd]..CouleurFond	= EstImpair(nLigne) ? HTMLVersRVB(__COULEUR_BDD_XXS__) sinon Blanc
+				
+				// Adresse 1
+				nInd++
+				xRapport[nLigne,nInd]						= sdReqExportBddHeberge.Adresse1
+				xRapport..Cellule[nLigne,nInd]..Police		= xPolice
+				xRapport..Cellule[nLigne,nInd]..Cadre		= xCadre
+				xRapport..Cellule[nLigne,nInd]..CouleurFond	= EstImpair(nLigne) ? HTMLVersRVB(__COULEUR_BDD_XXS__) sinon Blanc
+				
+				// Adresse 2
+				nInd++
+				xRapport[nLigne,nInd]						= sdReqExportBddHeberge.Adresse2
+				xRapport..Cellule[nLigne,nInd]..Police		= xPolice
+				xRapport..Cellule[nLigne,nInd]..Cadre		= xCadre
+				xRapport..Cellule[nLigne,nInd]..CouleurFond	= EstImpair(nLigne) ? HTMLVersRVB(__COULEUR_BDD_XXS__) sinon Blanc
+				
+				// Adresse 3
+				nInd++
+				xRapport[nLigne,nInd]						= sdReqExportBddHeberge.Adresse3
+				xRapport..Cellule[nLigne,nInd]..Police		= xPolice
+				xRapport..Cellule[nLigne,nInd]..Cadre		= xCadre
+				xRapport..Cellule[nLigne,nInd]..CouleurFond	= EstImpair(nLigne) ? HTMLVersRVB(__COULEUR_BDD_XXS__) sinon Blanc
+				
+				// Adresse 4
+				nInd++
+				xRapport[nLigne,nInd]						= sdReqExportBddHeberge.Adresse4
+				xRapport..Cellule[nLigne,nInd]..Police		= xPolice
+				xRapport..Cellule[nLigne,nInd]..Cadre		= xCadre
+				xRapport..Cellule[nLigne,nInd]..CouleurFond	= EstImpair(nLigne) ? HTMLVersRVB(__COULEUR_BDD_XXS__) sinon Blanc
+				
+				// Code postal
+				nInd++
+				xRapport[nLigne,nInd]						= sdReqExportBddHeberge.CodePostal
+				xRapport..Cellule[nLigne,nInd]..Police		= xPolice
+				xRapport..Cellule[nLigne,nInd]..Cadre		= xCadre
+				xRapport..Cellule[nLigne,nInd]..CouleurFond	= EstImpair(nLigne) ? HTMLVersRVB(__COULEUR_BDD_XXS__) sinon Blanc
+				
+				// Ville
+				nInd++
+				xRapport[nLigne,nInd]						= sdReqExportBddHeberge.Ville
+				xRapport..Cellule[nLigne,nInd]..Police		= xPolice
+				xRapport..Cellule[nLigne,nInd]..Cadre		= xCadre
+				xRapport..Cellule[nLigne,nInd]..CouleurFond	= EstImpair(nLigne) ? HTMLVersRVB(__COULEUR_BDD_XXS__) sinon Blanc
+				
+			autre cas					: STOP
+		fin
+		
+		
+		
+	fin
+fin
+
+
+xlsSauve(xRapport,sRepertoire + sFichier)
+
+popAction.__sRepertoire	= sRepertoire
+popAction.__sFichier	= sFichier
+	
+
+fin:
+HAnnuleDéclaration(sdReqExportBddHeberge)

@@ -1,0 +1,14 @@
+// Déclarations Globales de fenBatchBloctel
+
+__nIdSftp est entier
+
+// Fin d'initialisation de fenBatchBloctel
+
+ConnexionFtp()
+
+
+// Fermeture de fenBatchBloctel
+
+FTPDéconnecte(__nIdSftp)
+
+

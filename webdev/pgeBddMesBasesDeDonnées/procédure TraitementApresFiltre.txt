@@ -1,0 +1,29 @@
+procédure TraitementApresFiltre(pIdBddClient,pIdBddFiltre)
+
+nInd			est un entier
+nPos			est un entier
+sListeNomFiltre	est une chaîne
+sListeIdFiltre	est une chaîne
+
+Partage.CalculeTotauxClientBaseFiltre(pIdBddClient,pIdBddFiltre)
+
+// Mise à jour de la combo des filtres
+pour tout clt_base_filtre avec IdBase = pIdBddClient
+	nInd++
+	sListeNomFiltre += [RC] + clt_base_filtre.Nom
+	sListeIdFiltre 	+= [TAB] + clt_base_filtre.IdFiltre
+	si clt_base_filtre.IdFiltre = pIdBddFiltre alors nPos = nInd + 1
+fin
+
+znrBddHeberge[attZnrLigne].attListeFiltreId			= "0" + [TAB] + sListeIdFiltre
+znrBddHeberge[attZnrLigne].attCboBddFiltre			= "< Filtres >" + [RC] + sListeNomFiltre
+
+znrBddHeberge[attZnrLigne].cboBddFiltre..Valeur 	= nPos
+znrBddHeberge[attZnrLigne].cboBddFiltre.Visible		= Vrai
+
+znrBddHeberge[attZnrLigne].attFiltreAjouter			= Faux
+znrBddHeberge[attZnrLigne].attFiltreModifier		= Vrai
+znrBddHeberge[attZnrLigne].attFiltreSupprimer		= Vrai
+
+
+TotauxFiltreZnrBddHeberge(pIdBddClient,pIdBddFiltre,attZnrLigne)

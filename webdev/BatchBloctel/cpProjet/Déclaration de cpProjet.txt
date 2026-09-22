@@ -1,0 +1,16 @@
+__sRepRacine						est une chaîne
+__sHttpMarketeam					est une chaîne
+
+__sRepUpload						est une chaîne 
+
+__moTauxTva							est un monétaire
+
+__sRepBloctel						est une chaîne
+__sRepBloctelEntrée					est une chaîne
+__sRepBloctelSortie					est une chaîne
+
+__sBloctelSftpFichierCléPrivée		est une chaîne
+__sBloctelSftpHôte					est une chaîne
+__sBloctelSftpIdentifiant			est une chaîne
+__nBloctelSftpPort					est un entier
+__sBloctelSftpMotDePasse			est une chaîne

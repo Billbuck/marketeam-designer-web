@@ -1,0 +1,42 @@
+procédure OuvrePopupBouton(pIndice)
+
+stParam		est une structRcsBoutonParametres
+sAction		est une chaîne
+
+_nIndiceBoutonEdite = pIndice
+
+si pIndice = 0 alors
+	libTitrePopupBouton	= "Ajouter un bouton"
+	sAction					= __RCS_ACTION_LIEN__
+
+sinon
+	libTitrePopupBouton	= "Modifier le bouton"
+	saiBoutonLibelle		= _stCarteEdite.tabBouton[pIndice].Libelle
+	sAction					= _stCarteEdite.tabBouton[pIndice].SousType
+	si sAction = "" alors sAction = __RCS_ACTION_LIEN__
+	si _stCarteEdite.tabBouton[pIndice].Parametres <> "" alors
+		Désérialise(stParam, _stCarteEdite.tabBouton[pIndice].Parametres, psdJSON)
+	fin
+fin
+
+cboBoutonRubrique = RubriqueDeAction(sAction)
+InitCboBoutonAction(cboBoutonRubrique.ValeurMémorisée)
+cboBoutonAction = sAction
+
+RemplitFormulaireBouton(stParam)
+libBoutonLibelleCpt = Taille(saiBoutonLibelle) + " / " + __RCS_MAX_LIBELLE_BOUTON__
+
+si pIndice = 0 alors
+	selBoutonOuverture = 1
+sinon
+	selon _stCarteEdite.tabBouton[pIndice].UrlWebviewMode
+		cas "FULL"					: selBoutonOuverture = 2
+		cas "TALL"					: selBoutonOuverture = 3
+		cas __RCS_WEBVIEW_HALF__	: selBoutonOuverture = 4
+		autre cas					: selBoutonOuverture = 1
+	fin
+fin
+
+MajZonesBouton()
+
+si pIndice = 0 alors SuggereLibelleBouton()

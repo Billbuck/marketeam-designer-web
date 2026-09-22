@@ -1,0 +1,97 @@
+procédure GenereRequeteFiltreClientBase(pIdBase,pIdFiltre)
+
+nInd est un entier
+sTexteRequete est une chaîne
+sdReqFiltre est une Source de Données
+sWhere est une chaîne, utile
+
+sFiltre est une chaîne 
+sFiltreCritère est une chaîne
+
+
+HLitRecherchePremier(clt_base_filtre,IdFiltre,pIdFiltre)
+si HTrouve(clt_base_filtre) alors
+	
+	sFiltre = Remplace(clt_base_filtre.Phrase,"ET","AND",SansCasse+MotComplet)
+	sFiltre = Remplace(sFiltre,"OU","OR",SansCasse+MotComplet)
+	sFiltre = "clt_base_ligne.IdBase = " + pIdBase + " AND (" + sFiltre + ")"
+	
+	sTexteRequete =
+	[
+	SELECT
+		clt_base_champ.IdBaseChamp,
+		clt_base_champ.Libelle,
+		clt_base_champ.Type,
+		clt_base_champ.Champ,
+		clt_base_filtre_critere.Filtre,
+		clt_base_filtre_critere.Valeur1,
+		clt_base_filtre_critere.Valeur2
+	FROM
+		clt_base_filtre_critere, clt_base_champ
+	WHERE
+		clt_base_filtre_critere.IdFiltre = [%pIdFiltre%] AND
+		clt_base_champ.IdBaseChamp = clt_base_filtre_critere.IdBaseChamp
+	ORDER BY 
+		clt_base_filtre_critere.IdCritere
+	]
+	
+	si pas HExécuteRequêteSQL(sdReqFiltre, clt_base..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+		Info("Erreur requête")
+		renvoyer ""	
+	fin
+	
+	pour tout sdReqFiltre
+		nInd++
+		sFiltreCritère = ""
+		
+		selon Vrai
+				
+			cas sdReqFiltre.Type = __CHAMP_TYPE_DATE__
+				selon sdReqFiltre.Filtre
+					cas __FILTRE_EGALE__		: sFiltreCritère = "clt_base_ligne." + sdReqFiltre.Champ + " = '" 			+ sdReqFiltre.Valeur1 + "'"
+					cas __FILTRE_SUPERIEUR__	: sFiltreCritère = "clt_base_ligne." + sdReqFiltre.Champ + " >= '" 			+ sdReqFiltre.Valeur1 + "'"
+					cas __FILTRE_INFERIEUR__	: sFiltreCritère = "clt_base_ligne." + sdReqFiltre.Champ + " <= '" 			+ sdReqFiltre.Valeur1 + "'"
+					cas __FILTRE_COMPRIS__		: sFiltreCritère = "clt_base_ligne." + sdReqFiltre.Champ + " BETWEEN '" 	+ sdReqFiltre.Valeur1 + "'" + " AND '" + sdReqFiltre.Valeur2 + "'"
+					cas __FILTRE_NOT_NULL__		: sFiltreCritère = "clt_base_ligne." + sdReqFiltre.Champ + " IS NOT NULL"
+					cas __FILTRE_EST_NULL__		: sFiltreCritère = "clt_base_ligne." + sdReqFiltre.Champ + " IS NULL"
+					autres cas 					: STOP
+				fin                                                                              
+				                                                                                 
+			cas sdReqFiltre.Type dans (__CHAMP_TYPE_DECIMAL__, __CHAMP_TYPE_ENTIER__, __CHAMP_TYPE_MONETAIRE__)
+				selon sdReqFiltre.Filtre                                                         
+					cas __FILTRE_EGALE__		: sFiltreCritère = "CONVERT(clt_base_ligne." + sdReqFiltre.Champ + ",DECIMAL) = " 		+ sdReqFiltre.Valeur1
+					cas __FILTRE_SUPERIEUR__	: sFiltreCritère = "CONVERT(clt_base_ligne." + sdReqFiltre.Champ + ",DECIMAL) >= " 		+ sdReqFiltre.Valeur1
+					cas __FILTRE_INFERIEUR__	: sFiltreCritère = "CONVERT(clt_base_ligne." + sdReqFiltre.Champ + ",DECIMAL) <= "		+ sdReqFiltre.Valeur1
+					cas __FILTRE_COMPRIS__		: sFiltreCritère = "CONVERT(clt_base_ligne." + sdReqFiltre.Champ + ",DECIMAL) BETWEEN "	+ sdReqFiltre.Valeur1 + " AND " + sdReqFiltre.Valeur2
+					cas __FILTRE_NOT_NULL__		: sFiltreCritère = "clt_base_ligne." + sdReqFiltre.Champ + " IS NOT NULL"
+					cas __FILTRE_EST_NULL__		: sFiltreCritère = "clt_base_ligne." + sdReqFiltre.Champ + " IS NULL"
+					autres cas 					: STOP
+				fin                                                                              
+
+			autre cas // TEXTE
+				selon sdReqFiltre.Filtre
+					cas __FILTRE_COMMENCE__		: sFiltreCritère = "clt_base_ligne." + sdReqFiltre.Champ + " LIKE '" 		+ sdReqFiltre.Valeur1 + "%'"
+					cas __FILTRE_CONTIENT__		: sFiltreCritère = "clt_base_ligne." + sdReqFiltre.Champ + " LIKE '%" 		+ sdReqFiltre.Valeur1 + "%'"
+					cas __FILTRE_EGALE__		: sFiltreCritère = "clt_base_ligne." + sdReqFiltre.Champ + " LIKE '" 		+ sdReqFiltre.Valeur1 + "'"
+					cas __FILTRE_DIFFERENT__	: sFiltreCritère = "clt_base_ligne." + sdReqFiltre.Champ + " NOT LIKE '%" 	+ sdReqFiltre.Valeur1 + "%'"
+					cas __FILTRE_NOT_NULL__		: sFiltreCritère = "clt_base_ligne." + sdReqFiltre.Champ + " IS NOT NULL"
+					cas __FILTRE_EST_NULL__		: sFiltreCritère = "clt_base_ligne." + sdReqFiltre.Champ + " IS NULL"
+					autres cas 					: STOP
+				fin
+				
+		fin
+		
+		sFiltre = Remplace(sFiltre,"[[" + nInd + "]]",sFiltreCritère,MotComplet)
+		
+	fin
+	
+fin
+
+
+
+renvoyer sFiltre
+
+fin:
+HAnnuleDéclaration(sdReqFiltre)
+
+

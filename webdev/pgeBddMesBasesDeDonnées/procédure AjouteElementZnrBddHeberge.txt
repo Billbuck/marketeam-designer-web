@@ -1,0 +1,46 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// AjouteElementZnrBddHeberge ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure AjouteElementZnrBddHeberge()
+
+nInd est un entier
+
+nInd												= ZoneRépétéeAjouteLigne(znrBddHeberge)
+
+znrBddHeberge[nInd].attZnrLigne						= nInd
+znrBddHeberge[nInd].attIdClient						= _sdReqBddHeberge.IdClient
+znrBddHeberge[nInd].attIdBase						= _sdReqBddHeberge.IdBase
+znrBddHeberge[nInd].attIdRnvp						= _sdReqBddHeberge.IdRnvp
+znrBddHeberge[nInd].attIdBloctel					= _sdReqBddHeberge.IdBloctel
+znrBddHeberge[nInd].attBddNom						= _sdReqBddHeberge.Nom
+znrBddHeberge[nInd].libBddTotal						= NumériqueVersChaîne(_sdReqBddHeberge.NbrTotal, "dS")
+znrBddHeberge[nInd].libBddTotalAdresse				= _sdReqBddHeberge.NbrAdresse > 0 	? NumériqueVersChaîne(_sdReqBddHeberge.NbrAdresse, "dS") 	sinon "-"
+znrBddHeberge[nInd].libBddTotalTel					= _sdReqBddHeberge.NbrTel > 0 		? NumériqueVersChaîne(_sdReqBddHeberge.NbrTel, "dS") 		sinon "-"
+znrBddHeberge[nInd].libBddTotalSms					= _sdReqBddHeberge.NbrSms > 0 		? NumériqueVersChaîne(_sdReqBddHeberge.NbrSms, "dS") 		sinon "-"
+znrBddHeberge[nInd].libBddTotalEmail				= _sdReqBddHeberge.NbrEmail > 0		? NumériqueVersChaîne(_sdReqBddHeberge.NbrEmail, "dS") 		sinon "-"
+znrBddHeberge[nInd].attListeFiltreId				= "0" + [TAB] + _sdReqBddHeberge.IdFiltre
+znrBddHeberge[nInd].attCboBddFiltre					= "< Filtres >" + [RC] + _sdReqBddHeberge.NomFiltre
+znrBddHeberge[nInd].cboBddFiltre.Visible			= (_sdReqBddHeberge.IdFiltre <> "")
+
+znrBddHeberge[nInd].intEstPartagée.Visible			= (_sdReqBddHeberge.IdClient = Partage.__vcUser.IDClient _et_ Partage.__vcUser.EstAdministrateur)
+znrBddHeberge[nInd].intEstPartagée					= (_sdReqBddHeberge.EstPartage)
+
+znrBddHeberge[nInd].attBddRenommer					= Vrai
+znrBddHeberge[nInd].attBddAperçu					= (_sdReqBddHeberge.IdZecible = 0)
+znrBddHeberge[nInd].attBddExporter					= (_sdReqBddHeberge.IdZecible = 0 _et_ _sdReqBddHeberge.IdClient = Partage.__vcUser.IDClient _et_ (Partage.__vcUser.EstAdministrateur _ou_ Partage.__vcUser.taaDroit[#DROIT_AJOUTER_UNE_BASE_DE_DONNÉES]))
+znrBddHeberge[nInd].attBddSupprimer					= (_sdReqBddHeberge.IdZecible = 0 _et_ _sdReqBddHeberge.IdClient = Partage.__vcUser.IDClient _et_ (Partage.__vcUser.EstAdministrateur _ou_ Partage.__vcUser.taaDroit[#DROIT_AJOUTER_UNE_BASE_DE_DONNÉES]))
+znrBddHeberge[nInd].attFiltreAjouter				= (_sdReqBddHeberge.IdZecible = 0 _et_ (Partage.__vcUser.EstAdministrateur _ou_ Partage.__vcUser.taaDroit[#DROIT_AJOUTER_UNE_BASE_DE_DONNÉES]))
+znrBddHeberge[nInd].attFiltreModifier				= Faux
+znrBddHeberge[nInd].attFiltreSupprimer				= Faux
+
+znrBddHeberge[nInd].attTypeStopPub					= ""
+

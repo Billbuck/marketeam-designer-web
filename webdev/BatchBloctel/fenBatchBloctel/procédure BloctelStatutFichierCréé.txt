@@ -1,0 +1,29 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] BloctelStatutFichierCréé (<pIdBloctel>, <pFichier>)
+//
+// Paramètres :
+//	pIdBloctel : <indiquez ici le rôle de pIdBloctel>
+//	pFichier : <indiquez ici le rôle de pSFichier>
+
+// Valeur de retour :
+// 	booléen : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure BloctelStatutFichierCréé(pIdBloctel, pFichier)
+
+si FTPEnvoie(__nIdSftp,cpProjet.__sRepBloctelEntrée + ["\"] + pFichier + __TXT__, "/IN") alors
+	si HLitRecherchePremier(ope_bloctel,IdBloctel,pIdBloctel) alors
+		ope_bloctel.DateHeureDepot	= DateHeureSys()
+		ope_bloctel.Statut			= __STATUT_BLOCTEL_FICHIER_DEPOSE__
+		si ope_bloctel.Modifie() alors
+			renvoyer ope_bloctel.Statut
+		fin
+	fin
+fin
+
+renvoyer ""
+
+

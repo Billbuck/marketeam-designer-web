@@ -1,0 +1,80 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] CalculeTotauxClientBase (<pIdBase>)
+//
+// Paramètres :
+//	pIdBase : <indiquez ici le rôle de pIdBase>
+// Valeur de retour :
+// 	booléen : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+//	pIdFiltre : <indiquez ici le rôle de pIdFiltre>
+procédure CalculeTotauxClientBase(pIdBase)
+
+
+
+sTexteRequete		est une chaîne
+sTexteRequeteTotal	est une chaîne
+sdReqBddTotal		est une Source de Données
+nTotal				est un entier
+nTotalSociete		est un entier
+nTotalContact		est un entier
+nTotalAdresse		est un entier
+nTotalSms			est un entier
+nTotalTel			est un entier
+nTotalFax			est un entier
+nTotalEmail			est un entier
+
+
+sTexteRequeteTotal =
+[
+	SELECT COUNT(*) Total FROM clt_base_ligne WHERE IdBase = %1 %2
+	%3
+]
+
+
+nTotal			= CalculSurBddClient(pIdBase,"")
+nTotalSociete	= CalculSurBddClient(pIdBase,"AND Societe IS NOT NULL")
+nTotalContact	= CalculSurBddClient(pIdBase,"AND Contact IS NOT NULL")
+nTotalAdresse	= CalculSurBddClient(pIdBase,"AND (Adresse1 IS NOT NULL OR Adresse2 IS NOT NULL) AND CodePostal IS NOT NULL AND Ville IS NOT NULL")
+nTotalSms		= CalculSurBddClient(pIdBase,"AND Portable IS NOT NULL")
+nTotalTel		= CalculSurBddClient(pIdBase,"AND (Tel IS NOT NULL OR Portable IS NOT NULL) ")
+nTotalFax		= CalculSurBddClient(pIdBase,"AND Fax IS NOT NULL")
+nTotalEmail		= CalculSurBddClient(pIdBase,"AND Email IS NOT NULL")
+
+si clt_base.LitRecherchePremier(IdBase,pIdBase) alors
+	clt_base.NbrTotal 		= nTotal
+	clt_base.NbrSociete		= nTotalSociete
+	clt_base.NbrContact		= nTotalContact
+	clt_base.NbrAdresse		= nTotalAdresse
+	clt_base.NbrSms			= nTotalSms
+	clt_base.NbrTel			= nTotalTel
+	clt_base.NbrEmail		= nTotalEmail
+	clt_base.EstActif		= Vrai
+	renvoyer clt_base.Modifie()
+fin
+
+renvoyer Faux
+
+procédure interne CalculSurBddClient(piBddClient,pColonne)
+
+	sTexteRequete = ChaîneConstruit(sTexteRequeteTotal,piBddClient, pColonne)
+
+	si pas HExécuteRequêteSQL(sdReqBddTotal, clt_base_ligne..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+		Info("Erreur requête")
+		renvoyer ""
+	fin
+
+	HLitPremier(sdReqBddTotal,hSansRafraîchir)
+	si pas HEnDehors(sdReqBddTotal) _et_ Val(sdReqBddTotal.Total) > 0 alors
+		renvoyer sdReqBddTotal.Total
+	sinon
+		renvoyer 0
+	fin
+
+	fin
+
+fin:
+HAnnuleDéclaration(sdReqBddTotal)

@@ -1,0 +1,63 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//BloctelTraitement (<sdReqBloctel> est objet source de données)
+//
+// Paramètres :
+//	sdReqBloctel (objet source de données) : <indiquez ici le rôle de pStatut>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+// 	pIdOperation : <indiquez ici le rôle de pIdOperation>
+//	pIdBloctel : <indiquez ici le rôle de pIdBase>
+//	pIdBaseSource : <indiquez ici le rôle de pIdBaseSource>
+//	pIdFiltreSource : <indiquez ici le rôle de pIdFiltreSource>
+//	pIdBaseClient : <indiquez ici le rôle de pIdBase>
+//	pFichierEntree : <indiquez ici le rôle de pIdBase>
+//	pFichierSortie : <indiquez ici le rôle de pIdBase>
+procédure BloctelTraitement(sdReqBloctel est une Source de Données)
+
+nIdOperation	est un entier	= sdReqBloctel.IdOperation
+nIdBloctel		est un entier	= sdReqBloctel.IdBloctel
+nIdBaseClient	est un entier	= sdReqBloctel.IdBaseClient
+nIdBaseSource	est un entier	= sdReqBloctel.IdBaseSource
+nIdFiltreSource	est un entier	= sdReqBloctel.IdFiltreSource
+sStatut			est une chaîne	= sdReqBloctel.Statut
+sFichierEntree	est une chaîne 	= sdReqBloctel.FichierEntree
+sFichierSortie	est une chaîne	= sdReqBloctel.FichierSortie
+sSociete		est une chaîne	= sdReqBloctel.Societe
+sContact		est une chaîne	= sdReqBloctel.Contact
+sDossier		est une chaîne	= sdReqBloctel.Dossier
+
+si sStatut = __STATUT_BLOCTEL_EN_ATTENTE__ alors
+	sStatut = BloctelStatutEnAttente(nIdOperation, nIdBloctel)
+	si sStatut <> "" alors tblBloctel.AjouteLigne(sDossier,sSociete,sContact,sFichierEntree,LibelleStatutBloctel(sStatut),DateHeureSys())
+fin
+
+si sStatut = __STATUT_BLOCTEL_PRISE_EN_CHARGE__ alors
+	(sStatut, sFichierEntree) = BloctelStatutPriseEnCharge(nIdBloctel, nIdBaseSource, nIdFiltreSource)
+	si sStatut <> "" alors tblBloctel.AjouteLigne(sDossier,sSociete,sContact,sFichierEntree,LibelleStatutBloctel(sStatut),DateHeureSys())
+fin
+
+si sStatut = __STATUT_BLOCTEL_FICHIER_CREE__ alors
+	sStatut = BloctelStatutFichierCréé(nIdBloctel, sFichierEntree) 
+	si sStatut <> "" alors tblBloctel.AjouteLigne(sDossier,sSociete,sContact,sFichierEntree,LibelleStatutBloctel(sStatut),DateHeureSys())
+fin
+
+si sStatut = __STATUT_BLOCTEL_FICHIER_DEPOSE__ alors
+	sStatut = BloctelStatutFichierDeposé(nIdOperation, nIdBloctel, sFichierEntree)
+	si sStatut <> "" alors tblBloctel.AjouteLigne(sDossier,sSociete,sContact,sFichierEntree,LibelleStatutBloctel(sStatut),DateHeureSys())
+fin
+
+si sStatut = __STATUT_BLOCTEL_EN_COURS_DE_TRAITEMENT__ alors
+	(sStatut, sFichierSortie) = BloctelStatutEnCoursDeTraitement(nIdBloctel, sFichierEntree)	
+	si sStatut <> "" alors tblBloctel.AjouteLigne(sDossier,sSociete,sContact,sFichierEntree,LibelleStatutBloctel(sStatut),DateHeureSys())
+fin
+
+si sStatut = __STATUT_BLOCTEL_TRAITE__ alors
+	sStatut = BloctelStatutTraite(nIdOperation, nIdBloctel, nIdBaseClient, sFichierSortie)	
+	si sStatut <> "" alors tblBloctel.AjouteLigne(sDossier,sSociete,sContact,sFichierEntree,LibelleStatutBloctel(sStatut),DateHeureSys())
+fin
+

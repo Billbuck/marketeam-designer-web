@@ -1,0 +1,42 @@
+procédure InitCboContact()
+
+sTexteRequete		est une chaîne
+sdReqUtilisateur	est une Source de Données
+
+cboContact.SupprimeTout()
+
+si _sBibliothèque <> BibliothèquePersonnelle.Valeur alors
+	cboContact.Visible = Faux
+	retour
+fin
+
+cboContact.Visible = Vrai
+
+sTexteRequete = [
+	SELECT
+	clt_contact.IdContact,
+	CONCAT(clt_contact.Prenom,' ',clt_contact.Nom) contact
+	FROM
+	clt_contact
+	WHERE
+	clt_contact.IdClient = [%Partage.__vcUser.IdClient%]
+	AND clt_contact.EstActif = 1
+]
+
+si pas sdReqUtilisateur.ExécuteRequêteSQL(clt_contact.Connexion,hRequêteSansCorrection,sTexteRequete) alors
+	Info("Erreur Requête")
+	retour
+fin
+
+pour tout sdReqUtilisateur
+	cboContact.Ajoute(sdReqUtilisateur.Contact + gValeurMémorisée(sdReqUtilisateur.IdContact))
+fin
+
+si cboContact.Occurrence <> 1 alors
+	cboContact.Insère("< Sélectionner >" + gValeurMémorisée(0),1)
+fin
+
+cboContact = Partage.__vcUser.IDContact
+
+fin:
+sdReqUtilisateur.AnnuleDéclaration()

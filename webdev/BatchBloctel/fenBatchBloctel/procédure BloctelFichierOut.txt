@@ -1,0 +1,23 @@
+procédure BloctelFichierOut()
+
+sRepEnCours est une chaîne = FTPRepEnCours(__nIdSftp)
+nNbrFichier est un entier
+
+
+nNbrFichier = FTPListeFichier(__nIdSftp, "/OUT/*" + __ZIP__, FTPListeFichier_Callback) 
+
+
+	procédure interne FTPListeFichier_Callback(sFichier chaîne, nTaille entier <utile>, sAttribut chaîne <utile>, sDate chaîne <utile>, sHeure chaîne <utile>, vParamètreDeLaProcédure Variant <utile>) : booléen
+		nIdBloctel est un entier = ExtraitChaîne(sFichier,3,"_")
+		
+		si ope_bloctel.LitRecherchePremier(IdBloctel,nIdBloctel) alors
+			si ope_bloctel.Statut <> __STATUT_BLOCTEL_TRAITE__ alors
+				ope_bloctel.DateHeureFinTraitement		= DateHeureSys()
+				ope_bloctel.FichierSortie				= fExtraitChemin(sFichier,fFichier)
+				ope_bloctel.Statut					= __STATUT_BLOCTEL_TRAITE__
+				ope_bloctel.Modifie()
+			fin
+		fin
+		
+		renvoyer Vrai
+	fin

@@ -1,0 +1,33 @@
+// Déclarations globales de pgeBddMesBasesDeDonnées
+
+procédure MaPage()
+
+_sUnivers 		= __OPERATION_BASE_DE_DONNEES__
+
+_sdReqBddHeberge	est une Source de Données
+_sBibliothèque		est une chaîne
+_nIdMarque			est un entier
+_nSourisPosX		est un entier	<synchronisé navigateur>
+_nSourisPosY		est un entier	<synchronisé navigateur>
+_taaBaseChamp		est un tableau associatif de structBaseChamp
+
+constante
+	#BddTitre 			= 1
+	#BddRenommer		= 2
+	#BddAperçu			= 3
+	#BddExporter		= 4
+	#BddSupprimer		= 5
+	#FiltreTitre		= 6
+	#FiltreAjouter		= 7
+	#FiltreModifier		= 8
+	#FiltreSupprimer	= 9
+fin
+
+// Fin d'initialisation de pgeBddMesBasesDeDonnées
+
+Init()
+
+
+// Fermeture de pgeBddMesBasesDeDonnées
+
+_sdReqBddHeberge.AnnuleDéclaration()

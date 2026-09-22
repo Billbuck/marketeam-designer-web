@@ -1,0 +1,60 @@
+procédure AjoutModificationOperationBloctel(stOperation est une structOperation)
+
+bEstModeCreation est un booléen = (stOperation.IdOperation = 0)  // On fait le test maintenant car après l'appel de AjoutModificationOperation l'IdOperation sera renseigné
+
+AjoutModificationOperation(stOperation)  // On ajoute / met à jour les données dans la table dos_operation
+
+si bEstModeCreation alors
+	// On prépare l'ajout des données qui est fait plus bas
+	ope_bloctel.RAZ()
+	ope_bloctel.IdOperation				= stOperation.IdOperation
+	ope_bloctel.DateHeureCreation		= DateHeureSys()
+	ope_bloctel.UserCreation			= Partage.__vcUser.NomUser
+sinon
+
+	ope_bloctel.LitRecherchePremier(IdBloctel,stOperation.stOperationBloctel.IdBloctel)
+	si pas ope_bloctel.Trouve() alors
+		<compile si TypeConfiguration <> Webservice>
+			Info("Erreur positionnement ope_bloctel")
+		<fin>
+		renvoyer Faux
+	fin
+
+fin
+
+ope_bloctel.IdOperation 				= stOperation.IdOperation
+ope_bloctel.DateHeureCreation 			= DateHeureSys()
+ope_bloctel.IdClient					= stOperation.IdClient
+ope_bloctel.IdContact					= stOperation.IdContact
+ope_bloctel.IdBaseClient..Null			= Vrai
+ope_bloctel.IdBaseSource				= stOperation.stOperationBloctel.IdBaseSource
+ope_bloctel.IdFiltreSource				= stOperation.stOperationBloctel.IdFiltreSource
+ope_bloctel.IdFiltreSource..Null		= (stOperation.stOperationBloctel.IdFiltreSource = 0)
+ope_bloctel.NbrTelephoneEntree			= stOperation.stOperationBloctel.NbrTelephoneEntree
+ope_bloctel.NbrPortableEntree			= stOperation.stOperationBloctel.NbrPortableEntree
+ope_bloctel.Statut						= stOperation.stOperationBloctel.Statut
+ope_bloctel.PrixUnitaireAchat			= stOperation.stOperationBloctel.PrixUnitaireAchat
+ope_bloctel.PrixUnitaireFacture			= stOperation.stOperationBloctel.PrixUnitaireFacture
+
+si bEstModeCreation alors // Création
+	si ope_bloctel.Ajoute() alors
+		stOperation.stOperationBloctel.IdBloctel = ope_bloctel.IdBloctel
+		renvoyer Vrai
+	sinon
+		<compile si TypeConfiguration <> Webservice>
+			Info("Erreur :",ErreurInfo(errComplet))
+		<fin>
+		renvoyer Faux
+	fin
+sinon	// Modification
+	ope_bloctel.DateHeureModification		= DateHeureSys()
+	ope_bloctel.UserModification			= Partage.__vcUser.NomUser
+	si ope_bloctel.Modifie() alors
+		renvoyer Vrai
+	sinon
+		<compile si TypeConfiguration <> Webservice>
+			Info("Erreur :",ErreurInfo(errComplet))
+		<fin>
+		renvoyer Faux
+	fin
+fin

@@ -1,0 +1,19 @@
+procédure Init()
+
+
+grpPartage.Visible = Partage.__vcUser.Partage
+
+Partage.InitCboBibliothèque(cboBibliothèque,clt_base..Nom,clt_base.IdBase..Nom,0,Faux,Vrai,"")
+BibliothèqueValeurMemorisée(cboBibliothèque, _sBibliothèque, _nIdMarque)
+
+InitCboContact()
+
+grpImporterBase.Visible = ((Partage.__vcUser.EstAdministrateur _ou_ Partage.__vcUser.taaDroit[#DROIT_AJOUTER_UNE_BASE_DE_DONNÉES]) _et_ _sBibliothèque = BibliothèquePersonnelle.Valeur)
+
+popFiltre.btnFiltreMoins.ClasseHTML		= ClassHtmlTypeOperation("btn",__OPERATION_BASE_DE_DONNEES__,"supprimer")
+
+btnFermePopBddAperçu.ClasseHTML			= ClassHtmlTypeOperation("btn",__OPERATION_BASE_DE_DONNEES__)
+
+
+InitZnrBasesDeDonnéesClient()
+

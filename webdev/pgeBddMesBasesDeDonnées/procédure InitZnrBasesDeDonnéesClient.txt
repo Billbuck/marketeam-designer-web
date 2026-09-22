@@ -1,0 +1,54 @@
+procédure InitZnrBasesDeDonnéesClient()
+
+nLigne			est un entier
+sTexteRequete	est une chaîne
+sWhere			est une chaîne
+
+znrBddHeberge.SupprimeTout()
+
+Partage.FiltreBibliothèque(_sBibliothèque, clt_base..Nom, sWhere, Vrai)
+
+si cboContact.ValeurMémorisée > 0 alors
+	sWhere += RC + [
+ 	AND clt_base.IdContact = [%cboContact.ValeurMémorisée%]
+	]
+fin
+
+si SansEspace(saiRecherche) <> "" alors
+	sWhere += RC + [
+		AND clt_base.Nom LIKE '%[%saiRecherche%]%'
+	]
+fin
+
+
+sTexteRequete =
+[
+	SELECT
+	clt_base.*,
+	(SELECT GROUP_CONCAT(clt_base_filtre.IdFiltre SEPARATOR '\t') FROM clt_base_filtre WHERE clt_base_filtre.IdBase = clt_base.IdBase ORDER BY IdFiltre) IdFiltre,
+	(SELECT GROUP_CONCAT(clt_base_filtre.Nom SEPARATOR '\n') FROM clt_base_filtre WHERE clt_base_filtre.IdBase = clt_base.IdBase ORDER BY IdFiltre) NomFiltre
+	FROM
+	clt_base
+	WHERE
+	clt_base.EstActif = 1
+	[%sWhere%]
+	ORDER BY IdBase DESC
+]
+
+
+si pas _sdReqBddHeberge.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour
+fin
+
+pour tout _sdReqBddHeberge
+	nLigne++
+	AjouteElementZnrBddHeberge()
+	si nLigne = 10 alors sortir
+fin
+
+dispBdd[2].Visible	= (znrBddHeberge..Occurrence > 1)
+dispBdd[3].Visible	= (znrBddHeberge..Occurrence > 0)
+
+
+
