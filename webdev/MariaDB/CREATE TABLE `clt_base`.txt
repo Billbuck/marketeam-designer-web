@@ -1,0 +1,47 @@
+CREATE TABLE `clt_base` (
+	`IdBase` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdClient` INT(11) NULL DEFAULT NULL,
+	`IdMarque` INT(11) NULL DEFAULT NULL COMMENT 'A concerver',
+	`IdContact` INT(11) NULL DEFAULT NULL,
+	`IdRnvp` INT(11) NULL DEFAULT NULL,
+	`IdBloctel` INT(11) NULL DEFAULT NULL,
+	`IdBlocmail` INT(11) NULL DEFAULT NULL COMMENT 'FK vers ope_blocmail',
+	`IdZecible` INT(11) NULL DEFAULT NULL COMMENT 'Location base de données Zecible',
+	`EstPartage` TINYINT(1) NOT NULL DEFAULT '0',
+	`EstActif` TINYINT(1) NOT NULL DEFAULT '1',
+	`Nom` VARCHAR(60) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`NbrTotal` INT(10) UNSIGNED NULL DEFAULT NULL,
+	`NbrSociete` INT(10) UNSIGNED NULL DEFAULT NULL,
+	`NbrContact` INT(10) UNSIGNED NULL DEFAULT NULL,
+	`NbrAdresse` INT(10) UNSIGNED NULL DEFAULT NULL,
+	`NbrSms` INT(10) UNSIGNED NULL DEFAULT NULL,
+	`NbrFixe` INT(10) UNSIGNED NULL DEFAULT NULL,
+	`NbrTel` INT(10) UNSIGNED NULL DEFAULT NULL COMMENT 'Ensemble Fixe + Portable',
+	`NbrEmail` INT(10) UNSIGNED NULL DEFAULT NULL,
+	`DateHeureCreation` DATETIME NOT NULL,
+	`DateHeureModification` DATETIME NULL DEFAULT NULL,
+	`UserCreation` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`UserModification` VARCHAR(35) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`EstBlocmailTraite` TINYINT(1) NOT NULL DEFAULT '0' COMMENT '1 = base issue d’un traitement Blocmail',
+	PRIMARY KEY (`IdBase`) USING BTREE,
+	INDEX `IdClient` (`IdClient`) USING BTREE,
+	INDEX `IdContact` (`IdContact`) USING BTREE,
+	INDEX `FK_clt_base_ope_rnvp` (`IdRnvp`) USING BTREE,
+	INDEX `FK_clt_base_ope_bloctel` (`IdBloctel`) USING BTREE,
+	INDEX `IdMarque` (`IdMarque`) USING BTREE,
+	INDEX `EstPartage` (`EstPartage`) USING BTREE,
+	INDEX `EstActif` (`EstActif`) USING BTREE,
+	INDEX `IdBase_IdClient` (`IdBase`, `IdClient`) USING BTREE,
+	INDEX `FK_clt_base_ope_blocmail` (`IdBlocmail`) USING BTREE,
+	CONSTRAINT `FK_clt_base_clt_client` FOREIGN KEY (`IdClient`) REFERENCES `clt_client` (`IdClient`) ON UPDATE RESTRICT ON DELETE CASCADE,
+	CONSTRAINT `FK_clt_base_clt_contact` FOREIGN KEY (`IdContact`) REFERENCES `clt_contact` (`IdContact`) ON UPDATE RESTRICT ON DELETE CASCADE,
+	CONSTRAINT `FK_clt_base_clt_marque` FOREIGN KEY (`IdMarque`) REFERENCES `clt_marque` (`IdMarque`) ON UPDATE NO ACTION ON DELETE NO ACTION,
+	CONSTRAINT `FK_clt_base_ope_blocmail` FOREIGN KEY (`IdBlocmail`) REFERENCES `ope_blocmail` (`IdBlocmail`) ON UPDATE RESTRICT ON DELETE SET NULL,
+	CONSTRAINT `FK_clt_base_ope_bloctel` FOREIGN KEY (`IdBloctel`) REFERENCES `ope_bloctel` (`IdBloctel`) ON UPDATE NO ACTION ON DELETE CASCADE,
+	CONSTRAINT `FK_clt_base_ope_rnvp` FOREIGN KEY (`IdRnvp`) REFERENCES `ope_rnvp` (`IdRnvp`) ON UPDATE NO ACTION ON DELETE CASCADE
+)
+COMMENT='bases de données annuaire des clients'
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+AUTO_INCREMENT=2694
+;

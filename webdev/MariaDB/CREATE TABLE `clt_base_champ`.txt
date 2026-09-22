@@ -1,0 +1,18 @@
+CREATE TABLE `clt_base_champ` (
+	`IdBaseChamp` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdBase` INT(11) NOT NULL,
+	`Ordre` TINYINT(2) NOT NULL,
+	`Champ` VARCHAR(20) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Libelle` VARCHAR(20) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Type` CHAR(3) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	PRIMARY KEY (`IdBaseChamp`) USING BTREE,
+	INDEX `IdBase` (`IdBase`) USING BTREE,
+	INDEX `Ordre` (`Ordre`) USING BTREE,
+	INDEX `IdBase_Champ` (`IdBase`, `Champ`) USING BTREE,
+	INDEX `IdBase_Ordre` (`IdBase`, `Ordre`) USING BTREE,
+	CONSTRAINT `FK_clt_base_champ_clt_base` FOREIGN KEY (`IdBase`) REFERENCES `clt_base` (`IdBase`) ON UPDATE RESTRICT ON DELETE CASCADE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+AUTO_INCREMENT=19223
+;

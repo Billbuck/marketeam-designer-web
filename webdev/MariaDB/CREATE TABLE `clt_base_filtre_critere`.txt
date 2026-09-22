@@ -1,0 +1,17 @@
+CREATE TABLE `clt_base_filtre_critere` (
+	`IdCritere` INT(11) NOT NULL AUTO_INCREMENT,
+	`IdFiltre` INT(11) NOT NULL,
+	`IdBaseChamp` INT(11) NULL DEFAULT NULL,
+	`Filtre` CHAR(1) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Valeur1` VARCHAR(50) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Valeur2` VARCHAR(50) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	PRIMARY KEY (`IdCritere`) USING BTREE,
+	INDEX `IdFiltre` (`IdFiltre`) USING BTREE,
+	INDEX `IdChamp` (`IdBaseChamp`) USING BTREE,
+	CONSTRAINT `FK_clt_base_filtre_critere_clt_base_champ` FOREIGN KEY (`IdBaseChamp`) REFERENCES `clt_base_champ` (`IdBaseChamp`) ON UPDATE RESTRICT ON DELETE CASCADE,
+	CONSTRAINT `FK_clt_base_filtre_critere_clt_base_filtre` FOREIGN KEY (`IdFiltre`) REFERENCES `clt_base_filtre` (`IdFiltre`) ON UPDATE RESTRICT ON DELETE CASCADE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+AUTO_INCREMENT=872
+;
