@@ -40,8 +40,31 @@ si _stWsBddImportReponse.IdWbsBase > 0 alors
 			// Traitement par lots nécessaire
 			renvoyer jsonResultat.IdWbsBase
 		sinon si jsonResultat.IdBase > 0 alors
-			// Ancien comportement - base créée directement
+			// Ancien comportement - base créée directement.
+			// Même règle de qualification RCS automatique que la voie par
+			// lots (QualificationRcsAuto du Webservice) : portables présents,
+			// plafond Rcs_Qualification_AutoMax, statut encore NON.
 			gnIdBaseResultat = jsonResultat.IdBase
+
+			nAutoMaxRcs est un entier = cpFonction.ValeurParametre("Rcs_Qualification_AutoMax", prm_parametre.ValNumerique..Nom)
+			si nAutoMaxRcs <= 0 alors nAutoMaxRcs = 50000
+
+			sReqQualifRcs est une chaîne = [
+				UPDATE clt_base SET
+				StatutRcs = '[%__BASE_RCS_A_TRAITER__%]',
+				DateHeureModification = NOW()
+				WHERE
+				clt_base.IdBase = [%gnIdBaseResultat%]
+				AND clt_base.NbrSms > 0
+				AND clt_base.NbrSms <= [%nAutoMaxRcs%]
+				AND clt_base.StatutRcs = '[%__BASE_RCS_NON__%]'
+			]
+			sdReqQualifRcs est une Source de Données
+			si pas sdReqQualifRcs.ExécuteRequêteSQL(clt_base..Connexion, hRequêteSansCorrection, sReqQualifRcs) alors
+				Trace("ConfirmationImport : erreur qualification RCS auto base " + gnIdBaseResultat, HErreurInfo(hErrComplet))
+			fin
+			sdReqQualifRcs.AnnuleDéclaration()
+
 			renvoyer 0
 		fin
 	fin

@@ -494,6 +494,11 @@ constante
 	__BASE_RCS_TRAITE__										= "TRAITE"
 	__BASE_RCS_ERREUR__										= "ERREUR"
 
+	// Qualification RCS d'une ligne (clt_base_ligne.EstRcs - NULL = inconnu)
+	__LIGNE_RCS_SMS__											= 0
+	__LIGNE_RCS_OUI__											= 1
+	__LIGNE_RCS_INVALIDE__									= 2
+
 
 	__DOC_RCS_IMAGE_CARD__									= "RcsImgCard"
 	__DOC_RCS_IMAGE_SLDR__									= "RcsImgSldr"

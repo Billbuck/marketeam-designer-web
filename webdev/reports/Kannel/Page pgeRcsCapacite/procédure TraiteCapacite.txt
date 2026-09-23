@@ -1,33 +1,24 @@
-// Résumé : Traite UN résultat de capability check (un numéro d'un lot)
+// Résumé : Traite UN résultat de capability check ASYNCHRONE (un numéro d'un lot)
 // Syntaxe :
-//TraiteCapacite (<vResultat> est Variant)
+//TraiteCapacite (<vResultat> est variant)
 //
 // Paramètres :
-//	vResultat : { "bulkId", "messageId", "phoneNumber", "code" }
-//
+//	vResultat (variant) : { "bulkId", "messageId", "phoneNumber", "code" }
+
 // Enchaînement :
-//	1. lot retrouvé par BulkId (clt_base_rcs_lot) ;
-//	2. UPDATE clt_base_ligne.EstRcs (0/1) sur le numéro, match double format
-//	   (33670299592 et 0670299592), seulement si la valeur change ;
-//	3. si l'UPDATE a modifié une ligne : NbrRecu + 1 (idempotence : un
-//	   résultat rejoué ne modifie rien, donc ne recompte pas) ;
-//	4. lot TERMINE quand NbrRecu >= NbrEnvoye ;
-//	5. quand plus aucun lot de la base n'est ENVOYE ni ERREUR :
-//	   consolidation clt_base (TRAITE + compteurs). Le WHERE accepte
-//	   EN_COURS et TRAITE : des résultats tardifs après la consolidation
-//	   partielle (échéance 2 h du batch) remettent les compteurs à jour.
-procédure TraiteCapacite(vResultat est un Variant)
+//	   (33670299592 et 0670299592), seulement si la valeur change :
+//	   l'UPDATE a modifié une ligne (ROW_COUNT : un rejeu ne recompte pas) ;
+// La CONSOLIDATION de la base (TRAITE + compteurs) n'est PAS faite ici :
+procédure TraiteCapacite(local vResultat est un Variant)
 
 sBulkId				est une chaîne
 sNumero				est une chaîne
 sNumeroNational	est une chaîne
 sCode					est une chaîne
-nEstRcs				est un entier
+nValeurLigne		est un entier
 nIdBaseRcsLot		est un entier
 nIdBase				est un entier
 nNbModif				est un entier
-nLotTermine			est un entier
-nNbrLotRestant		est un entier
 sTexteRequete		est une chaîne
 sdReqLot				est une Source de Données
 sdReqMaj				est une Source de Données
@@ -40,7 +31,7 @@ sdReqCompte			est une Source de Données
 	fin
 
 
-si vResultat.bulkId..Membre = Null _ou_ vResultat.phoneNumber..Membre = Null alors
+si pas vResultat.bulkId..Existe _ou_ pas vResultat.phoneNumber..Existe alors
 	EnregistreErreurRcsCapacite("Résultat incomplet (bulkId ou phoneNumber absent)", VariantVersJSON(vResultat))
 	retour
 fin
@@ -48,19 +39,27 @@ fin
 sBulkId	= vResultat.bulkId
 sNumero	= vResultat.phoneNumber
 sCode		= ""
-si vResultat.code..Membre <> Null alors sCode = vResultat.code
+si vResultat.code..Existe alors sCode = vResultat.code
 
 si sBulkId = "" _ou_ sNumero = "" alors
 	EnregistreErreurRcsCapacite("Résultat incomplet (bulkId ou phoneNumber vide)", VariantVersJSON(vResultat))
 	retour
 fin
 
-nEstRcs			= (sCode = "ENABLED" ? 1 sinon 0)
+// Classement : ENABLED → RCS, INVALID_DESTINATION_ADDRESS → invalide,
+// tout autre code (UNREACHABLE, REJECTED_NETWORK, UNKNOWN_CODE...) → SMS seul
+si sCode = "ENABLED" alors
+	nValeurLigne = __LIGNE_RCS_OUI__
+sinon si sCode = "INVALID_DESTINATION_ADDRESS" alors
+	nValeurLigne = __LIGNE_RCS_INVALIDE__
+sinon
+	nValeurLigne = __LIGNE_RCS_SMS__
+fin
 
 // ------------------------------------------------------------------
 // 1) Lot retrouvé par BulkId
 // ------------------------------------------------------------------
-sTexteRequete	= [
+sTexteRequete = [
 	SELECT
 	clt_base_rcs_lot.IdBaseRcsLot,
 	clt_base_rcs_lot.IdBase
@@ -87,7 +86,6 @@ sdReqLot.AnnuleDéclaration()
 
 // ------------------------------------------------------------------
 // 2) Ligne de la base : EstRcs posé si la valeur change
-//    (match double format par sécurité : 33670299592 / 0670299592)
 // ------------------------------------------------------------------
 sNumeroNational = sNumero
 si Gauche(sNumero, 2) = "33" _et_ Taille(sNumero) = 11 alors
@@ -95,10 +93,10 @@ si Gauche(sNumero, 2) = "33" _et_ Taille(sNumero) = 11 alors
 fin
 
 sTexteRequete = [
-	UPDATE clt_base_ligne SET EstRcs = [%nEstRcs%]
+	UPDATE clt_base_ligne SET EstRcs = [%nValeurLigne%]
 	WHERE clt_base_ligne.IdBase = [%nIdBase%]
 	AND clt_base_ligne.Portable IN ('[%EchappeSqlCapacite(sNumero)%]','[%EchappeSqlCapacite(sNumeroNational)%]')
-	AND (clt_base_ligne.EstRcs IS NULL OR clt_base_ligne.EstRcs <> [%nEstRcs%])
+	AND (clt_base_ligne.EstRcs IS NULL OR clt_base_ligne.EstRcs <> [%nValeurLigne%])
 ]
 
 si pas sdReqMaj.ExécuteRequêteSQL(cpKannel.__cnxKannel, hRequêteSansCorrection, sTexteRequete) alors
@@ -111,13 +109,23 @@ si sdReqCompte.ExécuteRequêteSQL(cpKannel.__cnxKannel, hRequêteSansCorrection
 fin
 
 // ------------------------------------------------------------------
-// 3) Compteur du lot (seulement si le résultat a réellement changé une ligne)
+// 3) Suivi du lot et de la jauge
 // ------------------------------------------------------------------
 si nNbModif > 0 alors
-	sTexteRequete = "UPDATE clt_base_rcs_lot SET NbrRecu = NbrRecu + 1 WHERE IdBaseRcsLot = " + nIdBaseRcsLot
+	sTexteRequete = "UPDATE clt_base_rcs_lot SET NbrRecu = NbrRecu + 1, DateHeureDernierRetour = NOW() WHERE IdBaseRcsLot = " + nIdBaseRcsLot
+sinon
+	// Résultat rejoué : l'activité est notée, le compteur ne bouge pas
+	sTexteRequete = "UPDATE clt_base_rcs_lot SET DateHeureDernierRetour = NOW() WHERE IdBaseRcsLot = " + nIdBaseRcsLot
+fin
+si pas sdReqMaj.ExécuteRequêteSQL(cpKannel.__cnxKannel, hRequêteSansCorrection, sTexteRequete) alors
+	EnregistreErreurRcsCapacite("Erreur suivi lot " + nIdBaseRcsLot, sTexteRequete)
+	retour
+fin
+
+si nNbModif > 0 alors
+	sTexteRequete = "UPDATE clt_base SET NbrTraiteRcs = IFNULL(NbrTraiteRcs, 0) + 1 WHERE IdBase = " + nIdBase
 	si pas sdReqMaj.ExécuteRequêteSQL(cpKannel.__cnxKannel, hRequêteSansCorrection, sTexteRequete) alors
-		EnregistreErreurRcsCapacite("Erreur incrément NbrRecu lot " + nIdBaseRcsLot, sTexteRequete)
-		retour
+		EnregistreErreurRcsCapacite("Erreur jauge base " + nIdBase, sTexteRequete)
 	fin
 fin
 
@@ -127,36 +135,6 @@ fin
 sTexteRequete = "UPDATE clt_base_rcs_lot SET Statut = 'TERMINE', DateHeureFin = NOW() WHERE IdBaseRcsLot = " + nIdBaseRcsLot + " AND Statut = 'ENVOYE' AND NbrRecu >= NbrEnvoye"
 si pas sdReqMaj.ExécuteRequêteSQL(cpKannel.__cnxKannel, hRequêteSansCorrection, sTexteRequete) alors
 	EnregistreErreurRcsCapacite("Erreur clôture lot " + nIdBaseRcsLot, sTexteRequete)
-	retour
-fin
-
-si sdReqCompte.ExécuteRequêteSQL(cpKannel.__cnxKannel, hRequêteSansCorrection, "SELECT ROW_COUNT() NbModif") alors
-	si sdReqCompte.LitPremier() alors nLotTermine = sdReqCompte.NbModif
-fin
-
-// ------------------------------------------------------------------
-// 5) Consolidation de la base quand tous ses lots sont TERMINE
-// ------------------------------------------------------------------
-si nLotTermine > 0 alors
-	sTexteRequete = "SELECT COUNT(*) NbrRestant FROM clt_base_rcs_lot WHERE IdBase = " + nIdBase + " AND Statut <> 'TERMINE'"
-	si sdReqCompte.ExécuteRequêteSQL(cpKannel.__cnxKannel, hRequêteSansCorrection, sTexteRequete) alors
-		si sdReqCompte.LitPremier() alors nNbrLotRestant = sdReqCompte.NbrRestant
-	fin
-
-	si nNbrLotRestant = 0 alors
-		sTexteRequete = [
-			UPDATE clt_base SET
-			StatutRcs = '[%__BASE_RCS_TRAITE__%]',
-			DateHeureRcs = NOW(),
-			NbrRcs = (SELECT COUNT(*) FROM clt_base_ligne WHERE clt_base_ligne.IdBase = [%nIdBase%] AND clt_base_ligne.EstRcs = 1),
-			NbrSmsSeul = (SELECT COUNT(*) FROM clt_base_ligne WHERE clt_base_ligne.IdBase = [%nIdBase%] AND clt_base_ligne.EstRcs = 0)
-			WHERE clt_base.IdBase = [%nIdBase%]
-			AND clt_base.StatutRcs IN ('[%__BASE_RCS_EN_COURS__%]','[%__BASE_RCS_TRAITE__%]')
-		]
-		si pas sdReqMaj.ExécuteRequêteSQL(cpKannel.__cnxKannel, hRequêteSansCorrection, sTexteRequete) alors
-			EnregistreErreurRcsCapacite("Erreur consolidation base " + nIdBase, sTexteRequete)
-		fin
-	fin
 fin
 
 sdReqMaj.AnnuleDéclaration()

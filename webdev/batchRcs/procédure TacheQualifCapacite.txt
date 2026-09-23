@@ -1,0 +1,121 @@
+// Résumé : Tâche parallèle de qualification synchrone d'UN paquet de numéros
+// Syntaxe :
+//[ <Résultat> = ] TacheQualifCapacite (<pIdBaseTache>, <pSenderTache>, <pListeNumerosTache>)
+//
+// Paramètres :
+//	pIdBaseTache : base qualifiée (clt_base)
+//	pSenderTache : agent RCS (SenderName)
+//	pListeNumerosTache : numéros normalisés 33X séparés par TAB
+//		(les paramètres d'une tâche parallèle sont copiés)
+// Valeur de retour :
+// 	entier : 1 si le paquet est traité normalement, 0 si échec HTTP après
+// 	deux essais (le paquet est alors marqué invalide)
+//
+// Lancée par ScannerQualification (vagues de Rcs_Capacite_Parallelisme tâches).
+// Une source de données par tâche (modèle TacheParalleleRcs).
+// Enchaînement : VerifieCapacite (2 essais espacés de 5 s) ; classement des
+// codes : ENABLED → 1, INVALID_DESTINATION_ADDRESS et numéros absents de la
+// réponse → 2, tout autre code → 0 (décision Michel 23/09 : REJECTED_NETWORK
+// et UNKNOWN_CODE = SMS seul) ; un UPDATE par valeur (IN, double format
+// 33X / 0X par sécurité) ; puis NbrTraiteRcs += taille du paquet dans tous
+// les cas : la jauge mesure la progression, pas le succès.
+procédure TacheQualifCapacite(pIdBaseTache, pSenderTache, pListeNumerosTache)
+
+tabNumerosTache	est un tableau de chaînes
+taaCodeTache		est un tableau associatif de chaînes
+sNumTache			est une chaîne
+sCodeTache			est une chaîne
+sErrTache			est une chaîne
+bOkTache				est un booléen
+sListeRcsTache		est une chaîne
+sListeSmsTache		est une chaîne
+sListeInvTache		est une chaîne
+nIndTache			est un entier
+sReqTache			est une chaîne
+sdMajTache			est une Source de Données
+
+
+	// Ajoute un numéro à une liste IN, sous ses deux écritures (33X et 0X)
+	procédure interne AjouteInTache(sListeCdb, pNumCdb)
+		si sListeCdb <> "" alors sListeCdb += ","
+		sListeCdb += "'" + pNumCdb + "'"
+		si Gauche(pNumCdb, 2) = "33" _et_ Taille(pNumCdb) = 11 alors
+			sListeCdb += ",'0" + Milieu(pNumCdb, 3) + "'"
+		fin
+	fin
+
+
+	// UPDATE des lignes d'une liste vers une valeur EstRcs
+	procédure interne EcritValeurTache(pValeurCdb, pListeInCdb)
+		sReqEcritCdb	est une chaîne
+		sdEcritCdb		est une Source de Données
+
+		si pListeInCdb = "" alors retour
+
+		sReqEcritCdb = [
+			UPDATE clt_base_ligne SET EstRcs = [%pValeurCdb%]
+			WHERE clt_base_ligne.IdBase = [%pIdBaseTache%]
+			AND clt_base_ligne.Portable IN ([%pListeInCdb%])
+		]
+		si pas sdEcritCdb.ExécuteRequêteSQL(clt_base_ligne..Connexion, hRequêteSansCorrection, sReqEcritCdb) alors
+			Trace("TacheQualifCapacite : erreur UPDATE EstRcs=" + pValeurCdb + " base " + pIdBaseTache, HErreurInfo(hErrComplet))
+		fin
+		sdEcritCdb.AnnuleDéclaration()
+	fin
+
+
+pour toute chaîne sNumTache de pListeNumerosTache séparée par TAB
+	si sNumTache <> "" alors tabNumerosTache.Ajoute(sNumTache)
+fin
+
+si tabNumerosTache..Occurrence = 0 alors renvoyer 1
+
+// Deux essais espacés de 5 secondes
+bOkTache = cpRcs.VerifieCapacite(pSenderTache, tabNumerosTache, taaCodeTache, sErrTache)
+si pas bOkTache alors
+	ThreadPause(5 s)
+	bOkTache = cpRcs.VerifieCapacite(pSenderTache, tabNumerosTache, taaCodeTache, sErrTache)
+fin
+
+si pas bOkTache alors
+	// Second échec : tout le paquet passe en invalide
+	pour nIndTache = 1 _à_ tabNumerosTache..Occurrence
+		AjouteInTache(sListeInvTache, tabNumerosTache[nIndTache])
+	fin
+	EcritValeurTache(__LIGNE_RCS_INVALIDE__, sListeInvTache)
+	Trace("TacheQualifCapacite : paquet en échec base " + pIdBaseTache + " (" + tabNumerosTache..Occurrence + " numéros en invalide) : " + sErrTache)
+sinon
+	// Classement des numéros selon le code renvoyé
+	pour nIndTache = 1 _à_ tabNumerosTache..Occurrence
+		sNumTache = tabNumerosTache[nIndTache]
+		si taaCodeTache[sNumTache]..Existe alors
+			sCodeTache = taaCodeTache[sNumTache]
+			si sCodeTache = "ENABLED" alors
+				AjouteInTache(sListeRcsTache, sNumTache)
+			sinon si sCodeTache = "INVALID_DESTINATION_ADDRESS" alors
+				AjouteInTache(sListeInvTache, sNumTache)
+			sinon
+				// UNREACHABLE, REJECTED_NETWORK, UNKNOWN_CODE, tout autre code
+				AjouteInTache(sListeSmsTache, sNumTache)
+			fin
+		sinon
+			// Numéro absent de la réponse
+			AjouteInTache(sListeInvTache, sNumTache)
+		fin
+	fin
+
+	EcritValeurTache(__LIGNE_RCS_OUI__, sListeRcsTache)
+	EcritValeurTache(__LIGNE_RCS_SMS__, sListeSmsTache)
+	EcritValeurTache(__LIGNE_RCS_INVALIDE__, sListeInvTache)
+fin
+
+// Progression de la jauge, succès ou échec
+sReqTache = "UPDATE clt_base SET NbrTraiteRcs = IFNULL(NbrTraiteRcs, 0) + " + tabNumerosTache..Occurrence + " WHERE IdBase = " + pIdBaseTache
+si pas sdMajTache.ExécuteRequêteSQL(clt_base..Connexion, hRequêteSansCorrection, sReqTache) alors
+	Trace("TacheQualifCapacite : erreur UPDATE NbrTraiteRcs base " + pIdBaseTache, HErreurInfo(hErrComplet))
+fin
+sdMajTache.AnnuleDéclaration()
+
+si pas bOkTache alors renvoyer 0
+
+renvoyer 1

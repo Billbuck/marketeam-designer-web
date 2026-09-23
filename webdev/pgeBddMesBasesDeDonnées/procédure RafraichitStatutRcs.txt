@@ -1,0 +1,63 @@
+// Résumé : Rafraîchit l'affichage RCS des bases visibles (timer tmrStatutRcs, 5 s)
+// Syntaxe :
+//RafraichitStatutRcs ()
+//
+// Relit en une requête le statut RCS des bases affichées dans znrBddHeberge
+// et met à jour leurs lignes (MajLigneStatutRcs), sans recharger la zone.
+// Quand plus aucune base n'est en attente ou en cours, le timer se désactive ;
+// il est réactivé par ActionAnalyseRcs et à l'initialisation de la page.
+procédure RafraichitStatutRcs()
+
+sListeIdBase	est une chaîne
+sTexteRequete	est une chaîne
+sdReqStatut		est une Source de Données
+nInd				est un entier
+nLigne			est un entier
+bEncoreEnCours	est un booléen
+
+
+pour nInd = 1 _à_ znrBddHeberge..Occurrence
+	si sListeIdBase <> "" alors sListeIdBase += ","
+	sListeIdBase += znrBddHeberge[nInd].attIdBase
+fin
+
+si sListeIdBase = "" alors
+	tmrStatutRcs..Etat = Grisé
+	retour
+fin
+
+sTexteRequete = [
+	SELECT
+	clt_base.IdBase,
+	clt_base.StatutRcs,
+	IFNULL(clt_base.NbrTraiteRcs, 0) NbrTraiteRcs,
+	IFNULL(clt_base.NbrPortableRcs, 0) NbrPortableRcs,
+	IFNULL(clt_base.NbrRcs, 0) NbrRcs,
+	IFNULL(clt_base.NbrSmsSeul, 0) NbrSmsSeul,
+	IFNULL(clt_base.DateHeureRcs, '') DateHeureRcs,
+	IFNULL(clt_base.NbrSms, 0) NbrSms
+	FROM clt_base
+	WHERE clt_base.IdBase IN ([%sListeIdBase%])
+]
+
+si pas sdReqStatut.ExécuteRequêteSQL(clt_base..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	retour
+fin
+
+pour tout sdReqStatut
+	pour nLigne = 1 _à_ znrBddHeberge..Occurrence
+		si znrBddHeberge[nLigne].attIdBase = sdReqStatut.IdBase alors
+			MajLigneStatutRcs(nLigne, sdReqStatut.StatutRcs, sdReqStatut.NbrTraiteRcs, sdReqStatut.NbrPortableRcs, sdReqStatut.NbrRcs, sdReqStatut.NbrSmsSeul, sdReqStatut.DateHeureRcs)
+			znrBddHeberge[nLigne].attBddAnalyseRcs = (_bClientAgentRcs _et_ sdReqStatut.NbrSms > 0 _et_ (sdReqStatut.StatutRcs = __BASE_RCS_NON__ _ou_ sdReqStatut.StatutRcs = __BASE_RCS_TRAITE__ _ou_ sdReqStatut.StatutRcs = __BASE_RCS_ERREUR__))
+			sortir
+		fin
+	fin
+	si sdReqStatut.StatutRcs = __BASE_RCS_A_TRAITER__ _ou_ sdReqStatut.StatutRcs = __BASE_RCS_EN_COURS__ alors
+		bEncoreEnCours = Vrai
+	fin
+fin
+sdReqStatut.AnnuleDéclaration()
+
+si pas bEncoreEnCours alors
+	tmrStatutRcs..Etat = Grisé
+fin

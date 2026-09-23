@@ -31,9 +31,10 @@ si pas sdReqRcs.ExécuteRequêteSQL(clt_base..Connexion, hRequêteSansCorrection
 	retour
 fin
 
-// Rafraîchissement de la ligne à l'écran
-znrBddHeberge[pInd].libBddRcs				= "RCS : analyse demandée"
+// Rafraîchissement de la ligne à l'écran et réveil du timer de suivi
+MajLigneStatutRcs(pInd, __BASE_RCS_A_TRAITER__, 0, 0, 0, 0, "")
 znrBddHeberge[pInd].attBddAnalyseRcs	= Faux
+tmrStatutRcs..Etat						= Actif
 
 fin :
 sdReqRcs.AnnuleDéclaration()

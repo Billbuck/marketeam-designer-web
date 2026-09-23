@@ -1,0 +1,18 @@
+-- Qualification RCS hybride (cahier des charges du 23/09/2026, étape 2)
+-- À exécuter en dev puis en prod.
+
+-- Compteurs de qualification et jauge de progression
+ALTER TABLE `clt_base`
+	ADD `NbrInvalide` INT(10) UNSIGNED NULL DEFAULT NULL COMMENT 'Portables invalides (qualification RCS)' AFTER `NbrSmsSeul`,
+	ADD `NbrPortableRcs` INT(10) UNSIGNED NULL DEFAULT NULL COMMENT 'Portables distincts envoyes en qualification - denominateur de la jauge' AFTER `NbrInvalide`,
+	ADD `NbrTraiteRcs` INT(10) UNSIGNED NULL DEFAULT NULL COMMENT 'Reponses recues - numerateur de la jauge' AFTER `NbrPortableRcs`;
+
+-- Suivi d'inactivité des lots asynchrones (remplace l'échéance fixe de 2 h)
+ALTER TABLE `clt_base_rcs_lot`
+	ADD `DateHeureDernierRetour` DATETIME NULL DEFAULT NULL COMMENT 'Dernier resultat recu par pgeRcsCapacite' AFTER `DateHeureEnvoi`;
+
+-- Paramètres (ClefRecherche est la clé primaire : INSERT IGNORE)
+INSERT IGNORE INTO prm_parametre (ClefRecherche, ValNumerique) VALUES ('Rcs_Capacite_TailleLotSync', 500);
+INSERT IGNORE INTO prm_parametre (ClefRecherche, ValNumerique) VALUES ('Rcs_Capacite_Parallelisme', 4);
+INSERT IGNORE INTO prm_parametre (ClefRecherche, ValNumerique) VALUES ('Rcs_Qualification_AutoMax', 50000);
+INSERT IGNORE INTO prm_parametre (ClefRecherche, ValNumerique) VALUES ('Rcs_Capacite_InactiviteMinutes', 10);

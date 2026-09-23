@@ -9,42 +9,53 @@
 
 
 // Résumé : Qualification RCS des bases clients (capability check Infobip, gratuit).
-// Pour chaque clt_base en A_TRAITER : passage EN_COURS, remise à NULL de
-// clt_base_ligne.EstRcs (requalification propre), purge des lots de la
-// qualification précédente, extraction des portables distincts, envoi par
-// paquets de Rcs_Capacite_TailleLot à /rcs/2/capability-check/notify
-// (cpRcs.EnvoieCapabilityCheck), un clt_base_rcs_lot par paquet.
-// Les résultats reviennent par webhook sur la page pgeRcsCapacite (reports),
-// qui met à jour EstRcs, les compteurs de lots et consolide la base.
+// Mode HYBRIDE selon le nombre de portables distincts (cahier du 23/09/2026) :
 //
-// Sécurité de fin (Infobip ne renvoie pas toujours 100 % des numéros) :
-//	- base EN_COURS dont le dernier lot date de plus de 2 h → TRAITE avec
-//	  les compteurs disponibles + Trace ;
-//	- base EN_COURS sans aucun lot depuis plus de 2 h (échec avant le
-//	  premier envoi) → ERREUR + Trace.
+//	SYNCHRONE (n <= Rcs_Qualification_AutoMax) : paquets de
+//	Rcs_Capacite_TailleLotSync (500) envoyés à /rcs/2/capability-check/query
+//	par vagues de Rcs_Capacite_Parallelisme (4) tâches parallèles
+//	(TacheQualifCapacite : réponse immédiate, écriture des EstRcs par
+//	valeur, jauge NbrTraiteRcs). Plus de 10 % de paquets en échec → ERREUR.
+//	Fin dans le même cycle : TRAITE + compteurs (mesures § 6 : 500 numéros
+//	en 1,23 s, 4 paquets parallèles en 1,74 s, 50 000 en ~45 s).
 //
-// Traitement inline (pas de tâche parallèle) : une base de 100 000 lignes
-// représente 10 appels HTTP ; l'automatisme « ignorer le timer si occupé »
-// absorbe les traitements longs.
+//	ASYNCHRONE (n > AutoMax) : lots de Rcs_Capacite_TailleLot (10 000) vers
+//	/rcs/2/capability-check/notify (EnvoieCapabilityCheck), résultats reçus
+//	par la page pgeRcsCapacite qui tague les lignes et les compteurs.
+//	La CONSOLIDATION est faite ici (seule autorité) : quand tous les lots
+//	sont TERMINE, ou quand le dernier retour date de plus de
+//	Rcs_Capacite_InactiviteMinutes : lignes restées NULL → invalide,
+//	lots restants TERMINE, puis TRAITE + compteurs.
+//
+// Filet : base EN_COURS sans aucun lot depuis plus de
+// Rcs_Capacite_InactiviteMinutes (échec avant le premier envoi, ou crash
+// pendant un traitement synchrone) → ERREUR.
 procédure ScannerQualification()
 
-nTailleLot		est un entier
+nTailleLotSync	est un entier
+nTailleLotAsync	est un entier
+nParallelisme	est un entier
+nAutoMax			est un entier
+nInactiviteMin	est un entier
 sSender			est une chaîne
 sNotifyUrl		est une chaîne
 sCleWebhook		est une chaîne
 nIdBase			est un entier
 sNomBase			est une chaîne
 sSociete			est une chaîne
+nNbrPortable	est un entier
+nNbrLot			est un entier
 sTexteRequete	est une chaîne
 sdReqBase		est une Source de Données
 sdReqAgent		est une Source de Données
 sdReqPortable	est une Source de Données
 sdReqMaj			est une Source de Données
+sdReqCompte		est une Source de Données
 sdReqEcheance	est une Source de Données
 tabNumeros		est un tableau de chaînes
-nNbrPortable	est un entier
-nNbrLot			est un entier
 bErreurBase		est un booléen
+dhDebutBase		est une DateHeure
+duBase			est une Durée
 
 
 	// Normalisation d'un portable pour Infobip : sans espace ni +,
@@ -85,7 +96,7 @@ bErreurBase		est un booléen
 	fin
 
 
-	// Consolidation d'une base : statut TRAITE + compteurs depuis clt_base_ligne
+	// Consolidation d'une base : TRAITE + compteurs RCS / SMS seul / invalides
 	procédure interne ConsolideBaseQualif(pIdBaseCdb)
 		sReqCdb	est une chaîne
 		sdMajCdb	est une Source de Données
@@ -96,8 +107,9 @@ bErreurBase		est un booléen
 			DateHeureRcs = NOW(),
 			DateHeureModification = NOW(),
 			UserModification = 'batchRcs',
-			NbrRcs = (SELECT COUNT(*) FROM clt_base_ligne WHERE clt_base_ligne.IdBase = [%pIdBaseCdb%] AND clt_base_ligne.EstRcs = 1),
-			NbrSmsSeul = (SELECT COUNT(*) FROM clt_base_ligne WHERE clt_base_ligne.IdBase = [%pIdBaseCdb%] AND clt_base_ligne.EstRcs = 0)
+			NbrRcs = (SELECT COUNT(*) FROM clt_base_ligne WHERE clt_base_ligne.IdBase = [%pIdBaseCdb%] AND clt_base_ligne.EstRcs = [%__LIGNE_RCS_OUI__%]),
+			NbrSmsSeul = (SELECT COUNT(*) FROM clt_base_ligne WHERE clt_base_ligne.IdBase = [%pIdBaseCdb%] AND clt_base_ligne.EstRcs = [%__LIGNE_RCS_SMS__%]),
+			NbrInvalide = (SELECT COUNT(*) FROM clt_base_ligne WHERE clt_base_ligne.IdBase = [%pIdBaseCdb%] AND clt_base_ligne.EstRcs = [%__LIGNE_RCS_INVALIDE__%])
 			WHERE clt_base.IdBase = [%pIdBaseCdb%]
 			AND clt_base.StatutRcs = '[%__BASE_RCS_EN_COURS__%]'
 		]
@@ -108,9 +120,8 @@ bErreurBase		est un booléen
 	fin
 
 
-	// Envoi d'un paquet de numéros à Infobip et enregistrement du lot.
+	// Envoi d'un lot ASYNCHRONE (notify) et enregistrement dans clt_base_rcs_lot.
 	// Utilise sSender et sNotifyUrl de la procédure hôte.
-	// Renvoie Faux en cas d'échec (lot ERREUR inséré, message conservé).
 	procédure interne EnvoieLotQualif(pIdBaseCdb, tabNumerosCdb est un tableau de chaînes)
 		sReqCdb	est une chaîne
 		sdLotCdb	est une Source de Données
@@ -139,10 +150,82 @@ bErreurBase		est un booléen
 			Trace("ScannerQualification : erreur INSERT lot erreur base " + pIdBaseCdb, HErreurInfo(hErrComplet))
 		fin
 		sdLotCdb.AnnuleDéclaration()
-		Trace("ScannerQualification : échec capability check base " + pIdBaseCdb + " : " + sErrCdb)
+		Trace("ScannerQualification : échec capability check asynchrone base " + pIdBaseCdb + " : " + sErrCdb)
 		renvoyer Faux
 	fin
 
+
+	// Qualification SYNCHRONE d'une base : paquets de nTailleLotSync envoyés
+	// par vagues de nParallelisme tâches parallèles (TacheQualifCapacite).
+	// Renvoie Faux si plus de 10 % des paquets sont en échec.
+	procédure interne QualifieBaseSync(pIdBaseSync)
+		sReqSync				est une chaîne
+		sdReqPortSync		est une Source de Données
+		tabPaquetSync		est un tableau de chaînes
+		sPaquetSync			est une chaîne
+		nDansPaquetSync	est un entier
+		tabTacheSync		est un tableau de TâchesParallèles
+		nIndPaquetSync		est un entier
+		nIndTacheSync		est un entier
+		nEchecSync			est un entier
+		nRetourSync			est un entier
+
+		// Extraction des portables distincts, découpage en paquets (chaînes TAB)
+		sReqSync = [
+			SELECT DISTINCT clt_base_ligne.Portable
+			FROM clt_base_ligne
+			WHERE clt_base_ligne.IdBase = [%pIdBaseSync%]
+			AND clt_base_ligne.Portable IS NOT NULL
+			AND clt_base_ligne.Portable <> ''
+		]
+		si pas sdReqPortSync.ExécuteRequêteSQL(clt_base_ligne..Connexion, hRequêteSansCorrection, sReqSync) alors
+			Trace("ScannerQualification : erreur extraction portables base " + pIdBaseSync, HErreurInfo(hErrComplet))
+			renvoyer Faux
+		fin
+		pour tout sdReqPortSync
+			si sPaquetSync <> "" alors sPaquetSync += TAB
+			sPaquetSync += NormalisePortableQualif(sdReqPortSync.Portable)
+			nDansPaquetSync++
+			si nDansPaquetSync >= nTailleLotSync alors
+				tabPaquetSync.Ajoute(sPaquetSync)
+				sPaquetSync			= ""
+				nDansPaquetSync	= 0
+			fin
+		fin
+		sdReqPortSync.AnnuleDéclaration()
+		si sPaquetSync <> "" alors tabPaquetSync.Ajoute(sPaquetSync)
+
+		si tabPaquetSync..Occurrence = 0 alors renvoyer Vrai
+
+		// Vagues de nParallelisme tâches, attente de la vague avant la suivante
+		nIndPaquetSync = 1
+		tantque nIndPaquetSync <= tabPaquetSync..Occurrence
+			tabTacheSync.SupprimeTout()
+			pour nIndTacheSync = 1 _à_ nParallelisme
+				si nIndPaquetSync > tabPaquetSync..Occurrence alors sortir
+				tabTacheSync.Ajoute(TâcheParallèleExécute(TacheQualifCapacite, (pIdBaseSync, sSender, tabPaquetSync[nIndPaquetSync])))
+				nIndPaquetSync++
+			fin
+			TâcheParallèleAttendToutes(tabTacheSync)
+			pour nIndTacheSync = 1 _à_ tabTacheSync..Occurrence
+				nRetourSync = tabTacheSync[nIndTacheSync].ValeurRenvoyée
+				si nRetourSync = 0 alors nEchecSync++
+			fin
+		fin
+
+		si nEchecSync * 10 > tabPaquetSync..Occurrence alors
+			Trace("ScannerQualification : base " + pIdBaseSync + " en erreur - " + nEchecSync + " paquets en échec sur " + tabPaquetSync..Occurrence)
+			renvoyer Faux
+		fin
+		renvoyer Vrai
+	fin
+
+
+// ------------------------------------------------------------------
+// 0) Paramètre d'inactivité (utile même sans nouvelle base)
+// ------------------------------------------------------------------
+nInactiviteMin = cpFonction.ValeurParametre("Rcs_Capacite_InactiviteMinutes", prm_parametre.ValNumerique..Nom)
+si nInactiviteMin <= 0 alors nInactiviteMin = 10
 
 // ------------------------------------------------------------------
 // 1) Bases en attente de qualification
@@ -179,8 +262,17 @@ si sdReqBase.LitPremier(hSansRafraîchir) alors
 	fin
 	sdReqAgent.AnnuleDéclaration()
 
-	nTailleLot = cpFonction.ValeurParametre("Rcs_Capacite_TailleLot", prm_parametre.ValNumerique..Nom)
-	si nTailleLot <= 0 _ou_ nTailleLot > 10000 alors nTailleLot = 10000
+	nTailleLotSync = cpFonction.ValeurParametre("Rcs_Capacite_TailleLotSync", prm_parametre.ValNumerique..Nom)
+	si nTailleLotSync <= 0 _ou_ nTailleLotSync > 500 alors nTailleLotSync = 500
+
+	nParallelisme = cpFonction.ValeurParametre("Rcs_Capacite_Parallelisme", prm_parametre.ValNumerique..Nom)
+	si nParallelisme <= 0 alors nParallelisme = 4
+
+	nAutoMax = cpFonction.ValeurParametre("Rcs_Qualification_AutoMax", prm_parametre.ValNumerique..Nom)
+	si nAutoMax <= 0 alors nAutoMax = 50000
+
+	nTailleLotAsync = cpFonction.ValeurParametre("Rcs_Capacite_TailleLot", prm_parametre.ValNumerique..Nom)
+	si nTailleLotAsync <= 0 _ou_ nTailleLotAsync > 10000 alors nTailleLotAsync = 10000
 
 	sNotifyUrl	= cpFonction.ValeurParametre("Rcs_Capacite_Webhook_Url", prm_parametre.ValChaine..Nom)
 	sCleWebhook	= cpFonction.ValeurParametre("Rcs_Webhook_Cle", prm_parametre.ValChaine..Nom)
@@ -188,25 +280,46 @@ si sdReqBase.LitPremier(hSansRafraîchir) alors
 	si sCleWebhook = "Erreur" alors sCleWebhook = ""
 	sNotifyUrl += sCleWebhook
 
-	si sSender = "" _ou_ sNotifyUrl = "" alors
-		Trace("ScannerQualification : agent RCS actif ou Rcs_Capacite_Webhook_Url manquant, bases laissées en attente")
+	si sSender = "" alors
+		Trace("ScannerQualification : aucun agent RCS actif, bases laissées en attente")
 	sinon
 
 		pour tout sdReqBase
-			nIdBase			= sdReqBase.IdBase
-			sNomBase			= sdReqBase.Nom
-			sSociete			= sdReqBase.Societe
-			bErreurBase		= Faux
-			nNbrPortable	= 0
-			nNbrLot			= 0
-			tabNumeros.SupprimeTout()
+			nIdBase		= sdReqBase.IdBase
+			sNomBase		= sdReqBase.Nom
+			sSociete		= sdReqBase.Societe
+			bErreurBase	= Faux
 
-			// (a) Prise en main
-			MajStatutBaseQualif(nIdBase, __BASE_RCS_EN_COURS__)
+			// (a) Nombre de portables distincts : aiguillage synchrone / asynchrone
+			nNbrPortable = 0
+			sTexteRequete = [
+				SELECT COUNT(DISTINCT clt_base_ligne.Portable) NbrPortable
+				FROM clt_base_ligne
+				WHERE clt_base_ligne.IdBase = [%nIdBase%]
+				AND clt_base_ligne.Portable IS NOT NULL
+				AND clt_base_ligne.Portable <> ''
+			]
+			si sdReqCompte.ExécuteRequêteSQL(clt_base_ligne..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+				si sdReqCompte.LitPremier() alors nNbrPortable = sdReqCompte.NbrPortable
+			fin
+			sdReqCompte.AnnuleDéclaration()
 
-			// (b) Requalification propre : résultats précédents effacés,
-			// lots de la qualification précédente purgés (la table décrit
-			// la qualification en cours, pas un journal)
+			// (b) Prise en main : EN_COURS + compteurs de jauge
+			sTexteRequete = [
+				UPDATE clt_base SET
+				StatutRcs = '[%__BASE_RCS_EN_COURS__%]',
+				NbrPortableRcs = [%nNbrPortable%],
+				NbrTraiteRcs = 0,
+				DateHeureModification = NOW(),
+				UserModification = 'batchRcs'
+				WHERE clt_base.IdBase = [%nIdBase%]
+			]
+			si pas sdReqMaj.ExécuteRequêteSQL(clt_base..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+				Trace("ScannerQualification : erreur passage EN_COURS base " + nIdBase, HErreurInfo(hErrComplet))
+			fin
+
+			// (c) Requalification propre : résultats précédents effacés,
+			// lots de la qualification précédente purgés
 			sTexteRequete = "UPDATE clt_base_ligne SET EstRcs = NULL WHERE IdBase = " + nIdBase
 			si pas sdReqMaj.ExécuteRequêteSQL(clt_base_ligne..Connexion, hRequêteSansCorrection, sTexteRequete) alors
 				Trace("ScannerQualification : erreur remise à NULL EstRcs base " + nIdBase, HErreurInfo(hErrComplet))
@@ -217,56 +330,86 @@ si sdReqBase.LitPremier(hSansRafraîchir) alors
 			fin
 			sdReqMaj.AnnuleDéclaration()
 
-			// (c) Extraction des portables distincts et envoi par paquets
-			sTexteRequete = [
-				SELECT DISTINCT clt_base_ligne.Portable
-				FROM clt_base_ligne
-				WHERE clt_base_ligne.IdBase = [%nIdBase%]
-				AND clt_base_ligne.Portable IS NOT NULL
-				AND clt_base_ligne.Portable <> ''
-			]
-			si pas sdReqPortable.ExécuteRequêteSQL(clt_base_ligne..Connexion, hRequêteSansCorrection, sTexteRequete) alors
-				Trace("ScannerQualification : erreur extraction portables base " + nIdBase, HErreurInfo(hErrComplet))
-				MajStatutBaseQualif(nIdBase, __BASE_RCS_ERREUR__)
+			// (d) Base sans portable : traitée à vide
+			si nNbrPortable = 0 alors
+				ConsolideBaseQualif(nIdBase)
+				Trace("ScannerQualification : base " + nIdBase + " sans portable, traitée à vide")
+				tblQualification.AjouteLigne(DateHeureSys(), sNomBase, sSociete, 0, 0, "", 0, 0, 0, "Aucun portable")
 				continuer
 			fin
 
-			pour tout sdReqPortable
-				tabNumeros.Ajoute(NormalisePortableQualif(sdReqPortable.Portable))
-				nNbrPortable++
+			si nNbrPortable <= nAutoMax alors
+				// ------------------------------------------------------
+				// Mode SYNCHRONE : réponse immédiate, fin dans ce cycle
+				// ------------------------------------------------------
+				nNbrLot		= PartieEntière((nNbrPortable + nTailleLotSync - 1) / nTailleLotSync)
+				dhDebutBase	= DateHeureSys()
 
-				si tabNumeros..Occurrence >= nTailleLot alors
-					si pas EnvoieLotQualif(nIdBase, tabNumeros) alors
-						bErreurBase = Vrai
-						sortir
+				si QualifieBaseSync(nIdBase) alors
+					ConsolideBaseQualif(nIdBase)
+					duBase = DateHeureSys() - dhDebutBase
+
+					// Compteurs consolidés pour l'affichage
+					sTexteRequete = "SELECT IFNULL(NbrRcs,0) NbrRcs, IFNULL(NbrSmsSeul,0) NbrSmsSeul, IFNULL(NbrInvalide,0) NbrInvalide FROM clt_base WHERE IdBase = " + nIdBase
+					si sdReqCompte.ExécuteRequêteSQL(clt_base..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+						si sdReqCompte.LitPremier() alors
+							tblQualification.AjouteLigne(DateHeureSys(), sNomBase, sSociete, nNbrPortable, nNbrLot, PartieEntière(duBase..EnMillisecondes / 1000) + " s", sdReqCompte.NbrRcs, sdReqCompte.NbrSmsSeul, sdReqCompte.NbrInvalide, "Terminée")
+						fin
 					fin
-					nNbrLot++
-					tabNumeros.SupprimeTout()
-				fin
-			fin
-			sdReqPortable.AnnuleDéclaration()
-
-			// Dernier paquet incomplet
-			si bErreurBase = Faux _et_ tabNumeros..Occurrence > 0 alors
-				si EnvoieLotQualif(nIdBase, tabNumeros) alors
-					nNbrLot++
-					tabNumeros.SupprimeTout()
+					sdReqCompte.AnnuleDéclaration()
+					Trace("ScannerQualification : base " + nIdBase + " qualifiée en " + PartieEntière(duBase..EnMillisecondes / 1000) + " s (" + nNbrPortable + " portables, " + nNbrLot + " paquets)")
 				sinon
-					bErreurBase = Vrai
+					MajStatutBaseQualif(nIdBase, __BASE_RCS_ERREUR__)
+					tblQualification.AjouteLigne(DateHeureSys(), sNomBase, sSociete, nNbrPortable, nNbrLot, "", "", "", "", "Erreur (échecs > 10 %)")
 				fin
-			fin
 
-			// (d) Issue
-			si bErreurBase alors
-				MajStatutBaseQualif(nIdBase, __BASE_RCS_ERREUR__)
-				tblQualification.AjouteLigne(DateHeureSys(), sNomBase, sSociete, nNbrPortable, nNbrLot, "Erreur d'envoi")
-			sinon si nNbrLot = 0 alors
-				// Aucun portable : base traitée à vide (compteurs 0)
-				ConsolideBaseQualif(nIdBase)
-				Trace("ScannerQualification : base " + nIdBase + " sans portable, traitée à vide")
-				tblQualification.AjouteLigne(DateHeureSys(), sNomBase, sSociete, 0, 0, "Aucun portable")
 			sinon
-				tblQualification.AjouteLigne(DateHeureSys(), sNomBase, sSociete, nNbrPortable, nNbrLot, "Envoyé - attente retours")
+				// ------------------------------------------------------
+				// Mode ASYNCHRONE : lots de 10 000, résultats par webhook
+				// ------------------------------------------------------
+				si sNotifyUrl = "" alors
+					Trace("ScannerQualification : Rcs_Capacite_Webhook_Url manquant, base " + nIdBase + " en erreur")
+					MajStatutBaseQualif(nIdBase, __BASE_RCS_ERREUR__)
+					continuer
+				fin
+
+				nNbrLot = 0
+				tabNumeros.SupprimeTout()
+
+				si pas sdReqPortable.ExécuteRequêteSQL(clt_base_ligne..Connexion, hRequêteSansCorrection, ChaîneConstruit("SELECT DISTINCT clt_base_ligne.Portable FROM clt_base_ligne WHERE clt_base_ligne.IdBase = %1 AND clt_base_ligne.Portable IS NOT NULL AND clt_base_ligne.Portable <> ''", nIdBase)) alors
+					Trace("ScannerQualification : erreur extraction portables base " + nIdBase, HErreurInfo(hErrComplet))
+					MajStatutBaseQualif(nIdBase, __BASE_RCS_ERREUR__)
+					continuer
+				fin
+
+				pour tout sdReqPortable
+					tabNumeros.Ajoute(NormalisePortableQualif(sdReqPortable.Portable))
+					si tabNumeros..Occurrence >= nTailleLotAsync alors
+						si pas EnvoieLotQualif(nIdBase, tabNumeros) alors
+							bErreurBase = Vrai
+							sortir
+						fin
+						nNbrLot++
+						tabNumeros.SupprimeTout()
+					fin
+				fin
+				sdReqPortable.AnnuleDéclaration()
+
+				si bErreurBase = Faux _et_ tabNumeros..Occurrence > 0 alors
+					si EnvoieLotQualif(nIdBase, tabNumeros) alors
+						nNbrLot++
+						tabNumeros.SupprimeTout()
+					sinon
+						bErreurBase = Vrai
+					fin
+				fin
+
+				si bErreurBase alors
+					MajStatutBaseQualif(nIdBase, __BASE_RCS_ERREUR__)
+					tblQualification.AjouteLigne(DateHeureSys(), sNomBase, sSociete, nNbrPortable, nNbrLot, "", "", "", "", "Erreur d'envoi")
+				sinon
+					tblQualification.AjouteLigne(DateHeureSys(), sNomBase, sSociete, nNbrPortable, nNbrLot, "", "", "", "", "Envoyé - attente retours")
+				fin
 			fin
 		fin
 
@@ -275,37 +418,64 @@ fin
 sdReqBase.AnnuleDéclaration()
 
 // ------------------------------------------------------------------
-// 2) Échéance 2 h : bases EN_COURS dont le dernier lot est trop ancien
-//    → TRAITE avec les compteurs disponibles
+// 2) Consolidation ASYNCHRONE (seule autorité) : tous les lots TERMINE,
+//    ou aucun retour depuis Rcs_Capacite_InactiviteMinutes
 // ------------------------------------------------------------------
 sTexteRequete = [
 	SELECT clt_base.IdBase, IFNULL(clt_base.Nom, '') Nom
 	FROM clt_base
 	WHERE clt_base.StatutRcs = '[%__BASE_RCS_EN_COURS__%]'
 	AND EXISTS (SELECT 1 FROM clt_base_rcs_lot WHERE clt_base_rcs_lot.IdBase = clt_base.IdBase)
-	AND (SELECT MAX(clt_base_rcs_lot.DateHeureEnvoi) FROM clt_base_rcs_lot WHERE clt_base_rcs_lot.IdBase = clt_base.IdBase) < NOW() - INTERVAL 2 HOUR
+	AND (
+		NOT EXISTS (SELECT 1 FROM clt_base_rcs_lot WHERE clt_base_rcs_lot.IdBase = clt_base.IdBase AND clt_base_rcs_lot.Statut = 'ENVOYE')
+		OR (SELECT MAX(COALESCE(clt_base_rcs_lot.DateHeureDernierRetour, clt_base_rcs_lot.DateHeureEnvoi)) FROM clt_base_rcs_lot WHERE clt_base_rcs_lot.IdBase = clt_base.IdBase) < NOW() - INTERVAL [%nInactiviteMin%] MINUTE
+	)
 ]
 
 si sdReqEcheance.ExécuteRequêteSQL(clt_base..Connexion, hRequêteSansCorrection, sTexteRequete) alors
 	pour tout sdReqEcheance
-		Trace("ScannerQualification : échéance 2 h, base " + sdReqEcheance.IdBase + " (" + sdReqEcheance.Nom + ") consolidée avec les résultats disponibles")
-		ConsolideBaseQualif(sdReqEcheance.IdBase)
+		nIdBase = sdReqEcheance.IdBase
+
+		// Numéros restés sans réponse → invalide (lignes avec portable seulement)
+		sTexteRequete = [
+			UPDATE clt_base_ligne SET EstRcs = [%__LIGNE_RCS_INVALIDE__%]
+			WHERE clt_base_ligne.IdBase = [%nIdBase%]
+			AND clt_base_ligne.EstRcs IS NULL
+			AND clt_base_ligne.Portable IS NOT NULL
+			AND clt_base_ligne.Portable <> ''
+		]
+		si pas sdReqMaj.ExécuteRequêteSQL(clt_base_ligne..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+			Trace("ScannerQualification : erreur invalidation des silencieux base " + nIdBase, HErreurInfo(hErrComplet))
+		fin
+
+		// Lots encore ouverts → TERMINE
+		sTexteRequete = "UPDATE clt_base_rcs_lot SET Statut = 'TERMINE', DateHeureFin = NOW() WHERE IdBase = " + nIdBase + " AND Statut = 'ENVOYE'"
+		si pas sdReqMaj.ExécuteRequêteSQL(clt_base_rcs_lot..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+			Trace("ScannerQualification : erreur clôture des lots base " + nIdBase, HErreurInfo(hErrComplet))
+		fin
+		sdReqMaj.AnnuleDéclaration()
+
+		ConsolideBaseQualif(nIdBase)
+		Trace("ScannerQualification : base " + nIdBase + " (" + sdReqEcheance.Nom + ") consolidée (asynchrone)")
 	fin
 fin
 sdReqEcheance.AnnuleDéclaration()
 
-// Bases EN_COURS sans aucun lot depuis plus de 2 h : échec avant le premier envoi
+// ------------------------------------------------------------------
+// 3) Filet : base EN_COURS sans aucun lot depuis trop longtemps
+//    (échec avant le premier envoi, ou crash pendant un synchrone)
+// ------------------------------------------------------------------
 sTexteRequete = [
 	SELECT clt_base.IdBase, IFNULL(clt_base.Nom, '') Nom
 	FROM clt_base
 	WHERE clt_base.StatutRcs = '[%__BASE_RCS_EN_COURS__%]'
 	AND NOT EXISTS (SELECT 1 FROM clt_base_rcs_lot WHERE clt_base_rcs_lot.IdBase = clt_base.IdBase)
-	AND clt_base.DateHeureModification < NOW() - INTERVAL 2 HOUR
+	AND clt_base.DateHeureModification < NOW() - INTERVAL [%nInactiviteMin%] MINUTE
 ]
 
 si sdReqEcheance.ExécuteRequêteSQL(clt_base..Connexion, hRequêteSansCorrection, sTexteRequete) alors
 	pour tout sdReqEcheance
-		Trace("ScannerQualification : base " + sdReqEcheance.IdBase + " (" + sdReqEcheance.Nom + ") EN_COURS sans lot depuis 2 h, passée en erreur")
+		Trace("ScannerQualification : base " + sdReqEcheance.IdBase + " (" + sdReqEcheance.Nom + ") EN_COURS sans lot depuis " + nInactiviteMin + " min, passée en erreur")
 		MajStatutBaseQualif(sdReqEcheance.IdBase, __BASE_RCS_ERREUR__)
 	fin
 fin

@@ -15,5 +15,24 @@ popFiltre.btnFiltreMoins.ClasseHTML		= ClassHtmlTypeOperation("btn",__OPERATION_
 btnFermePopBddAperçu.ClasseHTML			= ClassHtmlTypeOperation("btn",__OPERATION_BASE_DE_DONNEES__)
 
 
+// Le client connecté a-t-il un agent RCS actif ? (visibilité du menu Analyse RCS)
+sTexteRequeteAgentRcs est une chaîne = [
+	SELECT 1 Existe
+	FROM rcs_agent
+	WHERE rcs_agent.IdClient = [%Partage.__vcUser.IDClient%]
+	AND rcs_agent.EstActif = 1
+	LIMIT 1
+]
+sdReqAgentRcs est une Source de Données
+_bClientAgentRcs = Faux
+si sdReqAgentRcs.ExécuteRequêteSQL(rcs_agent..Connexion, hRequêteSansCorrection, sTexteRequeteAgentRcs) alors
+	_bClientAgentRcs = sdReqAgentRcs.LitPremier()
+fin
+sdReqAgentRcs.AnnuleDéclaration()
+
 InitZnrBasesDeDonnéesClient()
+
+// Suivi des analyses RCS : le timer se désactive seul au premier passage
+// si aucune base affichée n'est en attente ou en cours
+tmrStatutRcs..Etat = Actif
 

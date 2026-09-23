@@ -1,0 +1,36 @@
+// Résumé : Déclenche la qualification RCS automatique d'une base après import
+// Syntaxe :
+//QualificationRcsAuto (<pIdBase>)
+//
+// Paramètres :
+//	pIdBase : base fraîchement importée (clt_base)
+//
+// Règle (cahier des charges qualification RCS, § 4.1) : la base passe en
+// A_TRAITER si elle contient des portables (NbrSms > 0) sans dépasser
+// Rcs_Qualification_AutoMax, et si elle n'a jamais été qualifiée (NON).
+// Au-delà du plafond, rien : l'analyse reste accessible par le menu
+// « Analyse RCS » (mode asynchrone). Le traitement lui-même est fait par
+// le batch RCS (ScannerQualification). Gratuit, sans opération.
+procédure QualificationRcsAuto(pIdBase)
+
+nAutoMax			est un entier	= cpFonction.ValeurParametre("Rcs_Qualification_AutoMax", prm_parametre.ValNumerique..Nom)
+sTexteRequete	est une chaîne
+sdReqQualif		est une Source de Données
+
+si nAutoMax <= 0 alors nAutoMax = 50000
+
+sTexteRequete = [
+	UPDATE clt_base SET
+	StatutRcs = '[%__BASE_RCS_A_TRAITER__%]',
+	DateHeureModification = NOW()
+	WHERE
+	clt_base.IdBase = [%pIdBase%]
+	AND clt_base.NbrSms > 0
+	AND clt_base.NbrSms <= [%nAutoMax%]
+	AND clt_base.StatutRcs = '[%__BASE_RCS_NON__%]'
+]
+
+si pas sdReqQualif.ExécuteRequêteSQL(clt_base..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("QualificationRcsAuto : erreur UPDATE base " + pIdBase, HErreurInfo(hErrComplet))
+fin
+sdReqQualif.AnnuleDéclaration()

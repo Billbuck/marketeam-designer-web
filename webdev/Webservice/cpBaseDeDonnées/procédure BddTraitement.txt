@@ -90,6 +90,10 @@ si bTermine alors
 	// Recalculer les totaux directement depuis la base (dédoublonnés)
 	CalculeTotauxClientBase(wbs_base.IdClientBase)
 
+	// Qualification RCS automatique (gratuite) si la base a des portables
+	// et ne dépasse pas Rcs_Qualification_AutoMax
+	QualificationRcsAuto(wbs_base.IdClientBase)
+
 	// Supprimer le fichier temporaire
 	si fFichierExiste(fRepDonnées() + ["\"] + wbs_base.FichierTemporaire) alors
 		fSupprime(fRepDonnées() + ["\"] + wbs_base.FichierTemporaire)

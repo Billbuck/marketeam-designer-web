@@ -1,0 +1,47 @@
+// Résumé : Remplit les champs de qualification RCS d'une ligne de znrBddHeberge
+// Syntaxe :
+//MajLigneStatutRcs (<pInd>, <pStatutRcs>, <pNbrTraite>, <pNbrPortable>, <pNbrRcs>, <pNbrSmsSeul>, <pDateHeureRcs>)
+//
+// Paramètres :
+//	pInd : indice de la ligne dans znrBddHeberge
+//	pStatutRcs : clt_base.StatutRcs
+//	pNbrTraite, pNbrPortable : jauge (numérateur / dénominateur)
+//	pNbrRcs, pNbrSmsSeul : compteurs affichés dans les colonnes Rcs / Sms
+//	pDateHeureRcs : date de fin de qualification (chaîne AAAAMMJJ...)
+//
+// Appelée par AjouteElementZnrBddHeberge (affichage initial) et par
+// RafraichitStatutRcs (timer 5 s) : un seul endroit décide de l'affichage.
+procédure MajLigneStatutRcs(pInd, pStatutRcs, pNbrTraite, pNbrPortable, pNbrRcs, pNbrSmsSeul, pDateHeureRcs)
+
+// Colonnes Rcs / Sms : nombres si la base est qualifiée, tiret sinon
+si pStatutRcs = __BASE_RCS_TRAITE__ alors
+	znrBddHeberge[pInd].libBddTotalRcs		= NumériqueVersChaîne(pNbrRcs, "dS")
+	znrBddHeberge[pInd].libBddTotalSmsSeul	= NumériqueVersChaîne(pNbrSmsSeul, "dS")
+sinon
+	znrBddHeberge[pInd].libBddTotalRcs		= "-"
+	znrBddHeberge[pInd].libBddTotalSmsSeul	= "-"
+fin
+
+// Libellé de statut
+selon pStatutRcs
+	cas __BASE_RCS_A_TRAITER__
+		znrBddHeberge[pInd].libBddRcs = "Analyse RCS en attente"
+	cas __BASE_RCS_EN_COURS__
+		znrBddHeberge[pInd].libBddRcs = "Analyse RCS en cours..."
+	cas __BASE_RCS_TRAITE__
+		znrBddHeberge[pInd].libBddRcs = "Analyse RCS du " + DateVersChaîne(Gauche(pDateHeureRcs, 8), "JJ/MM/AAAA")
+	cas __BASE_RCS_ERREUR__
+		znrBddHeberge[pInd].libBddRcs = "Analyse RCS en erreur"
+	autre cas
+		znrBddHeberge[pInd].libBddRcs = ""
+fin
+
+// Jauge de progression, visible seulement pendant le traitement
+znrBddHeberge[pInd].jgeBddRcs..Visible = (pStatutRcs = __BASE_RCS_EN_COURS__)
+si pStatutRcs = __BASE_RCS_EN_COURS__ alors
+	si pNbrPortable > 0 alors
+		znrBddHeberge[pInd].jgeBddRcs = PartieEntière((pNbrTraite * 100) / pNbrPortable)
+	sinon
+		znrBddHeberge[pInd].jgeBddRcs = 0
+	fin
+fin

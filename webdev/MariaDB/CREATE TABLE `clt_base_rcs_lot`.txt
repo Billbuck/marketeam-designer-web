@@ -7,6 +7,7 @@ CREATE TABLE `clt_base_rcs_lot` (
 	`Statut` ENUM('ENVOYE','TERMINE','ERREUR') NOT NULL DEFAULT 'ENVOYE' COLLATE 'utf8mb4_unicode_ci',
 	`Erreur` VARCHAR(500) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
 	`DateHeureEnvoi` DATETIME NOT NULL DEFAULT current_timestamp(),
+	`DateHeureDernierRetour` DATETIME NULL DEFAULT NULL COMMENT 'Dernier resultat recu par pgeRcsCapacite',
 	`DateHeureFin` DATETIME NULL DEFAULT NULL,
 	PRIMARY KEY (`IdBaseRcsLot`) USING BTREE,
 	UNIQUE INDEX `BulkId` (`BulkId`) USING BTREE,
