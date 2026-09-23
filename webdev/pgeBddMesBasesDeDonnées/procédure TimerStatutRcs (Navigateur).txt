@@ -1,0 +1,8 @@
+// Résumé : Tic du timer de suivi des analyses RCS (toutes les 5 secondes).
+// Procédure NAVIGATEUR. Déclenche le clic du bouton caché
+// btnRafraichitStatutRcs (mode AJAX), dont le code serveur appelle
+// RafraichitStatutRcs. Lancée / arrêtée par RelanceTimerStatutRcs et par
+// le code navigateur de retour du bouton caché.
+procédure TimerStatutRcs()
+
+ExécuteTraitement(btnRafraichitStatutRcs, trtClic)

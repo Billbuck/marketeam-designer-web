@@ -1,0 +1,5 @@
+// Code navigateur « Chargement (onload) » de pgeBddMesBasesDeDonnées.
+// Lance le suivi des analyses RCS si une base affichée est en attente ou
+// en cours (champ caché saiRcsEnCours posé par le serveur à l'affichage).
+
+RelanceTimerStatutRcs()

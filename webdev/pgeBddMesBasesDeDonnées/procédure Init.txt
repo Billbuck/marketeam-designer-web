@@ -31,8 +31,7 @@ fin
 sdReqAgentRcs.AnnuleDéclaration()
 
 InitZnrBasesDeDonnéesClient()
-
-// Suivi des analyses RCS : le timer se désactive seul au premier passage
-// si aucune base affichée n'est en attente ou en cours
-tmrStatutRcs..Etat = Actif
+// Le suivi des analyses RCS est lancé par le code navigateur de chargement
+// de la page (RelanceTimerStatutRcs), d'après le champ caché saiRcsEnCours
+// posé par InitZnrBasesDeDonnéesClient / AjouteElementZnrBddHeberge
 

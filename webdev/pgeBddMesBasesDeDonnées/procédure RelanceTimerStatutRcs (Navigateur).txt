@@ -1,0 +1,13 @@
+// Résumé : Lance le timer de suivi des analyses RCS si nécessaire.
+// Procédure NAVIGATEUR. Appelée :
+//	- par le code navigateur « Chargement (onload) » de la page ;
+//	- par le code navigateur qui suit l'action de menu « Analyse RCS »
+//	  (après le passage serveur, saiRcsEnCours vaut 1).
+// FinTimer avant Timer : pas de double timer si déjà lancé.
+// 500 centièmes de seconde = 5 secondes.
+procédure RelanceTimerStatutRcs()
+
+si saiRcsEnCours = 1 alors
+	FinTimer(TimerStatutRcs)
+	Timer(TimerStatutRcs, 500)
+fin

@@ -1,0 +1,14 @@
+// Bouton btnRafraichitStatutRcs — invisible, mode AJAX.
+// Déclenché toutes les 5 secondes par la procédure navigateur TimerStatutRcs.
+
+// Code Clic (Serveur)
+
+RafraichitStatutRcs()
+
+
+// Code Retour de traitement Ajax (Navigateur)
+
+// Plus aucune base en attente ou en cours : le timer s'arrête
+si saiRcsEnCours = 0 alors
+	FinTimer(TimerStatutRcs)
+fin

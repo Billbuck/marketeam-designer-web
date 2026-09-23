@@ -31,10 +31,12 @@ si pas sdReqRcs.ExécuteRequêteSQL(clt_base..Connexion, hRequêteSansCorrection
 	retour
 fin
 
-// Rafraîchissement de la ligne à l'écran et réveil du timer de suivi
+// Rafraîchissement de la ligne à l'écran. saiRcsEnCours repasse à 1 :
+// le code navigateur qui suit l'action du menu relance le timer
+// (RelanceTimerStatutRcs)
 MajLigneStatutRcs(pInd, __BASE_RCS_A_TRAITER__, 0, 0, 0, 0, "")
 znrBddHeberge[pInd].attBddAnalyseRcs	= Faux
-tmrStatutRcs..Etat						= Actif
+saiRcsEnCours								= 1
 
 fin :
 sdReqRcs.AnnuleDéclaration()

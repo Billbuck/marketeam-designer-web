@@ -51,3 +51,8 @@ znrBddHeberge[nInd].attBddAnalyseRcs				= (_bClientAgentRcs _et_ _sdReqBddHeberg
 
 MajLigneStatutRcs(nInd, _sdReqBddHeberge.StatutRcs, _sdReqBddHeberge.NbrTraiteRcs, _sdReqBddHeberge.NbrPortableRcs, _sdReqBddHeberge.NbrRcs, _sdReqBddHeberge.NbrSmsSeul, _sdReqBddHeberge.DateHeureRcs)
 
+// Une analyse est en attente ou en cours : le timer navigateur doit tourner
+si _sdReqBddHeberge.StatutRcs = __BASE_RCS_A_TRAITER__ _ou_ _sdReqBddHeberge.StatutRcs = __BASE_RCS_EN_COURS__ alors
+	saiRcsEnCours = 1
+fin
+

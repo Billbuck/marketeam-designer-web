@@ -6,6 +6,10 @@ sWhere			est une chaîne
 
 znrBddHeberge.SupprimeTout()
 
+// Champ caché du suivi RCS : repassera à 1 si une base affichée est
+// en attente ou en cours d'analyse (AjouteElementZnrBddHeberge)
+saiRcsEnCours = 0
+
 Partage.FiltreBibliothèque(_sBibliothèque, clt_base..Nom, sWhere, Vrai)
 
 si cboContact.ValeurMémorisée > 0 alors
