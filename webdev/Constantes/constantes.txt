@@ -501,6 +501,10 @@ constante
 	__LIGNE_RCS_OUI__											= 1
 	__LIGNE_RCS_INVALIDE__									= 2
 
+	// Canal prévu d'une ligne d'envoi RCS (ope_rcs_envoi.CanalPrevu)
+	__CANAL_PREVU_RCS__										= "RCS"
+	__CANAL_PREVU_SMS__										= "SMS"
+
 
 	__DOC_RCS_IMAGE_CARD__									= "RcsImgCard"
 	__DOC_RCS_IMAGE_SLDR__									= "RcsImgSldr"

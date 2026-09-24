@@ -86,8 +86,8 @@ pour tout stBase de stOperation.tabBase
 					sListeSelect += [","] + stBase.taaBaseChamp[sLibelle].Champ
 				fin
 			fin
-			sListeInsert += [","] + "Sexe,Profil"
-			sListeSelect += [","] + "Sexe,Profil"
+			sListeInsert += [","] + "Sexe,Profil,EstRcs"
+			sListeSelect += [","] + "Sexe,Profil,EstRcs"
 
 			sTexteRequete =
 			[

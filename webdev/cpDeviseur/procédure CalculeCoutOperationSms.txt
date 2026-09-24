@@ -74,7 +74,6 @@ si sWhereBase = "" _et_ sListeIdBase = "" alors
 
 			autre cas
 		fin
-		STOP
 	fin
 	stOperation.stOperationSms.taaCreditSms.SupprimeTout()
 	stOperation.stOperationSms.taaTailleSms.SupprimeTout()

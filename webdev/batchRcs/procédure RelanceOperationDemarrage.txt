@@ -22,7 +22,7 @@ sTexteRequete =
 	WHERE
 		dos_operation.Statut = '[%__Statut_Distribution_En_Cours__%]'
 		AND dos_operation.TypeOperation = '[%__OPERATION_RCS__%]' 
-		AND EXISTS (SELECT ope_rcs_envoi.IdBaseLigne FROM ope_rcs_envoi WHERE ope_rcs_envoi.IdRcs = dos_operation.IdOperation AND (ope_rcs_envoi.Statut = '[%__SMS_STATUT_ENREGISTREE__%]' OR (ope_rcs_envoi.Statut = '[%__SMS_STATUT_ERREUR_ENVOI__%]' AND ope_rcs_envoi.NbTentatives < 2)) LIMIT 1)
+		AND EXISTS (SELECT ope_rcs_envoi.IdBaseLigne FROM ope_rcs_envoi WHERE ope_rcs_envoi.IdRcs = dos_operation.IdOperation AND ope_rcs_envoi.CanalPrevu = '[%__CANAL_PREVU_RCS__%]' AND (ope_rcs_envoi.Statut = '[%__SMS_STATUT_ENREGISTREE__%]' OR (ope_rcs_envoi.Statut = '[%__SMS_STATUT_ERREUR_ENVOI__%]' AND ope_rcs_envoi.NbTentatives < 2)) LIMIT 1)
 ]
 
 

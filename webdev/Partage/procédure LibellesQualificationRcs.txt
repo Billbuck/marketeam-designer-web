@@ -1,0 +1,50 @@
+// Résumé : Libellés du récapitulatif de qualification d'une opération RCS
+// Syntaxe :
+//[ <Résultat> = ] LibellesQualificationRcs (<stOperation>)
+//
+// Paramètres :
+//	stOperation : opération RCS dont le deviseur a rempli les compteurs
+//		(cpDeviseur.CalculeCoutOperationRcs : NbrDestinataireRcs,
+//		NbrDestinataireRepliSms, NbrInvalide, NbrInconnu, RepliTailleMax)
+// Valeur de retour :
+// 	chaîne : un libellé par ligne (RC), à afficher dans le récapitulatif
+// 	du tunnel / la page devis.
+//
+// Exemples de rendu :
+//	7 650 destinataires RCS
+//	1 969 en SMS de repli (1 crédit chacun)          ← si repli activé
+//	1 969 destinataires non compatibles ne seront pas contactés (pas de SMS de repli)  ← sinon
+//	2 numéros invalides ignorés
+//	312 numéros non qualifiés - analyse RCS à relancer   ← blocage (PageMémorise)
+procédure LibellesQualificationRcs(stOperation est une structOperation)
+
+sLibelles	est une chaîne
+nCredit		est un entier
+nTaille		est un entier
+
+sLibelles = NumériqueVersChaîne(stOperation.stOperationRcs.NbrDestinataireRcs, "dS") + " destinataires RCS"
+
+si stOperation.stOperationRcs.NbrDestinataireRepliSms > 0 alors
+	si stOperation.stOperationRcs.EstRepliSms alors
+		// Crédits du repli : pire cas si la fusion l'a calculé, sinon gabarit
+		si stOperation.stOperationRcs.RepliTailleMax > 0 alors
+			nCredit = cpSms.CalculeTailleSms(stOperation.stOperationRcs.RepliTailleMax, Faux)
+		sinon
+			nTaille	= cpSms.TailleSms(stOperation.stOperationRcs.RepliSmsMessage, Faux)
+			nCredit	= cpSms.CalculeTailleSms(nTaille, Faux)
+		fin
+		sLibelles += RC + NumériqueVersChaîne(stOperation.stOperationRcs.NbrDestinataireRepliSms, "dS") + " en SMS de repli (" + nCredit + (nCredit > 1 ? " crédits" sinon " crédit") + " chacun)"
+	sinon
+		sLibelles += RC + NumériqueVersChaîne(stOperation.stOperationRcs.NbrDestinataireRepliSms, "dS") + " destinataires non compatibles ne seront pas contactés (pas de SMS de repli)"
+	fin
+fin
+
+si stOperation.stOperationRcs.NbrInvalide > 0 alors
+	sLibelles += RC + NumériqueVersChaîne(stOperation.stOperationRcs.NbrInvalide, "dS") + " numéros invalides ignorés"
+fin
+
+si stOperation.stOperationRcs.NbrInconnu > 0 alors
+	sLibelles += RC + NumériqueVersChaîne(stOperation.stOperationRcs.NbrInconnu, "dS") + " numéros non qualifiés - analyse RCS à relancer"
+fin
+
+renvoyer sLibelles

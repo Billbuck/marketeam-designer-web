@@ -28,9 +28,9 @@ selon stOperation.TypeOperation
 		renvoyer stOperation.NbrDestinataire
 
 	cas __OPERATION_RCS__
-		stOperation.stOperationSms.Message = stOperation.stOperationRcs.RepliSmsMessage
-		cpDeviseur.CalculeCoutOperationSms(stOperation)
-		cpDeviseur.RepartitionRcs(stOperation)
+		// Comptage par la qualification (EstRcs) : destinataires RCS, repli SMS,
+		// invalides et non qualifiés + crédits du repli (lot 3)
+		cpDeviseur.CalculeCoutOperationRcs(stOperation)
 		renvoyer stOperation.NbrDestinataire
 
 	cas __OPERATION_TEL__

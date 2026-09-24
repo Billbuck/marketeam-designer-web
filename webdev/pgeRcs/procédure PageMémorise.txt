@@ -1,3 +1,11 @@
 procédure PageMémorise(pPrecedent est un booléen = Faux)
 
+// Blocage qualification RCS (lot 3) : des numéros non qualifiés signifient
+// que la base n'a pas été (entièrement) analysée — le devis serait faux.
+// Le retour en arrière reste possible.
+si pas pPrecedent _et_ __stOperation.stOperationRcs.NbrInconnu > 0 alors
+	Info("Cette base n'est pas entièrement qualifiée RCS (" + NumériqueVersChaîne(__stOperation.stOperationRcs.NbrInconnu, "dS") + " numéros non analysés)." + RC + "Relancez l'analyse RCS depuis « Mes bases de données » puis revenez sur cette étape.")
+	renvoyer Faux
+fin
+
 renvoyer Vrai

@@ -1,0 +1,8 @@
+-- Lot 3 qualification RCS : canal prévu par la programmation (cahier § 5).
+-- À exécuter en dev puis en prod.
+-- RCS = ligne EstRcs 1 ; SMS = ligne EstRcs 0 quand le repli SMS est activé
+-- (envoi SMS direct au lot 4). Jamais de ligne pour EstRcs 2 (invalide) ni NULL.
+
+ALTER TABLE `ope_rcs_envoi`
+	ADD `CanalPrevu` VARCHAR(3) NOT NULL DEFAULT 'RCS' COMMENT 'Canal prevu par la programmation : RCS (EstRcs=1) ou SMS (EstRcs=0 avec repli)' AFTER `Statut`,
+	ADD INDEX `IdRcs_CanalPrevu` (`IdRcs`, `CanalPrevu`);

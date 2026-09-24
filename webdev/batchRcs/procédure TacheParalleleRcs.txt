@@ -216,6 +216,9 @@ sTexteRequetePourJson =
 			sinon
 				sConditionStatut = "ope_rcs_envoi.Statut = '" + __SMS_STATUT_ENREGISTREE__ + "'"
 			fin
+			// Seules les lignes prévues en RCS : les lignes CanalPrevu = SMS
+			// relèvent de l'envoi SMS direct (lot 4), jamais d'un message RCS
+			sConditionStatut += " AND ope_rcs_envoi.CanalPrevu = '" + __CANAL_PREVU_RCS__ + "'"
 			sTexteRequeteLot = ChaîneConstruit(sTexteRequetePourLot, sSelectChamp, pIdRcs, nIdDernierIdBaseLigne, sConditionStatut, nQuantite)
 			si pas sdReqEnvoi.ExécuteRequêteSQL(ope_rcs_envoi..Connexion, hRequêteSansCorrection, sTexteRequeteLot) alors
 				Trace("Erreur requête lot TacheParalleleRcs", sTexteRequeteLot, HErreurInfo(hErrComplet))

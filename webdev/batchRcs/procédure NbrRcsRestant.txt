@@ -16,10 +16,13 @@ sTexteRequete =
 	ope_rcs_envoi
 	WHERE
 	IdRcs = %1 AND
-	Statut = '%2'
+	Statut = '%2' AND
+	CanalPrevu = '%3'
 ]
 
-sTexteRequete = ChaîneConstruit(sTexteRequete,pIdRcs,__SMS_STATUT_ENREGISTREE__)
+// Seules les lignes prévues en RCS sont envoyées par ce batch
+// (les lignes CanalPrevu = SMS relèvent de l'envoi SMS direct, lot 4)
+sTexteRequete = ChaîneConstruit(sTexteRequete,pIdRcs,__SMS_STATUT_ENREGISTREE__,__CANAL_PREVU_RCS__)
 
 si pas HExécuteRequêteSQL(sdReqNbrRcsRestant, ope_rcs_envoi..Connexion, hRequêteSansCorrection, sTexteRequete) alors
 	Trace("Erreur requête NbrRcsRestant", sTexteRequete, HErreurInfo(hErrComplet))

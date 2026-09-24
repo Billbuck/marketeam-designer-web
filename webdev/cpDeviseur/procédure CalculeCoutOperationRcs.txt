@@ -1,0 +1,309 @@
+// Résumé : Comptages et coût du repli d'une opération RCS depuis la qualification
+// Syntaxe :
+//[ <Résultat> = ] CalculeCoutOperationRcs (<stOperation> est structOperation)
+//
+// Paramètres :
+//	stOperation : opération RCS du tunnel
+// Valeur de retour :
+// 	monétaire : coût du repli SMS (informatif — les lignes du devis sont
+// 	posées par DevisRcs à partir des compteurs remplis ici)
+//
+// Calquée sur CalculeCoutOperationSms : mêmes trois cas de source
+// (clt_base_ligne filtrée avec StopPub = 0, dos_base_ligne injectée, union).
+// Compte les portables DISTINCTS par valeur de qualification EstRcs :
+//	1 → NbrDestinataireRcs (facturés ROUTAGE_RCS par DevisRcs)
+//	0 → NbrDestinataireRepliSms (facturés ROUTAGE_SMS si EstRepliSms)
+//	2 → NbrInvalide (jamais contactés ni facturés, affichés)
+//	NULL → NbrInconnu (base non qualifiée : blocage du tunnel, PageMémorise)
+// Si le repli est activé : crédits du texte de repli — fusion SQL sur les
+// lignes EstRcs = 0 quand le gabarit contient des champs (même logique que
+// le SMS personnalisé), sinon taille du gabarit ; remplit taaRepliCreditSms,
+// taaRepliTailleSms et RepliTailleMax (utilisé par DevisRcs, pire cas).
+// stOperation.NbrDestinataire = contactables : RCS + repli si activé.
+// DateHeureQualification posée quand la qualification couvre tout
+// (NbrInconnu = 0), vidée sinon.
+// Sans aucune base : estimation au taux Rcs_TauxCouverture (RepartitionRcs),
+// comme avant, avec les crédits du repli calculés sur le gabarit.
+procédure CalculeCoutOperationRcs(stOperation est une structOperation)
+
+sTexteRequete				est une chaîne
+sdReqCoutRcs				est une Source de Données
+sSelect						est une chaîne
+sLeRepli						est une chaîne
+sWhereBase					est une chaîne
+sFiltreBase					est une chaîne
+sListeIdBase				est une chaîne
+bRepliPersonnalise		est un booléen
+nRcs							est un entier
+nSms							est un entier
+nInvalide					est un entier
+nInconnu						est un entier
+nTailleRepli				est un entier
+nCreditRepli				est un entier
+mPrixMessage				est un monétaire
+mPrixTotal					est un monétaire
+nTotalCaractereSpeciaux	est un entier
+taaBaseChamp				est un tableau associatif de structBaseChamp	= stOperation.taaBaseChamp
+
+
+	// Copie de l'interne de CalculeCoutOperationSms (isolation volontaire :
+	// le deviseur SMS n'est pas touché). Construit l'expression SQL qui
+	// fusionne le gabarit avec les colonnes de la ligne et renvoie sa taille.
+	procédure interne RemplissageDesBalises(sMessageCdb, pEstCliquezIciCdb)
+
+		sListeChampsCdb	est une chaîne
+		sSelectRetourCdb	est une chaîne
+
+		pour tout stBaseChamp, sLibelleCdb de taaBaseChamp
+			si Contient(sMessageCdb, "[" + sLibelleCdb + "]") alors
+				sListeChampsCdb += [","] + sLibelleCdb
+			fin
+		fin
+
+		sSelectRetourCdb = "'" + Remplace(sMessageCdb, "'", "''") + "'"
+
+		pour toute chaînes sLibelleCdb de sListeChampsCdb séparée par ","
+			sSelectRetourCdb = "REPLACE(" + sSelectRetourCdb + ",'[" + sLibelleCdb + "]', IFNULL(" + taaBaseChamp[sLibelleCdb].Champ + ",''))"
+		fin
+
+		si pEstCliquezIciCdb alors
+			si Contient(sMessageCdb, "[" + __CHAMP_CLIQUEZ_ICI__ + "]") alors
+				sSelectRetourCdb = "REPLACE(" + sSelectRetourCdb + ",'[" + __CHAMP_CLIQUEZ_ICI__ + "]', 'XXXXXX')"
+			fin
+		fin
+
+		sSelectRetourCdb = "RetourneTailleSms(" + sSelectRetourCdb + ")"
+
+		renvoyer sSelectRetourCdb
+	fin
+
+
+sLeRepli = stOperation.stOperationRcs.RepliSmsMessage.Remplace(RC, Caract(10))
+
+// ------------------------------------------------------------------
+// 1) Sources : bases du tunnel (mêmes trois cas que le SMS)
+// ------------------------------------------------------------------
+pour tout stBase de stOperation.tabBase
+	si stBase.EstSupprime = Faux alors
+		si stBase.EstAjoute = Vrai alors // La base vient d'être ajoutée dans le tunnel
+			si stBase.IdFiltre = 0 alors
+				sWhereBase += [" OR "] + "(clt_base_ligne.IdBase = " + stBase.IdBaseClient + ")"
+			sinon
+				sFiltreBase = GenereRequeteFiltreClientBase(stBase.IdBaseClient, stBase.IdFiltre)
+				sWhereBase += [" OR "] + "(" + sFiltreBase + ")"
+			fin
+		sinon							// La base est déjà présente dans l'opération (injectée)
+			sListeIdBase += [","] + stBase.IdBase
+		fin
+	fin
+fin
+
+// ------------------------------------------------------------------
+// 2) Pas encore de base : estimation au taux, comme avant
+// ------------------------------------------------------------------
+si sWhereBase = "" _et_ sListeIdBase = "" alors
+	si stOperation.NbrDestinataire = 0 alors
+		stOperation.NbrDestinataire = 2000
+	fin
+	stOperation.stOperationRcs.DateHeureQualification = ""
+	RepartitionRcs(stOperation)
+	stOperation.stOperationRcs.NbrInvalide	= 0
+	stOperation.stOperationRcs.NbrInconnu	= 0
+
+	stOperation.stOperationRcs.taaRepliCreditSms.SupprimeTout()
+	stOperation.stOperationRcs.taaRepliTailleSms.SupprimeTout()
+	stOperation.stOperationRcs.RepliTailleMax = 0
+
+	si stOperation.stOperationRcs.EstRepliSms _et_ SansEspace(sLeRepli) <> "" alors
+		nTailleRepli	= cpSms.TailleSms(sLeRepli, Faux)
+		nCreditRepli	= cpSms.CalculeTailleSms(nTailleRepli, Faux)
+		mPrixMessage	= Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_SMS__].PrixVenteUnitaire * nCreditRepli
+		mPrixTotal		= mPrixMessage * stOperation.stOperationRcs.NbrDestinataireRepliSms
+		stOperation.stOperationRcs.taaRepliCreditSms[nCreditRepli]	= stOperation.stOperationRcs.NbrDestinataireRepliSms
+		stOperation.stOperationRcs.taaRepliTailleSms[nTailleRepli]	= stOperation.stOperationRcs.NbrDestinataireRepliSms
+		stOperation.stOperationRcs.RepliTailleMax							= nTailleRepli
+	fin
+
+	renvoyer mPrixTotal
+fin
+
+// ------------------------------------------------------------------
+// 3) Comptage des portables distincts par valeur de qualification
+//    (-1 = EstRcs NULL : non qualifié)
+// ------------------------------------------------------------------
+selon Vrai
+	cas sWhereBase <> "" _et_ sListeIdBase <> ""
+		sTexteRequete	=
+		[
+			SELECT
+			IFNULL(z.EstRcs, -1) EstRcsGroupe,
+			COUNT(DISTINCT z.Portable) Total
+			FROM
+			(
+				SELECT clt_base_ligne.Portable, clt_base_ligne.EstRcs FROM clt_base_ligne WHERE ([%sWhereBase%]) AND clt_base_ligne.Portable IS NOT NULL AND StopPub = 0
+				UNION
+				SELECT dos_base_ligne.Portable, dos_base_ligne.EstRcs FROM dos_base_ligne WHERE IdBase IN ([%sListeIdBase%]) AND dos_base_ligne.Portable IS NOT NULL
+			) AS z
+			GROUP BY EstRcsGroupe
+		]
+
+	cas sWhereBase <> ""
+		sTexteRequete	=
+		[
+			SELECT
+			IFNULL(EstRcs, -1) EstRcsGroupe,
+			COUNT(DISTINCT Portable) Total
+			FROM
+			clt_base_ligne
+			WHERE ([%sWhereBase%]) AND Portable IS NOT NULL AND StopPub = 0
+			GROUP BY EstRcsGroupe
+		]
+
+	cas sListeIdBase <> ""
+		sTexteRequete	=
+		[
+			SELECT
+			IFNULL(EstRcs, -1) EstRcsGroupe,
+			COUNT(DISTINCT Portable) Total
+			FROM
+			dos_base_ligne
+			WHERE IdBase IN ([%sListeIdBase%]) AND Portable IS NOT NULL
+			GROUP BY EstRcsGroupe
+		]
+
+	autre cas
+
+fin
+
+si pas sdReqCoutRcs.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	<compile si TypeConfiguration <> Webservice>
+		Info("Erreur requête CalculeCoutOperationRcs 1")
+	<fin>
+	renvoyer mPrixTotal
+fin
+
+pour tout sdReqCoutRcs
+	selon sdReqCoutRcs.EstRcsGroupe
+		cas __LIGNE_RCS_OUI__			: nRcs		= sdReqCoutRcs.Total
+		cas __LIGNE_RCS_SMS__			: nSms		= sdReqCoutRcs.Total
+		cas __LIGNE_RCS_INVALIDE__		: nInvalide	= sdReqCoutRcs.Total
+		autre cas							: nInconnu	+= sdReqCoutRcs.Total
+	fin
+fin
+
+stOperation.stOperationRcs.NbrDestinataireRcs		= nRcs
+stOperation.stOperationRcs.NbrDestinataireRepliSms	= nSms
+stOperation.stOperationRcs.NbrInvalide					= nInvalide
+stOperation.stOperationRcs.NbrInconnu					= nInconnu
+
+// Destinataires réellement contactés : RCS + repli SMS si activé.
+// Les invalides et non qualifiés ne sont jamais adressés.
+si stOperation.stOperationRcs.EstRepliSms alors
+	stOperation.NbrDestinataire = nRcs + nSms
+sinon
+	stOperation.NbrDestinataire = nRcs
+fin
+
+// Le devis est figé sur une qualification complète
+si nInconnu = 0 alors
+	stOperation.stOperationRcs.DateHeureQualification = DateHeureSys()
+sinon
+	stOperation.stOperationRcs.DateHeureQualification = ""
+fin
+
+// ------------------------------------------------------------------
+// 4) Crédits du repli SMS (lignes EstRcs = 0 uniquement)
+// ------------------------------------------------------------------
+stOperation.stOperationRcs.taaRepliCreditSms.SupprimeTout()
+stOperation.stOperationRcs.taaRepliTailleSms.SupprimeTout()
+stOperation.stOperationRcs.RepliTailleMax = 0
+
+si stOperation.stOperationRcs.EstRepliSms = Faux _ou_ nSms = 0 _ou_ SansEspace(sLeRepli) = "" alors
+	renvoyer mPrixTotal
+fin
+
+bRepliPersonnalise = (Contient(sLeRepli.Remplace("[" + Partage.LibelleBaseChamp(__CHAMP_CLIQUEZ_ICI__) + "]", ""), "[") _ou_ Contient(sLeRepli.Remplace("[" + Partage.LibelleBaseChamp(__CHAMP_CLIQUEZ_ICI__) + "]", ""), "]"))
+
+si bRepliPersonnalise alors
+	sSelect = RemplissageDesBalises(sLeRepli, stOperation.EstCliquezIci) + " TailleDuMessage"
+
+	selon Vrai
+		cas sWhereBase <> "" _et_ sListeIdBase <> ""
+			sTexteRequete	=
+			[
+			SELECT
+			COUNT(z.Portable) Total, 
+			[%sSelect%]
+			FROM
+				(SELECT * FROM
+					(
+					SELECT Reference,Societe,Enseigne,contact,Civilite,Nom,Prenom,Adresse1,Adresse2,Adresse3,Adresse4,CodePostal,Ville,Pays,Tel,Portable,Email,CodeAlliage,Champ1,Champ2,Champ3,Champ4,Champ5,Champ6,Champ7,Champ8,Champ9,Champ10,Champ11,Champ12,Champ13,Champ14,Champ15,Champ16,Champ17,Champ18,Champ19,Champ20,Champ21,Champ22,Champ23,Champ24,Champ25,Champ26,Champ27,Champ28,Champ29,Champ30,Sexe,Profil 
+					FROM clt_base_ligne WHERE ([%sWhereBase%]) AND Portable IS NOT NULL AND StopPub = 0 AND EstRcs = [%__LIGNE_RCS_SMS__%]
+					UNION
+					SELECT Reference,Societe,Enseigne,contact,Civilite,Nom,Prenom,Adresse1,Adresse2,Adresse3,Adresse4,CodePostal,Ville,Pays,Tel,Portable,Email,CodeAlliage,Champ1,Champ2,Champ3,Champ4,Champ5,Champ6,Champ7,Champ8,Champ9,Champ10,Champ11,Champ12,Champ13,Champ14,Champ15,Champ16,Champ17,Champ18,Champ19,Champ20,Champ21,Champ22,Champ23,Champ24,Champ25,Champ26,Champ27,Champ28,Champ29,Champ30,Sexe,Profil 
+					FROM dos_base_ligne 
+					WHERE IdBase IN ([%sListeIdBase%]) AND Portable IS NOT NULL AND EstRcs = [%__LIGNE_RCS_SMS__%])
+					) AS t
+				GROUP BY t.Portable) AS z
+			GROUP BY TailleDuMessage
+			]
+
+		cas sWhereBase <> ""
+			sTexteRequete	=
+			[
+			SELECT
+			COUNT(z.Portable) Total, 
+				[%sSelect%]
+			FROM
+				(SELECT * FROM clt_base_ligne WHERE ([%sWhereBase%]) AND Portable IS NOT NULL AND StopPub = 0 AND EstRcs = [%__LIGNE_RCS_SMS__%] GROUP BY Portable) AS z
+			GROUP BY TailleDuMessage
+			]
+
+		cas sListeIdBase <> ""
+			sTexteRequete	=
+			[
+			SELECT
+			COUNT(z.Portable) Total, 
+				[%sSelect%]
+			FROM
+				(SELECT * FROM dos_base_ligne WHERE IdBase IN ([%sListeIdBase%]) AND Portable IS NOT NULL AND EstRcs = [%__LIGNE_RCS_SMS__%] GROUP BY Portable) AS z
+			GROUP BY TailleDuMessage
+			]
+
+		autre cas
+
+	fin
+
+	si pas sdReqCoutRcs.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+		<compile si TypeConfiguration <> Webservice>
+			Info("Erreur requête CalculeCoutOperationRcs 2")
+		<fin>
+		renvoyer mPrixTotal
+	fin
+
+	pour tout sdReqCoutRcs
+		nCreditRepli	= cpSms.CalculeTailleSms(sdReqCoutRcs.TailleDuMessage, Faux)
+		mPrixMessage	= Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_SMS__].PrixVenteUnitaire * nCreditRepli
+		mPrixTotal		+= mPrixMessage * sdReqCoutRcs.Total
+		stOperation.stOperationRcs.taaRepliCreditSms[nCreditRepli] += sdReqCoutRcs.Total
+		stOperation.stOperationRcs.taaRepliTailleSms[sdReqCoutRcs.TailleDuMessage] = sdReqCoutRcs.Total
+		stOperation.stOperationRcs.RepliTailleMax = Max(stOperation.stOperationRcs.RepliTailleMax, sdReqCoutRcs.TailleDuMessage)
+	fin
+	stOperation.stOperationRcs.taaRepliTailleSms.Trie(ttClé)
+
+sinon
+	// Gabarit sans champ de fusion : même taille pour tous
+	nTotalCaractereSpeciaux	= sLeRepli.Occurrence(["€","^","~","|","\"])
+	nTailleRepli				= sLeRepli.Taille() + nTotalCaractereSpeciaux
+	nCreditRepli				= cpSms.CalculeTailleSms(nTailleRepli, Faux)
+	mPrixMessage				= Partage.__vcUser.taaPrestation[__PRESTATION_ROUTAGE_SMS__].PrixVenteUnitaire * nCreditRepli
+	mPrixTotal					= mPrixMessage * nSms
+	stOperation.stOperationRcs.taaRepliCreditSms[nCreditRepli]	= nSms
+	stOperation.stOperationRcs.taaRepliTailleSms[nTailleRepli]	= nSms
+	stOperation.stOperationRcs.RepliTailleMax						= nTailleRepli
+fin
+
+renvoyer mPrixTotal
+
+fin:
+sdReqCoutRcs.AnnuleDéclaration()

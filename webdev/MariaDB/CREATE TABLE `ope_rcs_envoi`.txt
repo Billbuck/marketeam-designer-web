@@ -2,6 +2,7 @@ CREATE TABLE `ope_rcs_envoi` (
 	`IdRcs` INT(11) NOT NULL COMMENT 'IdOperation de dos_operation - voir ope_rcs',
 	`IdBaseLigne` INT(11) NOT NULL COMMENT 'Destinataire - voir dos_base_ligne',
 	`Statut` CHAR(2) NULL DEFAULT NULL COMMENT 'Codes Marketeam communs au SMS (__SMS_STATUT_*) : 10 enregistre 12 pris en charge 15 erreur envoi 20 envoye 42 stop pub 80 non delivre 90 delivre' COLLATE 'utf8mb4_unicode_ci',
+	`CanalPrevu` VARCHAR(3) NOT NULL DEFAULT 'RCS' COMMENT 'Canal prevu par la programmation : RCS (EstRcs=1) ou SMS (EstRcs=0 avec repli)' COLLATE 'utf8mb4_unicode_ci',
 	`NbTentatives` TINYINT(3) UNSIGNED NOT NULL DEFAULT '0' COMMENT 'Relance automatique des erreurs d envoi (statut 15) par batchRcs',
 	`CanalUtilise` ENUM('ATTENTE','RCS','SMS') NOT NULL DEFAULT 'ATTENTE' COMMENT 'Canal réellement facturé - renseigné par le DLR' COLLATE 'utf8mb4_unicode_ci',
 	`BulkId` VARCHAR(64) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
@@ -26,6 +27,7 @@ CREATE TABLE `ope_rcs_envoi` (
 	UNIQUE INDEX `MessageId` (`MessageId`) USING BTREE,
 	INDEX `Statut` (`Statut`) USING BTREE,
 	INDEX `IdBaseLigne` (`IdBaseLigne`) USING BTREE,
+	INDEX `IdRcs_CanalPrevu` (`IdRcs`, `CanalPrevu`) USING BTREE,
 	CONSTRAINT `FK_ope_rcs_envoi_dos_operation` FOREIGN KEY (`IdRcs`) REFERENCES `dos_operation` (`IdOperation`) ON UPDATE NO ACTION ON DELETE CASCADE
 )
 COLLATE='utf8mb4_unicode_ci'

@@ -2330,8 +2330,10 @@ structOperationRcs est une Structure
 	Paquet									est un entier
 	Pause										est un entier
 	PrixAchat								est un numérique(6,3)
-	NbrDestinataireRcs					est un entier											// qualification ENABLED
-	NbrDestinataireRepliSms				est un entier											// qualification UNREACHABLE
+	NbrDestinataireRcs					est un entier											// qualification EstRcs = 1 (ENABLED)
+	NbrDestinataireRepliSms				est un entier											// qualification EstRcs = 0 (SMS seul)
+	NbrInvalide								est un entier											// qualification EstRcs = 2 - jamais contactés ni facturés
+	NbrInconnu								est un entier											// qualification EstRcs NULL - blocage du tunnel si > 0
 	DateHeureQualification				est une DateHeure										// fige le devis ; vide = pas encore qualifié
 	taaRepliCreditSms						est un tableau associatif d'entiers				// Cle = crédit , Valeur = nombre
 	taaRepliTailleSms						est un tableau associatif d'entiers				// Cle = taille , Valeur = nombre
