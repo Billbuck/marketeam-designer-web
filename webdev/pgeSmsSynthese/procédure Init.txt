@@ -1,0 +1,27 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//Init ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure Init()
+
+
+_bCadenasOuvert		= Faux
+_stSynthèse			= Partage.ChargeSynthèseOperation(_pIdOperation)
+
+// On test si l'opération cliquez-ici a des liens de redirection
+// Pour l'affichage de l'onglet Performance
+
+_bOperationAvecLien = OpérationAvecLien(_pIdOperation)
+_bOperationAvecLead = OpérationAvecLead(_pIdOperation)
+
+GestionInterface()
+
+

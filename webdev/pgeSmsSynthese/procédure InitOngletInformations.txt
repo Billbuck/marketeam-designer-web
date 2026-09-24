@@ -1,0 +1,118 @@
+procédure InitOngletInformations()
+
+
+nInd			est un entier
+sTexteRequete	est une chaîne
+sdReqBdd		est une Source de Données
+nNbr			est un entier
+tabBase			est un tableau de StructBase
+taaBaseChamp	est un tableau associatif de structBaseChamp
+tabRapport		est un tableau de structRapport
+stRapport 		est une structRapport
+
+
+sTexteRequete =
+[
+SELECT
+	clt_base.Nom BaseNom,
+	clt_base_filtre.Nom FiltreNom,
+	clt_base.NbrSms
+FROM
+	dos_base
+	JOIN clt_base ON clt_base.IdBase = dos_base.IdBaseClient
+	LEFT JOIN clt_base_filtre ON clt_base_filtre.IdFiltre = dos_base.IdFiltre
+WHERE
+	dos_base.IdOperation = [%_pIdOperation%]
+]
+
+
+si pas sdReqBdd.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour
+fin
+
+znrBaseDeDonnées.SupprimeTout()
+
+pour tout sdReqBdd
+	nInd										= znrBaseDeDonnées.AjouteLigne()
+	znrBaseDeDonnées[nInd].libBaseNom			= sdReqBdd.BaseNom
+	znrBaseDeDonnées[nInd].libFiltreNom			= sdReqBdd.FiltreNom
+	znrBaseDeDonnées[nInd].libBddNbrSms			= NumériqueVersChaîne(sdReqBdd.NbrSms, "dS") + " Sms"
+fin
+
+selon znrBaseDeDonnées.Occurrence
+	cas 0
+		libBddTitre								= "Base de données"
+		nInd									= znrBaseDeDonnées.AjouteLigne()
+		znrBaseDeDonnées[nInd].libBaseNom		= "Base de données en attente..."
+		znrBaseDeDonnées[nInd].libFiltreNom		= ""
+		znrBaseDeDonnées[nInd].libBddNbrSms		= ""
+	cas 1
+		libBddTitre								= "Base de données"
+	autre cas
+		libBddTitre								= "Bases de données"
+		nInd									= znrBaseDeDonnées.AjouteLigne()
+		znrBaseDeDonnées[nInd].libBaseNom		= ""
+		znrBaseDeDonnées[nInd].libFiltreNom		= "Total après dédoublonnage"
+		znrBaseDeDonnées[nInd].libBddNbrSms		= NumériqueVersChaîne(_stSynthèse.NbrDestinataire, "dS") + " Sms"
+fin
+
+si _stSynthèse.EstCliquezIci _et_ _stSynthèse.TypeCliquezici dans (__ICI_WEB__, __ICI_URL_TRACKING__) alors
+	si ope_cliquezici.LitRecherchePremier(IdCliquezIci,_pIdOperation) alors
+		saiEmailLeadEnCopie					= Remplace(ope_cliquezici.EmailLeadEnCopie,";",RC)
+		dispInformation[2].Visible			= (saiEmailLeadEnCopie <> "")
+		dispInformation[3].Visible			= (saiEmailLeadEnCopie <> "" _et_ _stSynthèse.TypeCliquezici = __ICI_WEB__)
+		intEmailType[1] = _stSynthèse.EmailLeadType.Contient("lead",MotComplet)
+		intEmailType[2] = _stSynthèse.EmailLeadType.Contient("lien",MotComplet)
+		intEmailType[3] = _stSynthèse.EmailLeadType.Contient("visite",MotComplet)
+	fin
+sinon
+	dispInformation[2].Visible = Faux
+	dispInformation[3].Visible = Faux
+fin
+
+
+znrRapport.SupprimeTout()
+
+tabBase = Partage.ChargeTabStructBase(_stSynthèse.IdOperation)
+
+pour tout stBase de tabBase
+	si stBase.EstSupprime = Faux alors
+		nNbr++
+	fin
+fin
+
+pour tout dos_operation_rapport avec IdOperation = _stSynthèse.IdOperation
+	stRapport.Champ				= dos_operation_rapport.Champ
+	stRapport.Libelle			= dos_operation_rapport.Libelle
+	stRapport.Type				= dos_operation_rapport.Type
+	stRapport.EstObligatoire	= dos_operation_rapport.EstObligatoire
+	tabRapport.Ajoute(stRapport)
+fin
+
+si nNbr > 0 alors
+	taaBaseChamp = CalculeTaaBaseChamp(tabBase, Faux, Faux)
+
+	si taaBaseChamp.Occurrence > 0 alors
+		pour tout stBaseChamp, sLibelle de taaBaseChamp
+			si stBaseChamp.Pointer = nNbr alors
+				nInd									= znrRapport.AjouteLigne()
+				znrRapport[nInd].attChamp				= stBaseChamp.Champ
+				znrRapport[nInd].attType				= stBaseChamp.Type
+				znrRapport[nInd].attOrdre				= stBaseChamp.Ordre
+				znrRapport[nInd].attLibelle				= sLibelle
+				znrRapport[nInd].intRapport[1].Libellé	= sLibelle
+				znrRapport[nInd].attEtat				= (stBaseChamp.Champ = __CHAMP_PORTABLE__) ? Inactif sinon Actif
+				znrRapport[nInd].attValeur				= (tabRapport.Cherche(tcLinéaire,"Champ",stBaseChamp.Champ) > 0)
+			fin
+		fin
+	fin
+fin
+
+dispInformation[4].Visible = _stSynthèse.EstBaseDeDonnéesChargée = Vrai _et_ _stSynthèse.EmailLeadEnCopie <> ""
+
+
+fin:
+sdReqBdd.AnnuleDéclaration()
+
+

@@ -1,0 +1,113 @@
+procédure ChargeTaaStatut()
+
+taaStatut est un tableau associatif de DateHeures
+taaDate est un tableau associatif de DateHeures
+
+ChargeTaaDate()
+
+
+taaStatut[__Statut_Enregistrée__] = taaDate[__Statut_Enregistrée__]
+
+si _stSynthèse.Statut = __Statut_Element_En_Attente__ alors
+	taaStatut[__Statut_Element_En_Attente__] = taaDate[__Statut_Element_En_Attente__]
+fin
+
+si _stSynthèse.Statut = __Statut_Element_Hors_Delais__ alors
+	taaStatut[__Statut_Element_Hors_Delais__] = taaDate[__Statut_Element_Hors_Delais__]
+fin
+
+//
+si _stSynthèse.EstFacturationMensuelle = Vrai _et_ _stSynthèse.EstPlafondEncoursDepassé = Faux alors
+	si _stSynthèse.Statut dans (__Statut_Validation_Hors_Delais__, __Statut_Validation_Refusée__) alors
+		taaStatut[_stSynthèse.Statut] = taaDate[_stSynthèse.Statut]
+	sinon
+		taaStatut[__Statut_Validation_En_Attente__] = taaDate[__Statut_Validation_En_Attente__]
+	fin
+sinon
+	si _stSynthèse.Statut dans (__Statut_Règlement_En_Cours__,__Statut_Règlement_Annulé__,__Statut_Règlement_Rejeté__,__Statut_Règlement_Erreur__,__Statut_Règlement_Hors_Delais__) alors
+		taaStatut[_stSynthèse.Statut] = taaDate[_stSynthèse.Statut]
+	sinon
+		taaStatut[__Statut_Règlement_En_Attente__] = taaDate[__Statut_Règlement_En_Attente__]
+	fin
+fin
+
+// 4
+taaStatut[__Statut_Prise_En_Charge_En_Attente__] = taaDate[__Statut_Prise_En_Charge_En_Attente__]
+
+selon _stSynthèse.TypeOperation
+	cas __OPERATION_COURRIER__, __OPERATION_SMARTEVA__, __OPERATION_TRACTEVA__
+		taaStatut[__Statut_Prise_En_Charge__] = taaDate[__Statut_Prise_En_Charge__]
+		taaStatut[__Statut_Production_En_Cours__] = taaDate[__Statut_Production_En_Cours__]
+		si _stSynthèse.Statut = __Statut_Distribution_En_Attente__ alors
+			taaStatut[__Statut_Distribution_En_Attente__] = taaDate[__Statut_Distribution_En_Attente__]
+		fin
+		taaStatut[__Statut_Distribution_En_Cours__] = taaDate[__Statut_Distribution_En_Cours__]
+
+	cas __OPERATION_SMS__, __OPERATION_SMS_INTERACTIF__, __OPERATION_SMS_NOTIFICATION__, __OPERATION_EMAIL__, __OPERATION_VMS__
+		taaStatut[__Statut_Distribution_En_Cours__] = taaDate[__Statut_Distribution_En_Cours__]
+		taaStatut[__Statut_Envoyée__] = taaDate[__Statut_Envoyée__]
+
+	cas __OPERATION_TEL__
+		taaStatut[__Statut_Prise_En_Charge__]	= taaDate[__Statut_Prise_En_Charge__]
+		taaStatut[__Statut_Appel_En_Cours__]				= taaDate[__Statut_Appel_En_Cours__]
+
+	autre cas
+		STOP
+fin
+
+si _stSynthèse.EstReserve = Faux alors
+	taaStatut[__Statut_Facturation_En_Attente__]				= taaDate[__Statut_Facturation_En_Attente__]
+fin
+
+si _stSynthèse.EstFacturationMensuelle = Vrai _et_ _stSynthèse.EstPlafondEncoursDepassé = Faux alors
+	si _stSynthèse.Statut dans (__Statut_Solde_En_Cours__, __Statut_Solde_Annulé__, __Statut_Solde_Rejeté__, __Statut_Solde_Erreur__) alors
+		taaStatut[_stSynthèse.Statut] = taaDate[_stSynthèse.Statut]
+	sinon
+		taaStatut[__Statut_Solde_En_Attente__] = taaDate[__Statut_Solde_En_Attente__]
+	fin
+fin
+
+taaStatut[__Statut_Terminée__] = taaDate[__Statut_Terminée__]
+
+renvoyer taaStatut
+
+
+procédure interne ChargeTaaDate()
+		sTexteRequete	est une chaîne
+		sdReqDate		est une Source de Données
+
+		sTexteRequete =
+		[
+			SELECT 
+			z.statut,
+			MAX(z.DateHeureStatut) DateHeureStatut
+			FROM 
+				(
+					SELECT DISTINCT s.Statut, s.DateHeureStatut, 'o' AS Origine FROM dos_operation_statut s WHERE s.IdOperation = [%_pIdOperation%]
+					UNION
+					SELECT o.Statut, o.DateHeureStatut, 'n' AS Origine FROM dos_operation o WHERE o.IdOperation = [%_pIdOperation%]
+					UNION
+					SELECT '00' AS Statut, o.DateHeureCreation, 'c' AS Origine FROM dos_operation o WHERE o.IdOperation = [%_pIdOperation%]
+				) AS z
+			WHERE
+				z.Statut <= '[%_stSynthèse.Statut%]'
+			GROUP BY 
+				z.Statut
+		]
+
+		si pas sdReqDate.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+			Info("Erreur requête")
+			retour
+		fin
+
+		sdReqDate.LitPremier(hSansRafraîchir)
+		tantque pas sdReqDate.EnDehors()
+			taaDate[sdReqDate.Statut] = sdReqDate.DateHeureStatut
+			sdReqDate.LitSuivant()
+		fin
+
+
+	fin:
+	sdReqDate.AnnuleDéclaration()
+fin
+

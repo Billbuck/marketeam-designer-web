@@ -1,0 +1,55 @@
+procédure InitOngletStatut()
+
+
+
+nInd			est un entier
+taaStatut		est un tableau associatif de DateHeures
+
+taaStatut		= ChargeTaaStatut()
+
+znrStatut.SupprimeTout()
+
+pour tout dhStatut, sStatut de taaStatut
+	nInd = znrStatut.AjouteLigne()
+	znrStatut[nInd].celContour.celCercle.libNumero		= nInd
+	znrStatut[nInd].libStatut							= Partage.LibelleStatutOperation(sStatut)
+	si DateHeureValide(dhStatut) alors
+		znrStatut[nInd].libDateHeure					= DateHeureVersChaîne(dhStatut,"Jjjj JJ mmmm AAAA HH:mm")
+	sinon
+		znrStatut[nInd].libDateHeure					= ""
+	fin
+	
+	selon sStatut
+		cas < _stSynthèse.Statut
+			znrStatut[nInd].celContour.CouleurFond						= HTMLVersRVB(__COULEUR_GRIS_S__)
+			znrStatut[nInd].celTraitHaut.CouleurFond					= HTMLVersRVB(__COULEUR_GRIS_S__)
+			znrStatut[nInd].celTraitBas.CouleurFond						= HTMLVersRVB(__COULEUR_GRIS_S__)
+			znrStatut[nInd].celCercle.CouleurFond						= HTMLVersRVB(__COULEUR_GRIS_S__)
+			znrStatut[nInd].celContour.celCercle.libNumero.Couleur		= Blanc
+			znrStatut[nInd].libStatut.Couleur							= HTMLVersRVB(__COULEUR_GRIS_L__)
+			znrStatut[nInd].libDateHeure.Couleur						= HTMLVersRVB(__COULEUR_GRIS_L__)
+			
+		cas = _stSynthèse.Statut
+			znrStatut[nInd].celContour.CouleurFond						= HTMLVersRVB(__COULEUR_SMS_M__) // RVB(32, 100, 255)
+			znrStatut[nInd].celTraitHaut.CouleurFond					= HTMLVersRVB(__COULEUR_GRIS_S__)
+			znrStatut[nInd].celTraitBas.CouleurFond						= Noir
+			znrStatut[nInd].celCercle.CouleurFond						= HTMLVersRVB(__COULEUR_SMS_M__) //RVB(32, 100, 255)
+			znrStatut[nInd].celContour.celCercle.libNumero.Couleur		= Blanc
+			znrStatut[nInd].libStatut.Couleur							= HTMLVersRVB(__COULEUR_SMS_L__) //RVB(32, 100, 255)
+			znrStatut[nInd].libDateHeure.Couleur						= HTMLVersRVB(__COULEUR_SMS_L__) //RVB(32, 100, 255)
+			
+		cas > _stSynthèse.Statut
+			znrStatut[nInd].celContour.CouleurFond						= Noir
+			znrStatut[nInd].celTraitHaut.CouleurFond					= Noir
+			znrStatut[nInd].celTraitBas.CouleurFond						= Noir
+			znrStatut[nInd].celCercle.CouleurFond						= Blanc
+			znrStatut[nInd].celContour.celCercle.libNumero.Couleur		= Noir
+			znrStatut[nInd].libStatut.Couleur							= Noir
+			znrStatut[nInd].libDateHeure.Couleur						= Noir
+			
+	fin
+fin
+
+znrStatut[1].celTraitHaut.Visible 					= Faux
+znrStatut[taaStatut.Occurrence].celTraitBas.Visible	= Faux
+			

@@ -1,0 +1,290 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//InitOngletRapport ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure InitOngletRapport()
+
+nSerie						est un entier
+nCategorie					est un entier
+sTexteRequeteRapport		est une chaîne
+sTexteRequeteOperateur		est une chaîne
+sTexteRequeteDiffusion		est une chaîne
+sdReqRapportSms				est une Source de Données
+sNomCookie					est une chaîne
+sCookie						est une chaîne
+vJsonCookie					est un Variant
+bCookieExiste				est un booléen
+dhMin						est une DateHeure
+dhMax						est une DateHeure
+dhDateHeure					est une DateHeure
+dhSuivante					est une DateHeure
+taaDiffusion				est un tableau associatif d'entiers
+Diff						est une chaîne
+DuréeDiffusion				est une Durée
+nCadence					est un entier
+sFormatEtiquette			est une chaîne
+
+
+// **************************** COOKIE *****************************
+
+sNomCookie	= "Rapport|" + Partage.__vcUser.IDContact + "|" + _pIdOperation
+sCookie		= CookieLit(sNomCookie)
+si sCookie <> "" alors
+	vJsonCookie		= JSONVersVariant(sCookie)
+	bCookieExiste	= Vrai
+sinon
+	// Le cookie n'existait pas
+	vJsonCookie.Envoyé		= 0
+	vJsonCookie.Reçu		= 0
+	vJsonCookie.Erreur		= 0
+	vJsonCookie.Stop		= 0
+fin
+
+soit nNouveauEnvoyé					= Max(0,_stSynthèse.NbrDiffusion 	- Val(vJsonCookie.Envoyé))
+soit nNouveauReçu					= Max(0,_stSynthèse.NbrDelivre		- Val(vJsonCookie.Reçu))
+soit nNouveauErreur					= Max(0,_stSynthèse.NbrErreur		- Val(vJsonCookie.Erreur))
+soit nNouveauStop					= Max(0,_stSynthèse.NbrStop			- Val(vJsonCookie.Stop))
+
+
+libRapportNouveauEnvoyé				= "+" + NumériqueVersChaîne(nNouveauEnvoyé, "dS")
+libRapportNouveauEnvoyé.Visible		= (nNouveauEnvoyé > 0)
+
+libRapportNouveauReçu				= "+" + NumériqueVersChaîne(nNouveauReçu, "dS")
+libRapportNouveauReçu.Visible		= (nNouveauReçu > 0)
+
+libRapportNouveauErreur				= "+" + NumériqueVersChaîne(nNouveauErreur, "dS")
+libRapportNouveauErreur.Visible		= (nNouveauErreur > 0)
+
+libRapportNouveauStop				= "+" + NumériqueVersChaîne(nNouveauStop, "dS")
+libRapportNouveauStop.Visible		= (nNouveauStop > 0)
+
+
+// On enregistre le Cookie
+vJsonCookie.Envoyé					= _stSynthèse.NbrDiffusion
+vJsonCookie.Reçu					= _stSynthèse.NbrDelivre
+vJsonCookie.Erreur					= _stSynthèse.NbrErreur
+vJsonCookie.Stop					= _stSynthèse.NbrStop
+
+CookieEcrit(sNomCookie, VariantVersJSON(vJsonCookie))
+
+
+//-----------------------------------------------------------------------
+
+libRapportTotal					= NumériqueVersChaîne(_stSynthèse.NbrDestinataire, "dS")
+libRapportTotalEnvoyé			= NumériqueVersChaîne(_stSynthèse.NbrDiffusion, "dS")
+libRapportTotalReçu				= NumériqueVersChaîne(_stSynthèse.NbrDelivre, "dS")
+libRapportTotalErreur			= NumériqueVersChaîne(_stSynthèse.NbrErreur, "dS")
+libRapportTotalStop				= NumériqueVersChaîne(_stSynthèse.NbrStop, "dS")
+
+libRapportTauxEnvoyé			= (_stSynthèse.NbrDestinataire > 0)	? Arrondi(_stSynthèse.NbrDiffusion	/ _stSynthèse.NbrDestinataire * 100,0)	+ " %"	sinon "0 %"
+libRapportTauxlReçu				= (_stSynthèse.NbrDiffusion > 0)	? Arrondi(_stSynthèse.NbrDelivre	/ _stSynthèse.NbrDiffusion * 100,0) 	+ " %"	sinon "0 %"
+libRapportTauxErreur			= (_stSynthèse.NbrDiffusion > 0)	? Arrondi(_stSynthèse.NbrErreur		/ _stSynthèse.NbrDiffusion * 100,0)		+ " %"	sinon "0 %"
+libRapportTauxStop				= (_stSynthèse.NbrDiffusion > 0)	? Arrondi(_stSynthèse.NbrStop		/ _stSynthèse.NbrDiffusion * 100,0)		+ " %"	sinon "0 %"
+
+sTexteRequeteRapport =
+[
+	SELECT
+	ope_sms_envoi.Statut,
+	COUNT(ope_sms_envoi.IdBaseLigne) Total
+	FROM
+	ope_sms_envoi
+	WHERE
+	ope_sms_envoi.IdSms = [%_pIdOperation%]
+	GROUP BY ope_sms_envoi.Statut
+	ORDER BY Total DESC
+]
+
+si pas HExécuteRequêteSQL(sdReqRapportSms, dos_base..Connexion, hRequêteSansCorrection, sTexteRequeteRapport) alors
+	Info("Erreur requête")
+	retour
+fin
+
+// **************************** GRAPHE RAPPORT *****************************
+
+
+grfRapport.SupprimeTout()
+
+nSerie		= 1
+nCategorie	= 0
+pour tout sdReqRapportSms
+	nCategorie++
+	grfRapport.AjouteDonnée(nSerie,sdReqRapportSms.Total)
+	grfRapport.EtiquetteCatégorie(nCategorie,cpSms.LibelleStatutSms(sdReqRapportSms.Statut))
+	grfRapport.CouleurCatégorie(nCategorie,Partage.CouleurTypeOperation(__OPERATION_SMS__,CouleurCategorie(nCategorie)))
+	grfRapport.Bulle(nSerie, nCategorie, NumériqueVersChaîne(sdReqRapportSms.Total, "dS") + " " + cpSms.LibelleStatutSms(sdReqRapportSms.Statut))
+fin
+
+grfRapport.HistoEspacement(20)
+grfRapport.Libellé(grAfficheValeur,Vrai)
+grfRapport.Dessine()
+
+
+// **************************** GRAPHE OPÉRATEUR *****************************
+
+sTexteRequeteOperateur =
+[
+	SELECT
+		sms_operateur.Operateur,
+		COUNT(ope_sms_envoi.IdBaseLigne) Total
+	FROM
+		ope_sms_envoi
+		LEFT JOIN sms_operateur ON sms_operateur.PLMN = ope_sms_envoi.Operateur
+	WHERE
+		ope_sms_envoi.IdSms = [%_pIdOperation%]
+		AND ope_sms_envoi.Operateur IS NOT NULL
+	GROUP BY ope_sms_envoi.Operateur
+	ORDER BY Total DESC
+]
+
+si pas HExécuteRequêteSQL(sdReqRapportSms, dos_base..Connexion, hRequêteSansCorrection, sTexteRequeteOperateur) alors
+	Info("Erreur requête")
+	retour
+fin
+
+grfOperateur.SupprimeTout()
+
+nSerie		= 1
+nCategorie	= 0
+pour tout sdReqRapportSms
+	si sdReqRapportSms.Operateur <> "" alors
+		nCategorie++
+		grfOperateur.AjouteDonnée(nSerie,sdReqRapportSms.Total)
+		grfOperateur.EtiquetteCatégorie(nCategorie,sdReqRapportSms.Operateur)
+		selon nCategorie
+			cas 1 		: grfOperateur.CouleurCatégorie(nCategorie,HTMLVersRVB(__COULEUR_SMS_S__))
+			cas 2		: grfOperateur.CouleurCatégorie(nCategorie,HTMLVersRVB(__COULEUR_SMS_M__))
+			cas 3		: grfOperateur.CouleurCatégorie(nCategorie,HTMLVersRVB(__COULEUR_SMS_L__))
+			cas 4		: grfOperateur.CouleurCatégorie(nCategorie,HTMLVersRVB(__COULEUR_SMS_XL__))
+			autre cas	: grfOperateur.CouleurCatégorie(nCategorie,HTMLVersRVB(__COULEUR_SMS_XXL__))
+		fin
+		grfOperateur.Bulle(nSerie, nCategorie, NumériqueVersChaîne(sdReqRapportSms.Total, "dS") + " " + sdReqRapportSms.Operateur)
+	fin
+fin
+
+grfOperateur.Libellé(grAfficheValeur,Vrai)
+grfOperateur.Dessine()
+
+
+// **************************** GRAPHE DIFFUSION *****************************
+
+grfDiffusion.SupprimeTout()
+
+sTexteRequeteDiffusion = [
+	SELECT
+		MIN(DateHeureEnvoi) DateMin,
+		MAX(DateHeureEnvoi) DateMax
+	FROM
+		ope_sms_envoi
+	WHERE
+		IdSms = [%_pIdOperation%]
+		AND Statut >= [%__SMS_STATUT_ENVOYE__%]
+]
+
+si pas HExécuteRequêteSQL(sdReqRapportSms, dos_base..Connexion, hRequêteSansCorrection, sTexteRequeteDiffusion) alors
+	Info("Erreur requête")
+	retour
+fin
+
+si pas sdReqRapportSms.LitPremier(hSansRafraîchir) alors
+	dispRapportEmission[4].Visible = Faux
+	retour
+sinon
+	dhMin = sdReqRapportSms.DateMin
+	dhMax = sdReqRapportSms.DateMax
+fin
+
+si pas DateHeureValide(dhMin) 	alors retour
+si pas DateHeureValide(dhMax) 	alors retour
+si pas dhMin <> dhMax			alors retour
+
+Diff = DateHeureDifférence(dhMin,dhMax)
+
+DuréeDiffusion = ChaîneVersDurée(Diff, duréeCentième)
+
+si DuréeDiffusion.EnSecondes < 10 alors
+	dispRapportEmission[4].Visible = Faux
+	retour
+fin
+
+selon Vrai
+	cas DuréeDiffusion..EnSecondes < 60	: nCadence = 1   	; sFormatEtiquette = "HH:mm:SS"		// Toutes les secondes
+	cas DuréeDiffusion..EnMinutes  < 60	: nCadence = 15		; sFormatEtiquette = "HH:mm:SS"		// Toutes les 15 secondes
+	cas DuréeDiffusion..EnHeures   < 4	: nCadence = 60		; sFormatEtiquette = "HH:mm"		// Toutes les minutes
+	cas dhMin..Jour <> dhMax..Jour		: nCadence = 900	; sFormatEtiquette = "JJ/MM HH:mm"	// Toutes les 15 minutes
+	autre cas							: nCadence = 300	; sFormatEtiquette = "HH:mm"		// Toutes les 5 minutes
+fin
+
+sTexteRequeteDiffusion = [
+	SELECT
+		FROM_UNIXTIME(
+			COALESCE([%nCadence%] * ROUND(UNIX_TIMESTAMP(DateHeureEnvoi) DIV NULLIF([%nCadence%], 0)), 0)
+		) AS DateHeure,
+		COUNT(IdBaseLigne) Total
+	FROM
+		ope_sms_envoi
+	WHERE
+		IdSms = [%_pIdOperation%]
+		AND Statut >= [%__SMS_STATUT_ENVOYE__%]
+		AND DateHeureEnvoi IS NOT NULL
+	GROUP BY
+	(UNIX_TIMESTAMP(DateHeureEnvoi) DIV NULLIF([%nCadence%], 0));
+]
+
+
+si pas HExécuteRequêteSQL(sdReqRapportSms, dos_base..Connexion, hRequêteSansCorrection, sTexteRequeteDiffusion) alors
+	Info("Erreur requête")
+	retour
+fin
+
+
+pour tout sdReqRapportSms
+	dhMin = Min(dhMin,sdReqRapportSms.DateHeure)
+	dhMax = Max(dhMax,sdReqRapportSms.DateHeure)
+	taaDiffusion[sdReqRapportSms.DateHeure] = sdReqRapportSms.Total
+fin
+
+taaDiffusion.Trie(ttClé)
+
+dhSuivante	= dhMin
+nSerie		= 1
+nCategorie	= 0
+pour tout nTotal, sDateHeure de taaDiffusion
+	dhDateHeure = sDateHeure
+	tantque dhSuivante < dhDateHeure
+		si dhSuivante.PartieHeure <= "200000" _et_ dhSuivante.PartieHeure >= "080000" alors
+			nCategorie++
+			grfDiffusion.AjouteDonnéeTemporelle(nSerie,dhSuivante, 0)
+			grfDiffusion.EtiquetteCatégorie(nCategorie,DateHeureVersChaîne(dhSuivante,sFormatEtiquette))
+		fin
+		dhSuivante.Seconde += nCadence
+	fin
+	nCategorie++
+	grfDiffusion.AjouteDonnéeTemporelle(nSerie,dhDateHeure, nTotal)
+	grfDiffusion.EtiquetteCatégorie(nCategorie,DateHeureVersChaîne(dhDateHeure,sFormatEtiquette))
+	dhSuivante.Seconde += nCadence
+fin
+
+grfDiffusion.Paramètre(grGraduationsOptimiséesX, Vrai)
+grfDiffusion.Paramètre(grGraduationsOptimiséesY,Vrai)
+grfDiffusion.AxeVisible(grAbscisse,grVisible)
+grfDiffusion.AxeVisible(grOrdonnée,grVisible)
+grfDiffusion.CouleurSérie(nSerie,HTMLVersRVB(__COULEUR_SMS_M__))
+grfDiffusion.EpaisseurTrait(nSerie,2)
+grfDiffusion.NiveauTemporelMax(1,grntMinute)
+grfDiffusion.NiveauTemporelMasque(grntMinute, "HH:MM:SS")
+
+grfDiffusion.Dessine()
+
+
+
+fin:
+HAnnuleDéclaration(sdReqRapportSms)
+

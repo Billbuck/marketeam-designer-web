@@ -210,15 +210,12 @@ sTexteRequetePourJson =
 	// curseur remis à zéro, sélection des erreurs d'envoi avec NbTentatives < 2.
 	procédure interne LitLot()
 		sConditionStatut est une chaîne
-		tantque Vrai
+		boucle
 			si bModeRelance alors
 				sConditionStatut = "ope_rcs_envoi.Statut = '" + __SMS_STATUT_ERREUR_ENVOI__ + "' AND ope_rcs_envoi.NbTentatives < 2"
 			sinon
 				sConditionStatut = "ope_rcs_envoi.Statut = '" + __SMS_STATUT_ENREGISTREE__ + "'"
 			fin
-			// Seules les lignes prévues en RCS : les lignes CanalPrevu = SMS
-			// relèvent de l'envoi SMS direct (lot 4), jamais d'un message RCS
-			sConditionStatut += " AND ope_rcs_envoi.CanalPrevu = '" + __CANAL_PREVU_RCS__ + "'"
 			sTexteRequeteLot = ChaîneConstruit(sTexteRequetePourLot, sSelectChamp, pIdRcs, nIdDernierIdBaseLigne, sConditionStatut, nQuantite)
 			si pas sdReqEnvoi.ExécuteRequêteSQL(ope_rcs_envoi..Connexion, hRequêteSansCorrection, sTexteRequeteLot) alors
 				Trace("Erreur requête lot TacheParalleleRcs", sTexteRequeteLot, HErreurInfo(hErrComplet))
@@ -265,9 +262,9 @@ tantque LitLot()
 		pour tout stBaseChamp, sLibelle de taaBaseChamp
 			taaValeurChamp[sLibelle] = {"sdReqEnvoi." + stBaseChamp.Champ, indRubrique}
 		fin
-		taaValeurChamp[__CHAMP_CLIQUEZ_ICI__]	= sdReqEnvoi.Code
+		taaValeurChamp[__CHAMP_CLIQUEZ_ICI__]		= sdReqEnvoi.Code
 
-		sMessageId										= ChaîneConstruit("%1-%2", pIdRcs, sdReqEnvoi.IdBaseLigne)
+		sMessageId											= ChaîneConstruit("%1-%2", pIdRcs, sdReqEnvoi.IdBaseLigne)
 		sJsonMessage										= cpRcs.ConstruitJsonMessage(stOperationRcs, sSenderName, sdReqEnvoi.Portable, sMessageId, taaValeurChamp, sdReqEnvoi.Code, Faux)
 
 		tabJsonMessage.Ajoute(sJsonMessage)
@@ -280,7 +277,7 @@ tantque LitLot()
 			sListeIdBaseLigne += [","] + tabIdBaseLigneLot[nIndLot]
 		fin
 		nTotalEnvoyé		= nCompteur
-		sTexteRequete	= ChaîneConstruit(sTexteRequetePourSimul, sListeIdBaseLigne)
+		sTexteRequete		= ChaîneConstruit(sTexteRequetePourSimul, sListeIdBaseLigne)
 		si pas sdReqMaj.ExécuteRequêteSQL(ope_rcs_envoi..Connexion, hRequêteSansCorrection, sTexteRequete) alors
 			Trace("Erreur requête simulation TacheParalleleRcs", sTexteRequete, HErreurInfo(hErrComplet))
 		fin
@@ -339,7 +336,7 @@ tantque LitLot()
 				sListeIdBaseLigneEnErreur += [","] + tabIdBaseLigneLot[nIndLot]
 			fin
 			nTotalErreur		= nCompteur
-			sTexteRequete	= ChaîneConstruit(sTexteRequetePourErreur, __SMS_STATUT_ERREUR_ENVOI__, pIdRcs, sListeIdBaseLigneEnErreur, sStatutOrigine, DateHeureSys()[[à 14]], nTotalErreur)
+			sTexteRequete		= ChaîneConstruit(sTexteRequetePourErreur, __SMS_STATUT_ERREUR_ENVOI__, pIdRcs, sListeIdBaseLigneEnErreur, sStatutOrigine, DateHeureSys()[[à 14]], nTotalErreur)
 			si pas sdReqMaj.ExécuteRequêteSQL(ope_rcs_envoi..Connexion, hRequêteSansCorrection, sTexteRequete) alors
 				Trace("Erreur requête erreur TacheParalleleRcs", sTexteRequete, HErreurInfo(hErrComplet))
 			fin

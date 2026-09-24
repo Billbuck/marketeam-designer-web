@@ -62,6 +62,7 @@ Le service est **gratuit** pour le client : aucune opération, aucune facturatio
 - `EnregistrementBase` recopie `EstRcs` dans `dos_base_ligne`.
 - Devis : `ROUTAGE_RCS` × lignes `EstRcs = 1` ; si repli SMS : `ROUTAGE_SMS` × lignes `EstRcs = 0` × segments du texte de repli ; sans repli : lignes SMS exclues et annoncées ; lignes invalides jamais comptées, annoncées (« n numéros invalides ignorés »).
 - `EnregistrementProgrammationRcs` : `ope_rcs_envoi.CanalPrevu` = RCS pour `EstRcs = 1`, SMS pour `EstRcs = 0` si repli ; rien pour 2 et NULL.
+- **Envoi des lignes SMS seul (décision du 24 septembre 2026, remplace le « lot 4 envoi SMS direct »)** : elles sont envoyées par `batchRcs` **comme les lignes RCS, par l'API RCS avec bloc `smsFailover`** ; Infobip constate l'absence de RCS et envoie lui-même le SMS de repli (même expéditeur, même rapport `channel = SMS` → `CanalUtilise = SMS`, même STOP). Aucun envoi SMS direct, aucune garde sur `CanalPrevu` dans le batch : `CanalPrevu` reste la prévision du devis (reporting, régularisation), elle ne pilote pas l'envoi. Sans repli activé, les lignes `EstRcs = 0` ne sont pas programmées, donc jamais envoyées.
 
 ## 6. Mesure préalable (avant tout développement)
 
@@ -94,4 +95,4 @@ Depuis `batchRcs` (procédure de test provisoire) : un appel `/rcs/2/capability-
 2. Base : colonnes, constantes, paramètres (dev puis prod).
 3. `batchRcs` : `cpRcs.VerifieCapacite` + `ScannerQualification` synchrone parallèle, aiguillage par taille, consolidation par inactivité du mode asynchrone ; `pgeRcsCapacite` : `DateHeureDernierRetour`, `NbrTraiteRcs`, invalides.
 4. Site : import automatique, menu conditionné, colonnes, statut, jauge, timer.
-5. Lot 3 (tunnel + devis) puis lot 4 (envoi SMS direct).
+5. Lot 3 (tunnel + devis) — fait le 24 septembre 2026 ; le lot 4 « envoi SMS direct » est abandonné au profit du repli Infobip via l'API RCS (§ 5).

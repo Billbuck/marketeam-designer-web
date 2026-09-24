@@ -1,0 +1,20 @@
+procédure CouleurCategorie(pCategorie)
+
+
+selon pCategorie
+	cas 1		: renvoyer "M"
+	cas 2		: renvoyer "L"
+	cas 3		: renvoyer "XL"
+	cas 4		: renvoyer "XXL"
+	cas 5		: renvoyer "S"
+	cas 6		: renvoyer "XS"
+	cas 7		: renvoyer "XXS"
+	cas 8		: renvoyer "M"
+	cas 9		: renvoyer "L"
+	cas 10		: renvoyer "XL"
+	cas 11		: renvoyer "XXL"
+	cas 12		: renvoyer "S"
+	cas 13		: renvoyer "XS"
+	cas 14		: renvoyer "XXS"
+	autres cas 	: renvoyer "M"
+fin

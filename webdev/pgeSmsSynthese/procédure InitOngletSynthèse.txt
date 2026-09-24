@@ -1,0 +1,179 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//InitOngletSynthèse ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure InitOngletSynthèse()
+
+
+nProgression		est un entier
+nEngagement			est un entier
+nTransformation		est un entier
+
+
+// Titre
+libNomOperation				= "> " + _stSynthèse.NomOperation
+
+
+// Ligne 1
+libDossier					= _stSynthèse.Dossier
+libStatutOperation			= Partage.LibelleStatutOperation(_stSynthèse.Statut)
+imgStatut.Bulle				= _stSynthèse.MotifRefus
+
+libDateCreation				= DateHeureVersChaîne(_stSynthèse.DateHeureCreation, "Jjj JJ Mmm AAAA à HH:mm")
+
+// Ligne 2
+libSociete					= _stSynthèse.DossierSociete
+libCréateur					= cpFonction.CiviliteCourte(_stSynthèse.DossierCivilite) 	+ [" "] + _stSynthèse.DossierNom 	+ [" "] + _stSynthèse.DossierPrenom
+libValideur					= cpFonction.CiviliteCourte(_stSynthèse.ValideurCivilite) 	+ [" "] + _stSynthèse.ValideurNom 	+ [" "] + _stSynthèse.ValideurPrenom
+
+// Ligne 3
+si _stSynthèse.EstEnvoiImmediat = Faux alors
+	libDateDebutOperation	= DateVersChaîne(_stSynthèse.DateEnvoiSouhaite,"Jjj JJ Mmm AAAA") + " à " + HeureVersChaîne(_stSynthèse.HeureEnvoiSouhaite,"HH:MM")
+sinon
+	si DateHeureValide(_stSynthèse.DateHeurePriseEnCharge) alors
+		libDateDebutOperation	= DateHeureVersChaîne(_stSynthèse.DateHeurePriseEnCharge,"Jjj JJ Mmm AAAA à HH:mm")
+	sinon
+		libDateDebutOperation	= DateVersChaîne(_stSynthèse.DateEnvoiSouhaite,"Jjj JJ Mmm AAAA") + " Immédiat"
+	fin
+fin
+
+si _stSynthèse.Statut >= __Statut_Facturation_En_Attente__ alors
+	libDateFinOperation	= DateDernierAppel()
+	contDateFin.Visible	= libDateFinOperation <> ""
+sinon
+	contDateFin.Visible = Faux
+fin
+
+// Ligne 4
+libMontantHT 	= NumériqueVersChaîne(_stSynthèse.MontantNetHT, ",2fS") + " € HT" + ESP + ESP + ESP + "/" + ESP + ESP + ESP + NumériqueVersChaîne(_stSynthèse.MontantTTC, ",2fS") + " € TTC"
+
+si _stSynthèse.ResteAPayer > 0 alors
+	libTitreResteAPayer		= "Reste à payer"
+	libResteAPayer			= NumériqueVersChaîne(_stSynthèse.ResteAPayer, ",2fS") + " €"
+	si _stSynthèse.EstFacturationMensuelle alors
+		libModeReglement 	= "à réception de facture"
+	sinon
+		libModeReglement 	= "à la commande"
+	fin
+sinon
+	libTitreResteAPayer			= "Date de règlement"
+
+	si _stSynthèse.IdPaiement > 0 alors
+		si _stSynthèse.EstReserve = Vrai _et_ _stSynthèse.IdReglement = 0 alors
+			libResteAPayer			= DateHeureVersChaîne(_stSynthèse.PaiementDateHeureCreation,"Jjj JJ Mmm AAAA à HH:mm")
+			libModeReglement		= "Réserve d'argent"
+		sinon
+			si _stSynthèse.IdReglement > 0 alors
+				libModeReglement = _stSynthèse.LibelleModeReglement
+				selon _stSynthèse.ReglementStatut
+					cas __REGLEMENT_STATUT_VALIDE__ 	: libResteAPayer = (DateHeureValide(_stSynthèse.DateHeureReceptionReglement)) ? DateHeureVersChaîne(_stSynthèse.DateHeureReceptionReglement,"Jjjj JJ Mmm AAAA à HH:mm") sinon "Validé"
+					cas __REGLEMENT_STATUT_EN_COURS__ 	: libResteAPayer = "En cours"
+					cas __REGLEMENT_STATUT_ANNULE__		: libResteAPayer = "Annulé"
+					cas __REGLEMENT_STATUT_EN_ATTENTE__	: libResteAPayer = "En attente de validation"
+					cas __REGLEMENT_STATUT_REFUSE__		: libResteAPayer = "Refusé"
+					autre cas						: Trace("A définir")
+				fin
+			fin
+		fin
+	fin
+fin
+
+// Ligne 5
+selon _stSynthèse.NbrDestinataire
+	cas 1		: libNombreDestinataire = "1 destinataire"
+	autre cas	: libNombreDestinataire = NumériqueVersChaîne(_stSynthèse.NbrDestinataire, "dS") + " destinataires"
+fin
+
+
+// Ligne 6
+si _stSynthèse.Statut >= __Statut_Distribution_En_Cours__ alors
+
+	// Bloc Progression
+	dispSynthèse[6].Visible					= Vrai
+	jaugeTauxProgression.BorneMax			= _stSynthèse.NbrDestinataire
+	nProgression							= _stSynthèse.NbrDelivre
+	jaugeTauxProgression					= nProgression
+	selon nProgression
+		cas 0 , _stSynthèse.NbrDestinataire	: libProgression = ""
+		cas 1									: libProgression = "1 envoyé"
+		autre cas								: libProgression = NumériqueVersChaîne(nProgression, "dS") + " envoyés"
+	fin
+
+	libTauxProgression						= NumériqueVersChaîne((nProgression / _stSynthèse.NbrDestinataire) * 100, ",1f") + "0 %"
+
+	// Bloc Engagement
+	si _stSynthèse.EstCliquezIci = Vrai alors
+		contTauxOuverture.Visible			= Vrai
+		jaugeTauxOuverture.BorneMax			= _stSynthèse.NbrDestinataire
+		nEngagement							= _stSynthèse.NbrAudience
+		jaugeTauxOuverture					= nEngagement
+		selon nEngagement
+			cas 0		: libOuverture		= ""
+			cas 1		: libOuverture		= "1 ouverture"
+			autre cas	: libOuverture		= NumériqueVersChaîne(nEngagement, "dS") + " ouvertures"
+		fin
+		si nProgression > 0 alors
+			libTauxOuverture				= NumériqueVersChaîne((nEngagement / nProgression) * 100, ",1f") + "0 %"
+		sinon
+			libTauxOuverture				= "0 %"
+		fin
+	fin
+
+	// Bloc Transformation
+	si _stSynthèse.EstCliquezIci = Vrai _et_ _stSynthèse.TypeCliquezici = __ICI_WEB__ _et_ nEngagement > 0 alors
+		contTauxConcrétisation.Visible		= Vrai
+		jaugeTauxConcretisation.BorneMax	= 100
+		nTransformation						= _stSynthèse.NbrLead
+		jaugeTauxConcretisation				= nTransformation / nEngagement * 100
+		selon nTransformation
+			cas 0		: libConcretisation	= ""
+			cas 1		: libConcretisation	= "1 lead"
+			autre cas	: libConcretisation	= NumériqueVersChaîne(nTransformation, "dS") + " leads"
+		fin
+		libTauxConcrétisation				= NumériqueVersChaîne((nTransformation / nEngagement) * 100, ",1f") + "0 %"
+	fin
+fin
+
+
+
+	procédure interne DateDernierAppel()
+		sTexteRequete est une chaîne
+		sdReqDernierSms	est une Source de Données
+		sTexteRequete =
+		[
+			SELECT
+				ope_sms_envoi.DateHeureEnvoi
+			FROM 
+				ope_sms_envoi
+			WHERE
+				ope_sms_envoi.IdSms = [%_pIdOperation%]
+			ORDER BY ope_sms_envoi.DateHeureEnvoi DESC
+			LIMIT 1
+		]
+
+		si pas sdReqDernierSms.ExécuteRequêteSQL(clt_client..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+			Trace("Erreur requête","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+			renvoyer ""
+		fin
+
+		si sdReqDernierSms.LitPremier(hSansRafraîchir) _et_ DateHeureValide(sdReqDernierSms.DateHeureEnvoi) alors
+			renvoyer DateHeureVersChaîne(sdReqDernierSms.DateHeureEnvoi,"Jjj JJ Mmm AAAA à HH:mm")
+		sinon
+			renvoyer ""
+		fin
+
+	fin:
+	sdReqDernierSms.AnnuleDéclaration()
+fin
+
+
+
+

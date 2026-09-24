@@ -1,0 +1,21 @@
+procédure ValidationPaiement(pRetour = mdcPaiement._paiement_validé_)
+
+
+// Le paiement est validé
+
+si pRetour = mdcPaiement._paiement_validé_ alors
+	si dos_operation.LitRecherchePremier(IdOperation,_pIdOperation) alors
+		// Le Trigger va changer le statut
+		dos_operation.DateHeureValidation 			= DateHeureSys()
+		dos_operation.EstPaiementReceptionFacture	= (mdcPaiement._stPaiementSécurisé.ModeRèglement = __REGLEMENT_RECEPTION_FACTURE__)
+		si dos_operation.Modifie() alors
+			// on récupère le nouveau statut
+			si dos_operation.LitRecherchePremier(IdOperation,_pIdOperation) alors
+				_pOnglet = synthese.Nom
+				Init()
+			fin
+		fin
+	fin
+fin
+
+//mdcPaiement.AfficheResultat(pRetour)

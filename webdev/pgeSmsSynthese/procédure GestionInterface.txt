@@ -1,0 +1,39 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// GestionInterface ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure GestionInterface()
+
+si _stSynthèse.IdOperation = _pIdOperation
+
+	onglet.reglement.Visible		= (_stSynthèse.Statut dans (__Statut_Règlement_En_Attente__, __Statut_Solde_En_Attente__, __Statut_Validation_En_Attente__) _et_ _stSynthèse.ResteAPayer > 0 _et_ _stSynthèse.IdValideur = Partage.__vcUser.IDContact)
+	btnOperationPayer.Visible		= (_stSynthèse.Statut dans (__Statut_Règlement_En_Attente__, __Statut_Solde_En_Attente__, __Statut_Validation_En_Attente__) _et_ _stSynthèse.ResteAPayer > 0 _et_ _stSynthèse.IdValideur = Partage.__vcUser.IDContact)
+	btnOperationValider.Visible		= (_stSynthèse.Statut = __Statut_Validation_En_Attente__ _et_ _stSynthèse.IdValideur = Partage.__vcUser.IDContact)
+	btnOperationRefuser.Visible		= (_stSynthèse.Statut dans (__Statut_Validation_En_Attente__, __Statut_Règlement_En_Attente__) _et_ _stSynthèse.IdValideur = Partage.__vcUser.IDContact _et_ _stSynthèse.IdContact <> Partage.__vcUser.IDContact)
+	onglet.rapport.Visible			= (_stSynthèse.Statut > __Statut_Prise_En_Charge__)
+	onglet.performance.Visible		= (_stSynthèse.Statut > __Statut_Prise_En_Charge__ _et_ _stSynthèse.EstCliquezIci = Vrai)
+	onglet.leads.Visible			= (_stSynthèse.Statut > __Statut_Prise_En_Charge__ _et_ _stSynthèse.EstCliquezIci = Vrai _et_ _stSynthèse.TypeCliquezici = __ICI_WEB__ _et_ _stSynthèse.NbrLeadUnique > 0)
+	btnReprogrammer.Visible			= (_stSynthèse.Statut <= __Statut_Prise_En_Charge_En_Attente__)
+
+	onglet							= {"onglet." + _pOnglet,indChamp}
+
+	InitOngletSynthèse()
+	InitOngletInformations()
+	InitOngletStatut()
+	InitOngletDevis()
+
+	si onglet.rapport.Visible			alors InitOngletRapport()
+	si onglet.performance.Visible		alors InitOngletPerformance()
+	si onglet.leads.Visible				alors InitOngletLead()
+	si onglet.reglement.Visible			alors InitOngletReglement()
+
+	libTitre = onglet[onglet]..Libellé
+fin

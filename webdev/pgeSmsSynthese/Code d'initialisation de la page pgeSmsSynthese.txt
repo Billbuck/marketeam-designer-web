@@ -1,0 +1,31 @@
+// Déclarations globales de pgeSmsSynthese
+
+procédure MaPage(_pIdOperation, _pOnglet est une chaîne <synchronisé navigateur> = onglet.synthese.Nom)
+
+_sUnivers = __OPERATION_SMS__
+
+_stSynthèse			est une structSynthèse
+_bOperationAvecLien	est un booléen
+_bOperationAvecLead	est un booléen
+_bCadenasOuvert		est un booléen
+
+// Onglet Reprogrammer
+_stCalendrier	est une structCalendrier	<synchronisé navigateur>
+_nTimerImmediat	est un entier				<synchronisé navigateur>
+
+
+// Fin d'initialisation de pgeSmsSynthese
+
+Init()
+
+
+// Chargement de pgeSmsSynthese (onload navigateur)
+
+_nTimerActualiser	est un entier
+_nActualiser		est un entier
+
+
+// Reprogrammer
+_sCboDateFin		est une chaîne	// pour mémoriser la valeur de la cboDateFin
+_sCboHeureFin		est une chaîne	// pour mémoriser la valeur de la cboHeureFin
+_taaCadence			est un tableau associatif de tableau associatif d'entiers

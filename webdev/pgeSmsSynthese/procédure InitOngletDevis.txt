@@ -1,0 +1,91 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//InitOngletDevis ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure InitOngletDevis()
+
+sTexteRequete		est une chaîne
+sdReqDosOperation	est une Source de Données 
+rTauxTva			est un réel
+
+
+nInd				est un entier
+
+sTexteRequete =
+[
+	SELECT
+	dos_operation_ligne.IdOperation,
+	dos_operation_ligne.Designation,
+	dos_operation_ligne.Qte,
+	dos_operation_ligne.PrixUnitaireVenteBrut,
+	dos_operation_ligne.PrixUnitaireVenteNet,
+	dos_operation_ligne.TauxTVA,
+	dos_operation.TypeOperation,
+	dos_operation.Statut,
+	dos_operation.DateEnvoiSouhaite,
+	dos_operation.HeureEnvoiSouhaite,
+	dos_operation.DateHeurePriseEnCharge,
+	dos_operation.EstEnvoiImmediat,
+	dos_operation.NomOperation,
+	dos_operation.MontantBrutHT,
+	dos_operation.MontantNetHT,
+	dos_operation.MontantTVA,
+	dos_operation.MontantTTC,
+	dos_operation.CoutAffranchissement,
+	dos_operation.RemiseMontant,
+	dos_operation.RemiseTaux
+	FROM
+	dos_operation_ligne,dos_operation
+	WHERE
+	dos_operation_ligne.IdOperation = [%_pIdOperation%] AND
+	dos_operation_ligne.IdOperation = dos_operation.IdOperation
+	ORDER BY dos_operation_ligne.IdOperationLigne
+]
+
+si pas HExécuteRequêteSQL(sdReqDosOperation, ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour	
+fin
+
+ZoneRépétéeSupprimeTout(znrDossier)
+
+pour tout sdReqDosOperation
+	nInd = ZoneRépétéeAjouteLigne(znrDossier)
+	si sdReqDosOperation.TauxTva > 0 _et_ rTauxTva = 0 alors rTauxTva = sdReqDosOperation.TauxTva
+	znrDossier[nInd].attIdOperation				= sdReqDosOperation.IdOperation
+	znrDossier[nInd].attLibDesignation			= sdReqDosOperation.Designation
+	znrDossier[nInd].attQte						= (sdReqDosOperation.Qte = 0) ? "" sinon NumériqueVersChaîne(sdReqDosOperation.Qte, "dS")
+	znrDossier[nInd].attPrixUnitaire			= (sdReqDosOperation.Qte = 0) ? "" sinon NumériqueVersChaîne(sdReqDosOperation.PrixUnitaireVenteNet, ",3fS") + " €"
+	znrDossier[nInd].attTotal					= (sdReqDosOperation.Qte = 0) ? "" sinon NumériqueVersChaîne(Arrondi(sdReqDosOperation.PrixUnitaireVenteNet * sdReqDosOperation.Qte,2), ",2fS") + " €"
+	znrDossier[nInd].attTotalHT					= NumériqueVersChaîne(sdReqDosOperation.MontantNetHT, ",2fS") + " €"
+	znrDossier[nInd].attDesignationHT			= "Total HT Prestation"
+	znrDossier[nInd].attDesignationTVA			= "TVA (" + cpProjet.__moTauxTva + "%)"
+	znrDossier[nInd].attTotalTVA				= NumériqueVersChaîne(sdReqDosOperation.MontantTva, ",2fS") + " €" 
+	
+	znrDossier[nInd].attDesignationTTC			= "Total TTC"
+	znrDossier[nInd].attTotalTTC				= NumériqueVersChaîne(sdReqDosOperation.MontantTTC, ",2fS") + " €" 
+	
+	znrDossier[nInd].attTypeOperation			= sdReqDosOperation.TypeOperation
+	
+	
+fin
+
+
+libTotalHT			= NumériqueVersChaîne(sdReqDosOperation.MontantNetHT, ",2fS") + " €"
+libTotalTVA			= NumériqueVersChaîne(sdReqDosOperation.MontantTva, ",2fS") + " €"
+libTotalTTC			= NumériqueVersChaîne(sdReqDosOperation.MontantTTC, ",2fS") + " €"
+
+libDesignationTVA	= ChaîneConstruit(libDesignationTVA..ValeurInitiale,"(" + NumériqueVersChaîne(rTauxTva, ",2f")) + "%)"
+
+
+
+fin:
+HAnnuleDéclaration(sdReqDosOperation)

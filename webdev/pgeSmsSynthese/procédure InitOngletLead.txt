@@ -1,0 +1,63 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] InitOngletLead ()
+//
+// Paramètres :
+//	Aucun
+
+// Valeur de retour :
+// 	booléen : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure InitOngletLead()
+
+nInd			est un entier
+sTexteRequete	est une chaîne
+sdReqLead		est une Source de Données
+
+sTexteRequete = 
+[
+	SELECT
+		l.contact,
+		l.Civilite,
+		l.Prenom,
+		l.Nom,
+		l.Portable,
+		c.DateHeureClic,
+		c.CasesCochees
+	FROM
+		ope_cliquezici_clic c
+		JOIN dos_base_ligne l ON c.IdBaseLigne = l.IdBaseLigne
+	WHERE
+		c.IdCliquezIci = [%_pIdOperation%]
+	ORDER BY 
+		c.IdCliquezIciClic DESC
+]
+
+
+si pas sdReqLead.ExécuteRequêteSQL(clt_client..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+	renvoyer Faux
+fin
+
+znrLead.SupprimeTout()
+
+sdReqLead.LitPremier(hSansRafraîchir)
+tantque pas sdReqLead.EnDehors()
+	nInd = znrLead.AjouteLigne()
+	si sdReqLead.Nom = "" _et_ sdReqLead.Prenom = ""
+ 		znrLead[nInd].attLeadContact 		= NomPropre(sdReqLead.Contact)	
+ 	sinon
+		znrLead[nInd].attLeadContact 		= CiviliteCourte(sdReqLead.Civilite) + [" "] + Majuscule(sdReqLead.Nom) + [" "] + NomPropre(sdReqLead.Prenom)
+ 	fin
+	znrLead[nInd].attLeadChoix	 		= Remplace(sdReqLead.CasesCochees,RC," + ")
+	znrLead[nInd].attLeadDate	 		= DateVersChaîne(sdReqLead.DateHeureClic..PartieDate,  "JJ/MM/AA")
+	znrLead[nInd].attLeadHeure	 		= HeureVersChaîne(sdReqLead.DateHeureClic..PartieHeure, "HH:MM")
+	znrLead[nInd].attLeadPortable 		= Telephone(sdReqLead.Portable ,1,".")
+	sdReqLead.LitSuivant()
+fin
+
+fin:
+sdReqLead.AnnuleDéclaration()

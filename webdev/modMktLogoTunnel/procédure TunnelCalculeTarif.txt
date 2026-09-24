@@ -28,6 +28,12 @@ selon __stOperation.TypeOperation
 		cpDeviseur.DevisSms(__stOperation)
 
 	cas __OPERATION_RCS__
+		// Recalcul des compteurs de qualification AVANT le devis : la case
+		// repli SMS (étape message) change la population contactée, et le
+		// compteur de crédits de popSms (CalculeCoutOperationSms) écrase
+		// NbrDestinataire avec le total brut — le recalcul repose les
+		// bonnes valeurs à chaque passage, y compris avant l'enregistrement.
+		cpDeviseur.CalculeCoutOperationRcs(__stOperation)
 		cpDeviseur.DevisRcs(__stOperation)
 		
 	cas __OPERATION_VMS__

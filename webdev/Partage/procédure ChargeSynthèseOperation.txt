@@ -1,0 +1,194 @@
+procédure ChargeSynthèseOperation(pIdOperation)
+
+sTexteRequete	est une chaîne
+sdReqSynthèse	est une Source de Données
+stSynthèse		est une structSynthèse
+sTypeOperation	est une chaîne
+bEstCliquezIci	est un booléen
+sSelect			est une chaîne
+sFrom			est une chaîne
+
+si dos_operation.LitRecherchePremier(IdOperation,pIdOperation) alors
+	sTypeOperation = dos_operation.TypeOperation
+	bEstCliquezIci = dos_operation.EstCliquezIci
+fin
+
+
+
+selon sTypeOperation
+
+	cas __OPERATION_SMS__
+		sSelect = [
+			,ope_sms.Message
+			,ope_sms.EstSmsPersonnalise
+			,ope_sms.Cadence
+			,ope_sms.DateFin DateFinSouhaite
+			,ope_sms.HeureFin HeureFinSouhaite
+		]
+
+		sFrom = [
+			JOIN ope_sms ON ope_sms.IdSms = dos_operation.IdOperation
+		]
+
+	cas __OPERATION_VMS__
+		sSelect = [
+			,ope_vms.IdMessage
+		]
+
+		sFrom = [
+			JOIN ope_vms ON ope_vms.IdVms = dos_operation.IdOperation
+		]
+
+	cas __OPERATION_TEL__
+		sSelect = [
+			,ope_tel.IdMessage IdMessageRepondeur
+			,ope_tel.Nom
+			,ope_tel.Objectif
+			,ope_tel.Informations
+			,ope_tel.DateDebutSouhaite
+			,ope_tel.DateFinSouhaite
+			,ope_tel.EmailLeadEnCopie
+			,ope_tel.EstTransfertAppel
+			,ope_tel.EstMessageRepondeur
+			,ope_tel.EstSmsConfirmation
+			,ope_tel.LeFromConfirmation
+			,ope_tel.SmsConfirmation
+			,ope_tel.EstSmsRappel
+			,ope_tel.LeFromRappel
+			,ope_tel.SmsRappel
+			,ope_tel.DateRappel
+			,ope_tel.TransfertNumero
+			,ope_tel.TransfertMotifAutorise
+			,ope_tel.JoursAppel
+			,ope_tel.UsePortable
+			,ope_tel.UseFixe
+			,ope_tel.UsePriorite
+			,ope_tel.NbrQuestionBrancheMax
+			,ope_tel.NbrReponseBrancheMax
+			,ope_tel.NbrFormulaireBrancheMax
+			,ope_tel.NbrRelance
+			,ope_tel.DateMaxRendezVous
+			,ope_tel.DateDebutAgenda
+			,ope_tel.DateFinAgenda
+			,ope_tel.DecalageAgenda
+		]
+
+		sFrom = [
+			JOIN ope_tel ON ope_tel.IdTel = dos_operation.IdOperation
+		]
+
+	autre cas
+
+fin
+
+si bEstCliquezIci = Vrai alors
+	sSelect = [
+		,ope_cliquezici.Type TypeCliquezIci
+		,ope_cliquezici.EmailLeadEnCopie
+		,ope_cliquezici.EmailLeadType
+	]
+
+	sFrom = [
+		JOIN ope_cliquezici ON ope_cliquezici.IdCliquezIci = dos_operation.IdOperation
+	]
+
+fin
+
+
+sTexteRequete = [
+	SELECT
+	dos_operation.IdOperation
+	,dos_operation.Dossier
+	,dos_operation.Statut
+	,dos_operation.TypeOperation
+	,dos_operation.DateEnvoiSouhaite
+	,dos_operation.HeureEnvoiSouhaite
+	,dos_operation.EstEnvoiImmediat
+	,dos_operation.DateHeureCreation
+	,dos_operation.DateHeureLimiteValidation
+	,dos_operation.DateHeureLimitePriseEnCharge
+	,dos_operation.DateHeurePriseEnCharge
+	,dos_operation.DateEnvoiSouhaite
+	,dos_operation.IdClient
+	,dos_operation.IdContact
+	,dos_operation.IdClientFacturation
+	,dos_operation.IdAdresseFacturation
+	,dos_operation.IdValideur
+	,dos_operation.EstModifiableParUnTiers
+	,dos_operation.EstVisibleParUnTiers
+	,dos_operation.MotifRefus
+	,dos_operation.NomOperation
+	,dos_operation.MontantNetHT
+	,dos_operation.MontantTTC
+	,dos_operation.ResteAPayer
+	,dos_operation.NbrDestinataire
+	,dos_operation.NbrDiffusion
+	,dos_operation.NbrDelivre
+	,dos_operation.NbrErreur
+	,dos_operation.NbrRepondeur
+	,dos_operation.NbrMessageDepose
+	,dos_operation.NbrAboutement
+	,dos_operation.NbrRendezVous
+	,dos_operation.NbrInjoignable
+	,dos_operation.NbrStop
+	,dos_operation.NbrAudience
+	,dos_operation.NbrAudienceUnique
+	,dos_operation.NbrInteraction
+	,dos_operation.NbrInteractionUnique
+	,dos_operation.NbrRepondeur
+	,dos_operation.NbrLead
+	,dos_operation.NbrLeadUnique
+	,dos_operation.EstCliquezIci
+	,clt_client.Societe DossierSociete
+	,clt_contact.Civilite DossierCivilite
+	,clt_contact.Nom DossierNom
+	,clt_contact.Prenom DossierPrenom
+	,clt_client_facturation.Societe FacturationSociete
+	,clt_client_facturation.ReserveArgent
+	,clt_client.EstFacturationMensuelle
+	,clt_contact_valideur.Civilite ValideurCivilite
+	,clt_contact_valideur.Nom ValideurNom
+	,clt_contact_valideur.Prenom ValideurPrenom
+	,clt_paiement.IdPaiement
+	,clt_paiement.EstReserve
+	,clt_paiement.DateHeureCreation PaiementDateHeureCreation
+	,clt_reglement.IdReglement
+	,clt_reglement.DateHeureReceptionReglement
+	,clt_reglement.Statut ReglementStatut
+	,clt_facture_ligne.IdFactureLigne
+	,clt_facture_ligne.IdFacture
+	,prm_mode_reglement.LibelleSingulier LibelleModeReglement
+	[%sSelect%]
+	FROM
+	dos_operation
+	JOIN clt_client ON clt_client.IdClient = dos_operation.IdClientFacturation
+	JOIN clt_contact ON clt_contact.IdContact = dos_operation.IdContact
+	JOIN clt_client clt_client_facturation ON clt_client_facturation.IdClient = dos_operation.IdClientFacturation
+	JOIN clt_contact clt_contact_valideur ON clt_contact_valideur.IdContact = dos_operation.IdValideur
+	[%sFrom%]
+	LEFT JOIN clt_paiement ON clt_paiement.IdOperation = dos_operation.IdOperation
+	LEFT JOIN clt_reglement ON clt_reglement.IdReglement = clt_paiement.IdReglement
+	LEFT JOIN clt_facture_ligne ON clt_facture_ligne.IdOperation = dos_operation.IdOperation
+	LEFT JOIN prm_mode_reglement ON prm_mode_reglement.CodeModeReglement = clt_reglement.CodeModeReglement
+	WHERE
+	dos_operation.IdOperation = [%pIdOperation%]
+	
+]
+
+si pas sdReqSynthèse.ExécuteRequêteSQL(dos_operation..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	<compile si TypeConfiguration <> Webservice>
+		Info("Erreur requête ChargeSynthèseOperation")
+	<fin>
+	renvoyer stSynthèse
+fin
+
+si sdReqSynthèse.LitPremier() alors
+	FichierVersMémoire(stSynthèse,sdReqSynthèse)
+	stSynthèse.EstPlafondEncoursDepassé = Partage.PlafondEncoursDepassé(sdReqSynthèse.IdClientFacturation, sdReqSynthèse.ResteAPayer, sdReqSynthèse.IdOperation)
+	stSynthèse.EstBaseDeDonnéesChargée	= dos_base.LitRecherchePremier(IdOperation,pIdOperation)
+fin
+
+renvoyer stSynthèse
+
+fin:
+sdReqSynthèse.AnnuleDéclaration()

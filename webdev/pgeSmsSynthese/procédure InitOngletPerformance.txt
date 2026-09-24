@@ -1,0 +1,240 @@
+procédure InitOngletPerformance()
+
+nSerie					est un entier
+nCategorie				est un entier
+sOffre					est une chaîne
+//taaOffre				est un tableau associatif d'entiers
+//taaLien					est un tableau associatif d'entiers
+sNomCookie				est une chaîne
+sCookie					est une chaîne
+vJsonCookie				est un Variant
+bCookieExiste			est un booléen
+sTexteRequete			est une chaîne
+sdReqPerformance		est une Source de Données
+sListeField 			est une chaîne
+sOrderBy				est une chaîne
+
+btnTéléchargerPerformance.Visible = _stSynthèse.TypeCliquezici dans (__ICI_URL_TRACKING__, __ICI_WEB__) _et_ (_stSynthèse.NbrAudienceUnique + _stSynthèse.NbrInteractionUnique + _stSynthèse.NbrLeadUnique) > 0
+btnBddPerformance.Visible = _stSynthèse.TypeCliquezici dans (__ICI_URL_TRACKING__, __ICI_WEB__)
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+
+sNomCookie	= "Performance|" + Partage.__vcUser.IDContact + "|" + _pIdOperation
+sCookie		= CookieLit(sNomCookie)
+si sCookie <> "" alors
+	vJsonCookie		= JSONVersVariant(sCookie)
+	bCookieExiste	= Vrai
+	//	trace("Cookie Lit -->", "Envoyé :", vJsonCookie.Envoyé, "Restant :", vJsonCookie.Restant, "Visite :", vJsonCookie.Visite, "Clic :", vJsonCookie.Clic)
+sinon
+	// Le cookie n'existait pas
+	vJsonCookie.Envoyé		= 0
+	vJsonCookie.Reçu		= 0
+	vJsonCookie.Visite		= 0
+	vJsonCookie.Lien		= 0
+	vJsonCookie.Lead		= 0
+fin
+
+soit nNouveauEnvoyé			= Max(0,_stSynthèse.NbrDiffusion 			- Val(vJsonCookie.Envoyé))
+soit nNouveauReçu			= Max(0,_stSynthèse.NbrDelivre 				- Val(vJsonCookie.Reçu))
+soit nNouveauVisite			= Max(0,_stSynthèse.NbrAudienceUnique		- Val(vJsonCookie.Visite))
+soit nNouveauLien			= Max(0,_stSynthèse.NbrInteractionUnique	- Val(vJsonCookie.Lien))
+soit nNouveauLead			= Max(0,_stSynthèse.NbrLeadUnique			- Val(vJsonCookie.Lead))
+
+
+libPerformanceNouveauEnvoye				= "+" + NumériqueVersChaîne(nNouveauEnvoyé, "dS")
+libPerformanceNouveauEnvoye.Visible		= (nNouveauEnvoyé > 0)
+
+libPerformanceNouveauReçu				= "+" + NumériqueVersChaîne(nNouveauReçu, "dS")
+libPerformanceNouveauReçu.Visible		= (nNouveauReçu > 0)
+
+libPerformanceNouveauLien				= "+" + NumériqueVersChaîne(nNouveauLien, "dS")
+libPerformanceNouveauLien.Visible		= (nNouveauLien > 0)
+
+libPerformanceNouveauVisite				= "+" + NumériqueVersChaîne(nNouveauVisite, "dS")
+libPerformanceNouveauVisite.Visible		= (nNouveauVisite > 0)
+
+libPerformanceNouveauLead				= "+" + NumériqueVersChaîne(nNouveauLead, "dS")
+libPerformanceNouveauLead.Visible		= (nNouveauLead > 0)
+
+
+// On enregistre le Cookie
+vJsonCookie.Envoyé						= _stSynthèse.NbrDiffusion
+vJsonCookie.Reçu						= _stSynthèse.NbrDelivre
+vJsonCookie.Visite						= _stSynthèse.NbrAudienceUnique
+vJsonCookie.Lien						= _stSynthèse.NbrInteractionUnique
+vJsonCookie.Lead						= _stSynthèse.NbrLeadUnique
+
+CookieEcrit(sNomCookie, VariantVersJSON(vJsonCookie))
+
+
+//-----------------------------------------------------------------------
+
+
+libPerformanceTotalEnvoye			= NumériqueVersChaîne(_stSynthèse.NbrDiffusion, "dS")
+libPerformanceTotalReçu				= NumériqueVersChaîne(_stSynthèse.NbrDelivre, "dS")
+libPerformanceTotalVisite			= NumériqueVersChaîne(_stSynthèse.NbrAudienceUnique, "dS")
+libPerformanceTotalLien				= NumériqueVersChaîne(_stSynthèse.NbrInteractionUnique, "dS")
+libPerformanceTotalLead				= NumériqueVersChaîne(_stSynthèse.NbrLeadUnique, "dS")
+
+libPerformanceTauxEnvoye			= (_stSynthèse.NbrDestinataire > 0)	? Arrondi(_stSynthèse.NbrDiffusion			/ _stSynthèse.NbrDestinataire * 100,0)	+ " %"	sinon "0 %"
+libPerformanceTauxReçu				= (_stSynthèse.NbrDiffusion > 0)	? Arrondi(_stSynthèse.NbrDelivre			/ _stSynthèse.NbrDiffusion * 100,0) 	+ " %"	sinon "0 %"
+libPerformanceTauxVisite			= (_stSynthèse.NbrDelivre > 0)		? Arrondi(_stSynthèse.NbrAudienceUnique		/ _stSynthèse.NbrDelivre * 100,0) 		+ " %"	sinon "0 %"
+libPerformanceTauxLien				= (_stSynthèse.NbrDelivre > 0)		? Arrondi(_stSynthèse.NbrInteractionUnique	/ _stSynthèse.NbrDelivre * 100,0) 		+ " %"	sinon "0 %"
+libPerformanceTauxLead				= (_stSynthèse.NbrDelivre > 0)		? Arrondi(_stSynthèse.NbrLeadUnique			/ _stSynthèse.NbrDelivre * 100,0)	 	+ " %"	sinon "0 %"
+
+libPerformanceGrapheTauxRedirection = (_stSynthèse.NbrAudienceUnique > 0)		? Arrondi(_stSynthèse.NbrInteractionUnique	/ _stSynthèse.NbrAudienceUnique * 100,0) 		+ " %"	sinon "0 %"
+libPerformanceGrapheTauxLead		= (_stSynthèse.NbrAudienceUnique > 0)		? Arrondi(_stSynthèse.NbrLeadUnique			/ _stSynthèse.NbrAudienceUnique * 100,0)	 	+ " %"	sinon "0 %"
+
+
+sTexteRequete =
+[
+	SELECT TypeLien, Libelle, Url, COUNT(DISTINCT IdBaseLigne) Total FROM ope_cliquezici_lien WHERE IdCliquezIci = [%_pIdOperation%] GROUP BY TypeLien, Libelle, Url
+]
+
+si pas HExécuteRequêteSQL(sdReqPerformance, ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour
+fin
+
+tblRedirection.SupprimeTout()
+grfRedirection.SupprimeTout()
+nSerie		= 1
+nCategorie	= 0
+pour tout sdReqPerformance
+	nCategorie++
+	grfRedirection.AjouteDonnée(nSerie,sdReqPerformance.Total)
+	grfRedirection.EtiquetteCatégorie(nCategorie,sdReqPerformance.Libelle)
+	grfRedirection.CouleurCatégorie(nCategorie,Partage.CouleurTypeOperation(__OPERATION_SMS__,CouleurCategorie(nCategorie)))
+	grfRedirection.Bulle(nSerie, nCategorie, NumériqueVersChaîne(sdReqPerformance.Total, "dS") + " " + sdReqPerformance.Libelle)
+	tblRedirection.AjouteLigne()
+	tblRedirection[nCategorie].colTypeLien	= Partage.LibelleCliquezIciTracking(sdReqPerformance.TypeLien)
+	tblRedirection[nCategorie].colLien		= sdReqPerformance.Libelle
+	tblRedirection[nCategorie].colUrl		= Remplace(sdReqPerformance.Url,"#","")
+	tblRedirection[nCategorie].colTotal		= sdReqPerformance.Total
+fin
+
+si nCategorie > 0 alors
+	grfRedirection.Libellé(grAffichePourcentage,Vrai)
+	grfRedirection.Dessine()
+	dispStatistique[3].Visible = Vrai
+sinon
+	dispStatistique[3].Visible = Faux
+fin
+
+
+sTexteRequete = [
+	SELECT
+		GROUP_CONCAT("\"", COALESCE(ope_cliquezici_offre.Libelle, ope_cliquezici_offre.Offre), "\"") ListeField
+	FROM
+		ope_cliquezici_offre
+		JOIN ope_cliquezici_bloc ON ope_cliquezici_bloc.IdCliquezIciBloc = ope_cliquezici_offre.IdCliquezIciBloc AND ope_cliquezici_bloc.`Type` IN ('[%__BLOC_OFFRE__%]' ,'[%__BLOC_FORMULAIRE__%]' , '[%__BLOC_BOUTON__%]')
+	WHERE
+		ope_cliquezici_bloc.IdCliquezIci = [%_pIdOperation%]
+	ORDER BY
+		FIELD(ope_cliquezici_bloc.`Type`, '[%__BLOC_OFFRE__%]' , '[%__BLOC_FORMULAIRE__%]' , '[%__BLOC_BOUTON__%]')
+]
+
+si pas HExécuteRequêteSQL(sdReqPerformance, ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour
+fin
+
+si sdReqPerformance.LitPremier() alors
+	sListeField = sdReqPerformance.ListeField
+fin
+
+si sListeField <> "" alors
+	sOrderBy = [
+		ORDER BY 
+			FIELD(ope_cliquezici_clic_selection.Libelle, [%sListeField%]),
+			Total DESC
+	]
+sinon
+	sOrderBy = [
+		ORDER BY 
+			FIELD(ope_cliquezici_clic_selection.`Type`, '[%__FORMULAIRE_INTERRUPTEUR__%]', '[%__FORMULAIRE_COMBO__%]','[%__FORMULAIRE_SAISIE__%]','[%__FORMULAIRE_OPTIN__%]'),
+			Total DESC
+	]
+fin
+
+
+sTexteRequete =
+[
+	SELECT
+		ope_cliquezici_clic_selection.Libelle,
+		ope_cliquezici_clic_selection.Valeur,
+		COUNT(ope_cliquezici_clic_selection.IdCliquezIciSelection) AS Total
+	FROM 
+		ope_cliquezici_clic
+	JOIN 
+		ope_cliquezici_clic_selection ON ope_cliquezici_clic_selection.IdCliquezIciClic = ope_cliquezici_clic.IdCliquezIciClic
+		JOIN (
+			SELECT 
+				IdBaseLigne, 
+				MAX(IdCliquezIciClic) AS MaxIdCliquezIciClic
+			FROM 
+				ope_cliquezici_clic
+			WHERE 
+				IdCliquezIci = [%_pIdOperation%]
+			GROUP BY 
+				IdBaseLigne
+		) AS dernierClic ON dernierClic.MaxIdCliquezIciClic = ope_cliquezici_clic.IdCliquezIciClic
+	WHERE
+		ope_cliquezici_clic.IdCliquezIci = [%_pIdOperation%]
+	GROUP BY 
+		ope_cliquezici_clic_selection.Libelle,
+		ope_cliquezici_clic_selection.Valeur
+	[%sOrderBy%]
+
+]
+
+si pas HExécuteRequêteSQL(sdReqPerformance, ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour
+fin
+
+tblLead.SupprimeTout()
+grfLead.SupprimeTout()
+nSerie		= 1
+nCategorie	= 0
+
+pour tout sdReqPerformance
+	nCategorie++
+	grfLead.AjouteDonnée(nSerie,sdReqPerformance.Total)
+	grfLead.EtiquetteCatégorie(nCategorie,Majuscule(SansEspace(Remplace(sdReqPerformance.Libelle,":",""))) + [" : "] + sdReqPerformance.Valeur)
+	grfLead.CouleurCatégorie(nCategorie,Partage.CouleurTypeOperation(__OPERATION_SMS__,CouleurCategorie(nCategorie)))
+	grfLead.Bulle(nSerie, nCategorie, NumériqueVersChaîne(sdReqPerformance.Total, "dS") + " " + sOffre)
+	tblLead.AjouteLigne(Majuscule(SansEspace(Remplace(sdReqPerformance.Libelle,":",""))) + [" : "] + sdReqPerformance.Valeur, sdReqPerformance.Total)
+fin
+
+si nCategorie > 0 alors
+	grfLead.Libellé(grAffichePourcentage,Vrai)
+	grfLead.Dessine()
+	dispStatistique[4].Visible = Vrai
+sinon
+	dispStatistique[4].Visible = Faux
+fin
+
+
+
+
+
+
+
+fin:
+HAnnuleDéclaration(sdReqPerformance)
+
+
+
+
+	procédure interne BelleCouleur
+		nRouge, nVert, nBleu sont des entiers
+		InitHasard()
+		tantque (Max(nRouge,nVert,nBleu) - Min(nRouge,nVert,nBleu)) < 80
+			nRouge	= Hasard(120,240)
+			nVert	= Hasard(120,240)
+			nBleu	= Hasard(120,240)
+		fin
+		renvoyer RVB(nRouge,nVert,nBleu)
+	fin
+
