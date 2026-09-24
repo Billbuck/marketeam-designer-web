@@ -11,6 +11,7 @@ _nSourisPosX		est un entier	<synchronisé navigateur>
 _nSourisPosY		est un entier	<synchronisé navigateur>
 _taaBaseChamp		est un tableau associatif de structBaseChamp
 _bClientAgentRcs	est un booléen		// le client connecté a un agent RCS actif (menu Analyse RCS)
+_bRcsEnCours 		est un booléen	<synchronisé navigateur>
 
 constante
 	#BddTitre 			= 1
@@ -18,11 +19,14 @@ constante
 	#BddAperçu			= 3
 	#BddExporter		= 4
 	#BddSupprimer		= 5
-	#FiltreTitre		= 6
-	#FiltreAjouter		= 7
-	#FiltreModifier		= 8
-	#FiltreSupprimer	= 9
+	#TraitementTitre 	= 6
+	#TraitementRcs 	= 7
+	#FiltreTitre		= 8
+	#FiltreAjouter		= 9
+	#FiltreModifier	= 10
+	#FiltreSupprimer	= 11
 fin
+
 
 // Fin d'initialisation de pgeBddMesBasesDeDonnées
 

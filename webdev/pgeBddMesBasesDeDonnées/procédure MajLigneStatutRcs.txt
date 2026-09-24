@@ -1,17 +1,17 @@
 // Résumé : Remplit les champs de qualification RCS d'une ligne de znrBddHeberge
 // Syntaxe :
-//MajLigneStatutRcs (<pInd>, <pStatutRcs>, <pNbrTraite>, <pNbrPortable>, <pNbrRcs>, <pNbrSmsSeul>, <pDateHeureRcs>)
+//MajLigneStatutRcs (<pInd> est entier, <pStatutRcs> est chaîne, <pNbrTraite> est entier, <pNbrPortable> est entier, <pNbrRcs> est entier, <pNbrSmsSeul> est entier, <dhDateHeureRcs> est dateheure)
 //
 // Paramètres :
-//	pInd : indice de la ligne dans znrBddHeberge
-//	pStatutRcs : clt_base.StatutRcs
-//	pNbrTraite, pNbrPortable : jauge (numérateur / dénominateur)
-//	pNbrRcs, pNbrSmsSeul : compteurs affichés dans les colonnes Rcs / Sms
-//	pDateHeureRcs : date de fin de qualification (chaîne AAAAMMJJ...)
-//
-// Appelée par AjouteElementZnrBddHeberge (affichage initial) et par
-// RafraichitStatutRcs (timer 5 s) : un seul endroit décide de l'affichage.
-procédure MajLigneStatutRcs(pInd, pStatutRcs, pNbrTraite, pNbrPortable, pNbrRcs, pNbrSmsSeul, pDateHeureRcs)
+//	pInd (entier) : indice de la ligne dans znrBddHeberge
+//	pStatutRcs (chaîne ANSI) : clt_base.StatutRcs
+//	pNbrTraite (entier) : jauge (numérateur / dénominateur)
+//	pNbrPortable (entier) : compteurs affichés dans les colonnes Rcs / Sms
+//	pNbrRcs (entier) : date de fin de qualification (chaîne AAAAMMJJ...)
+//	pNbrSmsSeul (entier) : <indiquez ici le rôle de pNbrSmsSeul>
+//	dhDateHeureRcs (dateheure) : <indiquez ici le rôle de dhDateHeureRcs>
+
+procédure MajLigneStatutRcs(pInd est un entier, pStatutRcs est une chaîne ANSI, pNbrTraite est un entier, pNbrPortable est un entier, pNbrRcs est un entier, pNbrSmsSeul est un entier, dhDateHeureRcs est une DateHeure)
 
 // Colonnes Rcs / Sms : nombres si la base est qualifiée, tiret sinon
 si pStatutRcs = __BASE_RCS_TRAITE__ alors
@@ -24,24 +24,27 @@ fin
 
 // Libellé de statut
 selon pStatutRcs
-	cas __BASE_RCS_A_TRAITER__
-		znrBddHeberge[pInd].libBddRcs = "Analyse RCS en attente"
-	cas __BASE_RCS_EN_COURS__
-		znrBddHeberge[pInd].libBddRcs = "Analyse RCS en cours..."
-	cas __BASE_RCS_TRAITE__
-		znrBddHeberge[pInd].libBddRcs = "Analyse RCS du " + DateVersChaîne(Gauche(pDateHeureRcs, 8), "JJ/MM/AAAA")
-	cas __BASE_RCS_ERREUR__
-		znrBddHeberge[pInd].libBddRcs = "Analyse RCS en erreur"
-	autre cas
-		znrBddHeberge[pInd].libBddRcs = ""
+	cas __BASE_RCS_A_TRAITER__			: znrBddHeberge[pInd].libBddRcs = "Analyse RCS en attente"
+	cas __BASE_RCS_EN_COURS__			: znrBddHeberge[pInd].libBddRcs = "Analyse RCS en cours..."
+	cas __BASE_RCS_TRAITE__				: znrBddHeberge[pInd].libBddRcs = "Analyse RCS du " + DateVersChaîne(dhDateHeureRcs, "JJ/MM/AAAA")
+	cas __BASE_RCS_ERREUR__				: znrBddHeberge[pInd].libBddRcs = "Analyse RCS en erreur"
+	cas __BASE_RCS_EXPIRE__				: znrBddHeberge[pInd].libBddRcs = "Analyse RCS expirée depuis " + (DateDifférence(dhDateHeureRcs.PartieDate, DateSys()) + 1) + " jours"
+	autre cas								: znrBddHeberge[pInd].libBddRcs = ""
 fin
 
-// Jauge de progression, visible seulement pendant le traitement
-znrBddHeberge[pInd].jgeBddRcs..Visible = (pStatutRcs = __BASE_RCS_EN_COURS__)
+
+// Barre de progression en HTML (une jauge n'est pas prise en charge dans une zone répétée),
+// visible seulement pendant le traitement
 si pStatutRcs = __BASE_RCS_EN_COURS__ alors
-	si pNbrPortable > 0 alors
-		znrBddHeberge[pInd].jgeBddRcs = PartieEntière((pNbrTraite * 100) / pNbrPortable)
-	sinon
-		znrBddHeberge[pInd].jgeBddRcs = 0
-	fin
+	nPourcent est un entier = 0
+	si pNbrPortable > 0 alors nPourcent = PartieEntière((pNbrTraite * 100) / pNbrPortable)
+	znrBddHeberge[pInd].libBddJauge..Visible	= Vrai
+	znrBddHeberge[pInd].libBddJauge				= [
+		<div style="width:100%;height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden;margin-top:4px">
+		<div style="width:[%nPourcent%]%;height:100%;background:#f28c28"></div>
+		</div>
+	]
+sinon
+	znrBddHeberge[pInd].libBddJauge				= ""
+	znrBddHeberge[pInd].libBddJauge..Visible	= Faux
 fin

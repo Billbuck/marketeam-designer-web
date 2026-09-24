@@ -36,7 +36,7 @@ fin
 // (RelanceTimerStatutRcs)
 MajLigneStatutRcs(pInd, __BASE_RCS_A_TRAITER__, 0, 0, 0, 0, "")
 znrBddHeberge[pInd].attBddAnalyseRcs	= Faux
-saiRcsEnCours								= 1
+_bRcsEnCours									= 1
 
 fin :
 sdReqRcs.AnnuleDéclaration()

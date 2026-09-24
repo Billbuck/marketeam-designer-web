@@ -8,7 +8,7 @@ BibliothèqueValeurMemorisée(cboBibliothèque, _sBibliothèque, _nIdMarque)
 
 InitCboContact()
 
-grpImporterBase.Visible = ((Partage.__vcUser.EstAdministrateur _ou_ Partage.__vcUser.taaDroit[#DROIT_AJOUTER_UNE_BASE_DE_DONNÉES]) _et_ _sBibliothèque = BibliothèquePersonnelle.Valeur)
+grpImporterBase.Visible						= ((Partage.__vcUser.EstAdministrateur _ou_ Partage.__vcUser.taaDroit[#DROIT_AJOUTER_UNE_BASE_DE_DONNÉES]) _et_ _sBibliothèque = BibliothèquePersonnelle.Valeur)
 
 popFiltre.btnFiltreMoins.ClasseHTML		= ClassHtmlTypeOperation("btn",__OPERATION_BASE_DE_DONNEES__,"supprimer")
 

@@ -1,8 +1,12 @@
-// Résumé : Tic du timer de suivi des analyses RCS (toutes les 5 secondes).
-// Procédure NAVIGATEUR. Déclenche le clic du bouton caché
-// btnRafraichitStatutRcs (mode AJAX), dont le code serveur appelle
-// RafraichitStatutRcs. Lancée / arrêtée par RelanceTimerStatutRcs et par
-// le code navigateur de retour du bouton caché.
+// Procédure automatique :
+// La procédure est exécutée automatiquement, après le code d'initialisation de la page
+// Elle sera répétée en boucle, en attendant 1 seconde entre chaque appel
+// Chaque appel suivant exécute une seule fois la procédure, sans timer
+// 
+
 procédure TimerStatutRcs()
 
-ExécuteTraitement(btnRafraichitStatutRcs, trtClic)
+// Toutes les 5 s (automatisme de la procédure) : appel serveur seulement si une base est en attente ou en cours
+si _bRcsEnCours = 1 alors
+	RafraichitStatutRcs()
+fin

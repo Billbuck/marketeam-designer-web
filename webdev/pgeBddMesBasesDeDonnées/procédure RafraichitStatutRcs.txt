@@ -6,9 +6,9 @@
 //
 // Relit en une requête le statut RCS des bases affichées dans znrBddHeberge
 // et met à jour leurs lignes (MajLigneStatutRcs), sans recharger la zone.
-// Pose dans le champ caché saiRcsEnCours (0/1) s'il reste des bases en
+// Pose dans le champ caché _bRcsEnCours (0/1) s'il reste des bases en
 // attente ou en cours : le code navigateur du bouton caché arrête le timer
-// quand saiRcsEnCours repasse à 0.
+// quand _bRcsEnCours repasse à 0.
 procédure RafraichitStatutRcs()
 
 sListeIdBase	est une chaîne
@@ -16,16 +16,19 @@ sTexteRequete	est une chaîne
 sdReqStatut		est une Source de Données
 nInd				est un entier
 nLigne			est un entier
-bEncoreEnCours	est un booléen
 
+
+si _bClientAgentRcs = Faux alors
+	_bRcsEnCours = 0
+	retour
+fin
 
 pour nInd = 1 _à_ znrBddHeberge..Occurrence
-	si sListeIdBase <> "" alors sListeIdBase += ","
-	sListeIdBase += znrBddHeberge[nInd].attIdBase
+	sListeIdBase += [","] + znrBddHeberge[nInd].attIdBase
 fin
 
 si sListeIdBase = "" alors
-	saiRcsEnCours = 0
+	_bRcsEnCours = 0
 	retour
 fin
 
@@ -50,15 +53,20 @@ fin
 pour tout sdReqStatut
 	pour nLigne = 1 _à_ znrBddHeberge..Occurrence
 		si znrBddHeberge[nLigne].attIdBase = sdReqStatut.IdBase alors
-			MajLigneStatutRcs(nLigne, sdReqStatut.StatutRcs, sdReqStatut.NbrTraiteRcs, sdReqStatut.NbrPortableRcs, sdReqStatut.NbrRcs, sdReqStatut.NbrSmsSeul, sdReqStatut.DateHeureRcs)
+			sStatutRcs	est une chaîne ANSI	= sdReqStatut.StatutRcs
+			dhRcs			est une DateHeure		= sdReqStatut.DateHeureRcs
+			MajLigneStatutRcs(nLigne, sStatutRcs, sdReqStatut.NbrTraiteRcs, sdReqStatut.NbrPortableRcs, sdReqStatut.NbrRcs, sdReqStatut.NbrSmsSeul, dhRcs)
 			znrBddHeberge[nLigne].attBddAnalyseRcs = (_bClientAgentRcs _et_ sdReqStatut.NbrSms > 0 _et_ (sdReqStatut.StatutRcs = __BASE_RCS_NON__ _ou_ sdReqStatut.StatutRcs = __BASE_RCS_TRAITE__ _ou_ sdReqStatut.StatutRcs = __BASE_RCS_ERREUR__))
+			Trace(znrBddHeberge[nLigne].libBddTotalSms, (_bClientAgentRcs _et_ sdReqStatut.NbrSms > 0 _et_ (sdReqStatut.StatutRcs = __BASE_RCS_NON__ _ou_ sdReqStatut.StatutRcs = __BASE_RCS_TRAITE__ _ou_ sdReqStatut.StatutRcs = __BASE_RCS_ERREUR__)))
+
 			sortir
 		fin
 	fin
 	si sdReqStatut.StatutRcs = __BASE_RCS_A_TRAITER__ _ou_ sdReqStatut.StatutRcs = __BASE_RCS_EN_COURS__ alors
-		bEncoreEnCours = Vrai
+		_bRcsEnCours = Vrai
 	fin
 fin
-sdReqStatut.AnnuleDéclaration()
 
-saiRcsEnCours = (bEncoreEnCours ? 1 sinon 0)
+
+fin:
+sdReqStatut.AnnuleDéclaration()

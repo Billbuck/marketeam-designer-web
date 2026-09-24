@@ -493,6 +493,8 @@ constante
 	__BASE_RCS_EN_COURS__									= "EN_COURS"
 	__BASE_RCS_TRAITE__										= "TRAITE"
 	__BASE_RCS_ERREUR__										= "ERREUR"
+	__BASE_RCS_EXPIRE__ 										= "EXPIRE"
+	
 
 	// Qualification RCS d'une ligne (clt_base_ligne.EstRcs - NULL = inconnu)
 	__LIGNE_RCS_SMS__											= 0
