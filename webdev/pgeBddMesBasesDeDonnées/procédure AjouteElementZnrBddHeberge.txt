@@ -25,6 +25,7 @@ znrBddHeberge[nInd].attBddNom								= _sdReqBddHeberge.Nom
 znrBddHeberge[nInd].libBddTotal							= NumériqueVersChaîne(_sdReqBddHeberge.NbrTotal, "dS")
 znrBddHeberge[nInd].libBddTotalAdresse					= _sdReqBddHeberge.NbrAdresse > 0 	? NumériqueVersChaîne(_sdReqBddHeberge.NbrAdresse, "dS") 	sinon "-"
 znrBddHeberge[nInd].libBddTotalTel						= _sdReqBddHeberge.NbrTel > 0 		? NumériqueVersChaîne(_sdReqBddHeberge.NbrTel, "dS") 		sinon "-"
+znrBddHeberge[nInd].attBddTotPortable					= _sdReqBddHeberge.NbrSms
 znrBddHeberge[nInd].libBddTotalSms						= _sdReqBddHeberge.NbrSms > 0 		? NumériqueVersChaîne(_sdReqBddHeberge.NbrSms, "dS") 		sinon "-"
 znrBddHeberge[nInd].libBddTotalEmail					= _sdReqBddHeberge.NbrEmail > 0		? NumériqueVersChaîne(_sdReqBddHeberge.NbrEmail, "dS") 		sinon "-"
 znrBddHeberge[nInd].attListeFiltreId					= "0" + [TAB] + _sdReqBddHeberge.IdFiltre
@@ -33,6 +34,8 @@ znrBddHeberge[nInd].cboBddFiltre.Visible				= (_sdReqBddHeberge.IdFiltre <> "")
 
 znrBddHeberge[nInd].intEstPartagée.Visible			= (_sdReqBddHeberge.IdClient = Partage.__vcUser.IDClient _et_ Partage.__vcUser.EstAdministrateur)
 znrBddHeberge[nInd].intEstPartagée						= (_sdReqBddHeberge.EstPartage)
+
+znrBddHeberge[nInd].attBddRcsStatut						= _sdReqBddHeberge.StatutRcs
 
 znrBddHeberge[nInd].attBddRenommer						= Vrai
 znrBddHeberge[nInd].attBddAperçu							= (_sdReqBddHeberge.IdZecible = 0)

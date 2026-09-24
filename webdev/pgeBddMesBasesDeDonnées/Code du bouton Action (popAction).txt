@@ -1,0 +1,13 @@
+popAction.dispAction[#BddTitre].Visible				= (attBddRenommer = Vrai _ou_ attBddAperçu = Vrai _ou_ attBddExporter = Vrai _ou_ attBddSupprimer = Vrai)
+popAction.dispAction[#BddRenommer].Visible			= (attBddRenommer = Vrai)
+popAction.dispAction[#BddAperçu].Visible				= (attBddAperçu = Vrai)
+popAction.dispAction[#BddExporter].Visible			= (attBddExporter = Vrai)
+popAction.dispAction[#BddSupprimer].Visible			= (attBddSupprimer = Vrai)
+
+popAction.dispAction[#TraitementTitre].Visible		= (_bClientAgentRcs = Vrai _et_ attBddTotPortable > 0 _et_ attBddRcsStatut dans (__BASE_RCS_NON__, __BASE_RCS_EXPIRE__))
+popAction.dispAction[#TraitementRcs].Visible			= (_bClientAgentRcs = Vrai _et_ attBddTotPortable > 0 _et_ attBddRcsStatut dans (__BASE_RCS_NON__, __BASE_RCS_EXPIRE__))
+
+popAction.dispAction[#FiltreTitre].Visible			= (attFiltreAjouter = Vrai _ou_ attFiltreModifier = Vrai _ou_ attFiltreSupprimer = Vrai)
+popAction.dispAction[#FiltreAjouter].Visible			= (attFiltreAjouter = Vrai)
+popAction.dispAction[#FiltreModifier].Visible		= (attFiltreModifier = Vrai)
+popAction.dispAction[#FiltreSupprimer].Visible		= (attFiltreSupprimer = Vrai)
