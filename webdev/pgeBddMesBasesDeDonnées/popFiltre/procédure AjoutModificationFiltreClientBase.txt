@@ -1,0 +1,66 @@
+procédure AjoutModificationFiltreClientBase(pIdBddClient,pIdBddFiltre)
+
+nInd est un entier
+sCondition est une chaîne
+
+
+sCondition = popFiltre.saiCondition
+
+pour nInd = 1 _à_ popFiltre.znrPopupFiltre..Occurrence
+	sCondition = Remplace(sCondition, nInd, "[[" + nInd + "]]", MotComplet)
+fin
+
+si pIdBddFiltre = 0 alors // Création
+	clt_base_filtre.RAZ()
+	clt_base_filtre.DateHeureCreation		= DateHeureSys()
+	clt_base_filtre.UserCreation 			= Partage.__vcUser.NomUser
+	clt_base_filtre.IdBase					= pIdBddClient
+	clt_base_filtre.IdClient				= Partage.__vcUser.IDClient
+	clt_base_filtre.IdContact				= Partage.__vcUser.IDContact
+	clt_base_filtre.Nom						= popFiltre.saiFiltreNom
+	clt_base_filtre.Phrase					= sCondition
+	si clt_base_filtre.Ajoute() alors
+		pIdBddFiltre = clt_base_filtre.IdFiltre
+	fin
+sinon
+	si clt_base_filtre.LitRecherchePremier(IdFiltre,pIdBddFiltre) alors
+		clt_base_filtre.DateHeureModification	= DateHeureSys()
+		clt_base_filtre.UserModification		= Partage.__vcUser.NomUser
+		clt_base_filtre.IdClient				= Partage.__vcUser.IDClient
+		clt_base_filtre.IdContact				= Partage.__vcUser.IDContact
+		clt_base_filtre.Nom						= popFiltre.saiFiltreNom
+		clt_base_filtre.Phrase					= sCondition
+		si clt_base_filtre.Modifie() alors
+			// On supprime toutes les conditions et on recommence
+			cpFonction.SupprimeEnregistrement(clt_base_filtre_critere..Nom,"Idfiltre = " + pIdBddFiltre)
+		fin
+	fin
+fin
+
+pour toute ligne de popFiltre.znrPopupFiltre
+	clt_base_filtre_critere.RAZ()
+
+	clt_base_filtre_critere.IdFiltre			= pIdBddFiltre
+	clt_base_filtre_critere.IdBaseChamp 		= attIdBaseChamp
+
+	selon attChampType
+		cas __CHAMP_TYPE_DATE__
+			clt_base_filtre_critere.Filtre 	= attFiltreValeurMemorisée
+			clt_base_filtre_critere.Valeur1 	= attDateValeur1
+			clt_base_filtre_critere.Valeur2 	= attDateValeur2
+
+		cas __CHAMP_TYPE_DECIMAL__, __CHAMP_TYPE_ENTIER__, __CHAMP_TYPE_MONETAIRE__
+			clt_base_filtre_critere.Filtre 	= attFiltreValeurMemorisée
+			clt_base_filtre_critere.Valeur1 	= attNumeriqueValeur1
+			clt_base_filtre_critere.Valeur2 	= attNumeriqueValeur2
+
+		autres cas
+			clt_base_filtre_critere.Filtre 	= attFiltreValeurMemorisée
+			clt_base_filtre_critere.Valeur1 	= attTexteValeur
+
+	fin
+	clt_base_filtre_critere.Ajoute()
+fin
+
+TraitementApresFiltre(pIdBddClient,pIdBddFiltre)
+

@@ -28,6 +28,7 @@ sTexteRequete = [
 	AND clt_base.NbrSms > 0
 	AND clt_base.NbrSms <= [%nAutoMax%]
 	AND clt_base.StatutRcs = '[%__BASE_RCS_NON__%]'
+	AND EXISTS (SELECT 1 FROM rcs_agent WHERE rcs_agent.IdClient = clt_base.IdClient AND rcs_agent.EstActif = 1)
 ]
 
 si pas sdReqQualif.ExécuteRequêteSQL(clt_base..Connexion, hRequêteSansCorrection, sTexteRequete) alors
