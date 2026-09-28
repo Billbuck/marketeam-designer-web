@@ -1,0 +1,26 @@
+CREATE TABLE `rcs_code` (
+	`TypeCode` ENUM('STATUT','ERREUR') NOT NULL COMMENT 'STATUT = status Infobip, ERREUR = error Infobip' COLLATE 'utf8mb4_unicode_ci',
+	`CodeId` SMALLINT(5) UNSIGNED NOT NULL,
+	`Nom` VARCHAR(60) NOT NULL COMMENT 'name Infobip' COLLATE 'utf8mb4_unicode_ci',
+	`GroupeId` TINYINT(3) UNSIGNED NULL DEFAULT NULL,
+	`GroupeNom` VARCHAR(30) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`EstPermanent` TINYINT(1) NULL DEFAULT NULL COMMENT 'Erreurs : permanent Infobip',
+	`Libelle` VARCHAR(120) NULL DEFAULT NULL COMMENT 'Libellé français affiché dans Marketeam - NULL = à renseigner' COLLATE 'utf8mb4_unicode_ci',
+	`Action` VARCHAR(20) NULL DEFAULT NULL COMMENT 'Ex. SMS_SEUL pour la qualification' COLLATE 'utf8mb4_unicode_ci',
+	`DateHeureCreation` DATETIME NOT NULL DEFAULT current_timestamp(),
+	PRIMARY KEY (`TypeCode`, `CodeId`) USING BTREE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+;
+
+-- Contenu au 28/09/2026 (extrait) :
+-- STATUT : 2 Remis à l'opérateur, 3 En attente de livraison, 4 Rejeté par
+-- l'opérateur, 5 Délivré sur le téléphone, 7 En cours d'acheminement,
+-- 9 Non délivré, 10 Rejeté : liste anti-démarchage, 14 Rejeté : numéro bloqué,
+-- 15 Expiré (validité dépassée), 20 Rejeté : trop de messages vers ce numéro,
+-- 21 Rejeté : erreur système Infobip, 26 Accepté par Infobip,
+-- 29 Expiré statut inconnu, 31 Non envoyé, 52 Rejeté : numéro invalide.
+-- ERREUR : 0 Aucune erreur, 7002 Numéro non joignable en RCS (Action SMS_SEUL).
+-- La synthèse affiche rcs_code.Libelle (TypeCode ERREUR, CodeId = ErreurId) ;
+-- un code sans libellé affiche ope_rcs_envoi.ErreurNom (nom Infobip).

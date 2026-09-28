@@ -1,0 +1,136 @@
+// Résumé : Onglet Retours (remplace InitOngletLead du SMS).
+// Un seul tableau pour tous les retours de l'opération (vue_ope_retour) :
+// leads, intentions de contact, interactions, redirections — les réponses
+// texte sont exclues en V1 (seul leur nombre apparaît ailleurs).
+// Pastilles de comptage cliquables en en-tête (btnFiltreLead / Intention /
+// Interaction / Redirection) : chaque clic pose _sFiltreRetourFamille et
+// rappelle cette procédure (filtre côté serveur). Leads par défaut.
+// Convention : la pastille Interactions EXCLUT la catégorie REDIRECTION,
+// comptée à part (décision du 28/09).
+// La zone réutilise znrLead du SMS avec trois attributs ajoutés :
+// attRetourCategorie, attRetourDetail, attRetourCanal.
+procédure InitOngletRetours()
+
+nInd					est un entier
+sTexteRequete		est une chaîne
+sdReqRetour			est une Source de Données
+sCondition			est une chaîne
+nNbrLead				est un entier
+nNbrIntention		est un entier
+nNbrInteraction	est un entier
+nNbrRedirection	est un entier
+
+
+// ------------------------------------------------------------------
+// Pastilles : comptage par famille (REDIRECTION à part)
+// ------------------------------------------------------------------
+sTexteRequete =
+[
+	SELECT
+	vue_ope_retour.Famille,
+	vue_ope_retour.Categorie,
+	COUNT(*) Total
+	FROM vue_ope_retour
+	WHERE vue_ope_retour.IdOperation = [%_pIdOperation%]
+	GROUP BY vue_ope_retour.Famille, vue_ope_retour.Categorie
+]
+
+si pas sdReqRetour.ExécuteRequêteSQL(clt_client..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour
+fin
+
+pour tout sdReqRetour
+	selon sdReqRetour.Famille
+		cas __RETOUR_FAMILLE_LEAD__
+			nNbrLead += sdReqRetour.Total
+		cas __RETOUR_FAMILLE_INTENTION__
+			nNbrIntention += sdReqRetour.Total
+		cas __RETOUR_FAMILLE_INTERACTION__
+			si sdReqRetour.Categorie = __RETOUR_CATEGORIE_REDIRECTION__ alors
+				nNbrRedirection += sdReqRetour.Total
+			sinon
+				nNbrInteraction += sdReqRetour.Total
+			fin
+	fin
+fin
+
+btnFiltreLead.Libellé			= "Leads " + NumériqueVersChaîne(nNbrLead, "dS")
+btnFiltreIntention.Libellé		= "Intentions " + NumériqueVersChaîne(nNbrIntention, "dS")
+btnFiltreInteraction.Libellé	= "Interactions " + NumériqueVersChaîne(nNbrInteraction, "dS")
+btnFiltreRedirection.Libellé	= "Redirections " + NumériqueVersChaîne(nNbrRedirection, "dS")
+
+// La pastille active est grisée (non cliquable), les autres sont actives
+btnFiltreLead.Etat				= (_sFiltreRetourFamille = __RETOUR_FAMILLE_LEAD__) ? Grisé sinon Actif
+btnFiltreIntention.Etat			= (_sFiltreRetourFamille = __RETOUR_FAMILLE_INTENTION__) ? Grisé sinon Actif
+btnFiltreInteraction.Etat		= (_sFiltreRetourFamille = __RETOUR_FAMILLE_INTERACTION__) ? Grisé sinon Actif
+btnFiltreRedirection.Etat		= (_sFiltreRetourFamille = __RETOUR_CATEGORIE_REDIRECTION__) ? Grisé sinon Actif
+
+// ------------------------------------------------------------------
+// Filtre de la pastille active
+// ------------------------------------------------------------------
+selon _sFiltreRetourFamille
+	cas __RETOUR_FAMILLE_LEAD__
+		sCondition = "vue_ope_retour.Famille = '" + __RETOUR_FAMILLE_LEAD__ + "'"
+	cas __RETOUR_FAMILLE_INTENTION__
+		sCondition = "vue_ope_retour.Famille = '" + __RETOUR_FAMILLE_INTENTION__ + "'"
+	cas __RETOUR_FAMILLE_INTERACTION__
+		sCondition = "vue_ope_retour.Famille = '" + __RETOUR_FAMILLE_INTERACTION__ + "' AND vue_ope_retour.Categorie <> '" + __RETOUR_CATEGORIE_REDIRECTION__ + "'"
+	cas __RETOUR_CATEGORIE_REDIRECTION__
+		sCondition = "vue_ope_retour.Categorie = '" + __RETOUR_CATEGORIE_REDIRECTION__ + "'"
+	autre cas
+		sCondition = "1 = 1"
+fin
+
+// ------------------------------------------------------------------
+// Tableau des retours (réponses exclues en V1)
+// ------------------------------------------------------------------
+sTexteRequete =
+[
+	SELECT
+		l.contact,
+		l.Civilite,
+		l.Prenom,
+		l.Nom,
+		l.Portable,
+		vue_ope_retour.Categorie,
+		vue_ope_retour.Libelle,
+		vue_ope_retour.Detail,
+		vue_ope_retour.DateHeure,
+		vue_ope_retour.Canal
+	FROM
+		vue_ope_retour
+		JOIN dos_base_ligne l ON l.IdBaseLigne = vue_ope_retour.IdBaseLigne
+	WHERE
+		vue_ope_retour.IdOperation = [%_pIdOperation%]
+		AND vue_ope_retour.Famille <> '[%__RETOUR_FAMILLE_REPONSE__%]'
+		AND [%sCondition%]
+	ORDER BY 
+		vue_ope_retour.DateHeure DESC
+]
+
+si pas sdReqRetour.ExécuteRequêteSQL(clt_client..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+	retour
+fin
+
+znrLead.SupprimeTout()
+
+pour tout sdReqRetour
+	nInd = znrLead.AjouteLigne()
+	si sdReqRetour.Nom = "" _et_ sdReqRetour.Prenom = ""
+ 		znrLead[nInd].attLeadContact 		= NomPropre(sdReqRetour.Contact)
+ 	sinon
+		znrLead[nInd].attLeadContact 		= CiviliteCourte(sdReqRetour.Civilite) + [" "] + Majuscule(sdReqRetour.Nom) + [" "] + NomPropre(sdReqRetour.Prenom)
+ 	fin
+	znrLead[nInd].attRetourCategorie	= Partage.LibelleRetourCategorie(sdReqRetour.Categorie)
+	znrLead[nInd].attLeadChoix	 		= sdReqRetour.Libelle
+	znrLead[nInd].attRetourDetail 		= Remplace(sdReqRetour.Detail,RC," + ")
+	znrLead[nInd].attLeadDate	 		= DateVersChaîne(sdReqRetour.DateHeure..PartieDate,  "JJ/MM/AA")
+	znrLead[nInd].attLeadHeure	 		= HeureVersChaîne(sdReqRetour.DateHeure..PartieHeure, "HH:MM")
+	znrLead[nInd].attLeadPortable 		= Telephone(sdReqRetour.Portable ,1,".")
+	znrLead[nInd].attRetourCanal		= sdReqRetour.Canal
+fin
+
+fin:
+sdReqRetour.AnnuleDéclaration()

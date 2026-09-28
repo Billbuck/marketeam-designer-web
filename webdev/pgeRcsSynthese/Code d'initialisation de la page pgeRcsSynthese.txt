@@ -1,0 +1,41 @@
+// Déclarations globales de pgeRcsSynthese
+//
+// Page créée par « Enregistrer sous » de pgeSmsSynthese (mêmes champs,
+// mêmes onglets — le volet leads est renommé retours). Différences :
+// _sUnivers RCS, jauges lecture / repli, onglet Retours multi-familles
+// (vue_ope_retour), graphe canal et tableau des erreurs dans Rapport,
+// bloc Performance étendu (lus, intentions, réponses).
+
+procédure MaPage(_pIdOperation, _pOnglet est une chaîne <synchronisé navigateur> = onglet.synthese.Nom)
+
+_sUnivers = __OPERATION_RCS__
+
+_stSynthèse			est une structSynthèse
+_bOperationAvecLien	est un booléen
+_bOperationAvecLead	est un booléen
+_bCadenasOuvert		est un booléen
+
+// Pastille active de l'onglet Retours : une famille __RETOUR_FAMILLE_*
+// ou la catégorie __RETOUR_CATEGORIE_REDIRECTION__ (Leads par défaut)
+_sFiltreRetourFamille	est une chaîne	= __RETOUR_FAMILLE_LEAD__
+
+// Onglet Reprogrammer
+_stCalendrier	est une structCalendrier	<synchronisé navigateur>
+_nTimerImmediat	est un entier				<synchronisé navigateur>
+
+
+// Fin d'initialisation de pgeRcsSynthese
+
+Init()
+
+
+// Chargement de pgeRcsSynthese (onload navigateur)
+
+_nTimerActualiser	est un entier
+_nActualiser		est un entier
+
+
+// Reprogrammer
+_sCboDateFin		est une chaîne	// pour mémoriser la valeur de la cboDateFin
+_sCboHeureFin		est une chaîne	// pour mémoriser la valeur de la cboHeureFin
+_taaCadence			est un tableau associatif de tableau associatif d'entiers

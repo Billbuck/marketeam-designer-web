@@ -1,0 +1,6 @@
+// Bouton btnFiltreInteraction — Clic (Serveur, AJAX)
+// Pastille de l'onglet Retours : filtre sur les interactions
+// (hors redirections, comptées à part).
+
+_sFiltreRetourFamille = __RETOUR_FAMILLE_INTERACTION__
+InitOngletRetours()

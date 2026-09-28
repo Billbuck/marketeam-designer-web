@@ -1,0 +1,38 @@
+// Résumé : Libellé français d'une catégorie de retour (vue_ope_retour.Categorie)
+// Syntaxe :
+//[ <Résultat> = ] LibelleRetourCategorie (<pCategorie>)
+//
+// Paramètres :
+//	pCategorie : catégorie de la vue — SousType d'un bouton RCS
+//		(__RCS_ACTION_*) ou catégorie propre à la vue (__RETOUR_CATEGORIE_*)
+// Valeur de retour :
+// 	chaîne : libellé affiché dans la synthèse (tableau Retours, pastilles,
+// 	interactions par bouton). Catégorie inconnue : renvoyée telle quelle.
+procédure LibelleRetourCategorie(pCategorie)
+
+selon pCategorie
+	cas __RCS_ACTION_REACTION__				: renvoyer "Réaction"
+	cas __RCS_ACTION_APPEL__					: renvoyer "Appel"
+	cas __RCS_ACTION_EMAIL__					: renvoyer "Email"
+	cas __RCS_ACTION_SMS__						: renvoyer "SMS"
+	cas __RCS_ACTION_WHATSAPP__				: renvoyer "WhatsApp"
+	cas __RCS_ACTION_LIEN__						: renvoyer "Lien"
+	cas __RCS_ACTION_LANDING__					: renvoyer "Landing page"
+	cas __RCS_ACTION_CARTE__					: renvoyer "Carte"
+	cas __RCS_ACTION_ITINERAIRE__				: renvoyer "Itinéraire"
+	cas __RCS_ACTION_AGENDA__					: renvoyer "Agenda"
+	cas __RCS_ACTION_APPLICATION__			: renvoyer "Application"
+	cas __RCS_ACTION_RDV__						: renvoyer "Rendez-vous"
+	cas __RCS_ACTION_AVIS__						: renvoyer "Avis"
+	cas __RCS_ACTION_DOCUMENT__				: renvoyer "Document"
+	cas __RCS_ACTION_INSTAGRAM__				: renvoyer "Instagram"
+	cas __RCS_ACTION_FACEBOOK__				: renvoyer "Facebook"
+	cas __RCS_ACTION_TIKTOK__					: renvoyer "TikTok"
+	cas __RCS_ACTION_YOUTUBE__					: renvoyer "YouTube"
+	cas __RCS_ACTION_LINKEDIN__				: renvoyer "LinkedIn"
+	cas __RETOUR_CATEGORIE_REDIRECTION__	: renvoyer "Redirection"
+	cas __RETOUR_CATEGORIE_FORMULAIRE__		: renvoyer "Formulaire"
+	cas __RETOUR_CATEGORIE_REPONSE__			: renvoyer "Réponse"
+fin
+
+renvoyer pCategorie

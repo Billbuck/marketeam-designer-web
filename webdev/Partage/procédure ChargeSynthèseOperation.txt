@@ -2,6 +2,7 @@ procédure ChargeSynthèseOperation(pIdOperation)
 
 sTexteRequete	est une chaîne
 sdReqSynthèse	est une Source de Données
+sdReqRetour		est une Source de Données
 stSynthèse		est une structSynthèse
 sTypeOperation	est une chaîne
 bEstCliquezIci	est un booléen
@@ -28,6 +29,22 @@ selon sTypeOperation
 
 		sFrom = [
 			JOIN ope_sms ON ope_sms.IdSms = dos_operation.IdOperation
+		]
+
+	cas __OPERATION_RCS__
+		// NbrLu et NbrRepliSms mappés par FichierVersMémoire (alias = membres).
+		// Les compteurs de retours (leads, intentions, interactions, réponses)
+		// sont chargés plus bas depuis vue_ope_retour.
+		sSelect = [
+			,ope_rcs.Cadence
+			,ope_rcs.DateFin DateFinSouhaite
+			,ope_rcs.HeureFin HeureFinSouhaite
+			,(SELECT COUNT(*) FROM ope_rcs_envoi WHERE ope_rcs_envoi.IdRcs = dos_operation.IdOperation AND ope_rcs_envoi.DateHeureLu IS NOT NULL) NbrLu
+			,(SELECT COUNT(*) FROM ope_rcs_envoi WHERE ope_rcs_envoi.IdRcs = dos_operation.IdOperation AND ope_rcs_envoi.CanalUtilise = '[%__CANAL_PREVU_SMS__%]' AND ope_rcs_envoi.Statut = '[%__SMS_STATUT_DELIVERED__%]') NbrRepliSms
+		]
+
+		sFrom = [
+			JOIN ope_rcs ON ope_rcs.IdRcs = dos_operation.IdOperation
 		]
 
 	cas __OPERATION_VMS__
@@ -186,6 +203,39 @@ si sdReqSynthèse.LitPremier() alors
 	FichierVersMémoire(stSynthèse,sdReqSynthèse)
 	stSynthèse.EstPlafondEncoursDepassé = Partage.PlafondEncoursDepassé(sdReqSynthèse.IdClientFacturation, sdReqSynthèse.ResteAPayer, sdReqSynthèse.IdOperation)
 	stSynthèse.EstBaseDeDonnéesChargée	= dos_base.LitRecherchePremier(IdOperation,pIdOperation)
+
+	// Compteurs de retours RCS depuis vue_ope_retour : une requête groupée
+	// par famille. Pour le RCS, leads et interactions écrasent les colonnes
+	// de dos_operation (qui ne couvrent que la landing du SMS interactif).
+	si sTypeOperation = __OPERATION_RCS__ alors
+		sTexteRequete = [
+			SELECT
+			vue_ope_retour.Famille,
+			COUNT(*) NbrEvenement,
+			COUNT(DISTINCT vue_ope_retour.IdBaseLigne) NbrUnique
+			FROM vue_ope_retour
+			WHERE vue_ope_retour.IdOperation = [%pIdOperation%]
+			GROUP BY vue_ope_retour.Famille
+		]
+		si sdReqRetour.ExécuteRequêteSQL(dos_operation..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+			pour tout sdReqRetour
+				selon sdReqRetour.Famille
+					cas __RETOUR_FAMILLE_LEAD__
+						stSynthèse.NbrLead							= sdReqRetour.NbrEvenement
+						stSynthèse.NbrLeadUnique					= sdReqRetour.NbrUnique
+					cas __RETOUR_FAMILLE_INTENTION__
+						stSynthèse.NbrIntentionContact			= sdReqRetour.NbrEvenement
+						stSynthèse.NbrIntentionContactUnique	= sdReqRetour.NbrUnique
+					cas __RETOUR_FAMILLE_INTERACTION__
+						stSynthèse.NbrInteraction					= sdReqRetour.NbrEvenement
+						stSynthèse.NbrInteractionUnique			= sdReqRetour.NbrUnique
+					cas __RETOUR_FAMILLE_REPONSE__
+						stSynthèse.NbrReponse						= sdReqRetour.NbrEvenement
+				fin
+			fin
+		fin
+		sdReqRetour.AnnuleDéclaration()
+	fin
 fin
 
 renvoyer stSynthèse

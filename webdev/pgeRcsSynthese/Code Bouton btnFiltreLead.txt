@@ -1,0 +1,5 @@
+// Bouton btnFiltreLead — Clic (Serveur, AJAX)
+// Pastille de l'onglet Retours : filtre sur la famille Lead.
+
+_sFiltreRetourFamille = __RETOUR_FAMILLE_LEAD__
+InitOngletRetours()

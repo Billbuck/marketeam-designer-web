@@ -505,6 +505,18 @@ constante
 	__CANAL_PREVU_RCS__										= "RCS"
 	__CANAL_PREVU_SMS__										= "SMS"
 
+	// Retours d'une opération (vue_ope_retour) : familles...
+	__RETOUR_FAMILLE_LEAD__									= "LEAD"
+	__RETOUR_FAMILLE_INTENTION__							= "INTENTION"
+	__RETOUR_FAMILLE_INTERACTION__						= "INTERACTION"
+	__RETOUR_FAMILLE_REPONSE__								= "REPONSE"
+
+	// ... et catégories propres à la vue (les catégories des clics RCS
+	// sont les SousType existants : __RCS_ACTION_*)
+	__RETOUR_CATEGORIE_REDIRECTION__						= "REDIRECTION"
+	__RETOUR_CATEGORIE_FORMULAIRE__						= "FORMULAIRE"
+	__RETOUR_CATEGORIE_REPONSE__							= "REPONSE"
+
 
 	__DOC_RCS_IMAGE_CARD__									= "RcsImgCard"
 	__DOC_RCS_IMAGE_SLDR__									= "RcsImgSldr"
