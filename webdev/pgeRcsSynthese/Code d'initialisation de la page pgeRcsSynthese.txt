@@ -15,8 +15,8 @@ _bOperationAvecLien	est un booléen
 _bOperationAvecLead	est un booléen
 _bCadenasOuvert		est un booléen
 
-// Pastille active de l'onglet Retours : une famille __RETOUR_FAMILLE_*
-// ou l'action __RCS_ACTION_REDIRECTION__ (Leads par défaut)
+// Famille active de l'onglet Retours : une des cinq __RETOUR_FAMILLE_*
+// (Leads par défaut — option 1 du sélecteur selFiltre)
 _sFiltreRetourFamille	est une chaîne	= __RETOUR_FAMILLE_LEAD__
 
 // Onglet Reprogrammer

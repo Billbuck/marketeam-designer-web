@@ -4,8 +4,9 @@
 -- (__RCS_ACTION_*), complétés de REDIRECTION / FORMULAIRE / REPONSE.
 -- Une ligne par retour : clic sur un bouton RCS, clic sur un lien de landing,
 -- formulaire de landing, réponse RCS, réponse SMS.
--- Familles : LEAD (Réaction, Formulaire), INTENTION (Appel/Email/SMS/WhatsApp),
--- INTERACTION (autres boutons, redirections), REPONSE (textes, masqués en V1).
+-- Familles (décisions du 29/09) : LEAD (Réaction, Formulaire), INTENTION
+-- (Appel/Email/SMS/WhatsApp), INTERACTION (autres boutons RCS), REDIRECTION
+-- (liens de landing), REPONSE (textes, affichés dès la V1 dans Retours).
 -- Les STOP n'y figurent pas (comptés dans NbrStop) ; les clics et réponses
 -- des envois de test (unitaires) sont exclus.
 -- Écarts corrigés par rapport au cahier :
@@ -26,7 +27,7 @@ FROM ope_rcs_clic c
 LEFT JOIN ope_rcs_bouton b ON b.IdRcsBouton = c.IdRcsBouton
 WHERE c.IdBaseLigne IS NOT NULL
 UNION ALL
-SELECT 'LANDING', l.IdCliquezIci, l.IdBaseLigne, 'REDIRECTION', 'INTERACTION', l.Libelle, l.Url, l.DateHeureClic
+SELECT 'LANDING', l.IdCliquezIci, l.IdBaseLigne, 'REDIRECTION', 'REDIRECTION', l.Libelle, l.Url, l.DateHeureClic
 FROM ope_cliquezici_lien l
 UNION ALL
 SELECT 'LANDING', k.IdCliquezIci, k.IdBaseLigne, 'FORMULAIRE', 'LEAD', 'Formulaire', k.CasesCochees, k.DateHeureClic

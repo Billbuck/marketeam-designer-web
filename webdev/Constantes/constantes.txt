@@ -512,6 +512,7 @@ constante
 	__RETOUR_FAMILLE_LEAD__									= "LEAD"
 	__RETOUR_FAMILLE_INTENTION__							= "INTENTION"
 	__RETOUR_FAMILLE_INTERACTION__						= "INTERACTION"
+	__RETOUR_FAMILLE_REDIRECTION__						= "REDIRECTION"
 	__RETOUR_FAMILLE_REPONSE__								= "REPONSE"
 
 	// ... et catégories propres à la vue (les catégories des clics RCS

@@ -207,6 +207,10 @@ si sdReqSynthèse.LitPremier() alors
 	// Compteurs de retours RCS depuis vue_rcs_retour : une requête groupée
 	// par famille. Pour le RCS, leads et interactions écrasent les colonnes
 	// de dos_operation (qui ne couvrent que la landing du SMS interactif).
+	// NbrInteraction* ne compte que la famille INTERACTION (décision du
+	// 29/09) : les redirections forment la famille REDIRECTION, sans
+	// compteur dans structSynthèse — visibles dans l'onglet Retours
+	// (pastille Redirections) et le tableau des redirections de Performance.
 	si sTypeOperation = __OPERATION_RCS__ alors
 		sTexteRequete = [
 			SELECT

@@ -1,12 +1,13 @@
 // Résumé : Onglet Retours (remplace InitOngletLead du SMS).
 // Un seul tableau pour tous les retours de l'opération (vue_rcs_retour) :
-// leads, intentions de contact, interactions, redirections — les réponses
-// texte sont exclues en V1 (seul leur nombre apparaît ailleurs).
-// Pastilles de comptage cliquables en en-tête (btnFiltreLead / Intention /
-// Interaction / Redirection) : chaque clic pose _sFiltreRetourFamille et
-// rappelle cette procédure (filtre côté serveur). Leads par défaut.
-// Convention : la pastille Interactions EXCLUT la catégorie REDIRECTION,
-// comptée à part (décision du 28/09).
+// leads, intentions de contact, interactions, redirections et réponses.
+// Décisions du 29/09 : les réponses sont affichées dès la V1 (le texte de
+// la réponse est dans la colonne Détail) ; les redirections sont une
+// famille à part (REDIRECTION), plus une action de la famille INTERACTION.
+// Sélecteur selFiltre en en-tête, 5 options dans l'ordre des familles :
+// 1 Leads, 2 Intentions, 3 Interactions, 4 Redirections, 5 Réponses —
+// Leads par défaut. OptionModifiee pose _sFiltreRetourFamille et rappelle
+// cette procédure : filtre côté serveur, une seule condition sur la famille.
 // La zone réutilise znrLead du SMS avec trois attributs ajoutés :
 // attRetourAction, attRetourDetail, attRetourCanal.
 procédure InitOngletRetours()
@@ -19,20 +20,20 @@ nNbrLead				est un entier
 nNbrIntention		est un entier
 nNbrInteraction	est un entier
 nNbrRedirection	est un entier
+nNbrReponse			est un entier
 
 
 // ------------------------------------------------------------------
-// Pastilles : comptage par famille (REDIRECTION à part)
+// Pastilles : comptage par famille (réponses comprises)
 // ------------------------------------------------------------------
 sTexteRequete =
 [
 	SELECT
 	vue_rcs_retour.Famille,
-	vue_rcs_retour.Action,
 	COUNT(*) Total
 	FROM vue_rcs_retour
 	WHERE vue_rcs_retour.IdOperation = [%_pIdOperation%]
-	GROUP BY vue_rcs_retour.Famille, vue_rcs_retour.Action
+	GROUP BY vue_rcs_retour.Famille
 ]
 
 si pas sdReqRetour.ExécuteRequêteSQL(clt_client..Connexion, hRequêteSansCorrection, sTexteRequete) alors
@@ -42,42 +43,27 @@ fin
 
 pour tout sdReqRetour
 	selon sdReqRetour.Famille
-		cas __RETOUR_FAMILLE_LEAD__
-			nNbrLead += sdReqRetour.Total
-		cas __RETOUR_FAMILLE_INTENTION__
-			nNbrIntention += sdReqRetour.Total
-		cas __RETOUR_FAMILLE_INTERACTION__
-			si sdReqRetour.Action = __RCS_ACTION_REDIRECTION__ alors
-				nNbrRedirection += sdReqRetour.Total
-			sinon
-				nNbrInteraction += sdReqRetour.Total
-			fin
+		cas __RETOUR_FAMILLE_LEAD__			: nNbrLead			= sdReqRetour.Total
+		cas __RETOUR_FAMILLE_INTENTION__		: nNbrIntention	= sdReqRetour.Total
+		cas __RETOUR_FAMILLE_INTERACTION__	: nNbrInteraction	= sdReqRetour.Total
+		cas __RETOUR_FAMILLE_REDIRECTION__	: nNbrRedirection	= sdReqRetour.Total
+		cas __RETOUR_FAMILLE_REPONSE__		: nNbrReponse		= sdReqRetour.Total
 	fin
 fin
 
-selFiltre[1].Libellé	= "Interactions (" + NumériqueVersChaîne(nNbrInteraction, "dS") + ")"
-selFiltre[2].Libellé = "Intentions (" + NumériqueVersChaîne(nNbrIntention, "dS") + ")"
-selFiltre[3].Libellé	= "Redirections (" + NumériqueVersChaîne(nNbrRedirection, "dS") + ")"
-selFiltre[4].Libellé	= "Leads (" + NumériqueVersChaîne(nNbrLead, "dS") + ")"
+selFiltre[1].Libellé	= "Leads (" + NumériqueVersChaîne(nNbrLead, "dS") + ")"
+selFiltre[2].Libellé	= "Intentions (" + NumériqueVersChaîne(nNbrIntention, "dS") + ")"
+selFiltre[3].Libellé	= "Interactions (" + NumériqueVersChaîne(nNbrInteraction, "dS") + ")"
+selFiltre[4].Libellé	= "Redirections (" + NumériqueVersChaîne(nNbrRedirection, "dS") + ")"
+selFiltre[5].Libellé	= "Réponses (" + NumériqueVersChaîne(nNbrReponse, "dS") + ")"
 
 // ------------------------------------------------------------------
-// Filtre de la pastille active
+// Filtre de la famille active (posée par OptionModifiee)
 // ------------------------------------------------------------------
-selon _sFiltreRetourFamille
-	cas __RETOUR_FAMILLE_LEAD__
-		sCondition = "vue_rcs_retour.Famille = '" + __RETOUR_FAMILLE_LEAD__ + "'"
-	cas __RETOUR_FAMILLE_INTENTION__
-		sCondition = "vue_rcs_retour.Famille = '" + __RETOUR_FAMILLE_INTENTION__ + "'"
-	cas __RETOUR_FAMILLE_INTERACTION__
-		sCondition = "vue_rcs_retour.Famille = '" + __RETOUR_FAMILLE_INTERACTION__ + "' AND vue_rcs_retour.Action <> '" + __RCS_ACTION_REDIRECTION__ + "'"
-	cas __RCS_ACTION_REDIRECTION__
-		sCondition = "vue_rcs_retour.Action = '" + __RCS_ACTION_REDIRECTION__ + "'"
-	autre cas
-		sCondition = "1 = 1"
-fin
+sCondition = "vue_rcs_retour.Famille = '" + _sFiltreRetourFamille + "'"
 
 // ------------------------------------------------------------------
-// Tableau des retours (réponses exclues en V1)
+// Tableau des retours de la famille filtrée
 // ------------------------------------------------------------------
 sTexteRequete =
 [
@@ -97,7 +83,6 @@ sTexteRequete =
 	JOIN dos_base_ligne l ON l.IdBaseLigne = vue_rcs_retour.IdBaseLigne
 	WHERE
 	vue_rcs_retour.IdOperation = [%_pIdOperation%]
-	AND vue_rcs_retour.Famille <> '[%__RETOUR_FAMILLE_REPONSE__%]'
 	AND [%sCondition%]
 	ORDER BY 
 	vue_rcs_retour.DateHeure DESC
