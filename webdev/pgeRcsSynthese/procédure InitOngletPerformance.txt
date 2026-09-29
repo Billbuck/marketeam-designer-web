@@ -1,17 +1,18 @@
 // Résumé : Onglet Performance d'une opération RCS.
 // Bloc Synthèse : Envoyés, Délivrés (dont SMS de repli), Lus, Interactions,
-// Intentions de contact, Réponses (nombre seul), Leads — taux du cahier :
-// lus / délivrés, interactions / lus, intentions / lus, leads / lus.
+// Intentions de contact, Réponses (nombre seul), Leads — taux (29/09) :
+// lus / délivrés, puis interactions, intentions et leads SUR LES DÉLIVRÉS.
 // Champs RENOMMÉS depuis le SMS : Visite → Lu, Lien → Interaction.
 // Champs NOUVEAUX : Intention (total / taux / nouveau), Réponse (total /
-// nouveau), libPerformanceReçuRepli, tableau tblInteractionBouton.
-// Bloc RCS interactif (redirections + offres de la landing) : repris du
-// SMS, visible seulement si l'opération a une landing (EstCliquezIci).
+// nouveau), libPerformanceReçuRepli, tableaux tblInteractionBouton
+// (famille INTERACTION) et tblIntention (famille INTENTION) — colonnes
+// Catégorie / Bouton / Destinataires uniques pour les deux.
+// Tableau des leads (29/09) : Réactions des boutons RCS pour toutes les
+// opérations, puis offres de la landing pour les opérations interactives.
+// Bloc redirections : landing uniquement (EstCliquezIci).
 procédure InitOngletPerformance()
 
-nSerie					est un entier
 nCategorie				est un entier
-sOffre					est une chaîne
 sNomCookie				est une chaîne
 sCookie					est une chaîne
 vJsonCookie				est un Variant
@@ -22,12 +23,12 @@ sListeField				est une chaîne
 sOrderBy					est une chaîne
 
 btnTéléchargerPerformance.Visible		= _stSynthèse.TypeCliquezici dans (__ICI_URL_TRACKING__, __ICI_WEB__) _et_ (_stSynthèse.NbrAudienceUnique + _stSynthèse.NbrInteractionUnique + _stSynthèse.NbrLeadUnique) > 0
-btnBddPerformance.Visible				= _stSynthèse.TypeCliquezici dans (__ICI_URL_TRACKING__, __ICI_WEB__)
+btnBddPerformance.Visible					= _stSynthèse.TypeCliquezici dans (__ICI_URL_TRACKING__, __ICI_WEB__)
 
 //-------------------------------------------------------------------------------------------------------------------------------------------
 
-sNomCookie									= "Performance|" + Partage.__vcUser.IDContact + "|" + _pIdOperation
-sCookie										= CookieLit(sNomCookie)
+sNomCookie										= "Performance|" + Partage.__vcUser.IDContact + "|" + _pIdOperation
+sCookie											= CookieLit(sNomCookie)
 si sCookie <> "" alors
 	vJsonCookie		= JSONVersVariant(sCookie)
 	bCookieExiste	= Vrai
@@ -107,25 +108,32 @@ libPerformanceTotalLead					= NumériqueVersChaîne(_stSynthèse.NbrLeadUnique, 
 libPerformanceTauxEnvoye				= (_stSynthèse.NbrDestinataire > 0)	? Arrondi(_stSynthèse.NbrDiffusion					/ _stSynthèse.NbrDestinataire * 100,0)	+ " %"	sinon "0 %"
 libPerformanceTauxReçu					= (_stSynthèse.NbrDiffusion > 0)	? Arrondi(_stSynthèse.NbrDelivre					/ _stSynthèse.NbrDiffusion * 100,0) 	+ " %"	sinon "0 %"
 libPerformanceTauxLu						= (_stSynthèse.NbrDelivre > 0)		? Arrondi(_stSynthèse.NbrLu							/ _stSynthèse.NbrDelivre * 100,0) 		+ " %"	sinon "0 %"
-libPerformanceTauxInteraction			= (_stSynthèse.NbrLu > 0)			? Arrondi(_stSynthèse.NbrInteractionUnique			/ _stSynthèse.NbrLu * 100,0) 			+ " %"	sinon "0 %"
-libPerformanceTauxIntention			= (_stSynthèse.NbrLu > 0)			? Arrondi(_stSynthèse.NbrIntentionContactUnique		/ _stSynthèse.NbrLu * 100,0) 			+ " %"	sinon "0 %"
-libPerformanceTauxLead					= (_stSynthèse.NbrLu > 0)			? Arrondi(_stSynthèse.NbrLeadUnique					/ _stSynthèse.NbrLu * 100,0)	 		+ " %"	sinon "0 %"
+// Taux des cartes Interactions / Intentions / Leads calculés sur les DÉLIVRÉS
+// (correction du 29/09) : le taux de lecture est un plancher (accusés de lecture
+// bloqués par certains réglages), les délivrés sont la base fiable.
+libPerformanceTauxInteraction			= (_stSynthèse.NbrDelivre > 0)		? Arrondi(_stSynthèse.NbrInteractionUnique			/ _stSynthèse.NbrDelivre * 100,0) 		+ " %"	sinon "0 %"
+libPerformanceTauxIntention			= (_stSynthèse.NbrDelivre > 0)		? Arrondi(_stSynthèse.NbrIntentionContactUnique		/ _stSynthèse.NbrDelivre * 100,0) 		+ " %"	sinon "0 %"
+libPerformanceTauxLead					= (_stSynthèse.NbrDelivre > 0)		? Arrondi(_stSynthèse.NbrLeadUnique					/ _stSynthèse.NbrDelivre * 100,0)	 	+ " %"	sinon "0 %"
 
 
-// **************************** TABLEAU INTERACTIONS PAR BOUTON *****************************
+// **************************** TABLEAUX INTERACTIONS ET INTENTIONS PAR BOUTON *****************************
 
 // Une seule mesure par bouton : les destinataires uniques (correction du 29/09 —
-// la colonne Clics a été retirée du tableau)
+// la colonne Clics a été retirée). Une seule requête pour les deux familles :
+// INTERACTION alimente tblInteractionBouton, INTENTION alimente tblIntention
+// (placée entre Interactions et Redirections). Colonnes des deux tables :
+// Catégorie, Bouton, Destinataires uniques.
 sTexteRequete								=
 [
 	SELECT
+	vue_rcs_retour.Famille,
 	vue_rcs_retour.Action,
 	vue_rcs_retour.Libelle,
 	COUNT(DISTINCT vue_rcs_retour.IdBaseLigne) NbrUnique
 	FROM vue_rcs_retour
 	WHERE vue_rcs_retour.IdOperation = [%_pIdOperation%]
 	AND vue_rcs_retour.Famille IN ('[%__RETOUR_FAMILLE_INTERACTION__%]','[%__RETOUR_FAMILLE_INTENTION__%]')
-	GROUP BY vue_rcs_retour.Action, vue_rcs_retour.Libelle
+	GROUP BY vue_rcs_retour.Famille, vue_rcs_retour.Action, vue_rcs_retour.Libelle
 	ORDER BY NbrUnique DESC
 ]
 
@@ -135,24 +143,61 @@ si pas HExécuteRequêteSQL(sdReqPerformance, ltr_support..Connexion, hRequêteS
 fin
 
 tblInteractionBouton.SupprimeTout()
+tblIntention.SupprimeTout()
 
 pour tout sdReqPerformance
-	tblInteractionBouton.AjouteLigne(sdReqPerformance.Libelle, Partage.LibelleRetourRcsAction(sdReqPerformance.Action), sdReqPerformance.NbrUnique)
+	si sdReqPerformance.Famille = __RETOUR_FAMILLE_INTENTION__ alors
+		tblIntention.AjouteLigne(Partage.LibelleRetourRcsAction(sdReqPerformance.Action), sdReqPerformance.Libelle, sdReqPerformance.NbrUnique)
+	sinon
+		tblInteractionBouton.AjouteLigne(Partage.LibelleRetourRcsAction(sdReqPerformance.Action), sdReqPerformance.Libelle, sdReqPerformance.NbrUnique)
+	fin
 fin
 
-tblInteractionBouton.Visible = (tblInteractionBouton.Occurrence > 0)
+tblInteractionBouton.Visible	= (tblInteractionBouton.Occurrence > 0)
+tblIntention.Visible				= (tblIntention.Occurrence > 0)
+
+
+// **************************** TABLEAU DES LEADS — RÉACTIONS *****************************
+// Tous les leads (correction du 29/09) : d'abord les Réactions des boutons RCS
+// (famille LEAD, action REACTION, destinataires uniques par libellé) — pour
+// toutes les opérations, avant le « retour » du bloc landing. Les offres de la
+// landing s'ajoutent à la suite plus bas.
+
+tblLead.SupprimeTout()
+nCategorie	= 0
+
+sTexteRequete								=
+[
+	SELECT
+	vue_rcs_retour.Libelle,
+	COUNT(DISTINCT vue_rcs_retour.IdBaseLigne) Total
+	FROM vue_rcs_retour
+	WHERE vue_rcs_retour.IdOperation = [%_pIdOperation%]
+	AND vue_rcs_retour.Famille = '[%__RETOUR_FAMILLE_LEAD__%]'
+	AND vue_rcs_retour.Action = '[%__RCS_ACTION_REACTION__%]'
+	GROUP BY vue_rcs_retour.Libelle
+	ORDER BY Total DESC
+]
+
+si pas HExécuteRequêteSQL(sdReqPerformance, ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	retour
+fin
+
+pour tout sdReqPerformance
+	nCategorie++
+	tblLead.AjouteLigne(sdReqPerformance.Libelle, sdReqPerformance.Total)
+fin
 
 
 // **************************** BLOC RCS INTERACTIF (landing) *****************************
 
 si _stSynthèse.EstCliquezIci = Faux alors
-	dispStatistique[4].Visible	= Faux
-	dispStatistique[5].Visible	= Faux
+	// dispStatistique[4].Visible	= Faux
+	// dispStatistique[5].Visible	= Faux
 	retour
 fin
 
-libPerformanceGrapheTauxRedirection	= (_stSynthèse.NbrAudienceUnique > 0)		? Arrondi(_stSynthèse.NbrInteractionUnique	/ _stSynthèse.NbrAudienceUnique * 100,0) 		+ " %"	sinon "0 %"
-libPerformanceGrapheTauxLead			= (_stSynthèse.NbrAudienceUnique > 0)		? Arrondi(_stSynthèse.NbrLeadUnique			/ _stSynthèse.NbrAudienceUnique * 100,0)	 	+ " %"	sinon "0 %"
 
 
 sTexteRequete								=
@@ -166,28 +211,14 @@ si pas HExécuteRequêteSQL(sdReqPerformance, ltr_support..Connexion, hRequêteS
 fin
 
 tblRedirection.SupprimeTout()
-grfRedirection.SupprimeTout()
-nSerie		= 1
 nCategorie	= 0
 pour tout sdReqPerformance
 	nCategorie++
-	grfRedirection.AjouteDonnée(nSerie,sdReqPerformance.Total)
-	grfRedirection.EtiquetteCatégorie(nCategorie,sdReqPerformance.Libelle)
-	grfRedirection.CouleurCatégorie(nCategorie,Partage.CouleurTypeOperation(__OPERATION_RCS__,CouleurCategorie(nCategorie)))
-	grfRedirection.Bulle(nSerie, nCategorie, NumériqueVersChaîne(sdReqPerformance.Total, "dS") + " " + sdReqPerformance.Libelle)
 	tblRedirection.AjouteLigne()
 	tblRedirection[nCategorie].colTypeLien	= Partage.LibelleCliquezIciTracking(sdReqPerformance.TypeLien)
 	tblRedirection[nCategorie].colLien		= sdReqPerformance.Libelle
 	tblRedirection[nCategorie].colUrl		= Remplace(sdReqPerformance.Url,"#","")
 	tblRedirection[nCategorie].colTotal		= sdReqPerformance.Total
-fin
-
-si nCategorie > 0 alors
-	grfRedirection.Libellé(grAffichePourcentage,Vrai)
-	grfRedirection.Dessine()
-	dispStatistique[4].Visible = Vrai
-sinon
-	dispStatistique[4].Visible = Faux
 fin
 
 
@@ -262,28 +293,11 @@ si pas HExécuteRequêteSQL(sdReqPerformance, ltr_support..Connexion, hRequêteS
 	retour
 fin
 
-tblLead.SupprimeTout()
-grfLead.SupprimeTout()
-nSerie		= 1
-nCategorie	= 0
-
+// Les offres s'ajoutent à la suite des Réactions (pas de remise à zéro)
 pour tout sdReqPerformance
 	nCategorie++
-	grfLead.AjouteDonnée(nSerie,sdReqPerformance.Total)
-	grfLead.EtiquetteCatégorie(nCategorie,Majuscule(SansEspace(Remplace(sdReqPerformance.Libelle,":",""))) + [" : "] + sdReqPerformance.Valeur)
-	grfLead.CouleurCatégorie(nCategorie,Partage.CouleurTypeOperation(__OPERATION_RCS__,CouleurCategorie(nCategorie)))
-	grfLead.Bulle(nSerie, nCategorie, NumériqueVersChaîne(sdReqPerformance.Total, "dS") + " " + sOffre)
 	tblLead.AjouteLigne(Majuscule(SansEspace(Remplace(sdReqPerformance.Libelle,":",""))) + [" : "] + sdReqPerformance.Valeur, sdReqPerformance.Total)
 fin
-
-si nCategorie > 0 alors
-	grfLead.Libellé(grAffichePourcentage,Vrai)
-	grfLead.Dessine()
-	dispStatistique[5].Visible = Vrai
-sinon
-	dispStatistique[5].Visible = Faux
-fin
-
 
 fin:
 HAnnuleDéclaration(sdReqPerformance)

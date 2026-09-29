@@ -7,11 +7,11 @@ stSynthèse		est une structSynthèse
 sTypeOperation	est une chaîne
 bEstCliquezIci	est un booléen
 sSelect			est une chaîne
-sFrom			est une chaîne
+sFrom				est une chaîne
 
 si dos_operation.LitRecherchePremier(IdOperation,pIdOperation) alors
-	sTypeOperation = dos_operation.TypeOperation
-	bEstCliquezIci = dos_operation.EstCliquezIci
+	sTypeOperation	= dos_operation.TypeOperation
+	bEstCliquezIci	= dos_operation.EstCliquezIci
 fin
 
 
@@ -99,13 +99,13 @@ selon sTypeOperation
 fin
 
 si bEstCliquezIci = Vrai alors
-	sSelect = [
+	sSelect += [RC] + [
 		,ope_cliquezici.Type TypeCliquezIci
 		,ope_cliquezici.EmailLeadEnCopie
 		,ope_cliquezici.EmailLeadType
 	]
 
-	sFrom = [
+	sFrom += [RC] + [
 		JOIN ope_cliquezici ON ope_cliquezici.IdCliquezIci = dos_operation.IdOperation
 	]
 
@@ -201,7 +201,7 @@ fin
 
 si sdReqSynthèse.LitPremier() alors
 	FichierVersMémoire(stSynthèse,sdReqSynthèse)
-	stSynthèse.EstPlafondEncoursDepassé = Partage.PlafondEncoursDepassé(sdReqSynthèse.IdClientFacturation, sdReqSynthèse.ResteAPayer, sdReqSynthèse.IdOperation)
+	stSynthèse.EstPlafondEncoursDepassé	= Partage.PlafondEncoursDepassé(sdReqSynthèse.IdClientFacturation, sdReqSynthèse.ResteAPayer, sdReqSynthèse.IdOperation)
 	stSynthèse.EstBaseDeDonnéesChargée	= dos_base.LitRecherchePremier(IdOperation,pIdOperation)
 
 	// Compteurs de retours RCS depuis vue_rcs_retour : une requête groupée

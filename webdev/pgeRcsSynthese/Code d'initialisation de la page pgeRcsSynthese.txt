@@ -10,18 +10,19 @@ procédure MaPage(_pIdOperation, _pOnglet est une chaîne <synchronisé navigate
 
 _sUnivers = __OPERATION_RCS__
 
-_stSynthèse			est une structSynthèse
-_bOperationAvecLien	est un booléen
-_bOperationAvecLead	est un booléen
-_bCadenasOuvert		est un booléen
+_stSynthèse					est une structSynthèse
+_bOperationAvecLien		est un booléen
+_bOperationAvecLead		est un booléen
+_bCadenasOuvert			est un booléen
 
-// Famille active de l'onglet Retours : une des cinq __RETOUR_FAMILLE_*
-// (Leads par défaut — option 1 du sélecteur selFiltre)
+// Famille active de l'onglet Retours : une des cinq __RETOUR_FAMILLE_*.
+// Leads par défaut : selFiltre = 5 (option Leads du sélecteur)
 _sFiltreRetourFamille	est une chaîne	= __RETOUR_FAMILLE_LEAD__
-
+selFiltre = 5
 // Onglet Reprogrammer
-_stCalendrier	est une structCalendrier	<synchronisé navigateur>
-_nTimerImmediat	est un entier				<synchronisé navigateur>
+_stCalendrier				est une structCalendrier	<synchronisé navigateur>
+_nTimerImmediat			est un entier					<synchronisé navigateur>
+
 
 
 // Fin d'initialisation de pgeRcsSynthese

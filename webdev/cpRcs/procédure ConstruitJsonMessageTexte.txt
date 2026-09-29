@@ -1,7 +1,8 @@
 // Résumé : Construit le JSON Infobip d'UN message RCS texte simple (confirmation STOP, notification, test).
 // Même enveloppe que ConstruitJsonMessage (sender, destinations, options, webhooks),
-// mais content = { "type": "TEXT", "text": ... }. Repli SMS optionnel (pTexteRepli), sans expéditeur :
-// Infobip applique l'expéditeur par défaut du compte.
+// mais content = { "type": "TEXT", "text": ... }. Repli SMS optionnel (pTexteRepli) ;
+// expéditeur obligatoire (Infobip n'en attribue pas) : le short code marketing
+// cpProjet.__sRepliSmsShortCode (correction du 29/09, test opération 3130).
 // Syntaxe :
 // sJson = ConstruitJsonMessageTexte(sSenderName, sPortable, sMessageId, sTexte [, sTexteRepli])
 procédure ConstruitJsonMessageTexte(pSenderName, pPortable, pMessageId, pTexte, pTexteRepli = "")
@@ -20,7 +21,9 @@ sJson += ",""content"":{""type"":""TEXT"",""text"":""" + EncodeAsciiJson(pTexte)
 
 sJson += ",""options"":{""validityPeriod"":{""amount"":" + __nValiditeHeures + ",""timeUnit"":""HOURS""}"
 si SansEspace(pTexteRepli) <> "" alors
-	sJson += ",""smsFailover"":{""text"":""" + EncodeAsciiJson(pTexteRepli) + """"
+	// Expéditeur obligatoire (Infobip n'en attribue pas) : le short code marketing
+	sJson += ",""smsFailover"":{""sender"":""" + EncodeAsciiJson(cpProjet.__sRepliSmsShortCode) + """"
+	sJson += ",""text"":""" + EncodeAsciiJson(pTexteRepli) + """"
 	sJson += ",""validityPeriod"":{""amount"":" + __nValiditeHeures + ",""timeUnit"":""HOURS""}}"
 fin
 sJson += "}"

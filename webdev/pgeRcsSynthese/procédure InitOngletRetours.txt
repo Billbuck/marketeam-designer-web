@@ -7,10 +7,11 @@
 // Affichage : UNE ligne par destinataire, action et libellé, datée du
 // DERNIER retour (pas de colonne Nb) ; les réponses restent une ligne par
 // texte. Pastilles en destinataires uniques (COUNT DISTINCT IdBaseLigne).
-// Sélecteur selFiltre en en-tête, 5 options dans l'ordre des familles :
-// 1 Leads, 2 Intentions, 3 Interactions, 4 Redirections, 5 Réponses —
-// Leads par défaut. OptionModifiee pose _sFiltreRetourFamille et rappelle
-// cette procédure : filtre côté serveur, une seule condition sur la famille.
+// Sélecteur selFiltre en en-tête, 5 options dans l'ordre de l'éditeur :
+// 1 Intentions, 2 Interactions, 3 Redirections, 4 Réponses, 5 Leads —
+// Leads par défaut (selFiltre = 5 posé à l'initialisation de la page).
+// OptionModifiee pose _sFiltreRetourFamille et rappelle cette procédure :
+// filtre côté serveur, une seule condition sur la famille.
 // La zone réutilise znrLead du SMS avec trois attributs ajoutés :
 // attRetourAction, attRetourDetail, attRetourCanal.
 procédure InitOngletRetours()
@@ -53,11 +54,13 @@ pour tout sdReqRetour
 	fin
 fin
 
-selFiltre[1].Libellé	= "Leads (" + NumériqueVersChaîne(nNbrLead, "dS") + ")"
-selFiltre[2].Libellé	= "Intentions (" + NumériqueVersChaîne(nNbrIntention, "dS") + ")"
-selFiltre[3].Libellé	= "Interactions (" + NumériqueVersChaîne(nNbrInteraction, "dS") + ")"
-selFiltre[4].Libellé	= "Redirections (" + NumériqueVersChaîne(nNbrRedirection, "dS") + ")"
-selFiltre[5].Libellé	= "Réponses (" + NumériqueVersChaîne(nNbrReponse, "dS") + ")"
+// Ordre aligné sur OptionModifiee : 1 Intentions, 2 Interactions,
+// 3 Redirections, 4 Réponses, 5 Leads (défaut)
+selFiltre[1].Libellé	= "Intentions (" + NumériqueVersChaîne(nNbrIntention, "dS") + ")"
+selFiltre[2].Libellé	= "Interactions (" + NumériqueVersChaîne(nNbrInteraction, "dS") + ")"
+selFiltre[3].Libellé	= "Redirections (" + NumériqueVersChaîne(nNbrRedirection, "dS") + ")"
+selFiltre[4].Libellé	= "Réponses (" + NumériqueVersChaîne(nNbrReponse, "dS") + ")"
+selFiltre[5].Libellé	= "Leads (" + NumériqueVersChaîne(nNbrLead, "dS") + ")"
 
 // ------------------------------------------------------------------
 // Tableau des retours de la famille active (posée par OptionModifiee).

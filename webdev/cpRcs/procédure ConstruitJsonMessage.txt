@@ -17,7 +17,7 @@ nInd				est un entier
 
 sPortable		= Remplace(Remplace(SansEspace(pPortable), "+", ""), " ", "")
 
-sJson			= "{"
+sJson				= "{"
 sJson += """sender"":""" + EncodeAsciiJson(pSenderName) + """"
 sJson += ",""destinations"":[{""to"":""" + EncodeAsciiJson(sPortable) + """,""messageId"":""" + EncodeAsciiJson(pMessageId) + """}]"
 
@@ -61,14 +61,15 @@ si stOperationRcs.CampaignReferenceId <> "" alors
 fin
 
 si stOperationRcs.EstRepliSms alors
-	sRepli	= FusionneTexte(stOperationRcs.RepliSmsMessage, taaValeurChamp)
-	sFrom		= SansEspace(stOperationRcs.RepliSmsFrom)
+	sFrom = SansEspace(stOperationRcs.RepliSmsFrom)
+	// Expéditeur obligatoire (Infobip n'en attribue pas) : le From du client, sinon le short code marketing
+	si sFrom = "" alors sFrom = cpProjet.__sRepliSmsShortCode
+	// 36XXX : le short code de l'expéditeur s'il en est un, sinon le short code marketing par défaut
+	sRepli		= FusionneTexte(stOperationRcs.RepliSmsMessage, taaValeurChamp)
+	sRepli		= Remplace(sRepli, __STOP_SMS__, (Gauche(sFrom, 2) = "36" _et_ Taille(sFrom) = 5) ? sFrom sinon cpProjet.__sRepliSmsShortCode)
 	si SansEspace(sRepli) <> "" alors
 		sOptions += ",""smsFailover"":{"
-		// Sans From : pas de "sender", Infobip applique son expéditeur par défaut (même logique que le SMS)
-		si sFrom <> "" alors
-			sOptions += """sender"":""" + EncodeAsciiJson(sFrom) + ""","
-		fin
+		sOptions += """sender"":""" + EncodeAsciiJson(sFrom) + ""","
 		sOptions += """text"":""" + EncodeAsciiJson(sRepli) + """"
 		sOptions += ",""validityPeriod"":{""amount"":" + nValidite + ",""timeUnit"":""" + EncodeAsciiJson(sUnite) + """}"
 		sOptions += "}"

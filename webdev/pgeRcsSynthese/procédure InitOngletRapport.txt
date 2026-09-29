@@ -130,6 +130,9 @@ fin
 
 grfRapport.HistoEspacement(20)
 grfRapport.Libellé(grAfficheValeur,Vrai)
+// La série héritée de la copie de pgeSmsSynthese s'appelait « Sms » :
+// les bulles affichaient « n Sms » (correction du 29/09)
+grfRapport.LibelléSérie(nSerie, "RCS")
 grfRapport.Dessine()
 
 
@@ -172,6 +175,8 @@ fin
 
 si nCategorie > 0 alors
 	grfCanal.Visible = Vrai
+	grfCanal.Titre = "Canal utilisé"
+	grfCanal.LibelléSérie(nSerie, "RCS")
 	grfCanal.Libellé(grAffichePourcentage,Vrai)
 	grfCanal.Dessine()
 sinon
@@ -254,8 +259,16 @@ pour tout sdReqRapportRcs
 	fin
 fin
 
-grfOperateur.Libellé(grAfficheValeur,Vrai)
-grfOperateur.Dessine()
+// Le rapport Infobip du RCS ne porte pas toujours le réseau : sans MccMnc,
+// le graphe opérateurs est masqué (correction du 29/09)
+si nCategorie > 0 alors
+	grfOperateur.Visible = Vrai
+	grfOperateur.LibelléSérie(nSerie, "RCS")
+	grfOperateur.Libellé(grAfficheValeur,Vrai)
+	grfOperateur.Dessine()
+sinon
+	grfOperateur.Visible = Faux
+fin
 
 
 // **************************** GRAPHE DIFFUSION *****************************
@@ -360,6 +373,8 @@ grfDiffusion.Paramètre(grGraduationsOptimiséesX, Vrai)
 grfDiffusion.Paramètre(grGraduationsOptimiséesY,Vrai)
 grfDiffusion.AxeVisible(grAbscisse,grVisible)
 grfDiffusion.AxeVisible(grOrdonnée,grVisible)
+// La bulle par défaut affichait le nom de série hérité du SMS (« n Sms »)
+grfDiffusion.LibelléSérie(nSerie, "RCS")
 grfDiffusion.CouleurSérie(nSerie,HTMLVersRVB(__COULEUR_SMS_M__))
 grfDiffusion.EpaisseurTrait(nSerie,2)
 grfDiffusion.NiveauTemporelMax(1,grntMinute)
