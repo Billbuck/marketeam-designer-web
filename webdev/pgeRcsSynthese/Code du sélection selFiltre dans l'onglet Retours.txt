@@ -1,0 +1,12 @@
+procédure OptionModifiee(IndiceOptionModifiee)
+
+selon IndiceOptionModifiee
+	cas 1	: _sFiltreRetourFamille = __RETOUR_FAMILLE_INTENTION__
+	cas 2	: _sFiltreRetourFamille = __RETOUR_FAMILLE_INTERACTION__
+	cas 3 : _sFiltreRetourFamille = __RCS_ACTION_REDIRECTION__
+	cas 4 : _sFiltreRetourFamille = __RETOUR_FAMILLE_REPONSE__
+	cas 5 : _sFiltreRetourFamille = __RETOUR_FAMILLE_LEAD__
+	autre cas
+fin
+
+InitOngletRetours()
