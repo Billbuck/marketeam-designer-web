@@ -3,7 +3,7 @@
 // Page créée par « Enregistrer sous » de pgeSmsSynthese (mêmes champs,
 // mêmes onglets — le volet leads est renommé retours). Différences :
 // _sUnivers RCS, jauges lecture / repli, onglet Retours multi-familles
-// (vue_ope_retour), graphe canal et tableau des erreurs dans Rapport,
+// (vue_rcs_retour), graphe canal et tableau des erreurs dans Rapport,
 // bloc Performance étendu (lus, intentions, réponses).
 
 procédure MaPage(_pIdOperation, _pOnglet est une chaîne <synchronisé navigateur> = onglet.synthese.Nom)
@@ -16,7 +16,7 @@ _bOperationAvecLead	est un booléen
 _bCadenasOuvert		est un booléen
 
 // Pastille active de l'onglet Retours : une famille __RETOUR_FAMILLE_*
-// ou la catégorie __RETOUR_CATEGORIE_REDIRECTION__ (Leads par défaut)
+// ou l'action __RCS_ACTION_REDIRECTION__ (Leads par défaut)
 _sFiltreRetourFamille	est une chaîne	= __RETOUR_FAMILLE_LEAD__
 
 // Onglet Reprogrammer

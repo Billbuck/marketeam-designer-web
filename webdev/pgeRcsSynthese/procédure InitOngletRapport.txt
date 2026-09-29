@@ -10,25 +10,25 @@
 //	- couleurs __OPERATION_RCS__.
 procédure InitOngletRapport()
 
-nSerie						est un entier
-nCategorie					est un entier
-sTexteRequeteRapport		est une chaîne
+nSerie							est un entier
+nCategorie						est un entier
+sTexteRequeteRapport			est une chaîne
 sTexteRequeteOperateur		est une chaîne
 sTexteRequeteDiffusion		est une chaîne
 sdReqRapportRcs				est une Source de Données
-sNomCookie					est une chaîne
-sCookie						est une chaîne
-vJsonCookie					est un Variant
-bCookieExiste				est un booléen
-dhMin						est une DateHeure
-dhMax						est une DateHeure
-dhDateHeure					est une DateHeure
-dhSuivante					est une DateHeure
-taaDiffusion				est un tableau associatif d'entiers
-Diff						est une chaîne
-DuréeDiffusion				est une Durée
-nCadence					est un entier
-sFormatEtiquette			est une chaîne
+sNomCookie						est une chaîne
+sCookie							est une chaîne
+vJsonCookie						est un Variant
+bCookieExiste					est un booléen
+dhMin								est une DateHeure
+dhMax								est une DateHeure
+dhDateHeure						est une DateHeure
+dhSuivante						est une DateHeure
+taaDiffusion					est un tableau associatif d'entiers
+Diff								est une chaîne
+DuréeDiffusion					est une Durée
+nCadence							est un entier
+sFormatEtiquette				est une chaîne
 
 
 // **************************** COOKIE *****************************
@@ -41,9 +41,9 @@ si sCookie <> "" alors
 sinon
 	// Le cookie n'existait pas
 	vJsonCookie.Envoyé		= 0
-	vJsonCookie.Reçu		= 0
+	vJsonCookie.Reçu			= 0
 	vJsonCookie.Erreur		= 0
-	vJsonCookie.Stop		= 0
+	vJsonCookie.Stop			= 0
 fin
 
 soit nNouveauEnvoyé					= Max(0,_stSynthèse.NbrDiffusion 	- Val(vJsonCookie.Envoyé))
@@ -52,24 +52,24 @@ soit nNouveauErreur					= Max(0,_stSynthèse.NbrErreur		- Val(vJsonCookie.Erreur
 soit nNouveauStop					= Max(0,_stSynthèse.NbrStop			- Val(vJsonCookie.Stop))
 
 
-libRapportNouveauEnvoyé				= "+" + NumériqueVersChaîne(nNouveauEnvoyé, "dS")
+libRapportNouveauEnvoyé					= "+" + NumériqueVersChaîne(nNouveauEnvoyé, "dS")
 libRapportNouveauEnvoyé.Visible		= (nNouveauEnvoyé > 0)
 
-libRapportNouveauReçu				= "+" + NumériqueVersChaîne(nNouveauReçu, "dS")
-libRapportNouveauReçu.Visible		= (nNouveauReçu > 0)
+libRapportNouveauReçu					= "+" + NumériqueVersChaîne(nNouveauReçu, "dS")
+libRapportNouveauReçu.Visible			= (nNouveauReçu > 0)
 
-libRapportNouveauErreur				= "+" + NumériqueVersChaîne(nNouveauErreur, "dS")
+libRapportNouveauErreur					= "+" + NumériqueVersChaîne(nNouveauErreur, "dS")
 libRapportNouveauErreur.Visible		= (nNouveauErreur > 0)
 
-libRapportNouveauStop				= "+" + NumériqueVersChaîne(nNouveauStop, "dS")
-libRapportNouveauStop.Visible		= (nNouveauStop > 0)
+libRapportNouveauStop					= "+" + NumériqueVersChaîne(nNouveauStop, "dS")
+libRapportNouveauStop.Visible			= (nNouveauStop > 0)
 
 
 // On enregistre le Cookie
-vJsonCookie.Envoyé					= _stSynthèse.NbrDiffusion
-vJsonCookie.Reçu					= _stSynthèse.NbrDelivre
-vJsonCookie.Erreur					= _stSynthèse.NbrErreur
-vJsonCookie.Stop					= _stSynthèse.NbrStop
+vJsonCookie.Envoyé						= _stSynthèse.NbrDiffusion
+vJsonCookie.Reçu							= _stSynthèse.NbrDelivre
+vJsonCookie.Erreur						= _stSynthèse.NbrErreur
+vJsonCookie.Stop							= _stSynthèse.NbrStop
 
 CookieEcrit(sNomCookie, VariantVersJSON(vJsonCookie))
 
@@ -82,9 +82,9 @@ libRapportTotalReçu				= NumériqueVersChaîne(_stSynthèse.NbrDelivre, "dS")
 libRapportTotalErreur			= NumériqueVersChaîne(_stSynthèse.NbrErreur, "dS")
 libRapportTotalStop				= NumériqueVersChaîne(_stSynthèse.NbrStop, "dS")
 
-libRapportTauxEnvoyé			= (_stSynthèse.NbrDestinataire > 0)	? Arrondi(_stSynthèse.NbrDiffusion	/ _stSynthèse.NbrDestinataire * 100,0)	+ " %"	sinon "0 %"
+libRapportTauxEnvoyé				= (_stSynthèse.NbrDestinataire > 0)	? Arrondi(_stSynthèse.NbrDiffusion	/ _stSynthèse.NbrDestinataire * 100,0)	+ " %"	sinon "0 %"
 libRapportTauxlReçu				= (_stSynthèse.NbrDiffusion > 0)	? Arrondi(_stSynthèse.NbrDelivre	/ _stSynthèse.NbrDiffusion * 100,0) 	+ " %"	sinon "0 %"
-libRapportTauxErreur			= (_stSynthèse.NbrDiffusion > 0)	? Arrondi(_stSynthèse.NbrErreur		/ _stSynthèse.NbrDiffusion * 100,0)		+ " %"	sinon "0 %"
+libRapportTauxErreur				= (_stSynthèse.NbrDiffusion > 0)	? Arrondi(_stSynthèse.NbrErreur		/ _stSynthèse.NbrDiffusion * 100,0)		+ " %"	sinon "0 %"
 libRapportTauxStop				= (_stSynthèse.NbrDiffusion > 0)	? Arrondi(_stSynthèse.NbrStop		/ _stSynthèse.NbrDiffusion * 100,0)		+ " %"	sinon "0 %"
 
 // Lus et réponses (spécifiques RCS)
@@ -95,7 +95,7 @@ sinon
 fin
 libRapportReponse				= "Réponses reçues : " + NumériqueVersChaîne(_stSynthèse.NbrReponse, "dS")
 
-sTexteRequeteRapport =
+sTexteRequeteRapport			=
 [
 	SELECT
 	ope_rcs_envoi.Statut,
@@ -209,22 +209,22 @@ pour tout sdReqRapportRcs
 	tblRapportErreur.AjouteLigne(sdReqRapportRcs.ErreurId, sdReqRapportRcs.LibelleErreur, sdReqRapportRcs.Total)
 fin
 
-tblRapportErreur.Visible = (tblRapportErreur.Occurrence > 0)
+tblRapportErreur.Visible		= (tblRapportErreur.Occurrence > 0)
 
 
 // **************************** GRAPHE OPÉRATEUR *****************************
 
-sTexteRequeteOperateur =
+sTexteRequeteOperateur		=
 [
 	SELECT
-		sms_operateur.Operateur,
-		COUNT(ope_rcs_envoi.IdBaseLigne) Total
+	sms_operateur.Operateur,
+	COUNT(ope_rcs_envoi.IdBaseLigne) Total
 	FROM
-		ope_rcs_envoi
-		LEFT JOIN sms_operateur ON sms_operateur.PLMN = ope_rcs_envoi.MccMnc
+	ope_rcs_envoi
+	LEFT JOIN sms_operateur ON sms_operateur.PLMN = ope_rcs_envoi.MccMnc
 	WHERE
-		ope_rcs_envoi.IdRcs = [%_pIdOperation%]
-		AND ope_rcs_envoi.MccMnc IS NOT NULL
+	ope_rcs_envoi.IdRcs = [%_pIdOperation%]
+	AND ope_rcs_envoi.MccMnc IS NOT NULL
 	GROUP BY ope_rcs_envoi.MccMnc
 	ORDER BY Total DESC
 ]
@@ -264,13 +264,13 @@ grfDiffusion.SupprimeTout()
 
 sTexteRequeteDiffusion = [
 	SELECT
-		MIN(DateHeureEnvoi) DateMin,
-		MAX(DateHeureEnvoi) DateMax
+	MIN(DateHeureEnvoi) DateMin,
+	MAX(DateHeureEnvoi) DateMax
 	FROM
-		ope_rcs_envoi
+	ope_rcs_envoi
 	WHERE
-		IdRcs = [%_pIdOperation%]
-		AND Statut >= [%__SMS_STATUT_ENVOYE__%]
+	IdRcs = [%_pIdOperation%]
+	AND Statut >= [%__SMS_STATUT_ENVOYE__%]
 ]
 
 si pas HExécuteRequêteSQL(sdReqRapportRcs, dos_base..Connexion, hRequêteSansCorrection, sTexteRequeteDiffusion) alors
@@ -282,17 +282,17 @@ si pas sdReqRapportRcs.LitPremier(hSansRafraîchir) alors
 	dispRapportEmission[4].Visible = Faux
 	retour
 sinon
-	dhMin = sdReqRapportRcs.DateMin
-	dhMax = sdReqRapportRcs.DateMax
+	dhMin	= sdReqRapportRcs.DateMin
+	dhMax	= sdReqRapportRcs.DateMax
 fin
 
 si pas DateHeureValide(dhMin) 	alors retour
 si pas DateHeureValide(dhMax) 	alors retour
 si pas dhMin <> dhMax			alors retour
 
-Diff = DateHeureDifférence(dhMin,dhMax)
+Diff				= DateHeureDifférence(dhMin,dhMax)
 
-DuréeDiffusion = ChaîneVersDurée(Diff, duréeCentième)
+DuréeDiffusion	= ChaîneVersDurée(Diff, duréeCentième)
 
 si DuréeDiffusion.EnSecondes < 10 alors
 	dispRapportEmission[4].Visible = Faux
@@ -309,16 +309,16 @@ fin
 
 sTexteRequeteDiffusion = [
 	SELECT
-		FROM_UNIXTIME(
-			COALESCE([%nCadence%] * ROUND(UNIX_TIMESTAMP(DateHeureEnvoi) DIV NULLIF([%nCadence%], 0)), 0)
-		) AS DateHeure,
-		COUNT(IdBaseLigne) Total
+	FROM_UNIXTIME(
+	COALESCE([%nCadence%] * ROUND(UNIX_TIMESTAMP(DateHeureEnvoi) DIV NULLIF([%nCadence%], 0)), 0)
+	) AS DateHeure,
+	COUNT(IdBaseLigne) Total
 	FROM
-		ope_rcs_envoi
+	ope_rcs_envoi
 	WHERE
-		IdRcs = [%_pIdOperation%]
-		AND Statut >= [%__SMS_STATUT_ENVOYE__%]
-		AND DateHeureEnvoi IS NOT NULL
+	IdRcs = [%_pIdOperation%]
+	AND Statut >= [%__SMS_STATUT_ENVOYE__%]
+	AND DateHeureEnvoi IS NOT NULL
 	GROUP BY
 	(UNIX_TIMESTAMP(DateHeureEnvoi) DIV NULLIF([%nCadence%], 0));
 ]
@@ -330,9 +330,9 @@ fin
 
 
 pour tout sdReqRapportRcs
-	dhMin = Min(dhMin,sdReqRapportRcs.DateHeure)
-	dhMax = Max(dhMax,sdReqRapportRcs.DateHeure)
-	taaDiffusion[sdReqRapportRcs.DateHeure] = sdReqRapportRcs.Total
+	dhMin													= Min(dhMin,sdReqRapportRcs.DateHeure)
+	dhMax													= Max(dhMax,sdReqRapportRcs.DateHeure)
+	taaDiffusion[sdReqRapportRcs.DateHeure]		= sdReqRapportRcs.Total
 fin
 
 taaDiffusion.Trie(ttClé)

@@ -18,28 +18,28 @@ vJsonCookie				est un Variant
 bCookieExiste			est un booléen
 sTexteRequete			est une chaîne
 sdReqPerformance		est une Source de Données
-sListeField 			est une chaîne
-sOrderBy				est une chaîne
+sListeField				est une chaîne
+sOrderBy					est une chaîne
 
-btnTéléchargerPerformance.Visible = _stSynthèse.TypeCliquezici dans (__ICI_URL_TRACKING__, __ICI_WEB__) _et_ (_stSynthèse.NbrAudienceUnique + _stSynthèse.NbrInteractionUnique + _stSynthèse.NbrLeadUnique) > 0
-btnBddPerformance.Visible = _stSynthèse.TypeCliquezici dans (__ICI_URL_TRACKING__, __ICI_WEB__)
+btnTéléchargerPerformance.Visible		= _stSynthèse.TypeCliquezici dans (__ICI_URL_TRACKING__, __ICI_WEB__) _et_ (_stSynthèse.NbrAudienceUnique + _stSynthèse.NbrInteractionUnique + _stSynthèse.NbrLeadUnique) > 0
+btnBddPerformance.Visible				= _stSynthèse.TypeCliquezici dans (__ICI_URL_TRACKING__, __ICI_WEB__)
 
 //-------------------------------------------------------------------------------------------------------------------------------------------
 
-sNomCookie	= "Performance|" + Partage.__vcUser.IDContact + "|" + _pIdOperation
-sCookie		= CookieLit(sNomCookie)
+sNomCookie									= "Performance|" + Partage.__vcUser.IDContact + "|" + _pIdOperation
+sCookie										= CookieLit(sNomCookie)
 si sCookie <> "" alors
 	vJsonCookie		= JSONVersVariant(sCookie)
 	bCookieExiste	= Vrai
 sinon
 	// Le cookie n'existait pas
 	vJsonCookie.Envoyé		= 0
-	vJsonCookie.Reçu		= 0
-	vJsonCookie.Lu			= 0
+	vJsonCookie.Reçu			= 0
+	vJsonCookie.Lu				= 0
 	vJsonCookie.Interaction	= 0
 	vJsonCookie.Intention	= 0
 	vJsonCookie.Reponse		= 0
-	vJsonCookie.Lead		= 0
+	vJsonCookie.Lead			= 0
 fin
 
 soit nNouveauEnvoyé			= Max(0,_stSynthèse.NbrDiffusion 				- Val(vJsonCookie.Envoyé))
@@ -51,36 +51,36 @@ soit nNouveauReponse		= Max(0,_stSynthèse.NbrReponse					- Val(vJsonCookie.Repo
 soit nNouveauLead			= Max(0,_stSynthèse.NbrLeadUnique				- Val(vJsonCookie.Lead))
 
 
-libPerformanceNouveauEnvoye				= "+" + NumériqueVersChaîne(nNouveauEnvoyé, "dS")
-libPerformanceNouveauEnvoye.Visible		= (nNouveauEnvoyé > 0)
+libPerformanceNouveauEnvoye					= "+" + NumériqueVersChaîne(nNouveauEnvoyé, "dS")
+libPerformanceNouveauEnvoye.Visible			= (nNouveauEnvoyé > 0)
 
-libPerformanceNouveauReçu				= "+" + NumériqueVersChaîne(nNouveauReçu, "dS")
-libPerformanceNouveauReçu.Visible		= (nNouveauReçu > 0)
+libPerformanceNouveauReçu						= "+" + NumériqueVersChaîne(nNouveauReçu, "dS")
+libPerformanceNouveauReçu.Visible			= (nNouveauReçu > 0)
 
-libPerformanceNouveauLu					= "+" + NumériqueVersChaîne(nNouveauLu, "dS")
-libPerformanceNouveauLu.Visible			= (nNouveauLu > 0)
+libPerformanceNouveauLu							= "+" + NumériqueVersChaîne(nNouveauLu, "dS")
+libPerformanceNouveauLu.Visible				= (nNouveauLu > 0)
 
-libPerformanceNouveauInteraction			= "+" + NumériqueVersChaîne(nNouveauInteraction, "dS")
+libPerformanceNouveauInteraction				= "+" + NumériqueVersChaîne(nNouveauInteraction, "dS")
 libPerformanceNouveauInteraction.Visible	= (nNouveauInteraction > 0)
 
-libPerformanceNouveauIntention			= "+" + NumériqueVersChaîne(nNouveauIntention, "dS")
-libPerformanceNouveauIntention.Visible	= (nNouveauIntention > 0)
+libPerformanceNouveauIntention				= "+" + NumériqueVersChaîne(nNouveauIntention, "dS")
+libPerformanceNouveauIntention.Visible		= (nNouveauIntention > 0)
 
-libPerformanceNouveauReponse			= "+" + NumériqueVersChaîne(nNouveauReponse, "dS")
-libPerformanceNouveauReponse.Visible	= (nNouveauReponse > 0)
+libPerformanceNouveauReponse					= "+" + NumériqueVersChaîne(nNouveauReponse, "dS")
+libPerformanceNouveauReponse.Visible		= (nNouveauReponse > 0)
 
-libPerformanceNouveauLead				= "+" + NumériqueVersChaîne(nNouveauLead, "dS")
-libPerformanceNouveauLead.Visible		= (nNouveauLead > 0)
+libPerformanceNouveauLead						= "+" + NumériqueVersChaîne(nNouveauLead, "dS")
+libPerformanceNouveauLead.Visible			= (nNouveauLead > 0)
 
 
 // On enregistre le Cookie
-vJsonCookie.Envoyé						= _stSynthèse.NbrDiffusion
-vJsonCookie.Reçu						= _stSynthèse.NbrDelivre
-vJsonCookie.Lu							= _stSynthèse.NbrLu
-vJsonCookie.Interaction					= _stSynthèse.NbrInteractionUnique
-vJsonCookie.Intention					= _stSynthèse.NbrIntentionContactUnique
-vJsonCookie.Reponse						= _stSynthèse.NbrReponse
-vJsonCookie.Lead						= _stSynthèse.NbrLeadUnique
+vJsonCookie.Envoyé								= _stSynthèse.NbrDiffusion
+vJsonCookie.Reçu									= _stSynthèse.NbrDelivre
+vJsonCookie.Lu										= _stSynthèse.NbrLu
+vJsonCookie.Interaction							= _stSynthèse.NbrInteractionUnique
+vJsonCookie.Intention							= _stSynthèse.NbrIntentionContactUnique
+vJsonCookie.Reponse								= _stSynthèse.NbrReponse
+vJsonCookie.Lead									= _stSynthèse.NbrLeadUnique
 
 CookieEcrit(sNomCookie, VariantVersJSON(vJsonCookie))
 
@@ -88,43 +88,43 @@ CookieEcrit(sNomCookie, VariantVersJSON(vJsonCookie))
 //-----------------------------------------------------------------------
 
 
-libPerformanceTotalEnvoye			= NumériqueVersChaîne(_stSynthèse.NbrDiffusion, "dS")
-libPerformanceTotalReçu				= NumériqueVersChaîne(_stSynthèse.NbrDelivre, "dS")
-libPerformanceTotalLu				= NumériqueVersChaîne(_stSynthèse.NbrLu, "dS")
+libPerformanceTotalEnvoye				= NumériqueVersChaîne(_stSynthèse.NbrDiffusion, "dS")
+libPerformanceTotalReçu					= NumériqueVersChaîne(_stSynthèse.NbrDelivre, "dS")
+libPerformanceTotalLu					= NumériqueVersChaîne(_stSynthèse.NbrLu, "dS")
 libPerformanceTotalInteraction		= NumériqueVersChaîne(_stSynthèse.NbrInteractionUnique, "dS")
-libPerformanceTotalIntention		= NumériqueVersChaîne(_stSynthèse.NbrIntentionContactUnique, "dS")
-libPerformanceTotalReponse			= NumériqueVersChaîne(_stSynthèse.NbrReponse, "dS")
-libPerformanceTotalLead				= NumériqueVersChaîne(_stSynthèse.NbrLeadUnique, "dS")
+libPerformanceTotalIntention			= NumériqueVersChaîne(_stSynthèse.NbrIntentionContactUnique, "dS")
+libPerformanceTotalReponse				= NumériqueVersChaîne(_stSynthèse.NbrReponse, "dS")
+libPerformanceTotalLead					= NumériqueVersChaîne(_stSynthèse.NbrLeadUnique, "dS")
 
-// dont n par SMS de repli, sous Délivrés
-si _stSynthèse.NbrRepliSms > 0 alors
-	libPerformanceReçuRepli			= "dont " + NumériqueVersChaîne(_stSynthèse.NbrRepliSms, "dS") + " par SMS de repli"
-	libPerformanceReçuRepli.Visible	= Vrai
-sinon
-	libPerformanceReçuRepli.Visible	= Faux
-fin
+//// dont n par SMS de repli, sous Délivrés
+//si _stSynthèse.NbrRepliSms > 0 alors
+//	libPerformanceReçuRepli				= "dont " + NumériqueVersChaîne(_stSynthèse.NbrRepliSms, "dS") + " par SMS de repli"
+//	libPerformanceReçuRepli.Visible	= Vrai
+//sinon
+//	libPerformanceReçuRepli.Visible	= Faux
+//fin
 
-libPerformanceTauxEnvoye			= (_stSynthèse.NbrDestinataire > 0)	? Arrondi(_stSynthèse.NbrDiffusion					/ _stSynthèse.NbrDestinataire * 100,0)	+ " %"	sinon "0 %"
-libPerformanceTauxReçu				= (_stSynthèse.NbrDiffusion > 0)	? Arrondi(_stSynthèse.NbrDelivre					/ _stSynthèse.NbrDiffusion * 100,0) 	+ " %"	sinon "0 %"
-libPerformanceTauxLu				= (_stSynthèse.NbrDelivre > 0)		? Arrondi(_stSynthèse.NbrLu							/ _stSynthèse.NbrDelivre * 100,0) 		+ " %"	sinon "0 %"
-libPerformanceTauxInteraction		= (_stSynthèse.NbrLu > 0)			? Arrondi(_stSynthèse.NbrInteractionUnique			/ _stSynthèse.NbrLu * 100,0) 			+ " %"	sinon "0 %"
+libPerformanceTauxEnvoye				= (_stSynthèse.NbrDestinataire > 0)	? Arrondi(_stSynthèse.NbrDiffusion					/ _stSynthèse.NbrDestinataire * 100,0)	+ " %"	sinon "0 %"
+libPerformanceTauxReçu					= (_stSynthèse.NbrDiffusion > 0)	? Arrondi(_stSynthèse.NbrDelivre					/ _stSynthèse.NbrDiffusion * 100,0) 	+ " %"	sinon "0 %"
+libPerformanceTauxLu						= (_stSynthèse.NbrDelivre > 0)		? Arrondi(_stSynthèse.NbrLu							/ _stSynthèse.NbrDelivre * 100,0) 		+ " %"	sinon "0 %"
+libPerformanceTauxInteraction			= (_stSynthèse.NbrLu > 0)			? Arrondi(_stSynthèse.NbrInteractionUnique			/ _stSynthèse.NbrLu * 100,0) 			+ " %"	sinon "0 %"
 libPerformanceTauxIntention			= (_stSynthèse.NbrLu > 0)			? Arrondi(_stSynthèse.NbrIntentionContactUnique		/ _stSynthèse.NbrLu * 100,0) 			+ " %"	sinon "0 %"
-libPerformanceTauxLead				= (_stSynthèse.NbrLu > 0)			? Arrondi(_stSynthèse.NbrLeadUnique					/ _stSynthèse.NbrLu * 100,0)	 		+ " %"	sinon "0 %"
+libPerformanceTauxLead					= (_stSynthèse.NbrLu > 0)			? Arrondi(_stSynthèse.NbrLeadUnique					/ _stSynthèse.NbrLu * 100,0)	 		+ " %"	sinon "0 %"
 
 
 // **************************** TABLEAU INTERACTIONS PAR BOUTON *****************************
 
-sTexteRequete =
+sTexteRequete								=
 [
 	SELECT
-	vue_ope_retour.Categorie,
-	vue_ope_retour.Libelle,
+	vue_rcs_retour.Action,
+	vue_rcs_retour.Libelle,
 	COUNT(*) NbrClic,
-	COUNT(DISTINCT vue_ope_retour.IdBaseLigne) NbrUnique
-	FROM vue_ope_retour
-	WHERE vue_ope_retour.IdOperation = [%_pIdOperation%]
-	AND vue_ope_retour.Famille IN ('[%__RETOUR_FAMILLE_INTERACTION__%]','[%__RETOUR_FAMILLE_INTENTION__%]')
-	GROUP BY vue_ope_retour.Categorie, vue_ope_retour.Libelle
+	COUNT(DISTINCT vue_rcs_retour.IdBaseLigne) NbrUnique
+	FROM vue_rcs_retour
+	WHERE vue_rcs_retour.IdOperation = [%_pIdOperation%]
+	AND vue_rcs_retour.Famille IN ('[%__RETOUR_FAMILLE_INTERACTION__%]','[%__RETOUR_FAMILLE_INTENTION__%]')
+	GROUP BY vue_rcs_retour.Action, vue_rcs_retour.Libelle
 	ORDER BY NbrClic DESC
 ]
 
@@ -136,7 +136,7 @@ fin
 tblInteractionBouton.SupprimeTout()
 
 pour tout sdReqPerformance
-	tblInteractionBouton.AjouteLigne(sdReqPerformance.Libelle, Partage.LibelleRetourCategorie(sdReqPerformance.Categorie), sdReqPerformance.NbrClic, sdReqPerformance.NbrUnique)
+	tblInteractionBouton.AjouteLigne(sdReqPerformance.Libelle, Partage.LibelleRetourRcsAction(sdReqPerformance.Action), sdReqPerformance.NbrClic, sdReqPerformance.NbrUnique)
 fin
 
 tblInteractionBouton.Visible = (tblInteractionBouton.Occurrence > 0)
@@ -145,16 +145,16 @@ tblInteractionBouton.Visible = (tblInteractionBouton.Occurrence > 0)
 // **************************** BLOC RCS INTERACTIF (landing) *****************************
 
 si _stSynthèse.EstCliquezIci = Faux alors
-	dispStatistique[3].Visible = Faux
-	dispStatistique[4].Visible = Faux
+	dispStatistique[4].Visible	= Faux
+	dispStatistique[5].Visible	= Faux
 	retour
 fin
 
-libPerformanceGrapheTauxRedirection = (_stSynthèse.NbrAudienceUnique > 0)		? Arrondi(_stSynthèse.NbrInteractionUnique	/ _stSynthèse.NbrAudienceUnique * 100,0) 		+ " %"	sinon "0 %"
-libPerformanceGrapheTauxLead		= (_stSynthèse.NbrAudienceUnique > 0)		? Arrondi(_stSynthèse.NbrLeadUnique			/ _stSynthèse.NbrAudienceUnique * 100,0)	 	+ " %"	sinon "0 %"
+libPerformanceGrapheTauxRedirection	= (_stSynthèse.NbrAudienceUnique > 0)		? Arrondi(_stSynthèse.NbrInteractionUnique	/ _stSynthèse.NbrAudienceUnique * 100,0) 		+ " %"	sinon "0 %"
+libPerformanceGrapheTauxLead			= (_stSynthèse.NbrAudienceUnique > 0)		? Arrondi(_stSynthèse.NbrLeadUnique			/ _stSynthèse.NbrAudienceUnique * 100,0)	 	+ " %"	sinon "0 %"
 
 
-sTexteRequete =
+sTexteRequete								=
 [
 	SELECT TypeLien, Libelle, Url, COUNT(DISTINCT IdBaseLigne) Total FROM ope_cliquezici_lien WHERE IdCliquezIci = [%_pIdOperation%] GROUP BY TypeLien, Libelle, Url
 ]
@@ -184,22 +184,22 @@ fin
 si nCategorie > 0 alors
 	grfRedirection.Libellé(grAffichePourcentage,Vrai)
 	grfRedirection.Dessine()
-	dispStatistique[3].Visible = Vrai
+	dispStatistique[4].Visible = Vrai
 sinon
-	dispStatistique[3].Visible = Faux
+	dispStatistique[4].Visible = Faux
 fin
 
 
 sTexteRequete = [
 	SELECT
-		GROUP_CONCAT("\"", COALESCE(ope_cliquezici_offre.Libelle, ope_cliquezici_offre.Offre), "\"") ListeField
+	GROUP_CONCAT("\"", COALESCE(ope_cliquezici_offre.Libelle, ope_cliquezici_offre.Offre), "\"") ListeField
 	FROM
-		ope_cliquezici_offre
-		JOIN ope_cliquezici_bloc ON ope_cliquezici_bloc.IdCliquezIciBloc = ope_cliquezici_offre.IdCliquezIciBloc AND ope_cliquezici_bloc.`Type` IN ('[%__BLOC_OFFRE__%]' ,'[%__BLOC_FORMULAIRE__%]' , '[%__BLOC_BOUTON__%]')
+	ope_cliquezici_offre
+	JOIN ope_cliquezici_bloc ON ope_cliquezici_bloc.IdCliquezIciBloc = ope_cliquezici_offre.IdCliquezIciBloc AND ope_cliquezici_bloc.`Type` IN ('[%__BLOC_OFFRE__%]' ,'[%__BLOC_FORMULAIRE__%]' , '[%__BLOC_BOUTON__%]')
 	WHERE
-		ope_cliquezici_bloc.IdCliquezIci = [%_pIdOperation%]
+	ope_cliquezici_bloc.IdCliquezIci = [%_pIdOperation%]
 	ORDER BY
-		FIELD(ope_cliquezici_bloc.`Type`, '[%__BLOC_OFFRE__%]' , '[%__BLOC_FORMULAIRE__%]' , '[%__BLOC_BOUTON__%]')
+	FIELD(ope_cliquezici_bloc.`Type`, '[%__BLOC_OFFRE__%]' , '[%__BLOC_FORMULAIRE__%]' , '[%__BLOC_BOUTON__%]')
 ]
 
 si pas HExécuteRequêteSQL(sdReqPerformance, ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
@@ -214,14 +214,14 @@ fin
 si sListeField <> "" alors
 	sOrderBy = [
 		ORDER BY 
-			FIELD(ope_cliquezici_clic_selection.Libelle, [%sListeField%]),
-			Total DESC
+		FIELD(ope_cliquezici_clic_selection.Libelle, [%sListeField%]),
+		Total DESC
 	]
 sinon
 	sOrderBy = [
 		ORDER BY 
-			FIELD(ope_cliquezici_clic_selection.`Type`, '[%__FORMULAIRE_INTERRUPTEUR__%]', '[%__FORMULAIRE_COMBO__%]','[%__FORMULAIRE_SAISIE__%]','[%__FORMULAIRE_OPTIN__%]'),
-			Total DESC
+		FIELD(ope_cliquezici_clic_selection.`Type`, '[%__FORMULAIRE_INTERRUPTEUR__%]', '[%__FORMULAIRE_COMBO__%]','[%__FORMULAIRE_SAISIE__%]','[%__FORMULAIRE_OPTIN__%]'),
+		Total DESC
 	]
 fin
 
@@ -229,31 +229,31 @@ fin
 sTexteRequete =
 [
 	SELECT
-		ope_cliquezici_clic_selection.Libelle,
-		ope_cliquezici_clic_selection.Valeur,
-		COUNT(ope_cliquezici_clic_selection.IdCliquezIciSelection) AS Total
+	ope_cliquezici_clic_selection.Libelle,
+	ope_cliquezici_clic_selection.Valeur,
+	COUNT(ope_cliquezici_clic_selection.IdCliquezIciSelection) AS Total
 	FROM 
-		ope_cliquezici_clic
+	ope_cliquezici_clic
 	JOIN 
-		ope_cliquezici_clic_selection ON ope_cliquezici_clic_selection.IdCliquezIciClic = ope_cliquezici_clic.IdCliquezIciClic
-		JOIN (
-			SELECT 
-				IdBaseLigne, 
-				MAX(IdCliquezIciClic) AS MaxIdCliquezIciClic
-			FROM 
-				ope_cliquezici_clic
-			WHERE 
-				IdCliquezIci = [%_pIdOperation%]
-			GROUP BY 
-				IdBaseLigne
-		) AS dernierClic ON dernierClic.MaxIdCliquezIciClic = ope_cliquezici_clic.IdCliquezIciClic
-	WHERE
-		ope_cliquezici_clic.IdCliquezIci = [%_pIdOperation%]
+	ope_cliquezici_clic_selection ON ope_cliquezici_clic_selection.IdCliquezIciClic = ope_cliquezici_clic.IdCliquezIciClic
+	JOIN (
+	SELECT 
+	IdBaseLigne, 
+	MAX(IdCliquezIciClic) AS MaxIdCliquezIciClic
+	FROM 
+	ope_cliquezici_clic
+	WHERE 
+	IdCliquezIci = [%_pIdOperation%]
 	GROUP BY 
-		ope_cliquezici_clic_selection.Libelle,
-		ope_cliquezici_clic_selection.Valeur
+	IdBaseLigne
+	) AS dernierClic ON dernierClic.MaxIdCliquezIciClic = ope_cliquezici_clic.IdCliquezIciClic
+	WHERE
+	ope_cliquezici_clic.IdCliquezIci = [%_pIdOperation%]
+	GROUP BY 
+	ope_cliquezici_clic_selection.Libelle,
+	ope_cliquezici_clic_selection.Valeur
 	[%sOrderBy%]
-
+	
 ]
 
 si pas HExécuteRequêteSQL(sdReqPerformance, ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
@@ -278,9 +278,9 @@ fin
 si nCategorie > 0 alors
 	grfLead.Libellé(grAffichePourcentage,Vrai)
 	grfLead.Dessine()
-	dispStatistique[4].Visible = Vrai
+	dispStatistique[5].Visible = Vrai
 sinon
-	dispStatistique[4].Visible = Faux
+	dispStatistique[5].Visible = Faux
 fin
 
 

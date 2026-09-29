@@ -1,6 +1,0 @@
-// Bouton btnFiltreRedirection — Clic (Serveur, AJAX)
-// Pastille de l'onglet Retours : filtre sur les redirections de la landing
-// (catégorie REDIRECTION de la vue).
-
-_sFiltreRetourFamille = __RETOUR_CATEGORIE_REDIRECTION__
-InitOngletRetours()

@@ -1,5 +1,0 @@
-// Bouton btnFiltreIntention — Clic (Serveur, AJAX)
-// Pastille de l'onglet Retours : filtre sur les intentions de contact.
-
-_sFiltreRetourFamille = __RETOUR_FAMILLE_INTENTION__
-InitOngletRetours()

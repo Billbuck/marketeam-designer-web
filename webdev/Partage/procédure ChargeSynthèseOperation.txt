@@ -34,7 +34,7 @@ selon sTypeOperation
 	cas __OPERATION_RCS__
 		// NbrLu et NbrRepliSms mappés par FichierVersMémoire (alias = membres).
 		// Les compteurs de retours (leads, intentions, interactions, réponses)
-		// sont chargés plus bas depuis vue_ope_retour.
+		// sont chargés plus bas depuis vue_rcs_retour.
 		sSelect = [
 			,ope_rcs.Cadence
 			,ope_rcs.DateFin DateFinSouhaite
@@ -204,18 +204,18 @@ si sdReqSynthèse.LitPremier() alors
 	stSynthèse.EstPlafondEncoursDepassé = Partage.PlafondEncoursDepassé(sdReqSynthèse.IdClientFacturation, sdReqSynthèse.ResteAPayer, sdReqSynthèse.IdOperation)
 	stSynthèse.EstBaseDeDonnéesChargée	= dos_base.LitRecherchePremier(IdOperation,pIdOperation)
 
-	// Compteurs de retours RCS depuis vue_ope_retour : une requête groupée
+	// Compteurs de retours RCS depuis vue_rcs_retour : une requête groupée
 	// par famille. Pour le RCS, leads et interactions écrasent les colonnes
 	// de dos_operation (qui ne couvrent que la landing du SMS interactif).
 	si sTypeOperation = __OPERATION_RCS__ alors
 		sTexteRequete = [
 			SELECT
-			vue_ope_retour.Famille,
+			vue_rcs_retour.Famille,
 			COUNT(*) NbrEvenement,
-			COUNT(DISTINCT vue_ope_retour.IdBaseLigne) NbrUnique
-			FROM vue_ope_retour
-			WHERE vue_ope_retour.IdOperation = [%pIdOperation%]
-			GROUP BY vue_ope_retour.Famille
+			COUNT(DISTINCT vue_rcs_retour.IdBaseLigne) NbrUnique
+			FROM vue_rcs_retour
+			WHERE vue_rcs_retour.IdOperation = [%pIdOperation%]
+			GROUP BY vue_rcs_retour.Famille
 		]
 		si sdReqRetour.ExécuteRequêteSQL(dos_operation..Connexion, hRequêteSansCorrection, sTexteRequete) alors
 			pour tout sdReqRetour

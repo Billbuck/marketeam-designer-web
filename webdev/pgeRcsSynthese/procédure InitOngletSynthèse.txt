@@ -11,8 +11,8 @@
 procédure InitOngletSynthèse()
 
 
-nProgression		est un entier
-nEngagement			est un entier
+nProgression			est un entier
+nEngagement				est un entier
 nTransformation		est un entier
 
 
@@ -21,16 +21,16 @@ libNomOperation				= "> " + _stSynthèse.NomOperation
 
 
 // Ligne 1
-libDossier					= _stSynthèse.Dossier
+libDossier						= _stSynthèse.Dossier
 libStatutOperation			= Partage.LibelleStatutOperation(_stSynthèse.Statut)
 imgStatut.Bulle				= _stSynthèse.MotifRefus
 
 libDateCreation				= DateHeureVersChaîne(_stSynthèse.DateHeureCreation, "Jjj JJ Mmm AAAA à HH:mm")
 
 // Ligne 2
-libSociete					= _stSynthèse.DossierSociete
-libCréateur					= cpFonction.CiviliteCourte(_stSynthèse.DossierCivilite) 	+ [" "] + _stSynthèse.DossierNom 	+ [" "] + _stSynthèse.DossierPrenom
-libValideur					= cpFonction.CiviliteCourte(_stSynthèse.ValideurCivilite) 	+ [" "] + _stSynthèse.ValideurNom 	+ [" "] + _stSynthèse.ValideurPrenom
+libSociete						= _stSynthèse.DossierSociete
+libCréateur						= cpFonction.CiviliteCourte(_stSynthèse.DossierCivilite) 	+ [" "] + _stSynthèse.DossierNom 	+ [" "] + _stSynthèse.DossierPrenom
+libValideur						= cpFonction.CiviliteCourte(_stSynthèse.ValideurCivilite) 	+ [" "] + _stSynthèse.ValideurNom 	+ [" "] + _stSynthèse.ValideurPrenom
 
 // Ligne 3
 si _stSynthèse.EstEnvoiImmediat = Faux alors
@@ -55,7 +55,7 @@ libMontantHT 	= NumériqueVersChaîne(_stSynthèse.MontantNetHT, ",2fS") + " €
 
 si _stSynthèse.ResteAPayer > 0 alors
 	libTitreResteAPayer		= "Reste à payer"
-	libResteAPayer			= NumériqueVersChaîne(_stSynthèse.ResteAPayer, ",2fS") + " €"
+	libResteAPayer				= NumériqueVersChaîne(_stSynthèse.ResteAPayer, ",2fS") + " €"
 	si _stSynthèse.EstFacturationMensuelle alors
 		libModeReglement 	= "à réception de facture"
 	sinon
@@ -97,8 +97,8 @@ si _stSynthèse.Statut >= __Statut_Distribution_En_Cours__ alors
 	// Bloc Progression : délivrés / destinataires
 	dispSynthèse[6].Visible					= Vrai
 	jaugeTauxProgression.BorneMax			= _stSynthèse.NbrDestinataire
-	nProgression							= _stSynthèse.NbrDelivre
-	jaugeTauxProgression					= nProgression
+	nProgression								= _stSynthèse.NbrDelivre
+	jaugeTauxProgression						= nProgression
 	selon nProgression
 		cas 0 , _stSynthèse.NbrDestinataire	: libProgression = ""
 		cas 1									: libProgression = "1 délivré"
@@ -113,17 +113,17 @@ si _stSynthèse.Statut >= __Statut_Distribution_En_Cours__ alors
 
 	// dont n par SMS de repli
 	si _stSynthèse.NbrRepliSms > 0 alors
-		libProgressionRepli					= "dont " + NumériqueVersChaîne(_stSynthèse.NbrRepliSms, "dS") + " par SMS de repli"
+		libProgressionRepli						= "dont " + NumériqueVersChaîne(_stSynthèse.NbrRepliSms, "dS") + " par SMS de repli"
 		libProgressionRepli.Visible			= Vrai
 	sinon
 		libProgressionRepli.Visible			= Faux
 	fin
 
 	// Bloc Engagement : lus / délivrés (accusés de lecture RCS)
-	contTauxOuverture.Visible			= Vrai
+	contTauxOuverture.Visible				= Vrai
 	jaugeTauxOuverture.BorneMax			= _stSynthèse.NbrDelivre
-	nEngagement							= _stSynthèse.NbrLu
-	jaugeTauxOuverture					= nEngagement
+	nEngagement									= _stSynthèse.NbrLu
+	jaugeTauxOuverture						= nEngagement
 	selon nEngagement
 		cas 0		: libOuverture		= ""
 		cas 1		: libOuverture		= "1 lu"
@@ -138,9 +138,9 @@ si _stSynthèse.Statut >= __Statut_Distribution_En_Cours__ alors
 	// Bloc Transformation : leads uniques / lus
 	si nEngagement > 0 alors
 		contTauxConcrétisation.Visible		= Vrai
-		jaugeTauxConcretisation.BorneMax	= 100
-		nTransformation						= _stSynthèse.NbrLeadUnique
-		jaugeTauxConcretisation				= nTransformation / nEngagement * 100
+		jaugeTauxConcretisation.BorneMax		= 100
+		nTransformation							= _stSynthèse.NbrLeadUnique
+		jaugeTauxConcretisation					= nTransformation / nEngagement * 100
 		selon nTransformation
 			cas 0		: libConcretisation	= ""
 			cas 1		: libConcretisation	= "1 lead"
@@ -167,16 +167,16 @@ fin
 
 
 	procédure interne DateDernierEnvoi()
-		sTexteRequete est une chaîne
+		sTexteRequete		est une chaîne
 		sdReqDernierRcs	est une Source de Données
 		sTexteRequete =
 		[
 			SELECT
-				ope_rcs_envoi.DateHeureEnvoi
+			ope_rcs_envoi.DateHeureEnvoi
 			FROM 
-				ope_rcs_envoi
+			ope_rcs_envoi
 			WHERE
-				ope_rcs_envoi.IdRcs = [%_pIdOperation%]
+			ope_rcs_envoi.IdRcs = [%_pIdOperation%]
 			ORDER BY ope_rcs_envoi.DateHeureEnvoi DESC
 			LIMIT 1
 		]
@@ -192,6 +192,6 @@ fin
 			renvoyer ""
 		fin
 
-	fin:
-	sdReqDernierRcs.AnnuleDéclaration()
-fin
+		fin:
+		sdReqDernierRcs.AnnuleDéclaration()
+	fin

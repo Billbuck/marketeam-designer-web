@@ -1,4 +1,7 @@
 -- Vue des retours d'une opération (synthèse RCS, cahier du 28/09/2026 § 5).
+-- Renommée vue_rcs_retour (ex vue_ope_retour) et colonne Action (ex Categorie)
+-- à l'intégration du 29/09 : les actions des clics RCS sont les SousType
+-- (__RCS_ACTION_*), complétés de REDIRECTION / FORMULAIRE / REPONSE.
 -- Une ligne par retour : clic sur un bouton RCS, clic sur un lien de landing,
 -- formulaire de landing, réponse RCS, réponse SMS.
 -- Familles : LEAD (Réaction, Formulaire), INTENTION (Appel/Email/SMS/WhatsApp),
@@ -12,9 +15,9 @@
 --   branches landing n'ont pas besoin de jointure.
 -- À exécuter en dev puis en prod.
 
-CREATE OR REPLACE VIEW vue_ope_retour AS
+CREATE OR REPLACE VIEW vue_rcs_retour AS
 SELECT 'RCS' Canal, c.IdOperation, c.IdBaseLigne,
-       IFNULL(b.SousType, '') Categorie,
+       IFNULL(b.SousType, '') Action,
        CASE WHEN b.SousType = 'REACTION' THEN 'LEAD'
             WHEN b.SousType IN ('APPEL','EMAIL','SMS','WHATSAPP') THEN 'INTENTION'
             ELSE 'INTERACTION' END Famille,
@@ -39,5 +42,5 @@ JOIN dos_base_ligne dbl ON dbl.IdBaseLigne = s.IdBaseLigne
 JOIN dos_base db ON db.IdBase = dbl.IdBase;
 
 -- Requête de contrôle (opération 3027) :
--- SELECT Famille, Categorie, COUNT(*), COUNT(DISTINCT IdBaseLigne)
--- FROM vue_ope_retour WHERE IdOperation = 3027 GROUP BY Famille, Categorie;
+-- SELECT Famille, Action, COUNT(*), COUNT(DISTINCT IdBaseLigne)
+-- FROM vue_rcs_retour WHERE IdOperation = 3027 GROUP BY Famille, Action;

@@ -1,16 +1,16 @@
-// Résumé : Libellé français d'une catégorie de retour (vue_ope_retour.Categorie)
+// Résumé : Libellé français d'une action de retour (vue_rcs_retour.Action)
 // Syntaxe :
-//[ <Résultat> = ] LibelleRetourCategorie (<pCategorie>)
+//[ <Résultat> = ] LibelleRetourRcsAction (<pAction>)
 //
 // Paramètres :
-//	pCategorie : catégorie de la vue — SousType d'un bouton RCS
-//		(__RCS_ACTION_*) ou catégorie propre à la vue (__RETOUR_CATEGORIE_*)
+//	pAction : catégorie de la vue — SousType d'un bouton RCS
+//		(__RCS_ACTION_*, y compris REDIRECTION / FORMULAIRE / REPONSE)
 // Valeur de retour :
-// 	chaîne : libellé affiché dans la synthèse (tableau Retours, pastilles,
+// 	Type indéterminé : libellé affiché dans la synthèse (tableau Retours, pastilles,
 // 	interactions par bouton). Catégorie inconnue : renvoyée telle quelle.
-procédure LibelleRetourCategorie(pCategorie)
+procédure LibelleRetourRcsAction(pAction)
 
-selon pCategorie
+selon pAction
 	cas __RCS_ACTION_REACTION__				: renvoyer "Réaction"
 	cas __RCS_ACTION_APPEL__					: renvoyer "Appel"
 	cas __RCS_ACTION_EMAIL__					: renvoyer "Email"
@@ -30,9 +30,9 @@ selon pCategorie
 	cas __RCS_ACTION_TIKTOK__					: renvoyer "TikTok"
 	cas __RCS_ACTION_YOUTUBE__					: renvoyer "YouTube"
 	cas __RCS_ACTION_LINKEDIN__				: renvoyer "LinkedIn"
-	cas __RETOUR_CATEGORIE_REDIRECTION__	: renvoyer "Redirection"
-	cas __RETOUR_CATEGORIE_FORMULAIRE__		: renvoyer "Formulaire"
-	cas __RETOUR_CATEGORIE_REPONSE__			: renvoyer "Réponse"
+	cas __RCS_ACTION_REDIRECTION__			: renvoyer "Redirection"
+	cas __RCS_ACTION_FORMULAIRE__				: renvoyer "Formulaire"
+	cas __RCS_ACTION_REPONSE__					: renvoyer "Réponse"
 fin
 
-renvoyer pCategorie
+renvoyer pAction

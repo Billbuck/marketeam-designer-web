@@ -480,6 +480,10 @@ constante
 	__RCS_ACTION_YOUTUBE__									= "YOUTUBE"
 	__RCS_ACTION_LINKEDIN__									= "LINKEDIN"
 
+	__RCS_ACTION_REDIRECTION__								= "REDIRECTION"
+	__RCS_ACTION_FORMULAIRE__								= "FORMULAIRE"
+	__RCS_ACTION_REPONSE__									= "REPONSE"
+
 	// Valeurs API
 	__RCS_BOUTON_SHOW_LOCATION__							= "SHOW_LOCATION"
 	__RCS_URL_WEBVIEW__										= "WEBVIEW"
@@ -494,7 +498,6 @@ constante
 	__BASE_RCS_TRAITE__										= "TRAITE"
 	__BASE_RCS_ERREUR__										= "ERREUR"
 	__BASE_RCS_EXPIRE__ 										= "EXPIRE"
-	
 
 	// Qualification RCS d'une ligne (clt_base_ligne.EstRcs - NULL = inconnu)
 	__LIGNE_RCS_SMS__											= 0
@@ -505,7 +508,7 @@ constante
 	__CANAL_PREVU_RCS__										= "RCS"
 	__CANAL_PREVU_SMS__										= "SMS"
 
-	// Retours d'une opération (vue_ope_retour) : familles...
+	// Retours d'une opération (vue_rcs_retour) : familles
 	__RETOUR_FAMILLE_LEAD__									= "LEAD"
 	__RETOUR_FAMILLE_INTENTION__							= "INTENTION"
 	__RETOUR_FAMILLE_INTERACTION__						= "INTERACTION"
@@ -513,9 +516,7 @@ constante
 
 	// ... et catégories propres à la vue (les catégories des clics RCS
 	// sont les SousType existants : __RCS_ACTION_*)
-	__RETOUR_CATEGORIE_REDIRECTION__						= "REDIRECTION"
-	__RETOUR_CATEGORIE_FORMULAIRE__						= "FORMULAIRE"
-	__RETOUR_CATEGORIE_REPONSE__							= "REPONSE"
+
 
 
 	__DOC_RCS_IMAGE_CARD__									= "RcsImgCard"
