@@ -131,8 +131,9 @@ fin
 grfRapport.HistoEspacement(20)
 grfRapport.Libellé(grAfficheValeur,Vrai)
 // La série héritée de la copie de pgeSmsSynthese s'appelait « Sms » :
-// les bulles affichaient « n Sms » (correction du 29/09)
-grfRapport.LibelléSérie(nSerie, "RCS")
+// les bulles affichaient « n Sms » (correction du 29/09, fonction vérifiée
+// dans la doc PC SOFT : grEtiquetteSérie, équivalente à la légende)
+grEtiquetteSérie(grfRapport, nSerie, "RCS")
 grfRapport.Dessine()
 
 
@@ -175,8 +176,10 @@ fin
 
 si nCategorie > 0 alors
 	grfCanal.Visible = Vrai
+	// Pas d'étiquette de série sur grfCanal : les graphes en secteurs ne les
+	// utilisent pas (doc PC SOFT) — les libellés RCS / SMS de repli sont les
+	// étiquettes de catégorie posées plus haut
 	grfCanal.Titre = "Canal utilisé"
-	grfCanal.LibelléSérie(nSerie, "RCS")
 	grfCanal.Libellé(grAffichePourcentage,Vrai)
 	grfCanal.Dessine()
 sinon
@@ -263,7 +266,7 @@ fin
 // le graphe opérateurs est masqué (correction du 29/09)
 si nCategorie > 0 alors
 	grfOperateur.Visible = Vrai
-	grfOperateur.LibelléSérie(nSerie, "RCS")
+	grEtiquetteSérie(grfOperateur, nSerie, "RCS")
 	grfOperateur.Libellé(grAfficheValeur,Vrai)
 	grfOperateur.Dessine()
 sinon
@@ -374,7 +377,7 @@ grfDiffusion.Paramètre(grGraduationsOptimiséesY,Vrai)
 grfDiffusion.AxeVisible(grAbscisse,grVisible)
 grfDiffusion.AxeVisible(grOrdonnée,grVisible)
 // La bulle par défaut affichait le nom de série hérité du SMS (« n Sms »)
-grfDiffusion.LibelléSérie(nSerie, "RCS")
+grEtiquetteSérie(grfDiffusion, nSerie, "RCS")
 grfDiffusion.CouleurSérie(nSerie,HTMLVersRVB(__COULEUR_SMS_M__))
 grfDiffusion.EpaisseurTrait(nSerie,2)
 grfDiffusion.NiveauTemporelMax(1,grntMinute)
