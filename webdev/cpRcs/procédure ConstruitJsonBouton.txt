@@ -1,4 +1,8 @@
-procédure ConstruitJsonBouton(stBouton est une structOperationRcsBouton, pIdRcsCarte, taaValeurChamp est un tableau associatif de chaînes, pCodeLanding, bEstTest)
+// pPostbackOrigine (correction du 29/09) : origine du message, en tête du
+// postbackData — l'IdRcs de l'opération ("3085") ou "U" + IdRcsUnitaire ("U42")
+// pour un envoi unitaire / test. Le webhook des entrants résout ainsi le clic
+// depuis le message cliqué, jamais depuis le dernier envoi au portable.
+procédure ConstruitJsonBouton(stBouton est une structOperationRcsBouton, pIdRcsCarte, taaValeurChamp est un tableau associatif de chaînes, pCodeLanding, bEstTest, pPostbackOrigine)
 
 sJson				est une chaîne
 sLibelle			est une chaîne
@@ -31,7 +35,8 @@ si SansEspace(sLibelle) = "" alors
 	renvoyer ""
 fin
 
-sPostback = pIdRcsCarte + "-" + stBouton.IdRcsBouton
+// Format : Origine-IdRcsCarte-IdRcsBouton (carte 0 = bouton commun au message)
+sPostback = pPostbackOrigine + "-" + pIdRcsCarte + "-" + stBouton.IdRcsBouton
 
 selon stBouton.SousType
 	cas __RCS_ACTION_AGENDA__

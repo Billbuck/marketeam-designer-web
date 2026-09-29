@@ -66,6 +66,18 @@ sinon
 fin
 
 
+// Une opération déjà diffusée (statut > prise en charge) garde ses cartes et
+// boutons (correction du 29/09) : leurs ids figurent dans les postbackData des
+// messages déjà envoyés et dans ope_rcs_clic — les recréer casserait
+// l'attribution des clics. Le remplacement reste permis pour les brouillons.
+si pas bEstModeCreation alors
+	si dos_operation.LitRecherchePremier(IdOperation, stOperation.IdOperation) alors
+		si dos_operation.Statut > __Statut_Prise_En_Charge__ alors
+			renvoyer Vrai
+		fin
+	fin
+fin
+
 // On remplace tout : suppression puis réécriture dans l'ordre
 sTexteRequete = ChaîneConstruit("DELETE FROM ope_rcs_bouton WHERE IdRcs = %1", stOperation.IdOperation)
 si pas sdReqRcs.ExécuteRequêteSQL(ope_rcs_bouton..Connexion, hRequêteSansCorrection, sTexteRequete) alors

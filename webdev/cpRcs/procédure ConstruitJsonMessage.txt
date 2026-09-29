@@ -1,4 +1,6 @@
-procédure ConstruitJsonMessage(stOperationRcs est une structOperationRcs, pSenderName, pPortable, pMessageId, taaValeurChamp est un tableau associatif de chaînes, pCodeLanding, bEstTest)
+// pPostbackOrigine (correction du 29/09) : préfixe des postbackData des boutons —
+// IdRcs de l'opération (campagne) ou "U" + IdRcsUnitaire (unitaire / test).
+procédure ConstruitJsonMessage(stOperationRcs est une structOperationRcs, pSenderName, pPortable, pMessageId, taaValeurChamp est un tableau associatif de chaînes, pCodeLanding, bEstTest, pPostbackOrigine)
 
 sJson				est une chaîne
 sPortable		est une chaîne
@@ -24,7 +26,7 @@ si stOperationRcs.TypeContenu = __RCS_CONTENU_CARROUSEL__ alors
 	sContent += ",""cardWidth"":""" + EncodeAsciiJson((stOperationRcs.LargeurCarte = "") ? "MEDIUM" sinon stOperationRcs.LargeurCarte) + """"
 	sContent += ",""contents"":["
 	pour nInd = 1 _à_ stOperationRcs.tabCarte..Occurrence
-		sCarte = ConstruitJsonCarte(stOperationRcs.tabCarte[nInd], taaValeurChamp, pCodeLanding, bEstTest)
+		sCarte = ConstruitJsonCarte(stOperationRcs.tabCarte[nInd], taaValeurChamp, pCodeLanding, bEstTest, pPostbackOrigine)
 		sContent += (nInd > 1 ? "," sinon "") + sCarte
 	fin
 	sContent += "]"
@@ -33,14 +35,14 @@ sinon
 	sContent += ",""orientation"":""" + EncodeAsciiJson((stOperationRcs.Orientation = "") ? "VERTICAL" sinon stOperationRcs.Orientation) + """"
 	sContent += ",""alignment"":""" + EncodeAsciiJson((stOperationRcs.Alignement = "") ? "LEFT" sinon stOperationRcs.Alignement) + """"
 	si stOperationRcs.tabCarte..Occurrence > 0 alors
-		sContent += ",""content"":" + ConstruitJsonCarte(stOperationRcs.tabCarte[1], taaValeurChamp, pCodeLanding, bEstTest)
+		sContent += ",""content"":" + ConstruitJsonCarte(stOperationRcs.tabCarte[1], taaValeurChamp, pCodeLanding, bEstTest, pPostbackOrigine)
 	sinon
 		sContent += ",""content"":{}"
 		Trace("cpRcs : message sans carte")
 	fin
 fin
 
-sChips = ConstruitJsonSuggestions(stOperationRcs.tabBoutonCommun, 0, __RCS_MAX_BOUTONS_MESSAGE__, taaValeurChamp, pCodeLanding, bEstTest)
+sChips = ConstruitJsonSuggestions(stOperationRcs.tabBoutonCommun, 0, __RCS_MAX_BOUTONS_MESSAGE__, taaValeurChamp, pCodeLanding, bEstTest, pPostbackOrigine)
 si sChips <> "" alors
 	sContent += ",""suggestions"":" + sChips
 fin

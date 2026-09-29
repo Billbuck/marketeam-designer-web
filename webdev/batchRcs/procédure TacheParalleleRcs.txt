@@ -265,7 +265,8 @@ tantque LitLot()
 		taaValeurChamp[__CHAMP_CLIQUEZ_ICI__]		= sdReqEnvoi.Code
 
 		sMessageId											= ChaîneConstruit("%1-%2", pIdRcs, sdReqEnvoi.IdBaseLigne)
-		sJsonMessage										= cpRcs.ConstruitJsonMessage(stOperationRcs, sSenderName, sdReqEnvoi.Portable, sMessageId, taaValeurChamp, sdReqEnvoi.Code, Faux)
+		// Origine du postback des boutons : l'IdRcs de l'opération (correction du 29/09)
+		sJsonMessage										= cpRcs.ConstruitJsonMessage(stOperationRcs, sSenderName, sdReqEnvoi.Portable, sMessageId, taaValeurChamp, sdReqEnvoi.Code, Faux, pIdRcs)
 
 		tabJsonMessage.Ajoute(sJsonMessage)
 		tabIdBaseLigneLot.Ajoute(sdReqEnvoi.IdBaseLigne)

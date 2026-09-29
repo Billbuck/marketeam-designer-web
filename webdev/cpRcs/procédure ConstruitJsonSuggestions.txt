@@ -1,4 +1,4 @@
-procédure ConstruitJsonSuggestions(tabBouton est un tableau de structOperationRcsBouton, pIdRcsCarte, pMax, taaValeurChamp est un tableau associatif de chaînes, pCodeLanding, bEstTest)
+procédure ConstruitJsonSuggestions(tabBouton est un tableau de structOperationRcsBouton, pIdRcsCarte, pMax, taaValeurChamp est un tableau associatif de chaînes, pCodeLanding, bEstTest, pPostbackOrigine)
 
 sJson			est une chaîne
 sUn			est une chaîne
@@ -7,7 +7,7 @@ nIgnore		est un entier
 
 
 pour tout stBoutonJson de tabBouton sur Ordre
-	sUn = ConstruitJsonBouton(stBoutonJson, pIdRcsCarte, taaValeurChamp, pCodeLanding, bEstTest)
+	sUn = ConstruitJsonBouton(stBoutonJson, pIdRcsCarte, taaValeurChamp, pCodeLanding, bEstTest, pPostbackOrigine)
 	si sUn = "" alors continuer
 
 	si nAjoute >= pMax alors

@@ -1,43 +1,47 @@
 // Résumé : Traite UN message entrant RCS (un élément de results[]).
 //
-// Résolution du destinataire :
+// Résolution du destinataire (réponses TEXT / FILE / LOCATION et STOP) :
 //   1. pairedMessageId si présent : préfixe "U" → ope_rcs_unitaire, sinon "IdRcs-IdBaseLigne" ;
 //   2. sinon dernière ligne envoyée à ce portable depuis moins de 3 jours
 //      (ope_rcs_envoi via dos_base_ligne, UNION ope_rcs_unitaire), la plus récente gagne ;
 //   3. toujours rien → journalisation et fin (la page répond quand même 200).
+//
+// Les clics (SUGGESTION) ne passent PAS par le repli « dernier envoi au portable »
+// (correction du 29/09) : l'opération est résolue depuis le postbackData du bouton
+// cliqué, dans TraiteClicCdb. Un clic non résolu est journalisé, jamais deviné.
 //
 // Confirmation STOP : INSERT IGNORE dans ope_rcs_unitaire avec MessageIdEvenement
 // (id Infobip de l'entrant, index UNIQUE) → un webhook rejoué ne crée jamais de
 // seconde confirmation. Facturation calquée sur pgeKannelReponse.Traitement
 // (dos_operation_ligne, prestation ROUTAGE_RCS). Statut 10 (enregistrée) :
 // le RCS texte est envoyé par ScannerUnitaire (batchRcs).
-procédure TraiteEntrant(vEntrant est un Variant)
+procédure TraiteEntrant(local vEntrant est un Variant)
 
-sdReqEntrant			est une Source de Données
+sdReqEntrant				est une Source de Données
 sdReqResolution			est une Source de Données
-sTexteRequete			est une chaîne
-sMessageIdInfobip		est une chaîne
-sPortable				est une chaîne
-sRecu					est une chaîne
-sTypeMessage			est une chaîne
-sTexteMessage			est une chaîne
-sTexteContenu			est une chaîne
-sPostback				est une chaîne
-sPaired					est une chaîne
-sMessageConfirmation	est une chaîne = "Votre demande de désabonnement a bien été prise en compte"
-nIdOperation			est un entier
-nIdBaseLigne			est un entier
-nIdRcsUnitaire			est un entier
-nIdRcsCarte				est un entier
-nIdRcsBouton			est un entier
+sTexteRequete				est une chaîne
+sMessageIdInfobip			est une chaîne
+sPortable					est une chaîne
+sRecu							est une chaîne
+sTypeMessage				est une chaîne
+sTexteMessage				est une chaîne
+sTexteContenu				est une chaîne
+sPostback					est une chaîne
+sPaired						est une chaîne
+sMessageConfirmation		est une chaîne	= "Votre demande de désabonnement a bien été prise en compte"
+nIdOperation				est un entier
+nIdBaseLigne				est un entier
+nIdRcsUnitaire				est un entier
+nIdRcsCarte					est un entier
+nIdRcsBouton				est un entier
 
 
-	// --- Procédures internes : toujours écrites AVANT leur première utilisation ---
+// --- Procédures internes : toujours écrites AVANT leur première utilisation ---
 
 	// Échappe une chaîne pour insertion SQL
 	procédure interne EchappeSqlCdb(local pTexteCdb)
-		pTexteCdb = Remplace(pTexteCdb, "\", "\\")
-		pTexteCdb = Remplace(pTexteCdb, "'", "''")
+		pTexteCdb		= Remplace(pTexteCdb, "\", "\\")
+		pTexteCdb		= Remplace(pTexteCdb, "'", "''")
 		renvoyer pTexteCdb
 	fin
 
@@ -50,29 +54,124 @@ nIdRcsBouton			est un entier
 		renvoyer Vrai
 	fin
 
-	// Clic sur un bouton : INSERT IGNORE (idempotence par MessageIdEvenement UNIQUE).
-	// Les LEFT JOIN renvoient NULL si la carte ou le bouton ont été supprimés depuis
-	// (les FK de ope_rcs_clic interdisent d'insérer un id inexistant).
-	// NULLIF(x, 0) : carte 0 = bouton commun → IdRcsCarte NULL.
+// Clic sur un bouton : l'opération est résolue depuis le postbackData du bouton
+// cliqué, jamais depuis le dernier envoi au portable (correction du 29/09).
+// Formats de postback :
+//   nouveau : "IdRcs-IdRcsCarte-IdRcsBouton" (campagne, carte 0 = bouton commun)
+//             "U<IdRcsUnitaire>-IdRcsCarte-IdRcsBouton" (envoi unitaire / test)
+//   ancien  : "IdRcsCarte-IdRcsBouton" → IdRcs retrouvé par le bouton, sinon la
+//             carte, sinon le pairedMessageId déjà résolu ; sinon journal et abandon.
+// Le portable ne sert plus qu'à trouver l'IdBaseLigne dans ope_rcs_envoi de
+// CETTE opération. INSERT IGNORE (idempotence par MessageIdEvenement UNIQUE).
+// Les LEFT JOIN historisent Libelle / TypeBouton / SousType si le bouton existe
+	// encore ; NULLIF(x, 0) : carte 0 = bouton commun → IdRcsCarte NULL.
 	procédure interne TraiteClicCdb()
-		sReqClicCdb est une chaîne
-		nIdRcsCarte		= Val(ExtraitChaîne(sPostback, 1, "-"))
-		nIdRcsBouton	= Val(ExtraitChaîne(sPostback, 2, "-"))
+		sReqClicCdb		est une chaîne
+		sOrigineCdb		est une chaîne
+		nNbSegmentCdb	est un entier
+
+		nNbSegmentCdb = ChaîneOccurrence(sPostback, "-") + 1
+
+		si nNbSegmentCdb >= 3 alors
+			// Nouveau format : l'origine du message est en tête du postback
+			sOrigineCdb		= ExtraitChaîne(sPostback, 1, "-")
+			nIdRcsCarte		= Val(ExtraitChaîne(sPostback, 2, "-"))
+			nIdRcsBouton	= Val(ExtraitChaîne(sPostback, 3, "-"))
+			si Gauche(sOrigineCdb, 1) = "U" alors
+				nIdRcsUnitaire	= Val(sOrigineCdb[[2 à]])
+				nIdOperation	= 0
+				nIdBaseLigne	= 0
+			sinon
+				// Le message cliqué fait foi. L'IdBaseLigne éventuellement résolu par
+				// pairedMessageId n'est conservé que s'il désigne la même opération.
+				si Val(sOrigineCdb) <> nIdOperation alors nIdBaseLigne = 0
+				nIdOperation	= Val(sOrigineCdb)
+				nIdRcsUnitaire	= 0
+			fin
+		sinon
+			// Ancien format : opération retrouvée par le bouton, sinon par la carte.
+			// À défaut, les valeurs du pairedMessageId (déjà résolues) restent en place.
+			nIdRcsCarte		= Val(ExtraitChaîne(sPostback, 1, "-"))
+			nIdRcsBouton	= Val(ExtraitChaîne(sPostback, 2, "-"))
+			si nIdRcsBouton > 0 alors
+				si sdReqResolution.ExécuteRequêteSQL(cpKannel.__cnxKannel, hRequêteSansCorrection, "SELECT ope_rcs_bouton.IdRcs FROM ope_rcs_bouton WHERE ope_rcs_bouton.IdRcsBouton = " + nIdRcsBouton) alors
+					si sdReqResolution.LitPremier() alors
+						si sdReqResolution.IdRcs <> nIdOperation alors nIdBaseLigne = 0
+						nIdOperation	= sdReqResolution.IdRcs
+						nIdRcsUnitaire	= 0
+					fin
+				fin
+			fin
+			si nIdOperation = 0 _et_ nIdRcsCarte > 0 alors
+				si sdReqResolution.ExécuteRequêteSQL(cpKannel.__cnxKannel, hRequêteSansCorrection, "SELECT ope_rcs_carte.IdRcs FROM ope_rcs_carte WHERE ope_rcs_carte.IdRcsCarte = " + nIdRcsCarte) alors
+					si sdReqResolution.LitPremier() alors
+						nIdOperation	= sdReqResolution.IdRcs
+						nIdRcsUnitaire	= 0
+					fin
+				fin
+			fin
+		fin
+
+		// Envoi unitaire : IdOperation et IdBaseLigne portés par ope_rcs_unitaire
+		si nIdRcsUnitaire > 0 alors
+			si sdReqResolution.ExécuteRequêteSQL(cpKannel.__cnxKannel, hRequêteSansCorrection, "SELECT IFNULL(ope_rcs_unitaire.IdOperation, 0) IdOperation, IFNULL(ope_rcs_unitaire.IdBaseLigne, 0) IdBaseLigne FROM ope_rcs_unitaire WHERE ope_rcs_unitaire.IdRcsUnitaire = " + nIdRcsUnitaire) alors
+				si sdReqResolution.LitPremier() alors
+					nIdOperation	= sdReqResolution.IdOperation
+					nIdBaseLigne	= sdReqResolution.IdBaseLigne
+				sinon
+					nIdRcsUnitaire = 0		// envoi unitaire inconnu
+				fin
+			fin
+		fin
+
+		// Opération : IdBaseLigne du portable dans CETTE opération uniquement
+		si nIdOperation > 0 _et_ nIdRcsUnitaire = 0 _et_ nIdBaseLigne = 0 _et_ sPortable <> "" alors
+			sReqClicCdb =
+			[
+				SELECT ope_rcs_envoi.IdBaseLigne
+				FROM ope_rcs_envoi
+				JOIN dos_base_ligne ON dos_base_ligne.IdBaseLigne = ope_rcs_envoi.IdBaseLigne
+				WHERE ope_rcs_envoi.IdRcs = %1 AND dos_base_ligne.Portable = '%2'
+				ORDER BY ope_rcs_envoi.DateHeureEnvoi DESC
+				LIMIT 1
+			]
+			sReqClicCdb = ChaîneConstruit(sReqClicCdb, nIdOperation, EchappeSqlCdb(sPortable))
+			si sdReqResolution.ExécuteRequêteSQL(cpKannel.__cnxKannel, hRequêteSansCorrection, sReqClicCdb) alors
+				si sdReqResolution.LitPremier() alors
+					nIdBaseLigne = sdReqResolution.IdBaseLigne
+				fin
+			fin
+		fin
+
+		// Jamais de rattachement « au dernier envoi » : sans opération ni unitaire,
+		// on journalise et on n'insère rien
+		si nIdOperation = 0 _et_ nIdRcsUnitaire = 0 alors
+			EnregistreErreurRcsEntrant("TraiteEntrant : clic non résolu (postback " + sPostback + ", portable " + sPortable + ")", VariantVersJSON(vEntrant))
+			retour
+		fin
+
+		// Le CHECK de ope_rcs_clic exige une source : ligne de base ou envoi unitaire
+		si nIdBaseLigne = 0 _et_ nIdRcsUnitaire = 0 alors
+			EnregistreErreurRcsEntrant("TraiteEntrant : clic sans destinataire dans l'opération " + nIdOperation + " (postback " + sPostback + ", portable " + sPortable + ")", VariantVersJSON(vEntrant))
+			retour
+		fin
+
 		sReqClicCdb =
 		[
 			INSERT IGNORE INTO ope_rcs_clic
-			(IdOperation, IdBaseLigne, IdRcsUnitaire, IdRcsCarte, IdRcsBouton, PostbackData, LibelleBouton, TypeBouton, DateHeureClic, MessageIdEvenement)
+			(IdOperation, IdBaseLigne, IdRcsUnitaire, IdRcsCarte, IdRcsBouton, PostbackData, LibelleBouton, TypeBouton, SousType, DateHeureClic, MessageIdEvenement)
 			SELECT
-				NULLIF(%1, 0),
-				NULLIF(%2, 0),
-				NULLIF(%3, 0),
-				ope_rcs_carte.IdRcsCarte,
-				ope_rcs_bouton.IdRcsBouton,
-				'%4',
-				ope_rcs_bouton.Libelle,
-				ope_rcs_bouton.TypeBouton,
-				'%5',
-				'%6'
+			NULLIF(%1, 0),
+			NULLIF(%2, 0),
+			NULLIF(%3, 0),
+			ope_rcs_carte.IdRcsCarte,
+			ope_rcs_bouton.IdRcsBouton,
+			'%4',
+			ope_rcs_bouton.Libelle,
+			ope_rcs_bouton.TypeBouton,
+			ope_rcs_bouton.SousType,
+			'%5',
+			'%6'
 			FROM (SELECT 1 bidon) src
 			LEFT JOIN ope_rcs_bouton ON ope_rcs_bouton.IdRcsBouton = %7
 			LEFT JOIN ope_rcs_carte ON ope_rcs_carte.IdRcsCarte = %8
@@ -83,7 +182,7 @@ nIdRcsBouton			est un entier
 
 	// Mot-clé STOP : liste de blocage + confirmation RCS texte facturée
 	procédure interne TraiteStopCdb()
-		sReqStopCdb			est une chaîne
+		sReqStopCdb				est une chaîne
 		sReqConfirmationCdb	est une chaîne
 
 		// 1 - Liste de blocage (comme pgeKannelReponse.Traitement, index UNIQUE sur Portable)
@@ -91,12 +190,12 @@ nIdRcsBouton			est un entier
 		[
 			INSERT IGNORE INTO dos_base_ligne_erreur (IdBaseLigne, IdClient, IdOperation, TypeErreur, DateHeureErreur, Portable)
 			SELECT
-				NULLIF(%1, 0),
-				dos_operation.IdClientFacturation,
-				dos_operation.IdOperation,
-				'%2',
-				NOW(),
-				'%3'
+			NULLIF(%1, 0),
+			dos_operation.IdClientFacturation,
+			dos_operation.IdOperation,
+			'%2',
+			NOW(),
+			'%3'
 			FROM dos_operation
 			WHERE dos_operation.IdOperation = %4
 		]
@@ -112,28 +211,28 @@ nIdRcsBouton			est un entier
 			INSERT IGNORE INTO ope_rcs_unitaire
 			(IdOperation, IdBaseLigne, IdRcsAgent, IdClient, IdContact, Origine, Portable, Message, Statut, MessageIdEvenement, TauxTVA, MontantHT, MontantTTC, EstPaye, DateHeureCreation, UserCreation)
 			SELECT
-				dos_operation.IdOperation,
-				NULLIF(%1, 0),
-				ope_rcs.IdRcsAgent,
-				dos_operation.IdClient,
-				dos_operation.IdContact,
-				'%2',
-				'%3',
-				'%4',
-				'%5',
-				'%6',
-				dos_operation_ligne.TauxTVA,
-				dos_operation_ligne.PrixUnitaireVenteBrut / GREATEST(dos_operation_ligne.TailleUnitaire, 1),
-				(dos_operation_ligne.PrixUnitaireVenteBrut / GREATEST(dos_operation_ligne.TailleUnitaire, 1)) * (1 + dos_operation_ligne.TauxTVA / 100),
-				0,
-				NOW(),
-				'Webhook'
+			dos_operation.IdOperation,
+			NULLIF(%1, 0),
+			ope_rcs.IdRcsAgent,
+			dos_operation.IdClient,
+			dos_operation.IdContact,
+			'%2',
+			'%3',
+			'%4',
+			'%5',
+			'%6',
+			dos_operation_ligne.TauxTVA,
+			dos_operation_ligne.PrixUnitaireVenteBrut / GREATEST(dos_operation_ligne.TailleUnitaire, 1),
+			(dos_operation_ligne.PrixUnitaireVenteBrut / GREATEST(dos_operation_ligne.TailleUnitaire, 1)) * (1 + dos_operation_ligne.TauxTVA / 100),
+			0,
+			NOW(),
+			'Webhook'
 			FROM
-				dos_operation
-				JOIN ope_rcs ON ope_rcs.IdRcs = dos_operation.IdOperation AND ope_rcs.IdRcsAgent IS NOT NULL
-				JOIN dos_operation_ligne ON dos_operation_ligne.IdOperation = dos_operation.IdOperation AND dos_operation_ligne.CodePrestation = '%7'
+			dos_operation
+			JOIN ope_rcs ON ope_rcs.IdRcs = dos_operation.IdOperation AND ope_rcs.IdRcsAgent IS NOT NULL
+			JOIN dos_operation_ligne ON dos_operation_ligne.IdOperation = dos_operation.IdOperation AND dos_operation_ligne.CodePrestation = '%7'
 			WHERE
-				dos_operation.IdOperation = %8
+			dos_operation.IdOperation = %8
 		]
 		sReqConfirmationCdb = ChaîneConstruit(sReqConfirmationCdb, nIdBaseLigne, __ERREUR_STOP_PUB__, EchappeSqlCdb(sPortable), EchappeSqlCdb(sMessageConfirmation), __SMS_STATUT_ENREGISTREE__, EchappeSqlCdb(sMessageIdInfobip), __PRESTATION_ROUTAGE_RCS__, nIdOperation)
 		ExecuteRequeteCdb("TraiteEntrant stop confirmation", sReqConfirmationCdb)
@@ -162,9 +261,9 @@ si sMessageIdInfobip = "" alors
 fin
 
 // sender = portable de l'utilisateur, normalisé sans + ni espace (comme cpRcs)
-sPortable = Remplace(Remplace(SansEspace("" + vEntrant.sender), "+", ""), " ", "")
+sPortable		= Remplace(Remplace(SansEspace("" + vEntrant.sender), "+", ""), " ", "")
 
-sRecu = Gauche(Remplace(vEntrant.receivedAt, ["-","T",":","+"], ""), 14)
+sRecu			= Gauche(Remplace(vEntrant.receivedAt, ["-","T",":","+"], ""), 14)
 si sRecu = "" alors sRecu = DateHeureSys()[[à 14]]
 
 si vEntrant.message..Membre = Null alors
@@ -195,30 +294,32 @@ si sPaired <> "" alors
 		nIdOperation	= Val(ExtraitChaîne(sPaired, 1, "-"))
 		nIdBaseLigne	= Val(ExtraitChaîne(sPaired, 2, "-"))
 		si nIdOperation <= 0 _ou_ nIdBaseLigne <= 0 alors
-			nIdOperation = 0
-			nIdBaseLigne = 0
+			nIdOperation		= 0
+			nIdBaseLigne		= 0
 		fin
 	fin
 fin
 
-si nIdOperation = 0 _et_ nIdRcsUnitaire = 0 _et_ sPortable <> "" alors
+// Repli « dernière ligne envoyée au portable » : réservé aux réponses et aux STOP.
+// Les clics (SUGGESTION) sont résolus par le postback dans TraiteClicCdb.
+si sTypeMessage <> "SUGGESTION" _et_ nIdOperation = 0 _et_ nIdRcsUnitaire = 0 _et_ sPortable <> "" alors
 	// Dernière ligne envoyée à ce portable depuis moins de 3 jours
 	sTexteRequete =
 	[
 		SELECT z.IdOperation, z.IdBaseLigne, z.IdRcsUnitaire
 		FROM (
-			SELECT ope_rcs_envoi.IdRcs IdOperation, ope_rcs_envoi.IdBaseLigne IdBaseLigne, 0 IdRcsUnitaire, ope_rcs_envoi.DateHeureEnvoi DateHeureEnvoi
-			FROM ope_rcs_envoi
-			JOIN dos_base_ligne ON dos_base_ligne.IdBaseLigne = ope_rcs_envoi.IdBaseLigne
-			WHERE dos_base_ligne.Portable = '%1'
-			AND ope_rcs_envoi.DateHeureEnvoi >= DATE_SUB(NOW(), INTERVAL 3 DAY)
-
-			UNION
-
-			SELECT ope_rcs_unitaire.IdOperation, 0 IdBaseLigne, ope_rcs_unitaire.IdRcsUnitaire, ope_rcs_unitaire.DateHeureEnvoi
-			FROM ope_rcs_unitaire
-			WHERE ope_rcs_unitaire.Portable = '%1'
-			AND ope_rcs_unitaire.DateHeureEnvoi >= DATE_SUB(NOW(), INTERVAL 3 DAY)
+		SELECT ope_rcs_envoi.IdRcs IdOperation, ope_rcs_envoi.IdBaseLigne IdBaseLigne, 0 IdRcsUnitaire, ope_rcs_envoi.DateHeureEnvoi DateHeureEnvoi
+		FROM ope_rcs_envoi
+		JOIN dos_base_ligne ON dos_base_ligne.IdBaseLigne = ope_rcs_envoi.IdBaseLigne
+		WHERE dos_base_ligne.Portable = '%1'
+		AND ope_rcs_envoi.DateHeureEnvoi >= DATE_SUB(NOW(), INTERVAL 3 DAY)
+		
+		UNION
+		
+		SELECT ope_rcs_unitaire.IdOperation, 0 IdBaseLigne, ope_rcs_unitaire.IdRcsUnitaire, ope_rcs_unitaire.DateHeureEnvoi
+		FROM ope_rcs_unitaire
+		WHERE ope_rcs_unitaire.Portable = '%1'
+		AND ope_rcs_unitaire.DateHeureEnvoi >= DATE_SUB(NOW(), INTERVAL 3 DAY)
 		) z
 		ORDER BY z.DateHeureEnvoi DESC
 		LIMIT 1
@@ -235,7 +336,7 @@ si nIdOperation = 0 _et_ nIdRcsUnitaire = 0 _et_ sPortable <> "" alors
 	fin
 fin
 
-si nIdOperation = 0 _et_ nIdRcsUnitaire = 0 alors
+si sTypeMessage <> "SUGGESTION" _et_ nIdOperation = 0 _et_ nIdRcsUnitaire = 0 alors
 	EnregistreErreurRcsEntrant("TraiteEntrant : entrant non résolu (portable " + sPortable + ")", VariantVersJSON(vEntrant))
 	retour
 fin

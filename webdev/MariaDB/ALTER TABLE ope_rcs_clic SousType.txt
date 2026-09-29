@@ -1,0 +1,13 @@
+-- Correction attribution des clics (29/09/2026) : historisation du SousType
+-- du bouton au moment du clic. Comme LibelleBouton, la valeur reste juste
+-- après suppression / recréation des boutons (brouillons réenregistrés).
+-- À exécuter en dev puis en prod, AVANT le CREATE OR REPLACE VIEW vue_rcs_retour.
+
+ALTER TABLE `ope_rcs_clic`
+	ADD COLUMN `SousType` VARCHAR(20) NULL DEFAULT NULL COMMENT 'SousType du bouton au moment du clic - historise' AFTER `TypeBouton`;
+
+-- Reprise de l'historique : les clics dont le bouton existe encore
+UPDATE ope_rcs_clic
+JOIN ope_rcs_bouton ON ope_rcs_bouton.IdRcsBouton = ope_rcs_clic.IdRcsBouton
+SET ope_rcs_clic.SousType = ope_rcs_bouton.SousType
+WHERE ope_rcs_clic.SousType IS NULL;

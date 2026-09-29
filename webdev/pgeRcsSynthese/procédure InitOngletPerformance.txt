@@ -114,18 +114,19 @@ libPerformanceTauxLead					= (_stSynthèse.NbrLu > 0)			? Arrondi(_stSynthèse.N
 
 // **************************** TABLEAU INTERACTIONS PAR BOUTON *****************************
 
+// Une seule mesure par bouton : les destinataires uniques (correction du 29/09 —
+// la colonne Clics a été retirée du tableau)
 sTexteRequete								=
 [
 	SELECT
 	vue_rcs_retour.Action,
 	vue_rcs_retour.Libelle,
-	COUNT(*) NbrClic,
 	COUNT(DISTINCT vue_rcs_retour.IdBaseLigne) NbrUnique
 	FROM vue_rcs_retour
 	WHERE vue_rcs_retour.IdOperation = [%_pIdOperation%]
 	AND vue_rcs_retour.Famille IN ('[%__RETOUR_FAMILLE_INTERACTION__%]','[%__RETOUR_FAMILLE_INTENTION__%]')
 	GROUP BY vue_rcs_retour.Action, vue_rcs_retour.Libelle
-	ORDER BY NbrClic DESC
+	ORDER BY NbrUnique DESC
 ]
 
 si pas HExécuteRequêteSQL(sdReqPerformance, ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
@@ -136,7 +137,7 @@ fin
 tblInteractionBouton.SupprimeTout()
 
 pour tout sdReqPerformance
-	tblInteractionBouton.AjouteLigne(sdReqPerformance.Libelle, Partage.LibelleRetourRcsAction(sdReqPerformance.Action), sdReqPerformance.NbrClic, sdReqPerformance.NbrUnique)
+	tblInteractionBouton.AjouteLigne(sdReqPerformance.Libelle, Partage.LibelleRetourRcsAction(sdReqPerformance.Action), sdReqPerformance.NbrUnique)
 fin
 
 tblInteractionBouton.Visible = (tblInteractionBouton.Occurrence > 0)

@@ -55,10 +55,10 @@ Voir décision 8. Le tableau des erreurs utilise `rcs_code.Libelle` (français) 
 ### Performance
 - Bloc **Synthèse** : Envoyés · Délivrés (dont SMS de repli) · Lus · Interactions · Intentions de contact · Réponses (nombre seulement) · Leads, avec les taux (lus / délivrés, interactions / lus, leads / lus).
 - Bloc **RCS interactif** (si landing) : pages visitées, redirections (graphe existant), offres.
-- Tableau **Interactions par bouton** : libellé, sous-type, action, clics, destinataires uniques (depuis `vue_rcs_retour` groupée, familles Interaction et Intention — les redirections ont leur propre tableau dans le bloc RCS interactif).
+- Tableau **Interactions par bouton** : libellé, action, destinataires uniques (depuis `vue_rcs_retour` groupée, familles Interaction et Intention — les redirections ont leur propre tableau dans le bloc RCS interactif ; la colonne Clics a été retirée le 29/09, seule la mesure « destinataires » est présentée).
 
 ### Retours (ex-Leads)
-Tableau `vue_rcs_retour` pour l'opération : Destinataire (civilité, nom, prénom, portable), Action, Libellé (bouton / lien / choix cochés), Détail (URL, cases cochées, texte de la réponse), Date, Heure, Canal (RCS / SMS / Landing). Sélecteur de filtre en en-tête, cinq familles, Leads par défaut ; les réponses sont affichées dès la V1. Export Excel du tableau filtré. Visible dès que l'opération est en diffusion (pas seulement au premier lead).
+Tableau `vue_rcs_retour` pour l'opération : Destinataire (civilité, nom, prénom, portable), Action, Libellé (bouton / lien / choix cochés), Détail (URL, cases cochées, texte de la réponse), Date, Heure, Canal (RCS / SMS / Landing). Une ligne par destinataire, action et libellé, datée du dernier retour (29/09 — pas de colonne Nb) ; les réponses restent une ligne par texte. Sélecteur de filtre en en-tête, cinq familles comptées en destinataires uniques, Leads par défaut ; les réponses sont affichées dès la V1. Export Excel du tableau filtré. Visible dès que l'opération est en diffusion (pas seulement au premier lead).
 
 ## 5. Modèle de données
 

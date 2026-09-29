@@ -186,7 +186,9 @@ pour tout sdReqUnitaire
 		bEstTest			= (sdReqUnitaire.CodeLanding <> "")
 		sCodeLanding	= bEstTest ? sdReqUnitaire.CodeLanding sinon sCode
 
-		sJsonMessage	= cpRcs.ConstruitJsonMessage(stOperationRcs, sdReqUnitaire.SenderName, sdReqUnitaire.Portable, sMessageId, taaValeurChamp, sCodeLanding, bEstTest)
+		// Origine du postback des boutons : U + IdRcsUnitaire, même en simulation
+		// (le messageId SIMUL- ne sert qu'au rapprochement des DLR, sans objet ici)
+		sJsonMessage	= cpRcs.ConstruitJsonMessage(stOperationRcs, sdReqUnitaire.SenderName, sdReqUnitaire.Portable, sMessageId, taaValeurChamp, sCodeLanding, bEstTest, "U" + nIdRcsUnitaire)
 	fin
 	tabJsonMessage.SupprimeTout()
 	tabJsonMessage.Ajoute(sJsonMessage)

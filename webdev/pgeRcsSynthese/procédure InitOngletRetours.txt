@@ -4,6 +4,9 @@
 // Décisions du 29/09 : les réponses sont affichées dès la V1 (le texte de
 // la réponse est dans la colonne Détail) ; les redirections sont une
 // famille à part (REDIRECTION), plus une action de la famille INTERACTION.
+// Affichage : UNE ligne par destinataire, action et libellé, datée du
+// DERNIER retour (pas de colonne Nb) ; les réponses restent une ligne par
+// texte. Pastilles en destinataires uniques (COUNT DISTINCT IdBaseLigne).
 // Sélecteur selFiltre en en-tête, 5 options dans l'ordre des familles :
 // 1 Leads, 2 Intentions, 3 Interactions, 4 Redirections, 5 Réponses —
 // Leads par défaut. OptionModifiee pose _sFiltreRetourFamille et rappelle
@@ -15,7 +18,6 @@ procédure InitOngletRetours()
 nInd					est un entier
 sTexteRequete		est une chaîne
 sdReqRetour			est une Source de Données
-sCondition			est une chaîne
 nNbrLead				est un entier
 nNbrIntention		est un entier
 nNbrInteraction	est un entier
@@ -24,13 +26,13 @@ nNbrReponse			est un entier
 
 
 // ------------------------------------------------------------------
-// Pastilles : comptage par famille (réponses comprises)
+// Pastilles : destinataires uniques par famille (réponses comprises)
 // ------------------------------------------------------------------
 sTexteRequete =
 [
 	SELECT
 	vue_rcs_retour.Famille,
-	COUNT(*) Total
+	COUNT(DISTINCT vue_rcs_retour.IdBaseLigne) Total
 	FROM vue_rcs_retour
 	WHERE vue_rcs_retour.IdOperation = [%_pIdOperation%]
 	GROUP BY vue_rcs_retour.Famille
@@ -58,35 +60,60 @@ selFiltre[4].Libellé	= "Redirections (" + NumériqueVersChaîne(nNbrRedirection
 selFiltre[5].Libellé	= "Réponses (" + NumériqueVersChaîne(nNbrReponse, "dS") + ")"
 
 // ------------------------------------------------------------------
-// Filtre de la famille active (posée par OptionModifiee)
+// Tableau des retours de la famille active (posée par OptionModifiee).
+// Réponses : une ligne par texte. Autres familles : une ligne par
+// destinataire, action et libellé — date du dernier retour, Detail du
+// dernier retour (GROUP_CONCAT trié date décroissante, premier élément).
 // ------------------------------------------------------------------
-sCondition = "vue_rcs_retour.Famille = '" + _sFiltreRetourFamille + "'"
-
-// ------------------------------------------------------------------
-// Tableau des retours de la famille filtrée
-// ------------------------------------------------------------------
-sTexteRequete =
-[
-	SELECT
-	l.contact,
-	l.Civilite,
-	l.Prenom,
-	l.Nom,
-	l.Portable,
-	vue_rcs_retour.Action,
-	vue_rcs_retour.Libelle,
-	vue_rcs_retour.Detail,
-	vue_rcs_retour.DateHeure,
-	vue_rcs_retour.Canal
-	FROM
-	vue_rcs_retour
-	JOIN dos_base_ligne l ON l.IdBaseLigne = vue_rcs_retour.IdBaseLigne
-	WHERE
-	vue_rcs_retour.IdOperation = [%_pIdOperation%]
-	AND [%sCondition%]
-	ORDER BY 
-	vue_rcs_retour.DateHeure DESC
-]
+si _sFiltreRetourFamille = __RETOUR_FAMILLE_REPONSE__ alors
+	sTexteRequete =
+	[
+		SELECT
+		l.contact,
+		l.Civilite,
+		l.Prenom,
+		l.Nom,
+		l.Portable,
+		vue_rcs_retour.Action,
+		vue_rcs_retour.Libelle,
+		vue_rcs_retour.Detail,
+		vue_rcs_retour.DateHeure,
+		vue_rcs_retour.Canal
+		FROM
+		vue_rcs_retour
+		JOIN dos_base_ligne l ON l.IdBaseLigne = vue_rcs_retour.IdBaseLigne
+		WHERE
+		vue_rcs_retour.IdOperation = [%_pIdOperation%]
+		AND vue_rcs_retour.Famille = '[%_sFiltreRetourFamille%]'
+		ORDER BY 
+		vue_rcs_retour.DateHeure DESC
+	]
+sinon
+	sTexteRequete =
+	[
+		SELECT
+		l.contact,
+		l.Civilite,
+		l.Prenom,
+		l.Nom,
+		l.Portable,
+		vue_rcs_retour.Action,
+		vue_rcs_retour.Libelle,
+		IFNULL(SUBSTRING_INDEX(GROUP_CONCAT(vue_rcs_retour.Detail ORDER BY vue_rcs_retour.DateHeure DESC SEPARATOR '\t'), '\t', 1), '') Detail,
+		MAX(vue_rcs_retour.DateHeure) DateHeure,
+		vue_rcs_retour.Canal
+		FROM
+		vue_rcs_retour
+		JOIN dos_base_ligne l ON l.IdBaseLigne = vue_rcs_retour.IdBaseLigne
+		WHERE
+		vue_rcs_retour.IdOperation = [%_pIdOperation%]
+		AND vue_rcs_retour.Famille = '[%_sFiltreRetourFamille%]'
+		GROUP BY
+		vue_rcs_retour.IdBaseLigne, vue_rcs_retour.Action, vue_rcs_retour.Libelle
+		ORDER BY 
+		DateHeure DESC
+	]
+fin
 
 si pas sdReqRetour.ExécuteRequêteSQL(clt_client..Connexion, hRequêteSansCorrection, sTexteRequete) alors
 	Trace("Erreur requête","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)

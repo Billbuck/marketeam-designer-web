@@ -1,4 +1,4 @@
-procédure ConstruitJsonCarte(stCarte est une structOperationRcsCarte, taaValeurChamp est un tableau associatif de chaînes, pCodeLanding, bEstTest)
+procédure ConstruitJsonCarte(stCarte est une structOperationRcsCarte, taaValeurChamp est un tableau associatif de chaînes, pCodeLanding, bEstTest, pPostbackOrigine)
 
 sJson				est une chaîne
 sTitre			est une chaîne
@@ -33,7 +33,7 @@ si sMedia <> "" alors
 	sJson += "}"
 fin
 
-sSuggestions = ConstruitJsonSuggestions(stCarte.tabBouton, stCarte.IdRcsCarte, __RCS_MAX_BOUTONS_CARTE__, taaValeurChamp, pCodeLanding, bEstTest)
+sSuggestions = ConstruitJsonSuggestions(stCarte.tabBouton, stCarte.IdRcsCarte, __RCS_MAX_BOUTONS_CARTE__, taaValeurChamp, pCodeLanding, bEstTest, pPostbackOrigine)
 si sSuggestions <> "" alors
 	sJson += ",""suggestions"":" + sSuggestions
 fin

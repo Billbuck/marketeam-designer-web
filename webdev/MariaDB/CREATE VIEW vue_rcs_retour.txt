@@ -16,11 +16,14 @@
 --   branches landing n'ont pas besoin de jointure.
 -- À exécuter en dev puis en prod.
 
+-- IFNULL(b.SousType, c.SousType) : le SousType historisé au clic prend le relais
+-- si le bouton a été supprimé depuis (brouillon réenregistré) — action ET famille
+-- restent justes.
 CREATE OR REPLACE VIEW vue_rcs_retour AS
 SELECT 'RCS' Canal, c.IdOperation, c.IdBaseLigne,
-       IFNULL(b.SousType, '') Action,
-       CASE WHEN b.SousType = 'REACTION' THEN 'LEAD'
-            WHEN b.SousType IN ('APPEL','EMAIL','SMS','WHATSAPP') THEN 'INTENTION'
+       IFNULL(b.SousType, IFNULL(c.SousType, '')) Action,
+       CASE WHEN IFNULL(b.SousType, c.SousType) = 'REACTION' THEN 'LEAD'
+            WHEN IFNULL(b.SousType, c.SousType) IN ('APPEL','EMAIL','SMS','WHATSAPP') THEN 'INTENTION'
             ELSE 'INTERACTION' END Famille,
        c.LibelleBouton Libelle, NULL Detail, c.DateHeureClic DateHeure
 FROM ope_rcs_clic c
