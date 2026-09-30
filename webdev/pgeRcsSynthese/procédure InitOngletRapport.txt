@@ -42,14 +42,18 @@ sinon
 	// Le cookie n'existait pas
 	vJsonCookie.Envoyé		= 0
 	vJsonCookie.Reçu			= 0
+	vJsonCookie.RcsDelivre	= 0
+	vJsonCookie.RcsLu			= 0
 	vJsonCookie.Erreur		= 0
 	vJsonCookie.Stop			= 0
 fin
 
 soit nNouveauEnvoyé					= Max(0,_stSynthèse.NbrDiffusion 	- Val(vJsonCookie.Envoyé))
-soit nNouveauReçu					= Max(0,_stSynthèse.NbrDelivre		- Val(vJsonCookie.Reçu))
-soit nNouveauErreur					= Max(0,_stSynthèse.NbrErreur		- Val(vJsonCookie.Erreur))
-soit nNouveauStop					= Max(0,_stSynthèse.NbrStop			- Val(vJsonCookie.Stop))
+soit nNouveauReçu						= Max(0,_stSynthèse.NbrDelivre		- Val(vJsonCookie.Reçu))
+soit nNouveauRcsDelivre				= Max(0,_stSynthèse.NbrRcsDelivre	- Val(vJsonCookie.RcsDelivre))
+soit nNouveauRcsLu					= Max(0,_stSynthèse.NbrRcsLu			- Val(vJsonCookie.RcsLu))
+soit nNouveauErreur					= Max(0,_stSynthèse.NbrErreur			- Val(vJsonCookie.Erreur))
+soit nNouveauStop						= Max(0,_stSynthèse.NbrStop			- Val(vJsonCookie.Stop))
 
 
 libRapportNouveauEnvoyé					= "+" + NumériqueVersChaîne(nNouveauEnvoyé, "dS")
@@ -57,6 +61,12 @@ libRapportNouveauEnvoyé.Visible		= (nNouveauEnvoyé > 0)
 
 libRapportNouveauReçu					= "+" + NumériqueVersChaîne(nNouveauReçu, "dS")
 libRapportNouveauReçu.Visible			= (nNouveauReçu > 0)
+
+libRapportNouveauRcsDelivre			= "+" + NumériqueVersChaîne(nNouveauRcsDelivre, "dS")
+libRapportNouveauRcsDelivre.Visible	= (nNouveauRcsDelivre > 0)
+
+libRapportNouveauRcsLu					= "+" + NumériqueVersChaîne(nNouveauRcsLu, "dS")
+libRapportNouveauRcsLu.Visible		= (nNouveauRcsLu > 0)
 
 libRapportNouveauErreur					= "+" + NumériqueVersChaîne(nNouveauErreur, "dS")
 libRapportNouveauErreur.Visible		= (nNouveauErreur > 0)
@@ -68,6 +78,8 @@ libRapportNouveauStop.Visible			= (nNouveauStop > 0)
 // On enregistre le Cookie
 vJsonCookie.Envoyé						= _stSynthèse.NbrDiffusion
 vJsonCookie.Reçu							= _stSynthèse.NbrDelivre
+vJsonCookie.RcsDelivre					= _stSynthèse.NbrRcsDelivre
+vJsonCookie.RcsLu							= _stSynthèse.NbrRcsLu
 vJsonCookie.Erreur						= _stSynthèse.NbrErreur
 vJsonCookie.Stop							= _stSynthèse.NbrStop
 
@@ -79,21 +91,18 @@ CookieEcrit(sNomCookie, VariantVersJSON(vJsonCookie))
 libRapportTotal					= NumériqueVersChaîne(_stSynthèse.NbrDestinataire, "dS")
 libRapportTotalEnvoyé			= NumériqueVersChaîne(_stSynthèse.NbrDiffusion, "dS")
 libRapportTotalReçu				= NumériqueVersChaîne(_stSynthèse.NbrDelivre, "dS")
+libRapportTotalRcsDelivre		= NumériqueVersChaîne(_stSynthèse.NbrRcsDelivre, "dS")
+libRapportTotalRcsLu				= NumériqueVersChaîne(_stSynthèse.NbrRcsLu, "dS")
 libRapportTotalErreur			= NumériqueVersChaîne(_stSynthèse.NbrErreur, "dS")
 libRapportTotalStop				= NumériqueVersChaîne(_stSynthèse.NbrStop, "dS")
 
 libRapportTauxEnvoyé				= (_stSynthèse.NbrDestinataire > 0)	? Arrondi(_stSynthèse.NbrDiffusion	/ _stSynthèse.NbrDestinataire * 100,0)	+ " %"	sinon "0 %"
 libRapportTauxlReçu				= (_stSynthèse.NbrDiffusion > 0)	? Arrondi(_stSynthèse.NbrDelivre	/ _stSynthèse.NbrDiffusion * 100,0) 	+ " %"	sinon "0 %"
+libRapportTauxRcsDelivre		= (_stSynthèse.NbrDelivre > 0)	? Arrondi(_stSynthèse.NbrRcsDelivre	/ _stSynthèse.NbrDelivre * 100,0) 	+ " %"	sinon "0 %"
+libRapportTauxRcsLu				= (_stSynthèse.NbrRcsDelivre > 0)	? Arrondi(_stSynthèse.NbrRcsLu	/ _stSynthèse.NbrRcsDelivre * 100,0) 	+ " %"	sinon "0 %"
 libRapportTauxErreur				= (_stSynthèse.NbrDiffusion > 0)	? Arrondi(_stSynthèse.NbrErreur		/ _stSynthèse.NbrDiffusion * 100,0)		+ " %"	sinon "0 %"
 libRapportTauxStop				= (_stSynthèse.NbrDiffusion > 0)	? Arrondi(_stSynthèse.NbrStop		/ _stSynthèse.NbrDiffusion * 100,0)		+ " %"	sinon "0 %"
 
-// Lus et réponses (spécifiques RCS)
-si _stSynthèse.NbrDelivre > 0 alors
-	libRapportLu				= "Lus : " + NumériqueVersChaîne(_stSynthèse.NbrLu, "dS") + " (" + Arrondi(_stSynthèse.NbrLu / _stSynthèse.NbrDelivre * 100, 0) + " %)"
-sinon
-	libRapportLu				= "Lus : 0"
-fin
-libRapportReponse				= "Réponses reçues : " + NumériqueVersChaîne(_stSynthèse.NbrReponse, "dS")
 
 sTexteRequeteRapport			=
 [
@@ -175,11 +184,11 @@ pour tout sdReqRapportRcs
 fin
 
 si nCategorie > 0 alors
-	grfCanal.Visible = Vrai
+	grfCanal.Visible	= Vrai
 	// Pas d'étiquette de série sur grfCanal : les graphes en secteurs ne les
 	// utilisent pas (doc PC SOFT) — les libellés RCS / SMS de repli sont les
 	// étiquettes de catégorie posées plus haut
-	grfCanal.Titre = "Canal utilisé"
+	grfCanal.Titre		= "Canal utilisé"
 	grfCanal.Libellé(grAffichePourcentage,Vrai)
 	grfCanal.Dessine()
 sinon
@@ -222,7 +231,7 @@ tblRapportErreur.Visible		= (tblRapportErreur.Occurrence > 0)
 
 // **************************** GRAPHE OPÉRATEUR *****************************
 
-sTexteRequeteOperateur		=
+sTexteRequeteOperateur			=
 [
 	SELECT
 	sms_operateur.Operateur,
@@ -346,8 +355,8 @@ fin
 
 
 pour tout sdReqRapportRcs
-	dhMin													= Min(dhMin,sdReqRapportRcs.DateHeure)
-	dhMax													= Max(dhMax,sdReqRapportRcs.DateHeure)
+	dhMin														= Min(dhMin,sdReqRapportRcs.DateHeure)
+	dhMax														= Max(dhMax,sdReqRapportRcs.DateHeure)
 	taaDiffusion[sdReqRapportRcs.DateHeure]		= sdReqRapportRcs.Total
 fin
 

@@ -881,129 +881,129 @@ fin
 
 
 structSynthèse est une Structure
-	IdOperation						est un entier
-	Dossier							est une chaîne
-	Statut							est une chaîne
-	IdClient						est un entier
-	IdClientFacturation				est un entier
-	IdAdresseFacturation			est un entier
-	IdFacture 						est un entier
-	IdFactureLigne 					est un entier
-	IdContact						est un entier
-	IdValideur						est un entier
-	TypeOperation					est une chaîne
-	NomOperation					est une chaîne
+	IdOperation								est un entier
+	Dossier									est une chaîne
+	Statut									est une chaîne
+	IdClient									est un entier
+	IdClientFacturation					est un entier
+	IdAdresseFacturation					est un entier
+	IdFacture								est un entier
+	IdFactureLigne							est un entier
+	IdContact								est un entier
+	IdValideur								est un entier
+	TypeOperation							est une chaîne
+	NomOperation							est une chaîne
 
-	DossierSociete					est une chaîne
-	DossierCivilite					est une chaîne
-	DossierNom						est une chaîne
-	DossierPrenom					est une chaîne
-	FacturationSociete				est une chaîne
-	EstFacturationMensuelle			est un booléen
-	ReserveArgent					est un monétaire
-	ValideurCivilite				est une chaîne
-	ValideurNom						est une chaîne
-	ValideurPrenom					est une chaîne
-	EmailLeadEnCopie				est une chaîne
-	EmailLeadType					est une chaîne
-	IdPaiement						est un entier
-	EstReserve						est un booléen
-	EstPlafondEncoursDepassé 		est un booléen
-	PaiementDateHeureCreation		est une DateHeure
-	IdReglement						est un entier
+	DossierSociete							est une chaîne
+	DossierCivilite						est une chaîne
+	DossierNom								est une chaîne
+	DossierPrenom							est une chaîne
+	FacturationSociete					est une chaîne
+	EstFacturationMensuelle				est un booléen
+	ReserveArgent							est un monétaire
+	ValideurCivilite						est une chaîne
+	ValideurNom								est une chaîne
+	ValideurPrenom							est une chaîne
+	EmailLeadEnCopie						est une chaîne
+	EmailLeadType							est une chaîne
+	IdPaiement								est un entier
+	EstReserve								est un booléen
+	EstPlafondEncoursDepassé			est un booléen
+	PaiementDateHeureCreation			est une DateHeure
+	IdReglement								est un entier
 	DateHeureReceptionReglement		est une DateHeure
-	ReglementStatut					est une chaîne
-	LibelleModeReglement			est une chaîne
-	MotifRefus						est une chaîne
-	EstBaseDeDonnéesChargée			est un booléen
+	ReglementStatut						est une chaîne
+	LibelleModeReglement					est une chaîne
+	MotifRefus								est une chaîne
+	EstBaseDeDonnéesChargée				est un booléen
 
 	// CliquezIci
-	EstCliquezIci					est un booléen
-	TypeCliquezici					est une chaîne
+	EstCliquezIci							est un booléen
+	TypeCliquezici							est une chaîne
 
 	// SMS
-	Message							est une chaîne
-	EstSmsPersonnalise				est un booléen
-	Cadence							est un entier
+	Message									est une chaîne
+	EstSmsPersonnalise					est un booléen
+	Cadence									est un entier
 
 	// VMS
-	IdMessage						est un entier
+	IdMessage								est un entier
 
 	// Callcenter
-	IdMessageRepondeur				est un entier
-	Nom								est une chaîne
-	Objectif						est une chaîne
-	Informations					est une chaîne
-	DateDebutSouhaite				est une Date
-	DateFinSouhaite					est une Date
-	HeureFinSouhaite				est une Heure
-	EstTransfertAppel				est un booléen
-	EstMessageRepondeur				est un booléen
-	EstSmsConfirmation				est un booléen
-	LeFromConfirmation				est une chaîne
-	SmsConfirmation					est une chaîne
-	EstSmsRappel					est un booléen
-	LeFromRappel					est une chaîne
-	SmsRappel						est une chaîne
-	DateRappel						est une Date
-	TransfertNumero					est une chaîne
-	TransfertMotifAutorise			est un entier
-	JoursAppel						est un entier
-	UsePortable						est un booléen
-	UseFixe							est un booléen
-	UsePriorite						est un booléen
-	NbrQuestionBrancheMax			est un entier
-	NbrReponseBrancheMax			est un entier
-	NbrFormulaireBrancheMax			est un entier
-	NbrRelance						est un entier
-	DateMaxRendezVous				est une Date
-	DateDebutAgenda					est une Date
-	DateFinAgenda					est une Date
-	DecalageAgenda					est un entier
+	IdMessageRepondeur					est un entier
+	Nom										est une chaîne
+	Objectif									est une chaîne
+	Informations							est une chaîne
+	DateDebutSouhaite						est une Date
+	DateFinSouhaite						est une Date
+	HeureFinSouhaite						est une Heure
+	EstTransfertAppel						est un booléen
+	EstMessageRepondeur					est un booléen
+	EstSmsConfirmation					est un booléen
+	LeFromConfirmation					est une chaîne
+	SmsConfirmation						est une chaîne
+	EstSmsRappel							est un booléen
+	LeFromRappel							est une chaîne
+	SmsRappel								est une chaîne
+	DateRappel								est une Date
+	TransfertNumero						est une chaîne
+	TransfertMotifAutorise				est un entier
+	JoursAppel								est un entier
+	UsePortable								est un booléen
+	UseFixe									est un booléen
+	UsePriorite								est un booléen
+	NbrQuestionBrancheMax				est un entier
+	NbrReponseBrancheMax					est un entier
+	NbrFormulaireBrancheMax				est un entier
+	NbrRelance								est un entier
+	DateMaxRendezVous						est une Date
+	DateDebutAgenda						est une Date
+	DateFinAgenda							est une Date
+	DecalageAgenda							est un entier
 
 
 	// ------------------------------------
 
-	MontantNetHT					est un monétaire
-	MontantTTC						est un monétaire
-	ResteAPayer						est un monétaire
+	MontantNetHT							est un monétaire
+	MontantTTC								est un monétaire
+	ResteAPayer								est un monétaire
 
-	DateEnvoiSouhaite				est une Date
-	HeureEnvoiSouhaite				est une Heure
-	EstEnvoiImmediat				est un booléen
-	DateHeureCreation				est une DateHeure
-	DateHeureLimiteValidation		est une DateHeure
-	DateHeureLimitePriseEnCharge	est une DateHeure
-	DateHeurePriseEnCharge			est une DateHeure
+	DateEnvoiSouhaite						est une Date
+	HeureEnvoiSouhaite					est une Heure
+	EstEnvoiImmediat						est un booléen
+	DateHeureCreation						est une DateHeure
+	DateHeureLimiteValidation			est une DateHeure
+	DateHeureLimitePriseEnCharge		est une DateHeure
+	DateHeurePriseEnCharge				est une DateHeure
 
-	EstModifiableParUnTiers			est un booléen
-	EstVisibleParUnTiers			est un booléen
+	EstModifiableParUnTiers				est un booléen
+	EstVisibleParUnTiers					est un booléen
 
-	NbrDestinataire					est un entier
-	NbrDiffusion					est un entier
-	NbrDelivre						est un entier
-	NbrRepondeur					est un entier
-	NbrAboutement					est un entier
-	NbrRendezVous					est un entier
-	NbrInjoignable					est un entier
-	NbrMessageDepose				est un entier
-	NbrErreur						est un entier
-	NbrStop							est un entier
-	NbrAudience						est un entier
-	NbrAudienceUnique				est un entier
-	NbrInteraction					est un entier
-	NbrInteractionUnique			est un entier
-	NbrLead							est un entier
-	NbrLeadUnique					est un entier
+	NbrDestinataire						est un entier
+	NbrDiffusion							est un entier
+	NbrDelivre								est un entier
+	NbrRepondeur							est un entier
+	NbrAboutement							est un entier
+	NbrRendezVous							est un entier
+	NbrInjoignable							est un entier
+	NbrMessageDepose						est un entier
+	NbrErreur								est un entier
+	NbrStop									est un entier
+	NbrAudience								est un entier
+	NbrAudienceUnique						est un entier
+	NbrInteraction							est un entier
+	NbrInteractionUnique					est un entier
+	NbrLead									est un entier
+	NbrLeadUnique							est un entier
 
-	// Synthèse RCS (vue_rcs_retour et ope_rcs_envoi)
-	NbrLu							est un entier											// accusés de lecture (DateHeureLu posée)
-	NbrRepliSms						est un entier											// délivrés par SMS de repli (CanalUtilise = SMS)
-	NbrIntentionContact				est un entier											// clics Appel / Email / SMS / WhatsApp
-	NbrIntentionContactUnique		est un entier											// destinataires uniques des intentions
-	NbrReponse						est un entier											// réponses texte RCS + SMS (masquées en V1)
+	// Synthèse RCS (vue_ope_retour et ope_rcs_envoi)
+	NbrRcsDelivre							est un entier											// Nombre de RCS délivré
+	NbrRcsLu									est un entier											// accusés de lecture (DateHeureLu posée)
+	NbrRepliSms								est un entier											// délivrés par SMS de repli (CanalUtilise = SMS)
+	NbrIntentionContact					est un entier											// clics Appel / Email / SMS / WhatsApp
+	NbrIntentionContactUnique			est un entier											// destinataires uniques des intentions
+	NbrReponse								est un entier											// réponses texte RCS + SMS (masquées en V1)
 fin
-
 
 
 
@@ -2349,16 +2349,16 @@ structOperationRcs est une Structure
 	tabBoutonCommun						est un tableau de structOperationRcsBouton	// IdRcsCarte NULL en base
 fin
 
-structRcsEnvoiResultat est une Structure
-	MessageId							est une chaîne
-	Destination							est une chaîne
-	StatutGroupeId						est un entier
-	StatutGroupeNom						est une chaîne
-	StatutId							est un entier
-	StatutNom							est une chaîne
-	BulkId								est une chaîne
-fin
 
+structRcsEnvoiResultat est une Structure
+	MessageId								est une chaîne
+	Destination								est une chaîne
+	StatutGroupeId							est un entier
+	StatutGroupeNom						est une chaîne
+	StatutId									est un entier
+	StatutNom								est une chaîne
+	BulkId									est une chaîne
+fin
 
 structOperationVms est une Structure
 	IdMessage							est un entier
