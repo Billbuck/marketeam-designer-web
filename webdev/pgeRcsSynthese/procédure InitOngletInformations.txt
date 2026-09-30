@@ -64,7 +64,7 @@ selon znrBaseDeDonnées.Occurrence
 		znrBaseDeDonnées[nInd].libBaseNom		= ""
 		znrBaseDeDonnées[nInd].libFiltreNom		= "Total après dédoublonnage"
 		znrBaseDeDonnées[nInd].libBddNbrRcs		= NumériqueVersChaîne(_stSynthèse.NbrDestinataire, "dS") + " Rcs"
-		znrBaseDeDonnées[nInd].libBddNbrSms		= NumériqueVersChaîne(_stSynthèse.NbrRepliSms, "dS") + " Sms de repli"
+		znrBaseDeDonnées[nInd].libBddNbrSms		= NumériqueVersChaîne(_stSynthèse.NbrSmsDelivre, "dS") + " Sms de repli"
 fin
 
 // Répartition des canaux prévus par la programmation

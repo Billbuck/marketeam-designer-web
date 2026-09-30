@@ -39,10 +39,9 @@ selon sTypeOperation
 			,ope_rcs.Cadence
 			,ope_rcs.DateFin DateFinSouhaite
 			,ope_rcs.HeureFin HeureFinSouhaite
-			,(SELECT COUNT(*) FROM ope_rcs_envoi WHERE ope_rcs_envoi.IdRcs = dos_operation.IdOperation AND ope_rcs_envoi.CanalUtilise = '[%__CANAL_UTILISE_SMS__%]') NbrSmsDelivre
-			,(SELECT COUNT(*) FROM ope_rcs_envoi WHERE ope_rcs_envoi.IdRcs = dos_operation.IdOperation AND ope_rcs_envoi.CanalUtilise = '[%__CANAL_UTILISE_RCS__%]') NbrRcsDelivre
+			,(SELECT COUNT(*) FROM ope_rcs_envoi WHERE ope_rcs_envoi.IdRcs = dos_operation.IdOperation AND ope_rcs_envoi.CanalUtilise = '[%__CANAL_UTILISE_SMS__%]' AND ope_rcs_envoi.Statut = '[%__SMS_STATUT_DELIVERED__%]') NbrSmsDelivre
+			,(SELECT COUNT(*) FROM ope_rcs_envoi WHERE ope_rcs_envoi.IdRcs = dos_operation.IdOperation AND ope_rcs_envoi.CanalUtilise = '[%__CANAL_UTILISE_RCS__%]' AND ope_rcs_envoi.Statut = '[%__SMS_STATUT_DELIVERED__%]') NbrRcsDelivre
 			,(SELECT COUNT(*) FROM ope_rcs_envoi WHERE ope_rcs_envoi.IdRcs = dos_operation.IdOperation AND ope_rcs_envoi.DateHeureLu IS NOT NULL) NbrRcsLu
-			,(SELECT COUNT(*) FROM ope_rcs_envoi WHERE ope_rcs_envoi.IdRcs = dos_operation.IdOperation AND ope_rcs_envoi.CanalUtilise = '[%__CANAL_PREVU_SMS__%]' AND ope_rcs_envoi.Statut = '[%__SMS_STATUT_DELIVERED__%]') NbrRepliSms
 		]
 
 		sFrom = [

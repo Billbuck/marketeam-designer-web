@@ -112,8 +112,8 @@ si _stSynthèse.Statut >= __Statut_Distribution_En_Cours__ alors
 	fin
 
 	// dont n par SMS de repli
-	si _stSynthèse.NbrRepliSms > 0 alors
-		libProgressionRepli						= "dont " + NumériqueVersChaîne(_stSynthèse.NbrRepliSms, "dS") + " par SMS de repli"
+	si _stSynthèse.NbrSmsDelivre > 0 alors
+		libProgressionRepli						= "dont " + NumériqueVersChaîne(_stSynthèse.NbrSmsDelivre, "dS") + " par SMS de repli"
 		libProgressionRepli.Visible			= Vrai
 	sinon
 		libProgressionRepli.Visible			= Faux
@@ -122,7 +122,7 @@ si _stSynthèse.Statut >= __Statut_Distribution_En_Cours__ alors
 	// Bloc Engagement : lus / délivrés (accusés de lecture RCS)
 	contTauxOuverture.Visible				= Vrai
 	jaugeTauxOuverture.BorneMax			= _stSynthèse.NbrDelivre
-	nEngagement									= _stSynthèse.NbrLu
+	nEngagement									= _stSynthèse.NbrRcsLu
 	jaugeTauxOuverture						= nEngagement
 	selon nEngagement
 		cas 0		: libOuverture		= ""

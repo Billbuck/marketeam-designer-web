@@ -997,10 +997,9 @@ structSynthèse est une Structure
 	NbrLeadUnique							est un entier
 
 	// Synthèse RCS (vue_ope_retour et ope_rcs_envoi)
-	NbrSmsDelivre							est un entier											// Nombre de SMS délivré
+	NbrSmsDelivre							est un entier											// délivrés par SMS de repli (CanalUtilise = SMS)
 	NbrRcsDelivre							est un entier											// Nombre de RCS délivré
 	NbrRcsLu									est un entier											// accusés de lecture (DateHeureLu posée)
-	NbrRepliSms								est un entier											// délivrés par SMS de repli (CanalUtilise = SMS)
 	NbrIntentionContact					est un entier											// clics Appel / Email / SMS / WhatsApp
 	NbrIntentionContactUnique			est un entier											// destinataires uniques des intentions
 	NbrReponse								est un entier											// réponses texte RCS + SMS (masquées en V1)

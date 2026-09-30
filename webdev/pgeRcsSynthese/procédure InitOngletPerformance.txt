@@ -43,13 +43,13 @@ sinon
 	vJsonCookie.Lead			= 0
 fin
 
-soit nNouveauEnvoyé			= Max(0,_stSynthèse.NbrDiffusion 				- Val(vJsonCookie.Envoyé))
-soit nNouveauReçu			= Max(0,_stSynthèse.NbrDelivre 					- Val(vJsonCookie.Reçu))
-soit nNouveauLu				= Max(0,_stSynthèse.NbrLu						- Val(vJsonCookie.Lu))
-soit nNouveauInteraction	= Max(0,_stSynthèse.NbrInteractionUnique		- Val(vJsonCookie.Interaction))
+soit nNouveauEnvoyé			= Max(0,_stSynthèse.NbrDiffusion 					- Val(vJsonCookie.Envoyé))
+soit nNouveauReçu			= Max(0,_stSynthèse.NbrDelivre 							- Val(vJsonCookie.Reçu))
+soit nNouveauLu				= Max(0,_stSynthèse.NbrRcsLu							- Val(vJsonCookie.Lu))
+soit nNouveauInteraction	= Max(0,_stSynthèse.NbrInteractionUnique			- Val(vJsonCookie.Interaction))
 soit nNouveauIntention		= Max(0,_stSynthèse.NbrIntentionContactUnique	- Val(vJsonCookie.Intention))
-soit nNouveauReponse		= Max(0,_stSynthèse.NbrReponse					- Val(vJsonCookie.Reponse))
-soit nNouveauLead			= Max(0,_stSynthèse.NbrLeadUnique				- Val(vJsonCookie.Lead))
+soit nNouveauReponse		= Max(0,_stSynthèse.NbrReponse							- Val(vJsonCookie.Reponse))
+soit nNouveauLead			= Max(0,_stSynthèse.NbrLeadUnique						- Val(vJsonCookie.Lead))
 
 
 libPerformanceNouveauEnvoye					= "+" + NumériqueVersChaîne(nNouveauEnvoyé, "dS")
@@ -77,7 +77,7 @@ libPerformanceNouveauLead.Visible			= (nNouveauLead > 0)
 // On enregistre le Cookie
 vJsonCookie.Envoyé								= _stSynthèse.NbrDiffusion
 vJsonCookie.Reçu									= _stSynthèse.NbrDelivre
-vJsonCookie.Lu										= _stSynthèse.NbrLu
+vJsonCookie.Lu										= _stSynthèse.NbrRcsLu
 vJsonCookie.Interaction							= _stSynthèse.NbrInteractionUnique
 vJsonCookie.Intention							= _stSynthèse.NbrIntentionContactUnique
 vJsonCookie.Reponse								= _stSynthèse.NbrReponse
@@ -91,7 +91,7 @@ CookieEcrit(sNomCookie, VariantVersJSON(vJsonCookie))
 
 libPerformanceTotalEnvoye				= NumériqueVersChaîne(_stSynthèse.NbrDiffusion, "dS")
 libPerformanceTotalReçu					= NumériqueVersChaîne(_stSynthèse.NbrDelivre, "dS")
-libPerformanceTotalLu					= NumériqueVersChaîne(_stSynthèse.NbrLu, "dS")
+libPerformanceTotalLu					= NumériqueVersChaîne(_stSynthèse.NbrRcsLu, "dS")
 libPerformanceTotalInteraction		= NumériqueVersChaîne(_stSynthèse.NbrInteractionUnique, "dS")
 libPerformanceTotalIntention			= NumériqueVersChaîne(_stSynthèse.NbrIntentionContactUnique, "dS")
 libPerformanceTotalReponse				= NumériqueVersChaîne(_stSynthèse.NbrReponse, "dS")
@@ -105,9 +105,9 @@ libPerformanceTotalLead					= NumériqueVersChaîne(_stSynthèse.NbrLeadUnique, 
 //	libPerformanceReçuRepli.Visible	= Faux
 //fin
 
-libPerformanceTauxEnvoye				= (_stSynthèse.NbrDestinataire > 0)	? Arrondi(_stSynthèse.NbrDiffusion					/ _stSynthèse.NbrDestinataire * 100,0)	+ " %"	sinon "0 %"
+libPerformanceTauxEnvoye				= (_stSynthèse.NbrDestinataire > 0)	? Arrondi(_stSynthèse.NbrDiffusion			/ _stSynthèse.NbrDestinataire * 100,0)	+ " %"	sinon "0 %"
 libPerformanceTauxReçu					= (_stSynthèse.NbrDiffusion > 0)	? Arrondi(_stSynthèse.NbrDelivre					/ _stSynthèse.NbrDiffusion * 100,0) 	+ " %"	sinon "0 %"
-libPerformanceTauxLu						= (_stSynthèse.NbrDelivre > 0)		? Arrondi(_stSynthèse.NbrLu							/ _stSynthèse.NbrDelivre * 100,0) 		+ " %"	sinon "0 %"
+libPerformanceTauxLu						= (_stSynthèse.NbrDelivre > 0)		? Arrondi(_stSynthèse.NbrRcsLu				/ _stSynthèse.NbrDelivre * 100,0) 		+ " %"	sinon "0 %"
 // Taux des cartes Interactions / Intentions / Leads calculés sur les DÉLIVRÉS
 // (correction du 29/09) : le taux de lecture est un plancher (accusés de lecture
 // bloqués par certains réglages), les délivrés sont la base fiable.
@@ -164,7 +164,7 @@ tblIntention.Visible				= (tblIntention.Occurrence > 0)
 // landing s'ajoutent à la suite plus bas.
 
 tblLead.SupprimeTout()
-nCategorie	= 0
+nCategorie									= 0
 
 sTexteRequete								=
 [
