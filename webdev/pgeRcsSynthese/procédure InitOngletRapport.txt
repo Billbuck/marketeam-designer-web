@@ -42,6 +42,7 @@ sinon
 	// Le cookie n'existait pas
 	vJsonCookie.Envoyé		= 0
 	vJsonCookie.Reçu			= 0
+	vJsonCookie.SmsDelivre	= 0
 	vJsonCookie.RcsDelivre	= 0
 	vJsonCookie.RcsLu			= 0
 	vJsonCookie.Erreur		= 0
@@ -50,6 +51,7 @@ fin
 
 soit nNouveauEnvoyé					= Max(0,_stSynthèse.NbrDiffusion 	- Val(vJsonCookie.Envoyé))
 soit nNouveauReçu						= Max(0,_stSynthèse.NbrDelivre		- Val(vJsonCookie.Reçu))
+soit nNouveauSmsDelivre				= Max(0,_stSynthèse.NbrSmsDelivre	- Val(vJsonCookie.SmsDelivre))
 soit nNouveauRcsDelivre				= Max(0,_stSynthèse.NbrRcsDelivre	- Val(vJsonCookie.RcsDelivre))
 soit nNouveauRcsLu					= Max(0,_stSynthèse.NbrRcsLu			- Val(vJsonCookie.RcsLu))
 soit nNouveauErreur					= Max(0,_stSynthèse.NbrErreur			- Val(vJsonCookie.Erreur))
@@ -61,6 +63,9 @@ libRapportNouveauEnvoyé.Visible		= (nNouveauEnvoyé > 0)
 
 libRapportNouveauReçu					= "+" + NumériqueVersChaîne(nNouveauReçu, "dS")
 libRapportNouveauReçu.Visible			= (nNouveauReçu > 0)
+
+libRapportNouveauSmsDelivre			= "+" + NumériqueVersChaîne(nNouveauSmsDelivre, "dS")
+libRapportNouveauSmsDelivre.Visible	= (nNouveauSmsDelivre > 0)
 
 libRapportNouveauRcsDelivre			= "+" + NumériqueVersChaîne(nNouveauRcsDelivre, "dS")
 libRapportNouveauRcsDelivre.Visible	= (nNouveauRcsDelivre > 0)
@@ -78,6 +83,7 @@ libRapportNouveauStop.Visible			= (nNouveauStop > 0)
 // On enregistre le Cookie
 vJsonCookie.Envoyé						= _stSynthèse.NbrDiffusion
 vJsonCookie.Reçu							= _stSynthèse.NbrDelivre
+vJsonCookie.SmsDelivre					= _stSynthèse.NbrSmsDelivre
 vJsonCookie.RcsDelivre					= _stSynthèse.NbrRcsDelivre
 vJsonCookie.RcsLu							= _stSynthèse.NbrRcsLu
 vJsonCookie.Erreur						= _stSynthèse.NbrErreur
@@ -91,6 +97,7 @@ CookieEcrit(sNomCookie, VariantVersJSON(vJsonCookie))
 libRapportTotal					= NumériqueVersChaîne(_stSynthèse.NbrDestinataire, "dS")
 libRapportTotalEnvoyé			= NumériqueVersChaîne(_stSynthèse.NbrDiffusion, "dS")
 libRapportTotalReçu				= NumériqueVersChaîne(_stSynthèse.NbrDelivre, "dS")
+libRapportTotalSmsDelivre		= NumériqueVersChaîne(_stSynthèse.NbrSmsDelivre, "dS")
 libRapportTotalRcsDelivre		= NumériqueVersChaîne(_stSynthèse.NbrRcsDelivre, "dS")
 libRapportTotalRcsLu				= NumériqueVersChaîne(_stSynthèse.NbrRcsLu, "dS")
 libRapportTotalErreur			= NumériqueVersChaîne(_stSynthèse.NbrErreur, "dS")
@@ -98,6 +105,7 @@ libRapportTotalStop				= NumériqueVersChaîne(_stSynthèse.NbrStop, "dS")
 
 libRapportTauxEnvoyé				= (_stSynthèse.NbrDestinataire > 0)	? Arrondi(_stSynthèse.NbrDiffusion	/ _stSynthèse.NbrDestinataire * 100,0)	+ " %"	sinon "0 %"
 libRapportTauxlReçu				= (_stSynthèse.NbrDiffusion > 0)	? Arrondi(_stSynthèse.NbrDelivre	/ _stSynthèse.NbrDiffusion * 100,0) 	+ " %"	sinon "0 %"
+libRapportTauxSmsDelivre		= (_stSynthèse.NbrDelivre > 0)	? Arrondi(_stSynthèse.NbrSmsDelivre	/ _stSynthèse.NbrDelivre * 100,0) 	+ " %"	sinon "0 %"
 libRapportTauxRcsDelivre		= (_stSynthèse.NbrDelivre > 0)	? Arrondi(_stSynthèse.NbrRcsDelivre	/ _stSynthèse.NbrDelivre * 100,0) 	+ " %"	sinon "0 %"
 libRapportTauxRcsLu				= (_stSynthèse.NbrRcsDelivre > 0)	? Arrondi(_stSynthèse.NbrRcsLu	/ _stSynthèse.NbrRcsDelivre * 100,0) 	+ " %"	sinon "0 %"
 libRapportTauxErreur				= (_stSynthèse.NbrDiffusion > 0)	? Arrondi(_stSynthèse.NbrErreur		/ _stSynthèse.NbrDiffusion * 100,0)		+ " %"	sinon "0 %"
