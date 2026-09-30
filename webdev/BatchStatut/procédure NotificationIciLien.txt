@@ -1,0 +1,136 @@
+procédure NotificationIciLien()
+
+nInd					est un entier
+sTexteRequete			est une chaîne
+sdReqNotificationLien	est une Source de Données
+sdReqLienUpdate			est une Source de Données
+stNotificationEnvoi		est une structNotificationEnvoi
+JsonVariable			est une chaîne
+sListeChampEmailPersonnalisé	est une chaînes
+
+
+sTexteRequete =
+[
+	SELECT 
+	    dos_operation.IdOperation,
+	    dos_operation.Dossier,
+	    dos_operation.IdClientFacturation,
+	    dos_operation.IdContact,
+	    dos_operation.IdValideur,
+		dos_operation.NomOperation,
+		dos_operation.TypeOperation,
+		dos_operation.TypeProjet,
+		ope_cliquezici.EmailLeadType,
+		ope_cliquezici.EmailLeadEnCopie,
+		GROUP_CONCAT(DISTINCT ope_cliquezici_lien.IdBaseLigne) AS ListeIdBaseLigne,
+		COUNT(DISTINCT(ope_cliquezici_lien.IdBaseLigne)) Total
+	FROM 
+	    ope_cliquezici_lien
+	    JOIN dos_operation ON dos_operation.IdOperation = ope_cliquezici_lien.IdCliquezIci
+	    JOIN ope_cliquezici on ope_cliquezici.IdCliquezIci = ope_cliquezici_lien.IdCliquezIci
+	WHERE
+	    dos_operation.DateHeurePriseEnCharge >= DATE_ADD(NOW(), INTERVAL -1 MONTH)
+	    AND ope_cliquezici_lien.DateHeureNotification IS NULL
+	    AND (
+	        NOT EXISTS (
+	            SELECT 1 
+	            FROM ope_cliquezici_lien AS notifications
+	            WHERE notifications.IdCliquezIci = dos_operation.IdOperation
+	            AND notifications.DateHeureNotification IS NOT NULL
+	            AND notifications.DateHeureNotification > DATE_ADD(NOW(), INTERVAL -[%cpProjet.__IntervalleIciLien%] MINUTE)
+	        )
+	    )
+	GROUP BY 
+	    dos_operation.IdOperation;
+]
+
+si pas sdReqNotificationLien.ExécuteRequêteSQL(ope_cliquezici_lien..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête","Procédure","NotificationLien","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+	retour
+fin
+
+pour tout sdReqNotificationLien
+	sTexteRequete = [
+ 		UPDATE ope_cliquezici_lien
+		SET ope_cliquezici_lien.DateHeureNotification = NOW()
+		WHERE
+		ope_cliquezici_lien.DateHeureNotification IS NULL
+		AND ope_cliquezici_lien.IdCliquezIci = [%sdReqNotificationLien.IdOperation%]
+	]
+
+	si pas sdReqLienUpdate.ExécuteRequêteSQL(ope_cliquezici_lien..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+		Trace("Erreur requête","Procédure","sdReqLienUpdate","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+		retour
+	fin
+
+	VariableRAZ(stNotificationEnvoi)
+	stNotificationEnvoi.CodeNotification					= __NOTIFICATION_LEAD_CLIQUEZICI_LIEN__
+	stNotificationEnvoi.IdClient							= sdReqNotificationLien.IdClientFacturation
+	stNotificationEnvoi.IdContact							= sdReqNotificationLien.IdContact
+	stNotificationEnvoi.IdOperation							= sdReqNotificationLien.IdOperation
+	stNotificationEnvoi.TypeOperation						= sdReqNotificationLien.TypeOperation
+	stNotificationEnvoi.Variables							= Partage.VariablesOperation(sdReqNotificationLien.IdOperation, sdReqNotificationLien.IdContact)
+	stNotificationEnvoi.Variables.Procedure					= "NotificationIciLien"
+	stNotificationEnvoi.Variables.DateHeureFiltre			= DateHeureVersChaîne(DateHeureSys(),"AAAAMMJJHHmmSS")
+	stNotificationEnvoi.Variables.ListeIdBaseLigne			= sdReqNotificationLien.ListeIdBaseLigne
+	stNotificationEnvoi.Variables.NombrePartielRedirection	= NumériqueVersChaîne(sdReqNotificationLien.Total, "d")
+
+	Partage.NotificationEnvoi(stNotificationEnvoi)
+
+	// On envoi les notifications au Valideur
+	si sdReqNotificationLien.IdContact <> sdReqNotificationLien.IdValideur alors
+		stNotificationEnvoi.IdContact						= sdReqNotificationLien.IdValideur
+		Partage.NotificationEnvoi(stNotificationEnvoi)
+	fin
+
+	si Contient(sdReqNotificationLien.EmailLeadType,"lien",MotComplet+SansCasse) _et_ sdReqNotificationLien.EmailLeadEnCopie <> "" alors
+
+		Sérialise(stNotificationEnvoi.Variables, JsonVariable, psdJSON)
+
+		sListeChampEmailPersonnalisé = ""
+		// On envoi les Emails de notifications au EmailLeadEnCopie
+		pour toute chaîne sEmail de sdReqNotificationLien.EmailLeadEnCopie séparée par ";"
+			si sEmail.Gauche(1) = "[" _et_ sEmail.Droite(1) = "]" alors
+				sListeChampEmailPersonnalisé += [";"] + sEmail.Remplace(["[","]"],"")
+			sinon
+				email_envoi.RAZ()
+				email_envoi.IdClient			= sdReqNotificationLien.IdClientFacturation
+				email_envoi.IdContact.Null		= Vrai
+				email_envoi.IdOperation			= sdReqNotificationLien.IdOperation
+				email_envoi.TypeOperation		= sdReqNotificationLien.TypeOperation
+				email_envoi.CodeSite			= __CODE_SITE_MARKETEAM__
+				email_envoi.CodeEmailType		= __NOTIFICATION_LEAD_CLIQUEZICI_LIEN__
+				email_envoi.DateHeureDemande		= DateHeureSys()
+				email_envoi.EmailDestinataire	= sEmail
+				email_envoi.Variable			= JsonVariable
+				email_envoi.Ajoute()
+			fin
+
+		fin
+	fin
+
+	si sListeChampEmailPersonnalisé <> "" alors
+		email_envoi.RAZ()
+		email_envoi.IdClient				= sdReqNotificationLien.IdClientFacturation
+		email_envoi.IdContact.Null			= Vrai
+		email_envoi.IdOperation				= sdReqNotificationLien.IdOperation
+		email_envoi.TypeOperation			= sdReqNotificationLien.TypeOperation
+		email_envoi.CodeSite				= __CODE_SITE_MARKETEAM__
+		email_envoi.CodeEmailType			= __NOTIFICATION_LEAD_CLIQUEZICI_LIEN_UNIQUE__ // Ici c'est spécial
+		email_envoi.DateHeureDemande		= DateHeureSys()
+		email_envoi.EmailDestinataire		= sListeChampEmailPersonnalisé
+		email_envoi.Variable				= JsonVariable
+		email_envoi.Ajoute()
+	fin
+
+
+	nInd = TableAjouteLigne(tblStatutDossier)
+	tblStatutDossier[nInd].colDosStatOperation	= sdReqNotificationLien.Dossier
+	tblStatutDossier[nInd].colDosStatDateHeure	= DateHeureSys()
+	tblStatutDossier[nInd].colDosStatNouveau 	= "CliquezIci-Lien"
+fin
+
+
+fin:
+sdReqNotificationLien.AnnuleDéclaration()
+sdReqLienUpdate.AnnuleDéclaration()

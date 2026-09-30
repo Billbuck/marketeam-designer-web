@@ -1,0 +1,37 @@
+procédure ChangementStatutGestionPrisEnCharge()
+
+sTexteRequete est une chaîne
+sdReqGestion est une Source de Données
+
+
+sTexteRequete =
+[
+	SELECT 
+	ope_lettre_gestion_depot.IdLettreGestionDepot
+	FROM
+	ope_lettre_gestion_depot 
+	WHERE
+	NOW() > ope_lettre_gestion_depot.DateHeureLimitePriseEnCharge and
+	ope_lettre_gestion_depot.Statut = '[%__DEPOT_STATUT_PRISE_EN_CHARGE_EN_ATTENTE__%]'
+]
+
+
+si pas HExécuteRequêteSQL(sdReqGestion, ope_lettre_gestion_depot..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête","Procédure","ChangementStatutGestionPrisEnCharge","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+	retour	
+fin
+
+pour tout sdReqGestion
+	si HLitRecherchePremier(ope_lettre_gestion_depot,IdLettreGestionDepot,sdReqGestion.IdLettreGestionDepot) alors
+		ope_lettre_gestion_depot.Statut 					= __DEPOT_STATUT_PRISE_EN_CHARGE__
+		ope_lettre_gestion_depot.DateHeurePriseEnCharge 	= DateHeureSys()
+		ope_lettre_gestion_depot.UserModification			= "BatchGestionPriseEnCharge"
+		HModifie(ope_lettre_gestion_depot) 
+		TableAjouteLigne(tblStatutDossier,ope_lettre_gestion_depot.IdLettreGestionDepot,DateHeureSys(),"Dépôt : " + Partage.LibelleStatutDepot(ope_lettre_gestion_depot.Statut))
+	fin
+fin
+
+
+fin:
+HAnnuleDéclaration(sdReqGestion)
+

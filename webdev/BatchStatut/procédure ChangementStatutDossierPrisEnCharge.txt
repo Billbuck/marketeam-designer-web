@@ -1,0 +1,36 @@
+procédure ChangementStatutDossierPrisEnCharge()
+
+sTexteRequete est une chaîne
+sdReqStatut est une Source de Données
+
+
+
+sTexteRequete =
+[
+	SELECT 
+	dos_operation.IdOperation
+	FROM
+	dos_operation 
+	WHERE
+	(NOW() > dos_operation.DateHeureLimitePriseEnCharge OR dos_operation.EstEnvoiImmediat = 1) 
+	AND dos_operation.Statut = '[%__Statut_Prise_En_Charge_En_Attente__%]'
+]
+
+si pas sdReqStatut.ExécuteRequêteSQL(dos_operation..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête","Procédure","ChangementStatutDossierPrisEnCharge","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+	retour
+fin
+
+pour tout sdReqStatut
+	si dos_operation.LitRecherchePremier(IdOperation,sdReqStatut.Idoperation) alors
+		dos_operation.Statut 					= __Statut_Prise_En_Charge__
+		dos_operation.DateHeurePriseEnCharge 	= DateHeureSys()
+		dos_operation.UserModification			= "BatchStatutPriseEnCharge"
+		dos_operation.Modifie()
+		TableAjouteLigne(tblStatutDossier,dos_operation.Dossier,DateHeureSys(),Partage.LibelleStatutOperation(dos_operation.Statut))
+	fin
+fin
+
+
+fin:
+sdReqStatut.AnnuleDéclaration()

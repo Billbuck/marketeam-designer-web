@@ -1,0 +1,123 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//RapportAudience ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure RapportAudience()
+
+sTexteRequete			est une chaîne
+sdReqRapportAudience	est une Source de Données
+stNotificationEnvoi		est une structNotificationEnvoi
+
+sTexteRequete	=
+[
+	SET @lower_limit = DATE_SUB(NOW(), INTERVAL 72 HOUR);
+	SET @upper_limit = DATE_SUB(NOW(), INTERVAL 24 HOUR);
+	
+	SELECT 
+	    dos_operation.IdOperation,
+	    dos_operation.IdClientFacturation,
+	    dos_operation.IdContact,
+	    dos_operation.IdValideur,
+		dos_operation.Dossier,
+		dos_operation.NomOperation,
+		dos_operation.TypeOperation,
+		dos_operation.TypeProjet,
+		dos_operation.NbrAboutement,
+	    dos_operation.NbrAudienceUnique,
+	    dos_operation.NbrDelivre,
+	    dos_operation.NbrDestinataire,
+	    dos_operation.NbrDiffusion,
+	    dos_operation.NbrErreur,
+	    dos_operation.NbrInjoignable,
+	    dos_operation.NbrInteractionUnique,
+	    dos_operation.NbrLeadUnique,
+	    dos_operation.NbrMessageDepose,
+	    dos_operation.NbrRendezVous,
+	    dos_operation.NbrRepondeur,
+	    dos_operation.NbrStop
+	FROM 
+		dos_operation USE INDEX (EstTerminee_DateHeureFin)
+	WHERE
+	    dos_operation.EstTerminee = 1
+	    AND dos_operation.TypeProjet IN ('[%__OPERATION_SMS__%]', '[%__OPERATION_SMS_INTERACTIF__%]', '[%__OPERATION_TEL__%]', '[%__OPERATION_VMS__%]', '[%__OPERATION_EMAIL__%]', '[%__OPERATION_EMAIL_INTERACTIF__%]')
+	    AND dos_operation.DateHeureFin IS NOT NULL
+  		AND dos_operation.DateHeureFin BETWEEN @lower_limit AND @upper_limit
+	    AND NOT EXISTS (
+	        SELECT 1
+	        FROM (
+	            SELECT email_envoi.IdOperation 
+	            FROM email_envoi USE INDEX (IdOperation_CodeEmailType)
+	            WHERE email_envoi.CodeEmailType = '[%__NOTIFICATION_RAPPORT_AUDIENCE__%]'
+	            
+	            UNION ALL
+	            
+	            SELECT sms_envoi.IdOperation 
+	            FROM sms_envoi  USE INDEX (IdOperation_CodeSmsType)
+	            WHERE sms_envoi.CodeSmsType = '[%__NOTIFICATION_RAPPORT_AUDIENCE__%]'
+	            
+	            UNION ALL
+	            
+	            SELECT push_envoi.IdOperation 
+	            FROM push_envoi USE INDEX (IdOperation_CodePushType)
+	            WHERE push_envoi.CodePushType = '[%__NOTIFICATION_RAPPORT_AUDIENCE__%]'
+	        ) Notifications
+	        WHERE Notifications.IdOperation = dos_operation.IdOperation
+	    );
+]
+
+
+si pas sdReqRapportAudience.ExécuteRequêteSQL(dos_operation..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête","Procédure","sdReqRapportAudienceIci","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+	retour
+fin
+
+
+
+pour tout sdReqRapportAudience
+
+	VariableRAZ(stNotificationEnvoi)
+	stNotificationEnvoi.CodeNotification				= __NOTIFICATION_RAPPORT_AUDIENCE__
+	stNotificationEnvoi.IdClient						= sdReqRapportAudience.IdClientFacturation
+	stNotificationEnvoi.IdContact						= sdReqRapportAudience.IdContact
+	stNotificationEnvoi.IdOperation						= sdReqRapportAudience.IdOperation
+	stNotificationEnvoi.Variables						= Partage.VariablesOperation(sdReqRapportAudience.IdOperation, sdReqRapportAudience.IdContact)
+
+	stNotificationEnvoi.Variables.Procedure				= "RapportAudience"
+	stNotificationEnvoi.Variables.NbrAboutement		= NumériqueVersChaîne(sdReqRapportAudience.NbrAboutement, "d")
+	stNotificationEnvoi.Variables.NbrAudienceUnique		= NumériqueVersChaîne(sdReqRapportAudience.NbrAudienceUnique, "d")
+	stNotificationEnvoi.Variables.NbrDelivre			= NumériqueVersChaîne(sdReqRapportAudience.NbrDelivre, "d")
+	stNotificationEnvoi.Variables.NbrDestinataire		= NumériqueVersChaîne(sdReqRapportAudience.NbrDestinataire, "d")
+	stNotificationEnvoi.Variables.NbrDiffusion			= NumériqueVersChaîne(sdReqRapportAudience.NbrDiffusion, "d")
+	stNotificationEnvoi.Variables.NbrErreur				= NumériqueVersChaîne(sdReqRapportAudience.NbrErreur, "d")
+	stNotificationEnvoi.Variables.NbrInjoignable		= NumériqueVersChaîne(sdReqRapportAudience.NbrInjoignable, "d")
+	stNotificationEnvoi.Variables.NbrInteractionUnique	= NumériqueVersChaîne(sdReqRapportAudience.NbrInteractionUnique, "d")
+	stNotificationEnvoi.Variables.NbrLeadUnique		= NumériqueVersChaîne(sdReqRapportAudience.NbrLeadUnique, "d")
+	stNotificationEnvoi.Variables.NbrMessageDepose		= NumériqueVersChaîne(sdReqRapportAudience.NbrMessageDepose, "d")
+	stNotificationEnvoi.Variables.NbrRendezVous		= NumériqueVersChaîne(sdReqRapportAudience.NbrRendezVous, "d")
+	stNotificationEnvoi.Variables.NbrRepondeur			= NumériqueVersChaîne(sdReqRapportAudience.NbrRepondeur, "d")
+	stNotificationEnvoi.Variables.NbrStop				= NumériqueVersChaîne(sdReqRapportAudience.NbrStop, "d")
+
+	Partage.NotificationEnvoi(stNotificationEnvoi)
+
+	// On envoi les notifications au Valideur
+	si sdReqRapportAudience.IdContact <> sdReqRapportAudience.IdValideur alors
+		stNotificationEnvoi.IdContact	= sdReqRapportAudience.IdValideur
+		Partage.NotificationEnvoi(stNotificationEnvoi)
+	fin
+
+
+fin
+
+
+fin:
+sdReqRapportAudience.AnnuleDéclaration()
+
+

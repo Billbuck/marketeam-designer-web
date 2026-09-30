@@ -1,0 +1,150 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//NotificationIciTracking ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure NotificationIciTracking()
+
+nInd							est un entier
+sTexteRequete					est une chaîne
+sdReqIciTracking				est une Source de Données
+sdReqTrackingUpdate				est une Source de Données
+stNotificationEnvoi				est une structNotificationEnvoi
+JsonVariable					est une chaîne
+sListeChampEmailPersonnalisé	est une chaînes
+
+
+
+
+sTexteRequete =
+[
+	SELECT
+		dos_operation.IdOperation,
+		dos_operation.Dossier,
+		dos_operation.IdClientFacturation,
+		dos_operation.IdContact,
+		dos_operation.IdValideur,
+		dos_operation.NomOperation,
+		dos_operation.TypeOperation,
+		dos_operation.TypeProjet,
+		ope_cliquezici.EmailLeadType,
+		ope_cliquezici.EmailLeadEnCopie,
+		GROUP_CONCAT(DISTINCT ope_cliquezici_tracking.IdBaseLigne) AS ListeIdBaseLigne,
+		count(DISTINCT(ope_cliquezici_tracking.IdBaseLigne)) Total
+	FROM
+		ope_cliquezici_tracking
+		JOIN dos_operation ON dos_operation.IdOperation = ope_cliquezici_tracking.IdCliquezIci
+		JOIN ope_cliquezici on ope_cliquezici.IdCliquezIci = ope_cliquezici_tracking.IdCliquezIci AND ope_cliquezici.Type in ('[%__ICI_URL_TRACKING__%]', '[%__ICI_WEB__%]')
+	WHERE
+		dos_operation.DateHeurePriseEnCharge >= DATE_ADD(NOW(), INTERVAL -1 MONTH)
+		AND ope_cliquezici_tracking.DateHeureNotification IS NULL
+		AND (
+			NOT EXISTS (
+			SELECT 1
+			FROM ope_cliquezici_tracking AS notifications
+			WHERE notifications.IdCliquezIci = dos_operation.IdOperation
+			AND notifications.DateHeureNotification IS NOT NULL
+			AND notifications.DateHeureNotification > DATE_ADD(NOW(), INTERVAL -[%cpProjet.__IntervalleIciTracking%] MINUTE)
+			)
+		)
+	GROUP BY
+		dos_operation.IdOperation;
+]
+
+si pas sdReqIciTracking.ExécuteRequêteSQL(ope_cliquezici_tracking..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête","Procédure","sdReqIciTracking","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+	retour
+fin
+
+pour tout sdReqIciTracking
+	sTexteRequete = [
+		UPDATE ope_cliquezici_tracking
+		SET ope_cliquezici_tracking.DateHeureNotification = NOW()
+		WHERE
+		ope_cliquezici_tracking.DateHeureNotification IS NULL
+		AND ope_cliquezici_tracking.IdCliquezIci = [%sdReqIciTracking.IdOperation%]
+	]
+
+	si pas sdReqTrackingUpdate.ExécuteRequêteSQL(ope_cliquezici_tracking..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+		Trace("Erreur requête","Procédure","sdReqIciTracking","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+		retour
+	fin
+
+	VariableRAZ(stNotificationEnvoi)
+	stNotificationEnvoi.CodeNotification						= __NOTIFICATION_CLIQUEZICI_TRACKING__
+	stNotificationEnvoi.IdClient								= sdReqIciTracking.IdClientFacturation
+	stNotificationEnvoi.IdContact							= sdReqIciTracking.IdContact
+	stNotificationEnvoi.IdOperation							= sdReqIciTracking.IdOperation
+	stNotificationEnvoi.TypeOperation						= sdReqIciTracking.TypeOperation
+	stNotificationEnvoi.Variables							= Partage.VariablesOperation(sdReqIciTracking.IdOperation, sdReqIciTracking.IdContact)
+	stNotificationEnvoi.Variables.Procedure					= "NotificationIciTracking"
+	stNotificationEnvoi.Variables.DateHeureFiltre			= DateHeureVersChaîne(DateHeureSys(),"AAAAMMJJHHmmSS")
+	stNotificationEnvoi.Variables.ListeIdBaseLigne			= sdReqIciTracking.ListeIdBaseLigne
+	stNotificationEnvoi.Variables.NombrePartielVisite			= NumériqueVersChaîne(sdReqIciTracking.Total, "d")
+
+	// On envoi les notifications au Créateur
+	Partage.NotificationEnvoi(stNotificationEnvoi)
+
+	// On envoi les notifications au Valideur
+	si sdReqIciTracking.IdContact <> sdReqIciTracking.IdValideur alors
+
+		stNotificationEnvoi.IdContact	= sdReqIciTracking.IdValideur
+		Partage.NotificationEnvoi(stNotificationEnvoi)
+	fin
+
+	si Contient(sdReqIciTracking.EmailLeadType,"visite",MotComplet+SansCasse) _et_ sdReqIciTracking.EmailLeadEnCopie <> "" alors
+
+		Sérialise(stNotificationEnvoi.Variables, JsonVariable, psdJSON)
+
+		// On envoi les Emails de notifications au EmailLeadEnCopie
+		pour toute chaîne sEmail de sdReqIciTracking.EmailLeadEnCopie séparée par ";"
+			si sEmail.Gauche(1) = "[" _et_ sEmail.Droite(1) = "]" alors
+				sListeChampEmailPersonnalisé += [";"] + sEmail.Remplace(["[","]"],"")
+			sinon
+				email_envoi.RAZ()
+				email_envoi.IdClient			= sdReqIciTracking.IdClientFacturation
+				email_envoi.IdContact.Null		= Vrai
+				email_envoi.IdOperation			= sdReqIciTracking.IdOperation
+				email_envoi.TypeOperation		= sdReqIciTracking.TypeOperation
+				email_envoi.CodeSite			= __CODE_SITE_MARKETEAM__
+				email_envoi.CodeEmailType		= __NOTIFICATION_CLIQUEZICI_TRACKING__
+				email_envoi.DateHeureDemande		= DateHeureSys()
+				email_envoi.EmailDestinataire	= sEmail
+				email_envoi.Variable			= JsonVariable
+				email_envoi.Ajoute()
+			fin
+
+		fin
+	fin
+
+	si sListeChampEmailPersonnalisé <> "" alors
+		email_envoi.RAZ()
+		email_envoi.IdClient				= sdReqIciTracking.IdClientFacturation
+		email_envoi.IdContact.Null			= Vrai
+		email_envoi.IdOperation				= sdReqIciTracking.IdOperation
+		email_envoi.TypeOperation			= sdReqIciTracking.TypeOperation
+		email_envoi.CodeSite				= __CODE_SITE_MARKETEAM__
+		email_envoi.CodeEmailType			= __NOTIFICATION_CLIQUEZICI_TRACKING_UNIQUE__ // Ici c'est spécial
+		email_envoi.DateHeureDemande		= DateHeureSys()
+		email_envoi.EmailDestinataire		= sListeChampEmailPersonnalisé
+		email_envoi.Variable				= JsonVariable
+		email_envoi.Ajoute()
+	fin
+
+
+	nInd										= TableAjouteLigne(tblStatutDossier)
+	tblStatutDossier[nInd].colDosStatOperation	= sdReqIciTracking.Dossier
+	tblStatutDossier[nInd].colDosStatDateHeure	= DateHeureSys()
+	tblStatutDossier[nInd].colDosStatNouveau		= "CliquezIci-Tracking"
+fin
+
+fin:
+sdReqIciTracking.AnnuleDéclaration()
+sdReqTrackingUpdate.AnnuleDéclaration()

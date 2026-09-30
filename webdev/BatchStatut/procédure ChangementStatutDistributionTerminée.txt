@@ -1,0 +1,51 @@
+procédure ChangementStatutDistributionTerminée()
+
+sTexteRequete est une chaîne
+sdReqStatutDistributionEnCours est une Source de Données
+
+
+sTexteRequete =
+[
+	SELECT
+	IdOperation 
+	FROM
+	dos_operation 
+	WHERE
+	dos_operation.TypeOperation IN ('[%__OPERATION_SMARTEVA__%]','[%__OPERATION_TRACTEVA__%]') AND
+	dos_operation.Statut = '[%__Statut_Distribution_En_Cours__%]' AND
+	CURDATE() >= DATE_ADD(dos_operation.DateEnvoiSouhaite,INTERVAL 5 DAY) AND
+	CURTIME() >= '13:00'
+	
+	UNION
+	
+	SELECT
+	IdOperation 
+	FROM
+	dos_operation 
+	WHERE
+	dos_operation.TypeOperation = '[%__OPERATION_COURRIER__%]' AND
+	dos_operation.Statut = '[%__Statut_Distribution_En_Cours__%]' AND
+	CURDATE() >= DATE_ADD(dos_operation.DateEnvoiSouhaite,INTERVAL (SELECT (DebutDistribution + FinDistribution-1) FROM ltr_timbre, ltr_timbre_tarif, ope_lettre WHERE ope_lettre.IdLettre = dos_operation.IdOperation AND ope_lettre.IdTimbreTarif = ltr_timbre_tarif.IdTimbreTarif AND ltr_timbre_tarif.IdTimbre = ltr_timbre.IdTimbre LIMIT 1) DAY) AND
+	CURTIME() >= '13:00'
+]
+
+si pas sdReqStatutDistributionEnCours.ExécuteRequêteSQL(dos_operation..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête","Procédure","ChangementStatutDistributionTerminée","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+	retour
+fin
+
+
+pour tout sdReqStatutDistributionEnCours
+	si dos_operation.LitRecherchePremier(IdOperation,sdReqStatutDistributionEnCours.Idoperation) alors
+		dos_operation.EstTerminee			= Vrai
+		dos_operation.DateHeureFin			= DateHeureSys()
+		dos_operation.DateHeureModification	= DateHeureSys()
+		dos_operation.UserModification		= "BatchStatutTerminée"
+		dos_operation.Modifie()
+		tblStatutDossier.AjouteLigne(dos_operation.Dossier,DateHeureSys(),Partage.LibelleStatutOperation(dos_operation.Statut))
+	fin
+fin
+
+
+fin:
+sdReqStatutDistributionEnCours.AnnuleDéclaration()

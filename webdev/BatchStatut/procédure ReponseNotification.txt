@@ -1,0 +1,64 @@
+procédure ReponseNotification()
+
+nInd						est un entier
+sTexteRequete				est une chaîne
+sdReqNotificationReponse	est une Source de Données
+stNotificationEnvoi 		est une structNotificationEnvoi
+
+sTexteRequete =
+[
+	SELECT 
+		ope_sms_reponse.IdReponse,
+		ope_sms_reponse.IdBaseLigne,
+		ope_sms_reponse.Reponse,
+		ope_sms_notification.IdClient,
+		ope_sms_notification.IdContact,
+		ope_sms_notification.IdOperation,
+		ope_sms_notification.IdReference,
+		ope_sms_notification.Portable,
+		ope_sms_notification.Message
+	FROM 
+		ope_sms_reponse
+		JOIN ope_sms_notification  ON ope_sms_reponse.IdSmsNotification = ope_sms_notification.IdSmsNotification
+	WHERE 
+		ope_sms_reponse.IdSmsNotification IS NOT NULL 
+		AND ope_sms_reponse.DateHeureEnvoi IS NULL;
+	
+]
+
+si pas sdReqNotificationReponse.ExécuteRequêteSQL(ope_sms_reponse..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête","Procédure","ReponseNotification","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+	retour
+fin
+
+
+pour tout sdReqNotificationReponse
+	si ope_sms_reponse.LitRecherchePremier(IdReponse,sdReqNotificationReponse.IdReponse) alors
+		ope_sms_reponse.DateHeureEnvoi = DateHeureSys()
+		si ope_sms_reponse.Modifie() alors
+
+			VariableRAZ(stNotificationEnvoi)
+			stNotificationEnvoi.CodeNotification					= __NOTIFICATION_NOTIFICATION_REPONSE__
+			stNotificationEnvoi.IdClient							= sdReqNotificationReponse.IdClient
+			stNotificationEnvoi.IdContact							= sdReqNotificationReponse.IdContact
+			stNotificationEnvoi.IdOperation							= sdReqNotificationReponse.IdOperation
+			stNotificationEnvoi.TypeOperation						= __OPERATION_SMS__
+			stNotificationEnvoi.Variables							= Partage.VariablesOperation(sdReqNotificationReponse.IdOperation, sdReqNotificationReponse.IdContact)
+			stNotificationEnvoi.Variables.Procedure					= "ReponseNotification"
+			stNotificationEnvoi.Variables.ReponsePortable			= Telephone(sdReqNotificationReponse.Portable,1,".")
+			stNotificationEnvoi.Variables.ReponseMessageReçu		= sdReqNotificationReponse.Reponse
+			stNotificationEnvoi.Variables.ReponseMessageSmsEnvoyé	= sdReqNotificationReponse.Message
+
+			Partage.NotificationEnvoi(stNotificationEnvoi)
+
+			nInd = tblStatutDossier.AjouteLigne()
+			tblStatutDossier[nInd].colDosStatOperation	= ""
+			tblStatutDossier[nInd].colDosStatDateHeure	= DateHeureSys()
+			tblStatutDossier[nInd].colDosStatNouveau 	= "notification reponse"
+		fin
+	fin
+fin
+
+
+fin:
+sdReqNotificationReponse.AnnuleDéclaration()

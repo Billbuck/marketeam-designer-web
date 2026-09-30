@@ -1,0 +1,42 @@
+procédure ChangementStatutOperationHorsDélais()
+
+sTexteRequete est une chaîne
+sdReqStatut est une Source de Données
+
+sTexteRequete =
+[
+	SELECT
+		dos_operation.IdOperation,
+		dos_operation.Statut
+	FROM
+		dos_operation 
+	WHERE
+		((dos_operation.DateHeureValidation IS NULL AND NOW() > dos_operation.DateHeureLimiteValidation) OR (dos_operation.DateHeurePriseEnCharge IS NULL AND NOW() > dos_operation.DateHeureLimitePriseEnCharge)) 
+		AND dos_operation.Statut IN ('[%__Statut_Element_En_Attente__%]','[%__Statut_Règlement_En_Attente__%]','[%__Statut_Validation_En_Attente__%]','[%__Statut_Référence_En_Attente__%]') 
+]
+
+
+si pas HExécuteRequêteSQL(sdReqStatut, dos_operation..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête","Procédure","ChangementStatutOperationHorsDélais","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+	retour
+fin
+
+pour tout sdReqStatut
+
+	si dos_operation.LitRecherchePremier(IdOperation,sdReqStatut.IdOperation) alors
+		selon sdReqStatut.STATUT
+			cas __Statut_Element_En_Attente__		: dos_operation.Statut = __Statut_Element_Hors_Delais__
+			cas __Statut_Règlement_En_Attente__		: dos_operation.Statut = __Statut_Règlement_Hors_Delais__
+			cas __Statut_Validation_En_Attente__	: dos_operation.Statut = __Statut_Validation_Hors_Delais__
+			cas __Statut_Référence_En_Attente__		: dos_operation.Statut = __Statut_Référence_Hors_Delais__
+		fin
+		dos_operation.DateHeureModification 	= DateHeureSys()
+		dos_operation.UserModification			= "BatchStatutHorsDélais"
+		dos_operation.Modifie()
+		TableAjouteLigne(tblStatutDossier,dos_operation.Dossier,DateHeureSys(),Partage.LibelleStatutOperation(dos_operation.Statut))
+	fin
+fin
+
+
+fin:
+sdReqStatut.AnnuleDéclaration()

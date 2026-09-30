@@ -1,0 +1,71 @@
+procédure ChangementStatutCallCenterTerminé()
+
+// pStatutTermine = Faux : on gère le statut Envoyé : 80 % des envois effectués
+// pStatutTermine = Vrai : on gère le statut Terminé : 95 % des envois effectués ou date d'envoi supérieure à 3 jours
+
+
+sTexteRequete est une chaîne
+sdReqStatutCallCenter est une Source de Données
+dDateFinTheorique est une Date
+
+
+sTexteRequete = 
+[
+	SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED ;
+	
+	SELECT 
+		dos_operation.IdOperation, 
+		dos_operation.NbrDestinataire, 
+		COUNT(ope_tel_envoi.IdBaseLigne) NonEffectue, 
+		ope_tel.DateFinSouhaite, 
+		ope_tel.NbrRelance, 
+		ope_tel.JoursAppel
+	FROM 
+		dos_operation 
+		INNER JOIN ope_tel ON dos_operation.IdOperation = ope_tel.IdTel
+		LEFT JOIN ope_tel_envoi ON (ope_tel_envoi.IdTel = ope_tel.IdTel AND ope_tel_envoi.Tentative <= ope_tel.NbrRelance AND ope_tel_envoi.Statut IN ('[%__TEL_STATUT_ENREGISTREE__%]','[%__TEL_STATUT_EN_COURS__%]','[%__TEL_STATUT_INJOIGNABLE__%]','[%__TEL_STATUT_REPONDEUR__%]'))
+	WHERE	
+		dos_operation.Statut = '[%__Statut_Appel_En_Cours__%]' 
+	GROUP BY 
+		dos_operation.IdOperation, 
+		dos_operation.NbrDestinataire ;	
+
+	SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ ;
+]
+
+ 
+
+si pas HExécuteRequêteSQL(sdReqStatutCallCenter, dos_operation..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête","Procédure","ChangementStatutCallCenterTerminé","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+	retour	
+fin
+
+pour tout sdReqStatutCallCenter
+	dDateFinTheorique = cpFonction.CalculeDateSuivante(sdReqStatutCallCenter.DateFinSouhaite, sdReqStatutCallCenter.NbrRelance, sdReqStatutCallCenter.JoursAppel)
+
+	// Si l'opération est techniquement terminée, ou que la date réel de fin est passée !
+	si sdReqStatutCallCenter.NonEffectue = 0 _ou_ dDateFinTheorique < DateSys() alors
+		// Mise à jour de la table des logs
+		si HLitRecherchePremier(dos_operation,IdOperation,sdReqStatutCallCenter.IdOperation) alors
+			dos_operation.EstTerminee 			= Vrai
+			dos_operation.DateHeureFin			= DateHeureSys()
+			dos_operation.UserModification 		= "BatchStatutEstTerminée"
+			dos_operation.DateHeureModification = DateHeureSys()
+			si pas HModifie(dos_operation) alors
+				Trace("Erreur : Hmodifie dos_operation", HErreurInfo(hErrComplet))
+				retour
+			fin
+			// On récupère le nouveau statut suite au Trigger !
+			si HLitRecherche(dos_operation,IdOperation,sdReqStatutCallCenter.IdOperation) alors
+				TableAjouteLigne(tblStatutDossier,dos_operation.Dossier,DateHeureSys(),Partage.LibelleStatutOperation(dos_operation.Statut))
+			fin
+		fin
+	fin
+fin
+
+
+
+fin:
+HAnnuleDéclaration(sdReqStatutCallCenter)
+
+

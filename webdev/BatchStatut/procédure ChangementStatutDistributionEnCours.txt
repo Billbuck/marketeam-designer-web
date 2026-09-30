@@ -1,0 +1,48 @@
+procédure ChangementStatutDistributionEnCours()
+
+sTexteRequete est une chaîne
+sdReqStatutDistributionEnCours est une Source de Données
+
+
+sTexteRequete =
+[
+	SELECT
+	IdOperation 
+	FROM
+	dos_operation 
+	WHERE
+	dos_operation.TypeOperation IN ('[%__OPERATION_SMARTEVA__%]','[%__OPERATION_TRACTEVA__%]') AND
+	dos_operation.Statut = '[%__Statut_Distribution_En_Attente__%]' AND
+	CURDATE() >= dos_operation.DateEnvoiSouhaite
+	
+	UNION
+	
+	SELECT
+	IdOperation 
+	FROM
+	dos_operation 
+	WHERE
+	dos_operation.TypeOperation = '[%__OPERATION_COURRIER__%]' AND
+	dos_operation.Statut = '[%__Statut_Distribution_En_Attente__%]' AND
+	CURDATE() > dos_operation.DateEnvoiSouhaite
+]
+
+
+si pas sdReqStatutDistributionEnCours.ExécuteRequêteSQL(dos_operation..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête","Procédure","ChangementStatutDistributionEnCours","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+	retour
+fin
+
+pour tout sdReqStatutDistributionEnCours
+	si dos_operation.LitRecherchePremier(IdOperation,sdReqStatutDistributionEnCours.Idoperation) alors
+		dos_operation.Statut = __Statut_Distribution_En_Cours__
+		dos_operation.DateHeureModification = DateHeureSys()
+		dos_operation.UserModification = "BatchStatutDistributionEnCours"
+		dos_operation.Modifie()
+		TableAjouteLigne(tblStatutDossier,dos_operation.Dossier,DateHeureSys(),Partage.LibelleStatutOperation(dos_operation.Statut))
+	fin
+fin
+
+
+fin:
+sdReqStatutDistributionEnCours.AnnuleDéclaration()

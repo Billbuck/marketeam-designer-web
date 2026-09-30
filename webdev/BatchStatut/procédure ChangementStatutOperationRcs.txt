@@ -1,0 +1,157 @@
+// Résumé : Fait avancer le statut des opérations RCS en cours de diffusion,
+// copie de ChangementStatutOperationKannel adaptée à ope_rcs_envoi.
+// Appelée toutes les minutes par le batch, deux fois :
+// - pStatutTermine = Faux : Distribution en cours (60) -> Envoyée (70)
+//   quand 80 % des envois sont partis, ou prise en charge depuis plus de 72 h
+// - pStatutTermine = Vrai : Envoyée (70) -> EstTerminee, le trigger de
+//   dos_operation pose le statut final, quand 95 % des envois sont partis
+//   ou prise en charge depuis plus de 72 h
+// NbrDiffusion / NbrDestinataire sont alimentés par le trigger de ope_rcs_envoi.
+procédure ChangementStatutOperationRcs(pStatutTermine est un booléen)
+
+sTexteRequete				est une chaîne
+sTexteRequeteTerminé		est une chaîne
+sTexteRequeteEnvoyé			est une chaîne
+sdReqStatutRcs				est une Source de Données
+sdReqBloque					est une Source de Données
+sTexteBloque				est une chaîne
+
+
+
+sTexteRequeteTerminé =
+[
+	SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+	
+	SELECT 
+		dos_operation.IdOperation,
+		dos_operation.NbrDestinataire,
+		dos_operation.NbrDiffusion,
+		DATE_ADD(dos_operation.DateHeurePriseEnCharge, INTERVAL 72 HOUR) AS DateComparaison
+	FROM 
+		dos_operation
+		JOIN ope_rcs_envoi ON ope_rcs_envoi.IdRcs = dos_operation.IdOperation
+	WHERE
+		ope_rcs_envoi.Statut > '[%__SMS_STATUT_ENVOYE__%]' 
+		AND dos_operation.Statut = '[%__Statut_Envoyée__%]'
+	GROUP BY 
+		dos_operation.IdOperation, 
+		dos_operation.NbrDestinataire
+	HAVING 
+		(dos_operation.NbrDiffusion / dos_operation.NbrDestinataire * 100 >= 95)
+		OR DateComparaison < NOW();
+	
+	SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+]
+
+sTexteRequeteEnvoyé =
+[
+	SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+	
+	SELECT 
+		dos_operation.IdOperation,
+		dos_operation.NbrDestinataire,
+		dos_operation.NbrDiffusion,
+		DATE_ADD(dos_operation.DateHeurePriseEnCharge, INTERVAL 72 HOUR) AS DateComparaison
+	FROM 
+		dos_operation
+		JOIN ope_rcs_envoi ON ope_rcs_envoi.IdRcs = dos_operation.IdOperation
+	WHERE
+		ope_rcs_envoi.Statut > '[%__SMS_STATUT_ENVOYE__%]'
+		AND dos_operation.Statut = '[%__Statut_Distribution_En_Cours__%]'
+	GROUP BY 
+		dos_operation.IdOperation, 
+		dos_operation.NbrDestinataire
+	HAVING 
+		(dos_operation.NbrDiffusion / dos_operation.NbrDestinataire * 100 >= 80)
+		OR DateComparaison < NOW();
+			
+	SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+]
+
+
+
+selon pStatutTermine
+	cas Vrai	: sTexteRequete	= sTexteRequeteTerminé
+	cas Faux	: sTexteRequete	= sTexteRequeteEnvoyé
+fin
+
+
+si pas sdReqStatutRcs.ExécuteRequêteSQL(dos_operation..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête","Procédure","ChangementStatutOperationRcs","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+	retour
+fin
+
+pour tout sdReqStatutRcs
+	selon pStatutTermine
+		cas Vrai // Opération terminée
+
+			// 1️⃣ 🔒 Bloquer l'enregistrement
+			sTexteBloque = [
+				START TRANSACTION;
+				SELECT * FROM dos_operation WHERE IdOperation = [%sdReqStatutRcs.IdOperation%] FOR UPDATE;
+			]
+
+			// 🔒 Exécuter le blocage MySQL
+			si sdReqBloque.ExécuteRequêteSQL(dos_operation..Connexion, hRequêteSansCorrection, sTexteBloque) alors
+
+				// Mise à jour de la table des logs
+				si dos_operation.LitRecherchePremier(IdOperation,sdReqStatutRcs.IdOperation) alors
+					dos_operation.EstTerminee					= Vrai
+					dos_operation.DateHeureFin					= DateHeureSys()
+					dos_operation.UserModification				= "BatchRcsStatutTerminée"
+					dos_operation.DateHeureModification			= DateHeureSys()
+					si pas dos_operation.Modifie() alors
+						Trace("Erreur : Hmodifie dos_operation", HErreurInfo(hErrComplet))
+						// 🔓 Ne pas laisser la transaction ouverte en cas d'échec
+						sdReqBloque.ExécuteRequêteSQL(dos_operation..Connexion, hRequêteSansCorrection, "ROLLBACK;")
+						retour
+					fin
+
+					// On récupère le nouveau statut suite au Trigger !
+					si dos_operation.LitRecherche(IdOperation,sdReqStatutRcs.IdOperation) alors
+						tblStatutDossier.AjouteLigne(dos_operation.Dossier,DateHeureSys(),Partage.LibelleStatutOperation(dos_operation.Statut))
+					fin
+				fin
+
+				// 🔓 Débloquer l'enregistrement avec COMMIT
+				sdReqBloque.ExécuteRequêteSQL(dos_operation..Connexion, hRequêteSansCorrection, "COMMIT;")
+			fin
+
+
+		cas Faux
+
+			// 1️⃣ 🔒 Bloquer l'enregistrement
+			sTexteBloque = [
+				START TRANSACTION;
+				SELECT * FROM dos_operation WHERE IdOperation = [%sdReqStatutRcs.IdOperation%] FOR UPDATE;
+			]
+
+			// 🔒 Exécuter le blocage MySQL
+			si sdReqBloque.ExécuteRequêteSQL(dos_operation..Connexion, hRequêteSansCorrection, sTexteBloque) alors
+
+				// Mise à jour de la table des logs
+				si dos_operation.LitRecherchePremier(IdOperation,sdReqStatutRcs.IdOperation,hBlocageEcriture) alors
+					dos_operation.Statut						= __Statut_Envoyée__
+					dos_operation.UserModification				= "BatchRcsStatutEnvoyée"
+					dos_operation.DateHeureModification			= DateHeureSys()
+					si pas dos_operation.Modifie() alors
+						Trace("Erreur : Hmodifie dos_operation" + HErreurInfo(hErrComplet) )
+						// 🔓 Ne pas laisser la transaction ouverte en cas d'échec
+						sdReqBloque.ExécuteRequêteSQL(dos_operation..Connexion, hRequêteSansCorrection, "ROLLBACK;")
+						retour
+					fin
+					tblStatutDossier.AjouteLigne(dos_operation.Dossier,DateHeureSys(),Partage.LibelleStatutOperation(__Statut_Envoyée__))
+				fin
+
+				// 🔓 Débloquer l'enregistrement avec COMMIT
+				sdReqBloque.ExécuteRequêteSQL(dos_operation..Connexion, hRequêteSansCorrection, "COMMIT;")
+			fin
+
+	fin
+
+fin
+
+
+fin:
+sdReqStatutRcs.AnnuleDéclaration()
+sdReqBloque.AnnuleDéclaration()

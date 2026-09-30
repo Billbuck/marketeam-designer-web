@@ -1,0 +1,118 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//NotificationLeadCallCenter ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure NotificationLeadCallCenter()
+
+
+nInd					est un entier
+sTexteRequete			est une chaîne
+sdReqCallCenter			est une Source de Données
+dUnMois					est une Date = DateSys()
+dhUneHeure				est une DateHeure = DateHeureSys()
+stNotificationEnvoi		est une structNotificationEnvoi
+
+dhUneHeure..Minute -= cpProjet.__IntervalleTelLead
+
+dUnMois.Mois -= 1
+
+
+sTexteRequete =
+[
+	SELECT DISTINCT
+	    ope_tel.IdTel,
+	    ope_tel.EmailLeadEnCopie,
+	    dos_operation.Dossier,
+		dos_operation.IdClientFacturation,
+		dos_operation.IdContact,
+		dos_operation.IdValideur,
+		dos_operation.NomOperation,
+		dos_operation.TypeOperation,
+		dos_operation.TypeProjet,
+		GROUP_CONCAT(DISTINCT ope_tel_envoi.IdBaseLigne) AS ListeIdBaseLigne,
+		COUNT(DISTINCT(ope_tel_envoi.IdBaseLigne)) Total
+	FROM
+	    ope_tel
+	    JOIN dos_operation ON ope_tel.IdTel = dos_operation.IdOperation
+	    JOIN ope_tel_envoi ON ope_tel.IdTel = ope_tel_envoi.IdTel
+	    JOIN tel_type_script ON ope_tel.IdTypeScript = tel_type_script.IdTypeScript
+	WHERE
+	    dos_operation.Statut = '[%__Statut_Appel_En_Cours__%]'
+	    AND (
+	        ope_tel_envoi.EstFormulaireRempli = 1
+	        OR (tel_type_script.RapportComplet = 1 AND ope_tel_envoi.Statut = '[%__TEL_STATUT_TERMINE__%]')
+	        OR (tel_type_script.RapportPartiel = 1 AND ope_tel_envoi.Statut = '[%__TEL_STATUT_QUALIFICATION_PARTIELLE__%]'
+	        )
+	    )
+	    AND ope_tel_envoi.DateHeureNotification IS NULL
+	    AND (ope_tel.DateHeureDerniereNotificationEmail IS NULL OR ope_tel.DateHeureDerniereNotificationEmail < '[%dhUneHeure%]')
+	    AND NOT EXISTS(
+	        SELECT 1
+	        FROM email_envoi
+	        WHERE email_envoi.IdOperation = ope_tel.IdTel
+	          AND email_envoi.CodeEmailType = '[%__NOTIFICATION_LEAD_CALLCENTER__%]'
+	          AND email_envoi.DateHeureEnvoi IS NULL
+	    )
+	GROUP BY 
+		ope_tel.IdTel, 
+		ope_tel.EmailLeadEnCopie, 
+		dos_operation.Dossier, 
+		dos_operation.IdContact, 
+		dos_operation.IdValideur;
+]
+
+//		AND (ope_tel_envoi.EstFormulaireRempli = 1 or ope_tel_envoi.Statut in ('[%__TEL_STATUT_TERMINE__%]','[%__TEL_STATUT_QUALIFICATION_PARTIELLE__%]'))
+
+
+si pas HExécuteRequêteSQL(sdReqCallCenter, ope_tel..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête","Procédure","NotificationCallCenter","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+	retour
+fin
+
+pour tout sdReqCallCenter
+	si ope_tel.LitRecherchePremier(IdTel,sdReqCallCenter.IdTel) alors
+		ope_tel.DateHeureDerniereNotificationEmail = DateHeureSys()
+		si ope_tel.Modifie() alors
+
+			VariableRAZ(stNotificationEnvoi)
+			stNotificationEnvoi.CodeNotification				= __NOTIFICATION_LEAD_CALLCENTER__
+			stNotificationEnvoi.IdClient						= sdReqCallCenter.IdClientFacturation
+			stNotificationEnvoi.IdContact						= sdReqCallCenter.IdContact
+			stNotificationEnvoi.IdOperation						= sdReqCallCenter.IdTel
+			stNotificationEnvoi.TypeOperation					= sdReqCallCenter.TypeOperation
+			stNotificationEnvoi.Variables						= Partage.VariablesOperation(sdReqCallCenter.IdOperation, sdReqCallCenter.IdContact)
+			stNotificationEnvoi.Variables.Procedure				= "NotificationLeadCallCenter"
+			stNotificationEnvoi.Variables.DateHeureFiltre		= DateHeureVersChaîne(DateHeureSys(),"AAAAMMJJHHmmSS")
+			stNotificationEnvoi.Variables.ListeIdBaseLigne		= sdReqCallCenter.ListeIdBaseLigne
+			stNotificationEnvoi.Variables.NombrePartielLead		= NumériqueVersChaîne(sdReqCallCenter.Total, "d")
+
+			// On envoi les notifications au Créateur
+			Partage.NotificationEnvoi(stNotificationEnvoi)
+
+			// On envoi les notifications au Valideur
+			si sdReqCallCenter.IdContact <> sdReqCallCenter.IdValideur alors
+				stNotificationEnvoi.IdContact	= sdReqCallCenter.IdValideur
+				Partage.NotificationEnvoi(stNotificationEnvoi)
+			fin
+
+			// On envoi les Emails de notifications au EmailLeadEnCopie
+
+			nInd										= TableAjouteLigne(tblStatutDossier)
+			tblStatutDossier[nInd].colDosStatOperation	= sdReqCallCenter.Dossier
+			tblStatutDossier[nInd].colDosStatDateHeure	= DateHeureSys()
+			tblStatutDossier[nInd].colDosStatNouveau	= "Lead Call Center"
+		fin
+	fin
+fin
+
+
+fin:
+sdReqCallCenter.AnnuleDéclaration()

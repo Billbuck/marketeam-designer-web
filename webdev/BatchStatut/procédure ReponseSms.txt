@@ -1,0 +1,103 @@
+procédure ReponseSms()
+
+
+
+nInd					est un entier
+sTexteRequete			est une chaîne
+sdReqSmsReponse			est une Source de Données
+stNotificationEnvoi		est une structNotificationEnvoi
+
+structReponseSms est une Structure
+	ListeIdReponse	est une chaîne
+	Email			est une chaîne
+	Dossier			est une chaîne
+	IdClient		est un entier
+	IdContact		est un entier
+	IdValideur		est un entier
+fin
+taaOperation est un tableau associatif de structReponseSms
+
+stReponseSms est une structReponseSms
+
+
+
+sTexteRequete =
+[
+SELECT 
+    ope_sms_reponse.IdReponse,
+    dos_operation.IdOperation,
+    dos_operation.Dossier,
+	dos_operation.IdClientFacturation,
+	dos_operation.IdContact,
+	dos_operation.IdValideur,    
+    ope_sms_reponse.IdBaseLigne,
+    ope_sms_reponse.Reponse,
+    clt_contact.Email
+FROM 
+    ope_sms_reponse
+    JOIN dos_base_ligne ON ope_sms_reponse.IdBaseLigne = dos_base_ligne.IdBaseLigne
+    JOIN dos_base ON dos_base_ligne.IdBase = dos_base.IdBase
+    JOIN dos_operation ON dos_base.IdOperation = dos_operation.IdOperation
+    JOIN clt_contact ON dos_operation.IdValideur = clt_contact.IdContact
+WHERE
+    ope_sms_reponse.IdBaseLigne IS NOT NULL
+    AND dos_base.EstLocation = 0
+    AND ope_sms_reponse.DateHeureEnvoi IS NULL;
+]
+
+
+sTexteRequete = ChaîneConstruit(sTexteRequete)
+
+si pas HExécuteRequêteSQL(sdReqSmsReponse, ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête","Procédure","ReponseSms","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+	retour
+fin
+
+pour tout sdReqSmsReponse
+	si ope_sms_reponse.LitRecherchePremier(IdReponse,sdReqSmsReponse.IdReponse) alors
+		ope_sms_reponse.DateHeureEnvoi = DateHeureSys()
+		si ope_sms_reponse.Modifie() alors
+			si taaOperation[sdReqSmsReponse.IdOperation]..Vide alors
+				stReponseSms.ListeIdReponse = sdReqSmsReponse.IdReponse
+				stReponseSms.Email			= sdReqSmsReponse.Email
+				stReponseSms.Dossier		= sdReqSmsReponse.Dossier
+				stReponseSms.IdClient		= sdReqSmsReponse.IdClient
+				stReponseSms.IdContact		= sdReqSmsReponse.IdContact
+				stReponseSms.IdValideur	= sdReqSmsReponse.IdValideur
+			sinon
+				stReponseSms 				= taaOperation[sdReqSmsReponse.IdOperation]
+				stReponseSms.ListeIdReponse	+= [","] + sdReqSmsReponse.IdReponse
+			fin
+
+			taaOperation[sdReqSmsReponse.IdOperation] = stReponseSms
+		fin
+	fin
+fin
+
+pour tout stReponseSms , sIdOperation de taaOperation
+
+	VariableRAZ(stNotificationEnvoi)
+	stNotificationEnvoi.CodeNotification		= __NOTIFICATION_SMS_REPONSE__
+	stNotificationEnvoi.IdClient				= stReponseSms.IdClient
+	stNotificationEnvoi.IdContact				= stReponseSms.IdContact
+	stNotificationEnvoi.IdOperation				= sIdOperation
+
+	Partage.NotificationEnvoi(stNotificationEnvoi)
+
+	// On envoi les notifications au Valideur
+	si stReponseSms.IdContact <> stReponseSms.IdValideur alors
+		stNotificationEnvoi.IdContact	= stReponseSms.IdValideur
+		Partage.NotificationEnvoi(stNotificationEnvoi)
+	fin
+
+
+	nInd = TableAjouteLigne(tblStatutDossier)
+	tblStatutDossier[nInd].colDosStatOperation	= stReponseSms.Dossier
+	tblStatutDossier[nInd].colDosStatDateHeure	= DateHeureSys()
+	tblStatutDossier[nInd].colDosStatNouveau 	= "sms reponse"
+fin
+
+
+
+fin:
+sdReqSmsReponse.AnnuleDéclaration()
