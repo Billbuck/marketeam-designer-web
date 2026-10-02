@@ -1,0 +1,13 @@
+CREATE TABLE `prm_email_signature` (
+	`IdSignature` INT(11) NOT NULL AUTO_INCREMENT,
+	`CodeSite` CHAR(3) NOT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Libelle` VARCHAR(50) NOT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Signature` VARCHAR(2000) NOT NULL COLLATE 'utf8mb4_unicode_ci',
+	PRIMARY KEY (`IdSignature`) USING BTREE,
+	INDEX `CodeSite` (`CodeSite`) USING BTREE,
+	INDEX `Libelle` (`Libelle`) USING BTREE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+AUTO_INCREMENT=4
+;

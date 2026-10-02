@@ -1,0 +1,19 @@
+CREATE TABLE `prm_sms_type` (
+	`CodeSmsType` VARCHAR(16) NOT NULL COLLATE 'utf8mb4_unicode_ci',
+	`CodeSite` CHAR(3) NOT NULL DEFAULT 'MKT' COLLATE 'utf8mb4_unicode_ci',
+	`IdSignature` INT(11) NULL DEFAULT NULL,
+	`Libelle` VARCHAR(100) NOT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Objet` VARCHAR(11) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Message` TEXT NOT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Variables` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`DateCreation` DATETIME NULL DEFAULT current_timestamp(),
+	PRIMARY KEY (`CodeSmsType`) USING BTREE,
+	INDEX `Libelle` (`Libelle`) USING BTREE,
+	INDEX `FK_prm_sms_type_prm_sms_signature` (`IdSignature`) USING BTREE,
+	INDEX `CodeSite` (`CodeSite`) USING BTREE,
+	CONSTRAINT `FK_prm_sms_type_prm_notification_canal` FOREIGN KEY (`CodeSmsType`) REFERENCES `prm_notification_canal` (`CodeNotification`) ON UPDATE CASCADE ON DELETE CASCADE,
+	CONSTRAINT `FK_prm_sms_type_prm_sms_signature` FOREIGN KEY (`IdSignature`) REFERENCES `prm_sms_signature` (`IdSignature`) ON UPDATE NO ACTION ON DELETE NO ACTION
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+;

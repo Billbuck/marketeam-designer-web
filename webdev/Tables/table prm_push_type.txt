@@ -1,0 +1,263 @@
+CodePushType	CodeSite	Libelle	MessagePush	MessageChronologique	MessageOperation	MessageStatut	DateCreation
+ABO_ECHEANCE	MKT	Notification échéance d'abonnement (clients hors compte)					2024-12-20 00:00:00
+ABO_ENCAISSEMENT	MKT	Notification encaissement abonnement à venir					2024-12-22 00:00:00
+ABO_RENOUVELLE	MKT	Notification renouvellement abonnement à venir (clients en compte)					2024-12-20 00:00:00
+ALLIAGE	MKT	Alliage					2024-11-19 00:00:00
+CPT_VALIDATION	MKT	Validation de compte					2024-11-19 00:00:00
+ECHEC_PAIEMENT	MKT	Notification échec de paiement					2024-12-20 00:00:00
+ECHEC_PRELEVE	MKT	Notification échec de prélèvement					2024-12-20 00:00:00
+FAC_CLIENTCOMPTE	MKT	Notification facturation (client en compte)					2024-12-20 00:00:00
+FAC_RELANCE_1	MKT	Relance facturation n°1 (client en compte)					2024-12-20 00:00:00
+FAC_RELANCE_2	MKT	Relance facturation n°2 (client en compte)					2024-12-20 00:00:00
+FAC_RELANCE_3	MKT	Relance facturation n°3 (client en compte)					2024-12-20 00:00:00
+FACTURE	MKT	Facturation	Facturation %FactureNumero%
+%DateHeureNotification%	Facture N° %FactureNumero%
+Dossier : %Dossier% 
+Nom : %NomOperation%	Facture N° %FactureNumero%	Facture N° %FactureNumero%
+Dossier : %Dossier% 
+Nom : %NomOperation%	2024-12-14 00:00:00
+ICI_TRACKING	MKT	Tracking lien SMS	%Dossier% - %NombrePartielVisite% Nouvelles visites
+Nom opération : %NomOperation%
+Type Opération : %LibelleTypeProjet%	%NombrePartielVisite% Nouvelles visites
+Dossier : %Dossier% 
+Nom : %NomOperation%	%NombrePartielVisite% Nouvelles visites	%NombrePartielVisite% nouvelle(s) visite(s)
+Dossier : %Dossier% 
+Nom : %NomOperation%	2024-12-02 00:00:00
+LEAD_CALLCENTER	MKT	Lead Call center	%Dossier% - %NombrePartielLead% nouveau(x) lead(s)
+Nom opération : %NomOperation%
+Type Opération : %LibelleTypeProjet%	%NombrePartielLead% nouveau(x) lead(s)
+Dossier : %Dossier% 
+Nom : %NomOperation%	%NombrePartielLead% nouveau(x) lead(s)	%NombrePartielLead% nouveau(x) lead(s)
+Dossier : %Dossier% 
+Nom : %NomOperation%	2024-11-19 00:00:00
+LEAD_ICI_CLIC	MKT	Cliquez-Ici Clic	%Dossier% - %NombrePartielLead% nouveau(x) lead(s)
+Nom opération : %NomOperation%
+Type Opération : %LibelleTypeProjet%	%NombrePartielLead% nouveau(x) lead(s)
+Dossier : %Dossier% 
+Nom : %NomOperation%	%NombrePartielLead% nouveau(x) lead(s)	%NombrePartielLead% nouveau(x) lead(s)
+Dossier : %Dossier% 
+Nom : %NomOperation%	2024-11-19 00:00:00
+LEAD_ICI_LIEN	MKT	Cliquez-Ici Lien	%Dossier% - %NombrePartielRedirection% nouvelle(s) redirection(s)
+Nom opération : %NomOperation%
+Type Opération : %LibelleTypeProjet%	%NombrePartielRedirection% nouvelle(s) redirection(s)
+Dossier : %Dossier% 
+Nom : %NomOperation%	%NombrePartielRedirection% nouvelle(s) redirection(s)	%NombrePartielRedirection% nouvelle(s) redirection(s)
+Dossier : %Dossier% 
+Nom : %NomOperation%	2024-11-19 00:00:00
+NOT_REPONSE	MKT	Notification Reponse	Notification Reponse du %ReponsePortable%
+%DateHeureNotification%
+Réponse :
+%ReponseMessageReçu%
+
+Message envoyé : 
+%ReponseMessageSmsEnvoyé%				2024-11-19 00:00:00
+RAPPORT_AUDIENCE	MKT	Rapport d'audience	%Dossier% - Rapport d'audience
+Nom opération : %NomOperation%
+Type Opération : %LibelleTypeProjet%
+%RapportCompletAudience%	Rapport d'audience
+Dossier : %Dossier% 
+Nom : %NomOperation%
+Resultat : 
+%RapportCompletAudience%	Rapport d'audience
+Resultat : 
+%RapportCompletAudience%	Dossier : %Dossier% 
+Nom : %NomOperation%
+Resultat : 
+%RapportCompletAudience%	2024-12-02 00:00:00
+STATUT_05	MKT	Élément en attente	%Dossier% - Élément en attente
+%DateHeureNotification%
+Nom opération : %NomOperation%
+Type Opération : %LibelleTypeProjet%
+Elements en attente :
+%ElementsManquants%	Élément en attente
+Dossier : %Dossier% 
+Nom : %NomOperation%
+Elements en attente :
+%ElementsManquants%	Élément en attente
+%ElementsManquants%	Dossier : %Dossier% 
+Nom : %NomOperation%
+Elements en attente :
+%ElementsManquants%	2024-11-19 00:00:00
+STATUT_07	MKT	Élément hors delais	%Dossier% - Élément hors delais
+%DateHeureNotification%
+Nom opération : %NomOperation%
+Type Opération : %LibelleTypeProjet%
+Elements en attente :
+%ElementsManquants%	Élément hors delais
+Dossier : %Dossier% 
+Nom : %NomOperation%
+Elements en attente :
+%ElementsManquants%	Élément hors delais
+%ElementsManquants%	Dossier : %Dossier% 
+Nom : %NomOperation%
+Elements en attente :
+%ElementsManquants%	2024-11-19 00:00:00
+STATUT_12	MKT	Audit de remplissage en attente	%Dossier% - Élément en attente
+%DateHeureNotification%
+Nom opération : %NomOperation%
+Type Opération : %LibelleTypeProjet%
+Elements en attente :
+%ElementsManquants%	Élément en attente
+Dossier : %Dossier% 
+Nom : %NomOperation%
+Elements en attente :
+%ElementsManquants%	Élément en attente
+%ElementsManquants%	Dossier : %Dossier% 
+Nom : %NomOperation%
+Elements en attente :
+%ElementsManquants%	2026-07-01 00:00:00
+STATUT_13	MKT	Audit de remplissage hors delais	%Dossier% - Élément en attente
+%DateHeureNotification%
+Nom opération : %NomOperation%
+Type Opération : %LibelleTypeProjet%
+Elements en attente :
+%ElementsManquants%	Élément en attente
+Dossier : %Dossier% 
+Nom : %NomOperation%
+Elements en attente :
+%ElementsManquants%	Élément en attente
+%ElementsManquants%	Dossier : %Dossier% 
+Nom : %NomOperation%
+Elements en attente :
+%ElementsManquants%	2026-07-01 00:00:00
+STATUT_15	MKT	Règlement en attente	%Dossier% - Règlement en attente
+%DateHeureNotification%
+Nom opération : %NomOperation%
+Type Opération : %LibelleTypeProjet%
+Montant à regler : %ResteAPayer%.	Règlement en attente
+Dossier : %Dossier% 
+Nom : %NomOperation%
+A régler : %ResteAPayer%	Règlement en attente
+A régler : %ResteAPayer%	Dossier : %Dossier% 
+Nom : %NomOperation%
+A régler : %ResteAPayer%	2024-12-21 00:00:00
+STATUT_17	MKT	Règlement hors delais	%Dossier% - Règlement hors delais
+%DateHeureNotification%
+Nom opération : %NomOperation%
+Type Opération : %LibelleTypeProjet%
+Montant à regler : %ResteAPayer%.	Règlement hors delais
+Dossier : %Dossier% 
+Nom : %NomOperation%
+A régler : %ResteAPayer%	Règlement hors delais
+A régler : %ResteAPayer%	Dossier : %Dossier% 
+Nom : %NomOperation%
+A régler : %ResteAPayer%	2024-11-19 00:00:00
+STATUT_25	MKT	Validation en attente	%Dossier% - Validation en attente
+%DateHeureNotification%
+Nom opération : %NomOperation%
+Type Opération : %LibelleTypeProjet%	Validation en attente
+Dossier : %Dossier% 
+Nom : %NomOperation%	Validation en attente	Dossier : %Dossier% 
+Nom : %NomOperation%	2024-11-19 00:00:00
+STATUT_27	MKT	Validation hors delais	%Dossier% - Validation hors delais
+%DateHeureNotification%
+Nom opération : %NomOperation%
+Type Opération : %LibelleTypeProjet%	Validation hors delais
+Dossier : %Dossier% 
+Nom : %NomOperation%	Validation hors delais	Dossier : %Dossier% 
+Nom : %NomOperation%	2024-11-19 00:00:00
+STATUT_29	MKT	Validation refusée					2024-11-19 00:00:00
+STATUT_35	MKT	Prise en charge en attente	%Dossier% - Prise en charge en attente
+%DateHeureNotification%
+Nom opération : %NomOperation%
+Type Opération : %LibelleTypeProjet%
+Date de prise en charge : %DateLimitePriseEnCharge%	Prise en charge en attente
+Dossier : %Dossier% 
+Nom : %NomOperation%
+Prise en charge : %DateLimitePriseEnCharge%	Prise en charge en attente
+Prise en charge : %DateLimitePriseEnCharge%	Dossier : %Dossier% 
+Nom : %NomOperation%
+Prise en charge : %DateLimitePriseEnCharge%	2024-11-19 00:00:00
+STATUT_40	MKT	Prise en charge	%Dossier% - Prise en charge
+%DateHeureNotification%
+Nom opération : %NomOperation%
+Type Opération : %LibelleTypeProjet%
+Date d'envoi : %DateHeureEnvoi%	Prise en charge
+Dossier : %Dossier% 
+Nom : %NomOperation%
+Date d'envoi : %DateHeureEnvoi%	Prise en charge
+Date d'envoi : %DateHeureEnvoi%	Dossier : %Dossier% 
+Nom : %NomOperation%
+Date d'envoi : %DateHeureEnvoi%	2024-11-19 00:00:00
+STATUT_45	MKT	Production en cours	%Dossier% - Production en cours
+%DateHeureNotification%
+Nom opération : %NomOperation%
+Type Opération : %LibelleTypeProjet%
+%RemiseEnPoste% : %DateHeureEnvoi%	Production en cours
+Dossier : %Dossier% 
+Nom : %NomOperation%
+%RemiseEnPoste% : %DateHeureEnvoi%	Production en cours
+%RemiseEnPoste% : %DateHeureEnvoi%	Dossier : %Dossier% 
+Nom : %NomOperation%
+%RemiseEnPoste% : %DateHeureEnvoi%	2024-11-19 00:00:00
+STATUT_49	MKT	Traitement RNVP terminé	%Dossier% - Traitement RNVP terminé
+%DateHeureNotification%
+Nom opération : %NomOperation%
+Type Opération : %LibelleTypeProjet%	Traitement RNVP terminé
+Dossier : %Dossier% 
+Nom : %NomOperation%	Traitement RNVP terminé	Nom opération : %NomOperation%
+Type Opération : %LibelleTypeProjet%	2024-12-14 00:00:00
+STATUT_59	MKT	Distribution en attente	%Dossier% - Distribution en attente
+%DateHeureNotification%
+Nom opération : %NomOperation%
+Type Opération : %LibelleTypeProjet%
+%RemiseEnPoste% : %DateHeureEnvoi%	Distribution en attente
+Dossier : %Dossier% 
+Nom : %NomOperation%
+%RemiseEnPoste% : %DateHeureEnvoi%	Distribution en attente
+%RemiseEnPoste% : %DateHeureEnvoi%	Dossier : %Dossier% 
+Nom : %NomOperation%
+%RemiseEnPoste% : %DateHeureEnvoi%	2024-11-19 00:00:00
+STATUT_60	MKT	Distribution en cours	%Dossier% - Distribution en cours
+%DateHeureNotification%
+Nom opération : %NomOperation%
+Type Opération : %LibelleTypeProjet%	Distribution en cours
+Dossier : %Dossier% 
+Nom : %NomOperation%	Distribution en cours	Dossier : %Dossier% 
+Nom : %NomOperation%	2024-11-19 00:00:00
+STATUT_62	MKT	Appels en cours	%Dossier% - Appels en cours
+%DateHeureNotification%
+Nom opération : %NomOperation%
+Type Opération : %LibelleTypeProjet%	Appels en cours
+Dossier : %Dossier% 
+Nom : %NomOperation%	Appels en cours	Dossier : %Dossier% 
+Nom : %NomOperation%	2024-12-14 00:00:00
+STATUT_69	MKT	Distribution en erreur	%Dossier% - Distribution en erreur
+%DateHeureNotification%
+Nom opération : %NomOperation%
+Type Opération : %LibelleTypeProjet%				2024-11-19 00:00:00
+STATUT_70	MKT	Finalisation en cours	%Dossier% - Finalisation en cours
+%DateHeureNotification%
+Nom opération : %NomOperation%
+Type Opération : %LibelleTypeProjet%	Finalisation en cours
+Dossier : %Dossier% 
+Nom : %NomOperation%	Finalisation en cours	Dossier : %Dossier% 
+Nom : %NomOperation%	2024-11-19 00:00:00
+STATUT_75	MKT	Facturation en attente	%Dossier% - Facturation en attente
+%DateHeureNotification%
+Nom opération : %NomOperation%
+Type Opération : %LibelleTypeProjet%	Facturation en attente
+Dossier : %Dossier% 
+Nom : %NomOperation%	Facturation en attente	Dossier : %Dossier% 
+Nom : %NomOperation%	2024-12-14 00:00:00
+STATUT_85	MKT	Solde en attente	%Dossier% - Solde en attente
+%DateHeureNotification%
+Nom opération : %NomOperation%
+Type Opération : %LibelleTypeProjet%
+Montant à regler : %ResteAPayer%.	Solde en attente
+Dossier : %Dossier% 
+Nom : %NomOperation%
+A régler : %ResteAPayer%	Solde en attente
+A régler : %ResteAPayer%	Dossier : %Dossier% 
+Nom : %NomOperation%
+A régler : %ResteAPayer%	2024-12-26 00:00:00
+STATUT_90	MKT	Terminée	%Dossier% - Terminée
+%DateHeureNotification%
+Nom opération : %NomOperation%
+Type Opération : %LibelleTypeProjet%	Terminée
+Dossier : %Dossier% 
+Nom : %NomOperation%	Terminée	Dossier : %Dossier% 
+Nom : %NomOperation%	2024-11-19 00:00:00
+STATUT_99	MKT	Opération annulée					2024-11-19 00:00:00
+USER_CREATION	MKT	Création compte utilisateur					2024-11-19 00:00:00
+USER_MDP	MKT	Mot de passe					2024-11-19 00:00:00

@@ -1,0 +1,350 @@
+CodeEmailType	CodeSite	IdSignature	Libelle	Objet	Corps
+ABO_ECHEANCE	MKT	2	Notification échéance d'abonnement (clients hors compte)	Echéance prochaine d'abonnement %AbonnementType% %AbonnementPlan%	Bonjour %ContactPrenom%,
+
+Nous vous remercions pour votre confiance et votre fidélité sur %LienMarketeamDirect%.
+
+Nous souhaitons vous informer que votre abonnement <b>%AbonnementType% %AbonnementPlan%</b> actuel arrivera à échéance dans <b>%AbonnementJoursAvantExpiration%</b>, le <b>%AbonnementDateExpiration%</b>.
+
+Pour continuer à profiter de tous les avantages de votre abonnement, il est nécessaire de procéder à son renouvellement avant cette date.
+
+<i><u>Avantages exclusifs pour nos abonnés : </u></i>
+%AbonnementListeAvantages%
+
+Pour renouveler dès maintenant, <b>%lciPaiementAbonnement%</b>
+
+Détails de votre abonnement :
+Abonnement : <b>%AbonnementType% %AbonnementPlan%</b>
+Montant : <b>%AbonnementMontant%</b>
+Date d’échéance : <b>%AbonnementDateExpiration%</b>
+
+N’attendez pas la dernière minute pour garantir la continuité de votre abonnement !
+ABO_ENCAISSEMENT	MKT	2	Notification encaissement abonnement à venir	Renouvellement prochain d'abonnement %AbonnementType% %AbonnementPlan%	Bonjour %ContactPrenom%,
+
+Nous vous remercions pour votre confiance et votre fidélité sur %LienMarketeamDirect%.
+
+Nous souhaitons vous informer que votre abonnement <b>%AbonnementType% %AbonnementPlan%</b> sera renouvelé automatiquement le <b>%AbonnementDateRenouvellement%</b>.
+
+Une transaction sera effectuée sur votre <b>%AbonnementModeReglement%</b> à cette date.
+
+Détails de votre abonnement :
+Abonnement : <b>%AbonnementType% %AbonnementPlan%</b>
+Montant : <b>%AbonnementMontant%</b>
+Date de renouvellement : <b>%AbonnementDateRenouvellement%</b>
+
+Avantages exclusifs de votre abonnement :
+<b>%AbonnementListeAvantages%</b>
+
+Si vous souhaitez modifier ou annuler le renouvellement de votre abonnement, nous vous invitons à effectuer cette démarche avant le <b>%AbonnementDateLimiteModification%</b>, en vous rendant sur votre espace client ou en contactant notre service client.
+ABO_RENOUVELLE	MKT	2	Notification renouvellement abonnement à venir (clients en compte)	Votre abonnement sera renouvelé automatiquement le %AbonnementDateExpiration%	Bonjour %ContactPrenom%,
+
+Nous vous remercions pour votre confiance et votre fidélité sur %LienMarketeamDirect%.
+
+Nous souhaitons vous informer que votre abonnement <b>%AbonnementType% %AbonnementPlan%</b> sera automatiquement renouvelé le <b>%AbonnementDateRenouvellement%</b>.
+
+Détails de votre abonnement :
+Abonnement : <b>%AbonnementType% %AbonnementPlan%</b>
+Montant : <b>%AbonnementMontant%</b>
+Prochaine date de renouvellement : <b>%AbonnementDateRenouvellement%</b>
+
+<i><u>Avantages exclusifs pour nos abonnés :</u></i>
+%AbonnementListeAvantages%
+
+Si vous souhaitez apporter des modifications à votre abonnement ou désactiver son renouvellement automatique, nous vous invitons à contacter notre service client avant le %AbonnementDateLimiteModification%.
+ALLIAGE	MKT	1	Alliage	%Dossier% - Rapport Alliage opération	Bonjour %ContactPrenom%,
+
+%RapportAlliage%
+CPT_VALIDATION	MKT	2	Validation de compte	Validation Compte Marketeam	Bonjour %ContactPrenom%,
+
+Félicitations et bienvenue sur Marketeam ! 
+
+Votre compte a été créé avec succès. 
+
+Afin de finaliser la validation de votre compte et accéder à toutes les fonctionnalités de notre plateforme, merci de <b>%lciValidationCompte%</b>.
+
+Voici les informations associées à votre compte :
+
+<i><u>Informations sur la société :</u></i>
+
+Société : <b>%Société%</b>
+Siret : <b>%Siret%</b>
+Adresse : <b>%Adresse%</b>
+%SociétéTéléphone%
+
+<i><u>Informations sur le contact :</u></i>
+
+Nom : <b>%Contact%</b>
+Email : <b>%ContactEmail%</b>
+%ContactTéléphone%
+%ContactPortable%
+
+
+ECHEC_PAIEMENT	MKT	2	Notification échec de paiement	Echec de paiment par Carte Bancaire enregistrée	Bonjour %ContactPrenom%,
+
+Nous vous remercions pour votre confiance et votre fidélité sur %LienMarketeamDirect%.
+
+Nous souhaitons vous informer que le paiement <b>%PaiementMotif%</b>, a échoué.
+
+ECHEC_PRELEVE	MKT	2	Notification échec de prélèvement	Échec de prélèvement	Bonjour %ContactPrenom%,
+
+Nous vous remercions pour votre confiance et votre fidélité sur %LienMarketeamDirect%.
+
+Nous souhaitons vous informer que le prelevement <b>%PrelevementMotif%</b>, a échoué.
+FAC_CLIENTCOMPTE	MKT	2	Notification facturation (client en compte)	Echéance prochaine de la facture n° %FactureNumero%	Bonjour %ContactPrenom%,
+
+Nous vous remercions pour votre confiance et votre fidélité sur %LienMarketeamDirect%.
+
+Nous souhaitons vous rappeler que la facture <b>%FactureNumero%</b>, d’un montant de <b>%FactureMontant%</b>, arrivera à échéance dans <b>%FactureJoursAvantEcheance%</b>, le <b>%FactureDateEcheance%</b>.
+
+Détails de la facture :
+Numéro de facture : <b>%FactureNumero%</b>
+Montant : <b>%FactureMontant%</b>
+Date d’échéance : <b>%FactureDateEcheance%</b>
+
+Nous vous invitons à vous assurer que son règlement sera effectué avant cette date. 
+
+Vous pouvez procéder au règlement dès maintenant : %lciPaiementFacture%.
+
+Si le paiement a déjà été réalisé, merci de ne pas tenir compte de ce message.
+FAC_RELANCE_1	MKT	2	Relance facturation n°1 (client en compte)	Rappel concernant le règlement de la facture n° %FactureNumero%	Bonjour %ContactPrenom%,
+
+Nous souhaitons vous rappeler que la facture <b>%FactureNumero%</b>, d’un montant de <b>%FactureMontant%</b>, arrivée à échéance le <b>%FactureDateEcheance%</b>, n’a pas encore été réglée.
+
+Si le règlement a été effectué récemment, nous vous remercions et vous invitons à ignorer ce message. 
+
+Dans le cas contraire, nous vous serions reconnaissants de procéder au règlement dans les meilleurs délais.
+
+Régler votre facture dès à présent : %lciPaiementFacture%.
+
+Pour toute question ou si vous rencontrez une difficulté, n’hésitez pas à nous contacter. Nous restons à votre disposition pour vous aider.
+FAC_RELANCE_2	MKT	2	Relance facturation n°2 (client en compte)	Facture n° %FactureNumero% en attente de règlement	Bonjour %ContactPrenom%,
+
+Nous vous écrivons concernant la facture <b>%FactureNumero%</b>, d’un montant de <b>%FactureMontant%</b>, arrivée à échéance le <b>%FactureDateEcheance%</b>, et dont le règlement reste en attente.
+
+Nous vous rappelons que conformément à nos conditions générales de vente, les paiements doivent être effectués avant la date d’échéance.
+
+Nous vous demandons donc de bien vouloir régulariser votre situation dans un délai de <b>%FactureDelaiGrace%</b> jours à compter de la réception de ce message.
+
+Un règlement immédiat est disponible ici : %lciPaiementFacture%.
+
+Si vous avez déjà procédé au règlement, merci de nous en informer afin que nous puissions mettre à jour notre système.
+
+Sans réponse de votre part, des pénalités de retard pourraient être appliquées conformément à nos conditions contractuelles.
+FAC_RELANCE_3	MKT	2	Relance facturation n°3 (client en compte)	Dernier rappel avant mise en recouvrement facture n° %FactureNumero%	Bonjour %ContactPrenom%,
+
+Malgré nos précédents rappels, nous constatons que la facture <b>%FactureNumero%</b>, d’un montant de <b>%FactureMontant%</b>, arrivée à échéance le <b>%FactureDateEcheance%</b>, n’a toujours pas été réglée.
+
+Nous vous informons que, sans réception de votre règlement sous <b>%FactureDelaiGrace%</b> jours, nous serons dans l’obligation de transmettre votre dossier à notre service de recouvrement. Cela pourrait entraîner des frais supplémentaires et une suspension de vos services ou commandes en cours.
+
+Si vous avez déjà effectué le règlement, merci de nous le signaler immédiatement en nous envoyant une preuve de paiement.
+
+Nous vous encourageons à régulariser votre situation au plus vite pour éviter toute action supplémentaire en <b>%lciPaiementFacture%</b>.
+
+Dans l’attente de votre règlement, nous restons à votre disposition pour toute question ou assistance.
+FACTURE	MKT	2	Facturation	Facture n° %FactureNumero%	Bonjour %ContactPrenom%,
+
+Vous trouverez ci-joint la facture n° <b>%FactureNumero%</b> d'un montant de <b>%FactureMontant%</b>, relative à <b>"%FactureDesignation%"</b>
+
+%ReglementMessage%
+
+Nous vous remercions pour votre confiance et restons à votre disposition pour toute question ou information complémentaire.
+ICI_TRACKING	MKT	1	Tracking lien SMS	%Dossier% - %NombrePartielVisite% nouvelle(s) visite(s)	Bonjour %ContactPrenom%,
+
+Nous avons le plaisir de vous informer que votre opération %NomOperation% a généré %NombrePartielVisite% nouvelle(s) visite(s) à partir du lien présent dans le message SMS.
+
+Pour télécharger le rapport de performance, %lciExcelCliquezIciTracking%.
+LEAD_CALLCENTER	MKT	1	Lead Call center	%Dossier% - %NombrePartielLead% nouveau(x) lead(s)	Bonjour %ContactPrenom%,
+
+Nous avons le plaisir de vous communiquer %NombrePartielLead% nouveau(x) lead(s) pour votre opération %NomOperation%
+
+Pour télécharger le rapport de performance, %lciExcelCallCenter%.
+
+Vous trouverez ci-dessous, un tableau recapitulatif.
+LEAD_ICI_CLIC	MKT	1	Cliquez-Ici Clic	%Dossier% - %NombrePartielLead% nouveau(x) lead(s)	Bonjour %ContactPrenom%,
+
+Nous avons le plaisir de vous communiquer %NombrePartielLead% nouveau(x) lead(s) pour votre opération %NomOperation%
+
+Pour télécharger le rapport de performance, %lciExcelCliquezIciClic%.
+
+Vous trouverez ci-dessous, un tableau recapitulatif.
+LEAD_ICI_LIEN	MKT	1	Cliquez-Ici Lien	%Dossier% - %NombrePartielRedirection% nouvelle(s) redirection(s)	Bonjour %ContactPrenom%,
+
+Nous avons le plaisir de vous informer que votre opération %NomOperation% a généré %NombrePartielRedirection% nouvelle(s) redirection(s) à partir des liens présents dans votre landing page.
+
+Pour télécharger le rapport de performance, %lciExcelCliquezIciLien%.
+
+Un tableau récapitulatif des résultats est présenté ci-dessous.
+
+
+NOT_REPONSE	MKT	1	Notification Reponse	Réponse notification Sms [%ReponsePortable%]	Bonjour %ContactPrenom%,
+
+Ci-dessous la réponse à votre Sms de Notification vers le %ReponsePortable% :
+
+%ReponseMessageReçu%
+
+Message envoyé : 
+%ReponseMessageSmsEnvoyé%
+RAPPORT_AUDIENCE	MKT	1	Rapport d'audience	%Dossier% - Rapport d'audience	Bonjour %ContactPrenom%,
+
+Nous avons le plaisir de vous présenter les résultats détaillés de votre opération %NomOperation%.
+
+Voici un aperçu des principales statistiques :
+
+%RapportCompletAudience%
+
+Pour consulter le rapport complet, %lciRapportAudience%.
+STATUT_05	MKT	1	Élément en attente	%Dossier% - Éléments en attente	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération <b>%LibelleTypeProjet%</b>, dossier <b>%Dossier%</b> prévue le %DateHeureEnvoi% a bien été enregistré sur %LienMarketeamDirect%.
+
+<u>Afin de poursuivre votre opération, nous sommes dans l'attente de :</u>
+
+%ElementsManquants%
+STATUT_07	MKT	1	Élément hors delais	%Dossier% - Éléments hors delais	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération <b>%LibelleTypeProjet%</b>, dossier <b>%Dossier%</b> dont l'envoi était prévu le %DateHeureEnvoi% est hors delais pour la ou les raisons suivantes :
+
+%ElementsManquants%
+
+Connectez-vous dès maintenant sur la plateforme %LienMarketeamDirect% pour finaliser et planifier à nouveau votre opération.
+STATUT_12	MKT	1	Audit de remplissage en attente	%Dossier% - Éléments en attente	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération <b>%LibelleTypeProjet%</b>, dossier <b>%Dossier%</b> prévue le %DateHeureEnvoi% a bien été enregistré sur %LienMarketeamDirect%.
+
+<u>Afin de poursuivre votre opération, nous sommes dans l'attente de :</u>
+
+%ElementsManquants%
+STATUT_13	MKT	1	Audit de remplissage hors delais	%Dossier% - Éléments hors delais	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération <b>%LibelleTypeProjet%</b>, dossier <b>%Dossier%</b> dont l'envoi était prévu le %DateHeureEnvoi% est hors delais pour la ou les raisons suivantes :
+
+%ElementsManquants%
+
+Connectez-vous dès maintenant sur la plateforme %LienMarketeamDirect% pour finaliser et planifier à nouveau votre opération.
+STATUT_15	MKT	1	Règlement en attente	%Dossier% - Règlement en attente	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération <b>%LibelleTypeProjet%</b>, dossier <b>%Dossier%</b> prévue le %DateHeureEnvoi% a bien été enregistré sur %LienMarketeamDirect%.
+
+Nous sommes dans l'attente de votre réglement d'un montant de <b>%ResteAPayer%</b>.
+
+Votre opération est soumise à validation : pour la payer %LibelleModifierRefuserSupprimer% merci de %lciPaiementOperation%.
+STATUT_17	MKT	1	Règlement hors delais	%Dossier% - Règlement hors delais	Bonjour %ContactPrenom%,
+
+Nous vous informons que faute de règlement, votre opération <b>%LibelleTypeProjet%</b>, dossier <b>%Dossier%</b> dont l'envoi était prévu le %DateHeureEnvoi% est hors delais de programmation.
+
+Connectez-vous dès maintenant sur la plateforme %LienMarketeamDirect% pour replanifier et payer votre opération.
+STATUT_25	MKT	1	Validation en attente	%Dossier% - Validation en attente	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération <b>%LibelleTypeProjet%</b>, dossier <b>%Dossier%</b> prévue le %DateHeureEnvoi% a bien été enregistré sur notre plateforme %LienMarketeamDirect%.
+
+Pour valider cette opération %LibelleModifierRefuserSupprimer%, merci de %lciValidationOperation%.
+STATUT_27	MKT	1	Validation hors delais	%Dossier% - Validation hors delais	Bonjour %ContactPrenom%,
+
+Nous vous informons que faute de validation, votre opération <b>%LibelleTypeProjet%</b>, dossier <b>%Dossier%</b> dont l'envoi était prévu le %DateHeureEnvoi% est hors delais de programmation.
+
+Connectez-vous dès maintenant sur la plateforme %LienMarketeamDirect% pour replanifier et valider votre opération.
+STATUT_29	MKT	1	Validation refusée	%Dossier% - Validation refusée	Bonjour %ContactPrenom%,
+
+Nous vous informons que la validation de votre opération <b>%LibelleTypeProjet%</b>, dossier <b>%Dossier%</b> a été refusé.
+
+<u>Vous trouverez ci-dessous le ou les motifs avancés par %NomValideur% :</u>
+
+%MotifRefus%
+STATUT_35	MKT	1	Prise en charge en attente	%Dossier% - Prise en charge en attente	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération <b>%LibelleTypeProjet%</b>, dossier <b>%Dossier%</b> est en attente de prise en charge.
+
+Vous avez jusqu’au %DateLimitePriseEnCharge% pour annuler ou modifier votre opération. Connectez-vous sur %LienMarketeamDirect%.
+STATUT_40	MKT	1	Prise en charge	%Dossier% - Prise en charge	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération <b>%LibelleTypeProjet%</b>, dossier <b>%Dossier%</b> est prise en charge.
+
+%ModeDiffusion% %DateHeureEnvoi%.
+STATUT_45	MKT	1	Production en cours	%Dossier% - Production en cours	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération <b>%LibelleTypeProjet%</b>, dossier <b>%Dossier%</b> est en cours de production.
+
+La %RemiseEnPoste% aura lieu %DateHeureEnvoi%.
+STATUT_49	MKT	1	Traitement RNVP terminé	%Dossier% - Traitement RNVP terminé	Bonjour %ContactPrenom%,
+
+Nous vous informons que le traitement RNVP de votre base de données est terminé.
+STATUT_59	MKT	1	Distribution en attente	%Dossier% - Distribution en attente	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération <b>%LibelleTypeProjet%</b>, dossier <b>%Dossier%</b> est en attente de distribution.
+
+La %RemiseEnPoste% aura lieu le %DateHeureEnvoi%.
+STATUT_60	MKT	1	Distribution en cours	%Dossier% - Distribution en cours	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération <b>%LibelleTypeProjet%</b>, dossier <b>%Dossier%</b> est en cours de distribution.
+STATUT_62	MKT	1	Appels en cours	%Dossier% - Appels en cours	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération <b>%LibelleTypeProjet%</b>, dossier <b>%Dossier%</b> est en cours d'appel.
+STATUT_69	MKT	1	Distribution en erreur	%Dossier% - Distribution en erreur	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération <b>%LibelleTypeProjet%</b>, dossier <b>%Dossier%</b> est en Erreur.
+STATUT_70	MKT	1	Envoyée	%Dossier% - Finalisation en cours	Bonjour %ContactPrenom%,
+
+Nous vous informons que la diffusion de votre opération <b>%LibelleTypeProjet%</b>, dossier <b>%Dossier%</b>, est en cours de finalisation.
+
+Les rapports de diffusion et de performance sont disponibles sur %LienMarketeamDirect%
+STATUT_75	MKT	1	Facturation en attente	%Dossier% - Facturation en attente 	Bonjour %ContactPrenom%,
+
+Nous vous informons que la diffusion de votre opération <b>%LibelleTypeProjet%</b>, dossier <b>%Dossier%</b>, est terminée.
+
+%DateCreationFacture%.
+
+Les rapports de diffusion et de performance sont disponibles sur %LienMarketeamDirect%
+STATUT_90	MKT	1	Terminée	%Dossier% - Terminée	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération <b>%LibelleTypeProjet%</b>, dossier <b>%Dossier%</b> est terminée.
+
+Pour accéder à l’ensemble des informations, connectez-vous sur %LienMarketeamDirect%
+STATUT_99	MKT	1	Opération annulée	%Dossier% - Opération annulée	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération <b>%LibelleTypeProjet%</b>, dossier <b>%Dossier%</b> est annulée.
+UN_ICI_TRACKING	MKT	3	Tracking lien SMS Unique	%Dossier% - %NombrePartielVisite% nouvelle(s) visite(s)	Bonjour,
+
+Nous avons le plaisir de vous informer que votre opération %NomOperation% a généré %NombrePartielVisite% nouvelle(s) visite(s) à partir du lien présent dans le message SMS.
+UN_LEAD_ICI_CLIC	MKT	3	Cliquez-Ici Clic Unique	%Dossier% - %NombrePartielLead% nouveau(x) lead(s)	Bonjour,
+
+Nous avons le plaisir de vous communiquer %NombrePartielLead% nouveau(x) lead(s) pour votre opération %NomOperation%
+
+Vous trouverez ci-dessous, un tableau recapitulatif.
+UN_LEAD_ICI_LIEN	MKT	3	Cliquez-Ici Lien Unique	%Dossier% - %NombrePartielRedirection% nouvelle(s) redirection(s)	Bonjour,
+
+Nous avons le plaisir de vous informer que votre opération %NomOperation% a généré %NombrePartielRedirection% nouvelle(s) redirection(s) à partir des liens présents dans votre landing page.
+
+Un tableau récapitulatif des résultats est présenté ci-dessous.
+USER_CREATION	MKT	2	Création compte utilisateur	Marketeam	Bonjour %ContactPrenom%,
+
+Félicitations et bienvenue sur Marketeam ! 
+
+Votre compte a été créé avec succès. 
+
+Voici les informations associées à votre compte :
+
+<i><u>Informations sur la société :</u></i>
+
+Société : <b>%Société%</b>
+Siret : <b>%Siret%</b>
+Adresse : <b>%Adresse%</b>
+%SociétéTéléphone%
+
+<i><u>Informations sur le contact :</u></i>
+
+Nom : <b>%Contact%</b>
+Email : <b>%ContactEmail%</b>
+%ContactTéléphone%
+%ContactPortable%
+
+Pour activer votre compte et créer votre mot de passe, veuillez <b>%lciCreationUtilisateur%</b>.
+
+Ce lien vous redirigera vers une page sécurisée où vous pourrez définir votre mot de passe et accéder immédiatement à notre plateforme.
+USER_MDP	MKT	2	Mot de passe	Changement de mot de passe plateforme Marketeam	Bonjour %ContactPrenom%,
+
+Vous avez demandé la réinitialisation du mot de passe associé au compte client : %ContactEmail%
+
+Si vous êtes à l'origine de cette demande, %lciMotDePasse%.
+
+Ce lien ne peut être utilisé qu'une seule fois et expirera dans 15 minutes.
+
+Si vous n'avez pas demandé la réinitialisation de votre mot de passe, vous pouvez ignorer cet e-mail. La sécurité de votre compte client est assurée.

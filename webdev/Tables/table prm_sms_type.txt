@@ -1,0 +1,163 @@
+CodeSmsType	CodeSite	IdSignature	Libelle	Objet	Message	Variables	DateCreation
+ALLIAGE	MKT	1	Alliage	Marketeam			2024-11-19 00:00:00
+CPT_VALIDATION	MKT	1	Validation de compte	Marketeam			2024-11-19 00:00:00
+ECHEC_PAIEMENT	MKT	2	Notification échec de paiement	Marketeam			2024-12-20 00:00:00
+ECHEC_PRELEVE	MKT	2	Notification échec de prélèvement	Marketeam			2024-12-20 00:00:00
+FAC_RELANCE_1	MKT	2	Relance facturation n°1 (client en compte)				2024-12-20 00:00:00
+FAC_RELANCE_2	MKT	2	Relance facturation n°2 (client en compte)				2024-12-20 00:00:00
+FAC_RELANCE_3	MKT	2	Relance facturation n°3 (client en compte)				2024-12-20 00:00:00
+FACTURE	MKT	2	Facturation	Marketeam	Bonjour %ContactPrenom%,
+
+Vous trouverez ci-joint la facture n° %FactureNumero% d'un montant de %FactureMontant%, relative à "%FactureDesignation%"
+
+%ReglementMessage%
+
+Nous vous remercions pour votre confiance et restons à votre disposition pour toute question ou information complémentaire.		2024-12-14 00:00:00
+ICI_TRACKING	MKT	1	Tracking lien SMS	Marketeam	Bonjour %ContactPrenom%,
+
+Nous avons le plaisir de vous informer que votre opération %NomOperation% a généré %NombrePartielVisite% nouvelle(s) visite(s) à partir du lien présent dans le message SMS.
+
+Vous pouvez télécharger le rapport de performance sur la plateforme Marketeam.
+		2024-12-02 00:00:00
+LEAD_CALLCENTER	MKT	1	Lead Call center	Marketeam	Bonjour %ContactPrenom%,
+
+Nous avons le plaisir de vous communiquer %NombrePartielLead% nouveau(x) lead(s) pour votre opération %NomOperation%
+
+Pour télécharger le rapport de performance, rendez-vous sur la plateforme Marketeam.		2024-11-19 00:00:00
+LEAD_ICI_CLIC	MKT	1	Cliquez-Ici Clic	Marketeam	Bonjour %ContactPrenom%,
+
+Nous avons le plaisir de vous communiquer %NombrePartielLead% nouveau(x) lead(s) pour votre opération %NomOperation%
+
+Pour télécharger le rapport de performance, rendez-vous sur la plateforme Marketeam.		2024-11-19 00:00:00
+LEAD_ICI_LIEN	MKT	1	Cliquez-Ici Lien	Marketeam	Bonjour %ContactPrenom%,
+
+Nous avons le plaisir de vous informer que votre opération %NomOperation% a généré %NombrePartielRedirection% nouvelle(s) redirection(s) à partir des liens présents dans votre landing page.
+
+Pour télécharger le rapport de performance, rendez-vous sur la plateforme Marketeam.		2024-11-19 00:00:00
+NOT_REPONSE	MKT	1	Notification Reponse	Marketeam	Bonjour %ContactPrenom%,
+
+Ci-dessous la réponse à votre Sms de Notification vers le %ReponsePortable% :
+
+%ReponseMessageReçu%
+
+Message envoyé : 
+%ReponseMessageSmsEnvoyé%		2024-11-19 00:00:00
+RAPPORT_AUDIENCE	MKT	1	Rapport d'audience	Marketeam	Bonjour %ContactPrenom%,
+
+Nous avons le plaisir de vous présenter les résultats détaillés de votre opération %NomOperation%.
+
+Voici un aperçu des principales statistiques :
+
+%RapportCompletAudience%
+
+Pour consulter le rapport complet, rendez-vous sur la plateforme Marketeam.		2024-12-02 00:00:00
+STATUT_05	MKT	1	Élément en attente	Marketeam	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération %LibelleTypeProjet%, dossier %Dossier% prévue le %DateHeureEnvoi% a bien été enregistré sur la plateforme marketeam.
+
+Afin de poursuivre votre opération, nous sommes dans l'attente de :
+
+%ElementsManquants%		2024-11-19 00:00:00
+STATUT_07	MKT	1	Élément hors delais	Marketeam	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération %LibelleTypeProjet%, dossier <b>%Dossier%</b> dont l'envoi était prévu le %DateHeureEnvoi% est hors delais pour la ou les raisons suivantes :
+
+%ElementsManquants%
+
+Connectez-vous dès maintenant sur la plateforme Marketeam pour finaliser et planifier à nouveau votre opération.		2024-11-19 00:00:00
+STATUT_12	MKT	1	Audit de remplissage en attente	Marketeam	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération %LibelleTypeProjet%, dossier %Dossier% prévue le %DateHeureEnvoi% a bien été enregistré sur la plateforme marketeam.
+
+Afin de poursuivre votre opération, nous sommes dans l'attente de :
+
+%ElementsManquants%		2026-07-01 00:00:00
+STATUT_13	MKT	1	Audit de remplissage hors delais	Marketeam	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération %LibelleTypeProjet%, dossier %Dossier% prévue le %DateHeureEnvoi% a bien été enregistré sur la plateforme marketeam.
+
+Afin de poursuivre votre opération, nous sommes dans l'attente de :
+
+%ElementsManquants%		2026-07-01 00:00:00
+STATUT_15	MKT	1	Règlement en attente	Marketeam	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération %LibelleTypeProjet%, dossier %Dossier%> prévue le %DateHeureEnvoi% a bien été enregistré.
+
+Nous sommes dans l'attente de votre réglement d'un montant de %ResteAPayer%.
+
+Votre opération est soumise à validation : pour la payer %LibelleModifierRefuserSupprimer% merci de vous connecter sur la plateforme Marketeam.		2024-12-21 00:00:00
+STATUT_17	MKT	1	Règlement hors delais	Marketeam	Bonjour %ContactPrenom%,
+
+Nous vous informons que faute de règlement, votre opération %LibelleTypeProjet%, dossier %Dossier% dont l'envoi était prévu le %DateHeureEnvoi% est hors delais de programmation.
+
+Connectez-vous dès maintenant sur la plateforme Marketeam pour replanifier et payer votre opération.		2024-11-19 00:00:00
+STATUT_25	MKT	1	Validation en attente	Marketeam	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération %LibelleTypeProjet%, dossier %Dossier%> prévue le %DateHeureEnvoi% a bien été enregistré.
+
+Pour valider cette opération %LibelleModifierRefuserSupprimer%, merci de vous connecter sur la plateforme Marketeam.		2024-11-19 00:00:00
+STATUT_27	MKT	1	Validation hors delais	Marketeam	Bonjour %ContactPrenom%,
+
+Nous vous informons que faute de validation, votre opération %LibelleTypeProjet%, dossier %Dossier% dont l'envoi était prévu le %DateHeureEnvoi% est hors delais de programmation.
+
+Connectez-vous dès maintenant sur la plateforme Marketeam pour replanifier et valider votre opération.		2024-11-19 00:00:00
+STATUT_29	MKT	1	Validation refusée	Marketeam			2024-11-19 00:00:00
+STATUT_35	MKT	1	Prise en charge en attente	Marketeam	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération %LibelleTypeProjet%, dossier %Dossier% est en attente de prise en charge.
+
+Vous avez jusqu’au %DateLimitePriseEnCharge% pour annuler ou modifier votre opération. Connectez-vous sur la plateforme Marketeam.		2024-11-19 00:00:00
+STATUT_40	MKT	1	Prise en charge	Marketeam	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération %LibelleTypeProjet%, dossier %Dossier% est prise en charge.
+
+%ModeDiffusion% %DateHeureEnvoi%.		2024-11-19 00:00:00
+STATUT_45	MKT	1	Production en cours	Marketeam	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération %LibelleTypeProjet%, dossier %Dossier% est en cours de production.
+
+La %RemiseEnPoste% aura lieu %DateHeureEnvoi%.		2024-11-19 00:00:00
+STATUT_49	MKT	1	Traitement RNVP terminé	Marketeam	Bonjour %ContactPrenom%,
+
+Nous vous informons que le traitement RNVP de votre base de données est terminé.		2024-12-14 00:00:00
+STATUT_59	MKT	1	Distribution en attente	Marketeam	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération %LibelleTypeProjet%, dossier %Dossier% est en attente de distribution.
+
+La %RemiseEnPoste% aura lieu le %DateHeureEnvoi%.		2024-11-19 00:00:00
+STATUT_60	MKT	1	Distribution en cours	Marketeam	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération %LibelleTypeProjet%, dossier %Dossier% est en cours de distribution.		2024-11-19 00:00:00
+STATUT_62	MKT	1	Appels en cours	Marketeam	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération %LibelleTypeProjet%, dossier %Dossier% est en cours d'appel.		2024-12-14 00:00:00
+STATUT_69	MKT	1	Distribution en erreur	Marketeam	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération %LibelleTypeProjet%, dossier %Dossier% est en Erreur.		2024-11-19 00:00:00
+STATUT_70	MKT	1	Envoyée	Marketeam	Bonjour %ContactPrenom%,
+
+Nous vous informons que la diffusion de votre opération %LibelleTypeProjet%, dossier %Dossier%, est en cours de finalisation.
+
+Les rapports de diffusion et de performance sont disponibles sur la plateforme Marketeam		2024-11-19 00:00:00
+STATUT_75	MKT	1	Facturation en attente	Marketeam	Bonjour %ContactPrenom%,
+
+Nous vous informons que la diffusion de votre opération %LibelleTypeProjet%, dossier %Dossier%, est terminée.
+
+%DateCreationFacture%.
+
+Les rapports de diffusion et de performance sont disponibles sur la plateforme Marketeam		2024-12-14 00:00:00
+STATUT_85	MKT	1	Solde en attente	Marketeam	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération %LibelleTypeProjet%, dossier %Dossier%> est désormais terminée.
+
+Nous sommes dans l'attente de votre réglement d'un montant de %ResteAPayer%.
+
+Pour payer votre opération merci de vous connecter sur la plateforme Marketeam.		2024-12-26 00:00:00
+STATUT_90	MKT	1	Terminée	Marketeam	Bonjour %ContactPrenom%,
+
+Nous vous informons que votre opération %LibelleTypeProjet%, dossier %Dossier% est terminée.
+
+Pour accéder à l'ensemble des informations, connectez-vous sur la plateforme Marketeam.		2024-11-19 00:00:00
+STATUT_99	MKT	1	Opération annulée	Marketeam			2024-11-19 00:00:00
+USER_CREATION	MKT	2	Création compte utilisateur	Marketeam			2024-11-19 00:00:00
+USER_MDP	MKT	2	Mot de passe	Marketeam			2024-11-19 00:00:00

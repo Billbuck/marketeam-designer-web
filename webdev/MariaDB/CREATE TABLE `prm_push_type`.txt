@@ -1,0 +1,17 @@
+CREATE TABLE `prm_push_type` (
+	`CodePushType` VARCHAR(16) NOT NULL COLLATE 'utf8mb4_unicode_ci',
+	`CodeSite` CHAR(3) NOT NULL DEFAULT 'MKT' COLLATE 'utf8mb4_unicode_ci',
+	`Libelle` VARCHAR(100) NOT NULL COLLATE 'utf8mb4_unicode_ci',
+	`MessagePush` TEXT NOT NULL COLLATE 'utf8mb4_unicode_ci',
+	`MessageChronologique` TEXT NOT NULL COLLATE 'utf8mb4_unicode_ci',
+	`MessageOperation` TEXT NOT NULL COLLATE 'utf8mb4_unicode_ci',
+	`MessageStatut` TEXT NOT NULL COLLATE 'utf8mb4_unicode_ci',
+	`DateCreation` DATETIME NULL DEFAULT current_timestamp(),
+	PRIMARY KEY (`CodePushType`) USING BTREE,
+	INDEX `Libelle` (`Libelle`) USING BTREE,
+	INDEX `CodeSite` (`CodeSite`) USING BTREE,
+	CONSTRAINT `FK_prm_push_type_prm_notification_canal` FOREIGN KEY (`CodePushType`) REFERENCES `prm_notification_canal` (`CodeNotification`) ON UPDATE CASCADE ON DELETE CASCADE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+;

@@ -1,0 +1,19 @@
+CREATE TABLE `prm_email_type` (
+	`CodeEmailType` VARCHAR(16) NOT NULL COLLATE 'utf8mb4_unicode_ci',
+	`CodeSite` CHAR(3) NOT NULL COLLATE 'utf8mb4_unicode_ci',
+	`IdSignature` INT(11) NULL DEFAULT NULL,
+	`Libelle` VARCHAR(100) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Objet` VARCHAR(200) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Corps` VARCHAR(4000) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	PRIMARY KEY (`CodeEmailType`) USING BTREE,
+	INDEX `CodeSite` (`CodeSite`) USING BTREE,
+	INDEX `FK_prm_email_type_prm_email_signature` (`IdSignature`) USING BTREE,
+	INDEX `Libelle` (`Libelle`) USING BTREE,
+	INDEX `CodeEmailType` (`CodeEmailType`) USING BTREE,
+	CONSTRAINT `FK_prm_email_type_prm_email_signature` FOREIGN KEY (`IdSignature`) REFERENCES `prm_email_signature` (`IdSignature`) ON UPDATE NO ACTION ON DELETE NO ACTION,
+	CONSTRAINT `FK_prm_email_type_prm_notification_canal` FOREIGN KEY (`CodeEmailType`) REFERENCES `prm_notification_canal` (`CodeNotification`) ON UPDATE CASCADE ON DELETE CASCADE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+ROW_FORMAT=COMPACT
+;

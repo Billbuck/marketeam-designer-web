@@ -1,0 +1,19 @@
+CREATE TABLE `prm_notification_canal` (
+	`CodeNotification` VARCHAR(16) NOT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Libelle` VARCHAR(100) NOT NULL COLLATE 'utf8mb4_unicode_ci',
+	`Description` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+	`CanauxParDefaut` SET('Email','Sms','Push') NOT NULL COLLATE 'utf8mb4_unicode_ci',
+	`CanauxPossible` SET('Email','Sms','Push') NOT NULL COLLATE 'utf8mb4_unicode_ci',
+	`CanauxObligatoire` SET('Email','Sms','Push') NOT NULL COLLATE 'utf8mb4_unicode_ci',
+	`CanauxProtege` SET('Email','Sms','Push') NOT NULL COLLATE 'utf8mb4_unicode_ci',
+	`OrdreAffichage` SMALLINT(6) NOT NULL,
+	`Visibilite` ENUM('Public','Commande','Facture','Privé') NOT NULL DEFAULT 'Public' COLLATE 'utf8mb4_unicode_ci',
+	PRIMARY KEY (`CodeNotification`) USING BTREE,
+	INDEX `Libelle` (`Libelle`) USING BTREE,
+	INDEX `OrdreAffichage` (`OrdreAffichage`) USING BTREE,
+	INDEX `idx_prm_notification_canal` (`OrdreAffichage`) USING BTREE,
+	INDEX `Visibilite` (`Visibilite`) USING BTREE
+)
+COLLATE='utf8mb4_unicode_ci'
+ENGINE=InnoDB
+;

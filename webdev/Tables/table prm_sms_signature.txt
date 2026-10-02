@@ -1,0 +1,10 @@
+IdSignature	CodeSite	Libelle	Signature
+1	MKT	Support technique	En cas de probleme, vous pouvez nous contacter au 01.49.49.01.01.
+
+Cordialement,
+
+Le service technique Marketeam
+2	MKT	Service commercial	Cordialement,
+
+Le service commercial Marketeam
+Vous pouvez nous joindre au %TelephoneCommercialMarketeam%.

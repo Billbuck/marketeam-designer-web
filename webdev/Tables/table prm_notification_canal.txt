@@ -1,0 +1,50 @@
+CodeNotification	Libelle	Description	CanauxParDefaut	CanauxPossible	CanauxObligatoire	CanauxProtege	OrdreAffichage	Visibilite
+UN_ICI_TRACKING	Tracking lien SMS Unique		Email	Email	Email		0	Privé
+UN_LEAD_ICI_CLIC	Cliquez-Ici Clic Unique		Email	Email	Email		0	Privé
+UN_LEAD_ICI_LIEN	Cliquez-Ici Lien Unique		Email	Email	Email		0	Privé
+RAPPORT_AUDIENCE	Rapport d'audience		Email,Push	Email,Sms,Push			1	Public
+LEAD_CALLCENTER	Lead Call center		Email,Push	Email,Sms,Push		Email,Sms,Push	2	Public
+LEAD_ICI_CLIC	Cliquez-Ici Clic		Email,Push	Email,Sms,Push		Email,Sms,Push	3	Public
+LEAD_ICI_LIEN	Cliquez-Ici Lien		Email,Push	Email,Sms,Push		Email,Sms,Push	4	Public
+ICI_TRACKING	Tracking lien SMS		Email,Push	Email,Sms,Push			5	Public
+NOT_REPONSE	Notification Reponse		Email,Push	Email,Sms,Push			6	Public
+ALLIAGE	Alliage		Email	Email,Sms,Push			7	Public
+FACTURE	Facturation		Email,Push	Email,Sms,Push	Email	Email,Sms,Push	8	Public
+STATUT_99	Opération annulée			Email,Sms,Push			9	Public
+STATUT_90	Terminée		Email,Push	Email,Sms,Push			10	Public
+STATUT_75	Facturation en attente		Email,Push	Email,Sms,Push			11	Public
+STATUT_70	Envoyée		Email,Push	Email,Sms,Push			12	Public
+STATUT_49	Traitement RNVP terminé		Email,Push	Email,Sms,Push			13	Public
+STATUT_62	Appel en cours		Email,Push	Email,Sms,Push			14	Public
+STATUT_60	Distribution en cours		Email,Push	Email,Sms,Push			15	Public
+STATUT_69	Distribution en erreur		Email,Push	Email,Sms,Push			16	Public
+STATUT_59	Distribution en attente		Email,Push	Email,Sms,Push			17	Public
+STATUT_45	Production en cours		Email,Push	Email,Sms,Push			18	Public
+STATUT_40	Prise en charge		Email,Push	Email,Sms,Push			19	Public
+STATUT_35	Prise en charge en attente		Email,Push	Email,Sms,Push			20	Public
+STATUT_29	Validation refusée		Email,Push	Email,Sms,Push		Email,Sms,Push	21	Public
+STATUT_07	Élément hors delais		Email,Push	Email,Sms,Push			22	Public
+STATUT_05	Élément en attente		Email,Push	Email,Sms,Push			23	Public
+STATUT_12	Audit de remplissage en attente		Email,Push	Email,Sms,Push			23	Public
+STATUT_13	Audit de remplissage hors delais		Email,Push	Email,Sms,Push			23	Public
+STATUT_17	Règlement hors delais		Email,Push	Email,Sms,Push			24	Commande
+STATUT_15	Règlement en attente		Email,Push	Email,Sms,Push			25	Commande
+STATUT_27	Validation hors delais		Email,Push	Email,Sms,Push			26	Facture
+STATUT_85	Solde en attente		Push	Sms,Push			27	Facture
+STATUT_25	Validation en attente		Email,Push	Email,Sms,Push			28	Facture
+USER_MDP	Mot de passe		Email	Email	Email	Email,Sms,Push	29	Privé
+CPT_VALIDATION	Validation de compte		Email	Email	Email	Email,Sms,Push	30	Privé
+USER_CREATION	Création compte utilisateur		Email	Email	Email	Email,Sms,Push	31	Privé
+ABO_RENOUVELLE	Notification renouvellement abonnement à venir (clients en compte)	Notification pour informer les clients en compte (paiement à réception de facture) que le renouvellement automatique de leur abonnement approche.
+	Email	Email,Push	Email	Email,Push	32	Privé
+ABO_ECHEANCE	Notification échéance d'abonnement (clients hors compte)	Notification pour informer les clients hors compte (paiement à la commande) que leur abonnement arrive à échéance et doit être renouvelé par paiement.	Email	Email,Push	Email	Email,Push	33	Privé
+ABO_ENCAISSEMENT	Notification encaissement abonnement à venir	Notification destinée aux clients ayant configuré un paiement par carte bancaire ou prélèvement, pour les informer qu'une transaction d'abonnement sera prochainement réalisée.	Email	Email,Push	Email	Email,Push	34	Privé
+ECHEC_PRELEVE	Notification échec de prélèvement	Notification pour avertir un client que le prélèvement automatique a échoué.	Email	Email,Sms,Push	Email,Sms	Email,Sms,Push	35	Privé
+ECHEC_PAIEMENT	Notification échec de paiement	Notification pour avertir un client que le paiement par Carte Bancaire enregistrée automatique a échoué.	Email	Email,Sms,Push	Email,Sms	Email,Sms,Push	36	Privé
+FAC_CLIENTCOMPTE	Notification facturation (client en compte)	Notification destinée aux clients en compte (paiement à réception de facture), pour les relancer avant l'échéance d'une facture en attente de règlement.	Email	Email,Push	Email	Email,Push	37	Privé
+FAC_RELANCE_1	Relance facturation n°1 (client en compte)	Première relance pour un client en compte (paiement à réception de facture), indiquant qu'une facture reste impayée et qu'un règlement est attendu.
+	Email	Email,Sms,Push	Email,Sms,Push	Email,Sms,Push	38	Privé
+FAC_RELANCE_2	Relance facturation n°2 (client en compte)	Deuxième relance pour un client en compte (paiement à réception de facture), rappelant qu'une facture reste impayée malgré une première relance.
+	Email	Email,Sms,Push	Email,Sms,Push	Email,Sms,Push	39	Privé
+FAC_RELANCE_3	Relance facturation n°3 (client en compte)	Troisième relance pour un client en compte (paiement à réception de facture), signalant l'absence de règlement après deux relances précédentes pour une facture impayée.
+	Email	Email,Sms,Push	Email,Sms,Push	Email,Sms,Push	40	Privé
