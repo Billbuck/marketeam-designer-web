@@ -1,0 +1,293 @@
+procédure BatchEnvoiEmail()
+
+sTexteRequete				est une chaîne
+sdReqEnvoiEmail			est une Source de Données
+eEmail						est un Email
+ePieceJointe				est un emailAttache
+sEmailEnCopie				est une chaîne
+smptEmailSession			est un emailSessionSMTP
+stNotificationMessage	est une structNotificationMessage
+sDossier						est une chaîne
+sVariableBrute				est une chaîne
+
+// Ouverture une session SMTP
+smptEmailSession.AdresseServeur	= "172.16.144.112"
+smptEmailSession.MotDePasse		= ""
+smptEmailSession.Nom					= ""
+smptEmailSession.Port				= "25"
+
+// On laisse maintenant 60 secondes de sécurité au lieu de 5
+sTexteRequete							=
+[
+	SELECT 
+	email_envoi.IdEmailEnvoi,
+	email_envoi.IdContact,
+	email_envoi.IdClient,
+	email_envoi.IdOperation,
+	email_envoi.TypeOperation,
+	email_envoi.IdFacture,
+	email_envoi.TypeFacture,
+	email_envoi.IdAbonnement,
+	email_envoi.TypeAbonnement,
+	email_envoi.CodeEmailType,
+	email_envoi.EmailDestinataire,
+	email_envoi.EmailEnCopie,
+	email_envoi.DateHeureDemande,
+	email_envoi.Variable,
+	prm_email_type.Libelle,
+	prm_email_type.Objet,
+	CONCAT(prm_email_type.Corps, '\r\n\r\n', prm_email_signature.Signature) AS 'Message'
+	FROM
+	email_envoi
+	JOIN prm_email_type ON email_envoi.CodeEmailType = prm_email_type.CodeEmailType AND email_envoi.CodeSite = prm_email_type.CodeSite
+	LEFT JOIN prm_email_signature ON prm_email_signature.IdSignature = prm_email_type.IdSignature
+	WHERE
+	email_envoi.DateHeureEnvoi IS NULL
+	AND email_envoi.DateHeureDemande <= DATE_ADD(NOW(), INTERVAL -60 SECOND)
+	AND email_envoi.CodeSite = '[%__CODE_SITE_MARKETEAM__%]'
+	AND email_envoi.CodeEmailType NOT IN ('[%__NOTIFICATION_CLIQUEZICI_TRACKING_UNIQUE__%]','[%__NOTIFICATION_LEAD_CLIQUEZICI_CLIC_UNIQUE__%]','[%__NOTIFICATION_LEAD_CLIQUEZICI_LIEN_UNIQUE__%]')
+]
+
+si pas sdReqEnvoiEmail.ExécuteRequêteSQL(email_envoi..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête",
+	"Procédure", "BatchEnvoiEmail",
+	"Date", DateVersChaîne(DateSys(),"Jjjj JJ mmm"),
+	"Heure", HeureVersChaîne(HeureSys(),"HH:MM:SS"),
+	"Erreur", HErreurInfo(),
+	"Requête", sTexteRequete)
+	retour
+fin
+
+si sdReqEnvoiEmail.LitPremier(hSansRafraîchir) alors
+
+	si smptEmailSession.OuvreSession() = Faux alors
+		Info(ErreurInfo(errComplet))
+		retour
+	sinon
+		ToastAffiche("Session Email Ouverte", toastCourt, cvHaut, chCentre)
+	fin
+
+sinon
+	retour
+fin
+
+pour tout sdReqEnvoiEmail
+
+	VariableRAZ(eEmail)
+	VariableRAZ(stNotificationMessage)
+
+	sDossier			= ""
+	sVariableBrute	= sdReqEnvoiEmail.Variable
+
+	// Sécurité : Variable vide
+	si SansEspace(sVariableBrute) = "" alors
+		Trace("Variable JSON vide",
+		"IdEmailEnvoi", sdReqEnvoiEmail.IdEmailEnvoi,
+		"CodeEmailType", sdReqEnvoiEmail.CodeEmailType,
+		"Email", sdReqEnvoiEmail.EmailDestinataire)
+
+		si email_envoi.LitRecherchePremier(IdEmailEnvoi, sdReqEnvoiEmail.IdEmailEnvoi) alors
+			email_envoi.DateHeureEnvoi = DateHeureSys()
+			email_envoi.Modifie()
+		fin
+
+		tblNotification.AjouteLigne("", sdReqEnvoiEmail.EmailDestinataire, DateHeureSys(), "[Erreur JSON vide] " + sdReqEnvoiEmail.Libelle)
+		continuer
+	fin
+
+	// Alimentation de la structure
+	stNotificationMessage.CodeType						= sdReqEnvoiEmail.CodeEmailType
+	stNotificationMessage.IdClient						= sdReqEnvoiEmail.IdClient
+	stNotificationMessage.IdValideur						= sdReqEnvoiEmail.IdContact
+	stNotificationMessage.DateHeureNotification		= sdReqEnvoiEmail.DateHeureDemande
+	stNotificationMessage.IdOperation					= sdReqEnvoiEmail.IdOperation
+	stNotificationMessage.TypeOperation					= sdReqEnvoiEmail.TypeOperation
+	stNotificationMessage.IdFacture						= sdReqEnvoiEmail.IdFacture
+	stNotificationMessage.TypeFacture					= sdReqEnvoiEmail.TypeFacture
+	stNotificationMessage.IdAbonnement					= sdReqEnvoiEmail.IdAbonnement
+	stNotificationMessage.TypeAbonnement				= sdReqEnvoiEmail.TypeAbonnement
+
+	// Affectation protégée du JSON
+	quand exception dans
+
+		stNotificationMessage.Variables = sVariableBrute
+
+	faire
+
+		Trace("Erreur affectation JSON",
+		"IdEmailEnvoi", sdReqEnvoiEmail.IdEmailEnvoi,
+		"CodeEmailType", sdReqEnvoiEmail.CodeEmailType,
+		"Email", sdReqEnvoiEmail.EmailDestinataire,
+		"Variable brute", sVariableBrute,
+		"Erreur", ExceptionInfo(errComplet))
+
+		si email_envoi.LitRecherchePremier(IdEmailEnvoi, sdReqEnvoiEmail.IdEmailEnvoi) alors
+			email_envoi.DateHeureEnvoi = DateHeureSys()
+			email_envoi.Modifie()
+		fin
+
+		tblNotification.AjouteLigne("", sdReqEnvoiEmail.EmailDestinataire, DateHeureSys(), "[Erreur JSON] " + sdReqEnvoiEmail.Libelle)
+		continuer
+
+	fin
+
+	// Lecture protégée de Dossier
+	quand exception dans
+
+		si stNotificationMessage.Variables.Dossier..Existe alors
+			sDossier = stNotificationMessage.Variables.Dossier
+		sinon
+			sDossier = ""
+		fin
+
+	faire
+
+		Trace("Erreur lecture Variables.Dossier",
+		"IdEmailEnvoi", sdReqEnvoiEmail.IdEmailEnvoi,
+		"CodeEmailType", sdReqEnvoiEmail.CodeEmailType,
+		"Email", sdReqEnvoiEmail.EmailDestinataire,
+		"Variable brute", sVariableBrute,
+		"Erreur", ExceptionInfo(errComplet))
+
+		sDossier = ""
+
+	fin
+
+	// Sujet
+	stNotificationMessage.Message = sdReqEnvoiEmail.Objet
+
+	quand exception dans
+
+		eEmail..Sujet = cpNotification.PersonnaliseMessage(stNotificationMessage)
+
+	faire
+
+		Trace("Erreur personnalisation sujet",
+		"IdEmailEnvoi", sdReqEnvoiEmail.IdEmailEnvoi,
+		"Email", sdReqEnvoiEmail.EmailDestinataire,
+		"Erreur", ExceptionInfo(errComplet))
+
+		si email_envoi.LitRecherchePremier(IdEmailEnvoi, sdReqEnvoiEmail.IdEmailEnvoi) alors
+			email_envoi.DateHeureEnvoi = DateHeureSys()
+			email_envoi.Modifie()
+		fin
+
+		tblNotification.AjouteLigne(sDossier, sdReqEnvoiEmail.EmailDestinataire, DateHeureSys(), "[Erreur sujet] " + sdReqEnvoiEmail.Libelle)
+		continuer
+
+	fin
+
+	// Corps du message
+	stNotificationMessage.Message	= sdReqEnvoiEmail.Message
+	stNotificationMessage.Mode		= "Email"
+
+	quand exception dans
+
+		eEmail..Message = cpNotification.PersonnaliseMessage(stNotificationMessage)
+
+	faire
+
+		Trace("Erreur personnalisation message",
+		"IdEmailEnvoi", sdReqEnvoiEmail.IdEmailEnvoi,
+		"Email", sdReqEnvoiEmail.EmailDestinataire,
+		"Erreur", ExceptionInfo(errComplet))
+
+		si email_envoi.LitRecherchePremier(IdEmailEnvoi, sdReqEnvoiEmail.IdEmailEnvoi) alors
+			email_envoi.DateHeureEnvoi = DateHeureSys()
+			email_envoi.Modifie()
+		fin
+
+		tblNotification.AjouteLigne(sDossier, sdReqEnvoiEmail.EmailDestinataire, DateHeureSys(), "[Erreur message] " + sdReqEnvoiEmail.Libelle)
+		continuer
+
+	fin
+
+	// Construction HTML
+	quand exception dans
+
+		cpProjet.ConstruitEmailHtml(eEmail, stNotificationMessage, stNotificationMessage.Variables)
+
+	faire
+
+		Trace("Erreur construction HTML",
+		"IdEmailEnvoi", sdReqEnvoiEmail.IdEmailEnvoi,
+		"Email", sdReqEnvoiEmail.EmailDestinataire,
+		"Erreur", ExceptionInfo(errComplet))
+
+		si email_envoi.LitRecherchePremier(IdEmailEnvoi, sdReqEnvoiEmail.IdEmailEnvoi) alors
+			email_envoi.DateHeureEnvoi = DateHeureSys()
+			email_envoi.Modifie()
+		fin
+
+		tblNotification.AjouteLigne(sDossier, sdReqEnvoiEmail.EmailDestinataire, DateHeureSys(), "[Erreur HTML] " + sdReqEnvoiEmail.Libelle)
+		continuer
+
+	fin
+
+	si eEmail.Message <> "" alors
+
+		eEmail..Expediteur = "marketeam.direct <" + __sEmailEmetteur + ">"
+		eEmail.Destinataire.Ajoute(sdReqEnvoiEmail.EmailDestinataire)
+
+		// Email destinataire en copie
+		sEmailEnCopie = sdReqEnvoiEmail.EmailEnCopie
+
+		pour toute chaîne sEmailCopie de sEmailEnCopie séparée par [";", RC]
+			si SansEspace(sEmailCopie) <> "" alors
+				eEmail.Cc.Ajoute(sEmailCopie)
+			fin
+		fin
+
+		// Envoi du message
+		si smptEmailSession.EnvoieMessage(eEmail, emailOptionEncodeEntête) alors
+
+			ePieceJointe.RAZ()
+
+			si email_envoi.LitRecherchePremier(IdEmailEnvoi, sdReqEnvoiEmail.IdEmailEnvoi) alors
+				TableAjouteLigne(tblNotification, sDossier, sdReqEnvoiEmail.EmailDestinataire, DateHeureSys(), sdReqEnvoiEmail.Libelle)
+
+				email_envoi.DateHeureEnvoi = DateHeureSys()
+				email_envoi.Modifie()
+			fin
+
+		sinon
+
+			Trace("Erreur envoi SMTP",
+			"IdEmailEnvoi", sdReqEnvoiEmail.IdEmailEnvoi,
+			"Email", sdReqEnvoiEmail.EmailDestinataire,
+			"Erreur", ErreurInfo(errComplet))
+
+			si email_envoi.LitRecherchePremier(IdEmailEnvoi, sdReqEnvoiEmail.IdEmailEnvoi) alors
+				email_envoi.DateHeureEnvoi = DateHeureSys()
+
+				si email_envoi.Modifie() alors
+					tblNotification.AjouteLigne(sDossier, sdReqEnvoiEmail.EmailDestinataire, DateHeureSys(), "[Erreur SMTP] " + sdReqEnvoiEmail.Libelle)
+				fin
+			fin
+
+		fin
+
+	sinon
+
+		Trace("Message email vide",
+		"IdEmailEnvoi", sdReqEnvoiEmail.IdEmailEnvoi,
+		"Email", sdReqEnvoiEmail.EmailDestinataire,
+		"CodeEmailType", sdReqEnvoiEmail.CodeEmailType)
+
+		si email_envoi.LitRecherchePremier(IdEmailEnvoi, sdReqEnvoiEmail.IdEmailEnvoi) alors
+			email_envoi.DateHeureEnvoi = DateHeureSys()
+			email_envoi.Modifie()
+		fin
+
+		tblNotification.AjouteLigne(sDossier, sdReqEnvoiEmail.EmailDestinataire, DateHeureSys(), "[Erreur message vide] " + sdReqEnvoiEmail.Libelle)
+
+	fin
+
+fin
+
+// Fermeture de la session
+smptEmailSession.FermeSession()
+ToastAffiche("Session Email Fermée", toastCourt, cvHaut, chCentre)
+
+fin:
+sdReqEnvoiEmail.AnnuleDéclaration()

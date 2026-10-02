@@ -1,0 +1,77 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] SmsNotificationEnvoie (<pPortable>, <pObjet>, <pMessage>, <pIdContact>, <pIdClient>, <pIdOperation>, <pPrixVenteUnitaire>)
+//
+// Paramètres :
+//	pPortable : <indiquez ici le rôle de pPortable>
+// 	pObjet : <indiquez ici le rôle de pObjet>
+//	pMessage : <indiquez ici le rôle de pMessage>
+//	pIdContact : <indiquez ici le rôle de pIdContact>
+//	pIdClient : <indiquez ici le rôle de pIdClient>
+//	pIdOperation : <indiquez ici le rôle de pIdOperation>
+//	pPrixVenteUnitaire : <indiquez ici le rôle de pPrixVenteUnitaire>
+// Valeur de retour :
+// 	booléen : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure SmsNotificationEnvoie(pPortable, pObjet, pMessage, pIdContact, pIdClient, pIdOperation, pPrixVenteUnitaire)
+
+bPaiementSurReserve		est un booléen
+bPaiementFinMois		est un booléen
+nNbrSms					est un entier
+mPrixMessageHT			est un monétaire
+mPrixMessageTTC			est un monétaire
+
+(nNbrSms, mPrixMessageHT)	= CalculePrixSms(pMessage, pPrixVenteUnitaire)
+mPrixMessageTTC	= Arrondi(mPrixMessageHT + (mPrixMessageHT * cpProjet.__moTauxTVA / 100),3)
+
+si mPrixMessageHT = 0 alors renvoyer Faux
+
+si clt_client.LitRecherchePremier(IdClient,pIdClient) alors
+	selon Vrai
+		cas clt_client.ReserveArgent >= mPrixMessageTTC : bPaiementSurReserve = Vrai
+		cas clt_client.EstFacturationMensuelle = Vrai	: bPaiementFinMois = Vrai
+		autre cas
+	fin
+fin
+
+si bPaiementSurReserve = Faux _et_ bPaiementFinMois = Faux  alors renvoyer Faux
+
+ope_sms_notification.RAZ()
+ope_sms_notification.IdOperation				= pIdOperation
+ope_sms_notification.IdOperation.Null			= (pIdOperation = 0)
+ope_sms_notification.IdContact					= pIdContact
+ope_sms_notification.IdClient					= pIdClient
+ope_sms_notification.Origine					= __SMS_ORIGINE_PUSH__
+ope_sms_notification.Portable					= pPortable
+ope_sms_notification.Message					= pMessage
+ope_sms_notification.EstSmsUnicode				= TestSmsUnicode(pMessage)
+ope_sms_notification.LeFrom						= pObjet
+ope_sms_notification.TauxTVA					= cpProjet.__moTauxTVA
+ope_sms_notification.NbrSmsFacture				= nNbrSms
+ope_sms_notification.MontantHT					= mPrixMessageHT
+ope_sms_notification.MontantTTC					= mPrixMessageTTC
+ope_sms_notification.EstPaye					= bPaiementSurReserve
+ope_sms_notification.EstPayeSurReserveArgent	= bPaiementSurReserve
+ope_sms_notification.Statut						= __SMS_STATUT_ENREGISTREE__
+
+si pas ope_sms_notification.Ajoute() alors renvoyer Faux
+
+si bPaiementSurReserve = Vrai alors
+	clt_paiement.RAZ()
+	clt_paiement.DateHeureCreation		= DateHeureSys()
+	clt_paiement.IdClient				= pIdClient
+	clt_paiement.IdContact				= pIdContact
+	clt_paiement.Montant				= mPrixMessageTTC
+	clt_paiement.EstReserve				= Vrai
+//	clt_paiement.TypePaiement			= Par le trigger
+//	clt_paiement.Designation			=  Par le trigger
+	clt_paiement.ListeIdSmsNotification	= ope_sms_notification.IdSmsNotification
+	clt_paiement.UserCreation			= "Batch Notification"
+	si pas clt_paiement.Ajoute() alors	renvoyer Faux
+	// Descente de la réserve d'argent par le trigger
+fin
+
+renvoyer Vrai

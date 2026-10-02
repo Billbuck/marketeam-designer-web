@@ -1,0 +1,20 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//AjouteEmailInformation (<stEmail> est structEmail, <pLibelle>, <pValeur>)
+//
+// Paramètres :
+//	stEmail (structEmail) : <indiquez ici le rôle de stEmail>
+//	pLibelle : <indiquez ici le rôle de pLibelle>
+//	pValeur : <indiquez ici le rôle de pValeur>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure AjouteEmailInformation(stEmail est une structEmail, pLibelle, pValeur)
+
+stInformation est une structEmailInformation
+stInformation.Libelle		= pLibelle
+stInformation.Valeur		= pValeur
+stEmail.tabInformation.Ajoute(stInformation)

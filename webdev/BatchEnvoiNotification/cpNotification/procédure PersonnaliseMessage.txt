@@ -1,0 +1,210 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] PersonnaliseMessage (<pMessage>, <stNotificationBalise> est structNotificationBalise [, <pMode>])
+//
+// Paramètres :
+//	pMessage : <indiquez ici le rôle de pMessage>
+//	stNotificationBalise (structNotificationBalise) : <indiquez ici le rôle de stNotificationBalise>
+//	pMode (valeur par défaut="") : <indiquez ici le rôle de pType>
+// Valeur de retour :
+// 	chaîne Unicode : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+//	stNotificationBalise (structNotificationBalise) : <indiquez ici le rôle de stNotificationBalise>
+procédure PersonnaliseMessage(local stNotificationMessage est une structNotificationMessage)
+
+nDep				est un entier
+nFin				est un entier
+sMessage			est une chaîne
+sLigne				est une chaîne
+sBalise				est une chaîne
+sCouleur			est une chaîne
+sTypeOperation		est une chaîne
+sTypeProjet			est une chaîne
+sDateHeureFiltre	est une chaîne
+
+selon Vrai
+	cas stNotificationMessage.TypeOperation <> "" 				: sTypeOperation = stNotificationMessage.TypeOperation
+	cas stNotificationMessage.Variables.TypeOperation..Existe 	: sTypeOperation = stNotificationMessage.Variables.TypeOperation
+	autre cas													: sTypeOperation = __OPERATION_MARKETEAM__
+fin
+
+si stNotificationMessage.Variables.TypeProjet..Existe alors sTypeProjet = stNotificationMessage.Variables.TypeProjet
+
+si DateHeureValide(stNotificationMessage.DateHeureNotification) alors
+	stNotificationMessage.Variables.DateHeureNotification = DateHeureVersChaîne(stNotificationMessage.DateHeureNotification, "Jjjj JJ mmmm AAAA")
+fin
+
+sDateHeureFiltre = stNotificationMessage.Variables.DateHeureFiltre..Existe ? stNotificationMessage.Variables.DateHeureFiltre sinon ""
+
+// On créé le Rapport d'audience :
+si stNotificationMessage.CodeType = __NOTIFICATION_RAPPORT_AUDIENCE__ alors
+	stNotificationMessage.Variables.RapportCompletAudience = ""
+	selon sTypeProjet
+		cas __OPERATION_SMS__
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre de destinataires",	stNotificationMessage.Variables.NbrDestinataire,"Entier", "Sms")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre de délivrés", 		stNotificationMessage.Variables.NbrDelivre, "Entier", "Sms")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre en Erreur", 		stNotificationMessage.Variables.NbrErreur, "Entier", "Sms")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre Stop Sms", 			stNotificationMessage.Variables.NbrStop, "Entier", "Sms")
+
+		cas __OPERATION_SMS_INTERACTIF__
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre de destinataires",	stNotificationMessage.Variables.NbrDestinataire," Entier", "Sms")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre de délivrés", 		stNotificationMessage.Variables.NbrDelivre, "Entier", "Sms")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre en Erreur", 		stNotificationMessage.Variables.NbrErreur, "Entier", "Sms")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre Stop Sms", 			stNotificationMessage.Variables.NbrStop, "Entier", "Sms")
+
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Résultats", 				" ", "", "")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre de visites", 		stNotificationMessage.Variables.NbrAudienceUnique, "Entier", "")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre de leads", 			stNotificationMessage.Variables.NbrLeadUnique, "Entier", "")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre de redirections", 	stNotificationMessage.Variables.NbrInteractionUnique, "Entier", "")
+
+
+		cas __OPERATION_VMS__
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre de destinataires",		stNotificationMessage.Variables.NbrDestinataire,"Entier", "Sms")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre de délivrés", 			stNotificationMessage.Variables.NbrDelivre, "Entier", "Sms")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre en Erreur", 			stNotificationMessage.Variables.NbrErreur, "Entier", "Sms")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre Stop Vms", 				stNotificationMessage.Variables.NbrStop, "Entier", "Sms")
+
+
+		cas __OPERATION_EMAIL__
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre de destinataires",		stNotificationMessage.Variables.NbrDestinataire,"Entier", "Sms")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre de délivrés", 			stNotificationMessage.Variables.NbrDelivre, "Entier", "Sms")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre en Erreur", 			stNotificationMessage.Variables.NbrErreur, "Entier", "Sms")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre Stop Email", 			stNotificationMessage.Variables.NbrStop, "Entier", "Sms")
+
+		cas __OPERATION_EMAIL_INTERACTIF__
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre de destinataires",		stNotificationMessage.Variables.NbrDestinataire,"Entier", "Sms")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre de délivrés", 			stNotificationMessage.Variables.NbrDelivre, "Entier", "Sms")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre en Erreur", 			stNotificationMessage.Variables.NbrErreur, "Entier", "Sms")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre Stop Email", 			stNotificationMessage.Variables.NbrStop, "Entier", "Sms")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Résultats", 					" ", "", "")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre de visites", 			stNotificationMessage.Variables.NbrAudienceUnique, "Entier", "")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre de leads", 				stNotificationMessage.Variables.NbrLeadUnique, "Entier", "")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre de redirections", 		stNotificationMessage.Variables.NbrInteractionUnique, "Entier", "")
+
+		cas __OPERATION_TEL__
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre de destinataires",		stNotificationMessage.Variables.NbrDestinataire,"Entier", "Appels")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre de délivrés", 			stNotificationMessage.Variables.NbrDelivre, "Entier", "Appels")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre en Erreur", 			stNotificationMessage.Variables.NbrErreur, "Entier", "Appels")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre Stop Pub", 				stNotificationMessage.Variables.NbrStop, "Entier", "Appels")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Résultats", 					" ", "", "")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre de leads", 				stNotificationMessage.Variables.NbrLeadUnique, "Entier", "")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre de rendez-vous", 		stNotificationMessage.Variables.NbrRendezVous, "Entier", "")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre de messages déposés",	stNotificationMessage.Variables.NbrMessageDepose, "Entier", "")
+			stNotificationMessage.Variables.RapportCompletAudience += [RC] + AjouteInformation("Nombre de répondeurs",			stNotificationMessage.Variables.NbrRepondeur, "Entier", "")
+
+		autre cas
+	fin
+fin
+
+
+
+
+si stNotificationMessage.Mode = "Email" alors
+	sCouleur														= cpNotification.NotificationCouleurTypeOperation(sTypeOperation,"L")
+
+	stNotificationMessage.Variables.TelephoneSupportMarketeam		= CréeBaliseLien("tel:+33149490101", "01.49.49.01.01", "none" )
+	stNotificationMessage.Variables.TelephoneCommercialMarketeam	= CréeBaliseLien("tel:+33149490100", "01.49.49.01.00", "none" )
+	stNotificationMessage.Variables.LienMarketeamDirect				= CréeBaliseLien("https://www.marketeam.direct","marketeam.direct", "none" )
+	stNotificationMessage.Variables.lciMarketeamDirect				= CréeBaliseLien("https://www.marketeam.direct","cliquez-ici", "none" )
+	stNotificationMessage.Variables.lciCreationUtilisateur			= CréeBaliseLien(__NOTIFICATION_CREATION_UTILISATEUR__ 	+ "|" + stNotificationMessage.IdValideur + "|" + stNotificationMessage.IdClient, "cliquez-ici", "underline" , __sUrlMarketeam + __URL_PARAM__)
+	stNotificationMessage.Variables.lciValidationCompte				= CréeBaliseLien(__NOTIFICATION_VALIDATION_COMPTE__ 	+ "|" + stNotificationMessage.IdValideur + "|" + stNotificationMessage.IdClient, "cliquez-ici", "underline" , __sUrlMarketeam + __URL_PARAM__)
+	stNotificationMessage.Variables.lciPaiementFacture				= CréeBaliseLien(__NOTIFICATION_PAYEMENT_FACTURE__ 		+ "|" + stNotificationMessage.IdFacture + "|" + clt_facture.IdClient + "|" + clt_facture.NumeroFacture, "cliquez-ici", "underline" , __sUrlMarketeam + __URL_PARAM__)
+	stNotificationMessage.Variables.lciPaiementOperation			= CréeBaliseLien(__NOTIFICATION_PAYEMENT_OPERATION__ 	+ "|" + stNotificationMessage.IdValideur + "|" + stNotificationMessage.IdClient + "|" + sTypeOperation + "|" + stNotificationMessage.IdOperation, "cliquez-ici", "underline" , __sUrlMarketeam + __URL_PARAM__)
+	stNotificationMessage.Variables.lciValidationOperation			= CréeBaliseLien(__NOTIFICATION_VALIDATION_OPERATION__ 	+ "|" + stNotificationMessage.IdValideur + "|" + stNotificationMessage.IdClient + "|" + sTypeOperation + "|" + stNotificationMessage.IdOperation, "cliquez-ici", "underline" , __sUrlMarketeam + __URL_PARAM__)
+	stNotificationMessage.Variables.lciMotDePasse					= CréeBaliseLien(__NOTIFICATION_MOT_DE_PASSE_OUBLIE__ 	+ "|" + stNotificationMessage.IdValideur + "|" + stNotificationMessage.IdClient, "cliquez-ici", "underline" , __sUrlMarketeam + __URL_PARAM__)
+	stNotificationMessage.Variables.lciExcelCliquezIciClic			= CréeBaliseLien(stNotificationMessage.IdClient +"|"+ stNotificationMessage.IdValideur +"|"+ __RAPPORT_ICI_CLIC__ 	+ "|" + stNotificationMessage.IdOperation +"|"+ sDateHeureFiltre,"cliquez-ici", "underline" , __sUrlRapportExcel)
+	stNotificationMessage.Variables.lciExcelCliquezIciLien			= CréeBaliseLien(stNotificationMessage.IdClient +"|"+ stNotificationMessage.IdValideur +"|"+ __RAPPORT_ICI_LIEN__ 	+ "|" + stNotificationMessage.IdOperation +"|"+ sDateHeureFiltre,"cliquez-ici", "underline" , __sUrlRapportExcel)
+	stNotificationMessage.Variables.lciExcelCliquezIciTracking		= CréeBaliseLien(stNotificationMessage.IdClient +"|"+ stNotificationMessage.IdValideur +"|"+ __RAPPORT_ICI_VISITE__ + "|" + stNotificationMessage.IdOperation +"|"+ sDateHeureFiltre,"cliquez-ici", "underline" , __sUrlRapportExcel)
+	stNotificationMessage.Variables.lciExcelCallCenter				= CréeBaliseLien(stNotificationMessage.IdClient +"|"+ stNotificationMessage.IdValideur +"|"+ __RAPPORT_TEL_LEAD__ 	+ "|" + stNotificationMessage.IdOperation +"|"+ sDateHeureFiltre,"cliquez-ici", "underline" , __sUrlRapportExcel)
+
+	selon sTypeProjet
+		cas __OPERATION_SMS__					: stNotificationMessage.Variables.lciRapportAudience = CréeBaliseLien(stNotificationMessage.IdClient +"|"+ stNotificationMessage.IdValideur +"|"+ __RAPPORT_SMS__ 					+ "|" + stNotificationMessage.IdOperation +"|"+ 0,"cliquez-ici", "underline" , __sUrlRapportExcel)
+		cas __OPERATION_SMS_INTERACTIF__			: stNotificationMessage.Variables.lciRapportAudience = CréeBaliseLien(stNotificationMessage.IdClient +"|"+ stNotificationMessage.IdValideur +"|"+ __RAPPORT_SMS_INTERACTIF__ 		+ "|" + stNotificationMessage.IdOperation +"|"+ 0,"cliquez-ici", "underline" , __sUrlRapportExcel)
+		cas __OPERATION_TEL__					: stNotificationMessage.Variables.lciRapportAudience = CréeBaliseLien(stNotificationMessage.IdClient +"|"+ stNotificationMessage.IdValideur +"|"+ __RAPPORT_TEL__			 		+ "|" + stNotificationMessage.IdOperation +"|"+ 0,"cliquez-ici", "underline" , __sUrlRapportExcel)
+		cas __OPERATION_VMS__					: stNotificationMessage.Variables.lciRapportAudience = CréeBaliseLien(stNotificationMessage.IdClient +"|"+ stNotificationMessage.IdValideur +"|"+ __RAPPORT_VMS__			 		+ "|" + stNotificationMessage.IdOperation +"|"+ 0,"cliquez-ici", "underline" , __sUrlRapportExcel)
+		cas __OPERATION_EMAIL__					: stNotificationMessage.Variables.lciRapportAudience = CréeBaliseLien(stNotificationMessage.IdClient +"|"+ stNotificationMessage.IdValideur +"|"+ __RAPPORT_EMAIL__		 		+ "|" + stNotificationMessage.IdOperation +"|"+ 0,"cliquez-ici", "underline" , __sUrlRapportExcel)
+		cas __OPERATION_EMAIL_INTERACTIF__		: stNotificationMessage.Variables.lciRapportAudience = CréeBaliseLien(stNotificationMessage.IdClient +"|"+ stNotificationMessage.IdValideur +"|"+ __RAPPORT_EMAIL_INTERACTIF__		+ "|" + stNotificationMessage.IdOperation +"|"+ 0,"cliquez-ici", "underline" , __sUrlRapportExcel)
+		cas __OPERATION_COURRIER_INTERACTIF__	: stNotificationMessage.Variables.lciRapportAudience = CréeBaliseLien(stNotificationMessage.IdClient +"|"+ stNotificationMessage.IdValideur +"|"+ __RAPPORT_COURRIER_INTERACTIF__	+ "|" + stNotificationMessage.IdOperation +"|"+ 0,"cliquez-ici", "underline" , __sUrlRapportExcel)
+		autre cas
+	fin
+fin
+
+si stNotificationMessage.Mode = "Marketeam" alors
+	pour toute chaîne sLigne, nInd de stNotificationMessage.Message séparée par RC
+		si nInd = 1 alors
+			sMessage = [
+				<b><font Color="[%__COULEUR_MARKETEAM_L__%]">[%sLigne%]</font></b>
+			]
+		sinon
+			si Contient(sLigne,"%") alors
+				nDep			= PositionOccurrence(sLigne,"%",1)
+				sLigne[[nDep]]	= "<b>%"
+				nFin			= PositionOccurrence(sLigne,"%",2)
+				sLigne[[nFin]]	= "%</b>"
+				sMessage += [RC] + sLigne
+			sinon
+				sMessage += [RC] + sLigne
+			fin
+		fin
+	fin
+sinon
+	sMessage = stNotificationMessage.Message
+fin
+
+sBalise = ExtraitChaîneEntre(sMessage,1,"%","%",DepuisDébut)
+
+tantque sBalise <> EOT
+	quand exception dans
+		si {"stNotificationMessage.Variables." + sBalise, indVariable}..Existe alors
+			sMessage = Remplace(sMessage,"%" + sBalise + "%", {"stNotificationMessage.Variables." + sBalise,indVariable})
+		sinon
+			sMessage = Remplace(sMessage,"%" + sBalise + "%", "#" + sBalise + "#")
+		fin
+	faire
+		sMessage = Remplace(sMessage,"%" + sBalise + "%", "Erreur balise : " + sBalise)
+	fin
+
+	sBalise = ExtraitChaîneEntre(sMessage,1,"%","%",DepuisDébut)
+fin
+
+si stNotificationMessage.Mode dans ("Marketeam", "Email") alors
+	sMessage = Remplace(sMessage,RC,"<br>")
+fin
+
+renvoyer sMessage
+
+
+	procédure interne CréeBaliseLien(pValeur, pLibelle, pDecoration, pUrl = "")
+
+		sValeur est une chaîne ANSI = pValeur
+
+		si pUrl <> "" alors
+			pValeur = pUrl + CrypteEncode(sValeur)
+		fin
+
+		sLien	est une chaîne	=
+		[
+			<A HREF="[%pValeur%]" style="color: [%sCouleur%]; text-decoration: [%pDecoration%]; text-decoration-style: solid;">[%pLibelle%]</A>
+		]
+		renvoyer sLien
+	fin
+
+	procédure interne AjouteInformation(pLibelle, pValeur, pType, pUnité)
+
+		sValeur			est une chaîne
+		sInformation	est une chaîne
+
+		si pValeur = "" _ou_ Val(pValeur) = 0 alors renvoyer ""
+
+		selon pType
+			cas "Entier"	: sValeur = NumériqueVersChaîne(Val(pValeur), "dS")
+			cas "Monetaire"	: sValeur = NumériqueVersChaîne(Val(pValeur), "dS") + " €"
+			autre cas		: sValeur = pValeur
+		fin
+
+		sInformation = pLibelle + " : " + sValeur + [" "] + pUnité
+		renvoyer sInformation
+	fin

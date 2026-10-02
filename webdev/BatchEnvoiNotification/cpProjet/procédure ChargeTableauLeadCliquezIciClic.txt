@@ -1,0 +1,240 @@
+procédure ChargeTableauLeadCliquezIciClic(pIdOperation, pPartiel,  stEmail est une structEmail, pListeIdBaseLigne)
+
+stEmail.tabTableauEntête.SupprimeTout()
+stEmail.tabTableauValeur.SupprimeTout()
+
+nInd					est un entier
+sTexteRequete			est une chaîne
+sTexteAudience			est une chaîne
+sTexteClic				est une chaîne
+sSelect					est une chaîne
+sWhere					est une chaîne
+sdReqCliquezIciClic		est une Source de Données
+sListeField				est une chaîne
+sOrderBy				est une chaîne
+sValeur					est une chaîne
+sReqColonne				est une chaîne
+sColonneSql				est une chaîne
+stEmailTableau			est une structEmailTableau
+nColonne				est un entier
+
+// On récupère la liste des offres (Interrupteurs, Combos, Champs de saisie et Optin) pour trier les résultats en sortie.
+sTexteRequete = [
+	SELECT
+		GROUP_CONCAT("\"", COALESCE(ope_cliquezici_offre.Libelle, ope_cliquezici_offre.Offre), "\"") ListeField
+	FROM
+		ope_cliquezici_offre
+		JOIN ope_cliquezici_bloc ON ope_cliquezici_bloc.IdCliquezIciBloc = ope_cliquezici_offre.IdCliquezIciBloc AND ope_cliquezici_bloc.`Type` IN ('[%__BLOC_OFFRE__%]' , '[%__BLOC_FORMULAIRE__%]' , '[%__BLOC_BOUTON__%]')
+	WHERE
+		ope_cliquezici_bloc.IdCliquezIci = [%pIdOperation%]
+	ORDER BY
+		FIELD(ope_cliquezici_bloc.`Type`, '[%__BLOC_OFFRE__%]' , '[%__BLOC_FORMULAIRE__%]' , '[%__BLOC_BOUTON__%]')
+
+]
+
+si pas HExécuteRequêteSQL(sdReqCliquezIciClic, ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	<compile si TypeConfiguration<>ServeurWebSocket>
+		Info("Erreur requête")
+	<fin>
+	renvoyer ""
+fin
+
+si sdReqCliquezIciClic.LitPremier() alors
+	sListeField = sdReqCliquezIciClic.ListeField
+fin
+
+// Si la liste des "libellés des offres" est vide : On trie le résultat par type (Interrupteurs, Combos, Champs de saisie et Optin)
+si sListeField <> "" alors
+	sOrderBy = [
+		ORDER BY
+			FIELD(ope_cliquezici_clic_selection.Libelle, [%sListeField%])
+	]
+sinon
+	sOrderBy = [
+		ORDER BY
+			FIELD(ope_cliquezici_clic_selection.`Type`, '[%__FORMULAIRE_INTERRUPTEUR__%]', '[%__FORMULAIRE_COMBO__%]','[%__FORMULAIRE_SAISIE__%]','[%__FORMULAIRE_OPTIN__%]')
+	]
+fin
+
+
+// Colonnes sélectionnées par le client pour le rapport
+
+sTexteRequete = [
+	SELECT
+		dos_operation_rapport.Libelle,
+		dos_operation_rapport.Champ,
+		dos_operation_rapport.Type
+	FROM 
+		dos_operation_rapport
+	WHERE
+		dos_operation_rapport.IdOperation = [%pIdOperation%]
+	ORDER BY
+		dos_operation_rapport.Ordre
+]
+
+si pas HExécuteRequêteSQL(sdReqCliquezIciClic, dos_operation_rapport..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête","Procédure","GenereRapportAudience n°1","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+	renvoyer ""
+fin
+
+pour tout sdReqCliquezIciClic
+	stEmailTableau.Libelle		= sdReqCliquezIciClic.Libelle
+	stEmailTableau.Champ		= sdReqCliquezIciClic.Champ
+	stEmailTableau.Type			= sdReqCliquezIciClic.Type
+	stEmailTableau.Alignement	= TypeAlignement(sdReqCliquezIciClic.Type)
+	stEmail.tabTableauEntête.Ajoute(stEmailTableau)
+	sSelect += ["," + RC] + "bl." + sdReqCliquezIciClic.Champ
+fin
+
+// On ajoute la colonne date & heure de clic
+stEmailTableau.Libelle 		= "Date & Heure"
+stEmailTableau.Champ 		= "DateHeure"
+stEmailTableau.Type 		= __CHAMP_TYPE_DATE_HEURE__
+stEmailTableau.Alignement 	= TypeAlignement(__CHAMP_TYPE_DATE_HEURE__)
+stEmail.tabTableauEntête.Ajoute(stEmailTableau)
+
+si pPartiel = Vrai _et_ pListeIdBaseLigne <> "" alors
+	sWhere = [
+		AND ope_cliquezici_clic.IdBaseLigne IN ([%pListeIdBaseLigne%])
+	]
+fin
+
+sTexteClic =
+[
+	SELECT DISTINCT
+		ope_cliquezici_clic_selection.`Type`,
+		ope_cliquezici_clic_selection.Libelle
+	FROM
+		ope_cliquezici_clic_selection
+		JOIN ope_cliquezici_clic ON ope_cliquezici_clic.IdCliquezIciClic = ope_cliquezici_clic_selection.IdCliquezIciClic
+	WHERE
+		ope_cliquezici_clic.IdCliquezIci = [%pIdOperation%]
+		[%sWhere%]
+	[%sOrderBy%]
+]
+
+
+
+si pas HExécuteRequêteSQL(sdReqCliquezIciClic, ltr_support..Connexion, hRequêteSansCorrection, sTexteClic) alors
+	<compile si TypeConfiguration<>ServeurWebSocket>
+		Info("Erreur requête")
+	<fin>
+	renvoyer ""
+fin
+
+// Pas de valeur alors retour
+si pas sdReqCliquezIciClic.LitPremier() alors
+	renvoyer stEmail
+fin
+
+pour tout sdReqCliquezIciClic
+	nColonne++
+	stEmailTableau.Libelle		= sdReqCliquezIciClic.Libelle
+	stEmailTableau.Type			= sdReqCliquezIciClic.Type
+	stEmailTableau.Champ		= "Col_" + nColonne
+	stEmailTableau.Alignement	= TypeAlignement(sdReqCliquezIciClic.Type)
+	stEmail.tabTableauEntête.Ajoute(stEmailTableau)
+
+	sColonneSql = [
+		COALESCE(MAX(
+		CASE 
+		WHEN sel.Libelle = [%Quotes(sdReqCliquezIciClic.Libelle)%]
+		THEN IF(sel.Valeur IS NULL, '✔', sel.Valeur)
+		ELSE ''
+		END
+		), '') AS [%QuotesIdentifiant(stEmailTableau.Champ)%]
+	]
+
+	sReqColonne += [", " + RC] + sColonneSql
+fin
+
+sTexteAudience =
+[
+	SELECT
+	    bl.IdBaseLigne,
+		[%sSelect%],
+		clic.DateHeureClic AS DateHeure,
+		[%sReqColonne%]
+	FROM (
+	    SELECT
+	        IdBaseLigne,
+	         MAX(IdCliquezIciClic) AS MaxIdCliquezIciClic
+	    FROM
+	        ope_cliquezici_clic
+	    WHERE
+	        IdCliquezIci = [%pIdOperation%]
+			[%sWhere%]
+	    GROUP BY
+	    IdBaseLigne
+	) AS dernierClic
+	JOIN
+	    ope_cliquezici_clic AS clic
+	    ON dernierClic.MaxIdCliquezIciClic = clic.IdCliquezIciClic
+	JOIN
+	    dos_base_ligne AS bl
+	    ON clic.IdBaseLigne = bl.IdBaseLigne
+	LEFT JOIN
+	    ope_cliquezici_clic_selection AS sel
+	    FORCE INDEX (IdCliquezIciClic_Libelle)
+	    ON clic.IdCliquezIciClic = sel.IdCliquezIciClic
+
+	GROUP BY
+	    bl.IdBaseLigne, [%sSelect%], clic.DateHeureClic
+	ORDER BY
+	    DateHeure DESC;
+]
+
+si pas HExécuteRequêteSQL(sdReqCliquezIciClic, ope_cliquezici_clic..Connexion, hRequêteSansCorrection, sTexteAudience) alors
+	Trace("")
+	Trace("Erreur requête","Procédure","GenereRapportAudience n°1","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo())
+	Trace("Requête :")
+	Trace(sTexteAudience)
+	Trace("-------------------------------------------------------------------------------------------------------------------")
+	renvoyer ""
+fin
+
+
+pour tout sdReqCliquezIciClic
+	nInd = stEmail.tabTableauValeur.Ajoute()
+	pour tout stEntete de stEmail.tabTableauEntête
+		sValeur = {"sdReqCliquezIciClic." + stEntete.Champ, indRubrique}
+		selon stEntete.Type
+			cas __CHAMP_TYPE_PORTABLE__		: sValeur = cpFonction.Telephone(sValeur,1,".")
+			cas __CHAMP_TYPE_TELEPHONE__ 	: sValeur = cpFonction.Telephone(sValeur,1,".")
+			cas __CHAMP_TYPE_DATE_HEURE__	: si DateHeureValide(sValeur)	alors sValeur = DateHeureVersChaîne(sValeur,"JJ/MM/AAAA HH:mm")
+			cas __CHAMP_TYPE_DATE__			: si DateValide(sValeur) 		alors sValeur = DateVersChaîne(sValeur,"JJ/MM/AAAA")
+			cas __CHAMP_TYPE_HEURE__		: si HeureValide(sValeur) 		alors sValeur = HeureVersChaîne(sValeur,"HH:MM:SS")
+			autre cas
+		fin
+		stEmail.tabTableauValeur[nInd].Ajoute(sValeur)
+	fin
+fin
+
+
+
+	procédure interne TypeAlignement(pType)
+		selon pType
+			cas __FORMULAIRE_INTERRUPTEUR__	: renvoyer "center"
+			cas __FORMULAIRE_COMBO__		: renvoyer "left"
+			cas __FORMULAIRE_SAISIE__		: renvoyer "left"
+			cas __FORMULAIRE_OPTIN__		: renvoyer "center"
+			cas	__CHAMP_TYPE_TEXTE__		: renvoyer "left"
+			cas	__CHAMP_TYPE_ENTIER__		: renvoyer "center"
+			cas	__CHAMP_TYPE_DECIMAL__		: renvoyer "right"
+			cas	__CHAMP_TYPE_MONETAIRE__	: renvoyer "right"
+			cas	__CHAMP_TYPE_DATE__			: renvoyer "center"
+			cas	__CHAMP_TYPE_HEURE__		: renvoyer "center"
+			cas	__CHAMP_TYPE_DATE_HEURE__	: renvoyer "center"
+			cas	__CHAMP_TYPE_EMAIL__		: renvoyer "left"
+			cas	__CHAMP_TYPE_TELEPHONE__	: renvoyer "center"
+			cas	__CHAMP_TYPE_PORTABLE__		: renvoyer "center"
+			cas	__CHAMP_TYPE_CODEPOSTAL__	: renvoyer "center"
+			autre cas						: renvoyer "left"
+		fin
+	fin
+
+
+
+fin:
+sdReqCliquezIciClic.AnnuleDéclaration()
+

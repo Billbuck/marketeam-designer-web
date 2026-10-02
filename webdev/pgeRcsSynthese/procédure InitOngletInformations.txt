@@ -1,24 +1,27 @@
 // Résumé : Onglet Informations d'une opération RCS.
-// Différences avec pgeSmsSynthese : compteurs affichés en « portables »,
-// et ligne « Total après dédoublonnage » = PRÉVU par canal
-// (ope_rcs_envoi.CanalPrevu, disponible à partir de la programmation ;
-// avant, total des destinataires sans répartition).
-// Base utilisée avec un filtre : compteurs RCS du FILTRE comptés à la volée
+// Différences avec pgeSmsSynthese : compteurs affichés en « portables ».
+// Opération programmée (ope_rcs_envoi remplie) : compteurs par base = envois
+// réellement prévus (jointure dos_base_ligne sur IdBaseLigne), qui reflètent
+// filtre, dédoublonnage et choix du repli SMS (EstRepliSms).
+// Avant programmation : potentiel de la base, ou du filtre compté à la volée
 // dans clt_base_ligne (clt_base_filtre ne stocke pas la qualification RCS).
+// La partie « Sms de repli » est masquée quand le repli est décoché.
 procédure InitOngletInformations()
 
 
-nInd					est un entier
-sTexteRequete		est une chaîne
-sTexteRequeteFiltre	est une chaîne
-sClauseFiltre		est une chaîne
-sdReqBdd				est une Source de Données
-sdReqFiltre			est une Source de Données
-nNbr					est un entier
-nNbrPrevuRcs		est un entier
-nNbrPrevuSms		est un entier
-nNbrRcsBase			est un entier
-nNbrSmsBase			est un entier
+nInd						est un entier
+sTexteRequete			est une chaîne
+sTexteRequeteFiltre		est une chaîne
+sTexteRequeteEnvoiBase	est une chaîne
+sClauseFiltre			est une chaîne
+sdReqBdd					est une Source de Données
+sdReqFiltre				est une Source de Données
+sdReqEnvoi				est une Source de Données
+nNbr						est un entier
+nNbrPrevuRcs			est un entier
+nNbrPrevuSms			est un entier
+nNbrRcsBase				est un entier
+nNbrSmsBase				est un entier
 tabBase			est un tableau de StructBase
 taaBaseChamp	est un tableau associatif de structBaseChamp
 tabRapport		est un tableau de structRapport
@@ -49,6 +52,7 @@ sTexteRequete =
 [
 	SELECT
 	clt_base.IdBase,
+	dos_base.IdBase IdBaseDossier,
 	dos_base.IdFiltre,
 	clt_base.Nom BaseNom,
 	clt_base_filtre.Nom FiltreNom,
@@ -62,9 +66,22 @@ sTexteRequete =
 	dos_base.IdOperation = [%_pIdOperation%]
 ]
 
-// Compteurs RCS d'un filtre : non stockés dans clt_base_filtre, comptés à la
-// volée dans les lignes de la base avec la clause du filtre (%1), comme le fait
-// CalculeTotauxClientBaseFiltre pour les autres compteurs
+// Opération programmée : envois réellement prévus pour une base (%1),
+// retrouvés par la jointure sur dos_base_ligne — reflètent filtre,
+// dédoublonnage et choix du repli SMS (voir EnregistrementProgrammationRcs)
+sTexteRequeteEnvoiBase =
+[
+	SELECT
+	SUM(CASE WHEN ope_rcs_envoi.CanalPrevu = '[%__CANAL_PREVU_RCS__%]' THEN 1 ELSE 0 END) NbrRcs,
+	SUM(CASE WHEN ope_rcs_envoi.CanalPrevu = '[%__CANAL_PREVU_SMS__%]' THEN 1 ELSE 0 END) NbrSmsSeul
+	FROM ope_rcs_envoi
+	JOIN dos_base_ligne ON dos_base_ligne.IdBaseLigne = ope_rcs_envoi.IdBaseLigne
+	WHERE ope_rcs_envoi.IdRcs = [%_pIdOperation%] AND dos_base_ligne.IdBase = %1
+]
+
+// Avant programmation, compteurs RCS d'un filtre : non stockés dans
+// clt_base_filtre, comptés à la volée dans les lignes de la base avec la
+// clause du filtre (%1), comme CalculeTotauxClientBaseFiltre
 sTexteRequeteFiltre =
 [
 	SELECT
@@ -83,18 +100,29 @@ fin
 znrBaseDeDonnées.SupprimeTout()
 
 pour tout sdReqBdd
-	// Compteurs de la base entière par défaut, remplacés par ceux du filtre
-	// quand la base est utilisée avec un filtre
-	nNbrRcsBase	= Val(sdReqBdd.NbrRcs)
-	nNbrSmsBase	= Val(sdReqBdd.NbrSmsSeul)
+	si nNbrPrevuRcs + nNbrPrevuSms > 0 alors
+		// Opération programmée : envois réellement prévus pour cette base
+		nNbrRcsBase	= 0
+		nNbrSmsBase	= 0
+		sTexteRequete = ChaîneConstruit(sTexteRequeteEnvoiBase, sdReqBdd.IdBaseDossier)
+		si sdReqEnvoi.ExécuteRequêteSQL(ltr_support..Connexion, hRequêteSansCorrection, sTexteRequete) _et_ sdReqEnvoi.LitPremier(hSansRafraîchir) alors
+			nNbrRcsBase	= Val(sdReqEnvoi.NbrRcs)
+			nNbrSmsBase	= Val(sdReqEnvoi.NbrSmsSeul)
+		fin
+	sinon
+		// Avant programmation : potentiel de la base entière, ou du filtre
+		// compté à la volée quand la base est utilisée avec un filtre
+		nNbrRcsBase	= Val(sdReqBdd.NbrRcs)
+		nNbrSmsBase	= Val(sdReqBdd.NbrSmsSeul)
 
-	si sdReqBdd.IdFiltre > 0 alors
-		sClauseFiltre = GenereRequeteFiltreClientBase(sdReqBdd.IdBase, sdReqBdd.IdFiltre)
-		si sClauseFiltre <> "" alors
-			sTexteRequete = ChaîneConstruit(sTexteRequeteFiltre, sClauseFiltre)
-			si sdReqFiltre.ExécuteRequêteSQL(clt_base_ligne..Connexion, hRequêteSansCorrection, sTexteRequete) _et_ sdReqFiltre.LitPremier(hSansRafraîchir) alors
-				nNbrRcsBase	= Val(sdReqFiltre.NbrRcs)
-				nNbrSmsBase	= Val(sdReqFiltre.NbrSmsSeul)
+		si sdReqBdd.IdFiltre > 0 alors
+			sClauseFiltre = GenereRequeteFiltreClientBase(sdReqBdd.IdBase, sdReqBdd.IdFiltre)
+			si sClauseFiltre <> "" alors
+				sTexteRequete = ChaîneConstruit(sTexteRequeteFiltre, sClauseFiltre)
+				si sdReqFiltre.ExécuteRequêteSQL(clt_base_ligne..Connexion, hRequêteSansCorrection, sTexteRequete) _et_ sdReqFiltre.LitPremier(hSansRafraîchir) alors
+					nNbrRcsBase	= Val(sdReqFiltre.NbrRcs)
+					nNbrSmsBase	= Val(sdReqFiltre.NbrSmsSeul)
+				fin
 			fin
 		fin
 	fin
@@ -103,7 +131,12 @@ pour tout sdReqBdd
 	znrBaseDeDonnées[nInd].libBaseNom			= sdReqBdd.BaseNom
 	znrBaseDeDonnées[nInd].libFiltreNom			= sdReqBdd.FiltreNom
 	znrBaseDeDonnées[nInd].libBddNbrRcs			= NumériqueVersChaîne(nNbrRcsBase, "dS") + " Rcs"
-	znrBaseDeDonnées[nInd].libBddNbrSms			= NumériqueVersChaîne(nNbrSmsBase, "dS") + " Sms de repli"
+	si _stSynthèse.EstRepliSms alors
+		znrBaseDeDonnées[nInd].libBddNbrSms		= NumériqueVersChaîne(nNbrSmsBase, "dS") + " Sms de repli"
+	sinon
+		// Repli SMS décoché : les non-RCS ne recevront rien, ne rien afficher
+		znrBaseDeDonnées[nInd].libBddNbrSms		= ""
+	fin
 fin
 
 selon znrBaseDeDonnées.Occurrence
@@ -124,7 +157,11 @@ selon znrBaseDeDonnées.Occurrence
 		si nNbrPrevuRcs + nNbrPrevuSms > 0 alors
 			// Prévu par la programmation : cohérent avec les lignes par base
 			znrBaseDeDonnées[nInd].libBddNbrRcs	= NumériqueVersChaîne(nNbrPrevuRcs, "dS") + " Rcs"
-			znrBaseDeDonnées[nInd].libBddNbrSms	= NumériqueVersChaîne(nNbrPrevuSms, "dS") + " Sms de repli"
+			si _stSynthèse.EstRepliSms alors
+				znrBaseDeDonnées[nInd].libBddNbrSms	= NumériqueVersChaîne(nNbrPrevuSms, "dS") + " Sms de repli"
+			sinon
+				znrBaseDeDonnées[nInd].libBddNbrSms	= ""
+			fin
 		sinon
 			// Opération pas encore programmée : total sans répartition
 			znrBaseDeDonnées[nInd].libBddNbrRcs	= NumériqueVersChaîne(_stSynthèse.NbrDestinataire, "dS") + " destinataires"
@@ -190,3 +227,4 @@ dispInformation[4].Visible = _stSynthèse.EstBaseDeDonnéesChargée = Vrai _et_ 
 fin:
 sdReqBdd.AnnuleDéclaration()
 sdReqFiltre.AnnuleDéclaration()
+sdReqEnvoi.AnnuleDéclaration()

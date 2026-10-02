@@ -1,0 +1,120 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//ChargeTableauFacture (<stFacture> est structFacture, <stEmail> est structEmail)
+//
+// Paramètres :
+//	stFacture (structFacture) : <indiquez ici le rôle de pIdOperation>
+//	stEmail (structEmail) : <indiquez ici le rôle de stEmail>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure ChargeTableauFacture(stFacture est une structFacture, stEmail est une structEmail)
+
+stEmailTableau	est une structEmailTableau
+tabValeur		est un tableau de chaîne
+
+
+si stFacture.tabFactureLigne.Occurrence = 1 _et_ stFacture.tabFactureLigne[1].tabFactureDetail.Occurrence > 0 alors
+	// 1 Operation dans la facture on affiche le détail de la facture
+	// Désignation
+	stEmailTableau.Libelle		= "Désignation"
+	stEmailTableau.Alignement	= "left"
+	stEmail.tabTableauEntête.Ajoute(stEmailTableau)
+
+	// Quantité
+	stEmailTableau.Libelle		= "Quantité"
+	stEmailTableau.Alignement	= "center"
+	stEmail.tabTableauEntête.Ajoute(stEmailTableau)
+
+	// Prix unitaire
+	stEmailTableau.Libelle		= "Prix Unitaire"
+	stEmailTableau.Alignement	= "right"
+	stEmail.tabTableauEntête.Ajoute(stEmailTableau)
+
+	stEmailTableau.Libelle		= "Total"
+	stEmailTableau.Alignement	= "right"
+	stEmail.tabTableauEntête.Ajoute(stEmailTableau)
+
+	pour tout stFactureDetail de stFacture.tabFactureLigne[1].tabFactureDetail
+		tabValeur.SupprimeTout()
+		tabValeur.Ajoute(stFactureDetail.Designation)
+		tabValeur.Ajoute(stFactureDetail.Quantite)
+		si stFactureDetail.MontantHT > 0 alors
+			tabValeur.Ajoute(NumériqueVersChaîne(stFactureDetail.PrixUnitaire, ",3fS") + " €")
+			tabValeur.Ajoute(NumériqueVersChaîne(stFactureDetail.MontantHT, ",2fS") + " €")
+		sinon
+			tabValeur.Ajoute(" ")
+			tabValeur.Ajoute(" ")
+		fin
+		stEmail.tabTableauValeur.Ajoute(tabValeur)
+	fin
+sinon
+	// Plusieurs opérations dans la facture on affiche les opérations
+
+	// Dossier
+	stEmailTableau.Libelle		= "Dossier"
+	stEmailTableau.Alignement	= "center"
+	stEmail.tabTableauEntête.Ajoute(stEmailTableau)
+
+	// Désignation
+	stEmailTableau.Libelle		= "Désignation"
+	stEmailTableau.Alignement	= "left"
+	stEmail.tabTableauEntête.Ajoute(stEmailTableau)
+
+	// Quantité
+	stEmailTableau.Libelle		= "Quantité"
+	stEmailTableau.Alignement	= "center"
+	stEmail.tabTableauEntête.Ajoute(stEmailTableau)
+
+	// Prix unitaire
+	stEmailTableau.Libelle		= "Montant HT"
+	stEmailTableau.Alignement	= "right"
+	stEmail.tabTableauEntête.Ajoute(stEmailTableau)
+
+	pour tout stFactureLigne de stFacture.tabFactureLigne
+		tabValeur.SupprimeTout()
+		tabValeur.Ajoute(stFactureLigne.Dossier)
+		tabValeur.Ajoute(stFactureLigne.Designation)
+		tabValeur.Ajoute(stFactureLigne.Quantite)
+		tabValeur.Ajoute(NumériqueVersChaîne(stFactureLigne.MontantHT, ",2fS") + " €")
+		stEmail.tabTableauValeur.Ajoute(tabValeur)
+	fin
+
+fin
+
+// Ligne Total HT
+tabValeur.SupprimeTout()
+tabValeur.Ajoute("Total HT")								// Désignation
+tabValeur.Ajoute(" ")										// Qte
+tabValeur.Ajoute(" ")										// Prix Unitaire
+tabValeur.Ajoute(NumériqueVersChaîne(stFacture.MontantHT, ",2fS") + " €")	// Total
+stEmail.tabTableauValeur.Ajoute(tabValeur)
+
+// Ligne Total TVA
+tabValeur.SupprimeTout()
+tabValeur.Ajoute("Total TVA")								// Désignation
+tabValeur.Ajoute(" ")										// Qte
+tabValeur.Ajoute(" ")										// Prix Unitaire
+tabValeur.Ajoute(NumériqueVersChaîne(stFacture.MontantTVA, ",2fS") + " €")	// Total
+stEmail.tabTableauValeur.Ajoute(tabValeur)
+
+// Ligne Total TTC
+tabValeur.SupprimeTout()
+tabValeur.Ajoute("Total TTC")								// Désignation
+tabValeur.Ajoute(" ")										// Qte
+tabValeur.Ajoute(" ")										// Prix Unitaire
+tabValeur.Ajoute(NumériqueVersChaîne(stFacture.MontantTTC, ",2fS") + " €")	// Total
+stEmail.tabTableauValeur.Ajoute(tabValeur)
+
+si stFacture.ResteAPAyer > 0 alors
+	// Ligne Reste à payer
+	tabValeur.SupprimeTout()
+	tabValeur.Ajoute("Reste à payer")							// Désignation
+	tabValeur.Ajoute(" ")										// Qte
+	tabValeur.Ajoute(" ")										// Prix Unitaire
+	tabValeur.Ajoute(NumériqueVersChaîne(stFacture.ResteAPAyer, ",2fS") + " €")	// Total
+	stEmail.tabTableauValeur.Ajoute(tabValeur)
+fin

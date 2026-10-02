@@ -1,0 +1,21 @@
+procédure IconePrintBasDePage(local pTypeOperation, pNiveau = "M")
+
+sCheminIcone est une chaîne
+
+selon pTypeOperation
+	cas __OPERATION_COURRIER__							: sCheminIcone = fRepExe() + "\Print\ltr-bas-de-page-" + pNiveau + __PNG__
+	cas __OPERATION_TRACTEVA__							: sCheminIcone = fRepExe() + "\Print\tra-bas-de-page-" + pNiveau + __PNG__
+	cas __OPERATION_SMARTEVA__							: sCheminIcone = fRepExe() + "\Print\sms-bas-de-page-" + pNiveau + __PNG__
+	cas __OPERATION_SMS__								: sCheminIcone = fRepExe() + "\Print\sms-bas-de-page-" + pNiveau + __PNG__
+	cas __OPERATION_SMS_INTERACTIF__					: sCheminIcone = fRepExe() + "\Print\sms-bas-de-page-" + pNiveau + __PNG__
+	cas __OPERATION_VMS__								: sCheminIcone = fRepExe() + "\Print\vms-bas-de-page-" + pNiveau + __PNG__
+	cas __OPERATION_TEL__								: sCheminIcone = fRepExe() + "\Print\tel-bas-de-page-" + pNiveau + __PNG__
+	cas __OPERATION_EMAIL__								: sCheminIcone = fRepExe() + "\Print\eml-bas-de-page-" + pNiveau + __PNG__
+	cas __OPERATION_RNVP__, __OPERATION_BLOCTEL__		: sCheminIcone = fRepExe() + "\Print\bdd-bas-de-page-" + pNiveau + __PNG__
+	cas __OPERATION_COURRIER_GESTION__					: sCheminIcone = fRepExe() + "\Print\ltr-bas-de-page-" + pNiveau + __PNG__
+	cas __OPERATION_MARKETEAM__							: sCheminIcone = fRepExe() + "\Print\mkt-bas-de-page-" + pNiveau + __PNG__
+	autre cas					
+fin
+
+renvoyer sCheminIcone
+

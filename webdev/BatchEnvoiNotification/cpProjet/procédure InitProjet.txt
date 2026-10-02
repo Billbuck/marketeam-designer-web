@@ -1,0 +1,13 @@
+procédure InitProjet()
+
+
+__sRepRacine				= cpFonction.ValeurParametre("rep_racine_marketeam")
+__sHttpMarketeam			= cpFonction.ValeurParametre("http_marketeam",prm_parametre.ValChaine..Nom)
+__sRepUpload				= cpFonction.ValeurParametre("repweb_uploads",prm_parametre.ValChaine..Nom)
+__moTauxTVA					= cpFonction.ValeurParametre("Taux_TVA",prm_parametre.ValNumerique..Nom)
+__sRepEmailIcone			= cpFonction.ValeurParametre("rep_email_icone",prm_parametre.ValChaine..Nom)
+__sMarketeamRepRacine	= cpFonction.ValeurParametre("marketeam_rep_web",prm_parametre.ValChaine..Nom)
+
+__taaUrl[__CODE_SITE_MARKETEAM__]	= cpFonction.ValeurParametre("Url_MKT")
+__taaUrl[__CODE_SITE_KINGCALL__]	= cpFonction.ValeurParametre("Url_TEL")
+

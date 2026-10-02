@@ -1,0 +1,101 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] CouleurEmail (<pType>)
+//
+// Paramètres :
+//	pType : <indiquez ici le rôle de pType>
+// Valeur de retour :
+// 	Type indéterminé : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+//	pDossier : <indiquez ici le rôle de pDossier>
+//	pLigne : <indiquez ici le rôle de pLigne>
+//	pNiveau (valeur par défaut="M") : < indiquez ici le rôle de pNiveau >
+procédure CouleurEmail(pType)
+
+stEmailCouleur est une structEmailCouleur
+
+
+selon pType
+	cas __OPERATION_COURRIER__ , __OPERATION_RNVP__ , __OPERATION_COURRIER_GESTION__
+		stEmailCouleur.XXS		= __COULEUR_COURRIER_XXS__
+		stEmailCouleur.XS		= __COULEUR_COURRIER_XS__
+		stEmailCouleur.S		= __COULEUR_COURRIER_S__
+		stEmailCouleur.M		= __COULEUR_COURRIER_M__
+		stEmailCouleur.L		= __COULEUR_COURRIER_XL__
+		stEmailCouleur.XL		= __COULEUR_COURRIER_XL__
+		stEmailCouleur.XXL		= __COULEUR_COURRIER_XXL__
+
+	cas __OPERATION_TRACTEVA__ , __OPERATION_SMARTEVA__
+		stEmailCouleur.XXS		= __COULEUR_TRACT_XXS__
+		stEmailCouleur.XS		= __COULEUR_TRACT_XS__
+		stEmailCouleur.S		= __COULEUR_TRACT_S__
+		stEmailCouleur.M		= __COULEUR_TRACT_M__
+		stEmailCouleur.L		= __COULEUR_TRACT_L__
+		stEmailCouleur.XL		= __COULEUR_TRACT_XL__
+		stEmailCouleur.XXL		= __COULEUR_TRACT_XXL__
+
+	cas __OPERATION_SMS__, __OPERATION_SMS_NOTIFICATION__, __OPERATION_SMS_INTERACTIF__
+		stEmailCouleur.XXS		= __COULEUR_SMS_XXS__
+		stEmailCouleur.XS		= __COULEUR_SMS_XS__
+		stEmailCouleur.S		= __COULEUR_SMS_S__
+		stEmailCouleur.M		= __COULEUR_SMS_M__
+		stEmailCouleur.L		= __COULEUR_SMS_L__
+		stEmailCouleur.XL		= __COULEUR_SMS_XL__
+		stEmailCouleur.XXL		= __COULEUR_SMS_XXL__
+
+	cas __OPERATION_VMS__
+		stEmailCouleur.XXS		= __COULEUR_VMS_XXS__
+		stEmailCouleur.XS		= __COULEUR_VMS_XS__
+		stEmailCouleur.S		= __COULEUR_VMS_S__
+		stEmailCouleur.M		= __COULEUR_VMS_M__
+		stEmailCouleur.L		= __COULEUR_VMS_L__
+		stEmailCouleur.XL		= __COULEUR_VMS_XL__
+		stEmailCouleur.XXL		= __COULEUR_VMS_XXL__
+
+	cas __OPERATION_EMAIL__
+		stEmailCouleur.XXS		= __COULEUR_EMAIL_XXS__
+		stEmailCouleur.XS		= __COULEUR_EMAIL_XS__
+		stEmailCouleur.S		= __COULEUR_EMAIL_S__
+		stEmailCouleur.M		= __COULEUR_EMAIL_M__
+		stEmailCouleur.L		= __COULEUR_EMAIL_L__
+		stEmailCouleur.XL		= __COULEUR_EMAIL_XL__
+		stEmailCouleur.XXL		= __COULEUR_EMAIL_XXL__
+
+
+	cas __OPERATION_TEL__ , __OPERATION_BLOCTEL__
+		stEmailCouleur.XXS		= __COULEUR_TEL_XXS__
+		stEmailCouleur.XS		= __COULEUR_TEL_XS__
+		stEmailCouleur.S		= __COULEUR_TEL_S__
+		stEmailCouleur.M		= __COULEUR_TEL_M__
+		stEmailCouleur.L		= __COULEUR_TEL_L__
+		stEmailCouleur.XL		= __COULEUR_TEL_XL__
+		stEmailCouleur.XXL		= __COULEUR_TEL_XXL__
+
+	cas __OPERATION_BASE_DE_DONNEES__
+		stEmailCouleur.XXS		= __COULEUR_BDD_XXS__
+		stEmailCouleur.XS		= __COULEUR_BDD_XS__
+		stEmailCouleur.S		= __COULEUR_BDD_S__
+		stEmailCouleur.M		= __COULEUR_BDD_M__
+		stEmailCouleur.L		= __COULEUR_BDD_L__
+		stEmailCouleur.XL		= __COULEUR_BDD_XL__
+		stEmailCouleur.XXL		= __COULEUR_BDD_XXL__
+
+	autres cas
+		stEmailCouleur.XXS		= __COULEUR_MARKETEAM_XXS__
+		stEmailCouleur.XS		= __COULEUR_MARKETEAM_XS__
+		stEmailCouleur.S		= __COULEUR_MARKETEAM_S__
+		stEmailCouleur.M		= __COULEUR_MARKETEAM_M__
+		stEmailCouleur.L		= __COULEUR_MARKETEAM_L__
+		stEmailCouleur.XL		= __COULEUR_MARKETEAM_XL__
+		stEmailCouleur.XXL		= __COULEUR_MARKETEAM_XXL__
+
+fin
+
+
+stEmailCouleur.Cadre 	= __COULEUR_GRIS_S__
+stEmailCouleur.Tableau	= __COULEUR_GRIS_S__
+
+renvoyer stEmailCouleur

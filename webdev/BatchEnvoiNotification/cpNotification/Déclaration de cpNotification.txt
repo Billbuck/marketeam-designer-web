@@ -1,0 +1,21 @@
+// Déclaration de cpNotification
+
+__sUrlMarketeam 	est une chaîne
+__sUrlRapportExcel	est une chaîne
+
+
+structNotificationMessage est une Structure
+	'Message'				est une chaîne
+	CodeType				est une chaîne
+	IdValideur				est un entier
+	IdClient				est un entier
+	IdOperation				est un entier
+	TypeOperation 			est une chaîne
+	IdFacture				est un entier
+	TypeFacture 			est une chaîne
+	IdAbonnement			est un entier
+	TypeAbonnement 			est une chaîne
+	DateHeureNotification	est une DateHeure
+	Variables 				est un JSON
+	Mode 					est une chaîne
+fin

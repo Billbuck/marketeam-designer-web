@@ -1,0 +1,108 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//BatchEnvoiSms ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure BatchEnvoiSms()
+
+sTexteRequete			est une chaîne
+sdReqEnvoiSms			est une Source de Données
+stNotificationMessage	est une structNotificationMessage
+sDossier				est une chaîne
+sSmsObjet 				est une chaîne
+sSmsMessage 			est une chaîne
+sSmsPortable 			est une chaîne
+moPrixUnitaireSms 		est un monétaire
+
+
+sTexteRequete				=
+[
+	SELECT 
+		sms_envoi.IdSmsEnvoi,
+		sms_envoi.IdContact,
+		sms_envoi.IdClient,
+		sms_envoi.IdOperation,
+		sms_envoi.TypeOperation,
+		sms_envoi.IdFacture,
+		sms_envoi.TypeFacture,
+		sms_envoi.IdAbonnement,
+		sms_envoi.TypeAbonnement,
+		sms_envoi.CodeSmsType,
+		sms_envoi.Portable,
+		sms_envoi.DateHeureDemande,
+		sms_envoi.Variable,
+		prm_sms_type.Libelle,
+		prm_sms_type.Objet,
+		CONCAT(prm_sms_type.Message, '\r\n\r\n', prm_sms_signature.Signature) AS 'Message'
+	FROM
+		sms_envoi
+		JOIN prm_sms_type ON prm_sms_type.CodeSmsType = sms_envoi.CodeSmsType
+		LEFT JOIN prm_sms_signature ON prm_sms_signature.IdSignature = prm_sms_type.IdSignature
+	WHERE
+		sms_envoi.DateHeureEnvoi IS NULL
+		AND sms_envoi.DateHeureDemande <= DATE_ADD(NOW(), INTERVAL -5 SECOND)
+]
+
+
+si pas sdReqEnvoiSms.ExécuteRequêteSQL(email_envoi..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête","Procédure","Traitement","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+	retour
+fin
+
+pour tout sdReqEnvoiSms
+
+	VariableRAZ(stNotificationMessage)
+	stNotificationMessage.CodeType				= sdReqEnvoiSms.CodeSmsType
+	stNotificationMessage.IdClient				= sdReqEnvoiSms.IdClient
+	stNotificationMessage.IdValideur			= sdReqEnvoiSms.IdContact
+	stNotificationMessage.DateHeureNotification	= sdReqEnvoiSms.DateHeureDemande
+	stNotificationMessage.IdOperation			= sdReqEnvoiSms.IdOperation
+	stNotificationMessage.TypeOperation			= sdReqEnvoiSms.TypeOperation
+	stNotificationMessage.IdFacture				= sdReqEnvoiSms.IdFacture
+	stNotificationMessage.TypeFacture			= sdReqEnvoiSms.TypeFacture
+	stNotificationMessage.IdAbonnement			= sdReqEnvoiSms.IdAbonnement
+	stNotificationMessage.TypeAbonnement		= sdReqEnvoiSms.TypeAbonnement
+	stNotificationMessage.Variables				= sdReqEnvoiSms.Variable
+	stNotificationMessage.Message				= sdReqEnvoiSms.Message
+	stNotificationMessage.Mode					= "Sms"
+
+	sDossier									= (stNotificationMessage.Variables.Dossier..Existe) ? stNotificationMessage.Variables.Dossier sinon ""
+
+	sSmsObjet									= sdReqEnvoiSms.Objet
+	sSmsMessage									= cpNotification.PersonnaliseMessage(stNotificationMessage)
+	sSmsPortable								= cpFonction.Telephone(sdReqEnvoiSms.Portable,2)
+	moPrixUnitaireSms							= PrixUnitaireSms(sdReqEnvoiSms.IdClient)
+
+	si moPrixUnitaireSms > 0 alors
+
+		si SmsNotificationEnvoie(sSmsPortable, sSmsObjet, sSmsMessage, sdReqEnvoiSms.IdClient, sdReqEnvoiSms.IdContact, sdReqEnvoiSms.IdOperation, moPrixUnitaireSms) alors
+			si sms_envoi.LitRecherchePremier(IdSmsEnvoi, sdReqEnvoiSms.IdSmsEnvoi) alors
+				TableAjouteLigne(tblNotification,sDossier,cpFonction.Telephone(sSmsPortable,1,"."),DateHeureSys(),sdReqEnvoiSms.Libelle)
+				sms_envoi.DateHeureEnvoi = DateHeureSys()
+				sms_envoi.Modifie()
+			fin
+		sinon
+			si sms_envoi.LitRecherchePremier(IdSmsEnvoi, sdReqEnvoiSms.IdSmsEnvoi) alors
+				TableAjouteLigne(tblNotification,sDossier,cpFonction.Telephone(sSmsPortable,1,"."),DateHeureSys(),"Erreur")
+				sms_envoi.DateHeureEnvoi = DateHeureSys()
+				sms_envoi.Modifie()
+			fin
+		fin
+	sinon
+		si sms_envoi.LitRecherchePremier(IdSmsEnvoi, sdReqEnvoiSms.IdSmsEnvoi) alors
+			TableAjouteLigne(tblNotification,sDossier,cpFonction.Telephone(sSmsPortable,1,"."),DateHeureSys(),"Erreur")
+			sms_envoi.DateHeureEnvoi = DateHeureSys()
+			sms_envoi.Modifie()
+		fin
+	fin
+fin
+
+fin:
+sdReqEnvoiSms.AnnuleDéclaration()

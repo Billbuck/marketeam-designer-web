@@ -1,0 +1,111 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//ChargeTableauDevis (<pIdOperation>, <stEmail> est structEmail)
+//
+// Paramètres :
+// 	pIdOperation : <indiquez ici le rôle de pIdOperation>
+//	stEmail (structEmail) : <indiquez ici le rôle de stEmail>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure ChargeTableauDevis(pIdOperation, stEmail est une structEmail)
+
+sTexteRequete	est une chaîne
+sdReqDevis		est une Source de Données
+stEmailTableau	est une structEmailTableau
+tabValeur		est un tableau de chaîne
+moTotalHT		est un monétaire
+moTotalTVA		est un monétaire
+moTotalTTC		est un monétaire
+
+sTexteRequete = [
+	SELECT
+	dos_operation_ligne.Designation,
+	dos_operation_ligne.Qte,
+	dos_operation_ligne.PrixUnitaireVenteNet,
+	dos_operation_ligne.TauxTva
+	FROM
+	dos_operation_ligne
+	WHERE
+	dos_operation_ligne.IdOperation = [%pIdOperation%]
+	ORDER BY
+	dos_operation_ligne.IdOperationLigne
+]
+
+
+si pas sdReqDevis.ExécuteRequêteSQL(dos_operation_ligne.Connexion,hRequêteSansCorrection,sTexteRequete) alors
+	<compile si TypeConfiguration<>ServeurWebSocket>
+		Erreur("Erreur Requête")
+	<fin>
+	STOP
+fin
+
+// Désignation
+stEmailTableau.Libelle		= "Désignation"
+stEmailTableau.Alignement	= "left"
+stEmail.tabTableauEntête.Ajoute(stEmailTableau)
+
+// Quantité
+stEmailTableau.Libelle		= "Quantité"
+stEmailTableau.Alignement	= "center"
+stEmail.tabTableauEntête.Ajoute(stEmailTableau)
+
+// Prix unitaire
+stEmailTableau.Libelle		= "Prix Unitaire"
+stEmailTableau.Alignement	= "right"
+stEmail.tabTableauEntête.Ajoute(stEmailTableau)
+
+stEmailTableau.Libelle		= "Total"
+stEmailTableau.Alignement	= "right"
+stEmail.tabTableauEntête.Ajoute(stEmailTableau)
+
+
+pour tout sdReqDevis
+	tabValeur.SupprimeTout()
+	tabValeur.Ajoute(sdReqDevis.Designation)
+	tabValeur.Ajoute(sdReqDevis.Qte)
+	si sdReqDevis.PrixUnitaireVenteNet > 0 alors
+		tabValeur.Ajoute(NumériqueVersChaîne(sdReqDevis.PrixUnitaireVenteNet, ",3fS") + " €")
+		tabValeur.Ajoute(NumériqueVersChaîne(sdReqDevis.Qte * sdReqDevis.PrixUnitaireVenteNet, ",2fS") + " €")
+	sinon
+		tabValeur.Ajoute(" ")
+		tabValeur.Ajoute(" ")
+	fin
+	stEmail.tabTableauValeur.Ajoute(tabValeur)
+
+
+	moTotalHT 	+= sdReqDevis.Qte * sdReqDevis.PrixUnitaireVenteNet
+	moTotalTVA	+= sdReqDevis.Qte * sdReqDevis.PrixUnitaireVenteNet * sdReqDevis.TauxTVA / 100
+fin
+
+moTotalTTC	= moTotalHT + moTotalTVA
+
+// Ligne Total HT
+tabValeur.SupprimeTout()
+tabValeur.Ajoute("Total HT")								// Désignation
+tabValeur.Ajoute(" ")										// Qte
+tabValeur.Ajoute(" ")										// Prix Unitaire
+tabValeur.Ajoute(NumériqueVersChaîne(moTotalHT, ",2fS") + " €")	// Total
+stEmail.tabTableauValeur.Ajoute(tabValeur)
+
+// Ligne Total TVA
+tabValeur.SupprimeTout()
+tabValeur.Ajoute("Total TVA")								// Désignation
+tabValeur.Ajoute(" ")										// Qte
+tabValeur.Ajoute(" ")										// Prix Unitaire
+tabValeur.Ajoute(NumériqueVersChaîne(moTotalTVA, ",2fS") + " €")	// Total
+stEmail.tabTableauValeur.Ajoute(tabValeur)
+
+// Ligne Total TTC
+tabValeur.SupprimeTout()
+tabValeur.Ajoute("Total TTC")								// Désignation
+tabValeur.Ajoute(" ")										// Qte
+tabValeur.Ajoute(" ")										// Prix Unitaire
+tabValeur.Ajoute(NumériqueVersChaîne(moTotalTTC, ",2fS") + " €")	// Total
+stEmail.tabTableauValeur.Ajoute(tabValeur)
+
+fin:
+sdReqDevis.AnnuleDéclaration()

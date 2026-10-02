@@ -1,0 +1,26 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] TestSmsUnicode (<pMessage>)
+//
+// Paramètres :
+//	pMessage : <indiquez ici le rôle de pSms>
+// Valeur de retour :
+// 	booléen : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure TestSmsUnicode(local pMessage)
+
+tabCaracteresSmsStandard est un tableau de chaînes	= [Caract(34),Caract(10),"-"," ","\","@","£","$","¥","è","é","ù","ì","ò","Ç","Ø","ø","Å","å","_","^","{","}","[","~","]","|","€","Æ","æ","ß","É","!","#","¤","%","&","'","(",")","*","+",",",".","/","0","1","2","3","4","5","6","7","8","9",":",";","<","=",">","?","¡","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","Ä","Ö","Ñ","Ü","§","¿","a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","ä","ö","ñ","ü","à"]
+
+si pMessage = "" alors renvoyer Faux
+
+pMessage	= Remplace(pMessage,RC,Caract(10))
+pMessage	= Remplace(pMessage,tabCaracteresSmsStandard,"")
+
+si Taille(pMessage) > 0 alors
+	renvoyer Vrai
+sinon
+	renvoyer Faux
+fin

@@ -1,0 +1,713 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] ChargeEmailStructure (<stEmail> est structEmail, <pTableau>)
+//
+// Paramètres :
+//	stEmail (structEmail) : <indiquez ici le rôle de pSociete>
+//	pTableau : <indiquez ici le rôle de pContenu>
+// Valeur de retour :
+// 	htmlDocument : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+// 	pContact : <indiquez ici le rôle de pContact>
+//	pEntete : <indiquez ici le rôle de pEntete>
+//	pMessage : <indiquez ici le rôle de pMessage>
+//	pContenu : <indiquez ici le rôle de pContenu>
+//	pTypeProjet : <indiquez ici le rôle de pTypeOperation>
+procédure ChargeEmailStructure(local stEmail est une structEmail, pTableau)
+
+sEmail				est un htmlDocument
+sUrlEmailIcone		est une chaîne
+sInformation		est une chaîne
+
+__sHttpMarketeam = "https://www.marketeam.direct/MARKETEAM_WEB/"
+
+sUrlEmailIcone = __sHttpMarketeam + ["/"] + __sRepEmailIcone + ["/"]
+
+
+// On construit le bloc information
+pour tout stInformation de stEmail.tabInformation
+	sInformation += [RC] + [
+	<p class="sous-titre"><span class="libelle">[%stInformation.Libelle%] : </span><span class="valeur">[%stInformation.Valeur%]</span></p>
+	]
+fin
+
+
+
+sEmail..ContenuHTML = ChaîneVersUTF8([
+
+<!DOCTYPE html>
+<html lang="fr">
+	<head>
+	    <meta charset="UTF-8">
+	    <title>Titre</title>
+	    <link rel="preconnect" href="https://fonts.googleapis.com">
+	    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+	    <style type="text/css">
+			/* Styles généraux */
+			body {
+			    margin: 0;
+			    padding: 0;
+			    background-color: [%stEmail.Couleur.XS%];
+			    font-family: 'Inter', Helvetica, Arial, sans-serif, system-ui;
+			}
+			.container {
+			    width: 100% !important;
+			    background-color: #FFFFFF;
+			    border: 1px solid [%stEmail.Couleur.Cadre%];
+			    border-radius: 10px;
+			    overflow: hidden;
+			    padding: 0;
+			}
+			.content {
+			    padding: 0 15px;
+			}
+			
+			/* Classes pour les éléments à personnaliser */
+			.logo-marketeam {
+			    width: 220px;
+			}
+			.contact {
+			    font-size: 14px;
+			    color: #445159;
+			    margin: 0;
+			}
+			.societe {
+			    font-size: 14px;
+			    color: #445159;
+			    margin: 5px 0 0 0;
+			}
+			.espace-client {
+			    font-size: 14px;
+			    margin: 5px 0 0 0;
+			}
+			.espace-client a {
+			    color: [%stEmail.Couleur.L%];
+			    font-weight: bold;
+			    text-decoration: none;
+			}
+			
+			/* Styles pour les entêtes de colonnes */
+			.table-header .table-cell {
+			    font-size: 12px;
+			    color: #FFFFFF;
+			    background-color: [%stEmail.Couleur.L%];
+			    font-weight: bold;
+			    text-align: center;
+			    vertical-align: middle;
+			    border: 1px solid [%stEmail.Couleur.Tableau%];
+			    height: 30px; /* Paramètre pour la hauteur de la ligne d'entête */
+			    padding-left: 5px;
+			    padding-right: 5px;
+			}
+			
+			/* Styles généraux pour les lignes du tableau */
+			.table-row .table-cell {
+			    font-size: 14px;
+			    color: #445159;
+			    vertical-align: middle;
+			    border: 1px solid [%stEmail.Couleur.Tableau%];
+			    padding-left: 5px;
+			    padding-right: 5px;
+			}
+			
+			/* Hauteur spécifique pour les lignes de données en mode desktop */
+			@media only screen and (min-width: 601px) {
+			    .table-row .table-cell {
+			        height: 40px; /* Paramètre pour la hauteur des lignes de données */
+			    }
+			}
+			
+			/* Autres styles */
+			.title {
+			    font-size: 20px;
+			    font-weight: bold;
+			    color: [%stEmail.Couleur.XXL%];
+			    margin: 0;
+			}
+			.sous-titre {
+			    font-size: 16px;
+			    color: #445159;
+			    margin: 5px 0 0 0;
+			}
+			.libelle {
+			    display: inline;
+			    color: #445159;
+			}
+			.valeur {
+			    font-weight: bold;
+			    color: [%stEmail.Couleur.L%];
+			    display: inline;
+			}
+			
+			/* Styles spécifiques pour le Conteneur Marketeam */
+			.marketeam-container {
+			    width: 100% !important;
+			    max-width: 900px;
+			}
+			
+			.marketeam-desktop {
+			    width: 100%;
+			    table-layout: fixed;
+			}
+			
+			.marketeam-desktop td {
+			    vertical-align: top;
+			    padding: 0;
+			    width: 33.3333%;
+			}
+			
+			.marketeam-desktop td table {
+			    width: 100%;
+			}
+			
+			
+			/* Styles spécifiques pour le mobile */
+			@media only screen and (max-width: 600px) {
+			    .logo-marketeam {
+			        width: 160px !important;
+			    }
+			    .contact {
+			        font-size: 12px !important;
+			    }
+			    .societe {
+			        font-size: 12px !important;
+			    }
+			    .espace-client {
+			        font-size: 12px !important;
+			    }
+			    .container {
+			        width: 100% !important;
+			        padding-left: 10px;
+			        padding-right: 10px;
+			    }
+			    .content {
+			        padding: 0px 0px;
+			    }
+			    .title {
+			        font-size: 18px !important;
+			    }
+			    .subtitle {
+			        font-size: 14px !important;
+			    }
+			    .sous-titre {
+			        font-size: 14px;
+			        color: #445159;
+			        margin: 5px 0 0 0;
+			    }
+			
+			    .table-header,
+			    .desktop-only,
+			    .desktop-header {
+			        display: none !important;
+			    }
+			    .mobile-only,
+			    .mobile-header {
+			        display: block !important;
+			    }
+			    .table-row {
+			        display: block;
+			        border: 1px solid [%stEmail.Couleur.Tableau%];
+			        border-radius: 8px;
+			        padding: 15px;
+			        margin-bottom: 10px;
+			    }
+			    .table-cell {
+			        display: block;
+			        width: 100% !important;
+			        border: none !important;
+			        padding: 0px !important; /* espacement vertical entre les valeurs du tableau en mobile */
+			        height: auto !important;
+			    }
+			    .label {
+			        color: [%stEmail.Couleur.L%];
+			        display: inline;
+			        font-size: 13px !important;
+			    }
+			    .value {
+			        font-weight: bold;
+			        display: inline;
+			        color: #445159;
+			        font-size: 15px !important;
+			    }
+			    /* Aligner les éléments à gauche en mobile */
+			    .mobile-header td {
+			        text-align: left !important;
+			    }
+			    /* Styles pour la signature en mobile */
+			    .signature-container {
+			        padding-left: 15px !important;
+			        padding-right: 15px !important;
+			    }
+			    .signature-table td {
+			        padding: 5px 2px !important;
+			    }
+			    .signature-table img {
+			        max-width: 75px !important;
+			    }
+			    .marketeam-desktop {
+			        display: none !important;
+			    }
+			    .marketeam-mobile {
+			        display: table-row !important;
+			    }
+			}
+			/* Masquer sur mobile */
+			.mobile-only {
+			    display: none;
+			}
+		</style>
+		
+		<!--[if mso]>
+			<style type="text/css">
+				.mobile-only {
+		            display: none !important;
+		        }
+		        .desktop-only {
+		            display: block !important;
+		        }
+		        /* Styles en ligne pour Outlook */
+		        .logo-marketeam {
+		            width: 220px !important;
+		        }
+		        .contact {
+		            font-size: 16px !important;
+		        }
+		        .societe {
+		            font-size: 18px !important;
+		        }
+		        .espace-client {
+		            font-size: 15px !important;
+		        }
+		        .table-row .table-cell {
+		            height: 40px !important;
+		        }
+		        .table-cell {
+		            padding-left: 5px !important;
+		            padding-right: 5px !important;
+		        }
+		        /* Styles pour la signature dans Outlook */
+		        .signature-container {
+		            padding-left: 20px !important;
+		            padding-right: 20px !important;
+		        }
+		        .signature-table td {
+		            padding: 0 5px !important;
+		        }
+		        .signature-table img {
+		            max-width: 75px !important;
+		            width: 100% !important;
+		            height: auto !important;
+		            display: block !important;
+		        }
+		    </style>
+		<![endif]-->
+	</head>
+
+	<body>
+
+		<!-- Conteneur Logo -->
+		<table width="100%" cellpadding="0" cellspacing="0" border="0" align="center">
+			<tr>
+				<td align="center" style="padding-left: 15px; padding-right: 15px;">
+
+					<!-- Espace vide en haut -->
+					<table width="100%" cellpadding="0" cellspacing="0" border="0">
+						<tr>
+							<td height="15"></td>
+						</tr>
+					</table>
+
+					<table class="container" width="100%" cellpadding="0" cellspacing="0" border="0" align="center">
+						<!-- Entête avec le logo et informations -->
+						<tr>
+							<td class="content" style="padding-bottom: 0px;">
+								<!-- Logo et informations sur une seule ligne -->
+								<table width="100%" cellpadding="0" cellspacing="0" border="0">
+									<tr>
+										<!-- Logo à gauche -->
+										<td align="left" style="padding: 15px 10px;">
+											<img src="[%sUrlEmailIcone%][%stEmail.CodeLogo%]-logo.svg" alt="Logo Marketeam" class="logo-marketeam" width="300" style="display:block; border:0;">
+										</td>
+										<!-- Contact, société, et espace client à droite -->
+										<td align="right" style="padding: 10px 10px; vertical-align: middle;">
+											<p class="contact" style="font-size:14px; color:#445159; margin:0;">[%stEmail.Contact%]</p>
+											<p class="societe" style="font-size:14px; color:#445159; margin:5px 0 0 0;">[%stEmail.Société%]</p>
+											<p class="espace-client" style="font-size:14px; margin:5px 0 0 0;"><a href="https://www.marketeam.direct/Marketeam" style="color:[%stEmail.Couleur.L%]; font-weight:bold; text-decoration:none;">Espace client</a></p>
+										</td>
+									</tr>
+								</table>
+							</td>
+						</tr>
+					</table>
+				</td>
+			</tr>
+		</table>
+
+
+		<!-- Conteneur Opération -->
+		<table width="100%" cellpadding="0" cellspacing="0" border="0" align="center">
+			<tr>
+				<td align="center" style="padding-left: 15px; padding-right: 15px;">
+					<!-- Espace vide en haut -->
+					<table width="100%" cellpadding="0" cellspacing="0" border="0">
+						<tr>
+							<td height="15"></td>
+						</tr>
+					</table>
+
+					<table class="container" width="100%" cellpadding="0" cellspacing="0" border="0" align="center">
+						<!-- Entête avec le logo et informations -->
+						<tr>
+							<td class="content" style="padding-bottom: 0px; padding-top: 0px;">
+
+								<!-- Version desktop de l'entête -->
+								<table width="100%" cellpadding="0" cellspacing="0" border="0" class="desktop-only">
+									<tr>
+										<!-- Icone avec le titre de l'opération -->
+										<td valign="top" align="left" style="padding:15px 0;">
+											<table cellpadding="0" cellspacing="0" border="0">
+												<tr>
+													<td valign="top">
+														<img src="[%sUrlEmailIcone%][%stEmail.CodeIcone%]-icone.svg" alt="Icone" width="50" height="50" style="display:block; border:0;">
+													</td>
+													<td valign="center" style="padding-left:10px;">
+														<p class="title">[%stEmail.Titre%]</p>
+													</td>
+												</tr>
+											</table>
+										</td>
+									</tr>
+								</table>
+								<!-- Version mobile du conteneur Opération -->
+								<!--[if !mso]><!-->
+								<table width="100%" cellpadding="0" cellspacing="0" border="0" class="mobile-only" style="display:none;">
+									<!-- Icone avec le titre de l'opération -->
+									<tr>
+										<td style="padding:7px 0;">
+											<table cellpadding="0" cellspacing="0" border="0">
+												<tr>
+													<td valign="top">
+														<img src="[%sUrlEmailIcone%][%stEmail.CodeIcone%]-icone.svg" alt="Icone" width="40" height="40" style="display:block; border:0;">
+													</td>
+													<td valign="middle" style="padding-left:10px;">
+														<p class="title">[%stEmail.Titre%]</p>
+													</td>
+												</tr>
+											</table>
+										</td>
+									</tr>
+								</table>
+								<!--<![endif]-->
+							</td>
+						</tr>
+					</table>
+				</td>
+			</tr>
+		</table>
+
+		<!-- Conteneur Message -->
+		<table width="100%" cellpadding="0" cellspacing="0" border="0" align="center">
+			<tr>
+				<td align="center" style="padding-left: 15px; padding-right: 15px;">
+
+					<!-- Espace vide en haut -->
+					<table width="100%" cellpadding="0" cellspacing="0" border="0">
+						<tr>
+							<td height="15"></td>
+						</tr>
+					</table>
+
+					<table class="container" width="100%" cellpadding="0" cellspacing="0" border="0" align="center">
+						<!-- Entête avec le logo et informations -->
+						<tr>
+							<td class="content" style="padding-bottom: 5px; padding-top: 5px;">
+
+								<table width="100%" cellpadding="0" cellspacing="0" border="0" class="desktop-only">
+									<tr>
+										<td valign="center" style="padding:10px 15px;">
+											[%sInformation%]
+										</td>
+									</tr>
+								</table>
+
+								<!-- Version mobile du conteneur Message -->
+								<!--[if !mso]><!-->
+								<table width="100%" cellpadding="0" cellspacing="0" border="0" class="mobile-only" style="display:none;">
+									<tr>
+										<td valign="center" style="padding:10px 15px;">
+											[%sInformation%]
+										</td>
+									</tr>
+								</table>
+								<!--<![endif]-->
+
+								<!-- Message -->
+								<table width="100%" cellpadding="0" cellspacing="0" border="0">
+									<tr>
+										<td style="padding:15px 15px;">
+											[%stEmail.Message%]
+										</td>
+									</tr>
+								</table>
+							</td>
+						</tr>
+					</table>
+				</td>
+			</tr>
+		</table>
+
+
+		[%pTableau%]
+
+		<!-- Conteneur Signature -->
+		<table width="100%" cellpadding="0" cellspacing="0" border="0" align="center">
+			<tr>
+				<td align="center" style="padding-left:15px; padding-right:15px;">
+
+					<!-- Conteneur de la signature -->
+					<table class="container" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" margin:0 auto;">
+						<tr>
+							<td style="padding-left: 20px; padding-right: 20px; padding-bottom: 10px; padding-top: 10px;">
+
+								<table width="100%" cellpadding="0" cellspacing="0" border="0">
+									<tr>
+										<!-- Pictogramme 1 -->
+										<td align="center" valign="middle" style="width:14.28%; padding:0 5px;">
+											<img src="[%sUrlEmailIcone%]Bas/[%stEmail.CodeLogo%]-bas-bdd.svg" alt="Données" width="75" style="max-width:75px; width:100%; height:auto; display:block; border:0;">
+										</td>
+										<!-- Pictogramme 2 -->
+										<td align="center" valign="middle" style="width:14.28%; padding:0 5px;">
+											<img src="[%sUrlEmailIcone%]Bas/[%stEmail.CodeLogo%]-bas-sms.svg" alt="Sms" width="75" style="max-width:75px; width:100%; height:auto; display:block; border:0;">
+										</td>
+										<!-- Pictogramme 3 -->
+										<td align="center" valign="middle" style="width:14.28%; padding:0 5px;">
+											<img src="[%sUrlEmailIcone%]Bas/[%stEmail.CodeLogo%]-bas-ltr.svg" alt="Courrier" width="75" style="max-width:75px; width:100%; height:auto; display:block; border:0;">
+										</td>
+										<!-- Pictogramme 4 -->
+										<td align="center" valign="middle" style="width:14.28%; padding:0 5px;">
+											<img src="[%sUrlEmailIcone%]Bas/[%stEmail.CodeLogo%]-bas-tel.svg" alt="Call-center" width="75" style="max-width:75px; width:100%; height:auto; display:block; border:0;">
+										</td>
+										<!-- Pictogramme 5 -->
+										<td align="center" valign="middle" style="width:14.28%; padding:0 5px;">
+											<img src="[%sUrlEmailIcone%]Bas/[%stEmail.CodeLogo%]-bas-ttb.svg" alt="Tract" width="75" style="max-width:75px; width:100%; height:auto; display:block; border:0;">
+										</td>
+										<!-- Pictogramme 6 -->
+										<td align="center" valign="middle" style="width:14.28%; padding:0 5px;">
+											<img src="[%sUrlEmailIcone%]Bas/[%stEmail.CodeLogo%]-bas-vms.svg" alt="Vms" width="75" style="max-width:75px; width:100%; height:auto; display:block; border:0;">
+										</td>
+										<!-- Pictogramme 7 -->
+										<td align="center" valign="middle" style="width:14.28%; padding:0 5px;">
+											<img src="[%sUrlEmailIcone%]Bas/[%stEmail.CodeLogo%]-bas-eml.svg" alt="Email" width="75" style="max-width:75px; width:100%; height:auto; display:block; border:0;">
+										</td>
+									</tr>
+								</table>
+
+							</td>
+						</tr>
+					</table>
+
+					<!-- Espace vide en bas -->
+					<table width="100%" cellpadding="0" cellspacing="0" border="0">
+						<tr>
+							<td height="15"></td>
+						</tr>
+					</table>
+
+				</td>
+			</tr>
+		</table>
+
+		<!-- Conteneur Marketeam -->
+		<table width="100%" cellpadding="0" cellspacing="0" border="0" align="center" style="max-width:900px; margin:0 auto;">
+			<tr>
+				<td align="center" style="padding-left:15px; padding-right:15px;">
+
+					<!-- Espace vide en haut -->
+					<table width="100%" cellpadding="0" cellspacing="0" border="0">
+						<tr>
+							<td height="15"></td>
+						</tr>
+					</table>
+
+					<!-- Conteneur principal -->
+					<table class="marketeam-container" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" style="border-collapse:collapse;">
+
+						<!-- Version Desktop -->
+						<tr class="marketeam-desktop" style="display:table-row;">
+							<!-- Première colonne -->
+							<td align="center" valign="top" style="width:33.3333%; vertical-align: top; padding: 0;">
+
+								<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+									<tr>
+										<td style="font-family: 'Inter', Arial, sans-serif; font-size:16px; color:[%stEmail.Couleur.L%]; font-weight:bold; padding-bottom:6px;">
+											Marketeam Direct
+										</td>
+									</tr>
+									<tr>
+										<td style="font-family: 'Inter', Arial, sans-serif; font-size:14px; color:#445159; padding-bottom:6px;">
+											Membre du Groupe Chronodirect
+										</td>
+									</tr>
+									<tr>
+										<td style="font-family: 'Inter', Arial, sans-serif; font-size:14px; color:#445159;">
+											1 Rue Bleue 75009 PARIS
+										</td>
+									</tr>
+								</table>
+
+							</td>
+							<!-- Deuxième colonne -->
+							<td align="center" valign="top" style="width:33.3333%; vertical-align: top; padding: 0;">
+
+								<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+									<tr>
+										<td style="font-family: 'Inter', Arial, sans-serif; font-size:14px; color:#445159; padding-bottom:7px;">
+											Code NAF : 7311Z
+										</td>
+									</tr>
+									<tr>
+										<td style="font-family: 'Inter', Arial, sans-serif; font-size:14px; color:#445159; padding-bottom:7px;">
+											Siret : 750 612 756 00015
+										</td>
+									</tr>
+									<tr>
+										<td style="font-family: 'Inter', Arial, sans-serif; font-size:14px; color:#445159;">
+											SASU au capital de 20 000 €
+										</td>
+									</tr>
+								</table>
+
+							</td>
+							<!-- Troisième colonne -->
+							<td align="center" valign="top" style="width:33.3333%; vertical-align: top; padding: 0;">
+
+								<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+									<tr>
+										<td style="font-family: 'Inter', Arial, sans-serif; font-size:14px; color:#445159; padding-bottom:7px;">
+											Tél.: 01.49.49.01.00
+										</td>
+									</tr>
+									<tr>
+										<td style="font-family: 'Inter', Arial, sans-serif; font-size:14px; color:#445159; padding-bottom:7px;">
+											e-mail : <a href="mailto:support@marketeam.com" style="color:[%stEmail.Couleur.L%]; text-decoration:none;">support@marketeam.com</a>
+										</td>
+									</tr>
+									<tr>
+										<td style="font-family: 'Inter', Arial, sans-serif; font-size:14px; color:#445159;">
+											site internet : <a href="http://www.marketeam.com" style="color:[%stEmail.Couleur.L%]; text-decoration:none;">www.marketeam.com</a>
+										</td>
+									</tr>
+								</table>
+
+							</td>
+						</tr>
+
+						<!-- Version Mobile -->
+						<!--[if !mso]><!-- -->
+						<tr class="marketeam-mobile" style="display:none;">
+							<td style="padding-left:15px; padding-right:15px;">
+
+								<!-- Contenu mobile -->
+								<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+									<!-- Colonne 1 -->
+									<tr>
+										<td style="font-family: 'Inter', Arial, sans-serif; font-size:16px; color:[%stEmail.Couleur.L%]; font-weight:bold; padding-bottom:5px; text-align:left;">
+											Marketeam Direct
+										</td>
+									</tr>
+									<tr>
+										<td style="font-family: 'Inter', Arial, sans-serif; font-size:14px; color:#445159; text-align:left;">
+											Membre du Groupe Chronodirect
+										</td>
+									</tr>
+									<tr>
+										<td style="font-family: 'Inter', Arial, sans-serif; font-size:14px; color:#445159; text-align:left;">
+											1 Rue Bleue 75009 PARIS
+										</td>
+									</tr>
+									<!-- Espace -->
+									<tr>
+										<td style="height:10px;"></td>
+									</tr>
+									<!-- Colonne 2 -->
+									<tr>
+										<td style="font-family: 'Inter', Arial, sans-serif; font-size:16px; color:[%stEmail.Couleur.L%]; font-weight:bold; padding-bottom:5px; text-align:left;">
+											Informations légales :
+										</td>
+									</tr>
+									<tr>
+										<td style="font-family: 'Inter', Arial, sans-serif; font-size:14px; color:#445159; text-align:left;">
+											Code NAF : 7311Z
+										</td>
+									</tr>
+									<tr>
+										<td style="font-family: 'Inter', Arial, sans-serif; font-size:14px; color:#445159; text-align:left;">
+											Siret : 750 612 756 00015
+										</td>
+									</tr>
+									<tr>
+										<td style="font-family: 'Inter', Arial, sans-serif; font-size:14px; color:#445159; text-align:left;">
+											Forme juridique : SASU
+										</td>
+									</tr>
+									<tr>
+										<td style="font-family: 'Inter', Arial, sans-serif; font-size:14px; color:#445159; text-align:left;">
+											Capital : 20 000 €
+										</td>
+									</tr>
+									<!-- Espace -->
+									<tr>
+										<td style="height:10px;"></td>
+									</tr>
+									<!-- Colonne 3 -->
+									<tr>
+										<td style="font-family: 'Inter', Arial, sans-serif; font-size:16px; color:[%stEmail.Couleur.L%]; font-weight:bold; padding-bottom:5px; text-align:left;">
+											Contact :
+										</td>
+									</tr>
+									<tr>
+										<td style="font-family: 'Inter', Arial, sans-serif; font-size:14px; color:#445159; text-align:left;">
+											Tél.: 01.49.49.01.00
+										</td>
+									</tr>
+									<tr>
+										<td style="font-family: 'Inter', Arial, sans-serif; font-size:14px; color:#445159; text-align:left;">
+											e-mail : <a href="mailto:support@marketeam.com" style="color:[%stEmail.Couleur.L%]; text-decoration:none;">support@marketeam.com</a>
+										</td>
+									</tr>
+									<tr>
+										<td style="font-family: 'Inter', Arial, sans-serif; font-size:14px; color:#445159; text-align:left;">
+											site internet : <a href="http://www.marketeam.com" style="color:[%stEmail.Couleur.L%]; text-decoration:none;">www.marketeam.com</a>
+										</td>
+									</tr>
+								</table>
+
+							</td>
+						</tr>
+						<!--<![endif]-->
+
+					</table>
+					<!-- Espace vide en bas -->
+					<table width="100%" cellpadding="0" cellspacing="0" border="0">
+						<tr>
+							<td height="15"></td>
+						</tr>
+					</table>
+
+				</td>
+			</tr>
+		</table>
+
+	</body>
+</html>
+
+])
+
+
+
+renvoyer sEmail
+

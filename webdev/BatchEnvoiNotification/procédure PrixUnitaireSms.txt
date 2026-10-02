@@ -1,0 +1,70 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] PrixUnitaireSms (<pIdClient>)
+//
+// Paramètres :
+//	pIdClient : <indiquez ici le rôle de pIdClient>
+// Valeur de retour :
+// 	entier : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure PrixUnitaireSms(pIdClient)
+
+nIdPackPrestation 	est un entier
+sTexteRequete		est une chaîne
+sdRequeteTarifSms	est une Source de Données
+
+nNbJourDélaiExpiration	est un entier = cpFonction.ValeurParametre("AbonnementNombreDeJourDelaiExpiration",prm_parametre.ValNumerique.Nom)
+
+
+sTexteRequete = [
+	SELECT
+		clt_abonnement_prestation.IdPackPrestation
+	FROM
+		clt_abonnement_prestation
+	WHERE
+		(clt_abonnement_prestation.IdClient = [%Partage.__vcUser.IDClient%] OR clt_abonnement_prestation.IdClient = [%pIdClient%])
+		AND DATE_ADD(clt_abonnement_prestation.DateFin,INTERVAL [%nNbJourDélaiExpiration%] DAY) > CURDATE()
+]
+
+si pas sdRequeteTarifSms.ExécuteRequêteSQL(clt_abonnement_prestation..Connexion,hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	renvoyer 0
+fin
+
+si pas sdRequeteTarifSms.LitPremier() alors
+	Info("Erreur requête")
+	renvoyer 0
+fin
+
+nIdPackPrestation = sdRequeteTarifSms.IdPackPrestation
+
+sTexteRequete = [
+	SELECT
+		ROUND(pck_prestation.PrixAchatUnitaire * pck_pack_prestation_marge.CoefficientMarge / 100, 3) AS PrixVenteUnitaire
+	FROM
+		pck_pack_prestation_marge
+		JOIN pck_prestation ON pck_prestation.CodePrestation = pck_pack_prestation_marge.CodePrestation
+	WHERE
+		(pck_pack_prestation_marge.IdClient = [%pIdClient%] OR pck_pack_prestation_marge.IdPackPrestation = [%nIdPackPrestation%])
+		AND pck_pack_prestation_marge.CodePrestation = '[%__PRESTATION_ROUTAGE_SMS__%]'
+	ORDER BY pck_pack_prestation_marge.IdClient DESC
+	LIMIT 1;
+]
+
+si pas sdRequeteTarifSms.ExécuteRequêteSQL(pck_pack_prestation_marge..Connexion,hRequêteSansCorrection, sTexteRequete) alors
+	Info("Erreur requête")
+	renvoyer 0
+fin
+
+si pas sdRequeteTarifSms.LitPremier() alors
+	Info("Erreur requête")
+	renvoyer 0
+fin
+
+renvoyer sdRequeteTarifSms.PrixVenteUnitaire
+
+fin:
+sdRequeteTarifSms.AnnuleDéclaration()

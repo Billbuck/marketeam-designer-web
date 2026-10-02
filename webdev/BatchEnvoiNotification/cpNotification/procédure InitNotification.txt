@@ -1,0 +1,16 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+// InitNotification ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure InitNotification()
+
+__sUrlMarketeam		= cpFonction.ValeurParametre("Url_MKT")
+__sUrlRapportExcel	= cpFonction.ValeurParametre("WS_Rapport_Excel",prm_parametre.ValChaine..Nom)

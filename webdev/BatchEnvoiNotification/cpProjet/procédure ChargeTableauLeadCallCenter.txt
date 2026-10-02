@@ -1,0 +1,160 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//ChargeTableauLeadCallCenter (<pIdOperation>, <pPartiel>, <stEmail> est structEmail)
+//
+// Paramètres :
+// 	pIdOperation : <indiquez ici le rôle de pIdOperation>
+// 	pPartiel : <indiquez ici le rôle de pPartiel>
+//	stEmail (structEmail) : <indiquez ici le rôle de stEmail>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure ChargeTableauLeadCallCenter(pIdOperation, pPartiel,  stEmail est une structEmail)
+
+stEmail.tabTableauEntête.SupprimeTout()
+stEmail.tabTableauValeur.SupprimeTout()
+
+nInd					est un entier
+sValeur					est une chaîne
+sTexteRequete			est une chaîne
+sdReqLeadCallCenter		est une Source de Données
+sSelect					est une chaîne
+sWhere					est une chaîne
+stEmailTableau			est une structEmailTableau
+
+sTexteRequete = [
+	SELECT
+		dos_operation_rapport.Libelle,
+		dos_operation_rapport.Champ,
+		dos_operation_rapport.Type
+	FROM 
+		dos_operation_rapport
+	WHERE
+		dos_operation_rapport.IdOperation = [%pIdOperation%]
+	ORDER BY
+		dos_operation_rapport.Ordre
+]
+
+si pas HExécuteRequêteSQL(sdReqLeadCallCenter, ope_cliquezici_clic..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête","Procédure","GenereRapportAudience n°1","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+	renvoyer ""
+fin
+
+
+// Colonnes sélectionnées par le client pour le rapport
+pour tout sdReqLeadCallCenter
+	stEmailTableau.Libelle		= sdReqLeadCallCenter.Libelle
+	stEmailTableau.Champ		= sdReqLeadCallCenter.Champ
+	stEmailTableau.Type			= sdReqLeadCallCenter.Type
+	stEmailTableau.Alignement	= TypeAlignement(sdReqLeadCallCenter.Type)
+	stEmail.tabTableauEntête.Ajoute(stEmailTableau)
+	sSelect += ["," + RC] + "dos_base_ligne." + sdReqLeadCallCenter.Champ
+fin
+
+// On ajoute la colonne date appel
+stEmailTableau.Libelle		= "Date Appel"
+stEmailTableau.Champ		= "DateAppel"
+stEmailTableau.Type			= __CHAMP_TYPE_DATE__
+stEmailTableau.Alignement	= "center"
+stEmail.tabTableauEntête.Ajoute(stEmailTableau)
+
+// On ajoute la colonne heure appel
+stEmailTableau.Libelle		= "Heure Appel"
+stEmailTableau.Champ		= "HeureDebut"
+stEmailTableau.Type			= __CHAMP_TYPE_HEURE__
+stEmailTableau.Alignement	= "center"
+stEmail.tabTableauEntête.Ajoute(stEmailTableau)
+
+// On ajoute la colonne lead scoring
+stEmailTableau.Libelle		= "lead scoring"
+stEmailTableau.Champ		= "LeadScoring"
+stEmailTableau.Type			= __CHAMP_TYPE_TEXTE__
+stEmailTableau.Alignement	= "center"
+stEmail.tabTableauEntête.Ajoute(stEmailTableau)
+
+si pPartiel = Vrai alors
+	sWhere = [
+	AND ope_tel_envoi.IdEmailEnvoi IS NULL
+	AND ope_tel_envoi.DateHeureNotification IS NOT NULL
+	]
+fin
+
+
+sTexteRequete = [
+	SELECT 
+		ope_tel_envoi.IdBaseLigne,
+		[%sSelect%],
+		ope_tel_envoi.DateAppel,
+		TIME_FORMAT(ope_tel_envoi.HeureDebut, '%H%i%s') HeureDebut,
+		ope_tel_envoi.LeadScoring
+	FROM
+		ope_tel_envoi
+		JOIN ope_tel ON ope_tel.IdTel = ope_tel_envoi.IdTel
+		JOIN dos_base_ligne ON ope_tel_envoi.IdBaseLigne = dos_base_ligne.IdBaseLigne
+		JOIN tel_type_script ON tel_type_script.IdTypeScript = ope_tel.IdTypeScript
+		LEFT JOIN ope_tel_rendez_vous ON ope_tel_rendez_vous.IdBaseLigne = ope_tel_envoi.IdBaseLigne
+	WHERE
+		ope_tel_envoi.IdTel = [%pIdOperation%] 
+		[%sWhere%] 
+		AND (
+			ope_tel_envoi.EstFormulaireRempli = 1 
+			OR IF (tel_type_script.RapportComplet = 1, ope_tel_envoi.Statut = '[%__TEL_STATUT_TERMINE__%]', '') 
+			OR IF (tel_type_script.RapportPartiel = 1, ope_tel_envoi.Statut = '[%__TEL_STATUT_QUALIFICATION_PARTIELLE__%]', '')
+		)
+	ORDER BY 
+		ope_tel_envoi.LeadScoring DESC,
+		ope_tel_envoi.DateAppel ASC,
+		ope_tel_envoi.HeureDebut ASC;
+]
+
+si pas HExécuteRequêteSQL(sdReqLeadCallCenter, ope_cliquezici_clic..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête","Procédure","GenereRapportAudience n°1","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+	renvoyer ""
+fin
+
+pour tout sdReqLeadCallCenter
+	nInd = stEmail.tabTableauValeur.Ajoute()
+	pour tout stEntete de stEmail.tabTableauEntête
+		sValeur = {"sdReqLeadCallCenter." + stEntete.Champ, indRubrique}
+		selon stEntete.Type
+			cas __CHAMP_TYPE_PORTABLE__		: sValeur = cpFonction.Telephone(sValeur,1,".")
+			cas __CHAMP_TYPE_TELEPHONE__ 	: sValeur = cpFonction.Telephone(sValeur,1,".")
+			cas __CHAMP_TYPE_DATE_HEURE__	: si DateHeureValide(sValeur)	alors sValeur = DateHeureVersChaîne(sValeur,"JJ/MM/AAAA HH:mm")
+			cas __CHAMP_TYPE_DATE__			: si DateValide(sValeur) 		alors sValeur = DateVersChaîne(sValeur,"JJ/MM/AAAA")
+			cas __CHAMP_TYPE_HEURE__		: si HeureValide(sValeur) 		alors sValeur = HeureVersChaîne(sValeur,"HH:MM:SS")
+			autre cas
+		fin
+		stEmail.tabTableauValeur[nInd].Ajoute(sValeur)
+	fin
+fin
+
+
+
+	procédure interne TypeAlignement(pType)
+		selon pType
+			cas __FORMULAIRE_INTERRUPTEUR__	: renvoyer "center"
+			cas __FORMULAIRE_COMBO__		: renvoyer "left"
+			cas __FORMULAIRE_SAISIE__		: renvoyer "left"
+			cas __FORMULAIRE_OPTIN__		: renvoyer "center"
+			cas	__CHAMP_TYPE_TEXTE__		: renvoyer "left"
+			cas	__CHAMP_TYPE_ENTIER__		: renvoyer "center"
+			cas	__CHAMP_TYPE_DECIMAL__		: renvoyer "right"
+			cas	__CHAMP_TYPE_MONETAIRE__	: renvoyer "right"
+			cas	__CHAMP_TYPE_DATE__			: renvoyer "center"
+			cas	__CHAMP_TYPE_HEURE__		: renvoyer "center"
+			cas	__CHAMP_TYPE_DATE_HEURE__	: renvoyer "center"
+			cas	__CHAMP_TYPE_EMAIL__		: renvoyer "left"
+			cas	__CHAMP_TYPE_TELEPHONE__	: renvoyer "center"
+			cas	__CHAMP_TYPE_PORTABLE__		: renvoyer "center"
+			cas	__CHAMP_TYPE_CODEPOSTAL__	: renvoyer "center"
+			autre cas						: renvoyer "left"
+		fin
+	fin
+
+
+
+fin:
+sdReqLeadCallCenter.AnnuleDéclaration()

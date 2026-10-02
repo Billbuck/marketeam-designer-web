@@ -1,0 +1,10 @@
+// Déclaration de cpProjet
+
+__sRepRacine		est une chaîne		// Racine des répertoires, différent selon les projets
+__sHttpMarketeam	est une chaîne
+__sUrlRapportExcel	est une chaîne
+__sRepUpload		est une chaîne
+__moTauxTVA			est un monétaire
+__sRepEmailIcone	est une chaîne
+__taaUrl			est un tableau associatif de chaînes
+__sMarketeamRepRacine est une chaîne 

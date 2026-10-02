@@ -1,0 +1,54 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] CheminClient (<pIdClient>, <pTypeOperation>, <pTypeRepertoire> [, <pEstRepertoirePhysique>])
+//
+// Paramètres :
+//	pIdClient : <indiquez ici le rôle de pDosssier>
+//	pTypeOperation : <indiquez ici le rôle de pTypeOperation>
+//	pTypeRepertoire : <indiquez ici le rôle de pTypeRepertoire>
+//	pEstRepertoirePhysique (valeur par défaut=1) : < indiquez ici le rôle de "\" >
+// Valeur de retour :
+// 	Type indéterminé : // 	Aucune
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+//	pNumOperation : <indiquez ici le rôle de pNumOperation>
+//	pDateDossier (date) : <indiquez ici le rôle de pDateDossier>
+//	pIdDossier : <indiquez ici le rôle de pIdDossier>
+//	pIdDossier : < indiquez ici le rôle de pEstRepertoireOperation >
+//	pEstRepertoireLocal (valeur par défaut=1) : < indiquez ici le rôle de pEstRepertoireLocal >
+procédure CheminClient(pIdClient, pTypeOperation, pTypeRepertoire, pEstRepertoirePhysique  = Vrai) //, pEstRepertoireLocal = Vrai)
+
+
+sCheminClient est une chaîne
+
+sRepClient est une chaîne 
+
+selon cpConnexion.__sConnexion
+	cas __CNX_DEV__		: sRepClient = "ClientsDev"
+	cas __CNX_TEST__	: sRepClient = "ClientsTest"
+	cas __CNX_PROD__	: sRepClient = "Clients"
+fin
+
+
+si clt_client.LitRecherchePremier(IdClient,pIdClient)  alors
+	sCheminClient = sRepClient + "\" + NumériqueVersChaîne(clt_client.IdClient, "08d") + "\" +((pTypeOperation = "") ? "" sinon RepertoireTypeOperation(pTypeOperation) + "\" + pTypeRepertoire + "\")
+	
+	si pEstRepertoirePhysique alors
+		si fRepCrée(ComplèteRep(__sRepRacine) + sCheminClient) alors
+			renvoyer ComplèteRep(__sRepRacine) + sCheminClient
+		sinon
+			renvoyer ""
+		fin
+	sinon
+		renvoyer __sHttpMarketeam +["/"]+ Remplace(sCheminClient,"\","/")
+	fin
+fin
+
+
+
+
+
+
+

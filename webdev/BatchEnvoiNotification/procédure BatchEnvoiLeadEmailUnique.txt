@@ -1,0 +1,207 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//BatchEnvoiLeadEmailUnique ()
+//
+// Paramètres :
+//	Aucun
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure BatchEnvoiLeadEmailUnique()
+
+sTexteRequete					est une chaîne
+sdReqEnvoiEmail					est une Source de Données
+eEmail							est un Email
+ePieceJointe					est un emailAttache
+smptEmailSession				est un emailSessionSMTP
+stNotificationMessage			est une structNotificationMessage
+sDossier						est une chaîne
+taaListeIdBaseLigneEmail		est un tableau associatif de chaînes	// liste des emails par rapport a la liste des leads
+tabBase							est un tableau de StructBase
+taaBaseChamp					est un tableau associatif de structBaseChamp
+tabListeChampEmail				est un tableau de chaînes
+sListeEmail						est une chaîne
+jsonVariable					est un JSON
+nNombrePartielLead 				est un entier
+sChampEmail 					est une chaîne
+stBaseChamp 					est une structBaseChamp
+
+// Ouverture une session SMTP
+smptEmailSession.AdresseServeur		= "172.16.144.112"
+smptEmailSession.MotDePasse			= ""
+smptEmailSession.Nom				= ""
+smptEmailSession.Port				= "25"
+
+// Dans la première partie de la requête on décale les envois d'une minute au cas ou il y a plusieurs emails qui arrivent les uns derrière les autres
+
+
+sTexteRequete						=
+[
+	SELECT
+	email_envoi.IdEmailEnvoi,
+	email_envoi.IdContact,
+	email_envoi.IdClient,
+	email_envoi.IdOperation,
+	email_envoi.TypeOperation,
+	email_envoi.IdFacture,
+	email_envoi.TypeFacture,
+	email_envoi.IdAbonnement,
+	email_envoi.TypeAbonnement,
+	email_envoi.CodeEmailType,
+	email_envoi.EmailDestinataire,
+	email_envoi.EmailEnCopie,
+	email_envoi.DateHeureDemande,
+	email_envoi.Variable,
+	prm_email_type.Libelle,
+	prm_email_type.Objet,
+	CONCAT(prm_email_type.Corps, '\r\n\r\n', prm_email_signature.Signature) AS 'Message'
+	FROM
+	email_envoi
+	JOIN prm_email_type ON email_envoi.CodeEmailType = prm_email_type.CodeEmailType AND email_envoi.CodeSite = prm_email_type.CodeSite
+	LEFT JOIN prm_email_signature ON prm_email_signature.IdSignature = prm_email_type.IdSignature
+	WHERE
+	email_envoi.DateHeureEnvoi IS NULL
+	AND email_envoi.DateHeureDemande <= DATE_ADD(NOW(), INTERVAL -5 SECOND)
+	AND email_envoi.CodeSite = '[%__CODE_SITE_MARKETEAM__%]'
+	AND email_envoi.CodeEmailType IN ('[%__NOTIFICATION_CLIQUEZICI_TRACKING_UNIQUE__%]','[%__NOTIFICATION_LEAD_CLIQUEZICI_CLIC_UNIQUE__%]','[%__NOTIFICATION_LEAD_CLIQUEZICI_LIEN_UNIQUE__%]')
+]
+
+si pas sdReqEnvoiEmail.ExécuteRequêteSQL(email_envoi..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête","Procédure","Traitement","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+	retour
+fin
+
+
+si sdReqEnvoiEmail.LitPremier(hSansRafraîchir) alors
+	// des courriels on ouvre la connexion
+	si smptEmailSession.OuvreSession() = Faux alors
+		Info(ErreurInfo(errComplet))
+		retour
+	sinon
+		ToastAffiche("Session Email Ouverte",toastCourt,cvHaut,chCentre)
+	fin
+sinon
+	// Pas d’émail on ouvre pas la connexion
+	retour
+fin
+
+pour tout sdReqEnvoiEmail
+
+	taaListeIdBaseLigneEmail.SupprimeTout()
+	tabListeChampEmail.SupprimeTout()
+	
+	tabBase			= Partage.ChargeTabStructBase(sdReqEnvoiEmail.IdOperation)
+	taaBaseChamp 	= Partage.CalculeTaaBaseChamp(tabBase, Faux, Faux)
+
+	pour toute chaîne LibelleChampEmail de sdReqEnvoiEmail.EmailDestinataire séparée par ";"
+		stBaseChamp = taaBaseChamp[LibelleChampEmail]
+		sChampEmail = stBaseChamp.Champ
+		tabListeChampEmail.Ajoute(sChampEmail)
+	fin
+
+	jsonVariable = sdReqEnvoiEmail.Variable
+
+	pour toute chaîne IdBaseLigne de jsonVariable.ListeIdBaseLigne séparée par ","
+		si dos_base_ligne.LitRecherchePremier(IdBaseLigne,IdBaseLigne) alors
+			sListeEmail = ""
+			pour tout Champ de tabListeChampEmail
+				si Champ.SansEspace() <> "" alors
+					sListeEmail += [TAB] + {"dos_base_ligne." + Champ,indRubrique}
+				fin
+			fin
+		fin
+		taaListeIdBaseLigneEmail[sListeEmail]+= [","] + IdBaseLigne
+	fin
+
+	pour tout sListeIdBaseLigne, sListeEmail  de taaListeIdBaseLigneEmail
+
+		nNombrePartielLead = ChaîneOccurrence(sListeIdBaseLigne,",") + 1
+
+
+		VariableRAZ(eEmail)
+
+		VariableRAZ(stNotificationMessage)
+		stNotificationMessage.CodeType						= Remplace(sdReqEnvoiEmail.CodeEmailType,"UN_","")
+		stNotificationMessage.IdClient						= sdReqEnvoiEmail.IdClient
+		stNotificationMessage.IdValideur					= sdReqEnvoiEmail.IdContact
+		stNotificationMessage.DateHeureNotification			= sdReqEnvoiEmail.DateHeureDemande
+		stNotificationMessage.IdOperation					= sdReqEnvoiEmail.IdOperation
+		stNotificationMessage.TypeOperation					= sdReqEnvoiEmail.TypeOperation
+		stNotificationMessage.IdFacture						= sdReqEnvoiEmail.IdFacture
+		stNotificationMessage.TypeFacture					= sdReqEnvoiEmail.TypeFacture
+		stNotificationMessage.IdAbonnement					= sdReqEnvoiEmail.IdAbonnement
+		stNotificationMessage.TypeAbonnement				= sdReqEnvoiEmail.TypeAbonnement
+		stNotificationMessage.Variables						= sdReqEnvoiEmail.Variable
+		stNotificationMessage.Variables.ListeIdBaseLigne	= sListeIdBaseLigne
+		stNotificationMessage.Variables.NombrePartielLead 	= NumériqueVersChaîne(nNombrePartielLead, "d")
+		stNotificationMessage.Message						= sdReqEnvoiEmail.Objet
+		sDossier											= (stNotificationMessage.Variables.Dossier..Existe) ? stNotificationMessage.Variables.Dossier sinon ""
+
+		eEmail..Sujet										= cpNotification.PersonnaliseMessage(stNotificationMessage)
+
+		stNotificationMessage.Message						= sdReqEnvoiEmail.Message
+		stNotificationMessage.Mode							= "Email"
+
+		eEmail..Message										= cpNotification.PersonnaliseMessage(stNotificationMessage)
+
+		cpProjet.ConstruitEmailHtml(eEmail, stNotificationMessage, stNotificationMessage.Variables)
+
+		si eEmail.Message <> "" alors
+
+			eEmail..Expediteur = "marketeam.direct <" + __sEmailEmetteur +">"
+			// eEmail.Destinataire.Ajoute(sListeEmail.ExtraitChaîne(1))			// Email Destinataire
+
+			// Email Destinataire en copie
+			pour toute chaîne sEmailCopie de sListeEmail séparée par TAB
+				eEmail.Cc.Ajoute(sEmailCopie)
+			fin
+
+			// Envoi du message
+
+			si smptEmailSession.EnvoieMessage(eEmail, emailOptionEncodeEntête) alors
+				// On remet RAZ la pièce jointe
+				ePieceJointe.RAZ()
+				//On met à jour la date d'envoi
+			sinon
+				Trace(sdReqEnvoiEmail.EmailDestinataire , ErreurInfo())
+				si email_envoi.LitRecherchePremier(IdEmailEnvoi, sdReqEnvoiEmail.IdEmailEnvoi) alors
+					email_envoi.DateHeureEnvoi 	= DateHeureSys()
+					si email_envoi.Modifie() alors
+						tblNotification.AjouteLigne(sDossier,sdReqEnvoiEmail.EmailDestinataire,DateHeureSys(),"[Erreur] "+ sdReqEnvoiEmail.Libelle)
+					fin
+				fin
+
+			fin
+
+		sinon
+			// On a eu une erreur
+			//On met à jour la date d'envoi
+			si email_envoi.LitRecherchePremier(IdEmailEnvoi, sdReqEnvoiEmail.IdEmailEnvoi) alors
+				email_envoi.DateHeureEnvoi 	= DateHeureSys()
+				//			si email_envoi.Modifie() ALORS
+				tblNotification.AjouteLigne(sDossier,sdReqEnvoiEmail.EmailDestinataire,DateHeureSys(),"[Erreur] "+ sdReqEnvoiEmail.Libelle)
+				//			FIN
+			fin
+		fin
+	fin
+
+	si email_envoi.LitRecherchePremier(IdEmailEnvoi, sdReqEnvoiEmail.IdEmailEnvoi) alors
+		TableAjouteLigne(tblNotification,sDossier,sdReqEnvoiEmail.EmailDestinataire,DateHeureSys(),sdReqEnvoiEmail.Libelle)
+
+		email_envoi.DateHeureEnvoi = DateHeureSys()
+		email_envoi.Modifie()
+	fin
+
+
+fin
+
+// Fermeture de la session
+smptEmailSession.FermeSession()
+ToastAffiche("Session Email Fermée",toastCourt,cvHaut,chCentre)
+
+
+fin:
+sdReqEnvoiEmail.AnnuleDéclaration()

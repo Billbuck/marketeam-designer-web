@@ -1,0 +1,167 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//ConstruitEmailHtml (<eEmail>, <pCodeEmailType>, <stNotificationMessage> est structNotificationMessage, <pVariables> est JSON)
+//
+// Paramètres :
+//	eEmail : <indiquez ici le rôle de eEmail>
+//	pCodeEmailType : <indiquez ici le rôle de pCodeEmailType>
+//	stNotificationMessage (structNotificationMessage) : <indiquez ici le rôle de stNotificationMessage>
+//	pVariables (JSON) : <indiquez ici le rôle de stNotificationBalise>
+// Valeur de retour :
+// 	Aucune
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+//	pMessage : <indiquez ici le rôle de pMessage>
+procédure ConstruitEmailHtml(eEmail, stNotificationMessage est une structNotificationMessage, pVariables est un JSON)
+
+sTableau			est une chaîne
+stEmail				est une structEmail
+sFichier			est une chaîne
+stFacture			est une structFacture
+ePieceJointe		est un emailAttache
+sTypeOperation		est une chaîne
+sListeIdBaseLigne 	est une chaîne
+sDateHeureFiltre 	est une chaîne
+
+selon Vrai
+	cas stNotificationMessage.TypeOperation <> "" 				: sTypeOperation = stNotificationMessage.TypeOperation
+	cas stNotificationMessage.Variables.TypeOperation..Existe 	: sTypeOperation = stNotificationMessage.Variables.TypeOperation
+	autre cas													: sTypeOperation = __OPERATION_MARKETEAM__
+fin
+
+
+stEmail.Société		= pVariables.Societe..Existe ? pVariables.Societe sinon "#Société#"
+stEmail.Contact		= pVariables.Contact..Existe ? pVariables.Contact sinon "#Contact#"
+stEmail.Couleur		= cpProjet.CouleurEmail(sTypeOperation)
+stEmail.CodeIcone	= cpProjet.CodeIcone(sTypeOperation)
+stEmail.CodeLogo	= cpProjet.CodeLogo(sTypeOperation)
+stEmail.Message		= eEmail..Message
+
+sListeIdBaseLigne	= pVariables.ListeIdBaseLigne..Existe	? pVariables.ListeIdBaseLigne sinon ""
+sDateHeureFiltre	= pVariables.DateHeureFiltre..Existe 	? pVariables.DateHeureFiltre sinon ""
+
+selon Vrai
+	cas Contient(stNotificationMessage.CodeType,__NOTIFICATION_STATUT__)
+		stEmail.Titre = "Opération " + pVariables.LibelleTypeProjet
+		AjouteEmailInformation(stEmail, "Opération", pVariables.NomOperation)
+		AjouteEmailInformation(stEmail, "Dossier", pVariables.Dossier)
+//		AjouteEmailInformation(stEmail, "Montant HT", pVariables.OperationMontantHT)
+		AjouteEmailInformation(stEmail, "Statut", pVariables.LibelleStatutOperation)
+
+		cpProjet.ChargeTableauDevis(stNotificationMessage.IdOperation, stEmail)
+		sTableau = cpProjet.GenereEmailTableau(stEmail)
+
+	cas stNotificationMessage.CodeType = __NOTIFICATION_CLIQUEZICI_TRACKING__
+		stEmail.Titre = "Opération " + pVariables.LibelleTypeProjet
+		AjouteEmailInformation(stEmail, "Opération", pVariables.NomOperation)
+		AjouteEmailInformation(stEmail, "Dossier", pVariables.Dossier)
+//		AjouteEmailInformation(stEmail, "Montant HT", pVariables.OperationMontantHT)
+		AjouteEmailInformation(stEmail, "Statut", pVariables.LibelleStatutOperation)
+
+		cpProjet.ChargeTableauDevis(stNotificationMessage.IdOperation, stEmail)
+		sTableau = cpProjet.GenereEmailTableau(stEmail)
+		UpdateIdEmailEnvoi(ope_cliquezici_tracking..Nom, ope_cliquezici_tracking.IdCliquezIci..Nom, stNotificationMessage.IdOperation, sDateHeureFiltre, sListeIdBaseLigne)
+
+
+	cas stNotificationMessage.CodeType = __NOTIFICATION_LEAD_CLIQUEZICI_CLIC__
+		stEmail.Titre = "Opération " + pVariables.LibelleTypeProjet
+		AjouteEmailInformation(stEmail, "Opération", pVariables.NomOperation)
+		AjouteEmailInformation(stEmail, "Dossier", pVariables.Dossier)
+//		AjouteEmailInformation(stEmail, "Montant HT", pVariables.OperationMontantHT)
+		AjouteEmailInformation(stEmail, "Statut", pVariables.LibelleStatutOperation)
+
+		cpProjet.ChargeTableauLeadCliquezIciClic(stNotificationMessage.IdOperation, Vrai, stEmail, sListeIdBaseLigne)
+		sTableau = cpProjet.GenereEmailTableau(stEmail)
+		UpdateIdEmailEnvoi(ope_cliquezici_clic..Nom, ope_cliquezici_clic.IdCliquezIci..Nom, stNotificationMessage.IdOperation, sDateHeureFiltre, sListeIdBaseLigne)
+
+	cas stNotificationMessage.CodeType = __NOTIFICATION_LEAD_CLIQUEZICI_LIEN__
+		stEmail.Titre = "Opération " + pVariables.LibelleTypeProjet
+		AjouteEmailInformation(stEmail, "Opération", pVariables.NomOperation)
+		AjouteEmailInformation(stEmail, "Dossier", pVariables.Dossier)
+//		AjouteEmailInformation(stEmail, "Montant HT", pVariables.OperationMontantHT)
+		AjouteEmailInformation(stEmail, "Statut", pVariables.LibelleStatutOperation)
+
+		cpProjet.ChargeTableauLeadCliquezIciLien(stNotificationMessage.IdOperation, Vrai, stEmail, sListeIdBaseLigne)
+		sTableau = cpProjet.GenereEmailTableau(stEmail)
+		UpdateIdEmailEnvoi(ope_cliquezici_lien..Nom, ope_cliquezici_lien.IdCliquezIci..Nom, stNotificationMessage.IdOperation, sDateHeureFiltre, sListeIdBaseLigne)
+
+	cas stNotificationMessage.CodeType = __NOTIFICATION_LEAD_CALLCENTER__
+		stEmail.Titre = "Opération " + pVariables.LibelleTypeProjet
+		AjouteEmailInformation(stEmail, "Opération", pVariables.NomOperation)
+		AjouteEmailInformation(stEmail, "Dossier", pVariables.Dossier)
+//		AjouteEmailInformation(stEmail, "Montant HT", pVariables.OperationMontantHT)
+		AjouteEmailInformation(stEmail, "Statut", pVariables.LibelleStatutOperation)
+
+		cpProjet.ChargeTableauLeadCallCenter(stNotificationMessage.IdOperation, Vrai, stEmail)
+		sTableau = cpProjet.GenereEmailTableau(stEmail)
+		UpdateIdEmailEnvoi(ope_tel_envoi..Nom, ope_tel_envoi.IdTel..Nom, stNotificationMessage.IdOperation, sDateHeureFiltre, sListeIdBaseLigne)
+
+
+	cas stNotificationMessage.CodeType = __NOTIFICATION_FACTURE__
+		stEmail.Titre	= "Facture n° " + pVariables.FactureNumero
+		stFacture		= Partage.ChargeFacture(stNotificationMessage.IdFacture,Vrai)
+		sFichier		= fRepDonnées() + "\Factures\" + "Facture" +[ESP]+ "Marketeam" +[ESP]+ "N°" +[ESP]+ stFacture.NumeroFacture + __PDF__
+
+		iDestination(iPDFGénérique, sFichier)
+
+		si stFacture.NbrOperation > 1 _ou_ (stFacture.NbrOperation = 1 _et_ stFacture.tabFactureLigne[1].tabFactureDetail.Occurrence = 0)  alors
+			iImprimeEtat(etaFacture, stFacture)
+		sinon
+			iImprimeEtat(etaFactureDétaillée, stFacture)
+		fin
+
+		ePieceJointe.Nom					= fExtraitChemin(sFichier, fFichier + fExtension)
+		ePieceJointe.Contenu				= fChargeBuffer(sFichier)
+		ePieceJointe.ContentType			= typeMimePDF
+		ePieceJointe.ContentDescription		= fExtraitChemin(sFichier, fFichier + fExtension)
+
+		Ajoute(eEmail.Attache, ePieceJointe)
+
+		fSupprime(sFichier)
+
+		si pVariables.NomOperation..Existe alors
+			AjouteEmailInformation(stEmail, "Facture", pVariables.NomOperation)
+		sinon
+			AjouteEmailInformation(stEmail, "Facture", pVariables.FactureDesignation)
+		fin
+
+		cpProjet.ChargeTableauFacture(stFacture, stEmail)
+		sTableau = cpProjet.GenereEmailTableau(stEmail)
+
+	cas stNotificationMessage.CodeType = __NOTIFICATION_MOT_DE_PASSE_OUBLIE__
+		stEmail.Titre	= "Changement de mot de passe"
+		sTableau		= "<br>"
+
+	cas stNotificationMessage.CodeType = __NOTIFICATION_VALIDATION_COMPTE__
+		stEmail.Titre	= "Validation de compte"
+		sTableau		= "<br>"
+
+	cas stNotificationMessage.CodeType = __NOTIFICATION_CREATION_UTILISATEUR__
+		stEmail.Titre	= "Création d'utilisateur"
+		sTableau		= "<br>"
+
+	autre cas
+		stEmail.Titre	= stNotificationMessage.CodeType
+		sTableau		= "<br>"
+fin
+
+eEmail..HTML	= cpProjet.ChargeEmailStructure(stEmail, sTableau)
+
+
+procédure interne UpdateIdEmailEnvoi(pTable, pChamp, pIdOperation, pEmailFiltre, pListeIdBaseLigne)
+
+	sTexteRequete est une chaîne
+	sdReqUpdate est une Source de Données
+
+	sTexteRequete = [
+ 		UPDATE [%pTable%]
+		SET [%pTable%].DateHeureEmailFiltre = [%pEmailFiltre%]		 
+		WHERE 
+			[%pTable%].[%pChamp%] = ([%pIdOperation%])
+			and [%pTable%].IdBaseLigne IN ([%pListeIdBaseLigne%])
+	]
+
+	sdReqUpdate.ExécuteRequêteSQL(email_envoi..Connexion,hRequêteSansCorrection,sTexteRequete)
+fin

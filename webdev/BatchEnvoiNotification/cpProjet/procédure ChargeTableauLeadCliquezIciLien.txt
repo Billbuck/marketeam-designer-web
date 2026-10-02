@@ -1,0 +1,174 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] ChargeTableauLeadCliquezIciLien (<pIdOperation>, <pPartiel>, <stEmail> est structEmail)
+//
+// Paramètres :
+//	pIdOperation : <indiquez ici le rôle de pIdOperation>
+//	pPartiel : <indiquez ici le rôle de pIdEmail>
+//	stEmail (structEmail) : <indiquez ici le rôle de stEmail>
+// Valeur de retour :
+// 	chaîne Unicode : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// Indiquez ici un exemple d'utilisation.
+//
+procédure ChargeTableauLeadCliquezIciLien(pIdOperation, pPartiel,  stEmail est une structEmail, pListeIdBaseLigne)
+
+stEmail.tabTableauEntête.SupprimeTout()
+stEmail.tabTableauValeur.SupprimeTout()
+
+nInd 				est un entier
+sTexteRequete 		est une chaîne
+sTexteAudience 		est une chaîne
+sSelect 			est une chaîne
+sWhere				est une chaîne
+sdReqCliquezIciLien	est une Source de Données
+sValeur 			est une chaîne
+stEmailTableau 		est une structEmailTableau
+
+
+// Colonnes sélectionnées par le client pour le rapport
+
+sTexteRequete = [
+	SELECT
+		dos_operation_rapport.Libelle,
+		dos_operation_rapport.Champ,
+		dos_operation_rapport.Type
+	FROM 
+		dos_operation_rapport
+	WHERE
+		dos_operation_rapport.IdOperation = [%pIdOperation%]
+	ORDER BY
+		dos_operation_rapport.Ordre
+]
+
+si pas HExécuteRequêteSQL(sdReqCliquezIciLien, dos_operation_rapport..Connexion, hRequêteSansCorrection, sTexteRequete) alors
+	Trace("Erreur requête","Procédure","GenereRapportAudience n°1","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+	renvoyer ""
+fin
+
+pour tout sdReqCliquezIciLien
+	stEmailTableau.Libelle		= sdReqCliquezIciLien.Libelle
+	stEmailTableau.Champ		= sdReqCliquezIciLien.Champ
+	stEmailTableau.Type			= sdReqCliquezIciLien.Type
+	stEmailTableau.Alignement	= TypeAlignement(sdReqCliquezIciLien.Type)
+	stEmailTableau.Procedure	= Null
+	stEmail.tabTableauEntête.Ajoute(stEmailTableau)
+	sSelect += ["," + RC] + "dos_base_ligne." + sdReqCliquezIciLien.Champ
+fin
+
+// On ajoute la colonne date & heure de clic
+stEmailTableau.Libelle 		= "Date & Heure"
+stEmailTableau.Champ 		= "DateHeureClic"
+stEmailTableau.Type 		= __CHAMP_TYPE_DATE__
+stEmailTableau.Alignement 	= TypeAlignement(__CHAMP_TYPE_DATE__)
+stEmailTableau.Procedure 	= Null
+sSelect += ["," +RC] + "ope_cliquezici_lien.DateHeureClic"
+stEmail.tabTableauEntête.Ajoute(stEmailTableau)
+
+// On ajoute la colonne Type de lien
+stEmailTableau.Libelle		= "Type"
+stEmailTableau.Champ		= "TypeLien"
+stEmailTableau.Type			= __CHAMP_TYPE_TEXTE__
+stEmailTableau.Alignement	= "center"
+stEmailTableau.Procedure 	= LibelleTypeLien
+sSelect += ["," +RC] + "ope_cliquezici_lien.TypeLien"
+stEmail.tabTableauEntête.Ajoute(stEmailTableau)
+
+// On ajoute la colonne lien
+stEmailTableau.Libelle		= "Lien"
+stEmailTableau.Champ		= "Libelle"
+stEmailTableau.Type			= __CHAMP_TYPE_TEXTE__
+stEmailTableau.Alignement	= "left"
+stEmailTableau.Procedure 	= Null
+sSelect += ["," +RC] + "ope_cliquezici_lien.Libelle"
+stEmail.tabTableauEntête.Ajoute(stEmailTableau)
+
+
+si pPartiel = Vrai _et_ pListeIdBaseLigne <> "" alors
+	sWhere = [
+		AND ope_cliquezici_lien.IdBaseLigne IN ([%pListeIdBaseLigne%])
+	]
+fin
+
+
+sTexteAudience =
+[
+	SELECT
+		[%sSelect%]
+	FROM
+		ope_cliquezici_lien
+		JOIN dos_base_ligne ON dos_base_ligne.IdBaseLigne = ope_cliquezici_lien.IdBaseLigne
+	WHERE
+		ope_cliquezici_lien.IdCliquezIci = [%pIdOperation%]
+		[%sWhere%]
+	GROUP BY 
+		dos_base_ligne.IdBaseLigne
+	ORDER BY 
+		ope_cliquezici_lien.DateHeureClic DESC
+]
+
+si pas HExécuteRequêteSQL(sdReqCliquezIciLien, ope_cliquezici_clic..Connexion, hRequêteSansCorrection, sTexteAudience) alors
+	Trace("Erreur requête","Procédure","GenereRapportAudience n°1","Date",DateVersChaîne(DateSys(),"Jjjj JJ mmm"),"Heure",HeureVersChaîne(HeureSys(),"HH:MM:SS"),"Erreur",HErreurInfo(),"Requête",sTexteRequete)
+	renvoyer ""
+fin
+
+pour tout sdReqCliquezIciLien
+	nInd = stEmail.tabTableauValeur.Ajoute()
+	pour tout stEntete de stEmail.tabTableauEntête
+		sValeur = {"sdReqCliquezIciLien." + stEntete.Champ, indRubrique}
+		selon stEntete.Type
+			cas __CHAMP_TYPE_PORTABLE__		: sValeur = cpFonction.Telephone(sValeur,1,".")
+			cas __CHAMP_TYPE_TELEPHONE__ 	: sValeur = cpFonction.Telephone(sValeur,1,".")
+			cas __CHAMP_TYPE_DATE_HEURE__	: si DateHeureValide(sValeur)	alors sValeur = DateHeureVersChaîne(sValeur,"JJ/MM/AAAA HH:mm")
+			cas __CHAMP_TYPE_DATE__			: si DateValide(sValeur) 		alors sValeur = DateVersChaîne(sValeur,"JJ/MM/AAAA")
+			cas __CHAMP_TYPE_HEURE__		: si HeureValide(sValeur) 		alors sValeur = HeureVersChaîne(sValeur,"HH:MM:SS")
+			autre cas
+		fin
+		si stEntete.Procedure <> Null alors
+			sValeur = stEntete.Procedure(sValeur)
+		fin
+		stEmail.tabTableauValeur[nInd].Ajoute(sValeur)
+	fin
+fin
+
+	procédure interne LibelleTypeLien(pType)
+		selon pType
+			cas __TRACKING_LIEN__		: renvoyer "Lien"
+			cas	__TRACKING_IMAGE__		: renvoyer "Image"
+			cas	__TRACKING_BANNIERE__	: renvoyer "Bannière"
+			cas	__TRACKING_GRILLE__		: renvoyer "Grille"
+			cas	__TRACKING_SCRIPT__		: renvoyer "Script"
+			cas	__TRACKING_GRATTAGE__	: renvoyer "Grattage"
+			cas	__TRACKING_SOCIAL__		: renvoyer "Social"
+			cas	__TRACKING_CGV__		: renvoyer "Cgv"
+			autre cas					: renvoyer "Erreur"
+		fin
+	fin
+
+	procédure interne TypeAlignement(pType)
+		selon pType
+			cas __FORMULAIRE_INTERRUPTEUR__	: renvoyer "center"
+			cas __FORMULAIRE_COMBO__		: renvoyer "left"
+			cas __FORMULAIRE_SAISIE__		: renvoyer "left"
+			cas __FORMULAIRE_OPTIN__		: renvoyer "center"
+			cas	__CHAMP_TYPE_TEXTE__		: renvoyer "left"
+			cas	__CHAMP_TYPE_ENTIER__		: renvoyer "center"
+			cas	__CHAMP_TYPE_DECIMAL__		: renvoyer "right"
+			cas	__CHAMP_TYPE_MONETAIRE__	: renvoyer "right"
+			cas	__CHAMP_TYPE_DATE__			: renvoyer "center"
+			cas	__CHAMP_TYPE_HEURE__		: renvoyer "center"
+			cas	__CHAMP_TYPE_DATE_HEURE__	: renvoyer "center"
+			cas	__CHAMP_TYPE_EMAIL__		: renvoyer "left"
+			cas	__CHAMP_TYPE_TELEPHONE__	: renvoyer "center"
+			cas	__CHAMP_TYPE_PORTABLE__		: renvoyer "center"
+			cas	__CHAMP_TYPE_CODEPOSTAL__	: renvoyer "center"
+			autre cas						: renvoyer "left"
+		fin
+	fin
+
+
+
+fin:
+sdReqCliquezIciLien.AnnuleDéclaration()
+

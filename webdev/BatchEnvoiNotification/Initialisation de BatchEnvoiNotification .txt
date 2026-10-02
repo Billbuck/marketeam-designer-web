@@ -1,0 +1,13 @@
+// Initialisation de BatchEnvoiNotification 
+
+__sEmailEmetteur	est une chaîne
+__sEmailPassword	est une chaîne
+__sEmailSmtp		est une chaîne
+__taaBaseChamp		est un tableau associatif de structBaseChamp
+
+__sEmailEmetteur	= cpFonction.ValeurParametre("Email_Emetteur")
+__sEmailPassword	= cpFonction.ValeurParametre("Email_Password")
+__sEmailSmtp		= cpFonction.ValeurParametre("Email_Smtp")
+
+cpProjet.InitProjet()
+cpNotification.InitNotification()

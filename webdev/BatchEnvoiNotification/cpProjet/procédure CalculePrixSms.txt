@@ -1,0 +1,35 @@
+// Résumé : <indiquez ici ce que fait la procédure>
+// Syntaxe :
+//[ <Résultat> = ] CalculePrixSms (<pMessage>, <pPrixVenteUnitaire>)
+//
+// Paramètres :
+//	pMessage : <indiquez ici le rôle de pMessage>
+//	pPrixVenteUnitaire : <indiquez ici le rôle de pPrixUnitaireVente>
+// Valeur de retour :
+// 	multi-valeur : <indiquez ici le rôle de la valeur de retour>
+//
+// Exemple :
+// <Indiquez ici un exemple d'utilisation>
+//
+procédure CalculePrixSms(local pMessage, local pPrixVenteUnitaire)
+
+mPrixSms		est un monétaire
+sMessage		est une chaîne
+nTaille			est un entier
+nNbrCredit		est un entier
+
+si pMessage <> "" alors
+	sMessage	= pMessage
+	sMessage	= Remplace(sMessage,RC,Caract(10))
+
+	nTaille		= Taille(sMessage)
+	si TestSmsUnicode(sMessage) = Faux alors
+		nNbrCredit = CalculeNbrCreditSms(nTaille,Faux)
+	sinon
+		nNbrCredit = CalculeNbrCreditSms(nTaille,Vrai)
+	fin
+	si nNbrCredit > 8 alors nNbrCredit = 8
+	mPrixSms = pPrixVenteUnitaire * nNbrCredit
+fin
+
+renvoyer (nNbrCredit, mPrixSms)
